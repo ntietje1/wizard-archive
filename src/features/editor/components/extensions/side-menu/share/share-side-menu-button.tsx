@@ -19,7 +19,6 @@ import {
   ContextMenuTrigger,
 } from '~/features/shadcn/components/context-menu'
 import { ShareMenuContent } from '~/features/sharing/components/share-menu-content'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
 const getButtonColorClass = (status: AggregateShareStatus): string => {
   switch (status) {
@@ -36,7 +35,6 @@ const getButtonColorClass = (status: AggregateShareStatus): string => {
 }
 
 export default function ShareSideMenuButton({ note }: { note: NoteWithContent }) {
-  const { isDm } = useCampaign()
   const Components = useComponentsContext()!
   const editor = useBlockNoteEditor() as CustomBlockNoteEditor
   const sideMenuExtension = useExtension(SideMenuExtension)
@@ -49,6 +47,7 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
     shareItems,
     toggleShareStatus,
     toggleShareWithMember,
+    canShare,
   } = useBlocksShare(blocks, note)
 
   const isMultiBlock = blocks.length > 1
@@ -56,7 +55,7 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
   const isBusy = isPending || isMutating
 
   const handleButtonClick = (e: React.MouseEvent | React.KeyboardEvent) => {
-    if (isBusy) return
+    if (isBusy || !canShare) return
     if (e.ctrlKey || e.metaKey) return
 
     e.preventDefault()
@@ -73,7 +72,7 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
 
   const buttonColorClass = getButtonColorClass(aggregateShareStatus)
 
-  if (!block || !isDm) return null
+  if (!block || !canShare) return null
 
   return (
     <ContextMenu onOpenChange={(open) => setSideMenuFrozen(sideMenuExtension, open)}>

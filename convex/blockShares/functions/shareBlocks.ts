@@ -3,9 +3,8 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { shareBlockWithMemberHelper } from './blockShareMutations'
-import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { ERROR_CODE } from '../../../shared/errors/client'
-import { throwClientError } from '../../errors'
+import { assertMemberCanReceiveBlockShare } from './noteBlockShareEligibility'
+import { getBlockShareNote } from './getBlockShareNote'
 import type { BlockShareMutationCtx } from './blockShareMutations'
 import type { Id } from '../../_generated/dataModel'
 import type { BlockNoteId } from '../../../shared/editor-blocks/types'
@@ -22,16 +21,12 @@ export const shareBlocks = async (
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {
-  const rawItem = await getSidebarItem(ctx, noteId)
-  if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.notes)
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  if (rawItem.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
-  }
+  const note = await getBlockShareNote(ctx, noteId)
+  await assertMemberCanReceiveBlockShare(ctx, { note, campaignMemberId })
 
   await asyncMap(blockNoteIds, (blockNoteId) =>
     shareBlockWithMemberHelper(ctx, {
-      note: rawItem,
+      note,
       blockNoteId,
       campaignMemberId,
     }),

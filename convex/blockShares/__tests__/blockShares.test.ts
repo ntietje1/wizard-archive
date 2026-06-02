@@ -26,6 +26,13 @@ describe('setBlocksShareStatus', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
 
     await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
@@ -95,6 +102,13 @@ describe('setBlocksShareStatus', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
 
     await expectNotFound(
       dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
@@ -131,6 +145,13 @@ describe('shareBlocks', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
 
     await dmAuth.action(api.blockShares.actions.shareBlocks, {
       campaignId: ctx.campaignId,
@@ -154,6 +175,13 @@ describe('shareBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
 
     await expectNotFound(
       dmAuth.action(api.blockShares.actions.shareBlocks, {
@@ -190,6 +218,13 @@ describe('unshareBlocks', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
     await dmAuth.action(api.blockShares.actions.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
@@ -219,6 +254,13 @@ describe('unshareBlocks', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
     await dmAuth.action(api.blockShares.actions.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId,

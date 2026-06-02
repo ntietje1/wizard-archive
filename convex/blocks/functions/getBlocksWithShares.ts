@@ -1,11 +1,11 @@
 import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
-import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { checkItemAccess } from '../../sidebarItems/validation/access'
+import { getEligibleBlockSharePlayers } from './getEligibleBlockSharePlayers'
 import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
@@ -28,15 +28,17 @@ export const getBlocksWithShares = async (
   blocks: Array<BlockShareInfo>
   playerMembers: Array<CampaignMember>
 }> => {
-  const note = await getSidebarItem(ctx, noteId)
-  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  const note = await getSidebarItem<'notes'>(ctx, noteId)
+  if (!note || note.type !== SIDEBAR_ITEM_TYPES.notes) {
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  }
   await checkItemAccess(ctx, {
     rawItem: note,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
 
-  const [allMembers, allNoteShares] = await Promise.all([
-    getCampaignMembers(ctx),
+  const [eligiblePlayers, allNoteShares] = await Promise.all([
+    getEligibleBlockSharePlayers(ctx, note),
     ctx.db
       .query('blockShares')
       .withIndex('by_campaign_note', (q) =>
@@ -45,10 +47,9 @@ export const getBlocksWithShares = async (
       .collect(),
   ])
 
-  const playerMembers = allMembers.filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
-
   const sharesByBlockId = new Map<Id<'blocks'>, Array<Id<'campaignMembers'>>>()
   for (const share of allNoteShares) {
+    if (!eligiblePlayers.eligibleMemberIds.has(share.campaignMemberId)) continue
     const list = sharesByBlockId.get(share.blockId)
     if (list) list.push(share.campaignMemberId)
     else sharesByBlockId.set(share.blockId, [share.campaignMemberId])
@@ -79,6 +80,6 @@ export const getBlocksWithShares = async (
 
   return {
     blocks,
-    playerMembers,
+    playerMembers: eligiblePlayers.playerMembers,
   }
 }

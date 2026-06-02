@@ -1,11 +1,11 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
-import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { checkItemAccess } from '../../sidebarItems/validation/access'
+import { getEligibleBlockSharePlayers } from './getEligibleBlockSharePlayers'
 import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { DmQueryCtx } from '../../functions'
@@ -31,8 +31,10 @@ export const getBlockWithShares = async (
   shares: Array<BlockShare>
   playerMembers: Array<CampaignMember>
 } | null> => {
-  const note = await getSidebarItem(ctx, noteId)
-  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  const note = await getSidebarItem<'notes'>(ctx, noteId)
+  if (!note || note.type !== SIDEBAR_ITEM_TYPES.notes) {
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  }
   await checkItemAccess(ctx, {
     rawItem: note,
     requiredLevel: PERMISSION_LEVEL.VIEW,
@@ -48,18 +50,20 @@ export const getBlockWithShares = async (
 
   const shareStatus: ShareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
-  const allMembers = await getCampaignMembers(ctx)
-  const playerMembers = allMembers.filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
+  const eligiblePlayers = await getEligibleBlockSharePlayers(ctx, note)
 
   let shares: Array<BlockShare> = []
   if (shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED) {
-    shares = await getBlockSharesByBlock(ctx, { block })
+    const blockShares = await getBlockSharesByBlock(ctx, { block })
+    shares = blockShares.filter((share) =>
+      eligiblePlayers.eligibleMemberIds.has(share.campaignMemberId),
+    )
   }
 
   return {
     block,
     shareStatus,
     shares,
-    playerMembers,
+    playerMembers: eligiblePlayers.playerMembers,
   }
 }

@@ -23,7 +23,9 @@ import type * as auth_routes from "../auth/routes.js";
 import type * as blockShares_actions from "../blockShares/actions.js";
 import type * as blockShares_functions_blockShareMutations from "../blockShares/functions/blockShareMutations.js";
 import type * as blockShares_functions_getBlockPermissionLevel from "../blockShares/functions/getBlockPermissionLevel.js";
+import type * as blockShares_functions_getBlockShareNote from "../blockShares/functions/getBlockShareNote.js";
 import type * as blockShares_functions_getBlockSharesForBlock from "../blockShares/functions/getBlockSharesForBlock.js";
+import type * as blockShares_functions_noteBlockShareEligibility from "../blockShares/functions/noteBlockShareEligibility.js";
 import type * as blockShares_functions_setBlocksShareStatus from "../blockShares/functions/setBlocksShareStatus.js";
 import type * as blockShares_functions_shareBlocks from "../blockShares/functions/shareBlocks.js";
 import type * as blockShares_functions_unshareBlocks from "../blockShares/functions/unshareBlocks.js";
@@ -35,6 +37,7 @@ import type * as blocks_functions_flattenBlocks from "../blocks/functions/flatte
 import type * as blocks_functions_getAllBlocksByNote from "../blocks/functions/getAllBlocksByNote.js";
 import type * as blocks_functions_getBlockWithShares from "../blocks/functions/getBlockWithShares.js";
 import type * as blocks_functions_getBlocksWithShares from "../blocks/functions/getBlocksWithShares.js";
+import type * as blocks_functions_getEligibleBlockSharePlayers from "../blocks/functions/getEligibleBlockSharePlayers.js";
 import type * as blocks_functions_getHeadingsByNote from "../blocks/functions/getHeadingsByNote.js";
 import type * as blocks_functions_patchBlockMetadata from "../blocks/functions/patchBlockMetadata.js";
 import type * as blocks_functions_reconstructBlockTree from "../blocks/functions/reconstructBlockTree.js";
@@ -262,7 +265,9 @@ declare const fullApi: ApiFromModules<{
   "blockShares/actions": typeof blockShares_actions;
   "blockShares/functions/blockShareMutations": typeof blockShares_functions_blockShareMutations;
   "blockShares/functions/getBlockPermissionLevel": typeof blockShares_functions_getBlockPermissionLevel;
+  "blockShares/functions/getBlockShareNote": typeof blockShares_functions_getBlockShareNote;
   "blockShares/functions/getBlockSharesForBlock": typeof blockShares_functions_getBlockSharesForBlock;
+  "blockShares/functions/noteBlockShareEligibility": typeof blockShares_functions_noteBlockShareEligibility;
   "blockShares/functions/setBlocksShareStatus": typeof blockShares_functions_setBlocksShareStatus;
   "blockShares/functions/shareBlocks": typeof blockShares_functions_shareBlocks;
   "blockShares/functions/unshareBlocks": typeof blockShares_functions_unshareBlocks;
@@ -274,6 +279,7 @@ declare const fullApi: ApiFromModules<{
   "blocks/functions/getAllBlocksByNote": typeof blocks_functions_getAllBlocksByNote;
   "blocks/functions/getBlockWithShares": typeof blocks_functions_getBlockWithShares;
   "blocks/functions/getBlocksWithShares": typeof blocks_functions_getBlocksWithShares;
+  "blocks/functions/getEligibleBlockSharePlayers": typeof blocks_functions_getEligibleBlockSharePlayers;
   "blocks/functions/getHeadingsByNote": typeof blocks_functions_getHeadingsByNote;
   "blocks/functions/patchBlockMetadata": typeof blocks_functions_patchBlockMetadata;
   "blocks/functions/reconstructBlockTree": typeof blocks_functions_reconstructBlockTree;

@@ -6,6 +6,7 @@ import {
   createBlock,
   createBlockShare,
   createNote,
+  createSidebarShare,
   syncBlocksToYjs,
   testBlockNoteId,
 } from '../../_test/factories.helper'
@@ -19,6 +20,13 @@ describe('share mutations with nested blocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
 
     await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('root'),

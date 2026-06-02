@@ -3,11 +3,12 @@ import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupMultiPlayerContext } from '../../_test/identities.helper'
 import {
   createBlock,
+  createFolder,
   createNote,
   createSidebarShare,
   syncBlocksToYjs,
 } from '../../_test/factories.helper'
-import { expectPermissionDenied } from '../../_test/assertions.helper'
+import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 
@@ -351,7 +352,7 @@ describe('block sharing workflows', () => {
   })
 
   describe('share without sidebar share', () => {
-    it('creates a block share even when the member has no sidebar share', async () => {
+    it('rejects a block share when the member cannot view the note', async () => {
       const ctx = await setupMultiPlayerContext(t, 1)
       const dmAuth = asDm(ctx)
       const p1 = ctx.players[0]
@@ -367,12 +368,14 @@ describe('block sharing workflows', () => {
         status: 'individually_shared',
       })
 
-      await dmAuth.action(api.blockShares.actions.shareBlocks, {
-        campaignId: ctx.campaignId,
-        noteId: note.noteId,
-        blockNoteIds: [block.blockNoteId],
-        campaignMemberId: p1.memberId,
-      })
+      await expectValidationFailed(
+        dmAuth.action(api.blockShares.actions.shareBlocks, {
+          campaignId: ctx.campaignId,
+          noteId: note.noteId,
+          blockNoteIds: [block.blockNoteId],
+          campaignMemberId: p1.memberId,
+        }),
+      )
 
       const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
         campaignId: ctx.campaignId,
@@ -381,7 +384,40 @@ describe('block sharing workflows', () => {
       })
       const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockNoteId)
       expect(blockInfo).toBeDefined()
-      expect(blockInfo!.sharedMemberIds).toContain(p1.memberId)
+      expect(result.playerMembers.map((m) => m._id)).not.toContain(p1.memberId)
+      expect(blockInfo!.sharedMemberIds).not.toContain(p1.memberId)
+    })
+
+    it('rejects inherited note access when the note all-player permission is none', async () => {
+      const ctx = await setupMultiPlayerContext(t, 1)
+      const dmAuth = asDm(ctx)
+      const p1 = ctx.players[0]
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        allPermissionLevel: 'view',
+      })
+      const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        parentId: folder.folderId,
+        allPermissionLevel: 'none',
+      })
+      const block = await createBlock(t, note.noteId, ctx.campaignId)
+      await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
+
+      await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
+        noteId: note.noteId,
+        blockNoteIds: [block.blockNoteId],
+        status: 'individually_shared',
+      })
+
+      await expectValidationFailed(
+        dmAuth.action(api.blockShares.actions.shareBlocks, {
+          campaignId: ctx.campaignId,
+          noteId: note.noteId,
+          blockNoteIds: [block.blockNoteId],
+          campaignMemberId: p1.memberId,
+        }),
+      )
     })
   })
 })

@@ -10,18 +10,57 @@ import { handleError } from '~/shared/utils/logger'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { resolveBlockShareState } from '~/features/sharing/utils/block-share-state'
+import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
 
 type CampaignMemberId = CampaignMember['_id']
 
+function canLoadBlockShareData({
+  campaignId,
+  isDm,
+  hasPersistedNote,
+  hasBlocks,
+}: {
+  campaignId: Id<'campaigns'> | undefined
+  isDm: boolean | undefined
+  hasPersistedNote: boolean
+  hasBlocks: boolean
+}): boolean {
+  return Boolean(campaignId) && Boolean(isDm) && hasPersistedNote && hasBlocks
+}
+
+function canRunBlockShareMutation({
+  campaignId,
+  isDm,
+  isMutating,
+  hasPersistedNote,
+  hasBlocks,
+}: {
+  campaignId: Id<'campaigns'> | undefined
+  isDm: boolean | undefined
+  isMutating: boolean
+  hasPersistedNote: boolean
+  hasBlocks: boolean
+}): boolean {
+  return Boolean(campaignId) && Boolean(isDm) && hasPersistedNote && hasBlocks && !isMutating
+}
+
 export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent) {
-  const { campaign, campaignId } = useCampaign()
+  const { campaignId, isDm } = useCampaign()
   const convex = useConvex()
-  const campaignData = campaign.data
   const blockNoteIds = blocks.map((b) => b.id)
+  const hasPersistedNote = !isOptimisticSidebarItem(note)
+  const hasBlocks = blockNoteIds.length > 0
 
   const query = useCampaignQuery(
     api.blocks.queries.getBlocksWithShares,
-    blockNoteIds.length > 0 && campaignData ? { noteId: note._id, blockNoteIds } : 'skip',
+    canLoadBlockShareData({
+      campaignId,
+      isDm,
+      hasPersistedNote,
+      hasBlocks,
+    })
+      ? { noteId: note._id, blockNoteIds }
+      : 'skip',
   )
 
   const setBlocksShareStatus = useMutation({
@@ -71,7 +110,13 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     blockNoteIds,
     playerMembers,
   })
-  const canMutate = !!campaignData?._id && !isMutating && blocks.length > 0
+  const canMutate = canRunBlockShareMutation({
+    campaignId,
+    isDm,
+    isMutating,
+    hasPersistedNote,
+    hasBlocks,
+  })
 
   const toggleShareStatus = async () => {
     if (!canMutate) return
@@ -123,5 +168,6 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     shareItems,
     toggleShareStatus,
     toggleShareWithMember,
+    canShare: canLoadBlockShareData({ campaignId, isDm, hasPersistedNote, hasBlocks }),
   }
 }
