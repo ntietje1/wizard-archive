@@ -7,7 +7,7 @@ import { shouldCompact } from '../constants'
 import { uint8ToArrayBuffer } from '../functions/uint8ToArrayBuffer'
 import { createYjsDocument } from '../functions/createYjsDocument'
 import { deleteYjsDocument } from '../functions/deleteYjsDocument'
-import { makeYjsUpdate } from './makeYjsUpdate.helper'
+import { makeYjsUpdate } from '../../_test/yjs.helper'
 
 describe('shouldCompact', () => {
   it('returns false for seq 0', () => {

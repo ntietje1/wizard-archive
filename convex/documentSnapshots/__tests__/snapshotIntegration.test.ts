@@ -7,10 +7,11 @@ import {
 } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote } from '../../_test/factories.helper'
+import { createMapWithTwoSnapshotPins } from '../../_test/documentSnapshots.helper'
 import { api } from '../../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { SNAPSHOT_TYPE } from '../../../shared/document-snapshots/types'
-import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdate } from '../../_test/yjs.helper'
 import { SNAPSHOT_IDLE_MS, SNAPSHOT_MIN_INTERVAL_MS } from '../../yjsSync/constants'
 import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
 
@@ -429,23 +430,10 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-      const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+      const { mapId } = await createMapWithTwoSnapshotPins(t, dmAuth, {
         campaignId: ctx.campaignId,
-        mapId,
-        pins: [{ itemId: n1, x: 10, y: 20 }],
+        ownerId: ctx.dm.profile._id,
       })
-      await t.finishAllScheduledFunctions(vi.runAllTimers)
-
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
-        mapId,
-        pins: [{ itemId: n2, x: 30, y: 40 }],
-      })
-      await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db

@@ -145,12 +145,12 @@ describe('import boundary checks', () => {
     expect(
       analyzeImportBoundaries([
         {
-          filePath: 'convex/yjsSync/__tests__/makeYjsUpdate.helper.ts',
-          source: "import { blocksToYDoc } from '../../../src/features/editor/blocknote-yjs'",
+          filePath: 'convex/_test/yjs.helper.ts',
+          source: "import { blocksToYDoc } from '../../src/features/editor/blocknote-yjs'",
         },
       ]),
     ).toEqual([
-      'convex/yjsSync/__tests__/makeYjsUpdate.helper.ts:1 convex may not import value from src boundary module ../../../src/features/editor/blocknote-yjs',
+      'convex/_test/yjs.helper.ts:1 convex may not import value from src boundary module ../../src/features/editor/blocknote-yjs',
     ])
   })
 

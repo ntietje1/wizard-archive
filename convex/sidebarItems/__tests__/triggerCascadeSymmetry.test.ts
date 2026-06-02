@@ -15,7 +15,7 @@ import {
   createNote,
   createSidebarShare,
 } from '../../_test/factories.helper'
-import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdate } from '../../_test/yjs.helper'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemType } from '../../../shared/sidebar-items/types'
 

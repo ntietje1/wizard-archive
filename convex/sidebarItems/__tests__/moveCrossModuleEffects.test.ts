@@ -12,8 +12,9 @@ import {
   expectPermissionDenied,
   expectValidationFailed,
 } from '../../_test/assertions.helper'
+import { getNoteLinksForSource, setupSiblingRelativeNoteLink } from '../../_test/noteLinks.helper'
 import { api } from '../../_generated/api'
-import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 
 describe('executeMoveCommand cross-module effects', () => {
   const t = createTestContext()
@@ -218,49 +219,12 @@ describe('executeMoveCommand cross-module effects', () => {
   it('moving a note re-syncs relative outgoing links', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const dmId = ctx.dm.profile._id
-
-    const { folderId: folderA } = await createFolder(t, ctx.campaignId, dmId, {
-      name: 'Folder A',
-    })
-    const { folderId: folderB } = await createFolder(t, ctx.campaignId, dmId, {
-      name: 'Folder B',
-    })
-    const { noteId: targetId } = await createNote(t, ctx.campaignId, dmId, {
-      name: 'Target',
-      parentId: folderA,
-    })
-    const { noteId: sourceId } = await createNote(t, ctx.campaignId, dmId, {
-      name: 'Source',
-      parentId: folderA,
-    })
-
-    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+    const { folderB, sourceId, targetId } = await setupSiblingRelativeNoteLink(t, dmAuth, {
       campaignId: ctx.campaignId,
-      documentId: sourceId,
-      update: makeYjsUpdateWithBlocks([
-        {
-          id: 'block-a',
-          type: 'paragraph',
-          props: {},
-          content: [{ type: 'text', text: '[[./Target]]', styles: {} }],
-          children: [],
-        },
-      ]),
-    })
-    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
-      documentId: sourceId,
+      creatorProfileId: ctx.dm.profile._id,
     })
 
-    let links = await t.run(async (dbCtx) => {
-      return await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-    })
+    let links = await getNoteLinksForSource(t, ctx.campaignId, sourceId)
     expect(links).toHaveLength(1)
     expect(links[0].targetItemId).toBe(targetId)
     expect(links[0].query).toBe('./Target')
@@ -271,14 +235,7 @@ describe('executeMoveCommand cross-module effects', () => {
       targetParentId: folderB,
     })
 
-    links = await t.run(async (dbCtx) => {
-      return await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-    })
+    links = await getNoteLinksForSource(t, ctx.campaignId, sourceId)
     expect(links).toHaveLength(1)
     expect(links[0].targetItemId).toBeNull()
     expect(links[0].query).toBe('./Target')

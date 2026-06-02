@@ -1,6 +1,6 @@
 import * as Y from 'yjs'
-import { blocksToYDoc } from '../../../shared/editor-blocks/blocknote-yjs'
-import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
+import { blocksToYDoc } from '../../shared/editor-blocks/blocknote-yjs'
+import type { CustomPartialBlock } from '../../shared/editor-blocks/types'
 
 type TestInlineContentArray = Extract<
   NonNullable<CustomPartialBlock['content']>,

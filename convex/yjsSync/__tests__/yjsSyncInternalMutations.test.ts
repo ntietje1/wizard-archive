@@ -5,7 +5,7 @@ import { setupCampaignContext } from '../../_test/identities.helper'
 import { createNote } from '../../_test/factories.helper'
 import { internal } from '../../_generated/api'
 import { AWARENESS_TTL_MS } from '../constants'
-import { makeYjsUpdate } from './makeYjsUpdate.helper'
+import { makeYjsUpdate } from '../../_test/yjs.helper'
 
 describe('compact', () => {
   const t = createTestContext()

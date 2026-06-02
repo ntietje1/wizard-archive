@@ -11,10 +11,7 @@ import {
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
-import {
-  makeYjsUpdate,
-  makeYjsUpdateWithBlocks,
-} from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { saveAllBlocksForNote } from '../functions/saveAllBlocksForNote'
 import type { CampaignMutationCtx } from '../../functions'
 import type { TableContent } from '../../../shared/editor-blocks/types'

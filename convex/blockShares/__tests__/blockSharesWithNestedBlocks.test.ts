@@ -10,7 +10,7 @@ import {
   testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 
 describe('share mutations with nested blocks', () => {
   const t = createTestContext()

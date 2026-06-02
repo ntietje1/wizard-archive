@@ -8,7 +8,7 @@ import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createBlock } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
-import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import type { Block } from '../../blocks/types'
 

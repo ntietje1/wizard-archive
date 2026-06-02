@@ -9,10 +9,7 @@ import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.hel
 import { createGameMap, createNote, createSidebarShare } from '../../_test/factories.helper'
 import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import {
-  makeYjsUpdate,
-  makeYjsUpdateWithBlocks,
-} from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
 import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
 

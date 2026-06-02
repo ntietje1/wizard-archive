@@ -12,10 +12,7 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api, internal } from '../../_generated/api'
-import {
-  makeYjsUpdate,
-  makeYjsUpdateWithBlocks,
-} from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 
 describe('persistBlocks', () => {
   const t = createTestContext()

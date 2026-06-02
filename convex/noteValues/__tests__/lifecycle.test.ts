@@ -12,7 +12,7 @@ import {
 import { api, internal } from '../../_generated/api'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import {
   hardDeleteValueTestNote,
   replaceNoteDocumentAndPersist,

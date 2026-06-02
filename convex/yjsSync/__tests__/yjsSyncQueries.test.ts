@@ -5,7 +5,7 @@ import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.hel
 import { createNote, createSidebarShare } from '../../_test/factories.helper'
 import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import { makeYjsUpdate as makeEmptyYjsUpdate } from './makeYjsUpdate.helper'
+import { makeYjsUpdate as makeEmptyYjsUpdate } from '../../_test/yjs.helper'
 
 describe('getUpdates', () => {
   const t = createTestContext()
