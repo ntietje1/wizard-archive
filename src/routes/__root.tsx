@@ -1,16 +1,8 @@
-import {
-  HeadContent,
-  Outlet,
-  Scripts,
-  createRootRouteWithContext,
-  useMatches,
-} from '@tanstack/react-router'
-import * as React from 'react'
+import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
-import { getThemeCookie, resolveTheme } from '~/features/settings/hooks/useTheme'
-import type { Theme } from '~/features/settings/hooks/useTheme'
+import { RootDocument } from '~/shared/components/root-document'
 import { getOrigin } from '~/shared/utils/origin'
 import appCss from '~/styles/app.css?url'
 
@@ -102,41 +94,9 @@ export const Route = createRootRouteWithContext<{
       { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
     ],
   }),
-  component: RootComponent,
-})
-
-function RootComponent() {
-  return (
+  component: () => (
     <RootDocument>
       <Outlet />
     </RootDocument>
-  )
-}
-
-function RootDocument({ children }: { children: React.ReactNode }) {
-  const matches = useMatches()
-  const appMatch = matches.find((m) => m.routeId === '/_app')
-
-  const themeClass: 'dark' | 'light' = appMatch
-    ? (() => {
-        const context = appMatch.context
-        const initialTheme =
-          context && typeof context === 'object' && 'initialTheme' in context
-            ? (context as { initialTheme?: Theme | null }).initialTheme
-            : null
-        return resolveTheme(initialTheme ?? getThemeCookie() ?? 'system')
-      })()
-    : resolveTheme(getThemeCookie() ?? 'system')
-
-  return (
-    <html lang="en" className={themeClass} suppressHydrationWarning>
-      <head>
-        <HeadContent />
-      </head>
-      <body className="flex flex-col min-h-screen">
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  )
-}
+  ),
+})

@@ -1,5 +1,5 @@
 import { CheckIcon, Monitor, Moon, Sun } from 'lucide-react'
-import { useTheme } from '~/features/settings/hooks/useTheme'
+import { useTheme } from '~/shared/theme/context'
 import { cn } from '~/features/shadcn/lib/utils'
 import { Separator } from '~/features/shadcn/components/separator'
 

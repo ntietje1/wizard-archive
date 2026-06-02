@@ -14,7 +14,7 @@ import './extensions/md-link/md-link.css'
 import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'
 import { useLinkDecorations } from '~/features/editor/hooks/useLinkDecorations'
-import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
+import { useResolvedTheme } from '~/shared/theme/context'
 import {
   patchYSyncAfterTypeChanged,
   patchYUndoPluginDestroy,

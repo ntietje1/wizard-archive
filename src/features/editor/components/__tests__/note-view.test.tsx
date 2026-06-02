@@ -69,7 +69,7 @@ vi.mock('~/features/editor/hooks/useLinkDecorations', () => ({
   useLinkDecorations: (...args: Array<unknown>) => linkDecorationsSpy(...args),
 }))
 
-vi.mock('~/features/settings/hooks/useTheme', () => ({
+vi.mock('~/shared/theme/context', () => ({
   useResolvedTheme: () => 'light',
 }))
 

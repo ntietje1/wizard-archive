@@ -7,7 +7,7 @@ import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/d
 import type * as Y from 'yjs'
 import type { CanvasWithContent } from 'shared/canvases/types'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
-import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
+import { useResolvedTheme } from '~/shared/theme/context'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 const CURSOR_COLORS = [

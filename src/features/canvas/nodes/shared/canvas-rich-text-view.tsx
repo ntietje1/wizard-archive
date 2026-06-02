@@ -1,6 +1,6 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { PreventExternalDrop } from '~/features/editor/components/extensions/prevent-external-drop/prevent-external-drop'
-import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
+import { useResolvedTheme } from '~/shared/theme/context'
 import type { CSSProperties } from 'react'
 import type { CanvasRichTextEditor } from './canvas-rich-text-editor'
 

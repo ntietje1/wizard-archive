@@ -2,17 +2,13 @@ import { useEffect } from 'react'
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import type { UserPreferences } from 'shared/user-preferences/types'
-import type { Theme } from '~/features/settings/hooks/useTheme'
+import type { Theme } from '~/shared/theme/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import {
-  ThemeProviderContext,
-  applyThemeClass,
-  getThemeCookie,
-  resolveTheme,
-} from '~/features/settings/hooks/useTheme'
-import { userPreferencesQueryOptions } from '~/features/settings/hooks/useUserPreferences'
+import { applyThemeClass, getThemeCookie, resolveTheme } from '~/shared/theme/dom'
+import { ThemeProviderContext } from '~/shared/theme/context'
+import { userPreferencesQueryOptions } from '~/shared/user-preferences/user-preferences-query'
 
 export function ThemeProvider({
   children,
