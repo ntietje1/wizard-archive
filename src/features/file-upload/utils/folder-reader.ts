@@ -3,7 +3,7 @@
  * Uses the File System Access API (webkitGetAsEntry) for recursive folder traversal.
  */
 
-export interface FileWithPath {
+interface FileWithPath {
   file: File
   relativePath: string
 }
@@ -135,7 +135,7 @@ export async function processDataTransferItems(
 /**
  * Count total files in a folder structure (including nested)
  */
-export function countFilesInFolderStructure(folder: FolderStructure): number {
+function countFilesInFolderStructure(folder: FolderStructure): number {
   let count = folder.files.length
   for (const subfolder of folder.subfolders) {
     count += countFilesInFolderStructure(subfolder)
@@ -146,7 +146,7 @@ export function countFilesInFolderStructure(folder: FolderStructure): number {
 /**
  * Count total folders in a folder structure (including the folder itself)
  */
-export function countFoldersInStructure(folder: FolderStructure): number {
+function countFoldersInStructure(folder: FolderStructure): number {
   let count = 1 // Count this folder
   for (const subfolder of folder.subfolders) {
     count += countFoldersInStructure(subfolder)

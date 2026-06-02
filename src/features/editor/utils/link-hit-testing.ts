@@ -1,5 +1,6 @@
 import { LINK_ROLE } from './link-decoration'
-import type { LinkPathKind, LinkType } from './link-decoration'
+import type { LinkPathKind } from 'shared/links/types'
+import type { LinkType } from './link-decoration'
 
 interface ParsedLinkElement {
   element: Element

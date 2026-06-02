@@ -3,7 +3,6 @@ import { NOTE_VALUE_FUNCTIONS } from '../../../shared/note-values/constants'
 import {
   applyFormulaAutocompleteInsertion,
   buildExternalNoteValuePrefix,
-  buildExternalNoteValueReference,
   buildSameNoteValueReference,
   getFormulaAutocompleteContext,
   rewriteSameNoteValueReferences,
@@ -103,9 +102,6 @@ describe('note value formula authoring helpers', () => {
   it('builds shared formula reference insertion strings', () => {
     expect(buildSameNoteValueReference('strength_mod')).toBe('[[strength_mod]]')
     expect(buildExternalNoteValuePrefix('Characters/Fighter')).toBe('[[Characters/Fighter.')
-    expect(buildExternalNoteValueReference('Characters/Fighter', 'prof_bonus')).toBe(
-      '[[Characters/Fighter.prof_bonus]]',
-    )
   })
 
   it('rewrites same-note references without changing external references', () => {

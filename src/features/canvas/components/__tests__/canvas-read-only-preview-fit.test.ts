@@ -1,29 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import {
-  DEFAULT_CANVAS_READ_ONLY_PREVIEW_VIEWPORT,
-  resolveCanvasReadOnlyPreviewViewport,
-  selectCanvasReadOnlyPreviewFitNodes,
-} from '../canvas-read-only-preview-fit'
+import { resolveCanvasReadOnlyPreviewViewport } from '../canvas-read-only-preview-fit'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 describe('canvas read-only preview fit', () => {
-  it('uses fallback nodes before the engine has projected node ids', () => {
-    const fallback = [createNode({ id: 'fallback' })]
-
-    expect(selectCanvasReadOnlyPreviewFitNodes(createSnapshot([]), fallback)).toBe(fallback)
-  })
-
-  it('selects projected nodes in engine order once available', () => {
-    const first = createNode({ id: 'first' })
-    const second = createNode({ id: 'second' })
-
-    expect(selectCanvasReadOnlyPreviewFitNodes(createSnapshot([first, second]), [])).toEqual([
-      first,
-      second,
-    ])
-  })
-
   it('falls back to the default viewport for zero-sized surfaces', () => {
     expect(
       resolveCanvasReadOnlyPreviewViewport({
@@ -34,7 +14,7 @@ describe('canvas read-only preview fit', () => {
         size: { width: 0, height: 100 },
         snapshot: createSnapshot([]),
       }),
-    ).toEqual(DEFAULT_CANVAS_READ_ONLY_PREVIEW_VIEWPORT)
+    ).toEqual({ x: 0, y: 0, zoom: 1 })
   })
 
   it('falls back to the default viewport for zero-height surfaces', () => {
@@ -47,7 +27,7 @@ describe('canvas read-only preview fit', () => {
         size: { width: 100, height: 0 },
         snapshot: createSnapshot([]),
       }),
-    ).toEqual(DEFAULT_CANVAS_READ_ONLY_PREVIEW_VIEWPORT)
+    ).toEqual({ x: 0, y: 0, zoom: 1 })
   })
 
   it('resolves a fitted viewport from projected nodes', () => {

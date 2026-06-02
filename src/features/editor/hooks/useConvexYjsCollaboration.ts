@@ -2,7 +2,13 @@ import * as Y from 'yjs'
 import { useEffect, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { ConvexYjsProvider } from '../providers/convex-yjs-provider'
+import {
+  ConvexYjsProvider,
+  applyConvexYjsProviderRemoteAwareness,
+  applyConvexYjsProviderRemoteUpdates,
+  setConvexYjsProviderUser,
+  setConvexYjsProviderWritable,
+} from '../providers/convex-yjs-provider'
 import type { YjsDocumentId } from 'shared/yjs-sync/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
@@ -96,11 +102,11 @@ export function useConvexYjsCollaboration(
 
   const { name, color } = user
   useEffect(() => {
-    if (currentState) currentState.provider.setUser({ name, color })
+    if (currentState) setConvexYjsProviderUser(currentState.provider, { name, color })
   }, [currentState, name, color])
 
   useEffect(() => {
-    if (currentState) currentState.provider.writable = canEdit
+    if (currentState) setConvexYjsProviderWritable(currentState.provider, canEdit)
   }, [currentState, canEdit])
 
   const updatesResult = useCampaignQuery(api.yjsSync.queries.getUpdates, {
@@ -116,7 +122,7 @@ export function useConvexYjsCollaboration(
     }
     if (updatesResult.data && currentState) {
       setError(null)
-      currentState.provider.applyRemoteUpdates(updatesResult.data)
+      applyConvexYjsProviderRemoteUpdates(currentState.provider, updatesResult.data)
       if (updatesResult.data.length > 0) {
         setAfterSeq(currentState.provider.lastAppliedSeq)
       }
@@ -131,7 +137,7 @@ export function useConvexYjsCollaboration(
 
   useEffect(() => {
     if (awarenessResult.data && currentState) {
-      currentState.provider.applyRemoteAwareness(awarenessResult.data)
+      applyConvexYjsProviderRemoteAwareness(currentState.provider, awarenessResult.data)
     }
   }, [awarenessResult.data, currentState])
 

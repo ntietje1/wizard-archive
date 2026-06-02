@@ -1,11 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
-import { ConvexYjsProvider } from '../convex-yjs-provider'
-import type { ConvexYjsProviderConfig } from '../convex-yjs-provider'
+import {
+  ConvexYjsProvider,
+  applyConvexYjsProviderRemoteAwareness,
+  applyConvexYjsProviderRemoteUpdates,
+  flushConvexYjsProviderPendingUpdates,
+  isConvexYjsProviderApplyingRemoteUpdate,
+  setConvexYjsProviderWritable,
+} from '../convex-yjs-provider'
 import type { Id } from 'convex/_generated/dataModel'
 
 const DOCUMENT_ID = 'test-doc-id' as Id<'sidebarItems'>
+type ConvexYjsProviderConfig = ConstructorParameters<typeof ConvexYjsProvider>[2]
 
 function createRemoteUpdate(seq = 0): { update: ArrayBuffer; seq: number } {
   const remoteDoc = new Y.Doc()
@@ -85,10 +92,6 @@ describe('ConvexYjsProvider', () => {
       expect(provider.awareness).toBeInstanceOf(Awareness)
     })
 
-    it('starts with synced false', () => {
-      expect(provider.synced).toBe(false)
-    })
-
     it('destroy calls removeAwareness with correct args', async () => {
       provider.destroy()
       await vi.advanceTimersByTimeAsync(0)
@@ -109,7 +112,7 @@ describe('ConvexYjsProvider', () => {
       const fragBefore = Y.encodeStateAsUpdate(doc)
       provider.destroy()
       const { update, seq } = createRemoteUpdate()
-      provider.applyRemoteUpdates([{ update, seq }])
+      applyConvexYjsProviderRemoteUpdates(provider, [{ update, seq }])
       const fragAfter = Y.encodeStateAsUpdate(doc)
       expect(fragAfter).toEqual(fragBefore)
     })
@@ -118,17 +121,17 @@ describe('ConvexYjsProvider', () => {
   describe('remote update application', () => {
     it('applies updates with seq greater than lastAppliedSeq', () => {
       const { update, seq } = createRemoteUpdate(0)
-      provider.applyRemoteUpdates([{ update, seq }])
+      applyConvexYjsProviderRemoteUpdates(provider, [{ update, seq }])
       const frag = doc.getXmlFragment('document')
       expect(frag.length).toBe(1)
     })
 
     it('skips already-applied seqs', () => {
       const update1 = createDistinctRemoteUpdate(0)
-      provider.applyRemoteUpdates([update1])
+      applyConvexYjsProviderRemoteUpdates(provider, [update1])
 
       const update2 = createDistinctRemoteUpdate(0, doc)
-      provider.applyRemoteUpdates([update2])
+      applyConvexYjsProviderRemoteUpdates(provider, [update2])
 
       const frag = doc.getXmlFragment('document')
       expect(frag.length).toBe(1)
@@ -139,9 +142,8 @@ describe('ConvexYjsProvider', () => {
       provider.on('sync', syncHandler)
 
       const { update, seq } = createRemoteUpdate(0)
-      provider.applyRemoteUpdates([{ update, seq }])
+      applyConvexYjsProviderRemoteUpdates(provider, [{ update, seq }])
 
-      expect(provider.synced).toBe(true)
       expect(syncHandler).toHaveBeenCalledWith(true)
     })
 
@@ -150,10 +152,10 @@ describe('ConvexYjsProvider', () => {
       provider.on('sync', syncHandler)
 
       const update1 = createRemoteUpdate(0)
-      provider.applyRemoteUpdates([update1])
+      applyConvexYjsProviderRemoteUpdates(provider, [update1])
 
       const update2 = createDistinctRemoteUpdate(1, doc)
-      provider.applyRemoteUpdates([update2])
+      applyConvexYjsProviderRemoteUpdates(provider, [update2])
 
       expect(syncHandler).toHaveBeenCalledTimes(1)
     })
@@ -162,15 +164,15 @@ describe('ConvexYjsProvider', () => {
       const remoteUpdateFlags: Array<boolean> = []
       doc.on('update', (_update, origin) => {
         if (origin === provider) {
-          remoteUpdateFlags.push(provider.isApplyingRemoteUpdate)
+          remoteUpdateFlags.push(isConvexYjsProviderApplyingRemoteUpdate(provider))
         }
       })
 
       const { update, seq } = createRemoteUpdate(0)
-      provider.applyRemoteUpdates([{ update, seq }])
+      applyConvexYjsProviderRemoteUpdates(provider, [{ update, seq }])
 
       expect(remoteUpdateFlags).toEqual([true])
-      expect(provider.isApplyingRemoteUpdate).toBe(false)
+      expect(isConvexYjsProviderApplyingRemoteUpdate(provider)).toBe(false)
     })
   })
 
@@ -180,7 +182,7 @@ describe('ConvexYjsProvider', () => {
       const otherAwareness = new Awareness(otherDoc)
       otherAwareness.setLocalState({ cursor: { x: 1, y: 2 } })
 
-      provider.applyRemoteAwareness([
+      applyConvexYjsProviderRemoteAwareness(provider, [
         {
           clientId: otherDoc.clientID,
           state: encodeAwareness(otherAwareness, otherDoc),
@@ -198,7 +200,9 @@ describe('ConvexYjsProvider', () => {
     it('skips own clientId in remote awareness', () => {
       const state = encodeAwareness(provider.awareness, doc)
       expect(() => {
-        provider.applyRemoteAwareness([{ clientId: doc.clientID, state, updatedAt: Date.now() }])
+        applyConvexYjsProviderRemoteAwareness(provider, [
+          { clientId: doc.clientID, state, updatedAt: Date.now() },
+        ])
       }).not.toThrow()
     })
 
@@ -214,14 +218,14 @@ describe('ConvexYjsProvider', () => {
       const state1 = encodeAwareness(otherAwareness1, otherDoc1)
       const state2 = encodeAwareness(otherAwareness2, otherDoc2)
 
-      provider.applyRemoteAwareness([
+      applyConvexYjsProviderRemoteAwareness(provider, [
         { clientId: otherDoc1.clientID, state: state1, updatedAt: Date.now() },
         { clientId: otherDoc2.clientID, state: state2, updatedAt: Date.now() },
       ])
 
       expect(provider.awareness.getStates().has(otherDoc2.clientID)).toBe(true)
 
-      provider.applyRemoteAwareness([
+      applyConvexYjsProviderRemoteAwareness(provider, [
         { clientId: otherDoc1.clientID, state: state1, updatedAt: Date.now() },
       ])
 
@@ -236,7 +240,7 @@ describe('ConvexYjsProvider', () => {
 
   describe('local update debouncing', () => {
     beforeEach(() => {
-      provider.writable = true
+      setConvexYjsProviderWritable(provider, true)
     })
 
     it('debounces local doc updates before pushing', () => {
@@ -281,7 +285,7 @@ describe('ConvexYjsProvider', () => {
 
     it('does not push remote-origin updates', () => {
       const { update, seq } = createRemoteUpdate(0)
-      provider.applyRemoteUpdates([{ update, seq }])
+      applyConvexYjsProviderRemoteUpdates(provider, [{ update, seq }])
 
       vi.advanceTimersByTime(500)
       expect(config.pushUpdate).not.toHaveBeenCalled()
@@ -310,7 +314,7 @@ describe('ConvexYjsProvider', () => {
     })
 
     it('does not push when writable is false', () => {
-      provider.writable = false
+      setConvexYjsProviderWritable(provider, false)
 
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
       vi.advanceTimersByTime(200)
@@ -322,7 +326,7 @@ describe('ConvexYjsProvider', () => {
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
       expect(config.pushUpdate).not.toHaveBeenCalled()
 
-      provider.writable = false
+      setConvexYjsProviderWritable(provider, false)
       expect(config.pushUpdate).toHaveBeenCalledTimes(1)
     })
 
@@ -330,7 +334,7 @@ describe('ConvexYjsProvider', () => {
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
       expect(config.pushUpdate).not.toHaveBeenCalled()
 
-      await expect(provider.flushPendingUpdates()).resolves.toBe(true)
+      await expect(flushConvexYjsProviderPendingUpdates(provider)).resolves.toBe(true)
 
       expect(config.pushUpdate).toHaveBeenCalledTimes(1)
     })
@@ -349,7 +353,7 @@ describe('ConvexYjsProvider', () => {
       expect(config.pushUpdate).toHaveBeenCalledTimes(1)
 
       doc.getXmlFragment('document').insert(1, [new Y.XmlElement('p')])
-      const flushPromise = provider.flushPendingUpdates()
+      const flushPromise = flushConvexYjsProviderPendingUpdates(provider)
       await Promise.resolve()
       expect(config.pushUpdate).toHaveBeenCalledTimes(1)
 
@@ -390,7 +394,9 @@ describe('ConvexYjsProvider', () => {
 
       const state = encodeAwareness(otherAwareness, otherDoc)
 
-      provider.applyRemoteAwareness([{ clientId: otherDoc.clientID, state, updatedAt: Date.now() }])
+      applyConvexYjsProviderRemoteAwareness(provider, [
+        { clientId: otherDoc.clientID, state, updatedAt: Date.now() },
+      ])
 
       vi.advanceTimersByTime(200)
 
@@ -410,7 +416,7 @@ describe('ConvexYjsProvider', () => {
 
   describe('edge cases', () => {
     it('flush on destroy sends pending updates when writable', async () => {
-      provider.writable = true
+      setConvexYjsProviderWritable(provider, true)
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
 
       expect(config.pushUpdate).not.toHaveBeenCalled()
@@ -420,9 +426,9 @@ describe('ConvexYjsProvider', () => {
     })
 
     it('does not flush on destroy when not writable', async () => {
-      provider.writable = true
+      setConvexYjsProviderWritable(provider, true)
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
-      provider.writable = false
+      setConvexYjsProviderWritable(provider, false)
       ;(config.pushUpdate as ReturnType<typeof vi.fn>).mockClear()
 
       provider.destroy()

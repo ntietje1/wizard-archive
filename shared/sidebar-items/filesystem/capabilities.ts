@@ -204,14 +204,3 @@ export function evaluateCopy(
   if (target.parentId === null) return evaluateRootCreationAccess(actor)
   return evaluateTargetParent(item, target)
 }
-
-export function evaluatePasteTarget(
-  actor: OperationActorSnapshot,
-  target: OperationTargetSnapshot,
-): SidebarOperationCapability {
-  if (target.parentId === null) {
-    return evaluateRootCreationAccess(actor)
-  }
-
-  return evaluateParentAccess(target)
-}

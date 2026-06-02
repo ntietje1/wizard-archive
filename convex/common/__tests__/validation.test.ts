@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { parseCampaignSlug, validateCampaignSlug } from '../../../shared/campaigns/validation'
-import { parseSidebarItemSlug, validateSidebarItemSlug } from '../../../shared/sidebar-items/slug'
+import { parseSidebarItemSlug } from '../../../shared/sidebar-items/slug'
 import { parseUsername, validateUsername } from '../../../shared/users/validation'
 
 const consecutiveSeparatorSlugs = ['name--link', 'name-_link', 'name_-link', 'name__link']
@@ -28,9 +28,9 @@ describe('entity slug parsing', () => {
   it('uses the universal slug syntax for sidebar items', () => {
     expect(parseSidebarItemSlug('7_lore')).toBe('7_lore')
     expect(parseSidebarItemSlug('lore-index')).toBe('lore-index')
-    expect(validateSidebarItemSlug('lore_index')).toBeNull()
+    expect(parseSidebarItemSlug('lore_index')).toBe('lore_index')
     for (const slug of consecutiveSeparatorSlugs) {
-      expect(validateSidebarItemSlug(slug)).toContain('consecutive separators')
+      expect(parseSidebarItemSlug(slug)).toBeNull()
     }
   })
 
@@ -38,12 +38,12 @@ describe('entity slug parsing', () => {
     expect(validateUsername('abc')).toContain('at least 4')
     expect(validateUsername('abcd')).toBeNull()
     expect(validateCampaignSlug('a')).toBeNull()
-    expect(validateSidebarItemSlug('a')).toBeNull()
+    expect(parseSidebarItemSlug('a')).toBe('a')
   })
 
   it('keeps domain max lengths', () => {
     expect(validateUsername('a'.repeat(31))).toContain('at most 30')
     expect(validateCampaignSlug('a'.repeat(31))).toContain('at most 30')
-    expect(validateSidebarItemSlug('a'.repeat(256))).toContain('at most 255')
+    expect(parseSidebarItemSlug('a'.repeat(256))).toBeNull()
   })
 })

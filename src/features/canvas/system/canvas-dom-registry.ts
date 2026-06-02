@@ -2,7 +2,7 @@ import type { CanvasCullingDiff } from './canvas-culling'
 import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
 import { readElementBorderBoxSize, readResizeObserverBorderBoxSize } from './canvas-element-size'
 
-export interface CanvasRegisteredEdgePaths {
+interface CanvasRegisteredEdgePaths {
   path: SVGPathElement | null
   highlightPath?: SVGPathElement | null
   interactionPath?: SVGPathElement | null

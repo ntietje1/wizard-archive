@@ -427,7 +427,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
   }
 }
 
-export function resolveSelectionResizeUpdates({
+function resolveSelectionResizeUpdates({
   handlePosition,
   nextBounds,
   nodes,

@@ -18,6 +18,7 @@ import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknot
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { assertNever } from '~/shared/utils/utils'
 import { api } from 'convex/_generated/api'
+import { setConvexYjsProviderUser } from '~/features/editor/providers/convex-yjs-provider'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
@@ -272,7 +273,7 @@ function CollaborativeNoteEditor({
   })
 
   useEffect(() => {
-    provider.setUser({ name: user.name, color: user.color })
+    setConvexYjsProviderUser(provider, { name: user.name, color: user.color })
   }, [provider, user.name, user.color])
 
   if (!editor) return null

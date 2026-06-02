@@ -6,7 +6,7 @@ import { authClient } from '~/features/auth/utils/auth-client'
 import { parseUserAgent } from '~/features/auth/utils/parse-user-agent'
 import { fetchDeviceSessions } from '~/features/auth/utils/device-sessions'
 
-export type EnrichedSession = ParsedUA & {
+type EnrichedSession = ParsedUA & {
   id: string
   token: string
   ipAddress: string | null

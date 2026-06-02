@@ -386,7 +386,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
 
 const MIN_POINT_GESTURE_DISTANCE = 1
 
-export function classifyCanvasPointerTarget(
+function classifyCanvasPointerTarget(
   target: EventTarget | null,
   pane: HTMLElement | null,
 ): CanvasPointerTarget {

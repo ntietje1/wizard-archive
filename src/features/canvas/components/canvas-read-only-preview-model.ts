@@ -3,7 +3,7 @@ import type { CanvasEdgeGeometry } from '../edges/shared/canvas-edge-geometry'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../system/canvas-engine-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
-export type CanvasPreviewNodeShellSnapshot = {
+type CanvasPreviewNodeShellSnapshot = {
   id: string
   type: string | undefined
   className: string | undefined
@@ -55,9 +55,9 @@ export function areCanvasPreviewNodeShellsEqual(
   )
 }
 
-export type CanvasPreviewEdgeType = 'bezier' | 'straight' | 'step'
+type CanvasPreviewEdgeType = 'bezier' | 'straight' | 'step'
 
-export type CanvasPreviewEdgeRender = {
+type CanvasPreviewEdgeRender = {
   edge: CanvasDocumentEdge
   geometry: CanvasEdgeGeometry
   type: CanvasPreviewEdgeType

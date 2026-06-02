@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveCanvasResize } from '../canvas-resize-geometry'
-import type { CanvasResizeGeometryOptions } from '../canvas-resize-geometry'
+
+type CanvasResizeGeometryOptions = Parameters<typeof resolveCanvasResize>[0]
 
 describe('resolveCanvasResize', () => {
   it('resolves all side handles without requiring DOM or engine state', () => {

@@ -18,7 +18,7 @@ export const getSlug = (search: EditorSearch): SidebarItemSlug | null => {
  * Type guard to check if a sidebar item is a specific type.
  * Returns true if the item has the specified type, false otherwise.
  */
-export function isSidebarItemType<T extends AnySidebarItem['type']>(
+function isSidebarItemType<T extends AnySidebarItem['type']>(
   item: AnySidebarItem | null | undefined,
   type: T,
 ): item is Extract<AnySidebarItem, { type: T }> {
@@ -52,17 +52,6 @@ export function isGameMap(item: AnySidebarItem | null | undefined): item is Game
  */
 export function isFile(item: AnySidebarItem | null | undefined): item is SidebarFile {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.files)
-}
-
-/**
- * Safely extracts a typed sidebar item from a union type.
- * Returns the item if it matches the specified type, undefined otherwise.
- */
-export function getSidebarItemAs<T extends AnySidebarItem['type']>(
-  item: AnySidebarItem | null | undefined,
-  type: T,
-): Extract<AnySidebarItem, { type: T }> | undefined {
-  return isSidebarItemType(item, type) ? item : undefined
 }
 
 export function getItemTypeLabel(type: SidebarItemType): string {

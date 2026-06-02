@@ -3,7 +3,6 @@ import {
   getNextSelectedIds,
   isExclusivelySelectedNode,
   areStringSetsEqual,
-  mergeSelectedIds,
 } from '../../system/canvas-selection'
 import { isPrimarySelectionModifier } from '../canvas-selection-utils'
 
@@ -19,14 +18,6 @@ describe('canvas-selection-utils', () => {
     expect(isPrimarySelectionModifier({ ctrlKey: false, metaKey: true }, 'mac')).toBe(true)
     expect(isPrimarySelectionModifier({ ctrlKey: true, metaKey: false }, 'mac')).toBe(false)
     expect(isPrimarySelectionModifier({ ctrlKey: false, metaKey: false }, 'mac')).toBe(false)
-  })
-
-  it('unions committed selection ids without duplicates when additive gestures merge', () => {
-    expect(mergeSelectedIds(new Set(['a', 'b']), new Set(['b', 'c']))).toEqual(
-      new Set(['a', 'b', 'c']),
-    )
-    expect(mergeSelectedIds(new Set(), new Set(['b', 'c']))).toEqual(new Set(['b', 'c']))
-    expect(mergeSelectedIds(new Set(), new Set())).toEqual(new Set())
   })
 
   it('compares set membership without requiring array conversion', () => {

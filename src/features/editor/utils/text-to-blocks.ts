@@ -28,7 +28,7 @@ export function convertBlocksToMarkdown(blocks: Array<CustomPartialBlock>): stri
   )
 }
 
-export function isMarkdownFile(fileName: string, mimeType: string): boolean {
+function isMarkdownFile(fileName: string, mimeType: string): boolean {
   const lowerName = fileName.toLowerCase()
   return (
     mimeType === 'text/markdown' ||
@@ -38,7 +38,7 @@ export function isMarkdownFile(fileName: string, mimeType: string): boolean {
   )
 }
 
-export function convertTextContentToBlocks(
+function convertTextContentToBlocks(
   textContent: string,
   fileName: string,
   mimeType: string,
@@ -109,7 +109,7 @@ export async function convertTextToBlocks(file: File): Promise<Array<CustomBlock
   return convertTextContentToBlocks(textContent, file.name, file.type)
 }
 
-export function convertTextToHTML(text: string): string {
+function convertTextToHTML(text: string): string {
   if (!text.trim()) {
     return '<p></p>'
   }

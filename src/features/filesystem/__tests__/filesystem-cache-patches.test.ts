@@ -5,7 +5,6 @@ import { createFileSystemCacheAdapter } from '../filesystem-cache-adapter'
 import { applyFileSystemPatchesToSidebarCache } from '../filesystem-cache-patches'
 import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../optimistic-sidebar-items'
 import {
-  invertFileSystemPatches,
   projectMoveOperations,
   projectTrashRoots,
 } from 'shared/sidebar-items/filesystem/patch-projection'
@@ -27,7 +26,7 @@ function rawSidebarRow(item: ReturnType<typeof createNote>) {
 }
 
 describe('filesystem cache patches', () => {
-  it('applies and inverts update patches across sidebar and trash caches', () => {
+  it('applies update patches across sidebar and trash caches', () => {
     const folder = createFolder()
     const note = createNote()
     const patch = {
@@ -41,9 +40,6 @@ describe('filesystem cache patches', () => {
       patch,
     ])
     expect(moved.sidebar.find((item) => item._id === note._id)?.parentId).toBe(folder._id)
-
-    const restored = applyFileSystemPatchesToSidebarCache(moved, invertFileSystemPatches([patch]))
-    expect(restored.sidebar.find((item) => item._id === note._id)?.parentId).toBeNull()
   })
 
   it('uses status to place items into sidebar, trash, or neither cache', () => {

@@ -5,13 +5,10 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type {
   CanvasDropZoneData,
-  EmptyEditorDropZoneData,
   MapDropZoneData,
   NoteEditorDropZoneData,
   ResolvedSidebarItemDropData,
   SidebarDropData,
-  SidebarRootDropZoneData,
-  TrashDropZoneData,
 } from '~/features/dnd/utils/drop-target-data'
 import type { Id } from 'convex/_generated/dataModel'
 import {
@@ -47,6 +44,21 @@ import { testId } from '~/test/helpers/test-id'
 import { resolveDropFeedback } from '../drop-feedback'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+
+interface SidebarRootDropZoneData {
+  [key: string | symbol]: unknown
+  type: typeof SIDEBAR_ROOT_DROP_TYPE
+}
+
+interface EmptyEditorDropZoneData {
+  [key: string | symbol]: unknown
+  type: typeof EMPTY_EDITOR_DROP_TYPE
+}
+
+interface TrashDropZoneData {
+  [key: string | symbol]: unknown
+  type: typeof TRASH_DROP_ZONE_TYPE
+}
 
 function createCtx(overrides?: Partial<DropPlanningContext>): DropPlanningContext {
   return {

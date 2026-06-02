@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { BlockNoteEditor } from '@blocknote/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useNoteEditorState } from '../useNoteEditorState'
-import { editorSchema } from '~/features/editor/editor-specs'
+import { createEditorSchema } from '~/features/editor/editor-specs'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import { testId } from '~/test/helpers/test-id'
 
@@ -63,7 +63,9 @@ describe('useNoteEditorState', () => {
     const { result, unmount } = renderHook(() =>
       useNoteEditorState(testId<'sidebarItems'>('note-id')),
     )
-    const mockEditor = BlockNoteEditor.create({ schema: editorSchema }) as CustomBlockNoteEditor
+    const mockEditor = BlockNoteEditor.create({
+      schema: createEditorSchema(),
+    }) as unknown as CustomBlockNoteEditor
     const collaborativeDoc = null
     const collaborativeProvider = null
 

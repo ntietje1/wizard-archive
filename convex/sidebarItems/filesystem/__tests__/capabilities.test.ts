@@ -2,11 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
-import { createSidebarItem } from './testSidebarItem'
+import { createSidebarItem } from '../../../_test/sidebarItem.helper'
 import {
   evaluateCopy,
   evaluateMoveToParent,
-  evaluatePasteTarget,
   evaluatePermanentDelete,
   evaluateTrash,
 } from '../../../../shared/sidebar-items/filesystem/capabilities'
@@ -75,19 +74,6 @@ describe('sidebar operation capabilities', () => {
       ok: false,
       code: 'circular',
       message: 'This move would create a circular reference',
-    })
-  })
-
-  it('rejects root paste for non-DM actors', () => {
-    const result = evaluatePasteTarget(
-      { role: CAMPAIGN_MEMBER_ROLE.Player },
-      { parentId: null, parent: null },
-    )
-
-    expect(result).toEqual({
-      ok: false,
-      code: 'dm_only',
-      message: 'Only the DM can create items at the root level',
     })
   })
 
@@ -198,17 +184,6 @@ describe('sidebar operation capabilities', () => {
     expect(evaluatePermanentDelete({ role: CAMPAIGN_MEMBER_ROLE.DM }, trashedNote)).toEqual({
       ok: true,
     })
-  })
-
-  it('allows DM to paste to accessible folders', () => {
-    const folder = createSidebarItem('folder-1', 'Folder', SIDEBAR_ITEM_TYPES.folders)
-
-    expect(
-      evaluatePasteTarget(
-        { role: CAMPAIGN_MEMBER_ROLE.DM },
-        { parentId: folder._id, parent: folder },
-      ),
-    ).toEqual({ ok: true })
   })
 
   it('rejects trashing an item that is already trashed', () => {

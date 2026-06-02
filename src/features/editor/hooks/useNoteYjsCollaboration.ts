@@ -6,12 +6,16 @@ import { api } from 'convex/_generated/api'
 import { useConvexYjsCollaboration } from './useConvexYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ConvexYjsProvider } from '../providers/convex-yjs-provider'
+import {
+  flushConvexYjsProviderPendingUpdates,
+  isConvexYjsProviderApplyingRemoteUpdate,
+} from '../providers/convex-yjs-provider'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { logger } from '~/shared/utils/logger'
 
-export const PERSIST_INTERVAL_MS = 10_000
-export const LIVE_YJS_PERSIST_DEBOUNCE_MS = 750
+const PERSIST_INTERVAL_MS = 10_000
+const LIVE_YJS_PERSIST_DEBOUNCE_MS = 750
 
 type ConvexClient = ReturnType<typeof useConvex>
 type QueryClient = ReturnType<typeof useQueryClient>
@@ -53,7 +57,7 @@ function persistLifecycleKey(
 
 async function flushProviderForPersist(provider: ConvexYjsProvider, label: string) {
   try {
-    const flushed = await provider.flushPendingUpdates()
+    const flushed = await flushConvexYjsProviderPendingUpdates(provider)
     if (flushed === false) {
       logger.error(`[Notes] ${label} flush did not drain all updates`)
       return false
@@ -303,7 +307,7 @@ export function useNoteYjsCollaboration(
     }
 
     const handleDocUpdate = (_update: Uint8Array, origin: unknown) => {
-      if (origin === provider && provider.isApplyingRemoteUpdate) {
+      if (origin === provider && isConvexYjsProviderApplyingRemoteUpdate(provider)) {
         return
       }
       schedulePersist()

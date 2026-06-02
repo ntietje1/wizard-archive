@@ -1,12 +1,12 @@
-import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
+import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_STATUS,
   SIDEBAR_ITEM_TYPES,
-} from '../../../../shared/sidebar-items/types'
-import { slugify } from '../../../../shared/slugs'
-import type { Id } from '../../../_generated/dataModel'
-import type { AnySidebarItem } from '../../../../shared/sidebar-items/model-types'
+} from '../../shared/sidebar-items/types'
+import { slugify } from '../../shared/slugs'
+import type { AnySidebarItem } from '../../shared/sidebar-items/model-types'
+import type { Id } from '../_generated/dataModel'
 
 function assertNeverSidebarItemType(type: never): never {
   throw new Error(`Unhandled sidebar item type: ${String(type)}`)

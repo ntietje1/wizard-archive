@@ -3,7 +3,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { captureCanvasRichTextSelection } from './canvas-rich-text-blocknote-adapter'
 import { resolveCanvasRichTextSelectionTextColor } from './canvas-rich-text-selection-colors'
 
-export type CanvasRichTextFormattingEditor = Pick<
+type CanvasRichTextFormattingEditor = Pick<
   BlockNoteEditor<any, any, any>,
   | 'document'
   | 'replaceBlocks'

@@ -9,17 +9,16 @@ import { createCanvasEngine } from '../../../system/canvas-engine'
 import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
 import { resolveCanvasScreenMinimumStrokeWidthCss as screenMinimumStrokeWidthCss } from '../../../utils/canvas-screen-stroke-width'
 import type { CanvasEdgeRendererProps } from '../../canvas-edge-types'
-import {
-  DEFAULT_CANVAS_EDGE_OPACITY,
-  DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
-  PENDING_PREVIEW_EDGE_OPACITY,
-} from '../../shared/canvas-edge-style'
+import { PENDING_PREVIEW_EDGE_OPACITY } from '../../shared/canvas-edge-style'
 import { BezierCanvasEdge } from '../bezier-canvas-edge'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../bezier-canvas-edge-geometry'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { ReactElement } from 'react'
 
 describe('BezierCanvasEdge', () => {
+  const defaultEdgeOpacity = 1
+  const defaultEdgeStrokeWidth = 1.5
+
   it('keeps baseline styling when no pending preview is active', () => {
     renderEdge(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
 
@@ -29,9 +28,9 @@ describe('BezierCanvasEdge', () => {
     )
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'false')
     expect(getPrimaryPath()).toHaveStyle({
-      opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
+      opacity: String(defaultEdgeOpacity),
       stroke: 'var(--foreground)',
-      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeWidth: String(screenMinimumStrokeWidthCss(defaultEdgeStrokeWidth)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -52,9 +51,9 @@ describe('BezierCanvasEdge', () => {
     )
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'false')
     expect(getPrimaryPath()).toHaveStyle({
-      opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
+      opacity: String(defaultEdgeOpacity),
       stroke: 'var(--foreground)',
-      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeWidth: String(screenMinimumStrokeWidthCss(defaultEdgeStrokeWidth)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -68,9 +67,9 @@ describe('BezierCanvasEdge', () => {
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-visual-selected', 'true')
     expect(getPrimaryPath()).toHaveStyle({
-      opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
+      opacity: String(defaultEdgeOpacity),
       stroke: 'var(--foreground)',
-      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeWidth: String(screenMinimumStrokeWidthCss(defaultEdgeStrokeWidth)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -120,7 +119,7 @@ describe('BezierCanvasEdge', () => {
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'true')
     expect(getPrimaryPath()).toHaveStyle({
       stroke: 'var(--foreground)',
-      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeWidth: String(screenMinimumStrokeWidthCss(defaultEdgeStrokeWidth)),
       opacity: String(PENDING_PREVIEW_EDGE_OPACITY),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
@@ -142,9 +141,9 @@ describe('BezierCanvasEdge', () => {
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-visual-selected', 'false')
     expect(getPrimaryPath()).toHaveStyle({
-      opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
+      opacity: String(defaultEdgeOpacity),
       stroke: 'var(--foreground)',
-      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeWidth: String(screenMinimumStrokeWidthCss(defaultEdgeStrokeWidth)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })

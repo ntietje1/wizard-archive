@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  blockNoteBlockSchema,
-  canvasPartialBlockNoteBlockSchema,
-} from '../../../shared/editor-blocks/blockSchemas'
+import { blockNoteBlockSchema } from '../../../shared/editor-blocks/blockSchemas'
 import { CANVAS_BLOCK_TYPES } from '../../../shared/editor-blocks/blockRegistry'
-import {
-  customInlineContentSpecs,
-  customStyleSpecs,
-} from '../../../shared/editor-blocks/editor-blocknote-schema'
 import { customBlockSpecs } from '../../../shared/editor-blocks/editor-blocknote-spec-factory'
 import { NOTE_VALUE_PROP_DEFAULTS } from '../../../shared/note-values/schema'
 import { testBlockNoteId } from '../../_test/factories.helper'
@@ -49,32 +42,6 @@ describe('block type coverage', () => {
       })
       expect(result.success, `Validator should reject unknown type "${fakeType}"`).toBe(false)
     }
-  })
-})
-
-// --- Inline content coverage -----------------------------------------------
-
-describe('inline content coverage', () => {
-  it('supports text and value inline content only (link removed)', () => {
-    expect(Object.keys(customInlineContentSpecs)).toEqual(['text', 'value'])
-  })
-})
-
-// --- Style coverage --------------------------------------------------------
-
-describe('style coverage', () => {
-  const expectedStyles = [
-    'bold',
-    'italic',
-    'underline',
-    'strike',
-    'code',
-    'textColor',
-    'backgroundColor',
-  ]
-
-  it('editor schema has the expected styles', () => {
-    expect(Object.keys(customStyleSpecs).sort()).toEqual(expectedStyles.sort())
   })
 })
 
@@ -308,38 +275,5 @@ describe('canvas block subset', () => {
     )
 
     expect(supportedCanvasTypes.sort()).toEqual([...CANVAS_BLOCK_TYPES].sort())
-  })
-
-  it('accepts canvas-supported partial blocks from the note schema family', () => {
-    expect(
-      canvasPartialBlockNoteBlockSchema.safeParse({
-        type: 'paragraph',
-        content: [{ type: 'text', text: 'Hello', styles: { bold: true } }],
-      }).success,
-    ).toBe(true)
-
-    expect(
-      canvasPartialBlockNoteBlockSchema.safeParse({
-        type: 'heading',
-        props: { level: 2 },
-        content: [{ type: 'text', text: 'Title' }],
-      }).success,
-    ).toBe(true)
-  })
-
-  it('rejects note block types that the canvas editor does not support', () => {
-    const excludedTypes = Object.keys(customBlockSpecs).filter(
-      (type) => !CANVAS_BLOCK_TYPES.includes(type as (typeof CANVAS_BLOCK_TYPES)[number]),
-    )
-
-    for (const type of excludedTypes) {
-      expect(
-        canvasPartialBlockNoteBlockSchema.safeParse({
-          type,
-          props: {},
-        }).success,
-        `Canvas subset should reject "${type}"`,
-      ).toBe(false)
-    }
   })
 })

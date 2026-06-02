@@ -3,8 +3,8 @@ import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-scr
 import type { CSSProperties } from 'react'
 
 export const DEFAULT_CANVAS_EDGE_STROKE = 'var(--foreground)'
-export const DEFAULT_CANVAS_EDGE_STROKE_WIDTH = 1.5
-export const DEFAULT_CANVAS_EDGE_OPACITY = 1
+const DEFAULT_CANVAS_EDGE_STROKE_WIDTH = 1.5
+const DEFAULT_CANVAS_EDGE_OPACITY = 1
 export const PENDING_PREVIEW_EDGE_OPACITY = 0.45
 const MIN_CANVAS_EDGE_STROKE_WIDTH = 1
 

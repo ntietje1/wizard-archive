@@ -6,7 +6,7 @@ import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { logger } from '~/shared/utils/logger'
 
-export type PreviewUploadResult =
+type PreviewUploadResult =
   | { status: 'success' }
   | { status: 'not-claimed' }
   | { status: 'error'; error: unknown }

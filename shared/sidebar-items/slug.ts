@@ -11,7 +11,7 @@ const SIDEBAR_ITEM_SLUG_OPTIONS = {
   maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
 } as const
 
-export function validateSidebarItemSlug(value: string): string | null {
+function validateSidebarItemSlug(value: string): string | null {
   return validateSlug(value, SIDEBAR_ITEM_SLUG_OPTIONS)
 }
 

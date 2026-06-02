@@ -3,13 +3,11 @@ import { parseCanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
 import {
   parseCanvasAwarenessUser,
   parseCanvasAwarenessPresence,
-  parseCanvasBounds,
   parseCanvasBoundsDimensions,
   parseCanvasDrawAwarenessState,
   parseCanvasEdgeStyle,
   parseCanvasEdgeType,
   parseCanvasEmbedNodeData,
-  parseCanvasLockedAspectRatio,
   parseCanvasLassoAwarenessState,
   parseCanvasNodeDataByType,
   parseCanvasNodeBorderWidth,
@@ -19,10 +17,8 @@ import {
   parseCanvasResizingAwarenessState,
   parseCanvasSelectionAwarenessState,
   parseCanvasSelectAwarenessState,
-  parseCanvasSidebarItemId,
   parseCanvasStrokeSelectionData,
   parseCanvasStrokeNodeData,
-  parseCanvasTextNodeData,
   parseCanvasDocumentEdge,
   parseCanvasDocumentNode,
   parseCanvasViewport,
@@ -99,19 +95,6 @@ describe('parseCanvasDocumentNode', () => {
 })
 
 describe('canvas node value parsers', () => {
-  it('accepts valid sidebar item ids and positive aspect ratios', () => {
-    expect(parseCanvasSidebarItemId('sidebar-1')).toBe('sidebar-1')
-    expect(parseCanvasLockedAspectRatio(1.5)).toBe(1.5)
-  })
-
-  it('rejects invalid sidebar item ids', () => {
-    expect(parseCanvasSidebarItemId('')).toBeUndefined()
-  })
-
-  it('rejects invalid aspect ratios', () => {
-    expect(parseCanvasLockedAspectRatio(0)).toBeUndefined()
-  })
-
   it('keeps surface colors', () => {
     expect(parseCanvasNodeSurfaceColor('var(--border)')).toBe('var(--border)')
     expect(parseCanvasNodeSurfaceColor(null)).toBeNull()
@@ -196,18 +179,6 @@ describe('canvas runtime node parsers', () => {
     })
 
     expect(
-      parseCanvasTextNodeData({
-        content: [{ type: 'paragraph' }],
-        borderWidth: 200,
-        textColor: 'var(--t-blue)',
-      }),
-    ).toEqual({
-      content: [{ type: 'paragraph' }],
-      borderWidth: 99,
-      textColor: 'var(--t-blue)',
-    })
-
-    expect(
       parseCanvasNodeDataByType('embed', {
         sidebarItemId: 'sidebar-1',
       }),
@@ -255,12 +226,6 @@ describe('canvas runtime node parsers', () => {
 
 describe('canvas geometry parsers', () => {
   it('parses valid bounds, bounds dimensions, and stroke-selection payloads', () => {
-    expect(parseCanvasBounds({ x: 1, y: 2, width: 3, height: 4 })).toEqual({
-      x: 1,
-      y: 2,
-      width: 3,
-      height: 4,
-    })
     expect(parseCanvasBoundsDimensions({ width: 30, height: 40, x: 99 })).toEqual({
       width: 30,
       height: 40,
@@ -285,7 +250,6 @@ describe('canvas geometry parsers', () => {
   })
 
   it('rejects malformed bounds and stroke-selection payloads', () => {
-    expect(parseCanvasBounds({ x: 1, y: 2, width: 'bad', height: 4 })).toBeNull()
     expect(parseCanvasBoundsDimensions({ width: 30 })).toBeNull()
     expect(
       parseCanvasStrokeSelectionData({

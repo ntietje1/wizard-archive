@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
-import { createSidebarItem } from './testSidebarItem'
+import { createSidebarItem } from '../../../_test/sidebarItem.helper'
 import { planTransferOperations } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
 import { normalizeSelectedRoots } from '../../../../shared/sidebar-items/filesystem/selection'
 import type { OperationPlannerItem } from '../../../../shared/sidebar-items/filesystem/selection'

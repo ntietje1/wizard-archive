@@ -3,7 +3,6 @@ import { getStrokeSelectionBounds } from './stroke/stroke-node-interactions'
 import { getCanvasNodeBounds } from './shared/canvas-node-bounds'
 import {
   matchesCanvasNodeLassoSelection,
-  matchesCanvasNodePointSelection,
   matchesCanvasNodeRectangleSelection,
 } from './canvas-node-modules'
 import { normalizeCanvasNode } from './canvas-node-normalization'
@@ -63,22 +62,6 @@ function isCanvasSelectionCandidate(
 
   const bounds = getBounds(node)
   return !bounds || rectIntersectsBounds(candidateBounds, bounds)
-}
-
-export function findCanvasNodeAtPoint(
-  nodes: ReadonlyArray<CanvasDocumentNode>,
-  point: Point2D,
-  context: CanvasNodeSelectionContext,
-): string | null {
-  for (let index = nodes.length - 1; index >= 0; index -= 1) {
-    const node = nodes[index]
-    const normalizedNode = getSelectionNode(node)
-    if (normalizedNode && matchesCanvasNodePointSelection(normalizedNode, point, context)) {
-      return node.id
-    }
-  }
-
-  return null
 }
 
 export function getCanvasNodesMatchingRectangle(

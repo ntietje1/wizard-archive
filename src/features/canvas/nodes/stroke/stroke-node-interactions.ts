@@ -2,7 +2,6 @@ import type { Point2D } from '../../utils/canvas-awareness-types'
 import {
   boundsFromPoints,
   pointInPolygon,
-  pointToSegmentDistSq,
   rectIntersectsBounds,
   segmentsIntersect,
 } from '../../utils/canvas-geometry-utils'
@@ -69,32 +68,6 @@ export function polylineIntersectsStroke(
   return false
 }
 
-function pointNearStrokePath(
-  px: number,
-  py: number,
-  points: Array<[number, number, number]>,
-  threshold: number = 20,
-): boolean {
-  if (points.length < 2) return false
-
-  const thresholdSq = threshold * threshold
-  for (let i = 0; i < points.length - 1; i++) {
-    if (
-      pointToSegmentDistSq(
-        px,
-        py,
-        points[i][0],
-        points[i][1],
-        points[i + 1][0],
-        points[i + 1][1],
-      ) <= thresholdSq
-    ) {
-      return true
-    }
-  }
-  return false
-}
-
 export function getStrokeSelectionPadding(zoom: number): number {
   const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
   return STROKE_SELECTION_PADDING_PX / safeZoom
@@ -110,33 +83,6 @@ export function getStrokeSelectionBounds(node: StrokeNodeLike, zoom: number): Bo
     width: bounds.width + threshold * 2,
     height: bounds.height + threshold * 2,
   }
-}
-
-function pointHitsStrokeSelection(point: Point2D, node: StrokeNodeLike, zoom: number): boolean {
-  return pointNearStrokePath(
-    point.x,
-    point.y,
-    getAbsoluteStrokePointsForNode(node),
-    getStrokeSelectionPadding(zoom),
-  )
-}
-
-export function strokeNodeContainsPoint(
-  node: StrokeNodeLike,
-  point: Point2D,
-  zoom: number,
-): boolean {
-  const bounds = getStrokeSelectionBounds(node, zoom)
-  if (
-    point.x < bounds.x ||
-    point.x > bounds.x + bounds.width ||
-    point.y < bounds.y ||
-    point.y > bounds.y + bounds.height
-  ) {
-    return false
-  }
-
-  return pointHitsStrokeSelection(point, node, zoom)
 }
 
 function strokePathIntersectsPolygon(

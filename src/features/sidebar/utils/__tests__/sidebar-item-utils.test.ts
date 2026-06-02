@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
-  isValidSidebarItemColor,
   normalizeSidebarItemColorOrDefault,
 } from 'shared/sidebar-items/color'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
@@ -11,13 +10,11 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import {
   buildBreadcrumbs,
   getItemTypeLabel,
-  getSidebarItemAs,
   getSlug,
   isFile,
   isFolder,
   isGameMap,
   isNote,
-  isSidebarItemType,
 } from '~/features/sidebar/utils/sidebar-item-utils'
 import {
   createFile,
@@ -55,30 +52,6 @@ describe('type guards', () => {
     expect(isFile(null)).toBe(false)
     expect(isFile(undefined)).toBe(false)
   })
-
-  it('isSidebarItemType works with explicit type parameter', () => {
-    expect(isSidebarItemType(createNote(), SIDEBAR_ITEM_TYPES.notes)).toBe(true)
-    expect(isSidebarItemType(createNote(), SIDEBAR_ITEM_TYPES.folders)).toBe(false)
-    expect(isSidebarItemType(null, SIDEBAR_ITEM_TYPES.notes)).toBe(false)
-    expect(isSidebarItemType(undefined, SIDEBAR_ITEM_TYPES.notes)).toBe(false)
-  })
-})
-
-describe('getSidebarItemAs', () => {
-  it('returns item when type matches', () => {
-    const note = createNote()
-    expect(getSidebarItemAs(note, SIDEBAR_ITEM_TYPES.notes)).toBe(note)
-  })
-
-  it('returns undefined when type does not match', () => {
-    const note = createNote()
-    expect(getSidebarItemAs(note, SIDEBAR_ITEM_TYPES.folders)).toBeUndefined()
-  })
-
-  it('returns undefined for null/undefined', () => {
-    expect(getSidebarItemAs(null, SIDEBAR_ITEM_TYPES.notes)).toBeUndefined()
-    expect(getSidebarItemAs(undefined, SIDEBAR_ITEM_TYPES.notes)).toBeUndefined()
-  })
 })
 
 describe('getSlug', () => {
@@ -97,39 +70,6 @@ describe('getItemTypeLabel', () => {
     expect(getItemTypeLabel(SIDEBAR_ITEM_TYPES.folders)).toBe('Folder')
     expect(getItemTypeLabel(SIDEBAR_ITEM_TYPES.gameMaps)).toBe('Map')
     expect(getItemTypeLabel(SIDEBAR_ITEM_TYPES.files)).toBe('File')
-  })
-})
-
-describe('isValidSidebarItemColor', () => {
-  it('accepts valid 6-digit hex colors', () => {
-    expect(isValidSidebarItemColor('#FF0000')).toBe(true)
-    expect(isValidSidebarItemColor('#14b8a6')).toBe(true)
-  })
-
-  it('accepts valid 8-digit hex colors', () => {
-    expect(isValidSidebarItemColor('#FF000080')).toBe(true)
-  })
-
-  it('rejects invalid colors', () => {
-    expect(isValidSidebarItemColor('#FFF')).toBe(false)
-    expect(isValidSidebarItemColor('red')).toBe(false)
-    expect(isValidSidebarItemColor('')).toBe(false)
-    expect(isValidSidebarItemColor(null)).toBe(false)
-    expect(isValidSidebarItemColor(undefined)).toBe(false)
-  })
-
-  it('rejects hex without # prefix', () => {
-    expect(isValidSidebarItemColor('FF0000')).toBe(false)
-  })
-
-  it('rejects 5-digit and 7-digit hex', () => {
-    expect(isValidSidebarItemColor('#12345')).toBe(false)
-    expect(isValidSidebarItemColor('#1234567')).toBe(false)
-  })
-
-  it('rejects non-hex characters', () => {
-    expect(isValidSidebarItemColor('#GGGGGG')).toBe(false)
-    expect(isValidSidebarItemColor('#ZZZZZZ')).toBe(false)
   })
 })
 

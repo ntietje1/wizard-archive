@@ -60,7 +60,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
 
 type ReadyCanvasSession = Extract<CanvasViewerSession, { status: 'ready' }>
 
-export function CanvasEditor({
+function CanvasEditor({
   canvasId,
   campaignId,
   canEdit,

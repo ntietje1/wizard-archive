@@ -259,27 +259,3 @@ export function applyFileSystemPatchesToSnapshot<T extends { _id: SidebarItemId 
       .filter((item): item is T | PatchProjectionItem => Boolean(item)),
   }
 }
-
-export function invertFileSystemPatches(patches: Array<FileSystemPatch>): Array<FileSystemPatch> {
-  return patches.map((patch): FileSystemPatch => {
-    if (patch.type === 'upsertSidebarItem') {
-      return {
-        type: 'removeSidebarItem',
-        itemId: patch.item._id,
-        snapshot: patch.item,
-      }
-    }
-    if (patch.type === 'removeSidebarItem') {
-      if (!patch.snapshot) {
-        throw new Error(`Cannot invert remove patch without a snapshot for ${patch.itemId}`)
-      }
-      return { type: 'upsertSidebarItem', item: patch.snapshot }
-    }
-    return {
-      type: 'updateSidebarItem',
-      itemId: patch.itemId,
-      before: patch.fields,
-      fields: patch.before,
-    }
-  })
-}

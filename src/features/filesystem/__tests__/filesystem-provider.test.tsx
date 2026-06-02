@@ -9,7 +9,7 @@ import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import { FileSystemProvider } from '../filesystem-provider'
 import { useFileSystem } from '../useFileSystem'
 import { useFileSystemUndoStore } from '../filesystem-undo-store'
-import { useFileSystemClipboardStore } from '../filesystem-clipboard-store'
+import { setFileSystemClipboard, useFileSystemClipboard } from '../filesystem-clipboard-store'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 
@@ -395,12 +395,22 @@ function ClipboardButtons({
   )
 }
 
+function ClipboardProbe() {
+  const clipboard = useFileSystemClipboard()
+  return <output data-testid="clipboard">{JSON.stringify(clipboard)}</output>
+}
+
+function getRenderedClipboard() {
+  const text = screen.getByTestId('clipboard').textContent
+  return text ? JSON.parse(text) : null
+}
+
 describe('FileSystemProvider', () => {
   beforeEach(() => {
     sidebarItems = []
     trashItems = []
     useFileSystemUndoStore.getState().reset()
-    useFileSystemClipboardStore.getState().clearClipboard()
+    setFileSystemClipboard(null)
     useSidebarUIStore.getState().clearSelectionForCampaignChange()
     executeMutateAsync.mockReset()
     undoMutateAsync.mockReset()
@@ -851,18 +861,19 @@ describe('FileSystemProvider', () => {
     trashItems = [trashedItem]
     render(
       <FileSystemProvider>
+        <ClipboardProbe />
         <ClipboardButtons itemId={trashedItem._id} />
       </FileSystemProvider>,
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
-    expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
+    expect(getRenderedClipboard()).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
     expect(executeMutateAsync).not.toHaveBeenCalled()
     expect(toastLoadingMock).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Cut' }))
-    expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
+    expect(getRenderedClipboard()).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
     expect(executeMutateAsync).not.toHaveBeenCalled()
     expect(toastLoadingMock).not.toHaveBeenCalled()
@@ -886,6 +897,7 @@ describe('FileSystemProvider', () => {
     sidebarItems = [source, target, conflictingChild]
     render(
       <FileSystemProvider>
+        <ClipboardProbe />
         <ClipboardButtons itemId={source._id} targetParentId={target._id} />
       </FileSystemProvider>,
     )
@@ -896,7 +908,7 @@ describe('FileSystemProvider', () => {
     await screen.findByRole('dialog', { name: 'Resolve File Conflict' })
     expect(executeMutateAsync).not.toHaveBeenCalled()
     expect(toastLoadingMock).not.toHaveBeenCalled()
-    expect(useFileSystemClipboardStore.getState().clipboard).toMatchObject({
+    expect(getRenderedClipboard()).toMatchObject({
       mode: 'cut',
       itemIds: [source._id],
     })
@@ -906,7 +918,7 @@ describe('FileSystemProvider', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Resolve File Conflict' })).toBeNull(),
     )
-    expect(useFileSystemClipboardStore.getState().clipboard).toMatchObject({
+    expect(getRenderedClipboard()).toMatchObject({
       mode: 'cut',
       itemIds: [source._id],
     })

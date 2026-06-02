@@ -53,12 +53,8 @@ export function getDefaultSidebarItemIconName(type: SidebarItemType): SidebarIte
   return DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE[type]
 }
 
-export function validateSidebarItemIconName(iconName: string): string | null {
+function validateSidebarItemIconName(iconName: string): string | null {
   return SIDEBAR_ITEM_ICON_NAME_SET.has(iconName) ? null : 'Icon is not supported'
-}
-
-export function parseSidebarItemIconName(iconName: string): SidebarItemIconName | null {
-  return SIDEBAR_ITEM_ICON_NAME_SET.has(iconName) ? (iconName as SidebarItemIconName) : null
 }
 
 export function assertSidebarItemIconName(iconName: string): SidebarItemIconName {

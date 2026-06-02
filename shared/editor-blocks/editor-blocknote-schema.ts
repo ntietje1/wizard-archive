@@ -23,11 +23,11 @@ const headlessRenderers = {
   },
 }
 
-export const customInlineContentSpecs = createCustomInlineContentSpecs({
+const customInlineContentSpecs = createCustomInlineContentSpecs({
   valueInline: headlessRenderers.valueInline,
 })
 
-export const customStyleSpecs = createCustomStyleSpecs({
+const customStyleSpecs = createCustomStyleSpecs({
   textColor: headlessRenderers.textColor,
 })
 

@@ -16,6 +16,7 @@ const {
   mockApplyRemoteUpdates,
   mockApplyRemoteAwareness,
   mockSetUser,
+  mockSetWritable,
   mockUseCampaign,
   MockConvexYjsProvider,
 } = vi.hoisted(() => {
@@ -28,6 +29,7 @@ const {
     mockApplyRemoteUpdates: vi.fn(),
     mockApplyRemoteAwareness: vi.fn(),
     mockSetUser: vi.fn(),
+    mockSetWritable: vi.fn(),
     mockUseCampaign: vi.fn().mockReturnValue({ campaignId: 'test-campaign-id' }),
     MockConvexYjsProvider: vi.fn(),
   }
@@ -60,6 +62,10 @@ vi.mock('~/shared/hooks/useCampaignQuery', () => ({
 
 vi.mock('../../providers/convex-yjs-provider', () => ({
   ConvexYjsProvider: MockConvexYjsProvider,
+  applyConvexYjsProviderRemoteAwareness: mockApplyRemoteAwareness,
+  applyConvexYjsProviderRemoteUpdates: mockApplyRemoteUpdates,
+  setConvexYjsProviderUser: mockSetUser,
+  setConvexYjsProviderWritable: mockSetWritable,
 }))
 
 describe('useConvexYjsCollaboration', () => {
@@ -75,6 +81,7 @@ describe('useConvexYjsCollaboration', () => {
     mockApplyRemoteUpdates.mockClear()
     mockApplyRemoteAwareness.mockClear()
     mockSetUser.mockClear()
+    mockSetWritable.mockClear()
     mockUseCampaign.mockReturnValue({ campaignId: 'test-campaign-id' })
 
     MockConvexYjsProvider.mockImplementation(function (
@@ -84,11 +91,8 @@ describe('useConvexYjsCollaboration', () => {
       _config: unknown,
     ) {
       this.destroy = mockProviderDestroy
-      this.applyRemoteUpdates = mockApplyRemoteUpdates
-      this.applyRemoteAwareness = mockApplyRemoteAwareness
-      this.setUser = mockSetUser
-      this.writable = false
       this.awareness = { setLocalStateField: vi.fn() }
+      this.lastAppliedSeq = -1
       // eslint-disable-next-line @typescript-eslint/no-this-alias
       lastProviderInstance = this
     })
@@ -137,7 +141,7 @@ describe('useConvexYjsCollaboration', () => {
 
   it('calls setUser on mount', () => {
     renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
-    expect(mockSetUser).toHaveBeenCalledWith(USER)
+    expect(mockSetUser).toHaveBeenCalledWith(lastProviderInstance, USER)
   })
 
   it('updates user when user changes', () => {
@@ -151,7 +155,7 @@ describe('useConvexYjsCollaboration', () => {
     const updatedUser = { name: 'New Name', color: '#00ff00' }
     rerender({ user: updatedUser })
 
-    expect(mockSetUser).toHaveBeenCalledWith(updatedUser)
+    expect(mockSetUser).toHaveBeenCalledWith(lastProviderInstance, updatedUser)
   })
 
   it('transitions isLoading to false when updates data arrives', () => {
@@ -174,7 +178,7 @@ describe('useConvexYjsCollaboration', () => {
 
     renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
 
-    expect(mockApplyRemoteUpdates).toHaveBeenCalledWith(updates)
+    expect(mockApplyRemoteUpdates).toHaveBeenCalledWith(lastProviderInstance, updates)
   })
 
   it('applies remote awareness when awareness data arrives', () => {
@@ -186,7 +190,7 @@ describe('useConvexYjsCollaboration', () => {
 
     renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
 
-    expect(mockApplyRemoteAwareness).toHaveBeenCalledWith(awarenessEntries)
+    expect(mockApplyRemoteAwareness).toHaveBeenCalledWith(lastProviderInstance, awarenessEntries)
   })
 
   it('destroys provider on unmount', async () => {
@@ -208,12 +212,12 @@ describe('useConvexYjsCollaboration', () => {
 
   it('sets writable to true when canEdit is true', () => {
     renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
-    expect(lastProviderInstance.writable).toBe(true)
+    expect(mockSetWritable).toHaveBeenCalledWith(lastProviderInstance, true)
   })
 
   it('sets writable to false when canEdit is false', () => {
     renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, false))
-    expect(lastProviderInstance.writable).toBe(false)
+    expect(mockSetWritable).toHaveBeenCalledWith(lastProviderInstance, false)
   })
 
   it('recreates provider when documentId changes', async () => {

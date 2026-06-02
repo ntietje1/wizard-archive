@@ -48,7 +48,7 @@ export function boundsFromPoints(points: ReadonlyArray<CanvasPosition>): Bounds 
   }
 }
 
-export function unionBounds(left: Bounds, right: Bounds): Bounds {
+function unionBounds(left: Bounds, right: Bounds): Bounds {
   const minX = Math.min(left.x, right.x)
   const minY = Math.min(left.y, right.y)
   const maxX = Math.max(left.x + left.width, right.x + right.width)
@@ -174,28 +174,4 @@ export function polygonIntersectsBounds(
   }
 
   return false
-}
-
-export function pointToSegmentDistSq(
-  px: number,
-  py: number,
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-): number {
-  const dx = bx - ax
-  const dy = by - ay
-  const lenSq = dx * dx + dy * dy
-  if (lenSq < 1e-10) {
-    const ex = px - ax
-    const ey = py - ay
-    return ex * ex + ey * ey
-  }
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq))
-  const projX = ax + t * dx
-  const projY = ay + t * dy
-  const ex = px - projX
-  const ey = py - projY
-  return ex * ex + ey * ey
 }

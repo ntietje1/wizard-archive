@@ -1,6 +1,6 @@
 import type { LinkPathKind, LinkResolvableItem } from './types'
 
-export function getItemPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
+function getItemPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   item: T,
   itemsMap: Map<TItemId, T>,
 ): Array<string> {
@@ -110,10 +110,7 @@ export function resolveItemByPath<TItemId extends string, T extends LinkResolvab
   return resolveAllByPath(pathSegments, allItems, itemsMap)[0]
 }
 
-export function resolveRelativeItemByPath<
-  TItemId extends string,
-  T extends LinkResolvableItem<TItemId>,
->(
+function resolveRelativeItemByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   pathSegments: Array<string>,
   allItems: Array<T>,
   itemsMap: Map<TItemId, T>,
@@ -172,7 +169,7 @@ export function resolveParsedItemPath<
     : resolveItemByPath(pathSegments, allItems, itemsMap)
 }
 
-export function resolveAllByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
+function resolveAllByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   pathSegments: Array<string>,
   allItems: Array<T>,
   itemsMap: Map<TItemId, T>,
@@ -187,7 +184,7 @@ export function resolveAllByPath<TItemId extends string, T extends LinkResolvabl
   return rankMatches(matches, itemsMap)
 }
 
-export function isPathUnique<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
+function isPathUnique<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   pathSegments: Array<string>,
   allItems: Array<T>,
   itemsMap: Map<TItemId, T>,

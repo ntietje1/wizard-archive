@@ -151,7 +151,6 @@ import type * as sessions_functions_startSession from "../sessions/functions/sta
 import type * as sessions_functions_updateSession from "../sessions/functions/updateSession.js";
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
-import type * as sidebarItems_filesystem___tests___testSidebarItem from "../sidebarItems/filesystem/__tests__/testSidebarItem.js";
 import type * as sidebarItems_filesystem_access from "../sidebarItems/filesystem/access.js";
 import type * as sidebarItems_filesystem_ancestors from "../sidebarItems/filesystem/ancestors.js";
 import type * as sidebarItems_filesystem_capabilities from "../sidebarItems/filesystem/capabilities.js";
@@ -391,7 +390,6 @@ declare const fullApi: ApiFromModules<{
   "sessions/functions/updateSession": typeof sessions_functions_updateSession;
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
-  "sidebarItems/filesystem/__tests__/testSidebarItem": typeof sidebarItems_filesystem___tests___testSidebarItem;
   "sidebarItems/filesystem/access": typeof sidebarItems_filesystem_access;
   "sidebarItems/filesystem/ancestors": typeof sidebarItems_filesystem_ancestors;
   "sidebarItems/filesystem/capabilities": typeof sidebarItems_filesystem_capabilities;

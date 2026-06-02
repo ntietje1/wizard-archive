@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { classifyCanvasPointerTarget, createCanvasPointerRouter } from '../canvas-pointer-router'
+import { createCanvasPointerRouter } from '../canvas-pointer-router'
 import {
   clearLassoToolLocalOverlay,
   useLassoToolLocalOverlayStore,
@@ -13,68 +13,6 @@ import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
 } from '~/features/canvas/domain/validation'
-
-describe('classifyCanvasPointerTarget', () => {
-  it('classifies pane, node, edge, handle, resize, interactive, and outside targets', () => {
-    const { pane, viewport, node, edge, handle, resizeZone, selectionDragWrapper, input } =
-      createCanvasDom()
-    const outside = document.createElement('div')
-
-    expect(classifyCanvasPointerTarget(viewport, pane)).toEqual({ kind: 'pane' })
-    expect(classifyCanvasPointerTarget(node, pane)).toEqual({ kind: 'node', nodeId: 'node-1' })
-    expect(classifyCanvasPointerTarget(edge, pane)).toEqual({ kind: 'edge' })
-    expect(classifyCanvasPointerTarget(selectionDragWrapper, pane)).toEqual({
-      kind: 'node',
-      nodeId: 'node-1',
-    })
-    expect(classifyCanvasPointerTarget(handle, pane)).toEqual({ kind: 'connection-handle' })
-    expect(classifyCanvasPointerTarget(resizeZone, pane)).toEqual({ kind: 'resize-handle' })
-    expect(classifyCanvasPointerTarget(input, pane)).toEqual({ kind: 'blocked-interactive-child' })
-    expect(classifyCanvasPointerTarget(outside, pane)).toEqual({ kind: 'outside' })
-  })
-
-  it('treats read-only rich embedded notes as draggable node content', () => {
-    const { pane, node } = createCanvasDom()
-    const readOnlyEmbedNote = document.createElement('div')
-    readOnlyEmbedNote.className = 'canvas-rich-text-editor'
-    const editingEmbedNote = document.createElement('div')
-    editingEmbedNote.className = 'canvas-rich-text-editor nodrag nopan'
-    const nodragOnlyEmbedNote = document.createElement('div')
-    nodragOnlyEmbedNote.className = 'canvas-rich-text-editor nodrag'
-    const nopanOnlyEmbedNote = document.createElement('div')
-    nopanOnlyEmbedNote.className = 'canvas-rich-text-editor nopan'
-    const nestedEmbedNote = document.createElement('div')
-    nestedEmbedNote.className = 'canvas-rich-text-editor'
-    const nestedEditor = document.createElement('div')
-    nestedEditor.className = 'canvas-rich-text-editor'
-    nestedEmbedNote.appendChild(nestedEditor)
-    node.append(
-      readOnlyEmbedNote,
-      editingEmbedNote,
-      nodragOnlyEmbedNote,
-      nopanOnlyEmbedNote,
-      nestedEmbedNote,
-    )
-
-    expect(classifyCanvasPointerTarget(readOnlyEmbedNote, pane)).toEqual({
-      kind: 'node',
-      nodeId: 'node-1',
-    })
-    expect(classifyCanvasPointerTarget(editingEmbedNote, pane)).toEqual({
-      kind: 'blocked-interactive-child',
-    })
-    expect(classifyCanvasPointerTarget(nodragOnlyEmbedNote, pane)).toEqual({
-      kind: 'blocked-interactive-child',
-    })
-    expect(classifyCanvasPointerTarget(nopanOnlyEmbedNote, pane)).toEqual({
-      kind: 'blocked-interactive-child',
-    })
-    expect(classifyCanvasPointerTarget(nestedEditor, pane)).toEqual({
-      kind: 'node',
-      nodeId: 'node-1',
-    })
-  })
-})
 
 describe('createCanvasPointerRouter', () => {
   const rafCallbacks = new Map<number, FrameRequestCallback>()

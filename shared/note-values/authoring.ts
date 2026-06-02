@@ -27,10 +27,6 @@ export function buildExternalNoteValuePrefix(notePath: string): string {
   return `[[${notePath}.`
 }
 
-export function buildExternalNoteValueReference(notePath: string, slug: string): string {
-  return `${buildExternalNoteValuePrefix(notePath)}${slug}]]`
-}
-
 export function getFormulaAutocompleteContext(
   expressionSource: string,
   cursorPosition: number,

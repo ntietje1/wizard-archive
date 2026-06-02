@@ -17,11 +17,6 @@ function ctx(overrides: Partial<MenuContext> = {}): MenuContext {
   }
 }
 
-describe('always / never', () => {
-  it('always returns true', () => expect(p.always(ctx())).toBe(true))
-  it('never returns false', () => expect(p.never(ctx())).toBe(false))
-})
-
 describe('isSidebarItem', () => {
   it('true when item is defined', () => {
     expect(p.isSidebarItem(ctx({ item: createNote() }))).toBe(true)
@@ -67,14 +62,8 @@ describe('view context predicates', () => {
     expect(p.inView(VIEW_CONTEXT.SIDEBAR, VIEW_CONTEXT.TOPBAR)(ctx())).toBe(true)
   })
 
-  it('notInView is inverse of inView', () => {
-    expect(p.notInView(VIEW_CONTEXT.TOPBAR)(ctx())).toBe(true)
-    expect(p.notInView(VIEW_CONTEXT.SIDEBAR)(ctx())).toBe(false)
-  })
-
-  it('inSidebar / notInSidebar', () => {
+  it('inSidebar', () => {
     expect(p.inSidebar(ctx())).toBe(true)
-    expect(p.notInSidebar(ctx())).toBe(false)
     expect(p.inSidebar(ctx({ surface: VIEW_CONTEXT.TOPBAR }))).toBe(false)
   })
 
@@ -85,30 +74,17 @@ describe('view context predicates', () => {
 })
 
 describe('role predicates', () => {
-  it('isDm / isPlayer', () => {
+  it('isDm', () => {
     expect(p.isDm(ctx({ memberRole: CAMPAIGN_MEMBER_ROLE.DM }))).toBe(true)
     expect(p.isDm(ctx({ memberRole: CAMPAIGN_MEMBER_ROLE.Player }))).toBe(false)
-    expect(p.isPlayer(ctx({ memberRole: CAMPAIGN_MEMBER_ROLE.Player }))).toBe(true)
-    expect(p.isPlayer(ctx({ memberRole: CAMPAIGN_MEMBER_ROLE.DM }))).toBe(false)
   })
 
   it('isDm returns false when memberRole is undefined', () => {
     expect(p.isDm(ctx())).toBe(false)
   })
-
-  it('isPlayer returns false when memberRole is undefined', () => {
-    expect(p.isPlayer(ctx())).toBe(false)
-  })
 })
 
 describe('permission predicates', () => {
-  it('hasViewAccess includes VIEW and higher', () => {
-    expect(p.hasViewAccess(ctx({ permissionLevel: PERMISSION_LEVEL.VIEW }))).toBe(true)
-    expect(p.hasViewAccess(ctx({ permissionLevel: PERMISSION_LEVEL.EDIT }))).toBe(true)
-    expect(p.hasViewAccess(ctx({ permissionLevel: PERMISSION_LEVEL.FULL_ACCESS }))).toBe(true)
-    expect(p.hasViewAccess(ctx({ permissionLevel: PERMISSION_LEVEL.NONE }))).toBe(false)
-  })
-
   it('hasEditAccess includes EDIT and higher', () => {
     expect(p.hasEditAccess(ctx({ permissionLevel: PERMISSION_LEVEL.VIEW }))).toBe(false)
     expect(p.hasEditAccess(ctx({ permissionLevel: PERMISSION_LEVEL.EDIT }))).toBe(true)
@@ -122,10 +98,7 @@ describe('permission predicates', () => {
 })
 
 describe('trash predicates', () => {
-  it('isItemTrashed / isItemNotTrashed', () => {
-    expect(p.isItemTrashed(ctx({ isItemTrashed: true }))).toBe(true)
-    expect(p.isItemTrashed(ctx({ isItemTrashed: false }))).toBe(false)
-    expect(p.isItemTrashed(ctx())).toBe(false)
+  it('isItemNotTrashed', () => {
     expect(p.isItemNotTrashed(ctx({ isItemTrashed: true }))).toBe(false)
     expect(p.isItemNotTrashed(ctx())).toBe(true)
   })
@@ -154,11 +127,6 @@ describe('map predicates', () => {
     pins: [mockPin],
   }
 
-  it('hasActiveMap', () => {
-    expect(p.hasActiveMap(ctx({ activeMap: mockMap }))).toBe(true)
-    expect(p.hasActiveMap(ctx())).toBe(false)
-  })
-
   it('isPinnedOnActiveMap', () => {
     const pinnedNote = createNote({ _id: testId<'sidebarItems'>('note_pinned') })
     const unpinnedNote = createNote({ _id: testId<'sidebarItems'>('note_other') })
@@ -174,15 +142,6 @@ describe('map predicates', () => {
     expect(p.isActiveMap(ctx({ item: otherItem, activeMap: mockMap }))).toBe(false)
     expect(p.isNotActiveMap(ctx({ item: otherItem, activeMap: mockMap }))).toBe(true)
     expect(p.isNotActiveMap(ctx({ item: mapItem, activeMap: mockMap }))).toBe(false)
-  })
-})
-
-describe('session predicates', () => {
-  it('hasActiveSession / hasNoActiveSession', () => {
-    expect(p.hasActiveSession(ctx({ hasActiveSession: true }))).toBe(true)
-    expect(p.hasActiveSession(ctx())).toBe(false)
-    expect(p.hasNoActiveSession(ctx())).toBe(true)
-    expect(p.hasNoActiveSession(ctx({ hasActiveSession: true }))).toBe(false)
   })
 })
 

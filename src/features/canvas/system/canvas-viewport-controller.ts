@@ -11,7 +11,7 @@ const WHEEL_ZOOM_SENSITIVITY = 0.002
 const MIN_WHEEL_ZOOM_FACTOR = 0.5
 const MAX_WHEEL_ZOOM_FACTOR = 2
 const WHEEL_PAN_SENSITIVITY = 1
-export const VIEWPORT_COMMIT_IDLE_MS = 300
+const VIEWPORT_COMMIT_IDLE_MS = 300
 const FIT_VIEW_PADDING = 0.15
 
 export interface CanvasViewportController {

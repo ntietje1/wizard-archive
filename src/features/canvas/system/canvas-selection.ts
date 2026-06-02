@@ -189,7 +189,7 @@ export function isExclusivelySelectedNode(
   return targetId !== null && selectedNodeIds.size === 1 && selectedNodeIds.has(targetId)
 }
 
-export function mergeSelectedIds(
+function mergeSelectedIds(
   selectedIds: ReadonlySet<string>,
   incomingIds: ReadonlySet<string>,
 ): ReadonlySet<string> {

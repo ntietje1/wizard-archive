@@ -49,7 +49,7 @@ interface TiptapEditorLike {
   ) => void
 }
 
-export function createValueTransferPlugin({
+function createValueTransferPlugin({
   createId = createUuidV4,
   getExistingSlugs = () => [],
 }: ValuePastePluginOptions = {}) {

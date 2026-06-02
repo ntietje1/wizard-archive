@@ -20,7 +20,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: npx playwright install --with-deps chromium
+      - run: vp exec playwright install --with-deps chromium
       - run: vp run test:e2e
         env:
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}

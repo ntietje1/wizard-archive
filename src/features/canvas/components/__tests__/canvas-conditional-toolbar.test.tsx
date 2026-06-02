@@ -2,7 +2,6 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
 import { registerCanvasRichTextFormattingSession } from '../../nodes/shared/canvas-rich-text-formatting-session'
-import type { CanvasRichTextFormattingEditor } from '../../nodes/shared/canvas-rich-text-formatting-session'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import {
   createCanvasRuntime,
@@ -28,6 +27,10 @@ const nodesMock = vi.hoisted(() => ({
 const edgesMock = vi.hoisted(() => ({
   edges: [] as Array<Edge>,
 }))
+
+type CanvasRichTextFormattingEditor = Parameters<
+  typeof registerCanvasRichTextFormattingSession
+>[0]['editor']
 
 const colorPickerMock = vi.hoisted(() => ({
   props: [] as Array<Record<string, unknown>>,

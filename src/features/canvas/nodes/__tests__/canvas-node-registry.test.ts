@@ -5,8 +5,6 @@ import {
 } from '../canvas-node-modules'
 import { normalizeCanvasNode } from '../canvas-node-normalization'
 import type { Id } from 'convex/_generated/dataModel'
-import { canvasNodeTypes } from '../canvas-node-renderers'
-import { TextNode } from '../text/text-node'
 
 describe('canvas node specs', () => {
   it('creates default text nodes from the text node spec', () => {
@@ -91,10 +89,6 @@ describe('canvas node specs', () => {
       height: 200,
       data: { lockedAspectRatio: 2 },
     })
-  })
-
-  it('exposes the static canvas node renderers', () => {
-    expect(canvasNodeTypes.text).toBe(TextNode)
   })
 
   it('returns empty inspectable properties for invalid raw nodes', () => {

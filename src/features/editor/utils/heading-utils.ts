@@ -9,7 +9,7 @@ function extractText(content: InlineContent | undefined): string {
     .join('')
 }
 
-export function normalizeHeadingText(text: string): string {
+function normalizeHeadingText(text: string): string {
   return text.toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
@@ -35,14 +35,6 @@ export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<H
 
   content.forEach(process)
   return headings
-}
-
-export function findHeadingByText(
-  headings: Array<Heading>,
-  searchText: string,
-): Heading | undefined {
-  const normalized = normalizeHeadingText(searchText)
-  return headings.find((h) => h.normalizedText === normalized)
 }
 
 /** Resolve chained heading path (e.g., H1#H2) to final heading */

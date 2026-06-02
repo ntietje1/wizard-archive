@@ -15,7 +15,7 @@ type FileSystemClipboardState = {
   clearClipboard: () => void
 }
 
-export const useFileSystemClipboardStore = create<FileSystemClipboardState>((set) => ({
+const useFileSystemClipboardStore = create<FileSystemClipboardState>((set) => ({
   clipboard: null,
   setClipboard: (clipboard) =>
     set({ clipboard: clipboard && clipboard.itemIds.length > 0 ? clipboard : null }),

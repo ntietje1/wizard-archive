@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { areArraysEqual } from '../canvas-renderer-utils'
-import type { PrimitiveArrayValue } from '../canvas-renderer-utils'
+
+type PrimitiveArrayValue = string | number | boolean | bigint | symbol | null | undefined
 
 describe('canvas renderer utils', () => {
   it('compares primitive arrays by value', () => {

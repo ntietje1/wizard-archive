@@ -360,9 +360,7 @@ function createPartialBlockSchema(
 
 export const partialBlockNoteBlockSchema = createPartialBlockSchema(allFlatBlockContentSchemas)
 
-export const canvasPartialBlockNoteBlockSchema = createPartialBlockSchema(
-  canvasFlatBlockContentSchemas,
-)
+const canvasPartialBlockNoteBlockSchema = createPartialBlockSchema(canvasFlatBlockContentSchemas)
 
 export const partialBlockNoteDocumentSchema = z.array(partialBlockNoteBlockSchema)
 

@@ -4,11 +4,11 @@
 
 import type { Id } from 'convex/_generated/dataModel'
 
-export interface UploadProgressCallback {
+interface UploadProgressCallback {
   (percentage: number): void
 }
 
-export interface UploadOptions {
+interface UploadOptions {
   onProgress?: UploadProgressCallback
   timeout?: number
 }

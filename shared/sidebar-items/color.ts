@@ -6,11 +6,11 @@ export const DEFAULT_SIDEBAR_ITEM_COLOR = '#9a6dd7' as const
 
 const SIDEBAR_ITEM_HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
-export function validateSidebarItemColor(color: string): string | null {
+function validateSidebarItemColor(color: string): string | null {
   return SIDEBAR_ITEM_HEX_COLOR_REGEX.test(color) ? null : 'Color must be a 6- or 8-digit hex value'
 }
 
-export function parseSidebarItemColor(color: string): SidebarItemColor | null {
+function parseSidebarItemColor(color: string): SidebarItemColor | null {
   return validateSidebarItemColor(color) === null ? (color.toLowerCase() as SidebarItemColor) : null
 }
 
@@ -47,10 +47,6 @@ export function coerceSidebarItemColorForInput(
   }
 
   return assertSidebarItemColor(color)
-}
-
-export function isValidSidebarItemColor(color: string | null | undefined): boolean {
-  return typeof color === 'string' && parseSidebarItemColor(color) !== null
 }
 
 export function normalizeSidebarItemColorOrDefault(

@@ -8,7 +8,6 @@ import {
 } from './shared/canvas-node-surface-style'
 import { clampStrokeNodeSize, resizeStrokeNode } from './stroke/stroke-node-model'
 import {
-  strokeNodeContainsPoint,
   strokeNodeIntersectsPolygon,
   strokeNodeIntersectsRect,
 } from './stroke/stroke-node-interactions'
@@ -270,22 +269,6 @@ export function resizeCanvasNode(
   return { ...node, ...resize }
 }
 
-export function matchesCanvasNodePointSelection(
-  node: AnyNormalizedCanvasNode,
-  point: { x: number; y: number },
-  context: { zoom: number },
-): boolean {
-  switch (node.type) {
-    case 'embed':
-    case 'text':
-      return pointInBounds(point, getNormalizedCanvasNodeBounds(node))
-    case 'stroke':
-      return strokeNodeContainsPoint(node, point, context.zoom)
-    default:
-      return assertNever(node)
-  }
-}
-
 export function matchesCanvasNodeRectangleSelection(
   node: AnyNormalizedCanvasNode,
   rect: { x: number; y: number; width: number; height: number },
@@ -331,16 +314,4 @@ function getNormalizedCanvasNodeBounds(
     width: node.width,
     height: node.height,
   }
-}
-
-function pointInBounds(
-  point: { x: number; y: number },
-  bounds: { x: number; y: number; width: number; height: number },
-) {
-  return (
-    point.x >= bounds.x &&
-    point.x <= bounds.x + bounds.width &&
-    point.y >= bounds.y &&
-    point.y <= bounds.y + bounds.height
-  )
 }

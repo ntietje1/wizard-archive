@@ -5,7 +5,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { logger } from '~/shared/utils/logger'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 
-export interface UploadProgress {
+interface UploadProgress {
   loaded: number
   total: number
   percentage: number

@@ -1,3 +1,5 @@
+import type { LinkPathKind } from 'shared/links/types'
+
 export const LINK_ROLE = {
   content: 'content',
   prefix: 'prefix',
@@ -10,7 +12,6 @@ export const LINK_ROLE = {
 type LinkRole = (typeof LINK_ROLE)[keyof typeof LINK_ROLE]
 export type LinkType = 'wiki' | 'md-internal' | 'md-external'
 type LinkStatus = 'exists' | 'ghost' | 'external'
-export type LinkPathKind = 'global' | 'relative'
 
 interface CreateLinkDecorationStateOptions {
   type: LinkType

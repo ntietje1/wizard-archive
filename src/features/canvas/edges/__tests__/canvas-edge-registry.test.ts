@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  findCanvasEdgeAtPoint,
   getCanvasEdgeInspectableProperties,
   getCanvasEdgesMatchingLasso,
   getCanvasEdgesMatchingRectangle,
@@ -62,15 +61,6 @@ function createStepEdge(overrides?: Partial<Edge>): Edge {
 describe('canvas edge specs', () => {
   const nodes = [createNode('source', 0, 0), createNode('target', 160, 0)]
 
-  it('matches the bezier edge on point hits using the rendered bezier geometry', () => {
-    expect(findCanvasEdgeAtPoint(nodes, [createBezierEdge()], { x: 100, y: 20 }, { zoom: 1 })).toBe(
-      'edge-1',
-    )
-    expect(
-      findCanvasEdgeAtPoint(nodes, [createBezierEdge()], { x: 100, y: 70 }, { zoom: 1 }),
-    ).toBeNull()
-  })
-
   it('selects bezier edges through rectangle hit testing', () => {
     const edges = [
       createBezierEdge(),
@@ -130,13 +120,9 @@ describe('canvas edge specs', () => {
     ).toEqual(new Set(['crossing-edge']))
   })
 
-  it('matches straight edges on point, rectangle, and lasso hit testing', () => {
+  it('matches straight edges through rectangle and lasso hit testing', () => {
     const edge = createStraightEdge()
 
-    expect(findCanvasEdgeAtPoint(nodes, [edge], { x: 100, y: 20 }, { zoom: 1 })).toBe(
-      'straight-edge',
-    )
-    expect(findCanvasEdgeAtPoint(nodes, [edge], { x: 100, y: 55 }, { zoom: 1 })).toBeNull()
     expect(
       getCanvasEdgesMatchingRectangle(
         nodes,
@@ -160,14 +146,10 @@ describe('canvas edge specs', () => {
     ).toEqual(new Set(['straight-edge']))
   })
 
-  it('matches step edges on point, rectangle, and lasso hit testing', () => {
+  it('matches step edges through rectangle and lasso hit testing', () => {
     const stepNodes = [createNode('source', 0, 0), createNode('target', 80, 120)]
     const edge = createStepEdge({ target: 'target' })
 
-    expect(findCanvasEdgeAtPoint(stepNodes, [edge], { x: 20, y: 80 }, { zoom: 1 })).toBe(
-      'step-edge',
-    )
-    expect(findCanvasEdgeAtPoint(stepNodes, [edge], { x: 70, y: 60 }, { zoom: 1 })).toBeNull()
     expect(
       getCanvasEdgesMatchingRectangle(
         stepNodes,
@@ -191,27 +173,6 @@ describe('canvas edge specs', () => {
     ).toEqual(new Set(['step-edge']))
   })
 
-  it('ignores malformed edge styles during hit testing', () => {
-    expect(
-      findCanvasEdgeAtPoint(
-        nodes,
-        [
-          createBezierEdge({
-            id: 'edge-invalid',
-            source: 'source',
-            target: 'target',
-            style: { strokeWidth: -1 },
-          }),
-          createBezierEdge({
-            id: 'edge-fallback',
-          }),
-        ],
-        { x: 100, y: 20 },
-        { zoom: 1 },
-      ),
-    ).toBe('edge-fallback')
-  })
-
   it('falls back unsupported edge types safely', () => {
     const unsupportedEdge = {
       ...createBezierEdge({ id: 'edge-fallback' }),
@@ -223,9 +184,6 @@ describe('canvas edge specs', () => {
       id: 'edge-fallback',
       type: 'bezier',
     })
-    expect(findCanvasEdgeAtPoint(nodes, [unsupportedEdge], { x: 100, y: 20 }, { zoom: 1 })).toBe(
-      'edge-fallback',
-    )
   })
 
   it('normalizes zero-width edge styles to the minimum visible stroke width', () => {

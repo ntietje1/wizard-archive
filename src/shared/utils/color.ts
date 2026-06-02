@@ -1,6 +1,6 @@
 import Color from 'color'
 
-export interface NamedColorOption {
+interface NamedColorOption {
   color: string
   label: string
 }

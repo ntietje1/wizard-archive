@@ -8,7 +8,6 @@ import {
 import {
   boundsFromPoints,
   pointInPolygon,
-  pointToSegmentDistSq,
   rectIntersectsBounds,
   segmentsIntersect,
 } from '../../utils/canvas-geometry-utils'
@@ -19,7 +18,6 @@ import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
-const MIN_ZOOM = 1e-6
 const NODE_EDGE_ANCHOR_OUTSET_PX = 0
 const POINT_EPSILON = 1e-6
 
@@ -160,33 +158,6 @@ export function getCanvasEdgeInteractionWidth(): number {
   return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH
 }
 
-function getCanvasEdgePointThreshold(zoom: number): number {
-  const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
-  return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH / 2 / safeZoom
-}
-
-export function canvasEdgeGeometryContainsPoint(
-  geometry: CanvasEdgeGeometry,
-  point: Point2D,
-  zoom: number,
-): boolean {
-  const threshold = getCanvasEdgePointThreshold(zoom)
-  const bounds = boundsFromPoints(geometry.hitPoints)
-  if (
-    bounds &&
-    !rectIntersectsBounds(bounds, {
-      x: point.x - threshold,
-      y: point.y - threshold,
-      width: threshold * 2,
-      height: threshold * 2,
-    })
-  ) {
-    return false
-  }
-
-  return pointNearPolyline(point, geometry.hitPoints, threshold)
-}
-
 export function canvasEdgeGeometryIntersectsRectangle(
   geometry: CanvasEdgeGeometry,
   rect: Bounds,
@@ -296,31 +267,6 @@ export function getPolylineMidpoint(points: ReadonlyArray<Point2D>): Point2D {
   }
 
   return points[points.length - 1]
-}
-
-function pointNearPolyline(
-  point: Point2D,
-  polyline: ReadonlyArray<Point2D>,
-  threshold: number,
-): boolean {
-  const thresholdSq = threshold * threshold
-
-  for (let index = 0; index < polyline.length - 1; index += 1) {
-    if (
-      pointToSegmentDistSq(
-        point.x,
-        point.y,
-        polyline[index].x,
-        polyline[index].y,
-        polyline[index + 1].x,
-        polyline[index + 1].y,
-      ) <= thresholdSq
-    ) {
-      return true
-    }
-  }
-
-  return false
 }
 
 function pointInRect(point: Point2D, rect: Bounds): boolean {

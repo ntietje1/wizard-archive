@@ -11,28 +11,19 @@ import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { testId } from '../../_test/test-id.helper'
-import {
-  coerceSidebarItemColorForInput,
-  parseSidebarItemColor,
-  validateSidebarItemColor,
-} from '../../../shared/sidebar-items/color'
-import {
-  coerceSidebarItemIconNameForInput,
-  parseSidebarItemIconName,
-  validateSidebarItemIconName,
-} from '../../../shared/sidebar-items/icon'
+import { coerceSidebarItemColorForInput } from '../../../shared/sidebar-items/color'
+import { coerceSidebarItemIconNameForInput } from '../../../shared/sidebar-items/icon'
 import {
   checkNameConflict,
   validateItemName,
   validateSidebarItemNameWithSiblings,
 } from '../../../shared/sidebar-items/name'
 import {
-  getAncestorIds,
   validateCreateParentTarget,
   validateNoCircularParent,
   validateNoCircularParentAsync,
 } from '../../../shared/sidebar-items/parent-target'
-import { validateSidebarItemSlug } from '../../../shared/sidebar-items/slug'
+import { parseSidebarItemSlug } from '../../../shared/sidebar-items/slug'
 import type { Id } from '../../_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
@@ -129,74 +120,76 @@ describe('validateItemName', () => {
 
 describe('validateSidebarItemSlug', () => {
   it('accepts a valid slug', () => {
-    expect(validateSidebarItemSlug('my-note')).toBeNull()
+    expect(parseSidebarItemSlug('my-note')).toBe('my-note')
   })
 
   it('rejects empty string', () => {
-    expect(validateSidebarItemSlug('')).not.toBeNull()
+    expect(parseSidebarItemSlug('')).toBeNull()
   })
 
   it('accepts single-character slugs', () => {
-    expect(validateSidebarItemSlug('a')).toBeNull()
+    expect(parseSidebarItemSlug('a')).toBe('a')
   })
 
   it('rejects uppercase letters', () => {
-    expect(validateSidebarItemSlug('My-Note')).not.toBeNull()
+    expect(parseSidebarItemSlug('My-Note')).toBeNull()
   })
 
   it('rejects spaces', () => {
-    expect(validateSidebarItemSlug('my note')).not.toBeNull()
+    expect(parseSidebarItemSlug('my note')).toBeNull()
   })
 
   it('accepts underscores', () => {
-    expect(validateSidebarItemSlug('my_note')).toBeNull()
+    expect(parseSidebarItemSlug('my_note')).toBe('my_note')
   })
 
   it('rejects consecutive separators', () => {
-    expect(validateSidebarItemSlug('my--note')).not.toBeNull()
-    expect(validateSidebarItemSlug('my-_note')).not.toBeNull()
+    expect(parseSidebarItemSlug('my--note')).toBeNull()
+    expect(parseSidebarItemSlug('my-_note')).toBeNull()
   })
 
   it('rejects leading or trailing separators', () => {
-    expect(validateSidebarItemSlug('-note')).not.toBeNull()
-    expect(validateSidebarItemSlug('note-')).not.toBeNull()
-    expect(validateSidebarItemSlug('_note')).not.toBeNull()
-    expect(validateSidebarItemSlug('note_')).not.toBeNull()
+    expect(parseSidebarItemSlug('-note')).toBeNull()
+    expect(parseSidebarItemSlug('note-')).toBeNull()
+    expect(parseSidebarItemSlug('_note')).toBeNull()
+    expect(parseSidebarItemSlug('note_')).toBeNull()
   })
 
   it('accepts exactly 255 characters', () => {
     const slug = 'a'.repeat(255)
-    expect(validateSidebarItemSlug(slug)).toBeNull()
+    expect(parseSidebarItemSlug(slug)).toBe(slug)
   })
 
   it('rejects 256 characters', () => {
     const slug = 'a'.repeat(256)
-    expect(validateSidebarItemSlug(slug)).not.toBeNull()
+    expect(parseSidebarItemSlug(slug)).toBeNull()
   })
 })
 
 describe('sidebar item color validation', () => {
-  it('parses valid colors and normalizes them to lowercase', () => {
-    expect(parseSidebarItemColor('#ABCDEF')).toBe('#abcdef')
-    expect(parseSidebarItemColor('#ABCDEF80')).toBe('#abcdef80')
+  it('coerces valid colors and normalizes them to lowercase', () => {
+    expect(coerceSidebarItemColorForInput('#ABCDEF')).toBe('#abcdef')
+    expect(coerceSidebarItemColorForInput('#ABCDEF80')).toBe('#abcdef80')
   })
 
   it('rejects invalid colors', () => {
-    expect(parseSidebarItemColor('abcdef')).toBeNull()
-    expect(validateSidebarItemColor('#FFF')).toBe('Color must be a 6- or 8-digit hex value')
-    expect(validateSidebarItemColor('')).toBe('Color must be a 6- or 8-digit hex value')
+    expect(() => coerceSidebarItemColorForInput('abcdef')).toThrow(
+      'Color must be a 6- or 8-digit hex value',
+    )
+    expect(() => coerceSidebarItemColorForInput('#FFF')).toThrow(
+      'Color must be a 6- or 8-digit hex value',
+    )
   })
 })
 
 describe('sidebar item icon validation', () => {
   it('accepts supported icon names', () => {
-    expect(parseSidebarItemIconName('Shield')).toBe('Shield')
-    expect(parseSidebarItemIconName('Grid2x2Plus')).toBe('Grid2x2Plus')
+    expect(coerceSidebarItemIconNameForInput('Shield')).toBe('Shield')
+    expect(coerceSidebarItemIconNameForInput('Grid2x2Plus')).toBe('Grid2x2Plus')
   })
 
   it('rejects unsupported icon names', () => {
-    expect(parseSidebarItemIconName('Nope')).toBeNull()
-    expect(validateSidebarItemIconName('Nope')).toBe('Icon is not supported')
+    expect(() => coerceSidebarItemIconNameForInput('Nope')).toThrow('Icon is not supported')
   })
 })
 
@@ -313,28 +306,6 @@ describe('validateNoCircularParent', () => {
       (id) => Promise.resolve(tree[id]),
     )
     expect(result.valid).toBe(false)
-  })
-})
-
-describe('getAncestorIds', () => {
-  const folder = (parentId: string | null) => ({
-    parentId: parentId ? testId<'sidebarItems'>(parentId) : null,
-  })
-
-  it('returns ancestors in nearest-first order', () => {
-    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
-      note: folder('f2'),
-      f2: folder('f3'),
-      f3: folder(null),
-    }
-    expect(getAncestorIds(testId<'sidebarItems'>('note'), (id) => tree[id])).toEqual([
-      testId<'sidebarItems'>('f2'),
-      testId<'sidebarItems'>('f3'),
-    ])
-  })
-
-  it('returns empty when the item is missing', () => {
-    expect(getAncestorIds(testId<'sidebarItems'>('missing'), () => undefined)).toEqual([])
   })
 })
 
@@ -573,8 +544,8 @@ describe('cross-table slug uniqueness', () => {
       content: [],
     })
 
-    expect(validateSidebarItemSlug(first.slug)).toBeNull()
-    expect(validateSidebarItemSlug(second.slug)).toBeNull()
+    expect(parseSidebarItemSlug(first.slug)).toBe(first.slug)
+    expect(parseSidebarItemSlug(second.slug)).toBe(second.slug)
     expect(first.slug.length).toBeLessThanOrEqual(255)
     expect(second.slug.length).toBeLessThanOrEqual(255)
   })

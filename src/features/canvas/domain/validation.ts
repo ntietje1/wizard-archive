@@ -232,11 +232,11 @@ export function parseCanvasViewport(value: unknown): CanvasViewportValue | null 
   return isFiniteNumber(x) && isFiniteNumber(y) && isFiniteNumber(zoom) ? { x, y, zoom } : null
 }
 
-export function parseCanvasSidebarItemId(value: unknown): string | undefined {
+function parseCanvasSidebarItemId(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined
 }
 
-export function parseCanvasLockedAspectRatio(value: unknown): number | undefined {
+function parseCanvasLockedAspectRatio(value: unknown): number | undefined {
   return isFiniteNumber(value) && value > 0 ? value : undefined
 }
 
@@ -252,7 +252,7 @@ export function parseCanvasNodeBorderWidth(value: unknown, fallback = 1): number
   return isFiniteNumber(value) ? clampNumber(value, 0, 99) : fallback
 }
 
-export function parseCanvasBounds(value: unknown): ParsedCanvasBounds | null {
+function parseCanvasBounds(value: unknown): ParsedCanvasBounds | null {
   if (!isRecord(value)) return null
   const { x, y, width, height } = value
   return isFiniteNumber(x) && isFiniteNumber(y) && isFiniteNumber(width) && isFiniteNumber(height)
@@ -439,7 +439,7 @@ export function parseCanvasEmbedNodeData(value: unknown): CanvasEmbedNodeData | 
   return styles ? { ...data, ...styles } : null
 }
 
-export function parseCanvasTextNodeData(value: unknown): CanvasTextNodeData | null {
+function parseCanvasTextNodeData(value: unknown): CanvasTextNodeData | null {
   if (!isRecord(value) || !hasOnlyKeys(value, textDataKeys)) return null
 
   const data: CanvasTextNodeData = {}

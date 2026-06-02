@@ -7,9 +7,6 @@ import type { SidebarItemType } from 'shared/sidebar-items/types'
 
 type PredicateContext = Parameters<Predicate>[0]
 
-export const always: Predicate = () => true
-export const never: Predicate = () => false
-
 export const isSidebarItem: Predicate = (ctx) => ctx.item !== undefined
 
 export const isSingleSelection: Predicate = (ctx) =>
@@ -81,14 +78,7 @@ export const inView =
   (ctx) =>
     views.includes(ctx.surface)
 
-export const notInView =
-  (...views: Array<ViewContext>): Predicate =>
-  (ctx) =>
-    !views.includes(ctx.surface)
-
 export const inSidebar: Predicate = (ctx) => ctx.surface === VIEW_CONTEXT.SIDEBAR
-
-export const notInSidebar: Predicate = (ctx) => ctx.surface !== VIEW_CONTEXT.SIDEBAR
 
 export const hasBlockNoteEditor: Predicate = (ctx) => ctx.editor !== undefined
 
@@ -98,8 +88,6 @@ export const hasEditableValueInlineId: Predicate = (ctx) =>
   ctx.valueInlineId !== undefined && ctx.valueInlineEditable === true
 
 export const atRoot: Predicate = (ctx) => !isSidebarItem(ctx)
-
-export const hasActiveMap: Predicate = (ctx) => Boolean(ctx.activeMap)
 
 export const isPinnedOnActiveMap: Predicate = (ctx) => {
   if (!ctx.item || !ctx.activeMap) return false
@@ -120,23 +108,11 @@ export const hasPinContext: Predicate = (ctx) => {
   return Boolean(ctx.activePin && ctx.activeMap)
 }
 
-export const hasActiveSession: Predicate = (ctx) => {
-  return ctx.hasActiveSession === true
-}
-
-export const hasNoActiveSession: Predicate = (ctx) => {
-  return ctx.hasActiveSession !== true
-}
-
 export const isDm: Predicate = (ctx) => {
   return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM
 }
 
-export const isPlayer: Predicate = (ctx) => {
-  return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.Player
-}
-
-export const hasViewAccess: Predicate = (ctx) => {
+const hasViewAccess: Predicate = (ctx) => {
   return ctx.permissionLevel === PERMISSION_LEVEL.VIEW || hasEditAccess(ctx)
 }
 
@@ -177,7 +153,7 @@ export const canRestoreSelectedItems: Predicate = (ctx) =>
 export const canDeleteSelectedItemsForever: Predicate = (ctx) =>
   getSidebarFilesystemCapabilities(ctx.memberRole, selectedFilesystemItems(ctx)).canDeleteForever
 
-export const isItemTrashed: Predicate = (ctx) => ctx.isItemTrashed === true
+const isItemTrashed: Predicate = (ctx) => ctx.isItemTrashed === true
 
 export const isItemNotTrashed: Predicate = (ctx) => ctx.isItemTrashed !== true
 

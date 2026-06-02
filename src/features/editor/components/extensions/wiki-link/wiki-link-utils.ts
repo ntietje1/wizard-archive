@@ -1,6 +1,6 @@
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 
-export interface WikiLinkContextEditor {
+interface WikiLinkContextEditor {
   _tiptapEditor?: {
     state: {
       selection: {

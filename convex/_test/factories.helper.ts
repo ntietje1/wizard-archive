@@ -26,7 +26,6 @@ import type { PermissionLevel } from '../../shared/permissions/types'
 import type { ShareStatus } from '../../shared/editor-blocks/share-status'
 import type {
   BlockNoteId,
-  BlockProps,
   BlockType,
   CustomBlock,
   CustomPartialBlock,
@@ -38,12 +37,13 @@ import type { SidebarItemName } from '../../shared/sidebar-items/name'
 import type { FileSystemOperationDecision } from '../../shared/sidebar-items/filesystem/commands'
 import type {
   FileSystemEvent,
-  FileSystemEventType,
   FileSystemTransactionReceipt,
 } from '../../shared/sidebar-items/filesystem/receipts'
 
 type T = TestConvex<typeof schema>
 type AuthedContext = TestConvexForDataModel<DataModel>
+type BlockProps = CustomBlock['props']
+type FileSystemEventType = FileSystemEvent['type']
 
 export async function executeMoveCommand(
   client: AuthedContext,

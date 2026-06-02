@@ -5,7 +5,10 @@ import { BlockNoteEditor } from '@blocknote/core'
 import { render } from '@testing-library/react'
 import { BlockNoteView } from '@blocknote/shadcn'
 import { createEditorSchema } from '../../editor-specs'
-import { ConvexYjsProvider } from '../../providers/convex-yjs-provider'
+import {
+  ConvexYjsProvider,
+  setConvexYjsProviderWritable,
+} from '../../providers/convex-yjs-provider'
 import { NoteValueRuntimeContext } from '../value-block-runtime-context'
 import {
   blocksToYDoc as backendBlocksToYDoc,
@@ -26,7 +29,7 @@ function createProvider(doc: Y.Doc) {
     pushAwareness: () => Promise.resolve(null),
     removeAwareness: () => Promise.resolve(null),
   })
-  provider.writable = true
+  setConvexYjsProviderWritable(provider, true)
   return provider
 }
 

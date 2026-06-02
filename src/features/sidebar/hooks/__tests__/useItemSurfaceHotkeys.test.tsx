@@ -8,7 +8,7 @@ import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
 import {
   setFileSystemClipboard,
-  useFileSystemClipboardStore,
+  useFileSystemClipboard,
 } from '~/features/filesystem/filesystem-clipboard-store'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { resetSidebarUIStore } from '~/test/helpers/store-helpers'
@@ -59,9 +59,8 @@ function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue
     copy: vi.fn(),
     cut: vi.fn(),
     cancelClipboard: vi.fn(() => {
-      const store = useFileSystemClipboardStore.getState()
-      if (!store.clipboard) return false
-      store.clearClipboard()
+      if (!clipboardCanPaste) return false
+      setFileSystemClipboard(null)
       clipboardCanPaste = false
       return true
     }),
@@ -90,7 +89,7 @@ function setupClipboardForPaste(mode: 'copy' | 'cut', itemIds: Array<Id<'sidebar
 describe('useItemSurfaceHotkeys', () => {
   beforeEach(() => {
     resetSidebarUIStore()
-    useFileSystemClipboardStore.getState().clearClipboard()
+    setFileSystemClipboard(null)
     clipboardCanPaste = false
     sidebarItems = []
     trashItems = []
@@ -114,7 +113,7 @@ describe('useItemSurfaceHotkeys', () => {
       dispatchItemSurfaceKeyboardEvent('Escape')
     })
 
-    expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
+    expect(renderHook(() => useFileSystemClipboard()).result.current).toBeNull()
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([note._id])
     expect(filesystem.copy).not.toHaveBeenCalled()
     expect(filesystem.cut).not.toHaveBeenCalled()
@@ -140,7 +139,7 @@ describe('useItemSurfaceHotkeys', () => {
       dispatchItemSurfaceKeyboardEvent('Escape')
     })
 
-    expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
+    expect(renderHook(() => useFileSystemClipboard()).result.current).toBeNull()
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
     expect(filesystem.copy).not.toHaveBeenCalled()
     expect(filesystem.cut).not.toHaveBeenCalled()

@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCanvasDomRuntime } from '../canvas-dom-runtime'
 import { createCanvasEngine } from '../canvas-engine'
-import {
-  createCanvasViewportController,
-  VIEWPORT_COMMIT_IDLE_MS,
-} from '../canvas-viewport-controller'
+import { createCanvasViewportController } from '../canvas-viewport-controller'
+
+const VIEWPORT_COMMIT_IDLE_MS = 300
 
 describe('createCanvasViewportController', () => {
   beforeEach(() => {

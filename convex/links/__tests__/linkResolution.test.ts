@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import {
-  getItemPath,
   resolveParsedItemPath,
-  resolveRelativeItemByPath,
   resolveItemByPath,
-  resolveAllByPath,
-  isPathUnique,
   getMinDisambiguationPath,
 } from '../../../shared/links/resolution'
 import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
@@ -47,49 +43,6 @@ function buildMap(items: Array<AnySidebarItem>) {
 function sidebarId(id: string): Id<'sidebarItems'> {
   return id as Id<'sidebarItems'>
 }
-
-describe('getItemPath', () => {
-  it('returns path for root item', () => {
-    const item = makeItem('a', 'Root Note')
-    const map = buildMap([item])
-    expect(getItemPath(item, map)).toEqual(['Root Note'])
-  })
-
-  it('returns path for nested item', () => {
-    const parent = makeItem('a', 'Folder')
-    const child = makeItem('b', 'Note', 'a')
-    const map = buildMap([parent, child])
-    expect(getItemPath(child, map)).toEqual(['Folder', 'Note'])
-  })
-
-  it('handles deep nesting', () => {
-    const root = makeItem('a', 'Root')
-    const mid = makeItem('b', 'Mid', 'a')
-    const leaf = makeItem('c', 'Leaf', 'b')
-    const map = buildMap([root, mid, leaf])
-    expect(getItemPath(leaf, map)).toEqual(['Root', 'Mid', 'Leaf'])
-  })
-
-  it('breaks parent cycles instead of hanging', () => {
-    const a = makeItem('a', 'A', 'b')
-    const b = makeItem('b', 'B', 'a')
-    const map = buildMap([a, b])
-
-    const path = getItemPath(a, map)
-
-    expect(path).toContain('A')
-    expect(path.length).toBeLessThanOrEqual(2)
-  })
-
-  it('returns an empty path when an ancestor has an empty name', () => {
-    const root = makeItem('a', 'Root')
-    const unnamed = makeItem('b', '', 'a')
-    const leaf = makeItem('c', 'Leaf', 'b')
-    const map = buildMap([root, unnamed, leaf])
-
-    expect(getItemPath(leaf, map)).toEqual([])
-  })
-})
 
 describe('resolveItemByPath', () => {
   const items = [
@@ -163,50 +116,6 @@ describe('resolveItemByPath', () => {
   })
 })
 
-describe('resolveRelativeItemByPath', () => {
-  const items = [
-    makeItem('world', 'World'),
-    makeItem('regions', 'Regions', 'world'),
-    makeItem('north', 'North', 'regions'),
-    makeItem('atlas', 'Atlas', 'north'),
-    makeItem('sibling', 'Sibling', 'north'),
-    makeItem('capital', 'Capital', 'regions'),
-  ]
-  const map = buildMap(items)
-
-  it('resolves relative child paths from the source parent', () => {
-    expect(resolveRelativeItemByPath(['Sibling'], items, map, sidebarId('north'))?._id).toBe(
-      'sibling',
-    )
-  })
-
-  it('supports dot and dotdot traversal', () => {
-    expect(resolveRelativeItemByPath(['.', 'Sibling'], items, map, sidebarId('north'))?._id).toBe(
-      'sibling',
-    )
-    expect(resolveRelativeItemByPath(['..', 'Capital'], items, map, sidebarId('north'))?._id).toBe(
-      'capital',
-    )
-    expect(resolveRelativeItemByPath(['..', '..'], items, map, sidebarId('north'))?._id).toBe(
-      'world',
-    )
-  })
-
-  it('returns undefined when traversal escapes root', () => {
-    expect(resolveRelativeItemByPath(['..', 'Atlas'], items, map, null)).toBeUndefined()
-  })
-
-  it('returns undefined when the source parent does not exist in the map', () => {
-    expect(
-      resolveRelativeItemByPath(['..', 'Capital'], items, map, sidebarId('missing')),
-    ).toBeUndefined()
-  })
-
-  it('returns undefined for an empty relative path', () => {
-    expect(resolveRelativeItemByPath([], items, map, sidebarId('north'))).toBeUndefined()
-  })
-})
-
 describe('resolveParsedItemPath', () => {
   const items = [
     makeItem('world', 'World'),
@@ -225,63 +134,6 @@ describe('resolveParsedItemPath', () => {
       resolveParsedItemPath('relative', ['..', 'North', 'Atlas'], items, map, sidebarId('north'))
         ?._id,
     ).toBe('atlas')
-  })
-})
-
-describe('resolveAllByPath', () => {
-  const items = [
-    makeItem('a', 'Factions'),
-    makeItem('b', 'Design', 'a'),
-    makeItem('c', 'Characters'),
-    makeItem('d', 'Design', 'c'),
-  ]
-  const map = buildMap(items)
-
-  it('returns all matches for ambiguous name', () => {
-    const matches = resolveAllByPath(['Design'], items, map)
-    expect(matches).toHaveLength(2)
-    expect(matches.map((item) => item._id)).toEqual(['d', 'b'])
-  })
-
-  it('returns single match for unique path', () => {
-    const matches = resolveAllByPath(['Factions', 'Design'], items, map)
-    expect(matches).toHaveLength(1)
-    expect(matches[0]._id).toBe('b')
-  })
-
-  it('returns empty for non-existent', () => {
-    expect(resolveAllByPath(['Nonexistent'], items, map)).toEqual([])
-  })
-})
-
-describe('isPathUnique', () => {
-  const items = [
-    makeItem('a', 'Factions'),
-    makeItem('b', 'Design', 'a'),
-    makeItem('c', 'Characters'),
-    makeItem('d', 'Design', 'c'),
-    makeItem('e', 'Unique'),
-  ]
-  const map = buildMap(items)
-
-  it('returns false for ambiguous path', () => {
-    expect(isPathUnique(['Design'], items, map)).toBe(false)
-  })
-
-  it('returns true for unique path', () => {
-    expect(isPathUnique(['Factions', 'Design'], items, map)).toBe(true)
-  })
-
-  it('treats surrounding whitespace in path segments as insignificant', () => {
-    expect(isPathUnique(['  Factions  ', '  Design  '], items, map)).toBe(true)
-  })
-
-  it('returns true for unique name', () => {
-    expect(isPathUnique(['Unique'], items, map)).toBe(true)
-  })
-
-  it('returns false for empty path', () => {
-    expect(isPathUnique([], items, map)).toBe(false)
   })
 })
 

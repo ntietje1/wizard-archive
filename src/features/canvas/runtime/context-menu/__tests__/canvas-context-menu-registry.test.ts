@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { embedNodeContextMenuContributors } from '../../../nodes/embed/embed-node-context-menu'
-import {
-  buildCanvasContextMenu,
-  parseCanvasReorderDirection,
-} from '../canvas-context-menu-registry'
+import { buildCanvasContextMenu } from '../canvas-context-menu-registry'
 import type {
   CanvasContextMenuContext,
   CanvasContextMenuServices,
@@ -293,26 +290,5 @@ describe('buildCanvasContextMenu', () => {
       nodeType: 'embed',
       sidebarItemId: testId<'sidebarItems'>('sidebar-1'),
     })
-  })
-
-  it('parses valid reorder payloads and rejects malformed ones', () => {
-    expect(parseCanvasReorderDirection(null)).toBeNull()
-    expect(parseCanvasReorderDirection(undefined)).toBeNull()
-    expect(parseCanvasReorderDirection({ direction: 'bringToFront' })).toBeNull()
-    expect(parseCanvasReorderDirection({ kind: 'reorder' })).toBeNull()
-    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'sideways' })).toBeNull()
-    expect(parseCanvasReorderDirection('sendToBack')).toBeNull()
-    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'sendToBack' })).toBe(
-      'sendToBack',
-    )
-    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'bringToFront' })).toBe(
-      'bringToFront',
-    )
-    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'bringForward' })).toBe(
-      'bringForward',
-    )
-    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'sendBackward' })).toBe(
-      'sendBackward',
-    )
   })
 })

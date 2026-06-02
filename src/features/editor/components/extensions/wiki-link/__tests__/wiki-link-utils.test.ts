@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { getWikiLinkContext, splitWikiLinkTargetAndDisplayName } from '../wiki-link-utils'
-import type { WikiLinkContextEditor } from '../wiki-link-utils'
 import { clampAutocompleteSelectedIndex } from '../wiki-link-autocomplete-model'
 
-function editorWithTextCursor(text: string, cursor: number): WikiLinkContextEditor {
+function editorWithTextCursor(
+  text: string,
+  cursor: number,
+): Parameters<typeof getWikiLinkContext>[0] {
   return {
     _tiptapEditor: {
       state: {

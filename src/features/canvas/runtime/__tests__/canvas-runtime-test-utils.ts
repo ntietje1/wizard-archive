@@ -12,7 +12,6 @@ import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasCommands } from '../document/use-canvas-commands'
-import type { CanvasRuntimeProviderProps } from '../providers/canvas-runtime'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 
 export function createCanvasRuntimeEnginePair() {
@@ -109,11 +108,12 @@ export function createCanvasRuntime(
     viewportController: CanvasViewportController
     commands: CanvasCommands
   }> = {},
-): Omit<CanvasRuntimeProviderProps, 'children'> & {
+): {
   canvasEngine: CanvasEngine
   canEdit: boolean
   commands: CanvasCommands
   documentWriter: CanvasDocumentWriter
+  domRuntime: CanvasDomRuntime
   history: CanvasHistoryController
   nodeActions: CanvasNodeActions
   remoteHighlights: ReadonlyMap<string, RemoteHighlight>

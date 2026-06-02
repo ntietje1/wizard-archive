@@ -1,11 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import type { EditorView } from '@tiptap/pm/view'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  getMountedBlockNoteView,
-  useBlockNoteActivationLifecycle,
-} from '../use-blocknote-activation-lifecycle'
-import type { BlockNoteEditorWithMountedView } from '../use-blocknote-activation-lifecycle'
+import { useBlockNoteActivationLifecycle } from '../use-blocknote-activation-lifecycle'
 import type { PendingRichEmbedActivationRef } from '../../embed/use-rich-embed-lifecycle'
 
 const {
@@ -197,45 +193,16 @@ describe('useBlockNoteActivationLifecycle', () => {
   })
 })
 
-describe('getMountedBlockNoteView', () => {
-  it('returns null when the ProseMirror view is not connected', () => {
-    expect(
-      getMountedBlockNoteView(createEditor(createMountedView({ connected: false }))),
-    ).toBeNull()
-    expect(getMountedBlockNoteView(createEditor(createMountedView({ docView: null })))).toBeNull()
-  })
-
-  it('returns null when reading view, dom, or docView throws before the editor mounts', () => {
-    expect(getMountedBlockNoteView(createEditorWithThrowingView())).toBeNull()
-    expect(
-      getMountedBlockNoteView(createEditor(createMountedView({ throwsOnDomAccess: true }))),
-    ).toBeNull()
-    expect(
-      getMountedBlockNoteView(createEditor(createMountedView({ throwsOnDocViewAccess: true }))),
-    ).toBeNull()
-  })
-})
-
 function createPendingActivationRef(): PendingRichEmbedActivationRef {
   return { current: null }
 }
 
-function createEditor(view: ReturnType<typeof createMountedView>): BlockNoteEditorWithMountedView {
+function createEditor(view: ReturnType<typeof createMountedView>) {
   return {
     _tiptapEditor: {
       view: view as unknown as EditorView,
     },
   }
-}
-
-function createEditorWithThrowingView(): BlockNoteEditorWithMountedView {
-  return {
-    _tiptapEditor: Object.defineProperty({}, 'view', {
-      get() {
-        throw new Error('[tiptap error]: The editor view is not available.')
-      },
-    }),
-  } as BlockNoteEditorWithMountedView
 }
 
 function createMountedView({

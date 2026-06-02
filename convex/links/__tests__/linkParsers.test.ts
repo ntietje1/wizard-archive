@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import {
   parseWikiLinkText,
   parseMdLinkTarget,
-  isExternalUrl,
   isDangerousUrl,
-  extractWikiLinksFromText,
-  extractMdLinksFromText,
   WIKI_LINK_REGEX,
   MD_LINK_REGEX,
 } from '../../../shared/links/parsing'
@@ -203,38 +200,6 @@ describe('parseMdLinkTarget', () => {
   })
 })
 
-describe('isExternalUrl', () => {
-  it('returns true for https', () => {
-    expect(isExternalUrl('https://example.com')).toBe(true)
-  })
-
-  it('returns true for http', () => {
-    expect(isExternalUrl('http://example.com')).toBe(true)
-  })
-
-  it('returns false for internal paths', () => {
-    expect(isExternalUrl('Factions/Note')).toBe(false)
-  })
-
-  it('is case insensitive', () => {
-    expect(isExternalUrl('HTTPS://example.com')).toBe(true)
-  })
-
-  it('returns true for protocol-relative urls', () => {
-    expect(isExternalUrl('//evil.com/x')).toBe(true)
-  })
-
-  it('returns false for dangerous schemes handled separately', () => {
-    expect(isExternalUrl('javascript:alert(1)')).toBe(false)
-    expect(isExternalUrl('data:text/html,<script>')).toBe(false)
-    expect(isExternalUrl('vbscript:msgbox(1)')).toBe(false)
-    expect(isExternalUrl('file:///etc/passwd')).toBe(false)
-    expect(isExternalUrl('blob:https://example.com/uuid')).toBe(false)
-    expect(isExternalUrl('about:blank')).toBe(false)
-    expect(isExternalUrl('filesystem:some/path')).toBe(false)
-  })
-})
-
 describe('isDangerousUrl', () => {
   it('returns true for dangerous or non-navigable schemes', () => {
     expect(isDangerousUrl('javascript:alert(1)')).toBe(true)
@@ -319,78 +284,6 @@ describe('parseMdLinkTarget safety', () => {
       itemName: '',
       headingPath: [],
     })
-  })
-})
-
-describe('extractWikiLinksFromText', () => {
-  it('extracts a single wiki link', () => {
-    const result = extractWikiLinksFromText('See [[My Note]] for details')
-    expect(result).toHaveLength(1)
-    expect(result[0]).toEqual({
-      syntax: 'wiki',
-      pathKind: 'global',
-      itemPath: ['My Note'],
-      itemName: 'My Note',
-      headingPath: [],
-      displayName: null,
-      rawTarget: 'My Note',
-      isExternal: false,
-    })
-  })
-
-  it('extracts multiple wiki links', () => {
-    const result = extractWikiLinksFromText('Link to [[Note A]] and [[Folder/Note B]]')
-    expect(result).toHaveLength(2)
-    expect(result[0].itemName).toBe('Note A')
-    expect(result[1].itemPath).toEqual(['Folder', 'Note B'])
-  })
-
-  it('returns empty array for no matches', () => {
-    expect(extractWikiLinksFromText('no links here')).toEqual([])
-  })
-
-  it('handles link with display name', () => {
-    const result = extractWikiLinksFromText('See [[Note|Custom Name]]')
-    expect(result[0].displayName).toBe('Custom Name')
-  })
-
-  it('does not leak regex iteration state across calls', () => {
-    expect(extractWikiLinksFromText('See [[Note A]]')).toHaveLength(1)
-    expect(extractWikiLinksFromText('See [[Note B]]')).toHaveLength(1)
-  })
-})
-
-describe('extractMdLinksFromText', () => {
-  it('extracts internal markdown links', () => {
-    const result = extractMdLinksFromText('See [click here](My Note) for details')
-    expect(result).toHaveLength(1)
-    expect(result[0]).toEqual({
-      syntax: 'md',
-      pathKind: 'global',
-      itemPath: ['My Note'],
-      itemName: 'My Note',
-      headingPath: [],
-      displayName: 'click here',
-      rawTarget: 'My Note',
-      isExternal: false,
-    })
-  })
-
-  it('extracts external markdown links', () => {
-    const result = extractMdLinksFromText('Visit [Google](https://google.com)')
-    expect(result).toHaveLength(1)
-    expect(result[0].isExternal).toBe(true)
-    expect(result[0].rawTarget).toBe('https://google.com')
-  })
-
-  it('does not match image syntax', () => {
-    const result = extractMdLinksFromText('![alt](image.png)')
-    expect(result).toEqual([])
-  })
-
-  it('does not leak regex iteration state across calls', () => {
-    expect(extractMdLinksFromText('See [A](Note A)')).toHaveLength(1)
-    expect(extractMdLinksFromText('See [B](Note B)')).toHaveLength(1)
   })
 })
 

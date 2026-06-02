@@ -4,7 +4,7 @@ import { validateItemName } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
-export const NAME_VALIDATION_DEBOUNCE_MS = 300
+const NAME_VALIDATION_DEBOUNCE_MS = 300
 
 interface UseNameValidationOptions {
   name: string

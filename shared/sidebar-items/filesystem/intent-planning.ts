@@ -19,10 +19,6 @@ type FileSystemIntentResult =
   | { status: 'noop' }
   | { status: 'blocked'; reason: SidebarOperationRejectionCode | 'mixed_actions' }
 
-type PasteTargetIntent =
-  | { kind: 'explicit'; parentId: SidebarItemId | null }
-  | { kind: 'selectedCommonParent'; surfaceParentId: SidebarItemId | null }
-
 type FileSystemDropTargetIntent =
   | { type: 'trash' }
   | { type: 'parent'; target: OperationTargetSnapshot }
@@ -30,25 +26,6 @@ type FileSystemDropTargetIntent =
 
 export type FileSystemDropOptions = {
   copy?: boolean
-}
-
-export function commonParentId<T extends { parentId: SidebarItemId | null }>(
-  items: Array<T>,
-): SidebarItemId | null | undefined {
-  if (items.length === 0) return undefined
-  const parentId = items[0].parentId
-  return items.every((item) => item.parentId === parentId) ? parentId : undefined
-}
-
-export function resolvePasteParentId<T extends { parentId: SidebarItemId | null }>({
-  items,
-  target,
-}: {
-  items: Array<T>
-  target: PasteTargetIntent
-}): SidebarItemId | null {
-  if (target.kind === 'explicit') return target.parentId
-  return commonParentId(items) ?? target.surfaceParentId
 }
 
 function blocked(reason: SidebarOperationRejectionCode): FileSystemIntentResult {

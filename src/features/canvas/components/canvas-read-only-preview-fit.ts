@@ -4,9 +4,9 @@ import type { CanvasEngineSnapshot } from '../system/canvas-engine-types'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
-export const DEFAULT_CANVAS_READ_ONLY_PREVIEW_VIEWPORT: CanvasViewport = { x: 0, y: 0, zoom: 1 }
+const DEFAULT_CANVAS_READ_ONLY_PREVIEW_VIEWPORT: CanvasViewport = { x: 0, y: 0, zoom: 1 }
 
-export function selectCanvasReadOnlyPreviewFitNodes(
+function selectCanvasReadOnlyPreviewFitNodes(
   snapshot: Pick<CanvasEngineSnapshot, 'nodeIds' | 'nodeLookup'>,
   fallbackNodes: ReadonlyArray<CanvasDocumentNode>,
 ): ReadonlyArray<CanvasDocumentNode> {

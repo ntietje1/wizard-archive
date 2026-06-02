@@ -135,23 +135,6 @@ export async function validateNoCircularParentAsync(
   return await validateNoCircularParentInternal(itemId, newParentId, getParent)
 }
 
-export function getAncestorIds(
-  itemId: SidebarItemId,
-  getParent: (id: SidebarItemId) => ParentLookup,
-): Array<SidebarItemId> {
-  const ancestors: Array<SidebarItemId> = []
-  const seen = new Set<SidebarItemId>()
-  let currentId = getParent(itemId)?.parentId ?? null
-
-  while (currentId && !seen.has(currentId)) {
-    seen.add(currentId)
-    ancestors.push(currentId)
-    currentId = getParent(currentId)?.parentId ?? null
-  }
-
-  return ancestors
-}
-
 function buildParentStack(
   parentId: SidebarItemId | null,
   itemsMap: Map<SidebarItemId, AnySidebarItem>,

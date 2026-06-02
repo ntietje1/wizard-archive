@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { CustomBlock, HeadingLevel } from 'shared/editor-blocks/types'
 import {
   extractHeadingsFromContent,
-  findHeadingByText,
-  normalizeHeadingText,
   resolveHeadingPath,
 } from '~/features/editor/utils/heading-utils'
 
@@ -31,16 +29,6 @@ function paragraph(id: string, text: string, children: Array<CustomBlock> = []):
     children,
   } as unknown as CustomBlock
 }
-
-describe('normalizeHeadingText', () => {
-  it('lowercases and trims', () => {
-    expect(normalizeHeadingText('  Hello World  ')).toBe('hello world')
-  })
-
-  it('collapses multiple spaces', () => {
-    expect(normalizeHeadingText('Hello    World')).toBe('hello world')
-  })
-})
 
 describe('extractHeadingsFromContent', () => {
   it('extracts headings from blocks', () => {
@@ -80,31 +68,6 @@ describe('extractHeadingsFromContent', () => {
     const headings = extractHeadingsFromContent(content)
     expect(headings).toHaveLength(1)
     expect(headings[0].text).toBe('Nested')
-  })
-})
-
-describe('findHeadingByText', () => {
-  const headings = [
-    {
-      blockNoteId: 'b1',
-      text: 'Introduction',
-      level: 1 as const,
-      normalizedText: 'introduction',
-    },
-    {
-      blockNoteId: 'b2',
-      text: 'Details',
-      level: 2 as const,
-      normalizedText: 'details',
-    },
-  ]
-
-  it('finds heading by text (case-insensitive)', () => {
-    expect(findHeadingByText(headings, 'INTRODUCTION')?.blockNoteId).toBe('b1')
-  })
-
-  it('returns undefined for non-existent heading', () => {
-    expect(findHeadingByText(headings, 'Missing')).toBeUndefined()
   })
 })
 

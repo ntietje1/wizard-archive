@@ -23,9 +23,6 @@ export const FILE_SYSTEM_EVENT_TYPE = {
   noop: 'noop',
 } as const
 
-export type FileSystemEventType =
-  (typeof FILE_SYSTEM_EVENT_TYPE)[keyof typeof FILE_SYSTEM_EVENT_TYPE]
-
 export type FileSystemEvent =
   | { type: typeof FILE_SYSTEM_EVENT_TYPE.created; itemId: SidebarItemId; slug: string }
   | { type: typeof FILE_SYSTEM_EVENT_TYPE.updated; itemId: SidebarItemId }

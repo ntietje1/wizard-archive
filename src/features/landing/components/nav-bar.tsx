@@ -1,22 +1,32 @@
 import { Link } from '@tanstack/react-router'
 import { Menu, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
 import { publicSite } from '~/features/landing/content/public-site'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { WizardArchiveLogo } from '~/shared/components/wizard-archive-logo'
 
-export function NavBar() {
-  const [scrolled, setScrolled] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
+function subscribeToScroll(callback: () => void) {
+  window.addEventListener('scroll', callback, { passive: true })
+  return () => window.removeEventListener('scroll', callback)
+}
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 32)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+function getScrolledSnapshot() {
+  return window.scrollY > 32
+}
+
+function getServerScrolledSnapshot() {
+  return false
+}
+
+export function NavBar() {
+  const scrolled = useSyncExternalStore(
+    subscribeToScroll,
+    getScrolledSnapshot,
+    getServerScrolledSnapshot,
+  )
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <header
@@ -27,7 +37,7 @@ export function NavBar() {
     >
       <LandingContainer className="flex h-full items-center justify-between">
         <Link to="/" className="flex items-center gap-1.5">
-          <WizardArchiveLogo className="h-5 w-5" />
+          <WizardArchiveLogo className="size-5" />
           <span className="text-base font-semibold text-foreground">Wizard's Archive</span>
         </Link>
 

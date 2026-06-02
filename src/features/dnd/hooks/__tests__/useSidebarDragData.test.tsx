@@ -4,9 +4,7 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import {
-  SIDEBAR_ITEMS_VIEW,
   useActiveSidebarItems,
-  useSidebarItems,
   useTrashSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
@@ -16,7 +14,6 @@ import { resetSidebarUIStore } from '~/test/helpers/store-helpers'
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   SIDEBAR_ITEMS_VIEW: { active: 'active', trash: 'trash' },
   useActiveSidebarItems: vi.fn(),
-  useSidebarItems: vi.fn(),
   useTrashSidebarItems: vi.fn(),
 }))
 
@@ -34,11 +31,6 @@ function mockSidebarItems(
 ) {
   vi.mocked(useActiveSidebarItems).mockReturnValue(sidebarItemsValue(activeItems))
   vi.mocked(useTrashSidebarItems).mockReturnValue(sidebarItemsValue(trashedItems))
-  vi.mocked(useSidebarItems).mockImplementation((view) => {
-    if (view === SIDEBAR_ITEMS_VIEW.active) return sidebarItemsValue(activeItems)
-    if (view === SIDEBAR_ITEMS_VIEW.trash) return sidebarItemsValue(trashedItems)
-    throw new Error(`Unexpected sidebar items view: ${String(view)}`)
-  })
 }
 
 function setActiveSurface(visibleItems: Array<AnySidebarItem>, surface = 'sidebar' as const) {
@@ -52,7 +44,6 @@ function setActiveSurface(visibleItems: Array<AnySidebarItem>, surface = 'sideba
 describe('useSidebarDragData', () => {
   beforeEach(() => {
     resetSidebarUIStore()
-    vi.mocked(useSidebarItems).mockReset()
     vi.mocked(useActiveSidebarItems).mockReset()
     vi.mocked(useTrashSidebarItems).mockReset()
   })

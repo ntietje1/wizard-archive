@@ -12,7 +12,7 @@ import type {
 } from '../../tools/canvas-tool-types'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 
-export type CanvasRuntimeProviderProps = {
+type CanvasRuntimeProviderProps = {
   canEdit: boolean
   children: ReactNode
   commands: CanvasCommands

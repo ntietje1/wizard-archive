@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { CanvasSceneViewport } from '../canvas-scene-viewport'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import { CANVAS_BACKGROUND_GRID_SIZE } from '../canvas-background-viewport'
 
 describe('CanvasSceneViewport', () => {
   let domRuntime: ReturnType<typeof createCanvasDomRuntime> | null = null
@@ -20,7 +19,7 @@ describe('CanvasSceneViewport', () => {
     domRuntime = createCanvasDomRuntime()
     engine = createCanvasEngine({ domRuntime })
     const zoom = 3
-    const expectedGridSize = `${(CANVAS_BACKGROUND_GRID_SIZE * Math.sqrt(zoom)).toFixed(3)}px`
+    const expectedGridSize = `${(36 * Math.sqrt(zoom)).toFixed(3)}px`
 
     render(
       <CanvasSceneViewport

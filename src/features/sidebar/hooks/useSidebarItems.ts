@@ -71,7 +71,7 @@ export const useSidebarItemsQueries = (): SidebarItemsContextValue => {
 // Consumer hooks
 // ---------------------------------------------------------------------------
 
-export const useSidebarItems = (view: SidebarItemsView): SidebarItemsValue => {
+const useSidebarItems = (view: SidebarItemsView): SidebarItemsValue => {
   const ctx = useContext(SidebarItemsContext)
   if (!ctx) {
     throw new Error('useSidebarItems must be used within a SidebarItemsProvider')

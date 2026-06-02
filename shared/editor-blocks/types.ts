@@ -13,7 +13,6 @@ import type {
 export type FlatBlockContent = z.infer<typeof flatBlockContentSchema>
 export type BlockType = z.infer<typeof blockTypeSchema>
 export type BlockNoteId = z.infer<typeof blockNoteIdSchema>
-export type BlockProps = FlatBlockContent['props']
 type InlineContentItem = z.infer<typeof inlineContentSchema>
 export type InlineContent = Array<InlineContentItem>
 export type TableContent = z.infer<typeof tableContentSchema>

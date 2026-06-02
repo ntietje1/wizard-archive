@@ -3,7 +3,6 @@ import { buildBezierCanvasEdgeGeometryFromEdge } from './bezier/bezier-canvas-ed
 import { buildStepCanvasEdgeGeometryFromEdge } from './step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromEdge } from './straight/straight-canvas-edge-geometry'
 import {
-  canvasEdgeGeometryContainsPoint,
   canvasEdgeGeometryIntersectsPolygon,
   canvasEdgeGeometryIntersectsRectangle,
 } from './shared/canvas-edge-geometry'
@@ -136,26 +135,6 @@ function isCanvasEdgeSelectionCandidate(
 
   const bounds = boundsFromPoints(geometry.hitPoints)
   return !bounds || rectIntersectsBounds(candidateBounds, bounds)
-}
-
-export function findCanvasEdgeAtPoint(
-  nodes: ReadonlyArray<CanvasDocumentNode>,
-  edges: ReadonlyArray<CanvasDocumentEdge>,
-  point: Point2D,
-  context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
-): string | null {
-  const selectionContext = createCanvasEdgeSelectionContext(nodes, context.zoom)
-  const normalizedEdges = normalizeCanvasEdges(edges)
-
-  for (let index = normalizedEdges.length - 1; index >= 0; index -= 1) {
-    const { rawEdge, edge } = normalizedEdges[index]
-    const geometry = getCanvasEdgeSpec(edge).buildGeometry(edge, selectionContext.nodesById)
-    if (geometry && canvasEdgeGeometryContainsPoint(geometry, point, selectionContext.zoom)) {
-      return rawEdge.id
-    }
-  }
-
-  return null
 }
 
 export function getCanvasEdgesMatchingRectangle(

@@ -28,12 +28,12 @@ export interface MapDropZoneData {
   pinnedItemIds?: ReadonlyArray<Id<'sidebarItems'>>
 }
 
-export interface SidebarRootDropZoneData {
+interface SidebarRootDropZoneData {
   [key: string | symbol]: unknown
   type: typeof SIDEBAR_ROOT_DROP_TYPE
 }
 
-export interface EmptyEditorDropZoneData {
+interface EmptyEditorDropZoneData {
   [key: string | symbol]: unknown
   type: typeof EMPTY_EDITOR_DROP_TYPE
 }
@@ -44,7 +44,7 @@ export interface NoteEditorDropZoneData {
   noteId: Id<'sidebarItems'>
 }
 
-export interface TrashDropZoneData {
+interface TrashDropZoneData {
   [key: string | symbol]: unknown
   type: typeof TRASH_DROP_ZONE_TYPE
 }

@@ -252,11 +252,11 @@ function useAutocompleteKeyboard({
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault()
-          setSelectedIndex((index) => (index + 1) % len)
+          setSelectedIndex((index) => (clampAutocompleteSelectedIndex(index, len) + 1) % len)
           break
         case 'ArrowUp':
           event.preventDefault()
-          setSelectedIndex((index) => (index - 1 + len) % len)
+          setSelectedIndex((index) => (clampAutocompleteSelectedIndex(index, len) - 1 + len) % len)
           break
         case 'Enter':
           event.preventDefault()
@@ -566,13 +566,9 @@ export function WikiLinkAutocomplete({
   )
 
   const activeModel = model.mode === 'empty' ? null : model
-
-  useEffect(() => {
-    if (!activeModel) return
-    setSelectedIndex((index) =>
-      clampAutocompleteSelectedIndex(index, activeModel.suggestions.length),
-    )
-  }, [activeModel])
+  const clampedSelectedIndex = activeModel
+    ? clampAutocompleteSelectedIndex(selectedIndex, activeModel.suggestions.length)
+    : selectedIndex
 
   useAutocompleteKeyboard({
     closeMenu,
@@ -585,7 +581,7 @@ export function WikiLinkAutocomplete({
     insertValueInline,
     menuShowing: menu.show,
     model: activeModel,
-    selectedIndex,
+    selectedIndex: clampedSelectedIndex,
     setSelectedIndex,
   })
 
@@ -599,7 +595,7 @@ export function WikiLinkAutocomplete({
       insertValueInline={insertValueInline}
       menuPos={menu.pos}
       model={model}
-      selectedIndex={selectedIndex}
+      selectedIndex={clampedSelectedIndex}
       setSelectedIndex={setSelectedIndex}
       valuesPending={model.mode === 'value' && valuesPending}
     />

@@ -12,7 +12,7 @@ type UndoRedoHandlers = {
   redo: () => Promise<unknown>
 }
 
-export function isFileSystemUndoShortcut(event: KeyboardEvent) {
+function isFileSystemUndoShortcut(event: KeyboardEvent) {
   return (
     (event.ctrlKey || event.metaKey) &&
     !event.altKey &&
@@ -21,7 +21,7 @@ export function isFileSystemUndoShortcut(event: KeyboardEvent) {
   )
 }
 
-export function isFileSystemRedoShortcut(event: KeyboardEvent) {
+function isFileSystemRedoShortcut(event: KeyboardEvent) {
   if (event.altKey) return false
   const key = event.key.toLowerCase()
   return (

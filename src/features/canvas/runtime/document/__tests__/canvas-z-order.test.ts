@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createCanvasReorderPlan } from '../canvas-reorder-plan'
 import { reorderCanvasElementIds } from '../canvas-reorder'
 import { getNextCanvasElementZIndex } from '../canvas-z-index'
-import { applyCanvasZOrder, sortCanvasElementsByZIndex } from '../canvas-z-order'
+import { sortCanvasElementsByZIndex } from '../canvas-z-order'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
@@ -70,7 +70,7 @@ describe('canvas z-order helpers', () => {
     ).toBe(11)
   })
 
-  it('reorders ids independently from zIndex assignment and applies normalized persisted order', () => {
+  it('reorders ids independently from zIndex assignment', () => {
     const elements = [
       { id: 'node-1', zIndex: 1 },
       { id: 'node-2', zIndex: 2 },
@@ -84,11 +84,6 @@ describe('canvas z-order helpers', () => {
     )
 
     expect(orderedIds).toEqual(['node-2', 'node-3', 'node-1'])
-    expect(applyCanvasZOrder(elements, orderedIds)).toEqual([
-      { id: 'node-2', zIndex: 1 },
-      { id: 'node-3', zIndex: 2 },
-      { id: 'node-1', zIndex: 3 },
-    ])
   })
 
   it('returns no reorder plan for an empty selection', () => {

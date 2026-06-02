@@ -7,11 +7,10 @@ import {
 } from '../canvas-read-only-preview-model'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-import type {
-  CanvasPreviewEdgeRender,
-  CanvasPreviewEdgeType,
-  CanvasPreviewNodeShellSnapshot,
-} from '../canvas-read-only-preview-model'
+
+type CanvasPreviewNodeShellSnapshot = NonNullable<ReturnType<typeof selectCanvasPreviewNodeShell>>
+type CanvasPreviewEdgeRender = NonNullable<ReturnType<typeof selectCanvasPreviewEdgeRender>>
+type CanvasPreviewEdgeType = CanvasPreviewEdgeRender['type']
 
 describe('canvas read-only preview model', () => {
   it('returns null when selecting a missing node shell', () => {

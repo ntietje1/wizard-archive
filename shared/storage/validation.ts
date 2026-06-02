@@ -2,7 +2,6 @@ type FileValidationResult = { valid: true } | { valid: false; error: string }
 
 export const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 
-const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'text/'] as const
 const ALLOWED_MIME_TYPES = ['application/pdf'] as const
 const TEXT_EXTENSIONS = ['.txt', '.md'] as const
 
@@ -14,15 +13,6 @@ export const FILE_UPLOAD_ACCEPT_PATTERN = [
   ...ALLOWED_MIME_TYPES,
   ...TEXT_EXTENSIONS,
 ].join(',')
-
-export function isAllowedContentType(contentType: string | null): boolean {
-  if (!contentType) return false
-  const lowerType = contentType.toLowerCase()
-  return (
-    ALLOWED_MIME_PREFIXES.some((prefix) => lowerType.startsWith(prefix)) ||
-    ALLOWED_MIME_TYPES.some((type) => lowerType === type)
-  )
-}
 
 export function isMediaFile(contentType: string | null): boolean {
   if (!contentType) return false
@@ -46,10 +36,7 @@ export function isTextFile(contentType: string | null, fileName?: string | null)
   return false
 }
 
-export function validateFileSize(
-  size: number,
-  maxSize: number = MAX_FILE_SIZE,
-): FileValidationResult {
+function validateFileSize(size: number, maxSize: number = MAX_FILE_SIZE): FileValidationResult {
   if (size > maxSize) {
     const maxSizeMB = maxSize / (1024 * 1024)
     return {
@@ -60,7 +47,7 @@ export function validateFileSize(
   return { valid: true }
 }
 
-export function validateFileType(
+function validateFileType(
   contentType: string | null,
   fileName?: string | null,
 ): FileValidationResult {

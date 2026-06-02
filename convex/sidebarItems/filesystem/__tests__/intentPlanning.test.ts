@@ -2,51 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
-import {
-  commonParentId,
-  planFileSystemDropIntent,
-  resolvePasteParentId,
-} from '../../../../shared/sidebar-items/filesystem/intent-planning'
-import { createSidebarItem } from './testSidebarItem'
-import type { Id } from '../../../_generated/dataModel'
+import { planFileSystemDropIntent } from '../../../../shared/sidebar-items/filesystem/intent-planning'
+import { createSidebarItem } from '../../../_test/sidebarItem.helper'
 
 describe('filesystem intent planning', () => {
-  it('resolves paste targets from explicit parent and selected common parent', () => {
-    const parentId = 'folder-1' as Id<'sidebarItems'>
-    const fallbackParentId = 'folder-2' as Id<'sidebarItems'>
-    const first = createSidebarItem('note-1', 'One', SIDEBAR_ITEM_TYPES.notes, { parentId })
-    const second = createSidebarItem('note-2', 'Two', SIDEBAR_ITEM_TYPES.notes, { parentId })
-
-    expect(commonParentId([first, second])).toBe(parentId)
-    expect(
-      resolvePasteParentId({
-        items: [first, second],
-        target: { kind: 'explicit', parentId: null },
-      }),
-    ).toBeNull()
-    expect(
-      resolvePasteParentId({
-        items: [first, second],
-        target: { kind: 'selectedCommonParent', surfaceParentId: fallbackParentId },
-      }),
-    ).toBe(parentId)
-  })
-
-  it('falls back to the surface parent when selected items have no common parent', () => {
-    const surfaceParentId = 'folder-1' as Id<'sidebarItems'>
-    const first = createSidebarItem('note-1', 'One')
-    const second = createSidebarItem('note-2', 'Two', SIDEBAR_ITEM_TYPES.notes, {
-      parentId: 'folder-2' as Id<'sidebarItems'>,
-    })
-
-    expect(
-      resolvePasteParentId({
-        items: [first, second],
-        target: { kind: 'selectedCommonParent', surfaceParentId },
-      }),
-    ).toBe(surfaceParentId)
-  })
-
   it('plans trash drops and ignores already trashed items', () => {
     const actor = { role: CAMPAIGN_MEMBER_ROLE.DM }
     const active = createSidebarItem('note-1', 'Active')

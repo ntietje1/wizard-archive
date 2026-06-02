@@ -1,29 +1,46 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import {
-  LIVE_YJS_PERSIST_DEBOUNCE_MS,
-  PERSIST_INTERVAL_MS,
-  useNoteYjsCollaboration,
-} from '../useNoteYjsCollaboration'
+import { useNoteYjsCollaboration } from '../useNoteYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
 import { flushMicrotasks } from '~/test/helpers/async'
 
 const NOTE_ID = 'test-note-id' as Id<'sidebarItems'>
 const OTHER_NOTE_ID = 'other-test-note-id' as Id<'sidebarItems'>
 const USER = { name: 'Test User', color: '#ff0000' }
+const PERSIST_INTERVAL_MS = 10_000
+const LIVE_YJS_PERSIST_DEBOUNCE_MS = 750
 
-const { mockAction, mockMutation, mockConvexClient, mockUseAuthQuery, mockInvalidateQueries } =
-  vi.hoisted(() => {
-    const mutation = vi.fn().mockResolvedValue(null)
-    const action = vi.fn().mockResolvedValue(null)
-    return {
-      mockAction: action,
-      mockMutation: mutation,
-      mockConvexClient: { action, mutation },
-      mockUseAuthQuery: vi.fn().mockReturnValue({ data: undefined }),
-      mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
-    }
-  })
+const {
+  mockAction,
+  mockMutation,
+  mockConvexClient,
+  mockUseAuthQuery,
+  mockInvalidateQueries,
+  mockProviderDestroy,
+  mockFlushPendingUpdates,
+  mockSetUser,
+  mockSetWritable,
+  mockApplyRemoteUpdates,
+  mockApplyRemoteAwareness,
+  mockIsApplyingRemoteUpdate,
+} = vi.hoisted(() => {
+  const mutation = vi.fn().mockResolvedValue(null)
+  const action = vi.fn().mockResolvedValue(null)
+  return {
+    mockAction: action,
+    mockMutation: mutation,
+    mockConvexClient: { action, mutation },
+    mockUseAuthQuery: vi.fn().mockReturnValue({ data: undefined }),
+    mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
+    mockProviderDestroy: vi.fn(),
+    mockFlushPendingUpdates: vi.fn().mockResolvedValue(true),
+    mockSetUser: vi.fn(),
+    mockSetWritable: vi.fn(),
+    mockApplyRemoteUpdates: vi.fn(),
+    mockApplyRemoteAwareness: vi.fn(),
+    mockIsApplyingRemoteUpdate: vi.fn().mockReturnValue(false),
+  }
+})
 
 vi.mock('convex/_generated/api', () => ({
   api: {
@@ -77,23 +94,18 @@ vi.mock('~/shared/hooks/useCampaignQuery', () => ({
   useCampaignQuery: (...args: Array<unknown>) => mockUseAuthQuery(...args),
 }))
 
-const mockProviderDestroy = vi.fn()
-const mockFlushPendingUpdates = vi.fn().mockResolvedValue(true)
-const mockSetUser = vi.fn()
-const mockApplyRemoteUpdates = vi.fn()
-const mockApplyRemoteAwareness = vi.fn()
-
 vi.mock('../../providers/convex-yjs-provider', () => ({
   ConvexYjsProvider: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
     this.destroy = mockProviderDestroy
-    this.flushPendingUpdates = mockFlushPendingUpdates
-    this.applyRemoteUpdates = mockApplyRemoteUpdates
-    this.applyRemoteAwareness = mockApplyRemoteAwareness
-    this.setUser = mockSetUser
-    this.writable = false
     this.awareness = { setLocalStateField: vi.fn() }
     this.lastAppliedSeq = -1
   }),
+  applyConvexYjsProviderRemoteAwareness: mockApplyRemoteAwareness,
+  applyConvexYjsProviderRemoteUpdates: mockApplyRemoteUpdates,
+  flushConvexYjsProviderPendingUpdates: mockFlushPendingUpdates,
+  isConvexYjsProviderApplyingRemoteUpdate: mockIsApplyingRemoteUpdate,
+  setConvexYjsProviderUser: mockSetUser,
+  setConvexYjsProviderWritable: mockSetWritable,
 }))
 
 describe('useNoteYjsCollaboration', () => {
@@ -110,8 +122,11 @@ describe('useNoteYjsCollaboration', () => {
     mockFlushPendingUpdates.mockClear()
     mockFlushPendingUpdates.mockResolvedValue(true)
     mockSetUser.mockClear()
+    mockSetWritable.mockClear()
     mockApplyRemoteUpdates.mockClear()
     mockApplyRemoteAwareness.mockClear()
+    mockIsApplyingRemoteUpdate.mockClear()
+    mockIsApplyingRemoteUpdate.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -205,11 +220,11 @@ describe('useNoteYjsCollaboration', () => {
       await flushMicrotasks(10)
       mockAction.mockClear()
 
-      result.current.provider!.isApplyingRemoteUpdate = true
+      mockIsApplyingRemoteUpdate.mockReturnValue(true)
       result.current.doc!.transact(() => {
         result.current.doc!.getMap('document-test').set('remote', 'changed')
       }, result.current.provider)
-      result.current.provider!.isApplyingRemoteUpdate = false
+      mockIsApplyingRemoteUpdate.mockReturnValue(false)
 
       await vi.advanceTimersByTimeAsync(LIVE_YJS_PERSIST_DEBOUNCE_MS)
       await flushMicrotasks(10)

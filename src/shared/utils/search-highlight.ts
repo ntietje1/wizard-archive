@@ -1,4 +1,4 @@
-export interface HighlightRange {
+interface HighlightRange {
   start: number
   end: number
 }

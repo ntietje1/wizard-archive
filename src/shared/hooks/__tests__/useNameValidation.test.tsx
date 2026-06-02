@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { NAME_VALIDATION_DEBOUNCE_MS, useNameValidation } from '~/shared/hooks/useNameValidation'
+import { useNameValidation } from '~/shared/hooks/useNameValidation'
 import { testId } from '~/test/helpers/test-id'
 
 const mockValidateName = vi.fn()
+const NAME_VALIDATION_DEBOUNCE_MS = 300
 
 vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
   useSidebarValidation: () => ({

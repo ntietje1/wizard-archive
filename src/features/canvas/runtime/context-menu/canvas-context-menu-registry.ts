@@ -95,7 +95,7 @@ function buildCanvasArrangeItems(): Array<CanvasContextMenuItem> {
   }))
 }
 
-export function parseCanvasReorderDirection(payload: unknown): CanvasReorderDirection | null {
+function parseCanvasReorderDirection(payload: unknown): CanvasReorderDirection | null {
   return parseCanvasReorderPayload(payload)?.direction ?? null
 }
 

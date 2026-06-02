@@ -1,12 +1,12 @@
 import { create } from 'zustand'
 
-export interface PanelState {
+interface PanelState {
   size: number
   visible: boolean
   activeContentId: string | null
 }
 
-export interface PanelPreferenceStore {
+interface PanelPreferenceStore {
   panels: Record<string, PanelState>
   initPanel: (panelId: string, state: PanelState) => void
   setSize: (panelId: string, size: number) => void

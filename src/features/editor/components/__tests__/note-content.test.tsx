@@ -81,7 +81,7 @@ vi.mock('~/features/editor/hooks/useLinkResolver', () => ({
 vi.mock('~/features/editor/hooks/useNoteYjsCollaboration', () => ({
   useNoteYjsCollaboration: () => ({
     doc: { getXmlFragment: vi.fn(() => ({})) },
-    provider: { setUser: vi.fn() },
+    provider: { awareness: { setLocalStateField: vi.fn() } },
     instanceId: 1,
     isLoading: false,
   }),

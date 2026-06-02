@@ -1,5 +1,4 @@
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import { devtools } from '@tanstack/devtools-vite'
 import { defineConfig } from 'vite-plus'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -75,7 +74,6 @@ export default defineConfig({
   },
   plugins: [
     tailwindcss(),
-    devtools(),
     tanstackStart(),
     react({
       babel: {

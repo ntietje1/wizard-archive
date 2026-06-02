@@ -9,7 +9,7 @@ interface CanvasResizeGeometryResult {
   guides: ReadonlyArray<CanvasDragGuide>
 }
 
-export interface CanvasResizeGeometryOptions {
+interface CanvasResizeGeometryOptions {
   handlePosition: CanvasResizeHandlePosition
   startBounds: CanvasResizeBounds
   currentPoint: { x: number; y: number }

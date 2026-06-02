@@ -1,4 +1,4 @@
-export type PrimitiveArrayValue = string | number | boolean | bigint | symbol | null | undefined
+type PrimitiveArrayValue = string | number | boolean | bigint | symbol | null | undefined
 
 export function areArraysEqual<T extends PrimitiveArrayValue>(
   left: ReadonlyArray<T>,

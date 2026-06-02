@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  findCanvasNodeAtPoint,
   getCanvasNodesMatchingLasso,
   getCanvasNodesMatchingRectangle,
 } from '../canvas-node-selection-queries'
@@ -19,7 +18,6 @@ describe('canvas node selection queries', () => {
       },
     ]
 
-    expect(findCanvasNodeAtPoint(nodes, { x: 20, y: 20 }, { zoom: 1 })).toBe('text-1')
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 100, height: 100 }, { zoom: 1 }),
     ).toEqual(new Set(['text-1']))
@@ -82,7 +80,6 @@ describe('canvas node selection queries', () => {
       },
     ]
 
-    expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 20 }, { zoom: 1 })).toBe('stroke-1')
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 40, height: 40 }, { zoom: 1 }),
     ).toEqual(new Set(['stroke-1']))
@@ -120,13 +117,12 @@ describe('canvas node selection queries', () => {
       },
     ]
 
-    expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 20 }, { zoom: 1 })).toBe('stroke-1')
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 40, y: 20, width: 20, height: 1 }, { zoom: 1 }),
     ).toEqual(new Set(['stroke-1']))
   })
 
-  it('hit-tests moved strokes using their rendered position', () => {
+  it('selects moved strokes using their rendered position', () => {
     const nodes: Array<Node> = [
       {
         id: 'stroke-1',
@@ -146,33 +142,13 @@ describe('canvas node selection queries', () => {
       },
     ]
 
-    expect(findCanvasNodeAtPoint(nodes, { x: 470, y: 250 }, { zoom: 1 })).toBe('stroke-1')
-  })
-
-  it('does not treat the open interior of a concave stroke as clickable', () => {
-    const nodes: Array<Node> = [
-      {
-        id: 'stroke-u',
-        type: 'stroke',
-        position: { x: 0, y: 0 },
-        width: 100,
-        height: 100,
-        data: {
-          bounds: { x: 0, y: 0, width: 100, height: 100 },
-          points: [
-            [20, 20, 0.5],
-            [20, 80, 0.5],
-            [80, 80, 0.5],
-            [80, 20, 0.5],
-          ],
-          color: 'var(--foreground)',
-          size: 4,
-        },
-      },
-    ]
-
-    expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 40 }, { zoom: 1 })).toBeNull()
-    expect(findCanvasNodeAtPoint(nodes, { x: 20, y: 50 }, { zoom: 1 })).toBe('stroke-u')
+    expect(
+      getCanvasNodesMatchingRectangle(
+        nodes,
+        { x: 460, y: 245, width: 20, height: 10 },
+        { zoom: 1 },
+      ),
+    ).toEqual(new Set(['stroke-1']))
   })
 
   it('ignores malformed stroke payloads during rectangle selection candidate filtering', () => {
@@ -202,7 +178,6 @@ describe('canvas node selection queries', () => {
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 100, height: 100 }, { zoom: 1 }),
     ).toEqual(new Set(['text-1']))
-    expect(findCanvasNodeAtPoint(nodes, { x: 10, y: 10 }, { zoom: 1 })).toBe('text-1')
     expect(
       getCanvasNodesMatchingLasso(
         nodes,

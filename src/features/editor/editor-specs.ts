@@ -6,7 +6,7 @@ import { reactValueInlineSpec } from './value-block/value-block-react-spec'
 import type { NoteValueProps } from '../../../shared/note-values/schema'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 
-export const editorSchema = BlockNoteSchema.create({
+const editorSchema = BlockNoteSchema.create({
   blockSpecs: customBlockSpecs,
   inlineContentSpecs: customInlineContentSpecs,
   styleSpecs: customStyleSpecs,

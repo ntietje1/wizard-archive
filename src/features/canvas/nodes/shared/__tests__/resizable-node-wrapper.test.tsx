@@ -12,7 +12,6 @@ import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { CANVAS_NODE_MIN_SIZE } from '../canvas-node-resize-constants'
 import { CanvasNodeResizeMetadataProvider } from '../canvas-node-resize-metadata-provider'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
-import { resolveSelectionResizeUpdates } from '../use-canvas-resize-session'
 import type { CanvasNodeResizeUpdate } from '../../../tools/canvas-tool-types'
 import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/validation'
 
@@ -483,39 +482,6 @@ describe('ResizableNodeWrapper', () => {
     expectMapEntries(runtime.nodeActions.onResizeMany, [
       ['node-1', { width: 150, height: 75, position: { x: 10, y: 20 } }],
     ])
-  })
-
-  it('keeps aspect-ratio locked nodes locked inside a group resize', () => {
-    const updates = resolveSelectionResizeUpdates({
-      handlePosition: 'right',
-      startBounds: { x: 10, y: 20, width: 140, height: 40 },
-      nextBounds: { x: 10, y: 20, width: 280, height: 40 },
-      nodes: [
-        {
-          id: 'node-1',
-          bounds: { x: 10, y: 20, width: 80, height: 40 },
-          dragging: false,
-          metadata: { dragging: false, lockedAspectRatio: 2, minHeight: 20, minWidth: 20 },
-        },
-        {
-          id: 'node-2',
-          bounds: { x: 110, y: 20, width: 40, height: 40 },
-          dragging: false,
-          metadata: { dragging: false, minHeight: 20, minWidth: 20 },
-        },
-      ],
-    })
-
-    expect(updates.get('node-1')).toEqual({
-      width: 160,
-      height: 80,
-      position: { x: 10, y: 0 },
-    })
-    expect(updates.get('node-2')).toEqual({
-      width: 80,
-      height: 40,
-      position: { x: 210, y: 20 },
-    })
   })
 
   it('keeps snapping active for the aggregate wrapper', () => {

@@ -11,13 +11,13 @@ import {
 } from '~/features/editor/utils/note-editor-focus'
 import { logger } from '~/shared/utils/logger'
 
-export interface BlockNoteEditorWithMountedView {
+interface BlockNoteEditorWithMountedView {
   _tiptapEditor?: {
     view?: EditorView | null
   }
 }
 
-export function getMountedBlockNoteView(
+function getMountedBlockNoteView(
   editor: BlockNoteEditorWithMountedView | null | undefined,
 ): EditorView | null {
   let view: EditorView | null | undefined

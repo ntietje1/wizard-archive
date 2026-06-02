@@ -81,7 +81,7 @@ export const publicPageHead = ({ title, description }: { title: string; descript
   }
 }
 
-export type PublicFaq = {
+type PublicFaq = {
   q: string
   a: string
 }

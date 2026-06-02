@@ -13,15 +13,3 @@ export function sortCanvasElementsByZIndex<T extends OrderableCanvasElement>(ele
     })
     .map(({ element }) => element)
 }
-
-export function applyCanvasZOrder<T extends OrderableCanvasElement>(
-  elements: Array<T>,
-  orderedIds: Array<string>,
-) {
-  const elementsById = new Map(elements.map((element) => [element.id, element]))
-
-  return orderedIds.flatMap((id, index) => {
-    const element = elementsById.get(id)
-    return element ? [{ ...element, zIndex: index + 1 }] : []
-  })
-}
