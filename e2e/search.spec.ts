@@ -62,10 +62,6 @@ test.describe.serial('search', () => {
 
     await createItemViaUI(page, 'Folder', folderTreasure)
 
-    // Wait for note content to persist and be indexed
-    const indexWaitMs = Number(process.env.TEST_INDEX_WAIT_MS ?? 5000)
-    await page.waitForTimeout(indexWaitMs)
-
     await page.close()
     await context.close()
   })
@@ -379,7 +375,7 @@ test.describe.serial('search', () => {
 
     // Hover over second item
     await items.nth(1).hover()
-    await expect(items.nth(1)).toHaveAttribute('aria-selected', 'true')
+    await expect(items.nth(1)).toHaveAttribute('aria-current', 'true')
   })
 
   test('click navigates to result and closes dialog', async ({ page }) => {

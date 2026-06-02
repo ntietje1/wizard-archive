@@ -4,7 +4,7 @@ import { api } from 'convex/_generated/api'
 import { AUTH_STORAGE_PATH } from './constants'
 import type { Id } from 'convex/_generated/dataModel'
 
-const CONVEX_AUTH_COOKIE = '__Secure-better-auth.convex_jwt'
+const CONVEX_AUTH_COOKIE_NAMES = ['__Secure-better-auth.convex_jwt', 'better-auth.convex_jwt']
 
 interface StorageState {
   cookies: Array<{
@@ -71,9 +71,11 @@ async function createE2EConvexClient() {
     )
   }
 
-  const jwt = storage.cookies.find((cookie) => cookie.name === CONVEX_AUTH_COOKIE)?.value
+  const jwt = storage.cookies.find((cookie) =>
+    CONVEX_AUTH_COOKIE_NAMES.includes(cookie.name),
+  )?.value
   if (!jwt) {
-    throw new Error(`Missing ${CONVEX_AUTH_COOKIE} in ${AUTH_STORAGE_PATH}`)
+    throw new Error(`Missing Convex auth cookie in ${AUTH_STORAGE_PATH}`)
   }
 
   const client = new ConvexHttpClient(convexUrl)

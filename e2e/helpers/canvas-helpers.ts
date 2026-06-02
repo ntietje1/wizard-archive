@@ -64,8 +64,6 @@ type ResizeHandlePosition =
   | 'bottom-left'
   | 'left'
 
-const MODIFIER_SETTLE_DELAY_MS = 50
-
 const TOOL_NAME_PATTERNS = {
   Pointer: /^(Pointer|Select)$/i,
   Panning: /^(Panning|Hand)$/i,
@@ -146,26 +144,6 @@ export function getCanvasMarqueeOverlay(page: Page) {
 
 export function getCanvasLassoOverlay(page: Page) {
   return page.getByTestId('canvas-lasso-overlay')
-}
-
-export function getCanvasDragSnapGuides(page: Page) {
-  return page.getByTestId('canvas-drag-snap-guide')
-}
-
-export function getCanvasRemoteCursor(page: Page) {
-  return page.getByTestId('canvas-remote-cursor')
-}
-
-export function getCanvasRemoteSelectionPreview(page: Page) {
-  return page.getByTestId('canvas-remote-selection-preview')
-}
-
-export function getCanvasRemoteLassoPreview(page: Page) {
-  return page.getByTestId('canvas-remote-lasso-preview')
-}
-
-export function getCanvasRemoteDrawPreview(page: Page) {
-  return page.getByTestId('canvas-remote-draw-preview')
 }
 
 export function getCanvasNodes(page: Page) {
@@ -329,6 +307,20 @@ export async function setCanvasSelectionViaRuntime(
     window.__WA_CANVAS_PERF_RUNTIME__?.setSelection(nextSelection)
   }, selection)
   await expectCanvasRuntimeSelection(page, selection)
+  await getCanvasPane(page).evaluate((pane) => {
+    pane.focus()
+  })
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const activeElement = document.activeElement
+        return (
+          activeElement instanceof Element &&
+          Boolean(activeElement.closest('[data-testid="canvas-scene"]'))
+        )
+      }),
+    )
+    .toBe(true)
 }
 
 /**
@@ -720,7 +712,6 @@ export async function clickCanvasNode(
   for (const modifier of options.modifiers) {
     await page.keyboard.down(modifier)
   }
-  await page.waitForTimeout(MODIFIER_SETTLE_DELAY_MS)
   try {
     await click()
   } finally {

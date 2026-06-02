@@ -13,22 +13,6 @@ export async function typeInEditor(page: Page, text: string) {
   await page.keyboard.type(text)
 }
 
-export async function selectAllText(page: Page, selector?: string) {
-  if (selector) {
-    await page.click(selector)
-  }
-  const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
-  await page.keyboard.press(`${mod}+a`)
-  await page.waitForTimeout(100)
-}
-
-export async function applyFormatting(page: Page, shortcut: string) {
-  const editor = await getEditor(page)
-  await editor.focus()
-  await page.keyboard.press(shortcut)
-  await page.waitForTimeout(300)
-}
-
 export async function openSlashMenu(page: Page) {
   const editor = await getEditor(page)
   const paragraphs = editor.locator('p')
@@ -46,15 +30,18 @@ export async function openSlashMenu(page: Page) {
 export async function selectSlashMenuItem(page: Page, itemName: string | RegExp) {
   const menu = await openSlashMenu(page)
   await menu.getByRole('option', { name: itemName }).click()
-  await page.waitForTimeout(300)
+  await expect(menu).not.toBeVisible({ timeout: 5000 })
 }
 
 export async function newParagraphAtEnd(page: Page) {
   const editor = await getEditor(page)
+  const initialParagraphCount = await editor.locator('p').count()
   await editor.click()
   const endShortcut = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
   await page.keyboard.press(endShortcut)
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
-  await page.waitForTimeout(200)
+  await expect
+    .poll(() => editor.locator('p').count(), { timeout: 5000 })
+    .toBeGreaterThan(initialParagraphCount)
 }

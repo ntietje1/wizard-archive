@@ -22,11 +22,8 @@ test.describe.serial('sidebar sorting', () => {
     await page.goto('/campaigns')
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
-    // Sequential creates with small delays to ensure distinct _creationTime values for date-sort tests
     await createNote(page, noteAlpha)
-    await page.waitForTimeout(100)
     await createNote(page, noteBeta)
-    await page.waitForTimeout(100)
     await createNote(page, noteCharlie)
     await page.close()
     await context.close()

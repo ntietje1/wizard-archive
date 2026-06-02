@@ -324,6 +324,7 @@ async function moveMouseToCanvasCenter(page: Page) {
   const box = await getCanvasPane(page).boundingBox()
   if (!box) throw new Error('Canvas pane is not visible')
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  // Performance-only probe: let the hover target stabilize before wheel timing begins.
   await page.waitForTimeout(100)
 }
 
@@ -410,6 +411,7 @@ async function measureInteraction(
   await action()
   const wallMs = Date.now() - start
   if (settleMs > 0) {
+    // Performance-only probe: include post-action render work before reading collected metrics.
     await page.waitForTimeout(settleMs)
   }
   const entries = await page.evaluate(() => window.__WA_CANVAS_PERF__?.entries ?? [])

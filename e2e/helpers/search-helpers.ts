@@ -6,19 +6,19 @@ export function getSearchDialog(page: Page) {
 }
 
 export function getSearchInput(page: Page) {
-  return page.getByRole('combobox', { name: 'Search' })
+  return page.getByRole('textbox', { name: 'Search' })
 }
 
 export function getResultsList(page: Page) {
-  return page.getByRole('listbox', { name: 'Search results' })
+  return page.getByLabel('Search results')
 }
 
 export function getResultItems(page: Page) {
-  return getResultsList(page).getByRole('option')
+  return getResultsList(page).getByRole('button')
 }
 
 export function getSelectedResult(page: Page) {
-  return getResultsList(page).getByRole('option', { selected: true })
+  return getResultsList(page).locator('button[aria-current="true"]')
 }
 
 export function getStatusText(page: Page) {

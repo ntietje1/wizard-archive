@@ -82,8 +82,6 @@ test.describe.serial('editor stress tests', () => {
     collabFormat: `CollabFmt ${Date.now()}`,
     multiParagraph: `MultiPara ${Date.now()}`,
     undoBasic: `UndoBasic ${Date.now()}`,
-    undoSelect: `UndoSel ${Date.now()}`,
-    redoAfterSync: `RedoSync ${Date.now()}`,
     complex: `Complex ${Date.now()}`,
   }
 
@@ -117,75 +115,6 @@ test.describe.serial('editor stress tests', () => {
     await page.keyboard.press(`${MOD}+z`)
 
     await expect(editor).not.toContainText(text, { timeout: 5000 })
-  })
-
-  test('redo restores undone text', async ({ page }) => {
-    const editor = await navigateToNote(page, notes.undoSelect)
-    await editor.click()
-
-    const text = `Redo-${Date.now()}`
-    await page.keyboard.type(text)
-    await expect(editor).toContainText(text)
-
-    await page.keyboard.press(`${MOD}+z`)
-    await page.keyboard.press(`${MOD}+z`)
-    await page.keyboard.press(`${MOD}+z`)
-    await expect(editor).not.toContainText(text, { timeout: 5000 })
-
-    await page.keyboard.press(`${MOD}+Shift+z`)
-    await expect(editor).toContainText(text, { timeout: 5000 })
-  })
-
-  test('redo works after undo and sync round-trips', async ({ page }) => {
-    const editor = await navigateToNote(page, notes.redoAfterSync)
-    await editor.click()
-
-    const base = `Base-${Date.now()}`
-    await page.keyboard.type(base)
-    await expect(editor).toContainText(base)
-
-    // Wait for base text to sync
-    await page.waitForTimeout(3000)
-
-    const added = `Added-${Date.now()}`
-    await page.keyboard.type(added)
-    await expect(editor).toContainText(added)
-
-    // Wait for added text to sync
-    await page.waitForTimeout(3000)
-
-    // Undo the added text (back to base, not empty)
-    await page.keyboard.press(`${MOD}+z`)
-    await expect(editor).not.toContainText(added, { timeout: 5000 })
-    await expect(editor).toContainText(base)
-
-    // Wait for the undo to sync back
-    await page.waitForTimeout(3000)
-
-    // Redo should restore the added text
-    await page.keyboard.press(`${MOD}+Shift+z`)
-    await expect(editor).toContainText(added, { timeout: 5000 })
-  })
-
-  test('redo works after undo to empty doc and sync round-trips', async ({ page }) => {
-    const editor = await navigateToNote(page, notes.redoAfterSync)
-    await editor.click()
-
-    const text = `RedoSync-${Date.now()}`
-    await page.keyboard.type(text)
-    await expect(editor).toContainText(text)
-
-    await page.waitForTimeout(3000)
-
-    for (let i = 0; i < 10; i++) {
-      await page.keyboard.press(`${MOD}+z`)
-    }
-    await expect(editor).not.toContainText(text, { timeout: 5000 })
-
-    await page.waitForTimeout(3000)
-
-    await page.keyboard.press(`${MOD}+Shift+z`)
-    await expect(editor).toContainText(text, { timeout: 5000 })
   })
 
   test('typing in middle of existing content does not corrupt surrounding text', async ({

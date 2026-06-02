@@ -8,20 +8,12 @@ import {
   getCanvasNodeById,
   getCanvasEdges,
   getCanvasNodesByType,
-  getCanvasPane,
-  getCanvasRemoteCursor,
-  getCanvasRemoteDrawPreview,
-  getCanvasRemoteLassoPreview,
-  getCanvasRemoteSelectionPreview,
   getCanvasRuntimeNodePosition,
-  moveCanvasPointer,
   openCanvas,
   seedCanvasEdgeViaRuntime,
   seedCanvasTextNodesViaRuntime,
   setCanvasSelectionViaRuntime,
   selectFirstCanvasNodesViaRuntime,
-  selectCanvasTool,
-  startCanvasPointerGesture,
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -184,51 +176,6 @@ test.describe.serial('canvas collaboration edge cases', () => {
       await waitForCanvasRuntime(collab.page2)
       await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(1)
       await expect(getCanvasNodeById(collab.page2, 'perf-node-0')).toBeVisible()
-    } finally {
-      await closeCollabContexts(collab)
-    }
-  })
-
-  test.fixme('shows remote cursor and in-progress selection, lasso, and draw previews', async ({
-    browser,
-  }) => {
-    const collab = await createCollabContexts(browser)
-
-    try {
-      await enableCanvasRuntime(collab.page1)
-      await enableCanvasRuntime(collab.page2)
-      await openCollabCanvas(collab.page1)
-      await openCollabCanvas(collab.page2)
-      await clearCanvasViaRuntime(collab.page1)
-      await seedCanvasTextNodesViaRuntime(collab.page1, {
-        count: 1,
-        start: { x: 220, y: 180 },
-      })
-      await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(1)
-
-      const paneBox = await getCanvasPane(collab.page2).boundingBox()
-      if (!paneBox) throw new Error('Canvas pane is not visible')
-      await collab.page2.mouse.move(paneBox.x + 240, paneBox.y + 180)
-      await expect(getCanvasRemoteCursor(collab.page1)).toBeVisible({ timeout: 10_000 })
-
-      await selectCanvasTool(collab.page2, 'Pointer')
-      await startCanvasPointerGesture(collab.page2, { x: 120, y: 120 })
-      await moveCanvasPointer(collab.page2, { x: 420, y: 300 })
-      await expect(getCanvasRemoteSelectionPreview(collab.page1)).toBeVisible({ timeout: 10_000 })
-      await collab.page2.mouse.up()
-
-      await selectCanvasTool(collab.page2, 'Lasso select')
-      await startCanvasPointerGesture(collab.page2, { x: 120, y: 120 })
-      await moveCanvasPointer(collab.page2, { x: 240, y: 160 })
-      await moveCanvasPointer(collab.page2, { x: 220, y: 280 })
-      await expect(getCanvasRemoteLassoPreview(collab.page1)).toBeVisible({ timeout: 10_000 })
-      await collab.page2.mouse.up()
-
-      await selectCanvasTool(collab.page2, 'Draw')
-      await startCanvasPointerGesture(collab.page2, { x: 260, y: 260 })
-      await moveCanvasPointer(collab.page2, { x: 340, y: 300 })
-      await expect(getCanvasRemoteDrawPreview(collab.page1)).toBeVisible({ timeout: 10_000 })
-      await collab.page2.mouse.up()
     } finally {
       await closeCollabContexts(collab)
     }

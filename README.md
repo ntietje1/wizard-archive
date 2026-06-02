@@ -92,13 +92,3 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 | **Auth**        | Better Auth (email/password, OAuth, 2FA)                                                         |
 | **Deployment**  | Cloudflare Workers (serverless edge)                                                             |
 | **Tooling**     | Vite+, Vitest, Playwright, React Compiler                                                        |
-
-## Testing
-
-| Suite        | Runner                | Scope                                                                                         |
-| ------------ | --------------------- | --------------------------------------------------------------------------------------------- |
-| **Backend**  | Vitest (edge-runtime) | 600+ tests — mutations, queries, permissions, cascading deletes, sharing workflows, snapshots |
-| **Frontend** | Vitest (jsdom)        | 300+ tests — components, hooks, stores, utilities                                             |
-| **E2E**      | Playwright (Chromium) | Full user flows — campaign creation, note editing, sharing, navigation                        |
-
-Backend and frontend suites run on every push via GitHub Actions. E2E tests run in CI and locally against a live app instance.

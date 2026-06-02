@@ -15,13 +15,14 @@ export async function openSettingsPeopleTab(page: Page) {
   let settingsOpened = false
   for (let attempt = 0; attempt < 3; attempt++) {
     await userMenuBtn.click()
+    const settingsButton = page.getByRole('button', { name: /^settings$/i })
     try {
-      await page.getByRole('button', { name: /^settings$/i }).click({ timeout: 5000 })
+      await settingsButton.click({ timeout: 5000 })
       settingsOpened = true
       break
     } catch {
       await page.keyboard.press('Escape')
-      await page.waitForTimeout(300)
+      await expect(settingsButton).not.toBeVisible({ timeout: 5000 })
     }
   }
   if (!settingsOpened) {

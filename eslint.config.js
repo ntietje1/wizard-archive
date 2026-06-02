@@ -4,7 +4,8 @@ import { includeIgnoreFile } from '@eslint/compat'
 import tseslint from 'typescript-eslint'
 import convexPlugin from '@convex-dev/eslint-plugin'
 
-// TODO: remove this once oxlint has plugins API
+// Vite+/Oxlint cannot load the Convex ESLint plugin rules, so this config
+// owns the Convex-specific lint adapter used by package scripts and CI.
 export default defineConfig([
   includeIgnoreFile(path.resolve(import.meta.dirname, '.gitignore')),
   {
