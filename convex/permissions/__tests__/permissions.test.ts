@@ -55,6 +55,8 @@ describe('hasAtLeastPermissionLevel', () => {
 
   it('uses named operation requirements for sidebar operations', () => {
     expect(hasPermissionForOperation(EDIT, PERMISSION_OPERATION.READ_SIDEBAR_ITEM)).toBe(true)
+    expect(hasPermissionForOperation(EDIT, PERMISSION_OPERATION.RENAME_SIDEBAR_ITEM)).toBe(true)
+    expect(hasPermissionForOperation(VIEW, PERMISSION_OPERATION.RENAME_SIDEBAR_ITEM)).toBe(false)
     expect(hasPermissionForOperation(EDIT, PERMISSION_OPERATION.MOVE_SIDEBAR_ITEM)).toBe(false)
     expect(hasPermissionForOperation(FULL_ACCESS, PERMISSION_OPERATION.MOVE_SIDEBAR_ITEM)).toBe(
       true,

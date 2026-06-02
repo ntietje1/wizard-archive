@@ -40,10 +40,10 @@ describe('effectiveHasAtLeastPermission', () => {
     ).toBe(false)
   })
 
-  it('DM with view-as inherits player permission from ancestors', () => {
+  it('DM with view-as inherits player permission through folders with inheritShares disabled', () => {
     const folder = createFolder({
       _id: testId<'sidebarItems'>('folder_parent'),
-      inheritShares: true,
+      inheritShares: false,
       allPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const note = createNote({

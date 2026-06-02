@@ -1,6 +1,7 @@
 import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
+import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
 import {
   ensureSidebarItemNameAvailable,
@@ -27,7 +28,7 @@ import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../../../../shared/sidebar-items/filesystem/receipts'
 import { createFileSystemReadModel } from '../../../../shared/sidebar-items/filesystem/read-model'
 import { getSidebarItemRow } from '../sidebarItemRows'
-import { checkSidebarItemRowAccess, requireSidebarItemRowAccess } from '../access'
+import { checkSidebarItemRowAccess, requireSidebarItemRowOperationAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
 import type { SidebarItemStatus } from '../../../../shared/sidebar-items/types'
 import type { AnySidebarItemRow } from '../../../../shared/sidebar-items/model-types'
@@ -119,9 +120,9 @@ async function resyncRelativeLinksForMovedItems(
 
 async function loadMovableSource(ctx: CampaignMutationCtx, itemId: Id<'sidebarItems'>) {
   const itemFromDb = await getSidebarItemRow(ctx, itemId)
-  return await requireSidebarItemRowAccess(ctx, {
+  return await requireSidebarItemRowOperationAccess(ctx, {
     rawItem: itemFromDb,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    operation: PERMISSION_OPERATION.MOVE_SIDEBAR_ITEM,
   })
 }
 
@@ -424,9 +425,9 @@ async function executeMergeFolderMove(
   }
 
   const rawDestination = await getSidebarItemRow(ctx, operation.destinationItemId)
-  const destination = await requireSidebarItemRowAccess(ctx, {
+  const destination = await requireSidebarItemRowOperationAccess(ctx, {
     rawItem: rawDestination,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
   if (destination.type !== SIDEBAR_ITEM_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Destination folder not found')
@@ -450,9 +451,9 @@ async function trashMoveReplacement(
   }
 
   const rawDestination = await getSidebarItemRow(ctx, destinationItemId)
-  const destination = await requireSidebarItemRowAccess(ctx, {
+  const destination = await requireSidebarItemRowOperationAccess(ctx, {
     rawItem: rawDestination,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    operation: PERMISSION_OPERATION.TRASH_SIDEBAR_ITEM,
   })
   if (destination.type === SIDEBAR_ITEM_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders are merged instead of replaced')

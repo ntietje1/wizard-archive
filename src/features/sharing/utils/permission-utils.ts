@@ -37,8 +37,6 @@ function resolveInheritedPermission(
     if (!folder) return null
     currentParentId = folder.parentId
 
-    if (!folder.inheritShares) continue
-
     const memberPermission = getMemberPermission(folder, memberId)
     if (memberPermission !== null) return { level: memberPermission, source: folder.name }
 

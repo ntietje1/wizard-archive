@@ -1,12 +1,108 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { AnySidebarItemFromDb } from '../../../shared/sidebar-items/model-types'
+
+type InheritedMemberPermission = { level: PermissionLevel; folderName: string | null }
+type InheritedPermissionsResult = {
+  allPlayers: { level: PermissionLevel | null; folderName: string | null }
+  members: Record<Id<'campaignMembers'>, InheritedMemberPermission>
+}
+
+function createInheritedPermissionsResult(): InheritedPermissionsResult {
+  return {
+    allPlayers: { level: null, folderName: null },
+    members: {} as Record<Id<'campaignMembers'>, InheritedMemberPermission>,
+  }
+}
+
+async function applyFolderMemberShares(
+  ctx: CampaignQueryCtx,
+  {
+    campaignId,
+    folderId,
+    folderName,
+    result,
+    unresolvedMembers,
+  }: {
+    campaignId: Id<'campaigns'>
+    folderId: Id<'sidebarItems'>
+    folderName: string
+    result: InheritedPermissionsResult
+    unresolvedMembers: Set<Id<'campaignMembers'>>
+  },
+) {
+  if (unresolvedMembers.size === 0) return
+
+  const folderShares = await ctx.db
+    .query('sidebarItemShares')
+    .withIndex('by_campaign_item_member', (q) =>
+      q.eq('campaignId', campaignId).eq('sidebarItemId', folderId),
+    )
+    .collect()
+  for (const share of folderShares) {
+    if (!unresolvedMembers.has(share.campaignMemberId)) continue
+
+    result.members[share.campaignMemberId] = {
+      level: normalizeExplicitSharePermissionLevel(share.permissionLevel),
+      folderName,
+    }
+    unresolvedMembers.delete(share.campaignMemberId)
+  }
+}
+
+function applyFolderAllPlayersPermission(
+  {
+    folderName,
+    allPermissionLevel,
+  }: {
+    folderName: string
+    allPermissionLevel: PermissionLevel | null
+  },
+  {
+    allPlayersResolved,
+    result,
+    unresolvedMembers,
+  }: {
+    allPlayersResolved: boolean
+    result: InheritedPermissionsResult
+    unresolvedMembers: Set<Id<'campaignMembers'>>
+  },
+) {
+  if (allPermissionLevel === null) return allPlayersResolved
+
+  if (!allPlayersResolved) {
+    result.allPlayers = {
+      level: allPermissionLevel,
+      folderName,
+    }
+  }
+
+  for (const memberId of unresolvedMembers) {
+    result.members[memberId] = {
+      level: allPermissionLevel,
+      folderName,
+    }
+  }
+  unresolvedMembers.clear()
+  return true
+}
+
+function fillUnresolvedMembersWithNone(
+  result: InheritedPermissionsResult,
+  unresolvedMembers: Set<Id<'campaignMembers'>>,
+) {
+  for (const memberId of unresolvedMembers) {
+    result.members[memberId] = {
+      level: PERMISSION_LEVEL.NONE,
+      folderName: null,
+    }
+  }
+}
 
 export async function resolveInheritedPermissions(
   ctx: CampaignQueryCtx,
@@ -19,21 +115,8 @@ export async function resolveInheritedPermissions(
     campaignId: Id<'campaigns'>
     memberIds: Array<Id<'campaignMembers'>>
   },
-): Promise<{
-  allPlayers: { level: PermissionLevel | null; folderName: string | null }
-  members: Record<Id<'campaignMembers'>, { level: PermissionLevel; folderName: string | null }>
-}> {
-  const result: {
-    allPlayers: { level: PermissionLevel | null; folderName: string | null }
-    members: Record<Id<'campaignMembers'>, { level: PermissionLevel; folderName: string | null }>
-  } = {
-    allPlayers: { level: null, folderName: null },
-    members: {} as Record<
-      Id<'campaignMembers'>,
-      { level: PermissionLevel; folderName: string | null }
-    >,
-  }
-
+): Promise<InheritedPermissionsResult> {
+  const result = createInheritedPermissionsResult()
   const unresolvedMembers = new Set(memberIds)
   let allPlayersResolved = false
 
@@ -42,60 +125,24 @@ export async function resolveInheritedPermissions(
     const folder = await getSidebarItem(ctx, currentParentId)
     if (!folder) break
 
-    const inheritShares = folder.type === SIDEBAR_ITEM_TYPES.folders ? folder.inheritShares : false
-    if (!inheritShares) {
-      currentParentId = folder.parentId
-      continue
-    }
-
-    if (unresolvedMembers.size > 0) {
-      const folderShares = await ctx.db
-        .query('sidebarItemShares')
-        .withIndex('by_campaign_item_member', (q) =>
-          q.eq('campaignId', campaignId).eq('sidebarItemId', currentParentId!),
-        )
-        .collect()
-      for (const share of folderShares) {
-        if (unresolvedMembers.has(share.campaignMemberId)) {
-          result.members[share.campaignMemberId] = {
-            level: normalizeExplicitSharePermissionLevel(share.permissionLevel),
-            folderName: folder.name,
-          }
-          unresolvedMembers.delete(share.campaignMemberId)
-        }
-      }
-    }
-
-    if (folder.allPermissionLevel !== null) {
-      if (!allPlayersResolved) {
-        result.allPlayers = {
-          level: folder.allPermissionLevel,
-          folderName: folder.name,
-        }
-        allPlayersResolved = true
-      }
-
-      for (const memberId of unresolvedMembers) {
-        result.members[memberId] = {
-          level: folder.allPermissionLevel,
-          folderName: folder.name,
-        }
-      }
-      unresolvedMembers.clear()
-    }
+    await applyFolderMemberShares(ctx, {
+      campaignId,
+      folderId: currentParentId,
+      folderName: folder.name,
+      result,
+      unresolvedMembers,
+    })
+    allPlayersResolved = applyFolderAllPlayersPermission(
+      { folderName: folder.name, allPermissionLevel: folder.allPermissionLevel },
+      { allPlayersResolved, result, unresolvedMembers },
+    )
 
     if (allPlayersResolved && unresolvedMembers.size === 0) break
 
     currentParentId = folder.parentId
   }
 
-  for (const memberId of unresolvedMembers) {
-    result.members[memberId] = {
-      level: PERMISSION_LEVEL.NONE,
-      folderName: null,
-    }
-  }
-
+  fillUnresolvedMembersWithNone(result, unresolvedMembers)
   return result
 }
 

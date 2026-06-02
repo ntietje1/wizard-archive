@@ -2,6 +2,7 @@ import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
 import { EDIT_HISTORY_ACTION } from '../../../../shared/edit-history/types'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
+import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
 import { logEditHistory } from '../../../editHistory/log'
 import { assertSidebarItemName } from '../../validation/name'
 import { deduplicateName } from '../../../../shared/sidebar-items/default-name'
@@ -16,7 +17,7 @@ import { SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
 import { isActiveSidebarItem } from '../../types/status'
 import { evaluateCopy } from '../../../../shared/sidebar-items/filesystem/capabilities'
 import { assertSidebarOperationAllowed } from '../capabilities'
-import { checkSidebarItemRowAccess, requireSidebarItemRowAccess } from '../access'
+import { checkSidebarItemRowAccess, requireSidebarItemRowOperationAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
 import { toDecisionRecord } from '../../../../shared/sidebar-items/filesystem/conflicts'
 import type { OperationDecision } from '../../../../shared/sidebar-items/filesystem/conflicts'
@@ -296,9 +297,9 @@ async function validateSidebarItemCopyable(
 ) {
   const rawSource = await getSidebarItemRow(ctx, sourceItemId)
   if (!rawSource) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
-  const source = await requireSidebarItemRowAccess(ctx, {
+  const source = await requireSidebarItemRowOperationAccess(ctx, {
     rawItem: rawSource,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    operation: PERMISSION_OPERATION.COPY_SIDEBAR_ITEM,
   })
   if (!isActiveSidebarItem(source)) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only active sidebar items can be copied')
@@ -319,9 +320,9 @@ async function logCopyFolderMerge(
   if (!destination || destination.type !== SIDEBAR_ITEM_TYPES.folders) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Destination folder not found')
   }
-  await requireSidebarItemRowAccess(ctx, {
+  await requireSidebarItemRowOperationAccess(ctx, {
     rawItem: destination,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
   await logEditHistory(ctx, {
     itemId: destination._id,
@@ -347,9 +348,9 @@ async function trashCopyReplacement(
   if (destination.type === SIDEBAR_ITEM_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders are merged instead of replaced')
   }
-  const trashableDestination = await requireSidebarItemRowAccess(ctx, {
+  const trashableDestination = await requireSidebarItemRowOperationAccess(ctx, {
     rawItem: destination,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    operation: PERMISSION_OPERATION.TRASH_SIDEBAR_ITEM,
   })
   await session.trashSidebarTree(trashableDestination)
 }

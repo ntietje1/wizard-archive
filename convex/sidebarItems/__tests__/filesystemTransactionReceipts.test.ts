@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
-import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
-import { createNote } from '../../_test/factories.helper'
+import { createNote, createSidebarShare } from '../../_test/factories.helper'
+import { expectPermissionDenied } from '../../_test/assertions.helper'
 
 describe('filesystem transaction receipts', () => {
   const t = createTestContext()
@@ -63,6 +64,40 @@ describe('filesystem transaction receipts', () => {
         command: { type: 'rename', itemId: noteId, name: 'Scene Three' },
       }),
     ).rejects.toThrow('Client operation id was already used for a different filesystem command')
+  })
+
+  it('allows edit permission to rename but not move the same item', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Scene',
+    })
+
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'edit',
+    })
+
+    await playerAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: noteId, name: 'Scene Revised' },
+    })
+
+    const renamed = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: noteId,
+    })
+    expect(renamed.name).toBe('Scene Revised')
+
+    await expectPermissionDenied(
+      playerAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        campaignId: ctx.campaignId,
+        command: { type: 'move', itemIds: [noteId], targetParentId: null },
+      }),
+    )
   })
 
   it('returns the original transaction id for undo and redo receipts', async () => {

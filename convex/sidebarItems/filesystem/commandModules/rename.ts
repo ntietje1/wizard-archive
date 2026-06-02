@@ -2,7 +2,7 @@ import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
 import { logEditHistory } from '../../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../../../shared/edit-history/types'
-import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
+import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
 import { assertSidebarItemName } from '../../validation/name'
 import { requireOptionalSidebarItemColor } from '../../../../shared/sidebar-items/color'
 import { requireOptionalSidebarItemIconName } from '../../../../shared/sidebar-items/icon'
@@ -10,7 +10,7 @@ import { prepareSidebarItemRename } from '../../validation/orchestration'
 import { FILE_SYSTEM_EVENT_TYPE } from '../../../../shared/sidebar-items/filesystem/receipts'
 import { createFileSystemWriteSession } from '../deltas'
 import { getSidebarItemRow } from '../sidebarItemRows'
-import { requireSidebarItemRowAccess } from '../access'
+import { requireSidebarItemRowOperationAccess } from '../access'
 import { isActiveSidebarItem } from '../../types/status'
 import type { AccessibleSidebarItemRow } from '../access'
 import type { CampaignMutationCtx } from '../../../functions'
@@ -39,9 +39,9 @@ export async function executeRenameCommand(
   const session = createFileSystemWriteSession(ctx)
   const rawItem = await getSidebarItemRow(ctx, command.itemId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
-  const item = await requireSidebarItemRowAccess(ctx, {
+  const item = await requireSidebarItemRowOperationAccess(ctx, {
     rawItem,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    operation: PERMISSION_OPERATION.RENAME_SIDEBAR_ITEM,
   })
   if (!isActiveSidebarItem(item)) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only active items can be renamed')

@@ -3,6 +3,10 @@ import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import {
+  PERMISSION_OPERATION,
+  getPermissionRequirementForOperation,
+} from '../../../shared/permissions/requirements'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { getSidebarItem } from '../functions/getSidebarItem'
@@ -154,7 +158,7 @@ export async function validateSidebarCreateParent(
     }
     await requireItemAccess(ctx, {
       rawItem: parentItem,
-      requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      requiredLevel: getPermissionRequirementForOperation(PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM),
     })
   } else if (membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can create items at the root level')

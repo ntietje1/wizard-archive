@@ -1,6 +1,7 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
+import { getPermissionRequirementForOperation } from '../../../shared/permissions/requirements'
 import { enhanceBase } from '../functions/enhanceBaseSidebarItem'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
@@ -10,6 +11,7 @@ import type {
 } from '../../../shared/sidebar-items/model-types'
 
 export type AccessibleSidebarItemRow = EnhanceSidebarItem<AnySidebarItemRow>
+type PermissionOperation = Parameters<typeof getPermissionRequirementForOperation>[0]
 
 export async function checkSidebarItemRowAccess<T extends AnySidebarItemRow>(
   ctx: CampaignQueryCtx,
@@ -47,4 +49,20 @@ export async function requireSidebarItemRowAccess<T extends AnySidebarItemRow>(
     )
   }
   return item
+}
+
+export async function requireSidebarItemRowOperationAccess<T extends AnySidebarItemRow>(
+  ctx: CampaignQueryCtx,
+  {
+    rawItem,
+    operation,
+  }: {
+    rawItem: T | null
+    operation: PermissionOperation
+  },
+): Promise<AccessibleSidebarItemRow> {
+  return await requireSidebarItemRowAccess(ctx, {
+    rawItem,
+    requiredLevel: getPermissionRequirementForOperation(operation),
+  })
 }
