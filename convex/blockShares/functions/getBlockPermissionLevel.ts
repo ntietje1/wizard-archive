@@ -1,4 +1,4 @@
-import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import type { CampaignQueryCtx } from '../../functions'

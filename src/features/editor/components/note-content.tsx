@@ -22,7 +22,7 @@ import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { BlockMeta, NoteWithContent } from 'convex/notes/types'
+import type { BlockMeta, NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties } from 'react'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 

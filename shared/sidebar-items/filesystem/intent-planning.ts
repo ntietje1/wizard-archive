@@ -1,4 +1,4 @@
-import type { SidebarItemId } from './types'
+import type { SidebarItemId } from '../../common/ids'
 import type { FileSystemCommand } from './commands'
 import type {
   OperationActorSnapshot,

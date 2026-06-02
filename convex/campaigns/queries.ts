@@ -8,7 +8,7 @@ import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampa
 import { getCampaignBySlug as getCampaignBySlugFn } from './functions/getCampaign'
 import { assertCampaignSlug, campaignSlugValidator } from './validation'
 
-import type { Campaign, CampaignMember } from './types'
+import type { Campaign, CampaignMember } from '../../shared/campaigns/types'
 
 export const getUserCampaigns = authQuery({
   args: {},

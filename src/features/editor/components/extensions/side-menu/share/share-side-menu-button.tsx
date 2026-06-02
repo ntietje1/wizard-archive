@@ -8,7 +8,7 @@ import {
 import { Share2 } from 'lucide-react'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'shared/notes/types'
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/utils/block-share-state'
 import type { AggregateShareStatus } from '~/features/sharing/utils/block-share-state'
 import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'

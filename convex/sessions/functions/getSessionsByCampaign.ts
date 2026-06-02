@@ -1,5 +1,5 @@
 import type { CampaignQueryCtx } from '../../functions'
-import type { Session } from '../types'
+import type { Session } from '../../../shared/sessions/types'
 
 export async function getSessionsByCampaign(ctx: CampaignQueryCtx): Promise<Array<Session>> {
   const campaignId = ctx.campaign._id

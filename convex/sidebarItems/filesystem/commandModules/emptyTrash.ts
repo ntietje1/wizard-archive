@@ -1,4 +1,4 @@
-import { CAMPAIGN_MEMBER_ROLE } from '../../../campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../../shared/campaigns/types'
 import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
 import { SIDEBAR_ITEM_STATUS } from '../../../../shared/sidebar-items/types'
@@ -10,7 +10,7 @@ import {
 import type { CampaignMutationCtx } from '../../../functions'
 import type { EmptyTrashFileSystemCommand } from '../../../../shared/sidebar-items/filesystem/commands'
 import type { FileSystemDelta } from '../../../../shared/sidebar-items/filesystem/receipts'
-import type { AnySidebarItemRow } from '../../types/types'
+import type { AnySidebarItemRow } from '../../../../shared/sidebar-items/model-types'
 import type { Id } from '../../../_generated/dataModel'
 
 // Keep empty-trash transactions bounded so one click cannot cause long DB work or UX pauses.

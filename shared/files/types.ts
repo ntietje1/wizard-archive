@@ -1,23 +1,23 @@
-import type { Id } from '../_generated/dataModel'
-import type { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import type { StorageId } from '../common/ids'
+import type { SIDEBAR_ITEM_TYPES } from '../sidebar-items/types'
 import type {
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
-} from '../sidebarItems/types/baseTypes'
+} from '../sidebar-items/model-types'
 
 export type FileFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.files> & {
-  storageId: Id<'_storage'> | null
+  storageId: StorageId | null
 }
 
 export type SidebarFile = SidebarItem<typeof SIDEBAR_ITEM_TYPES.files> & {
-  storageId: Id<'_storage'> | null
+  storageId: StorageId | null
   downloadUrl: string | null
   contentType: string | null
 }
 
 export type FileWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPES.files> & {
-  storageId: Id<'_storage'> | null
+  storageId: StorageId | null
   downloadUrl: string | null
   contentType: string | null
 }

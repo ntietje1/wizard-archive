@@ -1,4 +1,4 @@
-import type { SidebarItemId } from './types'
+import type { SidebarItemId } from '../../common/ids'
 import { SIDEBAR_ITEM_TYPES } from '../types'
 import type { OperationPlannerItem } from './selection'
 

@@ -1,7 +1,7 @@
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
-import type { FileFromDb, FileWithContent, SidebarFile } from '../types'
+import type { FileFromDb, FileWithContent, SidebarFile } from '../../../shared/files/types'
 
 export const enhanceFile = async (
   ctx: CampaignQueryCtx,

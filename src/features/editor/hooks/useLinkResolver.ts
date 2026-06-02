@@ -5,7 +5,7 @@ import { resolveParsedItemPath } from 'shared/links/resolution'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import type { ParsedLinkData, ResolvedLink } from 'shared/links/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 
 export interface LinkResolver {

@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import type { Folder } from 'convex/folders/types'
+import type { Folder } from 'shared/folders/types'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 
 interface DroppableSidebarItemProps {

@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type { DropResult } from '~/features/file-upload/utils/folder-reader'
 import type { FileSystemDropIntent } from '~/features/filesystem/useFileSystem'

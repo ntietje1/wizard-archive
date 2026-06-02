@@ -1,6 +1,6 @@
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useMapView } from '~/features/editor/hooks/useMapView'
-import type { GameMapWithContent } from 'convex/gameMaps/types'
+import type { GameMapWithContent } from 'shared/game-maps/types'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 
 export function MapImageContextMenuWrapper({

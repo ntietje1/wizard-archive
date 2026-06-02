@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import { assertNever } from '~/shared/utils/utils'
 import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor'
 import { MapViewer } from '~/features/editor/components/viewer/map/map-viewer'

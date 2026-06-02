@@ -1,4 +1,4 @@
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { DropOutcome } from './drop-outcome'
 import type { DropPlanningContext } from './drop-planning-context'
 import { resolveSurfaceDropCommand } from './surface-drop-planner'

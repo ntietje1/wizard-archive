@@ -7,7 +7,7 @@ import {
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import {
   buildBreadcrumbs,
   getItemTypeLabel,

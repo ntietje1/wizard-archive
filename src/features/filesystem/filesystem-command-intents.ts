@@ -3,7 +3,7 @@ import type { FileSystemCommand } from 'shared/sidebar-items/filesystem/commands
 import type { FileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import { isActiveSidebarItem } from 'shared/sidebar-items/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { FileSystemClipboard } from './filesystem-clipboard-store'
 import { getPasteTargetParentId } from './filesystem-targets'
 

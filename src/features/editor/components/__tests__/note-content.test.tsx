@@ -9,7 +9,7 @@ import type * as BlockNoteCore from '@blocknote/core'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
 
 const { activeItemsState, blockNoteCreateMock, campaignState, editorModeState, noteViewSpy } =

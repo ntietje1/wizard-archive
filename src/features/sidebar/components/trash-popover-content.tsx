@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { TRASH_RETENTION_DAYS } from 'shared/sidebar-items/trash-policy'
 import { handleError } from '~/shared/utils/logger'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'

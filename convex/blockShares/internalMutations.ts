@@ -14,7 +14,7 @@ import { syncNoteIndexesFromBlocks } from '../notes/functions/syncNoteDerivedDat
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
 import type { CustomBlock } from '../../shared/editor-blocks/types'
-import type { CampaignFromDb } from '../campaigns/types'
+import type { CampaignFromDb } from '../../shared/campaigns/types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 

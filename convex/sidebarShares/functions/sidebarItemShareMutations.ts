@@ -1,6 +1,6 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
 import { logEditHistory } from '../../editHistory/log'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
@@ -9,7 +9,7 @@ import { getUserProfileById } from '../../users/functions/getUserProfile'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { AnySidebarItem } from '../../sidebarItems/types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 
 type ExistingShare = Doc<'sidebarItemShares'> | null
 const MAX_SHARE_ITEMS_PER_REQUEST = 100

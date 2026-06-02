@@ -1,4 +1,4 @@
-import type { SidebarItemId } from './types'
+import type { SidebarItemId } from '../../common/ids'
 import { SIDEBAR_ITEM_STATUS } from '../types'
 import type { SidebarItemStatus } from '../types'
 import type { SidebarItemSlug } from '../slug'

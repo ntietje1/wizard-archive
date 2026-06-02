@@ -1,5 +1,5 @@
 import { RotateCcw, Trash2 } from 'lucide-react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import { TRASH_RETENTION_DAYS } from 'shared/sidebar-items/trash-policy'
 import { handleError } from '~/shared/utils/logger'

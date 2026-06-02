@@ -1,14 +1,8 @@
 import type { SidebarItemLocation, SidebarItemStatus, SidebarItemType } from '../types'
 import type { PermissionLevel } from '../../permissions/types'
+import type { CampaignId, SidebarItemId, StorageId, UserProfileId } from '../../common/ids'
 
-type SharedId<TableName extends string> = string & { __tableName: TableName }
-type CampaignId = SharedId<'campaigns'>
-export type UserProfileId = SharedId<'userProfiles'>
-export type StorageId = SharedId<'_storage'>
-export type FileSystemTransactionId = SharedId<'filesystemTransactions'>
-export type SidebarItemId = SharedId<'sidebarItems'>
-
-export type AnySidebarItemRow = {
+export type FileSystemSidebarItemRow = {
   _id: SidebarItemId
   _creationTime: number
   name: string
@@ -32,9 +26,9 @@ export type AnySidebarItemRow = {
   previewUpdatedAt: number | null
 }
 
-export type AnySidebarItem = AnySidebarItemRow & {
+export type FileSystemSidebarItem = FileSystemSidebarItemRow & {
   myPermissionLevel: PermissionLevel
   isBookmarked: boolean
 }
 
-export type SidebarItemPatchRow = AnySidebarItemRow
+export type SidebarItemPatchRow = FileSystemSidebarItemRow

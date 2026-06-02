@@ -1,6 +1,6 @@
 import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 
 type SidebarItemMap = ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
 

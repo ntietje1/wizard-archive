@@ -1,6 +1,6 @@
 import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
-import { EDIT_HISTORY_ACTION } from '../../../editHistory/types'
+import { EDIT_HISTORY_ACTION } from '../../../../shared/edit-history/types'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { logEditHistory } from '../../../editHistory/log'
 import { assertSidebarItemName } from '../../validation/name'
@@ -35,7 +35,7 @@ import type {
   CopyFileSystemCommand,
   FileSystemOperationDecision,
 } from '../../../../shared/sidebar-items/filesystem/commands'
-import type { AnySidebarItemRow } from '../../types/types'
+import type { AnySidebarItemRow } from '../../../../shared/sidebar-items/model-types'
 import type { SidebarItemColor } from '../../../../shared/sidebar-items/color'
 import type { SidebarItemIconName } from '../../../../shared/sidebar-items/icon'
 import type { SidebarItemName } from '../../../../shared/sidebar-items/name'
@@ -263,7 +263,7 @@ async function executeCopyOperation(
   let replacementDestinationId: Id<'sidebarItems'> | null = null
   if (operation.action === 'replace') {
     replacementDestinationId = operation.destinationItemId
-    await trashCopyReplacement(ctx, replacementDestinationId, copyContext.session)
+    await trashCopyReplacement(ctx, operation.destinationItemId, copyContext.session)
   }
 
   const copiedId = await insertCopiedSidebarItem(ctx, {

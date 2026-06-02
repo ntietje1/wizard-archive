@@ -2,11 +2,11 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { SidebarItemPreviewContent } from '../sidebar-item-preview-content'
-import type { CanvasWithContent } from 'convex/canvases/types'
-import type { FileWithContent } from 'convex/files/types'
-import type { FolderWithContent } from 'convex/folders/types'
-import type { GameMapWithContent } from 'convex/gameMaps/types'
-import type { NoteWithContent } from 'convex/notes/types'
+import type { CanvasWithContent } from 'shared/canvases/types'
+import type { FileWithContent } from 'shared/files/types'
+import type { FolderWithContent } from 'shared/folders/types'
+import type { GameMapWithContent } from 'shared/game-maps/types'
+import type { NoteWithContent } from 'shared/notes/types'
 import {
   createFile,
   createFolder,

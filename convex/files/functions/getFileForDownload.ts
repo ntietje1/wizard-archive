@@ -1,6 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItem } from '../../sidebarItems/types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
 import { logger } from '../../common/logger'
 

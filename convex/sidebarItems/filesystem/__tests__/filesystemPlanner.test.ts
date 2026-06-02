@@ -4,7 +4,7 @@ import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { planTransferOperations } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
 import type { OperationPlannerItem } from '../../../../shared/sidebar-items/filesystem/selection'
 import type { ConflictDecision } from '../../../../shared/sidebar-items/filesystem/conflicts'
-import type { AnySidebarItem } from '../../types/types'
+import type { AnySidebarItem } from '../../../../shared/sidebar-items/model-types'
 import type { Id } from '../../../_generated/dataModel'
 
 function item(

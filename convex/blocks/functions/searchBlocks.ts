@@ -1,13 +1,6 @@
-import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
-import type { BlockNoteId, BlockType } from '../../../shared/editor-blocks/types'
-
-export interface BlockSearchResult {
-  blockNoteId: BlockNoteId
-  noteId: Id<'sidebarItems'>
-  plainText: string
-  type: BlockType
-}
+import type { BlockSearchResult } from '../../../shared/search/types'
+import type { BlockType } from '../../../shared/editor-blocks/types'
 
 export async function searchBlocks(
   ctx: CampaignQueryCtx,

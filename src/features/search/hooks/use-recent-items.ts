@@ -1,7 +1,7 @@
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { logger } from '~/shared/utils/logger'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { parseSidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { SearchResult } from '../utils/merge-search-results'

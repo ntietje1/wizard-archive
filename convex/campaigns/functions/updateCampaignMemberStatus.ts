@@ -1,9 +1,9 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import type { Id } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
-import type { CampaignMemberStatus } from '../types'
+import type { CampaignMemberStatus } from '../../../shared/campaigns/types'
 
 const VALID_STATUS_TRANSITIONS: Record<
   CampaignMemberStatus,

@@ -35,21 +35,6 @@ const blockedP01ContractPrefixes = [
   'convex/sidebarItems/validation/parent',
   'convex/sidebarItems/functions/defaultItemName',
 ]
-const legacyDtoTypeModules = new Set([
-  'convex/blocks/functions/searchBlocks',
-  'convex/campaigns/types',
-  'convex/canvases/types',
-  'convex/editHistory/types',
-  'convex/files/types',
-  'convex/folders/types',
-  'convex/gameMaps/types',
-  'convex/notes/types',
-  'convex/sessions/types',
-  'convex/sidebarItems/types/types',
-  'convex/sidebarShares/types',
-  'convex/users/types',
-  'convex/yjsSync/functions/types',
-])
 
 function normalizedRelativePath(root, filePath) {
   return path.relative(root, filePath).split(path.sep).join('/')
@@ -96,12 +81,12 @@ function isBlockedP01Contract(specifier) {
   )
 }
 
-function isAllowedSrcConvexImport(specifier, kind) {
+function isAllowedSrcConvexImport(specifier) {
   if (!specifier.startsWith('convex/')) return true
   if (packageConvexModules.has(specifier)) return true
   if (generatedConvexPrefixes.some((prefix) => specifier.startsWith(prefix))) return true
   if (isBlockedP01Contract(specifier)) return false
-  return kind === 'type' && legacyDtoTypeModules.has(specifier)
+  return false
 }
 
 function classifyStaticImport(importDeclaration) {
@@ -151,7 +136,7 @@ function boundaryViolation(filePath, source, index, specifier, kind) {
     )
   }
 
-  if (sourceZone === 'src' && !isAllowedSrcConvexImport(specifier, kind)) {
+  if (sourceZone === 'src' && !isAllowedSrcConvexImport(specifier)) {
     return srcConvexImportViolation(filePath, source, index, specifier, kind)
   }
 

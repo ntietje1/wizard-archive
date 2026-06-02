@@ -23,7 +23,7 @@ describe('import boundary checks', () => {
     ).toEqual([])
   })
 
-  it('allows accepted legacy Convex DTO type imports from src', () => {
+  it('blocks legacy Convex DTO type imports from src', () => {
     expect(
       analyzeImportBoundaries([
         {
@@ -34,7 +34,10 @@ describe('import boundary checks', () => {
           ].join('\n'),
         },
       ]),
-    ).toEqual([])
+    ).toEqual([
+      'src/example.ts:1 src may not import type from local Convex module convex/sidebarItems/types/types',
+      'src/example.ts:2 src may not import type from local Convex module convex/gameMaps/types',
+    ])
   })
 
   it('blocks runtime imports from local Convex modules', () => {
@@ -117,7 +120,7 @@ describe('import boundary checks', () => {
           filePath: 'src/example.ts',
           source: [
             "import { api } from 'convex/_generated/api'",
-            "import type { AnySidebarItem } from 'convex/sidebarItems/types/types'",
+            "import type { AnySidebarItem } from 'shared/sidebar-items/model-types'",
             "import { validatePinDropTarget } from 'convex/gameMaps/validation'",
           ].join('\n'),
         },

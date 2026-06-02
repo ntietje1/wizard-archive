@@ -1,9 +1,9 @@
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import type { BlockShareInfo, CustomBlock } from 'shared/editor-blocks/types'
-import type { CampaignMember } from 'convex/campaigns/types'
+import type { CampaignMember } from 'shared/campaigns/types'
 
 type CampaignMemberId = CampaignMember['_id']
-export type ShareState = 'all' | 'some' | 'none'
+type ShareState = 'all' | 'some' | 'none'
 
 export interface ShareItem {
   key: string

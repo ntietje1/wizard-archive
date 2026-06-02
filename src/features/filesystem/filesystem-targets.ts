@@ -1,7 +1,7 @@
 import type { Id } from 'convex/_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES, isTrashedSidebarItem } from 'shared/sidebar-items/types'
 import type { SidebarItemStatus } from 'shared/sidebar-items/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { ItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'
 
 export interface SidebarOperationSurface {

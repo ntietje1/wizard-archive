@@ -1,13 +1,13 @@
-import type { CustomBlock } from '../../shared/editor-blocks/types'
-import type { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import type { SidebarItemId, CampaignMemberId } from '../common/ids'
+import type { CustomBlock } from '../editor-blocks/types'
+import type { ShareStatus } from '../editor-blocks/share-status'
+import type { PermissionLevel } from '../permissions/types'
+import type { SIDEBAR_ITEM_TYPES } from '../sidebar-items/types'
 import type {
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
-} from '../sidebarItems/types/baseTypes'
-import type { PermissionLevel } from '../../shared/permissions/types'
-import type { ShareStatus } from '../../shared/editor-blocks/share-status'
-import type { Id } from '../_generated/dataModel'
+} from '../sidebar-items/model-types'
 
 export type NoteFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.notes>
 
@@ -16,10 +16,11 @@ export type Note = SidebarItem<typeof SIDEBAR_ITEM_TYPES.notes>
 export type BlockMeta = {
   myPermissionLevel: PermissionLevel
   shareStatus: ShareStatus
-  sharedWith: Array<Id<'campaignMembers'>>
+  sharedWith: Array<CampaignMemberId>
 }
 
 export type NoteWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPES.notes> & {
+  _id: SidebarItemId
   content: Array<CustomBlock>
   blockMeta: Record<string, BlockMeta>
 }

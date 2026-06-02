@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import type { GameMapWithContent } from 'convex/gameMaps/types'
+import type { GameMapWithContent } from 'shared/game-maps/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { MAP_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import {
   executeSurfaceDropCommand,

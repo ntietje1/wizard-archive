@@ -5,7 +5,7 @@ import { assertSidebarItemLifecycleConsistency, isTrashedSidebarItem } from '../
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { AnySidebarItemRow } from '../types/types'
+import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
 import type { SidebarItemName } from '../../../shared/sidebar-items/name'
 import type { SidebarItemFieldPatch } from '../../../shared/sidebar-items/filesystem/receipts'
 

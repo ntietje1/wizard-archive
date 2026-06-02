@@ -4,7 +4,7 @@ import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
 } from 'shared/sidebar-items/color'
-import type { MapPinWithItem } from 'convex/gameMaps/types'
+import type { MapPinWithItem } from 'shared/game-maps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { cn } from '~/features/shadcn/lib/utils'

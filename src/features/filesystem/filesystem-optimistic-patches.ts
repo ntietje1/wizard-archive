@@ -5,7 +5,7 @@ import { deduplicateSlug, slugify } from '../../../shared/slugs'
 import { assertSidebarItemSlug, SIDEBAR_ITEM_SLUG_MAX_LENGTH } from 'shared/sidebar-items/slug'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
 import type {
   CreateFileSystemCommand,

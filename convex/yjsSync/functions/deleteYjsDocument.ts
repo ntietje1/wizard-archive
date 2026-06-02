@@ -1,6 +1,6 @@
 import { asyncMap } from 'convex-helpers'
 import type { MutationCtx } from '../../_generated/server'
-import type { YjsDocumentId } from './types'
+import type { YjsDocumentId } from '../../../shared/yjs-sync/types'
 
 export async function deleteYjsDocument(ctx: Pick<MutationCtx, 'db'>, documentId: YjsDocumentId) {
   const [updates, awareness] = await Promise.all([

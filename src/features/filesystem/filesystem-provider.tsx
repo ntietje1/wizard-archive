@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type {
   FileSystemCommand,
   FileSystemOperationDecision,

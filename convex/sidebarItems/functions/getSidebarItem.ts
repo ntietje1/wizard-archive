@@ -3,7 +3,7 @@ import { assertNever } from '../../common/types'
 import { isUndoHiddenSidebarItem } from '../types/status'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
-import type { SidebarItemTypeKey, FromDbByType } from '../types/types'
+import type { SidebarItemTypeKey, FromDbByType } from '../../../shared/sidebar-items/model-types'
 
 type GetSidebarItemCtx = Pick<QueryCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>

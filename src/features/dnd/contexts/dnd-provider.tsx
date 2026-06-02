@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { DndExecutionContext, DndMonitorCtx } from '~/features/dnd/types'
 import type { DndValue } from '~/features/dnd/hooks/useDnd'
 import { resolveDropTarget } from '~/features/dnd/utils/drop-target-data'

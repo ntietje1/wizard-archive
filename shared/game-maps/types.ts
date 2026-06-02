@@ -1,31 +1,32 @@
-import type { Id } from '../_generated/dataModel'
-import type { ConvexValidatorFields } from '../common/types'
-import type { SIDEBAR_ITEM_TYPES, SidebarItemType } from '../../shared/sidebar-items/types'
+import type { MapPinId, SidebarItemId, StorageId } from '../common/ids'
+import type { SIDEBAR_ITEM_TYPES, SidebarItemType } from '../sidebar-items/types'
 import type {
+  AnySidebarItem,
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
-} from '../sidebarItems/types/baseTypes'
-import type { AnySidebarItem } from '../sidebarItems/types/types'
+} from '../sidebar-items/model-types'
 
 export type GameMapFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
-  imageStorageId: Id<'_storage'> | null
+  imageStorageId: StorageId | null
 }
 
 export type GameMap = SidebarItem<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
-  imageStorageId: Id<'_storage'> | null
+  imageStorageId: StorageId | null
   imageUrl: string | null
 }
 
 export type GameMapWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPES.gameMaps> & {
-  imageStorageId: Id<'_storage'> | null
+  imageStorageId: StorageId | null
   imageUrl: string | null
   pins: Array<MapPinWithItem>
 }
 
-export type MapPin = ConvexValidatorFields<'mapPins'> & {
-  mapId: Id<'sidebarItems'>
-  itemId: Id<'sidebarItems'>
+export type MapPin = {
+  _id: MapPinId
+  _creationTime: number
+  mapId: SidebarItemId
+  itemId: SidebarItemId
   x: number
   y: number
   visible: boolean
@@ -37,8 +38,8 @@ export type MapPinWithItem = MapPin & {
 
 export const GAME_MAP_SNAPSHOT_TYPE = 'game_map' as const
 
-export type GameMapSnapshotPinData = {
-  itemId: Id<'sidebarItems'>
+type GameMapSnapshotPinData = {
+  itemId: SidebarItemId
   x: number
   y: number
   visible: boolean
@@ -61,8 +62,6 @@ export const MAP_HISTORY_ACTION = {
   map_pin_removed: 'map_pin_removed',
   map_pin_visibility_changed: 'map_pin_visibility_changed',
 } as const
-
-export type MapHistoryAction = (typeof MAP_HISTORY_ACTION)[keyof typeof MAP_HISTORY_ACTION]
 
 export type MapHistoryMetadataMap = {
   [MAP_HISTORY_ACTION.map_image_changed]: null

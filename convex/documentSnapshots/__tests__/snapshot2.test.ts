@@ -13,7 +13,7 @@ import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { SNAPSHOT_TYPE } from '../../../shared/document-snapshots/types'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { SNAPSHOT_MIN_INTERVAL_MS } from '../../yjsSync/constants'
-import type { GameMapSnapshotData } from '../../gameMaps/types'
+import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
 
 describe('cross-action debounce independence on game maps', () => {
   const t = createTestContext()

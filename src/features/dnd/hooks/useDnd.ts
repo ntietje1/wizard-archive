@@ -1,6 +1,6 @@
-import { createContext, useContext } from 'react'
+import { createContext } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { SidebarDropData } from '~/features/dnd/utils/drop-target-data'
 
 export interface DndValue {
@@ -9,11 +9,5 @@ export interface DndValue {
 }
 
 export const DndProviderContext = createContext<DndValue | null>(null)
-
-export function useDnd(): DndValue {
-  const ctx = useContext(DndProviderContext)
-  if (!ctx) throw new Error('useDnd must be used within DndProvider')
-  return ctx
-}
 
 DndProviderContext.displayName = 'DndProviderContext'

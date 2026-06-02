@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 
 export interface SidebarItemVisualState {
   isSelected?: boolean

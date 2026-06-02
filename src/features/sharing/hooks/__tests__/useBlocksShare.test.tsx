@@ -6,7 +6,7 @@ import { createCampaign } from '~/test/factories/campaign-factory'
 import { createGameMap, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 import type { CustomBlock } from 'shared/editor-blocks/types'
-import type { NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())

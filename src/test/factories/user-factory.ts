@@ -1,4 +1,4 @@
-import type { UserProfile } from 'convex/users/types'
+import type { UserProfile } from 'shared/users/types'
 import { assertUsername } from 'shared/users/validation'
 import { testId } from '~/test/helpers/test-id'
 

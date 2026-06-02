@@ -7,7 +7,7 @@ import {
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { buildVisibleSidebarItemIds } from '~/features/sidebar/utils/item-selection-order'
 import type { SortOptions } from 'shared/editor/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import { testId } from '~/test/helpers/test-id'
 

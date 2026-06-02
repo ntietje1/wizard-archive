@@ -1,4 +1,4 @@
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { validateCanvasEmbedDropTarget } from '~/features/canvas/domain/dropValidation'
 import { validateNoteLinkDropTarget } from 'shared/links/drop-validation'
 import { validatePinDropTarget } from 'shared/game-maps/drop-validation'

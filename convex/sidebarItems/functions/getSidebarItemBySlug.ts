@@ -4,7 +4,7 @@ import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
 import { isUndoHiddenSidebarItem } from '../types/status'
 import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
-import type { AnySidebarItemWithContent } from '../types/types'
+import type { AnySidebarItemWithContent } from '../../../shared/sidebar-items/model-types'
 import type { CampaignQueryCtx } from '../../functions'
 
 export const getSidebarItemBySlug = async (

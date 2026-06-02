@@ -1,4 +1,5 @@
-import type { SidebarItemId, AnySidebarItem } from './filesystem/types'
+import type { SidebarItemId } from '../common/ids'
+import type { AnySidebarItem } from './model-types'
 import { isPromiseLike } from '../common/async'
 import type { MaybePromise } from '../common/async'
 import { assertSidebarItemName, checkNameConflict, validateItemName } from './name'

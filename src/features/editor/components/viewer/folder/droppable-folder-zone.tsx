@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import type { HTMLAttributes, ReactNode } from 'react'
-import type { Folder } from 'convex/folders/types'
+import type { Folder } from 'shared/folders/types'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 

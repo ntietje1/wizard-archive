@@ -1,5 +1,5 @@
 import { MemberAvatar } from './member-avatar'
-import type { CampaignMember } from 'convex/campaigns/types'
+import type { CampaignMember } from 'shared/campaigns/types'
 
 export function MemberRow({
   member,

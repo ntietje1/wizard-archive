@@ -2,7 +2,7 @@ import { assertStoredUsername } from '../validation'
 import type { Username } from '../../../shared/users/validation'
 import type { QueryCtx } from '../../_generated/server'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { UserProfile, UserProfileFromDb } from '../types'
+import type { UserProfile, UserProfileFromDb } from '../../../shared/users/types'
 
 function toUserProfileFromDb(profile: Doc<'userProfiles'>): UserProfileFromDb {
   return {

@@ -1,5 +1,5 @@
 import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { createFileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import type { FileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import { applyFileSystemPatchesToSnapshot } from './filesystem-cache-patches'

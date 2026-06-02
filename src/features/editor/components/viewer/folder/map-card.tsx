@@ -1,6 +1,6 @@
 import { ClientOnly } from '@tanstack/react-router'
 import { MapPin } from 'lucide-react'
-import type { GameMap } from 'convex/gameMaps/types'
+import type { GameMap } from 'shared/game-maps/types'
 import type { ItemCardProps } from './item-card'
 import { Card } from '~/features/shadcn/components/card'
 import { cn } from '~/features/shadcn/lib/utils'

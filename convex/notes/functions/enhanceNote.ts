@@ -7,7 +7,7 @@ import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockShare
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import type { CampaignQueryCtx } from '../../functions'
-import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../types'
+import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../../../shared/notes/types'
 
 export const enhanceNote = async (
   ctx: CampaignQueryCtx,

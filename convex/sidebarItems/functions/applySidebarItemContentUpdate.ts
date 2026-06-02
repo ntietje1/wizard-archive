@@ -4,12 +4,12 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { getSidebarItem } from './getSidebarItem'
 import { requireItemAccess } from '../validation/access'
-import type { EditHistoryChange } from '../../editHistory/types'
+import type { EditHistoryChange } from '../../../shared/edit-history/types'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { SidebarItemType } from '../../../shared/sidebar-items/types'
-import type { AnySidebarItem } from '../types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 
 export async function applySidebarItemContentUpdate({
   ctx,

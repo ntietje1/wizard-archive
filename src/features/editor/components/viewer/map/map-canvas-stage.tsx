@@ -4,7 +4,7 @@ import { MapDropFeedbackOverlay } from './map-drop-feedback-overlay'
 import { MapImageUpload } from './map-image-upload'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
+import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
 

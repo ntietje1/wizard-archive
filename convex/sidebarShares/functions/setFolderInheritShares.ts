@@ -1,7 +1,7 @@
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE } from '../../../shared/errors/client'

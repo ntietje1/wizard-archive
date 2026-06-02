@@ -3,8 +3,8 @@ import { useContext, useState } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Note } from 'convex/notes/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { Note } from 'shared/notes/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { NoteValueProps } from '../../../../../shared/note-values/schema'
 import type {
   NoteValueAuthoringDefinition,

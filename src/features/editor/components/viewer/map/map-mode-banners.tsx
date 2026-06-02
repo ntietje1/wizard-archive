@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { MapPinWithItem } from 'convex/gameMaps/types'
+import type { MapPinWithItem } from 'shared/game-maps/types'
 
 export function MapModeBanners({
   pendingPinItems,

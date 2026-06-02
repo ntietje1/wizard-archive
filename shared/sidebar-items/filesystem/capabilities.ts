@@ -1,4 +1,5 @@
-import type { SidebarItemId, AnySidebarItem } from './types'
+import type { SidebarItemId } from '../../common/ids'
+import type { FileSystemSidebarItem } from './types'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/member-role'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
@@ -28,9 +29,10 @@ export type OperationActorSnapshot = {
   role: CampaignMemberRole
 }
 
-export type OperationSidebarItem = Pick<AnySidebarItem, '_id' | 'type' | 'status' | 'parentId'> & {
-  myPermissionLevel?: PermissionLevel | null
-}
+export type OperationSidebarItem = Pick<
+  FileSystemSidebarItem,
+  '_id' | 'type' | 'status' | 'parentId'
+> & { myPermissionLevel?: PermissionLevel | null }
 
 export type OperationTargetSnapshot = {
   parentId: SidebarItemId | null

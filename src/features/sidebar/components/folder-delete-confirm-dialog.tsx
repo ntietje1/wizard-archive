@@ -1,4 +1,4 @@
-import type { Folder } from 'convex/folders/types'
+import type { Folder } from 'shared/folders/types'
 import { handleError } from '~/shared/utils/logger'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'

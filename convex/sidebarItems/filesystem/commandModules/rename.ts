@@ -1,7 +1,7 @@
 import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
 import { logEditHistory } from '../../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../editHistory/types'
+import { EDIT_HISTORY_ACTION } from '../../../../shared/edit-history/types'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { assertSidebarItemName } from '../../validation/name'
 import { requireOptionalSidebarItemColor } from '../../../../shared/sidebar-items/color'
@@ -14,7 +14,7 @@ import { requireSidebarItemRowAccess } from '../access'
 import { isActiveSidebarItem } from '../../types/status'
 import type { AccessibleSidebarItemRow } from '../access'
 import type { CampaignMutationCtx } from '../../../functions'
-import type { EditHistoryChange } from '../../../editHistory/types'
+import type { EditHistoryChange } from '../../../../shared/edit-history/types'
 import type { RenameFileSystemCommand } from '../../../../shared/sidebar-items/filesystem/commands'
 import type {
   FileSystemDelta,

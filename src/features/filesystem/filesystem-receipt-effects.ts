@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemTransactionReceipt } from 'shared/sidebar-items/filesystem/receipts'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { FileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import { parseSidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'

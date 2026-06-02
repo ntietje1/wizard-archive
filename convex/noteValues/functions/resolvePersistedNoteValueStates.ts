@@ -9,7 +9,7 @@ import { noteValueRowToDefinition } from './noteValueRows'
 import type { NoteValueDefinition, NoteValueRuntimeState } from '../../../shared/note-values/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { NoteFromDb } from '../../notes/types'
+import type { NoteFromDb } from '../../../shared/notes/types'
 
 interface ResolvedNoteStates {
   states: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>

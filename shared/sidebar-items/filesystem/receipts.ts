@@ -1,11 +1,11 @@
 import type {
   FileSystemTransactionId,
   SidebarItemId,
-  SidebarItemPatchRow,
   StorageId,
   UserProfileId,
-} from './types'
+} from '../../common/ids'
 import type { FileSystemCommand } from './commands'
+import type { SidebarItemPatchRow } from './types'
 import type { SidebarItemStatus } from '../types'
 
 export const FILE_SYSTEM_EVENT_TYPE = {

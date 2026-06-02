@@ -1,4 +1,4 @@
-import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
+import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useMapViewStore } from '~/features/editor/stores/map-view-store'
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { Grid2x2Plus } from 'lucide-react'
-import type { Canvas } from 'convex/canvases/types'
+import type { Canvas } from 'shared/canvases/types'
 import type { ItemCardProps } from './item-card'
 import { Card } from '~/features/shadcn/components/card'
 import { cn } from '~/features/shadcn/lib/utils'

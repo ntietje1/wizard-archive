@@ -8,9 +8,9 @@ import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { captureGameMapSnapshot } from '../../gameMaps/functions/captureGameMapSnapshot'
 import { internal } from '../../_generated/api'
-import type { LogEditHistoryArgs } from '../../editHistory/types'
+import type { LogEditHistoryArgs } from '../../../shared/edit-history/types'
 import type { Id } from '../../_generated/dataModel'
-import type { GameMapSnapshotData } from '../../gameMaps/types'
+import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
 
 function createEditHistoryEntry(
   t: ReturnType<typeof createTestContext>,

@@ -1,7 +1,7 @@
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Canvas, CanvasFromDb, CanvasWithContent } from '../types'
+import type { Canvas, CanvasFromDb, CanvasWithContent } from '../../../shared/canvases/types'
 
 export const enhanceCanvas = (
   ctx: CampaignQueryCtx,

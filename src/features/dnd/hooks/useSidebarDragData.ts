@@ -1,4 +1,4 @@
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { selectionBelongsToSurface } from 'shared/sidebar-items/filesystem/selection'
 import {

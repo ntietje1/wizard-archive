@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { FileText } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { SidebarItem } from '../sidebar-item'
 

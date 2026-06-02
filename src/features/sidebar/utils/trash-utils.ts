@@ -1,4 +1,4 @@
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { collectDescendantIds } from '~/features/sidebar/utils/sidebar-item-maps'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 

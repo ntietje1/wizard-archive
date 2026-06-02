@@ -1,8 +1,8 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { ChevronDown, ChevronUp, Users } from 'lucide-react'
 import type { PermissionLevel } from 'shared/permissions/types'
-import type { CampaignMember } from 'convex/campaigns/types'
-import type { UserProfile } from 'convex/users/types'
+import type { CampaignMember } from 'shared/campaigns/types'
+import type { UserProfile } from 'shared/users/types'
 import type {
   NullableAggregatePermissionLevel,
   ShareItemWithPermission,

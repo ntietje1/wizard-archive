@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 
 export const OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX = 'optimistic-' as const
 

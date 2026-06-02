@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SidebarItemsProvider } from '../../contexts/all-sidebar-items-provider'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { useFilteredSidebarItems } from '../useFilteredSidebarItems'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 
 const activeItems = vi.hoisted(() => ({
   data: [] as Array<AnySidebarItem>,

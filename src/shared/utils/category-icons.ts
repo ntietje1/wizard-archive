@@ -40,7 +40,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { SidebarItemIconName } from 'shared/sidebar-items/icon'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { SidebarItemType } from 'shared/sidebar-items/types'
 
 // Map of icon names to LucideIcon components

@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'

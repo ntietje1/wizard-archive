@@ -9,7 +9,7 @@ import {
 import { MenuDialogs } from '../menu-dialogs'
 import { ContextMenuHost } from './context-menu-host'
 import type { ContextMenuHostRef } from './context-menu-host'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { ViewContext } from '../types'
 import { use, useRef } from 'react'
 import type { Ref } from 'react'

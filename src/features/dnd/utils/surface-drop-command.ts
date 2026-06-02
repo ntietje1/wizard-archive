@@ -1,6 +1,6 @@
 import { rejectionReasonMessage } from './drop-rejections'
 import { resolveSurfaceDropCommand } from './surface-drop-planner'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SurfaceDropPlanningContext } from './drop-planning-context'
 import type { SurfaceBatchDropCommand, SurfaceDropCommand } from './surface-drop-planner'

@@ -8,7 +8,7 @@ import type {
   AnySidebarItem,
   AnySidebarItemWithContent,
   WithContentBySidebarItemType,
-} from '../types/types'
+} from '../../../shared/sidebar-items/model-types'
 import type { SidebarItemType } from '../../../shared/sidebar-items/types'
 
 function isSidebarItemOfType<T extends SidebarItemType>(

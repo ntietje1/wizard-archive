@@ -19,7 +19,7 @@ import { CanvasScene } from './canvas-scene'
 import { CanvasToolbar } from './canvas-toolbar'
 import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
 import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
-import type { CanvasWithContent } from 'convex/canvases/types'
+import type { CanvasWithContent } from 'shared/canvases/types'
 
 // React Profiler durations are milliseconds; this ignores trivial sampling noise.
 const MIN_TRIVIAL_COMMIT_DURATION_MS = 1

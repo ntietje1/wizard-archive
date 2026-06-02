@@ -1,7 +1,7 @@
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { getSidebarItemAncestors } from './getSidebarItemAncestors'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Folder, FolderFromDb, FolderWithContent } from '../types'
+import type { Folder, FolderFromDb, FolderWithContent } from '../../../shared/folders/types'
 
 export const enhanceFolder = async (
   ctx: CampaignQueryCtx,

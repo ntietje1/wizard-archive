@@ -1,10 +1,14 @@
 import type { CampaignSlug } from '../../../shared/campaigns/validation'
 import type { Username } from '../../../shared/users/validation'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
+import {
+  CAMPAIGN_MEMBER_ROLE,
+  CAMPAIGN_MEMBER_STATUS,
+  CAMPAIGN_STATUS,
+} from '../../../shared/campaigns/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { getCampaignBySlug } from './getCampaign'
-import type { CampaignMemberStatus } from '../types'
+import type { CampaignMemberStatus } from '../../../shared/campaigns/types'
 import type { AuthMutationCtx } from '../../functions'
 
 export async function joinCampaign(

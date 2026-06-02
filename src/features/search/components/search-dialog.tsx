@@ -27,7 +27,7 @@ import { mergeSearchResults } from '../utils/merge-search-results'
 import { useRecentItems } from '../hooks/use-recent-items'
 import type { SearchResult } from '../utils/merge-search-results'
 import { useDebouncedValue } from '~/shared/hooks/useDebouncedValue'
-import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 
 function SearchResultsPanel({
   showPreview,

@@ -1,4 +1,4 @@
-import type { SidebarItemId } from './types'
+import type { SidebarItemId } from '../../common/ids'
 import { isTrashedSidebarItem } from '../types'
 import { deduplicateName } from '../default-name'
 import {

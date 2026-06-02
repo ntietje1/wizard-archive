@@ -5,7 +5,7 @@ import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/inte
 import type { FileSystemCommand } from 'shared/sidebar-items/filesystem/commands'
 import type { Id } from 'convex/_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import { SIDEBAR_ROOT_DROP_TYPE, TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import type {

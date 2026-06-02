@@ -1,11 +1,11 @@
 import { asyncMap } from 'convex-helpers'
-import { CAMPAIGN_MEMBER_STATUS } from '../types'
+import { CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { logger } from '../../common/logger'
 import { getUserProfileById } from '../../users/functions/getUserProfile'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { UserProfile } from '../../users/types'
-import type { CampaignMember } from '../types'
+import type { UserProfile } from '../../../shared/users/types'
+import type { CampaignMember } from '../../../shared/campaigns/types'
 
 export async function getCampaignMembers(ctx: CampaignQueryCtx): Promise<Array<CampaignMember>> {
   const campaignId = ctx.campaign._id

@@ -1,4 +1,4 @@
-import type { SidebarItemId } from './types'
+import type { SidebarItemId } from '../../common/ids'
 import type { SidebarItemColor } from '../color'
 import type { SidebarItemIconName } from '../icon'
 import type { SidebarItemName } from '../name'

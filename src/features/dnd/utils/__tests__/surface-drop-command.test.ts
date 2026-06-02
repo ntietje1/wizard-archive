@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { NOTE_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
 import {
   executeSurfaceDropCommand,

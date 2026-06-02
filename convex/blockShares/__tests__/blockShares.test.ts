@@ -15,7 +15,7 @@ import {
 } from '../../_test/factories.helper'
 import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import type { NoteWithContent } from '../../notes/types'
+import type { NoteWithContent } from '../../../shared/notes/types'
 
 describe('setBlocksShareStatus', () => {
   const t = createTestContext()

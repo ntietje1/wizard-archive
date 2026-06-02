@@ -25,7 +25,7 @@ import type {
   FileSystemCommand,
   FileSystemOperationDecision,
 } from '../../../shared/sidebar-items/filesystem/commands'
-import type { AnySidebarItemRow } from '../types/types'
+import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
 
 const MAX_FILESYSTEM_UNDO_HISTORY = 50
 const MAX_FILESYSTEM_NON_UNDOABLE_HISTORY = 50

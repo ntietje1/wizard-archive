@@ -1,6 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { SidebarItemType } from 'shared/sidebar-items/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 
 export const CANVAS_DROP_ZONE_TYPE = 'canvas-drop-zone' as const

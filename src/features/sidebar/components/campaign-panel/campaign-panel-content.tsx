@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowLeftRight, History, Play, Settings, Square, UserPlus } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
-import type { Session } from 'convex/sessions/types'
+import type { Session } from 'shared/sessions/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSettingsStore } from '~/features/settings/hooks/settings-store'

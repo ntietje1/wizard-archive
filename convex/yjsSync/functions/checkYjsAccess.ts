@@ -4,7 +4,7 @@ import { throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
-import type { YjsDocumentId } from './types'
+import type { YjsDocumentId } from '../../../shared/yjs-sync/types'
 
 async function checkYjsAccess(
   ctx: CampaignQueryCtx,
