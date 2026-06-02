@@ -61,6 +61,40 @@ describe('effectiveHasAtLeastPermission', () => {
     ).toBe(true)
   })
 
+  it('DM with view-as treats nullable explicit member shares as view', () => {
+    const note = createNote({ shares: [] })
+    const noteWithNullableShare = {
+      ...note,
+      shares: [
+        {
+          _id: testId<'sidebarItemShares'>('share_nullable_permission'),
+          _creationTime: 1,
+          campaignId: note.campaignId,
+          sidebarItemId: note._id,
+          sidebarItemType: note.type,
+          campaignMemberId: memberId,
+          sessionId: null,
+          permissionLevel: null,
+        },
+      ],
+    }
+
+    expect(
+      effectiveHasAtLeastPermission(noteWithNullableShare, PERMISSION_LEVEL.VIEW, {
+        isDm: true,
+        viewAsPlayerId: memberId,
+        allItemsMap: buildMap([noteWithNullableShare]),
+      }),
+    ).toBe(true)
+    expect(
+      effectiveHasAtLeastPermission(noteWithNullableShare, PERMISSION_LEVEL.EDIT, {
+        isDm: true,
+        viewAsPlayerId: memberId,
+        allItemsMap: buildMap([noteWithNullableShare]),
+      }),
+    ).toBe(false)
+  })
+
   it('regular player uses myPermissionLevel', () => {
     const note = createNote({ myPermissionLevel: PERMISSION_LEVEL.EDIT })
     expect(

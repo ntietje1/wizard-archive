@@ -345,6 +345,25 @@ describe('block permission resolution', () => {
     expect(item.blockMeta[blockNoteId]).toBeUndefined()
   })
 
+  it('treats nullable block share status as not shared for players', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      allPermissionLevel: 'view',
+    })
+
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
+      shareStatus: null,
+    })
+
+    const item = (await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: noteId,
+    })) as NoteWithContent
+    expect(item).toBeTruthy()
+    expect(item.blockMeta[blockNoteId]).toBeUndefined()
+  })
+
   it('shows individually_shared block to shared player', async () => {
     const ctx = await setupCampaignContext(t)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)

@@ -6,7 +6,7 @@ import {
   setupCampaignContext,
   setupMultiPlayerContext,
 } from '../../_test/identities.helper'
-import { setupFolderTree } from '../../_test/factories.helper'
+import { createSidebarShare, setupFolderTree } from '../../_test/factories.helper'
 import { expectNotFound } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
@@ -170,6 +170,30 @@ describe('permission inheritance through nested folder trees', () => {
       id: leaf,
     })
     expect(leafItem.myPermissionLevel).toBe('edit')
+  })
+
+  it('normalizes nullable explicit member shares to view', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    const { leaf } = await setupFolderTree(t, ctx.campaignId, ctx.dm.profile._id, {
+      depth: 1,
+      inheritShares: [true],
+    })
+
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: leaf,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: null,
+    })
+
+    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: leaf,
+    })
+    expect(leafItem.myPermissionLevel).toBe('view')
   })
 
   it('multiple players with different inheritance paths', async () => {

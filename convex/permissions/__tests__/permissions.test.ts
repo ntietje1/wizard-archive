@@ -1,4 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import {
+  PERMISSION_OPERATION,
+  hasPermissionForOperation,
+  hasPermissionForRequirement,
+} from '../../../shared/permissions/requirements'
+import { getBlockVisibilityPermissionLevel } from '../../../shared/permissions/block-visibility'
+import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 
@@ -39,5 +46,49 @@ describe('hasAtLeastPermissionLevel', () => {
 
   it('VIEW >= NONE', () => {
     expect(hasAtLeastPermissionLevel(VIEW, NONE)).toBe(true)
+  })
+
+  it('treats null or missing permission as NONE for requirements', () => {
+    expect(hasPermissionForRequirement(null, NONE)).toBe(true)
+    expect(hasPermissionForRequirement(undefined, VIEW)).toBe(false)
+  })
+
+  it('uses named operation requirements for sidebar operations', () => {
+    expect(hasPermissionForOperation(EDIT, PERMISSION_OPERATION.READ_SIDEBAR_ITEM)).toBe(true)
+    expect(hasPermissionForOperation(EDIT, PERMISSION_OPERATION.MOVE_SIDEBAR_ITEM)).toBe(false)
+    expect(hasPermissionForOperation(FULL_ACCESS, PERMISSION_OPERATION.MOVE_SIDEBAR_ITEM)).toBe(
+      true,
+    )
+    expect(
+      hasPermissionForOperation(FULL_ACCESS, PERMISSION_OPERATION.DELETE_SIDEBAR_ITEM_FOREVER),
+    ).toBe(true)
+  })
+
+  it('uses named block visibility outcomes', () => {
+    expect(
+      getBlockVisibilityPermissionLevel({
+        isDm: true,
+        shareStatus: SHARE_STATUS.NOT_SHARED,
+      }),
+    ).toBe(EDIT)
+    expect(
+      getBlockVisibilityPermissionLevel({
+        isDm: false,
+        shareStatus: SHARE_STATUS.ALL_SHARED,
+      }),
+    ).toBe(VIEW)
+    expect(
+      getBlockVisibilityPermissionLevel({
+        isDm: false,
+        shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
+        isIndividuallySharedWithMember: true,
+      }),
+    ).toBe(VIEW)
+    expect(
+      getBlockVisibilityPermissionLevel({
+        isDm: false,
+        shareStatus: null,
+      }),
+    ).toBe(NONE)
   })
 })

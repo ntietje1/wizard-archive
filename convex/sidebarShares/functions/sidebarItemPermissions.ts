@@ -1,5 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
@@ -57,7 +58,7 @@ export async function resolveInheritedPermissions(
       for (const share of folderShares) {
         if (unresolvedMembers.has(share.campaignMemberId)) {
           result.members[share.campaignMemberId] = {
-            level: share.permissionLevel ?? PERMISSION_LEVEL.VIEW,
+            level: normalizeExplicitSharePermissionLevel(share.permissionLevel),
             folderName: folder.name,
           }
           unresolvedMembers.delete(share.campaignMemberId)
@@ -119,7 +120,7 @@ export async function getSidebarItemPermissionLevel(
       q.eq('campaignId', campaignId).eq('sidebarItemId', item._id).eq('campaignMemberId', checkId),
     )
     .unique()
-  if (share) return share.permissionLevel ?? PERMISSION_LEVEL.VIEW
+  if (share) return normalizeExplicitSharePermissionLevel(share.permissionLevel)
 
   if (item.allPermissionLevel !== null) return item.allPermissionLevel
 

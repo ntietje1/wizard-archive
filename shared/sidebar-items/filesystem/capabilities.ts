@@ -1,8 +1,7 @@
 import type { SidebarItemId } from '../../common/ids'
 import type { FileSystemSidebarItem } from './types'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
-import { PERMISSION_LEVEL } from '../../permissions/types'
-import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
+import { PERMISSION_OPERATION, hasPermissionForOperation } from '../../permissions/requirements'
 import { SIDEBAR_ITEM_TYPES, isActiveSidebarItem, isTrashedSidebarItem } from '../types'
 import type { CampaignMemberRole } from '../../campaigns/types'
 import type { PermissionLevel } from '../../permissions/types'
@@ -48,10 +47,6 @@ function reject(code: SidebarOperationRejectionCode, message: string): SidebarOp
   return { ok: false, code, message }
 }
 
-function hasFullAccess(level: PermissionLevel | null | undefined): boolean {
-  return hasAtLeastPermissionLevel(level ?? PERMISSION_LEVEL.NONE, PERMISSION_LEVEL.FULL_ACCESS)
-}
-
 export function isPermissionRejectionCode(code: SidebarOperationRejectionCode): boolean {
   return code === 'no_source_permission' || code === 'no_target_permission' || code === 'dm_only'
 }
@@ -75,7 +70,12 @@ function evaluateParentAccess(target: OperationTargetSnapshot): SidebarOperation
     return reject('invalid_target', 'Parent not found')
   }
 
-  if (!hasFullAccess(target.parent.myPermissionLevel)) {
+  if (
+    !hasPermissionForOperation(
+      target.parent.myPermissionLevel,
+      PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
+    )
+  ) {
     return reject('no_target_permission', 'You do not have sufficient permission for this folder')
   }
 
@@ -117,7 +117,7 @@ export function evaluateMoveToParent(
     return reject('trashed_item', 'Only active items can be moved')
   }
 
-  if (!hasFullAccess(item.myPermissionLevel)) {
+  if (!hasPermissionForOperation(item.myPermissionLevel, PERMISSION_OPERATION.MOVE_SIDEBAR_ITEM)) {
     return reject('no_source_permission', 'You do not have sufficient permission for this item')
   }
 
@@ -136,7 +136,7 @@ export function evaluateTrash(
     return reject('already_trashed', 'This item is already in the trash')
   }
 
-  if (!hasFullAccess(item.myPermissionLevel)) {
+  if (!hasPermissionForOperation(item.myPermissionLevel, PERMISSION_OPERATION.TRASH_SIDEBAR_ITEM)) {
     return reject('no_source_permission', 'You do not have sufficient permission for this item')
   }
 
@@ -156,7 +156,9 @@ export function evaluateRestore(
     return reject('not_trashed', 'Only trashed items can be restored')
   }
 
-  if (!hasFullAccess(item.myPermissionLevel)) {
+  if (
+    !hasPermissionForOperation(item.myPermissionLevel, PERMISSION_OPERATION.RESTORE_SIDEBAR_ITEM)
+  ) {
     return reject('no_source_permission', 'You do not have sufficient permission for this item')
   }
 
@@ -181,7 +183,13 @@ export function evaluatePermanentDelete(
     }
   }
 
-  if (actor.role !== CAMPAIGN_MEMBER_ROLE.DM && !hasFullAccess(item.myPermissionLevel)) {
+  if (
+    actor.role !== CAMPAIGN_MEMBER_ROLE.DM &&
+    !hasPermissionForOperation(
+      item.myPermissionLevel,
+      PERMISSION_OPERATION.DELETE_SIDEBAR_ITEM_FOREVER,
+    )
+  ) {
     return reject('no_source_permission', 'You do not have sufficient permission for this item')
   }
 
@@ -197,7 +205,7 @@ export function evaluateCopy(
     return reject('trashed_item', 'Only active sidebar items can be copied')
   }
 
-  if (!hasFullAccess(item.myPermissionLevel)) {
+  if (!hasPermissionForOperation(item.myPermissionLevel, PERMISSION_OPERATION.COPY_SIDEBAR_ITEM)) {
     return reject('no_source_permission', 'You do not have sufficient permission for this item')
   }
 

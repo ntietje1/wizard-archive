@@ -1,4 +1,5 @@
 import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
+import { normalizeExplicitSharePermissionLevel } from 'shared/permissions/share-permissions'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import type { CampaignMember } from 'shared/campaigns/types'
@@ -13,7 +14,7 @@ function getMemberPermission(
   memberId: CampaignMemberId,
 ): PermissionLevel | null {
   const memberShare = item.shares.find((s) => s.campaignMemberId === memberId)
-  return memberShare ? (memberShare.permissionLevel ?? PERMISSION_LEVEL.VIEW) : null
+  return memberShare ? normalizeExplicitSharePermissionLevel(memberShare.permissionLevel) : null
 }
 
 function getAllPlayersPermission(item: AnySidebarItem | Folder): PermissionLevel | null {

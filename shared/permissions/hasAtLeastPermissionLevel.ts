@@ -1,9 +1,9 @@
-import { PERMISSION_RANK } from './types'
+import { hasPermissionForRequirement } from './requirements'
 import type { PermissionLevel } from './types'
 
 export function hasAtLeastPermissionLevel(
   level: PermissionLevel,
   requiredLevel: PermissionLevel,
 ): boolean {
-  return PERMISSION_RANK[level] >= PERMISSION_RANK[requiredLevel]
+  return hasPermissionForRequirement(level, requiredLevel)
 }
