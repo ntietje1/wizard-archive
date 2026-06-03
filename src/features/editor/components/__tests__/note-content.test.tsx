@@ -227,6 +227,54 @@ describe('NoteContent', () => {
     })
   })
 
+  it('shows every block in DM view-as mode when the viewed player has edit note permission', async () => {
+    const playerId = testId<'campaignMembers'>('player-1')
+    const hiddenByDefaultBlock = createBlock('hidden-by-default-block')
+    campaignState.isDm = true
+    editorModeState.viewAsPlayerId = playerId
+
+    const baseNote = createNoteWithContent({
+      content: [hiddenByDefaultBlock],
+      myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      blockMeta: {
+        [hiddenByDefaultBlock.id]: {
+          myPermissionLevel: PERMISSION_LEVEL.NONE,
+          shareStatus: SHARE_STATUS.NOT_SHARED,
+          sharedWith: [],
+        },
+      },
+    })
+    const note = {
+      ...baseNote,
+      shares: [
+        {
+          _id: testId<'sidebarItemShares'>('note-share-1'),
+          _creationTime: 1,
+          campaignId: baseNote.campaignId,
+          sidebarItemId: baseNote._id,
+          sidebarItemType: baseNote.type,
+          campaignMemberId: playerId,
+          sessionId: null,
+          permissionLevel: PERMISSION_LEVEL.EDIT,
+        },
+      ],
+    }
+    activeItemsState.itemsMap = new Map([[note._id, note]])
+
+    render(<NoteContent note={note} editable={false} />)
+
+    await waitFor(() => {
+      expect(noteViewSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          editable: false,
+          editor: expect.objectContaining({
+            document: [hiddenByDefaultBlock],
+          }),
+        }),
+      )
+    })
+  })
+
   it('keeps DM view-as rendering static and in viewer link mode', async () => {
     const playerId = testId<'campaignMembers'>('player-1')
     const visibleBlock = createBlock('visible-block')
@@ -236,6 +284,7 @@ describe('NoteContent', () => {
     const note = createNoteWithContent({
       content: [visibleBlock],
       myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      allPermissionLevel: PERMISSION_LEVEL.VIEW,
       blockMeta: {
         [visibleBlock.id]: {
           myPermissionLevel: PERMISSION_LEVEL.VIEW,
@@ -286,5 +335,6 @@ function createNoteWithContent({
     ancestors: [],
     content,
     blockMeta,
+    blockShareAccessWarnings: [],
   }
 }

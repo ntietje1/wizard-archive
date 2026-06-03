@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { PERMISSION_LEVEL } from '../../shared/permissions/types'
+import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
 import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
 
 describe('migrations', () => {
@@ -23,6 +25,32 @@ describe('migrations', () => {
           location: 'sidebar',
           status: 'undoHidden',
         }),
+      ).toBeNull()
+    })
+  })
+
+  describe('getBlockSharePermissionLevelMigrationPatch', () => {
+    it('defaults missing block share permission levels to view', () => {
+      expect(getBlockSharePermissionLevelMigrationPatch({})).toEqual({
+        permissionLevel: PERMISSION_LEVEL.VIEW,
+      })
+    })
+
+    it('defaults null block share permission levels to view', () => {
+      expect(getBlockSharePermissionLevelMigrationPatch({ permissionLevel: null })).toEqual({
+        permissionLevel: PERMISSION_LEVEL.VIEW,
+      })
+    })
+
+    it('preserves existing hidden block share permission levels', () => {
+      expect(
+        getBlockSharePermissionLevelMigrationPatch({ permissionLevel: PERMISSION_LEVEL.NONE }),
+      ).toBeNull()
+    })
+
+    it('preserves existing visible block share permission levels', () => {
+      expect(
+        getBlockSharePermissionLevelMigrationPatch({ permissionLevel: PERMISSION_LEVEL.VIEW }),
       ).toBeNull()
     })
   })

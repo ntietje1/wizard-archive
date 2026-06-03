@@ -2,18 +2,14 @@ import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../_generated/dataModel'
 import type {
   BlockNoteId,
+  BlockShareInfo as SharedBlockShareInfo,
   BlockType,
   FlatBlockContent,
   InlineContent,
   TableContent,
 } from '../../shared/editor-blocks/types'
-import type { ShareStatus } from '../../shared/editor-blocks/share-status'
 
-export type BlockShareInfo = {
-  blockNoteId: BlockNoteId
-  shareStatus: ShareStatus
-  sharedMemberIds: Array<Id<'campaignMembers'>>
-}
+export type BlockShareInfo = SharedBlockShareInfo<Id<'campaignMembers'>>
 
 type PersistedBlockCommon = {
   blockNoteId: BlockNoteId

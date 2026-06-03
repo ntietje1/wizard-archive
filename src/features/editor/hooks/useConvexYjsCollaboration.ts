@@ -6,7 +6,7 @@ import {
   ConvexYjsProvider,
   applyConvexYjsProviderRemoteAwareness,
   applyConvexYjsProviderRemoteUpdates,
-  setConvexYjsProviderUser,
+  updateConvexYjsProviderUser,
   setConvexYjsProviderWritable,
 } from '../providers/convex-yjs-provider'
 import type { YjsDocumentId } from 'shared/yjs-sync/types'
@@ -102,7 +102,7 @@ export function useConvexYjsCollaboration(
 
   const { name, color } = user
   useEffect(() => {
-    if (currentState) setConvexYjsProviderUser(currentState.provider, { name, color })
+    if (currentState) updateConvexYjsProviderUser(currentState.provider, { name, color })
   }, [currentState, name, color])
 
   useEffect(() => {

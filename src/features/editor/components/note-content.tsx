@@ -1,6 +1,10 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import { useEffect, useRef } from 'react'
-import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
+import {
+  getBlockAllPlayersPermissionLevel,
+  getEffectiveBlockVisibilityPermissionLevel,
+} from 'shared/permissions/block-visibility'
+import { hasPermissionForRequirement } from 'shared/permissions/requirements'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createEditorSchema } from '../editor-specs'
 import { NoteView } from './note-view'
@@ -15,13 +19,17 @@ import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadM
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getCursorColor } from '~/features/editor/utils/cursor-colors'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
-import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
-import { assertNever } from '~/shared/utils/utils'
+import {
+  effectiveHasAtLeastPermission,
+  resolveSidebarItemPermissionLevel,
+} from '~/features/sharing/utils/permission-utils'
 import { api } from 'convex/_generated/api'
-import { setConvexYjsProviderUser } from '~/features/editor/providers/convex-yjs-provider'
+import { updateConvexYjsProviderUser } from '~/features/editor/providers/convex-yjs-provider'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import type { PermissionLevel } from 'shared/permissions/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { BlockMeta, NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties } from 'react'
@@ -140,7 +148,9 @@ function useNoteRenderState({
     kind: 'static',
     note,
     noteId: note._id,
-    content: hasFullContent ? note.content : filterViewableBlocks(note, { isDm, viewAsPlayerId }),
+    content: hasFullContent
+      ? note.content
+      : filterViewableBlocks(note, { isDm, viewAsPlayerId, allItemsById }),
     evaluateValuesFromEditor: hasFullContent,
   }
 }
@@ -273,7 +283,7 @@ function CollaborativeNoteEditor({
   })
 
   useEffect(() => {
-    setConvexYjsProviderUser(provider, { name: user.name, color: user.color })
+    updateConvexYjsProviderUser(provider, { name: user.name, color: user.color })
   }, [provider, user.name, user.color])
 
   if (!editor) return null
@@ -298,16 +308,23 @@ function filterViewableBlocks(
   {
     isDm,
     viewAsPlayerId,
+    allItemsById,
   }: {
     isDm: boolean | undefined
     viewAsPlayerId: Id<'campaignMembers'> | undefined
+    allItemsById: Map<Id<'sidebarItems'>, AnySidebarItem>
   },
 ): Array<CustomBlock> {
   if (isDm && viewAsPlayerId) {
+    const notePermissionLevel = resolveSidebarItemPermissionLevel(
+      note,
+      viewAsPlayerId,
+      allItemsById,
+    ).level
     return note.content.filter((block) => {
       const meta = note.blockMeta[block.id]
       if (!meta) return false
-      return canViewBlockAsPlayer(meta, viewAsPlayerId)
+      return canViewBlockAsPlayer(meta, { viewAsPlayerId, notePermissionLevel })
     })
   }
 
@@ -318,15 +335,30 @@ function filterViewableBlocks(
   })
 }
 
-function canViewBlockAsPlayer(meta: BlockMeta, viewAsPlayerId: Id<'campaignMembers'>): boolean {
-  switch (meta.shareStatus) {
-    case SHARE_STATUS.ALL_SHARED:
-      return true
-    case SHARE_STATUS.INDIVIDUALLY_SHARED:
-      return meta.sharedWith.includes(viewAsPlayerId)
-    case SHARE_STATUS.NOT_SHARED:
-      return false
-    default:
-      return assertNever(meta.shareStatus)
-  }
+function canViewBlockAsPlayer(
+  meta: BlockMeta,
+  {
+    viewAsPlayerId,
+    notePermissionLevel,
+  }: {
+    viewAsPlayerId: Id<'campaignMembers'>
+    notePermissionLevel: PermissionLevel
+  },
+): boolean {
+  const permissionLevel = getEffectiveBlockVisibilityPermissionLevel({
+    isDm: false,
+    notePermissionLevel,
+    allPlayersPermissionLevel: getBlockAllPlayersPermissionLevel(meta.shareStatus),
+    memberPermissionLevel: getMemberBlockVisibilityPermissionLevel(meta, viewAsPlayerId),
+  })
+  return hasPermissionForRequirement(permissionLevel, PERMISSION_LEVEL.VIEW)
+}
+
+function getMemberBlockVisibilityPermissionLevel(
+  meta: BlockMeta,
+  viewAsPlayerId: Id<'campaignMembers'>,
+): PermissionLevel | null {
+  if ((meta.hiddenFrom ?? []).includes(viewAsPlayerId)) return PERMISSION_LEVEL.NONE
+  if (meta.sharedWith.includes(viewAsPlayerId)) return PERMISSION_LEVEL.VIEW
+  return null
 }

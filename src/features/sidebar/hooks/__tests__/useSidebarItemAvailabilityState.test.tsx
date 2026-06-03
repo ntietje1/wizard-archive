@@ -60,6 +60,7 @@ describe('useSidebarItemAvailabilityState', () => {
       ancestors: [],
       content: [],
       blockMeta: {},
+      blockShareAccessWarnings: [],
     }
 
     const { result } = renderHook(() =>

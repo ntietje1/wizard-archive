@@ -1,7 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
-import { hasPermissionForRequirement } from '../../../shared/permissions/requirements'
 import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
 import { throwClientError } from '../../errors'
 import { resolveInheritedPermissions } from '../../sidebarShares/functions/sidebarItemPermissions'
@@ -14,11 +13,12 @@ type BlockShareEligibilityCtx = Pick<QueryCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>
 }
 
-function grantsView(level: Parameters<typeof hasPermissionForRequirement>[0]): boolean {
-  return hasPermissionForRequirement(level, PERMISSION_LEVEL.VIEW)
+export type BlockSharePlayerNoteAccess = {
+  memberId: Id<'campaignMembers'>
+  notePermissionLevel: PermissionLevel
 }
 
-export async function getNoteEligibleBlockShareMemberIds(
+async function getNotePermissionLevelsByMemberId(
   ctx: BlockShareEligibilityCtx,
   {
     note,
@@ -27,9 +27,8 @@ export async function getNoteEligibleBlockShareMemberIds(
     note: NoteFromDb
     candidateMemberIds: Array<Id<'campaignMembers'>>
   },
-): Promise<Set<Id<'campaignMembers'>>> {
+): Promise<Map<Id<'campaignMembers'>, PermissionLevel>> {
   const candidateIds = new Set(candidateMemberIds)
-  const eligibleMemberIds = new Set<Id<'campaignMembers'>>()
   const directPermissionByMemberId = new Map<Id<'campaignMembers'>, PermissionLevel>()
 
   const directShares = await ctx.db
@@ -47,14 +46,13 @@ export async function getNoteEligibleBlockShareMemberIds(
     )
   }
 
-  const inherited =
-    note.allPermissionLevel === null
-      ? await resolveInheritedPermissions(ctx, {
-          parentId: note.parentId,
-          campaignId: note.campaignId,
-          memberIds: candidateMemberIds,
-        })
-      : null
+  const inherited = await resolveInheritedPermissions(ctx, {
+    parentId: note.parentId,
+    campaignId: note.campaignId,
+    memberIds: candidateMemberIds,
+  })
+
+  const permissionByMemberId = new Map<Id<'campaignMembers'>, PermissionLevel>()
 
   for (const memberId of candidateMemberIds) {
     const effectivePermissionLevel =
@@ -63,12 +61,59 @@ export async function getNoteEligibleBlockShareMemberIds(
       inherited?.members[memberId]?.level ??
       PERMISSION_LEVEL.NONE
 
-    if (grantsView(effectivePermissionLevel)) eligibleMemberIds.add(memberId)
+    permissionByMemberId.set(memberId, effectivePermissionLevel)
   }
-  return eligibleMemberIds
+  return permissionByMemberId
 }
 
-export async function assertMemberCanReceiveBlockShare(
+export async function getBlockSharePlayerNoteAccess(
+  ctx: BlockShareEligibilityCtx,
+  {
+    note,
+    candidateMemberIds,
+  }: {
+    note: NoteFromDb
+    candidateMemberIds: Array<Id<'campaignMembers'>>
+  },
+): Promise<Array<BlockSharePlayerNoteAccess>> {
+  const permissionByMemberId = await getNotePermissionLevelsByMemberId(ctx, {
+    note,
+    candidateMemberIds,
+  })
+  return candidateMemberIds.map((memberId) => ({
+    memberId,
+    notePermissionLevel: permissionByMemberId.get(memberId) ?? PERMISSION_LEVEL.NONE,
+  }))
+}
+
+export async function getActiveBlockSharePlayerMemberIds(
+  ctx: BlockShareEligibilityCtx,
+  {
+    note,
+    candidateMemberIds,
+  }: {
+    note: NoteFromDb
+    candidateMemberIds: Array<Id<'campaignMembers'>>
+  },
+): Promise<Set<Id<'campaignMembers'>>> {
+  const activeMemberIds = new Set<Id<'campaignMembers'>>()
+  await Promise.all(
+    candidateMemberIds.map(async (memberId) => {
+      const member = await ctx.db.get('campaignMembers', memberId)
+      if (
+        member &&
+        member.campaignId === note.campaignId &&
+        member.role === CAMPAIGN_MEMBER_ROLE.Player &&
+        member.status === CAMPAIGN_MEMBER_STATUS.Accepted
+      ) {
+        activeMemberIds.add(memberId)
+      }
+    }),
+  )
+  return activeMemberIds
+}
+
+export async function assertValidBlockSharePlayer(
   ctx: BlockShareEligibilityCtx,
   {
     note,
@@ -88,13 +133,5 @@ export async function assertMemberCanReceiveBlockShare(
     member.status !== CAMPAIGN_MEMBER_STATUS.Accepted
   ) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only active player members can receive blocks')
-  }
-
-  const eligibleMemberIds = await getNoteEligibleBlockShareMemberIds(ctx, {
-    note,
-    candidateMemberIds: [campaignMemberId],
-  })
-  if (!eligibleMemberIds.has(campaignMemberId)) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member cannot view this note')
   }
 }

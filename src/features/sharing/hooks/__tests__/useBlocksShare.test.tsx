@@ -5,6 +5,7 @@ import { useBlocksShare } from '../useBlocksShare'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 import type { CustomBlock } from 'shared/editor-blocks/types'
+import type { Id } from 'convex/_generated/dataModel'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
 
@@ -23,8 +24,7 @@ vi.mock('convex/_generated/api', () => ({
     blockShares: {
       actions: {
         setBlocksShareStatus: 'setBlocksShareStatus',
-        shareBlocks: 'shareBlocks',
-        unshareBlocks: 'unshareBlocks',
+        setBlockMemberPermission: 'setBlockMemberPermission',
       },
     },
   },
@@ -55,7 +55,7 @@ describe('useBlocksShare', () => {
     campaignState.isDm = true
     campaignState.campaignId = 'campaign-id'
     useCampaignQueryMock.mockReturnValue({
-      data: { blocks: [], playerMembers: [] },
+      data: { blocks: [], playerMembers: [], notePermissionsByMemberId: {} },
       isPending: false,
     })
   })
@@ -113,7 +113,7 @@ describe('useBlocksShare', () => {
 
     await act(async () => {
       await result.current.toggleShareStatus()
-      await result.current.toggleShareWithMember(testId<'campaignMembers'>('player-1'))
+      await result.current.setMemberPermission(testId<'campaignMembers'>('player-1'), 'visible')
     })
 
     expect(convexActionMock).not.toHaveBeenCalled()
@@ -123,7 +123,17 @@ describe('useBlocksShare', () => {
     const block = createBlock('block-1')
     const note = createNoteWithContent()
     useCampaignQueryMock.mockReturnValue({
-      data: { blocks: [{ blockNoteId: 'block-1', shareStatus: null }], playerMembers: [] },
+      data: {
+        blocks: [
+          {
+            blockNoteId: 'block-1',
+            shareStatus: null,
+            memberPermissions: {},
+          },
+        ],
+        playerMembers: [],
+        notePermissionsByMemberId: {},
+      },
       isPending: false,
     })
 
@@ -142,6 +152,81 @@ describe('useBlocksShare', () => {
       noteId: note._id,
       blockNoteIds: ['block-1'],
       status: 'all_shared',
+    })
+  })
+
+  it('sets player block visibility through the projection-aware action', async () => {
+    const block = createBlock('block-1')
+    const note = createNoteWithContent()
+    const playerId = testId<'campaignMembers'>('player-1')
+    useCampaignQueryMock.mockReturnValue({
+      data: {
+        blocks: [
+          {
+            blockNoteId: 'block-1',
+            shareStatus: 'not_shared',
+            memberPermissions: {},
+          },
+        ],
+        playerMembers: [createPlayerMember(playerId)],
+        notePermissionsByMemberId: { [playerId]: 'view' },
+      },
+      isPending: false,
+    })
+
+    const { result } = renderHook(() => useBlocksShare([block], note), {
+      wrapper: createQueryWrapper(),
+    })
+
+    await act(async () => {
+      await result.current.setMemberPermission(playerId, 'visible')
+    })
+
+    expect(convexActionMock).toHaveBeenCalledWith('setBlockMemberPermission', {
+      campaignId: 'campaign-id',
+      noteId: note._id,
+      blockNoteIds: ['block-1'],
+      campaignMemberId: playerId,
+      permissionLevel: 'view',
+    })
+  })
+
+  it('exposes players without note access as controllable block-share rows', async () => {
+    const block = createBlock('block-1')
+    const note = createNoteWithContent()
+    const playerId = testId<'campaignMembers'>('player-1')
+    useCampaignQueryMock.mockReturnValue({
+      data: {
+        blocks: [
+          {
+            blockNoteId: 'block-1',
+            shareStatus: 'not_shared',
+            memberPermissions: {},
+          },
+        ],
+        playerMembers: [createPlayerMember(playerId)],
+        notePermissionsByMemberId: { [playerId]: 'none' },
+      },
+      isPending: false,
+    })
+
+    const { result } = renderHook(() => useBlocksShare([block], note), {
+      wrapper: createQueryWrapper(),
+    })
+
+    expect(result.current.shareItems[0]?.kind).toBe('controllable')
+    expect(result.current.shareItems[0]?.permissionLevel).toBe('default')
+
+    await act(async () => {
+      await result.current.setMemberPermission(playerId, 'visible')
+    })
+
+    expect(convexActionMock).toHaveBeenCalledWith('setBlockMemberPermission', {
+      campaignId: 'campaign-id',
+      noteId: note._id,
+      blockNoteIds: ['block-1'],
+      campaignMemberId: playerId,
+      permissionLevel: 'view',
     })
   })
 })
@@ -163,5 +248,28 @@ function createNoteWithContent(id = 'embedded-note-id'): NoteWithContent {
     ancestors: [],
     content: [],
     blockMeta: {},
+    blockShareAccessWarnings: [],
   }
+}
+
+function createPlayerMember(memberId: Id<'campaignMembers'>) {
+  return {
+    _id: memberId,
+    _creationTime: 1,
+    campaignId: testId<'campaigns'>('campaign-1'),
+    userId: testId<'userProfiles'>('user-1'),
+    role: 'Player',
+    status: 'Accepted',
+    userProfile: {
+      _id: testId<'userProfiles'>('user-1'),
+      _creationTime: 1,
+      authUserId: 'auth-user-1',
+      email: 'player@example.com',
+      emailVerified: null,
+      imageUrl: null,
+      name: 'Player One',
+      twoFactorEnabled: null,
+      username: 'player-one',
+    },
+  } as const
 }

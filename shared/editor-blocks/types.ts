@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import type { ShareStatus } from './share-status'
+import type { PermissionLevel } from '../permissions/types'
 import type {
   blockNoteBlockSchema,
   blockNoteIdSchema,
@@ -22,7 +23,7 @@ export type CustomPartialBlock = z.infer<typeof partialBlockNoteBlockSchema>
 export type BlockShareInfo<MemberId extends string> = {
   blockNoteId: BlockNoteId
   shareStatus: ShareStatus
-  sharedMemberIds: Array<MemberId>
+  memberPermissions: Record<MemberId, Extract<PermissionLevel, 'none' | 'view'>>
 }
 
 export type HeadingLevel = Extract<FlatBlockContent, { type: 'heading' }>['props']['level']

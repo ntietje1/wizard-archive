@@ -8,4 +8,5 @@ export type BlockShare = {
   blockId: Id<'blocks'>
   campaignMemberId: Id<'campaignMembers'>
   sessionId: Id<'sessions'> | null
+  permissionLevel?: 'none' | 'view' | null
 }

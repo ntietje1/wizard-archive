@@ -1,27 +1,31 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
-import { getNoteEligibleBlockShareMemberIds } from '../../blockShares/functions/noteBlockShareEligibility'
+import { getBlockSharePlayerNoteAccess } from '../../blockShares/functions/noteBlockShareEligibility'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignMember } from '../../../shared/campaigns/types'
 import type { NoteFromDb } from '../../../shared/notes/types'
 
-export async function getEligibleBlockSharePlayers(
+export async function getBlockSharePlayers(
   ctx: CampaignQueryCtx,
   note: NoteFromDb,
 ): Promise<{
-  eligibleMemberIds: Set<Id<'campaignMembers'>>
   playerMembers: Array<CampaignMember>
+  notePermissionByMemberId: Map<Id<'campaignMembers'>, PermissionLevel>
 }> {
   const allMembers = await getCampaignMembers(ctx)
   const playerMembers = allMembers.filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
-  const eligibleMemberIds = await getNoteEligibleBlockShareMemberIds(ctx, {
+  const accessRows = await getBlockSharePlayerNoteAccess(ctx, {
     note,
     candidateMemberIds: playerMembers.map((m) => m._id),
   })
+  const notePermissionByMemberId = new Map(
+    accessRows.map((row) => [row.memberId, row.notePermissionLevel]),
+  )
 
   return {
-    eligibleMemberIds,
-    playerMembers: playerMembers.filter((m) => eligibleMemberIds.has(m._id)),
+    playerMembers,
+    notePermissionByMemberId,
   }
 }

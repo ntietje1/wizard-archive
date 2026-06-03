@@ -1,8 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { signIn } from './helpers/auth-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
-import { openSettingsPeopleTab } from './helpers/permission-helpers'
+import {
+  approvePlayerRequest,
+  getCampaignRouteParts,
+  requestToJoinCampaignAsPlayer,
+} from './helpers/permission-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const E2E_PLAYER_EMAIL = process.env.E2E_PLAYER_EMAIL
@@ -17,8 +20,11 @@ const campaignName = testName('E2E ViewAs')
 let sharedNote: string
 let unsharedNote: string
 
-test.describe.serial('view-as-player', () => {
+test.describe.configure({ mode: 'serial', timeout: 120_000 })
+
+test.describe('view-as-player', () => {
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(120_000)
     const id = Date.now()
     sharedNote = `Shared ${id}-1`
     unsharedNote = `Unshared ${id}-2`
@@ -32,55 +38,26 @@ test.describe.serial('view-as-player', () => {
     await navigateToCampaign(page, campaignName)
     await createNote(page, sharedNote)
     await createNote(page, unsharedNote)
-
-    // Extract campaign URL info for the join link
-    const url = page.url()
-    const match = url.match(/\/campaigns\/([^/]+)\/([^/]+)/)
-    if (!match) {
-      throw new Error(`Unexpected campaign URL format: ${url}`)
-    }
-    const [, dmUsername, campaignSlug] = match
+    const { dmUsername, campaignSlug } = getCampaignRouteParts(page)
 
     await page.close()
     await context.close()
 
-    // Sign in as player and join the campaign
-    const playerContext = await browser.newContext()
-    const playerPage = await playerContext.newPage()
-    await playerPage.goto('/sign-in', { waitUntil: 'networkidle' })
-    await signIn(playerPage, E2E_PLAYER_EMAIL!, E2E_PLAYER_PASSWORD!)
-    await playerPage.waitForURL('**/campaigns', { timeout: 30000 })
-    await playerPage.goto(`/join/${dmUsername}/${campaignSlug}`)
-    const joinButton = playerPage.getByRole('button', { name: /join/i })
-    await expect(joinButton).toBeVisible({ timeout: 10000 })
-    await joinButton.click()
-    await expect(playerPage.getByText(/Request Sent|You're In!/i)).toBeVisible({
-      timeout: 10000,
+    await requestToJoinCampaignAsPlayer({
+      browser,
+      dmUsername,
+      campaignSlug,
+      email: E2E_PLAYER_EMAIL!,
+      password: E2E_PLAYER_PASSWORD!,
     })
-    await playerPage.close()
-    await playerContext.close()
 
-    // DM approves the join request
     const dmContext = await browser.newContext({
       storageState: AUTH_STORAGE_PATH,
     })
     const dmPage = await dmContext.newPage()
     await dmPage.goto('/campaigns')
     await navigateToCampaign(dmPage, campaignName)
-    const dialog = await openSettingsPeopleTab(dmPage)
-    const playerRow = dialog.locator('div').filter({
-      hasText: new RegExp(E2E_PLAYER_EMAIL!, 'i'),
-    })
-    const approveButton = playerRow.getByRole('button', {
-      name: /approve|accept/i,
-    })
-    const hasApprove = await approveButton
-      .waitFor({ state: 'visible', timeout: 5000 })
-      .then(() => true)
-      .catch(() => false)
-    if (hasApprove) {
-      await approveButton.click()
-    }
+    await approvePlayerRequest(dmPage, E2E_PLAYER_EMAIL!)
     await dmPage.close()
     await dmContext.close()
   })

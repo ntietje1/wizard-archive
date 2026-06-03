@@ -2,17 +2,32 @@ import { api } from 'convex/_generated/api'
 import { useMutation } from '@tanstack/react-query'
 import { useConvex } from '@convex-dev/react-query'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
-import type { CustomBlock } from 'shared/editor-blocks/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
+import { hasPermissionForRequirement } from 'shared/permissions/requirements'
+import type { BlockShareInfo, CustomBlock } from 'shared/editor-blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMember } from 'shared/campaigns/types'
 import type { NoteWithContent } from 'shared/notes/types'
 import { handleError } from '~/shared/utils/logger'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { resolveBlockShareState } from '~/features/sharing/utils/block-share-state'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
+import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/utils/block-share-state'
+import type { AggregateShareStatus } from '~/features/sharing/utils/block-share-state'
 
 type CampaignMemberId = CampaignMember['_id']
+type BlockVisibilityLevel = typeof PERMISSION_LEVEL.NONE | typeof PERMISSION_LEVEL.VIEW
+export type BlockVisibilitySelectValue = 'default' | 'hidden' | 'visible'
+export type AggregateBlockVisibilitySelectValue = BlockVisibilitySelectValue | 'mixed'
+type BlockShareItemKind = 'controllable' | 'locked_visible'
+
+export interface BlockShareItem {
+  key: string
+  member: CampaignMember
+  kind: BlockShareItemKind
+  permissionLevel: AggregateBlockVisibilitySelectValue
+  hasExplicitShare: boolean
+}
 
 function canLoadBlockShareData({
   campaignId,
@@ -44,6 +59,59 @@ function canRunBlockShareMutation({
   return Boolean(campaignId) && Boolean(isDm) && hasPersistedNote && hasBlocks && !isMutating
 }
 
+function aggregateValues<T extends string>(values: Array<T>, fallback: T): T | 'mixed' {
+  if (values.length === 0) return fallback
+  const [first] = values as [T, ...Array<T>]
+  return values.every((value) => value === first) ? first : 'mixed'
+}
+
+function blockAllPlayersValue(
+  blockInfo: BlockShareInfo<CampaignMemberId> | undefined,
+): Extract<BlockVisibilitySelectValue, 'hidden' | 'visible'> {
+  return blockInfo?.shareStatus === SHARE_STATUS.ALL_SHARED ? 'visible' : 'hidden'
+}
+
+function memberPermissionValue(
+  blockInfo: BlockShareInfo<CampaignMemberId> | undefined,
+  memberId: CampaignMemberId,
+): BlockVisibilitySelectValue {
+  const permissionLevel = getMemberPermissions(blockInfo)[memberId]
+  if (permissionLevel === PERMISSION_LEVEL.NONE) return 'hidden'
+  if (permissionLevel === PERMISSION_LEVEL.VIEW) return 'visible'
+  return 'default'
+}
+
+function getAggregateShareStatus(
+  blockInfos: Array<BlockShareInfo<CampaignMemberId>>,
+): AggregateShareStatus {
+  const values = blockInfos.map((info) => blockAllPlayersValue(info))
+  const aggregateValue = aggregateValues(values, 'hidden')
+  if (aggregateValue === 'visible') return AGGREGATE_SHARE_STATUS.ALL_SHARED
+  if (aggregateValue === 'hidden') {
+    const hasMemberOverrides = blockInfos.some(
+      (info) => Object.keys(getMemberPermissions(info)).length > 0,
+    )
+    return hasMemberOverrides
+      ? AGGREGATE_SHARE_STATUS.INDIVIDUALLY_SHARED
+      : AGGREGATE_SHARE_STATUS.NOT_SHARED
+  }
+  return AGGREGATE_SHARE_STATUS.MIXED_SHARED
+}
+
+function getMemberPermissions(
+  blockInfo: BlockShareInfo<CampaignMemberId> | undefined,
+): Record<CampaignMemberId, BlockVisibilityLevel> {
+  return blockInfo?.memberPermissions ?? {}
+}
+
+function createBlockInfoMap(blockInfos: Array<BlockShareInfo<CampaignMemberId>> | undefined) {
+  const map = new Map<string, BlockShareInfo<CampaignMemberId>>()
+  for (const blockInfo of blockInfos ?? []) {
+    map.set(blockInfo.blockNoteId, blockInfo)
+  }
+  return map
+}
+
 export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent) {
   const { campaignId, isDm } = useCampaign()
   const convex = useConvex()
@@ -73,43 +141,22 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
       return convex.action(api.blockShares.actions.setBlocksShareStatus, { ...args, campaignId })
     },
   })
-  const shareBlocks = useMutation({
+  const setBlockMemberPermission = useMutation({
     mutationFn: (args: {
       noteId: Id<'sidebarItems'>
       blockNoteIds: Array<string>
       campaignMemberId: CampaignMemberId
+      permissionLevel: BlockVisibilityLevel | null
     }) => {
       if (!campaignId) throw new Error('Block sharing requires a campaign context')
-      return convex.action(api.blockShares.actions.shareBlocks, { ...args, campaignId })
-    },
-  })
-  const unshareBlocks = useMutation({
-    mutationFn: (args: {
-      noteId: Id<'sidebarItems'>
-      blockNoteIds: Array<string>
-      campaignMemberId: CampaignMemberId
-    }) => {
-      if (!campaignId) throw new Error('Block sharing requires a campaign context')
-      return convex.action(api.blockShares.actions.unshareBlocks, { ...args, campaignId })
+      return convex.action(api.blockShares.actions.setBlockMemberPermission, {
+        ...args,
+        campaignId,
+      })
     },
   })
 
-  const isMutating =
-    setBlocksShareStatus.isPending || shareBlocks.isPending || unshareBlocks.isPending
-
-  const playerMembers = query.data?.playerMembers ?? []
-  const {
-    aggregateShareStatus,
-    unsharedBlocks,
-    shareItems,
-    getShareStateForMember,
-    getBlocksToShareWithMember,
-  } = resolveBlockShareState({
-    blocks,
-    blockInfos: query.data?.blocks,
-    blockNoteIds,
-    playerMembers,
-  })
+  const isMutating = setBlocksShareStatus.isPending || setBlockMemberPermission.isPending
   const canMutate = canRunBlockShareMutation({
     campaignId,
     isDm,
@@ -118,44 +165,90 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     hasBlocks,
   })
 
-  const toggleShareStatus = async () => {
+  const blockInfoMap = createBlockInfoMap(query.data?.blocks)
+  const selectedBlockInfos = blockNoteIds.flatMap((blockNoteId) => {
+    const blockInfo = blockInfoMap.get(blockNoteId)
+    return blockInfo ? [blockInfo] : []
+  })
+  const hasCompleteData =
+    blockNoteIds.length > 0 &&
+    Boolean(query.data) &&
+    selectedBlockInfos.length === blockNoteIds.length
+
+  const allPlayersPermissionLevel: AggregateBlockVisibilitySelectValue = hasCompleteData
+    ? aggregateValues(
+        selectedBlockInfos.map((info) => blockAllPlayersValue(info)),
+        'hidden',
+      )
+    : 'hidden'
+  const aggregateShareStatus = hasCompleteData
+    ? getAggregateShareStatus(selectedBlockInfos)
+    : AGGREGATE_SHARE_STATUS.NOT_SHARED
+
+  const shareItems: Array<BlockShareItem> = (query.data?.playerMembers ?? []).map((member) => {
+    const notePermissionLevel =
+      query.data?.notePermissionsByMemberId[member._id] ?? PERMISSION_LEVEL.NONE
+    const isLockedVisible = hasPermissionForRequirement(notePermissionLevel, PERMISSION_LEVEL.EDIT)
+
+    if (isLockedVisible) {
+      return {
+        key: `block-share-${member._id}`,
+        member,
+        kind: 'locked_visible',
+        permissionLevel: 'visible',
+        hasExplicitShare: false,
+      }
+    }
+
+    const memberValues = selectedBlockInfos.map((info) => memberPermissionValue(info, member._id))
+    const hasExplicitShare = memberValues.some((value) => value !== 'default')
+    return {
+      key: `block-share-${member._id}`,
+      member,
+      kind: 'controllable',
+      permissionLevel: aggregateValues(memberValues, 'default'),
+      hasExplicitShare,
+    }
+  })
+
+  const setAllPlayersPermission = async (
+    value: Extract<BlockVisibilitySelectValue, 'hidden' | 'visible'>,
+  ) => {
     if (!canMutate) return
     try {
-      const blocksToUpdate = unsharedBlocks.length > 0 ? unsharedBlocks : blocks
-      const newStatus =
-        unsharedBlocks.length > 0 ? SHARE_STATUS.ALL_SHARED : SHARE_STATUS.NOT_SHARED
-
       await setBlocksShareStatus.mutateAsync({
         noteId: note._id,
-        blockNoteIds: blocksToUpdate.map((b) => b.id),
-        status: newStatus,
+        blockNoteIds,
+        status: value === 'visible' ? SHARE_STATUS.ALL_SHARED : SHARE_STATUS.NOT_SHARED,
       })
     } catch (error) {
       handleError(error, 'Failed to update share')
     }
   }
 
-  const toggleShareWithMember = async (memberId: CampaignMemberId) => {
+  const toggleShareStatus = async () => {
+    await setAllPlayersPermission(allPlayersPermissionLevel === 'visible' ? 'hidden' : 'visible')
+  }
+
+  const setMemberPermission = async (
+    memberId: CampaignMemberId,
+    value: BlockVisibilitySelectValue,
+  ) => {
     if (!canMutate) return
     try {
-      if (getShareStateForMember(memberId) === 'all') {
-        await unshareBlocks.mutateAsync({
-          noteId: note._id,
-          blockNoteIds: blocks.map((b) => b.id),
-          campaignMemberId: memberId,
-        })
-      } else {
-        const blocksToShare = getBlocksToShareWithMember(memberId)
-        if (blocksToShare.length === 0) return
-
-        await shareBlocks.mutateAsync({
-          noteId: note._id,
-          blockNoteIds: blocksToShare.map((b) => b.id),
-          campaignMemberId: memberId,
-        })
-      }
+      await setBlockMemberPermission.mutateAsync({
+        noteId: note._id,
+        blockNoteIds,
+        campaignMemberId: memberId,
+        permissionLevel:
+          value === 'default'
+            ? null
+            : value === 'visible'
+              ? PERMISSION_LEVEL.VIEW
+              : PERMISSION_LEVEL.NONE,
+      })
     } catch (error) {
-      handleError(error, 'Failed to update share')
+      handleError(error, 'Failed to update player share')
     }
   }
 
@@ -164,10 +257,11 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     isPending: query.isPending,
     isMutating,
     aggregateShareStatus,
-    playerMembers,
+    allPlayersPermissionLevel,
     shareItems,
     toggleShareStatus,
-    toggleShareWithMember,
+    setAllPlayersPermission,
+    setMemberPermission,
     canShare: canLoadBlockShareData({ campaignId, isDm, hasPersistedNote, hasBlocks }),
   }
 }

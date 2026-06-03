@@ -1,44 +1,17 @@
 import { v } from 'convex/values'
 import { campaignQuery, dmQuery } from '../functions'
-import { blockShareValidator } from '../blockShares/schema'
+import { blockVisibilityPermissionLevelValidator } from '../blockShares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
-import {
-  blockNoteIdValidator,
-  blockShareStatusValidator,
-  blockTypeValidator,
-  blockValidator,
-} from './schema'
-import { getBlockWithShares as getBlockWithSharesFn } from './functions/getBlockWithShares'
+import { permissionLevelValidator } from '../sidebarItems/schema/validators'
+import { blockNoteIdValidator, blockShareStatusValidator, blockTypeValidator } from './schema'
 import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlocksWithShares'
 import { getHeadingsByNote as getHeadingsByNoteFn } from './functions/getHeadingsByNote'
 import { searchBlocks as searchBlocksFn } from './functions/searchBlocks'
 
-export const getBlockWithShares = dmQuery({
-  args: {
-    noteId: v.id('sidebarItems'),
-    blockNoteId: blockNoteIdValidator,
-  },
-  returns: v.union(
-    v.object({
-      block: blockValidator,
-      shareStatus: blockShareStatusValidator,
-      shares: v.array(blockShareValidator),
-      playerMembers: v.array(campaignMemberValidator),
-    }),
-    v.null(),
-  ),
-  handler: async (ctx, args) => {
-    return await getBlockWithSharesFn(ctx, {
-      noteId: args.noteId,
-      blockNoteId: args.blockNoteId,
-    })
-  },
-})
-
 const blockShareInfoValidator = v.object({
   blockNoteId: blockNoteIdValidator,
   shareStatus: blockShareStatusValidator,
-  sharedMemberIds: v.array(v.id('campaignMembers')),
+  memberPermissions: v.record(v.id('campaignMembers'), blockVisibilityPermissionLevelValidator),
 })
 
 export const getBlocksWithShares = dmQuery({
@@ -49,6 +22,7 @@ export const getBlocksWithShares = dmQuery({
   returns: v.object({
     blocks: v.array(blockShareInfoValidator),
     playerMembers: v.array(campaignMemberValidator),
+    notePermissionsByMemberId: v.record(v.id('campaignMembers'), permissionLevelValidator),
   }),
   handler: async (ctx, args) => {
     return await getBlocksWithSharesFn(ctx, {

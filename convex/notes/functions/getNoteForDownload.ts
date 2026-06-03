@@ -21,7 +21,10 @@ export async function getNoteForDownload(
     noteId: item._id,
   })
   const results = await asyncMap(allBlocks, (block) =>
-    enforceBlockSharePermissionsOrNull(ctx, { block }),
+    enforceBlockSharePermissionsOrNull(ctx, {
+      block,
+      notePermissionLevel: item.myPermissionLevel,
+    }),
   )
   const permittedBlocks = results
     .filter((result): result is NonNullable<typeof result> => result !== null)

@@ -8,7 +8,8 @@ import {
   createSidebarShare,
   syncBlocksToYjs,
 } from '../../_test/factories.helper'
-import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
+import { expectPermissionDenied } from '../../_test/assertions.helper'
+import { getBlockShareInfo } from '../../_test/blockShareQueries.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 
@@ -125,13 +126,14 @@ describe('block sharing workflows', () => {
       const b1Info = dmResult.blocks.find((b) => b.blockNoteId === block1.blockNoteId)
       expect(b1Info).toBeDefined()
       expect(b1Info!.shareStatus).toBe('individually_shared')
-      expect(b1Info!.sharedMemberIds).toContain(p1.memberId)
-      expect(b1Info!.sharedMemberIds).not.toContain(p2.memberId)
+      expect(b1Info!.memberPermissions).toEqual({
+        [p1.memberId]: 'view',
+      })
 
       const b2Info = dmResult.blocks.find((b) => b.blockNoteId === block2.blockNoteId)
       expect(b2Info).toBeDefined()
       expect(b2Info!.shareStatus).toBe('individually_shared')
-      expect(b2Info!.sharedMemberIds).toHaveLength(0)
+      expect(b2Info!.memberPermissions).toEqual({})
 
       await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
@@ -163,7 +165,9 @@ describe('block sharing workflows', () => {
       })
       for (const b of notSharedResult.blocks) {
         expect(b.shareStatus).toBe('not_shared')
-        expect(b.sharedMemberIds).toHaveLength(0)
+        expect(b.memberPermissions).toEqual(
+          b.blockNoteId === block1.blockNoteId ? { [p1.memberId]: 'view' } : {},
+        )
       }
     })
   })
@@ -238,7 +242,7 @@ describe('block sharing workflows', () => {
       })
       expect(afterUnshare).toBeNull()
 
-      const blockAfter = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      const blockAfter = await getBlockShareInfo(dmAuth, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteId: block.blockNoteId,
@@ -272,13 +276,13 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      const blockAfter = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      const blockAfter = await getBlockShareInfo(dmAuth, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteId: block.blockNoteId,
       })
       expect(blockAfter).not.toBeNull()
-      expect(blockAfter!.shares).toHaveLength(0)
+      expect(blockAfter!.memberPermissions).toEqual({})
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })
@@ -347,12 +351,12 @@ describe('block sharing workflows', () => {
       })
       const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockNoteId)
       expect(blockInfo).toBeDefined()
-      expect(blockInfo!.sharedMemberIds.filter((id) => id === p1.memberId)).toHaveLength(1)
+      expect(blockInfo!.memberPermissions[p1.memberId]).toBe('view')
     })
   })
 
   describe('share without sidebar share', () => {
-    it('rejects a block share when the member cannot view the note', async () => {
+    it('records an explicit block share when the member cannot view the note', async () => {
       const ctx = await setupMultiPlayerContext(t, 1)
       const dmAuth = asDm(ctx)
       const p1 = ctx.players[0]
@@ -368,14 +372,12 @@ describe('block sharing workflows', () => {
         status: 'individually_shared',
       })
 
-      await expectValidationFailed(
-        dmAuth.action(api.blockShares.actions.shareBlocks, {
-          campaignId: ctx.campaignId,
-          noteId: note.noteId,
-          blockNoteIds: [block.blockNoteId],
-          campaignMemberId: p1.memberId,
-        }),
-      )
+      await dmAuth.action(api.blockShares.actions.shareBlocks, {
+        campaignId: ctx.campaignId,
+        noteId: note.noteId,
+        blockNoteIds: [block.blockNoteId],
+        campaignMemberId: p1.memberId,
+      })
 
       const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
         campaignId: ctx.campaignId,
@@ -384,11 +386,12 @@ describe('block sharing workflows', () => {
       })
       const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockNoteId)
       expect(blockInfo).toBeDefined()
-      expect(result.playerMembers.map((m) => m._id)).not.toContain(p1.memberId)
-      expect(blockInfo!.sharedMemberIds).not.toContain(p1.memberId)
+      expect(result.playerMembers.map((m) => m._id)).toContain(p1.memberId)
+      expect(result.notePermissionsByMemberId[p1.memberId]).toBe('none')
+      expect(blockInfo!.memberPermissions[p1.memberId]).toBe('view')
     })
 
-    it('rejects inherited note access when the note all-player permission is none', async () => {
+    it('records explicit block shares even when note all-player permission is none', async () => {
       const ctx = await setupMultiPlayerContext(t, 1)
       const dmAuth = asDm(ctx)
       const p1 = ctx.players[0]
@@ -410,14 +413,19 @@ describe('block sharing workflows', () => {
         status: 'individually_shared',
       })
 
-      await expectValidationFailed(
-        dmAuth.action(api.blockShares.actions.shareBlocks, {
-          campaignId: ctx.campaignId,
-          noteId: note.noteId,
-          blockNoteIds: [block.blockNoteId],
-          campaignMemberId: p1.memberId,
-        }),
-      )
+      await dmAuth.action(api.blockShares.actions.shareBlocks, {
+        campaignId: ctx.campaignId,
+        noteId: note.noteId,
+        blockNoteIds: [block.blockNoteId],
+        campaignMemberId: p1.memberId,
+      })
+
+      const blockInfo = await getBlockShareInfo(dmAuth, {
+        campaignId: ctx.campaignId,
+        noteId: note.noteId,
+        blockNoteId: block.blockNoteId,
+      })
+      expect(blockInfo?.memberPermissions[p1.memberId]).toBe('view')
     })
   })
 })

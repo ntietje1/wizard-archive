@@ -90,7 +90,7 @@ export function setConvexYjsProviderWritable(provider: ConvexYjsProvider, value:
   }
 }
 
-export function setConvexYjsProviderUser(provider: ConvexYjsProvider, user: ProviderUser) {
+export function updateConvexYjsProviderUser(provider: ConvexYjsProvider, user: ProviderUser) {
   provider.awareness.setLocalStateField('user', user)
 }
 

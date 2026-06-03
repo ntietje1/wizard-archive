@@ -5,12 +5,36 @@ import { NoteEditor } from '../note-editor'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
 import { EDITOR_MODE } from 'shared/editor/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { testId } from '~/test/helpers/test-id'
 
 const noteContentSpy = vi.hoisted(() => vi.fn())
 const noteFormattingToolbarSpy = vi.hoisted(() => vi.fn())
 const mockUseEditorMode = vi.hoisted(() => vi.fn())
+const setSidebarItemsMemberPermissionMock = vi.hoisted(() => vi.fn())
+const campaignMembersQuery = vi.hoisted(() => ({
+  data: [
+    {
+      _id: 'player-1',
+      userProfile: {
+        email: 'player@example.com',
+        imageUrl: null,
+        name: 'Player One',
+        username: 'player-one',
+      },
+    },
+    {
+      _id: 'player-2',
+      userProfile: {
+        email: 'second@example.com',
+        imageUrl: null,
+        name: 'Second Player',
+        username: 'second-player',
+      },
+    },
+  ],
+}))
 
 vi.mock('@tanstack/react-router', () => ({
   ClientOnly: ({ children }: { children: ReactNode }) => children,
@@ -63,6 +87,27 @@ vi.mock('~/features/editor/stores/note-editor-store', () => ({
     selector({ editor: null }),
 }))
 
+vi.mock('~/features/players/hooks/useCampaignMembers', () => ({
+  useCampaignMembers: () => campaignMembersQuery,
+}))
+
+vi.mock('~/shared/hooks/useCampaignMutation', () => ({
+  useCampaignMutation: () => ({
+    isPending: false,
+    mutateAsync: setSidebarItemsMemberPermissionMock,
+  }),
+}))
+
+vi.mock('convex/_generated/api', () => ({
+  api: {
+    sidebarShares: {
+      mutations: {
+        setSidebarItemsMemberPermission: 'setSidebarItemsMemberPermission',
+      },
+    },
+  },
+}))
+
 vi.mock('~/features/editor/hooks/useScrollPersistence', () => ({
   useScrollPersistence: vi.fn(),
 }))
@@ -82,6 +127,7 @@ describe('NoteEditor', () => {
     mockOpenBlockNoteContextMenu.mockReset()
     noteContentSpy.mockReset()
     noteFormattingToolbarSpy.mockReset()
+    setSidebarItemsMemberPermissionMock.mockReset()
     mockUseEditorMode.mockReturnValue({ canEdit: true, editorMode: EDITOR_MODE.EDITOR })
   })
 
@@ -137,6 +183,99 @@ describe('NoteEditor', () => {
     })
   })
 
+  it('shows block-share access warning with a grant note access action', async () => {
+    const user = userEvent.setup()
+    const note = createNote({
+      blockShareAccessWarnings: [
+        {
+          campaignMemberId: testId<'campaignMembers'>('player-1'),
+          blockCount: 2,
+        },
+      ],
+    })
+
+    render(<NoteEditor item={note} />)
+
+    const warning = screen.getByTestId('block-share-access-warning')
+    expect(warning).toHaveAccessibleName(
+      "There are 2 blocks explicitly shared with Player One, but this note isn't shared with them.",
+    )
+
+    await user.click(warning)
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      "There are 2 blocks explicitly shared with Player One, but this note isn't shared with them.",
+    )
+    expect(screen.getByRole('dialog')).toHaveTextContent('Share this note with this player?')
+
+    await user.click(screen.getByRole('button', { name: 'Share note' }))
+
+    expect(setSidebarItemsMemberPermissionMock).toHaveBeenCalledWith({
+      sidebarItemIds: [note._id],
+      campaignMemberId: testId<'campaignMembers'>('player-1'),
+      permissionLevel: PERMISSION_LEVEL.VIEW,
+    })
+  })
+
+  it('uses aggregate warning language and grants every warning player', async () => {
+    const user = userEvent.setup()
+    const note = createNote({
+      blockShareAccessWarnings: [
+        {
+          campaignMemberId: testId<'campaignMembers'>('player-1'),
+          blockCount: 1,
+        },
+        {
+          campaignMemberId: testId<'campaignMembers'>('player-2'),
+          blockCount: 3,
+        },
+      ],
+    })
+
+    render(<NoteEditor item={note} />)
+
+    const warning = screen.getByTestId('block-share-access-warning')
+    expect(warning).toHaveAccessibleName(
+      'There are blocks that are shared with Player One and Second Player.',
+    )
+
+    await user.click(warning)
+    await user.click(screen.getByRole('button', { name: 'Share note' }))
+
+    expect(setSidebarItemsMemberPermissionMock).toHaveBeenCalledTimes(2)
+    expect(setSidebarItemsMemberPermissionMock).toHaveBeenCalledWith({
+      sidebarItemIds: [note._id],
+      campaignMemberId: testId<'campaignMembers'>('player-1'),
+      permissionLevel: PERMISSION_LEVEL.VIEW,
+    })
+    expect(setSidebarItemsMemberPermissionMock).toHaveBeenCalledWith({
+      sidebarItemIds: [note._id],
+      campaignMemberId: testId<'campaignMembers'>('player-2'),
+      permissionLevel: PERMISSION_LEVEL.VIEW,
+    })
+  })
+
+  it('absolutely positions the warning control under the toolbar area', () => {
+    render(
+      <NoteEditor
+        item={createNote({
+          blockShareAccessWarnings: [
+            {
+              campaignMemberId: testId<'campaignMembers'>('player-1'),
+              blockCount: 2,
+            },
+          ],
+        })}
+      />,
+    )
+
+    expect(screen.getByTestId('block-share-access-warning-container')).toHaveClass(
+      'absolute',
+      'top-12',
+      'left-2',
+    )
+  })
+
   it('keeps untrusted right-click context menu events ignored', () => {
     render(<NoteEditor item={createNote()} />)
     const wrapper = screen.getByTestId('note-editor-wrapper')
@@ -147,13 +286,14 @@ describe('NoteEditor', () => {
   })
 })
 
-function createNote(): NoteWithContent {
+function createNote(overrides: Partial<NoteWithContent> = {}): NoteWithContent {
   return {
     _creationTime: 1,
     _id: testId<'sidebarItems'>('note-id'),
     allPermissionLevel: null,
     ancestors: [],
     blockMeta: {},
+    blockShareAccessWarnings: [],
     campaignId: testId<'campaigns'>('campaign-id'),
     color: null,
     content: [],
@@ -176,5 +316,6 @@ function createNote(): NoteWithContent {
     type: SIDEBAR_ITEM_TYPES.notes,
     updatedBy: null,
     updatedTime: null,
+    ...overrides,
   } as unknown as NoteWithContent
 }

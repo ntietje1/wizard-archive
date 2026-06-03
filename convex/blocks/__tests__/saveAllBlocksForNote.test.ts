@@ -214,6 +214,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         blockId: blockDbId,
         campaignMemberId: ctx.player.memberId,
         sessionId: null,
+        permissionLevel: 'view',
       })
     })
 

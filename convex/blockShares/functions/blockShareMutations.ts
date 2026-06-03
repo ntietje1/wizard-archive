@@ -1,12 +1,13 @@
-import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockNoteId'
 import { patchBlockMetadata } from '../../blocks/functions/patchBlockMetadata'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import type { NoteFromDb } from '../../../shared/notes/types'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
 import type { BlockNoteId } from '../../../shared/editor-blocks/types'
 
@@ -18,26 +19,26 @@ export type BlockShareMutationCtx = Pick<MutationCtx, 'db'> & {
 async function findBlockOrThrow(
   ctx: BlockShareMutationCtx,
   { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: BlockNoteId },
-): Promise<Id<'blocks'>> {
+): Promise<Doc<'blocks'>> {
   const block = await findBlockByBlockNoteId(ctx, { noteId, blockNoteId })
   if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'Block not found')
-  return block._id
+  return block
 }
 
 async function addBlockShare(
   ctx: BlockShareMutationCtx,
   {
     noteId,
-    blockId,
+    block,
     campaignMemberId,
+    permissionLevel,
   }: {
     noteId: Id<'sidebarItems'>
-    blockId: Id<'blocks'>
+    block: Doc<'blocks'>
     campaignMemberId: Id<'campaignMembers'>
+    permissionLevel: Extract<PermissionLevel, 'none' | 'view'>
   },
 ): Promise<Id<'blockShares'>> {
-  const block = await ctx.db.get('blocks', blockId)
-  if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
   const campaignId = block.campaignId
 
   const member = await ctx.db.get('campaignMembers', campaignMemberId)
@@ -49,12 +50,15 @@ async function addBlockShare(
     .withIndex('by_campaign_block_member', (q) =>
       q
         .eq('campaignId', campaignId)
-        .eq('blockId', blockId)
+        .eq('blockId', block._id)
         .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
 
   if (existingShare) {
+    if (existingShare.permissionLevel !== permissionLevel) {
+      await ctx.db.patch('blockShares', existingShare._id, { permissionLevel })
+    }
     return existingShare._id
   }
 
@@ -64,25 +68,23 @@ async function addBlockShare(
   return await ctx.db.insert('blockShares', {
     campaignId,
     noteId: noteId,
-    blockId,
+    blockId: block._id,
     campaignMemberId,
     sessionId: currentSession?._id ?? null,
+    permissionLevel,
   })
 }
 
 async function removeBlockShare(
   ctx: BlockShareMutationCtx,
-  { blockId, campaignMemberId }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
+  { block, campaignMemberId }: { block: Doc<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<void> {
-  const block = await ctx.db.get('blocks', blockId)
-  if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'Block not found')
-
   const share = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
       q
         .eq('campaignId', block.campaignId)
-        .eq('blockId', blockId)
+        .eq('blockId', block._id)
         .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
@@ -90,23 +92,6 @@ async function removeBlockShare(
   if (share) {
     await ctx.db.delete('blockShares', share._id)
   }
-}
-
-async function clearBlockShares(
-  ctx: BlockShareMutationCtx,
-  { blockId }: { blockId: Id<'blocks'> },
-): Promise<void> {
-  const block = await ctx.db.get('blocks', blockId)
-  if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'Block not found')
-
-  const shares = await ctx.db
-    .query('blockShares')
-    .withIndex('by_campaign_block_member', (q) =>
-      q.eq('campaignId', block.campaignId).eq('blockId', blockId),
-    )
-    .collect()
-
-  await asyncMap(shares, (share) => ctx.db.delete('blockShares', share._id))
 }
 
 export async function shareBlockWithMemberHelper(
@@ -121,17 +106,12 @@ export async function shareBlockWithMemberHelper(
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
-  const blockId = await findBlockOrThrow(ctx, {
-    noteId: note._id,
+  await setBlockMemberPermissionHelper(ctx, {
+    note,
     blockNoteId,
+    campaignMemberId,
+    permissionLevel: PERMISSION_LEVEL.VIEW,
   })
-
-  await patchBlockMetadata(ctx, {
-    blockDbId: blockId,
-    shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
-  })
-
-  await addBlockShare(ctx, { noteId: note._id, blockId, campaignMemberId })
 }
 
 export async function unshareBlockFromMemberHelper(
@@ -146,27 +126,55 @@ export async function unshareBlockFromMemberHelper(
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
-  const block = await findBlockByBlockNoteId(ctx, {
+  await setBlockMemberPermissionHelper(ctx, {
+    note,
+    blockNoteId,
+    campaignMemberId,
+    permissionLevel: null,
+  })
+}
+
+export async function setBlockMemberPermissionHelper(
+  ctx: BlockShareMutationCtx,
+  {
+    note,
+    blockNoteId,
+    campaignMemberId,
+    permissionLevel,
+  }: {
+    note: NoteFromDb
+    blockNoteId: BlockNoteId
+    campaignMemberId: Id<'campaignMembers'>
+    permissionLevel: Extract<PermissionLevel, 'none' | 'view'> | null
+  },
+): Promise<void> {
+  if (permissionLevel === null) {
+    const block = await findBlockByBlockNoteId(ctx, {
+      noteId: note._id,
+      blockNoteId,
+    })
+    if (!block) return
+    await removeBlockShare(ctx, { block, campaignMemberId })
+    await resetHiddenAllPlayersStatusIfNoOverrides(ctx, block)
+    return
+  }
+
+  const block = await findBlockOrThrow(ctx, {
     noteId: note._id,
     blockNoteId,
   })
-  if (!block) return
 
-  await removeBlockShare(ctx, { blockId: block._id, campaignMemberId })
+  await patchBlockMetadata(ctx, {
+    blockDbId: block._id,
+    shareStatus: getShareStatusForMemberOverride(block.shareStatus ?? SHARE_STATUS.NOT_SHARED),
+  })
 
-  const remainingShare = await ctx.db
-    .query('blockShares')
-    .withIndex('by_campaign_block_member', (q) =>
-      q.eq('campaignId', block.campaignId).eq('blockId', block._id),
-    )
-    .first()
-
-  if (!remainingShare && block.shareStatus !== SHARE_STATUS.ALL_SHARED) {
-    await patchBlockMetadata(ctx, {
-      blockDbId: block._id,
-      shareStatus: SHARE_STATUS.NOT_SHARED,
-    })
-  }
+  await addBlockShare(ctx, {
+    noteId: note._id,
+    block,
+    campaignMemberId,
+    permissionLevel,
+  })
 }
 
 export async function setBlockShareStatusHelper(
@@ -177,17 +185,40 @@ export async function setBlockShareStatusHelper(
     status,
   }: { note: NoteFromDb; blockNoteId: BlockNoteId; status: ShareStatus },
 ): Promise<void> {
-  const blockId = await findBlockOrThrow(ctx, {
+  const block = await findBlockOrThrow(ctx, {
     noteId: note._id,
     blockNoteId,
   })
 
   await patchBlockMetadata(ctx, {
-    blockDbId: blockId,
+    blockDbId: block._id,
     shareStatus: status,
   })
+}
 
-  if (status === SHARE_STATUS.NOT_SHARED) {
-    await clearBlockShares(ctx, { blockId })
+function getShareStatusForMemberOverride(shareStatus: ShareStatus): ShareStatus {
+  return shareStatus === SHARE_STATUS.ALL_SHARED
+    ? SHARE_STATUS.ALL_SHARED
+    : SHARE_STATUS.INDIVIDUALLY_SHARED
+}
+
+async function resetHiddenAllPlayersStatusIfNoOverrides(
+  ctx: BlockShareMutationCtx,
+  block: Doc<'blocks'>,
+) {
+  if (block.shareStatus === SHARE_STATUS.ALL_SHARED) return
+
+  const remainingShare = await ctx.db
+    .query('blockShares')
+    .withIndex('by_campaign_block_member', (q) =>
+      q.eq('campaignId', block.campaignId).eq('blockId', block._id),
+    )
+    .first()
+
+  if (!remainingShare) {
+    await patchBlockMetadata(ctx, {
+      blockDbId: block._id,
+      shareStatus: SHARE_STATUS.NOT_SHARED,
+    })
   }
 }

@@ -19,6 +19,7 @@ describe('SidebarItemEditor', () => {
       ancestors: [],
       content: [],
       blockMeta: {},
+      blockShareAccessWarnings: [],
     }
 
     render(<SidebarItemEditor item={item} />)

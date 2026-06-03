@@ -69,7 +69,12 @@ async function loadDefinitionsForNote(
     getAllBlocksByNote(ctx, { noteId }),
   ])
   const visibleBlocks = await Promise.all(
-    blocks.map((block) => enforceBlockSharePermissionsOrNull(ctx, { block })),
+    blocks.map((block) =>
+      enforceBlockSharePermissionsOrNull(ctx, {
+        block,
+        notePermissionLevel: accessibleNote.myPermissionLevel,
+      }),
+    ),
   )
   const visibleBlockNoteIds = new Set(
     visibleBlocks.flatMap((result) => (result ? [result.block.blockNoteId] : [])),

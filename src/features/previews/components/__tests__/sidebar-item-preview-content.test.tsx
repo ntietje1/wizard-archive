@@ -123,6 +123,7 @@ function createNoteItem(overrides: Partial<NoteWithContent> = {}): NoteWithConte
     ancestors: [],
     content: [],
     blockMeta: {},
+    blockShareAccessWarnings: [],
     ...overrides,
   }
 }
