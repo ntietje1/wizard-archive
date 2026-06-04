@@ -602,7 +602,7 @@ describe('block permission resolution', () => {
       campaignMemberId: ctx.player.memberId,
     })
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(ctx.player.memberId, { status: 'Removed' })
+      await dbCtx.db.patch("campaignMembers", ctx.player.memberId, { status: 'Removed' })
     })
 
     const dmNote = (await dmAuth.query(api.notes.queries.getNote, {
@@ -627,7 +627,7 @@ describe('block permission resolution', () => {
       campaignMemberId: ctx.player.memberId,
     })
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(ctx.player.memberId, { status: 'Removed' })
+      await dbCtx.db.patch("campaignMembers", ctx.player.memberId, { status: 'Removed' })
     })
 
     await dmAuth.action(api.blockShares.actions.setBlockMemberPermission, {
