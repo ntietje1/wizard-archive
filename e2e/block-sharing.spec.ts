@@ -137,7 +137,7 @@ test.describe('block sharing', () => {
       'controllable',
     )
     await expect(blockSharePlayerRow(menu, playerMemberId).getByRole('combobox')).toContainText(
-      /default/i,
+      /hidden/i,
     )
     await expect(page.getByText(/share the note with/i)).not.toBeVisible()
 
@@ -242,7 +242,7 @@ test.describe('block sharing', () => {
     playerRow = blockSharePlayerRow(menu, playerMemberId)
     await setSelectValue(playerRow.getByRole('combobox'), /^remove$/i)
     await expect(menu).toBeVisible({ timeout: 10000 })
-    await expect(playerRow.getByRole('combobox')).toContainText(/default/i, { timeout: 10000 })
+    await expect(playerRow.getByRole('combobox')).toContainText(/visible/i, { timeout: 10000 })
 
     await expectBlocksAsActualPlayer(browser, {
       visible: [visibleBlockText, conditionalBlockText],

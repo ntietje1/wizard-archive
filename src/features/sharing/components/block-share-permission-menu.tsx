@@ -1,5 +1,4 @@
-import { Lock, Users } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { Lock } from 'lucide-react'
 import type {
   AggregateBlockVisibilitySelectValue,
   BlockShareItem,
@@ -15,13 +14,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/features/shadcn/components/select'
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
-import { UserProfileImage } from '~/shared/components/user-profile-image'
+import {
+  SHARE_MENU_OVERLAY_Z_INDEX,
+  SHARE_MENU_WIDTH_CLASS,
+} from '~/features/sharing/components/share-menu-layout'
+import {
+  ShareMenuAllPlayersRow,
+  ShareMenuPlayerIdentity,
+  ShareMenuRowTooltip,
+  ShareMenuTreeItem,
+} from '~/features/sharing/components/share-menu-row-parts'
 import { getUserDisplayName } from '~/shared/utils/user-display-name'
 
 type ShareMemberId = BlockShareItem['member']['_id']
-
-const OVERLAY_Z_INDEX = 'z-[10000]'
 
 function visibilityLabel(value: AggregateBlockVisibilitySelectValue): string {
   switch (value) {
@@ -34,17 +39,6 @@ function visibilityLabel(value: AggregateBlockVisibilitySelectValue): string {
     case 'mixed':
       return 'Mixed'
   }
-}
-
-function RowTooltip({ text, children }: { text: string; children: ReactNode }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger render={<div className="block" />}>{children}</TooltipTrigger>
-      <TooltipContent side="left" className="max-w-[220px]" positionerClassName={OVERLAY_Z_INDEX}>
-        {text}
-      </TooltipContent>
-    </Tooltip>
-  )
 }
 
 interface BlockSharePermissionMenuProps {
@@ -89,7 +83,7 @@ export function BlockSharePermissionMenu({
 
   return (
     <div
-      className="flex min-w-[300px] flex-col gap-0.5"
+      className={`flex flex-col gap-0.5 ${SHARE_MENU_WIDTH_CLASS}`}
       data-testid="block-share-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
@@ -121,21 +115,21 @@ export function BlockSharePermissionMenu({
         <div className="ml-4">
           {defaultItems.length > 0 ? (
             defaultItems.map((item, index) => (
-              <TreeItem key={item.key} isLast={index === defaultItems.length - 1}>
+              <ShareMenuTreeItem key={item.key} isLast={index === defaultItems.length - 1}>
                 <PlayerRow
                   shareItem={item}
                   defaultValue={allPlayersPermissionLevel}
                   disabled={disabled}
                   onChange={(value) => onSetMemberPermission(item.member._id, value)}
                 />
-              </TreeItem>
+              </ShareMenuTreeItem>
             ))
           ) : (
-            <TreeItem isLast>
+            <ShareMenuTreeItem isLast>
               <div className="py-1 pl-1 text-xs text-muted-foreground">
                 No view-level players use the default block setting.
               </div>
-            </TreeItem>
+            </ShareMenuTreeItem>
           )}
         </div>
       )}
@@ -179,26 +173,14 @@ function AllPlayersRow({
       : 'This is the default block visibility for players with view-level note access.'
 
   return (
-    <RowTooltip text={infoText}>
-      <div
-        className="flex items-center gap-2.5 px-1 py-1.5 select-none"
-        data-testid="block-share-all-players-row"
-      >
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-2.5 hover:opacity-80"
-          onClick={onToggleExpand}
-        >
-          <div className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-muted">
-            <Users className="size-3.5 text-muted-foreground" />
-          </div>
-          <span className="flex min-w-0 flex-col text-left leading-tight">
-            <span className="truncate text-sm font-medium">All Players</span>
-            <span className="truncate text-xs text-muted-foreground">
-              {expanded ? 'Hide player defaults' : `${inheritingMembers.length} default player(s)`}
-            </span>
-          </span>
-        </button>
+    <ShareMenuAllPlayersRow
+      label="All Players"
+      tooltipText={infoText}
+      expanded={expanded}
+      members={inheritingMembers}
+      testId="block-share-all-players-row"
+      onToggleExpand={onToggleExpand}
+      select={
         <Select
           value={value}
           onValueChange={(nextValue) => {
@@ -206,7 +188,7 @@ function AllPlayersRow({
           }}
           disabled={disabled}
         >
-          <SelectTrigger size="sm" className="h-7 min-w-[96px] text-xs">
+          <SelectTrigger size="sm" className="h-7 min-w-[110px] text-xs">
             <SelectValue>{visibilityLabel(value)}</SelectValue>
           </SelectTrigger>
           <SelectContent
@@ -215,7 +197,7 @@ function AllPlayersRow({
             alignItemWithTrigger={false}
             data-block-share-menu-overlay="true"
             onPointerDown={(event) => event.stopPropagation()}
-            positionerClassName={OVERLAY_Z_INDEX}
+            positionerClassName={SHARE_MENU_OVERLAY_Z_INDEX}
           >
             {value === 'mixed' && (
               <>
@@ -229,8 +211,8 @@ function AllPlayersRow({
             <SelectItem value="visible">Visible</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-    </RowTooltip>
+      }
+    />
   )
 }
 
@@ -248,6 +230,7 @@ function PlayerRow({
   const { member, permissionLevel, hasExplicitShare } = shareItem
   const profile = member.userProfile
   const selectValue = hasExplicitShare ? permissionLevel : 'default'
+  const selectLabel = hasExplicitShare ? permissionLevel : defaultValue
   const name = getUserDisplayName(profile)
   const infoText =
     permissionLevel === 'mixed'
@@ -259,60 +242,59 @@ function PlayerRow({
           : `${name}'s block visibility is based on the All Players block setting.`
 
   return (
-    <RowTooltip text={infoText}>
-      <div
-        className="flex items-center gap-2.5 px-1 py-1.5 select-none"
-        data-member-id={member._id}
-        data-share-kind={shareItem.kind}
-        data-testid="block-share-player-row"
+    <ShareMenuRowTooltip
+      text={infoText}
+      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
+      memberId={member._id}
+      shareKind={shareItem.kind}
+      testId="block-share-player-row"
+    >
+      <ShareMenuPlayerIdentity member={member} />
+      <Select
+        value={selectValue}
+        onValueChange={(value) => {
+          if (value === 'default' || value === 'hidden' || value === 'visible') {
+            void onChange(value)
+          }
+        }}
+        disabled={disabled}
       >
-        <PlayerIdentity member={member} />
-        <Select
-          value={selectValue}
-          onValueChange={(value) => {
-            if (value === 'default' || value === 'hidden' || value === 'visible') {
-              void onChange(value)
-            }
-          }}
-          disabled={disabled}
+        <SelectTrigger size="sm" className="h-7 min-w-[110px] text-xs">
+          <SelectValue>{visibilityLabel(selectLabel)}</SelectValue>
+        </SelectTrigger>
+        <SelectContent
+          className="p-1"
+          align="end"
+          alignItemWithTrigger={false}
+          data-block-share-menu-overlay="true"
+          onPointerDown={(event) => event.stopPropagation()}
+          positionerClassName={SHARE_MENU_OVERLAY_Z_INDEX}
         >
-          <SelectTrigger size="sm" className="h-7 min-w-[96px] text-xs">
-            <SelectValue>{visibilityLabel(permissionLevel)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent
-            className="p-1"
-            align="end"
-            alignItemWithTrigger={false}
-            data-block-share-menu-overlay="true"
-            onPointerDown={(event) => event.stopPropagation()}
-            positionerClassName={OVERLAY_Z_INDEX}
-          >
-            {selectValue === 'mixed' && (
-              <>
-                <SelectItem value="mixed" disabled>
-                  Mixed
-                </SelectItem>
-                <SelectSeparator />
-              </>
-            )}
-            {!hasExplicitShare && (
-              <SelectItem value="default">Default ({visibilityLabel(defaultValue)})</SelectItem>
-            )}
-            <SelectItem value="hidden">Hidden</SelectItem>
-            <SelectItem value="visible">Visible</SelectItem>
-            {hasExplicitShare && (
-              <>
-                <SelectSeparator />
-                <SelectItem value="default" className="text-destructive">
-                  Remove
-                </SelectItem>
-              </>
-            )}
-          </SelectContent>
-        </Select>
-        {profile.name && profile.username && <span className="sr-only">@{profile.username}</span>}
-      </div>
-    </RowTooltip>
+          {selectValue === 'mixed' && (
+            <>
+              <SelectItem value="mixed" disabled>
+                Mixed
+              </SelectItem>
+              <SelectSeparator />
+            </>
+          )}
+          {!hasExplicitShare && (
+            <SelectItem value="default">Default ({visibilityLabel(defaultValue)})</SelectItem>
+          )}
+          <SelectItem value="hidden">Hidden</SelectItem>
+          <SelectItem value="visible">Visible</SelectItem>
+          {hasExplicitShare && (
+            <>
+              <SelectSeparator />
+              <SelectItem value="default" className="text-destructive">
+                Remove
+              </SelectItem>
+            </>
+          )}
+        </SelectContent>
+      </Select>
+      {profile.name && profile.username && <span className="sr-only">@{profile.username}</span>}
+    </ShareMenuRowTooltip>
   )
 }
 
@@ -320,52 +302,21 @@ function LockedPlayerRow({ shareItem }: { shareItem: BlockShareItem }) {
   const name = getUserDisplayName(shareItem.member.userProfile)
 
   return (
-    <RowTooltip text={`${name} can edit this note, so they can see every block.`}>
+    <ShareMenuRowTooltip
+      text={`${name} can edit this note, so they can see every block.`}
+      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
+      memberId={shareItem.member._id}
+      shareKind={shareItem.kind}
+      testId="block-share-player-row"
+    >
+      <ShareMenuPlayerIdentity member={shareItem.member} />
       <div
-        className="flex items-center gap-2.5 px-1 py-1.5 select-none"
-        data-member-id={shareItem.member._id}
-        data-share-kind={shareItem.kind}
-        data-testid="block-share-player-row"
+        className="flex h-7 min-w-[110px] items-center justify-between rounded-md border border-input bg-muted px-2 text-xs text-muted-foreground"
+        data-testid="block-share-locked-visible"
       >
-        <PlayerIdentity member={shareItem.member} />
-        <div
-          className="flex h-7 min-w-[96px] items-center justify-between rounded-md border border-input bg-muted px-2 text-xs text-muted-foreground"
-          data-testid="block-share-locked-visible"
-        >
-          <span>Visible</span>
-          <Lock className="size-3" />
-        </div>
+        <span>Visible</span>
+        <Lock className="size-3" />
       </div>
-    </RowTooltip>
-  )
-}
-
-function PlayerIdentity({ member }: { member: CampaignMember }) {
-  const profile = member.userProfile
-  return (
-    <>
-      <UserProfileImage
-        imageUrl={profile.imageUrl}
-        name={profile.name}
-        email={profile.email}
-        size="sm"
-      />
-      <div className="flex min-w-0 flex-1 flex-col leading-tight">
-        <span className="truncate text-sm font-medium">{getUserDisplayName(profile)}</span>
-        {profile.username && (
-          <span className="truncate text-xs text-muted-foreground">@{profile.username}</span>
-        )}
-      </div>
-    </>
-  )
-}
-
-function TreeItem({ isLast, children }: { isLast: boolean; children: ReactNode }) {
-  return (
-    <div className="relative flex items-center">
-      <div className={`absolute left-0 top-0 w-px bg-border ${isLast ? 'h-1/2' : 'h-full'}`} />
-      <div className="w-2 shrink-0 border-t border-border" />
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
+    </ShareMenuRowTooltip>
   )
 }

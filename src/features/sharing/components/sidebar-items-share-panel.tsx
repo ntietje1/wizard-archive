@@ -1,10 +1,8 @@
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { SharePermissionMenu } from './share-permission-menu'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
 
 export function SidebarItemsSharePanel({ items }: { items: Array<AnySidebarItem> }) {
-  const { campaign } = useCampaign()
   const {
     isPending,
     isMutating,
@@ -24,8 +22,15 @@ export function SidebarItemsSharePanel({ items }: { items: Array<AnySidebarItem>
 
   return (
     <SharePermissionMenu
-      title={items.length === 1 ? 'Share' : `Share ${items.length} items`}
-      dmUserProfile={campaign?.data?.dmUserProfile}
+      title={
+        items.length === 1 ? (
+          <>
+            Share <span className="text-muted-foreground">"{items[0]!.name}"</span>
+          </>
+        ) : (
+          `Share ${items.length} items`
+        )
+      }
       isPending={isPending}
       isMutating={isMutating}
       shareItems={shareItems}

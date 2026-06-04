@@ -41,7 +41,6 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
   const { isPending, isMutating, aggregateShareStatus, toggleShareStatus, canShare } =
     useBlocksShare(blocks, note)
 
-  const isMultiBlock = blocks.length > 1
   const blockCount = blocks.length
   const isBusy = isPending || isMutating
 
@@ -65,7 +64,7 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
       note,
       position,
       sideMenuController: sideMenuExtension,
-      title: getShareMenuLabel(blockCount, isMultiBlock),
+      title: getShareMenuTitle(blockCount),
     })
   }
 
@@ -142,6 +141,6 @@ function getShareButtonLabel(blockCount: number) {
   return blockCount > 1 ? `Share ${blockCount} blocks` : 'Share'
 }
 
-function getShareMenuLabel(blockCount: number, isMultiBlock: boolean) {
-  return isMultiBlock ? `Share ${blockCount} blocks with` : 'Share with'
+function getShareMenuTitle(blockCount: number) {
+  return `Share ${blockCount} ${blockCount === 1 ? 'Block' : 'Blocks'}`
 }

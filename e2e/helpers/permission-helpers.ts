@@ -4,7 +4,7 @@ import type { Browser, Locator, Page } from '@playwright/test'
 
 export async function openShareMenu(page: Page) {
   await page.getByRole('button', { name: /private|shared/i }).click()
-  await expect(page.getByText(/full access/i).first()).toBeVisible({
+  await expect(page.getByTestId('share-all-players-row')).toBeVisible({
     timeout: 5000,
   })
 }
@@ -135,7 +135,7 @@ export async function openBlockShareMenu(page: Page, blockText: string) {
   }
 
   await expect(menu).toBeVisible({ timeout: 5000 })
-  await expect(menu.getByText(/share with/i)).toBeVisible({ timeout: 5000 })
+  await expect(menu.getByText(/share \d+ blocks?/i)).toBeVisible({ timeout: 5000 })
   await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
   return menu
 }
@@ -151,7 +151,7 @@ export async function openBlockShareMenuWithKeyboard(page: Page, blockText: stri
   await page.keyboard.press('Shift+F10')
 
   await expect(menu).toBeVisible({ timeout: 5000 })
-  await expect(menu.getByText(/share with/i)).toBeVisible({ timeout: 5000 })
+  await expect(menu.getByText(/share \d+ blocks?/i)).toBeVisible({ timeout: 5000 })
   await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
   return menu
 }
