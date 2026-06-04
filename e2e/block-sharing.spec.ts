@@ -9,9 +9,11 @@ import {
   approvePlayerRequest,
   blockShareAllPlayersRow,
   blockSharePlayerRow,
+  clickBlockDragHandle,
   getCampaignRouteParts,
   openBlockShareMenu,
   openBlockShareMenuFromEditorContextMenu,
+  openEditorContextMenuFromBlockDragHandle,
   openEditorContextMenuFromBlockShareButton,
   openBlockShareMenuWithKeyboard,
   requestToJoinCampaignAsPlayer,
@@ -197,6 +199,22 @@ test.describe('block sharing', () => {
     await openCampaignNote(page)
 
     await openEditorContextMenuFromBlockShareButton(page, visibleBlockText)
+  })
+
+  test('left-clicking the drag handle does not open the old drag menu', async ({ page }) => {
+    await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await openCampaignNote(page)
+
+    await clickBlockDragHandle(page, visibleBlockText)
+
+    await expect(page.getByRole('menuitem', { name: /^delete$/i })).not.toBeVisible()
+  })
+
+  test('right-clicking the drag handle opens the normal editor context menu', async ({ page }) => {
+    await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await openCampaignNote(page)
+
+    await openEditorContextMenuFromBlockDragHandle(page, visibleBlockText)
   })
 
   test('shift left-click keeps all-player block sharing visible without opening the popover', async ({

@@ -163,9 +163,20 @@ export async function openEditorContextMenuFromBlockShareButton(page: Page, bloc
 
   await shareButton.click({ button: 'right' })
   await expect(page.getByTestId('block-share-menu')).not.toBeVisible()
-  await expect(page.getByRole('menuitem', { name: /^share 1 block$/i })).toBeVisible({
-    timeout: 5000,
-  })
+  await expectEditorBlockShareMenuItem(page)
+}
+
+export async function clickBlockDragHandle(page: Page, blockText: string) {
+  const dragHandle = await getVisibleBlockDragHandle(page, blockText)
+
+  await dragHandle.click()
+}
+
+export async function openEditorContextMenuFromBlockDragHandle(page: Page, blockText: string) {
+  const dragHandle = await getVisibleBlockDragHandle(page, blockText)
+
+  await dragHandle.click({ button: 'right' })
+  await expectEditorBlockShareMenuItem(page)
 }
 
 async function getVisibleBlockShareButton(page: Page, blockText: string) {
@@ -175,6 +186,17 @@ async function getVisibleBlockShareButton(page: Page, blockText: string) {
   await block.hover()
   await expect(shareButton).toBeVisible({ timeout: 5000 })
   return shareButton
+}
+
+async function getVisibleBlockDragHandle(page: Page, blockText: string) {
+  const block = getBlockTextLocator(page, blockText)
+  const dragHandle = page
+    .locator('[data-testid="block-drag-handle-button"], [data-test="dragHandle"]')
+    .first()
+
+  await block.hover()
+  await expect(dragHandle).toBeVisible({ timeout: 5000 })
+  return dragHandle
 }
 
 export async function openBlockShareMenuFromEditorContextMenu(page: Page, blockText: string) {
@@ -230,4 +252,10 @@ async function expectBlockShareMenuOpen(menu: Locator, title: RegExp) {
   await expect(menu).toBeVisible({ timeout: 5000 })
   await expect(menu.getByText(title)).toBeVisible({ timeout: 5000 })
   await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
+}
+
+async function expectEditorBlockShareMenuItem(page: Page) {
+  await expect(page.getByRole('menuitem', { name: /^share 1 block$/i })).toBeVisible({
+    timeout: 5000,
+  })
 }
