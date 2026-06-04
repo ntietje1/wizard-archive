@@ -112,7 +112,7 @@ export function BlockDragHandleButton({ note }: { note: NoteWithContent }) {
               draggable={true}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
-              className="!p-0 !px-0 !h-6 !w-4 !min-w-4 !text-muted-foreground cursor-grab active:cursor-grabbing"
+              className="block-drag-handle-button cursor-grab active:cursor-grabbing"
               icon={<GripVertical size={18} />}
               data-testid="block-drag-handle-button"
             />
@@ -171,25 +171,86 @@ function BlockDragHandleMenu({
 }
 
 function SubmenuItem({ icon, label }: { icon: React.ReactNode; label: string }) {
+  const [isSubmenuOpen, setIsSubmenuOpen] = useState(false)
+  const focusFirstItemOnOpenRef = useRef(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const submenuRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    if (!isSubmenuOpen || !focusFirstItemOnOpenRef.current) return
+    focusFirstItemOnOpenRef.current = false
+    submenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
+  }, [isSubmenuOpen])
+
+  function openSubmenu({ focusFirstItem = false }: { focusFirstItem?: boolean } = {}) {
+    focusFirstItemOnOpenRef.current = focusFirstItem
+    setIsSubmenuOpen(true)
+  }
+
+  function closeSubmenu({ returnFocus = false }: { returnFocus?: boolean } = {}) {
+    focusFirstItemOnOpenRef.current = false
+    setIsSubmenuOpen(false)
+    if (returnFocus) triggerRef.current?.focus()
+  }
+
+  function handleTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowRight') {
+      event.preventDefault()
+      openSubmenu({ focusFirstItem: true })
+      return
+    }
+    if (event.key === 'Escape' || event.key === 'ArrowLeft') {
+      event.preventDefault()
+      closeSubmenu()
+    }
+  }
+
+  function handleSubmenuKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'Escape' && event.key !== 'ArrowLeft') return
+    event.preventDefault()
+    closeSubmenu({ returnFocus: true })
+  }
+
+  function handleBlur(event: React.FocusEvent<HTMLDivElement>) {
+    const nextFocusedElement = event.relatedTarget
+    if (nextFocusedElement instanceof Node && event.currentTarget.contains(nextFocusedElement)) {
+      return
+    }
+    closeSubmenu()
+  }
+
   return (
-    <div className="group relative">
+    <div
+      className="relative"
+      onBlur={handleBlur}
+      onMouseEnter={() => openSubmenu()}
+      onMouseLeave={() => closeSubmenu()}
+    >
       <button
+        ref={triggerRef}
         type="button"
         role="menuitem"
         aria-haspopup="menu"
+        aria-expanded={isSubmenuOpen}
         className={menuItemClassName()}
         onClick={showComingSoon}
+        onKeyDown={handleTriggerKeyDown}
       >
         {icon}
         <span className="min-w-0 flex-1 truncate text-left">{label}</span>
         <ChevronRight className="ml-auto size-4" />
       </button>
-      <div
-        role="menu"
-        className="invisible absolute top-0 left-full z-[10000] ml-1 w-40 rounded-md bg-popover p-1 text-popover-foreground opacity-0 shadow-lg ring-1 ring-foreground/10 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
-      >
-        <MenuItem label="Coming soon" />
-      </div>
+      {isSubmenuOpen && (
+        <div
+          ref={submenuRef}
+          role="menu"
+          tabIndex={-1}
+          className="absolute top-0 left-full z-[10000] ml-1 w-40 rounded-md bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10"
+          onKeyDown={handleSubmenuKeyDown}
+        >
+          <MenuItem label="Coming soon" />
+        </div>
+      )}
     </div>
   )
 }

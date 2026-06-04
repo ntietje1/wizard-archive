@@ -101,7 +101,38 @@ export const hasEditableValueInlineId: Predicate = (ctx) =>
   ctx.valueInlineId !== undefined && ctx.valueInlineEditable === true
 
 function getEditorElement(ctx: PredicateContext): HTMLElement | null {
-  return ctx.editor?.domElement ?? ctx.editor?._tiptapEditor?.view?.dom ?? null
+  return (
+    getEditorDomElement(ctx.editor) ??
+    getEditorViewDom(ctx.editor) ??
+    getPrivateTiptapEditorViewDom(ctx.editor)
+  )
+}
+
+function getEditorDomElement(editor: unknown): HTMLElement | null {
+  if (!isRecord(editor)) return null
+  return editor.domElement instanceof HTMLElement ? editor.domElement : null
+}
+
+function getEditorViewDom(editor: unknown): HTMLElement | null {
+  if (!isRecord(editor)) return null
+  const view = editor.view
+  if (!isRecord(view)) return null
+  return view.dom instanceof HTMLElement ? view.dom : null
+}
+
+function getPrivateTiptapEditorViewDom(editor: unknown): HTMLElement | null {
+  if (!isRecord(editor)) return null
+  const tiptapEditor = editor._tiptapEditor
+  if (!isRecord(tiptapEditor)) return null
+  const view = tiptapEditor.view
+  if (!isRecord(view)) return null
+  // NOTE: _tiptapEditor is a private BlockNote escape hatch. Keep this guarded and revisit when
+  // BlockNote exposes a stable editor-view DOM accessor.
+  return view.dom instanceof HTMLElement ? view.dom : null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }
 
 function editorElementContainsNode(editorElement: HTMLElement, node: Node | null): boolean {

@@ -40,8 +40,21 @@ export function getEffectiveBlockVisibilityPermissionLevel({
     return PERMISSION_LEVEL.VIEW
   }
   if (memberPermissionLevel === PERMISSION_LEVEL.NONE) return PERMISSION_LEVEL.NONE
-  if (memberPermissionLevel) return PERMISSION_LEVEL.VIEW
+  if (isViewGrantingPermission(memberPermissionLevel)) return PERMISSION_LEVEL.VIEW
   return allPlayersPermissionLevel
+}
+
+function isViewGrantingPermission(permissionLevel: PermissionLevel | null | undefined): boolean {
+  switch (permissionLevel) {
+    case PERMISSION_LEVEL.VIEW:
+    case PERMISSION_LEVEL.EDIT:
+    case PERMISSION_LEVEL.FULL_ACCESS:
+      return true
+    case PERMISSION_LEVEL.NONE:
+    case null:
+    case undefined:
+      return false
+  }
 }
 
 function assertUnhandledShareStatus(shareStatus: never): never {

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 
 export function useFloatingMenuDismiss({
@@ -12,17 +12,22 @@ export function useFloatingMenuDismiss({
   menuRef: RefObject<HTMLElement | null>
   onDismiss: () => void
 }) {
+  const onDismissRef = useRef(onDismiss)
+  const ignoreTargetRef = useRef(ignoreTarget)
+  onDismissRef.current = onDismiss
+  ignoreTargetRef.current = ignoreTarget
+
   useEffect(() => {
     if (!enabled) return
 
     const handlePointerDown = (event: PointerEvent) => {
       if (event.target instanceof Node && menuRef.current?.contains(event.target)) return
-      if (ignoreTarget?.(event.target)) return
-      onDismiss()
+      if (ignoreTargetRef.current?.(event.target)) return
+      onDismissRef.current()
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onDismiss()
+      if (event.key === 'Escape') onDismissRef.current()
     }
 
     document.addEventListener('pointerdown', handlePointerDown)
@@ -31,5 +36,5 @@ export function useFloatingMenuDismiss({
       document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [enabled, ignoreTarget, menuRef, onDismiss])
+  }, [enabled, menuRef])
 }
