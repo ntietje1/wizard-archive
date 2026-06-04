@@ -2,12 +2,12 @@ import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissi
 import { normalizeExplicitSharePermissionLevel } from 'shared/permissions/share-permissions'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { PermissionLevel } from 'shared/permissions/types'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'shared/folders/types'
 
-type CampaignMemberId = CampaignMember['_id']
+type CampaignMemberId = CampaignMemberSummary['_id']
 
 function getMemberPermission(
   item: AnySidebarItem | Folder,

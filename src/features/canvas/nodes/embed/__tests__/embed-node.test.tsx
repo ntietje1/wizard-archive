@@ -145,7 +145,7 @@ vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
     selector({ viewAsPlayerId: null }),
 }))
 
-vi.mock('~/features/players/hooks/useCampaignMembers', () => ({
+vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({
   useCampaignMembers: () => ({
     data: [],
   }),

@@ -1,5 +1,5 @@
 import { api } from 'convex/_generated/api'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useCampaign } from './useCampaign'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 export function useCampaignMembers() {

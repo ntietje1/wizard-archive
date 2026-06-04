@@ -1,7 +1,7 @@
 import { Eye, X } from 'lucide-react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { Banner, BannerButton } from '~/shared/components/banner'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 

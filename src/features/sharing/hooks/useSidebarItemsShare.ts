@@ -7,19 +7,19 @@ import type { PermissionLevel } from 'shared/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { AggregateShareStatus, ShareItem } from '~/features/sharing/utils/block-share-state'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { handleError } from '~/shared/utils/logger'
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/utils/block-share-state'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
 
 type MixedPermissionLevel = 'mixed'
 type AggregatePermissionLevel = PermissionLevel | MixedPermissionLevel
 export type NullableAggregatePermissionLevel = PermissionLevel | MixedPermissionLevel | null
-type CampaignMemberId = CampaignMember['_id']
+type CampaignMemberId = CampaignMemberSummary['_id']
 
 export interface ShareItemWithPermission extends ShareItem {
   permissionLevel: AggregatePermissionLevel

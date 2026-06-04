@@ -1,6 +1,6 @@
 import type { CampaignId, CampaignMemberId, SessionId, UserProfileId } from '../common/ids'
 import type { CampaignSlug } from './validation'
-import type { UserProfile } from '../users/types'
+import type { UserProfile, UserProfileSummary } from '../users/types'
 
 export const CAMPAIGN_STATUS = {
   Active: 'Active',
@@ -55,4 +55,8 @@ export type CampaignMemberFromDb = {
 
 export type CampaignMember = CampaignMemberFromDb & {
   userProfile: UserProfile
+}
+
+export type CampaignMemberSummary = CampaignMemberFromDb & {
+  userProfile: UserProfileSummary
 }

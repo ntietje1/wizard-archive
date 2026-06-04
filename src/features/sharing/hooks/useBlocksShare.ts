@@ -6,7 +6,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { hasPermissionForRequirement } from 'shared/permissions/requirements'
 import type { BlockShareInfo, CustomBlock } from 'shared/editor-blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { NoteWithContent } from 'shared/notes/types'
 import { handleError } from '~/shared/utils/logger'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
@@ -15,7 +15,7 @@ import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sideba
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/utils/block-share-state'
 import type { AggregateShareStatus } from '~/features/sharing/utils/block-share-state'
 
-type CampaignMemberId = CampaignMember['_id']
+type CampaignMemberId = CampaignMemberSummary['_id']
 type BlockVisibilityLevel = typeof PERMISSION_LEVEL.NONE | typeof PERMISSION_LEVEL.VIEW
 export type BlockVisibilitySelectValue = 'default' | 'hidden' | 'visible'
 export type AggregateBlockVisibilitySelectValue = BlockVisibilitySelectValue | 'mixed'
@@ -23,7 +23,7 @@ type BlockShareItemKind = 'controllable' | 'locked_visible'
 
 export interface BlockShareItem {
   key: string
-  member: CampaignMember
+  member: CampaignMemberSummary
   kind: BlockShareItemKind
   permissionLevel: AggregateBlockVisibilitySelectValue
   hasExplicitShare: boolean

@@ -92,7 +92,7 @@ vi.mock('~/features/editor/stores/note-editor-store', () => ({
     selector({ editor: null }),
 }))
 
-vi.mock('~/features/players/hooks/useCampaignMembers', () => ({
+vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({
   useCampaignMembers: () => campaignMembersQuery,
 }))
 

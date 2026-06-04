@@ -2,10 +2,10 @@ import { useEffect, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import { Loader2, RotateCcw } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { EditHistoryEntry } from 'shared/edit-history/types'
 import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
@@ -131,7 +131,7 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
   const setPreviewingEntry = useHistoryPreviewStore((s) => s.setPreviewingEntry)
   const setRollbackEntryId = useHistoryPreviewStore((s) => s.setRollbackEntryId)
 
-  const membersMap = new Map<string, CampaignMember>()
+  const membersMap = new Map<string, CampaignMemberSummary>()
   if (membersQuery.data) {
     for (const m of membersQuery.data) {
       membersMap.set(m._id, m)

@@ -5,7 +5,7 @@ import { TRASH_RETENTION_DAYS } from 'shared/sidebar-items/trash-policy'
 import { handleError } from '~/shared/utils/logger'
 import { Banner, BannerButton } from '~/shared/components/banner'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { getUserDisplayName } from '~/shared/utils/user-display-name'
@@ -25,7 +25,7 @@ function useDeletedByName(deletedById: Id<'userProfiles'> | null) {
     return getUserDisplayName(dmProfile, 'Someone')
   }
 
-  const member = members?.find((mem) => mem.userProfile._id === deletedById)
+  const member = members?.find((mem) => mem.userId === deletedById)
   if (member) {
     return getUserDisplayName(member.userProfile, 'Someone')
   }

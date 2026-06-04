@@ -1,5 +1,5 @@
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { Id } from 'convex/_generated/dataModel'

@@ -1,8 +1,8 @@
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { UserProfileImage } from '~/shared/components/user-profile-image'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 
-export function ViewAsPlayerRow({ member }: { member: CampaignMember }) {
+export function ViewAsPlayerRow({ member }: { member: CampaignMemberSummary }) {
   const profile = member.userProfile
   const displayName = getCampaignMemberDisplayName(member)
 
@@ -11,7 +11,6 @@ export function ViewAsPlayerRow({ member }: { member: CampaignMember }) {
       <UserProfileImage
         imageUrl={profile.imageUrl}
         name={profile.name ?? profile.username}
-        email={profile.email}
         size="sm"
         className="shrink-0"
       />

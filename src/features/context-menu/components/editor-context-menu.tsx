@@ -22,7 +22,7 @@ import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { useOptionalBlockShareMenu } from '~/features/sharing/contexts/useBlockShareMenu'
 import {

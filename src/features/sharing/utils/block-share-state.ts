@@ -1,10 +1,10 @@
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 
 type ShareState = 'all' | 'some' | 'none'
 
 export interface ShareItem {
   key: string
-  member: CampaignMember
+  member: CampaignMemberSummary
   shareState: ShareState
 }
 

@@ -30,7 +30,7 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => campaignState,
 }))
 
-vi.mock('~/features/players/hooks/useCampaignMembers', () => ({
+vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({
   useCampaignMembers: () => campaignMembersState,
 }))
 

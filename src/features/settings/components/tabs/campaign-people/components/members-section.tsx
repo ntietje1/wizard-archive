@@ -3,7 +3,7 @@ import { Crown, Ellipsis, Trash2 } from 'lucide-react'
 import { SettingsSection } from '../../account-profile/components/settings-section'
 import { MemberRow } from './member-row'
 import { RemovePlayerDialog } from './remove-player-dialog'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { Badge } from '~/features/shadcn/components/badge'
 import { Button } from '~/features/shadcn/components/button'
@@ -21,8 +21,8 @@ export function MembersSection({
   isDm,
   campaignId,
 }: {
-  dmMember: CampaignMember | undefined
-  acceptedPlayers: Array<CampaignMember>
+  dmMember: CampaignMemberSummary | undefined
+  acceptedPlayers: Array<CampaignMemberSummary>
   isDm: boolean
   campaignId: Id<'campaigns'>
 }) {

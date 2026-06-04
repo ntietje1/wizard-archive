@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { api } from 'convex/_generated/api'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
@@ -112,7 +113,7 @@ test.describe('block sharing', () => {
     await dmPage.close()
     await dmContext.close()
 
-    playerMemberId = await getPlayerMemberId(E2E_PLAYER_EMAIL!)
+    playerMemberId = await getPlayerMemberId()
   })
 
   test.afterAll(async ({ browser }) => {
@@ -432,14 +433,12 @@ async function expectBlocksAsActualPlayer(
   await context.close()
 }
 
-async function getPlayerMemberId(playerEmail: string) {
+async function getPlayerMemberId() {
   const client = getConvexClient()
   const members = await client.query(api.campaigns.queries.getMembersByCampaign, { campaignId })
-  const player = members.find(
-    (member) => member.userProfile.email?.toLowerCase() === playerEmail.toLowerCase(),
-  )
+  const player = members.find((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player)
   if (!player) {
-    throw new Error(`Unable to find campaign member for ${playerEmail}`)
+    throw new Error('Unable to find campaign player member')
   }
   return player._id
 }

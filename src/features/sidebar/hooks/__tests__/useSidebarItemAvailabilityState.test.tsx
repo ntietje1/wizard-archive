@@ -35,7 +35,7 @@ vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
   ) => selector(viewAsState),
 }))
 
-vi.mock('~/features/players/hooks/useCampaignMembers', () => ({
+vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({
   useCampaignMembers: () => campaignMembersState,
 }))
 
