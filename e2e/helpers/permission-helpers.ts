@@ -113,23 +113,21 @@ export async function approvePlayerRequest(page: Page, playerEmail: string) {
 
 export async function openBlockShareMenu(page: Page, blockText: string) {
   const menu = page.getByTestId('block-share-menu')
-  const block = page.getByText(blockText, { exact: true })
-  const shareButton = page.getByTestId('block-share-button')
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    await block.hover()
-    await expect(shareButton).toBeVisible({ timeout: 5000 })
+    const shareButton = await getVisibleBlockShareButton(page, blockText)
     const box = await shareButton.boundingBox()
     if (!box) {
       continue
     }
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' })
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
     if (await menu.isVisible({ timeout: 1500 }).catch(() => false)) {
       break
     }
   }
 
   if (!(await menu.isVisible({ timeout: 500 }).catch(() => false))) {
+    const shareButton = await getVisibleBlockShareButton(page, blockText)
     await shareButton.focus()
     await page.keyboard.press('Shift+F10')
   }
@@ -142,16 +140,56 @@ export async function openBlockShareMenu(page: Page, blockText: string) {
 
 export async function openBlockShareMenuWithKeyboard(page: Page, blockText: string) {
   const menu = page.getByTestId('block-share-menu')
-  const block = page.getByText(blockText, { exact: true })
-  const shareButton = page.getByTestId('block-share-button')
+  const shareButton = await getVisibleBlockShareButton(page, blockText)
 
-  await block.hover()
-  await expect(shareButton).toBeVisible({ timeout: 5000 })
   await shareButton.focus()
   await page.keyboard.press('Shift+F10')
 
   await expect(menu).toBeVisible({ timeout: 5000 })
   await expect(menu.getByText(/share \d+ blocks?/i)).toBeVisible({ timeout: 5000 })
+  await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
+  return menu
+}
+
+export async function shiftClickBlockShareButton(page: Page, blockText: string) {
+  const shareButton = await getVisibleBlockShareButton(page, blockText)
+
+  await page.keyboard.down('Shift')
+  try {
+    await shareButton.click()
+  } finally {
+    await page.keyboard.up('Shift')
+  }
+}
+
+export async function openEditorContextMenuFromBlockShareButton(page: Page, blockText: string) {
+  const shareButton = await getVisibleBlockShareButton(page, blockText)
+
+  await shareButton.click({ button: 'right' })
+  await expect(page.getByTestId('block-share-menu')).not.toBeVisible()
+  await expect(page.getByRole('menuitem', { name: /^share 1 block$/i })).toBeVisible({
+    timeout: 5000,
+  })
+}
+
+async function getVisibleBlockShareButton(page: Page, blockText: string) {
+  const block = page.getByText(blockText, { exact: true })
+  const shareButton = page.getByTestId('block-share-button')
+
+  await block.hover()
+  await expect(shareButton).toBeVisible({ timeout: 5000 })
+  return shareButton
+}
+
+export async function openBlockShareMenuFromEditorContextMenu(page: Page, blockText: string) {
+  const menu = page.getByTestId('block-share-menu')
+  const block = page.getByText(blockText, { exact: true })
+
+  await block.click({ button: 'right' })
+  await page.getByRole('menuitem', { name: /^share 1 block$/i }).click()
+
+  await expect(menu).toBeVisible({ timeout: 5000 })
+  await expect(menu.getByText(/^share 1 block$/i)).toBeVisible({ timeout: 5000 })
   await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
   return menu
 }

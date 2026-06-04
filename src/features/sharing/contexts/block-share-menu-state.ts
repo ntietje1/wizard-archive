@@ -16,7 +16,7 @@ export type BlockShareMenuState = {
   blocks: Array<CustomBlock>
   note: NoteWithContent
   position: MenuPosition
-  sideMenuController: SideMenuController
+  sideMenuController?: SideMenuController
   title: string
 }
 

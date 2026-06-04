@@ -85,7 +85,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
     openBlockNoteContextMenu({
       position: { x: e.clientX, y: e.clientY },
       viewContext: 'note-view',
-      item: undefined,
+      note,
       ...blockNoteContext,
     })
   }

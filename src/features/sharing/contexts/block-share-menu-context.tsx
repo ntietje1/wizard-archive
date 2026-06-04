@@ -19,10 +19,12 @@ export function BlockShareMenuProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!menuState) return
+    const sideMenuController = menuState.sideMenuController
+    if (!sideMenuController) return
 
-    menuState.sideMenuController.freezeMenu()
+    sideMenuController.freezeMenu()
     return () => {
-      menuState.sideMenuController.unfreezeMenu()
+      sideMenuController.unfreezeMenu()
     }
   }, [menuState])
 

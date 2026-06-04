@@ -8,3 +8,7 @@ export function useBlockShareMenu() {
   }
   return context
 }
+
+export function useOptionalBlockShareMenu() {
+  return use(BlockShareMenuContext)
+}

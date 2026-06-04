@@ -6,7 +6,6 @@ import {
   useExtensionState,
 } from '@blocknote/react'
 import { Share2 } from 'lucide-react'
-import { useRef } from 'react'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
@@ -15,6 +14,11 @@ import type { AggregateShareStatus } from '~/features/sharing/utils/block-share-
 import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
 import { assertNever } from '~/shared/utils/utils'
 import { useBlockShareMenu } from '~/features/sharing/contexts/useBlockShareMenu'
+import {
+  getBlockShareTargetBlocks,
+  getBlockShareTitle,
+} from '~/features/editor/utils/block-share-targets'
+import { openBlockNoteContextMenu } from '~/features/editor/hooks/useBlockNoteContextMenu'
 
 const getButtonColorClass = (status: AggregateShareStatus): string => {
   switch (status) {
@@ -35,10 +39,9 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
   const editor = useBlockNoteEditor() as CustomBlockNoteEditor
   const sideMenuExtension = useExtension(SideMenuExtension)
   const blockShareMenu = useBlockShareMenu()
-  const openedFromMouseDownRef = useRef(false)
   const { block, blocks } = useShareTargetBlocks(editor)
 
-  const { isPending, isMutating, aggregateShareStatus, toggleShareStatus, canShare } =
+  const { isPending, isMutating, aggregateShareStatus, setAllPlayersPermission, canShare } =
     useBlocksShare(blocks, note)
 
   const blockCount = blocks.length
@@ -50,7 +53,13 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
 
     e.preventDefault()
     e.stopPropagation()
-    void toggleShareStatus()
+
+    if (e.shiftKey) {
+      void setAllPlayersPermission('visible')
+      return
+    }
+
+    openShareMenu(getEventPosition(e))
   }
 
   const buttonColorClass = getButtonColorClass(aggregateShareStatus)
@@ -64,7 +73,7 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
       note,
       position,
       sideMenuController: sideMenuExtension,
-      title: getShareMenuTitle(blockCount),
+      title: getBlockShareTitle(blockCount),
     })
   }
 
@@ -72,13 +81,12 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
     e.preventDefault()
     e.stopPropagation()
     e.nativeEvent.stopImmediatePropagation?.()
-    if (openedFromMouseDownRef.current) {
-      openedFromMouseDownRef.current = false
-      return
-    }
-    openShareMenu({
-      x: e.clientX,
-      y: e.clientY,
+
+    openBlockNoteContextMenu({
+      position: { x: e.clientX, y: e.clientY },
+      viewContext: 'note-view',
+      note,
+      blockNoteId: block?.id,
     })
   }
 
@@ -94,18 +102,11 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
   }
 
   return (
-    // openedFromMouseDownRef lets onMouseDownCapture handle right-clicks immediately while
-    // handleContextMenu suppresses the duplicate contextmenu event some browsers also dispatch.
     <span
       className="inline-flex"
       role="presentation"
       onContextMenu={handleContextMenu}
       onKeyDown={handleKeyDown}
-      onMouseDownCapture={(e) => {
-        if (e.button !== 2) return
-        openedFromMouseDownRef.current = true
-        handleContextMenu(e)
-      }}
     >
       <Components.SideMenu.Button
         label={getShareButtonLabel(blockCount)}
@@ -123,24 +124,23 @@ function useShareTargetBlocks(editor: CustomBlockNoteEditor) {
     selector: (state) => state?.block,
   }) as CustomBlock | undefined
 
-  const selectedBlocks = getSelectedBlocks(editor)
-  const hoveredBlockInSelection = selectedBlocks?.some(
-    (selectedBlock) => selectedBlock.id === block?.id,
-  )
-  const blocks = selectedBlocks && hoveredBlockInSelection ? selectedBlocks : block ? [block] : []
+  const blocks = getBlockShareTargetBlocks(editor, block?.id)
 
   return { block, blocks }
-}
-
-function getSelectedBlocks(editor: CustomBlockNoteEditor): Array<CustomBlock> | null {
-  const selection = editor.getSelection()
-  return selection && selection.blocks.length > 1 ? (selection.blocks as Array<CustomBlock>) : null
 }
 
 function getShareButtonLabel(blockCount: number) {
   return blockCount > 1 ? `Share ${blockCount} blocks` : 'Share'
 }
 
-function getShareMenuTitle(blockCount: number) {
-  return `Share ${blockCount} ${blockCount === 1 ? 'Block' : 'Blocks'}`
+function getEventPosition(e: React.MouseEvent | React.KeyboardEvent) {
+  if ('clientX' in e && 'clientY' in e) {
+    return { x: e.clientX, y: e.clientY }
+  }
+
+  const rect = e.currentTarget.getBoundingClientRect()
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  }
 }

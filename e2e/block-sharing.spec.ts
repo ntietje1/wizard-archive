@@ -11,9 +11,12 @@ import {
   blockSharePlayerRow,
   getCampaignRouteParts,
   openBlockShareMenu,
+  openBlockShareMenuFromEditorContextMenu,
+  openEditorContextMenuFromBlockShareButton,
   openBlockShareMenuWithKeyboard,
   requestToJoinCampaignAsPlayer,
   setSelectValue,
+  shiftClickBlockShareButton,
 } from './helpers/permission-helpers'
 import {
   createE2EConvexClient,
@@ -160,6 +163,44 @@ test.describe('block sharing', () => {
     expect(
       menuBox && viewportSize ? menuBox.y + menuBox.height <= viewportSize.height + 1 : false,
     ).toBe(true)
+  })
+
+  test('editor context menu opens block sharing for the clicked block', async ({ page }) => {
+    await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await openCampaignNote(page)
+
+    const menu = await openBlockShareMenuFromEditorContextMenu(page, visibleBlockText)
+
+    await expect(blockShareAllPlayersRow(menu).getByRole('combobox')).toBeVisible()
+  })
+
+  test('right-clicking the side-menu share button opens the normal editor context menu', async ({
+    page,
+  }) => {
+    await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await openCampaignNote(page)
+
+    await openEditorContextMenuFromBlockShareButton(page, visibleBlockText)
+  })
+
+  test('shift left-click keeps all-player block sharing visible without opening the popover', async ({
+    browser,
+    page,
+  }) => {
+    await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await setBlockAllPlayersStatus(visibleBlockNoteId, SHARE_STATUS.ALL_SHARED)
+    await setBlockMemberPermission(visibleBlockNoteId, null)
+    await setBlockAllPlayersStatus(conditionalBlockNoteId, SHARE_STATUS.NOT_SHARED)
+    await setBlockMemberPermission(conditionalBlockNoteId, null)
+    await openCampaignNote(page)
+
+    await shiftClickBlockShareButton(page, visibleBlockText)
+
+    await expect(page.getByTestId('block-share-menu')).not.toBeVisible()
+    await expectBlocksAsActualPlayer(browser, {
+      visible: [visibleBlockText],
+      hidden: [conditionalBlockText],
+    })
   })
 
   test('explicit block share before note access shows a warning but does not grant note access', async ({

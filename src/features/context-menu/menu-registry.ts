@@ -130,6 +130,13 @@ interface EditorContextMenuServices {
   filesystem: Pick<FileSystemValue, 'canPasteIntoTarget'>
   editorMode: EditorModeMenuService
   viewAsPlayer: ViewAsPlayerMenuService
+  blockShare: BlockShareMenuService
+}
+
+interface BlockShareMenuService {
+  canOpen: (context: EditorMenuContext) => boolean
+  getBlockCount: (context: EditorMenuContext) => number
+  open: (context: EditorMenuContext) => void
 }
 
 type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
@@ -220,14 +227,9 @@ export const editorContextMenuCommands = {
       logger.debug('test-editor', context)
     },
   },
-  logTestBlock: {
-    id: 'logTestBlock',
-    run: (context) => {
-      logger.debug('test-block', context.blockNoteId)
-      if (!context.blockNoteId) return
-      const block = context.editor?.getBlock(context.blockNoteId)
-      logger.debug(block?.content)
-    },
+  openBlockShareMenu: {
+    id: 'openBlockShareMenu',
+    run: (context, services) => services.blockShare.open(context),
   },
   editValueInline: {
     id: 'editValueInline',
@@ -326,13 +328,17 @@ export const editorContextMenuContributors = [
         applies: (context) => p.hasBlockNoteEditor(context),
       },
       {
-        id: 'test-block',
-        commandId: 'logTestBlock',
-        label: 'Test Block',
-        icon: Pencil,
-        group: 'primary',
+        id: 'share-blocks',
+        commandId: 'openBlockShareMenu',
+        label: (context, services) => {
+          const blockCount = services.blockShare.getBlockCount(context)
+          return `Share ${blockCount} ${blockCount === 1 ? 'Block' : 'Blocks'}`
+        },
+        icon: Share2,
+        group: 'share',
         priority: 1,
-        applies: (context) => p.hasBlockNoteId(context),
+        applies: (context, services) =>
+          p.isDm(context) && p.hasBlockNoteId(context) && services.blockShare.canOpen(context),
       },
     ],
   },
