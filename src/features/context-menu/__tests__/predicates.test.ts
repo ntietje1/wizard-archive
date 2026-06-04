@@ -79,6 +79,16 @@ describe('role predicates', () => {
     expect(p.isDm(ctx({ memberRole: CAMPAIGN_MEMBER_ROLE.Player }))).toBe(false)
   })
 
+  it('treats DM view-as as a non-DM action actor', () => {
+    const viewAsContext = ctx({
+      memberRole: CAMPAIGN_MEMBER_ROLE.DM,
+      isViewingAsPlayer: true,
+    })
+
+    expect(p.isDm(viewAsContext)).toBe(false)
+    expect(p.isCampaignDm(viewAsContext)).toBe(true)
+  })
+
   it('isDm returns false when memberRole is undefined', () => {
     expect(p.isDm(ctx())).toBe(false)
   })

@@ -3,18 +3,23 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { EDITOR_MODE } from 'shared/editor/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Editor, EditorMode } from 'shared/editor/types'
+import { getCampaignActorViewAsMemberId } from 'shared/campaigns/actor'
+import type { CampaignActor } from 'shared/campaigns/actor'
 import { handleError } from '~/shared/utils/logger'
+import { useCampaignActor } from '~/features/campaigns/hooks/useCampaignActor'
+import { actorCanMutateSidebarItem } from '~/features/sharing/utils/permission-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 
 interface EditorModeContextType {
   editorMode: EditorMode
+  campaignActor: CampaignActor | null
   viewAsPlayerId: Id<'campaignMembers'> | undefined
   canEdit: boolean
   setEditorMode: (editorMode: EditorMode) => void
@@ -25,6 +30,8 @@ export function useEditorMode(): EditorModeContextType {
   const { isDm, campaignId } = useCampaign()
   const { item: currentItem } = useCurrentItem()
   const queryClient = useQueryClient()
+  const campaignActor = useCampaignActor()
+  const { allItemsById } = useFileSystemReadModel()
 
   const editorQuery = useCampaignQuery(api.editors.queries.getCurrentEditor, {})
 
@@ -62,18 +69,18 @@ export function useEditorMode(): EditorModeContextType {
     },
   })
 
-  const viewAsPlayerId = useSidebarUIStore((s) => s.viewAsPlayerId)
-  const setViewAsPlayerIdStore = useSidebarUIStore((s) => s.setViewAsPlayerId)
+  const setViewAsPlayer = useSidebarUIStore((s) => s.setViewAsPlayer)
 
   const rawEditorMode = editorQuery.data?.editorMode ?? EDITOR_MODE.EDITOR
 
   const isDeleted = currentItem?.isTrashed === true
   const canEdit =
     !isDeleted &&
-    hasAtLeastPermissionLevel(
-      currentItem?.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
-      PERMISSION_LEVEL.EDIT,
-    )
+    !!currentItem &&
+    actorCanMutateSidebarItem(currentItem, PERMISSION_LEVEL.EDIT, {
+      actor: campaignActor,
+      allItemsMap: allItemsById,
+    })
   const effectiveEditorMode = canEdit ? rawEditorMode : EDITOR_MODE.VIEWER
   const mutate = setEditorMutation.mutate
 
@@ -83,12 +90,14 @@ export function useEditorMode(): EditorModeContextType {
   }
 
   const setViewAsPlayerId = (playerId: Id<'campaignMembers'> | undefined) => {
-    if (isDm) setViewAsPlayerIdStore(playerId ?? null)
+    if (!isDm || !campaignId) return
+    setViewAsPlayer(playerId ? { campaignId, memberId: playerId } : null)
   }
 
   return {
     editorMode: effectiveEditorMode,
-    viewAsPlayerId: isDm && viewAsPlayerId ? viewAsPlayerId : undefined,
+    campaignActor,
+    viewAsPlayerId: getCampaignActorViewAsMemberId(campaignActor),
     canEdit,
     setEditorMode,
     setViewAsPlayerId,

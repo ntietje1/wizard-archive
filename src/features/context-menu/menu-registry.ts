@@ -585,7 +585,7 @@ export const editorContextMenuContributors = [
         priority: 79,
         applies: (context, itemServices) =>
           p.inView('topbar')(context) &&
-          p.isDm(context) &&
+          p.isCampaignDm(context) &&
           p.isSidebarItem(context) &&
           itemServices.viewAsPlayer.playerMembers.length > 0,
         isChecked: (_itemContext, itemServices) =>

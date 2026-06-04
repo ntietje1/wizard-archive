@@ -25,13 +25,15 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
+    campaignId: 'campaign_1',
     isDm: true,
   }),
 }))
 
 vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
-  useSidebarUIStore: (selector: (state: { viewAsPlayerId: null }) => unknown) =>
-    selector({ viewAsPlayerId: null }),
+  useSidebarUIStore: (
+    selector: (state: { viewAsPlayer: null; setViewAsPlayer: () => void }) => unknown,
+  ) => selector({ viewAsPlayer: null, setViewAsPlayer: vi.fn() }),
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({

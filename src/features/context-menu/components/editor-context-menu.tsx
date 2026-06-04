@@ -29,6 +29,7 @@ import {
   getBlockShareTargetBlocks,
   getBlockShareTitle,
 } from '~/features/editor/utils/block-share-targets'
+import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
 interface EditorContextMenuProps {
   ref?: Ref<ContextMenuHostRef>
@@ -119,6 +120,7 @@ function useEditorContextMenuModel({
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
   const filesystemReadModel = useFileSystemReadModel()
   const editorMode = useEditorMode()
+  const actorPermissions = useCampaignActorPermissions()
   const blockShareMenu = useOptionalBlockShareMenu()
   const campaignMembersQuery = useCampaignMembers()
   const playerMembers =
@@ -131,16 +133,22 @@ function useEditorContextMenuModel({
     canUseItemSelection: canUseItemSelection(viewContext),
   })
   const primaryItem = selectedItems[0] ?? item
+  const actionItem = item ? actorPermissions.projectActionItem(item) : undefined
+  const actionPrimaryItem = primaryItem
+    ? actorPermissions.projectActionItem(primaryItem)
+    : undefined
+  const actionSelectedItems = selectedItems.map(actorPermissions.projectActionItem)
 
   const menuContext = buildEditorMenuContext({
     blockNoteContext,
     campaign,
     currentSession,
-    item,
+    item: actionItem,
+    isViewingAsPlayer: editorMode.viewAsPlayerId !== undefined,
     isTrashView,
     mapView,
-    primaryItem,
-    selectedItems,
+    primaryItem: actionPrimaryItem,
+    selectedItems: actionSelectedItems,
     viewContext,
   })
 
@@ -189,6 +197,7 @@ function buildEditorMenuContext({
   campaign,
   currentSession,
   item,
+  isViewingAsPlayer,
   isTrashView,
   mapView,
   primaryItem,
@@ -199,6 +208,7 @@ function buildEditorMenuContext({
   campaign: ReturnType<typeof useCampaign>['campaign']
   currentSession: ReturnType<typeof useSession>['currentSession']
   item?: AnySidebarItem
+  isViewingAsPlayer?: boolean
   isTrashView?: boolean
   mapView: ReturnType<typeof useMapViewOptional>
   primaryItem?: AnySidebarItem
@@ -214,6 +224,7 @@ function buildEditorMenuContext({
     isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
     currentUserId: campaign.data?.myMembership?.userId,
     memberRole: campaign.data?.myMembership?.role,
+    isViewingAsPlayer,
     permissionLevel: item?.myPermissionLevel,
     activeMap: mapView?.activeMap ?? undefined,
     activePin: mapView?.activePin ?? undefined,

@@ -40,16 +40,14 @@ function EditorLoading() {
 
 export function EditorContent() {
   const { item, contentItem, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
-  const { isDm } = useCampaign()
-  const { viewAsPlayerId } = useEditorMode()
+  const { campaignActor } = useEditorMode()
   const { itemsMap } = useActiveSidebarItems()
   const requestedSlug = getSlug(editorSearch)
 
   const canView =
     !!item &&
     effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, {
-      isDm,
-      viewAsPlayerId,
+      actor: campaignActor,
       allItemsMap: itemsMap,
     })
   const availabilityState = useSidebarItemAvailabilityState({

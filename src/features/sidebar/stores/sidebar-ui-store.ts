@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
+import type { CampaignViewAsSelection } from 'shared/campaigns/actor'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import { selectionBelongsToSurface } from 'shared/sidebar-items/filesystem/selection'
@@ -35,7 +36,7 @@ interface SidebarUIState {
   selectionSurface: ItemSurfaceIdentity | null
   focusSurface: ItemSurfaceIdentity | null
   activeItemSurface: ActiveItemSurface | null
-  viewAsPlayerId: Id<'campaignMembers'> | null
+  viewAsPlayer: CampaignViewAsSelection | null
 }
 
 interface SidebarUIActions {
@@ -65,7 +66,7 @@ interface SidebarUIActions {
   ) => void
   setActiveItemSurface: (surface: ActiveItemSurface | null) => void
   clearSelectionForCampaignChange: () => void
-  setViewAsPlayerId: (id: Id<'campaignMembers'> | null) => void
+  setViewAsPlayer: (state: CampaignViewAsSelection | null) => void
 }
 
 const defaultCampaignState: CampaignState = {
@@ -164,7 +165,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       selectionSurface: null,
       focusSurface: null,
       activeItemSurface: null,
-      viewAsPlayerId: null,
+      viewAsPlayer: null,
 
       setRenamingId: (id) => set({ renamingId: id }),
 
@@ -384,7 +385,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           activeItemSurface: null,
         }),
 
-      setViewAsPlayerId: (id) => set({ viewAsPlayerId: id }),
+      setViewAsPlayer: (viewAsPlayer) => set({ viewAsPlayer }),
     }),
     {
       name: 'sidebar-ui',

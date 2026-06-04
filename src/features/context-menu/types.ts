@@ -134,6 +134,7 @@ export interface EditorMenuContext {
   selectedItems?: Array<AnySidebarItem>
   currentUserId?: string
   memberRole?: CampaignMemberRole
+  isViewingAsPlayer?: boolean
   permissionLevel?: PermissionLevel
   activeMap?: GameMapWithContent
   activePin?: MapPinWithItem

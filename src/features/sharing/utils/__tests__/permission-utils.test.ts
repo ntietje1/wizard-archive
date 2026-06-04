@@ -1,12 +1,24 @@
 import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
-import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
+import type { CampaignActor } from 'shared/campaigns/actor'
+import {
+  actorCanMutateSidebarItem,
+  effectiveHasAtLeastPermission,
+  getActorActionPermissionLevel,
+  getActorPermissionLevel,
+} from '~/features/sharing/utils/permission-utils'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
 const memberId = testId<'campaignMembers'>('member_test')
+const campaignId = testId<'campaigns'>('campaign_test')
+
+const dmActor: CampaignActor = { kind: 'dm', campaignId }
+const dmViewAsActor: CampaignActor = { kind: 'dm_view_as', campaignId, memberId }
+const playerActor: CampaignActor = { kind: 'player', campaignId }
 
 function buildMap(items: Array<AnySidebarItem>) {
   const map = new Map<Id<'sidebarItems'>, AnySidebarItem>()
@@ -19,8 +31,7 @@ describe('effectiveHasAtLeastPermission', () => {
     const note = createNote({ myPermissionLevel: PERMISSION_LEVEL.NONE })
     expect(
       effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.FULL_ACCESS, {
-        isDm: true,
-        viewAsPlayerId: null,
+        actor: dmActor,
         allItemsMap: buildMap([note]),
       }),
     ).toBe(true)
@@ -33,8 +44,7 @@ describe('effectiveHasAtLeastPermission', () => {
     })
     expect(
       effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.VIEW, {
-        isDm: true,
-        viewAsPlayerId: memberId,
+        actor: dmViewAsActor,
         allItemsMap: buildMap([note]),
       }),
     ).toBe(false)
@@ -54,11 +64,34 @@ describe('effectiveHasAtLeastPermission', () => {
 
     expect(
       effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.VIEW, {
-        isDm: true,
-        viewAsPlayerId: memberId,
+        actor: dmViewAsActor,
         allItemsMap: buildMap([folder, note]),
       }),
     ).toBe(true)
+  })
+
+  it('exposes viewed-player permission while keeping DM view-as read-only for mutations', () => {
+    const note = createNote({
+      myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      shares: [
+        {
+          _id: testId<'sidebarItemShares'>('share_edit'),
+          _creationTime: 1,
+          campaignId,
+          sidebarItemId: testId<'sidebarItems'>('note_shared'),
+          sidebarItemType: SIDEBAR_ITEM_TYPES.notes,
+          campaignMemberId: memberId,
+          sessionId: null,
+          permissionLevel: PERMISSION_LEVEL.EDIT,
+        },
+      ],
+    })
+    const allItemsMap = buildMap([note])
+    const context = { actor: dmViewAsActor, allItemsMap }
+
+    expect(getActorPermissionLevel(note, context)).toBe(PERMISSION_LEVEL.EDIT)
+    expect(getActorActionPermissionLevel(note, context)).toBe(PERMISSION_LEVEL.VIEW)
+    expect(actorCanMutateSidebarItem(note, PERMISSION_LEVEL.EDIT, context)).toBe(false)
   })
 
   it('DM with view-as treats nullable explicit member shares as view', () => {
@@ -81,15 +114,13 @@ describe('effectiveHasAtLeastPermission', () => {
 
     expect(
       effectiveHasAtLeastPermission(noteWithNullableShare, PERMISSION_LEVEL.VIEW, {
-        isDm: true,
-        viewAsPlayerId: memberId,
+        actor: dmViewAsActor,
         allItemsMap: buildMap([noteWithNullableShare]),
       }),
     ).toBe(true)
     expect(
       effectiveHasAtLeastPermission(noteWithNullableShare, PERMISSION_LEVEL.EDIT, {
-        isDm: true,
-        viewAsPlayerId: memberId,
+        actor: dmViewAsActor,
         allItemsMap: buildMap([noteWithNullableShare]),
       }),
     ).toBe(false)
@@ -99,8 +130,7 @@ describe('effectiveHasAtLeastPermission', () => {
     const note = createNote({ myPermissionLevel: PERMISSION_LEVEL.EDIT })
     expect(
       effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.VIEW, {
-        isDm: false,
-        viewAsPlayerId: null,
+        actor: playerActor,
         allItemsMap: buildMap([note]),
       }),
     ).toBe(true)
@@ -110,8 +140,7 @@ describe('effectiveHasAtLeastPermission', () => {
     const note = createNote({ myPermissionLevel: PERMISSION_LEVEL.VIEW })
     expect(
       effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.EDIT, {
-        isDm: false,
-        viewAsPlayerId: null,
+        actor: playerActor,
         allItemsMap: buildMap([note]),
       }),
     ).toBe(false)

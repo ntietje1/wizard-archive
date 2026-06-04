@@ -13,7 +13,6 @@ import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocompl
 import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -34,6 +33,7 @@ import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { BlockMeta, NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties } from 'react'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { CampaignActor } from 'shared/campaigns/actor'
 
 type NoteEditorChangeHandler = (
   editor: CustomBlockNoteEditor | null,
@@ -118,8 +118,7 @@ function useNoteRenderState({
       content: Array<CustomBlock>
       evaluateValuesFromEditor: boolean
     } {
-  const { isDm } = useCampaign()
-  const { viewAsPlayerId } = useEditorMode()
+  const { campaignActor, viewAsPlayerId } = useEditorMode()
   const { allItemsById } = useFileSystemReadModel()
 
   if (!note) {
@@ -132,11 +131,10 @@ function useNoteRenderState({
   }
 
   const hasEditAccess = effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.EDIT, {
-    isDm,
-    viewAsPlayerId: undefined,
+    actor: campaignActor,
     allItemsMap: allItemsById,
   })
-  const isViewAs = Boolean(isDm && viewAsPlayerId)
+  const isViewAs = campaignActor?.kind === 'dm_view_as'
 
   if (editable && hasEditAccess && !isViewAs) {
     return { kind: 'editable', note }
@@ -150,7 +148,7 @@ function useNoteRenderState({
     noteId: note._id,
     content: hasFullContent
       ? note.content
-      : filterViewableBlocks(note, { isDm, viewAsPlayerId, allItemsById }),
+      : filterViewableBlocks(note, { actor: campaignActor, viewAsPlayerId, allItemsById }),
     evaluateValuesFromEditor: hasFullContent,
   }
 }
@@ -306,16 +304,16 @@ function CollaborativeNoteEditor({
 function filterViewableBlocks(
   note: NoteWithContent,
   {
-    isDm,
+    actor,
     viewAsPlayerId,
     allItemsById,
   }: {
-    isDm: boolean | undefined
+    actor: CampaignActor | null
     viewAsPlayerId: Id<'campaignMembers'> | undefined
     allItemsById: Map<Id<'sidebarItems'>, AnySidebarItem>
   },
 ): Array<CustomBlock> {
-  if (isDm && viewAsPlayerId) {
+  if (actor?.kind === 'dm_view_as' && viewAsPlayerId) {
     const notePermissionLevel = resolveSidebarItemPermissionLevel(
       note,
       viewAsPlayerId,

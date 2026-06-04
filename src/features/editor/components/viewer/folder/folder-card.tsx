@@ -1,7 +1,6 @@
 import { useRef } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import { MoreVertical } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'shared/folders/types'
@@ -20,6 +19,7 @@ import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSe
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { folderItemFolderFillClass } from './folder-item-visual-state'
 import { sidebarItemNameClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
 const H = 140
 const W = 400
@@ -114,8 +114,9 @@ function FolderCardInner({
   })
   const dragData = useSidebarDragData(folder)
   const isDragging = useDndStore((state) => state.sidebarDragPreviewItemIds.includes(folder._id))
+  const actorPermissions = useCampaignActorPermissions()
 
-  const canDrag = hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
+  const canDrag = actorPermissions.canMutate(folder, PERMISSION_LEVEL.FULL_ACCESS)
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -126,6 +127,7 @@ function FolderCardInner({
   const { isDropTarget, isTrashAction, isFileDropTarget } = useSidebarItemDropTarget({
     ref,
     item: folder,
+    canDrop: canDrag,
   })
 
   const dropState: DropState =

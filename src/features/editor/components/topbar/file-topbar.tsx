@@ -119,13 +119,13 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
 }
 
 export function FileTopbar() {
-  const { canEdit, viewAsPlayerId } = useEditorMode()
+  const { canEdit, campaignActor, viewAsPlayerId } = useEditorMode()
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const filesystemReadModel = useFileSystemReadModel()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const { isDm, campaignId } = useCampaign()
-  const permOpts = { isDm, viewAsPlayerId, allItemsMap: filesystemReadModel.activeItemsById }
+  const { campaignId } = useCampaign()
+  const permOpts = { actor: campaignActor, allItemsMap: filesystemReadModel.activeItemsById }
 
   const isTrashView = editorSearch.trash === true && !item
   const isPendingItem = isOptimisticSidebarItem(item)

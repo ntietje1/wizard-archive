@@ -1,7 +1,8 @@
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { getCampaignActorViewAsMemberId } from 'shared/campaigns/actor'
+import { useCampaignActor } from '~/features/campaigns/hooks/useCampaignActor'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
@@ -52,8 +53,8 @@ export function useSidebarItemAvailabilityState({
   fallbackLabel,
 }: UseSidebarItemAvailabilityStateArgs): SidebarItemAvailabilityState {
   const { isDm } = useCampaign()
-  const rawViewAsPlayerId = useSidebarUIStore((state) => state.viewAsPlayerId)
-  const viewAsPlayerId = isDm ? (rawViewAsPlayerId ?? undefined) : undefined
+  const campaignActor = useCampaignActor()
+  const viewAsPlayerId = getCampaignActorViewAsMemberId(campaignActor)
   const campaignMembersQuery = useCampaignMembers()
   const activeItems = useActiveSidebarItems()
   const metadata = findAvailabilityMetadata(lookup, activeItems)

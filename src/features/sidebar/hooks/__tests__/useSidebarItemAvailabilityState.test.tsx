@@ -12,10 +12,12 @@ const activeItemsState = vi.hoisted(() => ({
   status: 'success' as 'pending' | 'error' | 'success',
 }))
 const campaignState = vi.hoisted(() => ({
+  campaignId: 'campaign-1' as Id<'campaigns'> | undefined,
   isDm: true as boolean | undefined,
 }))
 const viewAsState = vi.hoisted(() => ({
-  viewAsPlayerId: null as Id<'campaignMembers'> | null,
+  viewAsPlayer: null as { campaignId: Id<'campaigns'>; memberId: Id<'campaignMembers'> } | null,
+  setViewAsPlayer: vi.fn(),
 }))
 const campaignMembersState = vi.hoisted(() => ({
   data: [] as Array<Record<string, unknown>>,
@@ -30,9 +32,7 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 }))
 
 vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
-  useSidebarUIStore: (
-    selector: (state: { viewAsPlayerId: Id<'campaignMembers'> | null }) => unknown,
-  ) => selector(viewAsState),
+  useSidebarUIStore: (selector: (state: typeof viewAsState) => unknown) => selector(viewAsState),
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({
@@ -49,8 +49,10 @@ describe('useSidebarItemAvailabilityState', () => {
     activeItemsState.data = [metadata]
     activeItemsState.itemsMap = new Map([[metadata._id, metadata]])
     activeItemsState.status = 'success'
+    campaignState.campaignId = testId<'campaigns'>('campaign-1')
     campaignState.isDm = true
-    viewAsState.viewAsPlayerId = null
+    viewAsState.viewAsPlayer = null
+    viewAsState.setViewAsPlayer.mockReset()
     campaignMembersState.data = []
   })
 
@@ -99,10 +101,16 @@ describe('useSidebarItemAvailabilityState', () => {
   })
 
   it('returns page not_shared copy for full editor view-as mode', () => {
-    viewAsState.viewAsPlayerId = testId<'campaignMembers'>('player-1')
+    viewAsState.viewAsPlayer = {
+      campaignId: testId<'campaigns'>('campaign-1'),
+      memberId: testId<'campaignMembers'>('player-1'),
+    }
     campaignMembersState.data = [
       {
         _id: testId<'campaignMembers'>('player-1'),
+        campaignId: testId<'campaigns'>('campaign-1'),
+        role: 'Player',
+        status: 'Accepted',
         userProfile: { name: 'Mina', username: 'mina' },
       },
     ]

@@ -163,6 +163,10 @@ export const hasPinContext: Predicate = (ctx) => {
 }
 
 export const isDm: Predicate = (ctx) => {
+  return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM && ctx.isViewingAsPlayer !== true
+}
+
+export const isCampaignDm: Predicate = (ctx) => {
   return ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM
 }
 

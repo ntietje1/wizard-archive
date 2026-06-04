@@ -1,5 +1,4 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import { ItemCard } from './item-card'
 import { NewItemCard } from './new-item-card'
 import { DroppableFolderZone } from './droppable-folder-zone'
@@ -13,10 +12,12 @@ import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
+import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
   const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } = useTrashSidebarItems()
+  const actorPermissions = useCampaignActorPermissions()
 
   const isDeleted = folder.isTrashed
   const effectiveStatus = isDeleted ? trashedStatus : status
@@ -32,7 +33,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
     })
 
   const hasFullAccess =
-    !isDeleted && hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
+    !isDeleted && actorPermissions.canMutate(folder, PERMISSION_LEVEL.FULL_ACCESS)
 
   const folderPath = [...folder.ancestors.map((a) => a.name), folder.name].join(' / ')
 

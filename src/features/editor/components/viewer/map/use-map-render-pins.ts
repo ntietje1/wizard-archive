@@ -1,15 +1,13 @@
 import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 
 export function useMapRenderPins(map: GameMapWithContent) {
-  const { isDm } = useCampaign()
-  const { viewAsPlayerId } = useEditorMode()
+  const { campaignActor } = useEditorMode()
   const { itemsMap: allItemsMap } = useActiveSidebarItems()
-  const permOpts = { isDm, viewAsPlayerId, allItemsMap }
+  const permOpts = { actor: campaignActor, allItemsMap }
   const canEditMap = effectiveHasAtLeastPermission(map, PERMISSION_LEVEL.EDIT, permOpts)
   const pins = canEditMap ? map.pins : map.pins.filter((pin) => pin.visible === true)
 
