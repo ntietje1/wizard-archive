@@ -9,8 +9,9 @@ import {
   approvePlayerRequest,
   blockShareAllPlayersRow,
   blockSharePlayerRow,
-  clickBlockDragHandle,
   getCampaignRouteParts,
+  getVisibleBlockDragHandle,
+  getVisibleBlockShareButton,
   openBlockShareMenu,
   openBlockShareMenuFromEditorContextMenu,
   openEditorContextMenuFromBlockDragHandle,
@@ -137,6 +138,9 @@ test.describe('block sharing', () => {
     await openCampaignNote(page)
 
     let menu = await openBlockShareMenu(page, visibleBlockText)
+    await expect(
+      blockShareAllPlayersRow(menu).getByRole('button', { name: /all players/i }),
+    ).toHaveAttribute('aria-expanded', 'true')
     await expect(menu.getByText(/no players in this campaign yet/i)).not.toBeVisible()
     await expect(blockSharePlayerRow(menu, playerMemberId)).toHaveAttribute(
       'data-share-kind',
@@ -201,13 +205,43 @@ test.describe('block sharing', () => {
     await openEditorContextMenuFromBlockShareButton(page, visibleBlockText)
   })
 
-  test('left-clicking the drag handle does not open the old drag menu', async ({ page }) => {
+  test('left-clicking the drag handle opens the block actions menu', async ({ page }) => {
     await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
     await openCampaignNote(page)
 
-    await clickBlockDragHandle(page, visibleBlockText)
+    const dragHandle = await getVisibleBlockDragHandle(page, visibleBlockText)
+    const dragHandleBox = await dragHandle.boundingBox()
+    if (!dragHandleBox) throw new Error('Expected drag handle to have a bounding box')
 
-    await expect(page.getByRole('menuitem', { name: /^delete$/i })).not.toBeVisible()
+    await page.mouse.move(
+      dragHandleBox.x + dragHandleBox.width / 2,
+      dragHandleBox.y + dragHandleBox.height / 2,
+    )
+    await page.mouse.down()
+    await expect(page.getByTestId('block-drag-handle-menu')).not.toBeVisible()
+    await page.mouse.up()
+
+    const menu = page.getByTestId('block-drag-handle-menu')
+    await expect(menu).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /^turn into$/i })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /^color$/i })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /^copy link to block$/i })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /^duplicate$/i })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /^delete$/i })).toBeVisible()
+    await expect(menu.getByRole('menuitem', { name: /^comment$/i })).toBeVisible()
+
+    const handleBox = await dragHandle.boundingBox()
+    const menuBox = await menu.boundingBox()
+    expect(handleBox && menuBox ? menuBox.x + menuBox.width <= handleBox.x + 1 : false).toBe(true)
+    expect(
+      handleBox && menuBox
+        ? Math.abs(menuBox.y + menuBox.height / 2 - (handleBox.y + handleBox.height / 2))
+        : Number.POSITIVE_INFINITY,
+    ).toBeLessThan(12)
+
+    if (!menuBox) throw new Error('Expected drag handle menu to have a bounding box')
+    await page.mouse.move(menuBox.x + menuBox.width / 2, menuBox.y + menuBox.height / 2)
+    await expect(menu).toBeVisible()
   })
 
   test('right-clicking the drag handle opens the normal editor context menu', async ({ page }) => {
@@ -215,6 +249,21 @@ test.describe('block sharing', () => {
     await openCampaignNote(page)
 
     await openEditorContextMenuFromBlockDragHandle(page, visibleBlockText)
+  })
+
+  test('side-menu share and drag buttons explain their primary gestures', async ({ page }) => {
+    await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await openCampaignNote(page)
+
+    const shareButton = await getVisibleBlockShareButton(page, visibleBlockText)
+    await shareButton.hover()
+    await expect(page.getByText(/click\s+to open share menu/i)).toBeVisible()
+    await expect(page.getByText(/shift click\s+to share to all/i)).toBeVisible()
+
+    const dragHandle = await getVisibleBlockDragHandle(page, visibleBlockText)
+    await dragHandle.hover()
+    await expect(page.getByText(/drag\s+to move/i)).toBeVisible()
+    await expect(page.getByText(/click\s+to open menu/i)).toBeVisible()
   })
 
   test('shift left-click keeps all-player block sharing visible without opening the popover', async ({

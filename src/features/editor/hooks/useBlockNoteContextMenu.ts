@@ -11,6 +11,7 @@ export interface BlockNoteContextMenuEvent {
   item?: AnySidebarItem
   note?: NoteWithContent
   blockNoteId?: BlockNoteId
+  isEditorTextContext?: boolean
   valueInlineId?: string
   valueInlineInstanceId?: string
   valueInlineEditable?: boolean
@@ -22,6 +23,7 @@ export interface BlockNoteContextMenuContextType {
   position: { x: number; y: number } | undefined
   note: NoteWithContent | undefined
   blockNoteId: BlockNoteId | undefined
+  isEditorTextContext: boolean
   valueInlineId: string | undefined
   valueInlineInstanceId: string | undefined
   valueInlineEditable: boolean

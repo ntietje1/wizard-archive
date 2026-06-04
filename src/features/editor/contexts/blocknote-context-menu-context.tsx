@@ -83,6 +83,7 @@ export function BlockNoteContextMenuProvider({ children }: BlockNoteContextMenuP
     position: menuState?.position,
     note: menuState?.note,
     blockNoteId: menuState?.blockNoteId,
+    isEditorTextContext: menuState?.isEditorTextContext === true,
     valueInlineId: menuState?.valueInlineId,
     valueInlineInstanceId: menuState?.valueInlineInstanceId,
     valueInlineEditable: menuState?.valueInlineEditable === true,

@@ -222,6 +222,7 @@ function buildEditorMenuContext({
     editor: blockNoteContext?.editor ?? undefined,
     position: blockNoteContext?.position,
     blockNoteId: blockNoteContext?.blockNoteId,
+    isEditorTextContext: blockNoteContext?.isEditorTextContext,
     valueInlineId: blockNoteContext?.valueInlineId,
     valueInlineInstanceId: blockNoteContext?.valueInlineInstanceId,
     valueInlineEditable: blockNoteContext?.valueInlineEditable,

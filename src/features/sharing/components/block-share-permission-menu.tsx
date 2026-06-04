@@ -1,11 +1,11 @@
 import { Lock } from 'lucide-react'
+import { useState } from 'react'
 import type {
   AggregateBlockVisibilitySelectValue,
   BlockShareItem,
   BlockVisibilitySelectValue,
 } from '~/features/sharing/hooks/useBlocksShare'
 import type { CampaignMember } from 'shared/campaigns/types'
-import usePersistedState from '~/shared/hooks/usePersistedState'
 import {
   Select,
   SelectContent,
@@ -65,7 +65,7 @@ export function BlockSharePermissionMenu({
   onSetAllPlayersPermission,
   onSetMemberPermission,
 }: BlockSharePermissionMenuProps) {
-  const [showPlayers, setShowPlayers] = usePersistedState('block-share-show-players', true)
+  const [showPlayers, setShowPlayers] = useState(true)
   const disabled = isPending || isMutating
 
   if (isPending) {
@@ -127,7 +127,7 @@ export function BlockSharePermissionMenu({
           ) : (
             <ShareMenuTreeItem isLast>
               <div className="py-1 pl-1 text-xs text-muted-foreground">
-                No view-level players use the default block setting.
+                Players that join the campaign will have this value
               </div>
             </ShareMenuTreeItem>
           )}

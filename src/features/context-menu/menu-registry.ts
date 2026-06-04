@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   Bookmark,
   BookOpen,
+  ClipboardCopy,
   Download,
   ClipboardPaste,
   Eye,
@@ -24,14 +25,15 @@ import {
   MapPin,
   Move,
   Navigation,
-  Pencil,
   Plus,
   RotateCcw,
   Share2,
   Sigma,
+  Scissors,
   SquareArrowOutUpRight,
   Trash2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import * as p from './predicates'
 import type {
   ContextMenuCommand,
@@ -221,10 +223,10 @@ export const editorContextMenuCommands = {
       activatePanelContent(payload)
     },
   },
-  logTestEditor: {
-    id: 'logTestEditor',
-    run: (context) => {
-      logger.debug('test-editor', context)
+  showComingSoon: {
+    id: 'showComingSoon',
+    run: () => {
+      toast.info('Coming soon')
     },
   },
   openBlockShareMenu: {
@@ -315,18 +317,9 @@ export const editorContextMenuContributors = [
     ],
   },
   {
-    id: 'editor-tests',
+    id: 'editor-note',
     surfaces: ['note-view'],
     getItems: () => [
-      {
-        id: 'test-editor',
-        commandId: 'logTestEditor',
-        label: 'Test Editor',
-        icon: Pencil,
-        group: 'primary',
-        priority: 0,
-        applies: (context) => p.hasBlockNoteEditor(context),
-      },
       {
         id: 'share-blocks',
         commandId: 'openBlockShareMenu',
@@ -339,6 +332,42 @@ export const editorContextMenuContributors = [
         priority: 1,
         applies: (context, services) =>
           p.isDm(context) && p.hasBlockNoteId(context) && services.blockShare.canOpen(context),
+      },
+    ],
+  },
+  {
+    id: 'editor-note-clipboard',
+    surfaces: ['note-view'],
+    getItems: () => [
+      {
+        id: 'editor-paste',
+        commandId: 'showComingSoon',
+        label: 'Paste',
+        icon: ClipboardPaste,
+        shortcut: 'Ctrl+V',
+        group: 'edit',
+        priority: 84,
+        applies: (context) => p.isEditorTextContext(context),
+      },
+      {
+        id: 'editor-cut',
+        commandId: 'showComingSoon',
+        label: 'Cut',
+        icon: Scissors,
+        shortcut: 'Ctrl+X',
+        group: 'edit',
+        priority: 85,
+        applies: (context) => p.hasEditorTextSelection(context),
+      },
+      {
+        id: 'editor-copy',
+        commandId: 'showComingSoon',
+        label: 'Copy',
+        icon: ClipboardCopy,
+        shortcut: 'Ctrl+C',
+        group: 'edit',
+        priority: 86,
+        applies: (context) => p.hasEditorTextSelection(context),
       },
     ],
   },

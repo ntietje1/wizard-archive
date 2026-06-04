@@ -146,11 +146,6 @@ describe('map predicates', () => {
 })
 
 describe('editor predicates', () => {
-  it('hasBlockNoteEditor', () => {
-    expect(p.hasBlockNoteEditor(ctx({ editor: {} as never }))).toBe(true)
-    expect(p.hasBlockNoteEditor(ctx())).toBe(false)
-  })
-
   it('hasBlockNoteId', () => {
     expect(p.hasBlockNoteId(ctx({ blockNoteId: 'b1' }))).toBe(true)
     expect(p.hasBlockNoteId(ctx())).toBe(false)

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { BlockSharePermissionMenu } from '~/features/sharing/components/block-share-permission-menu'
 import { BlockShareMenuContext } from '~/features/sharing/contexts/block-share-menu-state'
 import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
+import { useFloatingMenuDismiss } from '~/shared/hooks/use-floating-menu-dismiss'
 import type { BlockShareMenuState, MenuPosition } from './block-share-menu-state'
 
 const MENU_WIDTH = 340
@@ -28,26 +29,12 @@ export function BlockShareMenuProvider({ children }: { children: ReactNode }) {
     }
   }, [menuState])
 
-  useEffect(() => {
-    if (!menuState) return
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return
-      if (isBlockShareMenuOverlayTarget(event.target)) return
-      setMenuState(null)
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuState(null)
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [menuState])
+  useFloatingMenuDismiss({
+    enabled: Boolean(menuState),
+    ignoreTarget: isBlockShareMenuOverlayTarget,
+    menuRef,
+    onDismiss: () => setMenuState(null),
+  })
 
   return (
     <BlockShareMenuContext.Provider value={contextValue}>

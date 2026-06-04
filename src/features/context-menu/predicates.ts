@@ -80,12 +80,35 @@ export const inView =
 
 export const inSidebar: Predicate = (ctx) => ctx.surface === VIEW_CONTEXT.SIDEBAR
 
-export const hasBlockNoteEditor: Predicate = (ctx) => ctx.editor !== undefined
-
 export const hasBlockNoteId: Predicate = (ctx) => ctx.blockNoteId !== undefined
+
+export const isEditorTextContext: Predicate = (ctx) =>
+  ctx.surface === VIEW_CONTEXT.NOTE_VIEW && ctx.isEditorTextContext === true
+
+export const hasEditorTextSelection: Predicate = (ctx) => {
+  if (!isEditorTextContext(ctx)) return false
+
+  const editorElement = getEditorElement(ctx)
+  const selection = window.getSelection?.()
+  if (!editorElement || !selection || selection.isCollapsed || selection.rangeCount === 0) {
+    return false
+  }
+
+  return editorElementContainsNode(editorElement, selection.anchorNode)
+}
 
 export const hasEditableValueInlineId: Predicate = (ctx) =>
   ctx.valueInlineId !== undefined && ctx.valueInlineEditable === true
+
+function getEditorElement(ctx: PredicateContext): HTMLElement | null {
+  return ctx.editor?.domElement ?? ctx.editor?._tiptapEditor?.view?.dom ?? null
+}
+
+function editorElementContainsNode(editorElement: HTMLElement, node: Node | null): boolean {
+  if (!node) return false
+  if (node instanceof Element) return editorElement.contains(node)
+  return node.parentElement !== null && editorElement.contains(node.parentElement)
+}
 
 export const atRoot: Predicate = (ctx) => !isSidebarItem(ctx)
 

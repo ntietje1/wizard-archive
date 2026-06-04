@@ -18,7 +18,8 @@ import {
   getBlockShareTargetBlocks,
   getBlockShareTitle,
 } from '~/features/editor/utils/block-share-targets'
-import { openBlockNoteContextMenu } from '~/features/editor/hooks/useBlockNoteContextMenu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
+import { openEditorBlockContextMenuFromEvent } from '~/features/editor/utils/open-editor-block-context-menu-from-event'
 
 const getButtonColorClass = (status: AggregateShareStatus): string => {
   switch (status) {
@@ -78,13 +79,8 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
   }
 
   function handleContextMenu(e: React.MouseEvent<HTMLElement>) {
-    e.preventDefault()
-    e.stopPropagation()
-    e.nativeEvent.stopImmediatePropagation?.()
-
-    openBlockNoteContextMenu({
-      position: { x: e.clientX, y: e.clientY },
-      viewContext: 'note-view',
+    openEditorBlockContextMenuFromEvent({
+      event: e,
       note,
       blockNoteId: block?.id,
     })
@@ -102,20 +98,35 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
   }
 
   return (
-    <span
-      className="inline-flex"
-      role="presentation"
-      onContextMenu={handleContextMenu}
-      onKeyDown={handleKeyDown}
-    >
-      <Components.SideMenu.Button
-        label={getShareButtonLabel(blockCount)}
-        className={`!p-0 !px-0 !h-6 !w-6 ${buttonColorClass} ${isBusy ? 'opacity-50 cursor-wait' : ''}`}
-        icon={<Share2 size={18} />}
-        onClick={handleButtonClick}
-        data-testid="block-share-button"
+    <Tooltip>
+      <TooltipTrigger
+        render={(triggerProps) => (
+          <span
+            {...triggerProps}
+            className="inline-flex"
+            role="presentation"
+            onContextMenu={handleContextMenu}
+            onKeyDown={handleKeyDown}
+          >
+            <Components.SideMenu.Button
+              label={getShareButtonLabel(blockCount)}
+              className={`!p-0 !px-0 !h-6 !w-6 ${buttonColorClass} ${isBusy ? 'opacity-50 cursor-wait' : ''}`}
+              icon={<Share2 size={18} />}
+              onClick={handleButtonClick}
+              data-testid="block-share-button"
+            />
+          </span>
+        )}
       />
-    </span>
+      <TooltipContent side="bottom" className="whitespace-pre-line">
+        <span className="block">
+          <em>Click</em> to open share menu
+        </span>
+        <span className="block">
+          <em>Shift Click</em> to share to all
+        </span>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

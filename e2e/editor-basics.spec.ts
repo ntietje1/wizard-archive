@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { typeInEditor } from './helpers/editor-helpers'
 
 const campaignName = testName('E2E EdBasics')
 let noteName: string
@@ -145,6 +146,32 @@ test.describe.serial('editor basics', () => {
     await expect(editor).toContainText('My Heading')
   })
 
+  test('editor text context menu shows clipboard placeholders', async ({ page }) => {
+    await page.goto('/campaigns')
+    await navigateToCampaign(page, campaignName)
+    await openItem(page, noteName)
+
+    const clipboardText = `Clipboard placeholder ${Date.now()}`
+    await typeInEditor(page, clipboardText)
+    const text = page.getByText(clipboardText, { exact: true })
+    await expect(text).toBeVisible({ timeout: 10000 })
+
+    await text.click({ button: 'right' })
+    await expect(page.getByRole('menuitem', { name: 'Paste' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Test Editor' })).not.toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Cut' })).not.toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Copy' })).not.toBeVisible()
+    await page.getByRole('menuitem', { name: 'Paste' }).click()
+    await expect(page.getByText('Coming soon')).toBeVisible()
+
+    await selectEditorText(page, clipboardText)
+    await text.click({ button: 'right' })
+    await expect(page.getByRole('menuitem', { name: 'Cut' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Copy' })).toBeVisible()
+    await page.getByRole('menuitem', { name: 'Copy' }).click()
+    await expect(page.getByText('Coming soon')).toBeVisible()
+  })
+
   test('bold text with Ctrl+B', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
@@ -193,3 +220,28 @@ test.describe.serial('editor basics', () => {
     })
   })
 })
+
+async function selectEditorText(page: Parameters<typeof typeInEditor>[0], text: string) {
+  await page.evaluate((targetText) => {
+    const editor = document.querySelector('.bn-editor')
+    if (!editor) throw new Error('Editor not found')
+
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
+    let node = walker.nextNode()
+    while (node) {
+      const index = node.textContent?.indexOf(targetText) ?? -1
+      if (index >= 0) {
+        const range = document.createRange()
+        range.setStart(node, index)
+        range.setEnd(node, index + targetText.length)
+        const selection = window.getSelection()
+        selection?.removeAllRanges()
+        selection?.addRange(range)
+        return
+      }
+      node = walker.nextNode()
+    }
+
+    throw new Error(`Text not found: ${targetText}`)
+  }, text)
+}

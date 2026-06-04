@@ -97,6 +97,7 @@ export function ShareMenuAllPlayersRow({
     >
       <button
         type="button"
+        aria-expanded={expanded}
         className="flex min-w-0 flex-1 items-center gap-2.5 hover:opacity-80"
         onClick={onToggleExpand}
       >

@@ -85,6 +85,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
       position: { x: e.clientX, y: e.clientY },
       viewContext: 'note-view',
       note,
+      isEditorTextContext: isBlockNoteContext,
       ...blockNoteContext,
     })
   }

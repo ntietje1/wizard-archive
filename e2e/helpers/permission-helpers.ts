@@ -179,7 +179,7 @@ export async function openEditorContextMenuFromBlockDragHandle(page: Page, block
   await expectEditorBlockShareMenuItem(page)
 }
 
-async function getVisibleBlockShareButton(page: Page, blockText: string) {
+export async function getVisibleBlockShareButton(page: Page, blockText: string) {
   const block = getBlockTextLocator(page, blockText)
   const shareButton = page.getByTestId('block-share-button')
 
@@ -188,7 +188,7 @@ async function getVisibleBlockShareButton(page: Page, blockText: string) {
   return shareButton
 }
 
-async function getVisibleBlockDragHandle(page: Page, blockText: string) {
+export async function getVisibleBlockDragHandle(page: Page, blockText: string) {
   const block = getBlockTextLocator(page, blockText)
   const dragHandle = page
     .locator('[data-testid="block-drag-handle-button"], [data-test="dragHandle"]')

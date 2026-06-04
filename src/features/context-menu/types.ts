@@ -144,6 +144,7 @@ export interface EditorMenuContext {
   editor?: CustomBlockNoteEditor
   position?: { x: number; y: number }
   blockNoteId?: BlockNoteId
+  isEditorTextContext?: boolean
   valueInlineId?: string
   valueInlineInstanceId?: string
   valueInlineEditable?: boolean
