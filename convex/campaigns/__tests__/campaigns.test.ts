@@ -210,9 +210,27 @@ describe('getUserCampaigns', () => {
     const campaign = campaigns[0]
     expect(campaign.dmUserProfile).toBeDefined()
     expect(campaign.dmUserProfile._id).toBe(ctx.dm.profile._id)
-    expect(typeof campaign.playerCount).toBe('number')
+    expect(typeof campaign.acceptedMemberCount).toBe('number')
     expect(campaign.myMembership).toBeDefined()
     expect(campaign.myMembership!._id).toBe(ctx.dm.memberId)
+  })
+
+  it('reports accepted campaign members, including the DM membership', async () => {
+    const dm = await setupUser(t)
+    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+
+    let campaigns = await dm.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    expect(campaigns.find((campaign) => campaign._id === campaignId)).toMatchObject({
+      acceptedMemberCount: 1,
+    })
+
+    const player = await setupUser(t)
+    await addPlayerToCampaign(t, campaignId, player.profile)
+
+    campaigns = await dm.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    expect(campaigns.find((campaign) => campaign._id === campaignId)).toMatchObject({
+      acceptedMemberCount: 2,
+    })
   })
 
   it('requires authentication', async () => {

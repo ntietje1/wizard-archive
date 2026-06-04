@@ -31,7 +31,7 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
     currentSessionId: null,
     dmUserProfile: dmUser,
     myMembership: memberOverrides ? createCampaignMember({ ...memberOverrides, campaignId }) : null,
-    playerCount: 0,
+    acceptedMemberCount: 0,
     ...rest,
   }
   return campaign
