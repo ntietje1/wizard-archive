@@ -595,10 +595,12 @@ export async function createBlockShare(
     blockId: Id<'blocks'>
     campaignMemberId: Id<'campaignMembers'>
     sessionId?: Id<'sessions'> | null
+    permissionLevel?: 'none' | 'view'
   },
 ) {
   const sessionId: Id<'sessions'> | null = null
   const defaults = {
+    permissionLevel: 'view' as const,
     sessionId,
   }
   const data = { ...defaults, ...overrides }

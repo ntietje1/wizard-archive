@@ -302,6 +302,14 @@
   --bn-border: 1px solid var(--border);
 }
 
+:root .bn-side-menu .block-drag-handle-button {
+  height: 1.5rem;
+  width: 1rem;
+  min-width: 1rem;
+  padding: 0;
+  color: var(--muted-foreground);
+}
+
 /* --- Block-level overrides for hardcoded colours in BlockNote's Block.css --- */
 
 /* Blockquotes */

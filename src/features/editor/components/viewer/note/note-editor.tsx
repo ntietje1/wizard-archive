@@ -14,6 +14,8 @@ import { useScrollToHeading } from '~/features/editor/hooks/useScrollToHeading'
 import { NoteFormattingToolbar } from '~/features/editor/components/formatting-toolbar/note-formatting-toolbar'
 import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { BlockShareMenuProvider } from '~/features/sharing/contexts/block-share-menu-context'
+import { BlockShareAccessWarningIndicator } from './block-share-access-warning-indicator'
 import type { BlockNoteId } from 'shared/editor-blocks/types'
 
 function getContextMenuTarget(target: EventTarget | null): Element | null {
@@ -54,7 +56,6 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { onEditorChange, wrapperRef } = useNoteEditorState(note._id)
   const editor = useNoteEditorStore((s) => s.editor)
   const viewportRef = useRef<HTMLDivElement>(null)
-  const contextMenuHandledRef = useRef(false)
   const { hasHeadingParam } = useScrollToHeading(note.content)
   useScrollPersistence(note._id, viewportRef, hasHeadingParam)
 
@@ -83,32 +84,14 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
     openBlockNoteContextMenu({
       position: { x: e.clientX, y: e.clientY },
       viewContext: 'note-view',
-      item: undefined,
+      note,
+      isEditorTextContext: isBlockNoteContext,
       ...blockNoteContext,
     })
   }
 
-  const handleWrapperMouseDownCapture = (e: React.MouseEvent) => {
-    if (e.button !== 2) return
-    if (!e.isTrusted) return
-
-    const target = getContextMenuTarget(e.target)
-    if (!target || target.closest('.bn-editor') === null) return
-    contextMenuHandledRef.current = true
-    window.setTimeout(() => {
-      contextMenuHandledRef.current = false
-    }, 0)
-    openNoteContextMenu(e, target)
-  }
-
   const handleWrapperContextMenu = (e: React.MouseEvent) => {
     if (!e.isTrusted) return
-    if (contextMenuHandledRef.current) {
-      e.preventDefault()
-      e.stopPropagation()
-      contextMenuHandledRef.current = false
-      return
-    }
     const target = getContextMenuTarget(e.target)
     if (!target) return
     openNoteContextMenu(e, target)
@@ -116,30 +99,35 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
 
   return (
     <ClientOnly fallback={null}>
-      <BlockNoteContextMenuProvider>
-        <div
-          ref={wrapperRef}
-          className="flex flex-col flex-1 min-h-0"
-          data-testid="note-editor-wrapper"
-          onMouseDownCapture={handleWrapperMouseDownCapture}
-          onContextMenu={handleWrapperContextMenu}
-        >
-          <NoteFormattingToolbar editor={editor} visible={editable} />
-          <ScrollArea
-            viewportRef={viewportRef}
-            className="flex-1 min-h-0"
-            contentClassName={editable ? 'note-editor-scroll-content' : undefined}
+      <BlockShareMenuProvider>
+        <BlockNoteContextMenuProvider>
+          <div
+            ref={wrapperRef}
+            className="relative flex flex-col flex-1 min-h-0"
+            data-testid="note-editor-wrapper"
+            onContextMenu={handleWrapperContextMenu}
           >
-            <NoteContent
-              key={note._id}
-              note={note}
-              editable={editable}
-              onEditorChange={onEditorChange}
-              className="note-editor-surface"
+            <BlockShareAccessWarningIndicator
+              noteId={note._id}
+              warnings={note.blockShareAccessWarnings}
             />
-          </ScrollArea>
-        </div>
-      </BlockNoteContextMenuProvider>
+            <NoteFormattingToolbar editor={editor} visible={editable} />
+            <ScrollArea
+              viewportRef={viewportRef}
+              className="flex-1 min-h-0"
+              contentClassName={editable ? 'note-editor-scroll-content' : undefined}
+            >
+              <NoteContent
+                key={note._id}
+                note={note}
+                editable={editable}
+                onEditorChange={onEditorChange}
+                className="note-editor-surface"
+              />
+            </ScrollArea>
+          </div>
+        </BlockNoteContextMenuProvider>
+      </BlockShareMenuProvider>
     </ClientOnly>
   )
 }

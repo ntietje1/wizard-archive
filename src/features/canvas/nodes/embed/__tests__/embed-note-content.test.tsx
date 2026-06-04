@@ -186,5 +186,6 @@ function createTestNote(): NoteWithContent {
     ancestors: [],
     content: [],
     blockMeta: {},
+    blockShareAccessWarnings: [],
   }
 }

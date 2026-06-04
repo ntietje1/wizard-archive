@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
+import { getBlockShareInfo } from '../../_test/blockShareQueries.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import {
   createBlock,
   createBlockShare,
   createNote,
+  createSidebarShare,
   syncBlocksToYjs,
   testBlockNoteId,
 } from '../../_test/factories.helper'
@@ -19,6 +21,13 @@ describe('share mutations with nested blocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
 
     await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('root'),
@@ -45,15 +54,14 @@ describe('share mutations with nested blocks', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+    const result = await getBlockShareInfo(dmAuth, {
       campaignId: ctx.campaignId,
       noteId,
       blockNoteId: testBlockNoteId('child'),
     })
     expect(result).not.toBeNull()
     expect(result!.shareStatus).toBe('individually_shared')
-    expect(result!.shares).toHaveLength(1)
-    expect(result!.shares[0].campaignMemberId).toBe(ctx.player.memberId)
+    expect(result!.memberPermissions[ctx.player.memberId]).toBe('view')
   })
 
   it('sets share status on blocks at multiple depths', async () => {
@@ -117,7 +125,7 @@ describe('share mutations with nested blocks', () => {
     }
   })
 
-  it('setting not_shared clears shares on a nested block', async () => {
+  it('setting not_shared preserves member overrides on a nested block', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
@@ -155,7 +163,7 @@ describe('share mutations with nested blocks', () => {
       status: 'not_shared',
     })
 
-    const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+    const result = await getBlockShareInfo(dmAuth, {
       campaignId: ctx.campaignId,
       noteId,
       blockNoteId: testBlockNoteId('nested'),
@@ -168,7 +176,8 @@ describe('share mutations with nested blocks', () => {
         .query('blockShares')
         .filter((q) => q.eq(q.field('blockId'), blockDbId))
         .collect()
-      expect(shares).toHaveLength(0)
+      expect(shares).toHaveLength(1)
+      expect(shares[0]?.campaignMemberId).toBe(ctx.player.memberId)
     })
   })
 
@@ -200,6 +209,7 @@ describe('share mutations with nested blocks', () => {
         blockId: childDbId,
         campaignMemberId: ctx.player.memberId,
         sessionId: null,
+        permissionLevel: 'view',
       })
     })
 

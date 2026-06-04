@@ -49,7 +49,7 @@ export async function getSidebarItemIdBySlug({
   return item._id
 }
 
-async function createE2EConvexClient() {
+export async function createE2EConvexClient() {
   const convexUrl = process.env.VITE_CONVEX_URL
   if (!convexUrl) {
     throw new Error('VITE_CONVEX_URL is required for E2E Convex helpers')

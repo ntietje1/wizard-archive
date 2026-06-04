@@ -64,7 +64,7 @@ vi.mock('../../providers/convex-yjs-provider', () => ({
   ConvexYjsProvider: MockConvexYjsProvider,
   applyConvexYjsProviderRemoteAwareness: mockApplyRemoteAwareness,
   applyConvexYjsProviderRemoteUpdates: mockApplyRemoteUpdates,
-  setConvexYjsProviderUser: mockSetUser,
+  updateConvexYjsProviderUser: mockSetUser,
   setConvexYjsProviderWritable: mockSetWritable,
 }))
 

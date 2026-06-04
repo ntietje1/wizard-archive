@@ -3,6 +3,7 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { BlockNoteId } from 'shared/editor-blocks/types'
 import type { CampaignMember, CampaignMemberRole } from 'shared/campaigns/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
+import type { NoteWithContent } from 'shared/notes/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import type { EditorMode } from 'shared/editor/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -139,8 +140,11 @@ export interface EditorMenuContext {
   isItemTrashed?: boolean
   isTrashView?: boolean
   hasActiveSession?: boolean
+  note?: NoteWithContent
   editor?: CustomBlockNoteEditor
+  position?: { x: number; y: number }
   blockNoteId?: BlockNoteId
+  isEditorTextContext?: boolean
   valueInlineId?: string
   valueInlineInstanceId?: string
   valueInlineEditable?: boolean

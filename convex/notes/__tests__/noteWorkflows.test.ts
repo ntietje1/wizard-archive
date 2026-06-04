@@ -325,6 +325,15 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       blockNoteIds: [block.blockNoteId],
       status: 'not_shared',
     })
+    expect(await getVisibility()).toBe(true)
+
+    await dmAuth.action(api.blockShares.actions.setBlockMemberPermission, {
+      campaignId: ctx.campaignId,
+      noteId: note.noteId,
+      blockNoteIds: [block.blockNoteId],
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: null,
+    })
     expect(await getVisibility()).toBe(false)
   })
 

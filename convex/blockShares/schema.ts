@@ -1,6 +1,12 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { convexValidatorFields } from '../common/schema'
+import { PERMISSION_LEVEL } from '../../shared/permissions/types'
+
+export const blockVisibilityPermissionLevelValidator = v.union(
+  v.literal(PERMISSION_LEVEL.NONE),
+  v.literal(PERMISSION_LEVEL.VIEW),
+)
 
 const blockShareTableFields = {
   campaignId: v.id('campaigns'),
@@ -8,6 +14,7 @@ const blockShareTableFields = {
   blockId: v.id('blocks'),
   campaignMemberId: v.id('campaignMembers'),
   sessionId: v.nullable(v.id('sessions')),
+  permissionLevel: v.optional(v.nullable(blockVisibilityPermissionLevelValidator)),
 }
 
 export const blockShareTables = {

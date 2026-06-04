@@ -376,6 +376,7 @@ describe('EmbedNode', () => {
       name: 'Note Item',
       content: [],
       blockMeta: {},
+      blockShareAccessWarnings: [],
     }
 
     renderEmbedNode('node-1', 'note-1')

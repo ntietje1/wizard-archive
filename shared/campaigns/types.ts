@@ -41,7 +41,7 @@ export type CampaignFromDb = {
 export type Campaign = CampaignFromDb & {
   dmUserProfile: UserProfile
   myMembership: CampaignMember | null
-  playerCount: number
+  acceptedMemberCount: number
 }
 
 export type CampaignMemberFromDb = {

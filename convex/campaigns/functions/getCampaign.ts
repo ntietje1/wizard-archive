@@ -27,7 +27,7 @@ function toCampaignFromDb(campaign: Doc<'campaigns'>): CampaignFromDb {
   }
 }
 
-async function countAcceptedPlayers(
+async function countAcceptedMembers(
   ctx: QueryCtx,
   { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<number> {
@@ -42,9 +42,9 @@ async function enhanceCampaign(
   ctx: QueryCtx,
   { campaign }: { campaign: CampaignFromDb },
 ): Promise<Campaign> {
-  const [dmUserProfile, playerCount] = await Promise.all([
+  const [dmUserProfile, acceptedMemberCount] = await Promise.all([
     getUserProfileById(ctx, { profileId: campaign.dmUserId }),
-    countAcceptedPlayers(ctx, { campaignId: campaign._id }),
+    countAcceptedMembers(ctx, { campaignId: campaign._id }),
   ])
   if (!dmUserProfile) throw new Error('DM user profile not found')
   const identity = await ctx.auth.getUserIdentity()
@@ -68,7 +68,7 @@ async function enhanceCampaign(
       }
     }
   }
-  return { ...campaign, dmUserProfile, playerCount, myMembership }
+  return { ...campaign, dmUserProfile, acceptedMemberCount, myMembership }
 }
 
 // NOTE: No membership check here — callers need to verify membership

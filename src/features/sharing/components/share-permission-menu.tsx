@@ -1,8 +1,7 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { ChevronDown, ChevronUp, Users } from 'lucide-react'
+import type { ReactNode } from 'react'
 import type { PermissionLevel } from 'shared/permissions/types'
 import type { CampaignMember } from 'shared/campaigns/types'
-import type { UserProfile } from 'shared/users/types'
 import type {
   NullableAggregatePermissionLevel,
   ShareItemWithPermission,
@@ -16,10 +15,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/features/shadcn/components/select'
-import { Avatar, AvatarFallback } from '~/features/shadcn/components/avatar'
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { Switch } from '~/features/shadcn/components/switch'
-import { UserProfileImage } from '~/shared/components/user-profile-image'
+import {
+  SHARE_MENU_OVERLAY_Z_INDEX,
+  SHARE_MENU_WIDTH_CLASS,
+} from '~/features/sharing/components/share-menu-layout'
+import {
+  ShareMenuAllPlayersRow,
+  ShareMenuPlayerIdentity,
+  ShareMenuRowTooltip,
+  ShareMenuTreeItem,
+} from '~/features/sharing/components/share-menu-row-parts'
 import { getUserDisplayName } from '~/shared/utils/user-display-name'
 
 type PermissionLevelOrDefault = PermissionLevel | 'default'
@@ -33,43 +39,15 @@ const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   [PERMISSION_LEVEL.FULL_ACCESS]: 'Full access',
 }
 
-const OVERLAY_Z_INDEX = 'z-[10000]'
-
 function permissionLabel(level: NullableAggregatePermissionLevel): string {
   if (level === 'mixed') return 'Mixed'
   return PERMISSION_LABELS[level ?? PERMISSION_LEVEL.NONE] ?? 'None'
 }
 
-function RowTooltip({
-  text,
-  className,
-  positionerClassName,
-  children,
-}: {
-  text: string
-  className?: string
-  positionerClassName?: string
-  children: React.ReactNode
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger render={<div className={className} />}>{children}</TooltipTrigger>
-      <TooltipContent
-        side="left"
-        className="max-w-[220px]"
-        positionerClassName={positionerClassName}
-      >
-        {text}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
 // --- Main component ---
 
 interface SharePermissionMenuProps {
-  title?: string
-  dmUserProfile?: UserProfile
+  title?: ReactNode
   isPending: boolean
   isMutating: boolean
   shareItems: Array<ShareItemWithPermission>
@@ -86,7 +64,6 @@ interface SharePermissionMenuProps {
 
 export function SharePermissionMenu({
   title = 'Share',
-  dmUserProfile,
   isPending,
   isMutating,
   shareItems,
@@ -144,15 +121,12 @@ export function SharePermissionMenu({
   const isInheritingAll = allPlayersPermissionLevel === null && inheritedAllPermissionLevel !== null
 
   return (
-    <div className="flex flex-col gap-0.5 min-w-[300px]">
+    <div className={`flex flex-col gap-0.5 ${SHARE_MENU_WIDTH_CLASS}`}>
       <div className="text-sm font-medium px-1 pb-1">{title}</div>
       <div className="h-px bg-border mb-0.5" />
 
-      {dmUserProfile && <DmRow profile={dmUserProfile} />}
-
       {explicitShareItems.length > 0 && (
-        <>
-          <div className="h-px bg-border my-0.5" />
+        <div>
           {explicitShareItems.map((item) => (
             <PlayerRow
               key={item.key}
@@ -162,10 +136,10 @@ export function SharePermissionMenu({
               onChange={(val) => handlePlayerChange(item.member._id, val)}
             />
           ))}
-        </>
+        </div>
       )}
 
-      <div className="h-px bg-border my-0.5" />
+      {explicitShareItems.length > 0 && <div className="h-px bg-border my-0.5" />}
 
       <AllPlayersRow
         selectValue={allPlayersPermissionLevel ?? 'default'}
@@ -194,26 +168,18 @@ export function SharePermissionMenu({
       {isFolder && onSetInheritShares && (
         <>
           <div className="h-px bg-border my-0.5" />
-          <Tooltip>
-            <TooltipTrigger
-              render={<div className="flex items-center justify-between p-1 gap-2" />}
-            >
-              <span className="text-sm truncate flex-1">Copy permissions to new items</span>
-              <Switch
-                size="sm"
-                checked={inheritShares ?? false}
-                disabled={isDisabled}
-                onCheckedChange={onSetInheritShares}
-              />
-            </TooltipTrigger>
-            <TooltipContent
-              side="left"
-              className="max-w-[220px]"
-              positionerClassName={OVERLAY_Z_INDEX}
-            >
-              All items and folders inside this folder will share the same permissions
-            </TooltipContent>
-          </Tooltip>
+          <ShareMenuRowTooltip
+            text="All items and folders inside this folder will share the same permissions"
+            className="flex items-center justify-between p-1 gap-2"
+          >
+            <span className="text-sm truncate flex-1">Copy permissions to new items</span>
+            <Switch
+              size="sm"
+              checked={inheritShares ?? false}
+              disabled={isDisabled}
+              onCheckedChange={onSetInheritShares}
+            />
+          </ShareMenuRowTooltip>
         </>
       )}
     </div>
@@ -221,37 +187,6 @@ export function SharePermissionMenu({
 }
 
 // --- Row components ---
-
-function DmRow({ profile }: { profile: UserProfile }) {
-  return (
-    <RowTooltip
-      text="DMs always have full access"
-      className="flex items-center gap-2.5 px-1 py-1.5"
-      positionerClassName={OVERLAY_Z_INDEX}
-    >
-      <UserProfileImage
-        imageUrl={profile.imageUrl}
-        name={profile.name}
-        email={profile.email}
-        size="sm"
-      />
-      <div className="flex flex-col flex-1 min-w-0 select-none">
-        <span className="text-sm font-medium truncate">{getUserDisplayName(profile)}</span>
-        {profile.username && (
-          <span className="text-xs text-muted-foreground truncate">@{profile.username}</span>
-        )}
-      </div>
-      <Select value="full_access" disabled>
-        <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
-          <SelectValue>Full access</SelectValue>
-        </SelectTrigger>
-        <SelectContent positionerClassName={OVERLAY_Z_INDEX} portal={false}>
-          <SelectItem value="full_access">Full access</SelectItem>
-        </SelectContent>
-      </Select>
-    </RowTooltip>
-  )
-}
 
 function PlayerRow({
   shareItem,
@@ -265,27 +200,14 @@ function PlayerRow({
   onChange: (value: PermissionLevelOrDefault) => void
 }) {
   const { member, hasExplicitShare, permissionLevel, inheritedPermissionLevel } = shareItem
-  const profile = member.userProfile
   const selectValue: PermissionSelectValue = hasExplicitShare ? permissionLevel : 'default'
 
   return (
-    <RowTooltip
+    <ShareMenuRowTooltip
       text={infoText}
       className="flex items-center gap-2.5 px-1 py-1.5 select-none"
-      positionerClassName={OVERLAY_Z_INDEX}
     >
-      <UserProfileImage
-        imageUrl={profile.imageUrl}
-        name={profile.name}
-        email={profile.email}
-        size="sm"
-      />
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-sm font-medium truncate">{getUserDisplayName(profile)}</span>
-        {profile.username && (
-          <span className="text-xs text-muted-foreground truncate">@{profile.username}</span>
-        )}
-      </div>
+      <ShareMenuPlayerIdentity member={member} />
       <Select
         value={selectValue}
         onValueChange={(val) => {
@@ -300,8 +222,9 @@ function PlayerRow({
           className="p-1"
           align="end"
           alignItemWithTrigger={false}
-          positionerClassName={OVERLAY_Z_INDEX}
-          portal={false}
+          data-share-menu-overlay="true"
+          onPointerDown={(event) => event.stopPropagation()}
+          positionerClassName={SHARE_MENU_OVERLAY_Z_INDEX}
         >
           {selectValue === 'mixed' && (
             <>
@@ -330,7 +253,7 @@ function PlayerRow({
           )}
         </SelectContent>
       </Select>
-    </RowTooltip>
+    </ShareMenuRowTooltip>
   )
 }
 
@@ -359,11 +282,6 @@ function AllPlayersRow({
   onToggleExpand: () => void
   onChange: (value: PermissionLevelOrDefault) => void
 }) {
-  const Chevron = expanded ? ChevronUp : ChevronDown
-  const showStack = !expanded && inheritingMembers.length > 0
-  const badgeCount = Math.min(inheritingMembers.length, 3) + (inheritingMembers.length > 3 ? 1 : 0)
-  const iconAreaWidth = inheritingMembers.length > 0 ? 24 + (badgeCount - 1) * 16 : 24
-
   let infoText = 'This is the default permission level for all players.'
   if (isInheriting && inheritedFromFolderName) {
     infoText += ` Access is based on ${inheritedFromFolderName}.`
@@ -378,85 +296,49 @@ function AllPlayersRow({
   ]
 
   return (
-    <RowTooltip
-      text={infoText}
-      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
-      positionerClassName={OVERLAY_Z_INDEX}
-    >
-      <button
-        type="button"
-        className="flex items-center gap-2.5 flex-1 min-w-0 hover:opacity-80 transition-opacity"
-        onClick={onToggleExpand}
-      >
-        <div className="flex items-center justify-center shrink-0" style={{ width: iconAreaWidth }}>
-          {showStack ? (
-            <AvatarStack members={inheritingMembers} />
-          ) : (
-            <div className="flex items-center justify-center size-6 rounded-lg bg-muted">
-              <Users className="size-3.5 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-        <span className="text-sm font-medium truncate flex items-center gap-1">
-          {label}
-          <Chevron className="size-3.5 text-muted-foreground shrink-0 pt-0.5" />
-        </span>
-      </button>
-      <Select
-        value={selectValue}
-        onValueChange={(val) => {
-          if (val !== null && val !== 'mixed') onChange(val)
-        }}
-        disabled={disabled}
-      >
-        <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
-          <SelectValue>{selectLabel}</SelectValue>
-        </SelectTrigger>
-        <SelectContent
-          className="p-1"
-          align="end"
-          alignItemWithTrigger={false}
-          positionerClassName={OVERLAY_Z_INDEX}
-          portal={false}
+    <ShareMenuAllPlayersRow
+      label={label}
+      tooltipText={infoText}
+      expanded={expanded}
+      members={inheritingMembers}
+      testId="share-all-players-row"
+      onToggleExpand={onToggleExpand}
+      select={
+        <Select
+          value={selectValue}
+          onValueChange={(val) => {
+            if (val !== null && val !== 'mixed') onChange(val)
+          }}
+          disabled={disabled}
         >
-          {selectValue === 'mixed' && (
-            <>
-              <SelectItem value="mixed" disabled>
-                Mixed
+          <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
+            <SelectValue>{selectLabel}</SelectValue>
+          </SelectTrigger>
+          <SelectContent
+            className="p-1"
+            align="end"
+            alignItemWithTrigger={false}
+            data-share-menu-overlay="true"
+            onPointerDown={(event) => event.stopPropagation()}
+            positionerClassName={SHARE_MENU_OVERLAY_Z_INDEX}
+          >
+            {selectValue === 'mixed' && (
+              <>
+                <SelectItem value="mixed" disabled>
+                  Mixed
+                </SelectItem>
+                <SelectSeparator />
+              </>
+            )}
+            {options.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
               </SelectItem>
-              <SelectSeparator />
-            </>
-          )}
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </RowTooltip>
-  )
-}
-
-function AvatarStack({ members }: { members: Array<CampaignMember> }) {
-  return (
-    <div className="flex items-center">
-      {members.slice(0, 3).map((member, index) => (
-        <UserProfileImage
-          key={member._id}
-          imageUrl={member.userProfile.imageUrl}
-          name={member.userProfile.name}
-          email={member.userProfile.email}
-          size="sm"
-          className={`${index > 0 ? '-ml-2 ' : ''}ring-2 ring-background`}
-        />
-      ))}
-      {members.length > 3 && (
-        <Avatar size="sm" className="-ml-2 ring-2 ring-background">
-          <AvatarFallback>+{members.length - 3}</AvatarFallback>
-        </Avatar>
-      )}
-    </div>
+            ))}
+          </SelectContent>
+        </Select>
+      }
+    />
   )
 }
 
@@ -479,14 +361,14 @@ function ExpandedPlayerList({
     return (
       <div className="ml-4">
         {inheritingItems.map((item, index) => (
-          <TreeItem key={item.key} isLast={index === inheritingItems.length - 1}>
+          <ShareMenuTreeItem key={item.key} isLast={index === inheritingItems.length - 1}>
             <PlayerRow
               shareItem={item}
               infoText={getInfoText(item)}
               disabled={disabled}
               onChange={(val) => onPlayerChange(item.member._id, val)}
             />
-          </TreeItem>
+          </ShareMenuTreeItem>
         ))}
       </div>
     )
@@ -502,25 +384,13 @@ function ExpandedPlayerList({
 
   return (
     <div className="ml-4">
-      <TreeItem isLast>
+      <ShareMenuTreeItem isLast>
         <div className="pl-1">
           <div className="text-xs text-muted-foreground py-1">
             All players have explicit permissions set.
           </div>
         </div>
-      </TreeItem>
-    </div>
-  )
-}
-
-function TreeItem({ isLast, children }: { isLast: boolean; children: React.ReactNode }) {
-  return (
-    <div className="relative flex items-center">
-      <div
-        className={`absolute left-0 w-px bg-border ${isLast ? 'top-0 h-1/2' : 'top-0 h-full'}`}
-      />
-      <div className="w-2 border-t border-border shrink-0" />
-      <div className="flex-1 min-w-0">{children}</div>
+      </ShareMenuTreeItem>
     </div>
   )
 }

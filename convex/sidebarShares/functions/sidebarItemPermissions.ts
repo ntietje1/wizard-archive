@@ -3,9 +3,14 @@ import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { Doc, Id } from '../../_generated/dataModel'
+import type { QueryCtx } from '../../_generated/server'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { AnySidebarItemFromDb } from '../../../shared/sidebar-items/model-types'
+
+type SidebarPermissionCtx = Pick<QueryCtx, 'db'> & {
+  campaign: Pick<Doc<'campaigns'>, '_id'>
+}
 
 type InheritedMemberPermission = { level: PermissionLevel; folderName: string | null }
 type InheritedPermissionsResult = {
@@ -21,7 +26,7 @@ function createInheritedPermissionsResult(): InheritedPermissionsResult {
 }
 
 async function applyFolderMemberShares(
-  ctx: CampaignQueryCtx,
+  ctx: SidebarPermissionCtx,
   {
     campaignId,
     folderId,
@@ -105,7 +110,7 @@ function fillUnresolvedMembersWithNone(
 }
 
 export async function resolveInheritedPermissions(
-  ctx: CampaignQueryCtx,
+  ctx: SidebarPermissionCtx,
   {
     parentId,
     campaignId,

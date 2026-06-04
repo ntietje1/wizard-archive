@@ -52,7 +52,7 @@ const campaignValidatorFields = {
   ...convexValidatorFields('campaigns'),
   dmUserProfile: userProfileValidator,
   myMembership: v.nullable(campaignMemberValidator),
-  playerCount: v.number(),
+  acceptedMemberCount: v.number(),
   ...campaignTableFields,
 }
 

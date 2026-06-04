@@ -24,7 +24,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
   const allSessions: Array<Session> = sessions.data ?? []
   const currentId = currentSession.data?._id
   const previousSessions = allSessions.filter((s) => s._id !== currentId)
-  const memberCount = campaign.data?.playerCount
+  const memberCount = campaign.data?.acceptedMemberCount
 
   const handleStart = () => {
     startSession.mutate({})

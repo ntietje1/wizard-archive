@@ -29,7 +29,7 @@ export function RightSidebarContainer() {
   return (
     <>
       {isNote && !sidebar.visible && (
-        <div className="absolute top-2 right-2 z-10">
+        <div className="absolute top-12 right-2 z-10" data-testid="outline-toggle-container">
           <Tooltip>
             <TooltipTrigger
               render={

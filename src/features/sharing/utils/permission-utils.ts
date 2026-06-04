@@ -53,7 +53,7 @@ function resolveInheritedPermission(
  * Client-side permission resolution mirroring server logic.
  * Walks the item's shares and parent chain to determine effective permission.
  */
-function resolvePermissionLevel(
+export function resolveSidebarItemPermissionLevel(
   item: AnySidebarItem,
   memberId: CampaignMemberId,
   allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
@@ -77,7 +77,7 @@ function memberHasAtLeastPermission(
   allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
   requiredLevel: PermissionLevel,
 ): boolean {
-  const { level } = resolvePermissionLevel(item, memberId, allItemsMap)
+  const { level } = resolveSidebarItemPermissionLevel(item, memberId, allItemsMap)
   return hasAtLeastPermissionLevel(level, requiredLevel)
 }
 

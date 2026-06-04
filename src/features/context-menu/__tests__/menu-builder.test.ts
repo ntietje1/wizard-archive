@@ -24,6 +24,14 @@ import {
   createNote,
 } from '~/test/factories/sidebar-item-factory'
 
+const toastInfo = vi.hoisted(() => vi.fn())
+
+vi.mock('sonner', () => ({
+  toast: {
+    info: toastInfo,
+  },
+}))
+
 function createActions(): ActionHandlers {
   return {
     open: vi.fn(),
@@ -61,15 +69,18 @@ function createActions(): ActionHandlers {
 function createServices({
   editorMode: editorModeOverrides,
   viewAsPlayer: viewAsPlayerOverrides,
+  blockShare: blockShareOverrides,
 }: {
   editorMode?: Partial<typeof baseEditorModeService>
   viewAsPlayer?: Partial<typeof baseViewAsPlayerService>
+  blockShare?: Partial<typeof baseBlockShareService>
 } = {}) {
   return {
     actions: createActions(),
     filesystem: { canPasteIntoTarget: () => false },
     editorMode: { ...baseEditorModeService, ...editorModeOverrides },
     viewAsPlayer: { ...baseViewAsPlayerService, ...viewAsPlayerOverrides },
+    blockShare: { ...baseBlockShareService, ...blockShareOverrides },
   }
 }
 
@@ -89,6 +100,18 @@ const baseViewAsPlayerService: ViewAsPlayerMenuService = {
       userProfile: { name: 'Mina', username: 'mina', imageUrl: 'https://example.com/mina.png' },
     } as unknown as ViewAsPlayerMenuService['playerMembers'][number],
   ],
+}
+
+interface TestBlockShareService {
+  canOpen: (context: MenuContext) => boolean
+  getBlockCount: (context: MenuContext) => number
+  open: (context: MenuContext) => void
+}
+
+const baseBlockShareService: TestBlockShareService = {
+  canOpen: vi.fn(() => false),
+  getBlockCount: vi.fn(() => 0),
+  open: vi.fn(),
 }
 
 function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
@@ -475,6 +498,132 @@ describe('buildMenu', () => {
     expect(valueMenu.flatItems.map((item) => item.id)).toContain('edit-value-inline')
     expect(readonlyValueMenu.flatItems.map((item) => item.id)).not.toContain('edit-value-inline')
     expect(generalNoteMenu.flatItems.map((item) => item.id)).not.toContain('edit-value-inline')
+  })
+
+  it('opens block sharing from the note editor context menu', async () => {
+    const openBlockShare = vi.fn()
+    const menu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: createNote(),
+        selectedItems: [],
+        blockNoteId: 'block-1' as never,
+      }),
+      services: createServices({
+        blockShare: {
+          canOpen: () => true,
+          getBlockCount: () => 2,
+          open: openBlockShare,
+        },
+      }),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const shareBlocksItem = menu.flatItems.find((item) => item.id === 'share-blocks')
+
+    expect(menu.flatItems.map((item) => item.id)).not.toContain('test-block')
+    expect(shareBlocksItem).toMatchObject({
+      label: 'Share 2 Blocks',
+      group: 'share',
+      closeOnSelect: true,
+    })
+
+    await shareBlocksItem?.onSelect()
+
+    expect(openBlockShare).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ blockNoteId: 'block-1' }),
+    )
+  })
+
+  it('shows paste on editor text content and removes the temporary test editor item', async () => {
+    const editorRoot = document.createElement('div')
+    document.body.append(editorRoot)
+    const menu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: createNote(),
+        selectedItems: [],
+        editor: { domElement: editorRoot } as never,
+        isEditorTextContext: true,
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const pasteItem = menu.flatItems.find((item) => item.id === 'editor-paste')
+
+    expect(menu.flatItems.map((item) => item.id)).not.toContain('test-editor')
+    expect(pasteItem).toMatchObject({
+      label: 'Paste',
+      shortcut: 'Ctrl+V',
+    })
+    expect(menu.flatItems.map((item) => item.id)).not.toContain('editor-cut')
+    expect(menu.flatItems.map((item) => item.id)).not.toContain('editor-copy')
+
+    await pasteItem?.onSelect()
+
+    expect(toastInfo).toHaveBeenCalledExactlyOnceWith('Coming soon')
+    editorRoot.remove()
+  })
+
+  it('shows cut and copy only when the current selection is inside the editor', () => {
+    const editorRoot = document.createElement('div')
+    const selectedText = document.createElement('span')
+    selectedText.textContent = 'selected text'
+    editorRoot.append(selectedText)
+    document.body.append(editorRoot)
+
+    const range = document.createRange()
+    range.selectNodeContents(selectedText)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+
+    const selectedMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: createNote(),
+        selectedItems: [],
+        editor: { domElement: editorRoot } as never,
+        isEditorTextContext: true,
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const outsideRoot = document.createElement('div')
+    const outsideMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: createNote(),
+        selectedItems: [],
+        editor: { domElement: outsideRoot } as never,
+        isEditorTextContext: true,
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(selectedMenu.flatItems.find((item) => item.id === 'editor-cut')).toMatchObject({
+      label: 'Cut',
+      shortcut: 'Ctrl+X',
+    })
+    expect(selectedMenu.flatItems.find((item) => item.id === 'editor-copy')).toMatchObject({
+      label: 'Copy',
+      shortcut: 'Ctrl+C',
+    })
+    expect(outsideMenu.flatItems.map((item) => item.id)).not.toContain('editor-cut')
+    expect(outsideMenu.flatItems.map((item) => item.id)).not.toContain('editor-copy')
+
+    selection?.removeAllRanges()
+    editorRoot.remove()
   })
 
   it('checks reading mode in viewer mode and toggles without closing the menu', async () => {

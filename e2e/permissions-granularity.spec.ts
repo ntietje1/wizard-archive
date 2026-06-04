@@ -10,10 +10,7 @@ let folderName: string
 let noteName: string
 
 function allPlayersRow(page: Page) {
-  return page
-    .locator('div')
-    .filter({ hasText: /^All Players/ })
-    .filter({ has: page.locator('[data-slot="select-trigger"]') })
+  return page.getByTestId('share-all-players-row')
 }
 
 test.describe.serial('permissions granularity', () => {
@@ -56,7 +53,8 @@ test.describe.serial('permissions granularity', () => {
     await openItem(page, noteName)
     await openShareMenu(page)
 
-    await expect(page.getByText(/full access/i).first()).toBeVisible()
+    await expect(page.getByText(`Share "${noteName}"`)).toBeVisible()
+    await expect(allPlayersRow(page).locator('[data-slot="select-trigger"]')).toBeVisible()
   })
 
   test('set all-players permission to View', async ({ page }) => {
@@ -149,6 +147,7 @@ test.describe.serial('permissions granularity', () => {
     await openItem(page, folderName)
     await openShareMenu(page)
 
-    await expect(page.getByText(/full access/i).first()).toBeVisible()
+    await expect(page.getByText(`Share "${folderName}"`)).toBeVisible()
+    await expect(allPlayersRow(page).locator('[data-slot="select-trigger"]')).toBeVisible()
   })
 })

@@ -4,7 +4,10 @@ import {
   hasPermissionForOperation,
   hasPermissionForRequirement,
 } from '../../../shared/permissions/requirements'
-import { getBlockVisibilityPermissionLevel } from '../../../shared/permissions/block-visibility'
+import {
+  getBlockAllPlayersPermissionLevel,
+  getEffectiveBlockVisibilityPermissionLevel,
+} from '../../../shared/permissions/block-visibility'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
@@ -71,31 +74,44 @@ describe('hasPermissionForOperation', () => {
   })
 })
 
-describe('getBlockVisibilityPermissionLevel', () => {
-  it('uses named block visibility outcomes', () => {
+describe('getBlockAllPlayersPermissionLevel', () => {
+  it('normalizes block share status to hidden or visible all-player state', () => {
+    expect(getBlockAllPlayersPermissionLevel(SHARE_STATUS.ALL_SHARED)).toBe(VIEW)
+    expect(getBlockAllPlayersPermissionLevel(SHARE_STATUS.INDIVIDUALLY_SHARED)).toBe(NONE)
+    expect(getBlockAllPlayersPermissionLevel(SHARE_STATUS.NOT_SHARED)).toBe(NONE)
+    expect(getBlockAllPlayersPermissionLevel(null)).toBe(NONE)
+  })
+})
+
+describe('getEffectiveBlockVisibilityPermissionLevel', () => {
+  it('combines note access, all-player block visibility, and member overrides', () => {
     expect(
-      getBlockVisibilityPermissionLevel({
+      getEffectiveBlockVisibilityPermissionLevel({
         isDm: true,
-        shareStatus: SHARE_STATUS.NOT_SHARED,
+        notePermissionLevel: NONE,
+        allPlayersPermissionLevel: NONE,
       }),
     ).toBe(EDIT)
     expect(
-      getBlockVisibilityPermissionLevel({
+      getEffectiveBlockVisibilityPermissionLevel({
         isDm: false,
-        shareStatus: SHARE_STATUS.ALL_SHARED,
+        notePermissionLevel: NONE,
+        allPlayersPermissionLevel: VIEW,
+      }),
+    ).toBe(NONE)
+    expect(
+      getEffectiveBlockVisibilityPermissionLevel({
+        isDm: false,
+        notePermissionLevel: EDIT,
+        allPlayersPermissionLevel: NONE,
       }),
     ).toBe(VIEW)
     expect(
-      getBlockVisibilityPermissionLevel({
+      getEffectiveBlockVisibilityPermissionLevel({
         isDm: false,
-        shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
-        isIndividuallySharedWithMember: true,
-      }),
-    ).toBe(VIEW)
-    expect(
-      getBlockVisibilityPermissionLevel({
-        isDm: false,
-        shareStatus: null,
+        notePermissionLevel: VIEW,
+        allPlayersPermissionLevel: VIEW,
+        memberPermissionLevel: NONE,
       }),
     ).toBe(NONE)
   })

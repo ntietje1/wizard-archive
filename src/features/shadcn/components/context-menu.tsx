@@ -112,10 +112,10 @@ const ContextMenu = React.forwardRef<ContextMenuRef, ContextMenuProps>(
       NonNullable<MenuPrimitive.Root.Props['onOpenChange']>
     >(
       (open, eventDetails) => {
-        if (!open) {
+        onOpenChange?.(open, eventDetails)
+        if (!open && !eventDetails.isCanceled) {
           setAnchor(null)
         }
-        onOpenChange?.(open, eventDetails)
       },
       [onOpenChange],
     )

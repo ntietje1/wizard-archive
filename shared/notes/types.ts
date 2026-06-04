@@ -17,12 +17,19 @@ export type BlockMeta = {
   myPermissionLevel: PermissionLevel
   shareStatus: ShareStatus
   sharedWith: Array<CampaignMemberId>
+  hiddenFrom?: Array<CampaignMemberId>
+}
+
+export type BlockShareAccessWarning = {
+  campaignMemberId: CampaignMemberId
+  blockCount: number
 }
 
 export type NoteWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPES.notes> & {
   _id: SidebarItemId
   content: Array<CustomBlock>
   blockMeta: Record<string, BlockMeta>
+  blockShareAccessWarnings: Array<BlockShareAccessWarning>
 }
 
 export const NOTE_SNAPSHOT_TYPE = 'yjs_state' as const

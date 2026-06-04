@@ -1,7 +1,11 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
-import { getBlockVisibilityPermissionLevel } from '../../../shared/permissions/block-visibility'
+import {
+  getBlockAllPlayersPermissionLevel,
+  getEffectiveBlockVisibilityPermissionLevel,
+} from '../../../shared/permissions/block-visibility'
+import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Block } from '../../blocks/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
@@ -9,41 +13,46 @@ import type { Id } from '../../_generated/dataModel'
 
 async function getBlockPermissionLevel(
   ctx: CampaignQueryCtx,
-  { block }: { block: Block },
+  {
+    block,
+    notePermissionLevel,
+  }: { block: Block; notePermissionLevel: PermissionLevel | null | undefined },
 ): Promise<PermissionLevel> {
   const { membership } = ctx
   const shareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
   if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
-    return getBlockVisibilityPermissionLevel({
+    return getEffectiveBlockVisibilityPermissionLevel({
       isDm: true,
-      shareStatus,
+      notePermissionLevel,
+      allPlayersPermissionLevel: getBlockAllPlayersPermissionLevel(shareStatus),
     })
   }
 
   const checkId = membership._id
 
-  const isIndividuallySharedWithMember =
-    shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
-      ? await isBlockSharedWithMember(ctx, {
-          blockId: block._id,
-          campaignMemberId: checkId,
-          campaignId: block.campaignId,
-        })
-      : false
+  const memberPermissionLevel = await getBlockMemberPermissionLevel(ctx, {
+    blockId: block._id,
+    campaignMemberId: checkId,
+    campaignId: block.campaignId,
+  })
 
-  return getBlockVisibilityPermissionLevel({
+  return getEffectiveBlockVisibilityPermissionLevel({
     isDm: false,
-    shareStatus,
-    isIndividuallySharedWithMember,
+    notePermissionLevel,
+    allPlayersPermissionLevel: getBlockAllPlayersPermissionLevel(shareStatus),
+    memberPermissionLevel,
   })
 }
 
 export async function enforceBlockSharePermissionsOrNull(
   ctx: CampaignQueryCtx,
-  { block }: { block: Block },
+  {
+    block,
+    notePermissionLevel,
+  }: { block: Block; notePermissionLevel: PermissionLevel | null | undefined },
 ): Promise<{ block: Block; permissionLevel: PermissionLevel } | null> {
-  const permissionLevel = await getBlockPermissionLevel(ctx, { block })
+  const permissionLevel = await getBlockPermissionLevel(ctx, { block, notePermissionLevel })
   if (permissionLevel === PERMISSION_LEVEL.NONE) {
     return null
   }
@@ -51,7 +60,7 @@ export async function enforceBlockSharePermissionsOrNull(
   return { block, permissionLevel }
 }
 
-async function isBlockSharedWithMember(
+async function getBlockMemberPermissionLevel(
   ctx: CampaignQueryCtx,
   {
     blockId,
@@ -62,7 +71,7 @@ async function isBlockSharedWithMember(
     campaignMemberId: Id<'campaignMembers'>
     campaignId: Id<'campaigns'>
   },
-): Promise<boolean> {
+): Promise<Extract<PermissionLevel, 'none' | 'view'> | null> {
   const share = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
@@ -73,5 +82,7 @@ async function isBlockSharedWithMember(
     )
     .first()
 
-  return share !== null
+  if (!share) return null
+  const permissionLevel = normalizeExplicitSharePermissionLevel(share.permissionLevel)
+  return permissionLevel === PERMISSION_LEVEL.NONE ? PERMISSION_LEVEL.NONE : PERMISSION_LEVEL.VIEW
 }

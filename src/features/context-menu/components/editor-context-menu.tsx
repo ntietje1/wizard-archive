@@ -10,7 +10,7 @@ import { MenuDialogs } from '../menu-dialogs'
 import { ContextMenuHost } from './context-menu-host'
 import type { ContextMenuHostRef } from './context-menu-host'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
-import type { ViewContext } from '../types'
+import type { EditorMenuContext, ViewContext } from '../types'
 import { use, useRef } from 'react'
 import type { Ref } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -24,6 +24,11 @@ import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadM
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
+import { useOptionalBlockShareMenu } from '~/features/sharing/contexts/useBlockShareMenu'
+import {
+  getBlockShareTargetBlocks,
+  getBlockShareTitle,
+} from '~/features/editor/utils/block-share-targets'
 
 interface EditorContextMenuProps {
   ref?: Ref<ContextMenuHostRef>
@@ -114,6 +119,7 @@ function useEditorContextMenuModel({
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
   const filesystemReadModel = useFileSystemReadModel()
   const editorMode = useEditorMode()
+  const blockShareMenu = useOptionalBlockShareMenu()
   const campaignMembersQuery = useCampaignMembers()
   const playerMembers =
     campaignMembersQuery.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
@@ -148,6 +154,22 @@ function useEditorContextMenuModel({
         viewAsPlayerId: editorMode.viewAsPlayerId,
         playerMembers,
         setViewAsPlayerId: editorMode.setViewAsPlayerId,
+      },
+      blockShare: {
+        canOpen: (context) =>
+          blockShareMenu !== null && getContextMenuBlockShareTargets(context).length > 0,
+        getBlockCount: (context) => getContextMenuBlockShareTargets(context).length,
+        open: (context) => {
+          const blocks = getContextMenuBlockShareTargets(context)
+          if (!blockShareMenu || !context.note || !context.position || blocks.length === 0) return
+
+          blockShareMenu.open({
+            blocks,
+            note: context.note,
+            position: context.position,
+            title: getBlockShareTitle(blocks.length),
+          })
+        },
       },
     },
     contributors: editorContextMenuContributors,
@@ -196,11 +218,19 @@ function buildEditorMenuContext({
     activeMap: mapView?.activeMap ?? undefined,
     activePin: mapView?.activePin ?? undefined,
     hasActiveSession: !!currentSession.data,
+    note: blockNoteContext?.note,
     editor: blockNoteContext?.editor ?? undefined,
+    position: blockNoteContext?.position,
     blockNoteId: blockNoteContext?.blockNoteId,
+    isEditorTextContext: blockNoteContext?.isEditorTextContext,
     valueInlineId: blockNoteContext?.valueInlineId,
     valueInlineInstanceId: blockNoteContext?.valueInlineInstanceId,
     valueInlineEditable: blockNoteContext?.valueInlineEditable,
     openValueInline: blockNoteContext?.openValueInline,
   }
+}
+
+function getContextMenuBlockShareTargets(context: EditorMenuContext) {
+  if (!context.editor || !context.note) return []
+  return getBlockShareTargetBlocks(context.editor, context.blockNoteId)
 }
