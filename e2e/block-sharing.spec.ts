@@ -15,6 +15,7 @@ import {
   openEditorContextMenuFromBlockShareButton,
   openBlockShareMenuWithKeyboard,
   requestToJoinCampaignAsPlayer,
+  rightMouseDownOnBlockText,
   setSelectValue,
   shiftClickBlockShareButton,
 } from './helpers/permission-helpers'
@@ -172,6 +173,21 @@ test.describe('block sharing', () => {
     const menu = await openBlockShareMenuFromEditorContextMenu(page, visibleBlockText)
 
     await expect(blockShareAllPlayersRow(menu).getByRole('combobox')).toBeVisible()
+  })
+
+  test('editor text context menu opens after right mouse up', async ({ page }) => {
+    await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await openCampaignNote(page)
+
+    await rightMouseDownOnBlockText(page, visibleBlockText)
+
+    await expect(page.getByRole('menuitem', { name: /^share 1 block$/i })).not.toBeVisible()
+
+    await page.mouse.up({ button: 'right' })
+
+    await expect(page.getByRole('menuitem', { name: /^share 1 block$/i })).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('right-clicking the side-menu share button opens the normal editor context menu', async ({

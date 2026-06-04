@@ -45,6 +45,11 @@ vi.mock('../../../note-content', () => ({
     noteContentSpy(props)
     return (
       <div className={props.className} data-testid="note-content">
+        <div className="bn-editor">
+          <div data-id="block-1" data-node-type="blockContainer" data-testid="blocknote-block">
+            Block text
+          </div>
+        </div>
         {props.children}
       </div>
     )

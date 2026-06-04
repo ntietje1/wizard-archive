@@ -132,9 +132,7 @@ export async function openBlockShareMenu(page: Page, blockText: string) {
     await page.keyboard.press('Shift+F10')
   }
 
-  await expect(menu).toBeVisible({ timeout: 5000 })
-  await expect(menu.getByText(/share \d+ blocks?/i)).toBeVisible({ timeout: 5000 })
-  await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
+  await expectBlockShareMenuOpen(menu, /share \d+ blocks?/i)
   return menu
 }
 
@@ -145,9 +143,7 @@ export async function openBlockShareMenuWithKeyboard(page: Page, blockText: stri
   await shareButton.focus()
   await page.keyboard.press('Shift+F10')
 
-  await expect(menu).toBeVisible({ timeout: 5000 })
-  await expect(menu.getByText(/share \d+ blocks?/i)).toBeVisible({ timeout: 5000 })
-  await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
+  await expectBlockShareMenuOpen(menu, /share \d+ blocks?/i)
   return menu
 }
 
@@ -173,7 +169,7 @@ export async function openEditorContextMenuFromBlockShareButton(page: Page, bloc
 }
 
 async function getVisibleBlockShareButton(page: Page, blockText: string) {
-  const block = page.getByText(blockText, { exact: true })
+  const block = getBlockTextLocator(page, blockText)
   const shareButton = page.getByTestId('block-share-button')
 
   await block.hover()
@@ -183,15 +179,20 @@ async function getVisibleBlockShareButton(page: Page, blockText: string) {
 
 export async function openBlockShareMenuFromEditorContextMenu(page: Page, blockText: string) {
   const menu = page.getByTestId('block-share-menu')
-  const block = page.getByText(blockText, { exact: true })
+  const block = getBlockTextLocator(page, blockText)
 
   await block.click({ button: 'right' })
   await page.getByRole('menuitem', { name: /^share 1 block$/i }).click()
 
-  await expect(menu).toBeVisible({ timeout: 5000 })
-  await expect(menu.getByText(/^share 1 block$/i)).toBeVisible({ timeout: 5000 })
-  await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
+  await expectBlockShareMenuOpen(menu, /^share 1 block$/i)
   return menu
+}
+
+export async function rightMouseDownOnBlockText(page: Page, blockText: string) {
+  const box = await getBlockTextBox(page, blockText)
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down({ button: 'right' })
 }
 
 export function blockShareAllPlayersRow(menu: Locator) {
@@ -209,4 +210,24 @@ export async function setSelectValue(selectTrigger: Locator, optionName: RegExp)
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function getBlockTextLocator(page: Page, blockText: string) {
+  return page.getByText(blockText, { exact: true })
+}
+
+async function getBlockTextBox(page: Page, blockText: string) {
+  const block = getBlockTextLocator(page, blockText)
+  await expect(block).toBeVisible({ timeout: 5000 })
+  const box = await block.boundingBox()
+  if (!box) {
+    throw new Error(`Unable to locate block text "${blockText}"`)
+  }
+  return box
+}
+
+async function expectBlockShareMenuOpen(menu: Locator, title: RegExp) {
+  await expect(menu).toBeVisible({ timeout: 5000 })
+  await expect(menu.getByText(title)).toBeVisible({ timeout: 5000 })
+  await expect(blockShareAllPlayersRow(menu)).toBeVisible({ timeout: 5000 })
 }

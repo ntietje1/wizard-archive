@@ -56,7 +56,6 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { onEditorChange, wrapperRef } = useNoteEditorState(note._id)
   const editor = useNoteEditorStore((s) => s.editor)
   const viewportRef = useRef<HTMLDivElement>(null)
-  const contextMenuHandledRef = useRef(false)
   const { hasHeadingParam } = useScrollToHeading(note.content)
   useScrollPersistence(note._id, viewportRef, hasHeadingParam)
 
@@ -90,27 +89,8 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
     })
   }
 
-  const handleWrapperMouseDownCapture = (e: React.MouseEvent) => {
-    if (e.button !== 2) return
-    if (!e.isTrusted) return
-
-    const target = getContextMenuTarget(e.target)
-    if (!target || target.closest('.bn-editor') === null) return
-    contextMenuHandledRef.current = true
-    window.setTimeout(() => {
-      contextMenuHandledRef.current = false
-    }, 0)
-    openNoteContextMenu(e, target)
-  }
-
   const handleWrapperContextMenu = (e: React.MouseEvent) => {
     if (!e.isTrusted) return
-    if (contextMenuHandledRef.current) {
-      e.preventDefault()
-      e.stopPropagation()
-      contextMenuHandledRef.current = false
-      return
-    }
     const target = getContextMenuTarget(e.target)
     if (!target) return
     openNoteContextMenu(e, target)
@@ -124,7 +104,6 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
             ref={wrapperRef}
             className="relative flex flex-col flex-1 min-h-0"
             data-testid="note-editor-wrapper"
-            onMouseDownCapture={handleWrapperMouseDownCapture}
             onContextMenu={handleWrapperContextMenu}
           >
             <BlockShareAccessWarningIndicator
