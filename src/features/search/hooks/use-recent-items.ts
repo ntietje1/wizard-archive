@@ -1,6 +1,7 @@
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { logger } from '~/shared/utils/logger'
+import { readPersistedJson, writePersistedJson } from '~/shared/storage/persisted-storage'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { parseSidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
@@ -36,36 +37,23 @@ function parseRecentEntry(entry: unknown): RecentEntry | null {
   return { slug, timestamp }
 }
 
-function parseEntries(raw: string | null, key: string): Array<RecentEntry> {
-  if (!raw) return []
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.flatMap((entry) => {
-      const parsedEntry = parseRecentEntry(entry)
-      return parsedEntry ? [parsedEntry] : []
-    })
-  } catch (error) {
-    logger.debug('Failed to parse recent items for key', key, error)
-    return []
-  }
+function parseEntries(value: unknown): Array<RecentEntry> | null {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((entry) => {
+    const parsedEntry = parseRecentEntry(entry)
+    return parsedEntry ? [parsedEntry] : []
+  })
 }
 
 export function addRecentItem(campaignId: string, slug: SidebarItemSlug) {
   if (!campaignId) return
   const key = storageKey(campaignId)
   try {
-    const raw = window.localStorage.getItem(key)
-    const entries = parseEntries(raw, key)
+    const entries = readPersistedJson(key, [], parseEntries)
     const filtered = entries.filter((e) => e.slug !== slug)
     filtered.unshift({ slug, timestamp: Date.now() })
     const trimmed = filtered.slice(0, MAX_RECENT_ITEMS)
-    window.localStorage.setItem(key, JSON.stringify(trimmed))
-    window.dispatchEvent(
-      new CustomEvent('localStorageChange', {
-        detail: { key, newValue: JSON.stringify(trimmed) },
-      }),
-    )
+    writePersistedJson(key, trimmed)
   } catch (error) {
     logger.debug('Failed to write recent items for key', key, error)
   }

@@ -8,6 +8,7 @@ import { ViewAsBanner } from '~/features/editor/components/view-as-banner'
 import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
 import { SearchDialog } from '~/features/search/components/search-dialog'
+import { CampaignPanelPreferencesController } from '~/features/campaigns/components/campaign-panel-preferences-controller'
 
 export function CampaignLayout() {
   const { initialPanelPreferences } = useRouteContext({
@@ -19,17 +20,19 @@ export function CampaignLayout() {
       <SidebarItemsProvider>
         <FileSystemProvider>
           <DndProvider>
-            <ClientOnly fallback={null}>
-              <SearchDialog />
-            </ClientOnly>
-            <div className="flex flex-col flex-1 min-h-0">
-              <SidebarLayout initialPanel={initialPanelPreferences?.['left-sidebar'] ?? null}>
-                <ErrorBoundary FallbackComponent={ErrorFallback}>
-                  <Outlet />
-                </ErrorBoundary>
-              </SidebarLayout>
-              <ViewAsBanner />
-            </div>
+            <CampaignPanelPreferencesController initialPanelPreferences={initialPanelPreferences}>
+              <ClientOnly fallback={null}>
+                <SearchDialog />
+              </ClientOnly>
+              <div className="flex flex-col flex-1 min-h-0">
+                <SidebarLayout>
+                  <ErrorBoundary FallbackComponent={ErrorFallback}>
+                    <Outlet />
+                  </ErrorBoundary>
+                </SidebarLayout>
+                <ViewAsBanner />
+              </div>
+            </CampaignPanelPreferencesController>
           </DndProvider>
         </FileSystemProvider>
       </SidebarItemsProvider>

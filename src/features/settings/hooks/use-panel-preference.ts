@@ -1,9 +1,7 @@
-import { useEffect, useRef } from 'react'
 import { api } from 'convex/_generated/api'
-import type { PanelPreference } from 'shared/user-preferences/types'
+import { useInitialPanelPreference } from '~/features/settings/hooks/use-initial-panel-preference'
 import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { handleError } from '~/shared/utils/logger'
 
 type PanelPreferenceState = {
@@ -19,10 +17,7 @@ type PanelPreferenceState = {
 export function usePanelPreference(
   panelId: string,
   defaults: { size: number; visible: boolean },
-  initial?: { size: number | null; visible: boolean | null },
 ): PanelPreferenceState {
-  const prefsQuery = useAuthQuery(api.userPreferences.queries.getUserPreferences, {})
-
   const setPanelPref = useAppMutation(api.userPreferences.mutations.setPanelPreference, {
     onError: (error) => {
       handleError(error, 'Failed to save panel preference')
@@ -32,52 +27,35 @@ export function usePanelPreference(
   const store = usePanelPreferenceStore
   const initPanel = store((s) => s.initPanel)
   const panel = store((s) => s.panels[panelId])
+  const isLoaded = store((s) => s.isLoaded)
+  const initialPanel = useInitialPanelPreference(panelId)
 
-  const hasInitialized = useRef<string | null>(null)
-
-  if (!panel) {
+  const ensurePanel = () => {
     initPanel(panelId, {
-      size: initial?.size ?? defaults.size,
-      visible: initial?.visible ?? defaults.visible,
+      size: initialPanel?.size ?? defaults.size,
+      visible: initialPanel?.visible ?? defaults.visible,
       activeContentId: null,
     })
   }
 
-  const serverPanel: PanelPreference | undefined = prefsQuery.data?.panelPreferences?.[panelId]
-
-  useEffect(() => {
-    if (prefsQuery.isSuccess && hasInitialized.current !== panelId) {
-      hasInitialized.current = panelId
-      const serverSize = serverPanel?.size ?? defaults.size
-      const serverVisible = serverPanel?.visible ?? defaults.visible
-      store.getState().setSize(panelId, serverSize)
-      store.getState().setVisible(panelId, serverVisible)
-    }
-  }, [
-    prefsQuery.isSuccess,
-    serverPanel?.size,
-    serverPanel?.visible,
-    defaults.size,
-    defaults.visible,
-    panelId,
-    store,
-  ])
-
-  const size = panel?.size ?? initial?.size ?? defaults.size
-  const visible = panel?.visible ?? initial?.visible ?? defaults.visible
+  const size = panel?.size ?? initialPanel?.size ?? defaults.size
+  const visible = panel?.visible ?? initialPanel?.visible ?? defaults.visible
   const activeContentId = panel?.activeContentId ?? null
 
   const setSize = (newSize: number) => {
+    ensurePanel()
     store.getState().setSize(panelId, newSize)
     setPanelPref.mutate({ panelId, size: newSize })
   }
 
   const setVisible = (newVisible: boolean) => {
+    ensurePanel()
     store.getState().setVisible(panelId, newVisible)
     setPanelPref.mutate({ panelId, visible: newVisible })
   }
 
   const setActiveContent = (contentId: string | null) => {
+    ensurePanel()
     store.getState().setActiveContent(panelId, contentId)
   }
 
@@ -88,6 +66,6 @@ export function usePanelPreference(
     setSize,
     setVisible,
     setActiveContent,
-    isLoaded: prefsQuery.isSuccess,
+    isLoaded,
   }
 }

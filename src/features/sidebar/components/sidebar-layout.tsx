@@ -8,7 +8,6 @@ import {
   NAV_COLUMN_WIDTH,
 } from './sidebar-toolbar/constants'
 import { ResizableSidebar } from './resizable-sidebar'
-import type { PanelPreference } from 'shared/user-preferences/types'
 import { CampaignPanel } from '~/features/sidebar/components/campaign-panel/campaign-panel'
 import { ResizablePanel, ResizablePanelGroup } from '~/features/shadcn/components/resizable'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
@@ -44,18 +43,8 @@ function SidebarContent() {
   )
 }
 
-export function SidebarLayout({
-  children,
-  initialPanel,
-}: {
-  children: React.ReactNode
-  initialPanel: PanelPreference | null
-}) {
-  const panelState = usePanelPreference(
-    LEFT_SIDEBAR_PANEL_ID,
-    LEFT_SIDEBAR_DEFAULTS,
-    initialPanel ?? undefined,
-  )
+export function SidebarLayout({ children }: { children: React.ReactNode }) {
+  const panelState = usePanelPreference(LEFT_SIDEBAR_PANEL_ID, LEFT_SIDEBAR_DEFAULTS)
 
   return (
     <div className="relative flex flex-1 min-h-0 min-w-0">

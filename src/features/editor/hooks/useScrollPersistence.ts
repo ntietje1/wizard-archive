@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import { useEffect, useRef } from 'react'
+import { readPersistedJson, writePersistedJson } from '~/shared/storage/persisted-storage'
 
 const SCROLL_POSITIONS_KEY = 'note-scroll-positions'
 const MAX_SCROLL_ENTRIES = 200
@@ -10,11 +11,7 @@ interface ScrollEntry {
 }
 
 function getScrollPositions(): Record<string, ScrollEntry> {
-  try {
-    return JSON.parse(localStorage.getItem(SCROLL_POSITIONS_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
+  return readPersistedJson(SCROLL_POSITIONS_KEY, {})
 }
 
 function saveScrollPosition(itemId: string, scrollTop: number) {
@@ -32,7 +29,7 @@ function saveScrollPosition(itemId: string, scrollTop: number) {
       }
     }
 
-    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
+    writePersistedJson(SCROLL_POSITIONS_KEY, positions)
   } catch {
     // ignore
   }
