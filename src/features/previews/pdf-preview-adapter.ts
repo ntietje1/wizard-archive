@@ -14,6 +14,7 @@ type PdfPreviewGenerationResult =
 type ClaimAndUploadPreview = (
   itemId: Id<'sidebarItems'>,
   generate: () => Promise<Blob>,
+  options?: { signal?: AbortSignal },
 ) => Promise<
   | { status: 'success' }
   | { status: 'not-claimed' }
@@ -30,11 +31,13 @@ export async function runPdfPreviewGeneration({
   fileId,
   claimAndUpload,
   renderPdfPreview = generatePdfPreview,
+  options,
 }: {
   file: File
   fileId: Id<'sidebarItems'>
   claimAndUpload: ClaimAndUploadPreview
-  renderPdfPreview?: (source: ArrayBuffer) => Promise<Blob>
+  renderPdfPreview?: (source: ArrayBuffer, options?: { signal?: AbortSignal }) => Promise<Blob>
+  options?: { signal?: AbortSignal }
 }): Promise<PdfPreviewGenerationResult> {
   if (!isPdfFile(file)) return { status: 'unsupported' }
   if (file.size > MAX_PDF_PREVIEW_SIZE) {
@@ -43,7 +46,9 @@ export async function runPdfPreviewGeneration({
 
   try {
     const buffer = await file.arrayBuffer()
-    const result = await claimAndUpload(fileId, () => renderPdfPreview(buffer))
+    const result = await claimAndUpload(fileId, () => renderPdfPreview(buffer, options), {
+      signal: options?.signal,
+    })
     if (result.status === 'success') return { status: 'published' }
     if (result.status === 'not-claimed') return { status: 'not-claimed' }
     if (result.status === 'stale') return { status: 'stale' }

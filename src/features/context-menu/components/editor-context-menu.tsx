@@ -284,10 +284,17 @@ function getMapMenuContext({
   activeMap?: GameMapWithContent
   activePin?: MapPinWithItem
 }) {
-  return {
-    activeMap: activeMap ?? mapView?.activeMap ?? undefined,
-    activePin: activePin ?? mapView?.activePin ?? undefined,
+  const context: Partial<Pick<EditorMenuContext, 'activeMap' | 'activePin'>> = {}
+  const resolvedActiveMap = activeMap ?? mapView?.activeMap
+  const resolvedActivePin = activePin ?? mapView?.activePin
+
+  if (resolvedActiveMap != null) {
+    context.activeMap = resolvedActiveMap
   }
+  if (resolvedActivePin != null) {
+    context.activePin = resolvedActivePin
+  }
+  return context
 }
 
 function sessionIsActive(currentSession: ReturnType<typeof useSession>['currentSession']) {

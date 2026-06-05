@@ -54,7 +54,9 @@ describe('runPdfPreviewGeneration', () => {
     })
 
     expect(result).toEqual({ status: 'published' })
-    expect(claimAndUpload).toHaveBeenCalledWith(fileId, expect.any(Function))
+    expect(claimAndUpload).toHaveBeenCalledWith(fileId, expect.any(Function), {
+      signal: undefined,
+    })
     expect(renderPdfPreview).toHaveBeenCalledOnce()
   })
 

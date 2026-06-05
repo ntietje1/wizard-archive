@@ -54,11 +54,7 @@ async function applyFileSystemLifecycleIntent({
       adapters.setSelectedItemIds(intent.itemIds, intent.focusedItemId)
       return
     case 'navigateToItem':
-      if (intent.replace === undefined) {
-        await adapters.navigateToItem(intent.slug)
-      } else {
-        await adapters.navigateToItem(intent.slug, intent.replace)
-      }
+      await adapters.navigateToItem(intent.slug, intent.replace)
       return
     case 'clearEditor':
       await adapters.clearEditorContent()
@@ -78,6 +74,7 @@ async function applyFileSystemLifecycleIntent({
       } else {
         await adapters.clearEditorContent()
       }
+      return
     }
   }
 }
