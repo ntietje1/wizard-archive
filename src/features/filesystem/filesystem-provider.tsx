@@ -59,6 +59,7 @@ import {
   fileSystemDropCommandFailureMessage,
   resolveGlobalFileSystemDropCommand,
 } from './filesystem-drop-planner'
+import { applyFileSystemLifecycleIntents } from './filesystem-lifecycle-intents'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { FolderDeleteConfirmDialog } from '~/features/sidebar/components/folder-delete-confirm-dialog'
 import { assertNever } from '~/shared/utils/utils'
@@ -179,6 +180,22 @@ function useFileSystemValue(): FileSystemProviderState {
       navigateToItem,
     })
   }
+
+  const applyLifecycleIntents = (
+    intents: Parameters<typeof applyFileSystemLifecycleIntents>[0]['intents'],
+    previousSlug: Parameters<typeof applyFileSystemLifecycleIntents>[0]['previousSlug'],
+  ) =>
+    applyFileSystemLifecycleIntents({
+      intents,
+      previousSlug,
+      adapters: {
+        setFolderState,
+        setSelectedItemIds,
+        getSelectionState: () => useSidebarUIStore.getState(),
+        navigateToItem,
+        clearEditorContent,
+      },
+    })
 
   const withPendingOperation = async <T,>(operation: () => Promise<T>): Promise<T> => {
     pendingOperationCountRef.current += 1
@@ -301,7 +318,6 @@ function useFileSystemValue(): FileSystemProviderState {
       return null
     }
     const clientOperationId = createClientOperationId()
-    const optimisticItem = plan.preview.optimisticItem
     const previousSlug = getSelectedSlug()
 
     return await withPendingOperation(() =>
@@ -309,34 +325,10 @@ function useFileSystemValue(): FileSystemProviderState {
         runOptimisticMutation({
           apply: plan.preview.receiptPatches,
           rollback: plan.preview.inversePatches,
-          onOptimisticApplied: optimisticItem
-            ? async () => {
-                if (optimisticItem.parentId) {
-                  setFolderState(campaignId, optimisticItem.parentId, true)
-                }
-                setSelectedItemIds([optimisticItem._id], optimisticItem._id)
-                useSidebarUIStore.getState().setSelected(optimisticItem.slug)
-                await navigateToItem(optimisticItem.slug)
-              }
-            : undefined,
-          onMutationFailure: optimisticItem
-            ? async () => {
-                const state = useSidebarUIStore.getState()
-                if (
-                  state.selectedSlug !== optimisticItem.slug &&
-                  !state.selectedItemIds.includes(optimisticItem._id)
-                ) {
-                  return
-                }
-                state.clearItemSelection()
-                if (previousSlug) {
-                  state.setSelected(previousSlug)
-                  await navigateToItem(previousSlug, true)
-                } else {
-                  await clearEditorContent()
-                }
-              }
-            : undefined,
+          onOptimisticApplied: () =>
+            applyLifecycleIntents(plan.preview.optimisticIntents, previousSlug),
+          onMutationFailure: () =>
+            applyLifecycleIntents(plan.preview.rollbackIntents, previousSlug),
           mutate: async () =>
             (await executeMutation.mutateAsync({
               command,

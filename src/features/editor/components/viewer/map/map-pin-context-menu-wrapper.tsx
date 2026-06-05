@@ -19,18 +19,24 @@ export function MapPinContextMenuWrapper({
   onClose: () => void
 }) {
   const contextMenuRef = useRef<ContextMenuHostRef>(null)
-  const { setActivePinId } = useMapView()
+  const { activeMap, setActivePinId } = useMapView()
   const dialogOpenRef = useRef(false)
   const actorPermissions = useCampaignActorPermissions()
 
   const pin = pins.find((p) => p._id === pinId)
 
   useEffect(() => {
-    if (pin) {
-      setActivePinId(pinId)
-      contextMenuRef.current?.open(position)
+    if (!pin) {
+      return
     }
+
+    setActivePinId(pinId)
+    const frameId = window.requestAnimationFrame(() => {
+      contextMenuRef.current?.open(position)
+    })
+
     return () => {
+      window.cancelAnimationFrame(frameId)
       setActivePinId(null)
     }
   }, [pin, pinId, position, setActivePinId])
@@ -62,6 +68,8 @@ export function MapPinContextMenuWrapper({
       ref={contextMenuRef}
       viewContext="map-view"
       item={actionItem}
+      activeMap={activeMap ?? undefined}
+      activePin={pin}
       className="absolute inset-0 pointer-events-none"
       onClose={handleMenuClose}
       onDialogOpen={handleDialogOpen}

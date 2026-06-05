@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { signInByApi } from './auth-helpers'
+import type { PermissionLevel } from 'shared/permissions/types'
 import type { Browser, Locator, Page } from '@playwright/test'
 
 export async function openShareMenu(page: Page) {
@@ -7,6 +8,24 @@ export async function openShareMenu(page: Page) {
   await expect(page.getByTestId('share-all-players-row')).toBeVisible({
     timeout: 5000,
   })
+}
+
+export async function setAllPlayersPermission(page: Page, permissionLevel: PermissionLevel) {
+  await openShareMenu(page)
+
+  const row = page.getByTestId('share-all-players-row')
+  const select = row.locator('[data-slot="select-trigger"]')
+  const label = permissionLevelLabel(permissionLevel)
+  const optionName = new RegExp(`^${label}$`, 'i')
+  const triggerText = new RegExp(label, 'i')
+
+  if (!(await select.textContent())?.match(triggerText)) {
+    await select.click()
+    await page.getByRole('option', { name: optionName }).first().click()
+  }
+
+  await expect(select).toContainText(triggerText, { timeout: 5000 })
+  await page.keyboard.press('Escape')
 }
 
 export async function openSettingsPeopleTab(page: Page) {
@@ -93,8 +112,9 @@ export async function requestToJoinCampaignAsPlayer({
 
 export async function approvePlayerRequest(page: Page, playerEmail: string) {
   const dialog = await openSettingsPeopleTab(page)
+  const playerIdentity = playerIdentityPattern(playerEmail)
   const playerRow = dialog.locator('div').filter({
-    hasText: new RegExp(escapeRegExp(playerEmail), 'i'),
+    hasText: playerIdentity,
   })
   const approveButton = playerRow.getByRole('button', {
     name: /approve|accept/i,
@@ -232,6 +252,15 @@ export async function setSelectValue(selectTrigger: Locator, optionName: RegExp)
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function playerIdentityPattern(playerEmail: string) {
+  const localPart = playerEmail.split('@')[0] ?? playerEmail
+  return new RegExp(`${escapeRegExp(playerEmail)}|${escapeRegExp(localPart)}`, 'i')
+}
+
+function permissionLevelLabel(permissionLevel: PermissionLevel) {
+  return permissionLevel.replaceAll('_', ' ')
 }
 
 function getBlockTextLocator(page: Page, blockText: string) {

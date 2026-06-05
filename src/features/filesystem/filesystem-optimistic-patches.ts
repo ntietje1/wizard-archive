@@ -7,6 +7,7 @@ import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
+import type { FileSystemOptimisticPreview } from 'shared/sidebar-items/filesystem/lifecycle'
 import type {
   CreateFileSystemCommand,
   RenameFileSystemCommand,
@@ -38,12 +39,6 @@ export function expectedOptimisticCreateSlug(
   )
 }
 
-type FileSystemOptimisticPreview = {
-  receiptPatches: Array<FileSystemPatch>
-  inversePatches: Array<FileSystemPatch>
-  optimisticItem?: AnySidebarItem
-}
-
 export function buildOptimisticCreatePreview({
   command,
   parentId,
@@ -66,6 +61,8 @@ export function buildOptimisticCreatePreview({
     return {
       receiptPatches: [],
       inversePatches: [],
+      optimisticIntents: [],
+      rollbackIntents: [],
     }
   }
 
@@ -104,7 +101,18 @@ export function buildOptimisticCreatePreview({
   return {
     receiptPatches,
     inversePatches: [{ type: 'removeSidebarItem', itemId: item._id, snapshot: item }],
-    optimisticItem: item,
+    optimisticIntents: [
+      ...(parentId ? [{ type: 'openFolder' as const, campaignId, folderId: parentId }] : []),
+      { type: 'selectItem', itemId: item._id, slug: item.slug },
+      { type: 'navigateToItem', slug: item.slug },
+    ],
+    rollbackIntents: [
+      {
+        type: 'restorePreviousLocation',
+        guardedByItemId: item._id,
+        guardedBySlug: item.slug,
+      },
+    ],
   }
 }
 
@@ -120,6 +128,8 @@ export function buildOptimisticRenamePreview(
     return {
       receiptPatches: [],
       inversePatches: [],
+      optimisticIntents: [],
+      rollbackIntents: [],
     }
   }
 
@@ -138,5 +148,7 @@ export function buildOptimisticRenamePreview(
     inversePatches: [
       { type: 'updateSidebarItem', itemId: item._id, before: fields, fields: previous },
     ],
+    optimisticIntents: [],
+    rollbackIntents: [],
   }
 }
