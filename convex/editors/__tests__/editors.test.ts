@@ -3,7 +3,12 @@ import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext, setupUser } from '../../_test/identities.helper'
 import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../../../shared/editor/types'
+import {
+  DEFAULT_SORT_OPTIONS,
+  EDITOR_MODE,
+  SORT_DIRECTIONS,
+  SORT_ORDERS,
+} from '../../../shared/editor/types'
 
 describe('getCurrentEditor', () => {
   const t = createTestContext()
@@ -80,8 +85,8 @@ describe('setCurrentEditor', () => {
       campaignId: ctx.campaignId,
     })
     expect(result).not.toBeNull()
-    expect(result!.sortOrder).toBe(SORT_ORDERS.DateCreated)
-    expect(result!.sortDirection).toBe(SORT_DIRECTIONS.Ascending)
+    expect(result!.sortOrder).toBe(DEFAULT_SORT_OPTIONS.order)
+    expect(result!.sortDirection).toBe(DEFAULT_SORT_OPTIONS.direction)
     expect(result!.editorMode).toBe(EDITOR_MODE.EDITOR)
   })
 

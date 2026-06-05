@@ -52,7 +52,7 @@ vi.mock('~/features/sidebar/hooks/useFolderState', () => ({
 }))
 
 vi.mock('~/features/sidebar/hooks/useSortOptions', () => ({
-  useSortOptions: () => ({ sortOptions: { sortBy: 'name', sortDirection: 'asc' } }),
+  useSortOptions: () => ({ sortOptions: { order: 'Alphabetical', direction: 'Ascending' } }),
 }))
 
 vi.mock('~/features/sidebar/hooks/useItemSelectionInteractions', () => ({

@@ -7,21 +7,14 @@ import {
 export function useFolderState(folderId: string) {
   const { campaignId } = useCampaign()
 
-  const { folderStates, closeAllFoldersMode } = useCampaignSidebarState(campaignId)
+  const { folderStates } = useCampaignSidebarState(campaignId)
 
-  const { setFolderState, toggleFolderState, exitCloseAllMode, clearAllFolderStates } =
-    useCampaignSidebarActions(campaignId)
+  const { setFolderState, toggleFolderState } = useCampaignSidebarActions(campaignId)
 
-  const isExpanded = !closeAllFoldersMode && (folderStates[folderId] ?? false)
+  const isExpanded = folderStates[folderId] ?? false
 
   const toggleExpanded = () => {
-    if (closeAllFoldersMode) {
-      exitCloseAllMode()
-      clearAllFolderStates()
-      setFolderState(folderId, true)
-    } else {
-      toggleFolderState(folderId)
-    }
+    toggleFolderState(folderId)
   }
 
   const setExpanded = (expanded: boolean) => {

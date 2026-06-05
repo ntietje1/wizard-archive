@@ -24,7 +24,7 @@ describe('folder states', () => {
     useSidebarUIStore.getState().setFolderState(campaignId, 'folder_1', true)
     useSidebarUIStore.getState().setFolderState(campaignId, 'folder_1', false)
     const state = useSidebarUIStore.getState().campaignStates[campaignId]
-    expect(state.folderStates['folder_1']).toBe(false)
+    expect(state.folderStates).not.toHaveProperty('folder_1')
   })
 
   it('toggleFolderState toggles between open and closed', () => {
@@ -34,17 +34,9 @@ describe('folder states', () => {
     )
 
     useSidebarUIStore.getState().toggleFolderState(campaignId, 'folder_1')
-    expect(useSidebarUIStore.getState().campaignStates[campaignId].folderStates['folder_1']).toBe(
-      false,
+    expect(useSidebarUIStore.getState().campaignStates[campaignId].folderStates).not.toHaveProperty(
+      'folder_1',
     )
-  })
-
-  it('clearAllFolderStates resets all folders for a campaign', () => {
-    useSidebarUIStore.getState().setFolderState(campaignId, 'folder_1', true)
-    useSidebarUIStore.getState().setFolderState(campaignId, 'folder_2', true)
-    useSidebarUIStore.getState().clearAllFolderStates(campaignId)
-    const state = useSidebarUIStore.getState().campaignStates[campaignId]
-    expect(state.folderStates).toEqual({})
   })
 
   it('folder states are isolated per campaign', () => {
@@ -53,25 +45,18 @@ describe('folder states', () => {
     expect(useSidebarUIStore.getState().campaignStates[campaignId].folderStates['folder_1']).toBe(
       true,
     )
-    expect(useSidebarUIStore.getState().campaignStates['campaign_2'].folderStates['folder_1']).toBe(
-      false,
-    )
+    expect(
+      useSidebarUIStore.getState().campaignStates['campaign_2'].folderStates,
+    ).not.toHaveProperty('folder_1')
   })
 })
 
-describe('closeAllFoldersMode', () => {
-  it('toggleCloseAllFoldersMode toggles the mode', () => {
-    useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId)
-    expect(useSidebarUIStore.getState().campaignStates[campaignId].closeAllFoldersMode).toBe(true)
-
-    useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId)
-    expect(useSidebarUIStore.getState().campaignStates[campaignId].closeAllFoldersMode).toBe(false)
-  })
-
-  it('exitCloseAllMode sets mode to false', () => {
-    useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId)
-    useSidebarUIStore.getState().exitCloseAllMode(campaignId)
-    expect(useSidebarUIStore.getState().campaignStates[campaignId].closeAllFoldersMode).toBe(false)
+describe('closeAllFolders', () => {
+  it('closeAllFolders clears folder state', () => {
+    useSidebarUIStore.getState().setFolderState(campaignId, 'folder_1', true)
+    useSidebarUIStore.getState().setFolderState(campaignId, 'folder_2', true)
+    useSidebarUIStore.getState().closeAllFolders(campaignId)
+    expect(useSidebarUIStore.getState().campaignStates[campaignId].folderStates).toEqual({})
   })
 })
 
@@ -424,9 +409,7 @@ describe('useCampaignSidebarActions', () => {
     const actions = useCampaignSidebarActions(undefined)
     actions.setFolderState('folder_1', true)
     actions.toggleFolderState('folder_1')
-    actions.clearAllFolderStates()
-    actions.toggleCloseAllFoldersMode()
-    actions.exitCloseAllMode()
+    actions.closeAllFolders()
     actions.toggleBookmarksOnlyMode()
     expect(useSidebarUIStore.getState().campaignStates).toEqual({})
   })

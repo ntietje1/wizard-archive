@@ -13,14 +13,12 @@ export function SidebarList() {
   const { parentItemsMap, status } = useFilteredSidebarItems()
   const { sortOptions } = useSortOptions()
   const { campaignId } = useCampaign()
-  const { folderStates, closeAllFoldersMode } = useCampaignSidebarState(campaignId)
+  const { folderStates } = useCampaignSidebarState(campaignId)
 
   const rootItems = sortItemsByOptions(sortOptions, parentItemsMap.get(null)) ?? []
   const expandedFolderIds = new Set<Id<'sidebarItems'>>()
-  if (!closeAllFoldersMode) {
-    for (const [id, isOpen] of Object.entries(folderStates)) {
-      if (isOpen) expandedFolderIds.add(id as Id<'sidebarItems'>)
-    }
+  for (const [id, isOpen] of Object.entries(folderStates)) {
+    if (isOpen) expandedFolderIds.add(id as Id<'sidebarItems'>)
   }
   const visibleItemIds = buildVisibleSidebarItemIds({
     parentItemsMap,

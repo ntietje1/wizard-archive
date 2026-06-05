@@ -27,11 +27,11 @@ export function SortMenu() {
   const { sortOptions, setSortOptions } = useSortOptions()
 
   const handleSortOrderChange = (value: string) => {
-    void setSortOptions({ ...sortOptions, order: value as SortOrder })
+    setSortOptions({ ...sortOptions, order: value as SortOrder })
   }
 
   const handleSortDirectionChange = (value: string) => {
-    void setSortOptions({ ...sortOptions, direction: value as SortDirection })
+    setSortOptions({ ...sortOptions, direction: value as SortDirection })
   }
 
   return (
