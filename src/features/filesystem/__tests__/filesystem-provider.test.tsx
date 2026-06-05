@@ -8,6 +8,7 @@ import type { SidebarItemName } from 'shared/sidebar-items/name'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import { FileSystemProvider } from '../filesystem-provider'
 import { useFileSystem } from '../useFileSystem'
+import type { FileSystemDropIntent } from '../useFileSystem'
 import { useFileSystemUndoStore } from '../filesystem-undo-store'
 import { setFileSystemClipboard, useFileSystemClipboard } from '../filesystem-clipboard-store'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
@@ -398,6 +399,20 @@ function ClipboardButtons({
 function ClipboardProbe() {
   const clipboard = useFileSystemClipboard()
   return <output data-testid="clipboard">{JSON.stringify(clipboard)}</output>
+}
+
+function DropButton({ intent }: { intent: FileSystemDropIntent }) {
+  const filesystem = useFileSystem()
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void filesystem.executeDrop(intent)
+      }}
+    >
+      Drop
+    </button>
+  )
 }
 
 function getRenderedClipboard() {
@@ -922,6 +937,61 @@ describe('FileSystemProvider', () => {
       mode: 'cut',
       itemIds: [source._id],
     })
+  })
+
+  it('opens a drop target only after a conflicted drop commits', async () => {
+    const sourceParent = createFolder({
+      _id: 'source_parent' as Id<'sidebarItems'>,
+      name: 'Source Folder',
+    })
+    const target = createFolder({
+      _id: 'target_folder' as Id<'sidebarItems'>,
+      name: 'Target Folder',
+    })
+    const source = createNote({
+      _id: 'drop_source' as Id<'sidebarItems'>,
+      name: 'Shared Name',
+      parentId: sourceParent._id,
+    })
+    const conflictingChild = createNote({
+      _id: 'drop_existing_child' as Id<'sidebarItems'>,
+      name: 'Shared Name',
+      parentId: target._id,
+    })
+    sidebarItems = [sourceParent, target, source, conflictingChild]
+    render(
+      <FileSystemProvider>
+        <DropButton
+          intent={{
+            itemIds: [source._id],
+            target: { type: 'folder', folder: target, ancestorIds: [] },
+            options: { copy: true },
+          }}
+        />
+      </FileSystemProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Drop' }))
+
+    await screen.findByRole('dialog', { name: 'Resolve File Conflict' })
+    expect(executeMutateAsync).not.toHaveBeenCalled()
+    expect(
+      useSidebarUIStore.getState().campaignStates.campaign_1?.folderStates[target._id],
+    ).toBeUndefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep both items' }))
+
+    await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
+    expect(executeMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        decisions: [{ sourceItemId: source._id, action: 'keepBoth' }],
+      }),
+    )
+    await waitFor(() =>
+      expect(useSidebarUIStore.getState().campaignStates.campaign_1?.folderStates[target._id]).toBe(
+        true,
+      ),
+    )
   })
 
   it('clears trash selection and editor state from delete receipt snapshots', async () => {

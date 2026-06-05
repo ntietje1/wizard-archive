@@ -4,14 +4,8 @@ import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
-import type {
-  FileSystemCommand,
-  FileSystemOperationDecision,
-} from 'shared/sidebar-items/filesystem/commands'
-import type {
-  FileSystemPatch,
-  FileSystemTransactionReceipt,
-} from 'shared/sidebar-items/filesystem/receipts'
+import type { FileSystemCommand } from 'shared/sidebar-items/filesystem/commands'
+import type { FileSystemTransactionReceipt } from 'shared/sidebar-items/filesystem/receipts'
 import type {
   ConflictDecision,
   ItemOperationConflict,
@@ -19,7 +13,7 @@ import type {
 import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import { FileSystemEmptyTrashDialog, FileSystemPermanentDeleteDialog } from './filesystem-dialogs'
 import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
-import { shouldRecordFileSystemUndo, useFileSystemUndoStore } from './filesystem-undo-store'
+import { useFileSystemUndoStore } from './filesystem-undo-store'
 import { FileSystemContext } from './useFileSystem'
 import type { FileSystemValue } from './useFileSystem'
 import { setFileSystemClipboard, useFileSystemClipboard } from './filesystem-clipboard-store'
@@ -30,7 +24,6 @@ import {
 } from './filesystem-command-intents'
 import { getContextMenuPasteParentId } from './filesystem-targets'
 import { useFileSystemUndoHotkeys } from './filesystem-hotkeys'
-import { planFileSystemOptimisticCommand } from './filesystem-optimistic-planner'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import {
   useActiveSidebarItems,
@@ -44,16 +37,15 @@ import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { handleError, logger } from '~/shared/utils/logger'
 import { createFileSystemCacheAdapter } from './filesystem-cache-adapter'
+import { executeFileSystemCommandLifecycle } from './filesystem-command-lifecycle'
+import { executeFileSystemHistoryLifecycle } from './filesystem-history-lifecycle'
+import { runFileSystemOptimisticMutation } from './filesystem-optimistic-mutation-lifecycle'
 import { applyFileSystemReceiptEffects } from './filesystem-receipt-effects'
 import {
   getCreatedItemResult,
   getReceiptRenamedSlug,
   getReceiptToastMessage,
 } from './filesystem-receipt-selectors'
-import {
-  getCommandProgressToastText,
-  getHistoryProgressToastText,
-} from './filesystem-progress-messages'
 import { toast } from 'sonner'
 import {
   fileSystemDropCommandFailureMessage,
@@ -72,19 +64,6 @@ type PendingConflict = {
 
 function createClientOperationId() {
   return globalThis.crypto?.randomUUID?.() ?? `filesystem-${Date.now()}-${Math.random()}`
-}
-
-function toDecisionArray(
-  decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>,
-): Array<FileSystemOperationDecision> | undefined {
-  if (!decisions) return undefined
-  const result: Array<FileSystemOperationDecision> = []
-  for (const [sourceItemId, decision] of Object.entries(decisions)) {
-    if (decision) {
-      result.push({ sourceItemId: sourceItemId as Id<'sidebarItems'>, action: decision.action })
-    }
-  }
-  return result
 }
 
 function toastReceipt(receipt: FileSystemTransactionReceipt) {
@@ -108,14 +87,6 @@ function reportFileSystemError(error: unknown, message: string) {
   } catch (reportError) {
     logger.error('Failed to report filesystem error', { message, error, reportError })
   }
-}
-
-function applyPatchArray(
-  applyPatches: (patches: Array<FileSystemPatch>) => void,
-  patches: Array<FileSystemPatch>,
-) {
-  if (patches.length === 0) return
-  applyPatches(patches)
 }
 
 type FileSystemProviderState = {
@@ -220,78 +191,6 @@ function useFileSystemValue(): FileSystemProviderState {
     return result
   }
 
-  const runOptimisticMutation = async ({
-    apply,
-    rollback,
-    mutate,
-    onOptimisticApplied,
-    onMutationFailure,
-    onSuccess,
-    errorMessage,
-    progressMessage,
-  }: {
-    apply: Array<FileSystemPatch>
-    rollback: Array<FileSystemPatch>
-    mutate: () => Promise<FileSystemTransactionReceipt>
-    onOptimisticApplied?: () => Promise<void> | void
-    onMutationFailure?: () => Promise<void> | void
-    onSuccess: (receipt: FileSystemTransactionReceipt) => Promise<void> | void
-    errorMessage: string
-    progressMessage?: string
-  }): Promise<FileSystemTransactionReceipt | null> => {
-    try {
-      applyPatchArray(cacheAdapter.applyPatches, apply)
-    } catch (error) {
-      reportFileSystemError(error, errorMessage)
-      return null
-    }
-
-    try {
-      await onOptimisticApplied?.()
-    } catch (error) {
-      try {
-        applyPatchArray(cacheAdapter.applyPatches, rollback)
-        await onMutationFailure?.()
-      } catch (rollbackError) {
-        reportFileSystemError(rollbackError, errorMessage)
-      }
-      reportFileSystemError(error, errorMessage)
-      return null
-    }
-
-    let receipt: FileSystemTransactionReceipt | null = null
-    let mutationError: unknown = null
-    const progressToastId = progressMessage ? toast.loading(progressMessage) : null
-    try {
-      receipt = await mutate()
-    } catch (error) {
-      mutationError = error
-    } finally {
-      if (progressToastId) toast.dismiss(progressToastId)
-    }
-
-    if (mutationError) {
-      try {
-        applyPatchArray(cacheAdapter.applyPatches, rollback)
-        await onMutationFailure?.()
-      } catch (rollbackError) {
-        reportFileSystemError(rollbackError, errorMessage)
-      }
-      reportFileSystemError(mutationError, errorMessage)
-      return null
-    }
-    if (!receipt) return null
-
-    try {
-      applyPatchArray(cacheAdapter.applyPatches, [...rollback, ...receipt.patches])
-      await onSuccess(receipt)
-      return receipt
-    } catch (error) {
-      reportFileSystemError(error, errorMessage)
-      return null
-    }
-  }
-
   const executeCommand = async (
     command: FileSystemCommand,
     {
@@ -303,56 +202,38 @@ function useFileSystemValue(): FileSystemProviderState {
     } = {},
   ): Promise<FileSystemTransactionReceipt | null> => {
     if (!campaignId) return null
-    const currentReadModel = cacheAdapter.getReadModel()
-    const plan = planFileSystemOptimisticCommand({
+    const result = await executeFileSystemCommandLifecycle({
       command,
       decisions,
-      snapshot: cacheAdapter.getSnapshot(),
-      readModel: currentReadModel,
-      activeItemSurface,
-      currentUserId: campaign.data?.myMembership?.userId ?? null,
       campaignId,
+      currentUserId: campaign.data?.myMembership?.userId ?? null,
+      activeItemSurface,
+      cacheAdapter,
+      createClientOperationId,
+      getCurrentSlug: getSelectedSlug,
+      runMutation: (operation) => withPendingOperation(() => runQueuedMutation(operation)),
+      executeMutation: async (args) =>
+        (await executeMutation.mutateAsync(args)) as FileSystemTransactionReceipt,
+      applyLifecycleIntents,
+      applyReceiptSideEffects,
+      recordUndoReceipt: (receipt) => useFileSystemUndoStore.getState().pushUndo(receipt),
+      onSuccess,
+      reportError: reportFileSystemError,
+      showProgress: toast.loading,
+      dismissProgress: toast.dismiss,
+      showReceiptToast: toastReceipt,
     })
-    if (plan.status === 'needsDecision') {
-      setPendingConflict({ command, conflicts: plan.conflicts, onSuccess })
+    if (result.status === 'needsDecision') {
+      setPendingConflict({ command, conflicts: result.conflicts, onSuccess })
       return null
     }
-    const clientOperationId = createClientOperationId()
-    const previousSlug = getSelectedSlug()
-
-    return await withPendingOperation(() =>
-      runQueuedMutation(() =>
-        runOptimisticMutation({
-          apply: plan.preview.receiptPatches,
-          rollback: plan.preview.inversePatches,
-          onOptimisticApplied: () =>
-            applyLifecycleIntents(plan.preview.optimisticIntents, previousSlug),
-          onMutationFailure: () =>
-            applyLifecycleIntents(plan.preview.rollbackIntents, previousSlug),
-          mutate: async () =>
-            (await executeMutation.mutateAsync({
-              command,
-              decisions: toDecisionArray(decisions),
-              clientOperationId,
-            })) as FileSystemTransactionReceipt,
-          progressMessage: getCommandProgressToastText(command),
-          onSuccess: async (receipt) => {
-            if (shouldRecordFileSystemUndo(receipt)) {
-              useFileSystemUndoStore.getState().pushUndo(receipt)
-            }
-            await applyReceiptSideEffects(receipt)
-            onSuccess?.()
-            toastReceipt(receipt)
-          },
-          errorMessage: 'Filesystem operation failed',
-        }),
-      ),
-    )
+    return result.status === 'completed' ? result.receipt : null
   }
 
   const discardCreatedItem = async (transactionId: Id<'filesystemTransactions'>) => {
     await withPendingOperation(() =>
-      runOptimisticMutation({
+      runFileSystemOptimisticMutation({
+        cacheAdapter,
         apply: [],
         rollback: [],
         mutate: async () =>
@@ -363,6 +244,9 @@ function useFileSystemValue(): FileSystemProviderState {
         },
         errorMessage: 'Failed to discard incomplete item',
         progressMessage: 'Discarding item...',
+        reportError: reportFileSystemError,
+        showProgress: toast.loading,
+        dismissProgress: toast.dismiss,
       }),
     )
   }
@@ -490,36 +374,33 @@ function useFileSystemValue(): FileSystemProviderState {
     const entry = direction === 'undo' ? undoStore.peekUndo() : undoStore.peekRedo()
     if (!entry) return
 
-    const receipt = await withPendingOperation(() =>
-      runQueuedMutation(() =>
-        runOptimisticMutation({
-          apply: [],
-          rollback: [],
-          mutate: async () =>
-            direction === 'undo'
-              ? ((await undoMutation.mutateAsync({
-                  transactionId: entry.transactionId,
-                })) as FileSystemTransactionReceipt)
-              : ((await redoMutation.mutateAsync({
-                  transactionId: entry.transactionId,
-                })) as FileSystemTransactionReceipt),
-          onSuccess: async (historyReceipt) => {
-            const store = useFileSystemUndoStore.getState()
-            if (direction === 'undo') {
-              store.removeUndo()
-              store.pushRedoEntry(entry)
-            } else {
-              store.removeRedo()
-              store.pushUndoEntry(entry, { preserveRedo: true })
-            }
-            await applyReceiptSideEffects(historyReceipt)
-          },
-          errorMessage: direction === 'undo' ? 'Filesystem undo failed' : 'Filesystem redo failed',
-          progressMessage: getHistoryProgressToastText(direction),
-        }),
-      ),
+    await withPendingOperation(() =>
+      executeFileSystemHistoryLifecycle({
+        direction,
+        entry,
+        cacheAdapter,
+        runMutation: (operation) => runQueuedMutation(operation),
+        executeMutation: async (transactionId) =>
+          direction === 'undo'
+            ? ((await undoMutation.mutateAsync({ transactionId })) as FileSystemTransactionReceipt)
+            : ((await redoMutation.mutateAsync({ transactionId })) as FileSystemTransactionReceipt),
+        recordHistorySuccess: (historyEntry) => {
+          const store = useFileSystemUndoStore.getState()
+          if (direction === 'undo') {
+            store.removeUndo()
+            store.pushRedoEntry(historyEntry)
+          } else {
+            store.removeRedo()
+            store.pushUndoEntry(historyEntry, { preserveRedo: true })
+          }
+        },
+        applyReceiptSideEffects,
+        reportError: reportFileSystemError,
+        showProgress: toast.loading,
+        dismissProgress: toast.dismiss,
+        showReceiptToast: toastReceipt,
+      }),
     )
-    if (receipt) toastReceipt(receipt)
   }
 
   const executeDrop: FileSystemValue['executeDrop'] = async ({ itemIds, target, options }) => {
@@ -539,19 +420,22 @@ function useFileSystemValue(): FileSystemProviderState {
       return
     }
     if (command.status !== 'ready') return
+    const dropTargetParentId =
+      command.command.type === 'trash' ? null : command.command.targetParentId
+    const openDropTargetOnSuccess =
+      dropTargetParentId && campaignId
+        ? () => setFolderState(campaignId, dropTargetParentId, true)
+        : undefined
     try {
       switch (command.action) {
         case 'move':
         case 'copy':
         case 'restore':
         case 'trash':
-          await executeCommand(command.command)
+          await executeCommand(command.command, { onSuccess: openDropTargetOnSuccess })
           break
         default:
           assertNever(command.action)
-      }
-      if (command.command.type !== 'trash' && command.command.targetParentId && campaignId) {
-        setFolderState(campaignId, command.command.targetParentId, true)
       }
     } catch (error) {
       handleError(error, fileSystemDropCommandFailureMessage(command))

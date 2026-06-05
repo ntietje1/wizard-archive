@@ -7,7 +7,7 @@ import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
 import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/hooks/useSidebarItems'
 import type { SidebarItemsView } from '~/features/sidebar/hooks/useSidebarItems'
 
-type FileSystemCacheAdapter = {
+export type FileSystemCacheAdapter = {
   getSnapshot: () => SidebarCacheSnapshot
   getReadModel: () => FileSystemReadModel<AnySidebarItem>
   applyPatches: (patches: Array<FileSystemPatch>) => void
