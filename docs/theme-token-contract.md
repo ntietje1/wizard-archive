@@ -4,14 +4,15 @@ The app theme contract lives in `src/styles/app.css`. App chrome should prefer t
 
 ## Current Core Families
 
-| Family                     | Tokens                                                                                                                     | Owner     |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------- |
-| App surfaces               | `--background`, `--foreground`, `--card`, `--popover`, `--border`, `--input`, `--ring`                                     | Theme CSS |
-| Actions                    | `--primary`, `--primary-foreground`, `--secondary`, `--secondary-foreground`, `--destructive`, `--destructive-foreground`  | Theme CSS |
-| Canvas text/stroke palette | `--t-gray`, `--t-brown`, `--t-orange`, `--t-yellow`, `--t-green`, `--t-blue`, `--t-purple`, `--t-pink`, `--t-red`          | Theme CSS |
-| Canvas fill palette        | `--bg-gray`, `--bg-brown`, `--bg-orange`, `--bg-yellow`, `--bg-green`, `--bg-blue`, `--bg-purple`, `--bg-pink`, `--bg-red` | Theme CSS |
-| Overlay chrome             | `--overlay`, `--overlay-strong`                                                                                            | Theme CSS |
-| Map ghost state            | `--map-pin-ghost`                                                                                                          | Theme CSS |
+| Family                     | Tokens                                                                                                                     | Owner                                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| App surfaces               | `--background`, `--foreground`, `--card`, `--popover`, `--border`, `--input`, `--ring`                                     | Theme CSS                            |
+| Actions                    | `--primary`, `--primary-foreground`, `--secondary`, `--secondary-foreground`, `--destructive`, `--destructive-foreground`  | Theme CSS                            |
+| Canvas text/stroke palette | `--t-gray`, `--t-brown`, `--t-orange`, `--t-yellow`, `--t-green`, `--t-blue`, `--t-purple`, `--t-pink`, `--t-red`          | Theme CSS                            |
+| Canvas fill palette        | `--bg-gray`, `--bg-brown`, `--bg-orange`, `--bg-yellow`, `--bg-green`, `--bg-blue`, `--bg-purple`, `--bg-pink`, `--bg-red` | Theme CSS                            |
+| Overlay chrome             | `--overlay`, `--overlay-strong`                                                                                            | Theme CSS                            |
+| Map ghost state            | `--map-pin-ghost`                                                                                                          | Theme CSS                            |
+| Browser/PWA chrome         | `appBrowserChromeColors`, `appThemeColorMeta`                                                                              | `src/shared/theme/browser-chrome.ts` |
 
 ## Planned P18 Token Names
 
@@ -19,12 +20,10 @@ These names are the migration target for later P18 slices. Add concrete CSS vari
 
 | Need                           | Proposed tokens                                                                                                                                                                                                      | First migration |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| Toast/status feedback          | `--feedback-success`, `--feedback-success-foreground`, `--feedback-warning`, `--feedback-warning-foreground`, `--feedback-info`, `--feedback-info-foreground`, `--feedback-loading`, `--feedback-loading-foreground` | P18.2           |
-| Permission/view-as mode chrome | `--mode-view-as`, `--mode-view-as-foreground`, `--mode-view-as-border`                                                                                                                                               | P18.2           |
+| Toast/status feedback          | `--feedback-success`, `--feedback-success-foreground`, `--feedback-warning`, `--feedback-warning-foreground`, `--feedback-info`, `--feedback-info-foreground`, `--feedback-loading`, `--feedback-loading-foreground` | Pending         |
+| Permission/view-as mode chrome | `--mode-view-as`, `--mode-view-as-foreground`, `--mode-view-as-border`                                                                                                                                               | Pending         |
 | Control states                 | `--control-surface`, `--control-hover`, `--control-disabled`, `--control-focus-ring`, `--control-invalid-ring`, `--control-invalid-border`                                                                           | P18.3           |
 | Item surface states            | `--item-hover`, `--item-viewing`, `--item-selected`, `--item-selected-focus`, `--item-cut`, `--item-action-hover`                                                                                                    | P18.3           |
-| Browser/PWA chrome             | `appBrowserChromeLight`, `appBrowserChromeDark`, `appBrowserChromeFallback` constants derived from the same theme decisions                                                                                          | P18.2           |
-| Public theme policy            | one route/root policy for public-page default theme, not local `.dark` classes                                                                                                                                       | P18.2           |
 
 ## Migration Rules
 
@@ -33,4 +32,6 @@ These names are the migration target for later P18 slices. Add concrete CSS vari
 - Backdrops use `--overlay` or `--overlay-strong`.
 - Ghost or unavailable map pins use `--map-pin-ghost`.
 - Destructive foreground text uses `--destructive-foreground`; do not substitute `--primary-foreground`.
+- Browser metadata and the web manifest cannot read runtime CSS variables; use `src/shared/theme/browser-chrome.ts` for the named static hex values.
+- Public routes must inherit the root theme policy; do not add local `.dark` roots.
 - If a future migration needs a new color concept, add one semantic token family instead of repeating raw palette or opacity math in feature code.

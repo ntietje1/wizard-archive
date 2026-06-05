@@ -4,13 +4,13 @@ import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { RootDocument } from '~/shared/components/root-document'
 import { getOrigin } from '~/shared/utils/origin'
+import { appBrowserChromeColors, appThemeColorMeta } from '~/shared/theme/browser-chrome'
 import appCss from '~/styles/app.css?url'
 
 const appTitle = "Wizard's Archive"
 const appDescription = 'The collaborative campaign manager for TTRPGs.'
 const appUrl = getOrigin()
 const appImage = new URL('/og-image.png', appUrl).toString()
-const appThemeColor = '#7B6FD4'
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -30,7 +30,7 @@ export const Route = createRootRouteWithContext<{
         title: appTitle,
       },
       { name: 'description', content: appDescription },
-      { name: 'theme-color', content: appThemeColor },
+      ...appThemeColorMeta,
       { property: 'og:type', content: 'website' },
       { property: 'og:title', content: appTitle },
       { property: 'og:description', content: appDescription },
@@ -90,7 +90,7 @@ export const Route = createRootRouteWithContext<{
         media: '(prefers-color-scheme: dark)',
       },
       { rel: 'manifest', href: '/site.webmanifest' },
-      { rel: 'mask-icon', href: '/safari-pinned-tab.svg', color: appThemeColor },
+      { rel: 'mask-icon', href: '/safari-pinned-tab.svg', color: appBrowserChromeColors.fallback },
       { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
     ],
   }),
