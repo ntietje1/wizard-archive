@@ -559,11 +559,11 @@ describe('CanvasConditionalToolbar', () => {
     fireEvent.click(within(fillGroup!).getByRole('button', { name: 'Select Red color' }))
 
     expect(updateNodeData).toHaveBeenCalledWith(firstText.id, {
-      backgroundColor: 'var(--t-red)',
+      backgroundColor: 'var(--bg-red)',
       backgroundOpacity: 100,
     })
     expect(updateNodeData).toHaveBeenCalledWith(secondText.id, {
-      backgroundColor: 'var(--t-red)',
+      backgroundColor: 'var(--bg-red)',
       backgroundOpacity: 100,
     })
     expect(transact).toHaveBeenCalledTimes(1)
@@ -1127,7 +1127,7 @@ describe('CanvasConditionalToolbar', () => {
 
     emitSelection([
       createNode('text', { backgroundColor: '#FFEBA1', borderStroke: null }),
-      createNode('text', { backgroundColor: 'var(--t-red)', borderStroke: null }),
+      createNode('text', { backgroundColor: 'var(--bg-red)', borderStroke: null }),
     ])
 
     const fillGroup = screen.getByText('Fill').parentElement

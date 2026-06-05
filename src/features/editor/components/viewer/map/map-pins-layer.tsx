@@ -9,7 +9,7 @@ import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { cn } from '~/features/shadcn/lib/utils'
 import { PinMarker } from './pin-marker'
 
-const GHOST_PIN_COLOR = 'hsl(var(--muted-foreground))'
+const GHOST_PIN_COLOR = 'var(--map-pin-ghost)'
 
 interface MapPinsLayerProps {
   ref?: Ref<HTMLDivElement>

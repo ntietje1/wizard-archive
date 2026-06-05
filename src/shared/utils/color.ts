@@ -50,13 +50,13 @@ export const BASE_STROKE_COLORS: ReadonlyArray<NamedColorOption> = [
 export const BASE_BG_COLORS: ReadonlyArray<NamedColorOption> = [
   { color: 'var(--background)', label: 'Primary' },
   { color: 'var(--foreground)', label: 'Reverse primary' },
-  { color: 'var(--t-red)', label: 'Red' },
-  { color: 'var(--t-orange)', label: 'Orange' },
-  { color: 'var(--t-yellow)', label: 'Yellow' },
-  { color: 'var(--t-green)', label: 'Green' },
-  { color: 'var(--t-blue)', label: 'Blue' },
-  { color: 'var(--t-purple)', label: 'Purple' },
-  { color: 'var(--t-pink)', label: 'Pink' },
+  { color: 'var(--bg-red)', label: 'Red' },
+  { color: 'var(--bg-orange)', label: 'Orange' },
+  { color: 'var(--bg-yellow)', label: 'Yellow' },
+  { color: 'var(--bg-green)', label: 'Green' },
+  { color: 'var(--bg-blue)', label: 'Blue' },
+  { color: 'var(--bg-purple)', label: 'Purple' },
+  { color: 'var(--bg-pink)', label: 'Pink' },
 ]
 
 const CSS_VARIABLE_REFERENCE_PATTERN = /^var\(\s*(--[^),\s]+)\s*(?:,\s*[^)]+)?\)$/
