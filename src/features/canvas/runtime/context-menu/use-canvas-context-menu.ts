@@ -14,7 +14,6 @@ import type {
   CanvasContextMenuServices,
 } from './canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import type { BuiltContextMenu } from '~/features/context-menu/types'
@@ -23,6 +22,10 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { logger } from '~/shared/utils/logger'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 interface UseCanvasContextMenuOptions {
   activeTool: string

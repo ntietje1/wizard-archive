@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/canvas-document'
 import {
   getCanvasNodesMatchingLasso,
   getCanvasNodesMatchingRectangle,
 } from '../canvas-node-selection-queries'
-import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/validation'
-
 describe('canvas node selection queries', () => {
   it('uses default rectangular selection behavior for rectangle-shaped nodes', () => {
     const nodes: Array<Node> = [

@@ -5,11 +5,11 @@ import {
   getCanvasEdgesMatchingRectangle,
   normalizeCanvasEdge,
 } from '../canvas-edge-registry'
+import type { CanvasStrokeSizePropertyBinding } from '../../properties/canvas-property-types'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-import type { CanvasStrokeSizePropertyBinding } from '../../properties/canvas-property-types'
+} from '~/features/canvas/domain/canvas-document'
 
 function createNode(id: string, x: number, y: number): Node {
   return {

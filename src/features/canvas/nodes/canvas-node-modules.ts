@@ -24,19 +24,19 @@ import {
 } from '../properties/canvas-property-types'
 import { polygonIntersectsBounds, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type { CanvasNodeCreateArgs, CanvasNodeDataByType } from './canvas-node-types'
-import { parseCanvasDocumentNode } from '~/features/canvas/domain/validation'
+import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
+import type { CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
+import { assertNever } from '~/shared/utils/utils'
+import { normalizeCanvasNode } from './canvas-node-normalization'
+import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
+import { parseCanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 import type {
   CanvasDocumentNode,
   CanvasEmbedDocumentNode,
   CanvasNodeType,
   CanvasStrokeDocumentNode,
   CanvasTextDocumentNode,
-} from '~/features/canvas/domain/validation'
-import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
-import type { CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
-import { assertNever } from '~/shared/utils/utils'
-import { normalizeCanvasNode } from './canvas-node-normalization'
-import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
+} from '~/features/canvas/domain/canvas-document'
 
 const DEFAULT_TEXT_SIZE = {
   width: TEXT_NODE_DEFAULT_WIDTH,

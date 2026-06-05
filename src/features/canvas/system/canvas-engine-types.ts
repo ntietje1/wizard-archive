@@ -7,12 +7,14 @@ import type {
 import type { CanvasCameraState } from './canvas-render-scheduler'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
+import type {
   CanvasDocumentNodePatch,
   CanvasPosition,
   CanvasViewport,
 } from '../types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
 export interface CanvasInternalNode {
   id: string
   node: CanvasDocumentNode

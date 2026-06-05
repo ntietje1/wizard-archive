@@ -1,6 +1,8 @@
 import { buildCanvasEdgeGeometry } from '../edges/canvas-edge-registry'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 export function buildCanvasEdgePath(
   edge: CanvasDocumentEdge,
   nodesById: ReadonlyMap<string, CanvasDocumentNode>,

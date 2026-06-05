@@ -7,8 +7,11 @@ import { CanvasPreviewStrokeNode } from './canvas-preview-stroke-node'
 import { CanvasPreviewTextNode } from './canvas-preview-text-node'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import type { CanvasNodeRendererMap } from './canvas-node-content-renderer'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 const PREVIEW_NODE_RENDERERS = {
   embed: CanvasPreviewEmbedNode,

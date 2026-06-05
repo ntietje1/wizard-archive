@@ -1,4 +1,4 @@
-import { parseCanvasDocumentEdge, parseCanvasEdgeType } from '~/features/canvas/domain/validation'
+import { parseCanvasEdgeType } from '~/features/canvas/domain/validation'
 import { buildBezierCanvasEdgeGeometryFromEdge } from './bezier/bezier-canvas-edge-geometry'
 import { buildStepCanvasEdgeGeometryFromEdge } from './step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromEdge } from './straight/straight-canvas-edge-geometry'
@@ -20,12 +20,12 @@ import type { CanvasEdgeGeometry } from './shared/canvas-edge-geometry'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
+import { parseCanvasDocumentEdge } from '~/features/canvas/domain/canvas-document'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasEdgeType,
-} from '~/features/canvas/domain/validation'
-
+} from '~/features/canvas/domain/canvas-document'
 type NormalizedCanvasEdgeEntry = {
   rawEdge: CanvasDocumentEdge
   edge: CanvasRuntimeEdge

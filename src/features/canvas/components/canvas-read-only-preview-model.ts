@@ -1,8 +1,10 @@
 import { buildCanvasEdgeGeometry, resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
 import type { CanvasEdgeGeometry } from '../edges/shared/canvas-edge-geometry'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../system/canvas-engine-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 type CanvasPreviewNodeShellSnapshot = {
   id: string
   type: string | undefined

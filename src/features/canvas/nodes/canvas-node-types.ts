@@ -1,9 +1,3 @@
-import type {
-  CanvasEmbedNodeData,
-  CanvasNodeType,
-  CanvasStrokeNodeData,
-  CanvasTextNodeData,
-} from '~/features/canvas/domain/validation'
 import type { EmbedNodeData } from './embed/embed-node-data'
 import type {
   CanvasRichTextNodeData,
@@ -11,6 +5,12 @@ import type {
 } from './shared/canvas-rich-text-node-data'
 import type { StrokeNodeData } from './stroke/stroke-node-model'
 import type { CanvasPosition } from '../types/canvas-domain-types'
+import type {
+  CanvasEmbedNodeData,
+  CanvasNodeType,
+  CanvasStrokeNodeData,
+  CanvasTextNodeData,
+} from '~/features/canvas/domain/canvas-document'
 
 export const CANVAS_NODE_TYPES = [
   'embed',

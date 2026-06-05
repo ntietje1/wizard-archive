@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/drop-target-data'
 import type { FileDropOverride } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
@@ -21,6 +20,7 @@ import {
 } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 const STACK_OFFSET = 20
 

@@ -1,13 +1,13 @@
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../system/canvas-engine-types'
-import type { CanvasDocumentNode, CanvasNodeType } from '~/features/canvas/domain/validation'
 import { CANVAS_NODE_TYPES } from '../nodes/canvas-node-types'
 import type {
   CanvasNodeComponentDataByType,
   CanvasNodeComponentProps,
 } from '../nodes/canvas-node-types'
 import type { ComponentType } from 'react'
+import type { CanvasDocumentNode, CanvasNodeType } from '~/features/canvas/domain/canvas-document'
 
 type CanvasNodeDataUnion = CanvasNodeComponentDataByType[CanvasNodeType]
 

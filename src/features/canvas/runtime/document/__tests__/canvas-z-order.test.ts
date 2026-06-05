@@ -3,11 +3,11 @@ import { createCanvasReorderPlan } from '../canvas-reorder-plan'
 import { reorderCanvasElementIds } from '../canvas-reorder'
 import { getNextCanvasElementZIndex } from '../canvas-z-index'
 import { sortCanvasElementsByZIndex } from '../canvas-z-order'
+import * as Y from 'yjs'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-import * as Y from 'yjs'
+} from '~/features/canvas/domain/canvas-document'
 
 function createNode(id: string, zIndex: number): Node {
   return {

@@ -11,8 +11,7 @@ import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { CanvasNodeSelectionContext } from './canvas-node-types'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 function getSelectionNode(node: CanvasDocumentNode): AnyNormalizedCanvasNode | null {
   return normalizeCanvasNode(node)
 }

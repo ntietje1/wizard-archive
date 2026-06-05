@@ -10,8 +10,11 @@ import {
 } from '../system/canvas-element-size'
 import { useCanvasViewportInteractions } from '../runtime/interaction/use-canvas-viewport-interactions'
 import type { CanvasElementSize } from '../system/canvas-element-size'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { RefObject } from 'react'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 export function useCanvasReadOnlyPreviewRuntime({
   edges,

@@ -14,8 +14,10 @@ import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasRichTextFormattingSnapshot } from '../nodes/shared/canvas-rich-text-formatting-session'
 import type { CanvasInspectableProperties, CanvasResolvedProperty } from './canvas-property-types'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 export function resolveCanvasSelectionProperties({
   activeFormattingSnapshot,
   activeTool,

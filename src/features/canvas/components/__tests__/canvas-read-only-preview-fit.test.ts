@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveCanvasReadOnlyPreviewViewport } from '../canvas-read-only-preview-fit'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 describe('canvas read-only preview fit', () => {
   it('falls back to the default viewport for zero-sized surfaces', () => {
     expect(

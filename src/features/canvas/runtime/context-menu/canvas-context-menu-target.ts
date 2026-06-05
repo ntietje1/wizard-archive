@@ -6,8 +6,11 @@ import type {
   CanvasContextMenuContributor,
   CanvasContextMenuTarget,
 } from './canvas-context-menu-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 type CanvasResolvedContextMenuTarget = {
   target: CanvasContextMenuTarget

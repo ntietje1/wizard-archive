@@ -5,8 +5,8 @@ import { StepCanvasEdge } from '../edges/step/step-canvas-edge'
 import { StraightCanvasEdge } from '../edges/straight/straight-canvas-edge'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
-import type { CanvasDocumentEdge, CanvasEdgeType } from '~/features/canvas/domain/validation'
 import type { ComponentType, MouseEvent as ReactMouseEvent } from 'react'
+import type { CanvasDocumentEdge, CanvasEdgeType } from '~/features/canvas/domain/canvas-document'
 
 type EdgeRendererProps = CanvasEdgeRendererProps<CanvasEdgeType>
 

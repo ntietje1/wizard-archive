@@ -9,8 +9,11 @@ import {
 import type { CanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 const STEP_EDGE_STUB_LENGTH = 48
 type StepSplitCoordinates = {

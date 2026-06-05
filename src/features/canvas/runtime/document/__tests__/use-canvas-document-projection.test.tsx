@@ -6,8 +6,7 @@ import { createCanvasEngine } from '../../../system/canvas-engine'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-
+} from '~/features/canvas/domain/canvas-document'
 function createTextNode(id: string): Node {
   return {
     id,

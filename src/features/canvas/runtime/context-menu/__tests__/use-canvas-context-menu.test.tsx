@@ -5,10 +5,6 @@ import {
   TEXT_NODE_DEFAULT_HEIGHT,
   TEXT_NODE_DEFAULT_WIDTH,
 } from '../../../nodes/text/text-node-constants'
-import type {
-  CanvasDocumentEdge as Edge,
-  CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
@@ -17,6 +13,10 @@ import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 import { createCommands } from './canvas-context-menu-test-utils'
 import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from '~/features/canvas/domain/canvas-document'
 
 const sidebarItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),

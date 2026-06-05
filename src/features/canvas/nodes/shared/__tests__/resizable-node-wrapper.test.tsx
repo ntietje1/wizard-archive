@@ -13,8 +13,7 @@ import { CANVAS_NODE_MIN_SIZE } from '../canvas-node-resize-constants'
 import { CanvasNodeResizeMetadataProvider } from '../canvas-node-resize-metadata-provider'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 import type { CanvasNodeResizeUpdate } from '../../../tools/canvas-tool-types'
-import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/canvas-document'
 const modifierState = vi.hoisted(() => ({
   shiftPressed: false,
   primaryPressed: false,

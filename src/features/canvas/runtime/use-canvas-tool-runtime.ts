@@ -16,8 +16,11 @@ import type { createCanvasViewportController } from '../system/canvas-viewport-c
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type { CanvasToolRuntime, CanvasToolId } from '../tools/canvas-tool-types'
 import type { CanvasConnection } from '../types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 interface UseCanvasToolRuntimeOptions {
   activeTool: CanvasToolId

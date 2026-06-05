@@ -15,9 +15,12 @@ import {
 import { useCanvasToolRuntime } from './use-canvas-tool-runtime'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { CanvasViewport } from '../types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useYjsPreviewUpload } from '~/features/previews/hooks/use-yjs-preview-upload'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 interface UseCanvasEditorRuntimeOptions {
   nodesMap: Y.Map<CanvasDocumentNode>

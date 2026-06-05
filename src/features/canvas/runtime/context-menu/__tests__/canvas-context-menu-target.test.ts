@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { resolveCanvasContextMenuTarget } from '../canvas-context-menu-target'
+import * as Y from 'yjs'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-import * as Y from 'yjs'
+} from '~/features/canvas/domain/canvas-document'
 
 const openDocs: Array<Y.Doc> = []
 

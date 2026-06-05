@@ -4,8 +4,8 @@ import {
   selectCanvasPreviewEdgeRender,
 } from './canvas-read-only-preview-model'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
-import type { CanvasDocumentEdge } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { CanvasDocumentEdge } from '~/features/canvas/domain/canvas-document'
 
 export function CanvasPreviewEdge({
   edgeId,

@@ -12,8 +12,8 @@ import type { CanvasEdgeRendererProps } from '../../canvas-edge-types'
 import { PENDING_PREVIEW_EDGE_OPACITY } from '../../shared/canvas-edge-style'
 import { BezierCanvasEdge } from '../bezier-canvas-edge'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../bezier-canvas-edge-geometry'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { ReactElement } from 'react'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 describe('BezierCanvasEdge', () => {
   const defaultEdgeOpacity = 1

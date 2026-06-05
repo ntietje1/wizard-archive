@@ -2,8 +2,8 @@ import { memo } from 'react'
 import { CanvasEdgeWrapper } from './canvas-edge-wrapper'
 import { areArraysEqual } from './canvas-renderer-utils'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
-import type { CanvasDocumentEdge } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { CanvasDocumentEdge } from '~/features/canvas/domain/canvas-document'
 
 export const CanvasEdgeRenderer = memo(function CanvasEdgeRenderer({
   onEdgeClick,

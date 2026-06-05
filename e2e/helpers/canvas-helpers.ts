@@ -3,7 +3,7 @@ import { navigateToCampaign } from './campaign-helpers'
 import { getBrowserPrimaryModifier } from './keyboard-helpers'
 import { openItem } from './sidebar-helpers'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentEdge } from '../../src/features/canvas/domain/validation'
+import type { CanvasDocumentEdge } from '../../src/features/canvas/domain/canvas-document'
 import type { Locator, Page } from '@playwright/test'
 
 export interface CanvasPoint {

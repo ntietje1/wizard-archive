@@ -7,8 +7,7 @@ import {
 } from './tool-module-utils'
 import { setRectCreationDragRect } from './rect-creation-local-overlay'
 import type { CanvasToolHandlers, CanvasToolRuntime } from '../canvas-tool-types'
-import type { CanvasNodeType } from '~/features/canvas/domain/validation'
-
+import type { CanvasNodeType } from '~/features/canvas/domain/canvas-document'
 const MIN_DRAG_RECT_SIZE = 10
 
 export function createRectangularPlacementToolController<

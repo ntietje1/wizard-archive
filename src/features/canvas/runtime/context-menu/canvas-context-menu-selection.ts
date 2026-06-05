@@ -1,6 +1,6 @@
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
-import type { CanvasDocumentEdge } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
+import type { CanvasDocumentEdge } from '~/features/canvas/domain/canvas-document'
 
 export function getCanvasDeletionSelection(
   edgesMap: Y.Map<CanvasDocumentEdge>,

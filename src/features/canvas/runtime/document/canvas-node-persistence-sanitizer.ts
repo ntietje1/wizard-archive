@@ -3,10 +3,10 @@ import {
   parseCanvasNodeDataByType,
   parseCanvasNodeType,
   parseCanvasPoint2D,
-  parseCanvasDocumentNode,
 } from '~/features/canvas/domain/validation'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import { logger } from '~/shared/utils/logger'
+import { parseCanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 function buildSafePersistedCanvasNode(node: CanvasDocumentNode): CanvasDocumentNode {
   let type = parseCanvasNodeType(node.type) ?? 'text'

@@ -5,8 +5,7 @@ import type {
   CanvasDocumentNode,
   CanvasEdgeStyle,
   CanvasEdgeType,
-} from '~/features/canvas/domain/validation'
-
+} from '~/features/canvas/domain/canvas-document'
 export interface CanvasEdgeRendererProps<TType extends CanvasEdgeType = CanvasEdgeType> {
   id: string
   type: TType

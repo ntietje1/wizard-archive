@@ -1,7 +1,6 @@
 import { parseCanvasBoundsDimensions } from '~/features/canvas/domain/validation'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 export function getCanvasNodeBounds(node: CanvasDocumentNode): Bounds | null {
   const fallbackBounds =
     typeof node.data === 'object' && node.data !== null && 'bounds' in node.data

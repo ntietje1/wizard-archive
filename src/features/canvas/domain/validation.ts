@@ -1,19 +1,26 @@
 import { parseCanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
-import type { CanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
+import type {
+  CanvasEdgeStyle,
+  CanvasEdgeType,
+  CanvasEmbedNodeData,
+  CanvasNodeType,
+  CanvasStrokeNodeData,
+  CanvasTextNodeData,
+} from './canvas-document'
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isFiniteNumber(value: unknown): value is number {
+export function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
-function hasOnlyKeys(value: Record<string, unknown>, keys: ReadonlySet<string>): boolean {
+export function hasOnlyKeys(value: Record<string, unknown>, keys: ReadonlySet<string>): boolean {
   return Object.keys(value).every((key) => keys.has(key))
 }
 
@@ -88,40 +95,6 @@ interface CanvasViewportValue {
   zoom: number
 }
 
-export interface CanvasStrokeNodeData {
-  points: Array<[number, number, number]>
-  color: string
-  size: number
-  opacity?: number
-  bounds: {
-    x: number
-    y: number
-    width: number
-    height: number
-  }
-}
-
-export interface CanvasEmbedNodeData {
-  sidebarItemId?: string
-  lockedAspectRatio?: number
-  textColor?: string | null
-  backgroundColor?: string | null
-  backgroundOpacity?: number
-  borderStroke?: string | null
-  borderOpacity?: number
-  borderWidth?: number
-}
-
-export interface CanvasTextNodeData {
-  content?: CanvasRichTextDocument
-  textColor?: string | null
-  backgroundColor?: string | null
-  backgroundOpacity?: number
-  borderStroke?: string | null
-  borderOpacity?: number
-  borderWidth?: number
-}
-
 interface ParsedCanvasBounds {
   x: number
   y: number
@@ -183,48 +156,6 @@ interface ParsedCanvasReorderPayload {
 }
 
 type ParsedCanvasResizingAwarenessState = Record<string, ParsedCanvasResizeAwarenessEntry>
-export type CanvasNodeType = 'embed' | 'stroke' | 'text'
-export type CanvasEdgeType = 'bezier' | 'straight' | 'step'
-
-interface CanvasDocumentNodeBase<TType extends CanvasNodeType, TData> {
-  id: string
-  type: TType
-  position: ParsedCanvasPoint2D
-  data: TData
-  width?: number
-  height?: number
-  hidden?: boolean
-  zIndex?: number
-  className?: string
-}
-
-export type CanvasEmbedDocumentNode = CanvasDocumentNodeBase<'embed', CanvasEmbedNodeData>
-export type CanvasStrokeDocumentNode = CanvasDocumentNodeBase<'stroke', CanvasStrokeNodeData>
-export type CanvasTextDocumentNode = CanvasDocumentNodeBase<'text', CanvasTextNodeData>
-
-export type CanvasDocumentNode =
-  | CanvasEmbedDocumentNode
-  | CanvasStrokeDocumentNode
-  | CanvasTextDocumentNode
-
-export interface CanvasEdgeStyle {
-  stroke?: string
-  strokeWidth?: number
-  opacity?: number
-}
-
-export interface CanvasDocumentEdge {
-  id: string
-  source: string
-  target: string
-  type: CanvasEdgeType
-  sourceHandle?: string | null
-  targetHandle?: string | null
-  style?: CanvasEdgeStyle
-  hidden?: boolean
-  zIndex?: number
-  className?: string
-}
 
 export function parseCanvasViewport(value: unknown): CanvasViewportValue | null {
   if (!isRecord(value)) return null
@@ -408,18 +339,6 @@ export function parseEmbeddedCanvasStableId(value: unknown): string | undefined 
 
 const embedDataKeys = new Set(['sidebarItemId', 'lockedAspectRatio', ...surfaceStyleKeys])
 const textDataKeys = new Set(['content', ...surfaceStyleKeys])
-const documentNodeKeys = new Set([
-  'id',
-  'type',
-  'position',
-  'data',
-  'width',
-  'height',
-  'hidden',
-  'zIndex',
-  'className',
-])
-
 export function parseCanvasEmbedNodeData(value: unknown): CanvasEmbedNodeData | null {
   if (!isRecord(value) || !hasOnlyKeys(value, embedDataKeys)) return null
 
@@ -477,59 +396,6 @@ export function parseCanvasNodeDataByType(type: CanvasNodeType, value: unknown) 
   }
 }
 
-function hasValidSharedDocumentFields(value: Record<string, unknown>): boolean {
-  return (
-    (value.hidden === undefined || typeof value.hidden === 'boolean') &&
-    (value.zIndex === undefined || isFiniteNumber(value.zIndex)) &&
-    (value.className === undefined || typeof value.className === 'string')
-  )
-}
-
-function pickSharedDocumentFields(value: Record<string, unknown>) {
-  return {
-    ...(value.hidden !== undefined ? { hidden: value.hidden as boolean } : {}),
-    ...(value.zIndex !== undefined ? { zIndex: value.zIndex as number } : {}),
-    ...(value.className !== undefined ? { className: value.className as string } : {}),
-  }
-}
-
-function hasValidOptionalNodeFields(value: Record<string, unknown>): boolean {
-  return (
-    hasValidSharedDocumentFields(value) &&
-    (value.width === undefined || isFiniteNumber(value.width)) &&
-    (value.height === undefined || isFiniteNumber(value.height))
-  )
-}
-
-function pickCanvasDocumentNodeFields(value: Record<string, unknown>) {
-  return {
-    ...(value.width !== undefined ? { width: value.width as number } : {}),
-    ...(value.height !== undefined ? { height: value.height as number } : {}),
-    ...pickSharedDocumentFields(value),
-  }
-}
-
-export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | null {
-  if (!isRecord(value) || !hasOnlyKeys(value, documentNodeKeys)) return null
-  if (typeof value.id !== 'string') return null
-
-  const type = parseCanvasNodeType(value.type)
-  const position = parseCanvasPoint2D(value.position)
-  if (!type || !position) return null
-
-  const data = parseCanvasNodeDataByType(type, value.data)
-  if (!data) return null
-  if (!hasValidOptionalNodeFields(value)) return null
-
-  return {
-    id: value.id,
-    type,
-    position,
-    data,
-    ...pickCanvasDocumentNodeFields(value),
-  } as CanvasDocumentNode
-}
-
 export function parseCanvasEdgeType(value: unknown): CanvasEdgeType | null {
   return value === 'bezier' || value === 'straight' || value === 'step' ? value : null
 }
@@ -555,73 +421,5 @@ export function parseCanvasEdgeStyle(value: unknown): CanvasEdgeStyle | null {
     ...(value.stroke !== undefined ? { stroke: value.stroke } : {}),
     ...(value.strokeWidth !== undefined ? { strokeWidth: value.strokeWidth } : {}),
     ...(value.opacity !== undefined ? { opacity: clampNumber(value.opacity, 0, 1) } : {}),
-  }
-}
-
-const documentEdgeKeys = new Set([
-  'id',
-  'source',
-  'target',
-  'type',
-  'sourceHandle',
-  'targetHandle',
-  'style',
-  'hidden',
-  'zIndex',
-  'className',
-])
-
-function hasValidOptionalEdgeFields(value: Record<string, unknown>): boolean {
-  return (
-    hasValidSharedDocumentFields(value) &&
-    (value.sourceHandle === undefined ||
-      value.sourceHandle === null ||
-      typeof value.sourceHandle === 'string') &&
-    (value.targetHandle === undefined ||
-      value.targetHandle === null ||
-      typeof value.targetHandle === 'string')
-  )
-}
-
-function pickCanvasDocumentEdgeFields(value: Record<string, unknown>) {
-  return {
-    ...(value.sourceHandle !== undefined
-      ? { sourceHandle: value.sourceHandle as string | null }
-      : {}),
-    ...(value.targetHandle !== undefined
-      ? { targetHandle: value.targetHandle as string | null }
-      : {}),
-    ...pickSharedDocumentFields(value),
-  }
-}
-
-export function parseCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | null {
-  if (!isRecord(value) || !hasOnlyKeys(value, documentEdgeKeys)) return null
-  if (
-    typeof value.id !== 'string' ||
-    typeof value.source !== 'string' ||
-    typeof value.target !== 'string'
-  ) {
-    return null
-  }
-
-  const type = parseCanvasEdgeType(value.type)
-  if (!type) return null
-  if (!hasValidOptionalEdgeFields(value)) return null
-
-  let style: CanvasEdgeStyle | undefined
-  if (value.style !== undefined) {
-    const parsedStyle = parseCanvasEdgeStyle(value.style)
-    if (!parsedStyle) return null
-    style = parsedStyle
-  }
-
-  return {
-    id: value.id,
-    source: value.source,
-    target: value.target,
-    type,
-    ...pickCanvasDocumentEdgeFields(value),
-    ...(style !== undefined ? { style } : {}),
   }
 }

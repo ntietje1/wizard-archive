@@ -1,6 +1,5 @@
 import type { CanvasToolRuntime } from '../../canvas-tool-types'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 export function createMockCanvasToolRuntime({
   deleteNodes = () => undefined,
   nodes = [],

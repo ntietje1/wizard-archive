@@ -1,10 +1,10 @@
 import type { Id } from 'convex/_generated/dataModel'
+import type { CanvasPosition } from '../../types/canvas-domain-types'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasTextDocumentNode,
-} from '~/features/canvas/domain/validation'
-import type { CanvasPosition } from '../../types/canvas-domain-types'
+} from '~/features/canvas/domain/canvas-document'
 
 interface CanvasPerformanceMetric {
   name: string

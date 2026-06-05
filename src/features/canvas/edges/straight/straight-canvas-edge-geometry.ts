@@ -5,8 +5,11 @@ import {
 } from '../shared/canvas-edge-geometry'
 import type { CanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 function buildStraightPoints(
   props: Pick<EdgeProps, 'sourceX' | 'sourceY' | 'targetX' | 'targetY'>,

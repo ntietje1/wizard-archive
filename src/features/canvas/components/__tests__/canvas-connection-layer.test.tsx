@@ -19,8 +19,7 @@ import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
   CanvasEdgeType,
-} from '~/features/canvas/domain/validation'
-
+} from '~/features/canvas/domain/canvas-document'
 const sourceNode: Node = {
   id: 'source',
   type: 'text',
