@@ -3,6 +3,10 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { Folder } from 'shared/folders/types'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
+import {
+  dropTargetBeforeRingClassName,
+  dropTargetFillClassName,
+} from '~/features/dnd/utils/drop-target-visual-state'
 
 interface DroppableSidebarItemProps {
   item: Folder
@@ -20,18 +24,14 @@ export function DroppableSidebarItem({ item, children }: DroppableSidebarItemPro
 
   const isHighlighted = isDropTarget || isFileDropTarget
   const ringClass = isDropTarget
-    ? isTrashAction
-      ? 'before:ring-destructive/60'
-      : 'before:ring-ring/60'
+    ? dropTargetBeforeRingClassName(isTrashAction ? 'destructive' : 'default')
     : isFileDropTarget
-      ? 'before:ring-ring/40'
+      ? dropTargetBeforeRingClassName('file')
       : ''
   const bgClass = isDropTarget
-    ? isTrashAction
-      ? 'bg-destructive/5'
-      : 'bg-ring/5'
+    ? dropTargetFillClassName(isTrashAction ? 'destructive' : 'default')
     : isFileDropTarget
-      ? 'bg-ring/5'
+      ? dropTargetFillClassName('file')
       : ''
 
   return (

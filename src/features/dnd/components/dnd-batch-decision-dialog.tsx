@@ -105,7 +105,7 @@ export function DndBatchDecisionDialog() {
           {command.rejectedItems.map(({ item, reason }) => (
             <div key={item._id} className="rounded-md border p-3">
               <div className="font-medium">{item.name}</div>
-              <div className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <div className="text-feedback-warning flex items-center gap-1">
                 <AlertTriangle className="size-3" aria-hidden="true" />
                 {rejectionReasonMessage(reason)}
               </div>

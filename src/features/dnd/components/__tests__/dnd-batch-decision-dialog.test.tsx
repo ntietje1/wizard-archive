@@ -129,7 +129,7 @@ describe('DndBatchDecisionDialog', () => {
     expect(
       screen.getByRole('heading', { name: '2 items can be pinned and 1 item cannot' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Already pinned to this map')).toHaveClass('text-amber-600')
+    expect(screen.getByText('Already pinned to this map')).toHaveClass('text-feedback-warning')
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
 
     expect(screen.getByText('Continue')).toBeInTheDocument()

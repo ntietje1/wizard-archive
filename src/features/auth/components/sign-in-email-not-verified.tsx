@@ -65,7 +65,7 @@ export function SignInEmailNotVerified({ email, onBack }: SignInEmailNotVerified
           )}
         </Button>
         {cooldown > 0 && (
-          <p className="text-sm text-green-600 text-center">
+          <p className="text-sm text-feedback-success text-center">
             Verification email sent! Check your inbox.
           </p>
         )}

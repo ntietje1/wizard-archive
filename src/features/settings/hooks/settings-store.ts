@@ -1,14 +1,6 @@
 import { create } from 'zustand'
 
-export type SettingsTab =
-  | 'profile'
-  | 'preferences'
-  | 'billing'
-  | 'campaign-general'
-  | 'campaign-people'
-  | 'campaign-import'
-  | 'emoji'
-  | 'connections'
+export type SettingsTab = 'profile' | 'preferences' | 'campaign-people'
 
 type SettingsStore = {
   isOpen: boolean

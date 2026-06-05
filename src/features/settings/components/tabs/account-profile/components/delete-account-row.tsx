@@ -45,7 +45,7 @@ function DeleteAccountDialogContent({ onDeletionEmailSent }: { onDeletionEmailSe
     return (
       <>
         <div className="flex flex-col items-center gap-3 py-4 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-feedback-destructive-surface">
             <Mail className="h-6 w-6 text-destructive" />
           </div>
           <div className="flex flex-col gap-1">

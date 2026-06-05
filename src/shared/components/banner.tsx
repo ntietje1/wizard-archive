@@ -5,14 +5,15 @@ import { cn } from '~/features/shadcn/lib/utils'
 const bannerVariants = {
   accent: 'border-primary/40 bg-accent text-accent-foreground',
   destructive:
-    'border-destructive/40 bg-destructive/10 text-destructive dark:bg-destructive/20 dark:border-destructive/60 dark:text-destructive/70',
+    'border-feedback-destructive-border bg-feedback-destructive-surface text-feedback-destructive',
 }
 
 const buttonVariants = {
   accent: 'text-accent-foreground hover:text-accent-foreground hover:bg-foreground/5',
-  destructive: 'text-destructive hover:text-destructive hover:bg-destructive/15',
+  destructive:
+    'text-feedback-destructive hover:text-feedback-destructive hover:bg-feedback-destructive-action-hover',
   'on-destructive':
-    'bg-transparent text-white hover:bg-transparent hover:text-white dark:text-white dark:hover:text-white',
+    'bg-transparent text-destructive-foreground hover:bg-transparent hover:text-destructive-foreground',
 }
 
 type BannerVariant = keyof typeof bannerVariants

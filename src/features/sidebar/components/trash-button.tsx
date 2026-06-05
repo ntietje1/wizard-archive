@@ -9,6 +9,7 @@ import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { cn } from '~/features/shadcn/lib/utils'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 
 export function TrashButton() {
   const [open, setOpen] = useState(false)
@@ -46,8 +47,7 @@ export function TrashButton() {
             isActive={isTrashViewActive || open}
             className={cn(
               'cursor-pointer select-none',
-              isDropTarget &&
-                'ring-2 ring-inset ring-destructive/60 bg-destructive/5 text-destructive',
+              isDropTarget && `${dropTargetChromeClass('destructive')} text-destructive`,
             )}
             rightSlot={
               trashCount > 0 ? (

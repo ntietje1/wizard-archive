@@ -20,6 +20,10 @@ import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { folderItemFolderFillClass } from './folder-item-visual-state'
 import { sidebarItemNameClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
+import {
+  dropTargetSvgFillClassName,
+  dropTargetSvgStrokeClassName,
+} from '~/features/dnd/utils/drop-target-visual-state'
 
 const H = 140
 const W = 400
@@ -46,9 +50,9 @@ const FOLDER_SHAPE = [
 type DropState = 'none' | 'valid' | 'trash'
 
 function folderStrokeClass(dropState: DropState, { isSelected = false }: { isSelected?: boolean }) {
-  if (dropState === 'trash') return 'stroke-destructive'
-  if (dropState === 'valid') return 'stroke-ring'
-  if (isSelected) return 'stroke-primary/70 dark:stroke-primary/80'
+  if (dropState === 'trash') return dropTargetSvgStrokeClassName('destructive')
+  if (dropState === 'valid') return dropTargetSvgStrokeClassName('default')
+  if (isSelected) return 'stroke-item-selected-outline'
   return 'stroke-border'
 }
 
@@ -67,7 +71,11 @@ function FolderSvg({
   const strokeClass = folderStrokeClass(dropState, visualState)
   const strokeWidth = 'stroke-[1.25px]'
   const tintClass =
-    dropState === 'trash' ? 'fill-destructive/5' : dropState === 'valid' ? 'fill-ring/5' : undefined
+    dropState === 'trash'
+      ? dropTargetSvgFillClassName('destructive')
+      : dropState === 'valid'
+        ? dropTargetSvgFillClassName('default')
+        : undefined
   const fillClass = folderItemFolderFillClass(visualState)
 
   return (
@@ -182,7 +190,7 @@ function FolderCardInner({
           <Button
             variant="ghost"
             size="sm"
-            className="absolute top-[18px] right-2 size-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            className="absolute top-[18px] right-2 size-6 p-0 text-muted-foreground hover:text-foreground hover:bg-item-action-hover rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
             aria-label="Open folder menu"
             onClick={(e) => {
               e.preventDefault()

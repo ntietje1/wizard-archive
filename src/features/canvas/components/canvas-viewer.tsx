@@ -1,6 +1,7 @@
 import { ClientOnly } from '@tanstack/react-router'
 import { Profiler } from 'react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
@@ -227,7 +228,7 @@ const CanvasDropOverlay = ({
       className={cn(
         'absolute inset-0 z-[4]',
         isDragging ? 'pointer-events-auto' : 'pointer-events-none',
-        active && 'bg-ring/5 ring-2 ring-inset ring-ring/60',
+        active && dropTargetChromeClass(isFileDropTarget ? 'file' : 'default'),
       )}
     />
   )

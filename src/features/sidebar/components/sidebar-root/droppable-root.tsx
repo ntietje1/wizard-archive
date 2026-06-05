@@ -4,6 +4,7 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 
 interface DroppableRootProps {
   children: React.ReactNode
@@ -36,8 +37,8 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
       ref={ref}
       className={cn(
         className,
-        isDropTarget && !isFileDragTarget && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
-        isFileDragTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
+        isDropTarget && !isFileDragTarget && dropTargetChromeClass('default'),
+        isFileDragTarget && dropTargetChromeClass('file'),
       )}
     >
       {children}

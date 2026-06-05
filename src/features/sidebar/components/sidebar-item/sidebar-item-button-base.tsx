@@ -42,7 +42,7 @@ function SidebarItemIconToggle({
       <Button
         variant="ghost"
         size="sm"
-        className="size-6 hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+        className="size-6 hover:text-foreground hover:bg-item-action-hover rounded-sm"
         aria-label={expanded ? 'Collapse folder' : 'Expand folder'}
         onClick={(e) => {
           e.stopPropagation()
@@ -85,7 +85,7 @@ function SidebarItemActions({
           variant="ghost"
           size="sm"
           className={cn(
-            'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
+            'size-6 p-0 hover:bg-item-action-hover rounded-sm',
             sidebarItemActionButtonClass(visualState),
           )}
           aria-label="More options"

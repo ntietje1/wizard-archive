@@ -42,13 +42,13 @@ export function CanvasSelectionBoundsOverlay({
     >
       <div
         data-testid={`${testIdPrefix}-fill`}
-        className="absolute inset-0 rounded-sm pointer-events-none bg-primary/5"
+        className="absolute inset-0 rounded-sm pointer-events-none bg-canvas-selection-fill"
       />
       <div
         data-testid={`${testIdPrefix}-outline`}
         className="absolute rounded-sm pointer-events-none"
         style={{
-          borderColor: 'var(--primary)',
+          borderColor: 'var(--canvas-selection-stroke)',
           borderStyle: 'solid',
           borderWidth: CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
           inset: -CANVAS_SELECTION_CHROME_OUTSET_PX,

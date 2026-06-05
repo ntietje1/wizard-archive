@@ -19,6 +19,7 @@ import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSid
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
@@ -113,8 +114,8 @@ function EmptyEditorContent() {
       ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center',
-        isDropTarget && !isFileDragTarget && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
-        isFileDragTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
+        isDropTarget && !isFileDragTarget && dropTargetChromeClass('default'),
+        isFileDragTarget && dropTargetChromeClass('file'),
       )}
     >
       {!isCampaignLoaded ? null : isDm ? (

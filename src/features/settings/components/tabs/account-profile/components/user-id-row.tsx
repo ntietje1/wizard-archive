@@ -28,7 +28,7 @@ export function UserIdRow({ userId }: { userId: Id<'userProfiles'> }) {
         variant="outline"
         size="sm"
         onClick={handleCopy}
-        className={cn('shrink-0', copied && 'text-green-600 hover:text-green-600')}
+        className={cn('shrink-0', copied && 'text-feedback-success hover:text-feedback-success')}
       >
         {copied ? (
           <>

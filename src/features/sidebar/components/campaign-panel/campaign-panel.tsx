@@ -24,7 +24,7 @@ export function CampaignPanel() {
           >
             <span className="flex-1 truncate text-sm font-medium">{campaignName}</span>
             <span
-              className={`h-2 w-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+              className={`h-2 w-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-feedback-success' : 'bg-feedback-loading/30'}`}
             />
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </button>
