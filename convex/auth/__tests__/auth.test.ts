@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import { createUserProfile } from '../../_test/factories.helper'
-import { testAuthIdentity, testAuthIdentityForKey } from '../../_test/identities.helper'
+import {
+  addPlayerToCampaign,
+  createBlock,
+  createBlockShare,
+  createCampaignWithDm,
+  createNote,
+  createSidebarShare,
+  createUserProfile,
+  testBlockNoteId,
+} from '../../_test/factories.helper'
+import { setupUser, testAuthIdentity, testAuthIdentityForKey } from '../../_test/identities.helper'
 import { expectNotAuthenticated } from '../../_test/assertions.helper'
 import { onCreateUser } from '../functions/onCreateUser'
+import { onDeleteUser } from '../functions/onDeleteUser'
 import { api } from '../../_generated/api'
 
 async function getProfileByAuthUserId(t: ReturnType<typeof createTestContext>, authUserId: string) {
@@ -178,5 +188,119 @@ describe('authenticate edge cases', () => {
     const orphan = t.withIdentity(testAuthIdentityForKey('no-profile-auth-id'))
     const result = await orphan.query(api.users.queries.getUserProfile, {})
     expect(result).toBeNull()
+  })
+})
+
+describe('onDeleteUser', () => {
+  const t = createTestContext()
+
+  it("retires DM-owned campaigns and removes the deleted user's campaign state", async () => {
+    const dm = await setupUser(t)
+    const player = await setupUser(t)
+    const { campaignId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
+    const { memberId: playerMemberId } = await addPlayerToCampaign(t, campaignId, player.profile)
+    const { noteId } = await createNote(t, campaignId, dm.profile._id)
+    const { blockDbId } = await createBlock(t, noteId, campaignId, {
+      blockNoteId: testBlockNoteId('account-delete-shared-block'),
+    })
+    const { shareId } = await createSidebarShare(t, {
+      campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: dmMemberId,
+    })
+    const { blockShareId } = await createBlockShare(t, {
+      campaignId,
+      noteId,
+      blockId: blockDbId,
+      campaignMemberId: dmMemberId,
+    })
+
+    await dm.authed.mutation(api.editors.mutations.setCurrentEditor, {
+      campaignId,
+    })
+
+    await t.run(async (ctx) => {
+      await onDeleteUser(ctx, {
+        _id: dm.profile.authUserId,
+        _creationTime: Date.now(),
+      })
+    })
+
+    const result = await t.run(async (ctx) => {
+      return {
+        campaign: await ctx.db.get('campaigns', campaignId),
+        dmMember: await ctx.db.get('campaignMembers', dmMemberId),
+        playerMember: await ctx.db.get('campaignMembers', playerMemberId),
+        sidebarShare: await ctx.db.get('sidebarItemShares', shareId),
+        blockShare: await ctx.db.get('blockShares', blockShareId),
+        editors: await ctx.db
+          .query('editor')
+          .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
+          .collect(),
+      }
+    })
+
+    expect(result.campaign).toMatchObject({ status: 'Deleted' })
+    expect(result.dmMember).toMatchObject({ status: 'Removed' })
+    expect(result.playerMember).toMatchObject({ status: 'Accepted' })
+    expect(result.sidebarShare).toBeNull()
+    expect(result.blockShare).toBeNull()
+    expect(result.editors).toHaveLength(0)
+  })
+
+  it('removes player campaign state without retiring the campaign', async () => {
+    const dm = await setupUser(t)
+    const player = await setupUser(t)
+    const { campaignId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
+    const { memberId: playerMemberId } = await addPlayerToCampaign(t, campaignId, player.profile)
+    const { noteId } = await createNote(t, campaignId, dm.profile._id)
+    const { blockDbId } = await createBlock(t, noteId, campaignId, {
+      blockNoteId: testBlockNoteId('player-account-delete-shared-block'),
+    })
+    const { shareId } = await createSidebarShare(t, {
+      campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: playerMemberId,
+    })
+    const { blockShareId } = await createBlockShare(t, {
+      campaignId,
+      noteId,
+      blockId: blockDbId,
+      campaignMemberId: playerMemberId,
+    })
+
+    await player.authed.mutation(api.editors.mutations.setCurrentEditor, {
+      campaignId,
+    })
+
+    await t.run(async (ctx) => {
+      await onDeleteUser(ctx, {
+        _id: player.profile.authUserId,
+        _creationTime: Date.now(),
+      })
+    })
+
+    const result = await t.run(async (ctx) => {
+      return {
+        campaign: await ctx.db.get('campaigns', campaignId),
+        dmMember: await ctx.db.get('campaignMembers', dmMemberId),
+        playerMember: await ctx.db.get('campaignMembers', playerMemberId),
+        sidebarShare: await ctx.db.get('sidebarItemShares', shareId),
+        blockShare: await ctx.db.get('blockShares', blockShareId),
+        editors: await ctx.db
+          .query('editor')
+          .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
+          .collect(),
+      }
+    })
+
+    expect(result.campaign).toMatchObject({ status: 'Active' })
+    expect(result.dmMember).toMatchObject({ status: 'Accepted' })
+    expect(result.playerMember).toMatchObject({ status: 'Removed' })
+    expect(result.sidebarShare).toBeNull()
+    expect(result.blockShare).toBeNull()
+    expect(result.editors).toHaveLength(0)
   })
 })

@@ -477,7 +477,7 @@ describe('FileSystemProvider', () => {
     expect(optimisticItem.slug).toBe('scene')
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([optimisticItem._id])
     expect(useSidebarUIStore.getState().selectedSlug).toBe(optimisticItem.slug)
-    expect(navigateToItemMock).toHaveBeenCalledWith(optimisticItem.slug)
+    expect(navigateToItemMock).toHaveBeenCalledWith(optimisticItem.slug, undefined)
     expect(toastLoadingMock).toHaveBeenCalledWith('Creating item...')
 
     act(() => resolveCreate(createReceipt()))

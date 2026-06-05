@@ -1,5 +1,5 @@
 import { asyncMap } from 'convex-helpers'
-import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../../shared/campaigns/types'
+import { removeCampaignMemberForDeletedUser } from '../../campaigns/functions/lifecycle'
 import type { MutationCtx } from '../../_generated/server'
 
 type AuthUserDoc = {
@@ -44,40 +44,11 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
     .collect()
 
   for (const member of memberships) {
-    if (member.status === CAMPAIGN_MEMBER_STATUS.Removed) continue
-
-    const campaignId = member.campaignId
-
-    const campaign = await ctx.db.get('campaigns', campaignId)
-    if (
-      campaign &&
-      campaign.status !== CAMPAIGN_STATUS.Deleted &&
-      campaign.dmUserId === profileId
-    ) {
-      await ctx.db.patch('campaigns', campaign._id, {
-        status: CAMPAIGN_STATUS.Deleted,
-      })
-    }
-
-    const [sidebarShares, blockShares] = await Promise.all([
-      ctx.db
-        .query('sidebarItemShares')
-        .withIndex('by_campaign_member', (q) =>
-          q.eq('campaignId', campaignId).eq('campaignMemberId', member._id),
-        )
-        .collect(),
-      ctx.db
-        .query('blockShares')
-        .withIndex('by_campaign_member', (q) =>
-          q.eq('campaignId', campaignId).eq('campaignMemberId', member._id),
-        )
-        .collect(),
-    ])
-
-    await asyncMap(sidebarShares, (s) => ctx.db.delete('sidebarItemShares', s._id))
-    await asyncMap(blockShares, (s) => ctx.db.delete('blockShares', s._id))
-    await ctx.db.patch('campaignMembers', member._id, {
-      status: CAMPAIGN_MEMBER_STATUS.Removed,
+    const campaign = await ctx.db.get('campaigns', member.campaignId)
+    await removeCampaignMemberForDeletedUser(ctx, {
+      campaign,
+      deletedUserId: profileId,
+      member,
     })
   }
 
