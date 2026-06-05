@@ -5,11 +5,11 @@ import {
   getCanvasEdgesMatchingRectangle,
   normalizeCanvasEdge,
 } from '../canvas-edge-registry'
+import type { CanvasStrokeSizePropertyBinding } from '../../properties/canvas-property-types'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-import type { CanvasStrokeSizePropertyBinding } from '../../properties/canvas-property-types'
+} from '~/features/canvas/domain/canvas-document'
 
 function createNode(id: string, x: number, y: number): Node {
   return {
@@ -173,17 +173,13 @@ describe('canvas edge specs', () => {
     ).toEqual(new Set(['step-edge']))
   })
 
-  it('falls back unsupported edge types safely', () => {
+  it('rejects unsupported edge types', () => {
     const unsupportedEdge = {
       ...createBezierEdge({ id: 'edge-fallback' }),
       type: 'curved',
     } as unknown as Edge
-    const fallbackEdge = normalizeCanvasEdge(unsupportedEdge)
 
-    expect(fallbackEdge).toMatchObject({
-      id: 'edge-fallback',
-      type: 'bezier',
-    })
+    expect(normalizeCanvasEdge(unsupportedEdge)).toBeNull()
   })
 
   it('normalizes zero-width edge styles to the minimum visible stroke width', () => {

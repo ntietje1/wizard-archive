@@ -10,8 +10,7 @@ import type {
   CanvasDocumentNode,
   CanvasEdgeType,
   CanvasNodeType,
-} from '~/features/canvas/domain/validation'
-
+} from '~/features/canvas/domain/canvas-document'
 export interface CanvasContextMenuPoint {
   x: number
   y: number

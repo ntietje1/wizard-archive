@@ -5,11 +5,11 @@ import { useCanvasClipboardStore } from '../../context-menu/use-canvas-clipboard
 import * as canvasDocumentCommands from '../canvas-document-commands'
 import type { CanvasReorderDirection } from '../canvas-reorder'
 import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
+import * as Y from 'yjs'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-import * as Y from 'yjs'
+} from '~/features/canvas/domain/canvas-document'
 
 function createNode(id: string, zIndex: number, width = 20, height = 10): Node {
   return {

@@ -7,8 +7,8 @@ import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasConnection } from '../../types/canvas-domain-types'
-import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/canvas-document'
 
 vi.mock('../canvas-background', () => ({
   CanvasBackground: () => null,

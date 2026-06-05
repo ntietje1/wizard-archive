@@ -6,8 +6,7 @@ import type { RenderHookResult } from '@testing-library/react'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-
+} from '~/features/canvas/domain/canvas-document'
 type TextNode = Extract<Node, { type: 'text' }>
 
 function textContent(text: string): TextNode['data']['content'] {

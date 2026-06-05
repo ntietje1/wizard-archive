@@ -1,6 +1,5 @@
 import { useReducer } from 'react'
 import type { SyntheticEvent } from 'react'
-import type { CanvasEdgeType } from '~/features/canvas/domain/validation'
 import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
 import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
@@ -15,6 +14,7 @@ import { useCanvasToolbarModel } from './use-canvas-toolbar-model'
 import type { CanvasCommands } from '../runtime/document/use-canvas-commands'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
 import { CheckerboardSwatch } from '~/shared/components/checkerboard-swatch'
+import type { CanvasEdgeType } from '~/features/canvas/domain/canvas-document'
 
 interface CanvasConditionalToolbarProps {
   canEdit: boolean

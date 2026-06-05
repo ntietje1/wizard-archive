@@ -7,8 +7,11 @@ import { useCanvasReadOnlyPreviewRuntime } from './canvas-read-only-preview-runt
 import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { CanvasRenderModeProvider } from '../runtime/providers/canvas-render-mode-context'
 import { cn } from '~/features/shadcn/lib/utils'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 const DEFAULT_MIN_ZOOM = 0.01
 const DEFAULT_MAX_ZOOM = 4

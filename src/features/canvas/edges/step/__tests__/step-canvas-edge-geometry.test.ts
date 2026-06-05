@@ -7,8 +7,7 @@ import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-ty
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-
+} from '~/features/canvas/domain/canvas-document'
 describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
   it('splits the middle run when bottom-to-top handles face away from each other', () => {
     const geometry = buildStepCanvasEdgeGeometryFromRenderProps({

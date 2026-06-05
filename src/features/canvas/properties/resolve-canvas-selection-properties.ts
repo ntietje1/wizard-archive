@@ -1,7 +1,6 @@
 import {
   getCanvasEdgeInspectableProperties,
   normalizeCanvasEdge,
-  resolveCanvasEdgeType,
 } from '../edges/canvas-edge-registry'
 import { getCanvasNodeInspectableProperties } from '../nodes/canvas-node-modules'
 import { normalizeCanvasNode } from '../nodes/canvas-node-normalization'
@@ -14,8 +13,10 @@ import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasRichTextFormattingSnapshot } from '../nodes/shared/canvas-rich-text-formatting-session'
 import type { CanvasInspectableProperties, CanvasResolvedProperty } from './canvas-property-types'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 export function resolveCanvasSelectionProperties({
   activeFormattingSnapshot,
   activeTool,
@@ -60,7 +61,7 @@ export function resolveCanvasSelectionProperties({
 }
 
 export function getSharedSelectedEdgeType(edges: ReadonlyArray<CanvasDocumentEdge>) {
-  const edgeTypes = edges.map((edge) => resolveCanvasEdgeType(edge.type))
+  const edgeTypes = edges.map((edge) => edge.type)
   const firstEdgeType = edgeTypes[0] ?? null
   return firstEdgeType && edgeTypes.every((edgeType) => edgeType === firstEdgeType)
     ? firstEdgeType

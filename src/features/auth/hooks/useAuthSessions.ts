@@ -95,7 +95,10 @@ export function useDeviceSessions() {
 
   return {
     allSessions: query.data ?? [],
-    isLoaded: query.isFetched,
+    isLoaded: query.isFetched && !query.isError,
+    isError: query.isError,
+    error: query.error,
+    retry: query.refetch,
     refresh,
     currentToken: currentSession?.session?.token,
   }

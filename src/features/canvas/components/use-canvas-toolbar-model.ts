@@ -1,6 +1,4 @@
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
-import type { CanvasEdgeType } from '~/features/canvas/domain/validation'
 import type { Id } from 'convex/_generated/dataModel'
 import {
   useCanvasDocumentRuntime,
@@ -26,6 +24,7 @@ import {
 import { useCanvasPropertySession } from '../properties/use-canvas-property-session'
 import { useOptionalActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useShallow } from 'zustand/shallow'
+import type { CanvasEdgeType } from '~/features/canvas/domain/canvas-document'
 
 export function useCanvasToolbarModel() {
   const canvasEngine = useCanvasEngine()
@@ -108,7 +107,7 @@ export function useCanvasToolbarModel() {
   const setSelectedEdgesType = (type: CanvasEdgeType) => {
     runPropertyChange(() => {
       selectedEdges.forEach((edge) => {
-        if (resolveCanvasEdgeType(edge.type) === type) return
+        if (edge.type === type) return
 
         patchEdge(edge.id, { type })
       })

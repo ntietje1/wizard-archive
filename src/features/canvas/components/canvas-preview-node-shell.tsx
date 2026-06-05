@@ -7,8 +7,8 @@ import { readResizeObserverBorderBoxSize } from '../system/canvas-element-size'
 import { useCanvasEngine } from '../react/canvas-engine-context-value'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { cn } from '~/features/shadcn/lib/utils'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 export function CanvasPreviewNodeShell({
   children,

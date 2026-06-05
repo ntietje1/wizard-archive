@@ -6,6 +6,7 @@ import {
 import { buildCanvasContextMenu } from './canvas-context-menu-registry'
 import { resolveCanvasContextMenuTarget } from './canvas-context-menu-target'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type {
   CanvasContextMenuCommands,
   CanvasContextMenuContext,
@@ -14,8 +15,6 @@ import type {
   CanvasContextMenuServices,
 } from './canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-import type * as Y from 'yjs'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import type { BuiltContextMenu } from '~/features/context-menu/types'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
@@ -23,14 +22,17 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { logger } from '~/shared/utils/logger'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 interface UseCanvasContextMenuOptions {
   activeTool: string
   canEdit: boolean
   campaignId: Id<'campaigns'>
   canvasParentId: Id<'sidebarItems'> | null
-  nodesMap: Y.Map<CanvasDocumentNode>
-  edgesMap: Y.Map<CanvasDocumentEdge>
+  canvasEngine: CanvasEngine
   createNode: (node: CanvasDocumentNode) => void
   setPendingEditNodeId: (nodeId: string | null) => void
   setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
@@ -59,8 +61,7 @@ export function useCanvasContextMenu({
   canEdit,
   campaignId,
   canvasParentId,
-  nodesMap,
-  edgesMap,
+  canvasEngine,
   createNode,
   setPendingEditNodeId,
   setPendingEditNodePoint,
@@ -80,11 +81,15 @@ export function useCanvasContextMenu({
   const { itemsMap } = useActiveSidebarItems()
 
   const services = {
-    hasSelectableCanvasItems: () => nodesMap.size > 0 || edgesMap.size > 0,
+    hasSelectableCanvasItems: () => {
+      const snapshot = canvasEngine.getSnapshot()
+      return snapshot.nodeIds.length > 0 || snapshot.edgeIds.length > 0
+    },
     selectAllCanvasItems: () => {
+      const snapshot = canvasEngine.getSnapshot()
       selection.setSelection({
-        nodeIds: new Set(nodesMap.keys()),
-        edgeIds: new Set(edgesMap.keys()),
+        nodeIds: new Set(snapshot.nodeIds),
+        edgeIds: new Set(snapshot.edgeIds),
       })
     },
     canOpenEmbedTarget: (target) =>
@@ -176,7 +181,10 @@ export function useCanvasContextMenu({
       return
     }
 
-    const resolvedSelection = resolveCanvasContextMenuTarget(nextSelection, nodesMap, edgesMap)
+    const resolvedSelection = resolveCanvasContextMenuTarget(
+      nextSelection,
+      canvasEngine.getSnapshot(),
+    )
     pendingOpenPositionRef.current = position
     setMenuState({
       context: {

@@ -10,6 +10,7 @@ let activeItems: Array<AnySidebarItem> = []
 let queryData: AnySidebarItem | null = null
 let queryStatus: 'pending' | 'error' | 'success' = 'success'
 let isFetching = false
+let queryError: unknown = null
 
 vi.mock('@tanstack/react-router', () => ({
   useMatch: () => ({ search: routeSearch }),
@@ -24,6 +25,7 @@ vi.mock('~/shared/hooks/useAuthQuery', () => ({
     data: queryData,
     status: queryStatus,
     isFetching,
+    error: queryError,
   }),
 }))
 
@@ -38,6 +40,7 @@ describe('useCurrentItem', () => {
     queryData = null
     queryStatus = 'success'
     isFetching = false
+    queryError = null
   })
 
   it('resolves optimistic slugs from the active sidebar cache', () => {
@@ -100,5 +103,18 @@ describe('useCurrentItem', () => {
     expect(result.current.item).toBeNull()
     expect(result.current.hasRequestedItem).toBe(false)
     expect(result.current.isNotFound).toBe(false)
+  })
+
+  it('reports current item query errors without treating them as loading or not found', () => {
+    queryError = new Error('fetch failed')
+    queryStatus = 'error'
+    routeSearch = { item: 'broken-slug' }
+
+    const { result } = renderHook(() => useCurrentItem())
+
+    expect(result.current.item).toBeNull()
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.isNotFound).toBe(false)
+    expect(result.current.itemError).toBe(queryError)
   })
 })

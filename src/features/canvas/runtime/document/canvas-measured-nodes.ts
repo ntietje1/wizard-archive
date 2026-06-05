@@ -1,7 +1,6 @@
 import type { CanvasMeasuredNode } from '../../tools/canvas-tool-types'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 type MeasuredNodeLookupValue = Pick<CanvasDocumentNode, 'data' | 'id' | 'position' | 'type'> & {
   measured?: {
     width?: number

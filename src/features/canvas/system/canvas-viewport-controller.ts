@@ -2,8 +2,7 @@ import type { CanvasEngine } from './canvas-engine-types'
 import type { CanvasDomRuntime } from './canvas-dom-runtime'
 import { getCanvasFitViewport } from '../utils/canvas-fit-view'
 import type { CanvasPosition, CanvasViewport } from '../types/canvas-domain-types'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 4
 const ZOOM_BUTTON_FACTOR = 1.2

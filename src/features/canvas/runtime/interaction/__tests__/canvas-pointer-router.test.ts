@@ -12,8 +12,7 @@ import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-
+} from '~/features/canvas/domain/canvas-document'
 describe('createCanvasPointerRouter', () => {
   const rafCallbacks = new Map<number, FrameRequestCallback>()
   let nextRafId = 1

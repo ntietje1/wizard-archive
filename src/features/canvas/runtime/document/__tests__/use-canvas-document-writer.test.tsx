@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { createCanvasDocumentWriter } from '../use-canvas-document-writer'
+import type { CanvasEdgePatch } from '../../../edges/canvas-edge-types'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-import type { CanvasEdgePatch } from '../../../edges/canvas-edge-types'
+} from '~/features/canvas/domain/canvas-document'
 
 const validCanvasEdgePatch: CanvasEdgePatch = {
   type: 'step',

@@ -1,39 +1,37 @@
-import { normalizeCanvasEdge } from '../../edges/canvas-edge-registry'
-import { normalizeCanvasNode } from '../../nodes/canvas-node-normalization'
 import { embedNodeContextMenuContributors } from '../../nodes/embed/embed-node-context-menu'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
+import type { CanvasEngineSnapshot } from '../../system/canvas-engine-types'
+import type { Id } from 'convex/_generated/dataModel'
 import type {
   CanvasContextMenuContributor,
   CanvasContextMenuTarget,
 } from './canvas-context-menu-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-import type * as Y from 'yjs'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 type CanvasResolvedContextMenuTarget = {
   target: CanvasContextMenuTarget
   contributors: ReadonlyArray<CanvasContextMenuContributor>
 }
 
-function getOrderedNormalizedSelectedNodes(
+function getOrderedSelectedNodes(
   nodeIds: ReadonlySet<string>,
-  nodesMap: Y.Map<CanvasDocumentNode>,
-): Array<NonNullable<ReturnType<typeof normalizeCanvasNode>>> {
+  nodeLookup: CanvasEngineSnapshot['nodeLookup'],
+): Array<CanvasDocumentNode> {
   return Array.from(nodeIds)
-    .map((nodeId) => nodesMap.get(nodeId))
+    .map((nodeId) => nodeLookup.get(nodeId)?.node)
     .filter((node): node is CanvasDocumentNode => node !== undefined)
-    .map((node) => normalizeCanvasNode(node))
-    .filter((node): node is NonNullable<ReturnType<typeof normalizeCanvasNode>> => node !== null)
 }
 
-function getOrderedNormalizedSelectedEdges(
+function getOrderedSelectedEdges(
   edgeIds: ReadonlySet<string>,
-  edgesMap: Y.Map<CanvasDocumentEdge>,
-): Array<NonNullable<ReturnType<typeof normalizeCanvasEdge>>> {
+  edgeLookup: CanvasEngineSnapshot['edgeLookup'],
+): Array<CanvasDocumentEdge> {
   return Array.from(edgeIds)
-    .map((edgeId) => edgesMap.get(edgeId))
+    .map((edgeId) => edgeLookup.get(edgeId)?.edge)
     .filter((edge): edge is CanvasDocumentEdge => edge !== undefined)
-    .map((edge) => normalizeCanvasEdge(edge))
-    .filter((edge): edge is NonNullable<ReturnType<typeof normalizeCanvasEdge>> => edge !== null)
 }
 
 function getSharedValue<TItem, TValue>(
@@ -59,9 +57,9 @@ function getSharedValue<TItem, TValue>(
 
 function resolveNodeSelectionTarget(
   selection: CanvasSelectionSnapshot,
-  nodesMap: Y.Map<CanvasDocumentNode>,
+  snapshot: CanvasEngineSnapshot,
 ): CanvasResolvedContextMenuTarget {
-  const selectedNodes = getOrderedNormalizedSelectedNodes(selection.nodeIds, nodesMap)
+  const selectedNodes = getOrderedSelectedNodes(selection.nodeIds, snapshot.nodeLookup)
 
   if (selectedNodes.length === 1) {
     const [selectedNode] = selectedNodes
@@ -71,7 +69,7 @@ function resolveNodeSelectionTarget(
           kind: 'embed-node',
           nodeId: selectedNode.id,
           nodeType: 'embed',
-          sidebarItemId: selectedNode.data.sidebarItemId,
+          sidebarItemId: selectedNode.data.sidebarItemId as Id<'sidebarItems'>,
         },
         contributors: embedNodeContextMenuContributors,
       }
@@ -91,9 +89,9 @@ function resolveNodeSelectionTarget(
 
 function resolveEdgeSelectionTarget(
   selection: CanvasSelectionSnapshot,
-  edgesMap: Y.Map<CanvasDocumentEdge>,
+  snapshot: CanvasEngineSnapshot,
 ): CanvasResolvedContextMenuTarget {
-  const selectedEdges = getOrderedNormalizedSelectedEdges(selection.edgeIds, edgesMap)
+  const selectedEdges = getOrderedSelectedEdges(selection.edgeIds, snapshot.edgeLookup)
   const edgeType = getSharedValue(selectedEdges, (edge) => edge.type)
 
   return {
@@ -108,16 +106,15 @@ function resolveEdgeSelectionTarget(
 
 export function resolveCanvasContextMenuTarget(
   selection: CanvasSelectionSnapshot,
-  nodesMap: Y.Map<CanvasDocumentNode>,
-  edgesMap: Y.Map<CanvasDocumentEdge>,
+  snapshot: CanvasEngineSnapshot,
 ): CanvasResolvedContextMenuTarget {
   if (selection.nodeIds.size === 0 && selection.edgeIds.size === 0) {
     return { target: { kind: 'pane' }, contributors: [] }
   }
 
   if (selection.nodeIds.size > 0 && selection.edgeIds.size > 0) {
-    const selectedNodes = getOrderedNormalizedSelectedNodes(selection.nodeIds, nodesMap)
-    const selectedEdges = getOrderedNormalizedSelectedEdges(selection.edgeIds, edgesMap)
+    const selectedNodes = getOrderedSelectedNodes(selection.nodeIds, snapshot.nodeLookup)
+    const selectedEdges = getOrderedSelectedEdges(selection.edgeIds, snapshot.edgeLookup)
     return {
       target: {
         kind: 'mixed-selection',
@@ -129,8 +126,8 @@ export function resolveCanvasContextMenuTarget(
   }
 
   if (selection.nodeIds.size > 0) {
-    return resolveNodeSelectionTarget(selection, nodesMap)
+    return resolveNodeSelectionTarget(selection, snapshot)
   }
 
-  return resolveEdgeSelectionTarget(selection, edgesMap)
+  return resolveEdgeSelectionTarget(selection, snapshot)
 }

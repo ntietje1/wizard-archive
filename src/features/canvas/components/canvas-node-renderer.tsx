@@ -2,8 +2,8 @@ import { memo } from 'react'
 import { CanvasNodeWrapper } from './canvas-node-wrapper'
 import { areArraysEqual } from './canvas-renderer-utils'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { ComponentType, MouseEvent as ReactMouseEvent } from 'react'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 export const CanvasNodeRenderer = memo(function CanvasNodeRenderer({
   onNodeClick,

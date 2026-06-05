@@ -1,8 +1,8 @@
 import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import type { CanvasViewport } from '../types/canvas-domain-types'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import { boundsUnion } from './canvas-geometry-utils'
 import type { Bounds } from './canvas-geometry-utils'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 export function getCanvasFitViewport({
   height,

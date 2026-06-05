@@ -39,7 +39,8 @@ function EditorLoading() {
 }
 
 export function EditorContent() {
-  const { item, contentItem, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
+  const { item, contentItem, editorSearch, isLoading, itemError, hasRequestedItem } =
+    useCurrentItem()
   const { campaignActor } = useEditorMode()
   const { itemsMap } = useActiveSidebarItems()
   const requestedSlug = getSlug(editorSearch)
@@ -54,6 +55,7 @@ export function EditorContent() {
     lookup: { kind: 'slug', slug: requestedSlug },
     readableItem: contentItem,
     readableItemLoading: isLoading,
+    readableItemError: itemError,
     canView,
     subject: 'page',
     fallbackLabel: 'Page',

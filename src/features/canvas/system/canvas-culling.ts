@@ -6,8 +6,10 @@ import type { CanvasSelectionState } from './canvas-selection'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import { rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type { CanvasViewport } from '../types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 const CULLING_OVERSCAN_PX = 512
 const MIN_ZOOM = 1e-6
 

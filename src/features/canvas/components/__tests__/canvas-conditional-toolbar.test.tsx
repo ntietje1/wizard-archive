@@ -10,15 +10,15 @@ import {
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import type { CanvasEngine } from '../../system/canvas-engine-types'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import type { CanvasEdgePatch } from '../../edges/canvas-edge-types'
+import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
   CanvasEdgeType,
   CanvasNodeType,
-} from '~/features/canvas/domain/validation'
-import type { CanvasEdgePatch } from '../../edges/canvas-edge-types'
-import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
-import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
+} from '~/features/canvas/domain/canvas-document'
 
 const nodesMock = vi.hoisted(() => ({
   nodes: [] as Array<Node>,

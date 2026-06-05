@@ -15,8 +15,10 @@ import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-ty
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
 const NODE_EDGE_ANCHOR_OUTSET_PX = 0
 const POINT_EPSILON = 1e-6

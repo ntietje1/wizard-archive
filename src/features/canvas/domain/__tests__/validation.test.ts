@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseCanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
+import { parseCanvasDocumentEdge, parseCanvasDocumentNode } from '../canvas-document'
 import {
   parseCanvasAwarenessUser,
   parseCanvasAwarenessPresence,
@@ -19,11 +20,8 @@ import {
   parseCanvasSelectAwarenessState,
   parseCanvasStrokeSelectionData,
   parseCanvasStrokeNodeData,
-  parseCanvasDocumentEdge,
-  parseCanvasDocumentNode,
   parseCanvasViewport,
 } from '../validation'
-
 describe('parseCanvasViewport', () => {
   it('returns the parsed viewport for finite coordinates', () => {
     expect(parseCanvasViewport({ x: 42, y: -18, zoom: 1.75 })).toEqual({
@@ -68,6 +66,36 @@ describe('parseCanvasDocumentNode', () => {
         type: 'text',
         position: { x: Number.NaN, y: 20 },
         data: {},
+      }),
+    ).toBeNull()
+  })
+
+  it('rejects nodes with invalid durable identity or dimensions', () => {
+    expect(
+      parseCanvasDocumentNode({
+        id: '',
+        type: 'text',
+        position: { x: 10, y: 20 },
+        data: {},
+      }),
+    ).toBeNull()
+
+    expect(
+      parseCanvasDocumentNode({
+        id: '   ',
+        type: 'text',
+        position: { x: 10, y: 20 },
+        data: {},
+      }),
+    ).toBeNull()
+
+    expect(
+      parseCanvasDocumentNode({
+        id: 'node-1',
+        type: 'text',
+        position: { x: 10, y: 20 },
+        data: {},
+        width: -1,
       }),
     ).toBeNull()
   })
@@ -449,6 +477,22 @@ describe('canvas edge parsers', () => {
   it('rejects malformed edge contracts', () => {
     expect(parseCanvasEdgeType('curved')).toBeNull()
     expect(parseCanvasEdgeStyle({ strokeWidth: -1 })).toBeNull()
+    expect(
+      parseCanvasDocumentEdge({
+        id: '',
+        source: 'node-1',
+        target: 'node-2',
+        type: 'straight',
+      }),
+    ).toBeNull()
+    expect(
+      parseCanvasDocumentEdge({
+        id: 'edge-1',
+        source: '   ',
+        target: 'node-2',
+        type: 'straight',
+      }),
+    ).toBeNull()
     expect(
       parseCanvasDocumentEdge({
         id: 'edge-1',

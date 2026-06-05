@@ -5,13 +5,13 @@ import type { CanvasEdgeRenderGeometryProps } from '../edges/canvas-edge-types'
 import { buildStepCanvasEdgeGeometryFromRenderProps } from '../edges/step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromRenderProps } from '../edges/straight/straight-canvas-edge-geometry'
 import type { CanvasConnectionDraft } from '../runtime/interaction/canvas-connection-gesture-types'
+import type { Point2D } from '../utils/canvas-awareness-types'
+import { assertNever } from '~/shared/utils/utils'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasEdgeType,
-} from '~/features/canvas/domain/validation'
-import type { Point2D } from '../utils/canvas-awareness-types'
-import { assertNever } from '~/shared/utils/utils'
+} from '~/features/canvas/domain/canvas-document'
 
 type CanvasConnectionPreviewGeometry = {
   path: string

@@ -1,7 +1,7 @@
 import { readCanvasRichTextContentState } from './canvas-rich-text-editor'
-import type { CanvasTextNodeData } from '~/features/canvas/domain/validation'
 import type { CanvasRichTextContentState } from './canvas-rich-text-editor'
 import { normalizeCanvasNodeSurfaceStyleData } from './canvas-node-surface-style'
+import type { CanvasTextNodeData } from '~/features/canvas/domain/canvas-document'
 import type {
   CanvasNodeSurfaceStyleData,
   CanvasNormalizedNodeSurfaceStyleData,

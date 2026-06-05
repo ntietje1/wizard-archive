@@ -10,7 +10,6 @@ import {
 import { HistoryPreviewBanner } from './history-preview-banner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { GameMapSnapshotData } from 'shared/game-maps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
@@ -22,6 +21,10 @@ import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import { resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
 import { yDocToBlocks } from 'shared/editor-blocks/blocknote-yjs'
 import { logger } from '~/shared/utils/logger'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 function readNoteYjsSnapshot(data: ArrayBuffer): Array<CustomBlock> {
   const doc = new Y.Doc()

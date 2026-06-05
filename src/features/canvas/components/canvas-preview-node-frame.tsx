@@ -1,5 +1,5 @@
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { ReactNode } from 'react'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 export function CanvasPreviewNodeFrame({
   children,

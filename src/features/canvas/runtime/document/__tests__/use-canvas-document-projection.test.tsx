@@ -1,12 +1,18 @@
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { useCanvasDocumentProjection } from '../use-canvas-document-projection'
 import { createCanvasEngine } from '../../../system/canvas-engine'
+import { logger } from '~/shared/utils/logger'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
+} from '~/features/canvas/domain/canvas-document'
+vi.mock('~/shared/utils/logger', () => ({
+  logger: {
+    error: vi.fn(),
+  },
+}))
 
 function createTextNode(id: string): Node {
   return {
@@ -26,7 +32,20 @@ function createOrderedTextNode(id: string, zIndex: number): Node {
   }
 }
 
+function createEdge(id: string): Edge {
+  return {
+    id,
+    source: 'node-1',
+    target: 'node-2',
+    type: 'straight',
+  }
+}
+
 describe('useCanvasDocumentProjection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('preserves local selection when remote state props rerender without document changes', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
@@ -74,7 +93,7 @@ describe('useCanvasDocumentProjection', () => {
     expect(canvasEngine.getSnapshot().selectedNodeIds).toEqual(new Set(['node-1']))
   })
 
-  it('drops nodes with stale persisted selection flags', () => {
+  it('normalizes nodes with stale persisted selection flags at the projection boundary', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
@@ -104,8 +123,100 @@ describe('useCanvasDocumentProjection', () => {
       }),
     )
 
-    expect(canvasEngine.getSnapshot().nodes).toHaveLength(0)
+    expect(canvasEngine.getSnapshot().nodes).toEqual([
+      expect.objectContaining({ id: 'node-1' }),
+      expect.objectContaining({ id: 'node-2' }),
+    ])
     expect(canvasEngine.getSnapshot().edges).toEqual([])
+    expect(logger.error).not.toHaveBeenCalled()
+  })
+
+  it('logs and drops invalid document values at the projection boundary', () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    nodesMap.set('node-1', {
+      id: 'node-1',
+      type: 'text',
+      position: { x: Number.NaN, y: 20 },
+      data: {},
+    } as unknown as Node)
+    nodesMap.set('node-2', null as unknown as Node)
+    edgesMap.set('edge-1', {
+      id: 'edge-1',
+      source: 'node-1',
+      target: '',
+      type: 'straight',
+    } as unknown as Edge)
+    edgesMap.set('edge-2', false as unknown as Edge)
+
+    const canvasEngine = createCanvasEngine()
+
+    renderHook(() =>
+      useCanvasDocumentProjection({
+        canvasEngine,
+        nodesMap,
+        edgesMap,
+        localDraggingIdsRef: { current: new Set<string>() },
+        remoteResizeDimensions: {},
+      }),
+    )
+
+    expect(canvasEngine.getSnapshot().nodes).toEqual([])
+    expect(canvasEngine.getSnapshot().edges).toEqual([])
+    expect(logger.error).toHaveBeenCalledWith(
+      'Ignoring invalid canvas document node at projection boundary',
+      expect.objectContaining({ id: 'node-1' }),
+    )
+    expect(logger.error).toHaveBeenCalledWith(
+      'Ignoring invalid canvas document edge at projection boundary',
+      expect.objectContaining({ id: 'edge-1' }),
+    )
+    expect(logger.error).toHaveBeenCalledWith(
+      'Ignoring invalid canvas document node at projection boundary',
+      expect.objectContaining({ id: 'node-2', value: null }),
+    )
+    expect(logger.error).toHaveBeenCalledWith(
+      'Ignoring invalid canvas document edge at projection boundary',
+      expect.objectContaining({ id: 'edge-2', value: false }),
+    )
+  })
+
+  it('drops document values whose stored id no longer matches the Yjs map key', () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set('node-2', createTextNode('node-2'))
+    edgesMap.set('edge-1', createEdge('edge-1'))
+
+    const canvasEngine = createCanvasEngine()
+
+    renderHook(() =>
+      useCanvasDocumentProjection({
+        canvasEngine,
+        nodesMap,
+        edgesMap,
+        localDraggingIdsRef: { current: new Set<string>() },
+        remoteResizeDimensions: {},
+      }),
+    )
+
+    act(() => {
+      nodesMap.set('node-1', createTextNode('node-2'))
+      edgesMap.set('edge-1', createEdge('edge-2'))
+    })
+
+    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual(['node-2'])
+    expect(canvasEngine.getSnapshot().edges).toEqual([])
+    expect(logger.error).toHaveBeenCalledWith(
+      'Ignoring canvas document node with mismatched map key at projection boundary',
+      expect.objectContaining({ id: 'node-1', valueId: 'node-2' }),
+    )
+    expect(logger.error).toHaveBeenCalledWith(
+      'Ignoring canvas document edge with mismatched map key at projection boundary',
+      expect.objectContaining({ id: 'edge-1', valueId: 'edge-2' }),
+    )
   })
 
   it('sorts projected nodes by persisted zIndex without renormalizing their stored values', () => {

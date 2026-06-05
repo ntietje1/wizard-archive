@@ -3,10 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasEditorRuntime } from '../use-canvas-editor-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasCommands } from '../document/use-canvas-commands'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 const previewSpy = vi.hoisted(() => vi.fn())
 const projectionSpy = vi.hoisted(() => vi.fn())
@@ -425,8 +428,9 @@ describe('useCanvasEditorRuntime', () => {
       canEdit: true,
       campaignId: 'campaign-id',
       canvasParentId: 'parent-id',
-      nodesMap,
-      edgesMap,
+      canvasEngine: expect.objectContaining({
+        getSnapshot: expect.any(Function),
+      }),
       createNode: documentWriterMock.createNode,
       setPendingEditNodeId: session.editSession.setPendingEditNodeId,
       setPendingEditNodePoint: session.editSession.setPendingEditNodePoint,

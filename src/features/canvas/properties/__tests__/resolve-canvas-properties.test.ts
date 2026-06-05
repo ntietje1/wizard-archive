@@ -19,8 +19,10 @@ import type {
   CanvasStrokeSizePropertyDefinition,
 } from '../canvas-property-types'
 import type { CanvasToolPropertyContext } from '../../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 const testPaintProperty: CanvasPaintPropertyDefinition = {
   id: 'fill',
   kind: 'paint',

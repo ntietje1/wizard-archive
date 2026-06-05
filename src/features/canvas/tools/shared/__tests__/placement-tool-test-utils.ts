@@ -1,7 +1,6 @@
 import type { CanvasToolId, CanvasToolRuntime } from '../../canvas-tool-types'
 import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 export function createPointerEvent(
   x: number,
   y: number,

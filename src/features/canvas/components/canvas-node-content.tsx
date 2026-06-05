@@ -9,26 +9,7 @@ const NODE_RENDERERS = {
   stroke: StrokeNode,
   text: TextNode,
 } as const satisfies CanvasNodeRendererMap
-const warnedNodeTypes = new Set<string>()
 
 export function CanvasNodeContent({ nodeId }: { nodeId: string }) {
-  return (
-    <CanvasNodeContentRenderer
-      nodeId={nodeId}
-      renderers={NODE_RENDERERS}
-      onUnknownNodeType={warnUnknownCanvasNodeType}
-    />
-  )
-}
-
-function warnUnknownCanvasNodeType(nodeType: string, expectedRenderers: ReadonlyArray<string>) {
-  if (!import.meta.env.DEV || warnedNodeTypes.has(nodeType)) {
-    return
-  }
-
-  console.warn('Unknown canvas node type; falling back to NODE_RENDERERS.text', {
-    nodeType,
-    expectedRenderers,
-  })
-  warnedNodeTypes.add(nodeType)
+  return <CanvasNodeContentRenderer nodeId={nodeId} renderers={NODE_RENDERERS} />
 }

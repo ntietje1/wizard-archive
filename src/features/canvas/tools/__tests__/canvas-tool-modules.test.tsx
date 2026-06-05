@@ -6,8 +6,7 @@ import {
   canvasToolbarTools,
 } from '../canvas-tool-modules'
 import type { CanvasToolPropertyContext, CanvasToolRuntime } from '../canvas-tool-types'
-import type { CanvasEdgeType } from '~/features/canvas/domain/validation'
-
+import type { CanvasEdgeType } from '~/features/canvas/domain/canvas-document'
 const selectAwarenessClear = vi.hoisted(() => vi.fn())
 const selectOverlayClear = vi.hoisted(() => vi.fn())
 const selectCreateHandlers = vi.hoisted(() => vi.fn(() => ({ onNodeClick: vi.fn() })))

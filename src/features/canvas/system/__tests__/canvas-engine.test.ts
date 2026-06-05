@@ -2,17 +2,16 @@ import { describe, expect, it, vi } from 'vitest'
 import { createCanvasDomRuntime } from '../canvas-dom-runtime'
 import { createCanvasEngine } from '../canvas-engine'
 import { getCachedStrokeDetailPath } from '../../nodes/stroke/stroke-path-cache'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from '~/features/canvas/domain/canvas-document'
 import {
   areCanvasPropertyEdgesEqual,
   areCanvasPropertyNodesEqual,
   areCanvasEdgeEndpointNodesEqual,
   selectCanvasEdgeEndpointNodes,
 } from '../canvas-engine-selectors'
-import type {
-  CanvasDocumentEdge as Edge,
-  CanvasDocumentNode as Node,
-} from '~/features/canvas/domain/validation'
-
 describe('createCanvasEngine', () => {
   it('stores document nodes as ordered ids plus lookup entries', () => {
     const engine = createCanvasEngine()

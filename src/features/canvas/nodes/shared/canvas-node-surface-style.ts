@@ -16,8 +16,7 @@ import {
 } from '../../properties/canvas-property-types'
 import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-screen-stroke-width'
 import type { CanvasNodeRenderDataByType, CanvasRuntimeNode } from '../canvas-node-types'
-import type { CanvasNodeType } from '~/features/canvas/domain/validation'
-
+import type { CanvasNodeType } from '~/features/canvas/domain/canvas-document'
 export interface CanvasNodeSurfaceStyleData {
   textColor?: string | null
   backgroundColor?: string | null

@@ -1,8 +1,11 @@
-import { buildCanvasEdgeGeometry, resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
+import { buildCanvasEdgeGeometry } from '../edges/canvas-edge-registry'
 import type { CanvasEdgeGeometry } from '../edges/shared/canvas-edge-geometry'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../system/canvas-engine-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasEdgeType,
+} from '~/features/canvas/domain/canvas-document'
 type CanvasPreviewNodeShellSnapshot = {
   id: string
   type: string | undefined
@@ -55,12 +58,10 @@ export function areCanvasPreviewNodeShellsEqual(
   )
 }
 
-type CanvasPreviewEdgeType = 'bezier' | 'straight' | 'step'
-
 type CanvasPreviewEdgeRender = {
   edge: CanvasDocumentEdge
   geometry: CanvasEdgeGeometry
-  type: CanvasPreviewEdgeType
+  type: CanvasEdgeType
 }
 
 export function selectCanvasPreviewEdgeRender(
@@ -74,10 +75,9 @@ export function selectCanvasPreviewEdgeRender(
 
   const edge = internalEdge.edge
   const nodesById = getPreviewEdgeEndpointNodes(edge, snapshot.nodeLookup)
-  const type = resolvePreviewEdgeType(edge.type)
-  const geometry = getPreviewEdgeGeometry({ ...edge, type }, nodesById)
+  const geometry = getPreviewEdgeGeometry(edge, nodesById)
 
-  return geometry ? { edge, geometry, type } : null
+  return geometry ? { edge, geometry, type: edge.type } : null
 }
 
 function getPreviewEdgeEndpointNodes(
@@ -97,12 +97,8 @@ function getPreviewEdgeEndpointNodes(
   return nodesById
 }
 
-function resolvePreviewEdgeType(type: string | undefined): CanvasPreviewEdgeType {
-  return resolveCanvasEdgeType(type)
-}
-
 function getPreviewEdgeGeometry(
-  edge: CanvasDocumentEdge & { type: CanvasPreviewEdgeType },
+  edge: CanvasDocumentEdge,
   nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ) {
   return buildCanvasEdgeGeometry(edge, nodesById)

@@ -18,8 +18,11 @@ import type { CanvasArrangeAction } from './canvas-arrange'
 import type { CanvasReorderDirection } from './canvas-reorder'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 interface UseCanvasCommandsOptions {
   canEdit: boolean

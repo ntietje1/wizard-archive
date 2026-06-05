@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createCanvasArrangePlan } from '../canvas-arrange'
-import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/validation'
 import * as Y from 'yjs'
+import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/canvas-document'
 
 vi.mock('~/features/canvas/nodes/shared/canvas-node-bounds', () => ({
   getCanvasNodeBounds: (node: Node) => {

@@ -1,6 +1,5 @@
 import { logger } from '~/shared/utils/logger'
-import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
-
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 export function createCanvasNodesById(
   nodes: ReadonlyArray<CanvasDocumentNode>,
 ): ReadonlyMap<string, CanvasDocumentNode> {

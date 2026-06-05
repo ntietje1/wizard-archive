@@ -21,7 +21,9 @@ import { Header } from '~/shared/components/header'
 import { SignInForm } from '~/features/auth/components/sign-in-form'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { StatusIcon } from '~/features/campaigns/components/status-icon'
+import { resolveCampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
 import type { Campaign, CampaignMember } from 'shared/campaigns/types'
+import type { CampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
 
 const PLACEHOLDER_USERNAME = parseUsername('placeholder')!
 const PLACEHOLDER_SLUG = parseCampaignSlug('placeholder')!
@@ -35,12 +37,10 @@ type JoinCampaignCardContent = {
 }
 
 type JoinCampaignCardContentOptions = {
-  campaign: Campaign | undefined
+  campaignLookupState: CampaignLookupState
   campaignMember: CampaignMember | null | undefined
   isAuthLoading: boolean
   isAuthenticated: boolean
-  isCampaignLoading: boolean
-  isCampaignUnavailable: boolean
   joinCampaignStatus: string
   onGoCampaignHome: () => void
   onGoHome: () => void
@@ -79,12 +79,10 @@ function CampaignInvitationSummary({ campaign }: { campaign: Campaign }) {
 }
 
 function buildJoinCampaignCardContent({
-  campaign,
+  campaignLookupState,
   campaignMember,
   isAuthLoading,
   isAuthenticated,
-  isCampaignLoading,
-  isCampaignUnavailable,
   joinCampaignStatus,
   onGoCampaignHome,
   onGoHome,
@@ -101,9 +99,12 @@ function buildJoinCampaignCardContent({
     }
   }
 
-  if (!isAuthenticated) return unauthenticatedCardContent(campaign, onShowSignIn)
+  const loadedCampaign =
+    campaignLookupState.status === 'ready' ? campaignLookupState.campaign : undefined
 
-  if (isCampaignLoading) {
+  if (!isAuthenticated) return unauthenticatedCardContent(loadedCampaign, onShowSignIn)
+
+  if (campaignLookupState.status === 'loading') {
     return {
       title: 'Loading Campaign…',
       description: 'Please wait a moment.',
@@ -113,7 +114,24 @@ function buildJoinCampaignCardContent({
     }
   }
 
-  if (isCampaignUnavailable || !campaign) {
+  if (campaignLookupState.status === 'failed') {
+    return {
+      title: 'Could Not Load Campaign',
+      description: 'Something went wrong while loading this campaign. Please try again.',
+      statusVariant: 'error',
+      titleColor: 'text-destructive',
+      children: (
+        <Button
+          onClick={() => void campaignLookupState.retry()}
+          className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
+        >
+          Try Again
+        </Button>
+      ),
+    }
+  }
+
+  if (campaignLookupState.status === 'not_found_or_forbidden') {
     return {
       title: 'Campaign Not Found',
       description: "The campaign link you're trying to access doesn't exist or has been removed.",
@@ -122,6 +140,8 @@ function buildJoinCampaignCardContent({
       children: <BrowseCampaignsButton onClick={onGoHome} />,
     }
   }
+
+  const campaign = campaignLookupState.campaign
 
   if (campaignMember?.role === CAMPAIGN_MEMBER_ROLE.DM) {
     return dmCardContent(campaign, onGoCampaignHome)
@@ -411,6 +431,7 @@ export function JoinCampaignPage() {
 
   const campaign = campaignQuery.data
   const campaignMember = campaign?.myMembership
+  const campaignLookupState = resolveCampaignLookupState(campaignQuery)
 
   const joinCampaign = useAppMutation(api.campaigns.mutations.joinCampaign)
 
@@ -466,12 +487,10 @@ export function JoinCampaignPage() {
   }
 
   const cardContent = buildJoinCampaignCardContent({
-    campaign,
+    campaignLookupState,
     campaignMember,
     isAuthLoading,
     isAuthenticated,
-    isCampaignLoading: campaignQuery.isLoading,
-    isCampaignUnavailable: campaignQuery.isError || !campaignQuery.data,
     joinCampaignStatus: joinCampaign.status,
     onGoCampaignHome: goToCampaignHome,
     onGoHome: goToHome,

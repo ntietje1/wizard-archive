@@ -1,5 +1,8 @@
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 export function transactCanvasMap<TValue>(map: Y.Map<TValue>, fn: () => void) {
   if (map.doc) {

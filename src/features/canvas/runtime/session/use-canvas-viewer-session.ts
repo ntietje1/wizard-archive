@@ -2,13 +2,16 @@ import { useEffect } from 'react'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
 import type { CanvasWithContent } from 'shared/canvases/types'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
 import { useResolvedTheme } from '~/shared/theme/context'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 const CURSOR_COLORS = [
   '#e06c75',

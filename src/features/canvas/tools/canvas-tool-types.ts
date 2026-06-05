@@ -13,12 +13,12 @@ import type {
   CanvasSelectionSnapshot,
 } from '../system/canvas-selection'
 import type { CanvasConnection, CanvasPosition } from '../types/canvas-domain-types'
+import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasEdgeType,
-} from '~/features/canvas/domain/validation'
-import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+} from '~/features/canvas/domain/canvas-document'
 
 export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text' | 'edge'
 
