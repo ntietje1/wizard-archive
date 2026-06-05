@@ -15,6 +15,14 @@ vi.mock('~/features/previews/hooks/use-claim-and-upload-preview', () => ({
   useClaimAndUploadPreview: claimAndUploadHookSpy,
 }))
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve
+  })
+  return { promise, resolve }
+}
+
 describe('useYjsPreviewUpload', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -64,7 +72,9 @@ describe('useYjsPreviewUpload', () => {
     })
 
     expect(claimAndUpload).toHaveBeenCalledTimes(1)
-    expect(claimAndUpload).toHaveBeenCalledWith('item-id', expect.any(Function))
+    expect(claimAndUpload).toHaveBeenCalledWith('item-id', expect.any(Function), {
+      signal: expect.any(AbortSignal),
+    })
     expect(capturePreviewSpy).toHaveBeenCalledTimes(1)
     expect(capturePreviewSpy).toHaveBeenCalledWith(target)
   })
@@ -121,5 +131,104 @@ describe('useYjsPreviewUpload', () => {
 
     expect(claimAndUpload).not.toHaveBeenCalled()
     expect(capturePreviewSpy).not.toHaveBeenCalled()
+  })
+
+  it('allows a new document to generate after a stale in-flight upload settles', async () => {
+    const firstDoc = new Y.Doc()
+    const secondDoc = new Y.Doc()
+    const container = document.createElement('div')
+    const target = document.createElement('div')
+    container.appendChild(target)
+    const pendingUpload = createDeferred<{ status: 'success' }>()
+
+    const claimAndUpload = vi.fn(
+      async (
+        _itemId: string,
+        _generate: () => Promise<Blob>,
+        _options?: { signal?: AbortSignal },
+      ) => pendingUpload.promise,
+    )
+    claimAndUploadHookSpy.mockReturnValue(claimAndUpload)
+
+    const { rerender } = renderHook(
+      ({ doc }) =>
+        useYjsPreviewUpload({
+          itemId: testId<'sidebarItems'>('item-id'),
+          doc,
+          containerRef: { current: container },
+          resolveElement: (root) => root,
+        }),
+      { initialProps: { doc: firstDoc } },
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+    expect(claimAndUpload).toHaveBeenCalledTimes(1)
+
+    rerender({ doc: secondDoc })
+
+    await act(async () => {
+      pendingUpload.resolve({ status: 'success' })
+      await pendingUpload.promise
+      await Promise.resolve()
+    })
+
+    act(() => {
+      secondDoc.getMap('nodes').set('after-swap', { value: 1 })
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+
+    expect(claimAndUpload).toHaveBeenCalledTimes(2)
+  })
+
+  it('aborts stale preview uploads when the Yjs document changes', async () => {
+    const firstDoc = new Y.Doc()
+    const secondDoc = new Y.Doc()
+    const container = document.createElement('div')
+    const pendingUpload = createDeferred<{ status: 'stale' }>()
+
+    const claimAndUpload = vi.fn(
+      async (
+        _itemId: string,
+        _generate: () => Promise<Blob>,
+        _options?: { signal?: AbortSignal },
+      ) => pendingUpload.promise,
+    )
+    claimAndUploadHookSpy.mockReturnValue(claimAndUpload)
+
+    const { rerender } = renderHook(
+      ({ doc }) =>
+        useYjsPreviewUpload({
+          itemId: testId<'sidebarItems'>('item-id'),
+          doc,
+          containerRef: { current: container },
+          resolveElement: (root) => root,
+        }),
+      { initialProps: { doc: firstDoc } },
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+
+    const firstOptions = claimAndUpload.mock.calls[0]?.[2]
+    const firstSignal = firstOptions?.signal
+    expect(firstSignal).toBeInstanceOf(AbortSignal)
+    if (!firstSignal) throw new Error('Expected preview upload signal')
+    expect(firstSignal.aborted).toBe(false)
+
+    rerender({ doc: secondDoc })
+
+    expect(firstSignal.aborted).toBe(true)
+
+    await act(async () => {
+      pendingUpload.resolve({ status: 'stale' })
+      await pendingUpload.promise
+      await Promise.resolve()
+    })
   })
 })

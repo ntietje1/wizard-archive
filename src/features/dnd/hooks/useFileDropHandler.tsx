@@ -164,9 +164,7 @@ export function useFileDropHandler() {
       storageId,
     })
 
-    generatePdfPreviewIfNeeded(file, result.id).catch((err: unknown) =>
-      logger.error('PDF preview generation failed', err),
-    )
+    void generatePdfPreviewIfNeeded(file, result.id)
     return result
   }
 

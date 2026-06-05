@@ -149,9 +149,7 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
       await updateFileStorage.mutateAsync({ fileId, storageId })
 
       if (fileUpload.file) {
-        generatePdfPreviewIfNeeded(fileUpload.file, fileId).catch((err: unknown) =>
-          handleError(err, 'PDF preview generation failed'),
-        )
+        void generatePdfPreviewIfNeeded(fileUpload.file, fileId)
       }
 
       toast.success('File updated')
@@ -173,9 +171,7 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
       storageId,
     })
     if (fileUpload.file) {
-      generatePdfPreviewIfNeeded(fileUpload.file, newFileId).catch((err: unknown) =>
-        handleError(err, 'PDF preview generation failed'),
-      )
+      void generatePdfPreviewIfNeeded(fileUpload.file, newFileId)
     }
 
     openParentFolders(newFileId)
