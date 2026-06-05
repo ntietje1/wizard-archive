@@ -21,11 +21,13 @@ import type {
 
 const sidebarItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),
+  createItem: vi.fn(),
+  navigateToItem: vi.fn(),
 }))
 
 vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
   useCreateFileSystemItem: () => ({
-    createItem: vi.fn(),
+    createItem: sidebarItemsState.createItem,
   }),
 }))
 
@@ -37,7 +39,7 @@ vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
 
 vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
   useEditorNavigation: () => ({
-    navigateToItem: vi.fn(),
+    navigateToItem: sidebarItemsState.navigateToItem,
   }),
 }))
 
@@ -116,7 +118,10 @@ function createMockSidebarItem(overrides: Partial<AnySidebarItem> = {}): AnySide
 describe('useCanvasContextMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    sidebarItemsState.itemsMap.clear()
+    sidebarItemsState.itemsMap = new Map()
+    sidebarItemsState.createItem.mockResolvedValue({
+      id: testId<'sidebarItems'>('created-sidebar-item'),
+    })
   })
 
   afterEach(() => {
@@ -158,6 +163,62 @@ describe('useCanvasContextMenu', () => {
     expect(selection.clearSelection).toHaveBeenCalledTimes(1)
     expect(open).toHaveBeenCalledWith({ x: 20, y: 40 })
     expect(result.current.menu.isEmpty).toBe(false)
+  })
+
+  it('injects sidebar-backed create actions into the pane menu adapter', async () => {
+    const selection = createSelectionController()
+    const canvasEngine = createContextMenuEngine()
+    const createNode = vi.fn()
+    const { result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        campaignId: testCampaignId,
+        canvasParentId: null,
+        canvasEngine,
+        createNode,
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+        selection,
+        commands: createCommands(),
+      }),
+    )
+
+    result.current.hostRef.current = {
+      open: vi.fn(),
+      close: vi.fn(),
+    }
+
+    act(() => {
+      result.current.openForPane(createContextMenuEvent(20, 40))
+    })
+
+    const createSubmenu = result.current.menu.flatItems.find(
+      (item) => item.id === 'canvas-pane-create-submenu',
+    )
+    expect(createSubmenu?.children?.map((item) => item.id)).toEqual([
+      'canvas-pane-create-note',
+      'canvas-pane-create-folder',
+      'canvas-pane-create-map',
+      'canvas-pane-create-canvas',
+      'canvas-pane-create-file',
+      'canvas-pane-create-text',
+    ])
+
+    const noteItem = createSubmenu?.children?.find((item) => item.id === 'canvas-pane-create-note')
+    expect(noteItem).toBeDefined()
+
+    await act(async () => {
+      await noteItem!.onSelect()
+    })
+
+    expect(sidebarItemsState.createItem).toHaveBeenCalledWith({
+      type: SIDEBAR_ITEM_TYPES.notes,
+      parentTarget: { kind: 'direct', parentId: null },
+      name: 'Item',
+    })
+    expect(createNode).toHaveBeenCalledTimes(1)
   })
 
   it('selects every canvas item from the pane menu Select All action', async () => {
@@ -413,6 +474,61 @@ describe('useCanvasContextMenu', () => {
 
     expect(open).toHaveBeenCalledWith({ x: 25, y: 30 })
     expect(result.current.menu.flatItems.some((item) => item.label === 'Open')).toBe(true)
+  })
+
+  it('refreshes embed-node contributors when active sidebar items are replaced while open', () => {
+    const selection = createSelectionController({
+      nodeIds: new Set(['embed-1']),
+      edgeIds: new Set<string>(),
+    })
+    sidebarItemsState.itemsMap.set(
+      'note-1',
+      createMockSidebarItem({
+        _id: testId<'sidebarItems'>('note-1'),
+        slug: 'note-1' as AnySidebarItem['slug'],
+      }),
+    )
+    const embedNode = {
+      id: 'embed-1',
+      type: 'embed',
+      position: { x: 0, y: 0 },
+      width: 200,
+      height: 120,
+      data: { sidebarItemId: 'note-1' },
+    } as Node
+    const canvasEngine = createContextMenuEngine({ nodes: [embedNode] })
+
+    const { rerender, result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        campaignId: testCampaignId,
+        canvasParentId: null,
+        canvasEngine,
+        createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+        selection,
+        commands: createCommands(),
+      }),
+    )
+
+    result.current.hostRef.current = {
+      open: vi.fn(),
+      close: vi.fn(),
+    }
+
+    act(() => {
+      result.current.openForNode(createContextMenuEvent(25, 30), embedNode)
+    })
+
+    expect(result.current.menu.flatItems.some((item) => item.label === 'Open')).toBe(true)
+
+    sidebarItemsState.itemsMap = new Map()
+    rerender()
+
+    expect(result.current.menu.flatItems.some((item) => item.label === 'Open')).toBe(false)
   })
 
   it('keeps mixed selections on the shared selection menu', () => {

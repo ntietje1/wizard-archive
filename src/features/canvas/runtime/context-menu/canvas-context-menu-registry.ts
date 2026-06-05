@@ -4,11 +4,6 @@ import {
   Copy,
   CopyPlus,
   CornerDownLeft,
-  File,
-  FilePlus,
-  FolderPlus,
-  Grid2x2Plus,
-  MapPin,
   Plus,
   Scissors,
   SquareMousePointer,
@@ -16,7 +11,6 @@ import {
   Type,
 } from 'lucide-react'
 import { parseCanvasReorderPayload } from '~/features/canvas/domain/validation'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { CANVAS_ARRANGE_ACTIONS } from '../document/canvas-arrange'
 import { CANVAS_REORDER_ACTIONS } from '../document/canvas-reorder-actions'
 import { buildMenu } from '~/features/context-menu/menu-builder'
@@ -111,30 +105,11 @@ function parseCanvasArrangeAction(payload: unknown): CanvasArrangeAction | null 
     : null
 }
 
-function buildCanvasCreateItems(): Array<CanvasContextMenuItem> {
-  const createItem = (
-    id: string,
-    label: string,
-    icon: CanvasContextMenuItem['icon'],
-    priority: number,
-    type: (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES],
-  ): CanvasContextMenuItem => ({
-    id,
-    label,
-    icon,
-    group: 'create',
-    priority,
-    onSelect: async (context, services) => {
-      await services.createAndEmbedSidebarItem(type, context.pointerPosition)
-    },
-  })
-
+function buildCanvasCreateItems(
+  injectedCreateItems: ReadonlyArray<CanvasContextMenuItem>,
+): Array<CanvasContextMenuItem> {
   return [
-    createItem('canvas-pane-create-note', 'Note', FilePlus, 10, SIDEBAR_ITEM_TYPES.notes),
-    createItem('canvas-pane-create-folder', 'Folder', FolderPlus, 11, SIDEBAR_ITEM_TYPES.folders),
-    createItem('canvas-pane-create-map', 'Map', MapPin, 12, SIDEBAR_ITEM_TYPES.gameMaps),
-    createItem('canvas-pane-create-canvas', 'Canvas', Grid2x2Plus, 13, SIDEBAR_ITEM_TYPES.canvases),
-    createItem('canvas-pane-create-file', 'File', File, 14, SIDEBAR_ITEM_TYPES.files),
+    ...injectedCreateItems,
     {
       id: 'canvas-pane-create-text',
       label: 'Text',
@@ -148,35 +123,39 @@ function buildCanvasCreateItems(): Array<CanvasContextMenuItem> {
   ]
 }
 
-const canvasPaneContributor: CanvasContextMenuContributor = {
-  id: 'canvas-pane',
-  surfaces: ['canvas'],
-  getItems: (context, _services) =>
-    context.target.kind !== 'pane'
-      ? []
-      : [
-          {
-            id: 'canvas-pane-create-submenu',
-            label: 'New...',
-            icon: Plus,
-            group: 'create',
-            priority: 0,
-            applies: (ctx) => ctx.canEdit,
-            children: () => buildCanvasCreateItems(),
-          },
-          {
-            id: 'canvas-pane-select-all',
-            label: 'Select All',
-            icon: SquareMousePointer,
-            shortcut: 'Mod+A',
-            group: 'edit',
-            priority: 0,
-            isEnabled: (_ctx, services) => services.hasSelectableCanvasItems(),
-            onSelect: (_ctx, services) => {
-              services.selectAllCanvasItems()
+function createCanvasPaneContributor(
+  createItems: ReadonlyArray<CanvasContextMenuItem>,
+): CanvasContextMenuContributor {
+  return {
+    id: 'canvas-pane',
+    surfaces: ['canvas'],
+    getItems: (context, _services) =>
+      context.target.kind !== 'pane'
+        ? []
+        : [
+            {
+              id: 'canvas-pane-create-submenu',
+              label: 'New...',
+              icon: Plus,
+              group: 'create',
+              priority: 0,
+              applies: (ctx) => ctx.canEdit,
+              children: () => buildCanvasCreateItems(createItems),
             },
-          },
-        ],
+            {
+              id: 'canvas-pane-select-all',
+              label: 'Select All',
+              icon: SquareMousePointer,
+              shortcut: 'Mod+A',
+              group: 'edit',
+              priority: 0,
+              isEnabled: (_ctx, services) => services.hasSelectableCanvasItems(),
+              onSelect: (_ctx, services) => {
+                services.selectAllCanvasItems()
+              },
+            },
+          ],
+  }
 }
 
 const canvasClipboardContributor: CanvasContextMenuContributor = {
@@ -248,7 +227,6 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
 }
 
 const canvasContextMenuContributors = [
-  canvasPaneContributor,
   canvasClipboardContributor,
   canvasSelectionContributor,
 ] satisfies ReadonlyArray<CanvasContextMenuContributor>
@@ -265,17 +243,23 @@ export function buildCanvasContextMenu({
   context,
   services,
   commands,
+  createItems = [],
   contributors = [],
 }: {
   context: CanvasContextMenuContext
   services: CanvasContextMenuServices
   commands: CanvasContextMenuCommands
+  createItems?: ReadonlyArray<CanvasContextMenuItem>
   contributors?: ReadonlyArray<CanvasContextMenuContributor>
 }) {
   return buildMenu({
     context,
     services,
-    contributors: [...canvasContextMenuContributors, ...contributors],
+    contributors: [
+      createCanvasPaneContributor(createItems),
+      ...canvasContextMenuContributors,
+      ...contributors,
+    ],
     commands: {
       'canvas-paste': {
         id: 'canvas-paste',

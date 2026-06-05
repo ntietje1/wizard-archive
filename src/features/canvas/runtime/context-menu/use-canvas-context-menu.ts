@@ -1,31 +1,23 @@
-import { useLayoutEffect, useRef, useState } from 'react'
-import {
-  createAndSelectEmbeddedCanvasNode,
-  createAndSelectTextCanvasNode,
-} from '../document/canvas-document-commands'
-import { buildCanvasContextMenu } from './canvas-context-menu-registry'
-import { resolveCanvasContextMenuTarget } from './canvas-context-menu-target'
+import { createAndSelectEmbeddedCanvasNode } from '../document/canvas-document-commands'
+import { useCanvasContextMenuCore } from './use-canvas-context-menu-core'
+import { createEmbedNodeContextMenuContributor } from '../../nodes/embed/embed-node-context-menu'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type {
   CanvasContextMenuCommands,
-  CanvasContextMenuContext,
-  CanvasContextMenuContributor,
+  CanvasContextMenuItem,
   CanvasContextMenuPoint,
-  CanvasContextMenuServices,
 } from './canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
-import type { BuiltContextMenu } from '~/features/context-menu/types'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { logger } from '~/shared/utils/logger'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/domain/canvas-document'
+import { File, FilePlus, FolderPlus, Grid2x2Plus, MapPin } from 'lucide-react'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 
 interface UseCanvasContextMenuOptions {
   activeTool: string
@@ -41,21 +33,6 @@ interface UseCanvasContextMenuOptions {
   commands: CanvasContextMenuCommands
 }
 
-type PointerPosition = { x: number; y: number }
-const EMPTY_CONTEXT_MENU: BuiltContextMenu = { groups: [], flatItems: [], isEmpty: true }
-
-function normalizeContextMenuEvent(event: MouseEvent | React.MouseEvent) {
-  const nativeEvent = 'nativeEvent' in event ? event.nativeEvent : event
-  event.preventDefault()
-  event.stopPropagation()
-  nativeEvent.stopImmediatePropagation?.()
-
-  return {
-    x: nativeEvent.clientX,
-    y: nativeEvent.clientY,
-  }
-}
-
 export function useCanvasContextMenu({
   activeTool,
   canEdit,
@@ -69,49 +46,89 @@ export function useCanvasContextMenu({
   selection,
   commands,
 }: UseCanvasContextMenuOptions) {
-  const hostRef = useRef<ContextMenuHostRef>(null)
-  const pendingOpenPositionRef = useRef<PointerPosition | null>(null)
-  const [menuState, setMenuState] = useState<{
-    context: CanvasContextMenuContext
-    contributors: ReadonlyArray<CanvasContextMenuContributor>
-  } | null>(null)
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { itemsMap } = useActiveSidebarItems()
+  const createItems = buildSidebarCreateItems({
+    campaignId,
+    canEdit,
+    canvasParentId,
+    createItem,
+    createNode,
+    getDefaultName,
+    screenToCanvasPosition,
+    setSelection: selection.setSelection,
+  })
 
-  const services = {
-    hasSelectableCanvasItems: () => {
-      const snapshot = canvasEngine.getSnapshot()
-      return snapshot.nodeIds.length > 0 || snapshot.edgeIds.length > 0
-    },
-    selectAllCanvasItems: () => {
-      const snapshot = canvasEngine.getSnapshot()
-      selection.setSelection({
-        nodeIds: new Set(snapshot.nodeIds),
-        edgeIds: new Set(snapshot.edgeIds),
-      })
-    },
-    canOpenEmbedTarget: (target) =>
-      target.kind === 'embed-node' && itemsMap.has(target.sidebarItemId),
-    openEmbedTarget: async (target) => {
-      if (target.kind !== 'embed-node') {
-        return false
-      }
+  return useCanvasContextMenuCore({
+    activeTool,
+    canEdit,
+    canvasEngine,
+    createItems,
+    createNode,
+    getTargetContributors: (target) =>
+      target.kind === 'embed-node'
+        ? [
+            createEmbedNodeContextMenuContributor({
+              canOpenEmbedTarget: (embedTarget) => itemsMap.has(embedTarget.sidebarItemId),
+              openEmbedTarget: async (embedTarget) => {
+                const item = itemsMap.get(embedTarget.sidebarItemId)
+                if (!item) {
+                  return false
+                }
 
-      const item = itemsMap.get(target.sidebarItemId)
-      if (!item) {
-        return false
-      }
+                await navigateToItem(item.slug)
+                return true
+              },
+            }),
+          ]
+        : [],
+    setPendingEditNodeId,
+    setPendingEditNodePoint,
+    screenToCanvasPosition,
+    selection,
+    commands,
+  })
+}
 
-      await navigateToItem(item.slug)
-      return true
-    },
-    createAndEmbedSidebarItem: async (type, pointerPosition) => {
+function buildSidebarCreateItems({
+  campaignId,
+  canEdit,
+  canvasParentId,
+  createItem,
+  createNode,
+  getDefaultName,
+  screenToCanvasPosition,
+  setSelection,
+}: {
+  campaignId: Id<'campaigns'>
+  canEdit: boolean
+  canvasParentId: Id<'sidebarItems'> | null
+  createItem: ReturnType<typeof useCreateFileSystemItem>['createItem']
+  createNode: (node: CanvasDocumentNode) => void
+  getDefaultName: ReturnType<typeof useSidebarValidation>['getDefaultName']
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  setSelection: CanvasSelectionController['setSelection']
+}): Array<CanvasContextMenuItem> {
+  const createSidebarItem = (
+    id: string,
+    label: string,
+    icon: CanvasContextMenuItem['icon'],
+    priority: number,
+    type: SidebarItemType,
+  ): CanvasContextMenuItem => ({
+    id,
+    label,
+    icon,
+    group: 'create',
+    priority,
+    onSelect: async (context) => {
       if (!canEdit) {
-        return null
+        return
       }
 
+      const pointerPosition = context.pointerPosition
       try {
         const result = await createItem({
           type,
@@ -119,12 +136,12 @@ export function useCanvasContextMenu({
           name: getDefaultName(type, canvasParentId),
         })
 
-        return createAndSelectEmbeddedCanvasNode({
+        createAndSelectEmbeddedCanvasNode({
           sidebarItemId: result.id,
           pointerPosition,
           screenToCanvasPosition,
           createNode,
-          setSelection: selection.setSelection,
+          setSelection,
         })
       } catch (error) {
         logger.error('Failed to create embedded sidebar item from canvas context menu', {
@@ -134,129 +151,27 @@ export function useCanvasContextMenu({
           type,
           error,
         })
-        return null
       }
     },
-    createTextNode: (pointerPosition) => {
-      if (!canEdit) {
-        return null
-      }
+  })
 
-      try {
-        return createAndSelectTextCanvasNode({
-          pointerPosition,
-          screenToCanvasPosition,
-          createNode,
-          setSelection: selection.setSelection,
-          setPendingEditNodeId,
-          setPendingEditNodePoint,
-        })
-      } catch (error) {
-        logger.error('Failed to create text node from canvas context menu', {
-          campaignId,
-          canvasParentId,
-          pointerPosition,
-          type: 'text',
-          error,
-        })
-        return null
-      }
-    },
-  } satisfies CanvasContextMenuServices
-
-  useLayoutEffect(() => {
-    if (!menuState || !pendingOpenPositionRef.current) {
-      return
-    }
-
-    hostRef.current?.open(pendingOpenPositionRef.current)
-    pendingOpenPositionRef.current = null
-  }, [menuState])
-
-  const openMenu = (
-    position: PointerPosition,
-    nextSelection: CanvasContextMenuContext['selection'],
-  ) => {
-    if (activeTool !== 'select') {
-      return
-    }
-
-    const resolvedSelection = resolveCanvasContextMenuTarget(
-      nextSelection,
-      canvasEngine.getSnapshot(),
-    )
-    pendingOpenPositionRef.current = position
-    setMenuState({
-      context: {
-        surface: 'canvas',
-        pointerPosition: position,
-        selection: nextSelection,
-        target: resolvedSelection.target,
-        canEdit,
-      },
-      contributors: resolvedSelection.contributors,
-    })
-  }
-
-  const close = () => {
-    // `close` is the full programmatic teardown path: clear pending open state,
-    // reset menu context, and tell the host to dismiss immediately.
-    pendingOpenPositionRef.current = null
-    setMenuState(null)
-    hostRef.current?.close()
-  }
-
-  const openForPane = (event: MouseEvent | React.MouseEvent) => {
-    const position = normalizeContextMenuEvent(event)
-    const nextSelection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() }
-    selection.clearSelection()
-    openMenu(position, nextSelection)
-  }
-
-  const openForNode = (event: React.MouseEvent, node: CanvasDocumentNode) => {
-    const position = normalizeContextMenuEvent(event)
-    const currentSelection = selection.getSnapshot()
-    const nextSelection = currentSelection.nodeIds.has(node.id)
-      ? currentSelection
-      : { nodeIds: new Set([node.id]), edgeIds: new Set<string>() }
-
-    if (nextSelection !== currentSelection) {
-      selection.setSelection(nextSelection)
-    }
-
-    openMenu(position, nextSelection)
-  }
-
-  const openForEdge = (event: React.MouseEvent, edge: CanvasDocumentEdge) => {
-    const position = normalizeContextMenuEvent(event)
-    const currentSelection = selection.getSnapshot()
-    const nextSelection = currentSelection.edgeIds.has(edge.id)
-      ? currentSelection
-      : { nodeIds: new Set<string>(), edgeIds: new Set([edge.id]) }
-
-    if (nextSelection !== currentSelection) {
-      selection.setSelection(nextSelection)
-    }
-
-    openMenu(position, nextSelection)
-  }
-
-  return {
-    close,
-    hostRef,
-    menu: menuState
-      ? buildCanvasContextMenu({
-          context: menuState.context,
-          services,
-          commands,
-          contributors: menuState.contributors,
-        })
-      : EMPTY_CONTEXT_MENU,
-    // `onClose` is host-driven dismissal only; the host already handled its own
-    // teardown, so this just clears the hook state.
-    onClose: () => setMenuState(null),
-    openForEdge,
-    openForNode,
-    openForPane,
-  }
+  return [
+    createSidebarItem('canvas-pane-create-note', 'Note', FilePlus, 10, SIDEBAR_ITEM_TYPES.notes),
+    createSidebarItem(
+      'canvas-pane-create-folder',
+      'Folder',
+      FolderPlus,
+      11,
+      SIDEBAR_ITEM_TYPES.folders,
+    ),
+    createSidebarItem('canvas-pane-create-map', 'Map', MapPin, 12, SIDEBAR_ITEM_TYPES.gameMaps),
+    createSidebarItem(
+      'canvas-pane-create-canvas',
+      'Canvas',
+      Grid2x2Plus,
+      13,
+      SIDEBAR_ITEM_TYPES.canvases,
+    ),
+    createSidebarItem('canvas-pane-create-file', 'File', File, 14, SIDEBAR_ITEM_TYPES.files),
+  ]
 }
