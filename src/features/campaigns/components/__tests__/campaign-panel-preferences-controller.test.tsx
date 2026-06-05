@@ -74,6 +74,42 @@ describe('CampaignPanelPreferencesController', () => {
     expect(renderedPanels[0]).toEqual({ size: 31, visible: false })
   })
 
+  it('updates panels when route-prefetched preferences change', async () => {
+    const { rerender } = render(
+      <CampaignPanelPreferencesController
+        initialPanelPreferences={{
+          [LEFT_SIDEBAR_PANEL_ID]: { size: 31, visible: false },
+        }}
+      >
+        <div />
+      </CampaignPanelPreferencesController>,
+    )
+
+    await waitFor(() => {
+      expect(usePanelPreferenceStore.getState().panels[LEFT_SIDEBAR_PANEL_ID]).toMatchObject({
+        size: 31,
+        visible: false,
+      })
+    })
+
+    rerender(
+      <CampaignPanelPreferencesController
+        initialPanelPreferences={{
+          [LEFT_SIDEBAR_PANEL_ID]: { size: 35, visible: true },
+        }}
+      >
+        <div />
+      </CampaignPanelPreferencesController>,
+    )
+
+    await waitFor(() => {
+      expect(usePanelPreferenceStore.getState().panels[LEFT_SIDEBAR_PANEL_ID]).toMatchObject({
+        size: 35,
+        visible: true,
+      })
+    })
+  })
+
   it('reconciles server panel preferences without touching non-chrome state', async () => {
     usePanelPreferenceStore.setState({
       isLoaded: false,
@@ -146,6 +182,52 @@ describe('CampaignPanelPreferencesController', () => {
     expect(usePanelPreferenceStore.getState().panels[LEFT_SIDEBAR_PANEL_ID]).toMatchObject({
       size: 22,
       visible: true,
+    })
+  })
+
+  it('reapplies server preferences after route-prefetched preferences change', async () => {
+    preferencesQueryState.data = {
+      theme: null,
+      panelPreferences: {
+        [LEFT_SIDEBAR_PANEL_ID]: { size: 44, visible: false },
+      },
+    }
+    preferencesQueryState.isSuccess = true
+
+    const { rerender } = render(
+      <CampaignPanelPreferencesController
+        initialPanelPreferences={{
+          [LEFT_SIDEBAR_PANEL_ID]: { size: 31, visible: true },
+        }}
+      >
+        <div />
+      </CampaignPanelPreferencesController>,
+    )
+
+    await waitFor(() => {
+      expect(usePanelPreferenceStore.getState().panels[LEFT_SIDEBAR_PANEL_ID]).toMatchObject({
+        size: 44,
+        visible: false,
+      })
+    })
+
+    usePanelPreferenceStore.getState().setVisible(LEFT_SIDEBAR_PANEL_ID, true)
+
+    rerender(
+      <CampaignPanelPreferencesController
+        initialPanelPreferences={{
+          [LEFT_SIDEBAR_PANEL_ID]: { size: 35, visible: true },
+        }}
+      >
+        <div />
+      </CampaignPanelPreferencesController>,
+    )
+
+    await waitFor(() => {
+      expect(usePanelPreferenceStore.getState().panels[LEFT_SIDEBAR_PANEL_ID]).toMatchObject({
+        size: 44,
+        visible: false,
+      })
     })
   })
 })

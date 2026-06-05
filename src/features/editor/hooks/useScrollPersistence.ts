@@ -10,8 +10,30 @@ interface ScrollEntry {
   lastAccess: number
 }
 
+function parseScrollEntry(value: unknown): ScrollEntry | null {
+  if (typeof value !== 'object' || value === null) return null
+  const scrollTop = (value as { scrollTop?: unknown }).scrollTop
+  const lastAccess = (value as { lastAccess?: unknown }).lastAccess
+  if (typeof scrollTop !== 'number') return null
+  return {
+    scrollTop,
+    lastAccess: typeof lastAccess === 'number' ? lastAccess : 0,
+  }
+}
+
+function parseScrollPositions(value: unknown): Record<string, ScrollEntry> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+
+  const positions: Record<string, ScrollEntry> = {}
+  for (const [key, rawEntry] of Object.entries(value)) {
+    const entry = parseScrollEntry(rawEntry)
+    if (entry) positions[key] = entry
+  }
+  return positions
+}
+
 function getScrollPositions(): Record<string, ScrollEntry> {
-  return readPersistedJson(SCROLL_POSITIONS_KEY, {})
+  return readPersistedJson(SCROLL_POSITIONS_KEY, {}, parseScrollPositions)
 }
 
 function saveScrollPosition(itemId: string, scrollTop: number) {

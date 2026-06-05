@@ -37,7 +37,7 @@ function parseRecentEntry(entry: unknown): RecentEntry | null {
   return { slug, timestamp }
 }
 
-function parseEntries(value: unknown): Array<RecentEntry> | null {
+function parseEntries(value: unknown): Array<RecentEntry> {
   if (!Array.isArray(value)) return []
   return value.flatMap((entry) => {
     const parsedEntry = parseRecentEntry(entry)
@@ -65,6 +65,7 @@ export function useRecentItems(items: Array<AnySidebarItem>): Array<SearchResult
   const [entries] = usePersistedState<Array<RecentEntry>>(
     campaignId ? storageKey(campaignId) : null,
     [],
+    parseEntries,
   )
 
   const slugToItem = new Map<SidebarItemSlug, AnySidebarItem>()

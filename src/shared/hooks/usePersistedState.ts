@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { logger } from '~/shared/utils/logger'
 import {
+  parsePersistedJson,
   readPersistedJson,
   subscribeToPersistedStorage,
   writePersistedJson,
@@ -11,6 +12,7 @@ const isBrowser = typeof window !== 'undefined'
 function usePersistedState<T>(
   key: string | null,
   initialValue: T,
+  parse: (value: unknown) => T | null,
 ): [T, (value: T | ((prev: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(initialValue)
   const initialValueRef = useRef(initialValue)
@@ -19,8 +21,8 @@ function usePersistedState<T>(
   useEffect(() => {
     if (!isBrowser) return
     if (!key) return
-    setStoredValue(readPersistedJson(key, initialValueRef.current))
-  }, [key])
+    setStoredValue(readPersistedJson(key, initialValueRef.current, parse))
+  }, [key, parse])
 
   const setValue = (value: T | ((prev: T) => T)) => {
     if (!key) return
@@ -43,12 +45,17 @@ function usePersistedState<T>(
 
     return subscribeToPersistedStorage(key, (newValue) => {
       try {
-        setStoredValue(newValue ? JSON.parse(newValue) : initialValueRef.current)
+        setStoredValue(
+          newValue
+            ? parsePersistedJson(newValue, initialValueRef.current, parse)
+            : initialValueRef.current,
+        )
       } catch (error) {
         logger.debug(error)
+        setStoredValue(initialValueRef.current)
       }
     })
-  }, [key, setStoredValue])
+  }, [key, parse, setStoredValue])
 
   return [storedValue, setValue]
 }

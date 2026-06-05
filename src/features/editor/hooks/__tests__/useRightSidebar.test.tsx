@@ -36,6 +36,14 @@ describe('useRightSidebar', () => {
     expect(rendered[0]).toBe(RIGHT_SIDEBAR_CONTENT.history)
   })
 
+  it('defaults safely when there is no current item type', () => {
+    const rendered: Array<RightSidebarContentId> = []
+
+    render(<RightSidebarProbe itemType={undefined} rendered={rendered} />)
+
+    expect(rendered[0]).toBe(RIGHT_SIDEBAR_CONTENT.history)
+  })
+
   it('stores the default content when asked to open unsupported content', () => {
     const rendered: Array<ReturnType<typeof useRightSidebar>> = []
 
@@ -59,7 +67,7 @@ function RightSidebarProbe({
   rendered,
   renderedSidebar,
 }: {
-  itemType: RightSidebarItemType
+  itemType: RightSidebarItemType | undefined
   rendered?: Array<RightSidebarContentId>
   renderedSidebar?: Array<ReturnType<typeof useRightSidebar>>
 }) {

@@ -12,18 +12,26 @@ const isBrowser = typeof window !== 'undefined'
 export function readPersistedJson<T>(
   key: string,
   fallback: T,
-  parse: (value: unknown) => T | null = (value) => value as T,
+  parse: (value: unknown) => T | null,
 ): T {
   if (!isBrowser) return fallback
 
   try {
     const rawValue = window.localStorage.getItem(key)
     if (!rawValue) return fallback
-    return parse(JSON.parse(rawValue)) ?? fallback
+    return parsePersistedJson(rawValue, fallback, parse)
   } catch (error) {
     logger.debug(error)
     return fallback
   }
+}
+
+export function parsePersistedJson<T>(
+  rawValue: string,
+  fallback: T,
+  parse: (value: unknown) => T | null,
+): T {
+  return parse(JSON.parse(rawValue)) ?? fallback
 }
 
 export function writePersistedJson<T>(

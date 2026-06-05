@@ -20,6 +20,13 @@ const RIGHT_SIDEBAR_CONTENT_ITEM_TYPES: Record<
   [RIGHT_SIDEBAR_CONTENT.outline]: [SIDEBAR_ITEM_TYPES.notes],
 }
 
+const RIGHT_SIDEBAR_CONTENT_PRIORITY = [
+  RIGHT_SIDEBAR_CONTENT.history,
+  RIGHT_SIDEBAR_CONTENT.backlinks,
+  RIGHT_SIDEBAR_CONTENT.outgoing,
+  RIGHT_SIDEBAR_CONTENT.outline,
+] as const satisfies ReadonlyArray<RightSidebarContentId>
+
 export function getRightSidebarContentItemTypes(contentId: RightSidebarContentId) {
   return RIGHT_SIDEBAR_CONTENT_ITEM_TYPES[contentId]
 }
@@ -34,7 +41,7 @@ export function canShowRightSidebarContent(
 export function getDefaultRightSidebarContent(itemType: RightSidebarItemType | null | undefined) {
   if (!itemType) return RIGHT_SIDEBAR_CONTENT.history
   return (
-    Object.values(RIGHT_SIDEBAR_CONTENT).find((contentId) =>
+    RIGHT_SIDEBAR_CONTENT_PRIORITY.find((contentId) =>
       canShowRightSidebarContent(itemType, contentId),
     ) ?? RIGHT_SIDEBAR_CONTENT.history
   )

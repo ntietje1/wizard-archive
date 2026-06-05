@@ -42,6 +42,17 @@ const DEFAULT_TRANSFORM: MapTransformState = {
   positionY: 0,
 }
 
+function parseMapTransformState(value: unknown): MapTransformState | null {
+  if (typeof value !== 'object' || value === null) return null
+  const scale = (value as { scale?: unknown }).scale
+  const positionX = (value as { positionX?: unknown }).positionX
+  const positionY = (value as { positionY?: unknown }).positionY
+  if (typeof scale !== 'number') return null
+  if (typeof positionX !== 'number') return null
+  if (typeof positionY !== 'number') return null
+  return { scale, positionX, positionY }
+}
+
 type PendingPinItems = { itemIds: Array<Id<'sidebarItems'>> }
 type PendingPinMove = { pinId: Id<'mapPins'> }
 type DraggingPin = { pin: MapPinWithItem }
@@ -139,6 +150,7 @@ function useMapViewerElement(map: GameMapWithContent) {
   const [savedTransform, setSavedTransform] = usePersistedState<MapTransformState>(
     `map-transform-${map._id}`,
     DEFAULT_TRANSFORM,
+    parseMapTransformState,
   )
   const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 

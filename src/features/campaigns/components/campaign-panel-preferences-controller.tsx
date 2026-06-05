@@ -26,21 +26,25 @@ export function CampaignPanelPreferencesController({
   initialPanelPreferences: Record<string, PanelPreference> | null
 }) {
   const prefsQuery = useAuthQuery(api.userPreferences.queries.getUserPreferences, {})
-  const initPanel = usePanelPreferenceStore((state) => state.initPanel)
   const applyPanelPreference = usePanelPreferenceStore((state) => state.applyPanelPreference)
   const setLoaded = usePanelPreferenceStore((state) => state.setLoaded)
   const hasAppliedServerPreferencesRef = useRef(false)
 
   useEffect(() => {
+    hasAppliedServerPreferencesRef.current = false
     setLoaded(false)
     for (const { defaults, panelId } of PANEL_DEFINITIONS) {
       const initial = initialPanelPreferences?.[panelId]
-      initPanel(panelId, {
-        size: initial?.size ?? defaults.size,
-        visible: initial?.visible ?? defaults.visible,
-      })
+      applyPanelPreference(
+        panelId,
+        {
+          size: initial?.size ?? defaults.size,
+          visible: initial?.visible ?? defaults.visible,
+        },
+        defaults,
+      )
     }
-  }, [initPanel, initialPanelPreferences, setLoaded])
+  }, [applyPanelPreference, initialPanelPreferences, setLoaded])
 
   useEffect(() => {
     if (!prefsQuery.isSuccess || hasAppliedServerPreferencesRef.current) return
@@ -58,7 +62,13 @@ export function CampaignPanelPreferencesController({
       )
     }
     setLoaded(true)
-  }, [applyPanelPreference, prefsQuery.data?.panelPreferences, prefsQuery.isSuccess, setLoaded])
+  }, [
+    applyPanelPreference,
+    initialPanelPreferences,
+    prefsQuery.data?.panelPreferences,
+    prefsQuery.isSuccess,
+    setLoaded,
+  ])
 
   return (
     <PanelPreferenceInitialProvider initialPanelPreferences={initialPanelPreferences}>
