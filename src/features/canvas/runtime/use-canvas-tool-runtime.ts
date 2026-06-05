@@ -1,6 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
 import { useCallback, useMemo } from 'react'
-import type * as Y from 'yjs'
 import type { createCanvasDocumentWriter } from './document/use-canvas-document-writer'
 import type { useCanvasDocumentCommands } from './document/use-canvas-commands'
 import { createCanvasToolRuntime, getEdgeCreationDefaults } from './canvas-tool-runtime-adapter'
@@ -17,10 +16,6 @@ import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type { CanvasToolRuntime, CanvasToolId } from '../tools/canvas-tool-types'
 import type { CanvasConnection } from '../types/canvas-domain-types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/domain/canvas-document'
 
 interface UseCanvasToolRuntimeOptions {
   activeTool: CanvasToolId
@@ -31,9 +26,7 @@ interface UseCanvasToolRuntimeOptions {
   canEdit: boolean
   commands: ReturnType<typeof useCanvasDocumentCommands>
   documentWriter: ReturnType<typeof createCanvasDocumentWriter>
-  edgesMap: Y.Map<CanvasDocumentEdge>
   modifiers: ReturnType<typeof useCanvasModifierKeys>
-  nodesMap: Y.Map<CanvasDocumentNode>
   pointerRouter: ReturnType<typeof useCanvasPointerRouterController>
   selection: ReturnType<typeof useCanvasSelectionController>
   session: ReturnType<typeof useCanvasSessionState>
@@ -50,9 +43,7 @@ export function useCanvasToolRuntime({
   canEdit,
   commands,
   documentWriter,
-  edgesMap,
   modifiers,
-  nodesMap,
   pointerRouter,
   selection,
   session,
@@ -106,8 +97,7 @@ export function useCanvasToolRuntime({
     canEdit,
     campaignId,
     canvasParentId,
-    nodesMap,
-    edgesMap,
+    canvasEngine,
     createNode: documentWriter.createNode,
     setPendingEditNodeId: session.editSession.setPendingEditNodeId,
     setPendingEditNodePoint: session.editSession.setPendingEditNodePoint,

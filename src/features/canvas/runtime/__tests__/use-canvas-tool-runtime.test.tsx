@@ -4,11 +4,6 @@ import { useCanvasToolRuntime } from '../use-canvas-tool-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { testId } from '~/test/helpers/test-id'
 import type { CanvasConnection } from '../../types/canvas-domain-types'
-import * as Y from 'yjs'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/domain/canvas-document'
 
 const cursorPresenceSpy = vi.hoisted(() => vi.fn())
 const dropIntegrationSpy = vi.hoisted(() => vi.fn())
@@ -104,8 +99,7 @@ describe('useCanvasToolRuntime', () => {
       canEdit: true,
       campaignId: 'campaign-id',
       canvasParentId: 'parent-id',
-      nodesMap: harness.nodesMap,
-      edgesMap: harness.edgesMap,
+      canvasEngine: harness.canvasEngine,
       createNode: harness.documentWriter.createNode,
       setPendingEditNodeId: harness.session.editSession.setPendingEditNodeId,
       setPendingEditNodePoint: harness.session.editSession.setPendingEditNodePoint,
@@ -184,9 +178,6 @@ describe('useCanvasToolRuntime', () => {
 })
 
 function createToolRuntimeHarness() {
-  const doc = new Y.Doc()
-  const nodesMap = doc.getMap<CanvasDocumentNode>('nodes')
-  const edgesMap = doc.getMap<CanvasDocumentEdge>('edges')
   const harness = {
     campaignId: testId<'campaigns'>('campaign-id'),
     canvasEngine: {
@@ -201,12 +192,10 @@ function createToolRuntimeHarness() {
       createNodes: vi.fn(),
       createEdge: vi.fn(),
     },
-    edgesMap,
     modifiers: {
       primaryPressed: false,
       shiftPressed: false,
     },
-    nodesMap,
     pointerRouter: {
       interaction: {
         suppressNextSurfaceClick: vi.fn(),

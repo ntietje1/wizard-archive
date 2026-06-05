@@ -428,8 +428,9 @@ describe('useCanvasEditorRuntime', () => {
       canEdit: true,
       campaignId: 'campaign-id',
       canvasParentId: 'parent-id',
-      nodesMap,
-      edgesMap,
+      canvasEngine: expect.objectContaining({
+        getSnapshot: expect.any(Function),
+      }),
       createNode: documentWriterMock.createNode,
       setPendingEditNodeId: session.editSession.setPendingEditNodeId,
       setPendingEditNodePoint: session.editSession.setPendingEditNodePoint,

@@ -12,12 +12,6 @@ import type {
   CanvasTextNodeData,
 } from '~/features/canvas/domain/canvas-document'
 
-export const CANVAS_NODE_TYPES = [
-  'embed',
-  'stroke',
-  'text',
-] as const satisfies ReadonlyArray<CanvasNodeType>
-
 export interface CanvasNodeDataByType {
   embed: CanvasEmbedNodeData
   stroke: CanvasStrokeNodeData

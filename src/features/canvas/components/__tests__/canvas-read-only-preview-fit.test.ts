@@ -6,7 +6,6 @@ describe('canvas read-only preview fit', () => {
   it('falls back to the default viewport for zero-sized surfaces', () => {
     expect(
       resolveCanvasReadOnlyPreviewViewport({
-        fallbackNodes: [createNode({ id: 'node-1' })],
         fitPadding: 0,
         maxZoom: 4,
         minZoom: 0.01,
@@ -19,7 +18,6 @@ describe('canvas read-only preview fit', () => {
   it('falls back to the default viewport for zero-height surfaces', () => {
     expect(
       resolveCanvasReadOnlyPreviewViewport({
-        fallbackNodes: [createNode({ id: 'node-1' })],
         fitPadding: 0,
         maxZoom: 4,
         minZoom: 0.01,
@@ -32,7 +30,6 @@ describe('canvas read-only preview fit', () => {
   it('resolves a fitted viewport from projected nodes', () => {
     expect(
       resolveCanvasReadOnlyPreviewViewport({
-        fallbackNodes: [],
         fitPadding: 0,
         maxZoom: 4,
         minZoom: 0.01,

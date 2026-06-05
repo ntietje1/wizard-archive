@@ -7,12 +7,7 @@ const DEFAULT_CANVAS_READ_ONLY_PREVIEW_VIEWPORT: CanvasViewport = { x: 0, y: 0, 
 
 function selectCanvasReadOnlyPreviewFitNodes(
   snapshot: Pick<CanvasEngineSnapshot, 'nodeIds' | 'nodeLookup'>,
-  fallbackNodes: ReadonlyArray<CanvasDocumentNode>,
 ): ReadonlyArray<CanvasDocumentNode> {
-  if (snapshot.nodeIds.length === 0) {
-    return fallbackNodes
-  }
-
   return snapshot.nodeIds.flatMap((nodeId) => {
     const node = snapshot.nodeLookup.get(nodeId)?.node
     return node ? [node] : []
@@ -20,14 +15,12 @@ function selectCanvasReadOnlyPreviewFitNodes(
 }
 
 export function resolveCanvasReadOnlyPreviewViewport({
-  fallbackNodes,
   fitPadding,
   maxZoom,
   minZoom,
   size,
   snapshot,
 }: {
-  fallbackNodes: ReadonlyArray<CanvasDocumentNode>
   fitPadding: number
   maxZoom: number
   minZoom: number
@@ -40,7 +33,7 @@ export function resolveCanvasReadOnlyPreviewViewport({
 
   return (
     getCanvasFitViewport({
-      nodes: selectCanvasReadOnlyPreviewFitNodes(snapshot, fallbackNodes),
+      nodes: selectCanvasReadOnlyPreviewFitNodes(snapshot),
       width: size.width,
       height: size.height,
       minZoom,

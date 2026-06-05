@@ -1,4 +1,3 @@
-import { parseCanvasEdgeType } from '~/features/canvas/domain/validation'
 import { buildBezierCanvasEdgeGeometryFromEdge } from './bezier/bezier-canvas-edge-geometry'
 import { buildStepCanvasEdgeGeometryFromEdge } from './step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromEdge } from './straight/straight-canvas-edge-geometry'
@@ -31,10 +30,6 @@ type NormalizedCanvasEdgeEntry = {
   edge: CanvasRuntimeEdge
 }
 
-export function resolveCanvasEdgeType(type: string | undefined): CanvasEdgeType {
-  return parseCanvasEdgeType(type) ?? 'bezier'
-}
-
 function createCanvasEdgeSelectionContext(
   nodes: ReadonlyArray<CanvasDocumentNode>,
   zoom: number,
@@ -50,7 +45,7 @@ export function normalizeCanvasEdge(edge: CanvasDocumentEdge): CanvasRuntimeEdge
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    type: resolveCanvasEdgeType(edge.type),
+    type: edge.type,
     sourceHandle: edge.sourceHandle,
     targetHandle: edge.targetHandle,
     style: edge.style,

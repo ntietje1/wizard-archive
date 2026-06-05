@@ -1,7 +1,6 @@
 import {
   getCanvasEdgeInspectableProperties,
   normalizeCanvasEdge,
-  resolveCanvasEdgeType,
 } from '../edges/canvas-edge-registry'
 import { getCanvasNodeInspectableProperties } from '../nodes/canvas-node-modules'
 import { normalizeCanvasNode } from '../nodes/canvas-node-normalization'
@@ -62,7 +61,7 @@ export function resolveCanvasSelectionProperties({
 }
 
 export function getSharedSelectedEdgeType(edges: ReadonlyArray<CanvasDocumentEdge>) {
-  const edgeTypes = edges.map((edge) => resolveCanvasEdgeType(edge.type))
+  const edgeTypes = edges.map((edge) => edge.type)
   const firstEdgeType = edgeTypes[0] ?? null
   return firstEdgeType && edgeTypes.every((edgeType) => edgeType === firstEdgeType)
     ? firstEdgeType

@@ -101,21 +101,12 @@ describe('EmbeddedCanvasContent', () => {
         fitPadding: 0.12,
         className: 'pointer-events-none relative h-full w-full min-h-0 min-w-0',
         nodes: [{ id: 'node-1', position: { x: 0, y: 0 }, data: {}, type: 'text' }],
-        edges: [
-          {
-            id: 'edge-1',
-            source: 'node-1',
-            sourceHandle: 'right',
-            target: 'node-1',
-            targetHandle: 'left',
-            type: 'bezier',
-          },
-        ],
+        edges: [{ id: 'edge-1', source: 'node-1', target: 'node-1', type: 'bezier' }],
       }),
     )
   })
 
-  it('normalizes embedded edges with missing handle ids before rendering the nested canvas preview', () => {
+  it('passes embedded edges through to the nested canvas preview', () => {
     useEmbeddedCanvasStateMock.mockReturnValue({
       nodes: [
         {
@@ -160,11 +151,14 @@ describe('EmbeddedCanvasContent', () => {
     expect(canvasPreviewSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
         edges: [
-          expect.objectContaining({
+          {
             id: 'edge-1',
-            sourceHandle: 'right',
-            targetHandle: 'left',
-          }),
+            source: 'source-node',
+            target: 'target-node',
+            sourceHandle: null,
+            targetHandle: null,
+            type: 'bezier',
+          },
         ],
       }),
     )

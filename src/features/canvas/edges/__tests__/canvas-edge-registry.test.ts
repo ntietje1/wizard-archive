@@ -173,17 +173,13 @@ describe('canvas edge specs', () => {
     ).toEqual(new Set(['step-edge']))
   })
 
-  it('falls back unsupported edge types safely', () => {
+  it('rejects unsupported edge types', () => {
     const unsupportedEdge = {
       ...createBezierEdge({ id: 'edge-fallback' }),
       type: 'curved',
     } as unknown as Edge
-    const fallbackEdge = normalizeCanvasEdge(unsupportedEdge)
 
-    expect(fallbackEdge).toMatchObject({
-      id: 'edge-fallback',
-      type: 'bezier',
-    })
+    expect(normalizeCanvasEdge(unsupportedEdge)).toBeNull()
   })
 
   it('normalizes zero-width edge styles to the minimum visible stroke width', () => {

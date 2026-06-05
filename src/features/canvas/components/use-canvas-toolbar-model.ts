@@ -1,5 +1,4 @@
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import {
   useCanvasDocumentRuntime,
@@ -108,7 +107,7 @@ export function useCanvasToolbarModel() {
   const setSelectedEdgesType = (type: CanvasEdgeType) => {
     runPropertyChange(() => {
       selectedEdges.forEach((edge) => {
-        if (resolveCanvasEdgeType(edge.type) === type) return
+        if (edge.type === type) return
 
         patchEdge(edge.id, { type })
       })

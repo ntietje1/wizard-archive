@@ -63,7 +63,7 @@ describe('canvas read-only preview model', () => {
   it('selects edge render geometry from endpoint nodes', () => {
     const source = createNode({ id: 'source', position: { x: 0, y: 0 } })
     const target = createNode({ id: 'target', position: { x: 200, y: 0 } })
-    const edge = createEdge({ id: 'edge-1', source: source.id, target: target.id, type: 'bad' })
+    const edge = createEdge({ id: 'edge-1', source: source.id, target: target.id, type: 'bezier' })
     const render = selectCanvasPreviewEdgeRender(
       createSnapshot({ nodes: [source, target], edge }),
       edge.id,
@@ -138,7 +138,7 @@ function createEdge({
   id: string
   source: string
   target: string
-  type: string
+  type: CanvasDocumentEdge['type']
 }): CanvasDocumentEdge {
   return {
     id,

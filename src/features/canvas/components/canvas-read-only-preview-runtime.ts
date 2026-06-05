@@ -15,6 +15,10 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
+import {
+  normalizeCanvasDocumentEdge,
+  normalizeCanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
 
 export function useCanvasReadOnlyPreviewRuntime({
   edges,
@@ -38,7 +42,17 @@ export function useCanvasReadOnlyPreviewRuntime({
   domRuntimeRef.current ??= createCanvasDomRuntime()
   const domRuntime = domRuntimeRef.current
   const canvasEngineRef = useRef<ReturnType<typeof createCanvasEngine> | null>(null)
-  canvasEngineRef.current ??= createCanvasEngine({ domRuntime })
+  const seededDocumentRef = useRef<{
+    edges: ReadonlyArray<CanvasDocumentEdge>
+    nodes: ReadonlyArray<CanvasDocumentNode>
+  } | null>(null)
+  if (!canvasEngineRef.current) {
+    canvasEngineRef.current = createCanvasEngine({ domRuntime })
+    canvasEngineRef.current.setDocumentSnapshot(
+      normalizeCanvasReadOnlyPreviewSnapshot({ nodes, edges }),
+    )
+    seededDocumentRef.current = { nodes, edges }
+  }
   const canvasEngine = canvasEngineRef.current
   const viewportControllerRef = useRef<ReturnType<typeof createCanvasViewportController> | null>(
     null,
@@ -52,8 +66,13 @@ export function useCanvasReadOnlyPreviewRuntime({
   })
   const viewportController = viewportControllerRef.current
 
-  useEffect(() => {
-    canvasEngine.setDocumentSnapshot({ nodes, edges })
+  useLayoutEffect(() => {
+    if (seededDocumentRef.current?.nodes === nodes && seededDocumentRef.current.edges === edges) {
+      return
+    }
+
+    canvasEngine.setDocumentSnapshot(normalizeCanvasReadOnlyPreviewSnapshot({ nodes, edges }))
+    seededDocumentRef.current = { nodes, edges }
   }, [canvasEngine, edges, nodes])
 
   useLayoutEffect(() => {
@@ -65,7 +84,6 @@ export function useCanvasReadOnlyPreviewRuntime({
     fitPadding,
     maxZoom,
     minZoom,
-    nodes,
     surfaceRef,
     viewportController,
   })
@@ -91,12 +109,30 @@ export function useCanvasReadOnlyPreviewRuntime({
   }
 }
 
+function normalizeCanvasReadOnlyPreviewSnapshot({
+  edges,
+  nodes,
+}: {
+  edges: ReadonlyArray<CanvasDocumentEdge>
+  nodes: ReadonlyArray<CanvasDocumentNode>
+}) {
+  return {
+    nodes: nodes.flatMap((node) => {
+      const normalizedNode = normalizeCanvasDocumentNode(node)
+      return normalizedNode ? [normalizedNode] : []
+    }),
+    edges: edges.flatMap((edge) => {
+      const normalizedEdge = normalizeCanvasDocumentEdge(edge)
+      return normalizedEdge ? [normalizedEdge] : []
+    }),
+  }
+}
+
 function useCanvasReadOnlyPreviewFit({
   canvasEngine,
   fitPadding,
   maxZoom,
   minZoom,
-  nodes,
   surfaceRef,
   viewportController,
 }: {
@@ -104,7 +140,6 @@ function useCanvasReadOnlyPreviewFit({
   fitPadding: number
   maxZoom: number
   minZoom: number
-  nodes: ReadonlyArray<CanvasDocumentNode>
   surfaceRef: RefObject<HTMLElement | null>
   viewportController: ReturnType<typeof createCanvasViewportController>
 }) {
@@ -116,7 +151,6 @@ function useCanvasReadOnlyPreviewFit({
     const fitToSize = (size: CanvasElementSize) => {
       lastSizeRef.current = size
       const viewport = resolveCanvasReadOnlyPreviewViewport({
-        fallbackNodes: nodes,
         fitPadding,
         minZoom,
         maxZoom,
@@ -183,5 +217,5 @@ function useCanvasReadOnlyPreviewFit({
       frameRef.current = null
       pendingSizeRef.current = null
     }
-  }, [canvasEngine, fitPadding, maxZoom, minZoom, nodes, surfaceRef, viewportController])
+  }, [canvasEngine, fitPadding, maxZoom, minZoom, surfaceRef, viewportController])
 }

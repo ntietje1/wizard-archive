@@ -1,13 +1,8 @@
-import { useMemo } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useEmbeddedCanvasState } from './use-embedded-canvas-state'
 import { CanvasThumbnailPreview } from '~/features/previews/components/canvas-thumbnail-preview'
 import { CanvasReadOnlyPreview } from '../../components/canvas-read-only-preview'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/domain/canvas-document'
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.01
 const FIT_PADDING = 0.12
@@ -23,7 +18,6 @@ export function EmbeddedCanvasContent({
   alt: string
 }) {
   const { nodes, edges, isLoading, isError } = useEmbeddedCanvasState(canvasId)
-  const normalizedEdges = useMemo(() => normalizeEmbeddedCanvasEdges(nodes, edges), [edges, nodes])
 
   if (isLoading) {
     return (
@@ -45,7 +39,7 @@ export function EmbeddedCanvasContent({
     >
       <CanvasReadOnlyPreview
         nodes={nodes}
-        edges={normalizedEdges}
+        edges={edges}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
         fitPadding={FIT_PADDING}
@@ -53,82 +47,4 @@ export function EmbeddedCanvasContent({
       />
     </div>
   )
-}
-
-function normalizeEmbeddedCanvasEdges(
-  nodes: Array<CanvasDocumentNode>,
-  edges: Array<CanvasDocumentEdge>,
-): Array<CanvasDocumentEdge> {
-  if (edges.length === 0) {
-    return edges
-  }
-
-  const nodesById = new Map(nodes.map((node) => [node.id, node] as const))
-
-  return edges.map((edge) => {
-    const sourceNode = nodesById.get(edge.source)
-    const targetNode = nodesById.get(edge.target)
-    if (!sourceNode || !targetNode) {
-      return edge
-    }
-
-    const inferredHandles = inferEmbeddedCanvasHandleIds(sourceNode, targetNode)
-    const nextSourceHandle =
-      typeof edge.sourceHandle === 'string' && edge.sourceHandle.length > 0
-        ? edge.sourceHandle
-        : inferredHandles.sourceHandle
-    const nextTargetHandle =
-      typeof edge.targetHandle === 'string' && edge.targetHandle.length > 0
-        ? edge.targetHandle
-        : inferredHandles.targetHandle
-
-    if (edge.sourceHandle === nextSourceHandle && edge.targetHandle === nextTargetHandle) {
-      return edge
-    }
-
-    return {
-      ...edge,
-      sourceHandle: nextSourceHandle,
-      targetHandle: nextTargetHandle,
-    }
-  })
-}
-
-function inferEmbeddedCanvasHandleIds(
-  sourceNode: CanvasDocumentNode,
-  targetNode: CanvasDocumentNode,
-) {
-  const sourceBounds = getNodeBounds(sourceNode)
-  const targetBounds = getNodeBounds(targetNode)
-  if (!sourceBounds || !targetBounds) {
-    return { sourceHandle: 'right', targetHandle: 'left' }
-  }
-
-  const dx = targetBounds.x + targetBounds.width / 2 - (sourceBounds.x + sourceBounds.width / 2)
-  const dy = targetBounds.y + targetBounds.height / 2 - (sourceBounds.y + sourceBounds.height / 2)
-
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    return dx >= 0
-      ? { sourceHandle: 'right', targetHandle: 'left' }
-      : { sourceHandle: 'left', targetHandle: 'right' }
-  }
-
-  return dy >= 0
-    ? { sourceHandle: 'bottom', targetHandle: 'top' }
-    : { sourceHandle: 'top', targetHandle: 'bottom' }
-}
-
-function getNodeBounds(node: CanvasDocumentNode) {
-  const width = node.width
-  const height = node.height
-  if (typeof width !== 'number' || typeof height !== 'number') {
-    return null
-  }
-
-  return {
-    x: node.position.x,
-    y: node.position.y,
-    width,
-    height,
-  }
 }

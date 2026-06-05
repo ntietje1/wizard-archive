@@ -159,6 +159,37 @@ describe('CanvasReadOnlyPreview', () => {
     )
   })
 
+  it('drops invalid preview records before seeding the preview engine', async () => {
+    render(
+      <CanvasReadOnlyPreview
+        nodes={[
+          createTextNode({ id: 'node-1', position: { x: 0, y: 0 } }),
+          {
+            id: 'invalid-node',
+            type: 'unknown',
+            position: { x: 100, y: 0 },
+            width: 100,
+            height: 80,
+            data: {},
+          } as unknown as CanvasDocumentNode,
+        ]}
+        edges={[
+          createEdge({ id: 'edge-1', source: 'node-1', target: 'node-1' }),
+          {
+            id: 'invalid-edge',
+            source: 'node-1',
+            target: 'node-1',
+            type: 'curved',
+          } as unknown as CanvasDocumentEdge,
+        ]}
+      />,
+    )
+
+    expect(await screen.findAllByLabelText('text node')).toHaveLength(1)
+    expect(document.querySelector('[data-canvas-edge-id="edge-1"]')).toBeInTheDocument()
+    expect(document.querySelector('[data-canvas-edge-id="invalid-edge"]')).not.toBeInTheDocument()
+  })
+
   it('keeps explicitly interactive preview nodes and edges targetable', async () => {
     render(
       <CanvasReadOnlyPreview
@@ -215,6 +246,34 @@ describe('CanvasReadOnlyPreview', () => {
     await waitFor(() => {
       expect(viewport).toHaveStyle({
         transform: 'translate3d(50px, 0px, 0) scale(3)',
+      })
+    })
+  })
+
+  it('fits from validated preview nodes during initial layout', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
+        return this.dataset.testid === 'canvas-read-only-preview'
+          ? createDomRect({ width: 400, height: 300 })
+          : createDomRect({ width: 0, height: 0 })
+      },
+    )
+
+    render(
+      <CanvasReadOnlyPreview
+        nodes={[createTextNode({ id: 'node-1', position: { x: 0, y: 0 } })]}
+        edges={[]}
+        fitPadding={0}
+      />,
+    )
+
+    const surface = screen.getByTestId('canvas-read-only-preview')
+    const viewport = surface.querySelector<HTMLElement>('[data-canvas-viewport="true"]')
+    expect(viewport).not.toBeNull()
+
+    await waitFor(() => {
+      expect(viewport).toHaveStyle({
+        transform: 'translate3d(12.5px, 0px, 0) scale(3.75)',
       })
     })
   })
