@@ -56,16 +56,25 @@ export function mockAuthQuery<T>(
   )
 }
 
-export function mockAuthQueryError<T>(error: Error): UseQueryResult<T> {
-  return mockAuthQuery<T>(undefined, {
-    status: 'error',
-    isPending: false,
-    isLoading: false,
-    isError: true,
-    error,
-    isFetching: false,
-    fetchStatus: 'idle',
-  })
+export function mockAuthQueryError<T>(
+  error: Error,
+  overrides?: Partial<UseQueryResult<T>>,
+): UseQueryResult<T> {
+  return asQueryResult<T>(
+    {
+      data: undefined,
+      status: 'error',
+      isPending: false,
+      isLoading: false,
+      isSuccess: false,
+      isError: true,
+      error,
+      isFetching: false,
+      fetchStatus: 'idle',
+      refetch: vi.fn(),
+    },
+    overrides,
+  )
 }
 
 export function mockAppMutation<TData = unknown, TArgs = unknown>(

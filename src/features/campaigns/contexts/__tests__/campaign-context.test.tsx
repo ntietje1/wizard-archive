@@ -1,8 +1,10 @@
 import { createElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
+import { ERROR_CODE } from 'shared/errors/client'
 import type { ReactNode } from 'react'
+import type { ClientErrorCode, ClientErrorData } from 'shared/errors/client'
 import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { createCampaign } from '~/test/factories/campaign-factory'
@@ -41,6 +43,16 @@ function CampaignConsumer() {
       <span data-testid="is-loaded">{String(ctx.isCampaignLoaded)}</span>
     </div>
   )
+}
+
+function clientError(code: ClientErrorCode): Error & { data: ClientErrorData } {
+  return Object.assign(new Error('Campaign not found'), {
+    data: {
+      kind: 'client',
+      code,
+      message: 'Campaign not found',
+    },
+  } satisfies { data: ClientErrorData })
 }
 
 describe('CampaignProvider', () => {
@@ -135,8 +147,18 @@ describe('CampaignProvider', () => {
     expect(screen.getByTestId('is-loaded')).toHaveTextContent('false')
   })
 
-  it('does not render children on query error', () => {
-    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQueryError(new Error('Not found')))
+  it('renders not found for missing campaign errors', () => {
+    vi.mocked(useAuthQuery).mockReturnValue(
+      mockAuthQuery(undefined, {
+        status: 'error',
+        isPending: false,
+        isLoading: false,
+        isError: true,
+        error: clientError(ERROR_CODE.NOT_FOUND),
+        isFetching: false,
+        fetchStatus: 'idle',
+      }),
+    )
 
     render(
       <TestWrapper>
@@ -147,5 +169,30 @@ describe('CampaignProvider', () => {
     )
 
     expect(screen.queryByTestId('dm-username')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Campaign Not Found' })).toBeInTheDocument()
+  })
+
+  it('renders a retryable failure for unexpected query errors', () => {
+    const refetch = vi.fn()
+    vi.mocked(useAuthQuery).mockReturnValue(
+      mockAuthQueryError(new Error('Network failed'), {
+        refetch,
+      }),
+    )
+
+    render(
+      <TestWrapper>
+        <CampaignProvider>
+          <CampaignConsumer />
+        </CampaignProvider>
+      </TestWrapper>,
+    )
+
+    expect(screen.queryByTestId('dm-username')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Could Not Load Campaign' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
+
+    expect(refetch).toHaveBeenCalled()
   })
 })
