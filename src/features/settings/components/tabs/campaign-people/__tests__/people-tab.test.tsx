@@ -1,11 +1,11 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { assertUsername } from 'shared/users/validation'
 import { PeopleTab } from '~/features/settings/components/tabs/campaign-people/people-tab'
 import { useOptionalCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { createCampaign, createCampaignMember } from '~/test/factories/campaign-factory'
-import { mockAuthQuery } from '~/test/mocks/convex-mocks'
+import { mockAuthQuery, mockAuthQueryError } from '~/test/mocks/convex-mocks'
 import { TestWrapper } from '~/test/test-wrapper'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getOrigin } from '~/shared/utils/origin'
@@ -139,5 +139,85 @@ describe('PeopleTab', () => {
     expect(screen.getByTestId('members-section')).toBeInTheDocument()
     expect(screen.getByTestId('pending-requests-section')).toBeInTheDocument()
     expect(screen.getByTestId('rejected-removed-section')).toBeInTheDocument()
+  })
+
+  it('keeps request sections usable when the member list fails', () => {
+    const campaign = createCampaign({
+      slug: 'my-campaign',
+      myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
+    })
+    const retryMembers = vi.fn()
+    vi.mocked(useOptionalCampaign).mockReturnValue({
+      dmUsername: assertUsername('testdm'),
+      campaignSlug: campaign.slug,
+      campaign: mockAuthQuery(campaign),
+      isDm: true,
+      isCampaignLoaded: true,
+      campaignId: campaign._id,
+    })
+    vi.mocked(getOrigin).mockReturnValue('https://example.test')
+    vi.mocked(useAuthQuery).mockImplementationOnce(() =>
+      mockAuthQueryError(new Error('Members failed'), { refetch: retryMembers }),
+    )
+    vi.mocked(useAuthQuery).mockImplementationOnce(() => mockAuthQuery([]))
+
+    render(
+      <TestWrapper>
+        <PeopleTab />
+      </TestWrapper>,
+    )
+
+    expect(screen.getByTestId('invite-link-section')).toBeInTheDocument()
+    expect(screen.getByText('Failed to load members.')).toBeInTheDocument()
+    expect(screen.queryByTestId('members-section')).not.toBeInTheDocument()
+    expect(screen.getByTestId('pending-requests-section')).toBeInTheDocument()
+    expect(screen.getByTestId('rejected-removed-section')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
+
+    expect(retryMembers).toHaveBeenCalled()
+  })
+
+  it('keeps member management usable when join requests fail', () => {
+    const campaign = createCampaign({
+      slug: 'my-campaign',
+      myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
+    })
+    const retryRequests = vi.fn()
+    const readyMembers = [
+      createCampaignMember({
+        campaignId: campaign._id,
+        role: CAMPAIGN_MEMBER_ROLE.DM,
+      }),
+    ]
+    vi.mocked(useOptionalCampaign).mockReturnValue({
+      dmUsername: assertUsername('testdm'),
+      campaignSlug: campaign.slug,
+      campaign: mockAuthQuery(campaign),
+      isDm: true,
+      isCampaignLoaded: true,
+      campaignId: campaign._id,
+    })
+    vi.mocked(getOrigin).mockReturnValue('https://example.test')
+    vi.mocked(useAuthQuery).mockImplementationOnce(() => mockAuthQuery(readyMembers))
+    vi.mocked(useAuthQuery).mockImplementationOnce(() =>
+      mockAuthQueryError(new Error('Requests failed'), { refetch: retryRequests }),
+    )
+
+    render(
+      <TestWrapper>
+        <PeopleTab />
+      </TestWrapper>,
+    )
+
+    expect(screen.getByTestId('invite-link-section')).toBeInTheDocument()
+    expect(screen.getByTestId('members-section')).toBeInTheDocument()
+    expect(screen.getByText('Failed to load join requests.')).toBeInTheDocument()
+    expect(screen.queryByTestId('pending-requests-section')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('rejected-removed-section')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))
+
+    expect(retryRequests).toHaveBeenCalled()
   })
 })

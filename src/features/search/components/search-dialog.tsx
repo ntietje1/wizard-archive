@@ -40,6 +40,7 @@ function SearchResultsPanel({
   itemsMap,
   query,
   isBodySearchPending,
+  bodySearchError,
   onSelect,
   onHover,
 }: {
@@ -53,9 +54,11 @@ function SearchResultsPanel({
   itemsMap: Parameters<typeof buildBreadcrumbs>[1]
   query: string
   isBodySearchPending: boolean
+  bodySearchError: unknown
   onSelect: (result: SearchResult) => void
   onHover: (index: number) => void
 }) {
+  const hasBodySearchError = Boolean(bodySearchError)
   const status = hasQuery
     ? results.length > 0
       ? `${results.length} result${results.length === 1 ? '' : 's'}`
@@ -83,7 +86,12 @@ function SearchResultsPanel({
           )}
           {hasQuery && results.length === 0 && !isBodySearchPending && (
             <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-              No results found
+              {hasBodySearchError ? 'Body search failed' : 'No results found'}
+            </div>
+          )}
+          {hasQuery && results.length > 0 && hasBodySearchError && (
+            <div className="px-3 py-2 text-xs text-destructive">
+              Body search failed. Showing title matches only.
             </div>
           )}
           {displayItems.map((result, index) => (
@@ -124,12 +132,14 @@ function SearchPreviewPanel({
   selectedResult,
   selectedContentItem,
   isPreviewLoading,
+  previewError,
   onOpen,
 }: {
   hasQuery: boolean
   selectedResult?: SearchResult
   selectedContentItem?: AnySidebarItemWithContent
   isPreviewLoading: boolean
+  previewError: unknown
   onOpen: (result: SearchResult) => void
 }) {
   return (
@@ -151,6 +161,10 @@ function SearchPreviewPanel({
             {isPreviewLoading ? (
               <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
                 Loading preview…
+              </div>
+            ) : previewError ? (
+              <div className="h-full flex items-center justify-center text-center text-sm text-muted-foreground p-4">
+                Failed to load preview. You can still open this result.
               </div>
             ) : selectedContentItem ? (
               <SidebarItemPreviewContent item={selectedContentItem} />
@@ -223,9 +237,11 @@ export function SearchDialog() {
 
   const selectedResult: SearchResult | undefined = displayItems[selectedIndex]
 
-  const { data: selectedContentItem, isLoading: isPreviewLoading } = useSidebarItemById(
-    selectedResult?.item._id,
-  )
+  const {
+    data: selectedContentItem,
+    isLoading: isPreviewLoading,
+    error: previewError,
+  } = useSidebarItemById(selectedResult?.item._id)
 
   const handleSelect = (result: SearchResult) => {
     void navigateToItem(result.item.slug)
@@ -305,6 +321,7 @@ export function SearchDialog() {
             itemsMap={itemsMap}
             query={debouncedQuery}
             isBodySearchPending={bodyQuery.isPending}
+            bodySearchError={bodyQuery.error}
             onSelect={handleSelect}
             onHover={setSelectedIndex}
           />
@@ -315,6 +332,7 @@ export function SearchDialog() {
               selectedResult={selectedResult}
               selectedContentItem={selectedContentItem}
               isPreviewLoading={isPreviewLoading}
+              previewError={previewError}
               onOpen={handleSelect}
             />
           )}

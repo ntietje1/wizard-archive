@@ -21,23 +21,58 @@ function resolveCurrentItemState({
   rawItem,
   queryStatus,
   isFetching,
+  queryError,
 }: {
   slug: string | null
   rawItem: AnySidebarItem | null
   queryStatus: QueryStatus
   isFetching: boolean
+  queryError: unknown
 }) {
   const item = rawItem && rawItem.slug === slug ? rawItem : null
-  const hasRequestedItem = slug !== null
-  const queryReturnedNull = rawItem === null && queryStatus === 'success' && !isFetching
-  const isLoading = hasRequestedItem && !item && !queryReturnedNull
+
+  if (!slug) {
+    return {
+      item: null,
+      itemType: undefined,
+      isLoading: false,
+      isNotFound: false,
+      itemError: null,
+      hasRequestedItem: false,
+    }
+  }
+
+  if (item) {
+    return {
+      item,
+      itemType: item.type,
+      isLoading: false,
+      isNotFound: false,
+      itemError: null,
+      hasRequestedItem: true,
+    }
+  }
+
+  if (queryStatus === 'error') {
+    return {
+      item: null,
+      itemType: undefined,
+      isLoading: false,
+      isNotFound: false,
+      itemError: queryError,
+      hasRequestedItem: true,
+    }
+  }
+
+  const isNotFound = rawItem === null && queryStatus === 'success' && !isFetching
 
   return {
-    item,
-    itemType: item?.type,
-    isLoading,
-    isNotFound: hasRequestedItem && !item && !isLoading,
-    hasRequestedItem,
+    item: null,
+    itemType: undefined,
+    isLoading: !isNotFound,
+    isNotFound,
+    itemError: null,
+    hasRequestedItem: true,
   }
 }
 
@@ -70,6 +105,7 @@ export function useCurrentItem() {
     rawItem,
     queryStatus: sidebarItemQuery.status,
     isFetching: sidebarItemQuery.isFetching,
+    queryError: sidebarItemQuery.error,
   })
 
   return {

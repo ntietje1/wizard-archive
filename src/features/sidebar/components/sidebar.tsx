@@ -7,9 +7,17 @@ import { useCampaignSidebarState } from '~/features/sidebar/stores/sidebar-ui-st
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export function FileSidebar() {
-  const { status } = useActiveSidebarItems()
+  const { status, error, refetch } = useActiveSidebarItems()
   const { campaignId } = useCampaign()
   const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
+
+  if (status === 'pending') {
+    return <SidebarLoading />
+  }
+
+  if (status === 'error') {
+    return <SidebarError error={error} onRetry={refetch} />
+  }
 
   if (bookmarksOnlyMode) {
     return (
@@ -17,14 +25,6 @@ export function FileSidebar() {
         <BookmarkedItemsList />
       </ClientOnly>
     )
-  }
-
-  if (status === 'pending') {
-    return <SidebarLoading />
-  }
-
-  if (status === 'error') {
-    return <SidebarLoading /> // TODO: have a better error state
   }
   return (
     <ClientOnly fallback={<SidebarLoading />}>
@@ -35,6 +35,22 @@ export function FileSidebar() {
       </DroppableRoot>
     </ClientOnly>
   )
+}
+
+function SidebarError({ error, onRetry }: { error: unknown; onRetry: () => unknown }) {
+  return (
+    <div className="flex-1 p-3 text-sm text-muted-foreground">
+      <p className="text-destructive">Failed to load sidebar items.</p>
+      <p className="mt-1">{getErrorMessage(error)}</p>
+      <button type="button" className="mt-2 text-primary underline" onClick={() => void onRetry()}>
+        Try Again
+      </button>
+    </div>
+  )
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function SidebarLoading() {

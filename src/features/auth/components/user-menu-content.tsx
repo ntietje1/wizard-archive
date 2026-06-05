@@ -40,15 +40,24 @@ export function UserMenuContent({ onClose }: { onClose: () => void }) {
         await authClient.signOut()
       }
       queryClient.clear()
+    } catch (error) {
+      handleError(error, 'Failed to sign out')
+      window.location.reload()
+      return
+    }
 
+    try {
       const remaining = await fetchDeviceSessions()
       void navigate({
         to: '/sign-in',
         search: remaining.length > 0 ? { view: 'picker' } : {},
       })
     } catch (error) {
-      handleError(error, 'Failed to sign out')
-      window.location.reload()
+      handleError(error, 'Failed to load remaining accounts after sign out')
+      void navigate({
+        to: '/sign-in',
+        search: {},
+      })
     }
   }
 
@@ -80,6 +89,18 @@ export function UserMenuContent({ onClose }: { onClose: () => void }) {
           }}
           onSwitch={handleSwitchAccount}
         />
+        {deviceSessions.isError && (
+          <div className="px-2 py-1.5 text-xs text-destructive">
+            <p>Could not load other accounts.</p>
+            <button
+              type="button"
+              className="mt-1 text-primary underline"
+              onClick={() => void deviceSessions.retry()}
+            >
+              Try Again
+            </button>
+          </div>
+        )}
 
         <div className="border-t my-1" />
 

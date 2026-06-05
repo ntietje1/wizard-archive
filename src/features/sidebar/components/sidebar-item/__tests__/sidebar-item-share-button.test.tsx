@@ -23,6 +23,8 @@ function sidebarItemsValue(items: Array<AnySidebarItem>): SidebarItemsValue {
   return {
     data: items,
     status: 'success',
+    error: null,
+    refetch: vi.fn(),
     ...buildSidebarItemMaps(items),
   }
 }

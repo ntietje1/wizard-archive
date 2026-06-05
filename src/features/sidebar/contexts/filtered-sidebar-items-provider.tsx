@@ -25,6 +25,8 @@ export function FilteredSidebarItemsProvider({ children }: { children: React.Rea
       value: {
         data: filteredData,
         status: allItems.status,
+        error: allItems.error,
+        refetch: allItems.refetch,
         ...buildSidebarItemMaps(filteredData),
       },
     },

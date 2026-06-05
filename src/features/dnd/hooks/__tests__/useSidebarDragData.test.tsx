@@ -21,6 +21,8 @@ function sidebarItemsValue(items: Array<AnySidebarItem>) {
   return {
     data: items,
     status: 'success' as const,
+    error: null,
+    refetch: vi.fn(),
     ...buildSidebarItemMaps(items),
   }
 }

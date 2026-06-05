@@ -68,6 +68,14 @@ export function useSidebarItemAvailabilityState({
     }
   }
 
+  if (readableItemError) {
+    return {
+      status: 'error',
+      label,
+      message: `Failed to load ${subject}: ${getErrorMessage(readableItemError)}`,
+    }
+  }
+
   if (readableItemLoading || activeItems.status === 'pending') {
     return {
       status: 'loading',
@@ -86,11 +94,11 @@ export function useSidebarItemAvailabilityState({
     }
   }
 
-  if (activeItems.status !== 'success' && readableItemError) {
+  if (activeItems.status === 'error') {
     return {
       status: 'error',
       label,
-      message: `Failed to load ${subject}: ${getErrorMessage(readableItemError)}`,
+      message: `Failed to load ${subject}.`,
     }
   }
 

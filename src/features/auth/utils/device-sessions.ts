@@ -1,4 +1,3 @@
-import { logger } from '~/shared/utils/logger'
 import { authClient } from '~/features/auth/utils/auth-client'
 
 export type DeviceSession = {
@@ -8,19 +7,15 @@ export type DeviceSession = {
 
 /** Fetch all device sessions, deduplicated by user email (keeps most recent). */
 export async function fetchDeviceSessions(): Promise<Array<DeviceSession>> {
-  try {
-    const { data } = await authClient.multiSession.listDeviceSessions()
+  const { data, error } = await authClient.multiSession.listDeviceSessions()
 
-    if (!data || data.length === 0) return []
+  if (error) throw new Error('Failed to load device sessions')
+  if (!data || data.length === 0) return []
 
-    // Last entry per email wins (API returns oldest-first, so last = most recent)
-    const byEmail = new Map<string, DeviceSession>()
-    for (const ds of data) {
-      byEmail.set(ds.user.email, ds)
-    }
-    return Array.from(byEmail.values())
-  } catch (error) {
-    logger.debug(error)
-    return []
+  // Last entry per email wins (API returns oldest-first, so last = most recent)
+  const byEmail = new Map<string, DeviceSession>()
+  for (const ds of data) {
+    byEmail.set(ds.user.email, ds)
   }
+  return Array.from(byEmail.values())
 }

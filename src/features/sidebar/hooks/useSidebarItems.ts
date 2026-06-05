@@ -18,6 +18,8 @@ import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps
 export interface SidebarItemsValue extends SidebarItemMaps {
   data: Array<AnySidebarItem>
   status: UseQueryResult['status']
+  error: UseQueryResult['error']
+  refetch: UseQueryResult['refetch']
 }
 
 // ---------------------------------------------------------------------------
@@ -57,6 +59,8 @@ function useSidebarItemQuery(view: SidebarItemsView): SidebarItemsValue {
   return {
     data,
     status: result.status,
+    error: result.error,
+    refetch: result.refetch,
     ...buildSidebarItemMaps(data),
   }
 }
