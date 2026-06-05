@@ -19,10 +19,6 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useMapImageStatus } from './use-map-image-status'
 import { useMapRenderPins } from './use-map-render-pins'
-import {
-  useActiveSidebarItems,
-  useTrashSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
 import { useMapSidebarItemDropTarget } from './use-map-sidebar-item-drop-target'
 import { buildMapPinPlacementInputs, getImagePinPosition } from './map-pin-placement'
 import type { PinPosition } from './map-pin-placement'
@@ -116,8 +112,6 @@ function useMapViewerElement(map: GameMapWithContent) {
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
-  const { itemsMap } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
   const actorPermissions = useCampaignActorPermissions()
   const canEditMap = actorPermissions.canMutate(map, PERMISSION_LEVEL.EDIT)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
@@ -356,7 +350,7 @@ function useMapViewerElement(map: GameMapWithContent) {
       return false
     }
   }
-  useMapSidebarItemDropTarget({ map, imageRef, itemsMap, trashedItemsMap, canPin: canEditMap })
+  useMapSidebarItemDropTarget({ map, imageRef, canPin: canEditMap })
 
   const handlePlacePin = async (position: PinPosition) => {
     if (!pendingPinItems || !map._id) return

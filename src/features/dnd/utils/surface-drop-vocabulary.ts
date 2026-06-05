@@ -22,10 +22,17 @@ const SURFACE_DROP_TARGET_TYPES = {
   embed: CANVAS_DROP_ZONE_TYPE,
 } as const satisfies Record<SurfaceDropAction, SidebarDropData['type']>
 
+const SURFACE_DROP_FAILURE_MESSAGES = {
+  pin: 'Failed to place pins',
+  link: 'Failed to add links',
+  embed: 'Failed to add items to canvas',
+} as const satisfies Record<SurfaceDropAction, string>
+
 type SurfaceDropContributionDescriptor<TAction extends SurfaceDropAction> = {
   action: TAction
   commandId: SurfaceDropCommandIdForAction<TAction>
   targetType: (typeof SURFACE_DROP_TARGET_TYPES)[TAction]
+  failureMessage: (typeof SURFACE_DROP_FAILURE_MESSAGES)[TAction]
 }
 
 export function getSurfaceDropContribution<TAction extends SurfaceDropAction>(
@@ -35,5 +42,6 @@ export function getSurfaceDropContribution<TAction extends SurfaceDropAction>(
     action,
     commandId: SURFACE_DROP_COMMAND_IDS[action],
     targetType: SURFACE_DROP_TARGET_TYPES[action],
+    failureMessage: SURFACE_DROP_FAILURE_MESSAGES[action],
   }
 }

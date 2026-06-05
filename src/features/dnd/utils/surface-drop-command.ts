@@ -1,16 +1,36 @@
 import { rejectionReasonMessage } from './drop-rejections'
-import { resolveSurfaceDropCommand } from './surface-drop-planner'
-import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SurfaceDropPlanningContext } from './drop-planning-context'
 import type { SurfaceBatchDropCommand, SurfaceDropCommand } from './surface-drop-planner'
-import type { SidebarDropData } from './drop-target-data'
+import { getDropTargetKey } from './drop-target-data'
 import type { DndBatchDecision } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
-import { getDragItemIds } from './drag-source-data'
-import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
+import { getSurfaceDropContribution } from './surface-drop-vocabulary'
+import type { SurfaceDropAction } from './surface-drop-vocabulary'
 
 type SurfaceAction = SurfaceBatchDropCommand['action']
+type SurfaceBatchDropCommandByAction<TAction extends SurfaceDropAction> = Extract<
+  SurfaceBatchDropCommand,
+  { action: TAction }
+>
+type SurfaceDropExecutor<TAction extends SurfaceDropAction> = (
+  command: SurfaceBatchDropCommandByAction<TAction>,
+  input: SurfaceDropExecutionInput,
+) => Promise<void>
+type RegisteredSurfaceDropExecutor = (
+  command: SurfaceBatchDropCommand,
+  input: SurfaceDropExecutionInput,
+) => Promise<void>
+
+type SurfaceDropExecutionInput = {
+  clientX: number
+  clientY: number
+}
+
+const surfaceDropExecutors = new Map<string, RegisteredSurfaceDropExecutor>()
+
+function surfaceDropExecutorKey(commandId: string, target: Record<string, unknown>) {
+  const targetKey = getDropTargetKey(target)
+  return targetKey ? `${commandId}:${targetKey}` : null
+}
 
 function isBatchDropCommand(command: SurfaceDropCommand): command is SurfaceBatchDropCommand {
   return command.status === 'ready' || command.status === 'partial' || command.status === 'failed'
@@ -23,29 +43,56 @@ function commandMatchesAction<TAction extends SurfaceAction>(
   return command.action === action
 }
 
-export function resolveSidebarSurfaceDropCommand({
-  sourceData,
-  activeItemsMap,
-  trashedItemsMap,
+export function registerSurfaceDropExecutor<TAction extends SurfaceDropAction>({
+  action,
   target,
-  planningContext,
+  execute,
 }: {
-  sourceData: Record<string, unknown>
-  activeItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
-  trashedItemsMap?: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
-  target: SidebarDropData
-  planningContext: SurfaceDropPlanningContext
-}): SurfaceDropCommand {
-  const sidebarItems = resolveSidebarOperationItems({
-    itemIds: getDragItemIds(sourceData),
-    activeItemsMap,
-    trashedItemsMap,
-    includeTrashed: true,
-  })
-  return resolveSurfaceDropCommand(sidebarItems, target, planningContext)
+  action: TAction
+  target: SurfaceBatchDropCommandByAction<TAction>['target']
+  execute: SurfaceDropExecutor<TAction>
+}): () => void {
+  const contribution = getSurfaceDropContribution(action)
+  const key = surfaceDropExecutorKey(contribution.commandId, target)
+  if (!key) return () => undefined
+
+  const registered: RegisteredSurfaceDropExecutor = (command, input) =>
+    execute(command as SurfaceBatchDropCommandByAction<TAction>, input)
+  surfaceDropExecutors.set(key, registered)
+
+  return () => {
+    if (surfaceDropExecutors.get(key) === registered) {
+      surfaceDropExecutors.delete(key)
+    }
+  }
 }
 
-export async function executeSurfaceDropCommand<TAction extends SurfaceAction>({
+export async function executeRegisteredSurfaceDropCommand({
+  command,
+  input,
+  setBatchDecision,
+}: {
+  command: SurfaceDropCommand
+  input: SurfaceDropExecutionInput
+  setBatchDecision: (decision: DndBatchDecision | null) => void
+}): Promise<boolean> {
+  if (!isBatchDropCommand(command)) return false
+
+  const key = surfaceDropExecutorKey(command.commandId, command.target)
+  const executor = key ? surfaceDropExecutors.get(key) : null
+  if (!executor) return false
+
+  await executeSurfaceDropCommand({
+    command,
+    action: command.action,
+    setBatchDecision,
+    failureMessage: getSurfaceDropContribution(command.action).failureMessage,
+    execute: async (batchCommand) => executor(batchCommand, input),
+  })
+  return true
+}
+
+async function executeSurfaceDropCommand<TAction extends SurfaceAction>({
   command,
   action,
   setBatchDecision,
