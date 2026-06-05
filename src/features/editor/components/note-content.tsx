@@ -226,6 +226,14 @@ function EditableNoteEditor({
   }
   const session = useNoteYjsCollaboration(note._id, user, true)
 
+  if (session.error) {
+    return (
+      <div role="alert" className="min-h-8 text-sm text-muted-foreground">
+        Failed to load note content.
+      </div>
+    )
+  }
+
   if (session.isLoading || !session.doc || !session.provider) {
     return <div aria-label="Loading note content" className="min-h-8" />
   }

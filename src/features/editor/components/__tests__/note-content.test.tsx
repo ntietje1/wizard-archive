@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
@@ -13,30 +13,40 @@ import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
 import type { CampaignActor } from 'shared/campaigns/actor'
 
-const { activeItemsState, blockNoteCreateMock, campaignState, editorModeState, noteViewSpy } =
-  vi.hoisted(() => ({
-    activeItemsState: { itemsMap: new Map() },
-    blockNoteCreateMock: vi.fn((options: { initialContent?: Array<CustomBlock> }) => ({
-      document: options.initialContent ?? [],
-      replaceBlocks: vi.fn(function replaceBlocks(
-        this: { document: Array<CustomBlock> },
-        _oldBlocks: Array<CustomBlock>,
-        newBlocks: Array<CustomBlock>,
-      ) {
-        this.document = newBlocks
-      }),
-      _tiptapEditor: { destroy: vi.fn() },
-    })),
-    campaignState: { isDm: false as boolean | undefined },
-    editorModeState: {
-      campaignActor: {
-        kind: 'player',
-        campaignId: 'campaign_1' as Id<'campaigns'>,
-      } as CampaignActor | null,
-      viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined,
-    },
-    noteViewSpy: vi.fn(),
-  }))
+const {
+  activeItemsState,
+  blockNoteCreateMock,
+  campaignState,
+  editorModeState,
+  noteSessionState,
+  noteViewSpy,
+} = vi.hoisted(() => ({
+  activeItemsState: { itemsMap: new Map() },
+  blockNoteCreateMock: vi.fn((options: { initialContent?: Array<CustomBlock> }) => ({
+    document: options.initialContent ?? [],
+    replaceBlocks: vi.fn(function replaceBlocks(
+      this: { document: Array<CustomBlock> },
+      _oldBlocks: Array<CustomBlock>,
+      newBlocks: Array<CustomBlock>,
+    ) {
+      this.document = newBlocks
+    }),
+    _tiptapEditor: { destroy: vi.fn() },
+  })),
+  campaignState: { isDm: false as boolean | undefined },
+  editorModeState: {
+    campaignActor: {
+      kind: 'player',
+      campaignId: 'campaign_1' as Id<'campaigns'>,
+    } as CampaignActor | null,
+    viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined,
+  },
+  noteSessionState: {
+    error: null as Error | null,
+    isLoading: false,
+  },
+  noteViewSpy: vi.fn(),
+}))
 
 vi.mock('@blocknote/core', async (importOriginal) => {
   const actual = await importOriginal<typeof BlockNoteCore>()
@@ -90,7 +100,8 @@ vi.mock('~/features/editor/hooks/useNoteYjsCollaboration', () => ({
     doc: { getXmlFragment: vi.fn(() => ({})) },
     provider: { awareness: { setLocalStateField: vi.fn() } },
     instanceId: 1,
-    isLoading: false,
+    isLoading: noteSessionState.isLoading,
+    error: noteSessionState.error,
   }),
 }))
 
@@ -121,6 +132,8 @@ describe('NoteContent', () => {
     activeItemsState.itemsMap = new Map()
     blockNoteCreateMock.mockClear()
     campaignState.isDm = false
+    noteSessionState.error = null
+    noteSessionState.isLoading = false
     editorModeState.campaignActor = {
       kind: 'player',
       campaignId: testId<'campaigns'>('campaign_1'),
@@ -186,6 +199,25 @@ describe('NoteContent', () => {
       )
     })
     expect(blockNoteCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collaboration: expect.any(Object),
+      }),
+    )
+  })
+
+  it('shows a failed state instead of mounting the editor when collaboration errors', () => {
+    noteSessionState.error = new Error('Collaboration failed')
+    const note = createNoteWithContent({
+      content: [createBlock('visible-block')],
+      myPermissionLevel: PERMISSION_LEVEL.EDIT,
+      blockMeta: {},
+    })
+
+    render(<NoteContent note={note} editable />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Failed to load note content.')
+    expect(noteViewSpy).not.toHaveBeenCalled()
+    expect(blockNoteCreateMock).not.toHaveBeenCalledWith(
       expect.objectContaining({
         collaboration: expect.any(Object),
       }),

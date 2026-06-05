@@ -1,11 +1,12 @@
 import * as Y from 'yjs'
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { HistoryPreviewViewer } from '../history-preview-viewer'
 import type * as BlockNoteCore from '@blocknote/core'
 import type { Id } from 'convex/_generated/dataModel'
 
-const { noteContentMock, useCampaignQueryMock } = vi.hoisted(() => ({
+const { canvasReadOnlyPreviewMock, noteContentMock, useCampaignQueryMock } = vi.hoisted(() => ({
+  canvasReadOnlyPreviewMock: vi.fn(),
   noteContentMock: vi.fn(),
   useCampaignQueryMock: vi.fn(),
 }))
@@ -20,7 +21,7 @@ vi.mock('@blocknote/core', async (importOriginal) => {
   }
 })
 
-vi.mock('@blocknote/core/yjs', () => ({
+vi.mock('shared/editor-blocks/blocknote-yjs', () => ({
   yDocToBlocks: vi.fn(() => [
     {
       id: 'block-1',
@@ -43,6 +44,13 @@ vi.mock('~/features/editor/components/note-content', () => ({
   },
 }))
 
+vi.mock('~/features/canvas/components/canvas-read-only-preview', () => ({
+  CanvasReadOnlyPreview: (props: unknown) => {
+    canvasReadOnlyPreviewMock(props)
+    return <div data-testid="canvas-preview" />
+  },
+}))
+
 vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
   useEditorMode: () => ({ canEdit: true }),
 }))
@@ -60,6 +68,12 @@ vi.mock('~/features/editor/utils/destroy-blocknote-editor', () => ({
 }))
 
 describe('HistoryPreviewViewer', () => {
+  beforeEach(() => {
+    canvasReadOnlyPreviewMock.mockClear()
+    noteContentMock.mockClear()
+    useCampaignQueryMock.mockReset()
+  })
+
   it('passes the snapshot note id into static note previews', () => {
     const noteId = 'note-1' as Id<'sidebarItems'>
     const doc = new Y.Doc()
@@ -91,5 +105,53 @@ describe('HistoryPreviewViewer', () => {
         editable: false,
       }),
     )
+  })
+
+  it('shows a corrupted state for invalid note snapshots', () => {
+    useCampaignQueryMock
+      .mockReturnValueOnce({
+        data: {
+          itemId: 'note-1',
+          itemType: 'note',
+          snapshotType: 'yjs_state',
+          data: new Uint8Array([1]).buffer,
+        },
+        isLoading: false,
+        error: null,
+      })
+      .mockReturnValueOnce({
+        data: { _creationTime: 1 },
+        isLoading: false,
+        error: null,
+      })
+
+    render(<HistoryPreviewViewer entryId={'history-1' as Id<'editHistory'>} />)
+
+    expect(screen.getByText('Snapshot data is corrupted.')).toBeInTheDocument()
+    expect(noteContentMock).not.toHaveBeenCalled()
+  })
+
+  it('shows a corrupted state for invalid canvas snapshots', () => {
+    useCampaignQueryMock
+      .mockReturnValueOnce({
+        data: {
+          itemId: 'canvas-1',
+          itemType: 'canvas',
+          snapshotType: 'yjs_state',
+          data: new Uint8Array([1]).buffer,
+        },
+        isLoading: false,
+        error: null,
+      })
+      .mockReturnValueOnce({
+        data: { _creationTime: 1 },
+        isLoading: false,
+        error: null,
+      })
+
+    render(<HistoryPreviewViewer entryId={'history-1' as Id<'editHistory'>} />)
+
+    expect(screen.getByText('Snapshot data is corrupted.')).toBeInTheDocument()
+    expect(canvasReadOnlyPreviewMock).not.toHaveBeenCalled()
   })
 })

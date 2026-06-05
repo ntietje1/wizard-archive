@@ -25,6 +25,7 @@ type DownloadZipItem =
     }
 
 const DOWNLOAD_FETCH_TIMEOUT_MS = 30_000
+type AddZipItemResult = { status: 'added' } | { status: 'failed' }
 
 function ensureMdFileName(name: string) {
   return name.endsWith('.md') ? name : `${name}.md`
@@ -62,11 +63,11 @@ async function fetchWithTimeout(url: string) {
   }
 }
 
-async function addZipItem(zip: JSZip, item: DownloadZipItem): Promise<boolean> {
+async function addZipItem(zip: JSZip, item: DownloadZipItem): Promise<AddZipItemResult> {
   const path = sanitizeZipPath(item.path)
   if (!path) {
     logger.warn(`Skipping download item with invalid path: ${item.path}`)
-    return false
+    return { status: 'failed' }
   }
 
   switch (item.type) {
@@ -74,19 +75,19 @@ async function addZipItem(zip: JSZip, item: DownloadZipItem): Promise<boolean> {
     case SIDEBAR_ITEM_TYPES.gameMaps: {
       if (!item.downloadUrl) {
         logger.warn(`No download URL for: ${item.path}`)
-        return false
+        return { status: 'failed' }
       }
       const response = await fetchWithTimeout(item.downloadUrl)
       if (!response.ok) {
         logger.warn(`Failed to fetch: ${item.path}`)
-        return false
+        return { status: 'failed' }
       }
       zip.file(path, await response.blob())
-      return true
+      return { status: 'added' }
     }
     case SIDEBAR_ITEM_TYPES.notes:
       zip.file(path, convertBlocksToMarkdown(item.content))
-      return true
+      return { status: 'added' }
     default:
       assertNever(item)
   }
@@ -114,21 +115,26 @@ async function downloadZip({
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           logger.warn(`Timed out fetching: ${item.path}`, error)
-          return false
+          return { status: 'failed' }
         }
         logger.warn(`Failed to process: ${item.path}`, error)
-        return false
+        return { status: 'failed' }
       }
     }),
   )
-  const successCount = results.filter(Boolean).length
+  const successCount = results.filter((result) => result.status === 'added').length
+  const failureCount = results.length - successCount
   if (successCount === 0) {
-    toast.info(emptyMessage)
+    toast.error(`Failed to download ${failureCount} item(s)`)
     return
   }
 
   downloadBlob(await zip.generateAsync({ type: 'blob' }), fileName)
-  toast.success(`Downloaded ${successCount} item(s)`)
+  if (failureCount > 0) {
+    toast.info(`Downloaded ${successCount} item(s); ${failureCount} failed`)
+  } else {
+    toast.success(`Downloaded ${successCount} item(s)`)
+  }
 }
 
 async function downloadSingleNote({

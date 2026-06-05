@@ -26,23 +26,25 @@ import type {
   CanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
 
-function readNoteYjsSnapshot(data: ArrayBuffer): Array<CustomBlock> {
+type SnapshotReadResult<T> = { status: 'ready'; value: T } | { status: 'corrupted' }
+
+function readNoteYjsSnapshot(data: ArrayBuffer): SnapshotReadResult<Array<CustomBlock>> {
   const doc = new Y.Doc()
   try {
     Y.applyUpdate(doc, new Uint8Array(data))
-    return yDocToBlocks(doc, 'document')
+    return { status: 'ready', value: yDocToBlocks(doc, 'document') }
   } catch (error) {
     logger.error('Failed to parse note snapshot:', error)
-    return []
+    return { status: 'corrupted' }
   } finally {
     doc.destroy()
   }
 }
 
-function readCanvasSnapshot(data: ArrayBuffer): {
+function readCanvasSnapshot(data: ArrayBuffer): SnapshotReadResult<{
   nodes: Array<CanvasDocumentNode>
   edges: Array<CanvasDocumentEdge>
-} {
+}> {
   const doc = new Y.Doc()
   try {
     Y.applyUpdate(doc, new Uint8Array(data))
@@ -51,12 +53,15 @@ function readCanvasSnapshot(data: ArrayBuffer): {
     const edgesMap = doc.getMap<CanvasDocumentEdge>('edges')
 
     return {
-      nodes: Array.from(nodesMap.values()),
-      edges: Array.from(edgesMap.values()),
+      status: 'ready',
+      value: {
+        nodes: Array.from(nodesMap.values()),
+        edges: Array.from(edgesMap.values()),
+      },
     }
   } catch (error) {
     logger.error('Failed to parse canvas snapshot:', error)
-    return { nodes: [], edges: [] }
+    return { status: 'corrupted' }
   } finally {
     doc.destroy()
   }
@@ -148,13 +153,17 @@ function NoteYjsSnapshotPreview({
   noteId: Id<'sidebarItems'>
   data: ArrayBuffer
 }) {
-  const blocks = readNoteYjsSnapshot(data)
+  const result = readNoteYjsSnapshot(data)
+
+  if (result.status === 'corrupted') {
+    return <CorruptedSnapshotState />
+  }
 
   return (
     <ScrollArea className="flex-1 min-h-0">
       <NoteContent
         noteId={noteId}
-        content={blocks}
+        content={result.value}
         editable={false}
         className="mx-auto w-full max-w-3xl mt-2"
       />
@@ -163,11 +172,23 @@ function NoteYjsSnapshotPreview({
 }
 
 function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
-  const { nodes, edges } = readCanvasSnapshot(data)
+  const result = readCanvasSnapshot(data)
+
+  if (result.status === 'corrupted') {
+    return <CorruptedSnapshotState />
+  }
 
   return (
     <div className="flex-1 min-h-0">
-      <CanvasReadOnlyPreview nodes={nodes} edges={edges} interactive />
+      <CanvasReadOnlyPreview nodes={result.value.nodes} edges={result.value.edges} interactive />
+    </div>
+  )
+}
+
+function CorruptedSnapshotState() {
+  return (
+    <div className="flex-1 min-h-0 flex items-center justify-center text-muted-foreground">
+      Snapshot data is corrupted.
     </div>
   )
 }
@@ -183,11 +204,7 @@ function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
   )
 
   if (!snapshotData) {
-    return (
-      <div className="flex-1 min-h-0 flex items-center justify-center text-muted-foreground">
-        Snapshot data is corrupted.
-      </div>
-    )
+    return <CorruptedSnapshotState />
   }
 
   if (!snapshotData.imageStorageId) {
