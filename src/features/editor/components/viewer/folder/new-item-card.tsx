@@ -8,14 +8,9 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '~/features/shadcn/components/context-menu'
-import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { handleError } from '~/shared/utils/logger'
-import type { SidebarItemCreationType } from '~/features/sidebar/sidebar-item-creation-catalog'
+import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
+import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
 
 interface NewItemCardProps {
   parentId: Id<'sidebarItems'>
@@ -25,11 +20,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const triggerRef = useRef<HTMLDivElement>(null)
 
-  const { campaignId } = useCampaign()
-  const { createItem } = useCreateFileSystemItem()
-  const { getDefaultName } = useSidebarValidation()
-  const { navigateToItem } = useEditorNavigation()
-  const { openParentFolders } = useOpenParentFolders()
+  const { runCreationCommand } = useRunSidebarItemCreationCommand()
 
   const openMenuAt = (clientX: number, clientY: number) => {
     if (triggerRef.current) {
@@ -51,19 +42,8 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
     openMenuAt(e.clientX, e.clientY)
   }
 
-  const handleCreate = async (type: SidebarItemCreationType) => {
-    if (!campaignId) return
-    try {
-      const result = await createItem({
-        type,
-        parentTarget: { kind: 'direct', parentId },
-        name: getDefaultName(type, parentId),
-      })
-      openParentFolders(result.id)
-      void navigateToItem(result.slug)
-    } catch (error) {
-      handleError(error, 'Failed to create item')
-    }
+  const handleCreate = async (command: SidebarItemCreationCommand) => {
+    await runCreationCommand(command, { parentId })
   }
 
   return (
@@ -96,7 +76,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         {SIDEBAR_ITEM_CREATION_COMMANDS.map((command) => {
           const Icon = command.icon
           return (
-            <ContextMenuItem key={command.id} onClick={() => handleCreate(command.type)}>
+            <ContextMenuItem key={command.id} onClick={() => handleCreate(command)}>
               <Icon className="size-4 mr-2" />
               New {command.label}
             </ContextMenuItem>

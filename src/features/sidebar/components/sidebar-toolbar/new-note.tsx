@@ -1,14 +1,11 @@
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { handleError, logger } from '~/shared/utils/logger'
+import { logger } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { SIDEBAR_ITEM_CREATION_COMMAND_BY_ID } from '~/features/sidebar/sidebar-item-creation-catalog'
+import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
 
 const NEW_NOTE_COMMAND = SIDEBAR_ITEM_CREATION_COMMAND_BY_ID['create.note']
 const NewNoteIcon = NEW_NOTE_COMMAND.icon
@@ -16,11 +13,8 @@ const NEW_NOTE_LABEL = NEW_NOTE_COMMAND.label
 const NEW_NOTE_LABEL_LOWER = NEW_NOTE_LABEL.toLowerCase()
 
 export function NewNoteButton() {
-  const { createItem } = useCreateFileSystemItem()
-  const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
-  const { navigateToItem } = useEditorNavigation()
-  const { openParentFolders } = useOpenParentFolders()
+  const { runCreationCommand } = useRunSidebarItemCreationCommand()
   const creationPendingRef = useRef(false)
   const [creationPending, setCreationPending] = useState(false)
 
@@ -36,15 +30,7 @@ export function NewNoteButton() {
     creationPendingRef.current = true
     setCreationPending(true)
     try {
-      const result = await createItem({
-        type: NEW_NOTE_COMMAND.type,
-        parentTarget: { kind: 'direct', parentId: null },
-        name: getDefaultName(NEW_NOTE_COMMAND.type, null),
-      })
-      openParentFolders(result.id)
-      void navigateToItem(result.slug)
-    } catch (error) {
-      handleError(error, NEW_NOTE_COMMAND.failureMessage)
+      await runCreationCommand(NEW_NOTE_COMMAND, { parentId: null })
     } finally {
       creationPendingRef.current = false
       setCreationPending(false)

@@ -2,16 +2,13 @@ import { useState } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from 'lucide-react'
-import { handleError } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
-import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import type { SidebarItemCreationType } from '~/features/sidebar/sidebar-item-creation-catalog'
+import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
+import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
 
 interface CreateNewButtonProps {
   icon: LucideIcon
@@ -58,33 +55,22 @@ interface CreateNewDashboardProps {
 
 export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardProps) {
   const { campaignId } = useCampaign()
-  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
-  const { navigateToItem } = useEditorNavigation()
-  const { openParentFolders } = useOpenParentFolders()
+  const { runCreationCommand } = useRunSidebarItemCreationCommand()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
-  const [creatingType, setCreatingType] = useState<SidebarItemCreationType | null>(null)
+  const [creatingCommandId, setCreatingCommandId] = useState<
+    SidebarItemCreationCommand['id'] | null
+  >(null)
 
-  const isDisabled = creatingType !== null
+  const isDisabled = creatingCommandId !== null
 
-  const handleCreate = async (type: SidebarItemCreationType) => {
+  const handleCreate = async (command: SidebarItemCreationCommand) => {
     if (!campaignId || isDisabled) return
 
-    setCreatingType(type)
-
-    try {
-      const name = pendingItemName.trim() || getDefaultName(type, parentId)
-      const result = await createItem({
-        type,
-        parentTarget: { kind: 'direct', parentId },
-        name,
-      })
-      openParentFolders(result.id)
-      await navigateToItem(result.slug)
-    } catch (error) {
-      handleError(error, 'Failed to create item')
-    }
-    setCreatingType(null)
+    setCreatingCommandId(command.id)
+    const name = pendingItemName.trim() || getDefaultName(command.type, parentId)
+    await runCreationCommand(command, { parentId, name })
+    setCreatingCommandId(null)
   }
 
   return (
@@ -105,9 +91,9 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
                 icon={command.icon}
                 name={command.label}
                 description={command.dashboardDescription}
-                onClick={() => handleCreate(command.type)}
+                onClick={() => handleCreate(command)}
                 disabled={isDisabled}
-                isCreating={creatingType === command.type}
+                isCreating={creatingCommandId === command.id}
               />
             ))}
           </div>

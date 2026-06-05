@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { PanelRightIcon, SearchIcon, ExternalLinkIcon, XIcon } from 'lucide-react'
 import { api } from 'convex/_generated/api'
+import type { Id } from 'convex/_generated/dataModel'
 import {
   Dialog,
   DialogContent,
@@ -27,45 +28,178 @@ import { mergeSearchResults } from '../utils/merge-search-results'
 import { useRecentItems } from '../hooks/use-recent-items'
 import type { SearchResult } from '../utils/merge-search-results'
 import { useDebouncedValue } from '~/shared/hooks/useDebouncedValue'
-import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
+import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
+import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
+import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
+import type { BlockSearchResult } from 'shared/search/types'
+
+type SearchDisplayItem =
+  | { kind: 'command'; command: SidebarItemCreationCommand }
+  | { kind: 'item'; result: SearchResult }
+
+function getMatchingCreationCommands(query: string): Array<SidebarItemCreationCommand> {
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (terms.length === 0) return []
+
+  return SIDEBAR_ITEM_CREATION_COMMANDS.filter((command) => {
+    const commandText = `new ${command.label} create ${command.label} ${command.key}`.toLowerCase()
+    return terms.every((term) => commandText.includes(term))
+  })
+}
+
+function getSearchStatus({
+  hasQuery,
+  itemResultCount,
+  recentItemCount,
+  commandResultCount,
+}: {
+  hasQuery: boolean
+  itemResultCount: number
+  recentItemCount: number
+  commandResultCount: number
+}) {
+  if (!hasQuery) return recentItemCount > 0 ? 'Recent' : ''
+
+  const total = itemResultCount + commandResultCount
+  return total > 0 ? `${total} result${total === 1 ? '' : 's'}` : 'No results'
+}
+
+function getTitleMatches(items: Array<AnySidebarItem>, query: string) {
+  const normalizedQuery = query.trim().toLowerCase()
+  if (!normalizedQuery) return []
+  return items.filter((item) => item.name.toLowerCase().includes(normalizedQuery))
+}
+
+function getSearchEmptyStateMessage({
+  hasQuery,
+  recentItemCount,
+  displayItemCount,
+  bodySearchPending,
+  bodySearchFailed,
+}: {
+  hasQuery: boolean
+  recentItemCount: number
+  displayItemCount: number
+  bodySearchPending: boolean
+  bodySearchFailed: boolean
+}) {
+  if (!hasQuery && recentItemCount === 0) return 'Type to search your vault'
+  if (!hasQuery || displayItemCount > 0 || bodySearchPending) return undefined
+  return bodySearchFailed ? 'Body search failed' : 'No results found'
+}
+
+function getSearchInlineStatusMessage({
+  hasQuery,
+  bodySearchFailed,
+  displayItemCount,
+  itemResultCount,
+}: {
+  hasQuery: boolean
+  bodySearchFailed: boolean
+  displayItemCount: number
+  itemResultCount: number
+}) {
+  if (!hasQuery || !bodySearchFailed || displayItemCount === 0) return undefined
+  return itemResultCount > 0
+    ? 'Body search failed. Showing title matches only.'
+    : 'Body search failed'
+}
+
+function getDisplayItems({
+  hasQuery,
+  matchingCommands,
+  results,
+  recentItems,
+}: {
+  hasQuery: boolean
+  matchingCommands: Array<SidebarItemCreationCommand>
+  results: Array<SearchResult>
+  recentItems: Array<SearchResult>
+}): Array<SearchDisplayItem> {
+  if (!hasQuery) return recentItems.map((result) => ({ kind: 'item', result }))
+  return [
+    ...matchingCommands.map((command) => ({ kind: 'command' as const, command })),
+    ...results.map((result) => ({ kind: 'item' as const, result })),
+  ]
+}
+
+function getSearchDialogModel({
+  query,
+  items,
+  itemsMap,
+  bodyResults,
+  bodySearchPending,
+  bodySearchError,
+  recentItems,
+}: {
+  query: string
+  items: Array<AnySidebarItem>
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
+  bodyResults: Array<BlockSearchResult> | undefined
+  bodySearchPending: boolean
+  bodySearchError: unknown
+  recentItems: Array<SearchResult>
+}) {
+  const hasQuery = query.trim().length > 0
+  const titleMatches = getTitleMatches(items, query)
+  const results = hasQuery ? mergeSearchResults(titleMatches, bodyResults, itemsMap, query) : []
+  const matchingCommands = hasQuery ? getMatchingCreationCommands(query) : []
+  const displayItems = getDisplayItems({ hasQuery, matchingCommands, results, recentItems })
+  const bodySearchFailed = Boolean(bodySearchError)
+
+  return {
+    displayItems,
+    hasQuery,
+    results,
+    status: getSearchStatus({
+      hasQuery,
+      itemResultCount: results.length,
+      recentItemCount: recentItems.length,
+      commandResultCount: matchingCommands.length,
+    }),
+    emptyStateMessage: getSearchEmptyStateMessage({
+      hasQuery,
+      recentItemCount: recentItems.length,
+      displayItemCount: displayItems.length,
+      bodySearchPending,
+      bodySearchFailed,
+    }),
+    inlineStatusMessage: getSearchInlineStatusMessage({
+      hasQuery,
+      bodySearchFailed,
+      displayItemCount: displayItems.length,
+      itemResultCount: results.length,
+    }),
+  }
+}
 
 function SearchResultsPanel({
   showPreview,
-  hasQuery,
-  results,
-  recentItems,
   displayItems,
+  status,
+  emptyStateMessage,
+  inlineStatusMessage,
   selectedIndex,
   selectedItemRef,
   itemsMap,
   query,
-  isBodySearchPending,
-  bodySearchError,
   onSelect,
   onHover,
 }: {
   showPreview: boolean
-  hasQuery: boolean
-  results: Array<SearchResult>
-  recentItems: Array<SearchResult>
-  displayItems: Array<SearchResult>
+  displayItems: Array<SearchDisplayItem>
+  status: string
+  emptyStateMessage?: string
+  inlineStatusMessage?: string
   selectedIndex: number
   selectedItemRef: RefObject<HTMLDivElement | null>
   itemsMap: Parameters<typeof buildBreadcrumbs>[1]
   query: string
-  isBodySearchPending: boolean
-  bodySearchError: unknown
-  onSelect: (result: SearchResult) => void
+  onSelect: (result: SearchDisplayItem) => void
   onHover: (index: number) => void
 }) {
-  const hasBodySearchError = Boolean(bodySearchError)
-  const status = hasQuery
-    ? results.length > 0
-      ? `${results.length} result${results.length === 1 ? '' : 's'}`
-      : 'No results'
-    : recentItems.length > 0
-      ? 'Recent'
-      : ''
+  const hasQuery = query.trim().length > 0
 
   return (
     <div
@@ -79,46 +213,58 @@ function SearchResultsPanel({
       </output>
       <ScrollArea className="flex-1">
         <div id="search-results-list" aria-label="Search results" className="p-1">
-          {!hasQuery && recentItems.length === 0 && (
+          {emptyStateMessage && (
             <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-              Type to search your vault
+              {emptyStateMessage}
             </div>
           )}
-          {hasQuery && results.length === 0 && !isBodySearchPending && (
-            <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-              {hasBodySearchError ? 'Body search failed' : 'No results found'}
-            </div>
+          {inlineStatusMessage && (
+            <div className="px-3 py-2 text-xs text-destructive">{inlineStatusMessage}</div>
           )}
-          {hasQuery && results.length > 0 && hasBodySearchError && (
-            <div className="px-3 py-2 text-xs text-destructive">
-              Body search failed. Showing title matches only.
-            </div>
-          )}
-          {displayItems.map((result, index) => (
+          {displayItems.map((displayItem, index) => (
             <div
-              key={`${result.itemId}-${result.matchType}`}
+              key={
+                displayItem.kind === 'command'
+                  ? displayItem.command.id
+                  : `${displayItem.result.itemId}-${displayItem.result.matchType}`
+              }
               ref={index === selectedIndex ? selectedItemRef : undefined}
             >
-              <SearchResultItem
-                id={`search-result-${index}`}
-                icon={getSidebarItemIcon(result.item)}
-                title={
-                  hasQuery && result.matchType === 'title' ? (
-                    <HighlightedText text={result.item.name} query={query} />
-                  ) : (
-                    result.item.name
-                  )
-                }
-                subtitle={buildBreadcrumbs(result.item, itemsMap) || undefined}
-                detail={
-                  hasQuery && result.matchType === 'body' && result.matchText ? (
-                    <HighlightedText text={result.matchText} query={query} />
-                  ) : undefined
-                }
-                isSelected={index === selectedIndex}
-                onClick={() => onSelect(result)}
-                onMouseEnter={() => onHover(index)}
-              />
+              {displayItem.kind === 'command' ? (
+                <SearchResultItem
+                  id={`search-result-${index}`}
+                  icon={displayItem.command.icon}
+                  title={`New ${displayItem.command.label}`}
+                  subtitle="Create at top level"
+                  badge="Command"
+                  isSelected={index === selectedIndex}
+                  onClick={() => onSelect(displayItem)}
+                  onMouseEnter={() => onHover(index)}
+                />
+              ) : (
+                <SearchResultItem
+                  id={`search-result-${index}`}
+                  icon={getSidebarItemIcon(displayItem.result.item)}
+                  title={
+                    hasQuery && displayItem.result.matchType === 'title' ? (
+                      <HighlightedText text={displayItem.result.item.name} query={query} />
+                    ) : (
+                      displayItem.result.item.name
+                    )
+                  }
+                  subtitle={buildBreadcrumbs(displayItem.result.item, itemsMap) || undefined}
+                  detail={
+                    hasQuery &&
+                    displayItem.result.matchType === 'body' &&
+                    displayItem.result.matchText ? (
+                      <HighlightedText text={displayItem.result.matchText} query={query} />
+                    ) : undefined
+                  }
+                  isSelected={index === selectedIndex}
+                  onClick={() => onSelect(displayItem)}
+                  onMouseEnter={() => onHover(index)}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -130,6 +276,7 @@ function SearchResultsPanel({
 function SearchPreviewPanel({
   hasQuery,
   selectedResult,
+  selectedCommand,
   selectedContentItem,
   isPreviewLoading,
   previewError,
@@ -137,11 +284,27 @@ function SearchPreviewPanel({
 }: {
   hasQuery: boolean
   selectedResult?: SearchResult
+  selectedCommand?: SidebarItemCreationCommand
   selectedContentItem?: AnySidebarItemWithContent
   isPreviewLoading: boolean
   previewError: unknown
   onOpen: (result: SearchResult) => void
 }) {
+  if (selectedCommand) {
+    const Icon = selectedCommand.icon
+    return (
+      <div className="w-1/2 flex flex-col min-h-0">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+          <Icon className="size-4 text-muted-foreground" />
+          <span className="text-sm font-medium">New {selectedCommand.label}</span>
+        </div>
+        <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+          Create at top level
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-1/2 flex flex-col min-h-0">
       {selectedResult ? (
@@ -188,8 +351,10 @@ export function SearchDialog() {
   const { isOpen, query, close, setQuery, open, showPreview, togglePreview } = useSearchStore()
   const { data: items, itemsMap } = useFilteredSidebarItems()
   const { navigateToItem } = useEditorNavigation()
+  const { runCreationCommand } = useRunSidebarItemCreationCommand()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const selectedItemRef = useRef<HTMLDivElement>(null)
+  const runningCommandIdRef = useRef<SidebarItemCreationCommand['id'] | null>(null)
   const debouncedQuery = useDebouncedValue(query, 200)
 
   useEffect(() => {
@@ -207,23 +372,22 @@ export function SearchDialog() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, open, close])
 
-  const titleMatches = debouncedQuery.trim()
-    ? items.filter((item) => item.name.toLowerCase().includes(debouncedQuery.toLowerCase()))
-    : []
-
   const bodyQuery = useCampaignQuery(
     api.blocks.queries.searchBlocks,
     debouncedQuery.trim() ? { query: debouncedQuery } : 'skip',
   )
 
   const recentItems = useRecentItems(items)
-
-  const results = debouncedQuery.trim()
-    ? mergeSearchResults(titleMatches, bodyQuery.data ?? undefined, itemsMap, debouncedQuery)
-    : []
-
-  const hasQuery = debouncedQuery.trim().length > 0
-  const displayItems = hasQuery ? results : recentItems
+  const { displayItems, emptyStateMessage, hasQuery, inlineStatusMessage, status } =
+    getSearchDialogModel({
+      query: debouncedQuery,
+      items,
+      itemsMap,
+      bodyResults: bodyQuery.data ?? undefined,
+      bodySearchPending: bodyQuery.isPending,
+      bodySearchError: bodyQuery.error,
+      recentItems,
+    })
 
   const prevQueryRef = useRef(debouncedQuery)
   if (prevQueryRef.current !== debouncedQuery) {
@@ -235,7 +399,11 @@ export function SearchDialog() {
     selectedItemRef.current?.scrollIntoView({ block: 'nearest' })
   }, [selectedIndex])
 
-  const selectedResult: SearchResult | undefined = displayItems[selectedIndex]
+  const selectedDisplayItem = displayItems[selectedIndex]
+  const selectedResult: SearchResult | undefined =
+    selectedDisplayItem?.kind === 'item' ? selectedDisplayItem.result : undefined
+  const selectedCommand: SidebarItemCreationCommand | undefined =
+    selectedDisplayItem?.kind === 'command' ? selectedDisplayItem.command : undefined
 
   const {
     data: selectedContentItem,
@@ -248,6 +416,20 @@ export function SearchDialog() {
     close()
   }
 
+  const handleSelectDisplayItem = (displayItem: SearchDisplayItem) => {
+    if (displayItem.kind === 'item') {
+      handleSelect(displayItem.result)
+      return
+    }
+    if (runningCommandIdRef.current !== null) return
+
+    runningCommandIdRef.current = displayItem.command.id
+    void runCreationCommand(displayItem.command, { parentId: null }).then((result) => {
+      runningCommandIdRef.current = null
+      if (result) close()
+    })
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (displayItems.length === 0) return
     const maxIndex = displayItems.length - 1
@@ -257,9 +439,9 @@ export function SearchDialog() {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setSelectedIndex((i) => Math.max(i - 1, 0))
-    } else if (e.key === 'Enter' && selectedResult) {
+    } else if (e.key === 'Enter' && selectedDisplayItem) {
       e.preventDefault()
-      handleSelect(selectedResult)
+      handleSelectDisplayItem(selectedDisplayItem)
     }
   }
 
@@ -312,17 +494,15 @@ export function SearchDialog() {
         <div className="flex flex-1 min-h-0">
           <SearchResultsPanel
             showPreview={showPreview}
-            hasQuery={hasQuery}
-            results={results}
-            recentItems={recentItems}
             displayItems={displayItems}
+            status={status}
+            emptyStateMessage={emptyStateMessage}
+            inlineStatusMessage={inlineStatusMessage}
             selectedIndex={selectedIndex}
             selectedItemRef={selectedItemRef}
             itemsMap={itemsMap}
             query={debouncedQuery}
-            isBodySearchPending={bodyQuery.isPending}
-            bodySearchError={bodyQuery.error}
-            onSelect={handleSelect}
+            onSelect={handleSelectDisplayItem}
             onHover={setSelectedIndex}
           />
 
@@ -330,6 +510,7 @@ export function SearchDialog() {
             <SearchPreviewPanel
               hasQuery={hasQuery}
               selectedResult={selectedResult}
+              selectedCommand={selectedCommand}
               selectedContentItem={selectedContentItem}
               isPreviewLoading={isPreviewLoading}
               previewError={previewError}
@@ -344,7 +525,7 @@ export function SearchDialog() {
             <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">↑↓</kbd> Navigate
           </span>
           <span>
-            <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">↵</kbd> Open
+            <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">↵</kbd> Open / Run
           </span>
           <span>
             <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">Esc</kbd> Close
