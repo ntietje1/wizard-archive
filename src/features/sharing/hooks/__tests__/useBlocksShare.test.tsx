@@ -155,6 +155,22 @@ describe('useBlocksShare', () => {
     })
   })
 
+  it('separates share eligibility from loaded block share state', () => {
+    const block = createBlock('block-1')
+    const note = createNoteWithContent()
+    useCampaignQueryMock.mockReturnValue({
+      data: { blocks: [], playerMembers: [], notePermissionsByMemberId: {} },
+      isPending: true,
+    })
+
+    const { result } = renderHook(() => useBlocksShare([block], note), {
+      wrapper: createQueryWrapper(),
+    })
+
+    expect(result.current.canShare).toBe(true)
+    expect(result.current.hasCompleteData).toBe(false)
+  })
+
   it('sets player block visibility through the projection-aware action', async () => {
     const block = createBlock('block-1')
     const note = createNoteWithContent()

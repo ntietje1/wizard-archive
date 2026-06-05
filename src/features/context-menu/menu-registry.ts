@@ -146,8 +146,10 @@ interface EditorContextMenuServices {
 
 interface BlockShareMenuService {
   canOpen: (context: EditorMenuContext) => boolean
+  canToggleAllPlayersPermission: (context: EditorMenuContext) => boolean
   getBlockCount: (context: EditorMenuContext) => number
-  open: (context: EditorMenuContext) => void
+  getAllPlayersPermissionLevel: (context: EditorMenuContext) => 'hidden' | 'visible' | 'mixed'
+  toggleAllPlayersPermission: (context: EditorMenuContext) => void
 }
 
 type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
@@ -176,6 +178,17 @@ const sidebarItemCreationActionIds = {
 
 function nextEditorMode(currentMode: EditorModeMenuService['editorMode']) {
   return currentMode === EDITOR_MODE.EDITOR ? EDITOR_MODE.VIEWER : EDITOR_MODE.EDITOR
+}
+
+function getBlockShareTargetLabel(blockCount: number) {
+  return blockCount === 1 ? 'Block' : `${blockCount} Blocks`
+}
+
+function getBlockShareActionLabel(context: EditorMenuContext, services: EditorContextMenuServices) {
+  const blockCount = services.blockShare.getBlockCount(context)
+  const targetLabel = getBlockShareTargetLabel(blockCount)
+  const allPlayersPermissionLevel = services.blockShare.getAllPlayersPermissionLevel(context)
+  return allPlayersPermissionLevel === 'visible' ? `Unshare ${targetLabel}` : `Share ${targetLabel}`
 }
 
 function createViewAsPlayerItems(
@@ -257,10 +270,6 @@ export const editorContextMenuCommands = {
       toast.info('Coming soon')
     },
   },
-  openBlockShareMenu: {
-    id: 'openBlockShareMenu',
-    run: (context, services) => services.blockShare.open(context),
-  },
   editValueInline: {
     id: 'editValueInline',
     run: (context) => {
@@ -318,16 +327,16 @@ export const editorContextMenuContributors = [
     getItems: () => [
       {
         id: 'share-blocks',
-        commandId: 'openBlockShareMenu',
-        label: (context, services) => {
-          const blockCount = services.blockShare.getBlockCount(context)
-          return `Share ${blockCount} ${blockCount === 1 ? 'Block' : 'Blocks'}`
-        },
+        label: getBlockShareActionLabel,
         icon: Share2,
         group: 'share',
         priority: 1,
         applies: (context, services) =>
           p.isDm(context) && p.hasBlockNoteId(context) && services.blockShare.canOpen(context),
+        isEnabled: (context, services) =>
+          services.blockShare.canToggleAllPlayersPermission(context),
+        onSelect: (context, services) => services.blockShare.toggleAllPlayersPermission(context),
+        closeOnSelect: false,
       },
     ],
   },
