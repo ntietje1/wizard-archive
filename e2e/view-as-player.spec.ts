@@ -251,12 +251,16 @@ async function enterViewAsPlayer(page: Page) {
 
   const playerUsername = E2E_PLAYER_EMAIL!.split('@')[0]
   const playerItem = page.getByRole('menuitemcheckbox', {
-    name: new RegExp(playerUsername, 'i'),
+    name: new RegExp(escapeRegExp(playerUsername), 'i'),
   })
   await expect(playerItem).toBeVisible({ timeout: 5000 })
   await playerItem.click()
   await page.keyboard.press('Escape')
   await expect(playerItem).not.toBeVisible({ timeout: 5000 })
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 async function pinSidebarItemToOpenMap(page: Page, itemName: string) {

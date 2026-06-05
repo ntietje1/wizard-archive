@@ -256,7 +256,7 @@ function escapeRegExp(value: string) {
 
 function playerIdentityPattern(playerEmail: string) {
   const localPart = playerEmail.split('@')[0] ?? playerEmail
-  return new RegExp(`${escapeRegExp(playerEmail)}|${escapeRegExp(localPart)}`, 'i')
+  return new RegExp(`^(?:${escapeRegExp(playerEmail)}|${escapeRegExp(localPart)})$`, 'i')
 }
 
 function permissionLevelLabel(permissionLevel: PermissionLevel) {

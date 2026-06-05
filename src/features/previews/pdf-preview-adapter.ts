@@ -45,10 +45,14 @@ export async function runPdfPreviewGeneration({
   }
 
   try {
-    const buffer = await file.arrayBuffer()
-    const result = await claimAndUpload(fileId, () => renderPdfPreview(buffer, options), {
-      signal: options?.signal,
-    })
+    const result = await claimAndUpload(
+      fileId,
+      async () => {
+        const buffer = await file.arrayBuffer()
+        return renderPdfPreview(buffer, options)
+      },
+      { signal: options?.signal },
+    )
     if (result.status === 'success') return { status: 'published' }
     if (result.status === 'not-claimed') return { status: 'not-claimed' }
     if (result.status === 'stale') return { status: 'stale' }

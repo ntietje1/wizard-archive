@@ -106,6 +106,26 @@ describe('useCanvasViewerSession', () => {
       false,
     )
   })
+
+  it('allows normal DM canvas collaboration to edit when the DM has edit access', () => {
+    const canvas = createCanvas({
+      myPermissionLevel: PERMISSION_LEVEL.EDIT,
+    })
+    actorState.campaignActor = {
+      kind: 'dm',
+      campaignId: testId<'campaigns'>('campaign_1'),
+    }
+    filesystemState.allItemsById = new Map([[canvas._id, canvas]])
+
+    const { result } = renderHook(() => useCanvasViewerSession(canvas))
+
+    expect(result.current).toMatchObject({ status: 'ready', canEdit: true })
+    expect(collaborationMock).toHaveBeenCalledWith(
+      canvas._id,
+      expect.objectContaining({ name: 'Mina' }),
+      true,
+    )
+  })
 })
 
 function createCanvas(overrides: Partial<CanvasWithContent> = {}): CanvasWithContent {

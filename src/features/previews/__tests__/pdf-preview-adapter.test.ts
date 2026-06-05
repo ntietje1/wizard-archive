@@ -76,15 +76,21 @@ describe('runPdfPreviewGeneration', () => {
 
   it('returns not-claimed when preview generation cannot claim the item', async () => {
     const claimAndUpload = vi.fn().mockResolvedValue({ status: 'not-claimed' })
+    const file = pdfFile()
+    const arrayBuffer = vi.fn()
+    Object.defineProperty(file, 'arrayBuffer', { value: arrayBuffer })
+    const renderPdfPreview = vi.fn()
 
     const result = await runPdfPreviewGeneration({
-      file: pdfFile(),
+      file,
       fileId,
       claimAndUpload,
-      renderPdfPreview: vi.fn(),
+      renderPdfPreview,
     })
 
     expect(result).toEqual({ status: 'not-claimed' })
+    expect(arrayBuffer).not.toHaveBeenCalled()
+    expect(renderPdfPreview).not.toHaveBeenCalled()
   })
 
   it('returns failed when claim/upload reports an error', async () => {
@@ -109,7 +115,10 @@ describe('runPdfPreviewGeneration', () => {
     const result = await runPdfPreviewGeneration({
       file,
       fileId,
-      claimAndUpload: vi.fn(),
+      claimAndUpload: vi.fn(async (_itemId, generate: () => Promise<Blob>) => {
+        await generate()
+        return { status: 'success' as const }
+      }),
       renderPdfPreview: vi.fn(),
     })
 

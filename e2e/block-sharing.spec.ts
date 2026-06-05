@@ -436,7 +436,9 @@ async function expectBlocksAsActualPlayer(
 async function getPlayerMemberId() {
   const client = getConvexClient()
   const members = await client.query(api.campaigns.queries.getMembersByCampaign, { campaignId })
-  const player = members.find((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player)
+  const player = members
+    .filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player)
+    .sort((a, b) => a._id.localeCompare(b._id))[0]
   if (!player) {
     throw new Error('Unable to find campaign player member')
   }

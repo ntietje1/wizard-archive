@@ -5,6 +5,42 @@ import type {
 import type { FileSystemCacheAdapter } from './filesystem-cache-adapter'
 
 type ProgressToastId = string | number
+type ProgressReporter = (error: unknown, message: string) => void
+
+function showProgressSafely({
+  progressMessage,
+  showProgress,
+  reportError,
+}: {
+  progressMessage: string | undefined
+  showProgress: (message: string) => ProgressToastId
+  reportError: ProgressReporter
+}): ProgressToastId | null {
+  if (!progressMessage) return null
+  try {
+    return showProgress(progressMessage)
+  } catch (error) {
+    reportError(error, 'Failed to show filesystem progress')
+    return null
+  }
+}
+
+function dismissProgressSafely({
+  progressToastId,
+  dismissProgress,
+  reportError,
+}: {
+  progressToastId: ProgressToastId | null
+  dismissProgress: (toastId: ProgressToastId) => void
+  reportError: ProgressReporter
+}) {
+  if (progressToastId === null) return
+  try {
+    dismissProgress(progressToastId)
+  } catch (error) {
+    reportError(error, 'Failed to dismiss filesystem progress')
+  }
+}
 
 export async function runFileSystemOptimisticMutation({
   cacheAdapter,
@@ -55,13 +91,13 @@ export async function runFileSystemOptimisticMutation({
 
   let receipt: FileSystemTransactionReceipt | null = null
   let mutationError: unknown = null
-  const progressToastId = progressMessage ? showProgress(progressMessage) : null
+  const progressToastId = showProgressSafely({ progressMessage, showProgress, reportError })
   try {
     receipt = await mutate()
   } catch (error) {
     mutationError = error
   } finally {
-    if (progressToastId) dismissProgress(progressToastId)
+    dismissProgressSafely({ progressToastId, dismissProgress, reportError })
   }
 
   if (mutationError) {
@@ -78,10 +114,14 @@ export async function runFileSystemOptimisticMutation({
 
   try {
     cacheAdapter.applyPatches([...rollback, ...receipt.patches])
-    await onSuccess(receipt)
-    return receipt
   } catch (error) {
     reportError(error, errorMessage)
     return null
   }
+  try {
+    await onSuccess(receipt)
+  } catch (error) {
+    reportError(error, errorMessage)
+  }
+  return receipt
 }

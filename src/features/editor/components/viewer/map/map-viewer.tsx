@@ -217,6 +217,15 @@ function useMapViewerElement(map: GameMapWithContent) {
   useEffect(() => {
     if (canEditMap) return
     if (pendingPinItems || pendingPinMove || draggingPin) {
+      if (draggingPin) {
+        const pinEl = pinsContainerRef.current?.querySelector(
+          `[data-pin-id="${draggingPin.pin._id}"]`,
+        ) as HTMLElement | null
+        if (pinEl) {
+          setPinElementPosition(pinEl, draggingPin.pin)
+        }
+        draggedPinPositionRef.current = null
+      }
       dispatchPinInteraction({ type: 'cancelActivePinAction' })
     }
   }, [canEditMap, pendingPinItems, pendingPinMove, draggingPin])

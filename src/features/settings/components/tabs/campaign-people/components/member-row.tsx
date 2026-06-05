@@ -10,6 +10,8 @@ export function MemberRow({
   badge?: React.ReactNode
   actions?: React.ReactNode
 }) {
+  const username = member.userProfile.username
+
   return (
     <div className="flex items-center gap-3 py-1">
       <MemberAvatar member={member} />
@@ -20,7 +22,7 @@ export function MemberRow({
           </span>
           {badge}
         </div>
-        <p className="text-xs text-muted-foreground truncate">@{member.userProfile.username}</p>
+        {username && <p className="text-xs text-muted-foreground truncate">@{username}</p>}
       </div>
       {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
     </div>
