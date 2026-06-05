@@ -4,10 +4,10 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { ERROR_CODE } from 'shared/errors/client'
 import type { ReactNode } from 'react'
-import type { ClientErrorCode, ClientErrorData } from 'shared/errors/client'
 import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { createCampaign } from '~/test/factories/campaign-factory'
+import { clientError } from '~/test/factories/error-factory'
 import { mockAuthQuery, mockAuthQueryError } from '~/test/mocks/convex-mocks'
 import { TestWrapper } from '~/test/test-wrapper'
 
@@ -43,16 +43,6 @@ function CampaignConsumer() {
       <span data-testid="is-loaded">{String(ctx.isCampaignLoaded)}</span>
     </div>
   )
-}
-
-function clientError(code: ClientErrorCode): Error & { data: ClientErrorData } {
-  return Object.assign(new Error('Campaign not found'), {
-    data: {
-      kind: 'client',
-      code,
-      message: 'Campaign not found',
-    },
-  } satisfies { data: ClientErrorData })
 }
 
 describe('CampaignProvider', () => {

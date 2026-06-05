@@ -361,7 +361,11 @@ function readAddedCanvasDocumentEdge(
 }
 
 function projectChangedCanvasEdge(edge: CanvasDocumentEdge, edgesMap: Y.Map<CanvasDocumentEdge>) {
-  const remoteEdge = readCanvasDocumentEdge(edgesMap.get(edge.id), edge.id, edgesMap.has(edge.id))
+  if (!edgesMap.has(edge.id)) {
+    return { edge: null, orderMayHaveChanged: true }
+  }
+
+  const remoteEdge = readCanvasDocumentEdge(edgesMap.get(edge.id), edge.id, true)
   if (!remoteEdge) {
     return { edge: null, orderMayHaveChanged: true }
   }

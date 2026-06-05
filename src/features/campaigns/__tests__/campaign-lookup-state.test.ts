@@ -1,20 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ERROR_CODE } from 'shared/errors/client'
 import { createCampaign } from '~/test/factories/campaign-factory'
+import { clientError } from '~/test/factories/error-factory'
 import { resolveCampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
 import type { Campaign } from 'shared/campaigns/types'
-import type { ClientErrorCode } from 'shared/errors/client'
 import type { QueryStatus } from '@tanstack/react-query'
-
-function clientError(code: ClientErrorCode) {
-  return {
-    data: {
-      kind: 'client',
-      code,
-      message: 'Campaign not found',
-    },
-  }
-}
 
 function campaignQuery({
   data,

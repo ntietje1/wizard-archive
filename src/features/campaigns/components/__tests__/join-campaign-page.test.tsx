@@ -5,9 +5,9 @@ import { ERROR_CODE } from 'shared/errors/client'
 import type { ReactNode } from 'react'
 import { JoinCampaignPage } from '~/features/campaigns/components/join-campaign-page'
 import { createCampaign } from '~/test/factories/campaign-factory'
+import { clientError } from '~/test/factories/error-factory'
 import { mockAppMutation, mockAuthQuery, mockAuthQueryError } from '~/test/mocks/convex-mocks'
 import { TestWrapper } from '~/test/test-wrapper'
-import type { ClientErrorCode, ClientErrorData } from 'shared/errors/client'
 import type * as TanstackReactQuery from '@tanstack/react-query'
 
 const mockNavigate = vi.fn()
@@ -45,16 +45,6 @@ vi.mock('convex/react', () => ({
 vi.mock('~/shared/hooks/useAppMutation', () => ({
   useAppMutation: () => mockUseAppMutation(),
 }))
-
-function clientError(code: ClientErrorCode): Error & { data: ClientErrorData } {
-  return Object.assign(new Error('Campaign not found'), {
-    data: {
-      kind: 'client',
-      code,
-      message: 'Campaign not found',
-    },
-  } satisfies { data: ClientErrorData })
-}
 
 describe('JoinCampaignPage', () => {
   beforeEach(() => {
