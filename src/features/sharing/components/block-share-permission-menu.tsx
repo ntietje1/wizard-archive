@@ -5,7 +5,7 @@ import type {
   BlockShareItem,
   BlockVisibilitySelectValue,
 } from '~/features/sharing/hooks/useBlocksShare'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import {
   Select,
   SelectContent,
@@ -163,7 +163,7 @@ function AllPlayersRow({
   value: AggregateBlockVisibilitySelectValue
   disabled: boolean
   expanded: boolean
-  inheritingMembers: Array<CampaignMember>
+  inheritingMembers: Array<CampaignMemberSummary>
   onToggleExpand: () => void
   onChange: (value: Extract<BlockVisibilitySelectValue, 'hidden' | 'visible'>) => Promise<void>
 }) {

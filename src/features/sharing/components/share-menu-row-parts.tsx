@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { Avatar, AvatarFallback } from '~/features/shadcn/components/avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { SHARE_MENU_OVERLAY_Z_INDEX } from '~/features/sharing/components/share-menu-layout'
@@ -47,16 +47,11 @@ export function ShareMenuRowTooltip({
   )
 }
 
-export function ShareMenuPlayerIdentity({ member }: { member: CampaignMember }) {
+export function ShareMenuPlayerIdentity({ member }: { member: CampaignMemberSummary }) {
   const profile = member.userProfile
   return (
     <>
-      <UserProfileImage
-        imageUrl={profile.imageUrl}
-        name={profile.name}
-        email={profile.email}
-        size="sm"
-      />
+      <UserProfileImage imageUrl={profile.imageUrl} name={profile.name} size="sm" />
       <div className="flex min-w-0 flex-1 flex-col leading-tight">
         <span className="truncate text-sm font-medium">{getUserDisplayName(profile)}</span>
         {profile.username && (
@@ -79,7 +74,7 @@ export function ShareMenuAllPlayersRow({
   label: string
   tooltipText: string
   expanded: boolean
-  members: Array<CampaignMember>
+  members: Array<CampaignMemberSummary>
   select: ReactNode
   testId?: string
   onToggleExpand: () => void
@@ -130,7 +125,7 @@ export function ShareMenuTreeItem({ isLast, children }: { isLast: boolean; child
   )
 }
 
-function ShareMenuAvatarStack({ members }: { members: Array<CampaignMember> }) {
+function ShareMenuAvatarStack({ members }: { members: Array<CampaignMemberSummary> }) {
   return (
     <div className="flex items-center">
       {members.slice(0, 3).map((member, index) => (
@@ -138,7 +133,6 @@ function ShareMenuAvatarStack({ members }: { members: Array<CampaignMember> }) {
           key={member._id}
           imageUrl={member.userProfile.imageUrl}
           name={member.userProfile.name}
-          email={member.userProfile.email}
           size="sm"
           className={`${index > 0 ? '-ml-2 ' : ''}ring-2 ring-background`}
         />

@@ -40,6 +40,7 @@ export function useYjsPreviewUpload({
 
     const subscriptionId = subscriptionIdRef.current + 1
     subscriptionIdRef.current = subscriptionId
+    const subscriptionAbortController = new AbortController()
     let cancelled = false
 
     const generate = async () => {
@@ -62,11 +63,18 @@ export function useYjsPreviewUpload({
       generationIdRef.current = generationId
       isGeneratingRef.current = true
       try {
-        await claimAndUploadRef.current(generatingItemId, () => captureElementPreview(element))
+        const result = await claimAndUploadRef.current(
+          generatingItemId,
+          () => captureElementPreview(element),
+          { signal: subscriptionAbortController.signal },
+        )
+        if (result.status === 'error') {
+          logger.error(`Preview generation failed for ${generatingItemId}:`, result.error)
+        }
       } catch (error) {
         logger.error(`Preview generation failed for ${generatingItemId}:`, error)
       } finally {
-        if (!cancelled && generationIdRef.current === generationId) {
+        if (generationIdRef.current === generationId) {
           isGeneratingRef.current = false
         }
       }
@@ -90,6 +98,7 @@ export function useYjsPreviewUpload({
 
     return () => {
       cancelled = true
+      subscriptionAbortController.abort()
       subscriptionIdRef.current += 1
       doc.off('update', scheduleGeneration)
       if (debounceTimerRef.current) {

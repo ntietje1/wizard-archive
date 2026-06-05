@@ -403,13 +403,19 @@ describe('renaming', () => {
 })
 
 describe('viewAsPlayerId', () => {
-  it('sets and clears viewAsPlayerId', () => {
+  it('sets and clears campaign-scoped view-as player state', () => {
+    const viewAsCampaignId = testId<'campaigns'>('campaign_view')
     const playerId = testId<'campaignMembers'>('member_view')
-    useSidebarUIStore.getState().setViewAsPlayerId(playerId)
-    expect(useSidebarUIStore.getState().viewAsPlayerId).toBe(playerId)
+    useSidebarUIStore
+      .getState()
+      .setViewAsPlayer({ campaignId: viewAsCampaignId, memberId: playerId })
+    expect(useSidebarUIStore.getState().viewAsPlayer).toEqual({
+      campaignId: viewAsCampaignId,
+      memberId: playerId,
+    })
 
-    useSidebarUIStore.getState().setViewAsPlayerId(null)
-    expect(useSidebarUIStore.getState().viewAsPlayerId).toBeNull()
+    useSidebarUIStore.getState().setViewAsPlayer(null)
+    expect(useSidebarUIStore.getState().viewAsPlayer).toBeNull()
   })
 })
 

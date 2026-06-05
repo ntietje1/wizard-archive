@@ -1,7 +1,7 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { ReactNode } from 'react'
 import type { PermissionLevel } from 'shared/permissions/types'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type {
   NullableAggregatePermissionLevel,
   ShareItemWithPermission,
@@ -276,7 +276,7 @@ function AllPlayersRow({
   disabled: boolean
   expanded: boolean
   label: string
-  inheritingMembers: Array<CampaignMember>
+  inheritingMembers: Array<CampaignMemberSummary>
   isInheriting: boolean
   inheritedFromFolderName: string | null
   onToggleExpand: () => void

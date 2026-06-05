@@ -3,12 +3,16 @@ import { authQuery, campaignQuery, dmQuery } from '../functions'
 import { assertUsername, usernameValidator } from '../users/validation'
 import { getCampaignMembers } from './functions/getCampaignMembers'
 import { getCampaignRequests as getCampaignRequestsFn } from './functions/getCampaignRequests'
-import { campaignMemberValidator, campaignValidator } from './schema'
+import {
+  campaignMemberSummaryValidator,
+  campaignMemberValidator,
+  campaignValidator,
+} from './schema'
 import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampaigns'
 import { getCampaignBySlug as getCampaignBySlugFn } from './functions/getCampaign'
 import { assertCampaignSlug, campaignSlugValidator } from './validation'
 
-import type { Campaign, CampaignMember } from '../../shared/campaigns/types'
+import type { Campaign, CampaignMember, CampaignMemberSummary } from '../../shared/campaigns/types'
 
 export const getUserCampaigns = authQuery({
   args: {},
@@ -34,8 +38,8 @@ export const getCampaignBySlug = authQuery({
 
 export const getMembersByCampaign = campaignQuery({
   args: {},
-  returns: v.array(campaignMemberValidator),
-  handler: async (ctx): Promise<Array<CampaignMember>> => {
+  returns: v.array(campaignMemberSummaryValidator),
+  handler: async (ctx): Promise<Array<CampaignMemberSummary>> => {
     return await getCampaignMembers(ctx)
   },
 })

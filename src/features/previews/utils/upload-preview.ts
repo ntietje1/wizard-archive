@@ -1,5 +1,11 @@
 import type { Id } from 'convex/_generated/dataModel'
 
+function throwIfPreviewUploadAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw new Error('Preview upload aborted')
+  }
+}
+
 export async function uploadPreviewBlob(
   blob: Blob,
   generateUploadUrl: () => Promise<string>,
@@ -10,13 +16,18 @@ export async function uploadPreviewBlob(
   }) => Promise<null>,
   itemId: Id<'sidebarItems'>,
   claimToken: string,
+  options: { signal?: AbortSignal } = {},
 ): Promise<void> {
+  throwIfPreviewUploadAborted(options.signal)
   const uploadUrl = await generateUploadUrl()
+  throwIfPreviewUploadAborted(options.signal)
 
   const contentType = blob.type || 'application/octet-stream'
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30_000)
+  const abortUpload = () => controller.abort()
+  options.signal?.addEventListener('abort', abortUpload, { once: true })
 
   let response: Response
   try {
@@ -27,13 +38,17 @@ export async function uploadPreviewBlob(
       signal: controller.signal,
     })
   } catch (error) {
-    clearTimeout(timeoutId)
     if (error instanceof DOMException && error.name === 'AbortError') {
+      if (options.signal?.aborted) {
+        throw new Error('Preview upload aborted')
+      }
       throw new Error('Preview upload timed out after 30s')
     }
     throw error
+  } finally {
+    clearTimeout(timeoutId)
+    options.signal?.removeEventListener('abort', abortUpload)
   }
-  clearTimeout(timeoutId)
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => 'Unknown error')
@@ -50,6 +65,7 @@ export async function uploadPreviewBlob(
     throw new Error('Preview upload failed: missing storageId in response')
   }
   const storageId = json.storageId as Id<'_storage'>
+  throwIfPreviewUploadAborted(options.signal)
 
   await setPreviewImage({ itemId, previewStorageId: storageId, claimToken })
 }

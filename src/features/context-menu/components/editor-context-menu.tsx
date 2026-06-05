@@ -11,6 +11,7 @@ import { ContextMenuHost } from './context-menu-host'
 import type { ContextMenuHostRef } from './context-menu-host'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { EditorMenuContext, ViewContext } from '../types'
+import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import { use, useRef } from 'react'
 import type { Ref } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -22,13 +23,14 @@ import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { useOptionalBlockShareMenu } from '~/features/sharing/contexts/useBlockShareMenu'
 import {
   getBlockShareTargetBlocks,
   getBlockShareTitle,
 } from '~/features/editor/utils/block-share-targets'
+import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
 interface EditorContextMenuProps {
   ref?: Ref<ContextMenuHostRef>
@@ -39,6 +41,8 @@ interface EditorContextMenuProps {
   className?: string
   menuClassName?: string
   disabled?: boolean
+  activeMap?: GameMapWithContent
+  activePin?: MapPinWithItem
   onClose?: () => void
   onDialogOpen?: () => void
   onDialogClose?: () => void
@@ -59,6 +63,8 @@ export function EditorContextMenu({
   className,
   menuClassName = 'w-48 z-[9999]',
   disabled = false,
+  activeMap,
+  activePin,
   onClose,
   onDialogOpen,
   onDialogClose,
@@ -68,6 +74,8 @@ export function EditorContextMenu({
     viewContext,
     item,
     isTrashView,
+    activeMap,
+    activePin,
     onDialogOpen,
     onDialogClose,
   })
@@ -99,6 +107,8 @@ function useEditorContextMenuModel({
   viewContext,
   item,
   isTrashView,
+  activeMap,
+  activePin,
   onDialogOpen,
   onDialogClose,
 }: {
@@ -106,6 +116,8 @@ function useEditorContextMenuModel({
   viewContext: ViewContext
   item?: AnySidebarItem
   isTrashView?: boolean
+  activeMap?: GameMapWithContent
+  activePin?: MapPinWithItem
   onDialogOpen?: () => void
   onDialogClose?: () => void
 }) {
@@ -119,6 +131,7 @@ function useEditorContextMenuModel({
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
   const filesystemReadModel = useFileSystemReadModel()
   const editorMode = useEditorMode()
+  const actorPermissions = useCampaignActorPermissions()
   const blockShareMenu = useOptionalBlockShareMenu()
   const campaignMembersQuery = useCampaignMembers()
   const playerMembers =
@@ -131,16 +144,24 @@ function useEditorContextMenuModel({
     canUseItemSelection: canUseItemSelection(viewContext),
   })
   const primaryItem = selectedItems[0] ?? item
+  const actionItem = item ? actorPermissions.projectActionItem(item) : undefined
+  const actionPrimaryItem = primaryItem
+    ? actorPermissions.projectActionItem(primaryItem)
+    : undefined
+  const actionSelectedItems = selectedItems.map(actorPermissions.projectActionItem)
 
   const menuContext = buildEditorMenuContext({
     blockNoteContext,
     campaign,
     currentSession,
-    item,
+    item: actionItem,
+    isViewingAsPlayer: editorMode.viewAsPlayerId !== undefined,
     isTrashView,
     mapView,
-    primaryItem,
-    selectedItems,
+    activeMap,
+    activePin,
+    primaryItem: actionPrimaryItem,
+    selectedItems: actionSelectedItems,
     viewContext,
   })
 
@@ -189,8 +210,11 @@ function buildEditorMenuContext({
   campaign,
   currentSession,
   item,
+  isViewingAsPlayer,
   isTrashView,
   mapView,
+  activeMap,
+  activePin,
   primaryItem,
   selectedItems,
   viewContext,
@@ -199,34 +223,99 @@ function buildEditorMenuContext({
   campaign: ReturnType<typeof useCampaign>['campaign']
   currentSession: ReturnType<typeof useSession>['currentSession']
   item?: AnySidebarItem
+  isViewingAsPlayer?: boolean
   isTrashView?: boolean
   mapView: ReturnType<typeof useMapViewOptional>
+  activeMap?: GameMapWithContent
+  activePin?: MapPinWithItem
   primaryItem?: AnySidebarItem
   selectedItems: Array<AnySidebarItem>
   viewContext: ViewContext
 }) {
+  const membershipContext = getCampaignMembershipContext(campaign)
+  const mapContext = getMapMenuContext({ mapView, activeMap, activePin })
+  const blockNoteMenuContext = getBlockNoteMenuContext(blockNoteContext)
+
   return {
     surface: viewContext,
     item,
     primaryItem,
     selectedItems,
-    isItemTrashed: item?.isTrashed === true,
-    isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
-    currentUserId: campaign.data?.myMembership?.userId,
-    memberRole: campaign.data?.myMembership?.role,
+    isItemTrashed: itemIsTrashed(item),
+    isTrashView: isTrashSurface({ explicitTrashView: isTrashView, viewContext }),
+    ...membershipContext,
+    isViewingAsPlayer,
     permissionLevel: item?.myPermissionLevel,
-    activeMap: mapView?.activeMap ?? undefined,
-    activePin: mapView?.activePin ?? undefined,
-    hasActiveSession: !!currentSession.data,
-    note: blockNoteContext?.note,
-    editor: blockNoteContext?.editor ?? undefined,
-    position: blockNoteContext?.position,
-    blockNoteId: blockNoteContext?.blockNoteId,
-    isEditorTextContext: blockNoteContext?.isEditorTextContext,
-    valueInlineId: blockNoteContext?.valueInlineId,
-    valueInlineInstanceId: blockNoteContext?.valueInlineInstanceId,
-    valueInlineEditable: blockNoteContext?.valueInlineEditable,
-    openValueInline: blockNoteContext?.openValueInline,
+    ...mapContext,
+    hasActiveSession: sessionIsActive(currentSession),
+    ...blockNoteMenuContext,
+  }
+}
+
+function itemIsTrashed(item?: AnySidebarItem) {
+  return item?.isTrashed === true
+}
+
+function isTrashSurface({
+  explicitTrashView,
+  viewContext,
+}: {
+  explicitTrashView?: boolean
+  viewContext: ViewContext
+}) {
+  return explicitTrashView === true || viewContext === VIEW_CONTEXT.TRASH_VIEW
+}
+
+function getCampaignMembershipContext(campaign: ReturnType<typeof useCampaign>['campaign']) {
+  const membership = campaign.data?.myMembership
+
+  return {
+    currentUserId: membership?.userId,
+    memberRole: membership?.role,
+  }
+}
+
+function getMapMenuContext({
+  mapView,
+  activeMap,
+  activePin,
+}: {
+  mapView: ReturnType<typeof useMapViewOptional>
+  activeMap?: GameMapWithContent
+  activePin?: MapPinWithItem
+}) {
+  const context: Partial<Pick<EditorMenuContext, 'activeMap' | 'activePin'>> = {}
+  const resolvedActiveMap = activeMap ?? mapView?.activeMap
+  const resolvedActivePin = activePin ?? mapView?.activePin
+
+  if (resolvedActiveMap != null) {
+    context.activeMap = resolvedActiveMap
+  }
+  if (resolvedActivePin != null) {
+    context.activePin = resolvedActivePin
+  }
+  return context
+}
+
+function sessionIsActive(currentSession: ReturnType<typeof useSession>['currentSession']) {
+  return Boolean(currentSession.data)
+}
+
+function getBlockNoteMenuContext(blockNoteContext: BlockNoteContextMenuContextType | null) {
+  if (!blockNoteContext) {
+    return {}
+  }
+
+  return {
+    note: blockNoteContext.note,
+    editor: blockNoteContext.editor ?? undefined,
+    position: blockNoteContext.position,
+    blockNoteId: blockNoteContext.blockNoteId,
+    isEditorTextContext: blockNoteContext.isEditorTextContext,
+    valueInlineId: blockNoteContext.valueInlineId,
+    valueInlineInstanceId: blockNoteContext.valueInlineInstanceId,
+    valueInlineEditable: blockNoteContext.valueInlineEditable,
+    openValueInline: blockNoteContext.openValueInline,
   }
 }
 

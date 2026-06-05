@@ -12,15 +12,12 @@ import { ERROR_CODE } from '../shared/errors/client'
 import { throwClientError } from './errors'
 import { getAuthProfileKey } from './auth/identity'
 import { assertStoredUsername } from './users/validation'
-import {
-  getUserProfileById,
-  getUserProfileDocByAuthProfileKey,
-} from './users/functions/getUserProfile'
+import { getUserProfileDocByAuthProfileKey } from './users/functions/getUserProfile'
 import type { CustomCtx } from 'convex-helpers/server/customFunctions'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import type { AuthUser } from './users/authTypes'
-import type { CampaignFromDb, CampaignMember } from '../shared/campaigns/types'
+import type { CampaignFromDb, CampaignMemberFromDb } from '../shared/campaigns/types'
 
 // --- Context enrichment ---
 
@@ -62,7 +59,7 @@ function assertAuthenticatedCtx(ctx: Record<string, any>): asserts ctx is Authen
 async function checkMembership(
   ctx: AuthenticatedCtx,
   campaignId: Id<'campaigns'>,
-): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
+): Promise<{ campaign: CampaignFromDb; membership: CampaignMemberFromDb }> {
   const campaign = await ctx.db.get('campaigns', campaignId)
   const member = await ctx.db
     .query('campaignMembers')
@@ -77,20 +74,16 @@ async function checkMembership(
     member.status !== CAMPAIGN_MEMBER_STATUS.Accepted
   )
     throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
-  const userProfile = await getUserProfileById(ctx, {
-    profileId: ctx.user.profile._id,
-  })
-  if (!userProfile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return {
     campaign: toCampaignFromDb(campaign),
-    membership: { ...member, userProfile },
+    membership: member,
   }
 }
 
 export async function checkDmMembership(
   ctx: AuthenticatedCtx,
   campaignId: Id<'campaigns'>,
-): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {
+): Promise<{ campaign: CampaignFromDb; membership: CampaignMemberFromDb }> {
   const result = await checkMembership(ctx, campaignId)
   if (result.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can perform this action')

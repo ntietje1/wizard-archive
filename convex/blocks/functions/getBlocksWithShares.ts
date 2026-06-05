@@ -12,7 +12,7 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
 import type { DmQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMember } from '../../../shared/campaigns/types'
+import type { CampaignMemberSummary } from '../../../shared/campaigns/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { BlockNoteId } from '../../../shared/editor-blocks/types'
 import type { BlockShareInfo } from '../types'
@@ -36,7 +36,7 @@ export const getBlocksWithShares = async (
   },
 ): Promise<{
   blocks: Array<BlockShareInfo>
-  playerMembers: Array<CampaignMember>
+  playerMembers: Array<CampaignMemberSummary>
   notePermissionsByMemberId: Record<Id<'campaignMembers'>, PermissionLevel>
 }> => {
   const note = await getSidebarItem<'notes'>(ctx, noteId)

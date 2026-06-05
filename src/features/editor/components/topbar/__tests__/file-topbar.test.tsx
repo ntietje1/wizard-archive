@@ -62,6 +62,7 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
   useEditorMode: () => ({
     canEdit: true,
+    campaignActor: { kind: 'player', campaignId: 'campaign_1' },
     viewAsPlayerId: null,
   }),
 }))

@@ -1,12 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useMapView } from '~/features/editor/hooks/useMapView'
 import type { Id } from 'convex/_generated/dataModel'
 import type { MapPinWithItem } from 'shared/game-maps/types'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import type { PinPosition } from './map-pin-placement'
+import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
 export function MapPinContextMenuWrapper({
   pinId,
@@ -20,17 +19,24 @@ export function MapPinContextMenuWrapper({
   onClose: () => void
 }) {
   const contextMenuRef = useRef<ContextMenuHostRef>(null)
-  const { setActivePinId } = useMapView()
+  const { activeMap, setActivePinId } = useMapView()
   const dialogOpenRef = useRef(false)
+  const actorPermissions = useCampaignActorPermissions()
 
   const pin = pins.find((p) => p._id === pinId)
 
   useEffect(() => {
-    if (pin) {
-      setActivePinId(pinId)
-      contextMenuRef.current?.open(position)
+    if (!pin) {
+      return
     }
+
+    setActivePinId(pinId)
+    const frameId = window.requestAnimationFrame(() => {
+      contextMenuRef.current?.open(position)
+    })
+
     return () => {
+      window.cancelAnimationFrame(frameId)
       setActivePinId(null)
     }
   }, [pin, pinId, position, setActivePinId])
@@ -53,18 +59,17 @@ export function MapPinContextMenuWrapper({
 
   if (!pin) return null
 
-  const canViewItem = pin.item
-    ? hasAtLeastPermissionLevel(
-        pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
-        PERMISSION_LEVEL.VIEW,
-      )
-    : false
+  const canViewItem = pin.item ? actorPermissions.canView(pin.item) : false
+  const actionItem =
+    canViewItem && pin.item ? actorPermissions.projectActionItem(pin.item) : undefined
 
   return (
     <EditorContextMenu
       ref={contextMenuRef}
       viewContext="map-view"
-      item={canViewItem ? (pin.item ?? undefined) : undefined}
+      item={actionItem}
+      activeMap={activeMap ?? undefined}
+      activePin={pin}
       className="absolute inset-0 pointer-events-none"
       onClose={handleMenuClose}
       onDialogOpen={handleDialogOpen}

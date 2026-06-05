@@ -42,3 +42,9 @@ const userProfileValidatorFields = {
 }
 
 export const userProfileValidator = v.object(userProfileValidatorFields)
+
+export const userProfileSummaryValidator = v.object({
+  username: userProfileValidatorFields.username,
+  name: userProfileValidatorFields.name,
+  imageUrl: userProfileValidatorFields.imageUrl,
+})

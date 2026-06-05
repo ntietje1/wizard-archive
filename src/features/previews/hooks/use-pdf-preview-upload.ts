@@ -1,36 +1,45 @@
-import { useCallback } from 'react'
-import { generatePdfPreview } from '../utils/generate-preview'
+import { runPdfPreviewGeneration } from '../pdf-preview-adapter'
 import { useClaimAndUploadPreview } from './use-claim-and-upload-preview'
 import type { Id } from 'convex/_generated/dataModel'
 import { logger } from '~/shared/utils/logger'
 
-function isPdfFile(file: File): boolean {
-  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-}
-
-const MAX_PDF_PREVIEW_SIZE = 50 * 1024 * 1024
-
 export function usePdfPreviewUpload() {
   const claimAndUpload = useClaimAndUploadPreview()
 
-  const generatePdfPreviewIfNeeded = useCallback(
-    async (file: File, fileId: Id<'sidebarItems'>) => {
-      if (!isPdfFile(file)) return
-      if (file.size > MAX_PDF_PREVIEW_SIZE) {
-        logger.debug(
-          `Skipping PDF preview for fileId=${fileId}: file too large (${file.size} bytes)`,
-        )
-        return
+  async function generatePdfPreviewIfNeeded(
+    file: File,
+    fileId: Id<'sidebarItems'>,
+    options?: { signal?: AbortSignal },
+  ) {
+    try {
+      const result = await runPdfPreviewGeneration({ file, fileId, claimAndUpload, options })
+      switch (result.status) {
+        case 'unsupported':
+        case 'not-claimed':
+        case 'stale':
+        case 'published':
+          break
+        case 'skipped-too-large':
+          logger.debug(
+            `Skipping PDF preview for fileId=${fileId}, fileName=${file.name}: file too large (${result.size} bytes)`,
+          )
+          break
+        case 'failed':
+          logger.error(
+            `PDF preview generation failed for fileId=${fileId}, fileName=${file.name}:`,
+            result.error,
+          )
+          break
       }
-      try {
-        const buffer = await file.arrayBuffer()
-        await claimAndUpload(fileId, () => generatePdfPreview(buffer))
-      } catch (error) {
-        logger.error(`PDF preview generation failed for fileId=${fileId}:`, error)
-      }
-    },
-    [claimAndUpload],
-  )
+      return result
+    } catch (error) {
+      logger.error(
+        `PDF preview generation failed for fileId=${fileId}, fileName=${file.name}:`,
+        error,
+      )
+      return { status: 'failed' as const, error }
+    }
+  }
 
   return { generatePdfPreviewIfNeeded }
 }

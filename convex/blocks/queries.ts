@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { campaignQuery, dmQuery } from '../functions'
 import { blockVisibilityPermissionLevelValidator } from '../blockShares/schema'
-import { campaignMemberValidator } from '../campaigns/schema'
+import { campaignMemberSummaryValidator } from '../campaigns/schema'
 import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { blockNoteIdValidator, blockShareStatusValidator, blockTypeValidator } from './schema'
 import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlocksWithShares'
@@ -21,7 +21,7 @@ export const getBlocksWithShares = dmQuery({
   },
   returns: v.object({
     blocks: v.array(blockShareInfoValidator),
-    playerMembers: v.array(campaignMemberValidator),
+    playerMembers: v.array(campaignMemberSummaryValidator),
     notePermissionsByMemberId: v.record(v.id('campaignMembers'), permissionLevelValidator),
   }),
   handler: async (ctx, args) => {

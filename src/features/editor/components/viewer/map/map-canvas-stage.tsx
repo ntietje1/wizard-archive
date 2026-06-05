@@ -1,7 +1,6 @@
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { MapPinsLayer } from './map-pins-layer'
 import { MapDropFeedbackOverlay } from './map-drop-feedback-overlay'
-import { MapImageUpload } from './map-image-upload'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
@@ -36,6 +35,7 @@ export function MapCanvasStage({
   onPinClick,
   onPinContextMenu,
   onPinDragStart,
+  emptyImageContent,
 }: {
   map: GameMapWithContent
   mapContainerRef: React.RefObject<HTMLDivElement | null>
@@ -67,6 +67,7 @@ export function MapCanvasStage({
   onPinClick: (event: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => void
   onPinContextMenu: (event: React.MouseEvent, pin: MapPinWithItem) => void
   onPinDragStart: (event: React.MouseEvent, pin: MapPinWithItem) => void
+  emptyImageContent: React.ReactNode
 }) {
   const mapContent = (
     <>
@@ -157,7 +158,7 @@ export function MapCanvasStage({
           </TransformComponent>
         </TransformWrapper>
       ) : (
-        <MapImageUpload mapId={map._id} />
+        emptyImageContent
       )}
     </div>
   )

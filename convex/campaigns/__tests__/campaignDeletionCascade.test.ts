@@ -166,7 +166,7 @@ describe('campaign deletion cascade', () => {
     expect(campaign).toBeNull()
   })
 
-  it('editor records are orphaned after campaign deletion (not cleaned up)', async () => {
+  it('deletes editor records for the campaign', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const cId = ctx.campaignId
@@ -190,6 +190,6 @@ describe('campaign deletion cascade', () => {
         .withIndex('by_campaign_user', (q) => q.eq('campaignId', cId))
         .collect()
     })
-    expect(remainingEditors).toHaveLength(1)
+    expect(remainingEditors).toHaveLength(0)
   })
 })

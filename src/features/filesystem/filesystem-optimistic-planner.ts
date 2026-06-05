@@ -6,6 +6,7 @@ import {
   projectTrashRoots,
 } from 'shared/sidebar-items/filesystem/patch-projection'
 import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
+import type { FileSystemOptimisticPreview } from 'shared/sidebar-items/filesystem/lifecycle'
 import {
   CREATE_PARENT_TARGET_KIND,
   validateCreateParentTarget,
@@ -43,12 +44,6 @@ type FileSystemOptimisticPlan =
   | { status: 'ready'; preview: FileSystemOptimisticPreview }
   | { status: 'needsDecision'; conflicts: Array<ItemOperationConflict> }
 
-type FileSystemOptimisticPreview = {
-  receiptPatches: Array<FileSystemPatch>
-  inversePatches: Array<FileSystemPatch>
-  optimisticItem?: AnySidebarItem
-}
-
 type PlannerArgs = {
   command: FileSystemCommand
   decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
@@ -74,6 +69,8 @@ function ready(
     preview: {
       receiptPatches: patches.forwardPatches,
       inversePatches: patches.inversePatches,
+      optimisticIntents: [],
+      rollbackIntents: [],
     },
   }
 }

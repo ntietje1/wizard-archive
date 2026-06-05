@@ -14,7 +14,7 @@ import {
 } from '~/features/shadcn/components/dropdown-menu'
 import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { ViewAsPlayerRow } from '../view-as-player-row'
 

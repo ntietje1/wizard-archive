@@ -4,11 +4,11 @@ import { uploadPreviewBlob } from '../utils/upload-preview'
 import type { Id } from 'convex/_generated/dataModel'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
-import { logger } from '~/shared/utils/logger'
 
 type PreviewUploadResult =
   | { status: 'success' }
   | { status: 'not-claimed' }
+  | { status: 'stale' }
   | { status: 'error'; error: unknown }
 
 export function useClaimAndUploadPreview() {
@@ -27,24 +27,29 @@ export function useClaimAndUploadPreview() {
     async (
       itemId: Id<'sidebarItems'>,
       generate: () => Promise<Blob>,
+      options: { signal?: AbortSignal } = {},
     ): Promise<PreviewUploadResult> => {
       try {
+        if (options.signal?.aborted) return { status: 'stale' }
         const { claimed, claimToken } = await claimRef.current.mutateAsync({
           itemId,
         })
         if (!claimed || !claimToken) return { status: 'not-claimed' }
+        if (options.signal?.aborted) return { status: 'stale' }
 
         const blob = await generate()
+        if (options.signal?.aborted) return { status: 'stale' }
         await uploadPreviewBlob(
           blob,
           () => urlRef.current.mutateAsync({}),
           (args) => setRef.current.mutateAsync(args),
           itemId,
           claimToken,
+          { signal: options.signal },
         )
         return { status: 'success' }
       } catch (error) {
-        logger.error(`Failed to claim/upload preview for itemId=${itemId}:`, error)
+        if (options.signal?.aborted) return { status: 'stale' }
         return { status: 'error', error }
       }
     },

@@ -3,7 +3,6 @@ import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -32,6 +31,8 @@ import { MapImageContextMenuWrapper } from './map-image-context-menu-wrapper'
 import { MapModeBanners } from './map-mode-banners'
 import { MapPinContextMenuWrapper } from './map-pin-context-menu-wrapper'
 import { MapViewerSkeleton } from './map-viewer-skeleton'
+import { MapImageUpload } from './map-image-upload'
+import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
 interface MapTransformState {
   scale: number
@@ -117,6 +118,8 @@ function useMapViewerElement(map: GameMapWithContent) {
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const { itemsMap } = useActiveSidebarItems()
   const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
+  const actorPermissions = useCampaignActorPermissions()
+  const canEditMap = actorPermissions.canMutate(map, PERMISSION_LEVEL.EDIT)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
   const { imageLoaded, imageError, handleImageLoad, handleImageError } = useMapImageStatus(
     map._id,
@@ -134,8 +137,9 @@ function useMapViewerElement(map: GameMapWithContent) {
     ref: mapContainerRef,
     data: mapDropData,
     highlightId: `map:${map._id}`,
+    canDrop: canEditMap,
   })
-  const mapDragOutcome = useDndStore((s) => (isMapDropTarget ? s.dragOutcome : null))
+  const mapDragOutcome = useDndStore((s) => (canEditMap && isMapDropTarget ? s.dragOutcome : null))
   const { pins, isPinGhost } = useMapRenderPins(map)
 
   const [savedTransform, setSavedTransform] = usePersistedState<MapTransformState>(
@@ -211,9 +215,26 @@ function useMapViewerElement(map: GameMapWithContent) {
   }, [pendingPinItems, pendingPinMove, draggingPin])
 
   useEffect(() => {
+    if (canEditMap) return
+    if (pendingPinItems || pendingPinMove || draggingPin) {
+      if (draggingPin) {
+        const pinEl = pinsContainerRef.current?.querySelector(
+          `[data-pin-id="${draggingPin.pin._id}"]`,
+        ) as HTMLElement | null
+        if (pinEl) {
+          setPinElementPosition(pinEl, draggingPin.pin)
+        }
+        draggedPinPositionRef.current = null
+      }
+      dispatchPinInteraction({ type: 'cancelActivePinAction' })
+    }
+  }, [canEditMap, pendingPinItems, pendingPinMove, draggingPin])
+
+  useEffect(() => {
     const handlePinPlacementRequest = (
       event: CustomEvent<{ itemIds: Array<Id<'sidebarItems'>> }>,
     ) => {
+      if (!canEditMap) return
       if (imageError) {
         toast.error('Cannot place pin: map image failed to load')
         return
@@ -229,10 +250,11 @@ function useMapViewerElement(map: GameMapWithContent) {
         handlePinPlacementRequest as EventListener,
       )
     }
-  }, [imageError])
+  }, [canEditMap, imageError])
 
   useEffect(() => {
     const handlePinMoveRequest = (event: CustomEvent<{ pinId: Id<'mapPins'> }>) => {
+      if (!canEditMap) return
       dispatchPinInteraction({ type: 'setPendingPinMove', value: event.detail })
     }
 
@@ -240,7 +262,7 @@ function useMapViewerElement(map: GameMapWithContent) {
     return () => {
       window.removeEventListener('map-pin-move-request', handlePinMoveRequest as EventListener)
     }
-  }, [])
+  }, [canEditMap])
 
   useEffect(() => {
     if (!draggingPin) return
@@ -334,10 +356,11 @@ function useMapViewerElement(map: GameMapWithContent) {
       return false
     }
   }
-  useMapSidebarItemDropTarget({ map, imageRef, itemsMap, trashedItemsMap })
+  useMapSidebarItemDropTarget({ map, imageRef, itemsMap, trashedItemsMap, canPin: canEditMap })
 
   const handlePlacePin = async (position: PinPosition) => {
     if (!pendingPinItems || !map._id) return
+    if (!canEditMap) return
 
     await createPinsAtPosition(pendingPinItems.itemIds, position)
     dispatchPinInteraction({ type: 'setPendingPinItems', value: null })
@@ -345,6 +368,7 @@ function useMapViewerElement(map: GameMapWithContent) {
 
   const handleMovePin = async (position: PinPosition) => {
     if (!pendingPinMove) return
+    if (!canEditMap) return
 
     try {
       await updateItemPinMutation.mutateAsync({
@@ -391,12 +415,7 @@ function useMapViewerElement(map: GameMapWithContent) {
     if (justFinishedDraggingRef.current === pin._id) {
       return
     }
-    const canView = pin.item
-      ? hasAtLeastPermissionLevel(
-          pin.item.myPermissionLevel ?? PERMISSION_LEVEL.NONE,
-          PERMISSION_LEVEL.VIEW,
-        )
-      : false
+    const canView = pin.item ? actorPermissions.canView(pin.item) : false
     if (!pin.item || !canView) {
       toast.error('You do not have permission to view this item')
       return
@@ -424,6 +443,7 @@ function useMapViewerElement(map: GameMapWithContent) {
   }
 
   const handlePinDragStart = (_event: React.MouseEvent, pin: MapPinWithItem) => {
+    if (!canEditMap) return
     if (pendingPinMove?.pinId === pin._id) {
       dispatchPinInteraction({ type: 'setPendingPinMove', value: null })
     }
@@ -448,6 +468,7 @@ function useMapViewerElement(map: GameMapWithContent) {
 
   const handleMapImageContextMenu = (e: React.MouseEvent) => {
     if (pendingPinItems) return
+    if (!canEditMap) return
 
     e.preventDefault()
     e.stopPropagation()
@@ -465,6 +486,7 @@ function useMapViewerElement(map: GameMapWithContent) {
     e.stopPropagation()
 
     if (pendingPinItems || pendingPinMove) {
+      if (!canEditMap) return
       const position = getPercentageFromClick(e)
       if (!position) {
         toast.error(
@@ -538,6 +560,15 @@ function useMapViewerElement(map: GameMapWithContent) {
             onPinClick={handlePinClick}
             onPinContextMenu={handlePinContextMenu}
             onPinDragStart={handlePinDragStart}
+            emptyImageContent={
+              canEditMap ? (
+                <MapImageUpload mapId={map._id} />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  No map image has been uploaded.
+                </div>
+              )
+            }
           />
 
           <MapModeBanners

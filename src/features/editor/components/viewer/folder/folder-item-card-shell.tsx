@@ -2,7 +2,6 @@ import { useRef } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { MoreVertical } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
@@ -23,6 +22,7 @@ import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSe
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { folderItemBackgroundClass, folderItemOutlineClass } from './folder-item-visual-state'
+import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
 export function FolderItemCardShell<TItem extends AnySidebarItem>({
   item,
@@ -47,7 +47,8 @@ export function FolderItemCardShell<TItem extends AnySidebarItem>({
   })
   const dragData = useSidebarDragData(item)
   const isDragging = useDndStore((state) => state.sidebarDragPreviewItemIds.includes(item._id))
-  const canDrag = hasAtLeastPermissionLevel(item.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
+  const actorPermissions = useCampaignActorPermissions()
+  const canDrag = actorPermissions.canMutate(item, PERMISSION_LEVEL.FULL_ACCESS)
   const { isDraggingRef } = useDraggable({ ref, data: dragData, canDrag })
   const handleCardClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (isDraggingRef.current) {

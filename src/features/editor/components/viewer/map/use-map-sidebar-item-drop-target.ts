@@ -19,11 +19,13 @@ export function useMapSidebarItemDropTarget({
   imageRef,
   itemsMap,
   trashedItemsMap,
+  canPin,
 }: {
   map: GameMapWithContent
   imageRef: React.RefObject<HTMLImageElement | null>
   itemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
   trashedItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
+  canPin: boolean
 }) {
   const createItemPinsMutation = useCampaignMutation(api.gameMaps.mutations.createItemPins)
   const setBatchDecision = useDndStore((s) => s.setBatchDecision)
@@ -35,10 +37,13 @@ export function useMapSidebarItemDropTarget({
   trashedItemsMapRef.current = trashedItemsMap
   const imageRefRef = useRef(imageRef)
   imageRefRef.current = imageRef
+  const canPinRef = useRef(canPin)
+  canPinRef.current = canPin
 
   useEffect(() => {
     return monitorForElements({
       onDrop: ({ source, location }) => {
+        if (!canPinRef.current) return
         const topTarget = location.current.dropTargets[0]
         if (!topTarget) return
 

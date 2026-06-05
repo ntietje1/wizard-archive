@@ -5,8 +5,11 @@ import { createFileSystemCacheAdapter } from '../filesystem-cache-adapter'
 import type { SidebarCacheSnapshot } from '../filesystem-cache-patches'
 import type { Id } from 'convex/_generated/dataModel'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
 
 const campaignId = 'campaign' as Id<'campaigns'>
+const userId = 'user_1' as Id<'userProfiles'>
 
 function createTestCache(snapshot: SidebarCacheSnapshot) {
   const adapter = createFileSystemCacheAdapter({
@@ -20,6 +23,45 @@ function createTestCache(snapshot: SidebarCacheSnapshot) {
 }
 
 describe('filesystem optimistic planning', () => {
+  it('models create selection and navigation as lifecycle intents', () => {
+    const parent = createFolder({ name: 'Scenes' })
+    const snapshot: SidebarCacheSnapshot = { sidebar: [parent], trash: [] }
+    const cache = createTestCache(snapshot)
+
+    const plan = planFileSystemOptimisticCommand({
+      command: {
+        type: 'create',
+        itemType: SIDEBAR_ITEM_TYPES.notes,
+        name: assertSidebarItemName('Scene'),
+        parentTarget: { kind: 'direct', parentId: parent._id },
+      },
+      snapshot: cache.snapshot,
+      readModel: cache.readModel,
+      activeItemSurface: { parentId: null },
+      currentUserId: userId,
+      campaignId,
+    })
+
+    expect(plan.status).toBe('ready')
+    if (plan.status !== 'ready') return
+    const upsert = plan.preview.receiptPatches[0]
+    expect(upsert?.type).toBe('upsertSidebarItem')
+    if (upsert?.type !== 'upsertSidebarItem') return
+    expect(plan.preview.optimisticIntents).toEqual([
+      { type: 'openFolder', campaignId, folderId: parent._id },
+      { type: 'selectItem', itemId: upsert.item._id, slug: upsert.item.slug },
+      { type: 'navigateToItem', slug: upsert.item.slug },
+    ])
+    expect(plan.preview.rollbackIntents).toEqual([
+      {
+        type: 'restorePreviousLocation',
+        guardedByItemId: upsert.item._id,
+        guardedBySlug: upsert.item.slug,
+      },
+    ])
+    expect('optimisticItem' in plan.preview).toBe(false)
+  })
+
   it('predicts copy conflicts but waits for authoritative created rows', () => {
     const source = createNote({ name: 'Source' })
     const snapshot: SidebarCacheSnapshot = { sidebar: [source], trash: [] }
@@ -43,6 +85,8 @@ describe('filesystem optimistic planning', () => {
       preview: {
         receiptPatches: [],
         inversePatches: [],
+        optimisticIntents: [],
+        rollbackIntents: [],
       },
     })
   })

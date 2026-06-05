@@ -1,7 +1,7 @@
 import type React from 'react'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { BlockNoteId } from 'shared/editor-blocks/types'
-import type { CampaignMember, CampaignMemberRole } from 'shared/campaigns/types'
+import type { CampaignMemberRole, CampaignMemberSummary } from 'shared/campaigns/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { PermissionLevel } from 'shared/permissions/types'
@@ -134,6 +134,7 @@ export interface EditorMenuContext {
   selectedItems?: Array<AnySidebarItem>
   currentUserId?: string
   memberRole?: CampaignMemberRole
+  isViewingAsPlayer?: boolean
   permissionLevel?: PermissionLevel
   activeMap?: GameMapWithContent
   activePin?: MapPinWithItem
@@ -159,7 +160,7 @@ export interface EditorModeMenuService {
 
 export interface ViewAsPlayerMenuService {
   viewAsPlayerId: Id<'campaignMembers'> | undefined
-  playerMembers: Array<CampaignMember>
+  playerMembers: Array<CampaignMemberSummary>
   setViewAsPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
 }
 

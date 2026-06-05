@@ -2,12 +2,18 @@ import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissi
 import { normalizeExplicitSharePermissionLevel } from 'shared/permissions/share-permissions'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { PermissionLevel } from 'shared/permissions/types'
-import type { CampaignMember } from 'shared/campaigns/types'
+import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'shared/folders/types'
+import type { CampaignActor } from 'shared/campaigns/actor'
 
-type CampaignMemberId = CampaignMember['_id']
+type CampaignMemberId = CampaignMemberSummary['_id']
+
+interface ActorPermissionContext {
+  actor: CampaignActor | null
+  allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
+}
 
 function getMemberPermission(
   item: AnySidebarItem | Folder,
@@ -67,18 +73,35 @@ export function resolveSidebarItemPermissionLevel(
   return resolveInheritedPermission(item, memberId, allItemsMap) ?? { level: PERMISSION_LEVEL.NONE }
 }
 
-/**
- * Check whether a specific campaign member has at least the required
- * permission level on an item, using client-side share/hierarchy data.
- */
-function memberHasAtLeastPermission(
+export function getActorPermissionLevel(
   item: AnySidebarItem,
-  memberId: CampaignMemberId,
-  allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
+  opts: ActorPermissionContext,
+): PermissionLevel {
+  if (opts.actor?.kind === 'dm') return PERMISSION_LEVEL.FULL_ACCESS
+  if (opts.actor?.kind === 'dm_view_as') {
+    return resolveSidebarItemPermissionLevel(item, opts.actor.memberId, opts.allItemsMap).level
+  }
+  return item.myPermissionLevel
+}
+
+export function getActorActionPermissionLevel(
+  item: AnySidebarItem,
+  opts: ActorPermissionContext,
+): PermissionLevel {
+  const permissionLevel = getActorPermissionLevel(item, opts)
+  if (opts.actor?.kind !== 'dm_view_as') return permissionLevel
+  return hasAtLeastPermissionLevel(permissionLevel, PERMISSION_LEVEL.VIEW)
+    ? PERMISSION_LEVEL.VIEW
+    : PERMISSION_LEVEL.NONE
+}
+
+export function actorCanMutateSidebarItem(
+  item: AnySidebarItem,
   requiredLevel: PermissionLevel,
+  opts: ActorPermissionContext,
 ): boolean {
-  const { level } = resolveSidebarItemPermissionLevel(item, memberId, allItemsMap)
-  return hasAtLeastPermissionLevel(level, requiredLevel)
+  if (opts.actor?.kind === 'dm_view_as') return false
+  return hasAtLeastPermissionLevel(getActorPermissionLevel(item, opts), requiredLevel)
 }
 
 /**
@@ -91,14 +114,9 @@ export function effectiveHasAtLeastPermission(
   item: AnySidebarItem,
   requiredLevel: PermissionLevel,
   opts: {
-    isDm: boolean | undefined
-    viewAsPlayerId: CampaignMemberId | null | undefined
+    actor: CampaignActor | null
     allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
   },
 ): boolean {
-  if (opts.isDm && !opts.viewAsPlayerId) return true
-  if (opts.isDm && opts.viewAsPlayerId) {
-    return memberHasAtLeastPermission(item, opts.viewAsPlayerId, opts.allItemsMap, requiredLevel)
-  }
-  return hasAtLeastPermissionLevel(item.myPermissionLevel, requiredLevel)
+  return hasAtLeastPermissionLevel(getActorPermissionLevel(item, opts), requiredLevel)
 }

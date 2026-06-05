@@ -7,23 +7,32 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 export function useSidebarItemDropTarget({
   ref,
   item,
+  canDrop = true,
 }: {
   ref: React.RefObject<HTMLElement | null>
   item: Folder
+  canDrop?: boolean
 }) {
   const dropData = { type: item.type, sidebarItemId: item._id }
-  const { isDropTarget } = useDndDropTarget({ ref, data: dropData, highlightId: item._id })
+  const { isDropTarget } = useDndDropTarget({
+    ref,
+    data: dropData,
+    highlightId: item._id,
+    canDrop,
+  })
 
   useExternalDropTarget({
     ref,
     parentId: item._id,
-    canAcceptFiles: canDropFilesOnTarget(item),
+    canAcceptFiles: canDrop && canDropFilesOnTarget(item),
   })
 
   const isTrashAction = useDndStore(
     (s) => s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
-  const isFileDropTarget = useDndStore((s) => s.isDraggingFiles && s.fileDragHoveredId === item._id)
+  const isFileDropTarget = useDndStore(
+    (s) => canDrop && s.isDraggingFiles && s.fileDragHoveredId === item._id,
+  )
 
   return { isDropTarget, isTrashAction, isFileDropTarget }
 }

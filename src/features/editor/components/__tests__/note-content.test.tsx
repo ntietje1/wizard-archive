@@ -11,6 +11,7 @@ import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
+import type { CampaignActor } from 'shared/campaigns/actor'
 
 const { activeItemsState, blockNoteCreateMock, campaignState, editorModeState, noteViewSpy } =
   vi.hoisted(() => ({
@@ -27,7 +28,13 @@ const { activeItemsState, blockNoteCreateMock, campaignState, editorModeState, n
       _tiptapEditor: { destroy: vi.fn() },
     })),
     campaignState: { isDm: false as boolean | undefined },
-    editorModeState: { viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined },
+    editorModeState: {
+      campaignActor: {
+        kind: 'player',
+        campaignId: 'campaign_1' as Id<'campaigns'>,
+      } as CampaignActor | null,
+      viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined,
+    },
     noteViewSpy: vi.fn(),
   }))
 
@@ -114,6 +121,10 @@ describe('NoteContent', () => {
     activeItemsState.itemsMap = new Map()
     blockNoteCreateMock.mockClear()
     campaignState.isDm = false
+    editorModeState.campaignActor = {
+      kind: 'player',
+      campaignId: testId<'campaigns'>('campaign_1'),
+    }
     editorModeState.viewAsPlayerId = undefined
     noteViewSpy.mockReset()
   })
@@ -188,6 +199,11 @@ describe('NoteContent', () => {
     const otherPlayerBlock = createBlock('other-player-block')
     const missingMetaBlock = createBlock('missing-meta-block')
     campaignState.isDm = true
+    editorModeState.campaignActor = {
+      kind: 'dm_view_as',
+      campaignId: testId<'campaigns'>('campaign_1'),
+      memberId: playerId,
+    }
     editorModeState.viewAsPlayerId = playerId
 
     const note = createNoteWithContent({
@@ -231,6 +247,11 @@ describe('NoteContent', () => {
     const playerId = testId<'campaignMembers'>('player-1')
     const hiddenByDefaultBlock = createBlock('hidden-by-default-block')
     campaignState.isDm = true
+    editorModeState.campaignActor = {
+      kind: 'dm_view_as',
+      campaignId: testId<'campaigns'>('campaign_1'),
+      memberId: playerId,
+    }
     editorModeState.viewAsPlayerId = playerId
 
     const baseNote = createNoteWithContent({
@@ -279,6 +300,11 @@ describe('NoteContent', () => {
     const playerId = testId<'campaignMembers'>('player-1')
     const visibleBlock = createBlock('visible-block')
     campaignState.isDm = true
+    editorModeState.campaignActor = {
+      kind: 'dm_view_as',
+      campaignId: testId<'campaigns'>('campaign_1'),
+      memberId: playerId,
+    }
     editorModeState.viewAsPlayerId = playerId
 
     const note = createNoteWithContent({

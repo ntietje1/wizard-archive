@@ -4,14 +4,14 @@ import { getBlockSharePlayerNoteAccess } from '../../blockShares/functions/noteB
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { CampaignMember } from '../../../shared/campaigns/types'
+import type { CampaignMemberSummary } from '../../../shared/campaigns/types'
 import type { NoteFromDb } from '../../../shared/notes/types'
 
 export async function getBlockSharePlayers(
   ctx: CampaignQueryCtx,
   note: NoteFromDb,
 ): Promise<{
-  playerMembers: Array<CampaignMember>
+  playerMembers: Array<CampaignMemberSummary>
   notePermissionByMemberId: Map<Id<'campaignMembers'>, PermissionLevel>
 }> {
   const allMembers = await getCampaignMembers(ctx)

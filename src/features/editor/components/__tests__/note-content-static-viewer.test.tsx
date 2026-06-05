@@ -6,6 +6,7 @@ import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ReactNode } from 'react'
+import type { CampaignActor } from 'shared/campaigns/actor'
 
 const { blockNoteCreateMock, campaignState, editorModeState, sidebarItemsState } = vi.hoisted(
   () => ({
@@ -17,7 +18,13 @@ const { blockNoteCreateMock, campaignState, editorModeState, sidebarItemsState }
       },
     })),
     campaignState: { isDm: true },
-    editorModeState: { viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined },
+    editorModeState: {
+      campaignActor: {
+        kind: 'dm',
+        campaignId: 'campaign_1' as Id<'campaigns'>,
+      } as CampaignActor,
+      viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined,
+    },
     sidebarItemsState: {
       data: [],
       status: 'success',

@@ -1,6 +1,8 @@
 import { useRef } from 'react'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { Folder } from 'shared/folders/types'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
+import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
 interface DroppableSidebarItemProps {
   item: Folder
@@ -9,7 +11,12 @@ interface DroppableSidebarItemProps {
 
 export function DroppableSidebarItem({ item, children }: DroppableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const { isDropTarget, isTrashAction, isFileDropTarget } = useSidebarItemDropTarget({ ref, item })
+  const actorPermissions = useCampaignActorPermissions()
+  const { isDropTarget, isTrashAction, isFileDropTarget } = useSidebarItemDropTarget({
+    ref,
+    item,
+    canDrop: actorPermissions.canMutate(item, PERMISSION_LEVEL.FULL_ACCESS),
+  })
 
   const isHighlighted = isDropTarget || isFileDropTarget
   const ringClass = isDropTarget

@@ -187,6 +187,54 @@ describe('uploadPreviewBlob', () => {
     expect(mockSetPreviewImage).not.toHaveBeenCalled()
   })
 
+  it('does not upload when the preview signal is already aborted', async () => {
+    const controller = new AbortController()
+    controller.abort()
+
+    await expect(
+      uploadPreviewBlob(
+        new Blob(['test'], { type: 'image/webp' }),
+        mockGenerateUploadUrl,
+        mockSetPreviewImage,
+        MOCK_ITEM_ID,
+        MOCK_CLAIM_TOKEN,
+        { signal: controller.signal },
+      ),
+    ).rejects.toThrow('Preview upload aborted')
+
+    expect(mockGenerateUploadUrl).not.toHaveBeenCalled()
+    expect(fetch).not.toHaveBeenCalled()
+    expect(mockSetPreviewImage).not.toHaveBeenCalled()
+  })
+
+  it('does not publish when the preview signal aborts after upload', async () => {
+    const controller = new AbortController()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => {
+          controller.abort()
+          return Promise.resolve({ storageId: MOCK_STORAGE_ID })
+        },
+      }),
+    )
+
+    await expect(
+      uploadPreviewBlob(
+        new Blob(['test'], { type: 'image/webp' }),
+        mockGenerateUploadUrl,
+        mockSetPreviewImage,
+        MOCK_ITEM_ID,
+        MOCK_CLAIM_TOKEN,
+        { signal: controller.signal },
+      ),
+    ).rejects.toThrow('Preview upload aborted')
+
+    expect(fetch).toHaveBeenCalled()
+    expect(mockSetPreviewImage).not.toHaveBeenCalled()
+  })
+
   it('throws on JSON parse error', async () => {
     vi.stubGlobal(
       'fetch',

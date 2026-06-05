@@ -20,3 +20,5 @@ export type UserProfileFromDb = {
 export type UserProfile = Omit<UserProfileFromDb, 'profileImage'> & {
   imageUrl: string | null
 }
+
+export type UserProfileSummary = Pick<UserProfile, 'name' | 'username' | 'imageUrl'>

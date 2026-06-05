@@ -311,6 +311,28 @@ describe('getMembersByCampaign', () => {
     }
   })
 
+  it('returns actor-safe public member profiles without private account fields', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    const members = await playerAuth.query(api.campaigns.queries.getMembersByCampaign, {
+      campaignId: ctx.campaignId,
+    })
+
+    expect(members.length).toBeGreaterThanOrEqual(2)
+    for (const member of members) {
+      expect(member.userProfile).toEqual({
+        name: expect.any(String),
+        username: expect.any(String),
+        imageUrl: null,
+      })
+      expect(member.userProfile).not.toHaveProperty('authUserId')
+      expect(member.userProfile).not.toHaveProperty('email')
+      expect(member.userProfile).not.toHaveProperty('emailVerified')
+      expect(member.userProfile).not.toHaveProperty('twoFactorEnabled')
+    }
+  })
+
   it('excludes Pending members', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
