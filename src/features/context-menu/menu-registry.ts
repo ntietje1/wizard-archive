@@ -10,14 +10,10 @@ import {
   ClipboardPaste,
   Eye,
   EyeOff,
-  File,
   FileEdit,
-  FilePlus,
   FileTypeIcon,
   Files,
   FolderDown,
-  FolderPlus,
-  Grid2x2Plus,
   MapPin,
   Move,
   Navigation,
@@ -58,6 +54,7 @@ import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-it
 import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
 import { ViewAsPlayerRow } from '~/features/editor/components/view-as-player-row'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
 
 function isPanelContentActive(
   context: EditorMenuContext,
@@ -160,6 +157,22 @@ type EditorContextMenuContributor = ContextMenuContributor<
 >
 
 type SimpleActionKey = Exclude<keyof ActionHandlers, 'setGeneralAccessLevel'>
+type SidebarItemCreationActionKey = Pick<
+  ActionHandlers,
+  'createNote' | 'createFolder' | 'createMap' | 'createCanvas' | 'createFile'
+>
+type SidebarItemCreationActionId = keyof SidebarItemCreationActionKey
+
+const sidebarItemCreationActionIds = {
+  'create.note': 'createNote',
+  'create.folder': 'createFolder',
+  'create.map': 'createMap',
+  'create.canvas': 'createCanvas',
+  'create.file': 'createFile',
+} satisfies Record<
+  (typeof SIDEBAR_ITEM_CREATION_COMMANDS)[number]['id'],
+  SidebarItemCreationActionId
+>
 
 function nextEditorMode(currentMode: EditorModeMenuService['editorMode']) {
   return currentMode === EDITOR_MODE.EDITOR ? EDITOR_MODE.VIEWER : EDITOR_MODE.EDITOR
@@ -272,48 +285,16 @@ export const editorContextMenuCommands = {
   },
 } satisfies Record<string, ContextMenuCommand<EditorMenuContext, EditorContextMenuServices>>
 
-const createSubmenuItems: Array<EditorContextMenuItem> = [
-  {
-    id: 'submenu-create-note',
-    commandId: 'createNote',
-    label: 'Note',
-    icon: FilePlus,
+const createSubmenuItems: Array<EditorContextMenuItem> = SIDEBAR_ITEM_CREATION_COMMANDS.map(
+  (command) => ({
+    id: `submenu-create-${command.key}`,
+    commandId: sidebarItemCreationActionIds[command.id],
+    label: command.label,
+    icon: command.icon,
     group: 'create',
-    priority: 10,
-  },
-  {
-    id: 'submenu-create-folder',
-    commandId: 'createFolder',
-    label: 'Folder',
-    icon: FolderPlus,
-    group: 'create',
-    priority: 11,
-  },
-  {
-    id: 'submenu-create-map',
-    commandId: 'createMap',
-    label: 'Map',
-    icon: MapPin,
-    group: 'create',
-    priority: 12,
-  },
-  {
-    id: 'submenu-create-canvas',
-    commandId: 'createCanvas',
-    label: 'Canvas',
-    icon: Grid2x2Plus,
-    group: 'create',
-    priority: 13,
-  },
-  {
-    id: 'submenu-create-file',
-    commandId: 'createFile',
-    label: 'File',
-    icon: File,
-    group: 'create',
-    priority: 14,
-  },
-]
+    priority: command.priority,
+  }),
+)
 
 export const editorContextMenuContributors = [
   {

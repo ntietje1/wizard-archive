@@ -14,10 +14,9 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { logger } from '~/shared/utils/logger'
-import { File, FilePlus, FolderPlus, Grid2x2Plus, MapPin } from 'lucide-react'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import type { SidebarItemType } from 'shared/sidebar-items/types'
+import type { SidebarItemCreationType } from '~/features/sidebar/sidebar-item-creation-catalog'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
 
 interface UseCanvasContextMenuOptions {
   activeTool: string
@@ -116,7 +115,7 @@ function buildSidebarCreateItems({
     label: string,
     icon: CanvasContextMenuItem['icon'],
     priority: number,
-    type: SidebarItemType,
+    type: SidebarItemCreationType,
   ): CanvasContextMenuItem => ({
     id,
     label,
@@ -155,23 +154,13 @@ function buildSidebarCreateItems({
     },
   })
 
-  return [
-    createSidebarItem('canvas-pane-create-note', 'Note', FilePlus, 10, SIDEBAR_ITEM_TYPES.notes),
+  return SIDEBAR_ITEM_CREATION_COMMANDS.map((command) =>
     createSidebarItem(
-      'canvas-pane-create-folder',
-      'Folder',
-      FolderPlus,
-      11,
-      SIDEBAR_ITEM_TYPES.folders,
+      `canvas-pane-create-${command.key}`,
+      command.label,
+      command.icon,
+      command.priority,
+      command.type,
     ),
-    createSidebarItem('canvas-pane-create-map', 'Map', MapPin, 12, SIDEBAR_ITEM_TYPES.gameMaps),
-    createSidebarItem(
-      'canvas-pane-create-canvas',
-      'Canvas',
-      Grid2x2Plus,
-      13,
-      SIDEBAR_ITEM_TYPES.canvases,
-    ),
-    createSidebarItem('canvas-pane-create-file', 'File', File, 14, SIDEBAR_ITEM_TYPES.files),
-  ]
+  )
 }

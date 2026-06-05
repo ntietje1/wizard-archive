@@ -247,8 +247,19 @@ describe('buildMenu', () => {
     const createNew = menu.flatItems.find((i) => i.id === 'create-new-submenu')
     expect(createNew).toBeDefined()
     expect(createNew).toMatchObject({ label: 'New...' })
-    expect(createNew!.children).toBeDefined()
-    expect(createNew!.children!.length).toBeGreaterThan(0)
+    expect(
+      createNew!.children?.map((item) => ({
+        id: item.id,
+        commandId: item.commandId,
+        label: item.label,
+      })),
+    ).toEqual([
+      { id: 'submenu-create-note', commandId: 'createNote', label: 'Note' },
+      { id: 'submenu-create-folder', commandId: 'createFolder', label: 'Folder' },
+      { id: 'submenu-create-map', commandId: 'createMap', label: 'Map' },
+      { id: 'submenu-create-canvas', commandId: 'createCanvas', label: 'Canvas' },
+      { id: 'submenu-create-file', commandId: 'createFile', label: 'File' },
+    ])
   })
 
   it('player without full access does not see rename/delete', () => {

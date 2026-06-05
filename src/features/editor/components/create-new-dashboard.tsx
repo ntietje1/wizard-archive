@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { File, FileText, Folder, Grid2x2Plus, Loader2, MapPin, Plus } from 'lucide-react'
-import type { SidebarItemType } from 'shared/sidebar-items/types'
+import { Loader2, Plus } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from 'lucide-react'
 import { handleError } from '~/shared/utils/logger'
@@ -12,6 +10,8 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import type { SidebarItemCreationType } from '~/features/sidebar/sidebar-item-creation-catalog'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
 
 interface CreateNewButtonProps {
   icon: LucideIcon
@@ -63,11 +63,11 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
-  const [creatingType, setCreatingType] = useState<SidebarItemType | null>(null)
+  const [creatingType, setCreatingType] = useState<SidebarItemCreationType | null>(null)
 
   const isDisabled = creatingType !== null
 
-  const handleCreate = async (type: SidebarItemType) => {
+  const handleCreate = async (type: SidebarItemCreationType) => {
     if (!campaignId || isDisabled) return
 
     setCreatingType(type)
@@ -99,46 +99,17 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
             {folderPath && <p className="text-xs text-muted-foreground mt-1">{folderPath}</p>}
           </div>
           <div className="space-y-2">
-            <CreateNewButton
-              icon={FileText}
-              name="Note"
-              description="Write and organize your thoughts"
-              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}
-              disabled={isDisabled}
-              isCreating={creatingType === SIDEBAR_ITEM_TYPES.notes}
-            />
-            <CreateNewButton
-              icon={Folder}
-              name="Folder"
-              description="Group related items together"
-              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}
-              disabled={isDisabled}
-              isCreating={creatingType === SIDEBAR_ITEM_TYPES.folders}
-            />
-            <CreateNewButton
-              icon={MapPin}
-              name="Map"
-              description="Upload an image to pin items on"
-              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}
-              disabled={isDisabled}
-              isCreating={creatingType === SIDEBAR_ITEM_TYPES.gameMaps}
-            />
-            <CreateNewButton
-              icon={File}
-              name="File"
-              description="Upload a document, image, or media"
-              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}
-              disabled={isDisabled}
-              isCreating={creatingType === SIDEBAR_ITEM_TYPES.files}
-            />
-            <CreateNewButton
-              icon={Grid2x2Plus}
-              name="Canvas"
-              description="Create a whiteboard to draw and organize nodes"
-              onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.canvases)}
-              disabled={isDisabled}
-              isCreating={creatingType === SIDEBAR_ITEM_TYPES.canvases}
-            />
+            {SIDEBAR_ITEM_CREATION_COMMANDS.map((command) => (
+              <CreateNewButton
+                key={command.id}
+                icon={command.icon}
+                name={command.label}
+                description={command.dashboardDescription}
+                onClick={() => handleCreate(command.type)}
+                disabled={isDisabled}
+                isCreating={creatingType === command.type}
+              />
+            ))}
           </div>
         </div>
 

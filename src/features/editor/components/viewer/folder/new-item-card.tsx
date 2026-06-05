@@ -1,7 +1,5 @@
 import { useRef, useState } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { File, FilePlus, FolderPlus, MapPin, Plus } from 'lucide-react'
-import type { SidebarItemType } from 'shared/sidebar-items/types'
+import { Plus } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
 import { Card } from '~/features/shadcn/components/card'
 import {
@@ -16,6 +14,8 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { handleError } from '~/shared/utils/logger'
+import type { SidebarItemCreationType } from '~/features/sidebar/sidebar-item-creation-catalog'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
 
 interface NewItemCardProps {
   parentId: Id<'sidebarItems'>
@@ -51,7 +51,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
     openMenuAt(e.clientX, e.clientY)
   }
 
-  const handleCreate = async (type: SidebarItemType) => {
+  const handleCreate = async (type: SidebarItemCreationType) => {
     if (!campaignId) return
     try {
       const result = await createItem({
@@ -76,6 +76,9 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
               onClick={openCreateMenu}
               role="button"
               tabIndex={0}
+              aria-label="Create item in this folder"
+              aria-haspopup="menu"
+              aria-expanded={isOpen}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
@@ -90,22 +93,15 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
         }
       />
       <ContextMenuContent className="w-48">
-        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}>
-          <FilePlus className="size-4 mr-2" />
-          New Note
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}>
-          <FolderPlus className="size-4 mr-2" />
-          New Folder
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}>
-          <MapPin className="size-4 mr-2" />
-          New Map
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}>
-          <File className="size-4 mr-2" />
-          New File
-        </ContextMenuItem>
+        {SIDEBAR_ITEM_CREATION_COMMANDS.map((command) => {
+          const Icon = command.icon
+          return (
+            <ContextMenuItem key={command.id} onClick={() => handleCreate(command.type)}>
+              <Icon className="size-4 mr-2" />
+              New {command.label}
+            </ContextMenuItem>
+          )
+        })}
       </ContextMenuContent>
     </ContextMenu>
   )
