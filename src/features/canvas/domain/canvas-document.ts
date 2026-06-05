@@ -92,6 +92,23 @@ export interface CanvasDocumentEdge {
   className?: string
 }
 
+export function stripEphemeralCanvasNodeState(node: CanvasDocumentNode): CanvasDocumentNode
+export function stripEphemeralCanvasNodeState(node: unknown): unknown
+export function stripEphemeralCanvasNodeState(node: unknown): unknown {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) {
+    return node
+  }
+
+  const {
+    selected: _selected,
+    draggable: _draggable,
+    dragging: _dragging,
+    resizing: _resizing,
+    ...documentNode
+  } = node as Record<string, unknown>
+  return documentNode
+}
+
 function hasValidSharedDocumentFields(value: Record<string, unknown>): boolean {
   return (
     (value.hidden === undefined || typeof value.hidden === 'boolean') &&
@@ -161,6 +178,10 @@ export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | nu
   } as CanvasDocumentNode
 }
 
+export function normalizeCanvasDocumentNode(value: unknown): CanvasDocumentNode | null {
+  return parseCanvasDocumentNode(stripEphemeralCanvasNodeState(value))
+}
+
 const documentEdgeKeys = new Set([
   'id',
   'source',
@@ -227,4 +248,8 @@ export function parseCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | nu
     ...pickCanvasDocumentEdgeFields(value),
     ...(style !== undefined ? { style } : {}),
   }
+}
+
+export function normalizeCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | null {
+  return parseCanvasDocumentEdge(value)
 }

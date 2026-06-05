@@ -1,69 +1,29 @@
-import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
-import {
-  parseCanvasNodeDataByType,
-  parseCanvasNodeType,
-  parseCanvasPoint2D,
-} from '~/features/canvas/domain/validation'
 import { logger } from '~/shared/utils/logger'
-import { parseCanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
+import { normalizeCanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
-function buildSafePersistedCanvasNode(node: CanvasDocumentNode): CanvasDocumentNode {
-  let type = parseCanvasNodeType(node.type) ?? 'text'
-  let data = parseCanvasNodeDataByType(type, node.data)
-  if (!data) {
-    type = 'text'
-    data = parseCanvasNodeDataByType(type, {}) ?? {}
+function getCanvasDocumentNodeLogField(node: unknown, field: 'id' | 'type') {
+  if (!node || typeof node !== 'object' || !(field in node)) {
+    return undefined
   }
-  const safeNodeFields: Partial<CanvasDocumentNode> = {}
-  const safeNodeBase = {
-    id: node.id,
-    type,
-    position: parseCanvasPoint2D(node.position) ?? { x: 0, y: 0 },
-    data,
-  }
-
-  const width = typeof node.width === 'number' && Number.isFinite(node.width) ? node.width : null
-  if (width !== null) {
-    safeNodeFields.width = width
-  }
-  const height =
-    typeof node.height === 'number' && Number.isFinite(node.height) ? node.height : null
-  if (height !== null) {
-    safeNodeFields.height = height
-  }
-  if (typeof node.zIndex === 'number' && Number.isFinite(node.zIndex)) {
-    safeNodeFields.zIndex = node.zIndex
-  }
-  if (typeof node.className === 'string') {
-    safeNodeFields.className = node.className
-  }
-  if (typeof node.hidden === 'boolean') {
-    safeNodeFields.hidden = node.hidden
-  }
-
-  return { ...safeNodeBase, ...safeNodeFields } as CanvasDocumentNode
+  return (node as Record<'id' | 'type', unknown>)[field]
 }
 
 export function sanitizeNodeForPersistence(
   node: CanvasDocumentNode,
   operation: string,
-  fallbackNode: CanvasDocumentNode = node,
 ): CanvasDocumentNode {
-  try {
-    const persistedNode = stripEphemeralCanvasNodeState(node)
-    const parsedNode = parseCanvasDocumentNode(persistedNode)
-    if (!parsedNode) {
-      throw new TypeError('parseCanvasDocumentNode rejected the stripped canvas node shape')
-    }
+  const parsedNode = normalizeCanvasDocumentNode(node)
+  if (parsedNode) {
     return parsedNode
-  } catch (error) {
-    logger.error('Canvas node persistence sanitization failed', {
-      operation,
-      nodeId: node.id,
-      nodeType: node.type,
-      error,
-    })
-    return buildSafePersistedCanvasNode(fallbackNode)
   }
+
+  const error = new TypeError('Invalid canvas document node rejected at persistence boundary')
+  logger.error('Canvas node persistence rejected invalid document node', {
+    operation,
+    nodeId: getCanvasDocumentNodeLogField(node, 'id'),
+    nodeType: getCanvasDocumentNodeLogField(node, 'type'),
+    error,
+  })
+  throw error
 }

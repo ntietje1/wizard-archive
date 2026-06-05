@@ -19,14 +19,11 @@ import type {
   CanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
 
-type CanvasNodeSanitizer = (
-  node: CanvasDocumentNode,
-  operation: string,
-  fallbackNode?: CanvasDocumentNode,
-) => CanvasDocumentNode
+type CanvasNodeSanitizer = (node: CanvasDocumentNode, operation: string) => CanvasDocumentNode
 type CanvasEdgeStyle = NonNullable<CanvasDocumentEdge['style']>
+type CanvasNodeMapUpdate = { id: string; node: CanvasDocumentNode }
 
-function updateCanvasNodeIfPresent({
+function getCanvasNodeUpdateIfPresent({
   nodesMap,
   nodeId,
   sanitizeNode,
@@ -41,10 +38,35 @@ function updateCanvasNodeIfPresent({
 }) {
   const existing = nodesMap.get(nodeId)
   if (!existing) {
-    return
+    return null
   }
 
-  nodesMap.set(nodeId, sanitizeNode(updater(existing), operation, existing))
+  return {
+    id: nodeId,
+    node: sanitizeNode(updater(existing), operation),
+  }
+}
+
+function applyCanvasNodeMapUpdates(
+  nodesMap: Y.Map<CanvasDocumentNode>,
+  updates: ReadonlyArray<CanvasNodeMapUpdate>,
+) {
+  for (const update of updates) {
+    nodesMap.set(update.id, update.node)
+  }
+}
+
+function updateCanvasNodeIfPresent(args: {
+  nodesMap: Y.Map<CanvasDocumentNode>
+  nodeId: string
+  sanitizeNode: CanvasNodeSanitizer
+  operation: string
+  updater: (node: CanvasDocumentNode) => CanvasDocumentNode
+}) {
+  const update = getCanvasNodeUpdateIfPresent(args)
+  if (update) {
+    args.nodesMap.set(update.id, update.node)
+  }
 }
 
 function updateCanvasEdgeIfPresent({
@@ -113,8 +135,10 @@ export function patchCanvasNodeDataCommand({
   updates: ReadonlyMap<string, CanvasNodeDataPatch>
   sanitizeNode: CanvasNodeSanitizer
 }) {
+  const nodeUpdates: Array<CanvasNodeMapUpdate> = []
+
   for (const [nodeId, data] of updates) {
-    updateCanvasNodeIfPresent({
+    const update = getCanvasNodeUpdateIfPresent({
       nodesMap,
       nodeId,
       sanitizeNode,
@@ -148,7 +172,12 @@ export function patchCanvasNodeDataCommand({
         }
       },
     })
+    if (update) {
+      nodeUpdates.push(update)
+    }
   }
+
+  applyCanvasNodeMapUpdates(nodesMap, nodeUpdates)
 }
 
 export function patchCanvasEdgesCommand({
@@ -206,15 +235,22 @@ export function resizeCanvasNodesCommand({
   updates: ReadonlyMap<string, { width: number; height: number; position: CanvasPosition }>
   sanitizeNode: CanvasNodeSanitizer
 }) {
+  const nodeUpdates: Array<CanvasNodeMapUpdate> = []
+
   for (const [nodeId, update] of updates) {
-    updateCanvasNodeIfPresent({
+    const nodeUpdate = getCanvasNodeUpdateIfPresent({
       nodesMap,
       nodeId,
       sanitizeNode,
       operation: 'resizeNodes',
       updater: (existing) => resizeCanvasNode(existing, update),
     })
+    if (nodeUpdate) {
+      nodeUpdates.push(nodeUpdate)
+    }
   }
+
+  applyCanvasNodeMapUpdates(nodesMap, nodeUpdates)
 }
 
 export function setCanvasNodePositionsCommand({
@@ -226,15 +262,22 @@ export function setCanvasNodePositionsCommand({
   positions: ReadonlyMap<string, CanvasPosition>
   sanitizeNode: CanvasNodeSanitizer
 }) {
+  const nodeUpdates: Array<CanvasNodeMapUpdate> = []
+
   for (const [nodeId, position] of positions) {
-    updateCanvasNodeIfPresent({
+    const update = getCanvasNodeUpdateIfPresent({
       nodesMap,
       nodeId,
       sanitizeNode,
       operation: 'setNodePositions',
       updater: (existing) => ({ ...existing, position }),
     })
+    if (update) {
+      nodeUpdates.push(update)
+    }
   }
+
+  applyCanvasNodeMapUpdates(nodesMap, nodeUpdates)
 }
 
 export function deleteCanvasSelectionCommand({
@@ -311,18 +354,29 @@ export function applyCanvasPasteCommand({
   sanitizeNode: CanvasNodeSanitizer
   onApplied?: () => void
 }) {
+  const nodeIds = new Set<string>()
   for (const node of paste.nodes) {
-    if (nodesMap.has(node.id)) {
+    if (nodesMap.has(node.id) || nodeIds.has(node.id)) {
       throw new Error(`Canvas node "${node.id}" already exists`)
     }
-
-    nodesMap.set(node.id, sanitizeNode(node, 'pasteNode'))
+    nodeIds.add(node.id)
   }
+
+  const edgeIds = new Set<string>()
   for (const edge of paste.edges) {
-    if (edgesMap.has(edge.id)) {
+    if (edgesMap.has(edge.id) || edgeIds.has(edge.id)) {
       throw new Error(`Canvas edge "${edge.id}" already exists`)
     }
+    edgeIds.add(edge.id)
+  }
 
+  const nodes = paste.nodes.map((node) => ({
+    id: node.id,
+    node: sanitizeNode(node, 'pasteNode'),
+  }))
+
+  applyCanvasNodeMapUpdates(nodesMap, nodes)
+  for (const edge of paste.edges) {
     edgesMap.set(edge.id, edge)
   }
   onApplied?.()

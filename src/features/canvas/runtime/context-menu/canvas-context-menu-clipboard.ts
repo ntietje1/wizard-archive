@@ -1,6 +1,6 @@
 import { getNextCanvasElementZIndex } from '../document/canvas-z-index'
 import { sortCanvasElementsByZIndex } from '../document/canvas-z-order'
-import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
+import { stripEphemeralCanvasNodeState } from '~/features/canvas/domain/canvas-document'
 import type { CanvasClipboardEntry } from './canvas-context-menu-types'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type * as Y from 'yjs'
