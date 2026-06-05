@@ -147,7 +147,7 @@ export function FileTopbar() {
   const canOpenHistory =
     !!item && !isPendingItem && effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.EDIT, permOpts)
 
-  const rightSidebar = useRightSidebar()
+  const rightSidebar = useRightSidebar(item?.type)
   const toggleHistory = () => {
     if (!canOpenHistory) return
     rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)

@@ -7,11 +7,11 @@ import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { ResizableSidebar } from '~/features/sidebar/components/resizable-sidebar'
 import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { canShowRightSidebarContent } from './right-sidebar-model'
 
 export function RightSidebarContainer() {
   const { item } = useCurrentItem()
-  const sidebar = useRightSidebar()
+  const sidebar = useRightSidebar(item?.type)
 
   const prevItemIdRef = useRef(item?._id)
   useEffect(() => {
@@ -23,12 +23,11 @@ export function RightSidebarContainer() {
 
   if (!item) return null
 
-  const isNote = item.type === SIDEBAR_ITEM_TYPES.notes
-  const activeContentId = isNote ? sidebar.activeContentId : RIGHT_SIDEBAR_CONTENT.history
+  const canOpenOutline = canShowRightSidebarContent(item.type, RIGHT_SIDEBAR_CONTENT.outline)
 
   return (
     <>
-      {isNote && !sidebar.visible && (
+      {canOpenOutline && !sidebar.visible && (
         <div className="absolute top-12 right-2 z-10" data-testid="outline-toggle-container">
           <Tooltip>
             <TooltipTrigger
@@ -61,7 +60,7 @@ export function RightSidebarContainer() {
           <RightSidebar
             itemId={item._id}
             itemType={item.type}
-            activeContentId={activeContentId}
+            activeContentId={sidebar.activeContentId}
             onContentChange={sidebar.setActiveContent}
             onClose={sidebar.close}
           />

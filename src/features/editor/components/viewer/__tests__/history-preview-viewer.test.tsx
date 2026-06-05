@@ -96,7 +96,7 @@ describe('HistoryPreviewViewer', () => {
         error: null,
       })
 
-    render(<HistoryPreviewViewer entryId={'history-1' as Id<'editHistory'>} />)
+    render(<HistoryPreviewViewer itemId={noteId} entryId={'history-1' as Id<'editHistory'>} />)
 
     expect(screen.getByTestId('note-content')).toBeInTheDocument()
     expect(noteContentMock).toHaveBeenCalledWith(
@@ -125,7 +125,12 @@ describe('HistoryPreviewViewer', () => {
         error: null,
       })
 
-    render(<HistoryPreviewViewer entryId={'history-1' as Id<'editHistory'>} />)
+    render(
+      <HistoryPreviewViewer
+        itemId={'note-1' as Id<'sidebarItems'>}
+        entryId={'history-1' as Id<'editHistory'>}
+      />,
+    )
 
     expect(screen.getByText('Snapshot data is corrupted.')).toBeInTheDocument()
     expect(noteContentMock).not.toHaveBeenCalled()
@@ -149,7 +154,12 @@ describe('HistoryPreviewViewer', () => {
         error: null,
       })
 
-    render(<HistoryPreviewViewer entryId={'history-1' as Id<'editHistory'>} />)
+    render(
+      <HistoryPreviewViewer
+        itemId={'canvas-1' as Id<'sidebarItems'>}
+        entryId={'history-1' as Id<'editHistory'>}
+      />,
+    )
 
     expect(screen.getByText('Snapshot data is corrupted.')).toBeInTheDocument()
     expect(canvasReadOnlyPreviewMock).not.toHaveBeenCalled()

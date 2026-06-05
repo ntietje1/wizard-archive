@@ -15,10 +15,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '~/features/shadcn/components/alert-dialog'
+import type { Id } from 'convex/_generated/dataModel'
 
-export function RollbackConfirmDialog() {
-  const rollbackEntryId = useHistoryPreviewStore((s) => s.rollbackEntryId)
-  const setRollbackEntryId = useHistoryPreviewStore((s) => s.setRollbackEntryId)
+export function RollbackConfirmDialog({ itemId }: { itemId: Id<'sidebarItems'> }) {
+  const rollbackEntryId = useHistoryPreviewStore((s) =>
+    s.rollback?.itemId === itemId ? s.rollback.entryId : null,
+  )
+  const clearRollback = useHistoryPreviewStore((s) => s.clearRollback)
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
 
   const historyEntry = useCampaignQuery(
@@ -32,9 +35,9 @@ export function RollbackConfirmDialog() {
     if (!rollbackEntryId || rollback.isPending) return
     try {
       await rollback.mutateAsync({ editHistoryId: rollbackEntryId })
-      clearPreview()
+      clearPreview(itemId)
       toast.success('Version restored')
-      setRollbackEntryId(null)
+      clearRollback(itemId)
     } catch (error) {
       handleError(error, 'Failed to restore version')
     }
@@ -48,7 +51,7 @@ export function RollbackConfirmDialog() {
     <AlertDialog
       open={rollbackEntryId !== null}
       onOpenChange={(open) => {
-        if (!open && !rollback.isPending) setRollbackEntryId(null)
+        if (!open && !rollback.isPending) clearRollback(itemId)
       }}
     >
       <AlertDialogContent>

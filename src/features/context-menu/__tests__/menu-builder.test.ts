@@ -456,6 +456,48 @@ describe('buildMenu', () => {
     )
   })
 
+  it('only shows right-sidebar panels supported by the current item type', () => {
+    const note = createNote()
+    const file = createFile()
+    const noteMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const fileMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: file,
+        primaryItem: file,
+        selectedItems: [file],
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(noteMenu.flatItems.map((menuItem) => menuItem.id)).toEqual(
+      expect.arrayContaining([
+        'panel-history',
+        'panel-backlinks',
+        'panel-outgoing',
+        'panel-outline',
+      ]),
+    )
+    expect(fileMenu.flatItems.map((menuItem) => menuItem.id)).toContain('panel-history')
+    expect(fileMenu.flatItems.map((menuItem) => menuItem.id)).not.toEqual(
+      expect.arrayContaining(['panel-backlinks', 'panel-outgoing', 'panel-outline']),
+    )
+  })
+
   it('shows value editing only for editable value inline content', () => {
     const valueMenu = buildMenu({
       context: sidebarCtx({

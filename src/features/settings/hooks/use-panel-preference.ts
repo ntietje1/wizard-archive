@@ -7,10 +7,8 @@ import { handleError } from '~/shared/utils/logger'
 type PanelPreferenceState = {
   size: number
   visible: boolean
-  activeContentId: string | null
   setSize: (size: number) => void
   setVisible: (visible: boolean) => void
-  setActiveContent: (contentId: string | null) => void
   isLoaded: boolean
 }
 
@@ -34,13 +32,11 @@ export function usePanelPreference(
     initPanel(panelId, {
       size: initialPanel?.size ?? defaults.size,
       visible: initialPanel?.visible ?? defaults.visible,
-      activeContentId: null,
     })
   }
 
   const size = panel?.size ?? initialPanel?.size ?? defaults.size
   const visible = panel?.visible ?? initialPanel?.visible ?? defaults.visible
-  const activeContentId = panel?.activeContentId ?? null
 
   const setSize = (newSize: number) => {
     ensurePanel()
@@ -54,18 +50,11 @@ export function usePanelPreference(
     setPanelPref.mutate({ panelId, visible: newVisible })
   }
 
-  const setActiveContent = (contentId: string | null) => {
-    ensurePanel()
-    store.getState().setActiveContent(panelId, contentId)
-  }
-
   return {
     size,
     visible,
-    activeContentId,
     setSize,
     setVisible,
-    setActiveContent,
     isLoaded,
   }
 }

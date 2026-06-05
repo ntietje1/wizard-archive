@@ -38,7 +38,6 @@ export function CampaignPanelPreferencesController({
       initPanel(panelId, {
         size: initial?.size ?? defaults.size,
         visible: initial?.visible ?? defaults.visible,
-        activeContentId: null,
       })
     }
   }, [initPanel, initialPanelPreferences, setLoaded])

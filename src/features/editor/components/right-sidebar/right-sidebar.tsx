@@ -1,5 +1,4 @@
-import { ArrowUpLeft, ArrowUpRight, History, List, X } from 'lucide-react'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { X } from 'lucide-react'
 import { RIGHT_SIDEBAR_CONTENT } from './constants'
 import { HistoryPanel } from './history-panel'
 import { BackLinksPanel } from './back-links-panel'
@@ -7,53 +6,12 @@ import { OutgoingLinksPanel } from './outgoing-links-panel'
 import { OutlinePanel } from './outline-panel'
 import type { RightSidebarContentId } from './constants'
 import type { Id } from 'convex/_generated/dataModel'
-import type { LucideIcon } from 'lucide-react'
+import { getRightSidebarPanelsForItemType } from './right-sidebar-registry'
+import type { RightSidebarItemType } from './right-sidebar-model'
 import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { cn } from '~/features/shadcn/lib/utils'
 import { assertNever } from '~/shared/utils/utils'
-
-type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
-
-interface RightSidebarTab {
-  id: RightSidebarContentId
-  label: string
-  icon: LucideIcon
-  appliesTo: Array<SidebarItemType>
-}
-
-const TABS: Array<RightSidebarTab> = [
-  {
-    id: RIGHT_SIDEBAR_CONTENT.history,
-    label: 'History',
-    icon: History,
-    appliesTo: [
-      SIDEBAR_ITEM_TYPES.notes,
-      SIDEBAR_ITEM_TYPES.folders,
-      SIDEBAR_ITEM_TYPES.gameMaps,
-      SIDEBAR_ITEM_TYPES.files,
-      SIDEBAR_ITEM_TYPES.canvases,
-    ],
-  },
-  {
-    id: RIGHT_SIDEBAR_CONTENT.backlinks,
-    label: 'Back Links',
-    icon: ArrowUpLeft,
-    appliesTo: [SIDEBAR_ITEM_TYPES.notes],
-  },
-  {
-    id: RIGHT_SIDEBAR_CONTENT.outgoing,
-    label: 'Outgoing Links',
-    icon: ArrowUpRight,
-    appliesTo: [SIDEBAR_ITEM_TYPES.notes],
-  },
-  {
-    id: RIGHT_SIDEBAR_CONTENT.outline,
-    label: 'Outline',
-    icon: List,
-    appliesTo: [SIDEBAR_ITEM_TYPES.notes],
-  },
-] as const
 
 function PanelContent({
   contentId,
@@ -86,12 +44,12 @@ export function RightSidebar({
   onClose,
 }: {
   itemId: Id<'sidebarItems'>
-  itemType: SidebarItemType
+  itemType: RightSidebarItemType
   activeContentId: RightSidebarContentId
   onContentChange: (contentId: RightSidebarContentId) => void
   onClose: () => void
 }) {
-  const tabs = TABS.filter((tab) => tab.appliesTo.includes(itemType))
+  const tabs = getRightSidebarPanelsForItemType(itemType)
 
   return (
     <div className="flex flex-col h-full bg-background">

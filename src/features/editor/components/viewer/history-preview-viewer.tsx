@@ -76,7 +76,13 @@ function readGameMapSnapshot(data: ArrayBuffer): GameMapSnapshotData | null {
   }
 }
 
-export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }) {
+export function HistoryPreviewViewer({
+  itemId,
+  entryId,
+}: {
+  itemId: Id<'sidebarItems'>
+  entryId: Id<'editHistory'>
+}) {
   const snapshotQuery = useCampaignQuery(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
     editHistoryId: entryId,
   })
@@ -99,7 +105,12 @@ export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }
   if (snapshotQuery.error || historyEntry.error) {
     return (
       <div className="flex flex-col h-full">
-        <HistoryPreviewBanner entryId={entryId} entryTime={entryTime} canEdit={canEdit} />
+        <HistoryPreviewBanner
+          itemId={itemId}
+          entryId={entryId}
+          entryTime={entryTime}
+          canEdit={canEdit}
+        />
         <div className="flex-1 min-h-0 flex items-center justify-center">
           <p className="text-sm text-muted-foreground">Failed to load history preview.</p>
         </div>
@@ -110,7 +121,12 @@ export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }
   if (!snapshotQuery.data) {
     return (
       <div className="flex flex-col h-full">
-        <HistoryPreviewBanner entryId={entryId} entryTime={entryTime} canEdit={canEdit} />
+        <HistoryPreviewBanner
+          itemId={itemId}
+          entryId={entryId}
+          entryTime={entryTime}
+          canEdit={canEdit}
+        />
         <div className="flex-1 min-h-0 flex items-center justify-center">
           <p className="text-sm text-muted-foreground">Preview not available for this version.</p>
         </div>
@@ -122,7 +138,12 @@ export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }
 
   return (
     <div className="flex flex-col h-full">
-      <HistoryPreviewBanner entryId={entryId} entryTime={entryTime} canEdit={canEdit} />
+      <HistoryPreviewBanner
+        itemId={itemId}
+        entryId={entryId}
+        entryTime={entryTime}
+        canEdit={canEdit}
+      />
       {snapshot.snapshotType === SNAPSHOT_TYPE.yjs_state &&
         snapshot.itemType === SIDEBAR_ITEM_TYPES.notes && (
           <NoteYjsSnapshotPreview noteId={snapshot.itemId} data={snapshot.data} />

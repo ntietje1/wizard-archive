@@ -19,20 +19,22 @@ export interface EditorViewerProps<T extends AnySidebarItemWithContent> {
 }
 
 export function SidebarItemEditor({ item, search }: EditorViewerProps<AnySidebarItemWithContent>) {
-  const previewingEntryId = useHistoryPreviewStore((s) => s.previewingEntryId)
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
+  const previewingEntryId = useHistoryPreviewStore((s) =>
+    s.preview?.itemId === item._id ? s.preview.entryId : null,
+  )
+  const clearItemSession = useHistoryPreviewStore((s) => s.clearItemSession)
 
   useEffect(() => {
-    clearPreview()
-  }, [item._id, clearPreview])
+    return () => clearItemSession(item._id)
+  }, [item._id, clearItemSession])
 
   if (previewingEntryId) {
     return (
       <>
         <ErrorBoundary FallbackComponent={ErrorFallback} key={`preview-${previewingEntryId}`}>
-          <HistoryPreviewViewer entryId={previewingEntryId} />
+          <HistoryPreviewViewer itemId={item._id} entryId={previewingEntryId} />
         </ErrorBoundary>
-        <RollbackConfirmDialog />
+        <RollbackConfirmDialog itemId={item._id} />
       </>
     )
   }
@@ -60,7 +62,7 @@ export function SidebarItemEditor({ item, search }: EditorViewerProps<AnySidebar
       <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
         {content}
       </ErrorBoundary>
-      <RollbackConfirmDialog />
+      <RollbackConfirmDialog itemId={item._id} />
     </>
   )
 }

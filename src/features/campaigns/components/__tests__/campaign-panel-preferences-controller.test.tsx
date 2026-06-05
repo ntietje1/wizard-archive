@@ -50,12 +50,10 @@ describe('CampaignPanelPreferencesController', () => {
       expect(usePanelPreferenceStore.getState().panels[LEFT_SIDEBAR_PANEL_ID]).toMatchObject({
         size: 31,
         visible: false,
-        activeContentId: null,
       })
       expect(usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]).toMatchObject({
         size: 28,
         visible: true,
-        activeContentId: null,
       })
     })
   })
@@ -76,14 +74,13 @@ describe('CampaignPanelPreferencesController', () => {
     expect(renderedPanels[0]).toEqual({ size: 31, visible: false })
   })
 
-  it('reconciles server panel preferences without clearing active content', async () => {
+  it('reconciles server panel preferences without touching non-chrome state', async () => {
     usePanelPreferenceStore.setState({
       isLoaded: false,
       panels: {
         [RIGHT_SIDEBAR_PANEL_ID]: {
           size: 20,
           visible: true,
-          activeContentId: 'history',
         },
       },
     })
@@ -106,7 +103,6 @@ describe('CampaignPanelPreferencesController', () => {
       expect(usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]).toMatchObject({
         size: 38,
         visible: false,
-        activeContentId: 'history',
       })
     })
   })
