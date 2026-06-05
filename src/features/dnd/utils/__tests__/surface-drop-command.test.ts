@@ -31,6 +31,7 @@ describe('resolveSidebarSurfaceDropCommand', () => {
       }),
     ).toMatchObject({
       status: 'partial',
+      commandId: 'surface-drop.link-sidebar-item-in-note',
       action: 'link',
       items: [active],
       rejectedItems: [{ item: trashed, reason: 'trashed_item' }],
@@ -45,6 +46,7 @@ describe('resolveSidebarSurfaceDropCommand', () => {
     await executeSurfaceDropCommand({
       command: {
         status: 'failed',
+        commandId: 'surface-drop.link-sidebar-item-in-note',
         action: 'link',
         target: { type: NOTE_EDITOR_DROP_TYPE, noteId: testId<'sidebarItems'>('note_target') },
         items: [],

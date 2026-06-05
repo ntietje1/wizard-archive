@@ -23,6 +23,7 @@ describe('DndBatchDecisionDialog', () => {
     useDndStore.getState().setBatchDecision({
       command: {
         status: 'partial',
+        commandId: 'surface-drop.pin-sidebar-item-to-map',
         action: 'pin',
         items: [createNote()],
         rejectedItems: [{ item: targetMap, reason: 'self_pin' }],
@@ -51,6 +52,7 @@ describe('DndBatchDecisionDialog', () => {
     useDndStore.getState().setBatchDecision({
       command: {
         status: 'partial',
+        commandId: 'surface-drop.link-sidebar-item-in-note',
         action: 'link',
         items: [createNote()],
         rejectedItems: [
@@ -78,6 +80,7 @@ describe('DndBatchDecisionDialog', () => {
     useDndStore.getState().setBatchDecision({
       command: {
         status: 'failed',
+        commandId: 'surface-drop.embed-sidebar-item-in-canvas',
         action: 'embed',
         items: [],
         rejectedItems: [
@@ -106,6 +109,7 @@ describe('DndBatchDecisionDialog', () => {
     useDndStore.getState().setBatchDecision({
       command: {
         status: 'partial',
+        commandId: 'surface-drop.pin-sidebar-item-to-map',
         action: 'pin',
         items: [createNote(), createNote()],
         rejectedItems: [{ item: createGameMap(), reason: 'already_pinned' }],
@@ -142,6 +146,7 @@ describe('DndBatchDecisionDialog', () => {
     useDndStore.getState().setBatchDecision({
       command: {
         status: 'partial',
+        commandId: 'surface-drop.link-sidebar-item-in-note',
         action: 'link',
         items: [createNote()],
         rejectedItems: [{ item: createNote(), reason: 'self_link' }],

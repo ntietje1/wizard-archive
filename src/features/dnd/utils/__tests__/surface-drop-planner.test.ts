@@ -29,6 +29,7 @@ describe('resolveSurfaceDropCommand', () => {
 
     expect(command).toMatchObject({
       status: 'ready',
+      commandId: 'surface-drop.pin-sidebar-item-to-map',
       action: 'pin',
       items: [first, second],
       rejectedItems: [],
@@ -48,6 +49,7 @@ describe('resolveSurfaceDropCommand', () => {
 
     expect(command).toMatchObject({
       status: 'failed',
+      commandId: 'surface-drop.link-sidebar-item-in-note',
       action: 'link',
       items: [],
       rejectedItems: [{ item: targetNote, reason: 'self_link' }],
@@ -67,6 +69,7 @@ describe('resolveSurfaceDropCommand', () => {
       ),
     ).toMatchObject({
       status: 'failed',
+      commandId: 'surface-drop.link-sidebar-item-in-note',
       action: 'link',
       items: [],
       rejectedItems: [{ item: targetNote, reason: 'self_link' }],
@@ -90,6 +93,7 @@ describe('resolveSurfaceDropCommand', () => {
       ),
     ).toMatchObject({
       status: 'failed',
+      commandId: 'surface-drop.pin-sidebar-item-to-map',
       action: 'pin',
       rejectedItems: [{ item: note, reason: 'wrong_campaign' }],
     })
