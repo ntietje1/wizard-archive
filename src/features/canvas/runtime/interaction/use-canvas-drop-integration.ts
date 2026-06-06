@@ -1,6 +1,6 @@
 import { useCanvasDropTarget } from './use-canvas-drop-target'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 interface UseCanvasDropIntegrationOptions {

@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { useCanvasAwareness } from '../use-canvas-awareness'
-import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import type { ResizingState } from '../../../utils/canvas-awareness-types'
 
 type AwarenessState = Record<string, unknown>

@@ -6,7 +6,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { EditorViewerProps } from '../sidebar-item-editor'
+import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import { MAP_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { handleError } from '~/shared/utils/logger'
@@ -115,7 +115,7 @@ function setPinElementPosition(pinEl: HTMLElement, position: PinPosition) {
   })
 }
 
-export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) {
+export function MapViewer({ item: map }: ViewerProps<GameMapWithContent>) {
   return useMapViewerElement(map)
 }
 

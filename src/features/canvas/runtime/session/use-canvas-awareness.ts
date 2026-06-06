@@ -7,7 +7,7 @@ import {
   parseCanvasSelectionAwarenessState,
 } from '~/features/canvas/domain/validation'
 import type { Awareness } from 'y-protocols/awareness'
-import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import { logger } from '~/shared/utils/logger'
 import type {
   CanvasAwarenessNamespace,

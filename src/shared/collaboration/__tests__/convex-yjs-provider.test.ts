@@ -8,7 +8,7 @@ import {
   flushConvexYjsProviderPendingUpdates,
   isConvexYjsProviderApplyingRemoteUpdate,
   setConvexYjsProviderWritable,
-} from '../convex-yjs-provider'
+} from '~/shared/collaboration/convex-yjs-provider'
 import type { Id } from 'convex/_generated/dataModel'
 
 const DOCUMENT_ID = 'test-doc-id' as Id<'sidebarItems'>

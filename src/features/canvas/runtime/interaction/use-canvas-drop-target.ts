@@ -10,7 +10,7 @@ import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { CANVAS_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { registerSurfaceDropExecutor } from '~/features/dnd/utils/surface-drop-command'
-import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 const STACK_OFFSET = 20

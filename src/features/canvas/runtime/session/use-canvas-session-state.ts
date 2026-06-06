@@ -3,7 +3,7 @@ import { useCanvasAwareness } from './use-canvas-awareness'
 import { getRemoteHighlights, getRemoteResizeDimensions } from './canvas-remote-state'
 import type { CanvasEditSessionState } from '../../tools/canvas-tool-types'
 import type { RemoteHighlight, RemoteUser, ResizingState } from '../../utils/canvas-awareness-types'
-import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 
 interface UseCanvasSessionStateOptions {
   provider: ConvexYjsProvider | null

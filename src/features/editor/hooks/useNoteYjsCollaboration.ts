@@ -5,11 +5,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useConvexYjsCollaboration } from './useConvexYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ConvexYjsProvider } from '../providers/convex-yjs-provider'
 import {
   flushConvexYjsProviderPendingUpdates,
   isConvexYjsProviderApplyingRemoteUpdate,
-} from '../providers/convex-yjs-provider'
+} from '~/shared/collaboration/convex-yjs-provider'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { logger } from '~/shared/utils/logger'

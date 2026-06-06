@@ -8,7 +8,7 @@ import { createEditorSchema } from '../../editor-specs'
 import {
   ConvexYjsProvider,
   setConvexYjsProviderWritable,
-} from '../../providers/convex-yjs-provider'
+} from '~/shared/collaboration/convex-yjs-provider'
 import { NoteValueRuntimeContext } from '../value-block-runtime-context'
 import {
   blocksToYDoc as backendBlocksToYDoc,

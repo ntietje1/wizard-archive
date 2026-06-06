@@ -23,7 +23,6 @@ import {
   resolveSidebarItemPermissionLevel,
 } from '~/features/sharing/utils/permission-utils'
 import { api } from 'convex/_generated/api'
-import { updateConvexYjsProviderUser } from '~/features/editor/providers/convex-yjs-provider'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
@@ -32,7 +31,8 @@ import type { PermissionLevel } from 'shared/permissions/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { BlockMeta, NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties } from 'react'
-import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import { updateConvexYjsProviderUser } from '~/shared/collaboration/convex-yjs-provider'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import type { CampaignActor } from 'shared/campaigns/actor'
 
 type NoteEditorChangeHandler = (
