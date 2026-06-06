@@ -1,7 +1,7 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { createEditorSchema } from '../editor-specs'
 import { NoteValueRuntimeContext } from '../value-block/value-block-runtime-context'
+import { createStaticEditorSchema } from '../static-editor-schema'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 import { useResolvedTheme } from '~/shared/theme/context'
@@ -37,7 +37,7 @@ export function StaticNoteContent({
     identity: `static-note-content:${JSON.stringify(content)}`,
     createEditor: () =>
       BlockNoteEditor.create({
-        schema: createEditorSchema(),
+        schema: createStaticEditorSchema(),
         initialContent:
           content.length > 0
             ? (content as NonNullable<
