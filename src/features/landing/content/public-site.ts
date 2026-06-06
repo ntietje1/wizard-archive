@@ -59,8 +59,7 @@ export const publicSite = {
   },
   essentialVendors: ['Convex', 'Better Auth', 'Resend', 'Cloudflare', 'Stripe'],
   analyticsVendors: ['PostHog'],
-  errorMonitoringVendors: ['Sentry'],
-  vendors: ['Convex', 'Better Auth', 'Resend', 'Cloudflare', 'Stripe', 'PostHog', 'Sentry'],
+  vendors: ['Convex', 'Better Auth', 'Resend', 'Cloudflare', 'Stripe', 'PostHog'],
 } as const
 
 export const emailHref = (email: string) => `mailto:${email}`
