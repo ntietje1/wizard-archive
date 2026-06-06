@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Github, MessageCircle } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
 import {
   PublicPageHeader,
@@ -8,22 +9,18 @@ import {
 import { publicPageHead, publicSite } from '~/features/landing/content/public-site'
 import { buttonVariants } from '~/features/shadcn/components/button'
 
-const communityLinks = [
-  {
-    title: 'Discord',
-    body: 'Chat with other users, ask questions, share feedback, and follow product updates.',
-    action: 'Join Discord',
-    href: publicSite.community.discordUrl,
-    icon: MessageCircle,
-  },
-  {
-    title: 'GitHub',
-    body: 'View the project, follow development, report bugs, and request technical changes.',
-    action: 'View GitHub',
-    href: publicSite.community.githubUrl,
-    icon: Github,
-  },
-]
+type CommunityChannelId = (typeof publicSite.community.channels)[number]['id']
+
+const communityChannelIcons = {
+  discord: MessageCircle,
+  github: Github,
+} satisfies Record<CommunityChannelId, LucideIcon>
+
+const communityChannels = publicSite.community.channels.filter((item) => item.href.length > 0)
+const communityChannelLabelList = new Intl.ListFormat('en', {
+  style: 'long',
+  type: 'conjunction',
+}).format(communityChannels.map((item) => item.label))
 
 function CommunityRouteComponent() {
   return (
@@ -33,8 +30,8 @@ function CommunityRouteComponent() {
           <PublicPageHeader title="Community" />
 
           <div className="mx-auto mt-12 grid max-w-3xl gap-4 md:grid-cols-2">
-            {communityLinks.map((item) => {
-              const Icon = item.icon
+            {communityChannels.map((item) => {
+              const Icon = communityChannelIcons[item.id]
 
               return (
                 <section
@@ -68,7 +65,7 @@ export const Route = createFileRoute('/community')({
   head: () =>
     publicPageHead({
       title: 'Community',
-      description: "Community channels for The Wizard's Archive, including Discord and GitHub.",
+      description: `Community channels for The Wizard's Archive, including ${communityChannelLabelList}.`,
     }),
   component: CommunityRouteComponent,
 })
