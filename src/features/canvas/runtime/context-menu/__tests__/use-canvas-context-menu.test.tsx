@@ -1,12 +1,15 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasContextMenu } from '../use-canvas-context-menu'
+import { CanvasContextMenuAdaptersContext } from '../canvas-context-menu-adapters-context'
+import { createEmbedNodeContextMenuContributor } from '../../../nodes/embed/embed-node-context-menu'
+import { createAndSelectEmbeddedCanvasNode } from '../../document/canvas-document-commands'
 import {
   TEXT_NODE_DEFAULT_HEIGHT,
   TEXT_NODE_DEFAULT_WIDTH,
 } from '../../../nodes/text/text-node-constants'
 import { createCanvasEngine } from '../../../system/canvas-engine'
-import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
@@ -18,35 +21,12 @@ import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
 } from '~/features/canvas/domain/canvas-document'
+import type { CanvasContextMenuAdapters } from '../canvas-context-menu-types'
 
 const sidebarItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),
   createItem: vi.fn(),
   navigateToItem: vi.fn(),
-}))
-
-vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
-  useCreateFileSystemItem: () => ({
-    createItem: sidebarItemsState.createItem,
-  }),
-}))
-
-vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
-  useSidebarValidation: () => ({
-    getDefaultName: vi.fn(() => 'Item'),
-  }),
-}))
-
-vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
-  useEditorNavigation: () => ({
-    navigateToItem: sidebarItemsState.navigateToItem,
-  }),
-}))
-
-vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useActiveSidebarItems: () => ({
-    itemsMap: sidebarItemsState.itemsMap,
-  }),
 }))
 
 function createSelectionController(
@@ -115,6 +95,67 @@ function createMockSidebarItem(overrides: Partial<AnySidebarItem> = {}): AnySide
   } as AnySidebarItem
 }
 
+function createTestAppAdapters(): CanvasContextMenuAdapters {
+  return {
+    createItems: (context) =>
+      [
+        { key: 'note', label: 'Note', priority: 10, type: SIDEBAR_ITEM_TYPES.notes },
+        { key: 'folder', label: 'Folder', priority: 11, type: SIDEBAR_ITEM_TYPES.folders },
+        { key: 'map', label: 'Map', priority: 12, type: SIDEBAR_ITEM_TYPES.gameMaps },
+        { key: 'canvas', label: 'Canvas', priority: 13, type: SIDEBAR_ITEM_TYPES.canvases },
+        { key: 'file', label: 'File', priority: 14, type: SIDEBAR_ITEM_TYPES.files },
+      ].map((command) => ({
+        id: `canvas-pane-create-${command.key}`,
+        label: command.label,
+        group: 'create',
+        priority: command.priority,
+        onSelect: async (menuContext) => {
+          const result = await sidebarItemsState.createItem({
+            type: command.type,
+            parentTarget: { kind: 'direct', parentId: context.canvasParentId },
+            name: 'Item',
+          })
+
+          createAndSelectEmbeddedCanvasNode({
+            sidebarItemId: result.id,
+            pointerPosition: menuContext.pointerPosition,
+            screenToCanvasPosition: context.screenToCanvasPosition,
+            createNode: context.createNode,
+            setSelection: context.setSelection,
+          })
+        },
+      })),
+    getTargetContributors: (target) =>
+      target.kind === 'embed-node'
+        ? [
+            createEmbedNodeContextMenuContributor({
+              canOpenEmbedTarget: (embedTarget) =>
+                sidebarItemsState.itemsMap.has(embedTarget.sidebarItemId),
+              openEmbedTarget: async (embedTarget) => {
+                const item = sidebarItemsState.itemsMap.get(embedTarget.sidebarItemId)
+                if (!item) {
+                  return false
+                }
+
+                await sidebarItemsState.navigateToItem(item.slug)
+                return true
+              },
+            }),
+          ]
+        : [],
+  }
+}
+
+function createAdapterWrapper(adapters: CanvasContextMenuAdapters) {
+  return function CanvasContextMenuAdapterWrapper({ children }: { children: ReactNode }) {
+    return (
+      <CanvasContextMenuAdaptersContext.Provider value={adapters}>
+        {children}
+      </CanvasContextMenuAdaptersContext.Provider>
+    )
+  }
+}
+
 describe('useCanvasContextMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -169,20 +210,22 @@ describe('useCanvasContextMenu', () => {
     const selection = createSelectionController()
     const canvasEngine = createContextMenuEngine()
     const createNode = vi.fn()
-    const { result } = renderHook(() =>
-      useCanvasContextMenu({
-        activeTool: 'select',
-        canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
-        canvasEngine,
-        createNode,
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
-        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
-        selection,
-        commands: createCommands(),
-      }),
+    const { result } = renderHook(
+      () =>
+        useCanvasContextMenu({
+          activeTool: 'select',
+          canEdit: true,
+          campaignId: testCampaignId,
+          canvasParentId: null,
+          canvasEngine,
+          createNode,
+          setPendingEditNodeId: vi.fn(),
+          setPendingEditNodePoint: vi.fn(),
+          screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+          selection,
+          commands: createCommands(),
+        }),
+      { wrapper: createAdapterWrapper(createTestAppAdapters()) },
     )
 
     result.current.hostRef.current = {
@@ -446,20 +489,22 @@ describe('useCanvasContextMenu', () => {
     } as Node
     const canvasEngine = createContextMenuEngine({ nodes: [embedNode] })
 
-    const { result } = renderHook(() =>
-      useCanvasContextMenu({
-        activeTool: 'select',
-        canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
-        canvasEngine,
-        createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
-        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
-        selection,
-        commands: createCommands(),
-      }),
+    const { result } = renderHook(
+      () =>
+        useCanvasContextMenu({
+          activeTool: 'select',
+          canEdit: true,
+          campaignId: testCampaignId,
+          canvasParentId: null,
+          canvasEngine,
+          createNode: vi.fn(),
+          setPendingEditNodeId: vi.fn(),
+          setPendingEditNodePoint: vi.fn(),
+          screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+          selection,
+          commands: createCommands(),
+        }),
+      { wrapper: createAdapterWrapper(createTestAppAdapters()) },
     )
 
     const open = vi.fn()
@@ -498,20 +543,22 @@ describe('useCanvasContextMenu', () => {
     } as Node
     const canvasEngine = createContextMenuEngine({ nodes: [embedNode] })
 
-    const { rerender, result } = renderHook(() =>
-      useCanvasContextMenu({
-        activeTool: 'select',
-        canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
-        canvasEngine,
-        createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
-        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
-        selection,
-        commands: createCommands(),
-      }),
+    const { rerender, result } = renderHook(
+      () =>
+        useCanvasContextMenu({
+          activeTool: 'select',
+          canEdit: true,
+          campaignId: testCampaignId,
+          canvasParentId: null,
+          canvasEngine,
+          createNode: vi.fn(),
+          setPendingEditNodeId: vi.fn(),
+          setPendingEditNodePoint: vi.fn(),
+          screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+          selection,
+          commands: createCommands(),
+        }),
+      { wrapper: createAdapterWrapper(createTestAppAdapters()) },
     )
 
     result.current.hostRef.current = {

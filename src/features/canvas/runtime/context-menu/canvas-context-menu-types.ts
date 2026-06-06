@@ -1,5 +1,6 @@
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasCommands } from '../document/use-canvas-commands'
+import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { ContextMenuContributor, ContextMenuItemSpec } from '~/features/context-menu/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasArrangeAction } from '../document/canvas-arrange'
@@ -87,3 +88,21 @@ export type CanvasContextMenuContributor = ContextMenuContributor<
   CanvasContextMenuContext,
   CanvasContextMenuServices
 >
+
+export interface CanvasContextMenuCreateItemContext {
+  campaignId: Id<'campaigns'>
+  canEdit: boolean
+  canvasParentId: Id<'sidebarItems'> | null
+  createNode: (node: CanvasDocumentNode) => void
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  setSelection: CanvasSelectionController['setSelection']
+}
+
+export interface CanvasContextMenuAdapters {
+  createItems?: (
+    context: CanvasContextMenuCreateItemContext,
+  ) => ReadonlyArray<CanvasContextMenuItem>
+  getTargetContributors?: (
+    target: CanvasContextMenuTarget,
+  ) => ReadonlyArray<CanvasContextMenuContributor>
+}

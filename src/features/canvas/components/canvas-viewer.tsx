@@ -9,6 +9,7 @@ import {
   isCanvasPerformanceEnabled,
   recordCanvasPerformanceMetric,
 } from '../runtime/performance/canvas-performance-metrics'
+import { CanvasContextMenuAdaptersContext } from '../runtime/context-menu/canvas-context-menu-adapters-context'
 import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime'
 import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { useCanvasPendingSelectionPreviewSummary } from '../runtime/selection/use-canvas-pending-selection-preview'
@@ -18,6 +19,7 @@ import { useCanvasEditorRuntime } from '../runtime/use-canvas-editor-runtime'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
 import { CanvasScene } from './canvas-scene'
 import { CanvasToolbar } from './canvas-toolbar'
+import { useCanvasContextMenuAppAdapters } from './use-canvas-context-menu-app-adapters'
 import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { CanvasWithContent } from 'shared/canvases/types'
@@ -61,7 +63,17 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
 
 type ReadyCanvasSession = Extract<CanvasViewerSession, { status: 'ready' }>
 
-function CanvasEditor({
+function CanvasEditor(session: ReadyCanvasSession) {
+  const contextMenuAdapters = useCanvasContextMenuAppAdapters()
+
+  return (
+    <CanvasContextMenuAdaptersContext.Provider value={contextMenuAdapters}>
+      <CanvasEditorRuntime {...session} />
+    </CanvasContextMenuAdaptersContext.Provider>
+  )
+}
+
+function CanvasEditorRuntime({
   canvasId,
   campaignId,
   canEdit,
