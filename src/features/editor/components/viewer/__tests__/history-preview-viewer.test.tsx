@@ -10,6 +10,7 @@ const { canvasReadOnlyPreviewMock, noteContentMock, useCampaignQueryMock } = vi.
   noteContentMock: vi.fn(),
   useCampaignQueryMock: vi.fn(),
 }))
+const canvasPreviewEmbedNodeMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@blocknote/core', async (importOriginal) => {
   const actual = await importOriginal<typeof BlockNoteCore>()
@@ -49,6 +50,10 @@ vi.mock('~/features/canvas/components/canvas-read-only-preview', () => ({
     canvasReadOnlyPreviewMock(props)
     return <div data-testid="canvas-preview" />
   },
+}))
+
+vi.mock('~/features/canvas/components/canvas-preview-embed-node', () => ({
+  CanvasPreviewEmbedNode: canvasPreviewEmbedNodeMock,
 }))
 
 vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
@@ -163,5 +168,53 @@ describe('HistoryPreviewViewer', () => {
 
     expect(screen.getByText('Snapshot data is corrupted.')).toBeInTheDocument()
     expect(canvasReadOnlyPreviewMock).not.toHaveBeenCalled()
+  })
+
+  it('passes the sidebar-backed embed renderer into canvas snapshot previews', () => {
+    const canvasId = 'canvas-1' as Id<'sidebarItems'>
+    const doc = new Y.Doc()
+    doc.getMap('nodes').set('embed-1', {
+      id: 'embed-1',
+      type: 'embed',
+      position: { x: 0, y: 0 },
+      data: { sidebarItemId: 'note-1' },
+    })
+    const snapshotData = Y.encodeStateAsUpdate(doc).buffer
+    doc.destroy()
+    useCampaignQueryMock
+      .mockReturnValueOnce({
+        data: {
+          itemId: canvasId,
+          itemType: 'canvas',
+          snapshotType: 'yjs_state',
+          data: snapshotData,
+        },
+        isLoading: false,
+        error: null,
+      })
+      .mockReturnValueOnce({
+        data: { _creationTime: 1 },
+        isLoading: false,
+        error: null,
+      })
+
+    render(<HistoryPreviewViewer itemId={canvasId} entryId={'history-1' as Id<'editHistory'>} />)
+
+    expect(screen.getByTestId('canvas-preview')).toBeInTheDocument()
+    expect(canvasReadOnlyPreviewMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interactive: true,
+        embedRenderer: canvasPreviewEmbedNodeMock,
+        nodes: [
+          {
+            id: 'embed-1',
+            type: 'embed',
+            position: { x: 0, y: 0 },
+            data: { sidebarItemId: 'note-1' },
+          },
+        ],
+        edges: [],
+      }),
+    )
   })
 })

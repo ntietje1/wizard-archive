@@ -6,6 +6,7 @@ import { testId } from '~/test/helpers/test-id'
 const useEmbeddedCanvasStateMock = vi.hoisted(() => vi.fn())
 const canvasThumbnailPreviewSpy = vi.hoisted(() => vi.fn())
 const canvasPreviewSpy = vi.hoisted(() => vi.fn())
+const canvasPreviewEmbedNodeMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../use-embedded-canvas-state', () => ({
   useEmbeddedCanvasState: (canvasId: string) => useEmbeddedCanvasStateMock(canvasId),
@@ -16,6 +17,10 @@ vi.mock('~/features/previews/components/canvas-thumbnail-preview', () => ({
     canvasThumbnailPreviewSpy(props)
     return <div data-testid="canvas-thumbnail-preview" />
   },
+}))
+
+vi.mock('../../../components/canvas-preview-embed-node', () => ({
+  CanvasPreviewEmbedNode: canvasPreviewEmbedNodeMock,
 }))
 
 vi.mock('../../../components/canvas-read-only-preview', () => ({
@@ -100,6 +105,7 @@ describe('EmbeddedCanvasContent', () => {
         maxZoom: 4,
         fitPadding: 0.12,
         className: 'pointer-events-none relative h-full w-full min-h-0 min-w-0',
+        embedRenderer: canvasPreviewEmbedNodeMock,
         nodes: [{ id: 'node-1', position: { x: 0, y: 0 }, data: {}, type: 'text' }],
         edges: [{ id: 'edge-1', source: 'node-1', target: 'node-1', type: 'bezier' }],
       }),

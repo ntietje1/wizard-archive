@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react'
 import { useEmbeddedCanvasState } from './use-embedded-canvas-state'
 import { CanvasThumbnailPreview } from '~/features/previews/components/canvas-thumbnail-preview'
+import { CanvasPreviewEmbedNode } from '../../components/canvas-preview-embed-node'
 import { CanvasReadOnlyPreview } from '../../components/canvas-read-only-preview'
 import type { Id } from 'convex/_generated/dataModel'
 const MAX_ZOOM = 4
@@ -44,6 +45,7 @@ export function EmbeddedCanvasContent({
         maxZoom={MAX_ZOOM}
         fitPadding={FIT_PADDING}
         className="pointer-events-none relative h-full w-full min-h-0 min-w-0"
+        embedRenderer={CanvasPreviewEmbedNode}
       />
     </div>
   )

@@ -13,6 +13,7 @@ import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { GameMapSnapshotData } from 'shared/game-maps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { CanvasPreviewEmbedNode } from '~/features/canvas/components/canvas-preview-embed-node'
 import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { NoteContent } from '~/features/editor/components/note-content'
@@ -201,7 +202,12 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
 
   return (
     <div className="flex-1 min-h-0">
-      <CanvasReadOnlyPreview nodes={result.value.nodes} edges={result.value.edges} interactive />
+      <CanvasReadOnlyPreview
+        nodes={result.value.nodes}
+        edges={result.value.edges}
+        interactive
+        embedRenderer={CanvasPreviewEmbedNode}
+      />
     </div>
   )
 }

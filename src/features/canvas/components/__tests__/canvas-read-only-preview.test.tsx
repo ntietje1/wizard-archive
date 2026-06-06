@@ -1,71 +1,19 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasReadOnlyPreview } from '../canvas-read-only-preview'
-import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
+import type { CanvasNodeComponentProps } from '../../nodes/canvas-node-types'
+import type { EmbedNodeData } from '../../nodes/embed/embed-node-data'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
-
-const contentItemState = vi.hoisted(() => ({
-  data: undefined as Record<string, unknown> | undefined,
-  error: null as Error | null,
-  isLoading: false,
-}))
-const activeItemsState = vi.hoisted(() => ({
-  itemsMap: new Map<string, Record<string, unknown>>(),
-  status: 'success' as 'pending' | 'error' | 'success',
-}))
-
-vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
-  useSidebarItemById: () => contentItemState,
-}))
-
-vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useActiveSidebarItems: () => activeItemsState,
-}))
-
-vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => ({
-    campaignId: 'campaign_1',
-    isDm: true,
-  }),
-}))
-
-vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
-  useSidebarUIStore: (
-    selector: (state: { viewAsPlayer: null; setViewAsPlayer: () => void }) => unknown,
-  ) => selector({ viewAsPlayer: null, setViewAsPlayer: vi.fn() }),
-}))
-
-vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({
-  useCampaignMembers: () => ({
-    data: [],
-  }),
-}))
-
-vi.mock('~/features/previews/components/sidebar-item-preview-content', () => ({
-  SidebarItemPreviewContent: () => <div data-testid="sidebar-item-preview-content" />,
-}))
 
 const resizeObservers: Array<MockResizeObserver> = []
 let animationFrameCallbacks: Array<FrameRequestCallback> = []
 
 describe('CanvasReadOnlyPreview', () => {
   beforeEach(() => {
-    const note = {
-      ...createNote({
-        _id: testId<'sidebarItems'>('note-1'),
-        name: 'Note',
-      }),
-      content: [],
-    }
-    contentItemState.data = note
-    contentItemState.error = null
-    contentItemState.isLoading = false
-    activeItemsState.itemsMap = new Map([[note._id, note]])
-    activeItemsState.status = 'success'
     resizeObservers.length = 0
     animationFrameCallbacks = []
     vi.stubGlobal('ResizeObserver', MockResizeObserver)
@@ -105,18 +53,16 @@ describe('CanvasReadOnlyPreview', () => {
       />,
     )
 
-    const previewEl = await screen.findByTestId('sidebar-item-preview-content')
+    const previewEl = await screen.findByText('Embedded item preview unavailable.')
 
     await waitFor(() => {
-      expect(previewEl.parentElement).toHaveStyle({
+      expect(previewEl).toHaveStyle({
         color: 'var(--t-purple)',
       })
     })
   })
 
-  it('uses the shared unavailable item state for read-only embedded nodes', async () => {
-    contentItemState.data = undefined
-
+  it('uses an injected embed renderer for read-only embedded nodes', async () => {
     render(
       <CanvasReadOnlyPreview
         nodes={[
@@ -132,11 +78,12 @@ describe('CanvasReadOnlyPreview', () => {
           } satisfies CanvasDocumentNode,
         ]}
         edges={[]}
+        embedRenderer={InjectedEmbedRenderer}
       />,
     )
 
-    expect(await screen.findByText("This item isn't shared with you.")).toBeInTheDocument()
-    expect(screen.queryByTestId('sidebar-item-preview-content')).not.toBeInTheDocument()
+    expect(await screen.findByTestId('injected-embed-renderer')).toHaveTextContent('note-1')
+    expect(screen.queryByText('Embedded item preview unavailable.')).not.toBeInTheDocument()
   })
 
   it('renders non-interactive preview nodes and edges without pointer targeting', async () => {
@@ -388,6 +335,10 @@ describe('CanvasReadOnlyPreview', () => {
     })
   })
 })
+
+function InjectedEmbedRenderer({ data }: CanvasNodeComponentProps<EmbedNodeData>) {
+  return <div data-testid="injected-embed-renderer">{data.sidebarItemId}</div>
+}
 
 class MockResizeObserver implements ResizeObserver {
   readonly elements = new Set<Element>()
