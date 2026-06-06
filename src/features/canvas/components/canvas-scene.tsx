@@ -3,7 +3,6 @@ import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasConnectionLayer } from './canvas-connection-layer'
 import { CanvasEdgeRenderer } from './canvas-edge-renderer'
 import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
-import { CanvasNodeContent } from './canvas-node-content'
 import { CanvasNodeRenderer } from './canvas-node-renderer'
 import { CanvasPendingSelectionPreviewOverlay } from './canvas-pending-selection-preview-overlay'
 import { CanvasSelectionResizeOverlay } from './canvas-selection-resize-overlay'
@@ -21,6 +20,7 @@ import type {
   CanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
 import type {
+  ComponentType,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
@@ -38,6 +38,7 @@ interface CanvasSceneProps {
   canEdit: boolean
   remoteUsers: Array<RemoteUser>
   sceneHandlers: CanvasSceneHandlers
+  NodeContentComponent: ComponentType<{ nodeId: string }>
   onNodeContextMenu: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
   onEdgeContextMenu: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
   onPaneContextMenu: (event: ReactMouseEvent) => void
@@ -47,6 +48,7 @@ export function CanvasScene({
   canEdit,
   remoteUsers,
   sceneHandlers,
+  NodeContentComponent,
   onNodeContextMenu,
   onEdgeContextMenu,
   onPaneContextMenu,
@@ -170,7 +172,7 @@ export function CanvasScene({
         <CanvasNodeRenderer
           onNodeClick={handleNodeClick}
           onNodeContextMenu={handleNodeContextMenu}
-          NodeContentComponent={CanvasNodeContent}
+          NodeContentComponent={NodeContentComponent}
         />
       </CanvasSceneViewport>
     </CanvasNodeResizeMetadataProvider>

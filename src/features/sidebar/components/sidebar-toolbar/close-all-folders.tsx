@@ -9,21 +9,25 @@ import {
 
 export function CloseAllFoldersButton() {
   const { campaignId } = useCampaign()
-  const { folderStates } = useCampaignSidebarState(campaignId)
-  const { closeAllFolders } = useCampaignSidebarActions(campaignId)
-  const hasOpenFolders = Object.values(folderStates).some(Boolean)
+  const { closeAllFoldersMode } = useCampaignSidebarState(campaignId)
+  const { toggleCloseAllFoldersMode } = useCampaignSidebarActions(campaignId)
 
   return (
     <TooltipButton tooltip="Close all folders" side="bottom">
       <Button
         variant="ghost"
         size="icon"
-        onClick={closeAllFolders}
-        disabled={!hasOpenFolders}
-        data-state={hasOpenFolders ? 'active' : 'inactive'}
-        aria-label={hasOpenFolders ? 'Close all folders' : 'No open folders'}
+        onClick={toggleCloseAllFoldersMode}
+        data-state={closeAllFoldersMode ? 'active' : 'inactive'}
+        aria-label={
+          closeAllFoldersMode ? 'Exit close-all-folders mode' : 'Enter close-all-folders mode'
+        }
       >
-        {hasOpenFolders ? <FolderDot className="h-4 w-4" /> : <FolderOpenDot className="h-4 w-4" />}
+        {closeAllFoldersMode ? (
+          <FolderDot className="h-4 w-4" />
+        ) : (
+          <FolderOpenDot className="h-4 w-4" />
+        )}
       </Button>
     </TooltipButton>
   )

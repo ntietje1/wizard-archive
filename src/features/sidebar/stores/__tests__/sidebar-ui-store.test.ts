@@ -51,11 +51,29 @@ describe('folder states', () => {
   })
 })
 
-describe('closeAllFolders', () => {
-  it('closeAllFolders clears folder state', () => {
+describe('closeAllFoldersMode', () => {
+  it('toggleCloseAllFoldersMode temporarily hides open folders without clearing folder state', () => {
     useSidebarUIStore.getState().setFolderState(campaignId, 'folder_1', true)
     useSidebarUIStore.getState().setFolderState(campaignId, 'folder_2', true)
-    useSidebarUIStore.getState().closeAllFolders(campaignId)
+    useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId)
+
+    expect(useSidebarUIStore.getState().closeAllFoldersModeCampaignIds).toContain(campaignId)
+    expect(useSidebarUIStore.getState().campaignStates[campaignId].folderStates).toEqual({
+      folder_1: true,
+      folder_2: true,
+    })
+
+    useSidebarUIStore.getState().exitCloseAllMode(campaignId)
+    expect(useSidebarUIStore.getState().closeAllFoldersModeCampaignIds).not.toContain(campaignId)
+    expect(useSidebarUIStore.getState().campaignStates[campaignId].folderStates).toEqual({
+      folder_1: true,
+      folder_2: true,
+    })
+  })
+
+  it('clearAllFolderStates clears persisted folder state explicitly', () => {
+    useSidebarUIStore.getState().setFolderState(campaignId, 'folder_1', true)
+    useSidebarUIStore.getState().clearAllFolderStates(campaignId)
     expect(useSidebarUIStore.getState().campaignStates[campaignId].folderStates).toEqual({})
   })
 })
@@ -409,7 +427,9 @@ describe('useCampaignSidebarActions', () => {
     const actions = useCampaignSidebarActions(undefined)
     actions.setFolderState('folder_1', true)
     actions.toggleFolderState('folder_1')
-    actions.closeAllFolders()
+    actions.clearAllFolderStates()
+    actions.toggleCloseAllFoldersMode()
+    actions.exitCloseAllMode()
     actions.toggleBookmarksOnlyMode()
     expect(useSidebarUIStore.getState().campaignStates).toEqual({})
   })

@@ -1,5 +1,5 @@
 import { SidebarItem } from './sidebar-item/sidebar-item'
-import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
+import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -13,12 +13,14 @@ export function SidebarList() {
   const { parentItemsMap, status } = useFilteredSidebarItems()
   const { sortOptions } = useSortOptions()
   const { campaignId } = useCampaign()
-  const { folderStates } = useCampaignSidebarState(campaignId)
+  const { closeAllFoldersMode, folderStates } = useCampaignSidebarState(campaignId)
 
   const rootItems = sortItemsByOptions(sortOptions, parentItemsMap.get(null)) ?? []
   const expandedFolderIds = new Set<Id<'sidebarItems'>>()
-  for (const [id, isOpen] of Object.entries(folderStates)) {
-    if (isOpen) expandedFolderIds.add(id as Id<'sidebarItems'>)
+  if (!closeAllFoldersMode) {
+    for (const [id, isOpen] of Object.entries(folderStates)) {
+      if (isOpen) expandedFolderIds.add(id as Id<'sidebarItems'>)
+    }
   }
   const visibleItemIds = buildVisibleSidebarItemIds({
     parentItemsMap,

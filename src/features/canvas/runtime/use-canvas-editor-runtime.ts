@@ -1,19 +1,10 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { MouseEvent as ReactMouseEvent } from 'react'
-import { useLayoutEffect, useMemo } from 'react'
 import type * as Y from 'yjs'
-import { useCanvasDocumentProjection } from './document/use-canvas-document-projection'
-import { useCanvasModifierKeys } from './interaction/use-canvas-modifier-keys'
-import { useCanvasPointerRouterController } from './interaction/use-canvas-pointer-router'
-import { useCanvasSessionState } from './session/use-canvas-session-state'
-import { useCanvasCoreRuntime } from './use-canvas-core-runtime'
-import { useCanvasDocumentRuntime } from './use-canvas-document-runtime'
 import {
-  useCanvasInteractionRuntime,
-  useCanvasSelectionRuntime,
-} from './use-canvas-interaction-runtime'
+  useCanvasEditorRuntimeBase,
+  useCanvasEditorSceneRuntime,
+} from './use-canvas-editor-runtime-base'
 import { useCanvasToolRuntime } from './use-canvas-tool-runtime'
-import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import { useYjsPreviewUpload } from '~/features/previews/hooks/use-yjs-preview-upload'
@@ -45,131 +36,76 @@ export function useCanvasEditorRuntime({
   doc,
   initialViewport,
 }: UseCanvasEditorRuntimeOptions) {
-  const session = useCanvasSessionState({ provider })
-  const core = useCanvasCoreRuntime({
+  const base = useCanvasEditorRuntimeBase({
+    nodesMap,
+    edgesMap,
     canvasId,
+    canEdit,
+    provider,
     initialViewport,
-  })
-  const { historySelectionChangeRef, selection } = useCanvasSelectionRuntime({
-    canvasEngine: core.canvasEngine,
-    canvasId,
-    setLocalSelection: session.awareness.core.setLocalSelection,
   })
 
   useYjsPreviewUpload({
     itemId: canvasId,
     doc,
-    containerRef: core.canvasSurfaceRef,
+    containerRef: base.canvasSurfaceRef,
     resolveElement: (container) => container,
   })
 
-  const document = useCanvasDocumentRuntime({
-    canEdit,
-    canvasSurfaceRef: core.canvasSurfaceRef,
-    canvasEngine: core.canvasEngine,
-    edgesMap,
-    nodesMap,
-    selection,
-    session,
-  })
-  useLayoutEffect(() => {
-    historySelectionChangeRef.current = document.history.onSelectionChange
-    return () => {
-      historySelectionChangeRef.current = () => undefined
-    }
-  }, [document.history.onSelectionChange, historySelectionChangeRef])
-
-  const modifiers = useCanvasModifierKeys()
-  const pointerRouter = useCanvasPointerRouterController()
-  const activeTool = useCanvasToolStore((state) => state.activeTool)
   const tools = useCanvasToolRuntime({
-    activeTool,
+    activeTool: base.activeTool,
     campaignId,
-    canvasEngine: core.canvasEngine,
+    canvasEngine: base.canvasEngine,
     canvasId,
     canvasParentId,
     canEdit,
-    commands: document.commands,
-    documentWriter: document.documentWriter,
-    modifiers,
-    pointerRouter,
+    commands: base.document.commands,
+    documentWriter: base.document.documentWriter,
+    modifiers: base.modifiers,
+    pointerRouter: base.pointerRouter,
     provider,
-    selection,
-    session,
-    viewportController: core.viewportController,
+    selection: base.selection,
+    session: base.session,
+    viewportController: base.viewportController,
   })
-  const interaction = useCanvasInteractionRuntime({
-    activeTool,
+
+  const sceneHandlers = useCanvasEditorSceneRuntime({
+    activeTool: base.activeTool,
     activeToolHandlers: tools.activeToolHandlers,
-    canvasEngine: core.canvasEngine,
+    canvasEngine: base.canvasEngine,
     canvasId,
-    canvasSurfaceRef: core.canvasSurfaceRef,
+    canvasSurfaceRef: base.canvasSurfaceRef,
     canEdit,
+    createEdgeFromConnection: tools.createEdgeFromConnection,
+    cursorPresence: tools.cursorPresence,
     doc,
-    documentWriter: document.documentWriter,
+    documentWriter: base.document.documentWriter,
     edgesMap,
-    modifiers,
+    modifiers: base.modifiers,
     nodesMap,
-    pointerRouter,
-    selection,
-    session,
-    viewportController: core.viewportController,
+    pointerRouter: base.pointerRouter,
+    selection: base.selection,
+    session: base.session,
+    viewportController: base.viewportController,
   })
-
-  useCanvasDocumentProjection({
-    canvasEngine: core.canvasEngine,
-    nodesMap,
-    edgesMap,
-    localDraggingIdsRef: interaction.localDraggingIdsRef,
-    remoteResizeDimensions: session.remoteResizeDimensions,
-  })
-
-  const canUsePointerTool = activeTool === 'select'
-  const sceneHandlers = useMemo(
-    () => ({
-      activeToolHandlers: tools.activeToolHandlers,
-      cursorPresence: tools.cursorPresence,
-      createEdgeFromConnection: tools.createEdgeFromConnection,
-      onNodeClick: (event: ReactMouseEvent, node: CanvasDocumentNode) => {
-        if (!canUsePointerTool) {
-          return
-        }
-        tools.activeToolHandlers.onNodeClick?.(event, node)
-      },
-      onEdgeClick: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
-        if (!canUsePointerTool) {
-          return
-        }
-        tools.activeToolHandlers.onEdgeClick?.(event, edge)
-      },
-      onMouseMove: tools.cursorPresence.onMouseMove,
-      onMouseLeave: tools.cursorPresence.onMouseLeave,
-    }),
-    [
-      canUsePointerTool,
-      tools.activeToolHandlers,
-      tools.createEdgeFromConnection,
-      tools.cursorPresence,
-    ],
-  )
 
   return {
-    activeTool,
-    canvasEngine: core.canvasEngine,
-    canvasSurfaceRef: core.canvasSurfaceRef,
-    commands: document.commands,
+    activeTool: base.activeTool,
+    canvasEngine: base.canvasEngine,
+    canvasSurfaceRef: base.canvasSurfaceRef,
+    commands: base.document.commands,
     contextMenu: tools.contextMenu,
-    documentWriter: document.documentWriter,
-    domRuntime: core.domRuntime,
+    documentWriter: base.document.documentWriter,
+    domRuntime: base.domRuntime,
     dropTarget: tools.dropTarget,
-    editSession: session.editSession,
+    editSession: base.session.editSession,
     sceneHandlers,
-    history: document.history,
-    nodeActions: document.nodeActions,
-    viewportController: core.viewportController,
-    remoteHighlights: session.remoteHighlights,
-    remoteUsers: session.remoteUsers,
-    selection,
+    history: base.document.history,
+    nodeActions: base.document.nodeActions,
+    viewportController: base.viewportController,
+    remoteHighlights: base.session.remoteHighlights,
+    remoteUsers: base.session.remoteUsers,
+    selection: base.selection,
     toolCursor: tools.activeToolSpec.cursor,
   }
 }

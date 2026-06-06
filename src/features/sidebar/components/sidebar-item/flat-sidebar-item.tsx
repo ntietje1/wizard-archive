@@ -1,5 +1,6 @@
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
+import { EditableName } from './editable-item-name'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
@@ -15,6 +16,7 @@ import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
+import { sidebarItemNameClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
 import type { MouseEvent } from 'react'
 
 interface FlatSidebarItemProps {
@@ -72,6 +74,18 @@ export function FlatSidebarItem({
         <SidebarItemButtonBase
           icon={icon}
           name={item.name}
+          nameContent={
+            <EditableName
+              initialName={item.name}
+              isRenaming={renamingId === item._id}
+              onFinishRename={handleFinishRename}
+              onCancelRename={handleCancelRename}
+              displayClassName={sidebarItemNameClass(visualState)}
+              campaignId={item.campaignId}
+              parentId={item.parentId}
+              excludeId={item._id}
+            />
+          }
           presentation={{
             visualState,
             focused: isFocused,
@@ -88,11 +102,6 @@ export function FlatSidebarItem({
             handleItemContextMenu(event)
             handleMoreOptions(event)
           }}
-          onFinishRename={handleFinishRename}
-          onCancelRename={handleCancelRename}
-          campaignId={item.campaignId}
-          parentId={item.parentId}
-          excludeId={item._id}
         />
       </EditorContextMenu>
     </DraggableSidebarItem>

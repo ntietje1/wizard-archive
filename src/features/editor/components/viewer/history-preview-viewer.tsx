@@ -16,7 +16,7 @@ import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { CanvasPreviewEmbedNode } from '~/features/canvas/components/canvas-preview-embed-node'
 import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { NoteContent } from '~/features/editor/components/note-content'
+import { RawNoteContent } from '~/features/editor/components/raw-note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import { resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
@@ -183,7 +183,7 @@ function NoteYjsSnapshotPreview({
 
   return (
     <ScrollArea className="flex-1 min-h-0">
-      <NoteContent
+      <RawNoteContent
         noteId={noteId}
         content={result.value}
         editable={false}

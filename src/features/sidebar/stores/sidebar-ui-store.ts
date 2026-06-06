@@ -26,6 +26,7 @@ interface CampaignState {
 
 interface SidebarUIState {
   campaignStates: Record<string, CampaignState>
+  closeAllFoldersModeCampaignIds: Array<string>
   renamingId: Id<'sidebarItems'> | null
   pendingItemName: string
   selectedSlug: SidebarItemSlug | null
@@ -42,7 +43,9 @@ interface SidebarUIActions {
   setRenamingId: (id: Id<'sidebarItems'> | null) => void
   setFolderState: (campaignId: string, folderId: string, isOpen: boolean) => void
   toggleFolderState: (campaignId: string, folderId: string) => void
-  closeAllFolders: (campaignId: string) => void
+  clearAllFolderStates: (campaignId: string) => void
+  toggleCloseAllFoldersMode: (campaignId: string) => void
+  exitCloseAllMode: (campaignId: string) => void
   toggleBookmarksOnlyMode: (campaignId: string) => void
   setPendingItemName: (name: string) => void
   setSelected: (slug: SidebarItemSlug | null) => void
@@ -152,6 +155,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
   persist(
     (set) => ({
       campaignStates: {},
+      closeAllFoldersModeCampaignIds: [],
       renamingId: null,
       pendingItemName: '',
       selectedSlug: null,
@@ -191,12 +195,29 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           }))
         }),
 
-      closeAllFolders: (campaignId) =>
+      clearAllFolderStates: (campaignId) =>
         set((state) =>
           updateCampaignState(state, campaignId, () => ({
             folderStates: {},
           })),
         ),
+
+      toggleCloseAllFoldersMode: (campaignId) =>
+        set((state) => {
+          const closeAllFoldersModeCampaignIds = state.closeAllFoldersModeCampaignIds.includes(
+            campaignId,
+          )
+            ? state.closeAllFoldersModeCampaignIds.filter((id) => id !== campaignId)
+            : [...state.closeAllFoldersModeCampaignIds, campaignId]
+          return { closeAllFoldersModeCampaignIds }
+        }),
+
+      exitCloseAllMode: (campaignId) =>
+        set((state) => ({
+          closeAllFoldersModeCampaignIds: state.closeAllFoldersModeCampaignIds.filter(
+            (id) => id !== campaignId,
+          ),
+        })),
 
       toggleBookmarksOnlyMode: (campaignId) =>
         set((state) => {
@@ -372,6 +393,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           selectionSurface: null,
           focusSurface: null,
           activeItemSurface: null,
+          closeAllFoldersModeCampaignIds: [],
         }),
 
       setViewAsPlayer: (viewAsPlayer) => set({ viewAsPlayer }),
@@ -393,6 +415,9 @@ export function useCampaignSidebarState(campaignId: string | undefined) {
       const cs = campaignId ? s.campaignStates[campaignId] : undefined
       return {
         folderStates: cs?.folderStates ?? EMPTY_FOLDER_STATES,
+        closeAllFoldersMode: campaignId
+          ? s.closeAllFoldersModeCampaignIds.includes(campaignId)
+          : false,
         bookmarksOnlyMode: cs?.bookmarksOnlyMode ?? false,
       }
     }),
@@ -405,7 +430,9 @@ export function useCampaignSidebarActions(campaignId: string | undefined) {
     return {
       setFolderState: noop as (folderId: string, isOpen: boolean) => void,
       toggleFolderState: noop as (folderId: string) => void,
-      closeAllFolders: noop,
+      clearAllFolderStates: noop,
+      toggleCloseAllFoldersMode: noop,
+      exitCloseAllMode: noop,
       toggleBookmarksOnlyMode: noop,
     }
   }
@@ -414,7 +441,10 @@ export function useCampaignSidebarActions(campaignId: string | undefined) {
       useSidebarUIStore.getState().setFolderState(campaignId, folderId, isOpen),
     toggleFolderState: (folderId: string) =>
       useSidebarUIStore.getState().toggleFolderState(campaignId, folderId),
-    closeAllFolders: () => useSidebarUIStore.getState().closeAllFolders(campaignId),
+    clearAllFolderStates: () => useSidebarUIStore.getState().clearAllFolderStates(campaignId),
+    toggleCloseAllFoldersMode: () =>
+      useSidebarUIStore.getState().toggleCloseAllFoldersMode(campaignId),
+    exitCloseAllMode: () => useSidebarUIStore.getState().exitCloseAllMode(campaignId),
     toggleBookmarksOnlyMode: () => useSidebarUIStore.getState().toggleBookmarksOnlyMode(campaignId),
   }
 }

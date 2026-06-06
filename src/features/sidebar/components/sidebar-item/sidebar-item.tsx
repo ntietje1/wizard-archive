@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import type { MouseEvent } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarShareButton } from './sidebar-item-share-button'
+import { EditableName } from './editable-item-name'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import { DroppableSidebarItem } from './droppable-sidebar-item'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
@@ -20,11 +20,15 @@ import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { Collapsible, CollapsibleContent } from '~/features/shadcn/components/collapsible'
-import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
+import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
-import { sidebarItemActionButtonClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import {
+  sidebarItemActionButtonClass,
+  sidebarItemNameClass,
+} from '~/features/sidebar/utils/sidebar-item-visual-state'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
+import type { MouseEvent } from 'react'
 
 interface SidebarItemProps {
   item: AnySidebarItem
@@ -89,6 +93,18 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
         <SidebarItemButtonBase
           icon={icon}
           name={item.name}
+          nameContent={
+            <EditableName
+              initialName={item.name}
+              isRenaming={renamingId === item._id}
+              onFinishRename={handleFinishRename}
+              onCancelRename={handleCancelRename}
+              displayClassName={sidebarItemNameClass(visualState)}
+              campaignId={item.campaignId}
+              parentId={item.parentId}
+              excludeId={item._id}
+            />
+          }
           presentation={{
             visualState,
             focused: isFocused,
@@ -106,11 +122,6 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
             handleItemContextMenu(event)
             handleMoreOptions(event)
           }}
-          onFinishRename={handleFinishRename}
-          onCancelRename={handleCancelRename}
-          campaignId={item.campaignId}
-          parentId={item.parentId}
-          excludeId={item._id}
           shareButton={
             isPending ? null : (
               <SidebarShareButton

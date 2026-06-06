@@ -84,7 +84,7 @@ export function EditorContent() {
 
   return (
     <Suspense fallback={<EditorLoading />}>
-      <SidebarItemEditor item={contentItem} search={editorSearch} />
+      <SidebarItemEditor item={contentItem} />
     </Suspense>
   )
 }

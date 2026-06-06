@@ -1,6 +1,6 @@
 import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
+import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'

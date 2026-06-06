@@ -25,6 +25,27 @@ const PREVIEW_NODE_RENDERERS = {
   text: CanvasPreviewTextNode,
 } as const satisfies CanvasNodeRendererMap
 
+const previewRendererOverrides = new WeakMap<
+  CanvasReadOnlyPreviewEmbedRenderer,
+  CanvasNodeRendererMap
+>()
+
+function getPreviewNodeRenderers(
+  embedRenderer?: CanvasReadOnlyPreviewEmbedRenderer,
+): CanvasNodeRendererMap {
+  if (!embedRenderer) return PREVIEW_NODE_RENDERERS
+
+  const cachedRenderers = previewRendererOverrides.get(embedRenderer)
+  if (cachedRenderers) return cachedRenderers
+
+  const renderers = {
+    ...PREVIEW_NODE_RENDERERS,
+    embed: embedRenderer,
+  } satisfies CanvasNodeRendererMap
+  previewRendererOverrides.set(embedRenderer, renderers)
+  return renderers
+}
+
 export function CanvasPreviewNodeRenderer({
   embedRenderer,
   interactive,
@@ -35,9 +56,7 @@ export function CanvasPreviewNodeRenderer({
   onNodeContextMenu: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
 }) {
   const nodeIds = useCanvasEngineSelector((snapshot) => snapshot.nodeIds, areArraysEqual)
-  const renderers = embedRenderer
-    ? ({ ...PREVIEW_NODE_RENDERERS, embed: embedRenderer } satisfies CanvasNodeRendererMap)
-    : PREVIEW_NODE_RENDERERS
+  const renderers = getPreviewNodeRenderers(embedRenderer)
 
   return nodeIds.map((nodeId) => (
     <CanvasPreviewNodeShell

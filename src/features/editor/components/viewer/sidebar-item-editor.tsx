@@ -14,9 +14,7 @@ import { ErrorFallback } from '~/shared/components/error-fallback'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 
-type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent> & {
-  search?: unknown
-}
+type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent>
 
 export function SidebarItemEditor({ item }: SidebarItemEditorProps) {
   const previewingEntryId = useHistoryPreviewStore((s) =>

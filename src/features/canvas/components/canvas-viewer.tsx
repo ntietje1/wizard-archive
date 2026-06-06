@@ -17,6 +17,7 @@ import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewp
 import { useCanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
 import { useCanvasEditorRuntime } from '../runtime/use-canvas-editor-runtime'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
+import { CanvasNodeContent } from './canvas-node-content'
 import { CanvasScene } from './canvas-scene'
 import { CanvasToolbar } from './canvas-toolbar'
 import { useCanvasContextMenuAppAdapters } from './use-canvas-context-menu-app-adapters'
@@ -167,6 +168,7 @@ function CanvasEditorContent({
           canEdit={canEdit}
           remoteUsers={runtime.remoteUsers}
           sceneHandlers={runtime.sceneHandlers}
+          NodeContentComponent={CanvasNodeContent}
           onNodeContextMenu={runtime.contextMenu.openForNode}
           onEdgeContextMenu={runtime.contextMenu.openForEdge}
           onPaneContextMenu={runtime.contextMenu.openForPane}
