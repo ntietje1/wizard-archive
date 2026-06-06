@@ -1,6 +1,8 @@
 import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
+import { StaticNoteContent } from '~/features/editor/components/static-note-content'
 import { DemoCanvasEmbedRenderer } from '~/features/landing/components/demo-canvas-embed-renderer'
 import { NavBar } from '~/features/landing/components/nav-bar'
+import type { CustomBlock } from 'shared/editor-blocks/types'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
@@ -120,6 +122,36 @@ const DEMO_CANVAS_EDGES = [
   },
 ] satisfies ReadonlyArray<CanvasDocumentEdge>
 
+const DEMO_NOTE_CONTENT: Array<CustomBlock> = [
+  {
+    id: 'demo-note-heading',
+    type: 'heading',
+    props: { level: 3 },
+    content: [{ type: 'text', text: 'The Lantern Market', styles: {} }],
+    children: [],
+  },
+  {
+    id: 'demo-note-brief',
+    type: 'paragraph',
+    props: {},
+    content: [
+      {
+        type: 'text',
+        text: 'A waterfront bazaar where every stall hides a second ledger.',
+        styles: {},
+      },
+    ],
+    children: [],
+  },
+  {
+    id: 'demo-note-clues',
+    type: 'bulletListItem',
+    props: {},
+    content: [{ type: 'text', text: 'Ask Mara about the blue-glass shipment.', styles: {} }],
+    children: [],
+  },
+]
+
 export function DemoRouteContent() {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -137,6 +169,18 @@ export function DemoRouteContent() {
                 visible at a glance.
               </p>
             </div>
+            <section
+              className="max-h-72 min-h-48 overflow-hidden rounded-lg border border-border bg-muted/20"
+              aria-label="Demo note preview"
+            >
+              <div className="border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground">
+                Session Note
+              </div>
+              <StaticNoteContent
+                content={DEMO_NOTE_CONTENT}
+                className="pointer-events-none p-4 text-sm"
+              />
+            </section>
             <dl className="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1">
               <div>
                 <dt className="text-muted-foreground">Focus</dt>

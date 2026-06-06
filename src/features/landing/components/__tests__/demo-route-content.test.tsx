@@ -7,12 +7,22 @@ import {
   normalizeCanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
 
-const canvasReadOnlyPreviewMock = vi.hoisted(() => vi.fn())
+const { canvasReadOnlyPreviewMock, staticNoteContentMock } = vi.hoisted(() => ({
+  canvasReadOnlyPreviewMock: vi.fn(),
+  staticNoteContentMock: vi.fn(),
+}))
 
 vi.mock('~/features/canvas/components/canvas-read-only-preview', () => ({
   CanvasReadOnlyPreview: (props: Record<string, unknown>) => {
     canvasReadOnlyPreviewMock(props)
     return <div data-testid="demo-canvas-preview" />
+  },
+}))
+
+vi.mock('~/features/editor/components/static-note-content', () => ({
+  StaticNoteContent: (props: { content: Array<unknown> }) => {
+    staticNoteContentMock(props)
+    return <div data-testid="demo-note-preview" />
   },
 }))
 
@@ -23,12 +33,14 @@ vi.mock('~/features/landing/components/nav-bar', () => ({
 describe('DemoRouteContent', () => {
   beforeEach(() => {
     canvasReadOnlyPreviewMock.mockReset()
+    staticNoteContentMock.mockReset()
   })
 
   it('renders a fixture-backed read-only canvas instead of the placeholder asset', () => {
     render(<DemoRouteContent />)
 
     expect(screen.getByTestId('demo-nav')).toBeInTheDocument()
+    expect(screen.getByTestId('demo-note-preview')).toBeInTheDocument()
     expect(screen.getByTestId('demo-canvas-preview')).toBeInTheDocument()
     expect(screen.queryByLabelText('Demo project preview placeholder')).not.toBeInTheDocument()
     expect(canvasReadOnlyPreviewMock).toHaveBeenCalledWith(
@@ -65,5 +77,24 @@ describe('DemoRouteContent', () => {
       ['brief-to-clock', 'scene-brief', 'encounter-clock'],
     ])
     expect(props.embedRenderer).toBe(DemoCanvasEmbedRenderer)
+  })
+
+  it('passes a static note fixture through the editor presenter boundary', () => {
+    render(<DemoRouteContent />)
+
+    expect(staticNoteContentMock).toHaveBeenCalledTimes(1)
+    expect(staticNoteContentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'demo-note-heading',
+            type: 'heading',
+            content: expect.arrayContaining([
+              expect.objectContaining({ text: 'The Lantern Market' }),
+            ]),
+          }),
+        ]),
+      }),
+    )
   })
 })
