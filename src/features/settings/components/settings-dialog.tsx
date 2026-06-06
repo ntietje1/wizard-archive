@@ -1,11 +1,10 @@
 import { api } from 'convex/_generated/api'
-import { Cable, CreditCard, Import, Paintbrush, Settings, Smile, Users } from 'lucide-react'
+import { Paintbrush, Users } from 'lucide-react'
 import { useMatch } from '@tanstack/react-router'
 import { useSettingsStore } from '../hooks/settings-store'
 import { ProfileTab } from './tabs/account-profile/profile-tab'
 import { PreferencesTab } from './tabs/account-preferences/preferences-tab'
 import { PeopleTab } from './tabs/campaign-people/people-tab'
-import { StubTab } from './tabs/stub-tab'
 import type { SettingsTab } from '../hooks/settings-store'
 import type { LucideIcon } from 'lucide-react'
 import { getInitials } from '~/shared/utils/get-initials'
@@ -31,73 +30,18 @@ type TabGroup = {
 
 const accountGroup: TabGroup = {
   label: 'Account',
-  tabs: [
-    { id: 'preferences', label: 'Preferences', icon: Paintbrush },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
-  ],
+  tabs: [{ id: 'preferences', label: 'Preferences', icon: Paintbrush }],
 }
 
 const campaignGroup: TabGroup = {
   label: 'Campaign',
-  tabs: [
-    { id: 'campaign-general', label: 'General', icon: Settings },
-    { id: 'campaign-people', label: 'People', icon: Users },
-    { id: 'campaign-import', label: 'Import', icon: Import },
-  ],
-}
-
-const featuresGroup: TabGroup = {
-  label: 'Features',
-  tabs: [
-    { id: 'emoji', label: 'Emoji', icon: Smile },
-    { id: 'connections', label: 'Connections', icon: Cable },
-  ],
+  tabs: [{ id: 'campaign-people', label: 'People', icon: Users }],
 }
 
 const tabContent: Record<SettingsTab, React.ReactNode> = {
   profile: <ProfileTab />,
   preferences: <PreferencesTab />,
-  billing: (
-    <StubTab
-      category="Account"
-      title="Billing"
-      description="Manage your subscription, payment methods, and billing history"
-      icon={CreditCard}
-    />
-  ),
-  'campaign-general': (
-    <StubTab
-      category="Campaign"
-      title="General"
-      description="Configure your campaign's basic settings and preferences"
-      icon={Settings}
-    />
-  ),
   'campaign-people': <PeopleTab />,
-  'campaign-import': (
-    <StubTab
-      category="Campaign"
-      title="Import"
-      description="Import content from other tools and platforms"
-      icon={Import}
-    />
-  ),
-  emoji: (
-    <StubTab
-      category="Features"
-      title="Emoji"
-      description="Customize emoji reactions and shortcuts for your campaigns"
-      icon={Smile}
-    />
-  ),
-  connections: (
-    <StubTab
-      category="Features"
-      title="Connections"
-      description="Connect third-party services and integrations"
-      icon={Cable}
-    />
-  ),
 }
 
 export function SettingsDialog() {
@@ -109,11 +53,7 @@ export function SettingsDialog() {
   })
   const isInCampaign = !!campaignMatch
 
-  const tabGroups: Array<TabGroup> = [
-    accountGroup,
-    ...(isInCampaign ? [campaignGroup] : []),
-    featuresGroup,
-  ]
+  const tabGroups: Array<TabGroup> = [accountGroup, ...(isInCampaign ? [campaignGroup] : [])]
 
   const isCampaignTab = activeTab.startsWith('campaign-')
   const resolvedTab = isCampaignTab && !isInCampaign ? 'profile' : activeTab

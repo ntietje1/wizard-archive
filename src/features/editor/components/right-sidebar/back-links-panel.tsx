@@ -1,12 +1,19 @@
-import { ArrowUpLeft } from 'lucide-react'
+import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { LinkListPanel, LinkPanelError, LinkPanelLoading } from './link-list-panel'
 
-export function BackLinksPanel({ itemId: _itemId }: { itemId: Id<'sidebarItems'> }) {
+export function BackLinksPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
+  const linksQuery = useCampaignQuery(api.links.queries.getBacklinkPanelRows, { itemId })
+
+  if (linksQuery.isPending) return <LinkPanelLoading label="backlinks" />
+  if (linksQuery.isError) return <LinkPanelError label="backlinks" />
+
   return (
-    <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-      <ArrowUpLeft className="h-8 w-8 text-muted-foreground mb-2" aria-hidden="true" />
-      <p className="text-sm font-medium text-muted-foreground">Back Links</p>
-      <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
-    </div>
+    <LinkListPanel
+      rows={linksQuery.data ?? []}
+      emptyTitle="No backlinks"
+      emptyDescription="Other notes do not link here yet"
+    />
   )
 }
