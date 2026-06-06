@@ -92,7 +92,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
       <div className="px-3 pt-2">
         <div className="flex items-center gap-2">
           <span
-            className={`size-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-feedback-success' : 'bg-feedback-loading/30'}`}
+            className={`size-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-feedback-success' : 'bg-muted/30'}`}
           />
           <span className="text-xs text-muted-foreground">
             {currentSession.data?.name ?? 'No active session'}

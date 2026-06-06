@@ -7,6 +7,7 @@ import {
   dropTargetBeforeRingClassName,
   dropTargetFillClassName,
 } from '~/features/dnd/utils/drop-target-visual-state'
+import type { DropTargetVisualState } from '~/features/dnd/utils/drop-target-visual-state'
 
 interface DroppableSidebarItemProps {
   item: Folder
@@ -22,22 +23,20 @@ export function DroppableSidebarItem({ item, children }: DroppableSidebarItemPro
     canDrop: actorPermissions.canMutate(item, PERMISSION_LEVEL.FULL_ACCESS),
   })
 
-  const isHighlighted = isDropTarget || isFileDropTarget
-  const ringClass = isDropTarget
-    ? dropTargetBeforeRingClassName(isTrashAction ? 'destructive' : 'default')
+  const dropVisualState: DropTargetVisualState | null = isDropTarget
+    ? isTrashAction
+      ? 'destructive'
+      : 'default'
     : isFileDropTarget
-      ? dropTargetBeforeRingClassName('file')
-      : ''
-  const bgClass = isDropTarget
-    ? dropTargetFillClassName(isTrashAction ? 'destructive' : 'default')
-    : isFileDropTarget
-      ? dropTargetFillClassName('file')
-      : ''
+      ? 'file'
+      : null
+  const ringClass = dropVisualState ? dropTargetBeforeRingClassName(dropVisualState) : ''
+  const bgClass = dropVisualState ? dropTargetFillClassName(dropVisualState) : ''
 
   return (
     <div
       ref={ref}
-      className={`w-full min-w-0 relative ${bgClass} ${isHighlighted ? `before:absolute before:inset-0 before:ring-2 before:ring-inset before:pointer-events-none before:z-10 before:rounded-[inherit] ${ringClass}` : ''}`}
+      className={`w-full min-w-0 relative ${bgClass} ${dropVisualState ? `before:absolute before:inset-0 before:ring-2 before:ring-inset before:pointer-events-none before:z-10 before:rounded-[inherit] ${ringClass}` : ''}`}
     >
       {children}
     </div>

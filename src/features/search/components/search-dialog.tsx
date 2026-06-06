@@ -33,6 +33,7 @@ import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
 import type { BlockSearchResult } from 'shared/search/types'
+import { handleError } from '~/shared/utils/logger'
 
 type SearchDisplayItem =
   | { kind: 'command'; command: SidebarItemCreationCommand }
@@ -423,11 +424,18 @@ export function SearchDialog() {
     }
     if (runningCommandIdRef.current !== null) return
 
-    runningCommandIdRef.current = displayItem.command.id
-    void runCreationCommand(displayItem.command, { parentId: null }).then((result) => {
-      runningCommandIdRef.current = null
-      if (result) close()
-    })
+    const { command } = displayItem
+    runningCommandIdRef.current = command.id
+    void (async () => {
+      try {
+        const result = await runCreationCommand(command, { parentId: null })
+        if (result) close()
+      } catch (error) {
+        handleError(error, command.failureMessage)
+      } finally {
+        runningCommandIdRef.current = null
+      }
+    })()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -1,4 +1,4 @@
-type DropTargetVisualState = 'default' | 'file' | 'destructive'
+export type DropTargetVisualState = 'default' | 'file' | 'destructive'
 
 const dropTargetRingClass: Record<DropTargetVisualState, string> = {
   default: 'ring-drop-target',

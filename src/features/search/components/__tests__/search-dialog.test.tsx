@@ -1,5 +1,5 @@
 import { createElement } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
@@ -155,6 +155,24 @@ describe('SearchDialog', () => {
     await user.click(screen.getByRole('button', { name: /New Note/i }))
 
     expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows retrying a creation command after an unexpected command failure', async () => {
+    const user = userEvent.setup()
+    searchState.query = 'note'
+    searchDataState.runCreationCommand
+      .mockRejectedValueOnce(new Error('failed'))
+      .mockResolvedValueOnce({ id: 'note_1', slug: 'new-note' })
+
+    render(<SearchDialog />)
+
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(1))
+
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(2))
+    expect(searchState.close).toHaveBeenCalled()
   })
 
   it('still reports body-search failure when command rows match the query', () => {
