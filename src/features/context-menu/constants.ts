@@ -4,7 +4,6 @@ export const VIEW_CONTEXT = {
   NOTE_VIEW: 'note-view',
   FOLDER_VIEW: 'folder-view',
   MAP_VIEW: 'map-view',
-  CANVAS_VIEW: 'canvas-view',
   SEARCH_RESULTS: 'search-results',
   RECENT_ITEMS: 'recent-items',
   FAVORITES: 'favorites',

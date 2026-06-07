@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { EDITOR_MODE } from 'shared/editor/types'
 import { NoteContent } from '../../note-content'
-import type { EditorViewerProps } from '../sidebar-item-editor'
+import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { NoteWithContent } from 'shared/notes/types'
 import { openBlockNoteContextMenu } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
@@ -48,7 +48,7 @@ function getBlockNoteContextFromTarget(
   }
 }
 
-export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
+export function NoteEditor({ item: note }: ViewerProps<NoteWithContent>) {
   const { editorMode, canEdit } = useEditorMode()
 
   const editable = editorMode === EDITOR_MODE.EDITOR && canEdit

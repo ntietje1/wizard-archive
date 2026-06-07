@@ -1,6 +1,7 @@
 import type { Id } from 'convex/_generated/dataModel'
 import { parseCanvasViewport } from '~/features/canvas/domain/validation'
 import { logger } from '~/shared/utils/logger'
+import { readPersistedJson, writePersistedJson } from '~/shared/storage/persisted-storage'
 
 const DEFAULT_CANVAS_VIEWPORT = {
   x: 0,
@@ -19,17 +20,11 @@ export function loadPersistedCanvasViewport(canvasId: Id<'sidebarItems'>): Persi
     return DEFAULT_CANVAS_VIEWPORT
   }
 
-  try {
-    const rawValue = window.localStorage.getItem(getCanvasViewportStorageKey(canvasId))
-    if (!rawValue) {
-      return DEFAULT_CANVAS_VIEWPORT
-    }
-
-    return parseCanvasViewport(JSON.parse(rawValue)) ?? DEFAULT_CANVAS_VIEWPORT
-  } catch (error) {
-    logger.debug(error)
-    return DEFAULT_CANVAS_VIEWPORT
-  }
+  return readPersistedJson(
+    getCanvasViewportStorageKey(canvasId),
+    DEFAULT_CANVAS_VIEWPORT,
+    parseCanvasViewport,
+  )
 }
 
 export function savePersistedCanvasViewport(
@@ -41,15 +36,8 @@ export function savePersistedCanvasViewport(
   }
 
   try {
-    const key = getCanvasViewportStorageKey(canvasId)
-    const serializedViewport = JSON.stringify(viewport)
-    window.localStorage.setItem(key, serializedViewport)
-    queueMicrotask(() => {
-      window.dispatchEvent(
-        new CustomEvent('localStorageChange', {
-          detail: { key, newValue: serializedViewport },
-        }),
-      )
+    writePersistedJson(getCanvasViewportStorageKey(canvasId), viewport, {
+      deferNotification: true,
     })
   } catch (error) {
     logger.debug(error)

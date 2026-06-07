@@ -23,6 +23,7 @@ import {
   seedCanvasTextNodesViaRuntime,
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
+import { ensureAcceptedPlayerMember, getCampaignIdFromRoute } from './helpers/convex-helpers'
 import { createMap, openMap, uploadMapImage, writeTestMapImage } from './helpers/map-helpers'
 import type { Page } from '@playwright/test'
 
@@ -85,6 +86,7 @@ test.describe('view-as-player', () => {
     await uploadMapImage(page, testImagePath)
     await pinSidebarItemToOpenMap(page, mapPinTarget)
     const { dmUsername, campaignSlug } = getCampaignRouteParts(page)
+    const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
 
     await page.close()
     await context.close()
@@ -104,6 +106,7 @@ test.describe('view-as-player', () => {
     await dmPage.goto('/campaigns')
     await navigateToCampaign(dmPage, campaignName)
     await approvePlayerRequest(dmPage, E2E_PLAYER_EMAIL!)
+    await ensureAcceptedPlayerMember({ campaignId })
     await shareActorFixtures(dmPage)
     await dmPage.close()
     await dmContext.close()
@@ -282,4 +285,5 @@ async function pinSidebarItemToOpenMap(page: Page, itemName: string) {
 
 async function openNewDashboard(page: Page) {
   await page.getByRole('navigation', { name: 'Sidebar' }).getByRole('link', { name: 'New' }).click()
+  await expect(page.getByRole('heading', { name: 'Create New' })).toBeVisible({ timeout: 10000 })
 }

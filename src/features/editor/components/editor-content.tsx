@@ -12,13 +12,13 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
@@ -83,7 +83,7 @@ export function EditorContent() {
 
   return (
     <Suspense fallback={<EditorLoading />}>
-      <SidebarItemEditor item={contentItem} search={editorSearch} />
+      <SidebarItemEditor item={contentItem} />
     </Suspense>
   )
 }
@@ -113,8 +113,8 @@ function EmptyEditorContent() {
       ref={ref}
       className={cn(
         'flex-1 min-h-0 flex items-center justify-center',
-        isDropTarget && !isFileDragTarget && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
-        isFileDragTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
+        isDropTarget && !isFileDragTarget && dropTargetChromeClass('default'),
+        isFileDragTarget && dropTargetChromeClass('file'),
       )}
     >
       {!isCampaignLoaded ? null : isDm ? (
@@ -136,7 +136,6 @@ function UnavailableEditorContent({
   const { campaignId } = useCampaign()
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
-  const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const [isPending, startCreateTransition] = useTransition()
 
@@ -151,7 +150,6 @@ function UnavailableEditorContent({
           name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
         })
         openParentFolders(result.id)
-        await navigateToItem(result.slug)
       } catch (error) {
         handleError(error, 'Failed to create note')
       }

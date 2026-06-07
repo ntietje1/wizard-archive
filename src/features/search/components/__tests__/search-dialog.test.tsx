@@ -1,5 +1,6 @@
 import { createElement } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
@@ -31,6 +32,7 @@ const searchDataState = vi.hoisted(() => ({
     error: null as unknown,
   },
   navigateToItem: vi.fn(),
+  runCreationCommand: vi.fn(),
 }))
 
 vi.mock('~/features/search/stores/search-store', () => ({
@@ -55,6 +57,12 @@ vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
   useSidebarItemById: () => searchDataState.previewQuery,
 }))
 
+vi.mock('~/features/sidebar/hooks/useRunSidebarItemCreationCommand', () => ({
+  useRunSidebarItemCreationCommand: () => ({
+    runCreationCommand: searchDataState.runCreationCommand,
+  }),
+}))
+
 vi.mock('~/shared/hooks/useCampaignQuery', () => ({
   useCampaignQuery: () => searchDataState.bodyQuery,
 }))
@@ -74,7 +82,13 @@ vi.mock('~/features/previews/components/sidebar-item-preview-content', () => ({
 vi.mock('~/features/shadcn/components/dialog', () => ({
   Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
     open ? createElement('div', null, children) : null,
-  DialogContent: ({ children }: { children: ReactNode }) => createElement('div', null, children),
+  DialogContent: ({
+    children,
+    ...props
+  }: {
+    children: ReactNode
+    onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>
+  }) => createElement('div', props, children),
   DialogDescription: ({ children }: { children: ReactNode }) => createElement('p', null, children),
   DialogHeader: ({ children }: { children: ReactNode }) => createElement('div', null, children),
   DialogTitle: ({ children }: { children: ReactNode }) => createElement('h2', null, children),
@@ -102,6 +116,73 @@ describe('SearchDialog', () => {
     searchDataState.bodyQuery = { data: undefined, isPending: false, error: null }
     searchDataState.previewQuery = { data: undefined, isLoading: false, error: null }
     searchDataState.navigateToItem.mockReset()
+    searchDataState.runCreationCommand.mockReset()
+  })
+
+  it('shows matching creation commands from the command catalog', () => {
+    searchState.query = 'new note'
+
+    render(<SearchDialog />)
+
+    expect(screen.getByRole('button', { name: /New Note/i })).toBeInTheDocument()
+    expect(screen.getAllByText('Create at top level')).toHaveLength(2)
+  })
+
+  it('runs a selected creation command from the keyboard launcher', async () => {
+    const user = userEvent.setup()
+    searchState.query = 'note'
+    searchDataState.runCreationCommand.mockResolvedValue({ id: 'note_1', slug: 'new-note' })
+
+    render(<SearchDialog />)
+
+    await user.keyboard('{Enter}')
+
+    expect(searchDataState.runCreationCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'create.note' }),
+      { parentId: null },
+    )
+    expect(searchState.close).toHaveBeenCalled()
+  })
+
+  it('ignores repeated creation command activation while the command is pending', async () => {
+    const user = userEvent.setup()
+    searchState.query = 'note'
+    searchDataState.runCreationCommand.mockReturnValue(new Promise(() => {}))
+
+    render(<SearchDialog />)
+
+    await user.keyboard('{Enter}{Enter}')
+    await user.click(screen.getByRole('button', { name: /New Note/i }))
+
+    expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows retrying a creation command after an unexpected command failure', async () => {
+    const user = userEvent.setup()
+    searchState.query = 'note'
+    searchDataState.runCreationCommand
+      .mockRejectedValueOnce(new Error('failed'))
+      .mockResolvedValueOnce({ id: 'note_1', slug: 'new-note' })
+
+    render(<SearchDialog />)
+
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(1))
+
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(2))
+    expect(searchState.close).toHaveBeenCalled()
+  })
+
+  it('still reports body-search failure when command rows match the query', () => {
+    searchState.query = 'note'
+    searchDataState.bodyQuery.error = new Error('body failed')
+
+    render(<SearchDialog />)
+
+    expect(screen.getByRole('button', { name: /New Note/i })).toBeInTheDocument()
+    expect(screen.getByText('Body search failed')).toBeInTheDocument()
   })
 
   it('shows body-search failure instead of no results when body search fails', () => {

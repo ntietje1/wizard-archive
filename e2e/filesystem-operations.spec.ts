@@ -42,7 +42,18 @@ function uniqueName(prefix: string) {
 }
 
 async function focusNonEditableTarget(page: Page) {
-  await page.getByRole('link', { name: 'New' }).focus()
+  const sidebarSurface = page
+    .getByRole('navigation', { name: 'Sidebar' })
+    .locator('[data-item-surface-hotkey-target="true"]')
+    .first()
+  await sidebarSurface.focus()
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Boolean(document.activeElement?.closest('[data-item-surface-hotkey-target="true"]')),
+      ),
+    )
+    .toBe(true)
 }
 
 async function expectNoConflictDialog(page: Page) {
@@ -314,6 +325,7 @@ test.describe.serial('filesystem command operations', () => {
     await expectFolderItemVisible(page, targetFolder, moveSource)
 
     await waitForFilesystemIdle(page)
+    await focusNonEditableTarget(page)
     await pressUndo(page)
     await expectSidebarItemVisible(page, moveSource)
     await expectFolderItemHidden(page, targetFolder, moveSource)
@@ -343,6 +355,7 @@ test.describe.serial('filesystem command operations', () => {
     await expectTrashItemVisible(page, trashNote)
 
     await waitForFilesystemIdle(page)
+    await focusNonEditableTarget(page)
     await pressUndo(page)
     await expectSidebarItemVisible(page, trashNote)
     await expectTrashItemHidden(page, trashNote)
@@ -361,9 +374,12 @@ test.describe.serial('filesystem command operations', () => {
     await expectSidebarItemVisible(page, restoreNote)
     await expectTrashItemHidden(page, restoreNote)
 
+    await page.keyboard.press('Escape')
     await waitForFilesystemIdle(page)
+    await focusNonEditableTarget(page)
     await pressUndo(page)
     await expectSidebarItemHidden(page, restoreNote)
+    await openTrashPopover(page)
     await expectTrashItemVisible(page, restoreNote)
     await waitForFilesystemIdle(page)
     await focusNonEditableTarget(page)

@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import { useEffect, useRef } from 'react'
+import { readPersistedJson, writePersistedJson } from '~/shared/storage/persisted-storage'
 
 const SCROLL_POSITIONS_KEY = 'note-scroll-positions'
 const MAX_SCROLL_ENTRIES = 200
@@ -9,12 +10,30 @@ interface ScrollEntry {
   lastAccess: number
 }
 
-function getScrollPositions(): Record<string, ScrollEntry> {
-  try {
-    return JSON.parse(localStorage.getItem(SCROLL_POSITIONS_KEY) ?? '{}')
-  } catch {
-    return {}
+function parseScrollEntry(value: unknown): ScrollEntry | null {
+  if (typeof value !== 'object' || value === null) return null
+  const scrollTop = (value as { scrollTop?: unknown }).scrollTop
+  const lastAccess = (value as { lastAccess?: unknown }).lastAccess
+  if (typeof scrollTop !== 'number') return null
+  return {
+    scrollTop,
+    lastAccess: typeof lastAccess === 'number' ? lastAccess : 0,
   }
+}
+
+function parseScrollPositions(value: unknown): Record<string, ScrollEntry> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {}
+
+  const positions: Record<string, ScrollEntry> = {}
+  for (const [key, rawEntry] of Object.entries(value)) {
+    const entry = parseScrollEntry(rawEntry)
+    if (entry) positions[key] = entry
+  }
+  return positions
+}
+
+function getScrollPositions(): Record<string, ScrollEntry> {
+  return readPersistedJson(SCROLL_POSITIONS_KEY, {}, parseScrollPositions)
 }
 
 function saveScrollPosition(itemId: string, scrollTop: number) {
@@ -32,7 +51,7 @@ function saveScrollPosition(itemId: string, scrollTop: number) {
       }
     }
 
-    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions))
+    writePersistedJson(SCROLL_POSITIONS_KEY, positions)
   } catch {
     // ignore
   }

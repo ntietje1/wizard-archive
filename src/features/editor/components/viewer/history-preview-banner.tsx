@@ -5,16 +5,18 @@ import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import { Banner, BannerButton } from '~/shared/components/banner'
 
 export function HistoryPreviewBanner({
+  itemId,
   entryId,
   entryTime,
   canEdit,
 }: {
+  itemId: Id<'sidebarItems'>
   entryId: Id<'editHistory'>
   entryTime: number | undefined
   canEdit: boolean
 }) {
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
-  const setRollbackEntryId = useHistoryPreviewStore((s) => s.setRollbackEntryId)
+  const setRollbackEntry = useHistoryPreviewStore((s) => s.setRollbackEntry)
 
   return (
     <Banner
@@ -22,12 +24,12 @@ export function HistoryPreviewBanner({
       actions={
         <>
           {canEdit && (
-            <BannerButton onClick={() => setRollbackEntryId(entryId)}>
+            <BannerButton onClick={() => setRollbackEntry(itemId, entryId)}>
               <RotateCcw className="h-3 w-3 mr-0.5" />
               Restore
             </BannerButton>
           )}
-          <BannerButton onClick={clearPreview}>
+          <BannerButton onClick={() => clearPreview(itemId)}>
             <X className="h-3 w-3 mr-0.5" />
             Exit
           </BannerButton>

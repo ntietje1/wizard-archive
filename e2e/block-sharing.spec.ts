@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test'
 import { api } from 'convex/_generated/api'
-import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
@@ -14,17 +13,18 @@ import {
   getVisibleBlockDragHandle,
   getVisibleBlockShareButton,
   openBlockShareMenu,
-  openBlockShareMenuFromEditorContextMenu,
   openEditorContextMenuFromBlockDragHandle,
   openEditorContextMenuFromBlockShareButton,
   openBlockShareMenuWithKeyboard,
   requestToJoinCampaignAsPlayer,
   rightMouseDownOnBlockText,
   setSelectValue,
+  shareBlockFromEditorContextMenu,
   shiftClickBlockShareButton,
 } from './helpers/permission-helpers'
 import {
   createE2EConvexClient,
+  ensureAcceptedPlayerMember,
   getCampaignIdFromRoute,
   getSidebarItemIdBySlug,
 } from './helpers/convex-helpers'
@@ -173,26 +173,30 @@ test.describe('block sharing', () => {
     ).toBe(true)
   })
 
-  test('editor context menu opens block sharing for the clicked block', async ({ page }) => {
+  test('editor context menu shares the clicked block with all players', async ({ page }) => {
     await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await setBlockAllPlayersStatus(visibleBlockNoteId, SHARE_STATUS.NOT_SHARED)
     await openCampaignNote(page)
 
-    const menu = await openBlockShareMenuFromEditorContextMenu(page, visibleBlockText)
+    await shareBlockFromEditorContextMenu(page, visibleBlockText)
+    await page.keyboard.press('Escape')
 
-    await expect(blockShareAllPlayersRow(menu).getByRole('combobox')).toBeVisible()
+    const menu = await openBlockShareMenu(page, visibleBlockText)
+    await expect(blockShareAllPlayersRow(menu).getByRole('combobox')).toContainText(/visible/i)
   })
 
   test('editor text context menu opens after right mouse up', async ({ page }) => {
     await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
+    await setBlockAllPlayersStatus(visibleBlockNoteId, SHARE_STATUS.NOT_SHARED)
     await openCampaignNote(page)
 
     await rightMouseDownOnBlockText(page, visibleBlockText)
 
-    await expect(page.getByRole('menuitem', { name: /^share 1 block$/i })).not.toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /^share block$/i })).not.toBeVisible()
 
     await page.mouse.up({ button: 'right' })
 
-    await expect(page.getByRole('menuitem', { name: /^share 1 block$/i })).toBeVisible({
+    await expect(page.getByRole('menuitem', { name: /^share block$/i })).toBeVisible({
       timeout: 5000,
     })
   })
@@ -434,15 +438,7 @@ async function expectBlocksAsActualPlayer(
 }
 
 async function getPlayerMemberId() {
-  const client = getConvexClient()
-  const members = await client.query(api.campaigns.queries.getMembersByCampaign, { campaignId })
-  const player = members
-    .filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player)
-    .sort((a, b) => a._id.localeCompare(b._id))[0]
-  if (!player) {
-    throw new Error('Unable to find campaign player member')
-  }
-  return player._id
+  return ensureAcceptedPlayerMember({ campaignId })
 }
 
 async function setPlayerNotePermission(permissionLevel: PermissionLevel) {

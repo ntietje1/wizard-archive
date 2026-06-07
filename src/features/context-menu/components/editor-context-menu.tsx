@@ -12,7 +12,7 @@ import type { ContextMenuHostRef } from './context-menu-host'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { EditorMenuContext, ViewContext } from '../types'
 import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
-import { use, useRef } from 'react'
+import { use, useRef, useState } from 'react'
 import type { Ref } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
@@ -25,12 +25,9 @@ import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadM
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
-import { useOptionalBlockShareMenu } from '~/features/sharing/contexts/useBlockShareMenu'
-import {
-  getBlockShareTargetBlocks,
-  getBlockShareTitle,
-} from '~/features/editor/utils/block-share-targets'
+import { getBlockShareTargetBlocks } from '~/features/editor/utils/block-share-targets'
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
+import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
 
 interface EditorContextMenuProps {
   ref?: Ref<ContextMenuHostRef>
@@ -53,6 +50,13 @@ const FILESYSTEM_SELECTION_SURFACES = new Set<ViewContext>([
   VIEW_CONTEXT.FOLDER_VIEW,
   VIEW_CONTEXT.TRASH_VIEW,
 ])
+
+type BlockShareAllPlayersPermissionLevel = 'hidden' | 'visible' | 'mixed'
+
+interface OptimisticBlockSharePermission {
+  targetKey: string
+  permissionLevel: Exclude<BlockShareAllPlayersPermissionLevel, 'mixed'>
+}
 
 export function EditorContextMenu({
   ref,
@@ -132,8 +136,23 @@ function useEditorContextMenuModel({
   const filesystemReadModel = useFileSystemReadModel()
   const editorMode = useEditorMode()
   const actorPermissions = useCampaignActorPermissions()
-  const blockShareMenu = useOptionalBlockShareMenu()
   const campaignMembersQuery = useCampaignMembers()
+  const blockShareTargets = getBlockShareTargetsFromContext(blockNoteContext)
+  const blockShare = useBlocksShare(blockShareTargets.blocks, blockShareTargets.note)
+  const blockShareTargetKey = getBlockShareTargetKey(
+    blockShareTargets,
+    blockShare.allPlayersPermissionLevel,
+  )
+  const [optimisticBlockSharePermission, setOptimisticBlockSharePermission] =
+    useState<OptimisticBlockSharePermission | null>(null)
+  const displayedAllPlayersPermissionLevel =
+    optimisticBlockSharePermission?.targetKey === blockShareTargetKey
+      ? optimisticBlockSharePermission.permissionLevel
+      : blockShare.allPlayersPermissionLevel
+  const optimisticBlockShareIsPending =
+    optimisticBlockSharePermission?.targetKey === blockShareTargetKey
+  const canToggleBlockShare =
+    blockShare.hasCompleteData && !blockShare.isMutating && !optimisticBlockShareIsPending
   const playerMembers =
     campaignMembersQuery.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
   const selectedItems = resolveClickedSidebarOperationItems({
@@ -178,17 +197,24 @@ function useEditorContextMenuModel({
       },
       blockShare: {
         canOpen: (context) =>
-          blockShareMenu !== null && getContextMenuBlockShareTargets(context).length > 0,
+          blockShare.canShare &&
+          blockShare.hasCompleteData &&
+          getContextMenuBlockShareTargets(context).length > 0,
+        canToggleAllPlayersPermission: () => canToggleBlockShare,
         getBlockCount: (context) => getContextMenuBlockShareTargets(context).length,
-        open: (context) => {
-          const blocks = getContextMenuBlockShareTargets(context)
-          if (!blockShareMenu || !context.note || !context.position || blocks.length === 0) return
-
-          blockShareMenu.open({
-            blocks,
-            note: context.note,
-            position: context.position,
-            title: getBlockShareTitle(blocks.length),
+        getAllPlayersPermissionLevel: () => displayedAllPlayersPermissionLevel,
+        toggleAllPlayersPermission: () => {
+          if (!canToggleBlockShare) return
+          const nextPermission =
+            displayedAllPlayersPermissionLevel === 'visible' ? 'hidden' : 'visible'
+          setOptimisticBlockSharePermission({
+            targetKey: blockShareTargetKey,
+            permissionLevel: nextPermission,
+          })
+          void blockShare.setAllPlayersPermission(nextPermission).then((updated) => {
+            if (!updated) {
+              setOptimisticBlockSharePermission(null)
+            }
           })
         },
       },
@@ -317,6 +343,21 @@ function getBlockNoteMenuContext(blockNoteContext: BlockNoteContextMenuContextTy
     valueInlineEditable: blockNoteContext.valueInlineEditable,
     openValueInline: blockNoteContext.openValueInline,
   }
+}
+
+function getBlockShareTargetsFromContext(blockNoteContext: BlockNoteContextMenuContextType | null) {
+  if (!blockNoteContext?.editor) return { blocks: [], note: undefined }
+  return {
+    blocks: getBlockShareTargetBlocks(blockNoteContext.editor, blockNoteContext.blockNoteId),
+    note: blockNoteContext.note,
+  }
+}
+
+function getBlockShareTargetKey(
+  { blocks, note }: ReturnType<typeof getBlockShareTargetsFromContext>,
+  permissionLevel: string,
+) {
+  return `${note?._id ?? 'no-note'}:${blocks.map((block) => block.id).join(',')}:${permissionLevel}`
 }
 
 function getContextMenuBlockShareTargets(context: EditorMenuContext) {

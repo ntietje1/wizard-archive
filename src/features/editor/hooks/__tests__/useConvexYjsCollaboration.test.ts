@@ -60,7 +60,7 @@ vi.mock('~/shared/hooks/useCampaignQuery', () => ({
   useCampaignQuery: (...args: Array<unknown>) => mockUseAuthQuery(...args),
 }))
 
-vi.mock('../../providers/convex-yjs-provider', () => ({
+vi.mock('~/shared/collaboration/convex-yjs-provider', () => ({
   ConvexYjsProvider: MockConvexYjsProvider,
   applyConvexYjsProviderRemoteAwareness: mockApplyRemoteAwareness,
   applyConvexYjsProviderRemoteUpdates: mockApplyRemoteUpdates,

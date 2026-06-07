@@ -125,6 +125,7 @@ export async function approvePlayerRequest(page: Page, playerEmail: string) {
     .catch(() => false)
   if (hasApprove) {
     await approveButton.click()
+    await expect(approveButton).not.toBeVisible({ timeout: 10000 })
   }
   await expect(playerRow.first()).toBeVisible({ timeout: 10000 })
   await page.keyboard.press('Escape')
@@ -219,15 +220,14 @@ export async function getVisibleBlockDragHandle(page: Page, blockText: string) {
   return dragHandle
 }
 
-export async function openBlockShareMenuFromEditorContextMenu(page: Page, blockText: string) {
-  const menu = page.getByTestId('block-share-menu')
+export async function shareBlockFromEditorContextMenu(page: Page, blockText: string) {
   const block = getBlockTextLocator(page, blockText)
 
   await block.click({ button: 'right' })
-  await page.getByRole('menuitem', { name: /^share 1 block$/i }).click()
-
-  await expectBlockShareMenuOpen(menu, /^share 1 block$/i)
-  return menu
+  await page.getByRole('menuitem', { name: /^share block$/i }).click()
+  await expect(page.getByRole('menuitem', { name: /^unshare block$/i })).toBeVisible({
+    timeout: 5000,
+  })
 }
 
 export async function rightMouseDownOnBlockText(page: Page, blockText: string) {
@@ -284,7 +284,7 @@ async function expectBlockShareMenuOpen(menu: Locator, title: RegExp) {
 }
 
 async function expectEditorBlockShareMenuItem(page: Page) {
-  await expect(page.getByRole('menuitem', { name: /^share 1 block$/i })).toBeVisible({
+  await expect(page.getByRole('menuitem', { name: /^(share|unshare) block$/i })).toBeVisible({
     timeout: 5000,
   })
 }

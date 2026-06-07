@@ -10,16 +10,17 @@ import {
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
 } from './drop-target-data'
+import { getSurfaceDropContribution } from './surface-drop-vocabulary'
 import type {
   CanvasDropZoneData,
   MapDropZoneData,
   NoteEditorDropZoneData,
   SidebarDropData,
 } from './drop-target-data'
+import type { SurfaceDropAction, SurfaceDropCommandIdForAction } from './surface-drop-vocabulary'
 
-type BatchDropAction = 'pin' | 'embed' | 'link'
-
-type SurfaceBatchDropBase<TAction extends BatchDropAction, TTarget> = {
+type SurfaceBatchDropBase<TAction extends SurfaceDropAction, TTarget> = {
+  commandId: SurfaceDropCommandIdForAction<TAction>
   action: TAction
   items: Array<AnySidebarItem>
   rejectedItems: Array<DropRejectedItem>
@@ -28,9 +29,21 @@ type SurfaceBatchDropBase<TAction extends BatchDropAction, TTarget> = {
 }
 
 type BatchDropTarget =
-  | { action: 'pin'; target: MapDropZoneData }
-  | { action: 'link'; target: NoteEditorDropZoneData }
-  | { action: 'embed'; target: CanvasDropZoneData }
+  | {
+      action: 'pin'
+      commandId: SurfaceDropCommandIdForAction<'pin'>
+      target: MapDropZoneData
+    }
+  | {
+      action: 'link'
+      commandId: SurfaceDropCommandIdForAction<'link'>
+      target: NoteEditorDropZoneData
+    }
+  | {
+      action: 'embed'
+      commandId: SurfaceDropCommandIdForAction<'embed'>
+      target: CanvasDropZoneData
+    }
 
 type DropRejectedItem = {
   item: AnySidebarItem
@@ -109,18 +122,21 @@ function createSurfaceBatchCommand(
     case 'pin':
       return {
         ...base,
+        commandId: batchTarget.commandId,
         action: 'pin',
         target: batchTarget.target,
       }
     case 'link':
       return {
         ...base,
+        commandId: batchTarget.commandId,
         action: 'link',
         target: batchTarget.target,
       }
     case 'embed':
       return {
         ...base,
+        commandId: batchTarget.commandId,
         action: 'embed',
         target: batchTarget.target,
       }
@@ -144,18 +160,21 @@ function createFailedSurfaceBatchCommand(
     case 'pin':
       return {
         ...base,
+        commandId: batchTarget.commandId,
         action: 'pin',
         target: batchTarget.target,
       }
     case 'link':
       return {
         ...base,
+        commandId: batchTarget.commandId,
         action: 'link',
         target: batchTarget.target,
       }
     case 'embed':
       return {
         ...base,
+        commandId: batchTarget.commandId,
         action: 'embed',
         target: batchTarget.target,
       }
@@ -166,12 +185,18 @@ function createFailedSurfaceBatchCommand(
 
 function resolveBatchDropTarget(target: SidebarDropData): BatchDropTarget | null {
   switch (target.type) {
-    case MAP_DROP_ZONE_TYPE:
-      return { action: 'pin', target }
-    case NOTE_EDITOR_DROP_TYPE:
-      return { action: 'link', target }
-    case CANVAS_DROP_ZONE_TYPE:
-      return { action: 'embed', target }
+    case MAP_DROP_ZONE_TYPE: {
+      const contribution = getSurfaceDropContribution('pin')
+      return { action: contribution.action, commandId: contribution.commandId, target }
+    }
+    case NOTE_EDITOR_DROP_TYPE: {
+      const contribution = getSurfaceDropContribution('link')
+      return { action: contribution.action, commandId: contribution.commandId, target }
+    }
+    case CANVAS_DROP_ZONE_TYPE: {
+      const contribution = getSurfaceDropContribution('embed')
+      return { action: contribution.action, commandId: contribution.commandId, target }
+    }
     default:
       return null
   }

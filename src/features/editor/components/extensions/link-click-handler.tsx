@@ -3,7 +3,6 @@ import { useNavigate } from '@tanstack/react-router'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import { handleError } from '~/shared/utils/logger'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { getLinkAt } from '~/features/editor/utils/link-hit-testing'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
@@ -199,7 +198,6 @@ export function LinkClickHandler({
   sourceNoteId?: Id<'sidebarItems'>
 }) {
   const navigate = useNavigate()
-  const { navigateToItem } = useEditorNavigation()
   const { campaign } = useCampaign()
   const campaignData = campaign.data
   const { editorMode } = useEditorMode()
@@ -329,8 +327,7 @@ export function LinkClickHandler({
 
       creatingLinks.add(creationKey)
       try {
-        const result = await createItem(feedback.createArgs)
-        if (result) void navigateToItem(result.slug)
+        await createItem(feedback.createArgs)
       } catch (error) {
         handleError(error, 'Failed to create note')
       } finally {
@@ -347,7 +344,6 @@ export function LinkClickHandler({
     editorEl,
     editorMode,
     navigate,
-    navigateToItem,
     sourceParentId,
   ])
 

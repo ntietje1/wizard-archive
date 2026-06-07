@@ -12,27 +12,27 @@ import { RollbackConfirmDialog } from '~/features/editor/components/viewer/rollb
 import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
+import type { ViewerProps } from '~/shared/viewer/viewer-props'
 
-export interface EditorViewerProps<T extends AnySidebarItemWithContent> {
-  item: T
-  search?: unknown
-}
+type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent>
 
-export function SidebarItemEditor({ item, search }: EditorViewerProps<AnySidebarItemWithContent>) {
-  const previewingEntryId = useHistoryPreviewStore((s) => s.previewingEntryId)
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
+export function SidebarItemEditor({ item }: SidebarItemEditorProps) {
+  const previewingEntryId = useHistoryPreviewStore((s) =>
+    s.preview?.itemId === item._id ? s.preview.entryId : null,
+  )
+  const clearItemSession = useHistoryPreviewStore((s) => s.clearItemSession)
 
   useEffect(() => {
-    clearPreview()
-  }, [item._id, clearPreview])
+    return () => clearItemSession(item._id)
+  }, [item._id, clearItemSession])
 
   if (previewingEntryId) {
     return (
       <>
         <ErrorBoundary FallbackComponent={ErrorFallback} key={`preview-${previewingEntryId}`}>
-          <HistoryPreviewViewer entryId={previewingEntryId} />
+          <HistoryPreviewViewer itemId={item._id} entryId={previewingEntryId} />
         </ErrorBoundary>
-        <RollbackConfirmDialog />
+        <RollbackConfirmDialog itemId={item._id} />
       </>
     )
   }
@@ -41,15 +41,15 @@ export function SidebarItemEditor({ item, search }: EditorViewerProps<AnySidebar
   const content = (() => {
     switch (loadedItem.type) {
       case SIDEBAR_ITEM_TYPES.notes:
-        return <NoteEditor item={loadedItem} search={search} />
+        return <NoteEditor item={loadedItem} />
       case SIDEBAR_ITEM_TYPES.gameMaps:
-        return <MapViewer key={loadedItem._id} item={loadedItem} search={search} />
+        return <MapViewer key={loadedItem._id} item={loadedItem} />
       case SIDEBAR_ITEM_TYPES.folders:
-        return <FolderViewer key={loadedItem._id} item={loadedItem} search={search} />
+        return <FolderViewer key={loadedItem._id} item={loadedItem} />
       case SIDEBAR_ITEM_TYPES.files:
-        return <FileViewer key={loadedItem._id} item={loadedItem} search={search} />
+        return <FileViewer key={loadedItem._id} item={loadedItem} />
       case SIDEBAR_ITEM_TYPES.canvases:
-        return <CanvasViewer key={loadedItem._id} item={loadedItem} search={search} />
+        return <CanvasViewer key={loadedItem._id} item={loadedItem} />
       default:
         return assertNever(loadedItem)
     }
@@ -60,7 +60,7 @@ export function SidebarItemEditor({ item, search }: EditorViewerProps<AnySidebar
       <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
         {content}
       </ErrorBoundary>
-      <RollbackConfirmDialog />
+      <RollbackConfirmDialog itemId={item._id} />
     </>
   )
 }

@@ -47,7 +47,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     createItem,
     getDefaultName,
     openParentFolders,
-    navigateToItem,
   })
 
   const [editMapDialog, setEditMapDialog] = useState<Id<'sidebarItems'> | null>(null)

@@ -53,6 +53,44 @@ describe('filesystem undo/redo hotkeys', () => {
 
     surface.remove()
   })
+
+  it('ignores stale editor selections when a non-editable item surface has focus', () => {
+    const undo = vi.fn().mockResolvedValue(undefined)
+    const editor = document.createElement('div')
+    editor.contentEditable = 'true'
+    editor.textContent = 'stale selection'
+    const surface = document.createElement('div')
+    surface.dataset.itemSurfaceHotkeyTarget = 'true'
+    surface.tabIndex = 0
+    document.body.append(editor, surface)
+    const range = document.createRange()
+    range.selectNodeContents(editor)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    surface.focus()
+
+    renderHook(() =>
+      useFileSystemUndoHotkeys({
+        canUndo: true,
+        canRedo: false,
+        undo,
+        redo: vi.fn().mockResolvedValue(undefined),
+      }),
+    )
+
+    act(() => {
+      surface.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }),
+      )
+    })
+
+    expect(undo).toHaveBeenCalledTimes(1)
+
+    selection?.removeAllRanges()
+    editor.remove()
+    surface.remove()
+  })
 })
 
 function createKeyboardEvent(

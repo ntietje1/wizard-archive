@@ -9,13 +9,19 @@ describe('canvas architecture boundaries', () => {
   it('keeps main editor entry points on the canvas-owned runtime and scene', () => {
     const viewer = readRepoFile('src/features/canvas/components/canvas-viewer.tsx')
     const runtime = readRepoFile('src/features/canvas/runtime/use-canvas-editor-runtime.ts')
+    const runtimeBase = readRepoFile(
+      'src/features/canvas/runtime/use-canvas-editor-runtime-base.ts',
+    )
     const coreRuntime = readRepoFile('src/features/canvas/runtime/use-canvas-core-runtime.ts')
 
     expect(viewer).toContain('useCanvasEditorRuntime')
     expect(viewer).toContain('CanvasScene')
-    expect(runtime).toContain('useCanvasCoreRuntime')
+    expect(runtime).toContain('useCanvasEditorRuntimeBase')
     expect(runtime).not.toContain('createCanvasEngine')
     expect(runtime).not.toContain('createCanvasViewportController')
+    expect(runtimeBase).toContain('useCanvasCoreRuntime')
+    expect(runtimeBase).not.toContain('createCanvasEngine')
+    expect(runtimeBase).not.toContain('createCanvasViewportController')
     expect(coreRuntime).toContain('createCanvasEngine')
     expect(coreRuntime).toContain('createCanvasViewportController')
   })

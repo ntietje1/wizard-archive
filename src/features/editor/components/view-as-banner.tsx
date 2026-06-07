@@ -20,7 +20,7 @@ export function ViewAsBanner() {
   return (
     <>
       {isActive && (
-        <div className="fixed inset-0 z-50 pointer-events-none border-[3px] border-primary/60 dark:border-primary/70" />
+        <div className="fixed inset-0 z-50 pointer-events-none border-[3px] border-mode-view-as-border" />
       )}
 
       {isActive && (

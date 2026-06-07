@@ -5,6 +5,7 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 
 interface DroppableFolderZoneProps extends HTMLAttributes<HTMLElement> {
   folder: Folder
@@ -31,8 +32,8 @@ export function DroppableFolderZone({
 
   const activeHighlight =
     isDropTarget && isTrashAction
-      ? 'ring-2 ring-inset ring-destructive/60 bg-destructive/5'
-      : 'ring-2 ring-inset ring-ring/60 bg-ring/5'
+      ? dropTargetChromeClass('destructive')
+      : dropTargetChromeClass('default')
 
   return (
     <section
@@ -44,7 +45,7 @@ export function DroppableFolderZone({
       className={cn(
         className,
         isNotTrashed && isDropTarget && activeHighlight,
-        isNotTrashed && isFileDropTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
+        isNotTrashed && isFileDropTarget && dropTargetChromeClass('file'),
       )}
       {...props}
     >

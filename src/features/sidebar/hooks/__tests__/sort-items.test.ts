@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'shared/editor/types'
-import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
+import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 
 const noteA = createNote({

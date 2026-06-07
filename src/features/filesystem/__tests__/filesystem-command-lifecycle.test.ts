@@ -111,11 +111,7 @@ describe('filesystem command lifecycle', () => {
       clientOperationId: 'operation-1',
     })
     expect(applyLifecycleIntents).toHaveBeenCalledWith(
-      [
-        { type: 'openFolder', campaignId, folderId: parent._id },
-        expect.objectContaining({ type: 'selectItem', slug: 'scene' }),
-        { type: 'navigateToItem', slug: 'scene' },
-      ],
+      [{ type: 'openFolder', campaignId, folderId: parent._id }],
       null,
     )
     expect(snapshot.sidebar).toEqual([parent, created])
@@ -250,18 +246,10 @@ describe('filesystem command lifecycle', () => {
     expect(applyLifecycleIntents).toHaveBeenCalledTimes(2)
     expect(applyLifecycleIntents).toHaveBeenNthCalledWith(
       1,
-      expect.arrayContaining([
-        { type: 'openFolder', campaignId, folderId: parent._id },
-        expect.objectContaining({ type: 'selectItem' }),
-        expect.objectContaining({ type: 'navigateToItem' }),
-      ]),
+      [{ type: 'openFolder', campaignId, folderId: parent._id }],
       'previous-scene',
     )
-    expect(applyLifecycleIntents).toHaveBeenNthCalledWith(
-      2,
-      [expect.objectContaining({ type: 'restorePreviousLocation' })],
-      'previous-scene',
-    )
+    expect(applyLifecycleIntents).toHaveBeenNthCalledWith(2, [], 'previous-scene')
     expect(showProgress).toHaveBeenCalledWith('Creating item...')
     expect(dismissProgress).toHaveBeenCalledWith('progress-toast')
     expect(reportError).toHaveBeenCalledWith(mutationError, 'Filesystem operation failed')

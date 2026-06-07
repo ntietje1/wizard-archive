@@ -75,6 +75,7 @@ export function useItemSurfaceRegistration({
 
   const itemSurfaceHotkeyProps = {
     [ITEM_SURFACE_HOTKEY_TARGET_ATTRIBUTE]: 'true',
+    tabIndex: -1,
   }
 
   return { activeSurface, activateSurface, handleSurfacePointerDown, itemSurfaceHotkeyProps }

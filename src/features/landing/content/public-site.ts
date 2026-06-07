@@ -22,8 +22,24 @@ export const publicSite = {
     storageKey: 'wizard-archive-privacy-preferences',
   },
   community: {
-    discordUrl: 'https://discord.gg/VhfzjsaXTD',
-    githubUrl: 'https://github.com/ntietje1/wizard-archive',
+    channels: [
+      {
+        id: 'discord',
+        label: 'Discord',
+        title: 'Discord',
+        body: 'Chat with other users, ask questions, share feedback, and follow product updates.',
+        action: 'Join Discord',
+        href: 'https://discord.gg/VhfzjsaXTD',
+      },
+      {
+        id: 'github',
+        label: 'GitHub',
+        title: 'GitHub',
+        body: 'View the project, follow development, report bugs, and request technical changes.',
+        action: 'View GitHub',
+        href: 'https://github.com/ntietje1/wizard-archive',
+      },
+    ],
   },
   trial: {
     days: 14,
@@ -59,8 +75,7 @@ export const publicSite = {
   },
   essentialVendors: ['Convex', 'Better Auth', 'Resend', 'Cloudflare', 'Stripe'],
   analyticsVendors: ['PostHog'],
-  errorMonitoringVendors: ['Sentry'],
-  vendors: ['Convex', 'Better Auth', 'Resend', 'Cloudflare', 'Stripe', 'PostHog', 'Sentry'],
+  vendors: ['Convex', 'Better Auth', 'Resend', 'Cloudflare', 'Stripe', 'PostHog'],
 } as const
 
 export const emailHref = (email: string) => `mailto:${email}`

@@ -1,8 +1,8 @@
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasCommands } from '../document/use-canvas-commands'
+import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { ContextMenuContributor, ContextMenuItemSpec } from '~/features/context-menu/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { CanvasArrangeAction } from '../document/canvas-arrange'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type {
@@ -49,6 +49,7 @@ export type CanvasContextMenuTarget =
     }
 
 type EmbedNodeTarget = Extract<CanvasContextMenuTarget, { kind: 'embed-node' }>
+export type CanvasEmbedNodeTarget = EmbedNodeTarget
 
 export type CanvasContextMenuReorderPayload = {
   kind: 'reorder'
@@ -67,14 +68,8 @@ export interface CanvasClipboardEntry {
 }
 
 export interface CanvasContextMenuServices {
-  canOpenEmbedTarget: (target: EmbedNodeTarget) => boolean
-  openEmbedTarget: (target: EmbedNodeTarget) => Promise<boolean>
   hasSelectableCanvasItems: () => boolean
   selectAllCanvasItems: () => void
-  createAndEmbedSidebarItem: (
-    type: SidebarItemType,
-    pointerPosition: CanvasContextMenuPoint,
-  ) => Promise<CanvasSelectionSnapshot | null>
   createTextNode: (pointerPosition: CanvasContextMenuPoint) => CanvasSelectionSnapshot | null
 }
 
@@ -93,3 +88,21 @@ export type CanvasContextMenuContributor = ContextMenuContributor<
   CanvasContextMenuContext,
   CanvasContextMenuServices
 >
+
+export interface CanvasContextMenuCreateItemContext {
+  campaignId: Id<'campaigns'>
+  canEdit: boolean
+  canvasParentId: Id<'sidebarItems'> | null
+  createNode: (node: CanvasDocumentNode) => void
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  setSelection: CanvasSelectionController['setSelection']
+}
+
+export interface CanvasContextMenuAdapters {
+  createItems?: (
+    context: CanvasContextMenuCreateItemContext,
+  ) => ReadonlyArray<CanvasContextMenuItem>
+  getTargetContributors?: (
+    target: CanvasContextMenuTarget,
+  ) => ReadonlyArray<CanvasContextMenuContributor>
+}

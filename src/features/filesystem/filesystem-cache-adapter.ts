@@ -4,8 +4,8 @@ import { createFileSystemReadModel } from 'shared/sidebar-items/filesystem/read-
 import type { FileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import { applyFileSystemPatchesToSidebarCache } from './filesystem-cache-patches'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
-import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/hooks/useSidebarItems'
-import type { SidebarItemsView } from '~/features/sidebar/hooks/useSidebarItems'
+import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/contexts/sidebar-items-context'
+import type { SidebarItemsView } from '~/features/sidebar/contexts/sidebar-items-context'
 
 export type FileSystemCacheAdapter = {
   getSnapshot: () => SidebarCacheSnapshot

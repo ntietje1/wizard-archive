@@ -4,7 +4,7 @@ import { NavBar } from '~/features/landing/components/nav-bar'
 
 export function PublicPageLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="dark min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       <NavBar />
       <div className="pt-16">{children}</div>
       <LandingFooter />

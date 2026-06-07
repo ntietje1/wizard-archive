@@ -456,7 +456,7 @@ describe('FileSystemProvider', () => {
     )
   })
 
-  it('selects and navigates to the optimistic item while create is pending', async () => {
+  it('inserts the optimistic item without opening it while create is pending', async () => {
     let resolveCreate: (receipt: FileSystemTransactionReceipt) => void = () => {}
     executeMutateAsync.mockReturnValueOnce(
       new Promise<FileSystemTransactionReceipt>((resolve) => {
@@ -475,9 +475,9 @@ describe('FileSystemProvider', () => {
     const optimisticItem = sidebarItems[0]
     expect(String(optimisticItem._id)).toMatch(/^optimistic-create-/)
     expect(optimisticItem.slug).toBe('scene')
-    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([optimisticItem._id])
-    expect(useSidebarUIStore.getState().selectedSlug).toBe(optimisticItem.slug)
-    expect(navigateToItemMock).toHaveBeenCalledWith(optimisticItem.slug, undefined)
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
+    expect(useSidebarUIStore.getState().selectedSlug).toBe(null)
+    expect(navigateToItemMock).not.toHaveBeenCalled()
     expect(toastLoadingMock).toHaveBeenCalledWith('Creating item...')
 
     act(() => resolveCreate(createReceipt()))
@@ -488,7 +488,7 @@ describe('FileSystemProvider', () => {
       ]),
     )
     await waitFor(() => expect(toastDismissMock).toHaveBeenCalledWith('toast-id'))
-    expect(navigateToItemMock).toHaveBeenCalledWith('scene', true)
+    expect(navigateToItemMock).not.toHaveBeenCalled()
   })
 
   it('runs undo and redo through transaction mutations', async () => {
@@ -1019,23 +1019,6 @@ describe('FileSystemProvider', () => {
     await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(useSidebarUIStore.getState().selectedItemIds).toEqual([]))
     expect(clearEditorContentMock).toHaveBeenCalled()
-  })
-
-  it('rolls back optimistic create state when optimistic navigation fails', async () => {
-    navigateToItemMock.mockRejectedValueOnce(new Error('navigation failed'))
-
-    render(
-      <FileSystemProvider>
-        <CreateButton />
-      </FileSystemProvider>,
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
-
-    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledTimes(1))
-    expect(executeMutateAsync).not.toHaveBeenCalled()
-    expect(sidebarItems).toEqual([])
-    expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(0)
   })
 
   it('generates a fresh client operation id for each forward command', async () => {

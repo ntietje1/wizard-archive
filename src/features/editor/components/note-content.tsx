@@ -23,7 +23,6 @@ import {
   resolveSidebarItemPermissionLevel,
 } from '~/features/sharing/utils/permission-utils'
 import { api } from 'convex/_generated/api'
-import { updateConvexYjsProviderUser } from '~/features/editor/providers/convex-yjs-provider'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
@@ -31,8 +30,9 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { BlockMeta, NoteWithContent } from 'shared/notes/types'
-import type { CSSProperties } from 'react'
-import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import type { CSSProperties, ReactNode } from 'react'
+import { updateConvexYjsProviderUser } from '~/shared/collaboration/convex-yjs-provider'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import type { CampaignActor } from 'shared/campaigns/actor'
 
 type NoteEditorChangeHandler = (
@@ -45,35 +45,23 @@ type NoteContentBaseProps = {
   editable: boolean
   className?: string
   style?: CSSProperties
-  children?: React.ReactNode
+  children?: ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }
 
 type LiveNoteContentProps = NoteContentBaseProps & {
   note: NoteWithContent
-  noteId?: never
-  content?: never
 }
-
-type RawNoteContentProps = NoteContentBaseProps & {
-  note?: never
-  noteId?: Id<'sidebarItems'>
-  content: Array<CustomBlock>
-}
-
-type NoteContentProps = LiveNoteContentProps | RawNoteContentProps
 
 export function NoteContent({
   note,
-  noteId,
-  content,
   editable,
   className,
   style,
   children,
   onEditorChange,
-}: NoteContentProps) {
-  const renderState = useNoteRenderState({ note, noteId, content, editable })
+}: LiveNoteContentProps) {
+  const renderState = useNoteRenderState({ note, editable })
   const editor =
     renderState.kind === 'editable' ? (
       <EditableNoteEditor note={renderState.note} style={style} onEditorChange={onEditorChange}>
@@ -99,17 +87,7 @@ export function NoteContent({
   )
 }
 
-function useNoteRenderState({
-  note,
-  noteId,
-  content,
-  editable,
-}: {
-  note?: NoteWithContent
-  noteId?: Id<'sidebarItems'>
-  content?: Array<CustomBlock>
-  editable: boolean
-}):
+function useNoteRenderState({ note, editable }: { note: NoteWithContent; editable: boolean }):
   | { kind: 'editable'; note: NoteWithContent }
   | {
       kind: 'static'
@@ -120,15 +98,6 @@ function useNoteRenderState({
     } {
   const { campaignActor, viewAsPlayerId } = useEditorMode()
   const { allItemsById } = useFileSystemReadModel()
-
-  if (!note) {
-    return {
-      kind: 'static',
-      noteId,
-      content: content ?? [],
-      evaluateValuesFromEditor: true,
-    }
-  }
 
   const hasEditAccess = effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.EDIT, {
     actor: campaignActor,
@@ -167,7 +136,7 @@ function StaticNoteEditor({
   content: Array<CustomBlock>
   evaluateValuesFromEditor: boolean
   style?: CSSProperties
-  children?: React.ReactNode
+  children?: ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
   const linkResolver = useLinkResolver(noteId, { isViewerMode: true })
@@ -215,7 +184,7 @@ function EditableNoteEditor({
 }: {
   note: NoteWithContent
   style?: CSSProperties
-  children?: React.ReactNode
+  children?: ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
@@ -225,6 +194,14 @@ function EditableNoteEditor({
     color: profile ? getCursorColor(profile._id) : '#61afef',
   }
   const session = useNoteYjsCollaboration(note._id, user, true)
+
+  if (session.error) {
+    return (
+      <div role="alert" className="min-h-8 text-sm text-muted-foreground">
+        Failed to load note content.
+      </div>
+    )
+  }
 
   if (session.isLoading || !session.doc || !session.provider) {
     return <div aria-label="Loading note content" className="min-h-8" />
@@ -259,7 +236,7 @@ function CollaborativeNoteEditor({
   provider: ConvexYjsProvider
   user: { name: string; color: string }
   style?: CSSProperties
-  children?: React.ReactNode
+  children?: ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
   const linkResolver = useLinkResolver(note._id, { isViewerMode: false })

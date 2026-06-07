@@ -1,7 +1,6 @@
 import { CollapseToggle } from './collapse-toggle'
 import { NotesNavButton } from './notes-nav-button'
 import { CampaignPlayersButton } from './campaign-players-button'
-import { SceneNavButton } from './scene-nav-button'
 import { UserMenu } from '~/features/auth/components/user-menu'
 import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
 import { BookmarksFilterButton } from '~/features/sidebar/components/sidebar-toolbar/bookmarks-filter-button'
@@ -31,7 +30,6 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex min-h-0">
         <div className="shrink-0 flex flex-col items-center px-0.5 space-y-1">
           <NotesNavButton />
-          <SceneNavButton />
           <CampaignPlayersButton />
           <div className="flex-1" />
           <div className="shrink-0">

@@ -12,6 +12,7 @@ import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
@@ -42,8 +43,8 @@ export function TrashPageViewer() {
         className={cn(
           'group/sidebar-surface flex flex-col h-full w-full min-h-0',
           isTrashDrag
-            ? 'ring-2 ring-inset ring-destructive/60 bg-destructive/5'
-            : isDropTarget && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
+            ? dropTargetChromeClass('destructive')
+            : isDropTarget && dropTargetChromeClass('default'),
         )}
       >
         {status === 'pending' ? (

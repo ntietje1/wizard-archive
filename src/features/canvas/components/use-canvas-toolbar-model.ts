@@ -22,7 +22,7 @@ import {
   resolveCanvasSelectionProperties,
 } from '../properties/resolve-canvas-selection-properties'
 import { useCanvasPropertySession } from '../properties/use-canvas-property-session'
-import { useOptionalActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useOptionalActiveSidebarItems } from '~/features/sidebar/contexts/sidebar-items-context'
 import { useShallow } from 'zustand/shallow'
 import type { CanvasEdgeType } from '~/features/canvas/domain/canvas-document'
 

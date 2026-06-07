@@ -1,4 +1,5 @@
 import type { Theme } from '~/shared/theme/types'
+import { getAppThemeColor } from '~/shared/theme/browser-chrome'
 
 export function resolveTheme(theme: Theme): 'dark' | 'light' {
   if (theme === 'system') {
@@ -17,6 +18,12 @@ export function applyThemeClass(resolved: 'dark' | 'light') {
   root.classList.remove(other)
   void root.offsetHeight
   root.classList.remove('no-transitions')
+  applyThemeColorMeta(resolved)
+}
+
+function applyThemeColorMeta(resolved: 'dark' | 'light') {
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+  meta?.setAttribute('content', getAppThemeColor(resolved))
 }
 
 export function getThemeCookie(): Theme | null {

@@ -28,13 +28,9 @@ function createReceiptEventGroups(receipt: FileSystemTransactionReceipt) {
 
 function isNavigationEvent(
   event: FileSystemEvent,
-  direction: FileSystemTransactionReceipt['direction'],
   currentSlug: string | null,
-): event is Extract<FileSystemEvent, { type: 'created' | 'renamed' }> {
-  return (
-    (event.type === 'created' && direction === 'forward') ||
-    (event.type === 'renamed' && event.previousSlug === currentSlug)
-  )
+): event is Extract<FileSystemEvent, { type: 'renamed' }> {
+  return event.type === 'renamed' && event.previousSlug === currentSlug
 }
 
 export function getReceiptRemovedRootIds(
@@ -111,9 +107,7 @@ export function getReceiptNavigationSlug(
   if (receipt.direction === 'undo') return null
 
   const events = createReceiptEventGroups(receipt)
-  const event = [...events.created, ...events.renamed].find((candidate) =>
-    isNavigationEvent(candidate, receipt.direction, currentSlug),
-  )
+  const event = events.renamed.find((candidate) => isNavigationEvent(candidate, currentSlug))
   return event?.slug ?? null
 }
 

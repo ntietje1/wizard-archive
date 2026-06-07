@@ -2,7 +2,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { ItemCard } from './item-card'
 import { NewItemCard } from './new-item-card'
 import { DroppableFolderZone } from './droppable-folder-zone'
-import type { EditorViewerProps } from '../sidebar-item-editor'
+import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { FolderWithContent } from 'shared/folders/types'
 import { CreateNewDashboard } from '~/features/editor/components/create-new-dashboard'
 import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -14,7 +14,7 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 
-export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithContent>) {
+export function FolderViewer({ item: folder }: ViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
   const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } = useTrashSidebarItems()
   const actorPermissions = useCampaignActorPermissions()

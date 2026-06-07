@@ -1,13 +1,24 @@
 import { SquareArrowOutUpRight } from 'lucide-react'
-import type { CanvasContextMenuContributor } from '../../runtime/context-menu/canvas-context-menu-types'
+import type {
+  CanvasContextMenuContributor,
+  CanvasEmbedNodeTarget,
+} from '../../runtime/context-menu/canvas-context-menu-types'
 
-export const embedNodeContextMenuContributors = [
-  {
+interface CreateEmbedNodeContextMenuContributorOptions {
+  canOpenEmbedTarget: (target: CanvasEmbedNodeTarget) => boolean
+  openEmbedTarget: (target: CanvasEmbedNodeTarget) => Promise<boolean>
+}
+
+export function createEmbedNodeContextMenuContributor({
+  canOpenEmbedTarget,
+  openEmbedTarget,
+}: CreateEmbedNodeContextMenuContributorOptions): CanvasContextMenuContributor {
+  return {
     id: 'embed-node-open',
     surfaces: ['canvas'],
-    applies: (context, services) =>
-      context.target.kind === 'embed-node' && services.canOpenEmbedTarget(context.target),
-    getItems: (context, services) => {
+    applies: (context) =>
+      context.target.kind === 'embed-node' && canOpenEmbedTarget(context.target),
+    getItems: (context) => {
       if (context.target.kind !== 'embed-node') {
         return []
       }
@@ -21,10 +32,10 @@ export const embedNodeContextMenuContributors = [
           group: 'navigation',
           priority: 0,
           onSelect: async () => {
-            await services.openEmbedTarget(target)
+            await openEmbedTarget(target)
           },
         },
       ]
     },
-  },
-] satisfies ReadonlyArray<CanvasContextMenuContributor>
+  }
+}

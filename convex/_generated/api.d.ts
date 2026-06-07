@@ -123,8 +123,6 @@ import type * as gameMaps_queries from "../gameMaps/queries.js";
 import type * as gameMaps_triggers from "../gameMaps/triggers.js";
 import type * as http from "../http.js";
 import type * as httpBridge from "../httpBridge.js";
-import type * as links_functions_getBacklinksForItem from "../links/functions/getBacklinksForItem.js";
-import type * as links_functions_getOutgoingLinksForNote from "../links/functions/getOutgoingLinksForNote.js";
 import type * as links_functions_resyncNoteLinksForNotes from "../links/functions/resyncNoteLinksForNotes.js";
 import type * as links_functions_syncNoteLinks from "../links/functions/syncNoteLinks.js";
 import type * as links_queries from "../links/queries.js";
@@ -366,8 +364,6 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/triggers": typeof gameMaps_triggers;
   http: typeof http;
   httpBridge: typeof httpBridge;
-  "links/functions/getBacklinksForItem": typeof links_functions_getBacklinksForItem;
-  "links/functions/getOutgoingLinksForNote": typeof links_functions_getOutgoingLinksForNote;
   "links/functions/resyncNoteLinksForNotes": typeof links_functions_resyncNoteLinksForNotes;
   "links/functions/syncNoteLinks": typeof links_functions_syncNoteLinks;
   "links/queries": typeof links_queries;

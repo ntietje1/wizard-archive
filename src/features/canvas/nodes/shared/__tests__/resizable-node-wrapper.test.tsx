@@ -52,12 +52,14 @@ describe('ResizableNodeWrapper', () => {
       transform: 'translate(10px, 20px)',
       width: '80px',
     })
-    expect(screen.getByTestId('canvas-pending-selection-preview-fill')).toHaveClass('bg-primary/5')
+    expect(screen.getByTestId('canvas-pending-selection-preview-fill')).toHaveClass(
+      'bg-canvas-selection-fill',
+    )
     expect(screen.getByTestId('canvas-node-selection-indicator')).toHaveStyle({
       borderWidth: '1.5px',
       borderRadius: '2px',
       inset: '-3px',
-      opacity: '0.55',
+      opacity: 'var(--canvas-selection-indicator-opacity)',
     })
     expect(screen.queryByTestId('selection-border')).toBeNull()
     expect(screen.queryByTestId('canvas-selection-resize-wrapper')).toBeNull()
@@ -91,7 +93,9 @@ describe('ResizableNodeWrapper', () => {
     expect(screen.getByTestId('canvas-selection-resize-wrapper')).toBeInTheDocument()
     expect(screen.getByTestId('canvas-selection-resize-fill')).toBeInTheDocument()
     expect(screen.getByTestId('canvas-selection-resize-outline')).toBeInTheDocument()
-    expect(screen.getByTestId('canvas-selection-resize-fill')).toHaveClass('bg-primary/5')
+    expect(screen.getByTestId('canvas-selection-resize-fill')).toHaveClass(
+      'bg-canvas-selection-fill',
+    )
     expect(screen.queryByTestId('canvas-node-selection-indicator')).toBeNull()
     expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
     expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
@@ -131,12 +135,12 @@ describe('ResizableNodeWrapper', () => {
     const nodeIndicators = screen.getAllByTestId('canvas-node-selection-indicator')
     expect(nodeIndicators).toHaveLength(2)
     const nodeIndicatorStyle = nodeIndicators[0].getAttribute('style') ?? ''
-    expect(nodeIndicatorStyle).toContain('border-color: var(--primary)')
+    expect(nodeIndicatorStyle).toContain('border-color: var(--canvas-selection-stroke)')
     expect(nodeIndicatorStyle).toContain('border-style: solid')
     expect(nodeIndicatorStyle).toContain('border-width: 1.5px')
     expect(nodeIndicatorStyle).toContain('border-radius: 2px')
     expect(nodeIndicatorStyle).toContain('inset: -3px')
-    expect(nodeIndicatorStyle).toContain('opacity: 0.55')
+    expect(nodeIndicatorStyle).toContain('opacity: var(--canvas-selection-indicator-opacity)')
     expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
     expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
   })
@@ -189,7 +193,7 @@ describe('ResizableNodeWrapper', () => {
       borderWidth: '1.5px',
       borderRadius: '2px',
       inset: '-3px',
-      opacity: '0.55',
+      opacity: 'var(--canvas-selection-indicator-opacity)',
     })
 
     act(() => {
@@ -200,7 +204,7 @@ describe('ResizableNodeWrapper', () => {
       borderWidth: '0.75px',
       borderRadius: '1px',
       inset: '-1.5px',
-      opacity: '0.55',
+      opacity: 'var(--canvas-selection-indicator-opacity)',
     })
   })
 

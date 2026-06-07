@@ -30,7 +30,7 @@ function DragOverlayContent({ dragState }: { dragState: DragOverlayState }) {
         <span className="text-muted-foreground whitespace-nowrap text-xs">{outcome.label}</span>
       )}
       {outcome?.type === 'operation' && rejectedItemCount && (
-        <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 whitespace-nowrap text-xs">
+        <span className="text-feedback-warning flex items-center gap-1 whitespace-nowrap text-xs">
           <AlertTriangle className="size-3" aria-hidden="true" />
           {rejectedItemCount === 1
             ? '1 item cannot be included'

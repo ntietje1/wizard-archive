@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
-import { embedNodeContextMenuContributors } from '../../../nodes/embed/embed-node-context-menu'
+import { createEmbedNodeContextMenuContributor } from '../../../nodes/embed/embed-node-context-menu'
 import { buildCanvasContextMenu } from '../canvas-context-menu-registry'
 import type {
   CanvasContextMenuContext,
+  CanvasContextMenuItem,
   CanvasContextMenuServices,
 } from '../canvas-context-menu-types'
 import { testId } from '~/test/helpers/test-id'
@@ -12,11 +13,8 @@ function createServices(
   overrides: Partial<CanvasContextMenuServices> = {},
 ): CanvasContextMenuServices {
   return {
-    canOpenEmbedTarget: () => false,
-    openEmbedTarget: vi.fn(() => Promise.resolve(true)),
     hasSelectableCanvasItems: () => false,
     selectAllCanvasItems: vi.fn(),
-    createAndEmbedSidebarItem: vi.fn(() => Promise.resolve(null)),
     createTextNode: vi.fn(() => null),
     ...overrides,
   }
@@ -48,54 +46,52 @@ describe('buildCanvasContextMenu', () => {
       'canvas-pane-select-all',
       'canvas-paste',
     ])
-    expect(menu.flatItems[0]?.children?.map((item) => item.id)).toEqual([
-      'canvas-pane-create-note',
-      'canvas-pane-create-folder',
-      'canvas-pane-create-map',
-      'canvas-pane-create-canvas',
-      'canvas-pane-create-file',
-      'canvas-pane-create-text',
-    ])
+    expect(menu.flatItems[0]?.children?.map((item) => item.id)).toEqual(['canvas-pane-create-text'])
     expect(menu.flatItems[1]?.disabled).toBe(true)
     expect(menu.flatItems[2]?.disabled).toBe(true)
   })
 
-  it('adds separated text-node creation to the pane New submenu', async () => {
+  it('adds injected create items before text-node creation in the pane New submenu', async () => {
+    const createNote = vi.fn()
     const createTextNode = vi.fn(() => null)
     const services = {
       ...createServices(),
       createTextNode,
     }
     const context = createContext()
+    const createItems: Array<CanvasContextMenuItem> = [
+      {
+        id: 'canvas-pane-create-note',
+        label: 'Note',
+        group: 'create',
+        priority: 10,
+        onSelect: createNote,
+      },
+    ]
     const menu = buildCanvasContextMenu({
       context,
       services,
       commands: createCommands(),
+      createItems,
     })
 
     const createSubmenu = menu.flatItems.find((item) => item.id === 'canvas-pane-create-submenu')
     expect(createSubmenu?.children?.map((item) => item.id)).toEqual([
       'canvas-pane-create-note',
-      'canvas-pane-create-folder',
-      'canvas-pane-create-map',
-      'canvas-pane-create-canvas',
-      'canvas-pane-create-file',
       'canvas-pane-create-text',
     ])
-    expect(createSubmenu?.children?.map((item) => item.group)).toEqual([
-      'create',
-      'create',
-      'create',
-      'create',
-      'create',
-      'create-node',
-    ])
+    expect(createSubmenu?.children?.map((item) => item.group)).toEqual(['create', 'create-node'])
+
+    const noteItem = createSubmenu!.children!.find((item) => item.id === 'canvas-pane-create-note')
+    expect(noteItem).toBeDefined()
 
     const textItem = createSubmenu!.children!.find((item) => item.id === 'canvas-pane-create-text')
     expect(textItem).toBeDefined()
 
+    await noteItem!.onSelect()
     await textItem!.onSelect()
 
+    expect(createNote).toHaveBeenCalledWith(context, services, undefined)
     expect(createTextNode).toHaveBeenCalledWith(context.pointerPosition)
   })
 
@@ -256,12 +252,9 @@ describe('buildCanvasContextMenu', () => {
     })
   })
 
-  it('merges node contributors that now expose direct actions instead of command ids', async () => {
+  it('merges injected node contributors that expose direct actions', async () => {
     const openEmbedTarget = vi.fn(() => Promise.resolve(true))
-    const services = createServices({
-      canOpenEmbedTarget: () => true,
-      openEmbedTarget,
-    })
+    const services = createServices()
     const selection = { nodeIds: new Set(['embed-1']), edgeIds: new Set<string>() }
     const menu = buildCanvasContextMenu({
       context: createContext({
@@ -275,7 +268,12 @@ describe('buildCanvasContextMenu', () => {
       }),
       services,
       commands: createCommands(),
-      contributors: embedNodeContextMenuContributors,
+      contributors: [
+        createEmbedNodeContextMenuContributor({
+          canOpenEmbedTarget: () => true,
+          openEmbedTarget,
+        }),
+      ],
     })
 
     expect(menu.flatItems.map((item) => item.id)).toContain('embed-node-open')

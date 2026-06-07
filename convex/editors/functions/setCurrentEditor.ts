@@ -1,4 +1,4 @@
-import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../../../shared/editor/types'
+import { DEFAULT_SORT_OPTIONS, EDITOR_MODE } from '../../../shared/editor/types'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { EditorMode, SortDirection, SortOrder } from '../../../shared/editor/types'
@@ -26,8 +26,8 @@ export async function setCurrentEditor(
     return await ctx.db.insert('editor', {
       userId,
       campaignId,
-      sortOrder: sortOrder ?? SORT_ORDERS.DateCreated,
-      sortDirection: sortDirection ?? SORT_DIRECTIONS.Ascending,
+      sortOrder: sortOrder ?? DEFAULT_SORT_OPTIONS.order,
+      sortDirection: sortDirection ?? DEFAULT_SORT_OPTIONS.direction,
       editorMode: editorMode ?? EDITOR_MODE.EDITOR,
     })
   }

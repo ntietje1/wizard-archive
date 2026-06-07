@@ -15,6 +15,8 @@ import {
   EMPTY_EDITOR_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
 import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
+import { executeRegisteredSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-command'
+import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-planner'
 import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
@@ -84,6 +86,7 @@ async function executeElementDrop(
   ctx: DndMonitorCtx,
   sourceData: Record<string, unknown>,
   targetData: Record<string, unknown>,
+  input: { clientX: number; clientY: number },
   options: FileSystemDropOptions,
 ) {
   const draggedItems = resolveDraggedItems(sourceData, ctx)
@@ -102,7 +105,19 @@ async function executeElementDrop(
   }
 
   const fileSystemTarget = resolveFileSystemDropTarget(resolvedTarget, ctx.dropPlanningContext)
-  if (!fileSystemTarget) return
+  if (!fileSystemTarget) {
+    const surfaceCommand = resolveSurfaceDropCommand(
+      draggedItems,
+      resolvedTarget,
+      ctx.dropPlanningContext,
+    )
+    await executeRegisteredSurfaceDropCommand({
+      command: surfaceCommand,
+      input,
+      setBatchDecision: useDndStore.getState().setBatchDecision,
+    })
+    return
+  }
 
   await ctx.dndContext.executeFileSystemDrop({
     itemIds: draggedItems.map((item) => item._id),
@@ -269,6 +284,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
             ctx,
             source.data,
             topTarget.data,
+            location.current.input,
             globalDropOptionsFromInput(location.current.input),
           )
         }

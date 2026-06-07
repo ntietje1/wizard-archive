@@ -39,6 +39,10 @@ const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   [PERMISSION_LEVEL.FULL_ACCESS]: 'Full access',
 }
 
+function parseBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null
+}
+
 function permissionLabel(level: NullableAggregatePermissionLevel): string {
   if (level === 'mixed') return 'Mixed'
   return PERMISSION_LABELS[level ?? PERMISSION_LEVEL.NONE] ?? 'None'
@@ -77,7 +81,7 @@ export function SharePermissionMenu({
   onSetAllPlayersPermission,
   onSetInheritShares,
 }: SharePermissionMenuProps) {
-  const [showPlayers, setShowPlayers] = usePersistedState('share-show-players', false)
+  const [showPlayers, setShowPlayers] = usePersistedState('share-show-players', false, parseBoolean)
   const isDisabled = isMutating || isPending
 
   if (isPending) {

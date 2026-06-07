@@ -8,6 +8,7 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { MAP_DROP_ZONE_TYPE, SIDEBAR_ROOT_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
+import { registerSurfaceDropExecutor } from '~/features/dnd/utils/surface-drop-command'
 
 const monitorForElements = vi.fn()
 
@@ -235,6 +236,56 @@ describe('useElementDragMonitor', () => {
       label: 'Pin item to "World Map"',
     })
     expect(result.current.dragState?.rejectedItemCount).toBe(1)
+  })
+
+  it('dispatches registered surface executors from the central monitor', async () => {
+    const note = createNote()
+    const ctx = createMonitorCtx([note])
+    const ctxRef = {
+      current: ctx,
+    } as React.RefObject<DndMonitorCtx>
+    const target = {
+      type: MAP_DROP_ZONE_TYPE,
+      mapId: testId<'sidebarItems'>('map_1'),
+      mapName: 'World Map',
+      pinnedItemIds: [],
+    }
+    const execute = vi.fn(() => Promise.resolve())
+    const dispose = registerSurfaceDropExecutor({
+      action: 'pin',
+      target,
+      execute,
+    })
+
+    try {
+      renderHook(() => useElementDragMonitor(ctxRef))
+      const monitor = getElementMonitor()
+
+      await act(async () => {
+        await monitor.onDrop({
+          source: createSidebarSource(note._id, [note._id]),
+          location: {
+            current: {
+              input: { clientX: 20, clientY: 30 },
+              dropTargets: [{ data: target }],
+            },
+          },
+        })
+      })
+
+      expect(ctx.dndContext.executeFileSystemDrop).not.toHaveBeenCalled()
+      expect(execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'ready',
+          commandId: 'surface-drop.pin-sidebar-item-to-map',
+          action: 'pin',
+          items: [note],
+        }),
+        { clientX: 20, clientY: 30 },
+      )
+    } finally {
+      dispose()
+    }
   })
 
   it('executes ctrl-drag note drops onto folders as one copy operation', async () => {

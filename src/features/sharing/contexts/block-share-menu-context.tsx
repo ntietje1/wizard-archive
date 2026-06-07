@@ -101,7 +101,9 @@ function BlockShareFloatingMenu({
         isMutating={isMutating}
         shareItems={shareItems}
         allPlayersPermissionLevel={allPlayersPermissionLevel}
-        onSetAllPlayersPermission={setAllPlayersPermission}
+        onSetAllPlayersPermission={async (value) => {
+          await setAllPlayersPermission(value)
+        }}
         onSetMemberPermission={setMemberPermission}
       />
     </div>

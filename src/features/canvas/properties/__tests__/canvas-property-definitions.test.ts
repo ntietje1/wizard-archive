@@ -35,5 +35,9 @@ describe('canvas property definitions', () => {
       label: 'Clear',
       value: { color: 'var(--background)', opacity: 0 },
     })
+    expect(fillCanvasProperty.options[3]).toMatchObject({
+      label: 'Red',
+      value: { color: 'var(--bg-red)', opacity: 100 },
+    })
   })
 })

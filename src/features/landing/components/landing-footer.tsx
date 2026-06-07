@@ -31,6 +31,18 @@ function FooterColumn({
   )
 }
 
+const configuredCommunityLinks: Array<{ label: string; href: string; external: true }> = []
+
+for (const channel of publicSite.community.channels) {
+  if (channel.href.length > 0) {
+    configuredCommunityLinks.push({
+      label: channel.label,
+      href: channel.href,
+      external: true,
+    })
+  }
+}
+
 export function LandingFooter() {
   return (
     <footer className="border-t border-border/20 bg-secondary/10 py-16">
@@ -58,12 +70,7 @@ export function LandingFooter() {
             title="Community"
             links={[
               { label: 'Community', href: publicSite.routes.community },
-              { label: 'Discord', href: publicSite.community.discordUrl, external: true },
-              {
-                label: 'GitHub',
-                href: publicSite.community.githubUrl,
-                external: true,
-              },
+              ...configuredCommunityLinks,
             ]}
           />
 

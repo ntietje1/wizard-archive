@@ -229,7 +229,7 @@ function TrashPopoverItem({
             variant="ghost"
             size="sm"
             className={cn(
-              'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
+              'size-6 p-0 hover:bg-item-action-hover rounded-sm',
               sidebarItemActionButtonClass(visualState),
             )}
             onClick={(event) => {
@@ -248,7 +248,7 @@ function TrashPopoverItem({
             variant="ghost"
             size="sm"
             className={cn(
-              'size-6 p-0 hover:text-destructive hover:bg-muted-foreground/10 rounded-sm',
+              'size-6 p-0 hover:text-destructive hover:bg-item-action-hover rounded-sm',
               sidebarItemActionButtonClass(visualState),
             )}
             onClick={(event) => {

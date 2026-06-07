@@ -104,14 +104,18 @@ const baseViewAsPlayerService: ViewAsPlayerMenuService = {
 
 interface TestBlockShareService {
   canOpen: (context: MenuContext) => boolean
+  canToggleAllPlayersPermission: (context: MenuContext) => boolean
   getBlockCount: (context: MenuContext) => number
-  open: (context: MenuContext) => void
+  getAllPlayersPermissionLevel: (context: MenuContext) => 'hidden' | 'visible' | 'mixed'
+  toggleAllPlayersPermission: (context: MenuContext) => void
 }
 
 const baseBlockShareService: TestBlockShareService = {
   canOpen: vi.fn(() => false),
+  canToggleAllPlayersPermission: vi.fn(() => true),
   getBlockCount: vi.fn(() => 0),
-  open: vi.fn(),
+  getAllPlayersPermissionLevel: vi.fn((): 'hidden' => 'hidden'),
+  toggleAllPlayersPermission: vi.fn(),
 }
 
 function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
@@ -247,8 +251,19 @@ describe('buildMenu', () => {
     const createNew = menu.flatItems.find((i) => i.id === 'create-new-submenu')
     expect(createNew).toBeDefined()
     expect(createNew).toMatchObject({ label: 'New...' })
-    expect(createNew!.children).toBeDefined()
-    expect(createNew!.children!.length).toBeGreaterThan(0)
+    expect(
+      createNew!.children?.map((item) => ({
+        id: item.id,
+        commandId: item.commandId,
+        label: item.label,
+      })),
+    ).toEqual([
+      { id: 'submenu-create-note', commandId: 'createNote', label: 'Note' },
+      { id: 'submenu-create-folder', commandId: 'createFolder', label: 'Folder' },
+      { id: 'submenu-create-map', commandId: 'createMap', label: 'Map' },
+      { id: 'submenu-create-canvas', commandId: 'createCanvas', label: 'Canvas' },
+      { id: 'submenu-create-file', commandId: 'createFile', label: 'File' },
+    ])
   })
 
   it('player without full access does not see rename/delete', () => {
@@ -456,6 +471,48 @@ describe('buildMenu', () => {
     )
   })
 
+  it('only shows right-sidebar panels supported by the current item type', () => {
+    const note = createNote()
+    const file = createFile()
+    const noteMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const fileMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: file,
+        primaryItem: file,
+        selectedItems: [file],
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(noteMenu.flatItems.map((menuItem) => menuItem.id)).toEqual(
+      expect.arrayContaining([
+        'panel-history',
+        'panel-backlinks',
+        'panel-outgoing',
+        'panel-outline',
+      ]),
+    )
+    expect(fileMenu.flatItems.map((menuItem) => menuItem.id)).toContain('panel-history')
+    expect(fileMenu.flatItems.map((menuItem) => menuItem.id)).not.toEqual(
+      expect.arrayContaining(['panel-backlinks', 'panel-outgoing', 'panel-outline']),
+    )
+  })
+
   it('shows value editing only for editable value inline content', () => {
     const valueMenu = buildMenu({
       context: sidebarCtx({
@@ -500,8 +557,8 @@ describe('buildMenu', () => {
     expect(generalNoteMenu.flatItems.map((item) => item.id)).not.toContain('edit-value-inline')
   })
 
-  it('opens block sharing from the note editor context menu', async () => {
-    const openBlockShare = vi.fn()
+  it('shares hidden blocks with all players from the note editor context menu', async () => {
+    const toggleAllPlayersPermission = vi.fn()
     const menu = buildMenu({
       context: sidebarCtx({
         surface: VIEW_CONTEXT.NOTE_VIEW,
@@ -513,7 +570,8 @@ describe('buildMenu', () => {
         blockShare: {
           canOpen: () => true,
           getBlockCount: () => 2,
-          open: openBlockShare,
+          getAllPlayersPermissionLevel: () => 'hidden',
+          toggleAllPlayersPermission,
         },
       }),
       contributors: editorContextMenuContributors,
@@ -527,14 +585,81 @@ describe('buildMenu', () => {
     expect(shareBlocksItem).toMatchObject({
       label: 'Share 2 Blocks',
       group: 'share',
-      closeOnSelect: true,
+      closeOnSelect: false,
     })
 
     await shareBlocksItem?.onSelect()
 
-    expect(openBlockShare).toHaveBeenCalledExactlyOnceWith(
+    expect(toggleAllPlayersPermission).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ blockNoteId: 'block-1' }),
     )
+  })
+
+  it('unshares all-player-visible blocks from the note editor context menu', async () => {
+    const toggleAllPlayersPermission = vi.fn()
+    const menu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: createNote(),
+        selectedItems: [],
+        blockNoteId: 'block-1' as never,
+      }),
+      services: createServices({
+        blockShare: {
+          canOpen: () => true,
+          getBlockCount: () => 1,
+          getAllPlayersPermissionLevel: () => 'visible',
+          toggleAllPlayersPermission,
+        },
+      }),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const shareBlocksItem = menu.flatItems.find((item) => item.id === 'share-blocks')
+
+    expect(shareBlocksItem).toMatchObject({
+      label: 'Unshare Block',
+      group: 'share',
+      closeOnSelect: false,
+    })
+
+    await shareBlocksItem?.onSelect()
+
+    expect(toggleAllPlayersPermission).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ blockNoteId: 'block-1' }),
+    )
+  })
+
+  it('keeps the optimistic block share item visible but disabled while a toggle is pending', () => {
+    const menu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: createNote(),
+        selectedItems: [],
+        blockNoteId: 'block-1' as never,
+      }),
+      services: createServices({
+        blockShare: {
+          canOpen: () => true,
+          canToggleAllPlayersPermission: () => false,
+          getBlockCount: () => 1,
+          getAllPlayersPermissionLevel: () => 'visible',
+        },
+      }),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const shareBlocksItem = menu.flatItems.find((item) => item.id === 'share-blocks')
+
+    expect(shareBlocksItem).toMatchObject({
+      label: 'Unshare Block',
+      disabled: true,
+      closeOnSelect: false,
+    })
   })
 
   it('shows paste on editor text content and removes the temporary test editor item', async () => {

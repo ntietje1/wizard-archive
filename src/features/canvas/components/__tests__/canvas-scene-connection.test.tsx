@@ -73,6 +73,10 @@ const targetNode: Node = {
   data: {},
 }
 
+function TestNodeContent() {
+  return null
+}
+
 let engine: ReturnType<typeof createCanvasEngine> | null = null
 let domRuntime: ReturnType<typeof createCanvasDomRuntime> | null = null
 
@@ -125,6 +129,7 @@ function renderScene({
           canEdit={canEdit}
           remoteUsers={[]}
           sceneHandlers={{ createEdgeFromConnection }}
+          NodeContentComponent={TestNodeContent}
           onNodeContextMenu={onNodeContextMenu}
           onEdgeContextMenu={vi.fn()}
           onPaneContextMenu={vi.fn()}

@@ -18,7 +18,7 @@ export function selectableSidebarRow(page: Page, name: string) {
 }
 
 export function folderContents(page: Page, folderName: string) {
-  return page.getByRole('group', { name: `${folderName} folder contents` })
+  return page.getByRole('region', { name: `${folderName} folder contents` })
 }
 
 export function folderItemLink(page: Page, folderName: string, itemName: string) {
@@ -164,6 +164,7 @@ export async function selectSidebarItems(page: Page, names: Array<string>) {
         : ({ modifiers: [modifier], timeout: 5000 } satisfies Parameters<Locator['click']>[0])
     await clickUntilSelected(page, name, options)
   }
+  await sidebarNavigation(page).locator('[data-item-surface-hotkey-target="true"]').first().focus()
 }
 
 async function clickUntilSelected(
@@ -173,10 +174,10 @@ async function clickUntilSelected(
 ) {
   const row = selectableSidebarRow(page, name)
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    if ((await row.getAttribute('aria-selected').catch(() => null)) === 'true') return
+    if ((await row.getAttribute('data-selected').catch(() => null)) === 'true') return
     await clickSidebarSelectionTarget(page, name, options, attempt)
     try {
-      await expect(row).toHaveAttribute('aria-selected', 'true', { timeout: 2500 })
+      await expect(row).toHaveAttribute('data-selected', 'true', { timeout: 2500 })
       return
     } catch {
       // Retry the same visible user action; under load the first click can be lost to navigation.
@@ -292,7 +293,7 @@ export async function focusFolderContents(page: Page, folderName: string) {
 }
 
 export async function expectSelected(page: Page, name: string) {
-  await expect(selectableSidebarRow(page, name)).toHaveAttribute('aria-selected', 'true', {
+  await expect(selectableSidebarRow(page, name)).toHaveAttribute('data-selected', 'true', {
     timeout: SIDEBAR_WAIT_TIMEOUT,
   })
 }

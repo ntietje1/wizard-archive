@@ -3,7 +3,6 @@ import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { createServerFn } from '@tanstack/react-start'
 import { LazyMotion, domAnimation } from 'motion/react'
-import { Toaster } from 'sonner'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import type { PanelPreference } from 'shared/user-preferences/types'
 import type { Theme } from '~/shared/theme/types'
@@ -15,6 +14,7 @@ import { prefetchUserPreferences } from '~/shared/user-preferences/user-preferen
 import { authClient } from '~/features/auth/utils/auth-client'
 import { getToken } from '~/features/auth/utils/auth-server'
 import { logger } from '~/shared/utils/logger'
+import { Toaster } from '~/features/shadcn/components/sonner'
 
 const fetchAuthToken = createServerFn({ method: 'GET' }).handler(async () => {
   return await getToken()

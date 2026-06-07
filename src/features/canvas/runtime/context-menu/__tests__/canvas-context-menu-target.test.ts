@@ -40,13 +40,10 @@ describe('resolveCanvasContextMenuTarget', () => {
   it('returns a pane target for an empty selection', () => {
     expect(
       resolveCanvasContextMenuTarget(selectionSnapshot(), createContextMenuSnapshot()),
-    ).toEqual({
-      target: { kind: 'pane' },
-      contributors: [],
-    })
+    ).toEqual({ kind: 'pane' })
   })
 
-  it('returns an embed-node target with contributors for a single valid embed selection', () => {
+  it('returns an embed-node target for a single valid embed selection', () => {
     const snapshot = createContextMenuSnapshot({
       nodes: [
         {
@@ -65,16 +62,11 @@ describe('resolveCanvasContextMenuTarget', () => {
       snapshot,
     )
 
-    expect(resolved.target).toEqual({
+    expect(resolved).toEqual({
       kind: 'embed-node',
       nodeId: 'embed-1',
       nodeType: 'embed',
       sidebarItemId: 'note-1',
-    })
-    expect(resolved.contributors).toHaveLength(1)
-    expect(resolved.contributors[0]).toMatchObject({
-      id: 'embed-node-open',
-      surfaces: ['canvas'],
     })
   })
 
@@ -103,10 +95,7 @@ describe('resolveCanvasContextMenuTarget', () => {
         selectionSnapshot({ nodeIds: new Set(['node-1']), edgeIds: new Set(['edge-1']) }),
         snapshot,
       ),
-    ).toEqual({
-      target: { kind: 'mixed-selection', nodeIds: ['node-1'], edgeIds: ['edge-1'] },
-      contributors: [],
-    })
+    ).toEqual({ kind: 'mixed-selection', nodeIds: ['node-1'], edgeIds: ['edge-1'] })
   })
 
   it('preserves a shared node type for valid multi-node selections', () => {
@@ -133,12 +122,9 @@ describe('resolveCanvasContextMenuTarget', () => {
         snapshot,
       ),
     ).toEqual({
-      target: {
-        kind: 'node-selection',
-        nodeIds: ['text-1', 'text-2'],
-        nodeType: 'text',
-      },
-      contributors: [],
+      kind: 'node-selection',
+      nodeIds: ['text-1', 'text-2'],
+      nodeType: 'text',
     })
   })
 
@@ -168,12 +154,9 @@ describe('resolveCanvasContextMenuTarget', () => {
         snapshot,
       ),
     ).toEqual({
-      target: {
-        kind: 'node-selection',
-        nodeIds: ['text-1', 'embed-1'],
-        nodeType: null,
-      },
-      contributors: [],
+      kind: 'node-selection',
+      nodeIds: ['text-1', 'embed-1'],
+      nodeType: null,
     })
   })
 
@@ -195,12 +178,9 @@ describe('resolveCanvasContextMenuTarget', () => {
         snapshot,
       ),
     ).toEqual({
-      target: {
-        kind: 'node-selection',
-        nodeIds: ['text-1'],
-        nodeType: 'text',
-      },
-      contributors: [],
+      kind: 'node-selection',
+      nodeIds: ['text-1'],
+      nodeType: 'text',
     })
   })
 
@@ -228,12 +208,9 @@ describe('resolveCanvasContextMenuTarget', () => {
         snapshot,
       ),
     ).toEqual({
-      target: {
-        kind: 'edge-selection',
-        edgeIds: ['edge-1', 'edge-2'],
-        edgeType: 'step',
-      },
-      contributors: [],
+      kind: 'edge-selection',
+      edgeIds: ['edge-1', 'edge-2'],
+      edgeType: 'step',
     })
   })
 
@@ -261,12 +238,9 @@ describe('resolveCanvasContextMenuTarget', () => {
         snapshot,
       ),
     ).toEqual({
-      target: {
-        kind: 'edge-selection',
-        edgeIds: ['edge-1', 'edge-2'],
-        edgeType: null,
-      },
-      contributors: [],
+      kind: 'edge-selection',
+      edgeIds: ['edge-1', 'edge-2'],
+      edgeType: null,
     })
   })
 
@@ -288,12 +262,9 @@ describe('resolveCanvasContextMenuTarget', () => {
         snapshot,
       ),
     ).toEqual({
-      target: {
-        kind: 'edge-selection',
-        edgeIds: ['edge-1'],
-        edgeType: 'straight',
-      },
-      contributors: [],
+      kind: 'edge-selection',
+      edgeIds: ['edge-1'],
+      edgeType: 'straight',
     })
   })
 })

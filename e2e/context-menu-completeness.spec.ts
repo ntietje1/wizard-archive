@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import { uploadFileInput } from './helpers/file-upload-helpers'
 import { createFolder, createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -30,7 +31,7 @@ test.describe.serial('context menu completeness', () => {
 
     await page.getByRole('link', { name: 'New' }).click()
     await page.getByRole('button', { name: /^File/ }).click()
-    const fileInput = page.getByLabel('Upload file')
+    const fileInput = uploadFileInput(page)
     await fileInput.setInputFiles(testFilePath)
     await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 10000 })
 

@@ -45,16 +45,16 @@ export function sidebarItemBackgroundClass({
 }: SidebarItemVisualState = {}) {
   if (isViewing && isMultiSelected)
     return withCutOpacity(
-      'bg-muted-foreground/10 dark:bg-muted/70 group-focus-within/sidebar-surface:bg-primary/18 group-focus-within/sidebar-surface:dark:bg-primary/30',
+      'bg-item-viewing group-focus-within/sidebar-surface:bg-item-selected-focus',
       isCut,
     )
-  if (isViewing) return withCutOpacity('bg-muted-foreground/10 dark:bg-muted/70', isCut)
+  if (isViewing) return withCutOpacity('bg-item-viewing', isCut)
   if (isSelected)
     return withCutOpacity(
-      'bg-muted-foreground/10 hover:bg-muted-foreground/8 dark:bg-muted/60 dark:hover:bg-muted/70 group-focus-within/sidebar-surface:bg-primary/12 group-focus-within/sidebar-surface:hover:bg-primary/16 group-focus-within/sidebar-surface:dark:bg-primary/20 group-focus-within/sidebar-surface:dark:hover:bg-primary/28',
+      'bg-item-selected hover:bg-item-selected-hover group-focus-within/sidebar-surface:bg-item-selected-focus group-focus-within/sidebar-surface:hover:bg-item-selected-focus-hover',
       isCut,
     )
-  return withCutOpacity('hover:bg-muted-foreground/6 dark:hover:bg-muted/50', isCut)
+  return withCutOpacity('hover:bg-item-hover', isCut)
 }
 
 function sidebarItemTextClass({ isViewing = false }: SidebarItemVisualState = {}) {

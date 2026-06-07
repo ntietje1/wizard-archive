@@ -1,39 +1,20 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { NoteContent } from '../note-content'
+import { RawNoteContent } from '../raw-note-content'
 import type * as BlockNoteCore from '@blocknote/core'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { Id } from 'convex/_generated/dataModel'
 import type { ReactNode } from 'react'
-import type { CampaignActor } from 'shared/campaigns/actor'
 
-const { blockNoteCreateMock, campaignState, editorModeState, sidebarItemsState } = vi.hoisted(
-  () => ({
-    blockNoteCreateMock: vi.fn((options: { initialContent?: Array<unknown> }) => ({
-      document: options.initialContent ?? [],
-      replaceBlocks: vi.fn(),
-      _tiptapEditor: {
-        destroy: vi.fn(),
-      },
-    })),
-    campaignState: { isDm: true },
-    editorModeState: {
-      campaignActor: {
-        kind: 'dm',
-        campaignId: 'campaign_1' as Id<'campaigns'>,
-      } as CampaignActor,
-      viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined,
+const { blockNoteCreateMock } = vi.hoisted(() => ({
+  blockNoteCreateMock: vi.fn((options: { initialContent?: Array<unknown> }) => ({
+    document: options.initialContent ?? [],
+    replaceBlocks: vi.fn(),
+    _tiptapEditor: {
+      destroy: vi.fn(),
     },
-    sidebarItemsState: {
-      data: [],
-      status: 'success',
-      itemsMap: new Map(),
-      parentItemsMap: new Map(),
-      getAncestorSidebarItems: vi.fn(() => []),
-    },
-  }),
-)
+  })),
+}))
 
 vi.mock('@blocknote/core', async (importOriginal) => {
   const actual = await importOriginal<typeof BlockNoteCore>()
@@ -45,9 +26,15 @@ vi.mock('@blocknote/core', async (importOriginal) => {
   }
 })
 
-vi.mock('../note-view', () => ({
-  NoteView: ({ editor, children }: { editor: CustomBlockNoteEditor; children?: ReactNode }) => (
-    <div data-testid="note-view">
+vi.mock('@blocknote/shadcn', () => ({
+  BlockNoteView: ({
+    editor,
+    children,
+  }: {
+    editor: CustomBlockNoteEditor
+    children?: ReactNode
+  }) => (
+    <div data-testid="block-note-view">
       <div>
         {editor.document
           .flatMap((block) =>
@@ -62,34 +49,10 @@ vi.mock('../note-view', () => ({
   ),
 }))
 
-vi.mock('../extensions/link-click-handler', () => ({
-  LinkClickHandler: () => null,
-}))
-
-vi.mock('~/features/editor/hooks/useLinkResolver', () => ({
-  useLinkResolver: () => ({
-    isViewerMode: true,
-    resolveLink: vi.fn(),
-  }),
-}))
-
-vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => campaignState,
-}))
-
-vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
-  useEditorMode: () => editorModeState,
-}))
-
-vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useActiveSidebarItems: () => sidebarItemsState,
-  useTrashSidebarItems: () => sidebarItemsState,
-}))
-
-describe('NoteContent static viewer', () => {
+describe('RawNoteContent static viewer', () => {
   it('renders inline values with a plain static editor', () => {
     render(
-      <NoteContent
+      <RawNoteContent
         editable={false}
         content={[
           {
@@ -112,7 +75,7 @@ describe('NoteContent static viewer', () => {
       />,
     )
 
-    expect(screen.getByTestId('note-view')).toHaveTextContent('strength')
+    expect(screen.getByTestId('block-note-view')).toHaveTextContent('strength')
     const editorOptions = blockNoteCreateMock.mock.calls[0][0]
     expect(editorOptions).not.toHaveProperty('collaboration')
     expect(editorOptions).toEqual(

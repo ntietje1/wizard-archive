@@ -3,13 +3,14 @@ import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-ca
 import { useCanvasCollaborationRuntime } from '../../runtime/providers/canvas-runtime'
 import {
   CANVAS_SELECTION_CHROME_OUTSET_PX,
+  CANVAS_SELECTION_CHROME_STROKE,
   CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
   useCanvasScreenSpaceViewport,
 } from '../../components/canvas-screen-space-overlay-utils'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import type { CanvasEngineSnapshot } from '../../system/canvas-engine-types'
 
-const CANVAS_NODE_SELECTION_INDICATOR_OPACITY = 0.55
+const CANVAS_NODE_SELECTION_INDICATOR_OPACITY = 'var(--canvas-selection-indicator-opacity)'
 const CANVAS_SELECTION_CHROME_RADIUS_PX = 2
 
 interface CanvasNodeFrameProps {
@@ -70,7 +71,7 @@ function CanvasNodeSelectionIndicator() {
       data-testid="canvas-node-selection-indicator"
       className="absolute pointer-events-none"
       style={{
-        borderColor: 'var(--primary)',
+        borderColor: CANVAS_SELECTION_CHROME_STROKE,
         borderRadius: chromeStyle.borderRadius,
         borderStyle: 'solid',
         borderWidth: chromeStyle.borderWidth,
@@ -88,7 +89,7 @@ function CanvasSelectionChrome({ color }: { color: string | undefined }) {
       data-testid="selection-border"
       className="absolute pointer-events-none"
       style={{
-        borderColor: color ?? 'var(--primary)',
+        borderColor: color ?? CANVAS_SELECTION_CHROME_STROKE,
         borderRadius: chromeStyle.borderRadius,
         borderStyle: 'solid',
         borderWidth: chromeStyle.borderWidth,

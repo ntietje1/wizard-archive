@@ -3,8 +3,6 @@ import { EDITOR_MODE } from 'shared/editor/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import { createElement } from 'react'
 import {
-  ArrowUpLeft,
-  ArrowUpRight,
   Bookmark,
   BookOpen,
   ClipboardCopy,
@@ -12,16 +10,10 @@ import {
   ClipboardPaste,
   Eye,
   EyeOff,
-  File,
   FileEdit,
-  FilePlus,
   FileTypeIcon,
   Files,
   FolderDown,
-  FolderPlus,
-  Grid2x2Plus,
-  History,
-  List,
   MapPin,
   Move,
   Navigation,
@@ -48,6 +40,13 @@ import {
   RIGHT_SIDEBAR_CONTENT,
   RIGHT_SIDEBAR_PANEL_ID,
 } from '~/features/editor/components/right-sidebar/constants'
+import {
+  canShowRightSidebarContent,
+  resolveRightSidebarContent,
+} from '~/features/editor/components/right-sidebar/right-sidebar-model'
+import { RIGHT_SIDEBAR_PANELS } from '~/features/editor/components/right-sidebar/right-sidebar-registry'
+import type { RightSidebarContentId } from '~/features/editor/components/right-sidebar/constants'
+import { useRightSidebarStateStore } from '~/features/editor/stores/right-sidebar-state-store'
 import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
@@ -55,15 +54,25 @@ import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-it
 import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
 import { ViewAsPlayerRow } from '~/features/editor/components/view-as-player-row'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
 
-function isPanelContentActive(contentId: string): boolean {
+function isPanelContentActive(
+  context: EditorMenuContext,
+  contentId: RightSidebarContentId,
+): boolean {
+  if (!context.item || !canShowRightSidebarContent(context.item.type, contentId)) return false
   const panel = usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
-  return panel?.visible === true && panel?.activeContentId === contentId
+  const activeContentId = resolveRightSidebarContent(
+    context.item.type,
+    useRightSidebarStateStore.getState().activeContentByItemType[context.item.type],
+  )
+  return panel?.visible === true && activeContentId === contentId
 }
 
-function activatePanelContent(contentId: string): void {
+function activatePanelContent(context: EditorMenuContext, contentId: RightSidebarContentId): void {
+  if (!context.item || !canShowRightSidebarContent(context.item.type, contentId)) return
   const store = usePanelPreferenceStore.getState()
-  store.setActiveContent(RIGHT_SIDEBAR_PANEL_ID, contentId)
+  useRightSidebarStateStore.getState().setActiveContent(context.item.type, contentId)
   store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
 }
 
@@ -137,8 +146,10 @@ interface EditorContextMenuServices {
 
 interface BlockShareMenuService {
   canOpen: (context: EditorMenuContext) => boolean
+  canToggleAllPlayersPermission: (context: EditorMenuContext) => boolean
   getBlockCount: (context: EditorMenuContext) => number
-  open: (context: EditorMenuContext) => void
+  getAllPlayersPermissionLevel: (context: EditorMenuContext) => 'hidden' | 'visible' | 'mixed'
+  toggleAllPlayersPermission: (context: EditorMenuContext) => void
 }
 
 type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
@@ -148,9 +159,36 @@ type EditorContextMenuContributor = ContextMenuContributor<
 >
 
 type SimpleActionKey = Exclude<keyof ActionHandlers, 'setGeneralAccessLevel'>
+type SidebarItemCreationActionKey = Pick<
+  ActionHandlers,
+  'createNote' | 'createFolder' | 'createMap' | 'createCanvas' | 'createFile'
+>
+type SidebarItemCreationActionId = keyof SidebarItemCreationActionKey
+
+const sidebarItemCreationActionIds = {
+  'create.note': 'createNote',
+  'create.folder': 'createFolder',
+  'create.map': 'createMap',
+  'create.canvas': 'createCanvas',
+  'create.file': 'createFile',
+} satisfies Record<
+  (typeof SIDEBAR_ITEM_CREATION_COMMANDS)[number]['id'],
+  SidebarItemCreationActionId
+>
 
 function nextEditorMode(currentMode: EditorModeMenuService['editorMode']) {
   return currentMode === EDITOR_MODE.EDITOR ? EDITOR_MODE.VIEWER : EDITOR_MODE.EDITOR
+}
+
+function getBlockShareTargetLabel(blockCount: number) {
+  return blockCount === 1 ? 'Block' : `${blockCount} Blocks`
+}
+
+function getBlockShareActionLabel(context: EditorMenuContext, services: EditorContextMenuServices) {
+  const blockCount = services.blockShare.getBlockCount(context)
+  const targetLabel = getBlockShareTargetLabel(blockCount)
+  const allPlayersPermissionLevel = services.blockShare.getAllPlayersPermissionLevel(context)
+  return allPlayersPermissionLevel === 'visible' ? `Unshare ${targetLabel}` : `Share ${targetLabel}`
 }
 
 function createViewAsPlayerItems(
@@ -215,12 +253,15 @@ export const editorContextMenuCommands = {
   },
   activatePanel: {
     id: 'activatePanel',
-    run: (_context, _services, payload) => {
-      if (typeof payload !== 'string') {
+    run: (context, _services, payload) => {
+      if (
+        typeof payload !== 'string' ||
+        !Object.values(RIGHT_SIDEBAR_CONTENT).includes(payload as RightSidebarContentId)
+      ) {
         logger.warn('activatePanel received invalid payload', payload)
         return
       }
-      activatePanelContent(payload)
+      activatePanelContent(context, payload as RightSidebarContentId)
     },
   },
   showComingSoon: {
@@ -228,10 +269,6 @@ export const editorContextMenuCommands = {
     run: () => {
       toast.info('Coming soon')
     },
-  },
-  openBlockShareMenu: {
-    id: 'openBlockShareMenu',
-    run: (context, services) => services.blockShare.open(context),
   },
   editValueInline: {
     id: 'editValueInline',
@@ -257,48 +294,16 @@ export const editorContextMenuCommands = {
   },
 } satisfies Record<string, ContextMenuCommand<EditorMenuContext, EditorContextMenuServices>>
 
-const createSubmenuItems: Array<EditorContextMenuItem> = [
-  {
-    id: 'submenu-create-note',
-    commandId: 'createNote',
-    label: 'Note',
-    icon: FilePlus,
+const createSubmenuItems: Array<EditorContextMenuItem> = SIDEBAR_ITEM_CREATION_COMMANDS.map(
+  (command) => ({
+    id: `submenu-create-${command.key}`,
+    commandId: sidebarItemCreationActionIds[command.id],
+    label: command.label,
+    icon: command.icon,
     group: 'create',
-    priority: 10,
-  },
-  {
-    id: 'submenu-create-folder',
-    commandId: 'createFolder',
-    label: 'Folder',
-    icon: FolderPlus,
-    group: 'create',
-    priority: 11,
-  },
-  {
-    id: 'submenu-create-map',
-    commandId: 'createMap',
-    label: 'Map',
-    icon: MapPin,
-    group: 'create',
-    priority: 12,
-  },
-  {
-    id: 'submenu-create-canvas',
-    commandId: 'createCanvas',
-    label: 'Canvas',
-    icon: Grid2x2Plus,
-    group: 'create',
-    priority: 13,
-  },
-  {
-    id: 'submenu-create-file',
-    commandId: 'createFile',
-    label: 'File',
-    icon: File,
-    group: 'create',
-    priority: 14,
-  },
-]
+    priority: command.priority,
+  }),
+)
 
 export const editorContextMenuContributors = [
   {
@@ -322,16 +327,16 @@ export const editorContextMenuContributors = [
     getItems: () => [
       {
         id: 'share-blocks',
-        commandId: 'openBlockShareMenu',
-        label: (context, services) => {
-          const blockCount = services.blockShare.getBlockCount(context)
-          return `Share ${blockCount} ${blockCount === 1 ? 'Block' : 'Blocks'}`
-        },
+        label: getBlockShareActionLabel,
         icon: Share2,
         group: 'share',
         priority: 1,
         applies: (context, services) =>
           p.isDm(context) && p.hasBlockNoteId(context) && services.blockShare.canOpen(context),
+        isEnabled: (context, services) =>
+          services.blockShare.canToggleAllPlayersPermission(context),
+        onSelect: (context, services) => services.blockShare.toggleAllPlayersPermission(context),
+        closeOnSelect: false,
       },
     ],
   },
@@ -513,65 +518,37 @@ export const editorContextMenuContributors = [
   {
     id: 'editor-panels',
     surfaces: ['topbar'],
-    getItems: () => [
-      {
-        id: 'toggle-reading-mode',
-        commandId: 'toggleReadingMode',
-        label: 'Reading Mode',
-        icon: BookOpen,
-        group: 'panels',
-        priority: 69,
-        applies: (context, itemServices) =>
-          p.isSidebarItem(context) && itemServices.editorMode.canEdit === true,
-        isChecked: (_itemContext, itemServices) =>
-          itemServices.editorMode.editorMode === EDITOR_MODE.VIEWER,
-        closeOnSelect: false,
-      },
-      {
-        id: 'panel-history',
+    getItems: () => {
+      const panelItems: Array<EditorContextMenuItem> = RIGHT_SIDEBAR_PANELS.map((panel, index) => ({
+        id: `panel-${panel.id}`,
         commandId: 'activatePanel',
-        payload: RIGHT_SIDEBAR_CONTENT.history,
-        label: 'Edit History',
-        icon: History,
+        payload: panel.id,
+        label: panel.label === 'History' ? 'Edit History' : panel.label,
+        icon: panel.icon,
         group: 'panels',
-        priority: 70,
-        applies: (context) => p.isSidebarItem(context),
-        isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.history),
-      },
-      {
-        id: 'panel-backlinks',
-        commandId: 'activatePanel',
-        payload: RIGHT_SIDEBAR_CONTENT.backlinks,
-        label: 'Back Links',
-        icon: ArrowUpLeft,
-        group: 'panels',
-        priority: 71,
-        applies: (context) => p.isSidebarItem(context),
-        isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.backlinks),
-      },
-      {
-        id: 'panel-outgoing',
-        commandId: 'activatePanel',
-        payload: RIGHT_SIDEBAR_CONTENT.outgoing,
-        label: 'Outgoing Links',
-        icon: ArrowUpRight,
-        group: 'panels',
-        priority: 72,
-        applies: (context) => p.isSidebarItem(context),
-        isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outgoing),
-      },
-      {
-        id: 'panel-outline',
-        commandId: 'activatePanel',
-        payload: RIGHT_SIDEBAR_CONTENT.outline,
-        label: 'Outline',
-        icon: List,
-        group: 'panels',
-        priority: 73,
-        applies: (context) => p.isSidebarItem(context),
-        isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outline),
-      },
-    ],
+        priority: 70 + index,
+        applies: (context) =>
+          p.isSidebarItem(context) && canShowRightSidebarContent(context.item?.type, panel.id),
+        isChecked: (context) => isPanelContentActive(context, panel.id),
+      }))
+
+      return [
+        {
+          id: 'toggle-reading-mode',
+          commandId: 'toggleReadingMode',
+          label: 'Reading Mode',
+          icon: BookOpen,
+          group: 'panels',
+          priority: 69,
+          applies: (context, itemServices) =>
+            p.isSidebarItem(context) && itemServices.editorMode.canEdit === true,
+          isChecked: (_itemContext, itemServices) =>
+            itemServices.editorMode.editorMode === EDITOR_MODE.VIEWER,
+          closeOnSelect: false,
+        },
+        ...panelItems,
+      ]
+    },
   },
   {
     id: 'editor-share',

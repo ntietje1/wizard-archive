@@ -21,12 +21,12 @@ interface ItemSurfaceIdentity {
 
 interface CampaignState {
   folderStates: Record<string, boolean>
-  closeAllFoldersMode: boolean
   bookmarksOnlyMode: boolean
 }
 
 interface SidebarUIState {
   campaignStates: Record<string, CampaignState>
+  closeAllFoldersModeCampaignIds: Array<string>
   renamingId: Id<'sidebarItems'> | null
   pendingItemName: string
   selectedSlug: SidebarItemSlug | null
@@ -71,7 +71,6 @@ interface SidebarUIActions {
 
 const defaultCampaignState: CampaignState = {
   folderStates: {},
-  closeAllFoldersMode: false,
   bookmarksOnlyMode: false,
 }
 
@@ -156,6 +155,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
   persist(
     (set) => ({
       campaignStates: {},
+      closeAllFoldersModeCampaignIds: [],
       renamingId: null,
       pendingItemName: '',
       selectedSlug: null,
@@ -170,20 +170,28 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       setRenamingId: (id) => set({ renamingId: id }),
 
       setFolderState: (campaignId, folderId, isOpen) =>
-        set((state) =>
-          updateCampaignState(state, campaignId, (prev) => ({
-            folderStates: { ...prev.folderStates, [folderId]: isOpen },
-          })),
-        ),
+        set((state) => {
+          const prev = getCampaignState(state, campaignId)
+          const folderStates = { ...prev.folderStates }
+          if (isOpen) {
+            folderStates[folderId] = true
+          } else {
+            delete folderStates[folderId]
+          }
+          return updateCampaignState(state, campaignId, () => ({ folderStates }))
+        }),
 
       toggleFolderState: (campaignId, folderId) =>
         set((state) => {
           const prev = getCampaignState(state, campaignId)
+          const folderStates = { ...prev.folderStates }
+          if (folderStates[folderId]) {
+            delete folderStates[folderId]
+          } else {
+            folderStates[folderId] = true
+          }
           return updateCampaignState(state, campaignId, () => ({
-            folderStates: {
-              ...prev.folderStates,
-              [folderId]: !(prev.folderStates[folderId] ?? false),
-            },
+            folderStates,
           }))
         }),
 
@@ -196,18 +204,20 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
 
       toggleCloseAllFoldersMode: (campaignId) =>
         set((state) => {
-          const prev = getCampaignState(state, campaignId)
-          return updateCampaignState(state, campaignId, () => ({
-            closeAllFoldersMode: !prev.closeAllFoldersMode,
-          }))
+          const closeAllFoldersModeCampaignIds = state.closeAllFoldersModeCampaignIds.includes(
+            campaignId,
+          )
+            ? state.closeAllFoldersModeCampaignIds.filter((id) => id !== campaignId)
+            : [...state.closeAllFoldersModeCampaignIds, campaignId]
+          return { closeAllFoldersModeCampaignIds }
         }),
 
       exitCloseAllMode: (campaignId) =>
-        set((state) =>
-          updateCampaignState(state, campaignId, () => ({
-            closeAllFoldersMode: false,
-          })),
-        ),
+        set((state) => ({
+          closeAllFoldersModeCampaignIds: state.closeAllFoldersModeCampaignIds.filter(
+            (id) => id !== campaignId,
+          ),
+        })),
 
       toggleBookmarksOnlyMode: (campaignId) =>
         set((state) => {
@@ -383,6 +393,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           selectionSurface: null,
           focusSurface: null,
           activeItemSurface: null,
+          closeAllFoldersModeCampaignIds: [],
         }),
 
       setViewAsPlayer: (viewAsPlayer) => set({ viewAsPlayer }),
@@ -404,7 +415,9 @@ export function useCampaignSidebarState(campaignId: string | undefined) {
       const cs = campaignId ? s.campaignStates[campaignId] : undefined
       return {
         folderStates: cs?.folderStates ?? EMPTY_FOLDER_STATES,
-        closeAllFoldersMode: cs?.closeAllFoldersMode ?? false,
+        closeAllFoldersMode: campaignId
+          ? s.closeAllFoldersModeCampaignIds.includes(campaignId)
+          : false,
         bookmarksOnlyMode: cs?.bookmarksOnlyMode ?? false,
       }
     }),

@@ -8,7 +8,7 @@ import {
   applyConvexYjsProviderRemoteUpdates,
   updateConvexYjsProviderUser,
   setConvexYjsProviderWritable,
-} from '../providers/convex-yjs-provider'
+} from '~/shared/collaboration/convex-yjs-provider'
 import type { YjsDocumentId } from 'shared/yjs-sync/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'

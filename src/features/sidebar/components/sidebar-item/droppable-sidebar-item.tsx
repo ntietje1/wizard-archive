@@ -3,6 +3,11 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { Folder } from 'shared/folders/types'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
+import {
+  dropTargetBeforeRingClassName,
+  dropTargetFillClassName,
+} from '~/features/dnd/utils/drop-target-visual-state'
+import type { DropTargetVisualState } from '~/features/dnd/utils/drop-target-visual-state'
 
 interface DroppableSidebarItemProps {
   item: Folder
@@ -18,26 +23,20 @@ export function DroppableSidebarItem({ item, children }: DroppableSidebarItemPro
     canDrop: actorPermissions.canMutate(item, PERMISSION_LEVEL.FULL_ACCESS),
   })
 
-  const isHighlighted = isDropTarget || isFileDropTarget
-  const ringClass = isDropTarget
+  const dropVisualState: DropTargetVisualState | null = isDropTarget
     ? isTrashAction
-      ? 'before:ring-destructive/60'
-      : 'before:ring-ring/60'
+      ? 'destructive'
+      : 'default'
     : isFileDropTarget
-      ? 'before:ring-ring/40'
-      : ''
-  const bgClass = isDropTarget
-    ? isTrashAction
-      ? 'bg-destructive/5'
-      : 'bg-ring/5'
-    : isFileDropTarget
-      ? 'bg-ring/5'
-      : ''
+      ? 'file'
+      : null
+  const ringClass = dropVisualState ? dropTargetBeforeRingClassName(dropVisualState) : ''
+  const bgClass = dropVisualState ? dropTargetFillClassName(dropVisualState) : ''
 
   return (
     <div
       ref={ref}
-      className={`w-full min-w-0 relative ${bgClass} ${isHighlighted ? `before:absolute before:inset-0 before:ring-2 before:ring-inset before:pointer-events-none before:z-10 before:rounded-[inherit] ${ringClass}` : ''}`}
+      className={`w-full min-w-0 relative ${bgClass} ${dropVisualState ? `before:absolute before:inset-0 before:ring-2 before:ring-inset before:pointer-events-none before:z-10 before:rounded-[inherit] ${ringClass}` : ''}`}
     >
       {children}
     </div>

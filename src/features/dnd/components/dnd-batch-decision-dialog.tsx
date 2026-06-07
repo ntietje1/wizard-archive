@@ -10,12 +10,13 @@ import {
 import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
 import { handleError } from '~/shared/utils/logger'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import type { SurfaceDropAction } from '~/features/dnd/utils/surface-drop-vocabulary'
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`
 }
 
-function continueButtonLabel(action: 'pin' | 'link' | 'embed') {
+function continueButtonLabel(action: SurfaceDropAction) {
   switch (action) {
     case 'pin':
       return 'Continue pinning items'
@@ -26,7 +27,7 @@ function continueButtonLabel(action: 'pin' | 'link' | 'embed') {
   }
 }
 
-function operationVerb(action: 'pin' | 'link' | 'embed') {
+function operationVerb(action: SurfaceDropAction) {
   switch (action) {
     case 'pin':
       return 'pinned'
@@ -37,7 +38,7 @@ function operationVerb(action: 'pin' | 'link' | 'embed') {
   }
 }
 
-function blockedOperationText(action: 'pin' | 'link' | 'embed') {
+function blockedOperationText(action: SurfaceDropAction) {
   return `No items can be ${operationVerb(action)} here`
 }
 
@@ -46,7 +47,7 @@ function getBatchDecisionTitle({
   acceptedCount,
   rejectedCount,
 }: {
-  action: 'pin' | 'link' | 'embed'
+  action: SurfaceDropAction
   acceptedCount: number
   rejectedCount: number
 }) {
@@ -104,7 +105,7 @@ export function DndBatchDecisionDialog() {
           {command.rejectedItems.map(({ item, reason }) => (
             <div key={item._id} className="rounded-md border p-3">
               <div className="font-medium">{item.name}</div>
-              <div className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <div className="text-feedback-warning flex items-center gap-1">
                 <AlertTriangle className="size-3" aria-hidden="true" />
                 {rejectionReasonMessage(reason)}
               </div>

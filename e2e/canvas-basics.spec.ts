@@ -299,7 +299,7 @@ test.describe.serial('canvas basics', () => {
     await selectCanvasTool(page, 'Pointer')
     await page.mouse.click(emptyPanePoint.x, emptyPanePoint.y, { button: 'right' })
 
-    const paneMenu = page.getByRole('menu')
+    const paneMenu = page.getByRole('menu').first()
     await expect(paneMenu).toBeVisible()
     const paneMenuItem = paneMenu.getByRole('menuitem').first()
     await expect(paneMenuItem).toBeVisible()

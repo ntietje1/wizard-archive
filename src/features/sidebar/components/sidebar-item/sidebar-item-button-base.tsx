@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronRight, Loader2, MoreHorizontal } from 'lucide-react'
-import { EditableName } from './editable-item-name'
 import type { SidebarItemButtonProps } from './types'
 import { Button } from '~/features/shadcn/components/button'
 import { HoverToggleButton } from '~/features/sidebar/components/hover-toggle-button'
@@ -14,6 +13,7 @@ import {
   sidebarItemNameClass,
 } from '~/features/sidebar/utils/sidebar-item-visual-state'
 import type { SidebarItemVisualState } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import type { ReactNode } from 'react'
 
 function PendingIcon() {
   return <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden="true" />
@@ -42,7 +42,7 @@ function SidebarItemIconToggle({
       <Button
         variant="ghost"
         size="sm"
-        className="size-6 hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+        className="size-6 hover:text-foreground hover:bg-item-action-hover rounded-sm"
         aria-label={expanded ? 'Collapse folder' : 'Expand folder'}
         onClick={(e) => {
           e.stopPropagation()
@@ -85,7 +85,7 @@ function SidebarItemActions({
           variant="ghost"
           size="sm"
           className={cn(
-            'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
+            'size-6 p-0 hover:bg-item-action-hover rounded-sm',
             sidebarItemActionButtonClass(visualState),
           )}
           aria-label="More options"
@@ -101,54 +101,68 @@ function SidebarItemActions({
   )
 }
 
-function SidebarItemName({
-  name,
-  visualState,
+function SidebarItemNameTarget({
+  children,
+  focused,
+  linkProps,
+  onClick,
+  pending,
   renaming,
-  onFinishRename,
-  onCancelRename,
-  campaignId,
-  parentId,
-  excludeId,
-}: Pick<
-  SidebarItemButtonProps,
-  'name' | 'onFinishRename' | 'onCancelRename' | 'campaignId' | 'parentId' | 'excludeId'
-> & {
-  visualState: SidebarItemVisualState
+  visualState,
+}: {
+  children: ReactNode
+  focused: boolean
+  linkProps: SidebarItemButtonProps['linkProps']
+  onClick: SidebarItemButtonProps['onClick']
+  pending: boolean
   renaming: boolean
+  visualState: SidebarItemVisualState
 }) {
-  if (!onFinishRename) {
-    return <span className={cn('truncate ml-1', sidebarItemNameClass(visualState))}>{name}</span>
+  if (renaming) {
+    return <div className="flex items-center min-w-0 flex-1 h-full rounded-sm">{children}</div>
+  }
+
+  const ariaCurrent = visualState.isViewing ? 'page' : undefined
+
+  if (!linkProps) {
+    return (
+      <button
+        type="button"
+        className="flex items-center min-w-0 flex-1 h-full rounded-sm text-left"
+        disabled={pending}
+        aria-current={ariaCurrent}
+        onClick={onClick}
+      >
+        {children}
+      </button>
+    )
   }
 
   return (
-    <EditableName
-      initialName={name}
-      isRenaming={renaming}
-      onFinishRename={onFinishRename}
-      onCancelRename={onCancelRename}
-      displayClassName={sidebarItemNameClass(visualState)}
-      campaignId={campaignId}
-      parentId={parentId}
-      excludeId={excludeId}
-    />
+    <Link
+      {...linkProps}
+      activeOptions={{ includeSearch: false }}
+      className="flex items-center min-w-0 flex-1 h-full rounded-sm select-none"
+      draggable={false}
+      tabIndex={focused ? 0 : -1}
+      aria-current={ariaCurrent}
+      onClick={onClick}
+    >
+      {children}
+    </Link>
   )
 }
 
 export function SidebarItemButtonBase({
   icon,
   name,
+  nameContent,
   presentation,
   linkProps,
   onClick,
   onContextMenu,
   onMoreOptions = () => {},
   onToggleExpanded = () => {},
-  onFinishRename,
-  onCancelRename,
-  campaignId,
-  parentId,
-  excludeId,
   shareButton,
   rowRef,
 }: SidebarItemButtonProps) {
@@ -162,17 +176,8 @@ export function SidebarItemButtonBase({
     indentLevel = 0,
   } = presentation
   const rowPadding = sidebarItemRowPaddingStyle(indentLevel)
-  const nameContent = (
-    <SidebarItemName
-      name={name}
-      visualState={visualState}
-      renaming={renaming}
-      onFinishRename={onFinishRename}
-      onCancelRename={onCancelRename}
-      campaignId={campaignId}
-      parentId={parentId}
-      excludeId={excludeId}
-    />
+  const renderedNameContent = nameContent ?? (
+    <span className={cn('truncate ml-1', sidebarItemNameClass(visualState))}>{name}</span>
   )
 
   return (
@@ -188,9 +193,7 @@ export function SidebarItemButtonBase({
       style={rowPadding}
       data-item-selection-target="true"
       data-testid={`selectable-row-${name}`}
-      role="option"
-      tabIndex={pending ? -1 : undefined}
-      aria-selected={visualState.isSelected}
+      data-selected={visualState.isSelected ? 'true' : 'false'}
       aria-busy={pending || undefined}
       onContextMenu={pending ? (event) => event.preventDefault() : onContextMenu}
     >
@@ -203,21 +206,16 @@ export function SidebarItemButtonBase({
         onToggleExpanded={onToggleExpanded}
       />
 
-      {/* Item Name */}
-      {renaming || !linkProps ? (
-        <div className="flex items-center min-w-0 flex-1 h-full rounded-sm">{nameContent}</div>
-      ) : (
-        <Link
-          {...linkProps}
-          activeOptions={{ includeSearch: false }}
-          className="flex items-center min-w-0 flex-1 h-full rounded-sm select-none"
-          draggable={false}
-          tabIndex={focused ? 0 : -1}
-          onClick={onClick}
-        >
-          {nameContent}
-        </Link>
-      )}
+      <SidebarItemNameTarget
+        focused={focused}
+        linkProps={linkProps}
+        onClick={onClick}
+        pending={pending}
+        renaming={renaming}
+        visualState={visualState}
+      >
+        {renderedNameContent}
+      </SidebarItemNameTarget>
 
       {/* Action Buttons */}
       {!renaming && !pending && (

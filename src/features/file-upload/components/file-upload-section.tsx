@@ -6,6 +6,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { Card, CardContent } from '~/features/shadcn/components/card'
 import { Badge } from '~/features/shadcn/components/badge'
 import { Progress } from '~/features/shadcn/components/progress'
+import { cn } from '~/features/shadcn/lib/utils'
 
 interface FileUploadSectionProps {
   label?: string
@@ -214,6 +215,28 @@ function EmptyFileUploadContent({
   )
 }
 
+function uploadZoneClass({
+  hasPreview,
+  isDragActive,
+  isBusy,
+}: {
+  hasPreview: boolean
+  isDragActive: boolean
+  isBusy: boolean
+}) {
+  return cn(
+    'group w-full border-2',
+    hasPreview
+      ? isDragActive
+        ? 'border-upload-zone-active-border bg-upload-zone-active'
+        : 'border-border'
+      : isDragActive
+        ? 'border-upload-zone-active-border bg-upload-zone-active'
+        : 'border-dashed border-upload-zone-border bg-upload-zone hover:border-upload-zone-hover-border',
+    isBusy && 'opacity-60',
+  )
+}
+
 export function FileUploadSection({
   label,
   fileUpload,
@@ -235,15 +258,11 @@ export function FileUploadSection({
 
       {/* File Card */}
       <Card
-        className={`group w-full border-2 ${
-          fileUpload.preview
-            ? fileUpload.isDragActive
-              ? 'border-primary bg-primary/5'
-              : 'border-border'
-            : fileUpload.isDragActive
-              ? 'border-primary bg-primary/5'
-              : 'border-dashed border-muted-foreground/25 bg-muted/50 hover:border-muted-foreground/50'
-        } ${fileUpload.isUploading || isSubmitting ? 'opacity-60' : ''}`}
+        className={uploadZoneClass({
+          hasPreview: Boolean(fileUpload.preview),
+          isDragActive: fileUpload.isDragActive,
+          isBusy: fileUpload.isUploading || isSubmitting,
+        })}
       >
         <CardContent className="p-3 h-20 flex items-center">
           {fileUpload.preview ? (

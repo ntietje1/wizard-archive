@@ -127,9 +127,11 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
   )
   const { canEdit } = useEditorMode()
   const myMemberId = campaign.data?.myMembership?._id
-  const previewingEntryId = useHistoryPreviewStore((s) => s.previewingEntryId)
+  const previewingEntryId = useHistoryPreviewStore((s) =>
+    s.preview?.itemId === itemId ? s.preview.entryId : null,
+  )
   const setPreviewingEntry = useHistoryPreviewStore((s) => s.setPreviewingEntry)
-  const setRollbackEntryId = useHistoryPreviewStore((s) => s.setRollbackEntryId)
+  const setRollbackEntry = useHistoryPreviewStore((s) => s.setRollbackEntry)
 
   const membersMap = new Map<string, CampaignMemberSummary>()
   if (membersQuery.data) {
@@ -239,7 +241,7 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
                     )}
                     onClick={(e) => {
                       e.stopPropagation()
-                      setRollbackEntryId(entry._id)
+                      setRollbackEntry(itemId, entry._id)
                     }}
                   >
                     <RotateCcw className="size-3.5" />
@@ -257,7 +259,7 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
                     type="button"
                     aria-pressed={isSelected}
                     className="flex min-w-0 flex-1 items-start gap-2.5 border-0 bg-transparent p-0 text-left text-foreground"
-                    onClick={() => setPreviewingEntry(isSelected ? null : entry._id)}
+                    onClick={() => setPreviewingEntry(itemId, isSelected ? null : entry._id)}
                   >
                     {entryContent}
                   </button>

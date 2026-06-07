@@ -3,8 +3,8 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { SIDEBAR_ITEMS_VIEW } from './useSidebarItems'
-import type { SidebarItemsView } from './useSidebarItems'
+import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/contexts/sidebar-items-context'
+import type { SidebarItemsView } from '~/features/sidebar/contexts/sidebar-items-context'
 import { assertNever } from '~/shared/utils/utils'
 
 export function useSidebarItemsCache() {

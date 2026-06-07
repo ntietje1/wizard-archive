@@ -8,7 +8,7 @@ import { ImageFileViewer } from './image-file-viewer'
 import { OtherFileViewer } from './other-file-viewer'
 import { VideoFileViewer } from './video-file-viewer'
 import { PdfFileViewer } from './pdf-file-viewer'
-import type { EditorViewerProps } from '../sidebar-item-editor'
+import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileWithContent } from 'shared/files/types'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
@@ -74,7 +74,7 @@ function FileUpload({ fileId }: { fileId: Id<'sidebarItems'> }) {
   )
 }
 
-export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
+export function FileViewer({ item: file }: ViewerProps<FileWithContent>) {
   if (!file.downloadUrl) {
     return <FileUpload fileId={file._id} />
   }
@@ -89,7 +89,7 @@ export function FileViewer({ item: file }: EditorViewerProps<FileWithContent>) {
     case 'pdf':
       return (
         <ClientOnly fallback={pdfFallback}>
-          <PdfFileViewer pdfUrl={file.downloadUrl} />
+          <PdfFileViewer key={file.downloadUrl} pdfUrl={file.downloadUrl} />
         </ClientOnly>
       )
     case 'video':

@@ -9,7 +9,7 @@ import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { cn } from '~/features/shadcn/lib/utils'
 import { PinMarker } from './pin-marker'
 
-const GHOST_PIN_COLOR = 'hsl(var(--muted-foreground))'
+const GHOST_PIN_COLOR = 'var(--map-pin-ghost)'
 
 interface MapPinsLayerProps {
   ref?: Ref<HTMLDivElement>
@@ -301,16 +301,17 @@ type MapPinPresentation = {
 }
 
 function getMapPinPresentation(pin: MapPinWithItem, isGhost: boolean): MapPinPresentation {
-  const visibleItem = isGhost || pin.item === null ? undefined : pin.item
+  // Ghost pins can still have an item; hide item details when permissions make them ghosts.
+  const presentationItem = isGhost ? undefined : (pin.item ?? undefined)
   const color = isGhost
     ? GHOST_PIN_COLOR
-    : normalizeSidebarItemColorOrDefault(visibleItem?.color, DEFAULT_SIDEBAR_ITEM_COLOR)
+    : normalizeSidebarItemColorOrDefault(presentationItem?.color, DEFAULT_SIDEBAR_ITEM_COLOR)
   const isHidden = pin.visible !== true
-  const baseName = isGhost ? '???' : (visibleItem?.name ?? '')
+  const baseName = isGhost ? '???' : (presentationItem?.name ?? '')
 
   return {
     color,
-    icon: getSidebarItemIcon(visibleItem),
+    icon: getSidebarItemIcon(presentationItem),
     itemName: isHidden ? `${baseName} (hidden)` : baseName,
     isHidden,
   }

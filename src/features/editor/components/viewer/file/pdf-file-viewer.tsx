@@ -15,6 +15,11 @@ const MIN_SCALE = 0.5
 const MAX_SCALE = 3
 const SCALE_STEP = 0.25
 
+type PdfDocumentState =
+  | { status: 'loading' }
+  | { status: 'ready'; numPages: number }
+  | { status: 'failed' }
+
 interface PdfFileViewerProps {
   pdfUrl: string
 }
@@ -41,9 +46,7 @@ function PdfPage({
       <Page
         pageNumber={pageNumber}
         scale={scale}
-        renderAnnotationLayer={true}
         renderForms={true}
-        renderTextLayer={true}
         loading={<div className="bg-muted w-[612px] h-[792px]" />}
       />
     </div>
@@ -51,16 +54,25 @@ function PdfPage({
 }
 
 export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
-  const [numPages, setNumPages] = useState(0)
+  const [documentState, setDocumentState] = useState<PdfDocumentState>({ status: 'loading' })
   const [currentPage, setCurrentPage] = useState(1)
   const [scale, setScale] = useState(1)
-  const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map())
+  const pageRefs = useRef<Map<number, HTMLDivElement> | null>(null)
+  if (pageRefs.current === null) {
+    pageRefs.current = new Map()
+  }
+  const pageRefsMap = pageRefs.current
   const scrollViewportRef = useRef<HTMLDivElement | null>(null)
 
   const isValid = isValidFileUrl(pdfUrl)
+  const numPages = documentState.status === 'ready' ? documentState.numPages : 0
 
   const handleDocumentLoadSuccess = ({ numPages: pages }: { numPages: number }) => {
-    setNumPages(pages)
+    setDocumentState({ status: 'ready', numPages: pages })
+  }
+
+  const handleDocumentLoadError = () => {
+    setDocumentState({ status: 'failed' })
   }
 
   // Track the current visible page via IntersectionObserver.
@@ -107,7 +119,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
       },
     )
 
-    for (const [, el] of pageRefs.current) {
+    for (const [, el] of pageRefsMap) {
       observer.observe(el)
     }
 
@@ -115,10 +127,10 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
       observer.disconnect()
       if (rafId !== null) cancelAnimationFrame(rafId)
     }
-  }, [numPages])
+  }, [numPages, pageRefsMap])
 
   const scrollToPage = (pageNumber: number) => {
-    const el = pageRefs.current.get(pageNumber)
+    const el = pageRefsMap.get(pageNumber)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
@@ -178,7 +190,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
 
   return (
     <div ref={containerRef} className="relative w-full h-full min-h-0 bg-background flex flex-col">
-      {numPages === 0 && (
+      {documentState.status === 'loading' && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <LoadingSpinner size="lg" />
         </div>
@@ -199,28 +211,30 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
         scrollOrientation="both"
         viewportRef={scrollViewportRef}
       >
-        <Document
-          file={pdfUrl}
-          onLoadSuccess={handleDocumentLoadSuccess}
-          loading={null}
-          error={
-            <div className="flex items-center justify-center py-20">
-              <p className="text-muted-foreground">Failed to load PDF</p>
-            </div>
-          }
-        >
-          {Array.from({ length: numPages }, (_, i) => {
-            const pageNumber = i + 1
-            return (
-              <PdfPage
-                key={pageNumber}
-                pageNumber={pageNumber}
-                scale={scale}
-                pageRefs={pageRefs.current}
-              />
-            )
-          })}
-        </Document>
+        {documentState.status === 'failed' ? (
+          <div className="flex items-center justify-center py-20">
+            <p className="text-muted-foreground">Failed to load PDF</p>
+          </div>
+        ) : (
+          <Document
+            file={pdfUrl}
+            onLoadSuccess={handleDocumentLoadSuccess}
+            onLoadError={handleDocumentLoadError}
+            loading={null}
+          >
+            {Array.from({ length: numPages }, (_, i) => {
+              const pageNumber = i + 1
+              return (
+                <PdfPage
+                  key={pageNumber}
+                  pageNumber={pageNumber}
+                  scale={scale}
+                  pageRefs={pageRefsMap}
+                />
+              )
+            })}
+          </Document>
+        )}
       </ScrollArea>
     </div>
   )

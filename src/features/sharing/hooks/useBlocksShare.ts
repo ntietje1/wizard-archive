@@ -112,21 +112,22 @@ function createBlockInfoMap(blockInfos: Array<BlockShareInfo<CampaignMemberId>> 
   return map
 }
 
-export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent) {
+export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent | undefined) {
   const { campaignId, isDm } = useCampaign()
   const convex = useConvex()
   const blockNoteIds = blocks.map((b) => b.id)
-  const hasPersistedNote = !isOptimisticSidebarItem(note)
+  const hasPersistedNote = Boolean(note) && !isOptimisticSidebarItem(note)
   const hasBlocks = blockNoteIds.length > 0
 
   const query = useCampaignQuery(
     api.blocks.queries.getBlocksWithShares,
-    canLoadBlockShareData({
-      campaignId,
-      isDm,
-      hasPersistedNote,
-      hasBlocks,
-    })
+    note &&
+      canLoadBlockShareData({
+        campaignId,
+        isDm,
+        hasPersistedNote,
+        hasBlocks,
+      })
       ? { noteId: note._id, blockNoteIds }
       : 'skip',
   )
@@ -214,27 +215,29 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
   const setAllPlayersPermission = async (
     value: Extract<BlockVisibilitySelectValue, 'hidden' | 'visible'>,
   ) => {
-    if (!canMutate) return
+    if (!canMutate || !note) return false
     try {
       await setBlocksShareStatus.mutateAsync({
         noteId: note._id,
         blockNoteIds,
         status: value === 'visible' ? SHARE_STATUS.ALL_SHARED : SHARE_STATUS.NOT_SHARED,
       })
+      return true
     } catch (error) {
       handleError(error, 'Failed to update share')
+      return false
     }
   }
 
   const toggleShareStatus = async () => {
-    await setAllPlayersPermission(allPlayersPermissionLevel === 'visible' ? 'hidden' : 'visible')
+    return setAllPlayersPermission(allPlayersPermissionLevel === 'visible' ? 'hidden' : 'visible')
   }
 
   const setMemberPermission = async (
     memberId: CampaignMemberId,
     value: BlockVisibilitySelectValue,
   ) => {
-    if (!canMutate) return
+    if (!canMutate || !note) return
     try {
       await setBlockMemberPermission.mutateAsync({
         noteId: note._id,
@@ -256,6 +259,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     query,
     isPending: query.isPending,
     isMutating,
+    hasCompleteData,
     aggregateShareStatus,
     allPlayersPermissionLevel,
     shareItems,

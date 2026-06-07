@@ -283,6 +283,60 @@ describe('createCanvasPointerRouter', () => {
     detach()
   })
 
+  it('toggles the selected node when modifier-clicking the aggregate selection wrapper', () => {
+    const { surface, selectionDragWrapper } = createCanvasDom()
+    const selection = createSelectionMock()
+    const nodeDragController = createNodeDragControllerMock()
+    const router = createCanvasPointerRouter()
+    router.setOptions(createRouterOptions({ activeTool: 'select', nodeDragController, selection }))
+    const detach = router.attach(surface)
+
+    selectionDragWrapper.dispatchEvent(
+      createPointerEvent('pointerdown', { ctrlKey: true, pointerId: 7 }),
+    )
+    window.dispatchEvent(createPointerEvent('pointerup', { ctrlKey: true, pointerId: 7 }))
+
+    expect(nodeDragController.begin).toHaveBeenCalledWith('node-1', expect.any(Event))
+    expect(nodeDragController.commit).toHaveBeenCalledTimes(1)
+    expect(selection.toggleNode).toHaveBeenCalledExactlyOnceWith('node-1', true)
+
+    detach()
+  })
+
+  it('uses the clicked selected node for aggregate selection wrapper modifier-clicks', () => {
+    const { surface, selectionDragWrapper } = createCanvasDom()
+    const selection = createSelectionMock({
+      nodeIds: new Set(['node-1', 'node-2']),
+      edgeIds: new Set(),
+    })
+    const nodeDragController = createNodeDragControllerMock()
+    const router = createCanvasPointerRouter()
+    selectionDragWrapper.dataset.canvasSelectionDragNodeId = 'node-2'
+    router.setOptions(
+      createRouterOptions({
+        activeTool: 'select',
+        nodeDragController,
+        nodeLookup: new Map([
+          ['node-1', createInternalNode('node-1', 0, 0)],
+          ['node-2', createInternalNode('node-2', 100, 0)],
+        ]),
+        selection,
+      }),
+    )
+    const detach = router.attach(surface)
+
+    selectionDragWrapper.dispatchEvent(
+      createPointerEvent('pointerdown', { clientX: 10, clientY: 10, ctrlKey: true, pointerId: 7 }),
+    )
+    window.dispatchEvent(
+      createPointerEvent('pointerup', { clientX: 10, clientY: 10, ctrlKey: true, pointerId: 7 }),
+    )
+
+    expect(selection.toggleNode).toHaveBeenCalledExactlyOnceWith('node-1', true)
+
+    detach()
+  })
+
   it('cancels select-tool node drags without committing them', () => {
     const { surface, node } = createCanvasDom()
     const nodeDragController = createNodeDragControllerMock()
@@ -358,6 +412,7 @@ function createSelectionMock(
     commitGesture: vi.fn(),
     getSnapshot: vi.fn(() => snapshot),
     setGesturePreview: vi.fn(),
+    toggleNode: vi.fn(),
   }
 }
 

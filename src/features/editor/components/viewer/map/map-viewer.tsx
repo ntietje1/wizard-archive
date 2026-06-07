@@ -6,7 +6,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { EditorViewerProps } from '../sidebar-item-editor'
+import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import { MAP_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { handleError } from '~/shared/utils/logger'
@@ -19,10 +19,6 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useMapImageStatus } from './use-map-image-status'
 import { useMapRenderPins } from './use-map-render-pins'
-import {
-  useActiveSidebarItems,
-  useTrashSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
 import { useMapSidebarItemDropTarget } from './use-map-sidebar-item-drop-target'
 import { buildMapPinPlacementInputs, getImagePinPosition } from './map-pin-placement'
 import type { PinPosition } from './map-pin-placement'
@@ -44,6 +40,17 @@ const DEFAULT_TRANSFORM: MapTransformState = {
   scale: 1,
   positionX: 0,
   positionY: 0,
+}
+
+function parseMapTransformState(value: unknown): MapTransformState | null {
+  if (typeof value !== 'object' || value === null) return null
+  const scale = (value as { scale?: unknown }).scale
+  const positionX = (value as { positionX?: unknown }).positionX
+  const positionY = (value as { positionY?: unknown }).positionY
+  if (typeof scale !== 'number') return null
+  if (typeof positionX !== 'number') return null
+  if (typeof positionY !== 'number') return null
+  return { scale, positionX, positionY }
 }
 
 type PendingPinItems = { itemIds: Array<Id<'sidebarItems'>> }
@@ -108,7 +115,7 @@ function setPinElementPosition(pinEl: HTMLElement, position: PinPosition) {
   })
 }
 
-export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) {
+export function MapViewer({ item: map }: ViewerProps<GameMapWithContent>) {
   return useMapViewerElement(map)
 }
 
@@ -116,8 +123,6 @@ function useMapViewerElement(map: GameMapWithContent) {
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
-  const { itemsMap } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
   const actorPermissions = useCampaignActorPermissions()
   const canEditMap = actorPermissions.canMutate(map, PERMISSION_LEVEL.EDIT)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
@@ -145,6 +150,7 @@ function useMapViewerElement(map: GameMapWithContent) {
   const [savedTransform, setSavedTransform] = usePersistedState<MapTransformState>(
     `map-transform-${map._id}`,
     DEFAULT_TRANSFORM,
+    parseMapTransformState,
   )
   const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -356,7 +362,7 @@ function useMapViewerElement(map: GameMapWithContent) {
       return false
     }
   }
-  useMapSidebarItemDropTarget({ map, imageRef, itemsMap, trashedItemsMap, canPin: canEditMap })
+  useMapSidebarItemDropTarget({ map, imageRef, canPin: canEditMap })
 
   const handlePlacePin = async (position: PinPosition) => {
     if (!pendingPinItems || !map._id) return

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeftRight, History, Play, Settings, Square, UserPlus } from 'lucide-react'
+import { ArrowLeftRight, History, Play, Square, UserPlus } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import type { Session } from 'shared/sessions/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -92,7 +92,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
       <div className="px-3 pt-2">
         <div className="flex items-center gap-2">
           <span
-            className={`size-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+            className={`size-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-feedback-success' : 'bg-muted/30'}`}
           />
           <span className="text-xs text-muted-foreground">
             {currentSession.data?.name ?? 'No active session'}
@@ -149,18 +149,6 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
         >
           <UserPlus className="size-4" />
           Invite Members
-        </button>
-
-        <button
-          type="button"
-          className={menuItemClass}
-          onClick={() => {
-            openSettings('campaign-general')
-            onClose()
-          }}
-        >
-          <Settings className="size-4" />
-          Settings
         </button>
 
         <div className="border-t my-1" />

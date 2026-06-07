@@ -1,5 +1,7 @@
 import { CanvasScreenSpaceSvg } from './canvas-screen-space-overlay'
 import {
+  CANVAS_SNAP_GUIDE_STROKE,
+  CANVAS_SNAP_GUIDE_STROKE_OPACITY,
   CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
   canvasPointToScreenPoint,
   useCanvasScreenSpaceViewport,
@@ -50,8 +52,8 @@ function renderGuideLine({
       y1={start.y}
       x2={end.x}
       y2={end.y}
-      stroke="var(--primary)"
-      strokeOpacity={0.35}
+      stroke={CANVAS_SNAP_GUIDE_STROKE}
+      strokeOpacity={CANVAS_SNAP_GUIDE_STROKE_OPACITY}
       strokeWidth={CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX}
     />
   )

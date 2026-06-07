@@ -3,10 +3,14 @@ import { useCanvasEngine } from '../react/canvas-engine-context-value'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 
-export const CANVAS_SELECTION_CHROME_FILL_OPACITY = 0.05
+export const CANVAS_SELECTION_CHROME_FILL = 'var(--canvas-selection-fill)'
+export const CANVAS_SELECTION_CHROME_FILL_OPACITY = 1
+export const CANVAS_SELECTION_CHROME_STROKE = 'var(--canvas-selection-stroke)'
 export const CANVAS_SELECTION_CHROME_OUTSET_PX = 3
 export const CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX = 1.5
 export const CANVAS_SELECTION_OVERLAY_Z_INDEX = 30
+export const CANVAS_SNAP_GUIDE_STROKE = 'var(--canvas-snap-guide)'
+export const CANVAS_SNAP_GUIDE_STROKE_OPACITY = 'var(--canvas-snap-guide-opacity)'
 
 export function useCanvasScreenSpaceViewport() {
   const canvasEngine = useCanvasEngine()

@@ -60,7 +60,7 @@ describe('RightSidebarContainer', () => {
     const file = createFile()
     currentItemState.item = file
     sidebarState.visible = true
-    sidebarState.activeContentId = RIGHT_SIDEBAR_CONTENT.outline
+    sidebarState.activeContentId = RIGHT_SIDEBAR_CONTENT.history
 
     render(<RightSidebarContainer />)
 

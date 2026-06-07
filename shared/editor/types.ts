@@ -18,6 +18,11 @@ export type SortOptions = {
   direction: SortDirection
 }
 
+export const DEFAULT_SORT_OPTIONS: SortOptions = {
+  order: SORT_ORDERS.DateCreated,
+  direction: SORT_DIRECTIONS.Descending,
+}
+
 type EditorSortFields = {
   sortOrder: SortOrder
   sortDirection: SortDirection

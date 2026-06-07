@@ -4,7 +4,17 @@ import zlib from 'node:zlib'
 import type { Page } from '@playwright/test'
 
 export async function createMap(page: Page, name: string) {
-  await page.getByRole('button', { name: /map.*upload an image/i }).click()
+  const mapButton = page.getByRole('button', { name: /map.*upload an image/i })
+  await expect(mapButton).toBeVisible({ timeout: 10000 })
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await mapButton.click({ timeout: 10000 })
+      break
+    } catch (error) {
+      if (attempt === 2) throw error
+      await expect(mapButton).toBeVisible({ timeout: 10000 })
+    }
+  }
 
   const textbox = page.getByRole('textbox', { name: 'Item name' })
   await expect(textbox).toHaveValue(/untitled/i, { timeout: 10000 })

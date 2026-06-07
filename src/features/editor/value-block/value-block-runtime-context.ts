@@ -6,7 +6,7 @@ import type {
   NoteValueRuntimeState,
 } from '../../../../shared/note-values/types'
 
-interface NoteValueRuntimeContextValue {
+export interface NoteValueRuntimeContextValue {
   noteId?: Id<'sidebarItems'>
   editable: boolean
   authoredDefinitions: Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>>

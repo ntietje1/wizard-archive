@@ -111,7 +111,15 @@ export function MapCanvasStage({
           <LoadingSpinner size="lg" />
         </div>
       )}
-      {map.imageUrl ? (
+      {map.imageUrl && imageError ? (
+        <div
+          role="alert"
+          className="flex h-full items-center justify-center text-sm text-muted-foreground"
+          onContextMenu={onMapCanvasContextMenu}
+        >
+          Failed to load map image.
+        </div>
+      ) : map.imageUrl ? (
         <TransformWrapper
           ref={transformWrapperRef}
           initialScale={savedTransform.scale}

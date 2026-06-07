@@ -102,7 +102,7 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+C' : 'Control+C')
 
     await openItem(page, folderName)
-    const folderContents = page.getByRole('group', { name: `${folderName} folder contents` })
+    const folderContents = page.getByRole('region', { name: `${folderName} folder contents` })
     await folderContents.focus()
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V')
 
@@ -124,7 +124,7 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await dragSidebarItemToSidebarItem(page, dragNoteA, folderName)
 
     await openItem(page, folderName)
-    const folderContents = page.getByRole('group', { name: `${folderName} folder contents` })
+    const folderContents = page.getByRole('region', { name: `${folderName} folder contents` })
     await expect(folderContents.getByRole('link', { name: dragNoteA, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
@@ -147,12 +147,12 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await dragSidebarItemToSidebarItem(page, selectedMoveNoteA, folderName)
 
     await expect(await sidebarSelectionRow(sidebar, selectedMoveNoteA)).toHaveAttribute(
-      'aria-selected',
+      'data-selected',
       'true',
       { timeout: VISIBILITY_TIMEOUT },
     )
     await expect(await sidebarSelectionRow(sidebar, selectedMoveNoteB)).toHaveAttribute(
-      'aria-selected',
+      'data-selected',
       'true',
       { timeout: VISIBILITY_TIMEOUT },
     )

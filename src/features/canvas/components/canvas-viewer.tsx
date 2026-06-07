@@ -1,6 +1,7 @@
 import { ClientOnly } from '@tanstack/react-router'
 import { Profiler } from 'react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
@@ -8,6 +9,7 @@ import {
   isCanvasPerformanceEnabled,
   recordCanvasPerformanceMetric,
 } from '../runtime/performance/canvas-performance-metrics'
+import { CanvasContextMenuAdaptersContext } from '../runtime/context-menu/canvas-context-menu-adapters-context'
 import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime'
 import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { useCanvasPendingSelectionPreviewSummary } from '../runtime/selection/use-canvas-pending-selection-preview'
@@ -15,16 +17,18 @@ import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewp
 import { useCanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
 import { useCanvasEditorRuntime } from '../runtime/use-canvas-editor-runtime'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
+import { CanvasNodeContent } from './canvas-node-content'
 import { CanvasScene } from './canvas-scene'
 import { CanvasToolbar } from './canvas-toolbar'
+import { useCanvasContextMenuAppAdapters } from './use-canvas-context-menu-app-adapters'
 import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
-import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
+import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { CanvasWithContent } from 'shared/canvases/types'
 
 // React Profiler durations are milliseconds; this ignores trivial sampling noise.
 const MIN_TRIVIAL_COMMIT_DURATION_MS = 1
 
-export function CanvasViewer({ item: canvas }: EditorViewerProps<CanvasWithContent>) {
+export function CanvasViewer({ item: canvas }: ViewerProps<CanvasWithContent>) {
   return (
     <ClientOnly fallback={null}>
       <CanvasViewerInner canvas={canvas} />
@@ -60,7 +64,17 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
 
 type ReadyCanvasSession = Extract<CanvasViewerSession, { status: 'ready' }>
 
-function CanvasEditor({
+function CanvasEditor(session: ReadyCanvasSession) {
+  const contextMenuAdapters = useCanvasContextMenuAppAdapters()
+
+  return (
+    <CanvasContextMenuAdaptersContext.Provider value={contextMenuAdapters}>
+      <CanvasEditorRuntime {...session} />
+    </CanvasContextMenuAdaptersContext.Provider>
+  )
+}
+
+function CanvasEditorRuntime({
   canvasId,
   campaignId,
   canEdit,
@@ -154,6 +168,7 @@ function CanvasEditorContent({
           canEdit={canEdit}
           remoteUsers={runtime.remoteUsers}
           sceneHandlers={runtime.sceneHandlers}
+          NodeContentComponent={CanvasNodeContent}
           onNodeContextMenu={runtime.contextMenu.openForNode}
           onEdgeContextMenu={runtime.contextMenu.openForEdge}
           onPaneContextMenu={runtime.contextMenu.openForPane}
@@ -227,7 +242,7 @@ const CanvasDropOverlay = ({
       className={cn(
         'absolute inset-0 z-[4]',
         isDragging ? 'pointer-events-auto' : 'pointer-events-none',
-        active && 'bg-ring/5 ring-2 ring-inset ring-ring/60',
+        active && dropTargetChromeClass(isFileDropTarget ? 'file' : 'default'),
       )}
     />
   )
