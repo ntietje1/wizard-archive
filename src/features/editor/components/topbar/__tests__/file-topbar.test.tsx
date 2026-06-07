@@ -3,6 +3,9 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { describe, expect, it, vi } from 'vitest'
 import { FileTopbar } from '../file-topbar'
 import { createNote } from '~/test/factories/sidebar-item-factory'
+import type { EditorWorkspaceSource } from '../../../workspace/editor-workspace-source'
+import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
+import type { Id } from 'convex/_generated/dataModel'
 
 const currentItemState = vi.hoisted(() => ({
   item: null as ReturnType<typeof createNote> | null,
@@ -26,47 +29,6 @@ vi.mock('~/features/context-menu/components/editor-context-menu', () => ({
   EditorContextMenu: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('~/features/sidebar/hooks/useCurrentItem', () => ({
-  useCurrentItem: () => ({
-    item: currentItemState.item,
-    editorSearch: {},
-    isLoading: false,
-    hasRequestedItem: true,
-  }),
-}))
-
-vi.mock('~/features/filesystem/useFileSystemReadModel', () => ({
-  useFileSystemReadModel: () => ({
-    activeItemsById: new Map(
-      currentItemState.item ? [[currentItemState.item._id, currentItemState.item]] : [],
-    ),
-    trashItems: [],
-  }),
-}))
-
-vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
-  useSidebarUIStore: (selector: (state: unknown) => unknown) =>
-    selector({
-      pendingItemName: '',
-      setPendingItemName: vi.fn(),
-    }),
-}))
-
-vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => ({
-    isDm: false,
-    campaignId: 'campaign_1',
-  }),
-}))
-
-vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
-  useEditorMode: () => ({
-    canEdit: true,
-    campaignActor: { kind: 'player', campaignId: 'campaign_1' },
-    viewAsPlayerId: null,
-  }),
-}))
-
 vi.mock('~/features/editor/hooks/useRightSidebar', () => ({
   useRightSidebar: () => rightSidebarState,
 }))
@@ -78,10 +40,54 @@ describe('FileTopbar', () => {
       updatedTime: Date.now(),
     })
 
-    render(<FileTopbar />)
+    render(<FileTopbar source={createWorkspaceSource()} />)
 
     fireEvent.click(screen.getByRole('button', { name: /toggle history panel/i }))
 
     expect(rightSidebarState.toggle).not.toHaveBeenCalled()
   })
 })
+
+function createWorkspaceSource(): EditorWorkspaceSource {
+  const item = currentItemState.item
+  const contentItem = item as AnySidebarItemWithContent | null
+  const campaignId = 'campaign_1' as Id<'campaigns'>
+  return {
+    currentItem: {
+      item,
+      contentItem,
+      editorSearch: {},
+      isLoading: false,
+      itemError: null,
+      hasRequestedItem: true,
+    },
+    editorMode: {
+      editorMode: 'editor',
+      canEdit: true,
+      campaignActor: { kind: 'player', campaignId },
+      viewAsPlayerId: undefined,
+      setEditorMode: vi.fn(),
+      setViewAsPlayerId: vi.fn(),
+    },
+    filesystem: {
+      activeItemsById: new Map(item ? [[item._id, item]] : []),
+      trashItems: [],
+    },
+    campaign: {
+      campaignId,
+      isCampaignLoaded: true,
+      isDm: false,
+    },
+    pendingItemName: '',
+    setPendingItemName: vi.fn(),
+    requestedSlug: null,
+    canViewCurrentItem: true,
+    availabilityState: {
+      status: 'available',
+      label: item?.name ?? 'Page',
+      item: contentItem!,
+    },
+    createMissingRequestedNote: vi.fn(),
+    isCreatingMissingRequestedNote: false,
+  }
+}

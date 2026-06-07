@@ -22,10 +22,6 @@ const sidebarState = vi.hoisted(() => ({
   close: vi.fn(),
 }))
 
-vi.mock('~/features/sidebar/hooks/useCurrentItem', () => ({
-  useCurrentItem: () => ({ item: currentItemState.item }),
-}))
-
 vi.mock('~/features/editor/hooks/useRightSidebar', () => ({
   useRightSidebar: () => sidebarState,
 }))
@@ -62,7 +58,7 @@ describe('RightSidebarContainer', () => {
     sidebarState.visible = true
     sidebarState.activeContentId = RIGHT_SIDEBAR_CONTENT.history
 
-    render(<RightSidebarContainer />)
+    render(<RightSidebarContainer item={currentItemState.item} />)
 
     const sidebar = screen.getByTestId('right-sidebar')
     expect(sidebar).toHaveAttribute('data-item-id', file._id)
@@ -74,7 +70,7 @@ describe('RightSidebarContainer', () => {
     currentItemState.item = createNote()
     sidebarState.visible = false
 
-    render(<RightSidebarContainer />)
+    render(<RightSidebarContainer item={currentItemState.item} />)
 
     expect(screen.getByTestId('outline-toggle-container')).toHaveClass(
       'absolute',

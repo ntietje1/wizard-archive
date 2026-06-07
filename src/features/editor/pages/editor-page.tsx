@@ -3,25 +3,27 @@ import { EditorWorkspaceSurface } from '../components/editor-workspace-surface'
 import { FileTopbar } from '../components/topbar/file-topbar'
 import { TrashBanner } from '../components/deleted-item-banner'
 import { RightSidebarContainer } from '../components/right-sidebar/right-sidebar-container'
+import { useLiveEditorWorkspaceSource } from '../workspace/use-live-editor-workspace-source'
 import { useSelectedItemSync } from '~/features/sidebar/hooks/useSelectedItem'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
+import type { EditorWorkspaceSource } from '../workspace/editor-workspace-source'
 
 export function EditorPage() {
   useSelectedItemSync()
+  const workspaceSource = useLiveEditorWorkspaceSource()
 
   return (
     <EditorWorkspaceSurface
-      topbar={<FileTopbar />}
-      banner={<EditorBanner />}
-      rightSidebar={<RightSidebarContainer />}
+      topbar={<FileTopbar source={workspaceSource} />}
+      banner={<EditorBanner source={workspaceSource} />}
+      rightSidebar={<RightSidebarContainer item={workspaceSource.currentItem.item} />}
     >
-      <EditorContent />
+      <EditorContent source={workspaceSource} />
     </EditorWorkspaceSurface>
   )
 }
 
-function EditorBanner() {
-  const { item, isLoading } = useCurrentItem()
+function EditorBanner({ source }: { source: EditorWorkspaceSource }) {
+  const { item, isLoading } = source.currentItem
   if (isLoading || !item || !item.isTrashed) return null
   return <TrashBanner item={item} />
 }

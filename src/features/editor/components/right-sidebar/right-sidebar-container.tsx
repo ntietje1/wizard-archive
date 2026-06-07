@@ -3,14 +3,13 @@ import { List } from 'lucide-react'
 import { RIGHT_SIDEBAR_CONTENT } from './constants'
 import { RightSidebar } from './right-sidebar'
 import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { ResizableSidebar } from '~/features/sidebar/components/resizable-sidebar'
 import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { canShowRightSidebarContent } from './right-sidebar-model'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 
-export function RightSidebarContainer() {
-  const { item } = useCurrentItem()
+export function RightSidebarContainer({ item }: { item: AnySidebarItem | null }) {
   const sidebar = useRightSidebar(item?.type)
 
   const prevItemIdRef = useRef(item?._id)

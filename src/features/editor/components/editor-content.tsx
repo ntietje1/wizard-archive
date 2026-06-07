@@ -1,28 +1,18 @@
-import { Suspense, lazy, useRef, useTransition } from 'react'
+import { Suspense, lazy, useRef } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EMPTY_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
-import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 import { cn } from '~/features/shadcn/lib/utils'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
-import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { handleError } from '~/shared/utils/logger'
+import type { EditorWorkspaceSource } from '../workspace/editor-workspace-source'
 
 const SidebarItemEditor = lazy(() =>
   import('./viewer/sidebar-item-editor').then((m) => ({
@@ -38,28 +28,16 @@ function EditorLoading() {
   )
 }
 
-export function EditorContent() {
-  const { item, contentItem, editorSearch, isLoading, itemError, hasRequestedItem } =
-    useCurrentItem()
-  const { campaignActor } = useEditorMode()
-  const { itemsMap } = useActiveSidebarItems()
-  const requestedSlug = getSlug(editorSearch)
+export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
+  const { item, contentItem, editorSearch, isLoading, hasRequestedItem } = source.currentItem
+  const { campaignActor } = source.editorMode
 
   const canView =
     !!item &&
     effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, {
       actor: campaignActor,
-      allItemsMap: itemsMap,
+      allItemsMap: source.filesystem.activeItemsById,
     })
-  const availabilityState = useSidebarItemAvailabilityState({
-    lookup: { kind: 'slug', slug: requestedSlug },
-    readableItem: contentItem,
-    readableItemLoading: isLoading,
-    readableItemError: itemError,
-    canView,
-    subject: 'page',
-    fallbackLabel: 'Page',
-  })
 
   if (isLoading) {
     return <EditorLoading />
@@ -72,9 +50,16 @@ export function EditorContent() {
 
   if (!canView) {
     if (hasRequestedItem) {
-      return <UnavailableEditorContent state={availabilityState} requestedSlug={requestedSlug} />
+      return (
+        <UnavailableEditorContent
+          state={source.availabilityState}
+          requestedSlug={source.requestedSlug}
+          isCreatingMissingItem={source.isCreatingMissingRequestedNote}
+          onCreateMissingItem={source.createMissingRequestedNote}
+        />
+      )
     }
-    return <EmptyEditorContent />
+    return <EmptyEditorContent campaign={source.campaign} />
   }
 
   if (!contentItem) {
@@ -88,8 +73,7 @@ export function EditorContent() {
   )
 }
 
-function EmptyEditorContent() {
-  const { isDm, isCampaignLoaded } = useCampaign()
+function EmptyEditorContent({ campaign }: { campaign: EditorWorkspaceSource['campaign'] }) {
   const ref = useRef<HTMLDivElement>(null)
 
   const { isDropTarget } = useDndDropTarget({
@@ -117,7 +101,7 @@ function EmptyEditorContent() {
         isFileDragTarget && dropTargetChromeClass('file'),
       )}
     >
-      {!isCampaignLoaded ? null : isDm ? (
+      {!campaign.isCampaignLoaded ? null : campaign.isDm ? (
         <CreateNewDashboard parentId={null} />
       ) : (
         <p className="text-muted-foreground">Select an item from the sidebar to view it.</p>
@@ -129,33 +113,14 @@ function EmptyEditorContent() {
 function UnavailableEditorContent({
   state,
   requestedSlug,
+  isCreatingMissingItem,
+  onCreateMissingItem,
 }: {
   state: SidebarItemAvailabilityState
   requestedSlug: string | null
+  isCreatingMissingItem: boolean
+  onCreateMissingItem: () => void
 }) {
-  const { campaignId } = useCampaign()
-  const { createItem } = useCreateFileSystemItem()
-  const { getDefaultName } = useSidebarValidation()
-  const { openParentFolders } = useOpenParentFolders()
-  const [isPending, startCreateTransition] = useTransition()
-
-  const handleCreate = () => {
-    if (!campaignId || !requestedSlug || isPending) return
-
-    startCreateTransition(async () => {
-      try {
-        const result = await createItem({
-          type: SIDEBAR_ITEM_TYPES.notes,
-          parentTarget: { kind: 'direct', parentId: null },
-          name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
-        })
-        openParentFolders(result.id)
-      } catch (error) {
-        handleError(error, 'Failed to create note')
-      }
-    })
-  }
-
   // UnavailableEditorContent is only rendered when canView is false; an
   // available state prop here would violate that caller invariant.
   if (state.status === 'available') {
@@ -168,7 +133,7 @@ function UnavailableEditorContent({
         <p>{state.message}</p>
         {state.status === 'not_found' && requestedSlug && (
           <p className="mt-2">
-            <Button variant="link" onClick={handleCreate} disabled={isPending}>
+            <Button variant="link" onClick={onCreateMissingItem} disabled={isCreatingMissingItem}>
               Create it
             </Button>
           </p>

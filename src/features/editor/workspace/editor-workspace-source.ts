@@ -1,0 +1,50 @@
+import type { CampaignActor } from 'shared/campaigns/actor'
+import type { EditorMode } from 'shared/editor/types'
+import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
+import type { Id } from 'convex/_generated/dataModel'
+import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
+import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+
+interface EditorCurrentItemSnapshot {
+  item: AnySidebarItem | null
+  contentItem: AnySidebarItemWithContent | null
+  editorSearch: EditorSearch
+  isLoading: boolean
+  itemError: unknown
+  hasRequestedItem: boolean
+}
+
+interface EditorModeSnapshot {
+  editorMode: EditorMode
+  campaignActor: CampaignActor | null
+  viewAsPlayerId: Id<'campaignMembers'> | undefined
+  canEdit: boolean
+  setEditorMode: (editorMode: EditorMode) => void
+  setViewAsPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
+}
+
+interface EditorFileSystemSnapshot {
+  activeItemsById: Map<Id<'sidebarItems'>, AnySidebarItem>
+  trashItems: Array<AnySidebarItem>
+}
+
+interface EditorCampaignSnapshot {
+  campaignId: Id<'campaigns'> | undefined
+  isCampaignLoaded: boolean
+  isDm: boolean | undefined
+}
+
+export interface EditorWorkspaceSource {
+  currentItem: EditorCurrentItemSnapshot
+  editorMode: EditorModeSnapshot
+  filesystem: EditorFileSystemSnapshot
+  campaign: EditorCampaignSnapshot
+  pendingItemName: string
+  setPendingItemName: (name: string) => void
+  requestedSlug: SidebarItemSlug | null
+  canViewCurrentItem: boolean
+  availabilityState: SidebarItemAvailabilityState
+  createMissingRequestedNote: () => void
+  isCreatingMissingRequestedNote: boolean
+}
