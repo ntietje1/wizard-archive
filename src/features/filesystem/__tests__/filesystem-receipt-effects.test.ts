@@ -40,7 +40,7 @@ function createReadModel(snapshot: SidebarCacheSnapshot) {
 }
 
 describe('filesystem receipt effects', () => {
-  it('plans committed create selection and navigation as lifecycle intents', () => {
+  it('plans committed create selection without navigation', () => {
     const item = createNote({
       _id: 'item_1' as Id<'sidebarItems'>,
       name: 'Scene',
@@ -60,9 +60,6 @@ describe('filesystem receipt effects', () => {
         currentSlug: null,
         selectedItemIds: [],
       }),
-    ).toEqual([
-      { type: 'selectItems', itemIds: ['item_1' as Id<'sidebarItems'>] },
-      { type: 'navigateToItem', slug: 'scene', replace: true },
-    ])
+    ).toEqual([{ type: 'selectItems', itemIds: ['item_1' as Id<'sidebarItems'>] }])
   })
 })

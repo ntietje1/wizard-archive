@@ -12,7 +12,6 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
@@ -137,7 +136,6 @@ function UnavailableEditorContent({
   const { campaignId } = useCampaign()
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
-  const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
   const [isPending, startCreateTransition] = useTransition()
 
@@ -152,7 +150,6 @@ function UnavailableEditorContent({
           name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
         })
         openParentFolders(result.id)
-        await navigateToItem(result.slug)
       } catch (error) {
         handleError(error, 'Failed to create note')
       }

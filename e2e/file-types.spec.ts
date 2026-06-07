@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import { uploadFileInput } from './helpers/file-upload-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E FileTypes')
@@ -86,7 +87,7 @@ startxref
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: /^file upload/i }).click()
-    await page.getByLabel('Upload file').setInputFiles(pngPath)
+    await uploadFileInput(page).setInputFiles(pngPath)
 
     await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 15000 })
 
@@ -105,10 +106,10 @@ startxref
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: /^file upload/i }).click()
-    await expect(page.getByLabel('Upload file')).toBeAttached({
+    await expect(uploadFileInput(page)).toBeAttached({
       timeout: 15000,
     })
-    await page.getByLabel('Upload file').setInputFiles(pdfPath)
+    await uploadFileInput(page).setInputFiles(pdfPath)
 
     // Second file upload creates "Untitled File 1"
     await expect(page.getByRole('link', { name: /untitled file 1/i })).toBeVisible({
@@ -121,7 +122,7 @@ startxref
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: /^file upload/i }).click()
-    await page.getByLabel('Upload file').setInputFiles(oversizedPath)
+    await uploadFileInput(page).setInputFiles(oversizedPath)
 
     await expect(page.getByText(/file must be less than|too large|size limit/i)).toBeVisible({
       timeout: 10000,

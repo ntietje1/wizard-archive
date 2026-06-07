@@ -23,7 +23,7 @@ function createTestCache(snapshot: SidebarCacheSnapshot) {
 }
 
 describe('filesystem optimistic planning', () => {
-  it('models create selection and navigation as lifecycle intents', () => {
+  it('models create as a passive item insert with parent-folder visibility', () => {
     const parent = createFolder({ name: 'Scenes' })
     const snapshot: SidebarCacheSnapshot = { sidebar: [parent], trash: [] }
     const cache = createTestCache(snapshot)
@@ -49,16 +49,8 @@ describe('filesystem optimistic planning', () => {
     if (upsert?.type !== 'upsertSidebarItem') return
     expect(plan.preview.optimisticIntents).toEqual([
       { type: 'openFolder', campaignId, folderId: parent._id },
-      { type: 'selectItem', itemId: upsert.item._id, slug: upsert.item.slug },
-      { type: 'navigateToItem', slug: upsert.item.slug },
     ])
-    expect(plan.preview.rollbackIntents).toEqual([
-      {
-        type: 'restorePreviousLocation',
-        guardedByItemId: upsert.item._id,
-        guardedBySlug: upsert.item.slug,
-      },
-    ])
+    expect(plan.preview.rollbackIntents).toEqual([])
     expect('optimisticItem' in plan.preview).toBe(false)
   })
 

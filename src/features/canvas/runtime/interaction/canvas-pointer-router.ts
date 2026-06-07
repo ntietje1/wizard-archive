@@ -21,7 +21,7 @@ type CanvasPointerTarget =
   | { kind: 'blocked-interactive-child' }
   | { kind: 'connection-handle' }
   | { kind: 'edge' }
-  | { kind: 'node'; nodeId: string }
+  | { kind: 'node'; nodeId: string; source: 'node-shell' | 'selection-overlay' }
   | { kind: 'outside' }
   | { kind: 'pane' }
   | { kind: 'resize-handle' }
@@ -38,8 +38,11 @@ type ActivePointerGesture =
     }
   | {
       kind: 'node-drag'
+      nodeId: string
       pointerId: number
       controller: CanvasDragController
+      source: Extract<CanvasPointerTarget, { kind: 'node' }>['source']
+      startPoint: { x: number; y: number }
     }
   | {
       kind: 'tool'
@@ -63,6 +66,7 @@ export interface CanvasPointerRouterOptions {
     | 'commitGesture'
     | 'getSnapshot'
     | 'setGesturePreview'
+    | 'toggleNode'
   >
   getShiftPressed: () => boolean
   setActiveTool: (tool: CanvasToolId) => void
@@ -164,8 +168,11 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
       captureTarget = setPointerCapture(event)
       activeGesture = {
         kind: 'node-drag',
+        nodeId: target.nodeId,
         pointerId: event.pointerId,
         controller,
+        source: target.source,
+        startPoint: { x: event.clientX, y: event.clientY },
       }
       addWindowGestureListeners()
       return
@@ -273,6 +280,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
     if (activeGesture.kind === 'node-drag') {
       claimCanvasPointerEvent(event)
       activeGesture.controller.commit(event)
+      maybeToggleSelectionOverlayNodeFromPointGesture(event, activeGesture)
       endActiveGesture()
       return
     }
@@ -355,6 +363,26 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
     }
   }
 
+  const maybeToggleSelectionOverlayNodeFromPointGesture = (
+    event: PointerEvent,
+    gesture: Extract<ActivePointerGesture, { kind: 'node-drag' }>,
+  ) => {
+    if (
+      gesture.source !== 'selection-overlay' ||
+      !isPrimarySelectionModifier(event) ||
+      distance(gesture.startPoint, { x: event.clientX, y: event.clientY }) >
+        MIN_POINT_GESTURE_DISTANCE
+    ) {
+      return
+    }
+
+    const currentOptions = requireOptions(options)
+    currentOptions.selection.toggleNode(
+      resolveSelectionOverlayClickNodeId(currentOptions, event) ?? gesture.nodeId,
+      true,
+    )
+  }
+
   return {
     interaction,
     attach: (nextSurfaceElement) => {
@@ -412,12 +440,16 @@ function classifyCanvasPointerTarget(
 
   const selectionDragTarget = target.closest<HTMLElement>('[data-canvas-selection-drag-node-id]')
   if (selectionDragTarget?.dataset.canvasSelectionDragNodeId) {
-    return { kind: 'node', nodeId: selectionDragTarget.dataset.canvasSelectionDragNodeId }
+    return {
+      kind: 'node',
+      nodeId: selectionDragTarget.dataset.canvasSelectionDragNodeId,
+      source: 'selection-overlay',
+    }
   }
 
   const node = target.closest<HTMLElement>('.canvas-node-shell')
   if (node?.dataset.nodeId) {
-    return { kind: 'node', nodeId: node.dataset.nodeId }
+    return { kind: 'node', nodeId: node.dataset.nodeId, source: 'node-shell' }
   }
 
   if (isCanvasEmptyPaneTarget(target, pane)) {
@@ -486,6 +518,43 @@ function getCanvasSelectionSnapshot(canvasEngine: CanvasEngine) {
     edges: snapshot.edges,
     measuredNodes: getMeasuredCanvasNodesFromEngineSnapshot(snapshot),
   }
+}
+
+function resolveSelectionOverlayClickNodeId(
+  options: CanvasPointerRouterOptions,
+  event: PointerEvent,
+): string | null {
+  const canvasPoint = options.viewportController.screenToCanvasPosition({
+    x: event.clientX,
+    y: event.clientY,
+  })
+  const selectedNodeIds = options.selection.getSnapshot().nodeIds
+  const snapshot = options.canvasEngine.getSnapshot()
+  const hitNodes = Array.from(selectedNodeIds).flatMap((nodeId) => {
+    const internalNode = snapshot.nodeLookup.get(nodeId)
+    if (!internalNode) {
+      return []
+    }
+
+    const { node } = internalNode
+    const width = node.width ?? internalNode.measured.width
+    const height = node.height ?? internalNode.measured.height
+    if (
+      width === undefined ||
+      height === undefined ||
+      canvasPoint.x < node.position.x ||
+      canvasPoint.y < node.position.y ||
+      canvasPoint.x > node.position.x + width ||
+      canvasPoint.y > node.position.y + height
+    ) {
+      return []
+    }
+
+    return [{ nodeId, zIndex: internalNode.zIndex ?? 0 }]
+  })
+
+  hitNodes.sort((left, right) => right.zIndex - left.zIndex)
+  return hitNodes[0]?.nodeId ?? null
 }
 
 function claimCanvasPointerEvent(event: PointerEvent) {

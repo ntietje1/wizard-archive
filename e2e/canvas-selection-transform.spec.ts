@@ -2,11 +2,11 @@ import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import {
   clearCanvasViaRuntime,
+  clickCanvasNode,
   createCanvas,
   DEFAULT_CANVAS_NAME,
   enableCanvasRuntime,
   getCanvasNodeById,
-  getCanvasNodesByType,
   getCanvasPendingSelectionNodeIds,
   getCanvasSelectionResizeWrapper,
   getCommittedSelectedCanvasNodes,
@@ -109,19 +109,19 @@ test.describe.serial('canvas selection under viewport transforms', () => {
   test('modifier selection toggles transformed nodes without moving the viewport', async ({
     page,
   }) => {
-    // Use the browser platform because Playwright can run a different browser OS than the runner.
     const modifier = await getBrowserPrimaryModifier(page)
     await setCanvasViewportViaRuntime(page, { x: -40, y: 30, zoom: 1.5 })
     await selectCanvasTool(page, 'Pointer')
 
-    await getCanvasNodesByType(page, 'text').first().click()
-    await page.keyboard.down(modifier)
-    try {
-      await getCanvasNodesByType(page, 'text').nth(1).click()
-      await getCanvasNodesByType(page, 'text').first().click()
-    } finally {
-      await page.keyboard.up(modifier)
-    }
+    await clickCanvasNode(page, getCanvasNodeById(page, 'perf-node-0'))
+    await clickCanvasNode(page, getCanvasNodeById(page, 'perf-node-1'), {
+      modifiers: [modifier],
+      positionRatio: { xRatio: 0.5, yRatio: 0.5 },
+    })
+    await clickCanvasNode(page, getCanvasNodeById(page, 'perf-node-0'), {
+      modifiers: [modifier],
+      positionRatio: { xRatio: 0.2, yRatio: 0.5 },
+    })
 
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
     await expect(getCanvasNodeById(page, 'perf-node-1')).toHaveAttribute(

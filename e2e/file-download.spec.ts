@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import { uploadFileInput } from './helpers/file-upload-helpers'
 import { openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -26,7 +27,7 @@ test.describe.serial('file download', () => {
 
     // Create a file item via the "File" button on the create-new page
     await page.getByRole('button', { name: /^File/ }).click()
-    const fileInput = page.getByLabel('Upload file')
+    const fileInput = uploadFileInput(page)
     await fileInput.setInputFiles(testFilePath)
 
     await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 10000 })

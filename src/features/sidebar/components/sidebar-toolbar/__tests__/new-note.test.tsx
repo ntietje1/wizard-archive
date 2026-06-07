@@ -5,7 +5,6 @@ import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { NewNoteButton } from '../new-note'
 
 const createItemMock = vi.hoisted(() => vi.fn())
-const navigateToItemMock = vi.hoisted(() => vi.fn())
 const openParentFoldersMock = vi.hoisted(() => vi.fn())
 const handleErrorMock = vi.hoisted(() => vi.fn())
 const toastInfoMock = vi.hoisted(() => vi.fn())
@@ -20,10 +19,6 @@ vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({ campaignId: 'campaign_1' }),
-}))
-
-vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
-  useEditorNavigation: () => ({ navigateToItem: navigateToItemMock }),
 }))
 
 vi.mock('~/features/sidebar/hooks/useOpenParentFolders', () => ({
@@ -42,7 +37,6 @@ vi.mock('sonner', () => ({
 describe('NewNoteButton', () => {
   beforeEach(() => {
     createItemMock.mockReset()
-    navigateToItemMock.mockReset()
     openParentFoldersMock.mockReset()
     handleErrorMock.mockReset()
     toastInfoMock.mockReset()
@@ -65,7 +59,7 @@ describe('NewNoteButton', () => {
     expect(toastInfoMock).toHaveBeenCalledWith('Note creation in progress')
   })
 
-  it('opens and navigates to a successfully created note', async () => {
+  it('creates a note and opens its parent folders', async () => {
     const user = userEvent.setup()
     createItemMock.mockResolvedValue({ id: 'note_1', slug: 'new-note' })
 
@@ -81,7 +75,6 @@ describe('NewNoteButton', () => {
       }),
     )
     expect(openParentFoldersMock).toHaveBeenCalledWith('note_1')
-    expect(navigateToItemMock).toHaveBeenCalledWith('new-note')
   })
 
   it('reports create failures and leaves the button enabled', async () => {

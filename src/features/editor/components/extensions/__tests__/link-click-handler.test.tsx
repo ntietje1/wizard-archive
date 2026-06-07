@@ -16,7 +16,6 @@ const {
   handleErrorMock,
   loggerErrorMock,
   navigateMock,
-  navigateToItemMock,
   useCampaignMock,
   useEditorDomElementMock,
   useEditorModeMock,
@@ -32,7 +31,6 @@ const {
   handleErrorMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   navigateMock: vi.fn(),
-  navigateToItemMock: vi.fn(),
   useCampaignMock: vi.fn(),
   useEditorDomElementMock: vi.fn(),
   useEditorModeMock: vi.fn(),
@@ -120,10 +118,6 @@ vi.mock('~/shared/utils/logger', () => ({
   logger: {
     error: (...args: Array<unknown>) => loggerErrorMock(...args),
   },
-}))
-
-vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
-  useEditorNavigation: () => ({ navigateToItem: navigateToItemMock }),
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -287,7 +281,6 @@ describe('LinkClickHandler', () => {
     handleErrorMock.mockReset()
     loggerErrorMock.mockReset()
     navigateMock.mockReset()
-    navigateToItemMock.mockReset()
     openMock.mockReset()
     vi.stubGlobal('open', openMock)
   })
@@ -435,8 +428,9 @@ describe('LinkClickHandler', () => {
     )
 
     resolveCreate?.({ noteId: 'note-1', slug: 'ghost-note' })
-    await waitFor(() => {
-      expect(navigateToItemMock).toHaveBeenCalledWith('ghost-note')
+    await expect(createNoteMock.mock.results[0]?.value).resolves.toEqual({
+      noteId: 'note-1',
+      slug: 'ghost-note',
     })
   })
 
@@ -503,9 +497,13 @@ describe('LinkClickHandler', () => {
       slug: 'north-ghost-note',
     })
 
-    await waitFor(() => {
-      expect(navigateToItemMock).toHaveBeenCalledWith('districts-ghost-note')
-      expect(navigateToItemMock).toHaveBeenCalledWith('north-ghost-note')
+    await expect(createNoteMock.mock.results[0]?.value).resolves.toEqual({
+      noteId: 'note-1',
+      slug: 'districts-ghost-note',
+    })
+    await expect(createNoteMock.mock.results[1]?.value).resolves.toEqual({
+      noteId: 'note-2',
+      slug: 'north-ghost-note',
     })
   })
 

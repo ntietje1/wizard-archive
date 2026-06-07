@@ -9,6 +9,7 @@ import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 
 interface CreateNewButtonProps {
   icon: LucideIcon
@@ -57,6 +58,7 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
   const { campaignId } = useCampaign()
   const { getDefaultName } = useSidebarValidation()
   const { runCreationCommand } = useRunSidebarItemCreationCommand()
+  const { navigateToItem } = useEditorNavigation()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const [creatingCommandId, setCreatingCommandId] = useState<
     SidebarItemCreationCommand['id'] | null
@@ -69,7 +71,10 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
 
     setCreatingCommandId(command.id)
     const name = pendingItemName.trim() || getDefaultName(command.type, parentId)
-    await runCreationCommand(command, { parentId, name })
+    const result = await runCreationCommand(command, { parentId, name })
+    if (result) {
+      await navigateToItem(result.slug)
+    }
     setCreatingCommandId(null)
   }
 

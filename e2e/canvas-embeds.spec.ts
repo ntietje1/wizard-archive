@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createMap } from './helpers/map-helpers'
-import { createNote } from './helpers/sidebar-helpers'
+import { createNote, selectableSidebarRow } from './helpers/sidebar-helpers'
 import {
   clearCanvasViaRuntime,
   createCanvas,
@@ -248,6 +248,7 @@ async function clickEmbeddedPreview(
 
 async function openCreateNewDashboard(page: Page) {
   await page.getByRole('navigation', { name: 'Sidebar' }).getByRole('link', { name: 'New' }).click()
+  await expect(page.getByRole('heading', { name: 'Create New' })).toBeVisible({ timeout: 10000 })
 }
 
 async function dragSidebarItemToCanvas(
@@ -255,34 +256,37 @@ async function dragSidebarItemToCanvas(
   itemName: string,
   target: { xRatio: number; yRatio: number },
 ) {
-  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-  const item = sidebar.getByRole('link', { name: itemName, exact: true })
-  const sourceBox = await item.boundingBox()
+  const item = selectableSidebarRow(page, itemName)
+  await expect(item).toBeVisible()
   const paneBox = await getCanvasPane(page).boundingBox()
-  if (!sourceBox || !paneBox) {
-    throw new Error('Sidebar item or canvas pane is not visible')
+  if (!paneBox) {
+    throw new Error('Canvas pane is not visible')
   }
 
-  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(
-    paneBox.x + paneBox.width * target.xRatio,
-    paneBox.y + paneBox.height * target.yRatio,
-    { steps: 16 },
-  )
-  await page.mouse.up()
+  await item.dragTo(getCanvasPane(page), {
+    targetPosition: {
+      x: paneBox.width * target.xRatio,
+      y: paneBox.height * target.yRatio,
+    },
+  })
 }
 
 async function openPaneNewMenu(page: Page, target: { xRatio: number; yRatio: number }) {
-  const paneBox = await getCanvasPane(page).boundingBox()
+  const pane = getCanvasPane(page)
+  const paneBox = await pane.boundingBox()
   if (!paneBox) throw new Error('Canvas pane is not visible')
-  await page.mouse.click(
-    paneBox.x + paneBox.width * target.xRatio,
-    paneBox.y + paneBox.height * target.yRatio,
-    {
-      button: 'right',
-    },
-  )
+  await pane.evaluate((element, position) => {
+    const box = element.getBoundingClientRect()
+    element.dispatchEvent(
+      new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: box.left + box.width * position.xRatio,
+        clientY: box.top + box.height * position.yRatio,
+        button: 2,
+      }),
+    )
+  }, target)
   await expect(page.getByRole('menu')).toBeVisible()
   await page.getByRole('menuitem', { name: 'New...' }).hover()
 }

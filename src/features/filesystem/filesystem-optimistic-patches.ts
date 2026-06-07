@@ -101,18 +101,10 @@ export function buildOptimisticCreatePreview({
   return {
     receiptPatches,
     inversePatches: [{ type: 'removeSidebarItem', itemId: item._id, snapshot: item }],
-    optimisticIntents: [
-      ...(parentId ? [{ type: 'openFolder' as const, campaignId, folderId: parentId }] : []),
-      { type: 'selectItem', itemId: item._id, slug: item.slug },
-      { type: 'navigateToItem', slug: item.slug },
-    ],
-    rollbackIntents: [
-      {
-        type: 'restorePreviousLocation',
-        guardedByItemId: item._id,
-        guardedBySlug: item.slug,
-      },
-    ],
+    optimisticIntents: parentId
+      ? [{ type: 'openFolder' as const, campaignId, folderId: parentId }]
+      : [],
+    rollbackIntents: [],
   }
 }
 

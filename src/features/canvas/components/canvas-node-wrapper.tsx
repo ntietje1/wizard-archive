@@ -51,7 +51,7 @@ export function CanvasNodeWrapper({
   )
   const canvasEngine = useCanvasEngine()
   const { domRuntime } = useCanvasViewportRuntime()
-  const nodeRef = useRef<HTMLButtonElement | null>(null)
+  const nodeRef = useRef<HTMLDivElement | null>(null)
   const shellMounted = shell !== null
   const shellId = shell?.id
 
@@ -89,16 +89,16 @@ export function CanvasNodeWrapper({
 
   const getCurrentNode = () => canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node ?? null
   return (
-    <button
-      type="button"
+    <div
       ref={nodeRef}
       className={cn(
-        'canvas-node-shell absolute left-0 top-0 touch-none select-none appearance-none border-0 bg-transparent p-0 text-inherit',
+        'canvas-node-shell absolute left-0 top-0 inline-block touch-none select-none',
         shell.className,
       )}
       data-node-id={shell.id}
       data-node-type={shell.type}
       aria-label={`${shell.type ?? 'canvas'} node`}
+      role="group"
       tabIndex={-1}
       style={{
         contain: 'layout style',
@@ -123,7 +123,7 @@ export function CanvasNodeWrapper({
       onKeyDown={handleCanvasNodeKeyDown}
     >
       {children}
-    </button>
+    </div>
   )
 }
 

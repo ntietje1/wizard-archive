@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import { uploadFileInput } from './helpers/file-upload-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E Upload')
@@ -52,7 +53,7 @@ test.describe.serial('file upload', () => {
     })
     await uploadButton.click()
 
-    const fileInput = page.getByLabel('Upload file')
+    const fileInput = uploadFileInput(page)
     await fileInput.setInputFiles(testFilePath)
 
     const submitButton = page.getByRole('button', {

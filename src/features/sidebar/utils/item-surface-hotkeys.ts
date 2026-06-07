@@ -15,14 +15,33 @@ function getHotkeyTargetCandidates(target: EventTarget | null): Array<Element> {
   const candidates: Array<Element> = []
   if (typeof Element !== 'undefined' && target instanceof Element) candidates.push(target)
   if (globalThis.document?.activeElement) candidates.push(globalThis.document.activeElement)
-  const selectionNode = globalThis.getSelection?.()?.anchorNode
-  const selectionElement =
-    typeof Element !== 'undefined' && selectionNode instanceof Element
-      ? selectionNode
-      : selectionNode?.parentElement
-  if (selectionElement) candidates.push(selectionElement)
+  if (shouldUseSelectionFallback(target)) {
+    const selectionNode = globalThis.getSelection?.()?.anchorNode
+    const selectionElement =
+      typeof Element !== 'undefined' && selectionNode instanceof Element
+        ? selectionNode
+        : selectionNode?.parentElement
+    if (selectionElement) candidates.push(selectionElement)
+  }
 
   return candidates
+}
+
+function shouldUseSelectionFallback(target: EventTarget | null): boolean {
+  if (
+    typeof Element !== 'undefined' &&
+    target instanceof Element &&
+    isConcreteFocusTarget(target)
+  ) {
+    return false
+  }
+
+  const activeElement = globalThis.document?.activeElement
+  return !(activeElement instanceof Element) || !isConcreteFocusTarget(activeElement)
+}
+
+function isConcreteFocusTarget(element: Element): boolean {
+  return element !== globalThis.document?.body && element !== globalThis.document?.documentElement
 }
 
 function isEditableElementOrDescendant(target: Element): boolean {

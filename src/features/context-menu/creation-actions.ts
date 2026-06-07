@@ -20,7 +20,6 @@ export function createCreationActions({
   createItem,
   getDefaultName,
   openParentFolders,
-  navigateToItem,
 }: {
   campaignId: Id<'campaigns'> | undefined
   createItem: (args: {
@@ -31,7 +30,6 @@ export function createCreationActions({
   }) => Promise<{ id: Id<'sidebarItems'>; slug: SidebarItemSlug }>
   getDefaultName: (type: SidebarItemCreationType, parentId: Id<'sidebarItems'> | null) => string
   openParentFolders: (itemId: Id<'sidebarItems'>) => void
-  navigateToItem: (slug: SidebarItemSlug) => Promise<void>
 }): CreationActions {
   const createSidebarItem = async (ctx: MenuContext, command: SidebarItemCreationCommand) => {
     if (!campaignId) {
@@ -51,7 +49,6 @@ export function createCreationActions({
         name: getDefaultName(command.type, parentId),
       })
       openParentFolders(result.id)
-      await navigateToItem(result.slug)
     } catch (error) {
       handleError(error, command.failureMessage)
     }

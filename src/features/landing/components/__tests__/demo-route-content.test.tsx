@@ -19,8 +19,8 @@ vi.mock('~/features/canvas/components/canvas-read-only-preview', () => ({
   },
 }))
 
-vi.mock('~/features/editor/components/static-note-content', () => ({
-  StaticNoteContent: (props: { content: Array<unknown> }) => {
+vi.mock('~/features/editor/components/raw-note-content', () => ({
+  RawNoteContent: (props: { content: Array<unknown> }) => {
     staticNoteContentMock(props)
     return <div data-testid="demo-note-preview" />
   },

@@ -124,9 +124,10 @@ test.describe.serial('trash: empty & permanent delete', () => {
     const dialog = page.getByRole('dialog', { name: /empty trash/i })
     await dialog.getByRole('button', { name: /empty trash/i }).click()
 
+    await waitForFilesystemIdle(page)
+    await openTrashPopover(page)
     await expect(page.getByText(/trash is empty/i)).toBeVisible({
       timeout: 10000,
     })
-    await waitForFilesystemIdle(page)
   })
 })

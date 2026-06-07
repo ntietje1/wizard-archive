@@ -1,5 +1,5 @@
 import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
-import { StaticNoteContent } from '~/features/editor/components/static-note-content'
+import { RawNoteContent } from '~/features/editor/components/raw-note-content'
 import { DemoCanvasEmbedRenderer } from '~/features/landing/components/demo-canvas-embed-renderer'
 import { NavBar } from '~/features/landing/components/nav-bar'
 import type { CustomBlock } from 'shared/editor-blocks/types'
@@ -176,8 +176,9 @@ export function DemoRouteContent() {
               <div className="border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground">
                 Session Note
               </div>
-              <StaticNoteContent
+              <RawNoteContent
                 content={DEMO_NOTE_CONTENT}
+                editable={false}
                 className="pointer-events-none p-4 text-sm"
               />
             </section>

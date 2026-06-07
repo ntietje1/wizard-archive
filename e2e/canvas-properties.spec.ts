@@ -21,7 +21,7 @@ import type { Locator, Page } from '@playwright/test'
 
 const campaignName = testName('CnvProps')
 const canvasName = DEFAULT_CANVAS_NAME
-const BLUE_COLOR = 'rgb(82, 156, 202)'
+const BLUE_COLOR = 'rgb(54, 73, 84)'
 const RED_COLOR = 'rgb(255, 115, 105)'
 
 test.describe.serial('canvas property toolbar workflows', () => {
