@@ -3,7 +3,7 @@ import type { SidebarItemButtonProps } from './sidebar-item/types'
 import { Collapsible, CollapsibleContent } from '~/features/shadcn/components/collapsible'
 import type { ReactNode } from 'react'
 
-interface SidebarTreeSurfaceItem {
+export interface SidebarTreeSurfaceItem {
   id: string
   icon: SidebarItemButtonProps['icon']
   name: SidebarItemButtonProps['name']

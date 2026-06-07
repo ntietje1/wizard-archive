@@ -12,6 +12,7 @@ import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
 import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-surface'
 import { SidebarWorkspaceShell } from '~/features/sidebar/components/sidebar-workspace-shell'
+import { buildSidebarTreeSurfaceItems } from '~/features/sidebar/workspace/sidebar-tree-projection'
 import {
   INITIAL_DEMO_WORKSPACE,
   demoCanvasForItem,
@@ -82,25 +83,28 @@ function DemoWorkspaceSidebar({
   selectedItem: DemoWorkspaceItem | null
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
-  const sidebarItems = workspace.items.map((item) => {
-    const selected = item.id === selectedItem?.id
+  const sidebarItems = buildSidebarTreeSurfaceItems(
+    workspace.items.map((item) => {
+      const selected = item.id === selectedItem?.id
 
-    return {
-      id: item.id,
-      icon: itemIcons[item.type],
-      name: assertSidebarItemName(item.title || 'Untitled'),
-      visualState: {
-        isSelected: selected,
-        isViewing: selected,
-        isMultiSelected: false,
-      },
-      onClick: (event: MouseEvent) => {
-        event.preventDefault()
-        dispatch({ type: 'selectItem', itemId: item.id })
-      },
-      onContextMenu: (event: MouseEvent) => event.preventDefault(),
-    }
-  })
+      return {
+        id: item.id,
+        parentId: null,
+        icon: itemIcons[item.type],
+        name: assertSidebarItemName(item.title || 'Untitled'),
+        visualState: {
+          isSelected: selected,
+          isViewing: selected,
+          isMultiSelected: false,
+        },
+        onClick: (event: MouseEvent) => {
+          event.preventDefault()
+          dispatch({ type: 'selectItem', itemId: item.id })
+        },
+        onContextMenu: (event: MouseEvent) => event.preventDefault(),
+      }
+    }),
+  )
 
   return (
     <aside className="flex w-72 shrink-0 flex-col border-r bg-background">
