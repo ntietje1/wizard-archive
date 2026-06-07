@@ -13,9 +13,11 @@ describe('canvas architecture boundaries', () => {
       'src/features/canvas/runtime/use-canvas-editor-runtime-base.ts',
     )
     const coreRuntime = readRepoFile('src/features/canvas/runtime/use-canvas-core-runtime.ts')
+    const surface = readRepoFile('src/features/canvas/components/canvas-editor-surface.tsx')
 
     expect(viewer).toContain('useCanvasEditorRuntime')
-    expect(viewer).toContain('CanvasScene')
+    expect(viewer).toContain('CanvasEditorSurface')
+    expect(surface).toContain('CanvasScene')
     expect(runtime).toContain('useCanvasEditorRuntimeBase')
     expect(runtime).not.toContain('createCanvasEngine')
     expect(runtime).not.toContain('createCanvasViewportController')

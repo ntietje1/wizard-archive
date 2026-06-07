@@ -1,13 +1,10 @@
 import * as Y from 'yjs'
 import { useLayoutEffect, useState } from 'react'
-import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
-import { CanvasConditionalToolbar } from '~/features/canvas/components/canvas-conditional-toolbar'
+import { CanvasEditorSurface } from '~/features/canvas/components/canvas-editor-surface'
 import { CanvasNodeContentRenderer } from '~/features/canvas/components/canvas-node-content-renderer'
 import { CanvasPreviewDefaultEmbedNode } from '~/features/canvas/components/canvas-preview-default-embed-node'
 import { CanvasPreviewStrokeNode } from '~/features/canvas/components/canvas-preview-stroke-node'
 import { CanvasPreviewTextNode } from '~/features/canvas/components/canvas-preview-text-node'
-import { CanvasScene } from '~/features/canvas/components/canvas-scene'
-import { CanvasToolbar } from '~/features/canvas/components/canvas-toolbar'
 import { CanvasEngineProvider } from '~/features/canvas/react/canvas-engine-context'
 import { CanvasRuntimeProvider } from '~/features/canvas/runtime/providers/canvas-runtime'
 import {
@@ -20,7 +17,6 @@ import {
 } from '~/features/canvas/runtime/canvas-tool-runtime-adapter'
 import { useCanvasContextMenuCore } from '~/features/canvas/runtime/context-menu/use-canvas-context-menu-core'
 import { useCanvasCursorPresence } from '~/features/canvas/runtime/interaction/use-canvas-cursor-presence'
-import { useCanvasPendingSelectionPreviewSummary } from '~/features/canvas/runtime/selection/use-canvas-pending-selection-preview'
 import { canvasToolSpecs } from '~/features/canvas/tools/canvas-tool-modules'
 import type { CanvasConnection } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasNodeRendererMap } from '~/features/canvas/components/canvas-node-content-renderer'
@@ -248,49 +244,16 @@ function LocalCanvasEditorContent({
   runtime: ReturnType<typeof useLocalCanvasEditorRuntime>
   canvasCursor: string
 }) {
-  const pendingSelectionPreview = useCanvasPendingSelectionPreviewSummary()
-
   return (
-    <div
-      className="canvas-editor-shell relative flex-1 min-h-0 allow-motion"
-      style={{ cursor: canvasCursor }}
-      data-testid="canvas-editor-shell"
-    >
-      <CanvasToolbar canEdit />
-      <CanvasConditionalToolbar canEdit />
-      <section
-        ref={runtime.canvasSurfaceRef}
-        className="relative z-0 h-full w-full"
-        data-testid="canvas-surface"
-        aria-label="Canvas surface"
-      >
-        <CanvasScene
-          canEdit
-          remoteUsers={runtime.remoteUsers}
-          sceneHandlers={runtime.sceneHandlers}
-          NodeContentComponent={LocalCanvasNodeContent}
-          onNodeContextMenu={runtime.contextMenu.openForNode}
-          onEdgeContextMenu={runtime.contextMenu.openForEdge}
-          onPaneContextMenu={runtime.contextMenu.openForPane}
-        />
-
-        <ContextMenuHost
-          ref={runtime.contextMenu.hostRef}
-          menu={runtime.contextMenu.menu}
-          onClose={runtime.contextMenu.onClose}
-        />
-
-        {pendingSelectionPreview.active &&
-          pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount > 0 && (
-            <output
-              className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-full border bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm"
-              aria-live="polite"
-            >
-              {`Selecting ${pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount}`}
-            </output>
-          )}
-      </section>
-    </div>
+    <CanvasEditorSurface
+      canEdit
+      canvasCursor={canvasCursor}
+      canvasSurfaceRef={runtime.canvasSurfaceRef}
+      contextMenu={runtime.contextMenu}
+      NodeContentComponent={LocalCanvasNodeContent}
+      remoteUsers={runtime.remoteUsers}
+      sceneHandlers={runtime.sceneHandlers}
+    />
   )
 }
 
