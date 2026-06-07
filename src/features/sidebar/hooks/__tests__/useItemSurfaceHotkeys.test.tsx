@@ -17,6 +17,7 @@ import { testId } from '~/test/helpers/test-id'
 let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
 let clipboardCanPaste = false
+const openParentFoldersMock = vi.hoisted(() => vi.fn())
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({ campaignId: 'campaign_1' as Id<'campaigns'> }),
@@ -43,8 +44,12 @@ vi.mock('~/features/sidebar/hooks/useLastEditorItem', () => ({
   useLastEditorItem: () => ({ setLastSelectedItem: vi.fn() }),
 }))
 
-vi.mock('~/features/sidebar/hooks/useOpenParentFolders', () => ({
-  useOpenParentFolders: () => ({ openParentFolders: vi.fn() }),
+vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', () => ({
+  useSidebarWorkspaceSource: () => ({
+    commands: {
+      openParentFolders: openParentFoldersMock,
+    },
+  }),
 }))
 
 function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue {
@@ -91,6 +96,7 @@ describe('useItemSurfaceHotkeys', () => {
     resetSidebarUIStore()
     setFileSystemClipboard(null)
     clipboardCanPaste = false
+    openParentFoldersMock.mockReset()
     sidebarItems = []
     trashItems = []
   })

@@ -3,7 +3,7 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import {
   isEditableHotkeyTarget,
@@ -48,7 +48,7 @@ interface HotkeyHandlerContext {
   moveFocus: ReturnType<typeof useSidebarUIStore.getState>['moveFocus']
   navigateToItem: ReturnType<typeof useEditorNavigation>['navigateToItem']
   setLastSelectedItem: ReturnType<typeof useLastEditorItem>['setLastSelectedItem']
-  openParentFolders: ReturnType<typeof useOpenParentFolders>['openParentFolders']
+  openParentFolders: ReturnType<typeof useSidebarWorkspaceSource>['commands']['openParentFolders']
 }
 
 function resolveSelection(
@@ -199,7 +199,9 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
   const filesystemReadModel = useFileSystemReadModel()
   const { navigateToItem } = useEditorNavigation()
   const { setLastSelectedItem } = useLastEditorItem()
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
   const contextRef = useRef({
     activeItemsMap: filesystemReadModel.activeItemsById,
     campaignId,

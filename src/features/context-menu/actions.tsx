@@ -12,7 +12,7 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
@@ -33,7 +33,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
   const { navigateToItem } = useEditorNavigation()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()

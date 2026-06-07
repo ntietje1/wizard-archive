@@ -3,7 +3,7 @@ import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { handleError } from '~/shared/utils/logger'
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 
@@ -21,7 +21,9 @@ export function useRunSidebarItemCreationCommand() {
   const { campaignId } = useCampaign()
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
 
   const runCreationCommand = async (
     command: SidebarItemCreationCommand,

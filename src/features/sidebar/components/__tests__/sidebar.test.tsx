@@ -103,6 +103,9 @@ function sidebarWorkspaceSource(): SidebarWorkspaceSource {
       exitCloseAllMode: vi.fn(),
       toggleBookmarksOnlyMode: vi.fn(),
     },
+    commands: {
+      openParentFolders: vi.fn(),
+    },
   }
 }
 

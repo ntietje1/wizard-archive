@@ -7,7 +7,7 @@ import { deduplicateName } from 'shared/sidebar-items/default-name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/features/file-upload/utils/folder-reader'
 import { logger } from '~/shared/utils/logger'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
@@ -109,7 +109,9 @@ export function useFileDropHandler() {
   const { createItem } = useCreateFileSystemItem()
   const { createFile } = useCreateFile()
   const { createNote } = useCreateNote()
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
   const { navigateToItem } = useEditorNavigation()
   const { getSiblings } = useSidebarValidation()
 

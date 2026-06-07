@@ -59,6 +59,27 @@ describe('sidebar workspace source boundaries', () => {
       expect(source).not.toContain('useCampaignSidebarActions')
     }
   })
+
+  it('keeps open-parent-folder behavior inside the sidebar workspace source', () => {
+    const liveSource = readRepoFile(
+      'src/features/sidebar/workspace/use-live-sidebar-workspace-source.ts',
+    )
+    const sourceContract = readRepoFile(
+      'src/features/sidebar/workspace/sidebar-workspace-source.ts',
+    )
+    const creationCommand = readRepoFile(
+      'src/features/sidebar/hooks/useRunSidebarItemCreationCommand.ts',
+    )
+    const hotkeys = readRepoFile('src/features/sidebar/hooks/useItemSurfaceHotkeys.ts')
+
+    expect(liveSource).toContain('openParentFolders')
+    expect(sourceContract).toContain('SidebarItemId')
+    expect(sourceContract).not.toContain("from 'convex/_generated/dataModel'")
+    expect(creationCommand).toContain('useSidebarWorkspaceSource')
+    expect(hotkeys).toContain('useSidebarWorkspaceSource')
+    expect(creationCommand).not.toContain('useOpenParentFolders')
+    expect(hotkeys).not.toContain('useOpenParentFolders')
+  })
 })
 
 function readRepoFile(path: string) {

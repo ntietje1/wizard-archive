@@ -21,8 +21,12 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({ campaignId: 'campaign_1' }),
 }))
 
-vi.mock('~/features/sidebar/hooks/useOpenParentFolders', () => ({
-  useOpenParentFolders: () => ({ openParentFolders: openParentFoldersMock }),
+vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', () => ({
+  useSidebarWorkspaceSource: () => ({
+    commands: {
+      openParentFolders: openParentFoldersMock,
+    },
+  }),
 }))
 
 vi.mock('~/shared/utils/logger', () => ({

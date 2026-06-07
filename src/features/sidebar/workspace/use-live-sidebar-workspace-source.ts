@@ -1,5 +1,6 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import type { SidebarItemId } from 'shared/common/ids'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useSidebarItemsQueries } from '~/features/sidebar/hooks/useSidebarItems'
@@ -21,12 +22,21 @@ export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
     campaignActor?.kind === 'dm'
       ? items.active
       : filterSidebarItemsForActor(items.active, campaignActor)
+  const openParentFolders = (itemId: SidebarItemId) => {
+    const ancestors = items.active.getAncestorSidebarItems(itemId)
+    for (const ancestor of ancestors) {
+      uiCommands.setFolderState(ancestor._id, true)
+    }
+  }
 
   return {
     items,
     filteredActiveItems,
     ui,
     uiCommands,
+    commands: {
+      openParentFolders,
+    },
   }
 }
 

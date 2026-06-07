@@ -17,7 +17,7 @@ import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
 import { getIconByName } from '~/shared/utils/category-icons'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { GenericFileUploadSection } from '~/features/file-upload/components/generic-file-upload-section'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
@@ -51,7 +51,9 @@ const defaultFileFormValues: FileFormValues = {
 }
 
 export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: FileFormProps) {
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
   const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditFileSystemItem()
   const { createFile } = useCreateFile()

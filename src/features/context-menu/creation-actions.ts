@@ -1,6 +1,7 @@
 import type { ActionHandlers } from './menu-registry'
 import type { MenuContext } from './types'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'shared/common/ids'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { handleError } from '~/shared/utils/logger'
@@ -29,7 +30,7 @@ export function createCreationActions({
     name: string
   }) => Promise<{ id: Id<'sidebarItems'>; slug: SidebarItemSlug }>
   getDefaultName: (type: SidebarItemCreationType, parentId: Id<'sidebarItems'> | null) => string
-  openParentFolders: (itemId: Id<'sidebarItems'>) => void
+  openParentFolders: (itemId: SidebarItemId) => void
 }): CreationActions {
   const createSidebarItem = async (ctx: MenuContext, command: SidebarItemCreationCommand) => {
     if (!campaignId) {

@@ -1,4 +1,5 @@
 import { createContext, createElement, useContext } from 'react'
+import type { SidebarItemId } from 'shared/common/ids'
 import type { SidebarItemsContextValue, SidebarItemsValue } from '../contexts/sidebar-items-context'
 
 interface SidebarWorkspaceUiState {
@@ -16,11 +17,16 @@ interface SidebarWorkspaceUiCommands {
   toggleBookmarksOnlyMode: () => void
 }
 
+interface SidebarWorkspaceCommands {
+  openParentFolders: (itemId: SidebarItemId) => void
+}
+
 export interface SidebarWorkspaceSource {
   items: SidebarItemsContextValue
   filteredActiveItems: SidebarItemsValue
   ui: SidebarWorkspaceUiState
   uiCommands: SidebarWorkspaceUiCommands
+  commands: SidebarWorkspaceCommands
 }
 
 const SidebarWorkspaceSourceContext = createContext<SidebarWorkspaceSource | null>(null)

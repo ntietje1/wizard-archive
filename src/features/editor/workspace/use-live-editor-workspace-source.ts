@@ -9,7 +9,7 @@ import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSyst
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
@@ -24,7 +24,9 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
   const [isCreatingMissingRequestedNote, startCreateTransition] = useTransition()
 
   const requestedSlug = getSlug(currentItem.editorSearch)
