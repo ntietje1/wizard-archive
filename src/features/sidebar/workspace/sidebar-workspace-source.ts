@@ -1,5 +1,6 @@
 import { createContext, createElement, useContext } from 'react'
 import type { SidebarItemId } from 'shared/common/ids'
+import type { SortOptions } from 'shared/editor/types'
 import type { SidebarItemsContextValue, SidebarItemsValue } from '../contexts/sidebar-items-context'
 
 interface SidebarWorkspaceUiState {
@@ -21,12 +22,18 @@ interface SidebarWorkspaceCommands {
   openParentFolders: (itemId: SidebarItemId) => void
 }
 
+interface SidebarWorkspaceSort {
+  options: SortOptions
+  setOptions: (options: SortOptions) => void
+}
+
 export interface SidebarWorkspaceSource {
   items: SidebarItemsContextValue
   filteredActiveItems: SidebarItemsValue
   ui: SidebarWorkspaceUiState
   uiCommands: SidebarWorkspaceUiCommands
   commands: SidebarWorkspaceCommands
+  sort: SidebarWorkspaceSort
 }
 
 const SidebarWorkspaceSourceContext = createContext<SidebarWorkspaceSource | null>(null)

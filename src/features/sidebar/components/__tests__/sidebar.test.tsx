@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
+import { DEFAULT_SORT_OPTIONS } from 'shared/editor/types'
 import { FileSidebar } from '~/features/sidebar/components/sidebar'
 import { SidebarWorkspaceSourceProvider } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
@@ -105,6 +106,10 @@ function sidebarWorkspaceSource(): SidebarWorkspaceSource {
     },
     commands: {
       openParentFolders: vi.fn(),
+    },
+    sort: {
+      options: DEFAULT_SORT_OPTIONS,
+      setOptions: vi.fn(),
     },
   }
 }

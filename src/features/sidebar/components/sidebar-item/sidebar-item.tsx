@@ -4,25 +4,31 @@ import { DroppableSidebarItem } from './droppable-sidebar-item'
 import { SidebarLiveItemButton } from './sidebar-live-item-button'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SortOptions } from 'shared/editor/types'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
-import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { SidebarTreeNodeShell } from '~/features/sidebar/components/sidebar-tree-surface'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
 
 interface SidebarItemProps {
   item: AnySidebarItem
   parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
+  sortOptions: SortOptions
   visibleItemIds: Array<Id<'sidebarItems'>>
   depth?: number
 }
 
-export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }: SidebarItemProps) {
+export function SidebarItem({
+  item,
+  parentItemsMap,
+  sortOptions,
+  visibleItemIds,
+  depth = 0,
+}: SidebarItemProps) {
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
-  const { sortOptions } = useSortOptions()
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const isPending = isOptimisticSidebarItem(item)
@@ -67,6 +73,7 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
               key={childItem._id}
               item={childItem}
               parentItemsMap={parentItemsMap}
+              sortOptions={sortOptions}
               visibleItemIds={visibleItemIds}
               depth={depth + 1}
             />

@@ -19,12 +19,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/features/shadcn/components/dropdown-menu'
-import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
 import { TooltipButton } from '~/shared/components/tooltip-button'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 export function SortMenu() {
-  const { sortOptions, setSortOptions } = useSortOptions()
+  const {
+    sort: { options: sortOptions, setOptions: setSortOptions },
+  } = useSidebarWorkspaceSource()
 
   const handleSortOrderChange = (value: string) => {
     setSortOptions({ ...sortOptions, order: value as SortOrder })

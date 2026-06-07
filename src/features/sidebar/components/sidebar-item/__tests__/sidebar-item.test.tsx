@@ -3,6 +3,7 @@ import { FileText } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import { SORT_DIRECTIONS, SORT_ORDERS } from 'shared/editor/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { SidebarItem } from '../sidebar-item'
 
@@ -51,10 +52,6 @@ vi.mock('~/features/sidebar/hooks/useFolderState', () => ({
   useFolderState: () => ({ isExpanded: false, toggleExpanded: vi.fn() }),
 }))
 
-vi.mock('~/features/sidebar/hooks/useSortOptions', () => ({
-  useSortOptions: () => ({ sortOptions: { order: 'Alphabetical', direction: 'Ascending' } }),
-}))
-
 vi.mock('~/features/sidebar/hooks/useItemSelectionInteractions', () => ({
   useItemSelectionInteractions: () => ({
     handleItemClick: vi.fn(),
@@ -101,7 +98,7 @@ describe('SidebarItem', () => {
       slug: 'new-scene',
     })
 
-    render(<SidebarItem item={item} parentItemsMap={new Map()} visibleItemIds={[item._id]} />)
+    renderSidebarItem({ item, parentItemsMap: new Map(), visibleItemIds: [item._id] })
 
     await waitFor(() =>
       expect(scrollIntoViewMock).toHaveBeenCalledWith({
@@ -118,7 +115,7 @@ describe('SidebarItem', () => {
       slug: 'existing-scene',
     })
 
-    render(<SidebarItem item={item} parentItemsMap={new Map()} visibleItemIds={[item._id]} />)
+    renderSidebarItem({ item, parentItemsMap: new Map(), visibleItemIds: [item._id] })
 
     await waitFor(() => expect(scrollIntoViewMock).not.toHaveBeenCalled())
   })
@@ -130,7 +127,7 @@ describe('SidebarItem', () => {
       slug: 'hidden-scene',
     })
 
-    render(<SidebarItem item={item} parentItemsMap={new Map()} visibleItemIds={[]} />)
+    renderSidebarItem({ item, parentItemsMap: new Map(), visibleItemIds: [] })
 
     await waitFor(() => expect(scrollIntoViewMock).not.toHaveBeenCalled())
   })
@@ -149,8 +146,18 @@ describe('SidebarItem', () => {
 
     render(
       <>
-        <SidebarItem item={first} parentItemsMap={new Map()} visibleItemIds={[first._id]} />
-        <SidebarItem item={second} parentItemsMap={new Map()} visibleItemIds={[second._id]} />
+        <SidebarItem
+          item={first}
+          parentItemsMap={new Map()}
+          sortOptions={alphaSortOptions}
+          visibleItemIds={[first._id]}
+        />
+        <SidebarItem
+          item={second}
+          parentItemsMap={new Map()}
+          sortOptions={alphaSortOptions}
+          visibleItemIds={[second._id]}
+        />
       </>,
     )
 
@@ -173,11 +180,18 @@ describe('SidebarItem', () => {
       [folder._id, [child]],
     ])
 
-    render(
-      <SidebarItem item={folder} parentItemsMap={parentItemsMap} visibleItemIds={[folder._id]} />,
-    )
+    renderSidebarItem({ item: folder, parentItemsMap, visibleItemIds: [folder._id] })
 
     expect(screen.getByTestId('selectable-row-Encounters')).toBeInTheDocument()
     expect(screen.queryByTestId('selectable-row-Hidden Scene')).not.toBeInTheDocument()
   })
 })
+
+function renderSidebarItem(props: Omit<React.ComponentProps<typeof SidebarItem>, 'sortOptions'>) {
+  return render(<SidebarItem {...props} sortOptions={alphaSortOptions} />)
+}
+
+const alphaSortOptions = {
+  order: SORT_ORDERS.Alphabetical,
+  direction: SORT_DIRECTIONS.Ascending,
+}

@@ -60,6 +60,27 @@ describe('sidebar workspace source boundaries', () => {
     }
   })
 
+  it('keeps sidebar sort options inside the sidebar workspace source', () => {
+    const liveSource = readRepoFile(
+      'src/features/sidebar/workspace/use-live-sidebar-workspace-source.ts',
+    )
+    const campaignLayout = readRepoFile('src/features/campaigns/pages/campaign-layout.tsx')
+    const sidebarList = readRepoFile('src/features/sidebar/components/sidebar-list.tsx')
+    const bookmarkedItemsList = readRepoFile(
+      'src/features/sidebar/components/bookmarked-items-list.tsx',
+    )
+    const sidebarItem = readRepoFile(
+      'src/features/sidebar/components/sidebar-item/sidebar-item.tsx',
+    )
+    const sortMenu = readRepoFile('src/features/sidebar/components/sidebar-toolbar/sort-menu.tsx')
+
+    expect(liveSource).toContain('useLiveSidebarSortOptions')
+    expect(campaignLayout).not.toContain('SidebarSortOptionsProvider')
+    for (const source of [sidebarList, bookmarkedItemsList, sidebarItem, sortMenu]) {
+      expect(source).not.toContain('useSortOptions')
+    }
+  })
+
   it('keeps open-parent-folder behavior inside the sidebar workspace source', () => {
     const liveSource = readRepoFile(
       'src/features/sidebar/workspace/use-live-sidebar-workspace-source.ts',
