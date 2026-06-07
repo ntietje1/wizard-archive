@@ -52,6 +52,13 @@ vi.mock('~/features/sidebar/hooks/useFolderState', () => ({
   useFolderState: () => ({ isExpanded: false, toggleExpanded: vi.fn() }),
 }))
 
+vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', () => ({
+  useSidebarWorkspaceSource: () => ({
+    commands: { setRenamingItemId: vi.fn() },
+    editing: { renamingItemId: null },
+  }),
+}))
+
 vi.mock('~/features/sidebar/hooks/useItemSelectionInteractions', () => ({
   useItemSelectionInteractions: () => ({
     handleItemClick: vi.fn(),

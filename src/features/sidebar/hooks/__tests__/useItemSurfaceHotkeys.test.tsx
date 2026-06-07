@@ -48,6 +48,33 @@ vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', () => ({
   useSidebarWorkspaceSource: () => ({
     commands: {
       openParentFolders: openParentFoldersMock,
+      setRenamingItemId: useSidebarUIStore.getState().setRenamingId,
+    },
+    items: {
+      active: {
+        data: sidebarItems,
+        status: 'success',
+        ...buildSidebarItemMaps(sidebarItems),
+      },
+      trash: {
+        data: trashItems,
+        status: 'success',
+        ...buildSidebarItemMaps(trashItems),
+      },
+    },
+    selectionCommands: {
+      clearItemSelection: useSidebarUIStore.getState().clearItemSelection,
+      getSelectionSnapshot: () => {
+        const state = useSidebarUIStore.getState()
+        return {
+          selectedSlug: state.selectedSlug,
+          selectedItemIds: state.selectedItemIds,
+          focusedItemId: state.focusedItemId,
+          activeItemSurface: state.activeItemSurface,
+        }
+      },
+      moveFocus: useSidebarUIStore.getState().moveFocus,
+      setSelectedItemIds: useSidebarUIStore.getState().setSelectedItemIds,
     },
   }),
 }))

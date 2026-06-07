@@ -20,7 +20,7 @@ import {
   sidebarItemActionButtonClass,
   sidebarItemNameClass,
 } from '~/features/sidebar/utils/sidebar-item-visual-state'
-import type { ActiveItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'
+import type { SidebarWorkspaceItemSurfaceName } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import type { MouseEvent, Ref } from 'react'
 
 interface SidebarLiveItemButtonProps {
@@ -33,7 +33,7 @@ interface SidebarLiveItemButtonProps {
   setRenamingId: (id: Id<'sidebarItems'> | null) => void
   showChevron: boolean
   showShareButton?: boolean
-  surface: ActiveItemSurface['surface']
+  surface: SidebarWorkspaceItemSurfaceName
   visibleItemIds: Array<Id<'sidebarItems'>>
 }
 

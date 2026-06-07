@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { useMatch } from '@tanstack/react-router'
-import { useShallow } from 'zustand/shallow'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
@@ -9,6 +8,7 @@ import { getSidebarItemVisualState } from '~/features/sidebar/utils/sidebar-item
 import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { addRecentItem } from '~/features/search/hooks/use-recent-items'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 const EMPTY_CUT_ITEM_IDS: ReadonlyArray<AnySidebarItem['_id']> = []
 
@@ -34,12 +34,7 @@ export function useSelectedItemSync() {
 
 export function useSidebarItemVisualState(item: AnySidebarItem) {
   const cutItemIds = useCutFileSystemItemIds()
-  const selection = useSidebarUIStore(
-    useShallow((s) => ({
-      selectedItemIds: s.selectedItemIds,
-      selectedSlug: s.selectedSlug,
-    })),
-  )
+  const { selection } = useSidebarWorkspaceSource()
   return getSidebarItemVisualState({
     item,
     selectedItemIds: selection.selectedItemIds,
@@ -49,7 +44,9 @@ export function useSidebarItemVisualState(item: AnySidebarItem) {
 }
 
 export function useIsFocusedItem(item: AnySidebarItem): boolean {
-  const focusedItemId = useSidebarUIStore((s) => s.focusedItemId)
+  const {
+    selection: { focusedItemId },
+  } = useSidebarWorkspaceSource()
   return focusedItemId === item._id
 }
 

@@ -34,7 +34,7 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useItemSurfaceHotkeys } from '~/features/sidebar/hooks/useItemSurfaceHotkeys'
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { handleError, logger } from '~/shared/utils/logger'
 import { createFileSystemCacheAdapter } from './filesystem-cache-adapter'
 import { executeFileSystemCommandLifecycle } from './filesystem-command-lifecycle'
@@ -109,10 +109,17 @@ function useFileSystemValue(): FileSystemProviderState {
   const redoMutation = useCampaignMutation(
     api.sidebarItems.filesystem.mutations.redoFileSystemTransaction,
   )
-  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
-  const setFolderState = useSidebarUIStore((s) => s.setFolderState)
+  const {
+    selection: { activeItemSurface },
+    selectionCommands: {
+      clearItemSelection,
+      getSelectionSnapshot,
+      setSelected,
+      setSelectedItemIds,
+    },
+    uiCommands,
+  } = useSidebarWorkspaceSource()
   const clipboard = useFileSystemClipboard()
-  const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
   const undoStack = useFileSystemUndoStore((s) => s.undoStack)
   const redoStack = useFileSystemUndoStore((s) => s.redoStack)
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null)
@@ -145,7 +152,7 @@ function useFileSystemValue(): FileSystemProviderState {
       receipt,
       readModel: cacheAdapter.getReadModel(),
       currentSlug: getSelectedSlug(),
-      getSelectedItemIds: () => useSidebarUIStore.getState().selectedItemIds,
+      getSelectedItemIds: () => getSelectionSnapshot().selectedItemIds,
       setSelectedItemIds,
       clearEditorContent,
       navigateToItem,
@@ -160,9 +167,14 @@ function useFileSystemValue(): FileSystemProviderState {
       intents,
       previousSlug,
       adapters: {
-        setFolderState,
+        setFolderState: (_campaignId, folderId, isOpen) =>
+          uiCommands.setFolderState(folderId, isOpen),
         setSelectedItemIds,
-        getSelectionState: () => useSidebarUIStore.getState(),
+        getSelectionState: () => ({
+          ...getSelectionSnapshot(),
+          clearItemSelection,
+          setSelected,
+        }),
         navigateToItem,
         clearEditorContent,
       },
@@ -424,7 +436,7 @@ function useFileSystemValue(): FileSystemProviderState {
       command.command.type === 'trash' ? null : command.command.targetParentId
     const openDropTargetOnSuccess =
       dropTargetParentId && campaignId
-        ? () => setFolderState(campaignId, dropTargetParentId, true)
+        ? () => uiCommands.setFolderState(dropTargetParentId, true)
         : undefined
     try {
       switch (command.action) {

@@ -6,7 +6,7 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SortOptions } from 'shared/editor/types'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
 import { SidebarTreeNodeShell } from '~/features/sidebar/components/sidebar-tree-surface'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
@@ -27,8 +27,10 @@ export function SidebarItem({
   depth = 0,
 }: SidebarItemProps) {
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
-  const renamingId = useSidebarUIStore((s) => s.renamingId)
-  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
+  const {
+    commands: { setRenamingItemId },
+    editing: { renamingItemId },
+  } = useSidebarWorkspaceSource()
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const isPending = isOptimisticSidebarItem(item)
@@ -50,9 +52,9 @@ export function SidebarItem({
       indentLevel={depth}
       item={item}
       onToggleExpanded={toggleExpanded}
-      renamingId={renamingId}
+      renamingId={renamingItemId}
       rowRef={rowRef}
-      setRenamingId={setRenamingId}
+      setRenamingId={setRenamingItemId}
       showChevron={isFolder && !isPending}
       showShareButton
       surface="sidebar"

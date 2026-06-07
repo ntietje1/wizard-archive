@@ -19,9 +19,8 @@ import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
 import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import type { BlockNoteContextMenuContextType } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
-import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
@@ -132,8 +131,10 @@ function useEditorContextMenuModel({
   const { currentSession } = useSession()
   const mapView = useMapViewOptional()
   const blockNoteContext = use(BlockNoteContextMenuContext)
-  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const filesystemReadModel = useFileSystemReadModel()
+  const {
+    items,
+    selection: { selectedItemIds },
+  } = useSidebarWorkspaceSource()
   const editorMode = useEditorMode()
   const actorPermissions = useCampaignActorPermissions()
   const campaignMembersQuery = useCampaignMembers()
@@ -158,8 +159,8 @@ function useEditorContextMenuModel({
   const selectedItems = resolveClickedSidebarOperationItems({
     item,
     selectedItemIds,
-    activeItemsMap: filesystemReadModel.activeItemsById,
-    trashedItemsMap: filesystemReadModel.trashedItemsById,
+    activeItemsMap: items.active.itemsMap,
+    trashedItemsMap: items.trash.itemsMap,
     canUseItemSelection: canUseItemSelection(viewContext),
   })
   const primaryItem = selectedItems[0] ?? item

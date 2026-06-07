@@ -1,5 +1,6 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { useQueryClient } from '@tanstack/react-query'
+import { useShallow } from 'zustand/shallow'
 import { useRef, useState } from 'react'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
@@ -14,13 +15,14 @@ import { useSidebarItemsQueries } from '~/features/sidebar/hooks/useSidebarItems
 import {
   useCampaignSidebarActions,
   useCampaignSidebarState,
+  useSidebarUIStore,
 } from '~/features/sidebar/stores/sidebar-ui-store'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 import { handleError } from '~/shared/utils/logger'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import type { SidebarItemsValue } from '../contexts/sidebar-items-context'
-import type { SidebarWorkspaceSource } from './sidebar-workspace-source'
+import type { SidebarWorkspaceSelection, SidebarWorkspaceSource } from './sidebar-workspace-source'
 
 export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
   const { campaignId } = useCampaign()
@@ -28,6 +30,10 @@ export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
   const campaignActor = useCampaignActor()
   const ui = useCampaignSidebarState(campaignId)
   const uiCommands = useCampaignSidebarActions(campaignId)
+  const renamingItemId = useSidebarUIStore((s) => s.renamingId)
+  const setRenamingItemId = useSidebarUIStore((s) => s.setRenamingId)
+  const selection = useSidebarWorkspaceSelection()
+  const selectionCommands = useSidebarWorkspaceSelectionCommands()
   const filteredActiveItems =
     campaignActor?.kind === 'dm'
       ? items.active
@@ -47,8 +53,53 @@ export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
     uiCommands,
     commands: {
       openParentFolders,
+      setRenamingItemId,
     },
     sort,
+    editing: {
+      renamingItemId,
+    },
+    selection,
+    selectionCommands,
+  }
+}
+
+function useSidebarWorkspaceSelection() {
+  return useSidebarUIStore(
+    useShallow((s) => ({
+      selectedSlug: s.selectedSlug,
+      selectedItemIds: s.selectedItemIds,
+      focusedItemId: s.focusedItemId,
+      activeItemSurface: s.activeItemSurface,
+    })),
+  )
+}
+
+function useSidebarWorkspaceSelectionCommands() {
+  return useSidebarUIStore(
+    useShallow((s) => ({
+      setSelected: s.setSelected,
+      setSelectedItemIds: s.setSelectedItemIds,
+      selectSingleItem: s.selectSingleItem,
+      toggleItemSelection: s.toggleItemSelection,
+      selectItemRange: s.selectItemRange,
+      setFocusedItem: s.setFocusedItem,
+      moveFocus: s.moveFocus,
+      clearItemSelection: s.clearItemSelection,
+      normalizeContextSelection: s.normalizeContextSelection,
+      setActiveItemSurface: s.setActiveItemSurface,
+      getSelectionSnapshot: getSidebarWorkspaceSelectionSnapshot,
+    })),
+  )
+}
+
+function getSidebarWorkspaceSelectionSnapshot(): SidebarWorkspaceSelection {
+  const state = useSidebarUIStore.getState()
+  return {
+    selectedSlug: state.selectedSlug,
+    selectedItemIds: state.selectedItemIds,
+    focusedItemId: state.focusedItemId,
+    activeItemSurface: state.activeItemSurface,
   }
 }
 

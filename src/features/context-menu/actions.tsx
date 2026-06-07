@@ -11,7 +11,6 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
@@ -32,9 +31,8 @@ interface UseMenuActionsOptions {
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
   const { navigateToItem } = useEditorNavigation()
-  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const {
-    commands: { openParentFolders },
+    commands: { openParentFolders, setRenamingItemId },
   } = useSidebarWorkspaceSource()
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
@@ -64,7 +62,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     rename: (ctx: MenuContext) => {
       if (!ctx.item) return
       openParentFolders(ctx.item._id)
-      setRenamingId(ctx.item._id)
+      setRenamingItemId(ctx.item._id)
     },
 
     showInSidebar: (ctx: MenuContext) => {

@@ -1,18 +1,24 @@
 import { useEffect, useRef } from 'react'
 import type { PointerEvent } from 'react'
-import type { Id } from 'convex/_generated/dataModel'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import type { ActiveItemSurface, ItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'
+import type { SidebarItemId } from 'shared/common/ids'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
+import type {
+  SidebarWorkspaceItemSurface,
+  SidebarWorkspaceItemSurfaceName,
+} from '~/features/sidebar/workspace/sidebar-workspace-source'
 import {
   ITEM_SURFACE_HOTKEY_TARGET_ATTRIBUTE,
   isItemSurfaceInteractionTarget,
 } from '~/features/sidebar/utils/item-surface-hotkeys'
 
-function sameVisibleIds(a: Array<Id<'sidebarItems'>>, b: Array<Id<'sidebarItems'>>): boolean {
+function sameVisibleIds(a: Array<SidebarItemId>, b: Array<SidebarItemId>): boolean {
   return a.length === b.length && a.every((id, index) => id === b[index])
 }
 
-function sameRegisteredSurface(a: ActiveItemSurface | null, b: ActiveItemSurface | null): boolean {
+function sameRegisteredSurface(
+  a: SidebarWorkspaceItemSurface | null,
+  b: SidebarWorkspaceItemSurface | null,
+): boolean {
   if (a === b) return true
   if (!a || !b) return false
   return (
@@ -22,7 +28,10 @@ function sameRegisteredSurface(a: ActiveItemSurface | null, b: ActiveItemSurface
   )
 }
 
-function sameSurfaceIdentity(a: ActiveItemSurface | null, b: ActiveItemSurface | null): boolean {
+function sameSurfaceIdentity(
+  a: SidebarWorkspaceItemSurface | null,
+  b: SidebarWorkspaceItemSurface | null,
+): boolean {
   if (a === b) return true
   if (!a || !b) return false
   return a.surface === b.surface && a.parentId === b.parentId
@@ -33,21 +42,26 @@ export function useItemSurfaceRegistration({
   parentId,
   visibleItemIds,
 }: {
-  surface: ItemSurface
-  parentId: Id<'sidebarItems'> | null
-  visibleItemIds: Array<Id<'sidebarItems'>>
+  surface: SidebarWorkspaceItemSurfaceName
+  parentId: SidebarItemId | null
+  visibleItemIds: Array<SidebarItemId>
 }) {
-  const setActiveItemSurface = useSidebarUIStore((s) => s.setActiveItemSurface)
-  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
-  const activeSurface: ActiveItemSurface = { surface, parentId, visibleItemIds }
+  const {
+    selection: { activeItemSurface },
+    selectionCommands: { clearItemSelection, setActiveItemSurface },
+  } = useSidebarWorkspaceSource()
+  const activeSurface: SidebarWorkspaceItemSurface = { surface, parentId, visibleItemIds }
   const visibleItemIdsKey = visibleItemIds.join('\u001f')
   const latestSurfaceRef = useRef(activeSurface)
+  const activeItemSurfaceRef = useRef(activeItemSurface)
   latestSurfaceRef.current = activeSurface
+  activeItemSurfaceRef.current = activeItemSurface
 
   // Keep the active owner in sync with item list changes without letting an inactive surface steal focus.
   useEffect(() => {
-    const currentSurface = useSidebarUIStore.getState().activeItemSurface
+    const currentSurface = activeItemSurfaceRef.current
     if (sameSurfaceIdentity(currentSurface, latestSurfaceRef.current)) {
+      activeItemSurfaceRef.current = latestSurfaceRef.current
       setActiveItemSurface(latestSurfaceRef.current)
     }
   }, [surface, parentId, visibleItemIdsKey, setActiveItemSurface])
@@ -55,7 +69,7 @@ export function useItemSurfaceRegistration({
   useEffect(() => {
     return () => {
       const registeredSurface = latestSurfaceRef.current
-      const currentSurface = useSidebarUIStore.getState().activeItemSurface
+      const currentSurface = activeItemSurfaceRef.current
       if (sameRegisteredSurface(currentSurface, registeredSurface)) {
         setActiveItemSurface(null)
       }
@@ -63,6 +77,7 @@ export function useItemSurfaceRegistration({
   }, [setActiveItemSurface])
 
   const activateSurface = () => {
+    activeItemSurfaceRef.current = latestSurfaceRef.current
     setActiveItemSurface(latestSurfaceRef.current)
   }
 

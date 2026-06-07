@@ -106,10 +106,38 @@ function sidebarWorkspaceSource(): SidebarWorkspaceSource {
     },
     commands: {
       openParentFolders: vi.fn(),
+      setRenamingItemId: vi.fn(),
     },
     sort: {
       options: DEFAULT_SORT_OPTIONS,
       setOptions: vi.fn(),
+    },
+    editing: {
+      renamingItemId: null,
+    },
+    selection: {
+      selectedSlug: null,
+      selectedItemIds: [],
+      focusedItemId: null,
+      activeItemSurface: null,
+    },
+    selectionCommands: {
+      setSelected: vi.fn(),
+      setSelectedItemIds: vi.fn(),
+      selectSingleItem: vi.fn(),
+      toggleItemSelection: vi.fn(),
+      selectItemRange: vi.fn(),
+      setFocusedItem: vi.fn(),
+      moveFocus: vi.fn(),
+      clearItemSelection: vi.fn(),
+      normalizeContextSelection: vi.fn(),
+      setActiveItemSurface: vi.fn(),
+      getSelectionSnapshot: () => ({
+        selectedSlug: null,
+        selectedItemIds: [],
+        focusedItemId: null,
+        activeItemSurface: null,
+      }),
     },
   }
 }

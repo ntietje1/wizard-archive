@@ -1,21 +1,18 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DEFAULT_SORT_OPTIONS } from 'shared/editor/types'
+import type { ReactNode } from 'react'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import {
-  useActiveSidebarItems,
-  useTrashSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
+import { SidebarWorkspaceSourceProvider } from '~/features/sidebar/workspace/sidebar-workspace-source'
+import type { SidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { resetSidebarUIStore } from '~/test/helpers/store-helpers'
 
-vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  SIDEBAR_ITEMS_VIEW: { active: 'active', trash: 'trash' },
-  useActiveSidebarItems: vi.fn(),
-  useTrashSidebarItems: vi.fn(),
-}))
+let activeSidebarItems: Array<AnySidebarItem> = []
+let trashedSidebarItems: Array<AnySidebarItem> = []
 
 function sidebarItemsValue(items: Array<AnySidebarItem>) {
   return {
@@ -31,8 +28,8 @@ function mockSidebarItems(
   activeItems: Array<AnySidebarItem>,
   trashedItems: Array<AnySidebarItem> = [],
 ) {
-  vi.mocked(useActiveSidebarItems).mockReturnValue(sidebarItemsValue(activeItems))
-  vi.mocked(useTrashSidebarItems).mockReturnValue(sidebarItemsValue(trashedItems))
+  activeSidebarItems = activeItems
+  trashedSidebarItems = trashedItems
 }
 
 function setActiveSurface(visibleItems: Array<AnySidebarItem>, surface = 'sidebar' as const) {
@@ -46,15 +43,15 @@ function setActiveSurface(visibleItems: Array<AnySidebarItem>, surface = 'sideba
 describe('useSidebarDragData', () => {
   beforeEach(() => {
     resetSidebarUIStore()
-    vi.mocked(useActiveSidebarItems).mockReset()
-    vi.mocked(useTrashSidebarItems).mockReset()
+    activeSidebarItems = []
+    trashedSidebarItems = []
   })
 
   it('uses only the current item when no items are selected', () => {
     const note = createNote()
     mockSidebarItems([note])
 
-    const { result } = renderHook(() => useSidebarDragData(note))
+    const { result } = renderHook(() => useSidebarDragData(note), { wrapper })
 
     expect(result.current).toEqual({
       sidebarItemId: note._id,
@@ -68,7 +65,7 @@ describe('useSidebarDragData', () => {
     mockSidebarItems([note])
     useSidebarUIStore.setState({ selectedItemIds: [note._id] })
 
-    const { result } = renderHook(() => useSidebarDragData(note))
+    const { result } = renderHook(() => useSidebarDragData(note), { wrapper })
 
     expect(result.current).toEqual({
       sidebarItemId: note._id,
@@ -83,7 +80,7 @@ describe('useSidebarDragData', () => {
     mockSidebarItems([dragged, selected])
     useSidebarUIStore.setState({ selectedItemIds: [selected._id] })
 
-    const { result } = renderHook(() => useSidebarDragData(dragged))
+    const { result } = renderHook(() => useSidebarDragData(dragged), { wrapper })
 
     expect(result.current).toEqual({
       sidebarItemId: dragged._id,
@@ -99,7 +96,7 @@ describe('useSidebarDragData', () => {
     setActiveSurface([first, second])
     useSidebarUIStore.setState({ selectedItemIds: [first._id, second._id] })
 
-    const { result } = renderHook(() => useSidebarDragData(first))
+    const { result } = renderHook(() => useSidebarDragData(first), { wrapper })
 
     expect(result.current).toEqual({
       sidebarItemId: first._id,
@@ -120,7 +117,7 @@ describe('useSidebarDragData', () => {
       selectedItemIds: [folder._id, firstChild._id, secondChild._id],
     })
 
-    const { result } = renderHook(() => useSidebarDragData(firstChild))
+    const { result } = renderHook(() => useSidebarDragData(firstChild), { wrapper })
 
     expect(result.current).toEqual({
       sidebarItemId: firstChild._id,
@@ -140,7 +137,7 @@ describe('useSidebarDragData', () => {
       selectedItemIds: [firstChild._id, secondChild._id],
     })
 
-    const { result } = renderHook(() => useSidebarDragData(firstChild))
+    const { result } = renderHook(() => useSidebarDragData(firstChild), { wrapper })
 
     expect(result.current).toEqual({
       sidebarItemId: firstChild._id,
@@ -156,7 +153,7 @@ describe('useSidebarDragData', () => {
     setActiveSurface([active])
     useSidebarUIStore.setState({ selectedItemIds: [active._id, trashed._id] })
 
-    const { result } = renderHook(() => useSidebarDragData(active))
+    const { result } = renderHook(() => useSidebarDragData(active), { wrapper })
 
     expect(result.current).toEqual({
       sidebarItemId: active._id,
@@ -172,7 +169,7 @@ describe('useSidebarDragData', () => {
     setActiveSurface([active])
     useSidebarUIStore.setState({ selectedItemIds: [active._id, missing._id] })
 
-    const { result } = renderHook(() => useSidebarDragData(active))
+    const { result } = renderHook(() => useSidebarDragData(active), { wrapper })
 
     expect(result.current).toEqual({
       sidebarItemId: active._id,
@@ -181,3 +178,73 @@ describe('useSidebarDragData', () => {
     })
   })
 })
+
+function wrapper({ children }: { children: ReactNode }) {
+  return (
+    <SidebarWorkspaceSourceProvider value={sidebarWorkspaceSourceFromStore()}>
+      {children}
+    </SidebarWorkspaceSourceProvider>
+  )
+}
+
+function sidebarWorkspaceSourceFromStore(): SidebarWorkspaceSource {
+  const state = useSidebarUIStore.getState()
+  const active = sidebarItemsValue(activeSidebarItems)
+  const trash = sidebarItemsValue(trashedSidebarItems)
+
+  return {
+    items: { active, trash },
+    filteredActiveItems: active,
+    ui: {
+      folderStates: {},
+      closeAllFoldersMode: false,
+      bookmarksOnlyMode: false,
+    },
+    uiCommands: {
+      setFolderState: vi.fn(),
+      toggleFolderState: vi.fn(),
+      clearAllFolderStates: vi.fn(),
+      toggleCloseAllFoldersMode: vi.fn(),
+      exitCloseAllMode: vi.fn(),
+      toggleBookmarksOnlyMode: vi.fn(),
+    },
+    commands: {
+      openParentFolders: vi.fn(),
+      setRenamingItemId: vi.fn(),
+    },
+    sort: {
+      options: DEFAULT_SORT_OPTIONS,
+      setOptions: vi.fn(),
+    },
+    editing: {
+      renamingItemId: null,
+    },
+    selection: {
+      selectedSlug: state.selectedSlug,
+      selectedItemIds: state.selectedItemIds,
+      focusedItemId: state.focusedItemId,
+      activeItemSurface: state.activeItemSurface,
+    },
+    selectionCommands: {
+      setSelected: state.setSelected,
+      setSelectedItemIds: state.setSelectedItemIds,
+      selectSingleItem: state.selectSingleItem,
+      toggleItemSelection: state.toggleItemSelection,
+      selectItemRange: state.selectItemRange,
+      setFocusedItem: state.setFocusedItem,
+      moveFocus: state.moveFocus,
+      clearItemSelection: state.clearItemSelection,
+      normalizeContextSelection: state.normalizeContextSelection,
+      setActiveItemSurface: state.setActiveItemSurface,
+      getSelectionSnapshot: () => {
+        const currentState = useSidebarUIStore.getState()
+        return {
+          selectedSlug: currentState.selectedSlug,
+          selectedItemIds: currentState.selectedItemIds,
+          focusedItemId: currentState.focusedItemId,
+          activeItemSurface: currentState.activeItemSurface,
+        }
+      },
+    },
+  }
+}

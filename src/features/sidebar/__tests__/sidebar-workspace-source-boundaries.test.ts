@@ -65,6 +65,59 @@ describe('sidebar workspace source boundaries', () => {
     }
   })
 
+  it('keeps sidebar selection presentation reads inside the workspace source', () => {
+    const sourceContract = readRepoFile(
+      'src/features/sidebar/workspace/sidebar-workspace-source.ts',
+    )
+    const liveSource = readRepoFile(
+      'src/features/sidebar/workspace/use-live-sidebar-workspace-source.ts',
+    )
+    const selectedItemHook = readRepoFile('src/features/sidebar/hooks/useSelectedItem.ts')
+    const selectionInteractions = readRepoFile(
+      'src/features/sidebar/hooks/useItemSelectionInteractions.ts',
+    )
+    const surfaceRegistration = readRepoFile(
+      'src/features/sidebar/hooks/useItemSurfaceRegistration.ts',
+    )
+    const dragData = readRepoFile('src/features/dnd/hooks/useSidebarDragData.ts')
+    const shareButton = readRepoFile(
+      'src/features/sidebar/components/sidebar-item/sidebar-item-share-button.tsx',
+    )
+    const hotkeys = readRepoFile('src/features/sidebar/hooks/useItemSurfaceHotkeys.ts')
+    const contextMenu = readRepoFile('src/features/context-menu/components/editor-context-menu.tsx')
+    const contextMenuActions = readRepoFile('src/features/context-menu/actions.tsx')
+    const filesystemProvider = readRepoFile('src/features/filesystem/filesystem-provider.tsx')
+    const sidebarItem = readRepoFile(
+      'src/features/sidebar/components/sidebar-item/sidebar-item.tsx',
+    )
+    const bookmarkedItemsList = readRepoFile(
+      'src/features/sidebar/components/bookmarked-items-list.tsx',
+    )
+
+    expect(sourceContract).toContain('selection: SidebarWorkspaceSelection')
+    expect(sourceContract).toContain('selectionCommands: SidebarWorkspaceSelectionCommands')
+    expect(sourceContract).toContain('editing: SidebarWorkspaceEditing')
+    expect(liveSource).toContain('useSidebarWorkspaceSelection')
+    expect(liveSource).toContain('useSidebarWorkspaceSelectionCommands')
+
+    for (const source of [
+      selectionInteractions,
+      surfaceRegistration,
+      dragData,
+      shareButton,
+      hotkeys,
+      contextMenu,
+      contextMenuActions,
+      filesystemProvider,
+      sidebarItem,
+      bookmarkedItemsList,
+    ]) {
+      expect(source).not.toContain('useSidebarUIStore')
+      expect(source).not.toContain('useFileSystemReadModel')
+    }
+    expect(selectedItemHook).toContain('useSidebarWorkspaceSource')
+  })
+
   it('keeps sidebar sort options inside the sidebar workspace source', () => {
     const liveSource = readRepoFile(
       'src/features/sidebar/workspace/use-live-sidebar-workspace-source.ts',

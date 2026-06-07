@@ -5,6 +5,8 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemTransactionReceipt } from 'shared/sidebar-items/filesystem/receipts'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { SidebarItemName } from 'shared/sidebar-items/name'
+import type * as SidebarWorkspaceSourceModule from '~/features/sidebar/workspace/sidebar-workspace-source'
+import type * as SidebarUIStoreModule from '~/features/sidebar/stores/sidebar-ui-store'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import { FileSystemProvider } from '../filesystem-provider'
 import { useFileSystem } from '../useFileSystem'
@@ -101,6 +103,58 @@ vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
 vi.mock('~/features/sidebar/hooks/useItemSurfaceHotkeys', () => ({
   useItemSurfaceHotkeys: vi.fn(),
 }))
+
+vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', async (importOriginal) => {
+  const actual = await importOriginal<typeof SidebarWorkspaceSourceModule>()
+  const { useSidebarUIStore: actualSidebarUIStore } = await vi.importActual<
+    typeof SidebarUIStoreModule
+  >('~/features/sidebar/stores/sidebar-ui-store')
+  const getSelectionSnapshot = () => {
+    const state = actualSidebarUIStore.getState()
+    return {
+      selectedSlug: state.selectedSlug,
+      selectedItemIds: state.selectedItemIds,
+      focusedItemId: state.focusedItemId,
+      activeItemSurface: state.activeItemSurface,
+    }
+  }
+
+  return {
+    ...actual,
+    useSidebarWorkspaceSource: () => {
+      const selectedSlug = actualSidebarUIStore((state) => state.selectedSlug)
+      const selectedItemIds = actualSidebarUIStore((state) => state.selectedItemIds)
+      const focusedItemId = actualSidebarUIStore((state) => state.focusedItemId)
+      const activeItemSurface = actualSidebarUIStore((state) => state.activeItemSurface)
+      const state = actualSidebarUIStore.getState()
+      return {
+        selection: {
+          selectedSlug,
+          selectedItemIds,
+          focusedItemId,
+          activeItemSurface,
+        },
+        selectionCommands: {
+          setSelected: state.setSelected,
+          setSelectedItemIds: state.setSelectedItemIds,
+          selectSingleItem: state.selectSingleItem,
+          toggleItemSelection: state.toggleItemSelection,
+          selectItemRange: state.selectItemRange,
+          setFocusedItem: state.setFocusedItem,
+          moveFocus: state.moveFocus,
+          clearItemSelection: state.clearItemSelection,
+          normalizeContextSelection: state.normalizeContextSelection,
+          setActiveItemSurface: state.setActiveItemSurface,
+          getSelectionSnapshot,
+        },
+        uiCommands: {
+          setFolderState: (folderId: Id<'sidebarItems'>, isOpen: boolean) =>
+            state.setFolderState('campaign_1' as Id<'campaigns'>, folderId, isOpen),
+        },
+      }
+    },
+  }
+})
 
 vi.mock('../filesystem-hotkeys', () => ({
   useFileSystemUndoHotkeys: vi.fn(),

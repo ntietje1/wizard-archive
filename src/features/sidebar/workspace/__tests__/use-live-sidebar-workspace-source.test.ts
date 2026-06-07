@@ -24,6 +24,8 @@ const liveSourceState = vi.hoisted(() => ({
   activeItems: [] as Array<AnySidebarItem>,
   trashItems: [] as Array<AnySidebarItem>,
   setFolderState: vi.fn(),
+  setRenamingId: vi.fn(),
+  selectedItemIds: [] as Array<AnySidebarItem['_id']>,
 }))
 const mutationCalls = vi.hoisted(
   () =>
@@ -68,21 +70,47 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   }),
 }))
 
-vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
-  useCampaignSidebarState: () => ({
-    folderStates: {},
-    closeAllFoldersMode: false,
-    bookmarksOnlyMode: false,
-  }),
-  useCampaignSidebarActions: () => ({
-    setFolderState: liveSourceState.setFolderState,
-    toggleFolderState: vi.fn(),
-    clearAllFolderStates: vi.fn(),
-    toggleCloseAllFoldersMode: vi.fn(),
-    exitCloseAllMode: vi.fn(),
-    toggleBookmarksOnlyMode: vi.fn(),
-  }),
-}))
+vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => {
+  const getState = () => ({
+    selectedSlug: null,
+    selectedItemIds: liveSourceState.selectedItemIds,
+    focusedItemId: null,
+    activeItemSurface: null,
+    renamingId: null,
+    setSelected: vi.fn(),
+    setSelectedItemIds: vi.fn(),
+    selectSingleItem: vi.fn(),
+    toggleItemSelection: vi.fn(),
+    selectItemRange: vi.fn(),
+    setFocusedItem: vi.fn(),
+    moveFocus: vi.fn(),
+    clearItemSelection: vi.fn(),
+    normalizeContextSelection: vi.fn(),
+    setActiveItemSurface: vi.fn(),
+    setRenamingId: liveSourceState.setRenamingId,
+  })
+  const useSidebarUIStore = Object.assign(
+    (selector: (state: ReturnType<typeof getState>) => unknown) => selector(getState()),
+    { getState },
+  )
+
+  return {
+    useSidebarUIStore,
+    useCampaignSidebarState: () => ({
+      folderStates: {},
+      closeAllFoldersMode: false,
+      bookmarksOnlyMode: false,
+    }),
+    useCampaignSidebarActions: () => ({
+      setFolderState: liveSourceState.setFolderState,
+      toggleFolderState: vi.fn(),
+      clearAllFolderStates: vi.fn(),
+      toggleCloseAllFoldersMode: vi.fn(),
+      exitCloseAllMode: vi.fn(),
+      toggleBookmarksOnlyMode: vi.fn(),
+    }),
+  }
+})
 
 vi.mock('~/shared/hooks/useCampaignQuery', () => ({
   useCampaignQuery: () => ({ data: currentEditorState.data, status: 'success' }),
@@ -131,7 +159,9 @@ describe('useLiveSidebarWorkspaceSource', () => {
     queryClient = createQueryClient()
     liveSourceState.activeItems = []
     liveSourceState.trashItems = []
+    liveSourceState.selectedItemIds = []
     liveSourceState.setFolderState.mockReset()
+    liveSourceState.setRenamingId.mockReset()
     mutationCalls.length = 0
     handleErrorMock.mockReset()
     currentEditorState.data = null

@@ -8,7 +8,7 @@ import { selectionBelongsToSurface } from 'shared/sidebar-items/filesystem/selec
 
 export type ItemSurface = 'sidebar' | 'folder-view' | 'bookmarks' | 'trash'
 
-export interface ActiveItemSurface {
+interface ActiveItemSurface {
   surface: ItemSurface
   parentId: Id<'sidebarItems'> | null
   visibleItemIds: Array<Id<'sidebarItems'>>

@@ -1,11 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { DEFAULT_SORT_OPTIONS } from 'shared/editor/types'
 import { SidebarShareButton } from '../sidebar-item-share-button'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { SidebarItemsContext } from '~/features/sidebar/contexts/sidebar-items-context'
 import type { SidebarItemsValue } from '~/features/sidebar/contexts/sidebar-items-context'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { SidebarWorkspaceSourceProvider } from '~/features/sidebar/workspace/sidebar-workspace-source'
+import type { SidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 
@@ -30,15 +33,15 @@ function sidebarItemsValue(items: Array<AnySidebarItem>): SidebarItemsValue {
 }
 
 function renderShareButton(item: AnySidebarItem, activeItems: Array<AnySidebarItem>) {
+  const active = sidebarItemsValue(activeItems)
+  const trash = sidebarItemsValue([])
+
   return render(
-    <SidebarItemsContext.Provider
-      value={{
-        active: sidebarItemsValue(activeItems),
-        trash: sidebarItemsValue([]),
-      }}
-    >
-      <SidebarShareButton item={item} />
-    </SidebarItemsContext.Provider>,
+    <SidebarWorkspaceSourceProvider value={sidebarWorkspaceSource(active, trash)}>
+      <SidebarItemsContext.Provider value={{ active, trash }}>
+        <SidebarShareButton item={item} />
+      </SidebarItemsContext.Provider>
+    </SidebarWorkspaceSourceProvider>,
   )
 }
 
@@ -157,3 +160,66 @@ describe('SidebarShareButton', () => {
     expect(await screen.findByTestId('share-panel')).toHaveTextContent('Clicked')
   })
 })
+
+function sidebarWorkspaceSource(
+  active: SidebarItemsValue,
+  trash: SidebarItemsValue,
+): SidebarWorkspaceSource {
+  const state = useSidebarUIStore.getState()
+
+  return {
+    items: { active, trash },
+    filteredActiveItems: active,
+    ui: {
+      folderStates: {},
+      closeAllFoldersMode: false,
+      bookmarksOnlyMode: false,
+    },
+    uiCommands: {
+      setFolderState: vi.fn(),
+      toggleFolderState: vi.fn(),
+      clearAllFolderStates: vi.fn(),
+      toggleCloseAllFoldersMode: vi.fn(),
+      exitCloseAllMode: vi.fn(),
+      toggleBookmarksOnlyMode: vi.fn(),
+    },
+    commands: {
+      openParentFolders: vi.fn(),
+      setRenamingItemId: vi.fn(),
+    },
+    sort: {
+      options: DEFAULT_SORT_OPTIONS,
+      setOptions: vi.fn(),
+    },
+    editing: {
+      renamingItemId: null,
+    },
+    selection: {
+      selectedSlug: state.selectedSlug,
+      selectedItemIds: state.selectedItemIds,
+      focusedItemId: state.focusedItemId,
+      activeItemSurface: state.activeItemSurface,
+    },
+    selectionCommands: {
+      setSelected: state.setSelected,
+      setSelectedItemIds: state.setSelectedItemIds,
+      selectSingleItem: state.selectSingleItem,
+      toggleItemSelection: state.toggleItemSelection,
+      selectItemRange: state.selectItemRange,
+      setFocusedItem: state.setFocusedItem,
+      moveFocus: state.moveFocus,
+      clearItemSelection: state.clearItemSelection,
+      normalizeContextSelection: state.normalizeContextSelection,
+      setActiveItemSurface: state.setActiveItemSurface,
+      getSelectionSnapshot: () => {
+        const currentState = useSidebarUIStore.getState()
+        return {
+          selectedSlug: currentState.selectedSlug,
+          selectedItemIds: currentState.selectedItemIds,
+          focusedItemId: currentState.focusedItemId,
+          activeItemSurface: currentState.activeItemSurface,
+        }
+      },
+    },
+  }
+}

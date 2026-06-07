@@ -1,36 +1,27 @@
-import { useShallow } from 'zustand/shallow'
 import type { MouseEvent } from 'react'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { getItemSelectionIntent } from '~/features/sidebar/utils/item-selection-intent'
 import type { ItemSelectionModifierState } from '~/features/sidebar/utils/item-selection-intent'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import type { ActiveItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
+import type { SidebarWorkspaceItemSurface } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 export function useItemSelectionInteractions(
   item: AnySidebarItem,
-  activeSurface?: ActiveItemSurface,
+  activeSurface?: SidebarWorkspaceItemSurface,
 ) {
   const {
-    isItemSelected,
-    selectedItemCount,
-    selectSingleItem,
-    toggleItemSelection,
-    selectItemRange,
-    setSelected,
-    normalizeContextSelection,
-    setActiveItemSurface,
-  } = useSidebarUIStore(
-    useShallow((s) => ({
-      isItemSelected: s.selectedItemIds.includes(item._id),
-      selectedItemCount: s.selectedItemIds.length,
-      selectSingleItem: s.selectSingleItem,
-      toggleItemSelection: s.toggleItemSelection,
-      selectItemRange: s.selectItemRange,
-      setSelected: s.setSelected,
-      normalizeContextSelection: s.normalizeContextSelection,
-      setActiveItemSurface: s.setActiveItemSurface,
-    })),
-  )
+    selection,
+    selectionCommands: {
+      normalizeContextSelection,
+      selectItemRange,
+      selectSingleItem,
+      setActiveItemSurface,
+      setSelected,
+      toggleItemSelection,
+    },
+  } = useSidebarWorkspaceSource()
+  const isItemSelected = selection.selectedItemIds.includes(item._id)
+  const selectedItemCount = selection.selectedItemIds.length
   const visibleItemIds = activeSurface?.visibleItemIds ?? [item._id]
 
   const activateSurface = () => {
