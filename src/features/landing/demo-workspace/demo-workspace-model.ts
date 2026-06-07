@@ -5,7 +5,7 @@ import type {
 } from '~/features/canvas/domain/canvas-document'
 import { assertNever } from '~/shared/utils/utils'
 
-export type DemoWorkspaceItemType = 'note' | 'canvas' | 'map' | 'file'
+export type DemoWorkspaceItemType = 'note' | 'folder' | 'canvas' | 'map' | 'file'
 
 export interface DemoWorkspaceItem {
   id: string
@@ -24,11 +24,12 @@ export interface DemoMapPin {
 }
 
 interface DemoWorkspaceState {
-  campaignName: string
+  activeView: 'item' | 'create'
   mountedItemIds: Array<string>
-  resetToken: number
-  selectedItemId: string
+  selectedItemId: string | null
+  nextLocalNoteIndex: number
   items: Array<DemoWorkspaceItem>
+  noteBodiesById: Record<string, string>
   note: {
     id: string
     title: string
@@ -52,18 +53,27 @@ interface DemoWorkspaceState {
 }
 
 type DemoWorkspaceAction =
+  | { type: 'createItem'; commandKey: string }
+  | { type: 'openCreateDashboard' }
   | { type: 'selectItem'; itemId: string }
   | { type: 'renameSelectedItem'; title: string }
-  | { type: 'reset' }
+
+const INITIAL_NOTE_BODY = [
+  'A waterfront bazaar where every stall hides a second ledger.',
+  '',
+  '- Ask Mara about the blue-glass shipment.',
+  '- The bell tower guard changes posts after the third tide bell.',
+  '- Players know the public auction starts at dusk.',
+].join('\n')
 
 export const INITIAL_DEMO_WORKSPACE = createInitialDemoWorkspace()
 
-function createInitialDemoWorkspace(resetToken = 0): DemoWorkspaceState {
+function createInitialDemoWorkspace(): DemoWorkspaceState {
   return {
-    campaignName: 'Lanterns of Brindlehook',
+    activeView: 'item',
     mountedItemIds: ['note-market'],
-    resetToken,
     selectedItemId: 'note-market',
+    nextLocalNoteIndex: 2,
     items: [
       {
         id: 'note-market',
@@ -90,16 +100,11 @@ function createInitialDemoWorkspace(resetToken = 0): DemoWorkspaceState {
         description: 'Handout',
       },
     ],
+    noteBodiesById: { 'note-market': INITIAL_NOTE_BODY },
     note: {
       id: 'note-market',
       title: 'The Lantern Market',
-      body: [
-        'A waterfront bazaar where every stall hides a second ledger.',
-        '',
-        '- Ask Mara about the blue-glass shipment.',
-        '- The bell tower guard changes posts after the third tide bell.',
-        '- Players know the public auction starts at dusk.',
-      ].join('\n'),
+      body: INITIAL_NOTE_BODY,
     },
     canvas: {
       id: 'canvas-heist',
@@ -147,10 +152,15 @@ export function demoWorkspaceReducer(
   action: DemoWorkspaceAction,
 ): DemoWorkspaceState {
   switch (action.type) {
+    case 'createItem':
+      return createLocalItem(state, action.commandKey)
+    case 'openCreateDashboard':
+      return { ...state, activeView: 'create', selectedItemId: null }
     case 'selectItem':
       if (!state.items.some((item) => item.id === action.itemId)) return state
       return {
         ...state,
+        activeView: 'item',
         selectedItemId: action.itemId,
         mountedItemIds: state.mountedItemIds.includes(action.itemId)
           ? state.mountedItemIds
@@ -158,15 +168,47 @@ export function demoWorkspaceReducer(
       }
     case 'renameSelectedItem':
       return renameSelectedItem(state, action.title)
-    case 'reset':
-      return createInitialDemoWorkspace(state.resetToken + 1)
     default:
       return assertNever(action)
   }
 }
 
 export function selectedDemoItem(state: DemoWorkspaceState) {
-  return state.items.find((item) => item.id === state.selectedItemId) ?? state.items[0]
+  if (state.activeView !== 'item') return null
+  return state.items.find((item) => item.id === state.selectedItemId) ?? state.items[0] ?? null
+}
+
+export function demoNoteBodyForItem(state: DemoWorkspaceState, itemId: string) {
+  return state.noteBodiesById[itemId] ?? ''
+}
+
+export function demoCanvasForItem(state: DemoWorkspaceState, itemId: string) {
+  if (itemId === state.canvas.id) {
+    return state.canvas
+  }
+
+  return { id: itemId, nodes: [], edges: [] }
+}
+
+export function demoMapPinsForItem(state: DemoWorkspaceState, itemId: string) {
+  if (itemId === state.map.id) {
+    return state.map.pins
+  }
+
+  return []
+}
+
+export function demoFileForItem(state: DemoWorkspaceState, item: DemoWorkspaceItem) {
+  if (item.id === state.file.id) {
+    return state.file
+  }
+
+  return {
+    id: item.id,
+    name: `${item.title || 'Untitled File'}.txt`,
+    contentType: 'text/plain',
+    body: '',
+  }
 }
 
 export function noteBodyToBlocks(body: string): Array<CustomBlock> {
@@ -201,14 +243,66 @@ export function noteBodyToBlocks(body: string): Array<CustomBlock> {
 }
 
 function renameSelectedItem(state: DemoWorkspaceState, title: string): DemoWorkspaceState {
+  if (state.activeView !== 'item') return state
   const nextTitle = title.trimStart()
   const item = selectedDemoItem(state)
+  if (!item) return state
   const items = state.items.map((candidate) =>
     candidate.id === item.id ? { ...candidate, title: nextTitle } : candidate,
   )
 
-  if (item.type === 'note') return { ...state, items, note: { ...state.note, title: nextTitle } }
+  if (item.id === state.note.id) {
+    return { ...state, items, note: { ...state.note, title: nextTitle } }
+  }
   return { ...state, items }
+}
+
+function createLocalItem(state: DemoWorkspaceState, commandKey: string): DemoWorkspaceState {
+  const type = demoItemTypeForCommand(commandKey)
+  const id = `local-${type}-${state.nextLocalNoteIndex}`
+  const item: DemoWorkspaceItem = {
+    id,
+    type,
+    title: localItemTitle(type, state.nextLocalNoteIndex),
+    description: localItemDescription(type),
+  }
+
+  return {
+    ...state,
+    activeView: 'item',
+    items: [...state.items, item],
+    mountedItemIds: state.mountedItemIds.includes(id)
+      ? state.mountedItemIds
+      : [...state.mountedItemIds, id],
+    nextLocalNoteIndex: state.nextLocalNoteIndex + 1,
+    noteBodiesById: { ...state.noteBodiesById, [id]: '' },
+    selectedItemId: id,
+  }
+}
+
+function demoItemTypeForCommand(commandKey: string): DemoWorkspaceItemType {
+  if (commandKey === 'folder') return 'folder'
+  if (commandKey === 'canvas') return 'canvas'
+  if (commandKey === 'map') return 'map'
+  if (commandKey === 'file') return 'file'
+  return 'note'
+}
+
+function localItemTitle(type: DemoWorkspaceItemType, index: number) {
+  const suffix = index === 2 ? '' : ` ${index}`
+  if (type === 'folder') return `New Folder${suffix}`
+  if (type === 'canvas') return `New Canvas${suffix}`
+  if (type === 'map') return `New Map${suffix}`
+  if (type === 'file') return `New File${suffix}`
+  return `Untitled Note${suffix}`
+}
+
+function localItemDescription(type: DemoWorkspaceItemType) {
+  if (type === 'folder') return 'Folder'
+  if (type === 'canvas') return 'Canvas'
+  if (type === 'map') return 'Map pins'
+  if (type === 'file') return 'Handout'
+  return 'Session note'
 }
 
 function createInitialCanvasNodes(): Array<CanvasDocumentNode> {

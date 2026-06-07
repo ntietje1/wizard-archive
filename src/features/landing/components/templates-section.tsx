@@ -1,4 +1,3 @@
-import { TemplatesFeatureDemo } from '~/features/landing/components/landing-feature-demos'
 import { StaticFeatureSection } from '~/features/landing/components/static-feature-section'
 
 const templateFeatures = [
@@ -15,7 +14,6 @@ export function TemplatesSection() {
       items={templateFeatures}
       cta="Use templates"
       visualDescription="Templates preview: a multi-faceted template workspace showing campaign templates such as characters, locations, sessions, lore, timelines, and family trees. The mockup should show one selected template backed by multiple supporting images or panels, similar to Obsidian's multi-image feature sections."
-      visual={<TemplatesFeatureDemo />}
       reverse
     />
   )

@@ -1,33 +1,41 @@
-import { Download, FileText, FolderOpen, Map, Network, RotateCcw, Upload } from 'lucide-react'
+import { Download, FileText, FolderOpen, Map, Network, Upload } from 'lucide-react'
 import { Fragment, useEffect, useReducer, useRef, useState } from 'react'
+import { CreateNewDashboardSurface } from '~/features/editor/components/create-new-dashboard-surface'
 import { EditorWorkspaceSurface } from '~/features/editor/components/editor-workspace-surface'
+import { NoteFormattingToolbar } from '~/features/editor/components/formatting-toolbar/note-formatting-toolbar'
 import { FileContentViewer } from '~/features/editor/components/viewer/file/file-content-viewer'
 import { RawNoteContent } from '~/features/editor/components/raw-note-content'
-import { EditorTopbarSurface } from '~/features/editor/components/topbar/editor-topbar-surface'
 import { LocalCanvasEditor } from '~/features/landing/demo-workspace/local-canvas-editor'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
+import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
-import { SidebarRow } from '~/features/sidebar/components/sidebar-row'
 import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-surface'
 import { SidebarWorkspaceShell } from '~/features/sidebar/components/sidebar-workspace-shell'
 import {
   INITIAL_DEMO_WORKSPACE,
+  demoCanvasForItem,
+  demoFileForItem,
+  demoMapPinsForItem,
+  demoNoteBodyForItem,
   demoWorkspaceReducer,
   noteBodyToBlocks,
   selectedDemoItem,
 } from '../demo-workspace/demo-workspace-model'
+import { DemoEditorTopbar, DemoSidebarFooter } from './demo-editor-chrome'
 import type {
   DemoMapPin,
   DemoWorkspaceItem,
   DemoWorkspaceItemType,
 } from '../demo-workspace/demo-workspace-model'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { ChangeEvent, Dispatch, MouseEvent, RefObject } from 'react'
 
 const itemIcons = {
   note: FileText,
+  folder: FolderOpen,
   canvas: Network,
   map: Map,
   file: FolderOpen,
@@ -39,8 +47,8 @@ export function DemoWorkspace() {
 
   return (
     <section
-      className="flex min-h-[calc(100svh-4rem)] bg-background text-foreground"
-      aria-label="Ephemeral demo workspace"
+      className="flex h-full min-h-0 bg-background text-foreground"
+      aria-label="Demo workspace"
     >
       <SidebarWorkspaceShell
         sidebar={
@@ -54,7 +62,11 @@ export function DemoWorkspace() {
         <EditorWorkspaceSurface
           topbar={<DemoWorkspaceTopbar selectedItem={selectedItem} dispatch={dispatch} />}
         >
-          <DemoWorkspaceSurfaces workspace={workspace} selectedItem={selectedItem} />
+          <DemoWorkspaceSurfaces
+            workspace={workspace}
+            selectedItem={selectedItem}
+            dispatch={dispatch}
+          />
         </EditorWorkspaceSurface>
       </SidebarWorkspaceShell>
     </section>
@@ -67,11 +79,11 @@ function DemoWorkspaceSidebar({
   workspace,
 }: {
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
-  selectedItem: DemoWorkspaceItem
+  selectedItem: DemoWorkspaceItem | null
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
   const sidebarItems = workspace.items.map((item) => {
-    const selected = item.id === selectedItem.id
+    const selected = item.id === selectedItem?.id
 
     return {
       id: item.id,
@@ -92,18 +104,13 @@ function DemoWorkspaceSidebar({
 
   return (
     <aside className="flex w-72 shrink-0 flex-col border-r bg-background">
-      <div className="border-b px-3 py-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Demo campaign
-        </p>
-        <h1 className="mt-1 truncate text-sm font-semibold">{workspace.campaignName}</h1>
-      </div>
-      <nav className="flex-1 overflow-auto p-1" aria-label="Demo campaign items">
+      <nav className="flex-1 overflow-auto p-1" aria-label="Demo items">
         <SidebarTreeSurface items={sidebarItems} />
       </nav>
-      <div className="border-t p-1">
-        <SidebarRow icon={FolderOpen} label="Trash" />
-      </div>
+      <DemoSidebarFooter
+        campaignName="Lanterns of Brindlehook"
+        onOpenCreateDashboard={() => dispatch({ type: 'openCreateDashboard' })}
+      />
     </aside>
   )
 }
@@ -113,51 +120,61 @@ function DemoWorkspaceTopbar({
   selectedItem,
 }: {
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
-  selectedItem: DemoWorkspaceItem
+  selectedItem: (typeof INITIAL_DEMO_WORKSPACE.items)[number] | null
 }) {
-  return (
-    <EditorTopbarSurface
-      title={
-        <Input
-          aria-label="Selected item name"
-          value={selectedItem.title}
-          onChange={(event) =>
-            dispatch({ type: 'renameSelectedItem', title: event.currentTarget.value })
-          }
-          className="h-8 max-w-lg border-transparent bg-transparent px-1 text-base font-medium shadow-none focus-visible:bg-control-surface focus-visible:px-2"
-        />
-      }
-      middleContent={
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => dispatch({ type: 'reset' })}
-        >
-          <RotateCcw aria-hidden="true" />
-          Reset demo
-        </Button>
-      }
-    />
-  )
+  const title = (() => {
+    if (selectedItem === null) {
+      return <p className="truncate text-sm font-semibold">Untitled Item</p>
+    }
+
+    return (
+      <Input
+        aria-label="Selected item name"
+        value={selectedItem.title}
+        onChange={(event) =>
+          dispatch({ type: 'renameSelectedItem', title: event.currentTarget.value })
+        }
+        className="h-8 max-w-lg border-transparent bg-transparent px-1 text-base font-medium shadow-none focus-visible:bg-control-surface focus-visible:px-2"
+      />
+    )
+  })()
+
+  return <DemoEditorTopbar title={title} />
 }
 
 function DemoWorkspaceSurfaces({
+  dispatch,
   selectedItem,
   workspace,
 }: {
-  selectedItem: DemoWorkspaceItem
+  dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
+  selectedItem: DemoWorkspaceItem | null
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
+  if (workspace.activeView === 'create') {
+    return (
+      <main className="flex min-h-0 flex-1 flex-col">
+        <CreateNewDashboardSurface
+          onCreate={(command) => dispatch({ type: 'createItem', commandKey: command.key })}
+        />
+      </main>
+    )
+  }
+
+  if (!selectedItem) {
+    return null
+  }
+
   return (
     <main className="flex min-h-0 flex-1 flex-col">
       {workspace.items.map((item) => (
-        <Fragment key={`${workspace.resetToken}:${item.id}`}>
+        <Fragment key={item.id}>
           {workspace.mountedItemIds.includes(item.id) && (
             <DemoWorkspaceSurface
               item={item}
               active={item.id === selectedItem.id}
               workspace={workspace}
+              dispatch={dispatch}
             />
           )}
         </Fragment>
@@ -168,13 +185,18 @@ function DemoWorkspaceSurfaces({
 
 function DemoWorkspaceSurface({
   active,
+  dispatch,
   item,
   workspace,
 }: {
   active: boolean
+  dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
   item: DemoWorkspaceItem
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
+  const canvas = item.type === 'canvas' ? demoCanvasForItem(workspace, item.id) : null
+  const file = item.type === 'file' ? demoFileForItem(workspace, item) : null
+
   return (
     <section
       className="contents"
@@ -184,23 +206,29 @@ function DemoWorkspaceSurface({
     >
       {item.type === 'note' && (
         <DemoNoteEditor
-          noteId={workspace.note.id as Id<'sidebarItems'>}
-          body={workspace.note.body}
+          noteId={item.id as Id<'sidebarItems'>}
+          body={demoNoteBodyForItem(workspace, item.id)}
+        />
+      )}
+      {item.type === 'folder' && (
+        <CreateNewDashboardSurface
+          folderPath={item.title}
+          onCreate={(command) => dispatch({ type: 'createItem', commandKey: command.key })}
         />
       )}
       {item.type === 'canvas' && (
         <LocalCanvasEditor
-          canvasId={workspace.canvas.id as Id<'sidebarItems'>}
-          nodes={workspace.canvas.nodes}
-          edges={workspace.canvas.edges}
+          canvasId={canvas?.id as Id<'sidebarItems'>}
+          nodes={canvas?.nodes ?? []}
+          edges={canvas?.edges ?? []}
         />
       )}
-      {item.type === 'map' && <DemoMapSurface pins={workspace.map.pins} />}
+      {item.type === 'map' && <DemoMapSurface pins={demoMapPinsForItem(workspace, item.id)} />}
       {item.type === 'file' && (
         <DemoFileSurface
-          initialBody={workspace.file.body}
-          initialContentType={workspace.file.contentType}
-          initialName={workspace.file.name}
+          initialBody={file?.body ?? ''}
+          initialContentType={file?.contentType ?? 'text/plain'}
+          initialName={file?.name ?? 'Untitled File.txt'}
         />
       )}
     </section>
@@ -208,14 +236,20 @@ function DemoWorkspaceSurface({
 }
 
 function DemoNoteEditor({ body, noteId }: { body: string; noteId: Id<'sidebarItems'> }) {
+  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+
   return (
-    <div className="note-editor-fill-height flex min-h-0 flex-1 flex-col">
-      <RawNoteContent
-        noteId={noteId}
-        content={noteBodyToBlocks(body)}
-        editable
-        className="note-editor-surface"
-      />
+    <div className="flex min-h-0 flex-1 flex-col">
+      <NoteFormattingToolbar editor={editor} visible />
+      <ScrollArea className="min-h-0 flex-1" contentClassName="note-editor-scroll-content">
+        <RawNoteContent
+          noteId={noteId}
+          content={noteBodyToBlocks(body)}
+          editable
+          className="note-editor-surface"
+          onEditorChange={setEditor}
+        />
+      </ScrollArea>
     </div>
   )
 }

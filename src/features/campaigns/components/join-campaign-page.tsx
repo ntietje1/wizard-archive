@@ -421,7 +421,12 @@ export function JoinCampaignPage() {
     }
   }, [isAuthLoading, isAuthenticated])
 
-  const campaignQuery = useQuery({
+  const {
+    data: campaign,
+    error: campaignError,
+    refetch: refetchCampaign,
+    status: campaignQueryStatus,
+  } = useQuery({
     ...convexQuery(api.campaigns.queries.getCampaignBySlug, {
       dmUsername: queryDmUsername,
       slug: queryCampaignSlug,
@@ -429,9 +434,13 @@ export function JoinCampaignPage() {
     enabled: dmUsername !== null && campaignSlug !== null,
   })
 
-  const campaign = campaignQuery.data
   const campaignMember = campaign?.myMembership
-  const campaignLookupState = resolveCampaignLookupState(campaignQuery)
+  const campaignLookupState = resolveCampaignLookupState({
+    data: campaign,
+    error: campaignError,
+    refetch: refetchCampaign,
+    status: campaignQueryStatus,
+  })
 
   const joinCampaign = useAppMutation(api.campaigns.mutations.joinCampaign)
 

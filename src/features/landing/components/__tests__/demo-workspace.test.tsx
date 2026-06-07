@@ -2,9 +2,15 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DemoWorkspace } from '../demo-workspace'
 
-const { fileContentViewerMock, localCanvasEditorMock, rawNoteContentMock } = vi.hoisted(() => ({
+const {
+  fileContentViewerMock,
+  localCanvasEditorMock,
+  noteFormattingToolbarMock,
+  rawNoteContentMock,
+} = vi.hoisted(() => ({
   fileContentViewerMock: vi.fn(),
   localCanvasEditorMock: vi.fn(),
+  noteFormattingToolbarMock: vi.fn(),
   rawNoteContentMock: vi.fn(),
 }))
 
@@ -12,6 +18,13 @@ vi.mock('~/features/editor/components/raw-note-content', () => ({
   RawNoteContent: (props: Record<string, unknown>) => {
     rawNoteContentMock(props)
     return <textarea aria-label="Demo note body" data-testid="demo-note-editor" defaultValue="" />
+  },
+}))
+
+vi.mock('~/features/editor/components/formatting-toolbar/note-formatting-toolbar', () => ({
+  NoteFormattingToolbar: (props: Record<string, unknown>) => {
+    noteFormattingToolbarMock(props)
+    return <div role="toolbar" aria-label="Note formatting toolbar" />
   },
 }))
 
@@ -53,6 +66,7 @@ describe('DemoWorkspace', () => {
   beforeEach(() => {
     fileContentViewerMock.mockReset()
     localCanvasEditorMock.mockReset()
+    noteFormattingToolbarMock.mockReset()
     rawNoteContentMock.mockReset()
     createObjectURLMock.mockClear()
     revokeObjectURLMock.mockClear()
@@ -82,6 +96,10 @@ describe('DemoWorkspace', () => {
         ]),
       }),
     )
+    expect(screen.getByRole('toolbar', { name: 'Note formatting toolbar' })).toBeInTheDocument()
+    expect(noteFormattingToolbarMock).toHaveBeenCalledWith(
+      expect.objectContaining({ visible: true }),
+    )
   })
 
   it('navigates inside the demo sidebar and mounts the local canvas editor runtime', () => {
@@ -103,10 +121,72 @@ describe('DemoWorkspace', () => {
     )
   })
 
-  it('keeps demo sidebar rows free of inert app-only controls', () => {
+  it('renders the app-like editor chrome without restoring the removed demo wrapper labels', () => {
     render(<DemoWorkspace />)
 
-    expect(screen.queryByRole('button', { name: /more options/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Last edited today' })).toHaveTextContent(
+      'Edited today',
+    )
+    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'View as player' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument()
+    expect(screen.getByText('Lanterns of Brindlehook')).toBeInTheDocument()
+    expect(screen.queryByText('Demo campaign')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reset demo' })).not.toBeInTheDocument()
+  })
+
+  it('opens the create dashboard and creates a local note from the product command list', () => {
+    render(<DemoWorkspace />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'New' }))
+
+    expect(screen.getByRole('heading', { name: 'Create New' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Note Write and organize your thoughts' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Note Write and organize your thoughts' }))
+
+    expect(screen.getByRole('textbox', { name: 'Selected item name' })).toHaveValue('Untitled Note')
+    expect(screen.getByTestId('selectable-row-Untitled Note')).toBeInTheDocument()
+    expect(rawNoteContentMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        editable: true,
+        noteId: 'local-note-2',
+        content: [],
+      }),
+    )
+  })
+
+  it('creates blank local canvases and files from the product command list', () => {
+    render(<DemoWorkspace />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'New' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Canvas Create a whiteboard to draw and organize nodes' }),
+    )
+
+    expect(screen.getByRole('textbox', { name: 'Selected item name' })).toHaveValue('New Canvas')
+    expect(localCanvasEditorMock).toHaveBeenLastCalledWith({
+      canvasId: 'local-canvas-2',
+      nodes: [],
+      edges: [],
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'New' }))
+    fireEvent.click(screen.getByRole('button', { name: 'File Upload a document, image, or media' }))
+
+    expect(screen.getByRole('textbox', { name: 'Selected item name' })).toHaveValue('New File 3')
+    expect(screen.getByText('New File 3.txt')).toBeInTheDocument()
+    expect(screen.getByText('text/plain · 0 B')).toBeInTheDocument()
+    expect(fileContentViewerMock).toHaveBeenLastCalledWith({
+      allowObjectUrl: true,
+      contentType: 'text/plain',
+      downloadUrl: 'blob:demo-default-file',
+      name: 'New File 3.txt',
+    })
   })
 
   it('renames a local item without leaving the demo workspace', () => {
@@ -120,18 +200,7 @@ describe('DemoWorkspace', () => {
     expect(screen.getByTestId('demo-note-editor')).toBeInTheDocument()
   })
 
-  it('resets local sidebar edits', () => {
-    render(<DemoWorkspace />)
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'Selected item name' }), {
-      target: { value: 'Market Leads' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Reset demo' }))
-
-    expect(screen.getByTestId('selectable-row-The Lantern Market')).toBeInTheDocument()
-  })
-
-  it('keeps mounted editor state while navigating until reset', () => {
+  it('keeps mounted editor state while navigating during the page session', () => {
     render(<DemoWorkspace />)
 
     fireEvent.change(screen.getByLabelText('Demo note body'), {
@@ -147,12 +216,9 @@ describe('DemoWorkspace', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Harbor Heist Board' }))
     expect(screen.getByLabelText('Demo canvas marker')).toHaveValue('moved encounter node')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Reset demo' }))
-    expect(screen.getByLabelText('Demo note body')).toHaveValue('')
   })
 
-  it('lets the demo file item use a local file until reset', async () => {
+  it('lets the demo file item use a local file during the page session', async () => {
     render(<DemoWorkspace />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Blue-glass Invoice' }))
@@ -190,11 +256,5 @@ describe('DemoWorkspace', () => {
       downloadUrl: 'blob:new-clues.txt',
       name: 'new-clues.txt',
     })
-
-    fireEvent.click(screen.getByRole('button', { name: 'Reset demo' }))
-    expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:new-clues.txt')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Blue-glass Invoice' }))
-    expect(screen.getByText('blue-glass-invoice.txt')).toBeInTheDocument()
   })
 })

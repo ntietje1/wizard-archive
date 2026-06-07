@@ -23,6 +23,7 @@ type RawNoteContentProps = {
   className?: string
   content: Array<CustomBlock>
   editable: boolean
+  fillHeight?: boolean
   noteId?: Id<'sidebarItems'>
   onEditorChange?: (editor: CustomBlockNoteEditor | null) => void
   style?: CSSProperties
@@ -123,6 +124,7 @@ export function RawNoteContent({
   className,
   content,
   editable,
+  fillHeight = false,
   noteId,
   onEditorChange,
   style,
@@ -141,7 +143,7 @@ export function RawNoteContent({
   if (!editor) return null
 
   return (
-    <div className={editable ? 'note-editor-fill-height' : undefined}>
+    <div className={editable || fillHeight ? 'note-editor-fill-height' : undefined}>
       <div className={className}>
         <NoteValueRuntimeContext.Provider value={createRawValueRuntime({ editable, noteId })}>
           <NoteEditorCore

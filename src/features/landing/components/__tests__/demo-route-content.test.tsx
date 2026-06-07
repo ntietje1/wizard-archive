@@ -7,16 +7,16 @@ vi.mock('~/features/landing/components/nav-bar', () => ({
 }))
 
 vi.mock('~/features/landing/components/demo-workspace', () => ({
-  DemoWorkspace: () => <section aria-label="Ephemeral demo workspace" />,
+  DemoWorkspace: () => <section aria-label="Demo workspace" />,
 }))
 
 describe('DemoRouteContent', () => {
-  it('renders the ephemeral workspace instead of a static fixture board', () => {
+  it('server-renders the public demo chrome and workspace frame', () => {
     render(<DemoRouteContent />)
 
     expect(screen.getByTestId('demo-nav')).toBeInTheDocument()
     expect(screen.getByLabelText('Demo project')).toBeInTheDocument()
-    expect(screen.getByLabelText('Ephemeral demo workspace')).toBeInTheDocument()
+    expect(document.querySelector('.demo-elevated-frame')).toBeInTheDocument()
     expect(screen.queryByLabelText('Demo project preview placeholder')).not.toBeInTheDocument()
   })
 })

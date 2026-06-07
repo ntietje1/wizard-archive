@@ -18,7 +18,11 @@ import {
 import { SettingsSubDialogContent } from '~/features/settings/components/settings-sub-dialog'
 
 function useOAuthProvider() {
-  const query = useQuery({
+  const {
+    data: oauthProvider,
+    isError,
+    isLoading,
+  } = useQuery({
     queryKey: ['auth', 'oauthProvider'],
     queryFn: async (): Promise<string | null> => {
       const { data, error } = await authClient.listAccounts()
@@ -28,8 +32,8 @@ function useOAuthProvider() {
     },
     staleTime: Infinity,
   })
-  if (query.isLoading || query.isError) return undefined
-  return query.data ?? null
+  if (isLoading || isError) return undefined
+  return oauthProvider ?? null
 }
 
 function EmailChangeDialog({ profile, onClose }: { profile: UserProfile; onClose: () => void }) {

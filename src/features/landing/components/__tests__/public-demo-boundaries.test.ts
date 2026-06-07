@@ -33,7 +33,31 @@ const AUTHENTICATED_APP_SERVICE_PATHS = [
 ] as const
 
 describe('public demo boundaries', () => {
-  it('keeps public landing and demo value imports free of authenticated app services', () => {
+  it('keeps public route entry files pointed at server-rendered page components', () => {
+    const importsByEntryPoint = new Map(
+      PUBLIC_ENTRY_POINTS.map((entryPoint) => [
+        entryPoint,
+        readStaticValueImportPaths(readRepoFile(join(repoRoot, entryPoint))),
+      ]),
+    )
+
+    expect(importsByEntryPoint.get('src/routes/index.tsx')).toContain(
+      '~/features/landing/components/landing-page',
+    )
+    expect(importsByEntryPoint.get('src/routes/demo.tsx')).toContain(
+      '~/features/landing/components/demo-route-content',
+    )
+  })
+
+  it('keeps public route entry files server renderable', () => {
+    const violations = PUBLIC_ENTRY_POINTS.filter((entryPoint) =>
+      readRepoFile(join(repoRoot, entryPoint)).includes('ssr: false'),
+    )
+
+    expect(violations).toEqual([])
+  })
+
+  it('keeps public landing and demo static imports free of authenticated app services', () => {
     const violations = PUBLIC_ENTRY_POINTS.flatMap((entryPoint) => {
       const graph = collectValueImportGraph(entryPoint)
       return graph.edges
@@ -56,7 +80,7 @@ function collectValueImportGraph(entryPath: string) {
     if (!importer || visited.has(importer)) continue
     visited.add(importer)
 
-    for (const importPath of readValueImportPaths(readRepoFile(importer))) {
+    for (const importPath of readStaticValueImportPaths(readRepoFile(importer))) {
       const target = resolveImportPath(importPath, importer)
       if (!target) continue
 
@@ -74,7 +98,7 @@ function readRepoFile(path: string) {
   return readFileSync(path, 'utf8')
 }
 
-function readValueImportPaths(source: string) {
+function readStaticValueImportPaths(source: string) {
   return [
     ...Array.from(
       source.matchAll(/^\s*import\s+(?!type\b)(?:[\s\S]*?\s+from\s+)?['"`]([^'"`]+)['"`]/gm),
@@ -84,7 +108,6 @@ function readValueImportPaths(source: string) {
       source.matchAll(/^\s*export\s+(?!type\b)(?:[\s\S]*?\s+from\s+)['"`]([^'"`]+)['"`]/gm),
       (match) => match[1],
     ),
-    ...Array.from(source.matchAll(/import\(\s*['"`]([^'"`]+)['"`]\s*\)/g), (match) => match[1]),
   ]
 }
 

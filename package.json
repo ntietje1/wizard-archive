@@ -131,7 +131,11 @@
     "overrides": {
       "vite": "npm:@voidzero-dev/vite-plus-core@latest",
       "vitest": "npm:@voidzero-dev/vite-plus-test@latest",
-      "miniflare>undici": "^8.0.3"
+      "miniflare>undici": "^8.0.3",
+      "prosemirror-model": "1.25.4",
+      "prosemirror-state": "1.4.4",
+      "prosemirror-transform": "1.11.0",
+      "prosemirror-view": "1.41.5"
     },
     "peerDependencyRules": {
       "allowAny": [

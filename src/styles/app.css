@@ -867,6 +867,12 @@
 }
 
 @layer utilities {
+  .demo-elevated-frame {
+    box-shadow:
+      0 0 18px 1px rgb(154 109 215 / 0.2),
+      0 0 60px 12px rgb(154 109 215 / 0.12);
+  }
+
   /* Delayed fade-in animation utilities */
   .fade-in-delayed {
     animation: fadeInDelayed 0.3s ease-in-out 0.25s both;
