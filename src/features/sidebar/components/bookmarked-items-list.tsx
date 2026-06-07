@@ -1,13 +1,15 @@
 import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
-import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 export function BookmarkedItemsList() {
-  const { data: filteredItems, status } = useFilteredSidebarItems()
+  const {
+    filteredActiveItems: { data: filteredItems, status },
+  } = useSidebarWorkspaceSource()
   const { sortOptions } = useSortOptions()
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
