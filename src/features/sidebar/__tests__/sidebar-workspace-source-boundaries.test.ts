@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 const repoRoot = process.cwd()
 
 describe('sidebar workspace source boundaries', () => {
-  it('keeps live item queries and editor-mode filtering inside the live sidebar source', () => {
+  it('keeps live item queries and actor filtering inside the live sidebar source', () => {
     const liveSource = readRepoFile(
       'src/features/sidebar/workspace/use-live-sidebar-workspace-source.ts',
     )
@@ -13,9 +13,11 @@ describe('sidebar workspace source boundaries', () => {
     const filteredProvider = readRepoFile(
       'src/features/sidebar/contexts/filtered-sidebar-items-provider.tsx',
     )
+    const campaignActorHook = readRepoFile('src/features/campaigns/hooks/useCampaignActor.ts')
 
     expect(liveSource).toContain('useSidebarItemsQueries')
-    expect(liveSource).toContain('useEditorMode')
+    expect(liveSource).toContain('useCampaignActor')
+    expect(liveSource).not.toContain('useEditorMode')
     expect(liveSource).toContain('effectiveHasAtLeastPermission')
     expect(provider).toContain('useLiveSidebarWorkspaceSource')
 
@@ -25,6 +27,9 @@ describe('sidebar workspace source boundaries', () => {
       expect(source).not.toContain('effectiveHasAtLeastPermission')
       expect(source).not.toContain('buildSidebarItemMaps')
     }
+    expect(campaignActorHook).not.toContain('useSidebarItems')
+    expect(campaignActorHook).not.toContain('useCurrentItem')
+    expect(campaignActorHook).not.toContain('useFileSystemReadModel')
   })
 
   it('keeps campaign sidebar UI state inside the sidebar workspace source', () => {

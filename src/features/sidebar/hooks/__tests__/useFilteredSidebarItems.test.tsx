@@ -43,13 +43,11 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({ campaignId: 'campaign_1', isDm: campaignState.isDm }),
 }))
 
-vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
-  useEditorMode: () => ({
-    campaignActor: campaignState.isDm
+vi.mock('~/features/campaigns/hooks/useCampaignActor', () => ({
+  useCampaignActor: () =>
+    campaignState.isDm
       ? { kind: 'dm', campaignId: 'campaign_1' }
       : { kind: 'player', campaignId: 'campaign_1' },
-    viewAsPlayerId: undefined,
-  }),
 }))
 
 vi.mock('~/features/sharing/utils/permission-utils', () => ({

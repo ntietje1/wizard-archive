@@ -7,8 +7,9 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import type { SidebarItemId } from 'shared/common/ids'
 import { DEFAULT_SORT_OPTIONS } from 'shared/editor/types'
 import type { Editor, SortOptions } from 'shared/editor/types'
+import type { CampaignActor } from 'shared/campaigns/actor'
+import { useCampaignActor } from '~/features/campaigns/hooks/useCampaignActor'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useSidebarItemsQueries } from '~/features/sidebar/hooks/useSidebarItems'
 import {
   useCampaignSidebarActions,
@@ -24,7 +25,7 @@ import type { SidebarWorkspaceSource } from './sidebar-workspace-source'
 export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
   const { campaignId } = useCampaign()
   const items = useSidebarItemsQueries()
-  const { campaignActor } = useEditorMode()
+  const campaignActor = useCampaignActor()
   const ui = useCampaignSidebarState(campaignId)
   const uiCommands = useCampaignSidebarActions(campaignId)
   const filteredActiveItems =
@@ -165,7 +166,7 @@ function sortOptionsFromMutationVars(vars: {
 
 function filterSidebarItemsForActor(
   activeItems: SidebarItemsValue,
-  campaignActor: ReturnType<typeof useEditorMode>['campaignActor'],
+  campaignActor: CampaignActor | null,
 ): SidebarItemsValue {
   const permOpts = { actor: campaignActor, allItemsMap: activeItems.itemsMap }
   const filteredData = activeItems.data.filter((item) =>

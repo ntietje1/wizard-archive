@@ -57,8 +57,8 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({ campaignId: 'campaign_1' }),
 }))
 
-vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
-  useEditorMode: () => ({ campaignActor: { kind: 'dm' } }),
+vi.mock('~/features/campaigns/hooks/useCampaignActor', () => ({
+  useCampaignActor: () => ({ kind: 'dm' }),
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
