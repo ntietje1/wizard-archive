@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { AssetPlaceholder } from '~/features/landing/components/asset-placeholder'
+import { HeroProductDemo } from '~/features/landing/components/landing-feature-demos'
 import { publicSite } from '~/features/landing/content/public-site'
 
 const trustHighlights = [
@@ -47,12 +47,10 @@ export function HeroSection() {
           </Link>
         </div>
 
-        <p className="mt-4 text-xs text-muted-foreground">
-          {publicSite.trial.short} Demo project coming soon.
-        </p>
+        <p className="mt-4 text-xs text-muted-foreground">{publicSite.trial.short}</p>
 
         <div className="mt-16 w-full max-w-4xl">
-          <AssetPlaceholder label="Hero product clip: campaign sidebar, active note, linked map, sharing controls, and a player preview showing the prepare-to-play workflow in one screen" />
+          <HeroProductDemo />
         </div>
 
         <ul className="mt-6 flex max-w-3xl flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">

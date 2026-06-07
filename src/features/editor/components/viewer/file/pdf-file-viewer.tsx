@@ -5,7 +5,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 // eslint-disable-next-line import/default
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PdfToolbar } from './pdf-toolbar'
-import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
+import { isValidFileUrl } from './file-url-validation'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 
@@ -21,6 +21,7 @@ type PdfDocumentState =
   | { status: 'failed' }
 
 interface PdfFileViewerProps {
+  allowObjectUrl?: boolean
   pdfUrl: string
 }
 
@@ -53,7 +54,7 @@ function PdfPage({
   )
 }
 
-export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
+export function PdfFileViewer({ allowObjectUrl = false, pdfUrl }: PdfFileViewerProps) {
   const [documentState, setDocumentState] = useState<PdfDocumentState>({ status: 'loading' })
   const [currentPage, setCurrentPage] = useState(1)
   const [scale, setScale] = useState(1)
@@ -64,7 +65,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
   const pageRefsMap = pageRefs.current
   const scrollViewportRef = useRef<HTMLDivElement | null>(null)
 
-  const isValid = isValidFileUrl(pdfUrl)
+  const isValid = isValidFileUrl(pdfUrl, { allowObjectUrl })
   const numPages = documentState.status === 'ready' ? documentState.numPages : 0
 
   const handleDocumentLoadSuccess = ({ numPages: pages }: { numPages: number }) => {

@@ -1,32 +1,45 @@
 import { describe, expect, it } from 'vitest'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, normalize, relative, resolve } from 'node:path'
 
 const repoRoot = process.cwd()
-const PUBLIC_DEMO_ENTRY = 'src/routes/demo.tsx'
+const PUBLIC_ENTRY_POINTS = ['src/routes/index.tsx', 'src/routes/demo.tsx'] as const
 
 const AUTHENTICATED_APP_SERVICE_PATHS = [
   'src/features/campaigns',
-  'src/features/context-menu',
   'src/features/dnd',
+  'src/features/editor/components/editor-content',
+  'src/features/editor/components/note-content',
+  'src/features/editor/hooks/useConvexYjsCollaboration',
+  'src/features/editor/hooks/useNoteYjsCollaboration',
+  'src/features/editor/hooks/useNoteEditorState',
+  'src/features/editor/pages',
+  'src/features/canvas/components/canvas-viewer',
+  'src/features/canvas/runtime/interaction/use-canvas-drop-integration',
+  'src/features/canvas/runtime/interaction/use-canvas-drop-target',
+  'src/features/canvas/runtime/session/use-canvas-viewer-session',
+  'src/features/canvas/runtime/use-canvas-editor-runtime',
   'src/features/filesystem',
   'src/features/file-upload',
-  'src/features/sidebar',
+  'src/features/previews',
   'src/features/sharing',
   'src/shared/collaboration',
   'src/shared/hooks/useAuth',
   'src/shared/hooks/useAuthQuery',
   'src/shared/hooks/useCampaignQuery',
+  'src/shared/hooks/useCampaignMutation',
   'convex/_generated/api',
   'convex/_generated/server',
 ] as const
 
 describe('public demo boundaries', () => {
-  it('keeps public demo value imports free of authenticated app services', () => {
-    const graph = collectValueImportGraph(PUBLIC_DEMO_ENTRY)
-    const violations = graph.edges
-      .filter(({ target }) => isAuthenticatedAppService(target))
-      .map(({ importer, target }) => `${toRepoPath(importer)} -> ${toRepoPath(target)}`)
+  it('keeps public landing and demo value imports free of authenticated app services', () => {
+    const violations = PUBLIC_ENTRY_POINTS.flatMap((entryPoint) => {
+      const graph = collectValueImportGraph(entryPoint)
+      return graph.edges
+        .filter(({ target }) => isAuthenticatedAppService(target))
+        .map(({ importer, target }) => `${toRepoPath(importer)} -> ${toRepoPath(target)}`)
+    })
 
     expect(violations).toEqual([])
   })
@@ -113,7 +126,9 @@ function resolveExistingModulePath(basePath: string) {
     join(basePath, 'index.tsx'),
   ]
 
-  return candidates.find((candidate) => existsSync(candidate)) ?? null
+  return (
+    candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile()) ?? null
+  )
 }
 
 function isAuthenticatedAppService(path: string) {

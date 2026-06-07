@@ -1,12 +1,17 @@
-import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
+import { isValidFileUrl } from './file-url-validation'
 
 interface OtherFileViewerProps {
+  allowObjectUrl?: boolean
   fileUrl: string
   fileName: string
 }
 
-export function OtherFileViewer({ fileUrl, fileName }: OtherFileViewerProps) {
-  const isValid = isValidFileUrl(fileUrl)
+export function OtherFileViewer({
+  allowObjectUrl = false,
+  fileUrl,
+  fileName,
+}: OtherFileViewerProps) {
+  const isValid = isValidFileUrl(fileUrl, { allowObjectUrl })
 
   if (!isValid) {
     return (
