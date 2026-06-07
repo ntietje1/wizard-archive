@@ -66,7 +66,70 @@ describe('resolveCanvasContextMenuTarget', () => {
       kind: 'embed-node',
       nodeId: 'embed-1',
       nodeType: 'embed',
-      sidebarItemId: 'note-1',
+      target: { kind: 'sidebarItem', sidebarItemId: 'note-1' },
+    })
+  })
+
+  it('returns an embed-node target for a single external embed selection', () => {
+    const snapshot = createContextMenuSnapshot({
+      nodes: [
+        {
+          id: 'embed-1',
+          type: 'embed',
+          position: { x: 0, y: 0 },
+          width: 200,
+          height: 120,
+          data: {
+            target: {
+              kind: 'externalUrl',
+              url: 'https://example.com/file.pdf',
+              name: 'file.pdf',
+            },
+          },
+        } as Node,
+      ],
+    })
+
+    const resolved = resolveCanvasContextMenuTarget(
+      selectionSnapshot({ nodeIds: new Set(['embed-1']) }),
+      snapshot,
+    )
+
+    expect(resolved).toEqual({
+      kind: 'embed-node',
+      nodeId: 'embed-1',
+      nodeType: 'embed',
+      target: {
+        kind: 'externalUrl',
+        url: 'https://example.com/file.pdf',
+        name: 'file.pdf',
+      },
+    })
+  })
+
+  it('keeps an empty embed on the generic node-selection target', () => {
+    const snapshot = createContextMenuSnapshot({
+      nodes: [
+        {
+          id: 'embed-1',
+          type: 'embed',
+          position: { x: 0, y: 0 },
+          width: 200,
+          height: 120,
+          data: { target: { kind: 'empty' } },
+        } as Node,
+      ],
+    })
+
+    expect(
+      resolveCanvasContextMenuTarget(
+        selectionSnapshot({ nodeIds: new Set(['embed-1']) }),
+        snapshot,
+      ),
+    ).toEqual({
+      kind: 'node-selection',
+      nodeIds: ['embed-1'],
+      nodeType: 'embed',
     })
   })
 
@@ -143,7 +206,7 @@ describe('resolveCanvasContextMenuTarget', () => {
           position: { x: 20, y: 0 },
           width: 200,
           height: 120,
-          data: { sidebarItemId: 'note-1' },
+          data: { target: { kind: 'sidebarItem', sidebarItemId: 'note-1' } },
         } as Node,
       ],
     })

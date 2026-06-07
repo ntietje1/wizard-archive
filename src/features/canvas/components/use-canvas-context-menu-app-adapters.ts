@@ -13,6 +13,7 @@ import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { logger } from '~/shared/utils/logger'
 import { toast } from 'sonner'
+import type { Id } from 'convex/_generated/dataModel'
 
 function buildEmbeddedSidebarItemCreateItem({
   command,
@@ -85,9 +86,21 @@ export function useCanvasContextMenuAppAdapters(): CanvasContextMenuAdapters {
       target.kind === 'embed-node'
         ? [
             createEmbedNodeContextMenuContributor({
-              canOpenEmbedTarget: (embedTarget) => itemsMap.has(embedTarget.sidebarItemId),
+              canOpenEmbedTarget: (embedTarget) =>
+                embedTarget.target.kind === 'externalUrl' ||
+                (embedTarget.target.kind === 'sidebarItem' &&
+                  itemsMap.has(embedTarget.target.sidebarItemId as Id<'sidebarItems'>)),
               openEmbedTarget: async (embedTarget) => {
-                const item = itemsMap.get(embedTarget.sidebarItemId)
+                if (embedTarget.target.kind === 'externalUrl') {
+                  window.open(embedTarget.target.url, '_blank', 'noopener,noreferrer')
+                  return true
+                }
+
+                if (embedTarget.target.kind !== 'sidebarItem') {
+                  return false
+                }
+
+                const item = itemsMap.get(embedTarget.target.sidebarItemId as Id<'sidebarItems'>)
                 if (!item) {
                   return false
                 }

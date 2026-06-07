@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useBlockNoteEditor } from '@blocknote/react'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
+import { shouldPreventExternalFileDrop } from './prevent-external-drop-policy'
 
 /**
  * Prevents ProseMirror from intercepting external file drag-and-drop events.
@@ -16,10 +17,8 @@ export function PreventExternalDrop() {
   useEffect(() => {
     if (!domElement) return
 
-    const isFileDrag = (e: DragEvent) => e.dataTransfer?.types.includes('Files') ?? false
-
     const stop = (e: DragEvent) => {
-      if (isFileDrag(e)) e.stopPropagation()
+      if (shouldPreventExternalFileDrop(e)) e.stopPropagation()
     }
 
     domElement.addEventListener('dragover', stop, true)

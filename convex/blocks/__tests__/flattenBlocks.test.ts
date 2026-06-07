@@ -55,22 +55,25 @@ describe('flattenBlocks', () => {
     expect(flattenBlocks([])).toEqual([])
   })
 
-  it('accepts BlockNote audio preview props before flattening', () => {
-    const [audioBlock] = parseEditorBlocks([
+  it('accepts BlockNote embed props before flattening', () => {
+    const [embedBlock] = parseEditorBlocks([
       {
-        id: testBlockNoteId('audio'),
-        type: 'audio',
+        id: testBlockNoteId('embed'),
+        type: 'embed',
         props: {
+          targetKind: 'externalUrl',
           name: 'clip.mp3',
           url: 'https://example.com/clip.mp3',
-          showPreview: true,
+          previewWidth: 320,
+          previewHeight: 180,
         },
       },
     ])
 
-    expect(flattenBlocks([audioBlock])[0].props).toMatchObject({
+    expect(flattenBlocks([embedBlock])[0].props).toMatchObject({
+      targetKind: 'externalUrl',
       name: 'clip.mp3',
-      showPreview: true,
+      previewHeight: 180,
     })
   })
 

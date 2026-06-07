@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { BLOCK_REGISTRY, BLOCK_TYPES } from './blockRegistry'
+import { embedTargetKindSchema, externalEmbedUrlSchema } from '../embeds/embedTargets'
 import { noteValuePropsSchema } from '../note-values/schema'
 import type { BlockType } from './blockRegistry'
 
@@ -108,32 +109,36 @@ const codeBlockPropsSchema = z.strictObject({
 
 const dividerPropsSchema = z.strictObject({})
 
-const imagePropsSchema = z.strictObject({
-  name: z.string().optional(),
-  url: z.string().optional(),
-  caption: z.string().optional(),
+const embedSharedPropsSchema = {
   backgroundColor: z.string().optional(),
   textAlignment: textAlignmentSchema,
-  showPreview: z.boolean().optional(),
-  previewWidth: z.number().optional(),
+  previewWidth: z.number().positive().optional(),
+  previewHeight: z.number().positive().optional(),
+}
+
+const emptyEmbedPropsSchema = z.strictObject({
+  targetKind: z.literal(embedTargetKindSchema.enum.empty).optional(),
+  ...embedSharedPropsSchema,
 })
 
-const videoPropsSchema = imagePropsSchema
-
-const audioPropsSchema = z.strictObject({
-  name: z.string().optional(),
-  url: z.string().optional(),
-  caption: z.string().optional(),
-  backgroundColor: z.string().optional(),
-  showPreview: z.boolean().optional(),
+const sidebarItemEmbedPropsSchema = z.strictObject({
+  targetKind: z.literal(embedTargetKindSchema.enum.sidebarItem),
+  sidebarItemId: z.string().min(1),
+  ...embedSharedPropsSchema,
 })
 
-const filePropsSchema = z.strictObject({
-  name: z.string().optional(),
-  url: z.string().optional(),
-  caption: z.string().optional(),
-  backgroundColor: z.string().optional(),
+const externalUrlEmbedPropsSchema = z.strictObject({
+  targetKind: z.literal(embedTargetKindSchema.enum.externalUrl),
+  url: externalEmbedUrlSchema,
+  name: z.string().trim().min(1).optional(),
+  ...embedSharedPropsSchema,
 })
+
+export const embedPropsSchema = z.union([
+  emptyEmbedPropsSchema,
+  sidebarItemEmbedPropsSchema,
+  externalUrlEmbedPropsSchema,
+])
 
 const tablePropsSchema = z.strictObject({
   textColor: z.string().optional(),
@@ -146,9 +151,7 @@ const blockPropSchemas = {
   checkListItem: checkListItemPropsSchema,
   codeBlock: codeBlockPropsSchema,
   empty: dividerPropsSchema,
-  mediaPreview: imagePropsSchema,
-  audio: audioPropsSchema,
-  file: filePropsSchema,
+  embed: embedPropsSchema,
   table: tablePropsSchema,
 } as const
 
@@ -210,27 +213,9 @@ const dividerBlockContentSchema = z.strictObject({
   content: inlineContent,
 })
 
-const imageBlockContentSchema = z.strictObject({
-  type: z.literal('image'),
-  props: imagePropsSchema,
-  content: inlineContent,
-})
-
-const videoBlockContentSchema = z.strictObject({
-  type: z.literal('video'),
-  props: videoPropsSchema,
-  content: inlineContent,
-})
-
-const audioBlockContentSchema = z.strictObject({
-  type: z.literal('audio'),
-  props: audioPropsSchema,
-  content: inlineContent,
-})
-
-const fileBlockContentSchema = z.strictObject({
-  type: z.literal('file'),
-  props: filePropsSchema,
+const embedBlockContentSchema = z.strictObject({
+  type: z.literal('embed'),
+  props: embedPropsSchema,
   content: inlineContent,
 })
 
@@ -250,10 +235,7 @@ const blockContentSchemasByType = {
   quote: quoteBlockContentSchema,
   codeBlock: codeBlockBlockContentSchema,
   divider: dividerBlockContentSchema,
-  image: imageBlockContentSchema,
-  video: videoBlockContentSchema,
-  audio: audioBlockContentSchema,
-  file: fileBlockContentSchema,
+  embed: embedBlockContentSchema,
   table: tableBlockContentSchema,
 } satisfies Record<BlockType, z.ZodObject>
 

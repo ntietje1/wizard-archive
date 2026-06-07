@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
+import { getLegacyMediaBlockProjectionMigrationPatch } from '../blocks/functions/migrateLegacyMediaBlocks'
 import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
 
 describe('migrations', () => {
@@ -51,6 +52,35 @@ describe('migrations', () => {
     it('preserves existing visible block share permission levels', () => {
       expect(
         getBlockSharePermissionLevelMigrationPatch({ permissionLevel: PERMISSION_LEVEL.VIEW }),
+      ).toBeNull()
+    })
+  })
+
+  describe('getLegacyMediaBlockProjectionMigrationPatch', () => {
+    it('rewrites projected legacy media block rows to embed rows', () => {
+      expect(
+        getLegacyMediaBlockProjectionMigrationPatch({
+          type: 'image',
+          props: {
+            url: 'https://example.com/a.png',
+            name: 'a.png',
+            previewWidth: 320,
+          },
+        }),
+      ).toEqual({
+        type: 'embed',
+        props: {
+          targetKind: 'externalUrl',
+          url: 'https://example.com/a.png',
+          name: 'a.png',
+          previewWidth: 320,
+        },
+      })
+    })
+
+    it('leaves non-media projection rows alone', () => {
+      expect(
+        getLegacyMediaBlockProjectionMigrationPatch({ type: 'paragraph', props: {} }),
       ).toBeNull()
     })
   })

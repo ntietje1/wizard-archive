@@ -35,8 +35,20 @@ vi.mock('react-pdf', () => {
         </div>
       )
     },
-    Page: ({ pageNumber }: { pageNumber: number }) => (
-      <div data-testid={`pdf-page-${pageNumber}`} />
+    Page: ({
+      pageNumber,
+      onLoadSuccess,
+    }: {
+      pageNumber: number
+      onLoadSuccess?: (page: { originalWidth: number; originalHeight: number }) => void
+    }) => (
+      <button
+        type="button"
+        data-testid={`pdf-page-${pageNumber}`}
+        onClick={() => onLoadSuccess?.({ originalWidth: 612, originalHeight: 792 })}
+      >
+        load page {pageNumber}
+      </button>
     ),
   }
 })
@@ -73,5 +85,22 @@ describe('PdfFileViewer', () => {
 
     expect(screen.queryByText('Failed to load PDF')).not.toBeInTheDocument()
     expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+  })
+
+  it('reports the first PDF page aspect ratio', () => {
+    const onFirstPageAspectRatio = vi.fn()
+    render(
+      <PdfFileViewer
+        pdfUrl="https://example.convex.cloud/api/storage/file-1"
+        onFirstPageAspectRatio={onFirstPageAspectRatio}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'load pdf' }))
+    fireEvent.click(screen.getByTestId('pdf-page-1'))
+    fireEvent.click(screen.getByTestId('pdf-page-2'))
+
+    expect(onFirstPageAspectRatio).toHaveBeenCalledTimes(1)
+    expect(onFirstPageAspectRatio).toHaveBeenCalledWith(0.772727)
   })
 })

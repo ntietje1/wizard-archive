@@ -130,9 +130,14 @@ function createTestAppAdapters(): CanvasContextMenuAdapters {
         ? [
             createEmbedNodeContextMenuContributor({
               canOpenEmbedTarget: (embedTarget) =>
-                sidebarItemsState.itemsMap.has(embedTarget.sidebarItemId),
+                embedTarget.target.kind === 'sidebarItem' &&
+                sidebarItemsState.itemsMap.has(embedTarget.target.sidebarItemId),
               openEmbedTarget: async (embedTarget) => {
-                const item = sidebarItemsState.itemsMap.get(embedTarget.sidebarItemId)
+                if (embedTarget.target.kind !== 'sidebarItem') {
+                  return false
+                }
+
+                const item = sidebarItemsState.itemsMap.get(embedTarget.target.sidebarItemId)
                 if (!item) {
                   return false
                 }
@@ -246,6 +251,7 @@ describe('useCanvasContextMenu', () => {
       'canvas-pane-create-map',
       'canvas-pane-create-canvas',
       'canvas-pane-create-file',
+      'canvas-pane-create-embed',
       'canvas-pane-create-text',
     ])
 
@@ -485,7 +491,7 @@ describe('useCanvasContextMenu', () => {
       position: { x: 0, y: 0 },
       width: 200,
       height: 120,
-      data: { sidebarItemId: 'note-1' },
+      data: { target: { kind: 'sidebarItem', sidebarItemId: 'note-1' } },
     } as Node
     const canvasEngine = createContextMenuEngine({ nodes: [embedNode] })
 
@@ -539,7 +545,7 @@ describe('useCanvasContextMenu', () => {
       position: { x: 0, y: 0 },
       width: 200,
       height: 120,
-      data: { sidebarItemId: 'note-1' },
+      data: { target: { kind: 'sidebarItem', sidebarItemId: 'note-1' } },
     } as Node
     const canvasEngine = createContextMenuEngine({ nodes: [embedNode] })
 

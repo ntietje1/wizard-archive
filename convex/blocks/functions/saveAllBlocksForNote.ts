@@ -3,6 +3,7 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { flattenBlocks } from './flattenBlocks'
+import { parseEditorBlocks } from '../parseEditorBlocks'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { CustomBlock } from '../../../shared/editor-blocks/types'
@@ -29,7 +30,8 @@ export async function saveAllBlocksForNote(
 
   const existingBlocksMap = new Map(existingBlocks.map((block) => [block.blockNoteId, block]))
 
-  const rawFlatBlocks = flattenBlocks(content)
+  const canonicalContent = parseEditorBlocks(content)
+  const rawFlatBlocks = flattenBlocks(canonicalContent)
   const deduped = new Map<string, (typeof rawFlatBlocks)[number]>()
   for (const flat of rawFlatBlocks) {
     if (deduped.has(flat.blockNoteId)) {

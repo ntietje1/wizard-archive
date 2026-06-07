@@ -3,6 +3,8 @@ import type { Context, ReactNode } from 'react'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
 import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
+import type { Id } from 'convex/_generated/dataModel'
+import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import type {
   CanvasDocumentWriter,
   CanvasEditSessionState,
@@ -13,6 +15,7 @@ import type {
 import type { CanvasCommands } from '../document/use-canvas-commands'
 
 type CanvasRuntimeProviderProps = {
+  canvasId?: Id<'sidebarItems'> | null
   canEdit: boolean
   children: ReactNode
   commands: CanvasCommands
@@ -21,15 +24,18 @@ type CanvasRuntimeProviderProps = {
   editSession: CanvasEditSessionState
   history: CanvasHistoryController
   nodeActions: CanvasNodeActions
+  provider?: ConvexYjsProvider | null
   remoteHighlights: ReadonlyMap<string, RemoteHighlight>
   selection: CanvasSelectionController
   viewportController: CanvasViewportController
 }
 
 interface CanvasDocumentRuntimeServices {
+  canvasId: Id<'sidebarItems'> | null
   commands: CanvasCommands
   documentWriter: CanvasDocumentWriter
   history: CanvasHistoryController
+  provider: ConvexYjsProvider | null
 }
 
 interface CanvasInteractionRuntimeServices {
@@ -95,6 +101,7 @@ export const useCanvasCollaborationRuntime = createServiceHook<CanvasCollaborati
 )
 
 export function CanvasRuntimeProvider({
+  canvasId = null,
   canEdit,
   children,
   commands,
@@ -103,13 +110,14 @@ export function CanvasRuntimeProvider({
   editSession,
   history,
   nodeActions,
+  provider = null,
   remoteHighlights,
   selection,
   viewportController,
 }: CanvasRuntimeProviderProps) {
   const documentServices = useMemo(
-    () => ({ commands, documentWriter, history }),
-    [commands, documentWriter, history],
+    () => ({ canvasId, commands, documentWriter, history, provider }),
+    [canvasId, commands, documentWriter, history, provider],
   )
   const interactionServices = useMemo(
     () => ({ canEdit, editSession, nodeActions, selection }),

@@ -5,6 +5,7 @@ import type { ContextMenuContributor, ContextMenuItemSpec } from '~/features/con
 import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasArrangeAction } from '../document/canvas-arrange'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
+import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
@@ -44,7 +45,7 @@ export type CanvasContextMenuTarget =
   | {
       kind: 'embed-node'
       nodeId: string
-      sidebarItemId: Id<'sidebarItems'>
+      target: EmbedTarget
       nodeType: 'embed'
     }
 
@@ -70,6 +71,7 @@ export interface CanvasClipboardEntry {
 export interface CanvasContextMenuServices {
   hasSelectableCanvasItems: () => boolean
   selectAllCanvasItems: () => void
+  createEmbedNode: (pointerPosition: CanvasContextMenuPoint) => CanvasSelectionSnapshot | null
   createTextNode: (pointerPosition: CanvasContextMenuPoint) => CanvasSelectionSnapshot | null
 }
 

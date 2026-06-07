@@ -102,18 +102,27 @@ describe('valid blocks are accepted', () => {
     expect(result.success).toBe(true)
   })
 
-  it('accepts an image block', () => {
+  it('accepts an embed block', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: testBlockNoteId('img-1'),
-      type: 'image',
+      id: testBlockNoteId('embed-1'),
+      type: 'embed',
       props: {
+        targetKind: 'externalUrl',
         url: 'https://example.com/img.png',
         name: 'img.png',
-        caption: 'A photo',
-        showPreview: true,
         previewWidth: 300,
+        previewHeight: 200,
         textAlignment: 'center',
       },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts an empty embed block without stale target props', () => {
+    const result = blockNoteBlockSchema.safeParse({
+      id: testBlockNoteId('embed-empty'),
+      type: 'embed',
+      props: {},
     })
     expect(result.success).toBe(true)
   })
@@ -225,6 +234,59 @@ describe('invalid blocks are rejected', () => {
       type: 'unknownWidget',
       props: {},
       content: [],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects legacy media blocks after migration', () => {
+    for (const type of ['image', 'video', 'audio', 'file']) {
+      const result = blockNoteBlockSchema.safeParse({
+        id: testBlockNoteId(`${type}-legacy`),
+        type,
+        props: { url: 'https://example.com/item' },
+      })
+      expect(result.success, `expected ${type} to be rejected`).toBe(false)
+    }
+  })
+
+  it('rejects embeds missing their target-specific locator', () => {
+    expect(
+      blockNoteBlockSchema.safeParse({
+        id: testBlockNoteId('embed-missing-url'),
+        type: 'embed',
+        props: { targetKind: 'externalUrl' },
+      }).success,
+    ).toBe(false)
+
+    expect(
+      blockNoteBlockSchema.safeParse({
+        id: testBlockNoteId('embed-missing-sidebar-id'),
+        type: 'embed',
+        props: { targetKind: 'sidebarItem' },
+      }).success,
+    ).toBe(false)
+  })
+
+  it('rejects empty embeds that retain stale target locators', () => {
+    const result = blockNoteBlockSchema.safeParse({
+      id: testBlockNoteId('embed-stale'),
+      type: 'embed',
+      props: {
+        targetKind: 'empty',
+        url: 'https://example.com/stale.png',
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects insecure external embed URLs', () => {
+    const result = blockNoteBlockSchema.safeParse({
+      id: testBlockNoteId('embed-http'),
+      type: 'embed',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'http://example.com/file.pdf',
+      },
     })
     expect(result.success).toBe(false)
   })

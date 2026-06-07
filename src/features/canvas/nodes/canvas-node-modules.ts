@@ -6,6 +6,7 @@ import {
   bindCanvasNodeTextColorProperty,
   normalizeCanvasNodeSurfaceStyleData,
 } from './shared/canvas-node-surface-style'
+import type { CanvasNormalizedNodeSurfaceStyleData } from './shared/canvas-node-surface-style'
 import { clampStrokeNodeSize, resizeStrokeNode } from './stroke/stroke-node-model'
 import {
   strokeNodeIntersectsPolygon,
@@ -107,18 +108,42 @@ function getSurfaceNodeProperties(
   patchNodeData: PatchCanvasNodeData,
   options: CanvasNodePropertyOptions = {},
 ): CanvasInspectableProperties {
+  const patchSurfaceNodeData = <TPatch extends Partial<CanvasNormalizedNodeSurfaceStyleData>>(
+    nodeId: string,
+    data: TPatch,
+  ) => {
+    patchNodeData(nodeId, data as CanvasNodeDataPatch)
+  }
   const textColorBindings = options.includeTextColor
-    ? [bindCanvasNodeTextColorProperty(node, patchNodeData)]
+    ? [
+        bindCanvasNodeTextColorProperty<CanvasNormalizedNodeSurfaceStyleData>(
+          node,
+          patchSurfaceNodeData,
+        ),
+      ]
     : []
   const fillBindings =
-    options.includeFill === false ? [] : [bindCanvasNodeSurfaceFillProperty(node, patchNodeData)]
+    options.includeFill === false
+      ? []
+      : [
+          bindCanvasNodeSurfaceFillProperty<CanvasNormalizedNodeSurfaceStyleData>(
+            node,
+            patchSurfaceNodeData,
+          ),
+        ]
 
   return {
     bindings: [
       ...textColorBindings,
       ...fillBindings,
-      bindCanvasNodeSurfaceBorderPaintProperty(node, patchNodeData),
-      bindCanvasNodeSurfaceBorderWidthProperty(node, patchNodeData),
+      bindCanvasNodeSurfaceBorderPaintProperty<CanvasNormalizedNodeSurfaceStyleData>(
+        node,
+        patchSurfaceNodeData,
+      ),
+      bindCanvasNodeSurfaceBorderWidthProperty<CanvasNormalizedNodeSurfaceStyleData>(
+        node,
+        patchSurfaceNodeData,
+      ),
     ],
   }
 }

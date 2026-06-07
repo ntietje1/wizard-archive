@@ -8,10 +8,7 @@ export const BLOCK_REGISTRY = [
   { type: 'quote', props: 'defaultText', content: 'inline', canvas: true },
   { type: 'codeBlock', props: 'codeBlock', content: 'inline', canvas: true },
   { type: 'divider', props: 'empty', content: 'inline', canvas: false },
-  { type: 'image', props: 'mediaPreview', content: 'inline', canvas: false },
-  { type: 'video', props: 'mediaPreview', content: 'inline', canvas: false },
-  { type: 'audio', props: 'audio', content: 'inline', canvas: false },
-  { type: 'file', props: 'file', content: 'inline', canvas: false },
+  { type: 'embed', props: 'embed', content: 'inline', canvas: false },
   { type: 'table', props: 'table', content: 'table', canvas: false },
 ] as const
 

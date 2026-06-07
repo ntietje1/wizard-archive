@@ -1,0 +1,219 @@
+import { fileURLToPath } from 'node:url'
+import fs from 'node:fs'
+import path from 'node:path'
+import { expect, test } from '@playwright/test'
+import { api } from 'convex/_generated/api'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import { getEditor, selectSlashMenuItem } from './helpers/editor-helpers'
+import {
+  createNote,
+  openItem,
+  selectableSidebarRow,
+  sidebarLink,
+  waitForFilesystemIdle,
+} from './helpers/sidebar-helpers'
+import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import {
+  createE2EConvexClient,
+  getCampaignIdFromRoute,
+  getCampaignRouteFromUrl,
+  getSidebarItemBySlug,
+  getSidebarItemIdBySlug,
+} from './helpers/convex-helpers'
+import { makeYjsUpdateWithBlocks } from '../convex/_test/yjs.helper'
+import type { Locator, Page, TestInfo } from '@playwright/test'
+
+const campaignName = testName('E2E NoteEmbeds')
+const sourceNoteContent = `Embedded source content ${Date.now()}`
+const testDir = path.dirname(fileURLToPath(import.meta.url))
+const imageFileName = 'note-embed-upload.png'
+const imageFilePath = path.join(testDir, imageFileName)
+
+test.describe.serial('note embeds', () => {
+  test.setTimeout(120_000)
+
+  test.beforeAll(async ({ browser }) => {
+    fs.writeFileSync(imageFilePath, createOnePixelPng())
+
+    const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
+    const page = await context.newPage()
+    await page.goto('/campaigns')
+    await createCampaign(page, campaignName)
+    await navigateToCampaign(page, campaignName)
+    await waitForFilesystemIdle(page)
+
+    await createNote(page, sourceNoteName())
+    await persistSourceNoteContent(page)
+
+    await page.close()
+    await context.close()
+  })
+
+  test.afterAll(async ({ browser }) => {
+    if (fs.existsSync(imageFilePath)) fs.unlinkSync(imageFilePath)
+
+    const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
+    const page = await context.newPage()
+    await page.goto('/campaigns')
+    try {
+      await deleteCampaign(page, campaignName)
+    } finally {
+      await page.close()
+      await context.close()
+    }
+  })
+
+  test('embeds a sidebar note through an empty embed block and persists after navigation', async ({
+    page,
+  }, testInfo) => {
+    const hostName = uniqueName('Note Embed Host', testInfo)
+    await openCampaign(page)
+    await createNote(page, hostName)
+    const block = await insertEmptyEmbedBlock(page)
+
+    await dragSidebarItemToEmbed(page, sourceNoteName(), block)
+
+    await expect(block.getByText(sourceNoteContent)).toBeVisible({ timeout: 15_000 })
+
+    await openItem(page, sourceNoteName())
+    await openItem(page, hostName)
+    await expect(page.getByTestId('note-embed-block').getByText(sourceNoteContent)).toBeVisible({
+      timeout: 15_000,
+    })
+  })
+
+  test('keeps a note self-drop as an empty embed', async ({ page }, testInfo) => {
+    const hostName = uniqueName('Self Embed Host', testInfo)
+    await openCampaign(page)
+    await createNote(page, hostName)
+    const block = await insertEmptyEmbedBlock(page)
+
+    await dragSidebarItemToEmbed(page, hostName, block)
+
+    await expect(block.getByTestId('embed-empty-state')).toBeVisible()
+    await expect(block.getByText('Drag and drop an item or file here')).toBeVisible()
+  })
+
+  test('links an external file from an empty note embed', async ({ page }, testInfo) => {
+    await openCampaign(page)
+    await createNote(page, uniqueName('External Embed Host', testInfo))
+    const block = await insertEmptyEmbedBlock(page)
+
+    await block.getByRole('button', { name: 'or link to an external file' }).click()
+    await page
+      .getByRole('textbox', { name: 'External file URL' })
+      .fill('https://example.com/lore.wacz')
+    await block.getByRole('button', { name: 'Link', exact: true }).click()
+
+    await expect(block.getByTestId('external-url-embed-card')).toContainText('lore.wacz')
+    await expect(block.getByRole('link', { name: 'Open file' })).toHaveAttribute(
+      'href',
+      'https://example.com/lore.wacz',
+    )
+  })
+
+  test('uploads from an empty note embed into the Assets folder and embeds the file', async ({
+    page,
+  }, testInfo) => {
+    await openCampaign(page)
+    await createNote(page, uniqueName('Upload Embed Host', testInfo))
+    const block = await insertEmptyEmbedBlock(page)
+
+    const fileChooserPromise = page.waitForEvent('filechooser')
+    await block.getByRole('button', { name: 'Upload' }).click()
+    const fileChooser = await fileChooserPromise
+    await fileChooser.setFiles(imageFilePath)
+
+    await expect(sidebarLink(page, 'Assets')).toBeVisible({ timeout: 15_000 })
+    await expectFileInAssetsFolder(page)
+    await expect(block.getByRole('img', { name: imageFileName })).toBeVisible({ timeout: 15_000 })
+  })
+})
+
+async function openCampaign(page: Page) {
+  await page.goto('/campaigns')
+  await navigateToCampaign(page, campaignName)
+  await waitForFilesystemIdle(page)
+}
+
+async function persistSourceNoteContent(page: Page) {
+  const { dmUsername, campaignSlug } = getCampaignRoute(page)
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const sourceNoteId = await getSidebarItemIdBySlug({
+    campaignId,
+    slug: 'embeddable-source-note',
+  })
+  const client = await createE2EConvexClient()
+  await client.mutation(api.yjsSync.mutations.pushUpdate, {
+    campaignId,
+    documentId: sourceNoteId,
+    update: makeYjsUpdateWithBlocks([
+      {
+        id: 'source-paragraph',
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: sourceNoteContent, styles: {} }],
+        children: [],
+      },
+    ]),
+  })
+  await client.action(api.notes.actions.persistNoteBlocks, {
+    campaignId,
+    documentId: sourceNoteId,
+  })
+}
+
+function getCampaignRoute(page: Page): {
+  dmUsername: string
+  campaignSlug: string
+} {
+  return getCampaignRouteFromUrl(page.url())
+}
+
+async function insertEmptyEmbedBlock(page: Page) {
+  await getEditor(page)
+  await selectSlashMenuItem(page, /Embed a file, note, map, canvas, folder, or external URL/)
+  const block = page.getByTestId('note-embed-block').last()
+  await expect(block.getByTestId('embed-empty-state')).toBeVisible({ timeout: 10_000 })
+  return block
+}
+
+async function dragSidebarItemToEmbed(page: Page, itemName: string, block: Locator) {
+  const item = selectableSidebarRow(page, itemName)
+  await expect(item).toBeVisible({ timeout: 10_000 })
+  await item.dragTo(block)
+}
+
+async function expectFileInAssetsFolder(page: Page) {
+  const assetsSlug = await getItemSlugFromSidebarLink(page, 'Assets')
+  const fileSlug = await getItemSlugFromSidebarLink(page, imageFileName)
+  const { dmUsername, campaignSlug } = getCampaignRoute(page)
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const assets = await getSidebarItemBySlug({ campaignId, slug: assetsSlug })
+  const file = await getSidebarItemBySlug({ campaignId, slug: fileSlug })
+  expect(file.parentId).toBe(assets._id)
+}
+
+async function getItemSlugFromSidebarLink(page: Page, itemName: string) {
+  const link = sidebarLink(page, itemName)
+  await expect(link).toBeVisible({ timeout: 15_000 })
+  const href = await link.getAttribute('href')
+  const slug = href ? new URL(href, page.url()).searchParams.get('item') : null
+  if (!slug) throw new Error(`Unable to resolve sidebar item slug for ${itemName}`)
+  return slug
+}
+
+function sourceNoteName() {
+  return 'Embeddable Source Note'
+}
+
+function uniqueName(prefix: string, testInfo: TestInfo) {
+  return `${prefix} ${testInfo.workerIndex}-${testInfo.retry}-${Date.now()}`
+}
+
+function createOnePixelPng() {
+  return Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mP8z8BQDwAFgwJ/l0S4YwAAAABJRU5ErkJggg==',
+    'base64',
+  )
+}

@@ -16,7 +16,7 @@ import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { CanvasPreviewEmbedNode } from '~/features/canvas/components/canvas-preview-embed-node'
 import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { RawNoteContent } from '~/features/editor/components/raw-note-content'
+import { RawNoteContentWithEmbeds } from '~/features/editor/components/raw-note-content-with-embeds'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import { resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
@@ -151,7 +151,7 @@ export function HistoryPreviewViewer({
         )}
       {snapshot.snapshotType === SNAPSHOT_TYPE.yjs_state &&
         snapshot.itemType === SIDEBAR_ITEM_TYPES.canvases && (
-          <CanvasSnapshotPreview data={snapshot.data} />
+          <CanvasSnapshotPreview canvasId={snapshot.itemId} data={snapshot.data} />
         )}
       {snapshot.snapshotType === SNAPSHOT_TYPE.game_map && (
         <GameMapSnapshotPreview data={snapshot.data} />
@@ -183,7 +183,7 @@ function NoteYjsSnapshotPreview({
 
   return (
     <ScrollArea className="flex-1 min-h-0">
-      <RawNoteContent
+      <RawNoteContentWithEmbeds
         noteId={noteId}
         content={result.value}
         editable={false}
@@ -193,7 +193,13 @@ function NoteYjsSnapshotPreview({
   )
 }
 
-function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
+function CanvasSnapshotPreview({
+  canvasId,
+  data,
+}: {
+  canvasId: Id<'sidebarItems'>
+  data: ArrayBuffer
+}) {
   const result = readCanvasSnapshot(data)
 
   if (result.status === 'corrupted') {
@@ -207,6 +213,7 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
         edges={result.value.edges}
         interactive
         embedRenderer={CanvasPreviewEmbedNode}
+        sourceItemId={canvasId}
       />
     </div>
   )

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { EditorFormattingToolbar } from '../formatting-toolbar'
 import {
-  createFileBlock,
+  createEmbedBlock,
   createFormattingToolbarTestEditor as createEditor,
   createParagraphBlock,
 } from './formatting-toolbar-test-utils'
@@ -385,21 +385,13 @@ describe('EditorFormattingToolbar', () => {
     expect(editorSurface).toHaveFocus()
   })
 
-  it('shows file-specific controls for a selected file block', () => {
-    const fileBlock = createFileBlock('file-1')
-    const editor = createEditor({ selectedBlocks: [fileBlock] })
+  it('does not show legacy file controls for a selected embed block', () => {
+    const embedBlock = createEmbedBlock('embed-1')
+    const editor = createEditor({ selectedBlocks: [embedBlock] })
 
     render(<EditorFormattingToolbar editor={editor as never} mode="full" visible />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit file caption' }))
-    fireEvent.change(screen.getByLabelText('File caption'), {
-      target: { value: 'Updated caption' },
-    })
-    fireEvent.submit(screen.getByRole('form', { name: 'Edit file caption form' }))
-
-    expect(editor.updateBlock).toHaveBeenCalledWith(fileBlock.id, {
-      props: { caption: 'Updated caption' },
-    })
-    expect(screen.getByRole('button', { name: 'Replace file' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit file caption' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Replace file' })).not.toBeInTheDocument()
   })
 })

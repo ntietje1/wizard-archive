@@ -1,7 +1,9 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasReadOnlyPreview } from '../canvas-read-only-preview'
+import { normalizeEmbedNodeData } from '../../nodes/embed/embed-node-data'
 import { testId } from '~/test/helpers/test-id'
+import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasNodeComponentProps } from '../../nodes/canvas-node-types'
 import type { EmbedNodeData } from '../../nodes/embed/embed-node-data'
 import type {
@@ -44,7 +46,10 @@ describe('CanvasReadOnlyPreview', () => {
             width: 240,
             height: 180,
             data: {
-              sidebarItemId: testId<'sidebarItems'>('note-1'),
+              target: {
+                kind: 'sidebarItem',
+                sidebarItemId: testId<'sidebarItems'>('note-1'),
+              },
               textColor: 'var(--t-purple)',
             },
           } satisfies CanvasDocumentNode,
@@ -65,6 +70,7 @@ describe('CanvasReadOnlyPreview', () => {
   it('uses an injected embed renderer for read-only embedded nodes', async () => {
     render(
       <CanvasReadOnlyPreview
+        sourceItemId={testId<'sidebarItems'>('canvas-1')}
         nodes={[
           {
             id: 'embed-1',
@@ -73,7 +79,10 @@ describe('CanvasReadOnlyPreview', () => {
             width: 240,
             height: 180,
             data: {
-              sidebarItemId: testId<'sidebarItems'>('note-1'),
+              target: {
+                kind: 'sidebarItem',
+                sidebarItemId: testId<'sidebarItems'>('note-1'),
+              },
             },
           } satisfies CanvasDocumentNode,
         ]}
@@ -83,6 +92,7 @@ describe('CanvasReadOnlyPreview', () => {
     )
 
     expect(await screen.findByTestId('injected-embed-renderer')).toHaveTextContent('note-1')
+    expect(screen.getByTestId('injected-source-item')).toHaveTextContent('canvas-1')
     expect(screen.queryByText('Embedded item preview unavailable.')).not.toBeInTheDocument()
   })
 
@@ -169,7 +179,10 @@ describe('CanvasReadOnlyPreview', () => {
             width: 100,
             height: 100,
             data: {
-              sidebarItemId: testId<'sidebarItems'>('note-1'),
+              target: {
+                kind: 'sidebarItem',
+                sidebarItemId: testId<'sidebarItems'>('note-1'),
+              },
             },
           } satisfies CanvasDocumentNode,
         ]}
@@ -236,7 +249,10 @@ describe('CanvasReadOnlyPreview', () => {
             width: 100,
             height: 100,
             data: {
-              sidebarItemId: testId<'sidebarItems'>('note-1'),
+              target: {
+                kind: 'sidebarItem',
+                sidebarItemId: testId<'sidebarItems'>('note-1'),
+              },
             },
           } satisfies CanvasDocumentNode,
         ]}
@@ -270,7 +286,10 @@ describe('CanvasReadOnlyPreview', () => {
             type: 'embed',
             position: { x: 0, y: 0 },
             data: {
-              sidebarItemId: testId<'sidebarItems'>('note-1'),
+              target: {
+                kind: 'sidebarItem',
+                sidebarItemId: testId<'sidebarItems'>('note-1'),
+              },
             },
           } satisfies CanvasDocumentNode,
         ]}
@@ -309,7 +328,10 @@ describe('CanvasReadOnlyPreview', () => {
             width: 4000,
             height: 3200,
             data: {
-              sidebarItemId: testId<'sidebarItems'>('note-1'),
+              target: {
+                kind: 'sidebarItem',
+                sidebarItemId: testId<'sidebarItems'>('note-1'),
+              },
             },
           } satisfies CanvasDocumentNode,
         ]}
@@ -336,8 +358,21 @@ describe('CanvasReadOnlyPreview', () => {
   })
 })
 
-function InjectedEmbedRenderer({ data }: CanvasNodeComponentProps<EmbedNodeData>) {
-  return <div data-testid="injected-embed-renderer">{data.sidebarItemId}</div>
+function InjectedEmbedRenderer({
+  data,
+  sourceItemId,
+}: CanvasNodeComponentProps<EmbedNodeData> & {
+  sourceItemId?: Id<'sidebarItems'> | null
+}) {
+  const target = normalizeEmbedNodeData(data).target
+  return (
+    <>
+      <div data-testid="injected-embed-renderer">
+        {target.kind === 'sidebarItem' ? target.sidebarItemId : target.kind}
+      </div>
+      <div data-testid="injected-source-item">{sourceItemId}</div>
+    </>
+  )
 }
 
 class MockResizeObserver implements ResizeObserver {

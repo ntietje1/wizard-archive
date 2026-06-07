@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
+import { useCanvasEmbedDropTarget } from './use-canvas-embed-drop-target'
 import {
   useCanvasDocumentRuntime,
   useCanvasInteractionRuntime,
@@ -26,15 +28,19 @@ import {
   getCanvasNodeTextStyle,
 } from '../shared/canvas-node-surface-style'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
-import { resolveFilePreviewImageUrl } from '~/features/editor/components/viewer/file/file-preview-source'
 import { EmbeddedCanvasContent } from './embedded-canvas-content'
-import { EmbeddedFileContent } from './embedded-file-content'
 import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
-import { EmbeddedSidebarItemUnavailable } from './embedded-sidebar-item-unavailable'
+import { EmbedContent } from '~/features/embeds/components/embed-content'
+import { useEmbedUpload } from '~/features/embeds/hooks/use-embed-upload'
+import { externalEmbedTargetFromUrl } from '~/features/embeds/utils/embed-targets'
+import { Button } from '~/features/shadcn/components/button'
+import { Input } from '~/features/shadcn/components/input'
+import type { Id } from 'convex/_generated/dataModel'
+import type { ReactNode, RefObject } from 'react'
 
 const EMBED_FLOATING_LABEL_GAP_PX = 6
 const EMBED_FLOATING_LABEL_LINE_HEIGHT_PX = 16
@@ -50,7 +56,9 @@ function persistEmbedTextColor(
 export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
   const normalizedData = normalizeEmbedNodeData(data)
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const sidebarItemId = normalizedData.sidebarItemId
+  const target = normalizedData.target
+  const sidebarItemId =
+    target.kind === 'sidebarItem' ? (target.sidebarItemId as Id<'sidebarItems'>) : null
   const contentQuery = useSidebarItemById(sidebarItemId)
   const itemState = useSidebarItemAvailabilityState({
     lookup: { kind: 'id', id: sidebarItemId },
@@ -63,7 +71,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   })
   const contentItem = itemState.status === 'available' ? itemState.item : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const { documentWriter } = useCanvasDocumentRuntime()
+  const { canvasId, documentWriter, provider } = useCanvasDocumentRuntime()
   const { patchNodeData } = documentWriter
   const { domRuntime } = useCanvasViewportRuntime()
   const { canEdit, editSession } = useCanvasInteractionRuntime()
@@ -80,9 +88,41 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const defaultTextColor = getCanvasNodeDefaultTextColor(normalizedData)
 
   const zoom = useCanvasViewportZoom()
-  const label = itemState.label
-  const isUnavailable = itemState.status !== 'available' && itemState.status !== 'loading'
+  const label = getEmbedFloatingLabel(target, itemState.label)
+  const isUnavailable =
+    target.kind === 'sidebarItem' &&
+    itemState.status !== 'available' &&
+    itemState.status !== 'loading'
   const showFloatingLabel = !showsFormattingToolbar
+  const isEditableEmbed = canEdit && interactiveRenderMode
+  const lastStoredAspectRatioRef = useRef<number | null>(normalizedData.lockedAspectRatio ?? null)
+  const setIntrinsicAspectRatio = (aspectRatio: number | null) => {
+    const lockedAspectRatio =
+      typeof aspectRatio === 'number' && Number.isFinite(aspectRatio) && aspectRatio > 0
+        ? aspectRatio
+        : null
+    if (lastStoredAspectRatioRef.current === lockedAspectRatio) return
+
+    lastStoredAspectRatioRef.current = lockedAspectRatio
+    patchNodeData(new Map([[id, { lockedAspectRatio }]]))
+  }
+  const setTarget = async (nextTarget: EmbedTarget) => {
+    patchNodeData(new Map([[id, { target: nextTarget }]]))
+    await provider?.flushUpdates()
+  }
+  const renderSidebarItem = (item: AnySidebarItemWithContent) => (
+    <EmbedRichContent
+      nodeId={id}
+      contentItem={item}
+      isEditing={isEditing}
+      isExclusivelySelected={editableSession.isExclusivelySelected}
+      interactiveRenderMode={interactiveRenderMode}
+      onActivated={editableSession.handleActivated}
+      onEditorChange={setEditor}
+      pendingActivationRef={editableSession.pendingActivationRef}
+      textColor={normalizedData.textColor}
+    />
+  )
 
   useEffect(() => domRuntime.registerNodeSurfaceElement(id, surfaceRef.current), [domRuntime, id])
 
@@ -108,7 +148,11 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       dragging={!!dragging}
       minWidth={CANVAS_NODE_MIN_SIZE}
       minHeight={CANVAS_NODE_MIN_SIZE}
-      lockedAspectRatio={getLockedAspectRatio(contentItem, normalizedData.lockedAspectRatio)}
+      lockedAspectRatio={getLockedAspectRatio(
+        target,
+        contentItem,
+        normalizedData.lockedAspectRatio,
+      )}
       editing={showsFormattingToolbar}
       chrome={
         <>
@@ -148,24 +192,125 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
         }}
       >
         <div className="h-full w-full min-h-0 min-w-0">
-          {itemState.status === 'available' ? (
-            <EmbedRichContent
-              nodeId={id}
-              contentItem={itemState.item}
-              isEditing={isEditing}
-              isExclusivelySelected={editableSession.isExclusivelySelected}
-              interactiveRenderMode={interactiveRenderMode}
-              onActivated={editableSession.handleActivated}
-              onEditorChange={setEditor}
-              pendingActivationRef={editableSession.pendingActivationRef}
-              textColor={normalizedData.textColor}
+          {isEditableEmbed ? (
+            <EditableCanvasEmbedContent
+              rootRef={surfaceRef}
+              sourceCanvasId={canvasId}
+              target={target}
+              setTarget={setTarget}
+              onIntrinsicAspectRatio={setIntrinsicAspectRatio}
+              renderSidebarItem={renderSidebarItem}
             />
           ) : (
-            <EmbeddedSidebarItemUnavailable state={itemState} />
+            <EmbedContent
+              target={target}
+              sourceItemId={canvasId}
+              mode="readonly"
+              onIntrinsicAspectRatio={setIntrinsicAspectRatio}
+              renderSidebarItem={renderSidebarItem}
+            />
           )}
         </div>
       </div>
     </ResizableNodeWrapper>
+  )
+}
+
+function EditableCanvasEmbedContent({
+  rootRef,
+  sourceCanvasId,
+  target,
+  setTarget,
+  onIntrinsicAspectRatio,
+  renderSidebarItem,
+}: {
+  rootRef: RefObject<HTMLElement | null>
+  sourceCanvasId: Id<'sidebarItems'> | null
+  target: EmbedTarget
+  setTarget: (target: EmbedTarget) => Promise<void>
+  onIntrinsicAspectRatio: (aspectRatio: number | null) => void
+  renderSidebarItem: (item: AnySidebarItemWithContent) => ReactNode
+}) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [linkDraftOpen, setLinkDraftOpen] = useState(false)
+  const [linkDraft, setLinkDraft] = useState('')
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const { uploadEmbedFile } = useEmbedUpload()
+  const uploadFile = async (file: globalThis.File) => {
+    const result = await uploadEmbedFile(file)
+    return result?.id ?? null
+  }
+  const setTargetAndCloseDraft = async (nextTarget: EmbedTarget) => {
+    await setTarget(nextTarget)
+    setLinkDraftOpen(false)
+    setLinkDraft('')
+    setLinkError(null)
+  }
+
+  useCanvasEmbedDropTarget({
+    ref: rootRef,
+    enabled: true,
+    sourceCanvasId,
+    setTarget: setTargetAndCloseDraft,
+    uploadFile,
+  })
+
+  return (
+    <>
+      <EmbedContent
+        target={target}
+        sourceItemId={sourceCanvasId}
+        mode="editable"
+        onUpload={() => fileInputRef.current?.click()}
+        onLinkExternal={() => setLinkDraftOpen(true)}
+        onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+        renderSidebarItem={renderSidebarItem}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={async (event) => {
+          const file = event.currentTarget.files?.item(0)
+          event.currentTarget.value = ''
+          if (!file) return
+          const sidebarItemId = await uploadFile(file)
+          if (sidebarItemId) await setTargetAndCloseDraft({ kind: 'sidebarItem', sidebarItemId })
+        }}
+      />
+      {linkDraftOpen ? (
+        <form
+          className="absolute inset-x-2 bottom-2 z-20 flex gap-2 rounded-md border border-border bg-background/95 p-2 shadow-sm"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            const nextTarget = externalEmbedTargetFromUrl(linkDraft)
+            if (!nextTarget) {
+              setLinkError('Use an HTTPS file URL')
+              return
+            }
+            await setTargetAndCloseDraft(nextTarget)
+          }}
+        >
+          <Input
+            value={linkDraft}
+            aria-label="External file URL"
+            placeholder="https://example.com/file.pdf"
+            onChange={(event) => {
+              setLinkDraft(event.target.value)
+              setLinkError(null)
+            }}
+          />
+          <Button type="submit" size="sm">
+            Link
+          </Button>
+          {linkError ? (
+            <span className="self-center whitespace-nowrap text-sm text-destructive">
+              {linkError}
+            </span>
+          ) : null}
+        </form>
+      ) : null}
+    </>
   )
 }
 
@@ -262,11 +407,7 @@ function EmbedRichContent({
   }
 
   if (contentItem.type === SIDEBAR_ITEM_TYPES.files) {
-    return interactiveRenderMode ? (
-      <EmbeddedFileContent nodeId={nodeId} file={contentItem} />
-    ) : (
-      <SidebarItemPreviewContent item={contentItem} />
-    )
+    return <SidebarItemPreviewContent item={contentItem} />
   }
 
   const hasScrollableContent = contentItem.type === SIDEBAR_ITEM_TYPES.folders
@@ -283,23 +424,31 @@ function EmbedRichContent({
   )
 }
 
+function getEmbedFloatingLabel(target: EmbedNodeData['target'], sidebarItemLabel: string) {
+  if (target.kind === 'externalUrl') return target.name ?? target.url
+  if (target.kind === 'empty') return 'Empty embed'
+  return sidebarItemLabel
+}
+
 function getLockedAspectRatio(
+  target: EmbedNodeData['target'],
   contentItem: AnySidebarItemWithContent | undefined,
   lockedAspectRatio: number | undefined,
 ) {
+  if (typeof lockedAspectRatio !== 'number') {
+    return undefined
+  }
+
+  if (target.kind === 'externalUrl') {
+    return lockedAspectRatio
+  }
+
   if (contentItem?.type === SIDEBAR_ITEM_TYPES.gameMaps) {
     return lockedAspectRatio
   }
 
   if (contentItem?.type === SIDEBAR_ITEM_TYPES.files) {
-    const hasVisualPreview =
-      resolveFilePreviewImageUrl({
-        downloadUrl: contentItem.downloadUrl,
-        contentType: contentItem.contentType,
-        previewUrl: contentItem.previewUrl,
-      }) !== null
-
-    return hasVisualPreview ? lockedAspectRatio : undefined
+    return lockedAspectRatio
   }
 
   return undefined

@@ -3,7 +3,8 @@
 import * as Y from 'yjs'
 import { BlockNoteEditor } from '@blocknote/core'
 import { yDocToBlocks as blockNoteYDocToBlocks } from '@blocknote/core/yjs'
-import { headlessEditorSchema } from '../../shared/editor-blocks/editor-blocknote-schema'
+import { headlessLegacyMediaDecodeEditorSchema } from '../../shared/editor-blocks/editor-blocknote-schema'
+import { migrateLegacyMediaBlocks } from '../../shared/editor-blocks/legacyMediaBlocks'
 import { parseEditorBlocks } from '../blocks/parseEditorBlocks'
 import type { Doc } from '../_generated/dataModel'
 import type { CustomBlock } from '../../shared/editor-blocks/types'
@@ -11,7 +12,7 @@ import type { CustomBlock } from '../../shared/editor-blocks/types'
 const DOCUMENT_FRAGMENT_NAME = 'document'
 
 function createHeadlessEditor() {
-  return BlockNoteEditor.create({ schema: headlessEditorSchema, _headless: true })
+  return BlockNoteEditor.create({ schema: headlessLegacyMediaDecodeEditorSchema, _headless: true })
 }
 
 function destroyHeadlessEditor(editor: ReturnType<typeof createHeadlessEditor>): void {
@@ -31,7 +32,13 @@ export function yjsUpdatesToBlocks(
     for (const row of updates) {
       Y.applyUpdate(doc, new Uint8Array(row.update))
     }
-    const rawBlocks = normalizeForConvex(blockNoteYDocToBlocks(editor, doc, DOCUMENT_FRAGMENT_NAME))
+    const rawBlocks = normalizeForConvex(
+      migrateLegacyMediaBlocks(
+        blockNoteYDocToBlocks(editor, doc, DOCUMENT_FRAGMENT_NAME) as Array<
+          Record<string, unknown>
+        >,
+      ),
+    )
     try {
       return parseEditorBlocks(rawBlocks)
     } catch (error) {

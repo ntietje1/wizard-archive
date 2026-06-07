@@ -1,5 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { createAndSelectTextCanvasNode } from '../document/canvas-document-commands'
+import {
+  createAndSelectEmbedCanvasNode,
+  createAndSelectTextCanvasNode,
+} from '../document/canvas-document-commands'
 import { buildCanvasContextMenu } from './canvas-context-menu-registry'
 import { resolveCanvasContextMenuTarget } from './canvas-context-menu-target'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
@@ -78,6 +81,19 @@ export function useCanvasContextMenuCore({
       selection.setSelection({
         nodeIds: new Set(snapshot.nodeIds),
         edgeIds: new Set(snapshot.edgeIds),
+      })
+    },
+    createEmbedNode: (pointerPosition) => {
+      if (!canEdit) {
+        return null
+      }
+
+      return createAndSelectEmbedCanvasNode({
+        target: { kind: 'empty' },
+        pointerPosition,
+        screenToCanvasPosition,
+        createNode,
+        setSelection: selection.setSelection,
       })
     },
     createTextNode: (pointerPosition) => {

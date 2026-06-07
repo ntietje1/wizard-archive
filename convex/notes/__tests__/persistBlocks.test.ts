@@ -285,16 +285,16 @@ describe('persistBlocks', () => {
           children: [],
         },
         {
-          id: testBlockNoteId('image-block-1'),
-          type: 'image',
+          id: testBlockNoteId('embed-block-1'),
+          type: 'embed',
           props: {
+            targetKind: 'externalUrl',
             name: 'Preview',
             url: 'https://example.com/image.png',
-            caption: 'A caption',
             backgroundColor: 'default',
             textAlignment: 'left',
-            showPreview: true,
             previewWidth: 320,
+            previewHeight: 180,
           },
           children: [],
         },
@@ -312,10 +312,9 @@ describe('persistBlocks', () => {
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
 
-      expect(blocks.map((block) => block.blockNoteId).sort()).toEqual([
-        testBlockNoteId('image-block-1'),
-        testBlockNoteId('table-block-1'),
-      ])
+      expect(blocks.map((block) => block.blockNoteId).sort()).toEqual(
+        [testBlockNoteId('embed-block-1'), testBlockNoteId('table-block-1')].sort(),
+      )
     })
   })
 

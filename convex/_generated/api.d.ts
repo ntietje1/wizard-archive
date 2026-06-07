@@ -40,6 +40,7 @@ import type * as blocks_functions_getAllBlocksByNote from "../blocks/functions/g
 import type * as blocks_functions_getBlockSharePlayers from "../blocks/functions/getBlockSharePlayers.js";
 import type * as blocks_functions_getBlocksWithShares from "../blocks/functions/getBlocksWithShares.js";
 import type * as blocks_functions_getHeadingsByNote from "../blocks/functions/getHeadingsByNote.js";
+import type * as blocks_functions_migrateLegacyMediaBlocks from "../blocks/functions/migrateLegacyMediaBlocks.js";
 import type * as blocks_functions_patchBlockMetadata from "../blocks/functions/patchBlockMetadata.js";
 import type * as blocks_functions_reconstructBlockTree from "../blocks/functions/reconstructBlockTree.js";
 import type * as blocks_functions_saveAllBlocksForNote from "../blocks/functions/saveAllBlocksForNote.js";
@@ -281,6 +282,7 @@ declare const fullApi: ApiFromModules<{
   "blocks/functions/getBlockSharePlayers": typeof blocks_functions_getBlockSharePlayers;
   "blocks/functions/getBlocksWithShares": typeof blocks_functions_getBlocksWithShares;
   "blocks/functions/getHeadingsByNote": typeof blocks_functions_getHeadingsByNote;
+  "blocks/functions/migrateLegacyMediaBlocks": typeof blocks_functions_migrateLegacyMediaBlocks;
   "blocks/functions/patchBlockMetadata": typeof blocks_functions_patchBlockMetadata;
   "blocks/functions/reconstructBlockTree": typeof blocks_functions_reconstructBlockTree;
   "blocks/functions/saveAllBlocksForNote": typeof blocks_functions_saveAllBlocksForNote;

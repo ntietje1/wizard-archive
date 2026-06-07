@@ -1,5 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { normalizeEmbedNodeData } from '../nodes/embed/embed-node-data'
 import {
   useCanvasDocumentRuntime,
   useCanvasInteractionRuntime,
@@ -87,10 +88,8 @@ export function useCanvasToolbarModel() {
         activeTool,
         activeFormattingSnapshot,
         isNoteEmbed: (node) => {
-          const sidebarItemId =
-            node.type === 'embed' && typeof node.data.sidebarItemId === 'string'
-              ? node.data.sidebarItemId
-              : null
+          const target = node.type === 'embed' ? normalizeEmbedNodeData(node.data).target : null
+          const sidebarItemId = target?.kind === 'sidebarItem' ? target.sidebarItemId : null
           return sidebarItemId
             ? activeSidebarItems?.itemsMap.get(sidebarItemId as Id<'sidebarItems'>)?.type ===
                 SIDEBAR_ITEM_TYPES.notes

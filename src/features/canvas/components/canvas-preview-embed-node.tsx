@@ -1,15 +1,14 @@
 import { CanvasPreviewNodeFrame } from './canvas-preview-node-frame'
-import { EmbeddedSidebarItemUnavailable } from '../nodes/embed/embedded-sidebar-item-unavailable'
 import { normalizeEmbedNodeData } from '../nodes/embed/embed-node-data'
 import {
   getCanvasNodeSurfaceStyle,
   getCanvasNodeTextStyle,
 } from '../nodes/shared/canvas-node-surface-style'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
-import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
-import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import { EmbedContent } from '~/features/embeds/components/embed-content'
 import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { EmbedNodeData } from '../nodes/embed/embed-node-data'
+import type { Id } from 'convex/_generated/dataModel'
 
 const DEFAULT_EMBED_MIN_WIDTH = 240
 const DEFAULT_EMBED_MIN_HEIGHT = 180
@@ -17,18 +16,11 @@ const DEFAULT_EMBED_MIN_HEIGHT = 180
 export function CanvasPreviewEmbedNode({
   data,
   dragging,
-}: CanvasNodeComponentProps<EmbedNodeData>) {
+  sourceItemId = null,
+}: CanvasNodeComponentProps<EmbedNodeData> & {
+  sourceItemId?: Id<'sidebarItems'> | null
+}) {
   const normalizedData = normalizeEmbedNodeData(data)
-  const contentQuery = useSidebarItemById(normalizedData.sidebarItemId)
-  const itemState = useSidebarItemAvailabilityState({
-    lookup: { kind: 'id', id: normalizedData.sidebarItemId },
-    readableItem: contentQuery.data,
-    readableItemLoading: contentQuery.isLoading,
-    readableItemError: contentQuery.error,
-    canView: contentQuery.data !== undefined,
-    subject: 'item',
-    fallbackLabel: 'Embedded item',
-  })
 
   return (
     <CanvasPreviewNodeFrame nodeType="embed" dragging={!!dragging}>
@@ -41,11 +33,12 @@ export function CanvasPreviewEmbedNode({
           minWidth: DEFAULT_EMBED_MIN_WIDTH,
         }}
       >
-        {itemState.status === 'available' ? (
-          <SidebarItemPreviewContent item={itemState.item} />
-        ) : (
-          <EmbeddedSidebarItemUnavailable state={itemState} />
-        )}
+        <EmbedContent
+          target={normalizedData.target}
+          sourceItemId={sourceItemId}
+          mode="readonly"
+          renderSidebarItem={(item) => <SidebarItemPreviewContent item={item} />}
+        />
       </div>
     </CanvasPreviewNodeFrame>
   )

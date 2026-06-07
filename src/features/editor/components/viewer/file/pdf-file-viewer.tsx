@@ -22,16 +22,19 @@ type PdfDocumentState =
 
 interface PdfFileViewerProps {
   pdfUrl: string
+  onFirstPageAspectRatio?: (aspectRatio: number | null) => void
 }
 
 function PdfPage({
   pageNumber,
   scale,
   pageRefs,
+  onFirstPageAspectRatio,
 }: {
   pageNumber: number
   scale: number
   pageRefs: Map<number, HTMLDivElement>
+  onFirstPageAspectRatio?: (aspectRatio: number | null) => void
 }) {
   const setRef = (el: HTMLDivElement | null) => {
     if (el) {
@@ -48,12 +51,20 @@ function PdfPage({
         scale={scale}
         renderForms={true}
         loading={<div className="bg-muted w-[612px] h-[792px]" />}
+        onLoadSuccess={(page) => {
+          if (pageNumber !== 1) return
+          const aspectRatio =
+            page.originalWidth > 0 && page.originalHeight > 0
+              ? Number((page.originalWidth / page.originalHeight).toFixed(6))
+              : null
+          onFirstPageAspectRatio?.(aspectRatio)
+        }}
       />
     </div>
   )
 }
 
-export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
+export function PdfFileViewer({ pdfUrl, onFirstPageAspectRatio }: PdfFileViewerProps) {
   const [documentState, setDocumentState] = useState<PdfDocumentState>({ status: 'loading' })
   const [currentPage, setCurrentPage] = useState(1)
   const [scale, setScale] = useState(1)
@@ -73,6 +84,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
 
   const handleDocumentLoadError = () => {
     setDocumentState({ status: 'failed' })
+    onFirstPageAspectRatio?.(null)
   }
 
   // Track the current visible page via IntersectionObserver.
@@ -230,6 +242,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
                   pageNumber={pageNumber}
                   scale={scale}
                   pageRefs={pageRefsMap}
+                  onFirstPageAspectRatio={onFirstPageAspectRatio}
                 />
               )
             })}

@@ -3,6 +3,7 @@ import {
   createCustomInlineContentSpecs,
   createCustomStyleSpecs,
   customBlockSpecs,
+  legacyMediaDecodeBlockSpecs,
 } from './editor-blocknote-spec-factory'
 
 function renderHeadlessSpec(): never {
@@ -33,6 +34,12 @@ const customStyleSpecs = createCustomStyleSpecs({
 
 export const headlessEditorSchema = BlockNoteSchema.create({
   blockSpecs: customBlockSpecs,
+  inlineContentSpecs: customInlineContentSpecs,
+  styleSpecs: customStyleSpecs,
+})
+
+export const headlessLegacyMediaDecodeEditorSchema = BlockNoteSchema.create({
+  blockSpecs: legacyMediaDecodeBlockSpecs,
   inlineContentSpecs: customInlineContentSpecs,
   styleSpecs: customStyleSpecs,
 })

@@ -1,4 +1,5 @@
 import {
+  createBlockSpec,
   createInlineContentSpec,
   createStyleSpec,
   defaultBlockSpecs,
@@ -36,6 +37,43 @@ const TEXT_COLOR_STYLE_CONFIG = {
 } satisfies TextColorStyleConfig
 
 const { link: _link, ...inlineContentWithoutLinks } = defaultInlineContentSpecs
+const {
+  image: _image,
+  video: _video,
+  audio: _audio,
+  file: _file,
+  ...defaultBlockSpecsWithoutMedia
+} = defaultBlockSpecs
+
+export const embedBlockConfig = {
+  type: 'embed',
+  propSchema: {
+    targetKind: {
+      default: 'empty',
+      values: ['empty', 'sidebarItem', 'externalUrl'] as const,
+    },
+    sidebarItemId: { default: undefined, type: 'string' },
+    url: { default: undefined, type: 'string' },
+    name: { default: undefined, type: 'string' },
+    backgroundColor: { default: 'default' },
+    textAlignment: {
+      default: 'left',
+      values: ['left', 'center', 'right', 'justify'] as const,
+    },
+    previewWidth: { default: undefined, type: 'number' },
+    previewHeight: { default: undefined, type: 'number' },
+  },
+  content: 'inline',
+} as const
+
+const embedBlockSpec = createBlockSpec(embedBlockConfig, {
+  render: () => {
+    const dom = document.createElement('div')
+    const contentDOM = document.createElement('span')
+    dom.appendChild(contentDOM)
+    return { dom, contentDOM }
+  },
+})()
 
 export function createCustomInlineContentSpecs(
   renderers: Pick<EditorSpecRenderers, 'valueInline'>,
@@ -56,5 +94,11 @@ export function createCustomStyleSpecs(renderers: Pick<EditorSpecRenderers, 'tex
 }
 
 export const customBlockSpecs = {
+  ...defaultBlockSpecsWithoutMedia,
+  embed: embedBlockSpec,
+} satisfies BlockSpecs
+
+export const legacyMediaDecodeBlockSpecs = {
   ...defaultBlockSpecs,
+  embed: embedBlockSpec,
 } satisfies BlockSpecs

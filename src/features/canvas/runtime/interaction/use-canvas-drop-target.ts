@@ -1,15 +1,19 @@
 import { useEffect, useRef } from 'react'
-import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
+import {
+  createEmbedCanvasNode,
+  createSidebarItemEmbedCanvasNode,
+} from '../../nodes/embed/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/drop-target-data'
 import type { FileDropOverride } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
+import { useEmbedUpload } from '~/features/embeds/hooks/use-embed-upload'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { CANVAS_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { registerSurfaceDropExecutor } from '~/features/dnd/utils/surface-drop-command'
+import { getExternalUrlDropTarget } from '~/features/embeds/utils/embed-targets'
 import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
@@ -67,7 +71,7 @@ export function useCanvasDropTarget({
         })
 
         const nodes = embedCommand.items.map((sidebarItem, index) =>
-          createEmbedCanvasNode(sidebarItem._id, {
+          createSidebarItemEmbedCanvasNode(sidebarItem._id, {
             x: position.x + index * STACK_OFFSET,
             y: position.y + index * STACK_OFFSET,
           }),
@@ -78,9 +82,9 @@ export function useCanvasDropTarget({
     })
   }, [canvasId, enabled])
 
-  const { uploadSingleFile } = useFileDropHandler()
-  const uploadRef = useRef(uploadSingleFile)
-  uploadRef.current = uploadSingleFile
+  const { uploadEmbedFile } = useEmbedUpload()
+  const uploadRef = useRef(uploadEmbedFile)
+  uploadRef.current = uploadEmbedFile
 
   const setFileDropOverride = useDndStore((s) => s.setFileDropOverride)
   useEffect(() => {
@@ -89,9 +93,7 @@ export function useCanvasDropTarget({
       const basePosition = screenToCanvasPositionRef.current(clientCoords)
       try {
         const files = dropResult.files
-        const results = await Promise.allSettled(
-          files.map((f) => uploadRef.current(f.file, null, { navigate: false })),
-        )
+        const results = await Promise.allSettled(files.map((f) => uploadRef.current(f.file)))
         const nodes: Array<CanvasDocumentNode> = []
         results.forEach((result) => {
           if (result.status === 'rejected') {
@@ -101,7 +103,7 @@ export function useCanvasDropTarget({
           if (!result.value) return
           const index = nodes.length
           nodes.push(
-            createEmbedCanvasNode(result.value.id, {
+            createSidebarItemEmbedCanvasNode(result.value.id, {
               x: basePosition.x + index * STACK_OFFSET,
               y: basePosition.y + index * STACK_OFFSET,
             }),
@@ -118,6 +120,40 @@ export function useCanvasDropTarget({
     setFileDropOverride(handler)
     return () => setFileDropOverride(null)
   }, [enabled, setFileDropOverride])
+
+  useEffect(() => {
+    const el = dropOverlayRef.current
+    if (!enabled || !el) return
+
+    const handleDragOver = (event: DragEvent) => {
+      if (!event.dataTransfer || event.dataTransfer.types.includes('Files')) return
+      if (getExternalUrlDropTarget(event.dataTransfer)) {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'copy'
+      }
+    }
+
+    const handleDrop = async (event: DragEvent) => {
+      if (!event.dataTransfer || event.dataTransfer.types.includes('Files')) return
+      const target = getExternalUrlDropTarget(event.dataTransfer)
+      if (!target) return
+
+      event.preventDefault()
+      const position = screenToCanvasPositionRef.current({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      createNodesRef.current([createEmbedCanvasNode(target, position)])
+      await providerRef.current?.flushUpdates()
+    }
+
+    el.addEventListener('dragover', handleDragOver)
+    el.addEventListener('drop', handleDrop)
+    return () => {
+      el.removeEventListener('dragover', handleDragOver)
+      el.removeEventListener('drop', handleDrop)
+    }
+  }, [enabled])
 
   return { dropOverlayRef, isDropTarget, isFileDropTarget }
 }

@@ -1,8 +1,9 @@
 import { BlockNoteEditor } from '@blocknote/core'
-import { BlockNoteView } from '@blocknote/shadcn'
+import { BlockNoteViewRaw as BlockNoteView } from '@blocknote/react'
 import { partialBlockNoteBlockSchema } from 'shared/editor-blocks/blockSchemas'
 import { createStaticEditorSchema } from '../static-editor-schema'
 import { NoteValueRuntimeContext } from '../value-block/value-block-runtime-context'
+import { NoteEmbedSurfaceProvider } from './extensions/embed-block/note-embed-surface-context'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 import { useResolvedTheme } from '~/shared/theme/context'
@@ -21,6 +22,7 @@ type RawNoteContentProps = {
   editable: boolean
   noteId?: Id<'sidebarItems'>
   onEditorChange?: (editor: CustomBlockNoteEditor | null) => void
+  schemaFactory?: (sourceNoteId: Id<'sidebarItems'> | null) => StaticEditorSchema
   style?: CSSProperties
 }
 
@@ -88,6 +90,7 @@ export function RawNoteContent({
   editable,
   noteId,
   onEditorChange,
+  schemaFactory,
   style,
 }: RawNoteContentProps) {
   const resolvedTheme = useResolvedTheme()
@@ -95,7 +98,7 @@ export function RawNoteContent({
     identity: `${noteId ?? 'raw-note-content'}:${editable}`,
     createEditor: () =>
       BlockNoteEditor.create({
-        schema: createStaticEditorSchema(),
+        schema: (schemaFactory ?? createStaticEditorSchema)(noteId ?? null),
         initialContent: validateInitialContent({ content, noteId }),
       }) as CustomBlockNoteEditor,
     destroyEditor: destroyBlockNoteEditor,
@@ -108,18 +111,24 @@ export function RawNoteContent({
     <div className={editable ? 'note-editor-fill-height' : undefined}>
       <div className={className}>
         <NoteValueRuntimeContext.Provider value={createRawValueRuntime({ editable, noteId })}>
-          <BlockNoteView
-            editor={editor}
-            style={style}
-            theme={resolvedTheme}
-            editable={editable}
-            sideMenu={false}
-            formattingToolbar={false}
-            slashMenu={false}
-            linkToolbar={false}
-          >
-            {children}
-          </BlockNoteView>
+          <NoteEmbedSurfaceProvider sourceNoteId={noteId ?? null} editable={editable}>
+            <BlockNoteView
+              editor={editor}
+              style={style}
+              theme={resolvedTheme}
+              editable={editable}
+              sideMenu={false}
+              formattingToolbar={false}
+              slashMenu={false}
+              linkToolbar={false}
+              emojiPicker={false}
+              filePanel={false}
+              tableHandles={false}
+              comments={false}
+            >
+              {children}
+            </BlockNoteView>
+          </NoteEmbedSurfaceProvider>
         </NoteValueRuntimeContext.Provider>
       </div>
     </div>
