@@ -1,6 +1,7 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName, SidebarItemBreadcrumb } from './editable-breadcrumb'
+import { EditorTopbarSurface } from './editor-topbar-surface'
 import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'
 import { Button } from '~/features/shadcn/components/button'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
@@ -180,22 +181,22 @@ export function FileTopbar() {
       isTrashView={isTrashView}
       disabled={isPendingItem}
     >
-      <div className="flex items-center py-0.5 pl-3 pr-1 shrink-0 w-full min-w-0 overflow-hidden gap-4 border-b">
-        <FileTopbarTitle title={title} />
-
-        {timestampLabel && (
-          <Button
-            variant="ghost"
-            onClick={toggleHistory}
-            aria-label={`Toggle history panel, ${timestampLabel}`}
-            className="text-xs text-muted-foreground hover:text-foreground h-auto px-1.5 py-0.5 shrink-0"
-          >
-            {timestampLabel}
-          </Button>
-        )}
-
-        {middleContent}
-      </div>
+      <EditorTopbarSurface
+        title={<FileTopbarTitle title={title} />}
+        timestampControl={
+          timestampLabel && (
+            <Button
+              variant="ghost"
+              onClick={toggleHistory}
+              aria-label={`Toggle history panel, ${timestampLabel}`}
+              className="text-xs text-muted-foreground hover:text-foreground h-auto px-1.5 py-0.5 shrink-0"
+            >
+              {timestampLabel}
+            </Button>
+          )
+        }
+        middleContent={middleContent}
+      />
     </EditorContextMenu>
   )
 }

@@ -40,7 +40,6 @@ export function BookmarkedItemsList() {
             <FlatSidebarItem
               key={item._id}
               item={item}
-              isExpanded={false}
               renamingId={renamingId}
               setRenamingId={setRenamingId}
               visibleItemIds={visibleItemIds}

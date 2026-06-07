@@ -1,12 +1,16 @@
 import { Download, FileText, FolderOpen, Map, Network, RotateCcw, Upload } from 'lucide-react'
 import { Fragment, useEffect, useReducer, useRef, useState } from 'react'
+import { EditorWorkspaceSurface } from '~/features/editor/components/editor-workspace-surface'
 import { FileContentViewer } from '~/features/editor/components/viewer/file/file-content-viewer'
 import { RawNoteContent } from '~/features/editor/components/raw-note-content'
+import { EditorTopbarSurface } from '~/features/editor/components/topbar/editor-topbar-surface'
 import { LocalCanvasEditor } from '~/features/landing/demo-workspace/local-canvas-editor'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { cn } from '~/features/shadcn/lib/utils'
 import { SidebarRow } from '~/features/sidebar/components/sidebar-row'
+import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-surface'
+import { SidebarWorkspaceShell } from '~/features/sidebar/components/sidebar-workspace-shell'
 import {
   INITIAL_DEMO_WORKSPACE,
   demoWorkspaceReducer,
@@ -19,7 +23,8 @@ import type {
   DemoWorkspaceItemType,
 } from '../demo-workspace/demo-workspace-model'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ChangeEvent, Dispatch, RefObject } from 'react'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
+import type { ChangeEvent, Dispatch, MouseEvent, RefObject } from 'react'
 
 const itemIcons = {
   note: FileText,
@@ -37,11 +42,21 @@ export function DemoWorkspace() {
       className="flex min-h-[calc(100svh-4rem)] bg-background text-foreground"
       aria-label="Ephemeral demo workspace"
     >
-      <DemoWorkspaceSidebar workspace={workspace} selectedItem={selectedItem} dispatch={dispatch} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <DemoWorkspaceHeader selectedItem={selectedItem} dispatch={dispatch} />
-        <DemoWorkspaceSurfaces workspace={workspace} selectedItem={selectedItem} />
-      </div>
+      <SidebarWorkspaceShell
+        sidebar={
+          <DemoWorkspaceSidebar
+            workspace={workspace}
+            selectedItem={selectedItem}
+            dispatch={dispatch}
+          />
+        }
+      >
+        <EditorWorkspaceSurface
+          topbar={<DemoWorkspaceTopbar selectedItem={selectedItem} dispatch={dispatch} />}
+        >
+          <DemoWorkspaceSurfaces workspace={workspace} selectedItem={selectedItem} />
+        </EditorWorkspaceSurface>
+      </SidebarWorkspaceShell>
     </section>
   )
 }
@@ -55,6 +70,26 @@ function DemoWorkspaceSidebar({
   selectedItem: DemoWorkspaceItem
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
+  const sidebarItems = workspace.items.map((item) => {
+    const selected = item.id === selectedItem.id
+
+    return {
+      id: item.id,
+      icon: itemIcons[item.type],
+      name: assertSidebarItemName(item.title || 'Untitled'),
+      visualState: {
+        isSelected: selected,
+        isViewing: selected,
+        isMultiSelected: false,
+      },
+      onClick: (event: MouseEvent) => {
+        event.preventDefault()
+        dispatch({ type: 'selectItem', itemId: item.id })
+      },
+      onContextMenu: (event: MouseEvent) => event.preventDefault(),
+    }
+  })
+
   return (
     <aside className="flex w-72 shrink-0 flex-col border-r bg-background">
       <div className="border-b px-3 py-3">
@@ -64,14 +99,7 @@ function DemoWorkspaceSidebar({
         <h1 className="mt-1 truncate text-sm font-semibold">{workspace.campaignName}</h1>
       </div>
       <nav className="flex-1 overflow-auto p-1" aria-label="Demo campaign items">
-        {workspace.items.map((item) => (
-          <DemoSidebarItem
-            key={item.id}
-            item={item}
-            selected={item.id === selectedItem.id}
-            onSelect={() => dispatch({ type: 'selectItem', itemId: item.id })}
-          />
-        ))}
+        <SidebarTreeSurface items={sidebarItems} />
       </nav>
       <div className="border-t p-1">
         <SidebarRow icon={FolderOpen} label="Trash" />
@@ -80,7 +108,7 @@ function DemoWorkspaceSidebar({
   )
 }
 
-function DemoWorkspaceHeader({
+function DemoWorkspaceTopbar({
   dispatch,
   selectedItem,
 }: {
@@ -88,20 +116,29 @@ function DemoWorkspaceHeader({
   selectedItem: DemoWorkspaceItem
 }) {
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b px-3">
-      <Input
-        aria-label="Selected item name"
-        value={selectedItem.title}
-        onChange={(event) =>
-          dispatch({ type: 'renameSelectedItem', title: event.currentTarget.value })
-        }
-        className="h-8 max-w-lg border-transparent bg-transparent px-1 text-base font-medium shadow-none focus-visible:bg-control-surface focus-visible:px-2"
-      />
-      <Button type="button" variant="outline" size="sm" onClick={() => dispatch({ type: 'reset' })}>
-        <RotateCcw aria-hidden="true" />
-        Reset demo
-      </Button>
-    </header>
+    <EditorTopbarSurface
+      title={
+        <Input
+          aria-label="Selected item name"
+          value={selectedItem.title}
+          onChange={(event) =>
+            dispatch({ type: 'renameSelectedItem', title: event.currentTarget.value })
+          }
+          className="h-8 max-w-lg border-transparent bg-transparent px-1 text-base font-medium shadow-none focus-visible:bg-control-surface focus-visible:px-2"
+        />
+      }
+      middleContent={
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => dispatch({ type: 'reset' })}
+        >
+          <RotateCcw aria-hidden="true" />
+          Reset demo
+        </Button>
+      }
+    />
   )
 }
 
@@ -126,40 +163,6 @@ function DemoWorkspaceSurfaces({
         </Fragment>
       ))}
     </main>
-  )
-}
-
-function DemoSidebarItem({
-  item,
-  onSelect,
-  selected,
-}: {
-  item: DemoWorkspaceItem
-  onSelect: () => void
-  selected: boolean
-}) {
-  const Icon = itemIcons[item.type]
-
-  return (
-    <button
-      type="button"
-      className={cn(
-        'flex h-8 w-full items-center gap-2 rounded-sm px-2 text-left text-sm',
-        selected
-          ? 'bg-accent text-accent-foreground'
-          : 'text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground',
-      )}
-      data-testid={`selectable-row-${item.title}`}
-      aria-current={selected ? 'page' : undefined}
-      onClick={(event) => {
-        event.preventDefault()
-        onSelect()
-      }}
-      onContextMenu={(event) => event.preventDefault()}
-    >
-      <Icon className="size-4 shrink-0" aria-hidden="true" />
-      <span className="truncate">{item.title}</span>
-    </button>
   )
 }
 

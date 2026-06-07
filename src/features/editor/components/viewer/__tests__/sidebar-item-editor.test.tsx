@@ -4,6 +4,7 @@ import type { NoteWithContent } from 'shared/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { SidebarItemEditor } from '../sidebar-item-editor'
+import { SidebarItemViewer } from '../sidebar-item-viewer'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 
 vi.mock('../note/note-editor', () => ({ NoteEditor: () => <div>note editor</div> }))
@@ -33,6 +34,20 @@ describe('SidebarItemEditor', () => {
     }
 
     render(<SidebarItemEditor item={item} />)
+
+    expect(screen.getByText('note editor')).toBeInTheDocument()
+  })
+
+  it('dispatches loaded item content without history wrapper state', () => {
+    const item: NoteWithContent = {
+      ...createNote(),
+      ancestors: [],
+      content: [],
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    }
+
+    render(<SidebarItemViewer item={item} />)
 
     expect(screen.getByText('note editor')).toBeInTheDocument()
   })
