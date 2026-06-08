@@ -3,6 +3,7 @@ import { createAndSelectEmbeddedCanvasNode } from '../runtime/document/canvas-do
 import type {
   CanvasContextMenuAdapters,
   CanvasContextMenuCreateItemContext,
+  CanvasEmbedNodeTarget,
   CanvasContextMenuItem,
 } from '../runtime/context-menu/canvas-context-menu-types'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
@@ -13,7 +14,8 @@ import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { logger } from '~/shared/utils/logger'
 import { toast } from 'sonner'
-import type { Id } from 'convex/_generated/dataModel'
+
+type ActiveSidebarItemsMap = ReturnType<typeof useActiveSidebarItems>['itemsMap']
 
 function buildEmbeddedSidebarItemCreateItem({
   command,
@@ -88,8 +90,7 @@ export function useCanvasContextMenuAppAdapters(): CanvasContextMenuAdapters {
             createEmbedNodeContextMenuContributor({
               canOpenEmbedTarget: (embedTarget) =>
                 embedTarget.target.kind === 'externalUrl' ||
-                (embedTarget.target.kind === 'sidebarItem' &&
-                  itemsMap.has(embedTarget.target.sidebarItemId as Id<'sidebarItems'>)),
+                getSidebarItemForEmbedTarget(embedTarget, itemsMap) !== null,
               openEmbedTarget: async (embedTarget) => {
                 if (embedTarget.target.kind === 'externalUrl') {
                   window.open(embedTarget.target.url, '_blank', 'noopener,noreferrer')
@@ -100,7 +101,7 @@ export function useCanvasContextMenuAppAdapters(): CanvasContextMenuAdapters {
                   return false
                 }
 
-                const item = itemsMap.get(embedTarget.target.sidebarItemId as Id<'sidebarItems'>)
+                const item = getSidebarItemForEmbedTarget(embedTarget, itemsMap)
                 if (!item) {
                   return false
                 }
@@ -112,4 +113,15 @@ export function useCanvasContextMenuAppAdapters(): CanvasContextMenuAdapters {
           ]
         : [],
   }
+}
+
+function getSidebarItemForEmbedTarget(
+  embedTarget: CanvasEmbedNodeTarget,
+  itemsMap: ActiveSidebarItemsMap,
+) {
+  if (embedTarget.target.kind !== 'sidebarItem') return null
+  for (const item of itemsMap.values()) {
+    if (item._id === embedTarget.target.sidebarItemId) return item
+  }
+  return null
 }

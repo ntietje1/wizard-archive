@@ -8,6 +8,7 @@ import { PdfToolbar } from './pdf-toolbar'
 import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { getIntrinsicAspectRatio } from '~/features/embeds/utils/embed-media'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
@@ -53,11 +54,7 @@ function PdfPage({
         loading={<div className="bg-muted w-[612px] h-[792px]" />}
         onLoadSuccess={(page) => {
           if (pageNumber !== 1) return
-          const aspectRatio =
-            page.originalWidth > 0 && page.originalHeight > 0
-              ? Number((page.originalWidth / page.originalHeight).toFixed(6))
-              : null
-          onFirstPageAspectRatio?.(aspectRatio)
+          onFirstPageAspectRatio?.(getIntrinsicAspectRatio(page.originalWidth, page.originalHeight))
         }}
       />
     </div>

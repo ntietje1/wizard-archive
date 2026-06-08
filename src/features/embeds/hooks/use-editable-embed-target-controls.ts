@@ -1,8 +1,12 @@
 import { useRef, useState } from 'react'
 import { externalEmbedTargetFromUrl } from '../utils/embed-targets'
 import { useEmbedUpload } from './use-embed-upload'
+import { handleError } from '~/shared/utils/logger'
 import type { ChangeEvent } from 'react'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
+
+const EMBED_LINK_URL_ERROR = 'Use an HTTPS file URL'
+const EMBED_UPLOAD_ERROR = 'Could not upload file. Please try again.'
 
 export function useEditableEmbedTargetControls({
   setTarget,
@@ -13,6 +17,8 @@ export function useEditableEmbedTargetControls({
   const [linkDraftOpen, setLinkDraftOpen] = useState(false)
   const [linkDraft, setLinkDraft] = useState('')
   const [linkError, setLinkError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const { uploadEmbedFile } = useEmbedUpload()
   const uploadFile = async (file: globalThis.File) => {
     const result = await uploadEmbedFile(file)
@@ -24,20 +30,34 @@ export function useEditableEmbedTargetControls({
     setLinkDraftOpen(false)
     setLinkDraft('')
     setLinkError(null)
+    setUploadError(null)
   }
 
   const handleFileInputChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.item(0)
     event.currentTarget.value = ''
     if (!file) return
-    const sidebarItemId = await uploadFile(file)
-    if (sidebarItemId) await setTargetAndCloseDraft({ kind: 'sidebarItem', sidebarItemId })
+    setUploadError(null)
+    setIsUploading(true)
+    try {
+      const sidebarItemId = await uploadFile(file)
+      if (!sidebarItemId) {
+        setUploadError(EMBED_UPLOAD_ERROR)
+        return
+      }
+      await setTargetAndCloseDraft({ kind: 'sidebarItem', sidebarItemId })
+    } catch (error) {
+      setUploadError(EMBED_UPLOAD_ERROR)
+      handleError(error, EMBED_UPLOAD_ERROR)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const submitLinkDraft = async () => {
     const nextTarget = externalEmbedTargetFromUrl(linkDraft)
     if (!nextTarget) {
-      setLinkError('Use an HTTPS file URL')
+      setLinkError(EMBED_LINK_URL_ERROR)
       return
     }
     await setTargetAndCloseDraft(nextTarget)
@@ -46,6 +66,7 @@ export function useEditableEmbedTargetControls({
   return {
     fileInputRef,
     handleFileInputChange,
+    isUploading,
     linkDraft,
     linkDraftOpen,
     linkError,
@@ -57,6 +78,7 @@ export function useEditableEmbedTargetControls({
     },
     setTargetAndCloseDraft,
     submitLinkDraft,
+    uploadError,
     uploadFile,
   }
 }

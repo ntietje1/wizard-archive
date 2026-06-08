@@ -12,9 +12,9 @@ import {
   RESIZE_HANDLE_DESCRIPTORS,
   getResizeHandleLabel,
 } from 'shared/resize/resizeHandleDescriptors'
+import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
 import { blockPropsFromEmbedTarget, embedTargetFromBlockProps } from './embed-block-targets'
 import { getNoteEmbedResizeCursor, startNoteEmbedResizeSession } from './note-embed-resize'
-import { useNoteEmbedBlockDropTarget } from './embed-block-drop'
 import type { NoteEmbedResizeHandle } from './note-embed-resize'
 import type { NoteEmbedBlockProps } from './embed-block-targets'
 
@@ -206,10 +206,10 @@ function EditableNoteEmbedBlockBody({
 }) {
   const embedControls = useEditableEmbedTargetControls({ setTarget })
 
-  useNoteEmbedBlockDropTarget({
+  useEmbedDropTarget({
     ref: rootRef,
-    editable: true,
-    sourceNoteId,
+    enabled: true,
+    sourceItemId: sourceNoteId,
     setTarget: embedControls.setTargetAndCloseDraft,
     uploadFile: embedControls.uploadFile,
   })
@@ -240,6 +240,15 @@ function EditableNoteEmbedBlockBody({
         className="hidden"
         onChange={embedControls.handleFileInputChange}
       />
+      {embedControls.isUploading || embedControls.uploadError ? (
+        <div className="border-t border-border px-3 py-2 text-sm">
+          {embedControls.uploadError ? (
+            <span className="text-destructive">{embedControls.uploadError}</span>
+          ) : (
+            <span className="text-muted-foreground">Uploading...</span>
+          )}
+        </div>
+      ) : null}
       {embedControls.linkDraftOpen ? (
         <form
           className="flex gap-2 border-t border-border p-2"

@@ -92,8 +92,8 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
   }),
 }))
 
-vi.mock('../use-canvas-embed-drop-target', () => ({
-  useCanvasEmbedDropTarget: vi.fn(),
+vi.mock('~/features/embeds/hooks/use-embed-drop-target', () => ({
+  useEmbedDropTarget: vi.fn(),
 }))
 
 vi.mock('~/features/embeds/hooks/use-embed-upload', () => ({

@@ -3,7 +3,6 @@ import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
-import { useCanvasEmbedDropTarget } from './use-canvas-embed-drop-target'
 import {
   useCanvasDocumentRuntime,
   useCanvasInteractionRuntime,
@@ -35,6 +34,7 @@ import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
+import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
 import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
@@ -232,10 +232,10 @@ function EditableCanvasEmbedContent({
 }) {
   const embedControls = useEditableEmbedTargetControls({ setTarget })
 
-  useCanvasEmbedDropTarget({
+  useEmbedDropTarget({
     ref: rootRef,
     enabled: true,
-    sourceCanvasId,
+    sourceItemId: sourceCanvasId,
     setTarget: embedControls.setTargetAndCloseDraft,
     uploadFile: embedControls.uploadFile,
   })
@@ -258,6 +258,15 @@ function EditableCanvasEmbedContent({
         className="hidden"
         onChange={embedControls.handleFileInputChange}
       />
+      {embedControls.isUploading || embedControls.uploadError ? (
+        <div className="absolute inset-x-2 bottom-2 z-20 rounded-md border border-border bg-background/95 px-3 py-2 text-sm shadow-sm">
+          {embedControls.uploadError ? (
+            <span className="text-destructive">{embedControls.uploadError}</span>
+          ) : (
+            <span className="text-muted-foreground">Uploading...</span>
+          )}
+        </div>
+      ) : null}
       {embedControls.linkDraftOpen ? (
         <form
           className="absolute inset-x-2 bottom-2 z-20 flex gap-2 rounded-md border border-border bg-background/95 p-2 shadow-sm"

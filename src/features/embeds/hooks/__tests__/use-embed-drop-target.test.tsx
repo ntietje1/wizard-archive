@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { useRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useCanvasEmbedDropTarget } from '../use-canvas-embed-drop-target'
+import { useEmbedDropTarget } from '../use-embed-drop-target'
 import { testId } from '~/test/helpers/test-id'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
@@ -20,14 +20,14 @@ vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
   }),
 }))
 
-describe('useCanvasEmbedDropTarget', () => {
+describe('useEmbedDropTarget', () => {
   beforeEach(() => {
     dropTargetState.args = null
   })
 
   it('replaces from sidebar item drops and rejects the current canvas', async () => {
     const setTarget = vi.fn(() => Promise.resolve())
-    renderHookHarness({ sourceCanvasId: testId<'sidebarItems'>('canvas-1'), setTarget })
+    renderHookHarness({ sourceItemId: testId<'sidebarItems'>('canvas-1'), setTarget })
 
     await waitFor(() => expect(dropTargetState.args).not.toBeNull())
 
@@ -115,16 +115,18 @@ describe('useCanvasEmbedDropTarget', () => {
 
 function renderHookHarness({
   sourceCanvasId = testId<'sidebarItems'>('canvas-1'),
+  sourceItemId = sourceCanvasId,
   setTarget = vi.fn(() => Promise.resolve()),
   uploadFile = vi.fn(() => Promise.resolve(null)),
 }: {
   sourceCanvasId?: Id<'sidebarItems'> | null
+  sourceItemId?: Id<'sidebarItems'> | null
   setTarget?: (target: EmbedTarget) => Promise<void>
   uploadFile?: (file: File) => Promise<Id<'sidebarItems'> | null>
 } = {}) {
   return render(
     <CanvasEmbedDropTargetHarness
-      sourceCanvasId={sourceCanvasId}
+      sourceItemId={sourceItemId}
       setTarget={setTarget}
       uploadFile={uploadFile}
     />,
@@ -132,19 +134,19 @@ function renderHookHarness({
 }
 
 function CanvasEmbedDropTargetHarness({
-  sourceCanvasId,
+  sourceItemId,
   setTarget,
   uploadFile,
 }: {
-  sourceCanvasId: Id<'sidebarItems'> | null
+  sourceItemId: Id<'sidebarItems'> | null
   setTarget: (target: EmbedTarget) => Promise<void>
   uploadFile: (file: File) => Promise<Id<'sidebarItems'> | null>
 }) {
   const ref = useRef<HTMLDivElement | null>(null)
-  useCanvasEmbedDropTarget({
+  useEmbedDropTarget({
     ref,
     enabled: true,
-    sourceCanvasId,
+    sourceItemId,
     setTarget,
     uploadFile,
   })

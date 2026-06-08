@@ -52,6 +52,12 @@ export function getResizeHandleCursor(position: ResizeHandlePosition) {
 }
 
 export function getResizeHandleLabel(position: ResizeHandlePosition) {
-  const handleKind = position.includes('-') ? 'corner' : 'edge'
+  const cornerPositions = new Set<ResizeHandlePosition>([
+    'top-left',
+    'top-right',
+    'bottom-right',
+    'bottom-left',
+  ])
+  const handleKind = cornerPositions.has(position) ? 'corner' : 'edge'
   return `Resize ${position} selection ${handleKind}`
 }

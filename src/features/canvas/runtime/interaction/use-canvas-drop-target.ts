@@ -139,12 +139,16 @@ export function useCanvasDropTarget({
       if (!target) return
 
       event.preventDefault()
-      const position = screenToCanvasPositionRef.current({
-        x: event.clientX,
-        y: event.clientY,
-      })
-      createNodesRef.current([createEmbedCanvasNode(target, position)])
-      await providerRef.current?.flushUpdates()
+      try {
+        const position = screenToCanvasPositionRef.current({
+          x: event.clientX,
+          y: event.clientY,
+        })
+        createNodesRef.current([createEmbedCanvasNode(target, position)])
+        await providerRef.current?.flushUpdates()
+      } catch (error) {
+        handleError(error, 'Failed to drop external URL on canvas')
+      }
     }
 
     el.addEventListener('dragover', handleDragOver)

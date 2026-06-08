@@ -30,7 +30,7 @@ const imageFileName = 'note-embed-upload.png'
 const imageFilePath = path.join(testDir, imageFileName)
 
 test.describe.serial('note embeds', () => {
-  test.setTimeout(120_000)
+  test.setTimeout(30_000)
 
   test.beforeAll(async ({ browser }) => {
     fs.writeFileSync(imageFilePath, createOnePixelPng())

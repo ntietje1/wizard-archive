@@ -8,34 +8,35 @@ import {
   getSidebarItemIdFromDragData,
   sidebarItemEmbedTarget,
 } from '~/features/embeds/utils/embed-targets'
+import { handleError } from '~/shared/utils/logger'
 
-export function useCanvasEmbedDropTarget({
+export function useEmbedDropTarget({
   ref,
   enabled,
-  sourceCanvasId,
+  sourceItemId,
   setTarget,
   uploadFile,
 }: {
   ref: RefObject<HTMLElement | null>
   enabled: boolean
-  sourceCanvasId: Id<'sidebarItems'> | null
-  setTarget: (target: EmbedTarget) => Promise<void>
+  sourceItemId: Id<'sidebarItems'> | null
+  setTarget: (target: EmbedTarget) => Promise<void> | void
   uploadFile: (file: File) => Promise<Id<'sidebarItems'> | null>
 }) {
-  useElementDropTarget({ ref, enabled, sourceCanvasId, setTarget })
+  useElementDropTarget({ ref, enabled, sourceItemId, setTarget })
   useNativeDropTarget({ ref, enabled, setTarget, uploadFile })
 }
 
 function useElementDropTarget({
   ref,
   enabled,
-  sourceCanvasId,
+  sourceItemId,
   setTarget,
 }: {
   ref: RefObject<HTMLElement | null>
   enabled: boolean
-  sourceCanvasId: Id<'sidebarItems'> | null
-  setTarget: (target: EmbedTarget) => Promise<void>
+  sourceItemId: Id<'sidebarItems'> | null
+  setTarget: (target: EmbedTarget) => Promise<void> | void
 }) {
   useEffect(() => {
     const element = ref.current
@@ -45,16 +46,18 @@ function useElementDropTarget({
       element,
       canDrop: ({ source }) => {
         const id = getSidebarItemIdFromDragData(source.data)
-        return id !== null && id !== sourceCanvasId
+        return id !== null && id !== sourceItemId
       },
       getDropEffect: () => 'copy',
       onDrop: ({ source }) => {
         const id = getSidebarItemIdFromDragData(source.data)
-        if (!id || id === sourceCanvasId) return
-        void setTarget(sidebarItemEmbedTarget(id))
+        if (!id || id === sourceItemId) return
+        void Promise.resolve(setTarget(sidebarItemEmbedTarget(id))).catch((error) => {
+          handleError(error, 'Failed to update embed target')
+        })
       },
     })
-  }, [enabled, ref, setTarget, sourceCanvasId])
+  }, [enabled, ref, setTarget, sourceItemId])
 }
 
 function useNativeDropTarget({
@@ -65,7 +68,7 @@ function useNativeDropTarget({
 }: {
   ref: RefObject<HTMLElement | null>
   enabled: boolean
-  setTarget: (target: EmbedTarget) => Promise<void>
+  setTarget: (target: EmbedTarget) => Promise<void> | void
   uploadFile: (file: File) => Promise<Id<'sidebarItems'> | null>
 }) {
   useEffect(() => {
@@ -84,14 +87,18 @@ function useNativeDropTarget({
       event.stopPropagation()
 
       const file = event.dataTransfer?.files.item(0)
-      if (file) {
-        const sidebarItemId = await uploadFile(file)
-        if (sidebarItemId) await setTarget(sidebarItemEmbedTarget(sidebarItemId))
-        return
-      }
+      try {
+        if (file) {
+          const sidebarItemId = await uploadFile(file)
+          if (sidebarItemId) await setTarget(sidebarItemEmbedTarget(sidebarItemId))
+          return
+        }
 
-      const target = getExternalUrlDropTarget(event.dataTransfer)
-      if (target) await setTarget(target)
+        const target = getExternalUrlDropTarget(event.dataTransfer)
+        if (target) await setTarget(target)
+      } catch (error) {
+        handleError(error, 'Failed to update embed target')
+      }
     }
 
     element.addEventListener('dragover', onDragOver)

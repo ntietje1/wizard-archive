@@ -21,7 +21,6 @@ export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | nu
         'note-embed-block relative my-2 overflow-hidden border border-border bg-card text-card-foreground',
         target.kind === 'empty' && 'border-dashed bg-muted/20',
       )
-      dom.dataset.noteEmbedDropTarget = 'true'
       if (width) dom.style.width = `${width}px`
       dom.style.maxWidth = '100%'
       dom.append(reactRootElement)

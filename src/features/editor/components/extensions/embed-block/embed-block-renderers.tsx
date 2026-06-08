@@ -16,7 +16,7 @@ type NoteEmbedBlockBaseProps = Omit<
 
 export function RenderEmbedBlock(props: EmbedBlockRenderProps) {
   const surface = useNoteEmbedSurface()
-  const viewProps = props as unknown as NoteEmbedBlockBaseProps
+  const viewProps = mapEmbedRenderProps(props)
   return (
     <NoteEmbedBlockView
       {...viewProps}
@@ -26,10 +26,38 @@ export function RenderEmbedBlock(props: EmbedBlockRenderProps) {
   )
 }
 
-export function RenderExternalEmbedBlock(
-  props: EmbedBlockRenderProps & { context: { nestingLevel: number } },
-) {
+export function RenderExternalEmbedBlock(props: EmbedBlockRenderProps) {
   const surface = useNoteEmbedSurface()
-  const viewProps = props as unknown as NoteEmbedBlockBaseProps
+  const viewProps = mapEmbedRenderProps(props)
   return <NoteEmbedBlockView {...viewProps} editable={false} sourceNoteId={surface.sourceNoteId} />
+}
+
+function mapEmbedRenderProps(props: EmbedBlockRenderProps): NoteEmbedBlockBaseProps {
+  const editor = props.editor
+  return {
+    block: props.block,
+    editor: {
+      domElement: editor.domElement,
+      replaceBlocks: (blocksToRemove, blocksToInsert) => {
+        editor.replaceBlocks(
+          blocksToRemove as Parameters<typeof editor.replaceBlocks>[0],
+          blocksToInsert as Parameters<typeof editor.replaceBlocks>[1],
+        )
+      },
+      setTextCursorPosition: editor.setTextCursorPosition
+        ? (targetBlock, placement) => {
+            editor.setTextCursorPosition!(
+              targetBlock as Parameters<NonNullable<typeof editor.setTextCursorPosition>>[0],
+              placement,
+            )
+          }
+        : undefined,
+      updateBlock: (block, update) => {
+        editor.updateBlock(
+          block as Parameters<typeof editor.updateBlock>[0],
+          update as Parameters<typeof editor.updateBlock>[1],
+        )
+      },
+    },
+  }
 }

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeEmbedNodeData } from '../embed-node-data'
+import { testId } from '~/test/helpers/test-id'
 
 describe('normalizeEmbedNodeData', () => {
   it('normalizes legacy sidebarItemId to a sidebar item target', () => {
-    expect(normalizeEmbedNodeData({ sidebarItemId: 'item-1' as never }).target).toEqual({
+    expect(normalizeEmbedNodeData({ sidebarItemId: testId('item-1') }).target).toEqual({
       kind: 'sidebarItem',
       sidebarItemId: 'item-1',
     })

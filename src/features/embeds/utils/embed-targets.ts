@@ -20,7 +20,9 @@ export function getSidebarItemIdFromDragData(
   data: Record<string | symbol, unknown>,
 ): Id<'sidebarItems'> | null {
   const id = data.sidebarItemId
-  return typeof id === 'string' ? (id as Id<'sidebarItems'>) : null
+  // This payload is produced by app-owned drag sources. Convex ids are opaque
+  // strings, so the frontend can only reject missing or malformed payload shape.
+  return typeof id === 'string' && id.length > 0 ? (id as Id<'sidebarItems'>) : null
 }
 
 export function getExternalUrlDropTarget(dataTransfer: DataTransfer | null): EmbedTarget | null {
