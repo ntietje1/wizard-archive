@@ -18,6 +18,7 @@ import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
 import { executeRegisteredSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-command'
 import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-planner'
 import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'
+import type { SurfaceDropOptions } from '~/features/dnd/utils/surface-drop-planner'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
 import { resolveFileSystemDropTarget } from '~/features/filesystem/filesystem-drop-planner'
@@ -87,7 +88,7 @@ async function executeElementDrop(
   sourceData: Record<string, unknown>,
   targetData: Record<string, unknown>,
   input: { clientX: number; clientY: number },
-  options: FileSystemDropOptions,
+  options: ElementDropOptions,
 ) {
   const draggedItems = resolveDraggedItems(sourceData, ctx)
   if (draggedItems.length === 0) return
@@ -106,14 +107,16 @@ async function executeElementDrop(
 
   const fileSystemTarget = resolveFileSystemDropTarget(resolvedTarget, ctx.dropPlanningContext)
   if (!fileSystemTarget) {
+    const surfaceInput = { clientX: input.clientX, clientY: input.clientY }
     const surfaceCommand = resolveSurfaceDropCommand(
       draggedItems,
       resolvedTarget,
       ctx.dropPlanningContext,
+      options,
     )
     await executeRegisteredSurfaceDropCommand({
       command: surfaceCommand,
-      input,
+      input: surfaceInput,
       setBatchDecision: useDndStore.getState().setBatchDecision,
     })
     return
@@ -122,12 +125,20 @@ async function executeElementDrop(
   await ctx.dndContext.executeFileSystemDrop({
     itemIds: draggedItems.map((item) => item._id),
     target: fileSystemTarget,
-    options,
+    options: { copy: options.copy },
   })
 }
 
-function globalDropOptionsFromInput(input: { ctrlKey?: boolean }): FileSystemDropOptions {
-  return { copy: input.ctrlKey === true }
+type ElementDropOptions = FileSystemDropOptions & SurfaceDropOptions
+
+function globalDropOptionsFromInput(input: {
+  ctrlKey?: boolean
+  shiftKey?: boolean
+}): ElementDropOptions {
+  return {
+    copy: input.ctrlKey === true,
+    noteEditorDropAction: input.shiftKey === true ? 'embed' : 'link',
+  }
 }
 
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
@@ -232,7 +243,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         const rawDropTarget = topTarget ? topTarget.data : null
         const key = getDropTargetKey(rawDropTarget)
         const options = globalDropOptionsFromInput(input)
-        const feedbackKey = `${key ?? 'none'}:${options.copy ? 'copy' : 'default'}`
+        const feedbackKey = `${key ?? 'none'}:${options.copy ? 'copy' : 'default'}:${options.noteEditorDropAction}`
 
         if (feedbackKey !== lastDropTargetKeyRef.current) {
           lastDropTargetKeyRef.current = feedbackKey

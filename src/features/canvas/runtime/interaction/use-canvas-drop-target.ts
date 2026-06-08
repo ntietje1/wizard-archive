@@ -48,7 +48,7 @@ export function useCanvasDropTarget({
 
   const { isFileDropTarget } = useExternalDropTarget({
     ref: dropOverlayRef,
-    parentId: null,
+    data: dropData,
     canAcceptFiles: enabled,
   })
 

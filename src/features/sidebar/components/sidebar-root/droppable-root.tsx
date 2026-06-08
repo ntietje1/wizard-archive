@@ -24,13 +24,13 @@ export function DroppableRoot({ children, className }: DroppableRootProps) {
 
   useExternalDropTarget({
     ref,
-    parentId: null,
+    data: rootTargetData,
     canAcceptFiles: canDropFilesOnTarget(rootTargetData),
   })
 
   const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
-  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
-  const isFileDragTarget = isDraggingFiles && fileDragHoveredId === null
+  const fileDragHoveredTargetKey = useDndStore((s) => s.fileDragHoveredTargetKey)
+  const isFileDragTarget = isDraggingFiles && fileDragHoveredTargetKey === SIDEBAR_ROOT_DROP_TYPE
 
   return (
     <div

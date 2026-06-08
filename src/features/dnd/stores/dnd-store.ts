@@ -18,7 +18,7 @@ interface DndState {
   sidebarDragTargetId: string | null
   sidebarDragPreviewItemIds: Array<Id<'sidebarItems'>>
   dragOutcome: DropOutcome | null
-  fileDragHoveredId: Id<'sidebarItems'> | null
+  fileDragHoveredTargetKey: string | null
   isDraggingFiles: boolean
   isDraggingElement: boolean
   fileDropOverride: FileDropOverride | null
@@ -29,7 +29,7 @@ interface DndActions {
   setSidebarDragTargetId: (id: string | null) => void
   setSidebarDragPreviewItemIds: (ids: Array<Id<'sidebarItems'>>) => void
   setDragOutcome: (outcome: DropOutcome | null) => void
-  setFileDragHoveredId: (id: Id<'sidebarItems'> | null) => void
+  setFileDragHoveredTargetKey: (key: string | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
   setIsDraggingElement: (isDragging: boolean) => void
   setFileDropOverride: (handler: FileDropOverride | null) => void
@@ -40,7 +40,7 @@ export const useDndStore = create<DndState & DndActions>()((set, get) => ({
   sidebarDragTargetId: null,
   sidebarDragPreviewItemIds: [],
   dragOutcome: null,
-  fileDragHoveredId: null,
+  fileDragHoveredTargetKey: null,
   isDraggingFiles: false,
   isDraggingElement: false,
   fileDropOverride: null,
@@ -56,7 +56,7 @@ export const useDndStore = create<DndState & DndActions>()((set, get) => ({
     set({ sidebarDragPreviewItemIds: ids })
   },
   setDragOutcome: (outcome) => set({ dragOutcome: outcome }),
-  setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
+  setFileDragHoveredTargetKey: (key) => set({ fileDragHoveredTargetKey: key }),
   setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),
   setIsDraggingElement: (isDragging) => set({ isDraggingElement: isDragging }),
   setFileDropOverride: (handler) => set({ fileDropOverride: handler }),

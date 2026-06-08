@@ -5,9 +5,8 @@ import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement
 import { shouldPreventExternalFileDrop } from './prevent-external-drop-policy'
 
 /**
- * Prevents ProseMirror from intercepting external file drag-and-drop events.
- * Without this, ProseMirror's built-in drop handler swallows file drags,
- * breaking the app-level pragmatic-dnd file upload flow.
+ * Prevents ProseMirror from intercepting external file drop events. Dragover
+ * still reaches ProseMirror so its native drop cursor can render normally.
  * Place this inside BlockNoteView.
  */
 export function PreventExternalDrop() {
@@ -17,17 +16,24 @@ export function PreventExternalDrop() {
   useEffect(() => {
     if (!domElement) return
 
-    const stop = (e: DragEvent) => {
-      if (shouldPreventExternalFileDrop(e)) e.stopPropagation()
+    const stopDrop = (e: DragEvent) => {
+      if (!shouldPreventExternalFileDrop(e)) return
+
+      removeProseMirrorDropCursors(domElement.ownerDocument)
+      e.stopPropagation()
     }
 
-    domElement.addEventListener('dragover', stop, true)
-    domElement.addEventListener('drop', stop, true)
+    domElement.addEventListener('drop', stopDrop, true)
     return () => {
-      domElement.removeEventListener('dragover', stop, true)
-      domElement.removeEventListener('drop', stop, true)
+      domElement.removeEventListener('drop', stopDrop, true)
     }
   }, [domElement])
 
   return null
+}
+
+function removeProseMirrorDropCursors(document: Document) {
+  document
+    .querySelectorAll('.note-editor-file-drop-cursor')
+    .forEach((element) => element.parentElement?.removeChild(element))
 }

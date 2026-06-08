@@ -148,6 +148,11 @@ function SidebarItemEmbedContent({
     return <EmbedUnavailable reason="missing" label={itemState.label} />
   }
 
-  const reason = itemState.status === 'not_shared' ? 'permission' : 'missing'
+  const reason =
+    itemState.status === 'not_shared'
+      ? 'permission'
+      : itemState.status === 'trashed'
+        ? 'trashed'
+        : 'missing'
   return <EmbedUnavailable reason={reason} label={itemState.label} />
 }

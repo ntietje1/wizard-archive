@@ -140,6 +140,32 @@ describe('EmbedContent', () => {
     expect(screen.getByText('Folder A')).toBeInTheDocument()
   })
 
+  it('renders trashed sidebar item embeds as unavailable instead of rich content', () => {
+    const item = {
+      _id: 'note-a',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Trashed Note',
+    }
+    useSidebarItemByIdMock.mockReturnValue({ data: item, isLoading: false, error: null })
+    useSidebarItemAvailabilityStateMock.mockReturnValue({
+      status: 'trashed',
+      label: 'Trashed Note',
+      message: 'This item is in the trash.',
+    })
+
+    render(
+      <EmbedContent
+        target={{ kind: 'sidebarItem', sidebarItemId: 'note-a' as Id<'sidebarItems'> }}
+        sourceItemId={null}
+        mode="readonly"
+        renderSidebarItem={(contentItem) => <div>{contentItem.name}</div>}
+      />,
+    )
+
+    expect(screen.getByText('Trashed Note')).toBeInTheDocument()
+    expect(screen.getByText('Embedded item is in the trash')).toBeInTheDocument()
+  })
+
   it('renders internal file sidebar targets through shared media handling', () => {
     const item = {
       _id: 'file-a',

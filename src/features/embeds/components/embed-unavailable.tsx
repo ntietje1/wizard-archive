@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react'
 export type EmbedUnavailableReason =
   | 'missing'
   | 'permission'
+  | 'trashed'
   | 'invalidExternalUrl'
   | 'recursive'
   | 'unsupported'
@@ -15,6 +16,7 @@ type EmbedUnavailableProps = {
 const MESSAGE_BY_REASON: Record<EmbedUnavailableReason, string> = {
   missing: 'Embedded item unavailable',
   permission: 'You do not have access to this embedded item',
+  trashed: 'Embedded item is in the trash',
   invalidExternalUrl: 'External file link is invalid',
   recursive: 'Recursive embed hidden',
   unsupported: 'This file type cannot be previewed',

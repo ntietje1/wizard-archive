@@ -23,6 +23,7 @@ function continueButtonLabel(action: SurfaceDropAction) {
     case 'link':
       return 'Continue adding links'
     case 'embed':
+    case 'noteEmbed':
       return 'Continue embedding items'
   }
 }
@@ -34,6 +35,7 @@ function operationVerb(action: SurfaceDropAction) {
     case 'link':
       return 'linked'
     case 'embed':
+    case 'noteEmbed':
       return 'embedded'
   }
 }

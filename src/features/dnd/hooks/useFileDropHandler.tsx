@@ -24,10 +24,8 @@ import { getErrorMessage, uploadFile } from '~/features/file-upload/utils/file-u
 import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
 import { useCreateFile } from '~/features/files/hooks/useCreateFile'
 import { useCreateNote } from '~/features/notes/hooks/useCreateNote'
-
-interface DropOptions {
-  parentId: Id<'sidebarItems'> | null
-}
+import { useAssetsFolder } from '~/features/embeds/hooks/use-assets-folder'
+import type { FileDropDestination, FileDropOptions } from '~/features/dnd/types'
 
 interface UploadSingleFileOptions {
   silent?: boolean
@@ -112,6 +110,7 @@ export function useFileDropHandler() {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
   const { getSiblings } = useSidebarValidation()
+  const { resolveAssetsFolderId } = useAssetsFolder()
 
   const generateUploadUrl = useAppMutation(api.storage.mutations.generateUploadUrl)
   const trackUpload = useAppMutation(api.storage.mutations.trackUpload)
@@ -362,7 +361,16 @@ export function useFileDropHandler() {
     )
   }
 
-  const handleDrop = async (dropResult: DropResult, options?: DropOptions): Promise<void> => {
+  const resolveDropDestinationParentId = async (
+    destination: FileDropDestination = { kind: 'direct', parentId: null },
+  ) => {
+    if (destination.kind === 'assets') {
+      return await resolveAssetsFolderId()
+    }
+    return destination.parentId
+  }
+
+  const handleDrop = async (dropResult: DropResult, options?: FileDropOptions): Promise<void> => {
     if (!campaignId) {
       toast.error('No campaign selected')
       return
@@ -373,7 +381,8 @@ export function useFileDropHandler() {
     const isSingleFile = files.length === 1 && !hasFolders
 
     if (isSingleFile) {
-      await uploadSingleFile(files[0].file, options?.parentId ?? null)
+      const parentId = await resolveDropDestinationParentId(options?.destination)
+      await uploadSingleFile(files[0].file, parentId)
       return
     }
 
@@ -406,7 +415,7 @@ export function useFileDropHandler() {
     }
 
     try {
-      const parentId = options?.parentId ?? null
+      const parentId = await resolveDropDestinationParentId(options?.destination)
       await uploadRootFiles(files, parentId, progress, hasFolders, stats)
       const lastFolderId = await uploadRootFolders(rootFolders, parentId, progress)
 
@@ -419,8 +428,8 @@ export function useFileDropHandler() {
 
       if (lastFolderId) {
         openParentFolders(lastFolderId)
-      } else if (options?.parentId) {
-        openParentFolders(options.parentId)
+      } else if (parentId) {
+        openParentFolders(parentId)
       }
     } catch (error) {
       logger.error(error)

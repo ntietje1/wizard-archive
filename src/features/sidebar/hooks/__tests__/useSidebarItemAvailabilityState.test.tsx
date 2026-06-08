@@ -5,6 +5,7 @@ import { testId } from '~/test/helpers/test-id'
 import { useSidebarItemAvailabilityState } from '../useSidebarItemAvailabilityState'
 import type { Id } from 'convex/_generated/dataModel'
 import type { NoteWithContent } from 'shared/notes/types'
+import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 
 const activeItemsState = vi.hoisted(() => ({
   data: [] as Array<Record<string, unknown>>,
@@ -80,6 +81,37 @@ describe('useSidebarItemAvailabilityState', () => {
       item: readableItem,
       label: 'Secret Note',
     })
+  })
+
+  it('returns trashed when readable content is in the trash', () => {
+    const readableItem: NoteWithContent = {
+      ...createNote({
+        _id: createItemId('note-1'),
+        name: 'Secret Note',
+        status: SIDEBAR_ITEM_STATUS.trashed,
+      }),
+      ancestors: [],
+      content: [],
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    }
+
+    const { result } = renderHook(() =>
+      useSidebarItemAvailabilityState({
+        lookup: { kind: 'id', id: createItemId('note-1') },
+        readableItem,
+        canView: true,
+        subject: 'item',
+        fallbackLabel: 'Embedded item',
+      }),
+    )
+
+    expect(result.current).toMatchObject({
+      status: 'trashed',
+      label: 'Secret Note',
+      message: 'This item is in the trash.',
+    })
+    expect(result.current).not.toHaveProperty('item')
   })
 
   it('returns item not_shared copy when metadata exists but content is not viewable', () => {

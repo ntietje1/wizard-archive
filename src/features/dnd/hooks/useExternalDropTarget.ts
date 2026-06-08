@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { dropTargetForExternal } from '@atlaskit/pragmatic-drag-and-drop/external/adapter'
 import { containsFiles } from '@atlaskit/pragmatic-drag-and-drop/external/file'
 import type { RefObject } from 'react'
-import type { Id } from 'convex/_generated/dataModel'
 
 export function useExternalDropTarget({
   ref,
-  parentId,
+  data,
   canAcceptFiles,
 }: {
   ref: RefObject<HTMLElement | null>
-  parentId: Id<'sidebarItems'> | null
+  data: Record<string, unknown>
   canAcceptFiles: boolean
 }) {
   const [isFileDropTarget, setIsFileDropTarget] = useState(false)
+  const dataRef = useRef(data)
+  dataRef.current = data
 
   useEffect(() => {
     const el = ref.current
@@ -23,31 +24,31 @@ export function useExternalDropTarget({
     }
 
     // Override the document-level 'none' dropEffect set by the global prevention
-    // listener. This runs in bubble phase (after the capture-phase global listener),
-    // so it wins and shows the copy/accept cursor over this element.
+    // listener. This runs in capture on the target element, after document capture
+    // but before editor children can stop propagation.
     const handleDragOver = (e: DragEvent) => {
       if (!e.dataTransfer) return
       if (e.dataTransfer.types.includes('Files')) {
         e.dataTransfer.dropEffect = 'copy'
       }
     }
-    el.addEventListener('dragover', handleDragOver)
+    el.addEventListener('dragover', handleDragOver, true)
 
     const cleanupDropTarget = dropTargetForExternal({
       element: el,
       canDrop: ({ source }) => containsFiles({ source }),
-      getData: () => ({ parentId }),
+      getData: () => dataRef.current,
       onDragEnter: () => setIsFileDropTarget(true),
       onDragLeave: () => setIsFileDropTarget(false),
       onDrop: () => setIsFileDropTarget(false),
     })
 
     return () => {
-      el.removeEventListener('dragover', handleDragOver)
+      el.removeEventListener('dragover', handleDragOver, true)
       cleanupDropTarget()
       setIsFileDropTarget(false)
     }
-  }, [ref, parentId, canAcceptFiles])
+  }, [ref, canAcceptFiles])
 
   return { isFileDropTarget }
 }
