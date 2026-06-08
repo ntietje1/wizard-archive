@@ -1,11 +1,11 @@
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
-import { createElement } from 'react'
-import type { ComponentType, ReactNode } from 'react'
+import type { ComponentType } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { EmbedAncestryProvider } from '../context/embed-render-ancestry'
 import { useEmbedAncestry } from '../context/embed-render-ancestry-context'
 import { EmbedEmptyState } from './embed-empty-state'
@@ -21,8 +21,11 @@ type EmbedContentProps = {
   onUpload?: () => void
   onLinkExternal?: () => void
   onMediaLayout?: EmbedMediaLayoutReporter
-  renderSidebarItem: (item: AnySidebarItemWithContent) => ReactNode
+  SidebarItemRenderer: SidebarItemEmbedRenderer
+  resolvedSidebarItemState?: SidebarItemAvailabilityState
 }
+
+type SidebarItemEmbedRenderer = ComponentType<{ item: AnySidebarItemWithContent }>
 
 export function EmbedContent({
   target,
@@ -31,7 +34,8 @@ export function EmbedContent({
   onUpload,
   onLinkExternal,
   onMediaLayout,
-  renderSidebarItem,
+  SidebarItemRenderer,
+  resolvedSidebarItemState,
 }: EmbedContentProps) {
   if (sourceItemId) {
     return (
@@ -43,7 +47,8 @@ export function EmbedContent({
           onUpload={onUpload}
           onLinkExternal={onLinkExternal}
           onMediaLayout={onMediaLayout}
-          renderSidebarItem={renderSidebarItem}
+          SidebarItemRenderer={SidebarItemRenderer}
+          resolvedSidebarItemState={resolvedSidebarItemState}
         />
       </EmbedAncestryProvider>
     )
@@ -57,7 +62,8 @@ export function EmbedContent({
       onUpload={onUpload}
       onLinkExternal={onLinkExternal}
       onMediaLayout={onMediaLayout}
-      renderSidebarItem={renderSidebarItem}
+      SidebarItemRenderer={SidebarItemRenderer}
+      resolvedSidebarItemState={resolvedSidebarItemState}
     />
   )
 }
@@ -69,7 +75,8 @@ function EmbedContentInner({
   onUpload,
   onLinkExternal,
   onMediaLayout,
-  renderSidebarItem,
+  SidebarItemRenderer,
+  resolvedSidebarItemState,
 }: EmbedContentProps) {
   if (target.kind === 'empty') {
     return <EmbedEmptyState mode={mode} onUpload={onUpload} onLinkExternal={onLinkExternal} />
@@ -86,7 +93,8 @@ function EmbedContentInner({
       targetItemId={target.sidebarItemId as Id<'sidebarItems'>}
       sourceItemId={sourceItemId}
       onMediaLayout={onMediaLayout}
-      renderSidebarItem={renderSidebarItem}
+      SidebarItemRenderer={SidebarItemRenderer}
+      resolvedSidebarItemState={resolvedSidebarItemState}
     />
   )
 }
@@ -95,18 +103,54 @@ function SidebarItemEmbedContent({
   targetItemId,
   sourceItemId,
   onMediaLayout,
-  renderSidebarItem,
+  SidebarItemRenderer,
+  resolvedSidebarItemState,
 }: {
   targetItemId: Id<'sidebarItems'>
   sourceItemId: Id<'sidebarItems'> | null
   onMediaLayout?: EmbedMediaLayoutReporter
-  renderSidebarItem: (item: AnySidebarItemWithContent) => ReactNode
+  SidebarItemRenderer: SidebarItemEmbedRenderer
+  resolvedSidebarItemState?: SidebarItemAvailabilityState
 }) {
   const ancestry = useEmbedAncestry()
   const isRecursive = targetItemId === sourceItemId || ancestry.has(targetItemId)
-  const contentQuery = useSidebarItemById(isRecursive ? null : targetItemId)
+
+  if (isRecursive) {
+    return <EmbedUnavailable reason="recursive" />
+  }
+
+  if (resolvedSidebarItemState) {
+    return (
+      <ResolvedSidebarItemEmbedContent
+        targetItemId={targetItemId}
+        itemState={resolvedSidebarItemState}
+        onMediaLayout={onMediaLayout}
+        SidebarItemRenderer={SidebarItemRenderer}
+      />
+    )
+  }
+
+  return (
+    <LiveSidebarItemEmbedContent
+      targetItemId={targetItemId}
+      onMediaLayout={onMediaLayout}
+      SidebarItemRenderer={SidebarItemRenderer}
+    />
+  )
+}
+
+function LiveSidebarItemEmbedContent({
+  targetItemId,
+  onMediaLayout,
+  SidebarItemRenderer,
+}: {
+  targetItemId: Id<'sidebarItems'>
+  onMediaLayout?: EmbedMediaLayoutReporter
+  SidebarItemRenderer: SidebarItemEmbedRenderer
+}) {
+  const contentQuery = useSidebarItemById(targetItemId)
   const itemState = useSidebarItemAvailabilityState({
-    lookup: { kind: 'id', id: isRecursive ? null : targetItemId },
+    lookup: { kind: 'id', id: targetItemId },
     readableItem: contentQuery.data,
     readableItemLoading: contentQuery.isLoading,
     readableItemError: contentQuery.error,
@@ -115,10 +159,27 @@ function SidebarItemEmbedContent({
     fallbackLabel: 'Embedded item',
   })
 
-  if (isRecursive) {
-    return <EmbedUnavailable reason="recursive" />
-  }
+  return (
+    <ResolvedSidebarItemEmbedContent
+      targetItemId={targetItemId}
+      itemState={itemState}
+      onMediaLayout={onMediaLayout}
+      SidebarItemRenderer={SidebarItemRenderer}
+    />
+  )
+}
 
+function ResolvedSidebarItemEmbedContent({
+  targetItemId,
+  itemState,
+  onMediaLayout,
+  SidebarItemRenderer,
+}: {
+  targetItemId: Id<'sidebarItems'>
+  itemState: SidebarItemAvailabilityState
+  onMediaLayout?: EmbedMediaLayoutReporter
+  SidebarItemRenderer: SidebarItemEmbedRenderer
+}) {
   if (itemState.status === 'available') {
     if (itemState.item.type === SIDEBAR_ITEM_TYPES.files) {
       return (
@@ -136,10 +197,7 @@ function SidebarItemEmbedContent({
 
     return (
       <EmbedAncestryProvider itemId={targetItemId}>
-        {createElement(
-          renderSidebarItem as ComponentType<AnySidebarItemWithContent>,
-          itemState.item,
-        )}
+        <SidebarItemRenderer item={itemState.item} />
       </EmbedAncestryProvider>
     )
   }

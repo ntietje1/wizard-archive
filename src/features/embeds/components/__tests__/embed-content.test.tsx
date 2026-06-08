@@ -1,9 +1,11 @@
 import { render, screen } from '@testing-library/react'
+import { useEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { EmbedAncestryProvider } from '../../context/embed-render-ancestry'
 import { EmbedContent } from '../embed-content'
 import type { Id } from 'convex/_generated/dataModel'
+import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 
 const useSidebarItemByIdMock = vi.hoisted(() => vi.fn())
 const useSidebarItemAvailabilityStateMock = vi.hoisted(() => vi.fn())
@@ -45,7 +47,7 @@ describe('EmbedContent', () => {
         mode="editable"
         onUpload={vi.fn()}
         onLinkExternal={vi.fn()}
-        renderSidebarItem={() => null}
+        SidebarItemRenderer={NullSidebarItemRenderer}
       />,
     )
 
@@ -60,7 +62,7 @@ describe('EmbedContent', () => {
         mode="readonly"
         onUpload={vi.fn()}
         onLinkExternal={vi.fn()}
-        renderSidebarItem={() => null}
+        SidebarItemRenderer={NullSidebarItemRenderer}
       />,
     )
 
@@ -77,7 +79,7 @@ describe('EmbedContent', () => {
         target={{ kind: 'externalUrl', url: 'https://x.test/a.png', name: 'a.png' }}
         sourceItemId={null}
         mode="readonly"
-        renderSidebarItem={() => null}
+        SidebarItemRenderer={NullSidebarItemRenderer}
       />,
     )
 
@@ -94,7 +96,7 @@ describe('EmbedContent', () => {
           target={{ kind: 'sidebarItem', sidebarItemId: 'note-a' as Id<'sidebarItems'> }}
           sourceItemId={'note-b' as Id<'sidebarItems'>}
           mode="readonly"
-          renderSidebarItem={() => null}
+          SidebarItemRenderer={NullSidebarItemRenderer}
         />
       </EmbedAncestryProvider>,
     )
@@ -108,7 +110,7 @@ describe('EmbedContent', () => {
         target={{ kind: 'sidebarItem', sidebarItemId: 'note-a' as Id<'sidebarItems'> }}
         sourceItemId={'note-a' as Id<'sidebarItems'>}
         mode="readonly"
-        renderSidebarItem={() => null}
+        SidebarItemRenderer={NullSidebarItemRenderer}
       />,
     )
 
@@ -133,11 +135,48 @@ describe('EmbedContent', () => {
         target={{ kind: 'sidebarItem', sidebarItemId: 'folder-a' as Id<'sidebarItems'> }}
         sourceItemId={null}
         mode="readonly"
-        renderSidebarItem={(contentItem) => <div>{contentItem.name}</div>}
+        SidebarItemRenderer={SidebarItemNameRenderer}
       />,
     )
 
     expect(screen.getByText('Folder A')).toBeInTheDocument()
+  })
+
+  it('does not remount sidebar item content when the render callback identity changes', () => {
+    const item = {
+      _id: 'canvas-a',
+      type: SIDEBAR_ITEM_TYPES.canvases,
+      name: 'Canvas A',
+    }
+    const unmountSpy = vi.fn()
+    mountProbeUnmountSpy = unmountSpy
+    useSidebarItemByIdMock.mockReturnValue({ data: item, isLoading: false, error: null })
+    useSidebarItemAvailabilityStateMock.mockReturnValue({
+      status: 'available',
+      label: 'Canvas A',
+      item,
+    })
+
+    const { rerender } = render(
+      <EmbedContent
+        target={{ kind: 'sidebarItem', sidebarItemId: 'canvas-a' as Id<'sidebarItems'> }}
+        sourceItemId={null}
+        mode="readonly"
+        SidebarItemRenderer={MountProbeRenderer}
+      />,
+    )
+
+    rerender(
+      <EmbedContent
+        target={{ kind: 'sidebarItem', sidebarItemId: 'canvas-a' as Id<'sidebarItems'> }}
+        sourceItemId={null}
+        mode="readonly"
+        SidebarItemRenderer={MountProbeRenderer}
+      />,
+    )
+
+    expect(screen.getByText('Canvas A')).toBeInTheDocument()
+    expect(unmountSpy).not.toHaveBeenCalled()
   })
 
   it('renders trashed sidebar item embeds as unavailable instead of rich content', () => {
@@ -158,7 +197,7 @@ describe('EmbedContent', () => {
         target={{ kind: 'sidebarItem', sidebarItemId: 'note-a' as Id<'sidebarItems'> }}
         sourceItemId={null}
         mode="readonly"
-        renderSidebarItem={(contentItem) => <div>{contentItem.name}</div>}
+        SidebarItemRenderer={SidebarItemNameRenderer}
       />,
     )
 
@@ -187,7 +226,7 @@ describe('EmbedContent', () => {
         target={{ kind: 'sidebarItem', sidebarItemId: 'file-a' as Id<'sidebarItems'> }}
         sourceItemId={null}
         mode="readonly"
-        renderSidebarItem={() => <div>surface fallback</div>}
+        SidebarItemRenderer={SurfaceFallbackRenderer}
       />,
     )
 
@@ -216,14 +255,7 @@ describe('EmbedContent', () => {
         target={{ kind: 'sidebarItem', sidebarItemId: 'folder-a' as Id<'sidebarItems'> }}
         sourceItemId={null}
         mode="readonly"
-        renderSidebarItem={() => (
-          <EmbedContent
-            target={{ kind: 'sidebarItem', sidebarItemId: 'folder-a' as Id<'sidebarItems'> }}
-            sourceItemId={null}
-            mode="readonly"
-            renderSidebarItem={() => <div>recursive child</div>}
-          />
-        )}
+        SidebarItemRenderer={RecursiveSameTargetRenderer}
       />,
     )
 
@@ -249,14 +281,7 @@ describe('EmbedContent', () => {
         target={{ kind: 'sidebarItem', sidebarItemId: 'note-b' as Id<'sidebarItems'> }}
         sourceItemId={'note-a' as Id<'sidebarItems'>}
         mode="readonly"
-        renderSidebarItem={() => (
-          <EmbedContent
-            target={{ kind: 'sidebarItem', sidebarItemId: 'note-a' as Id<'sidebarItems'> }}
-            sourceItemId={'note-b' as Id<'sidebarItems'>}
-            mode="readonly"
-            renderSidebarItem={() => <div>recursive child</div>}
-          />
-        )}
+        SidebarItemRenderer={RecursiveSourceRenderer}
       />,
     )
 
@@ -264,3 +289,52 @@ describe('EmbedContent', () => {
     expect(screen.queryByText('recursive child')).not.toBeInTheDocument()
   })
 })
+
+let mountProbeUnmountSpy = () => {}
+
+function NullSidebarItemRenderer() {
+  return null
+}
+
+function SidebarItemNameRenderer({ item }: { item: AnySidebarItemWithContent }) {
+  return <div>{item.name}</div>
+}
+
+function SurfaceFallbackRenderer() {
+  return <div>surface fallback</div>
+}
+
+function RecursiveChildRenderer() {
+  return <div>recursive child</div>
+}
+
+function RecursiveSameTargetRenderer() {
+  return (
+    <EmbedContent
+      target={{ kind: 'sidebarItem', sidebarItemId: 'folder-a' as Id<'sidebarItems'> }}
+      sourceItemId={null}
+      mode="readonly"
+      SidebarItemRenderer={RecursiveChildRenderer}
+    />
+  )
+}
+
+function RecursiveSourceRenderer() {
+  return (
+    <EmbedContent
+      target={{ kind: 'sidebarItem', sidebarItemId: 'note-a' as Id<'sidebarItems'> }}
+      sourceItemId={'note-b' as Id<'sidebarItems'>}
+      mode="readonly"
+      SidebarItemRenderer={RecursiveChildRenderer}
+    />
+  )
+}
+
+function MountProbeRenderer({ item }: { item: AnySidebarItemWithContent }) {
+  return <MountProbe label={item.name} onUnmount={mountProbeUnmountSpy} />
+}
+
+function MountProbe({ label, onUnmount }: { label: string; onUnmount: () => void }) {
+  useEffect(() => onUnmount, [onUnmount])
+  return <div>{label}</div>
+}

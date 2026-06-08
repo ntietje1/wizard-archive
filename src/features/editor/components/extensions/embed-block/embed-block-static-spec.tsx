@@ -2,11 +2,11 @@ import { createBlockSpec } from '@blocknote/core'
 import { createRoot } from 'react-dom/client'
 import { embedBlockConfig } from '../../../../../../shared/editor-blocks/editor-blocknote-spec-factory'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
-import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { cn } from '~/features/shadcn/lib/utils'
 import { embedTargetFromBlockProps } from './embed-block-targets'
 import type { Id } from 'convex/_generated/dataModel'
 import type { NoteEmbedBlockProps } from './embed-block-targets'
+import { SidebarItemPreviewRenderer } from './sidebar-item-preview-renderer'
 
 export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | null) {
   return createBlockSpec(embedBlockConfig, {
@@ -31,7 +31,7 @@ export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | nu
             target={target}
             sourceItemId={sourceNoteId}
             mode="readonly"
-            renderSidebarItem={(item) => <SidebarItemPreviewContent item={item} />}
+            SidebarItemRenderer={SidebarItemPreviewRenderer}
           />
         </div>,
       )

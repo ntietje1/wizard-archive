@@ -6,7 +6,6 @@ import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react'
 import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
-import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -25,6 +24,7 @@ import {
   isInternalNativeDrag,
   markInternalNativeDrag,
 } from '~/features/dnd/utils/internal-native-drag'
+import { SidebarItemPreviewRenderer } from './sidebar-item-preview-renderer'
 
 const EmbedContent = lazy(() =>
   import('~/features/embeds/components/embed-content').then((module) => ({
@@ -277,7 +277,7 @@ function ReadOnlyNoteEmbedBlockBody({
           sourceItemId={sourceNoteId}
           mode="readonly"
           onMediaLayout={onMediaLayout}
-          renderSidebarItem={(item) => <SidebarItemPreviewContent item={item} />}
+          SidebarItemRenderer={SidebarItemPreviewRenderer}
         />
       </Suspense>
     </div>
@@ -324,7 +324,7 @@ function EditableNoteEmbedBlockBody({
             onUpload={embedControls.openFilePicker}
             onLinkExternal={embedControls.openLinkDraft}
             onMediaLayout={onMediaLayout}
-            renderSidebarItem={(item) => <SidebarItemPreviewContent item={item} />}
+            SidebarItemRenderer={SidebarItemPreviewRenderer}
           />
         </Suspense>
       </div>

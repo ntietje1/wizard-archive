@@ -4,9 +4,11 @@ import type { NoteWithContent } from 'shared/notes/types'
 import type { Doc } from 'yjs'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { NoteContent } from '~/features/editor/components/note-content'
+import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
 import { useBlockNoteActivationLifecycle } from '../shared/use-blocknote-activation-lifecycle'
 import { getCanvasNodeTextStyle } from '../shared/canvas-node-surface-style'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { BlockShareMenuProvider } from '~/features/sharing/contexts/block-share-menu-context'
 import { cn } from '~/features/shadcn/lib/utils'
 
 interface EmbedNoteEditorState {
@@ -101,12 +103,16 @@ export function EmbedNoteContent({
         className="h-full"
         contentClassName={editable ? 'note-editor-scroll-content' : undefined}
       >
-        <NoteContent
-          note={note}
-          editable={editable}
-          style={textStyle}
-          onEditorChange={onEditorChange}
-        />
+        <BlockShareMenuProvider>
+          <BlockNoteContextMenuProvider>
+            <NoteContent
+              note={note}
+              editable={editable}
+              style={textStyle}
+              onEditorChange={onEditorChange}
+            />
+          </BlockNoteContextMenuProvider>
+        </BlockShareMenuProvider>
       </ScrollArea>
     </div>
   )

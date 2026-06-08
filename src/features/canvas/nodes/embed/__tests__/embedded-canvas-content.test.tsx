@@ -106,6 +106,7 @@ describe('EmbeddedCanvasContent', () => {
         fitPadding: 0.12,
         className: 'pointer-events-none relative h-full w-full min-h-0 min-w-0',
         embedRenderer: canvasPreviewEmbedNodeMock,
+        sourceItemId: createCanvasId('canvas-1'),
         nodes: [{ id: 'node-1', position: { x: 0, y: 0 }, data: {}, type: 'text' }],
         edges: [{ id: 'edge-1', source: 'node-1', target: 'node-1', type: 'bezier' }],
       }),

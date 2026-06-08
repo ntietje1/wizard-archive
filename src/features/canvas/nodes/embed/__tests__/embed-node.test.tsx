@@ -29,6 +29,17 @@ const canvasRuntimeState = vi.hoisted(() => ({
 const contentItemState = vi.hoisted((): { data: Record<string, unknown> } => ({
   data: {},
 }))
+const contentItemQuerySequence = vi.hoisted(
+  (): {
+    values: Array<{
+      data: Record<string, unknown> | null | undefined
+      error: unknown
+      isLoading: boolean
+    }>
+  } => ({
+    values: [],
+  }),
+)
 const activeItemsState = vi.hoisted(() => ({
   itemsMap: new Map<string, Record<string, unknown>>(),
   status: 'success' as 'pending' | 'error' | 'success',
@@ -150,11 +161,12 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
-  useSidebarItemById: () => ({
-    data: contentItemState.data,
-    error: null,
-    isLoading: false,
-  }),
+  useSidebarItemById: () =>
+    contentItemQuerySequence.values.shift() ?? {
+      data: contentItemState.data,
+      error: null,
+      isLoading: false,
+    },
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -220,6 +232,7 @@ describe('EmbedNode', () => {
     embeddedMapSpy.mockReset()
     embedNoteSpy.mockReset()
     resizableNodeWrapperSpy.mockReset()
+    contentItemQuerySequence.values = []
   })
 
   it('uses the canvas embed resize minimum', () => {
@@ -245,6 +258,31 @@ describe('EmbedNode', () => {
       alt: 'Canvas Item',
     })
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
+  })
+
+  it('renders canvas embeds from the canvas-resolved item when shared embed lookup is pending', () => {
+    contentItemQuerySequence.values = [
+      {
+        data: {
+          _id: 'canvas-1',
+          type: SIDEBAR_ITEM_TYPES.canvases,
+          name: 'Canvas Item',
+          previewUrl: 'canvas.png',
+        },
+        error: null,
+        isLoading: false,
+      },
+      {
+        data: null,
+        error: null,
+        isLoading: true,
+      },
+    ]
+
+    renderEmbedNode()
+
+    expect(screen.getByTestId('embedded-canvas-content')).toBeInTheDocument()
+    expect(screen.queryByText('Embedded item unavailable')).not.toBeInTheDocument()
   })
 
   it('renders map embeds through the dedicated embedded map renderer in interactive mode', () => {

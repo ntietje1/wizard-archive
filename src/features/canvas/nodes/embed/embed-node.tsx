@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { createContext, use, useEffect, useRef, useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
@@ -18,6 +18,7 @@ import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
@@ -42,10 +43,23 @@ import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ReactNode, RefObject } from 'react'
+import type { RefObject } from 'react'
 
 const EMBED_FLOATING_LABEL_GAP_PX = 6
 const EMBED_FLOATING_LABEL_LINE_HEIGHT_PX = 16
+
+type CanvasEmbedRichContentContextValue = {
+  nodeId: string
+  isEditing: boolean
+  isExclusivelySelected: boolean
+  interactiveRenderMode: boolean
+  onActivated: () => void
+  onEditorChange: (editor: CustomBlockNoteEditor | null) => void
+  pendingActivationRef: PendingRichEmbedActivationRef
+  textColor: string | null
+}
+
+const CanvasEmbedRichContentContext = createContext<CanvasEmbedRichContentContextValue | null>(null)
 
 function persistEmbedTextColor(
   patchNodeData: CanvasDocumentWriter['patchNodeData'],
@@ -128,19 +142,16 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
     patchNodeData(new Map([[id, { target: nextTarget }]]))
     await provider?.flushUpdates()
   }
-  const renderSidebarItem = (item: AnySidebarItemWithContent) => (
-    <EmbedRichContent
-      nodeId={id}
-      contentItem={item}
-      isEditing={isEditing}
-      isExclusivelySelected={editableSession.isExclusivelySelected}
-      interactiveRenderMode={interactiveRenderMode}
-      onActivated={editableSession.handleActivated}
-      onEditorChange={setEditor}
-      pendingActivationRef={editableSession.pendingActivationRef}
-      textColor={normalizedData.textColor}
-    />
-  )
+  const richContentContext: CanvasEmbedRichContentContextValue = {
+    nodeId: id,
+    isEditing,
+    isExclusivelySelected: editableSession.isExclusivelySelected,
+    interactiveRenderMode,
+    onActivated: editableSession.handleActivated,
+    onEditorChange: setEditor,
+    pendingActivationRef: editableSession.pendingActivationRef,
+    textColor: normalizedData.textColor,
+  }
 
   useEffect(() => domRuntime.registerNodeSurfaceElement(id, surfaceRef.current), [domRuntime, id])
 
@@ -206,26 +217,29 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
           editableSession.handleDoubleClick(event)
         }}
       >
-        <div className="h-full w-full min-h-0 min-w-0">
-          {isEditableEmbed ? (
-            <EditableCanvasEmbedContent
-              rootRef={surfaceRef}
-              sourceCanvasId={canvasId}
-              target={target}
-              setTarget={setTarget}
-              onMediaLayout={setEmbedMediaLayout}
-              renderSidebarItem={renderSidebarItem}
-            />
-          ) : (
-            <EmbedContent
-              target={target}
-              sourceItemId={canvasId}
-              mode="readonly"
-              onMediaLayout={setEmbedMediaLayout}
-              renderSidebarItem={renderSidebarItem}
-            />
-          )}
-        </div>
+        <CanvasEmbedRichContentContext.Provider value={richContentContext}>
+          <div className="h-full w-full min-h-0 min-w-0">
+            {isEditableEmbed ? (
+              <EditableCanvasEmbedContent
+                rootRef={surfaceRef}
+                sourceCanvasId={canvasId}
+                target={target}
+                setTarget={setTarget}
+                onMediaLayout={setEmbedMediaLayout}
+                resolvedSidebarItemState={itemState}
+              />
+            ) : (
+              <EmbedContent
+                target={target}
+                sourceItemId={canvasId}
+                mode="readonly"
+                onMediaLayout={setEmbedMediaLayout}
+                SidebarItemRenderer={CanvasEmbedRichContentRenderer}
+                resolvedSidebarItemState={itemState}
+              />
+            )}
+          </div>
+        </CanvasEmbedRichContentContext.Provider>
       </div>
     </ResizableNodeWrapper>
   )
@@ -253,14 +267,14 @@ function EditableCanvasEmbedContent({
   target,
   setTarget,
   onMediaLayout,
-  renderSidebarItem,
+  resolvedSidebarItemState,
 }: {
   rootRef: RefObject<HTMLElement | null>
   sourceCanvasId: Id<'sidebarItems'> | null
   target: EmbedTarget
   setTarget: (target: EmbedTarget) => Promise<void>
   onMediaLayout: (layout: EmbedMediaLayout) => void
-  renderSidebarItem: (item: AnySidebarItemWithContent) => ReactNode
+  resolvedSidebarItemState?: SidebarItemAvailabilityState
 }) {
   const embedControls = useEditableEmbedTargetControls({ setTarget })
 
@@ -281,7 +295,8 @@ function EditableCanvasEmbedContent({
         onUpload={embedControls.openFilePicker}
         onLinkExternal={embedControls.openLinkDraft}
         onMediaLayout={onMediaLayout}
-        renderSidebarItem={renderSidebarItem}
+        SidebarItemRenderer={CanvasEmbedRichContentRenderer}
+        resolvedSidebarItemState={resolvedSidebarItemState}
       />
       <input
         ref={embedControls.fileInputRef}
@@ -360,6 +375,13 @@ function EmbedFloatingLabel({
       </span>
     </div>
   )
+}
+
+function CanvasEmbedRichContentRenderer({ item }: { item: AnySidebarItemWithContent }) {
+  const context = use(CanvasEmbedRichContentContext)
+  if (!context) return null
+
+  return <EmbedRichContent {...context} contentItem={item} />
 }
 
 function EmbedRichContent({

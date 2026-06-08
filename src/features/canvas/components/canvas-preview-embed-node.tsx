@@ -9,6 +9,7 @@ import { EmbedContent } from '~/features/embeds/components/embed-content'
 import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { EmbedNodeData } from '../nodes/embed/embed-node-data'
 import type { Id } from 'convex/_generated/dataModel'
+import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 
 const DEFAULT_EMBED_MIN_WIDTH = 240
 const DEFAULT_EMBED_MIN_HEIGHT = 180
@@ -37,9 +38,13 @@ export function CanvasPreviewEmbedNode({
           target={normalizedData.target}
           sourceItemId={sourceItemId}
           mode="readonly"
-          renderSidebarItem={(item) => <SidebarItemPreviewContent item={item} />}
+          SidebarItemRenderer={SidebarItemPreviewRenderer}
         />
       </div>
     </CanvasPreviewNodeFrame>
   )
+}
+
+function SidebarItemPreviewRenderer({ item }: { item: AnySidebarItemWithContent }) {
+  return <SidebarItemPreviewContent item={item} />
 }

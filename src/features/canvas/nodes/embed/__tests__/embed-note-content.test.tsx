@@ -4,6 +4,8 @@ import { EmbedNoteContent } from '../embed-note-content'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type * as ReactModule from 'react'
+import type * as BlockNoteContextMenuModule from '~/features/editor/hooks/useBlockNoteContextMenu'
+import type * as BlockShareMenuModule from '~/features/sharing/contexts/useBlockShareMenu'
 import type { ReactNode, Ref } from 'react'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
@@ -19,6 +21,12 @@ vi.mock('../../shared/use-blocknote-activation-lifecycle', () => ({
 
 vi.mock('~/features/editor/components/note-content', async () => {
   const React = await vi.importActual<typeof ReactModule>('react')
+  const { BlockNoteContextMenuContext } = await vi.importActual<typeof BlockNoteContextMenuModule>(
+    '~/features/editor/hooks/useBlockNoteContextMenu',
+  )
+  const { useBlockShareMenu } = await vi.importActual<typeof BlockShareMenuModule>(
+    '~/features/sharing/contexts/useBlockShareMenu',
+  )
 
   return {
     NoteContent: ({
@@ -30,7 +38,13 @@ vi.mock('~/features/editor/components/note-content', async () => {
     }) => {
       const onEditorChangeRef = React.useRef(onEditorChange)
       onEditorChangeRef.current = onEditorChange
-      noteContentSpy(props)
+      const blockShareMenu = useBlockShareMenu()
+      const blockNoteContextMenu = React.useContext(BlockNoteContextMenuContext)
+      noteContentSpy({
+        ...props,
+        blockNoteContextMenuAvailable: blockNoteContextMenu !== null,
+        blockShareMenuAvailable: typeof blockShareMenu.open === 'function',
+      })
       React.useEffect(() => {
         onEditorChangeRef.current?.(mockEditor, null)
         return () => onEditorChangeRef.current?.(null, null)
@@ -75,6 +89,12 @@ describe('EmbedNoteContent', () => {
 
     expect(screen.getByTestId('embed-note-content-editor')).toBeInTheDocument()
     expect(screen.getByTestId('embed-note-content-wrapper')).toHaveClass('nowheel')
+    expect(noteContentSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blockNoteContextMenuAvailable: true,
+        blockShareMenuAvailable: true,
+      }),
+    )
     expect(mockUseBlockNoteActivationLifecycle).toHaveBeenCalledWith(
       expect.objectContaining({
         editable: true,
