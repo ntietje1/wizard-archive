@@ -2,9 +2,9 @@ import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { resolveAssetsFolderId } from '../../utils/assets-folder-resolver'
+import { resolveAssetsFolderId } from '~/features/filesystem/filesystem-assets-folder-resolver'
 import { testId } from '~/test/helpers/test-id'
-import { useAssetsFolder } from '../use-assets-folder'
+import { useAssetsFolder } from '~/features/filesystem/filesystem-assets-folder'
 
 type ResolveAssetsFolderInput = Parameters<typeof resolveAssetsFolderId>[0]
 type AssetsFolderItem = ResolveAssetsFolderInput['rootItems'][number]

@@ -1,5 +1,5 @@
 import { useSingleMediaFileUpload } from '~/features/file-upload/hooks/useSingleMediaFileUpload'
-import { useAssetsFolder } from './use-assets-folder'
+import { useAssetsFolder } from '~/features/filesystem/filesystem-assets-folder'
 
 export function useEmbedUpload() {
   const { uploadSingleMediaFile } = useSingleMediaFileUpload()

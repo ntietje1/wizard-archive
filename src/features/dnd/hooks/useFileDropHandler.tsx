@@ -27,7 +27,7 @@ import {
 } from '~/features/file-upload/utils/upload-toast'
 import { useSingleMediaFileUpload } from '~/features/file-upload/hooks/useSingleMediaFileUpload'
 import { useCreateNote } from '~/features/notes/hooks/useCreateNote'
-import { useAssetsFolder } from '~/features/embeds/hooks/use-assets-folder'
+import { useAssetsFolder } from '~/features/filesystem/filesystem-assets-folder'
 import type { FileDropDestination, FileDropOptions } from '~/features/dnd/types'
 
 interface UploadSingleFileOptions {

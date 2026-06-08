@@ -2,7 +2,7 @@ import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSyst
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarItemsCache } from '~/features/sidebar/hooks/useSidebarItemsCache'
 import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/contexts/sidebar-items-context'
-import { resolveAssetsFolderId } from '~/features/embeds/utils/assets-folder-resolver'
+import { resolveAssetsFolderId } from '~/features/filesystem/filesystem-assets-folder-resolver'
 
 export function useAssetsFolder() {
   const activeItems = useActiveSidebarItems()
