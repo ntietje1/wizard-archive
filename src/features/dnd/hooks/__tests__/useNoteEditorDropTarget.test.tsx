@@ -127,6 +127,7 @@ describe('useNoteEditorDropTarget', () => {
         {
           type: 'embed',
           props: {
+            previewWidth: 480,
             targetKind: 'sidebarItem',
             sidebarItemId: dragged._id,
           },
@@ -171,6 +172,7 @@ describe('useNoteEditorDropTarget', () => {
         {
           type: 'embed',
           props: {
+            previewWidth: 480,
             targetKind: 'sidebarItem',
             sidebarItemId: uploadedId,
           },

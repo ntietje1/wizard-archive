@@ -1,6 +1,7 @@
 import { Paperclip } from 'lucide-react'
 import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
+import { DEFAULT_NOTE_EMBED_PREVIEW_WIDTH } from '../embed-block/embed-block-targets'
 
 export function createEmbedSlashMenuItem(
   editor: CustomBlockNoteEditor,
@@ -13,7 +14,12 @@ export function createEmbedSlashMenuItem(
     onItemClick: () => {
       const currentBlock = editor.getTextCursorPosition().block
       editor.insertBlocks(
-        [{ type: 'embed', props: { targetKind: 'empty' } }],
+        [
+          {
+            type: 'embed',
+            props: { targetKind: 'empty', previewWidth: DEFAULT_NOTE_EMBED_PREVIEW_WIDTH },
+          },
+        ],
         currentBlock,
         'after',
       )

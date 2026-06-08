@@ -198,11 +198,18 @@ export function PdfFileViewer({ pdfUrl, onFirstPageAspectRatio }: PdfFileViewerP
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-0 bg-background flex flex-col">
+    <div
+      ref={containerRef}
+      data-testid="pdf-file-viewer"
+      className="relative flex h-full min-h-0 w-full min-w-full flex-col bg-background"
+    >
       {documentState.status === 'loading' && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <LoadingSpinner size="lg" />
-        </div>
+        <output
+          aria-label="Loading PDF"
+          className="absolute inset-0 z-10 flex h-full w-full min-w-full items-center justify-center"
+        >
+          <LoadingSpinner size="lg" aria-label="Loading PDF indicator" />
+        </output>
       )}
       {numPages > 0 && (
         <PdfToolbar
@@ -217,6 +224,7 @@ export function PdfFileViewer({ pdfUrl, onFirstPageAspectRatio }: PdfFileViewerP
       )}
       <ScrollArea
         className="flex-1 min-h-0"
+        contentClassName="min-w-full"
         scrollOrientation="both"
         viewportRef={scrollViewportRef}
       >

@@ -113,6 +113,7 @@ const embedSharedPropsSchema = {
   backgroundColor: z.string().optional(),
   textAlignment: textAlignmentSchema,
   previewWidth: z.number().positive().optional(),
+  previewAspectRatio: z.number().positive().optional(),
 }
 
 const emptyEmbedPropsSchema = z.strictObject({

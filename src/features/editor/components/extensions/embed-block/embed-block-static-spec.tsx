@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client'
 import { embedBlockConfig } from '../../../../../../shared/editor-blocks/editor-blocknote-spec-factory'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
 import { cn } from '~/features/shadcn/lib/utils'
-import { embedTargetFromBlockProps } from './embed-block-targets'
+import {
+  DEFAULT_NOTE_EMBED_PREVIEW_WIDTH,
+  embedTargetFromBlockProps,
+} from './embed-block-targets'
 import type { Id } from 'convex/_generated/dataModel'
 import type { NoteEmbedBlockProps } from './embed-block-targets'
 import { SidebarItemPreviewRenderer } from './sidebar-item-preview-renderer'
@@ -14,7 +17,10 @@ export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | nu
       const dom = document.createElement('section')
       const reactRootElement = document.createElement('div')
       const target = embedTargetFromBlockProps(block.props as NoteEmbedBlockProps)
-      const width = positiveNumber(block.props.previewWidth)
+      const width =
+        positiveNumber(block.props.previewWidth) ??
+        (target.kind !== 'empty' ? DEFAULT_NOTE_EMBED_PREVIEW_WIDTH : undefined)
+      const aspectRatio = positiveNumber(block.props.previewAspectRatio)
       const root = createRoot(reactRootElement)
 
       dom.className = cn(
@@ -26,7 +32,10 @@ export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | nu
       dom.append(reactRootElement)
 
       root.render(
-        <div className="min-h-36">
+        <div
+          className="min-h-36 w-full min-w-full overflow-hidden"
+          style={aspectRatio ? { aspectRatio: `${aspectRatio} / 1` } : undefined}
+        >
           <EmbedContent
             target={target}
             sourceItemId={sourceNoteId}

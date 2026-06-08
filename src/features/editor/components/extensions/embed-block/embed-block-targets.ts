@@ -9,7 +9,10 @@ export type NoteEmbedBlockProps = {
   backgroundColor?: string
   textAlignment?: 'left' | 'center' | 'right' | 'justify'
   previewWidth?: number
+  previewAspectRatio?: number
 }
+
+export const DEFAULT_NOTE_EMBED_PREVIEW_WIDTH = 480
 
 export function embedTargetFromBlockProps(props: NoteEmbedBlockProps): EmbedTarget {
   if (props.targetKind === 'sidebarItem') {
@@ -47,6 +50,15 @@ export function blockPropsFromEmbedTarget(target: EmbedTarget) {
         url: target.url,
         ...(target.name ? { name: target.name } : {}),
       }
+  }
+}
+
+export function blockPropsFromEmbedTargetWithDefaultPreview(target: EmbedTarget) {
+  if (target.kind === 'empty') return blockPropsFromEmbedTarget(target)
+
+  return {
+    previewWidth: DEFAULT_NOTE_EMBED_PREVIEW_WIDTH,
+    ...blockPropsFromEmbedTarget(target),
   }
 }
 

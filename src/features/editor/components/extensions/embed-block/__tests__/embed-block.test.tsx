@@ -149,6 +149,7 @@ describe('NoteEmbedBlockView', () => {
         {
           ...block,
           props: {
+            previewWidth: 480,
             targetKind: 'externalUrl',
             url: 'https://example.com/audio.mp3',
             name: 'audio.mp3',
@@ -231,6 +232,7 @@ describe('NoteEmbedBlockView', () => {
         {
           ...block,
           props: {
+            previewWidth: 480,
             targetKind: 'sidebarItem',
             sidebarItemId: 'file-1',
           },
@@ -265,6 +267,7 @@ describe('NoteEmbedBlockView', () => {
         {
           ...block,
           props: {
+            previewWidth: 480,
             targetKind: 'sidebarItem',
             sidebarItemId: 'map-1',
           },
@@ -316,6 +319,66 @@ describe('NoteEmbedBlockView', () => {
     expect(
       screen.getByRole('button', { name: 'Resize bottom-right selection corner' }),
     ).toBeInTheDocument()
+  })
+
+  it('reserves a known intrinsic aspect ratio before media finishes rendering', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/bestiary.pdf',
+        name: 'Bestiary',
+        previewWidth: 300,
+        previewAspectRatio: 0.75,
+      },
+    }
+
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const body = screen
+      .getByTestId('note-embed-block')
+      .querySelector('[data-note-embed-body="true"]')
+    expect(body).toBeInstanceOf(HTMLElement)
+    expect((body as HTMLElement).style.aspectRatio).toBe('0.75 / 1')
+  })
+
+  it('persists reported intrinsic aspect ratios for stable refresh layout', async () => {
+    const user = userEvent.setup()
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/map.png',
+        name: 'Map',
+        previewWidth: 300,
+      },
+    }
+
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'mock aspect ratio' }))
+
+    expect(editor.updateBlock).toHaveBeenCalledWith(block, {
+      props: {
+        previewAspectRatio: 16 / 9,
+      },
+    })
   })
 
   it('lets embedded media controls handle initial pointer interaction before embed selection', async () => {

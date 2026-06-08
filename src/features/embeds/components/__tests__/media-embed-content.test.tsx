@@ -312,6 +312,8 @@ describe('ExternalUrlEmbedContent', () => {
       />,
     )
 
+    expect(onMediaLayout).not.toHaveBeenCalled()
+
     fireEvent.click(await screen.findByTestId('pdf-viewer'))
 
     expect(onMediaLayout).toHaveBeenLastCalledWith({

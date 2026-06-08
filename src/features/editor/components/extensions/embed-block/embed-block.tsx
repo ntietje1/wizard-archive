@@ -6,6 +6,7 @@ import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react'
 import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
+import { EmbedLoadingState } from '~/features/embeds/components/embed-loading-state'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -15,7 +16,11 @@ import {
 } from 'shared/resize/resizeHandleDescriptors'
 import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
 import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
-import { blockPropsFromEmbedTarget, embedTargetFromBlockProps } from './embed-block-targets'
+import {
+  DEFAULT_NOTE_EMBED_PREVIEW_WIDTH,
+  blockPropsFromEmbedTarget,
+  embedTargetFromBlockProps,
+} from './embed-block-targets'
 import { getNoteEmbedResizeCursor, startNoteEmbedResizeSession } from './note-embed-resize'
 import type { NoteEmbedResizeHandle } from './note-embed-resize'
 import type { NoteEmbedBlockProps } from './embed-block-targets'
@@ -59,14 +64,21 @@ export function NoteEmbedBlockView({
   const dragCleanupRef = useRef<(() => void) | null>(null)
   const mediaControlDragSuppressionRef = useRef(false)
   const mediaControlDragSuppressionCleanupRef = useRef<(() => void) | null>(null)
-  const [mediaLayout, setMediaLayout] = useState<EmbedMediaLayout | null>(null)
   const [selected, setSelected] = useState(false)
   const blockProps = block.props as NoteEmbedBlockProps
+  const [mediaLayout, setMediaLayout] = useState<EmbedMediaLayout | null>(() =>
+    getInitialNoteEmbedMediaLayout(blockProps),
+  )
   const target = embedTargetFromBlockProps(blockProps)
+  const layoutSeedKey = getNoteEmbedLayoutSeedKey(blockProps)
+  const layoutSeedKeyRef = useRef(layoutSeedKey)
 
   const setTarget = (nextTarget: EmbedTarget) => {
     const nextProps = {
       ...getSharedEmbedBlockProps(blockProps),
+      ...(nextTarget.kind !== 'empty' && !positiveNumber(blockProps.previewWidth)
+        ? { previewWidth: DEFAULT_NOTE_EMBED_PREVIEW_WIDTH }
+        : {}),
       ...blockPropsFromEmbedTarget(nextTarget),
     }
 
@@ -81,7 +93,29 @@ export function NoteEmbedBlockView({
     )
   }
 
-  const width = positiveNumber(blockProps.previewWidth)
+  const width =
+    positiveNumber(blockProps.previewWidth) ??
+    (target.kind !== 'empty' ? DEFAULT_NOTE_EMBED_PREVIEW_WIDTH : undefined)
+
+  const handleMediaLayout = (layout: EmbedMediaLayout) => {
+    setMediaLayout(layout)
+    if (!editable) return
+
+    const aspectRatio = getNoteEmbedAspectRatio(layout)
+    if (!aspectRatio || blockProps.previewAspectRatio === aspectRatio) return
+
+    editor.updateBlock(block, {
+      props: {
+        previewAspectRatio: aspectRatio,
+      },
+    })
+  }
+
+  useEffect(() => {
+    if (layoutSeedKeyRef.current === layoutSeedKey) return
+    layoutSeedKeyRef.current = layoutSeedKey
+    setMediaLayout(getInitialNoteEmbedMediaLayout(blockProps))
+  }, [blockProps, layoutSeedKey])
 
   useEffect(() => {
     if (!selected) return
@@ -217,7 +251,7 @@ export function NoteEmbedBlockView({
             rootRef={rootRef}
             sourceNoteId={sourceNoteId}
             target={target}
-            onMediaLayout={setMediaLayout}
+            onMediaLayout={handleMediaLayout}
             setTarget={setTarget}
           />
         ) : (
@@ -225,7 +259,7 @@ export function NoteEmbedBlockView({
             mediaLayout={mediaLayout}
             sourceNoteId={sourceNoteId}
             target={target}
-            onMediaLayout={setMediaLayout}
+            onMediaLayout={handleMediaLayout}
           />
         )}
       </div>
@@ -271,7 +305,7 @@ function ReadOnlyNoteEmbedBlockBody({
       className={getNoteEmbedBodyClassName(mediaLayout)}
       style={getNoteEmbedBodyStyle(mediaLayout)}
     >
-      <Suspense fallback={<div className="min-h-36" />}>
+      <Suspense fallback={<EmbedLoadingState />}>
         <EmbedContent
           target={target}
           sourceItemId={sourceNoteId}
@@ -316,7 +350,7 @@ function EditableNoteEmbedBlockBody({
         className={getNoteEmbedBodyClassName(mediaLayout)}
         style={getNoteEmbedBodyStyle(mediaLayout)}
       >
-        <Suspense fallback={<div className="min-h-36" />}>
+        <Suspense fallback={<EmbedLoadingState />}>
           <EmbedContent
             target={target}
             sourceItemId={sourceNoteId}
@@ -490,8 +524,25 @@ function getNoteEmbedAspectRatio(mediaLayout: EmbedMediaLayout | null) {
   return null
 }
 
+function getInitialNoteEmbedMediaLayout(props: NoteEmbedBlockProps): EmbedMediaLayout | null {
+  const aspectRatio = positiveNumber(props.previewAspectRatio)
+  return aspectRatio ? { kind: 'intrinsicAspectRatio', aspectRatio } : null
+}
+
+function getNoteEmbedLayoutSeedKey(props: NoteEmbedBlockProps) {
+  return [
+    props.targetKind ?? 'empty',
+    props.sidebarItemId ?? '',
+    props.url ?? '',
+    props.previewAspectRatio ?? '',
+  ].join(':')
+}
+
 function getNoteEmbedBodyClassName(mediaLayout: EmbedMediaLayout | null) {
-  return cn('w-full', mediaLayout?.kind === 'fixedHeight' ? 'h-auto' : 'min-h-36')
+  return cn(
+    'w-full min-w-full overflow-hidden',
+    mediaLayout?.kind === 'fixedHeight' ? 'h-auto' : 'min-h-36',
+  )
 }
 
 function getNoteEmbedBodyStyle(mediaLayout: EmbedMediaLayout | null): CSSProperties | undefined {
@@ -500,7 +551,7 @@ function getNoteEmbedBodyStyle(mediaLayout: EmbedMediaLayout | null): CSSPropert
   }
 
   const aspectRatio = getNoteEmbedAspectRatio(mediaLayout)
-  return aspectRatio ? { aspectRatio } : undefined
+  return aspectRatio ? { aspectRatio: `${aspectRatio} / 1` } : undefined
 }
 
 function isNoteEmbedResizeHandleAllowed(

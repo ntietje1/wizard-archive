@@ -317,6 +317,53 @@ describe('persistBlocks', () => {
     })
   })
 
+  it('persists embed preview aspect ratios from canonical Yjs updates', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Embed Aspect Ratio Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: testBlockNoteId('embed-block-1'),
+          type: 'embed',
+          props: {
+            targetKind: 'externalUrl',
+            name: 'Preview',
+            url: 'https://example.com/document.pdf',
+            previewWidth: 320,
+            previewAspectRatio: 0.772727,
+          },
+          children: [],
+        },
+      ]),
+    })
+
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+    })
+
+    await t.run(async (dbCtx) => {
+      const block = await dbCtx.db
+        .query('blocks')
+        .filter((q) => q.eq(q.field('blockNoteId'), testBlockNoteId('embed-block-1')))
+        .first()
+
+      expect(block?.props).toMatchObject({
+        previewAspectRatio: 0.772727,
+        previewWidth: 320,
+      })
+    })
+  })
+
   it('rebuilds extracted noteValues when inline values are persisted', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)

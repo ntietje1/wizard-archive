@@ -61,6 +61,7 @@ export const embedBlockConfig = {
       values: ['left', 'center', 'right', 'justify'] as const,
     },
     previewWidth: { default: undefined, type: 'number' },
+    previewAspectRatio: { default: undefined, type: 'number' },
   },
   content: 'none',
 } as const

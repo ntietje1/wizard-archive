@@ -1,10 +1,10 @@
 import { ClientOnly } from '@tanstack/react-router'
 import { Maximize2, Pause, Play, Volume2, VolumeX } from 'lucide-react'
 import { Suspense, lazy, useEffect, useLayoutEffect, useReducer, useRef } from 'react'
-import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent } from '~/features/shadcn/components/popover'
 import { cn } from '~/features/shadcn/lib/utils'
+import { EmbedLoadingState } from './embed-loading-state'
 import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK, getIntrinsicAspectRatio } from '../utils/embed-media'
 import type {
   CSSProperties,
@@ -25,11 +25,7 @@ type MediaEmbedRendererProps = {
   renderUnknown: () => ReactNode
 }
 
-const pdfFallback = (
-  <div className="flex h-full w-full items-center justify-center">
-    <LoadingSpinner size="lg" />
-  </div>
-)
+const pdfFallback = <EmbedLoadingState label="Loading PDF" />
 
 type MediaControlsState = {
   playing: boolean
@@ -92,12 +88,6 @@ export function MediaEmbedRenderer({
   const onMediaLayoutRef = useRef(onMediaLayout)
   const sanitizedSourceUrl = sanitizeMediaSourceUrl(sourceUrl)
   onMediaLayoutRef.current = onMediaLayout
-
-  useLayoutEffect(() => {
-    if (kind !== 'audio') {
-      onMediaLayoutRef.current?.({ kind: 'intrinsicAspectRatio', aspectRatio: null })
-    }
-  }, [kind, sourceUrl])
 
   if (!sanitizedSourceUrl) return renderUnknown()
 

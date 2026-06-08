@@ -142,6 +142,26 @@ describe('EmbedContent', () => {
     expect(screen.getByText('Folder A')).toBeInTheDocument()
   })
 
+  it('renders loading sidebar item embeds as stable loading placeholders', () => {
+    useSidebarItemByIdMock.mockReturnValue({ data: null, isLoading: true, error: null })
+    useSidebarItemAvailabilityStateMock.mockReturnValue({
+      status: 'loading',
+      label: 'Map PDF',
+    })
+
+    render(
+      <EmbedContent
+        target={{ kind: 'sidebarItem', sidebarItemId: 'file-a' as Id<'sidebarItems'> }}
+        sourceItemId={null}
+        mode="readonly"
+        SidebarItemRenderer={SidebarItemNameRenderer}
+      />,
+    )
+
+    expect(screen.getByRole('status', { name: 'Loading Map PDF' })).toBeInTheDocument()
+    expect(screen.queryByText('Embedded item unavailable')).not.toBeInTheDocument()
+  })
+
   it('does not remount sidebar item content when the render callback identity changes', () => {
     const item = {
       _id: 'canvas-a',

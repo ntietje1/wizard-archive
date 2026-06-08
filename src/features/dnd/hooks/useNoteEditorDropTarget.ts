@@ -8,7 +8,7 @@ import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getMinDisambiguationPath } from 'shared/links/resolution'
 import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { registerExternalFileDropExecutor } from '~/features/dnd/utils/external-file-drop-command'
-import { blockPropsFromEmbedTarget } from '~/features/editor/components/extensions/embed-block/embed-block-targets'
+import { blockPropsFromEmbedTargetWithDefaultPreview } from '~/features/editor/components/extensions/embed-block/embed-block-targets'
 import { sidebarItemEmbedTarget } from '~/features/embeds/utils/embed-targets'
 import { useEmbedUpload } from '~/features/embeds/hooks/use-embed-upload'
 import { handleError } from '~/shared/utils/logger'
@@ -44,7 +44,7 @@ function insertSidebarItemEmbedBlocks(
   editor.insertBlocks(
     sidebarItemIds.map((sidebarItemId) => ({
       type: 'embed' as const,
-      props: blockPropsFromEmbedTarget(sidebarItemEmbedTarget(sidebarItemId)),
+      props: blockPropsFromEmbedTargetWithDefaultPreview(sidebarItemEmbedTarget(sidebarItemId)),
     })),
     referenceBlock,
     'after',

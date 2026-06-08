@@ -9,6 +9,7 @@ import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useS
 import { EmbedAncestryProvider } from '../context/embed-render-ancestry'
 import { useEmbedAncestry } from '../context/embed-render-ancestry-context'
 import { EmbedEmptyState } from './embed-empty-state'
+import { EmbedLoadingState } from './embed-loading-state'
 import { EmbedUnavailable } from './embed-unavailable'
 import { ExternalUrlEmbedContent } from './external-url-embed-content'
 import { FileMediaEmbedContent } from './file-media-embed-content'
@@ -203,7 +204,7 @@ function ResolvedSidebarItemEmbedContent({
   }
 
   if (itemState.status === 'loading') {
-    return <EmbedUnavailable reason="missing" label={itemState.label} />
+    return <EmbedLoadingState label={`Loading ${itemState.label}`} />
   }
 
   const reason =

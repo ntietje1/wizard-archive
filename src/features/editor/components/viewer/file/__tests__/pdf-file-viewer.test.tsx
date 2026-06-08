@@ -73,6 +73,13 @@ describe('PdfFileViewer', () => {
     expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
   })
 
+  it('reserves full embed width while the PDF document is loading', () => {
+    render(<PdfFileViewer pdfUrl="https://example.convex.cloud/api/storage/file-1" />)
+
+    expect(screen.getByTestId('pdf-file-viewer')).toHaveClass('w-full', 'min-w-full')
+    expect(screen.getByRole('status', { name: 'Loading PDF' })).toHaveClass('w-full', 'min-w-full')
+  })
+
   it('resets document state when the PDF viewer is remounted for a new URL', () => {
     const { rerender } = render(
       <PdfFileViewer key="file-1" pdfUrl="https://example.convex.cloud/api/storage/file-1" />,
@@ -84,7 +91,7 @@ describe('PdfFileViewer', () => {
     )
 
     expect(screen.queryByText('Failed to load PDF')).not.toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading PDF' })).toBeInTheDocument()
   })
 
   it('reports the first PDF page aspect ratio', () => {

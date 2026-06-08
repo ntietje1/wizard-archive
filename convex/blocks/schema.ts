@@ -123,6 +123,7 @@ const embedSharedPropsValidator = {
   backgroundColor: v.optional(v.string()),
   textAlignment: v.optional(textAlignmentValidator),
   previewWidth: v.optional(v.number()),
+  previewAspectRatio: v.optional(v.number()),
 }
 
 const embedPropsValidator = v.union(

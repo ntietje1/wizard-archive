@@ -12,7 +12,7 @@ describe('embed slash menu item', () => {
     createEmbedSlashMenuItem(editor as never).onItemClick?.()
 
     expect(editor.insertBlocks).toHaveBeenCalledWith(
-      [{ type: 'embed', props: { targetKind: 'empty' } }],
+      [{ type: 'embed', props: { targetKind: 'empty', previewWidth: 480 } }],
       currentBlock,
       'after',
     )
