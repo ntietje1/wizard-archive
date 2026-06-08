@@ -1,8 +1,8 @@
-import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
+import { useSingleMediaFileUpload } from '~/features/file-upload/hooks/useSingleMediaFileUpload'
 import { useAssetsFolder } from './use-assets-folder'
 
 export function useEmbedUpload() {
-  const { uploadSingleFile } = useFileDropHandler()
+  const { uploadSingleMediaFile } = useSingleMediaFileUpload()
   const { error, isLoading, resolveAssetsFolderId } = useAssetsFolder()
 
   const uploadEmbedFile = async (file: File) => {
@@ -13,7 +13,7 @@ export function useEmbedUpload() {
       throw new Error('Cannot upload embeds while sidebar items failed to load')
     }
     const assetsFolderId = await resolveAssetsFolderId()
-    return await uploadSingleFile(file, assetsFolderId, {
+    return await uploadSingleMediaFile(file, assetsFolderId, {
       navigate: false,
     })
   }
