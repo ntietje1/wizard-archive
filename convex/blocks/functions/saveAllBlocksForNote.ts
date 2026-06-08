@@ -144,7 +144,7 @@ async function validateSidebarItemEmbedTargets(
 ) {
   const targetIds = new Set<Id<'sidebarItems'>>()
   for (const block of flatBlocks) {
-    const targetId = getSidebarItemEmbedTargetId(block)
+    const targetId = getSidebarItemEmbedTargetId(ctx, block)
     if (!targetId) continue
     if (targetId === noteId) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'A note cannot embed itself')
@@ -154,13 +154,22 @@ async function validateSidebarItemEmbedTargets(
 
   await asyncMap([...targetIds], async (targetId) => {
     const item = await ctx.db.get(targetId)
-    if (!item || item.campaignId !== campaignId || !isActiveSidebarItem(item)) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Invalid embed target')
+    if (!item) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target not found')
+    }
+    if (item.campaignId !== campaignId) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target belongs to different campaign')
+    }
+    if (!isActiveSidebarItem(item)) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target is not an active sidebar item')
     }
   })
 }
 
-function getSidebarItemEmbedTargetId(block: PersistedFlatBlock): Id<'sidebarItems'> | null {
+function getSidebarItemEmbedTargetId(
+  ctx: Pick<MutationCtx, 'db'>,
+  block: PersistedFlatBlock,
+): Id<'sidebarItems'> | null {
   if (block.type !== 'embed') return null
   const props = block.props
   if (
@@ -171,7 +180,14 @@ function getSidebarItemEmbedTargetId(block: PersistedFlatBlock): Id<'sidebarItem
     'sidebarItemId' in props &&
     typeof props.sidebarItemId === 'string'
   ) {
-    return props.sidebarItemId as Id<'sidebarItems'>
+    const sidebarItemId = ctx.db.normalizeId('sidebarItems', props.sidebarItemId)
+    if (!sidebarItemId) {
+      throwClientError(
+        ERROR_CODE.VALIDATION_FAILED,
+        `Invalid embed target sidebarItemId for block ${block.blockNoteId}`,
+      )
+    }
+    return sidebarItemId
   }
   return null
 }

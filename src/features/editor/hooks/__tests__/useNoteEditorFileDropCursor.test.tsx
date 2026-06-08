@@ -45,6 +45,7 @@ async function flushAnimationFrame() {
 describe('useNoteEditorFileDropCursor', () => {
   afterEach(() => {
     dropCursor.mockClear()
+    vi.restoreAllMocks()
   })
 
   it('registers the native ProseMirror dropcursor plugin for editable note editors', async () => {
@@ -89,12 +90,12 @@ describe('useNoteEditorFileDropCursor', () => {
 
   it('stops polling when the ProseMirror view never mounts', () => {
     const callbacks: Array<FrameRequestCallback> = []
-    const requestAnimationFrameSpy = vi
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation((callback: FrameRequestCallback) => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(
+      (callback: FrameRequestCallback) => {
         callbacks.push(callback)
         return callbacks.length
-      })
+      },
+    )
     const cancelAnimationFrameSpy = vi
       .spyOn(window, 'cancelAnimationFrame')
       .mockImplementation(() => undefined)
@@ -110,7 +111,29 @@ describe('useNoteEditorFileDropCursor', () => {
     expect(dropCursor).not.toHaveBeenCalled()
     expect(tiptapEditor.registerPlugin).not.toHaveBeenCalled()
 
-    requestAnimationFrameSpy.mockRestore()
-    cancelAnimationFrameSpy.mockRestore()
+    expect(cancelAnimationFrameSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('warns when the ProseMirror view never becomes ready for dropcursor registration', () => {
+    const callbacks: Array<FrameRequestCallback> = []
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation(
+      (callback: FrameRequestCallback) => {
+        callbacks.push(callback)
+        return callbacks.length
+      },
+    )
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { editor } = createUnmountedEditor()
+
+    renderHook(() => useNoteEditorFileDropCursor(editor, true))
+    while (callbacks.length > 0) {
+      const callback = callbacks.shift()
+      callback?.(0)
+    }
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Drop cursor registration failed after 120 attempts'),
+    )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('editorId=unavailable'))
   })
 })

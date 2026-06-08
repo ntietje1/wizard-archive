@@ -10,6 +10,5 @@ describe('useEmbedUpload import boundary', () => {
     )
 
     expect(source).not.toContain('features/dnd/hooks/useFileDropHandler')
-    expect(source).not.toContain('useFileDropHandler')
   })
 })

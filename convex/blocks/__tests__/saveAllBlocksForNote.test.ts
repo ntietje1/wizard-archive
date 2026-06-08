@@ -347,6 +347,27 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
   })
 
+  it('rejects malformed sidebar item embed target ids before database lookup', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Malformed Embed Target Guard',
+    })
+
+    await expect(
+      t.run(async (dbCtx) => {
+        return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
+          noteId,
+          content: [
+            testBlock('malformed-embed', {
+              type: 'embed',
+              props: { targetKind: 'sidebarItem', sidebarItemId: 'not-a-convex-id' },
+            }),
+          ],
+        })
+      }),
+    ).rejects.toThrow(/Invalid embed target sidebarItemId for block/i)
+  })
+
   it('rejects sidebar item embeds that target missing, inactive, or other-campaign items', async () => {
     const ctx = await setupCampaignContext(t)
     const otherCtx = await setupCampaignContext(t)
@@ -356,6 +377,14 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { canvasId: activeCanvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Active Canvas',
     })
+    const { canvasId: deletedCanvasId } = await createCanvas(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Deleted Canvas',
+      },
+    )
     const { canvasId: inactiveCanvasId } = await createCanvas(
       t,
       ctx.campaignId,
@@ -378,8 +407,11 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       targetParentId: null,
       action: 'trash',
     })
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.delete(deletedCanvasId)
+    })
 
-    async function expectRejectedTarget(sidebarItemId: Id<'sidebarItems'>) {
+    async function expectRejectedTarget(sidebarItemId: Id<'sidebarItems'>, message: RegExp) {
       await expect(
         t.run(async (dbCtx) => {
           return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
@@ -392,12 +424,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
             ],
           })
         }),
-      ).rejects.toThrow(/invalid embed target/i)
+      ).rejects.toThrow(message)
     }
 
-    await expectRejectedTarget('sidebarItems:missing-target' as Id<'sidebarItems'>)
-    await expectRejectedTarget(inactiveCanvasId)
-    await expectRejectedTarget(otherCampaignCanvasId)
+    await expectRejectedTarget(deletedCanvasId, /Embed target not found/i)
+    await expectRejectedTarget(inactiveCanvasId, /Embed target is not an active sidebar item/i)
+    await expectRejectedTarget(otherCampaignCanvasId, /Embed target belongs to different campaign/i)
 
     const persistedBlocks = await t.run(async (dbCtx) => {
       return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {

@@ -36,6 +36,9 @@ function registerNoteEditorDropCursorPlugin(tiptapEditor: TiptapEditorLike | und
     if (!view) {
       attempts += 1
       if (attempts >= MAX_DROP_CURSOR_REGISTRATION_FRAMES) {
+        console.warn(
+          `[useNoteEditorFileDropCursor] Drop cursor registration failed after ${attempts} attempts; editorId=${getEditorDebugId(tiptapEditor)} selector=.bn-editor`,
+        )
         return
       }
       frameId = requestAnimationFrame(registerWhenReady)
@@ -58,6 +61,15 @@ function registerNoteEditorDropCursorPlugin(tiptapEditor: TiptapEditorLike | und
     if (frameId !== null) {
       cancelAnimationFrame(frameId)
     }
+  }
+}
+
+function getEditorDebugId(tiptapEditor: TiptapEditorLike) {
+  try {
+    const dom = tiptapEditor.view?.dom
+    return dom?.id || dom?.getAttribute('data-editor-id') || 'unavailable'
+  } catch {
+    return 'unavailable'
   }
 }
 

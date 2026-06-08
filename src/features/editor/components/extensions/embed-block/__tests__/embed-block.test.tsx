@@ -10,7 +10,6 @@ import {
 } from '~/features/embeds/utils/document-embed-layout'
 import { clearInternalNativeDrag } from '~/features/dnd/utils/internal-native-drag'
 import { getExternalUrlDropTarget } from '~/features/embeds/utils/embed-targets'
-import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 
 const uploadEmbedFileMock = vi.hoisted(() => vi.fn())
 const blockDragStartMock = vi.hoisted(() => vi.fn())
@@ -38,97 +37,15 @@ vi.mock('@blocknote/react', async (importOriginal) => {
   }
 })
 
-vi.mock('~/features/embeds/components/embed-content', () => ({
-  EmbedContent: (props: {
-    target: { kind: string; url?: string; name?: string }
-    mode: 'editable' | 'readonly'
-    onUpload?: () => void
-    onLinkExternal?: () => void
-    onMediaLayout?: (layout: EmbedMediaLayout) => void
-    allowInnerScroll?: boolean
-  }) => (
-    <div>
-      <div
-        data-testid="shared-embed-content"
-        data-kind={props.target.kind}
-        data-mode={props.mode}
-        data-allow-inner-scroll={props.allowInnerScroll ? 'true' : 'false'}
-      >
-        {props.target.name ?? props.target.url ?? props.target.kind}
-      </div>
-      <input type="range" aria-label="mock media slider" data-embed-media-control="true" />
-      {props.onUpload ? <button onClick={props.onUpload}>mock upload</button> : null}
-      {props.onLinkExternal ? <button onClick={props.onLinkExternal}>mock link</button> : null}
-      {props.onMediaLayout ? (
-        <>
-          <button
-            onClick={() =>
-              props.onMediaLayout?.({ kind: 'intrinsicAspectRatio', aspectRatio: 16 / 9 })
-            }
-          >
-            mock aspect ratio
-          </button>
-          <button
-            onClick={() =>
-              props.onMediaLayout?.({
-                kind: 'fixedHeight',
-                height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
-              })
-            }
-          >
-            mock audio layout
-          </button>
-        </>
-      ) : null}
-    </div>
-  ),
-}))
+vi.mock('~/features/embeds/components/embed-content', async () => {
+  const { makeMockEmbedContent } = await import('./mock-embed-content')
+  return { EmbedContent: makeMockEmbedContent() }
+})
 
-vi.mock('~/features/embeds/components/live-embed-content', () => ({
-  LiveEmbedContent: (props: {
-    target: { kind: string; url?: string; name?: string }
-    mode: 'editable' | 'readonly'
-    onUpload?: () => void
-    onLinkExternal?: () => void
-    onMediaLayout?: (layout: EmbedMediaLayout) => void
-    allowInnerScroll?: boolean
-  }) => (
-    <div>
-      <div
-        data-testid="shared-embed-content"
-        data-kind={props.target.kind}
-        data-mode={props.mode}
-        data-allow-inner-scroll={props.allowInnerScroll ? 'true' : 'false'}
-      >
-        {props.target.name ?? props.target.url ?? props.target.kind}
-      </div>
-      <input type="range" aria-label="mock media slider" data-embed-media-control="true" />
-      {props.onUpload ? <button onClick={props.onUpload}>mock upload</button> : null}
-      {props.onLinkExternal ? <button onClick={props.onLinkExternal}>mock link</button> : null}
-      {props.onMediaLayout ? (
-        <>
-          <button
-            onClick={() =>
-              props.onMediaLayout?.({ kind: 'intrinsicAspectRatio', aspectRatio: 16 / 9 })
-            }
-          >
-            mock aspect ratio
-          </button>
-          <button
-            onClick={() =>
-              props.onMediaLayout?.({
-                kind: 'fixedHeight',
-                height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
-              })
-            }
-          >
-            mock audio layout
-          </button>
-        </>
-      ) : null}
-    </div>
-  ),
-}))
+vi.mock('~/features/embeds/components/live-embed-content', async () => {
+  const { makeMockEmbedContent } = await import('./mock-embed-content')
+  return { LiveEmbedContent: makeMockEmbedContent() }
+})
 
 vi.mock('~/features/embeds/hooks/use-embed-upload', () => ({
   useEmbedUpload: () => ({ uploadEmbedFile: uploadEmbedFileMock }),
