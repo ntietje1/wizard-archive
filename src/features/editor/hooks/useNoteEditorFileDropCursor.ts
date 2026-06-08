@@ -46,6 +46,7 @@ function registerNoteEditorDropCursorPlugin(tiptapEditor: TiptapEditorLike | und
     }
 
     registeredEditors.add(tiptapEditor)
+    installEmptyEmbedDropCursorGuard(view)
     const cursorPlugin = dropCursor({
       color: false,
       width: 2,
@@ -62,6 +63,44 @@ function registerNoteEditorDropCursorPlugin(tiptapEditor: TiptapEditorLike | und
       cancelAnimationFrame(frameId)
     }
   }
+}
+
+function installEmptyEmbedDropCursorGuard(view: EditorView) {
+  const embedNodeSpec = view.state.schema.nodes.embed?.spec
+  if (!embedNodeSpec) return
+
+  const existingDisableDropCursor = embedNodeSpec.disableDropCursor
+  embedNodeSpec.disableDropCursor = (editorView, position, event) => {
+    if (isEmptyNoteEmbedDropTargetAtEvent(event, getEventDocument(event))) return true
+    if (typeof existingDisableDropCursor === 'function') {
+      return existingDisableDropCursor(editorView, position, event)
+    }
+    return existingDisableDropCursor === true
+  }
+}
+
+function isEmptyNoteEmbedDropTargetAtEvent(event: DragEvent, eventDocument: Document) {
+  return (
+    isEmptyNoteEmbedDropTarget(event.target) ||
+    isEmptyNoteEmbedDropTarget(getElementAtEventPoint(event, eventDocument))
+  )
+}
+
+function isEmptyNoteEmbedDropTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false
+  return Boolean(
+    target.closest('[data-note-embed-drop-target="true"][data-note-embed-target-kind="empty"]'),
+  )
+}
+
+function getElementAtEventPoint(event: DragEvent, eventDocument: Document) {
+  return eventDocument.elementFromPoint?.(event.clientX, event.clientY) ?? null
+}
+
+function getEventDocument(event: Event) {
+  return event.target instanceof Node && event.target.ownerDocument
+    ? event.target.ownerDocument
+    : document
 }
 
 function getEditorDebugId(tiptapEditor: TiptapEditorLike) {

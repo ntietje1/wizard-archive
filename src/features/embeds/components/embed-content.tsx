@@ -10,6 +10,7 @@ import { EmbedLoadingState } from './embed-loading-state'
 import { EmbedUnavailable } from './embed-unavailable'
 import { ExternalUrlEmbedContent } from './external-url-embed-content'
 import type { EmbedMediaLayoutReporter } from '../utils/embed-media'
+import type { EmbedDropTargetVisualState } from '../hooks/use-embed-drop-target'
 
 type EmbedContentProps = {
   target: EmbedTarget
@@ -19,6 +20,7 @@ type EmbedContentProps = {
   onLinkExternal?: () => void
   onMediaLayout?: EmbedMediaLayoutReporter
   allowInnerScroll?: boolean
+  dropVisualState?: EmbedDropTargetVisualState
   SidebarItemRenderer: SidebarItemEmbedRenderer
   resolvedSidebarItemState?: SidebarItemAvailabilityState
 }
@@ -37,6 +39,7 @@ export function EmbedContent({
   onLinkExternal,
   onMediaLayout,
   allowInnerScroll = true,
+  dropVisualState,
   SidebarItemRenderer,
   resolvedSidebarItemState,
 }: EmbedContentProps) {
@@ -51,6 +54,7 @@ export function EmbedContent({
           onLinkExternal={onLinkExternal}
           onMediaLayout={onMediaLayout}
           allowInnerScroll={allowInnerScroll}
+          dropVisualState={dropVisualState}
           SidebarItemRenderer={SidebarItemRenderer}
           resolvedSidebarItemState={resolvedSidebarItemState}
         />
@@ -67,6 +71,7 @@ export function EmbedContent({
       onLinkExternal={onLinkExternal}
       onMediaLayout={onMediaLayout}
       allowInnerScroll={allowInnerScroll}
+      dropVisualState={dropVisualState}
       SidebarItemRenderer={SidebarItemRenderer}
       resolvedSidebarItemState={resolvedSidebarItemState}
     />
@@ -81,11 +86,19 @@ function EmbedContentInner({
   onLinkExternal,
   onMediaLayout,
   allowInnerScroll = true,
+  dropVisualState,
   SidebarItemRenderer,
   resolvedSidebarItemState,
 }: EmbedContentProps) {
   if (target.kind === 'empty') {
-    return <EmbedEmptyState mode={mode} onUpload={onUpload} onLinkExternal={onLinkExternal} />
+    return (
+      <EmbedEmptyState
+        mode={mode}
+        onUpload={onUpload}
+        onLinkExternal={onLinkExternal}
+        dropVisualState={mode === 'editable' ? dropVisualState : undefined}
+      />
+    )
   }
 
   if (target.kind === 'externalUrl') {

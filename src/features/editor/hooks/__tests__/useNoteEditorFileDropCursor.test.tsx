@@ -10,8 +10,20 @@ vi.mock('@tiptap/pm/dropcursor', () => ({
 }))
 
 function createEditor() {
+  const embedNodeSpec: {
+    disableDropCursor?: unknown
+  } = {}
   const view = {
     dom: document.createElement('div'),
+    state: {
+      schema: {
+        nodes: {
+          embed: {
+            spec: embedNodeSpec,
+          },
+        },
+      },
+    },
   }
   const tiptapEditor = {
     view,
@@ -20,6 +32,7 @@ function createEditor() {
 
   return {
     editor: { _tiptapEditor: tiptapEditor } as unknown as CustomBlockNoteEditor,
+    embedNodeSpec,
     tiptapEditor,
   }
 }
@@ -60,6 +73,38 @@ describe('useNoteEditorFileDropCursor', () => {
       class: 'note-editor-file-drop-cursor',
     })
     expect(tiptapEditor.registerPlugin).toHaveBeenCalledWith(dropCursor.mock.results[0].value)
+  })
+
+  it('disables ProseMirror drop cursors when drag coordinates are over an empty embed block', async () => {
+    const { editor, embedNodeSpec } = createEditor()
+
+    renderHook(() => useNoteEditorFileDropCursor(editor, true))
+    await flushAnimationFrame()
+
+    const emptyEmbed = document.createElement('section')
+    emptyEmbed.setAttribute('data-note-embed-drop-target', 'true')
+    emptyEmbed.setAttribute('data-note-embed-target-kind', 'empty')
+    document.body.appendChild(emptyEmbed)
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint').mockReturnValue(emptyEmbed)
+
+    const dragOver = new Event('dragover', { bubbles: true, cancelable: true })
+    Object.defineProperties(dragOver, {
+      clientX: { value: 12 },
+      clientY: { value: 18 },
+    })
+
+    const disableDropCursor = embedNodeSpec.disableDropCursor as (
+      view: unknown,
+      position: { pos: number; inside: number },
+      event: DragEvent,
+    ) => boolean
+
+    expect(disableDropCursor({}, { pos: 1, inside: 1 }, dragOver as DragEvent)).toBe(true)
+    expect(elementFromPointSpy).toHaveBeenCalledWith(12, 18)
   })
 
   it('does not register a dropcursor for non-editable note editors', async () => {

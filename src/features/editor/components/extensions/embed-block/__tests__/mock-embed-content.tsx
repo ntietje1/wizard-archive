@@ -8,6 +8,10 @@ interface MockEmbedContentProps {
   onLinkExternal?: () => void
   onMediaLayout?: (layout: EmbedMediaLayout) => void
   allowInnerScroll?: boolean
+  dropVisualState?: {
+    isDropTarget: boolean
+    isFileDropTarget: boolean
+  }
 }
 
 export function makeMockEmbedContent() {
@@ -19,6 +23,8 @@ export function makeMockEmbedContent() {
           data-kind={props.target.kind}
           data-mode={props.mode}
           data-allow-inner-scroll={props.allowInnerScroll ? 'true' : 'false'}
+          data-drop-target={props.dropVisualState?.isDropTarget ? 'true' : 'false'}
+          data-file-drop-target={props.dropVisualState?.isFileDropTarget ? 'true' : 'false'}
         >
           {props.target.name ?? props.target.url ?? props.target.kind}
         </div>

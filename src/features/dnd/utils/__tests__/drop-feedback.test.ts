@@ -3,6 +3,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import {
   CANVAS_DROP_ZONE_TYPE,
+  EMPTY_EMBED_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
   SIDEBAR_ROOT_DROP_TYPE,
@@ -170,6 +171,25 @@ describe('resolveDropFeedback', () => {
         },
         planningContext(),
         { noteEditorDropAction: 'embed' },
+      ),
+    ).toEqual({
+      outcome: {
+        type: 'operation',
+        action: 'embed',
+        label: 'Embed item here',
+      },
+    })
+  })
+
+  it('uses embed feedback when hovering an empty embed drop target', () => {
+    const note = createNote()
+    const target = createNote()
+
+    expect(
+      resolveDropFeedback(
+        [note],
+        { type: EMPTY_EMBED_DROP_TYPE, sourceItemId: target._id },
+        planningContext(),
       ),
     ).toEqual({
       outcome: {

@@ -1,16 +1,18 @@
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import { validateEmbedDropTarget } from 'shared/embeds/drop-validation'
 import type { DropOutcome } from './drop-outcome'
 import type { DropPlanningContext } from './drop-planning-context'
 import type { SurfaceBatchDropCommand, SurfaceDropOptions } from './surface-drop-planner'
 import { resolveSurfaceDropCommand } from './surface-drop-planner'
-import { EMPTY_EDITOR_DROP_TYPE } from './drop-target-data'
-import type { SidebarDropData } from './drop-target-data'
+import { EMPTY_EDITOR_DROP_TYPE, EMPTY_EMBED_DROP_TYPE } from './drop-target-data'
+import type { EmptyEmbedDropZoneData, SidebarDropData } from './drop-target-data'
 import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'
 import { assertNever } from '~/shared/utils/utils'
 import {
   resolveFileSystemDropTarget,
   resolveGlobalFileSystemDropCommand,
 } from '~/features/filesystem/filesystem-drop-planner'
+import type { DropRejectionReason } from './drop-rejections'
 
 type DropFeedback = {
   outcome: DropOutcome | null
@@ -34,6 +36,45 @@ function surfaceDropOutcomeAction(
   }
 }
 
+function getEmptyEmbedLabel(count: number) {
+  return count === 1 ? 'Embed item here' : `Embed ${count} items here`
+}
+
+function resolveEmptyEmbedDropFeedback(
+  draggedItems: Array<AnySidebarItem>,
+  dropTarget: EmptyEmbedDropZoneData,
+  ctx: DropPlanningContext,
+): DropFeedback {
+  const rejectedReasons: Array<DropRejectionReason> = []
+  let acceptedCount = 0
+
+  for (const item of draggedItems) {
+    const reason = validateEmbedDropTarget({
+      targetId: dropTarget.sourceItemId,
+      item,
+      campaignId: ctx.campaignId,
+    })
+    if (reason) {
+      rejectedReasons.push(reason)
+      continue
+    }
+    acceptedCount += 1
+  }
+
+  if (acceptedCount === 0) {
+    return { outcome: { type: 'rejection', reason: rejectedReasons[0] ?? 'unexpected_action' } }
+  }
+
+  return {
+    outcome: {
+      type: 'operation',
+      action: 'embed',
+      label: getEmptyEmbedLabel(acceptedCount),
+    },
+    rejectedItemCount: rejectedReasons.length > 0 ? rejectedReasons.length : undefined,
+  }
+}
+
 export function resolveDropFeedback(
   draggedItems: Array<AnySidebarItem> | null | undefined,
   dropTarget: SidebarDropData | null,
@@ -50,6 +91,9 @@ export function resolveDropFeedback(
         label: 'Open in editor',
       },
     }
+  }
+  if (dropTarget.type === EMPTY_EMBED_DROP_TYPE) {
+    return resolveEmptyEmbedDropFeedback(draggedItems, dropTarget, ctx)
   }
 
   const fileSystemTarget = resolveFileSystemDropTarget(dropTarget, ctx)

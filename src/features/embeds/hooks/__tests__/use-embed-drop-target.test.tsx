@@ -1,14 +1,19 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { useRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEmbedDropTarget } from '../use-embed-drop-target'
 import { testId } from '~/test/helpers/test-id'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
+import { EMPTY_EMBED_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
 
 const dropTargetState = vi.hoisted(() => ({
   args: null as null | {
+    element: HTMLElement
+    getData?: () => Record<string, unknown>
     canDrop: (input: { source: { data: Record<string | symbol, unknown> } }) => boolean
+    onDragEnter: (input: { source: { data: Record<string | symbol, unknown> } }) => void
+    onDragLeave: () => void
     onDrop: (input: { source: { data: Record<string | symbol, unknown> } }) => void
   },
 }))
@@ -47,6 +52,10 @@ describe('useEmbedDropTarget', () => {
         source: { data: sidebarDragData(testId<'sidebarItems'>('note-1')) },
       }),
     ).toBe(true)
+    expect(dropTargetState.args!.getData?.()).toEqual({
+      type: EMPTY_EMBED_DROP_TYPE,
+      sourceItemId: testId<'sidebarItems'>('canvas-1'),
+    })
 
     dropTargetState.args!.onDrop({
       source: { data: sidebarDragData(testId<'sidebarItems'>('note-1')) },
@@ -94,6 +103,41 @@ describe('useEmbedDropTarget', () => {
     dropTargetState.args!.onDrop({ source: { data: forgedDragData } })
 
     expect(setTarget).not.toHaveBeenCalled()
+  })
+
+  it('reports valid sidebar item drops as active shared drop target feedback', async () => {
+    renderHookHarness({ sourceItemId: testId<'sidebarItems'>('canvas-1') })
+
+    await waitFor(() => expect(dropTargetState.args).not.toBeNull())
+
+    act(() => {
+      dropTargetState.args!.onDragEnter({
+        source: { data: sidebarDragData(testId<'sidebarItems'>('note-1')) },
+      })
+    })
+
+    expect(screen.getByTestId('drop-target')).toHaveAttribute('data-drop-target', 'true')
+    expect(screen.getByTestId('drop-target')).toHaveAttribute('data-file-drop-target', 'false')
+
+    act(() => {
+      dropTargetState.args!.onDragLeave()
+    })
+
+    expect(screen.getByTestId('drop-target')).toHaveAttribute('data-drop-target', 'false')
+  })
+
+  it('does not report rejected sidebar item drops as active feedback', async () => {
+    renderHookHarness({ sourceItemId: testId<'sidebarItems'>('canvas-1') })
+
+    await waitFor(() => expect(dropTargetState.args).not.toBeNull())
+
+    act(() => {
+      dropTargetState.args!.onDragEnter({
+        source: { data: sidebarDragData(testId<'sidebarItems'>('canvas-1')) },
+      })
+    })
+
+    expect(screen.getByTestId('drop-target')).toHaveAttribute('data-drop-target', 'false')
   })
 
   it('replaces from external URL drops', async () => {
@@ -173,6 +217,35 @@ describe('useEmbedDropTarget', () => {
     })
   })
 
+  it('reports native file drags as active file drop target feedback until drop', async () => {
+    const uploadFile = vi.fn(() => Promise.resolve(testId<'sidebarItems'>('file-1')))
+    const file = new File(['x'], 'image.png', { type: 'image/png' })
+    renderHookHarness({ uploadFile })
+
+    act(() => {
+      dispatchNativeDragEvent('dragenter', {
+        types: ['Files'],
+        files: { item: () => file },
+        getData: () => '',
+      })
+    })
+
+    expect(screen.getByTestId('drop-target')).toHaveAttribute('data-drop-target', 'true')
+    expect(screen.getByTestId('drop-target')).toHaveAttribute('data-file-drop-target', 'true')
+
+    act(() => {
+      dispatchNativeDrop({
+        types: ['Files'],
+        files: { item: () => file },
+        getData: () => '',
+      })
+    })
+
+    await waitFor(() =>
+      expect(screen.getByTestId('drop-target')).toHaveAttribute('data-drop-target', 'false'),
+    )
+  })
+
   it('reports native file upload failures instead of silently keeping the old target', async () => {
     const setTarget = vi.fn(() => Promise.resolve())
     const uploadFile = vi.fn(() => Promise.resolve(null))
@@ -233,14 +306,21 @@ function CanvasEmbedDropTargetHarness({
   uploadFile: (file: File) => Promise<Id<'sidebarItems'> | null>
 }) {
   const ref = useRef<HTMLDivElement | null>(null)
-  useEmbedDropTarget({
+  const dropVisualState = useEmbedDropTarget({
     ref,
     enabled: true,
     sourceItemId,
     setTarget,
     uploadFile,
   })
-  return <div ref={ref} data-testid="drop-target" />
+  return (
+    <div
+      ref={ref}
+      data-testid="drop-target"
+      data-drop-target={dropVisualState.isDropTarget ? 'true' : 'false'}
+      data-file-drop-target={dropVisualState.isFileDropTarget ? 'true' : 'false'}
+    />
+  )
 }
 
 function dispatchNativeDrop(dataTransfer: {
@@ -249,7 +329,19 @@ function dispatchNativeDrop(dataTransfer: {
   dropEffect?: DataTransfer['dropEffect']
   files?: { item: (index: number) => File | null }
 }) {
-  const event = new Event('drop', { bubbles: true, cancelable: true })
+  return dispatchNativeDragEvent('drop', dataTransfer)
+}
+
+function dispatchNativeDragEvent(
+  type: 'dragenter' | 'dragleave' | 'drop',
+  dataTransfer: {
+    types: Array<string>
+    getData: (type: string) => string
+    dropEffect?: DataTransfer['dropEffect']
+    files?: { item: (index: number) => File | null }
+  },
+) {
+  const event = new Event(type, { bubbles: true, cancelable: true })
   const transfer = {
     files: { item: () => null },
     ...dataTransfer,

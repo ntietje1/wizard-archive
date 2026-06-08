@@ -112,6 +112,7 @@ function useNoteYjsUndoShortcutPatch(
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (
+        event.defaultPrevented ||
         !isHistoryShortcut(event) ||
         !editor._tiptapEditor.view.hasFocus() ||
         !isEventInsideNoteSurface(event, surface)

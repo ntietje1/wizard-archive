@@ -229,6 +229,7 @@ export function NoteEmbedBlockView({
       ref={rootRef}
       data-testid="note-embed-block"
       data-note-embed-drop-target="true"
+      data-note-embed-target-kind={target.kind}
       draggable={editable}
       className="note-embed-block allow-motion relative my-2 select-none overflow-visible"
       style={{
@@ -390,7 +391,7 @@ function EditableNoteEmbedBlockBody({
 }) {
   const embedControls = useEditableEmbedTargetControls({ setTarget })
 
-  useEmbedDropTarget({
+  const dropVisualState = useEmbedDropTarget({
     ref: rootRef,
     enabled: true,
     sourceItemId: sourceNoteId,
@@ -414,6 +415,7 @@ function EditableNoteEmbedBlockBody({
             onLinkExternal={embedControls.openLinkDraft}
             allowInnerScroll={allowInnerScroll}
             onMediaLayout={onMediaLayout}
+            dropVisualState={target.kind === 'empty' ? dropVisualState : undefined}
             SidebarItemRenderer={SidebarItemPreviewRenderer}
           />
         </Suspense>
