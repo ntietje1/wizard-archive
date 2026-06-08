@@ -3,9 +3,9 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { EmbedNode } from '../embed-node'
+import { EMBED_NODE_MIN_SIZE } from '../embed-node-size'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
-import { CANVAS_NODE_MIN_SIZE } from '../../shared/canvas-node-resize-constants'
 import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '~/features/embeds/utils/embed-media'
 import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 import { testId } from '~/test/helpers/test-id'
@@ -222,13 +222,13 @@ describe('EmbedNode', () => {
     resizableNodeWrapperSpy.mockReset()
   })
 
-  it('uses the uniform small canvas node resize minimum', () => {
+  it('uses the canvas embed resize minimum', () => {
     renderEmbedNode()
 
     expect(resizableNodeWrapperSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        minHeight: CANVAS_NODE_MIN_SIZE,
-        minWidth: CANVAS_NODE_MIN_SIZE,
+        minHeight: EMBED_NODE_MIN_SIZE.height,
+        minWidth: EMBED_NODE_MIN_SIZE.width,
         nodeType: 'embed',
       }),
     )
@@ -346,10 +346,47 @@ describe('EmbedNode', () => {
     expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
         minHeight: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+        minWidth: EMBED_NODE_MIN_SIZE.width,
         resizeAxes: 'horizontal',
         lockedAspectRatio: undefined,
       }),
     )
+  })
+
+  it('ignores repeated identical media layout reports', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'Audio Item',
+      contentType: 'audio/mpeg',
+      downloadUrl: 'audio.mp3',
+      previewUrl: null,
+    }
+    renderEmbedNode('node-1', 'file-1')
+
+    const props = fileMediaEmbedSpy.mock.calls[0]?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      props.onMediaLayout?.({ kind: 'fixedHeight', height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK })
+    })
+    const renderCountAfterFirstReport = fileMediaEmbedSpy.mock.calls.length
+    canvasRuntimeState.patchNodeData.mockClear()
+    canvasRuntimeState.resizeNode.mockClear()
+
+    const latestProps = fileMediaEmbedSpy.mock.lastCall?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      latestProps.onMediaLayout?.({
+        kind: 'fixedHeight',
+        height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+      })
+    })
+
+    expect(fileMediaEmbedSpy).toHaveBeenCalledTimes(renderCountAfterFirstReport)
+    expect(canvasRuntimeState.patchNodeData).not.toHaveBeenCalled()
+    expect(canvasRuntimeState.resizeNode).not.toHaveBeenCalled()
   })
 
   it('falls back to the shared read-only preview path for nested embedded canvases', () => {

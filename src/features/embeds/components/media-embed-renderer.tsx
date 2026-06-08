@@ -205,15 +205,11 @@ function AudioEmbedPlayer({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const reportRenderedHeight = () => {
-    const renderedHeight = rootRef.current?.getBoundingClientRect().height ?? 0
-    onMediaLayoutRef.current?.({
-      kind: 'fixedHeight',
-      height: getAudioEmbedLayoutHeight(renderedHeight),
-    })
-  }
-
   useLayoutEffect(() => {
+    const reportRenderedHeight = () => {
+      reportAudioEmbedRenderedHeight(rootRef.current, onMediaLayoutRef)
+    }
+
     reportRenderedHeight()
 
     const root = rootRef.current
@@ -224,7 +220,7 @@ function AudioEmbedPlayer({
     const observer = new ResizeObserver(reportRenderedHeight)
     observer.observe(root)
     return () => observer.disconnect()
-  })
+  }, [onMediaLayoutRef, sourceUrl])
 
   return (
     <div ref={rootRef} data-testid="audio-embed-player" className="w-full">
@@ -234,13 +230,26 @@ function AudioEmbedPlayer({
         className="hidden"
         aria-label={label}
         draggable={false}
-        onLoadedMetadata={reportRenderedHeight}
+        onLoadedMetadata={() => {
+          reportAudioEmbedRenderedHeight(rootRef.current, onMediaLayoutRef)
+        }}
       >
         <track kind="captions" label="Captions unavailable" />
       </audio>
       <CustomMediaControls mediaRef={audioRef} label={label} />
     </div>
   )
+}
+
+function reportAudioEmbedRenderedHeight(
+  root: HTMLElement | null,
+  onMediaLayoutRef: MutableRefObject<EmbedMediaLayoutReporter | undefined>,
+) {
+  const renderedHeight = root?.getBoundingClientRect().height ?? 0
+  onMediaLayoutRef.current?.({
+    kind: 'fixedHeight',
+    height: getAudioEmbedLayoutHeight(renderedHeight),
+  })
 }
 
 function CustomMediaControls({
@@ -684,10 +693,13 @@ function mediaControlsReducer(
 ): MediaControlsState {
   switch (action.type) {
     case 'sync':
+      if (areMediaControlsStatesEqual(state, action.state)) return state
       return action.state
     case 'playing':
+      if (state.playing === action.playing) return state
       return { ...state, playing: action.playing }
     case 'currentTime':
+      if (state.currentTime === action.currentTime) return state
       return { ...state, currentTime: action.currentTime }
   }
 }
@@ -698,17 +710,31 @@ function mediaControlsUiReducer(
 ): MediaControlsUiState {
   switch (action.type) {
     case 'resize':
+      if (state.controlsWidth === action.controlsWidth) return state
       return { ...state, controlsWidth: action.controlsWidth }
     case 'seekHover':
+      if (state.seekHoverPercent === action.percent) return state
       return { ...state, seekHoverPercent: action.percent }
     case 'volumeHover':
+      if (state.volumeHoverPercent === action.percent) return state
       return { ...state, volumeHoverPercent: action.percent }
     case 'setVolumePopover':
+      if (state.volumePopoverOpen === action.open) return state
       return {
         ...state,
         volumePopoverOpen: action.open,
       }
   }
+}
+
+function areMediaControlsStatesEqual(state: MediaControlsState, nextState: MediaControlsState) {
+  return (
+    state.playing === nextState.playing &&
+    state.muted === nextState.muted &&
+    state.volume === nextState.volume &&
+    state.currentTime === nextState.currentTime &&
+    state.duration === nextState.duration
+  )
 }
 
 function getMediaControlsState(media: HTMLMediaElement): MediaControlsState {

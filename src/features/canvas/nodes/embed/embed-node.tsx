@@ -34,6 +34,7 @@ import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
+import { EMBED_NODE_MIN_SIZE } from './embed-node-size'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
 import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
 import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
@@ -98,8 +99,12 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
     itemState.status !== 'loading'
   const showFloatingLabel = !showsFormattingToolbar
   const isEditableEmbed = canEdit && interactiveRenderMode
+  const mediaLayoutRef = useRef<EmbedMediaLayout | null>(null)
   const lastStoredAspectRatioRef = useRef<number | null>(normalizedData.lockedAspectRatio ?? null)
   const setEmbedMediaLayout = (layout: EmbedMediaLayout) => {
+    if (areEmbedMediaLayoutsEqual(mediaLayoutRef.current, layout)) return
+
+    mediaLayoutRef.current = layout
     setMediaLayout(layout)
     const lockedAspectRatio = getEmbedMediaAspectRatio(layout)
     if (lastStoredAspectRatioRef.current !== lockedAspectRatio) {
@@ -159,7 +164,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       id={id}
       nodeType="embed"
       dragging={!!dragging}
-      minWidth={CANVAS_NODE_MIN_SIZE}
+      minWidth={EMBED_NODE_MIN_SIZE.width}
       minHeight={getEmbedResizeMinHeight(mediaLayout)}
       lockedAspectRatio={getLockedAspectRatio(target, contentItem, mediaLayout, normalizedData)}
       resizeAxes={mediaLayout?.kind === 'fixedHeight' ? 'horizontal' : 'both'}
@@ -224,6 +229,22 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       </div>
     </ResizableNodeWrapper>
   )
+}
+
+function areEmbedMediaLayoutsEqual(
+  currentLayout: EmbedMediaLayout | null,
+  nextLayout: EmbedMediaLayout,
+) {
+  if (!currentLayout || currentLayout.kind !== nextLayout.kind) return false
+  switch (currentLayout.kind) {
+    case 'fixedHeight':
+      return nextLayout.kind === 'fixedHeight' && currentLayout.height === nextLayout.height
+    case 'intrinsicAspectRatio':
+      return (
+        nextLayout.kind === 'intrinsicAspectRatio' &&
+        currentLayout.aspectRatio === nextLayout.aspectRatio
+      )
+  }
 }
 
 function EditableCanvasEmbedContent({
@@ -466,5 +487,5 @@ function getEmbedMediaAspectRatio(mediaLayout: EmbedMediaLayout | null) {
 }
 
 function getEmbedResizeMinHeight(mediaLayout: EmbedMediaLayout | null) {
-  return mediaLayout?.kind === 'fixedHeight' ? mediaLayout.height : CANVAS_NODE_MIN_SIZE
+  return mediaLayout?.kind === 'fixedHeight' ? mediaLayout.height : EMBED_NODE_MIN_SIZE.height
 }
