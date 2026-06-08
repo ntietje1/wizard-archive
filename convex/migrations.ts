@@ -23,7 +23,12 @@ export const migrateBlockSharePermissionLevel = migrations.define({
 export const deleteBlockInlineContentProjectionField = migrations.define({
   table: 'blocks',
   batchSize: 100,
-  migrateOne: (_ctx, block) => getDeleteBlockInlineContentProjectionFieldPatch(block) ?? undefined,
+  migrateOne: (_ctx, block) => {
+    const patch = getDeleteBlockInlineContentProjectionFieldPatch(
+      block as { inlineContent?: unknown },
+    )
+    return patch as Partial<typeof block> | undefined
+  },
 })
 
 export const runSidebarItemLifecycleStatusMigration = migrations.runner(

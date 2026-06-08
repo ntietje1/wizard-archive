@@ -174,15 +174,12 @@ const blockCommonTableFields = {
 const persistedContentFields = {
   inline: {
     content: v.nullable(inlineContentArrayValidator),
-    inlineContent: v.optional(v.nullable(inlineContentArrayValidator)),
   },
   none: {
     content: v.nullable(inlineContentArrayValidator),
-    inlineContent: v.optional(v.nullable(inlineContentArrayValidator)),
   },
   table: {
     content: v.nullable(tableContentValidator),
-    inlineContent: v.optional(v.null()),
   },
 } as const
 

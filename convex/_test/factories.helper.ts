@@ -531,7 +531,6 @@ export async function createBlock(
     type: BlockType
     props: BlockProps
     content: InlineContent | TableContent | null
-    inlineContent: InlineContent | null
     plainText: string
     shareStatus: ShareStatus | null
   }>,
