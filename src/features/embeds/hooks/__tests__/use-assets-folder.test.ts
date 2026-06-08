@@ -1,11 +1,47 @@
-import { describe, expect, it, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import type { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { resolveAssetsFolderId } from '../../utils/assets-folder-resolver'
 import { testId } from '~/test/helpers/test-id'
+import { useAssetsFolder } from '../use-assets-folder'
 
 type ResolveAssetsFolderInput = Parameters<typeof resolveAssetsFolderId>[0]
 type AssetsFolderItem = ResolveAssetsFolderInput['rootItems'][number]
 type CreateAssetsFolder = ResolveAssetsFolderInput['createItem']
+type ActiveSidebarItemsState = Pick<
+  ReturnType<typeof useActiveSidebarItems>,
+  'data' | 'error' | 'status'
+>
+
+const activeSidebarItemsState = vi.hoisted(() => ({
+  current: {
+    status: 'success',
+    data: [] as Array<AssetsFolderItem>,
+    error: null,
+  } as ActiveSidebarItemsState,
+}))
+const cachedActiveItems = vi.hoisted(() => ({
+  current: [] as Array<AssetsFolderItem>,
+}))
+const createFileSystemItem = vi.hoisted(() => ({
+  current: vi.fn<CreateAssetsFolder>(),
+}))
+
+vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
+  useActiveSidebarItems: () =>
+    activeSidebarItemsState.current as ReturnType<typeof useActiveSidebarItems>,
+}))
+
+vi.mock('~/features/sidebar/hooks/useSidebarItemsCache', () => ({
+  useSidebarItemsCache: () => ({
+    get: () => cachedActiveItems.current,
+  }),
+}))
+
+vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
+  useCreateFileSystemItem: () => ({ createItem: createFileSystemItem.current }),
+}))
 
 function createItemMock(): ReturnType<typeof vi.fn<CreateAssetsFolder>> {
   return vi.fn<CreateAssetsFolder>()
@@ -19,6 +55,16 @@ function assetsFolderItem(): AssetsFolderItem {
     parentId: null,
   }
 }
+
+beforeEach(() => {
+  activeSidebarItemsState.current = {
+    status: 'success',
+    data: [],
+    error: null,
+  } as ActiveSidebarItemsState
+  cachedActiveItems.current = []
+  createFileSystemItem.current = createItemMock()
+})
 
 describe('resolveAssetsFolderId', () => {
   it('does not resolve before sidebar items have loaded', async () => {
@@ -78,5 +124,21 @@ describe('resolveAssetsFolderId', () => {
       iconName: 'Box',
       parentTarget: { kind: 'direct', parentId: null },
     })
+  })
+})
+
+describe('useAssetsFolder', () => {
+  it('resolves against the sidebar cache before stale loaded hook data', async () => {
+    activeSidebarItemsState.current = {
+      status: 'success',
+      data: [],
+      error: null,
+    } as ActiveSidebarItemsState
+    cachedActiveItems.current = [assetsFolderItem()]
+
+    const { result } = renderHook(() => useAssetsFolder())
+
+    await expect(result.current.resolveAssetsFolderId()).resolves.toBe('assets-id')
+    expect(createFileSystemItem.current).not.toHaveBeenCalled()
   })
 })

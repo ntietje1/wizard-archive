@@ -2,12 +2,6 @@ import { create } from 'zustand'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
 import type { SurfaceBatchDropCommand } from '~/features/dnd/utils/surface-drop-planner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { DropResult } from '~/features/file-upload/utils/folder-reader'
-
-export type FileDropOverride = (
-  dropResult: DropResult,
-  clientCoords: { x: number; y: number },
-) => Promise<void>
 
 export type DndBatchDecision = {
   command: Extract<SurfaceBatchDropCommand, { status: 'partial' | 'failed' }>
@@ -21,7 +15,6 @@ interface DndState {
   fileDragHoveredTargetKey: string | null
   isDraggingFiles: boolean
   isDraggingElement: boolean
-  fileDropOverride: FileDropOverride | null
   batchDecision: DndBatchDecision | null
 }
 
@@ -32,7 +25,6 @@ interface DndActions {
   setFileDragHoveredTargetKey: (key: string | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
   setIsDraggingElement: (isDragging: boolean) => void
-  setFileDropOverride: (handler: FileDropOverride | null) => void
   setBatchDecision: (decision: DndBatchDecision | null) => void
 }
 
@@ -43,7 +35,6 @@ export const useDndStore = create<DndState & DndActions>()((set, get) => ({
   fileDragHoveredTargetKey: null,
   isDraggingFiles: false,
   isDraggingElement: false,
-  fileDropOverride: null,
   batchDecision: null,
 
   setSidebarDragTargetId: (id) =>
@@ -59,6 +50,5 @@ export const useDndStore = create<DndState & DndActions>()((set, get) => ({
   setFileDragHoveredTargetKey: (key) => set({ fileDragHoveredTargetKey: key }),
   setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),
   setIsDraggingElement: (isDragging) => set({ isDraggingElement: isDragging }),
-  setFileDropOverride: (handler) => set({ fileDropOverride: handler }),
   setBatchDecision: (decision) => set({ batchDecision: decision }),
 }))

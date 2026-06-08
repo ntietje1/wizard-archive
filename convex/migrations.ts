@@ -2,8 +2,8 @@ import { Migrations } from '@convex-dev/migrations'
 import { components, internal } from './_generated/api'
 import type { DataModel } from './_generated/dataModel'
 import { getBlockSharePermissionLevelMigrationPatch } from './blockShares/permissionLevelMigration'
-import { getLegacyMediaBlockProjectionMigrationPatch } from './blocks/functions/migrateLegacyMediaBlocks'
 import { getSidebarItemLifecycleMigrationPatch } from './sidebarItems/lifecycleMigration'
+import { getLegacyMediaBlockProjectionMigrationPatch } from '../shared/editor-blocks/legacyMediaBlocks'
 
 export const migrations = new Migrations<DataModel>(components.migrations)
 export const run = migrations.runner()

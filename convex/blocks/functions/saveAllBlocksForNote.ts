@@ -32,6 +32,11 @@ export async function saveAllBlocksForNote(
 
   const canonicalContent = parseEditorBlocks(content)
   const rawFlatBlocks = flattenBlocks(canonicalContent)
+  await validateSidebarItemEmbedTargets(ctx, {
+    noteId,
+    campaignId,
+    flatBlocks: rawFlatBlocks,
+  })
   const deduped = new Map<string, (typeof rawFlatBlocks)[number]>()
   for (const flat of rawFlatBlocks) {
     if (deduped.has(flat.blockNoteId)) {
@@ -123,4 +128,50 @@ function validatePersistedBlockDepth(block: Pick<PersistedFlatBlock, 'depth' | '
   if (block.parentBlockId !== null && block.depth === 0) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be > 0 when parentBlockId is set')
   }
+}
+
+async function validateSidebarItemEmbedTargets(
+  ctx: Pick<MutationCtx, 'db'>,
+  {
+    noteId,
+    campaignId,
+    flatBlocks,
+  }: {
+    noteId: Id<'sidebarItems'>
+    campaignId: Id<'campaigns'>
+    flatBlocks: Array<PersistedFlatBlock>
+  },
+) {
+  const targetIds = new Set<Id<'sidebarItems'>>()
+  for (const block of flatBlocks) {
+    const targetId = getSidebarItemEmbedTargetId(block)
+    if (!targetId) continue
+    if (targetId === noteId) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'A note cannot embed itself')
+    }
+    targetIds.add(targetId)
+  }
+
+  await asyncMap([...targetIds], async (targetId) => {
+    const item = await ctx.db.get(targetId)
+    if (!item || item.campaignId !== campaignId || !isActiveSidebarItem(item)) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Invalid embed target')
+    }
+  })
+}
+
+function getSidebarItemEmbedTargetId(block: PersistedFlatBlock): Id<'sidebarItems'> | null {
+  if (block.type !== 'embed') return null
+  const props = block.props
+  if (
+    props &&
+    typeof props === 'object' &&
+    'targetKind' in props &&
+    props.targetKind === 'sidebarItem' &&
+    'sidebarItemId' in props &&
+    typeof props.sidebarItemId === 'string'
+  ) {
+    return props.sidebarItemId as Id<'sidebarItems'>
+  }
+  return null
 }

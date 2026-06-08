@@ -24,12 +24,21 @@ export function migrateLegacyMediaBlocks(blocks: Array<LegacyBlock>): Array<Lega
 export function getLegacyMediaBlockProjectionMigrationPatch(block: {
   props?: Record<string, unknown>
   type?: string
-}): { props: EmbedProps; type: 'embed' } | null {
+}): {
+  content: null
+  inlineContent: null
+  plainText: ''
+  props: EmbedProps
+  type: 'embed'
+} | null {
   if (!isLegacyMediaBlockType(block.type)) return null
 
   return {
     type: 'embed',
     props: getLegacyMediaEmbedProps(block.props ?? {}),
+    content: null,
+    inlineContent: null,
+    plainText: '',
   }
 }
 

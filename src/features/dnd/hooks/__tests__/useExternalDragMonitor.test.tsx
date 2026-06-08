@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DndMonitorCtx } from '~/features/dnd/types'
 import type { DropResult } from '~/features/file-upload/utils/folder-reader'
 import {
+  CANVAS_DROP_ZONE_TYPE,
   EMPTY_EDITOR_DROP_TYPE,
   NOTE_EDITOR_DROP_TYPE,
   SIDEBAR_ROOT_DROP_TYPE,
@@ -258,6 +259,53 @@ describe('useExternalDragMonitor', () => {
     expect(ctx.handleDropFiles).toHaveBeenCalledWith(dropResult, {
       destination: { kind: 'direct', parentId: folderId },
     })
+  })
+
+  it('does not let a registered canvas executor intercept external drops for non-canvas targets', async () => {
+    const canvasId = testId<'sidebarItems'>('canvas_target')
+    const folderId = testId<'sidebarItems'>('folder_target')
+    const dropResult: DropResult = {
+      files: [],
+      rootFolders: [{ name: 'Maps', relativePath: 'Maps', files: [], subfolders: [] }],
+    }
+    processDataTransferItems.mockResolvedValue(dropResult)
+    const execute = vi.fn(() => Promise.resolve({ handled: true }))
+    const dispose = registerExternalFileDropExecutor({
+      target: { type: CANVAS_DROP_ZONE_TYPE, canvasId },
+      execute,
+    })
+    const ctx = createMonitorCtx()
+
+    try {
+      renderHook(() => useExternalDragMonitor({ current: ctx } as React.RefObject<DndMonitorCtx>))
+      const monitor = getExternalMonitor()
+
+      await act(async () => {
+        await monitor.onDrop({
+          source: { items: [] },
+          location: {
+            current: {
+              input: { clientX: 12, clientY: 34 },
+              dropTargets: [
+                {
+                  data: {
+                    type: SIDEBAR_ITEM_TYPES.folders,
+                    sidebarItemId: folderId,
+                  },
+                },
+              ],
+            },
+          },
+        })
+      })
+
+      expect(execute).not.toHaveBeenCalled()
+      expect(ctx.handleDropFiles).toHaveBeenCalledWith(dropResult, {
+        destination: { kind: 'direct', parentId: folderId },
+      })
+    } finally {
+      dispose()
+    }
   })
 
   it('falls back to the assets-backed upload flow for non-sidebar external targets', async () => {

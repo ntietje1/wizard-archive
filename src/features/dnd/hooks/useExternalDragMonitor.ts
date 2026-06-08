@@ -80,14 +80,9 @@ export function useExternalDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
             return
           }
 
-          const override = useDndStore.getState().fileDropOverride
-          if (override) {
-            await override(dropResult, { x: clientX, y: clientY })
-          } else {
-            await ctx.handleDropFiles(dropResult, {
-              destination: getExternalFileDropDestination(target),
-            })
-          }
+          await ctx.handleDropFiles(dropResult, {
+            destination: getExternalFileDropDestination(target),
+          })
         } catch (error) {
           handleError(error, 'Failed to upload files')
         }

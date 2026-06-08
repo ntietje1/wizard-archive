@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { BlockNoteEditor } from '@blocknote/core'
 import { blocksToYDoc } from '@blocknote/core/yjs'
-import { migrateLegacyMediaBlocks } from '../functions/migrateLegacyMediaBlocks'
 import { parseEditorBlocks } from '../parseEditorBlocks'
 import { yjsUpdatesToBlocks } from '../../notes/blocknoteNode'
 import { testBlockNoteId } from '../../_test/factories.helper'
 import { headlessLegacyMediaDecodeEditorSchema } from '../../../shared/editor-blocks/editor-blocknote-schema'
+import { migrateLegacyMediaBlocks } from '../../../shared/editor-blocks/legacyMediaBlocks'
 
 describe('migrateLegacyMediaBlocks', () => {
   it('converts legacy image blocks to external URL embeds', () => {

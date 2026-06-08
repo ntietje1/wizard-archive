@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
-import { getLegacyMediaBlockProjectionMigrationPatch } from '../blocks/functions/migrateLegacyMediaBlocks'
 import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
+import { getLegacyMediaBlockProjectionMigrationPatch } from '../../shared/editor-blocks/legacyMediaBlocks'
 
 describe('migrations', () => {
   describe('getSidebarItemLifecycleMigrationPatch', () => {
@@ -75,6 +75,9 @@ describe('migrations', () => {
           name: 'a.png',
           previewWidth: 320,
         },
+        content: null,
+        inlineContent: null,
+        plainText: '',
       })
     })
 

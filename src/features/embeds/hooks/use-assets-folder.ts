@@ -11,16 +11,12 @@ export function useAssetsFolder() {
 
   const resolve = async () => {
     const cachedActiveItems = sidebarItemsCache.get(SIDEBAR_ITEMS_VIEW.active)
+    const hasCachedActiveItems = cachedActiveItems.length > 0
     return await resolveAssetsFolderId({
-      rootItems:
-        activeItems.status === 'success'
-          ? activeItems.data
-          : cachedActiveItems.length > 0
-            ? cachedActiveItems
-            : (activeItems.data ?? []),
+      rootItems: hasCachedActiveItems ? cachedActiveItems : (activeItems.data ?? []),
       createItem,
-      loadError: activeItems.error,
-      loaded: activeItems.status === 'success',
+      loadError: hasCachedActiveItems ? null : activeItems.error,
+      loaded: hasCachedActiveItems || activeItems.status === 'success',
     })
   }
 

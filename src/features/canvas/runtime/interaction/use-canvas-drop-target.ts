@@ -5,13 +5,12 @@ import {
 } from '../../nodes/embed/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/drop-target-data'
-import type { FileDropOverride } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useEmbedUpload } from '~/features/embeds/hooks/use-embed-upload'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { CANVAS_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
+import { registerExternalFileDropExecutor } from '~/features/dnd/utils/external-file-drop-command'
 import { registerSurfaceDropExecutor } from '~/features/dnd/utils/surface-drop-command'
 import { getExternalUrlDropTarget } from '~/features/embeds/utils/embed-targets'
 import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
@@ -86,14 +85,20 @@ export function useCanvasDropTarget({
   const uploadRef = useRef(uploadEmbedFile)
   uploadRef.current = uploadEmbedFile
 
-  const setFileDropOverride = useDndStore((s) => s.setFileDropOverride)
   useEffect(() => {
     if (!enabled) return
-    const handler: FileDropOverride = async (dropResult, clientCoords) => {
-      const basePosition = screenToCanvasPositionRef.current(clientCoords)
-      try {
-        const files = dropResult.files
-        const results = await Promise.allSettled(files.map((f) => uploadRef.current(f.file)))
+    return registerExternalFileDropExecutor({
+      target: { type: CANVAS_DROP_ZONE_TYPE, canvasId },
+      execute: async (dropResult, input) => {
+        if (dropResult.files.length === 0) return { handled: false }
+
+        const basePosition = screenToCanvasPositionRef.current({
+          x: input.clientX,
+          y: input.clientY,
+        })
+        const results = await Promise.allSettled(
+          dropResult.files.map((fileEntry) => uploadRef.current(fileEntry.file)),
+        )
         const nodes: Array<CanvasDocumentNode> = []
         results.forEach((result) => {
           if (result.status === 'rejected') {
@@ -113,13 +118,17 @@ export function useCanvasDropTarget({
           createNodesRef.current(nodes)
           await providerRef.current?.flushUpdates()
         }
-      } catch (error) {
-        handleError(error, 'Failed to upload files to canvas')
-      }
-    }
-    setFileDropOverride(handler)
-    return () => setFileDropOverride(null)
-  }, [enabled, setFileDropOverride])
+
+        return {
+          handled: true,
+          unhandledDropResult:
+            dropResult.rootFolders.length > 0
+              ? { files: [], rootFolders: dropResult.rootFolders }
+              : undefined,
+        }
+      },
+    })
+  }, [canvasId, enabled])
 
   useEffect(() => {
     const el = dropOverlayRef.current

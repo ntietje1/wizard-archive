@@ -6,6 +6,7 @@ import {
   executeMoveCommand,
   createBlock,
   createNote as createNoteRecord,
+  createCanvas,
   testBlock,
   testBlockNoteId,
 } from '../../_test/factories.helper'
@@ -312,6 +313,108 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .collect()
       expect(blocks).toHaveLength(1)
       expect(blocks[0].blockNoteId).toBe(testBlockNoteId('block-a'))
+    })
+  })
+
+  it('rejects sidebar item embeds that target the same note', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Self Embed Guard',
+    })
+
+    await expect(
+      t.run(async (dbCtx) => {
+        return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
+          noteId,
+          content: [
+            testBlock('self-embed', {
+              type: 'embed',
+              props: { targetKind: 'sidebarItem', sidebarItemId: noteId },
+            }),
+          ],
+        })
+      }),
+    ).rejects.toThrow(/cannot embed itself/i)
+
+    await t.run(async (dbCtx) => {
+      const blocks = await dbCtx.db
+        .query('blocks')
+        .withIndex('by_campaign_note_block', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+        )
+        .collect()
+      expect(blocks).toHaveLength(0)
+    })
+  })
+
+  it('rejects sidebar item embeds that target missing, inactive, or other-campaign items', async () => {
+    const ctx = await setupCampaignContext(t)
+    const otherCtx = await setupCampaignContext(t)
+    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Embed Target Guard',
+    })
+    const { canvasId: activeCanvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Active Canvas',
+    })
+    const { canvasId: inactiveCanvasId } = await createCanvas(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Trashed Canvas',
+      },
+    )
+    const { canvasId: otherCampaignCanvasId } = await createCanvas(
+      t,
+      otherCtx.campaignId,
+      otherCtx.dm.profile._id,
+      {
+        name: 'Other Campaign Canvas',
+      },
+    )
+    await executeMoveCommand(asDm(ctx), {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [inactiveCanvasId],
+      targetParentId: null,
+      action: 'trash',
+    })
+
+    async function expectRejectedTarget(sidebarItemId: Id<'sidebarItems'>) {
+      await expect(
+        t.run(async (dbCtx) => {
+          return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
+            noteId,
+            content: [
+              testBlock(`embed-${sidebarItemId}`, {
+                type: 'embed',
+                props: { targetKind: 'sidebarItem', sidebarItemId },
+              }),
+            ],
+          })
+        }),
+      ).rejects.toThrow(/invalid embed target/i)
+    }
+
+    await expectRejectedTarget('sidebarItems:missing-target' as Id<'sidebarItems'>)
+    await expectRejectedTarget(inactiveCanvasId)
+    await expectRejectedTarget(otherCampaignCanvasId)
+
+    const persistedBlocks = await t.run(async (dbCtx) => {
+      return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
+        noteId,
+        content: [
+          testBlock('valid-embed', {
+            type: 'embed',
+            props: { targetKind: 'sidebarItem', sidebarItemId: activeCanvasId },
+          }),
+        ],
+      })
+    })
+
+    expect(persistedBlocks).toHaveLength(1)
+    expect(persistedBlocks[0].props).toMatchObject({
+      targetKind: 'sidebarItem',
+      sidebarItemId: activeCanvasId,
     })
   })
 
