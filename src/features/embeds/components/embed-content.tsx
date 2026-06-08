@@ -1,7 +1,8 @@
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ReactNode } from 'react'
+import { createElement } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
@@ -11,7 +12,7 @@ import { EmbedEmptyState } from './embed-empty-state'
 import { EmbedUnavailable } from './embed-unavailable'
 import { ExternalUrlEmbedContent } from './external-url-embed-content'
 import { FileMediaEmbedContent } from './file-media-embed-content'
-import type { IntrinsicAspectRatioReporter } from '../utils/embed-media'
+import type { EmbedMediaLayoutReporter } from '../utils/embed-media'
 
 type EmbedContentProps = {
   target: EmbedTarget
@@ -19,7 +20,7 @@ type EmbedContentProps = {
   mode: 'editable' | 'readonly'
   onUpload?: () => void
   onLinkExternal?: () => void
-  onIntrinsicAspectRatio?: IntrinsicAspectRatioReporter
+  onMediaLayout?: EmbedMediaLayoutReporter
   renderSidebarItem: (item: AnySidebarItemWithContent) => ReactNode
 }
 
@@ -29,7 +30,7 @@ export function EmbedContent({
   mode,
   onUpload,
   onLinkExternal,
-  onIntrinsicAspectRatio,
+  onMediaLayout,
   renderSidebarItem,
 }: EmbedContentProps) {
   if (sourceItemId) {
@@ -41,7 +42,7 @@ export function EmbedContent({
           mode={mode}
           onUpload={onUpload}
           onLinkExternal={onLinkExternal}
-          onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+          onMediaLayout={onMediaLayout}
           renderSidebarItem={renderSidebarItem}
         />
       </EmbedAncestryProvider>
@@ -55,7 +56,7 @@ export function EmbedContent({
       mode={mode}
       onUpload={onUpload}
       onLinkExternal={onLinkExternal}
-      onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+      onMediaLayout={onMediaLayout}
       renderSidebarItem={renderSidebarItem}
     />
   )
@@ -67,7 +68,7 @@ function EmbedContentInner({
   mode,
   onUpload,
   onLinkExternal,
-  onIntrinsicAspectRatio,
+  onMediaLayout,
   renderSidebarItem,
 }: EmbedContentProps) {
   if (target.kind === 'empty') {
@@ -76,11 +77,7 @@ function EmbedContentInner({
 
   if (target.kind === 'externalUrl') {
     return (
-      <ExternalUrlEmbedContent
-        url={target.url}
-        name={target.name}
-        onIntrinsicAspectRatio={onIntrinsicAspectRatio}
-      />
+      <ExternalUrlEmbedContent url={target.url} name={target.name} onMediaLayout={onMediaLayout} />
     )
   }
 
@@ -88,7 +85,7 @@ function EmbedContentInner({
     <SidebarItemEmbedContent
       targetItemId={target.sidebarItemId as Id<'sidebarItems'>}
       sourceItemId={sourceItemId}
-      onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+      onMediaLayout={onMediaLayout}
       renderSidebarItem={renderSidebarItem}
     />
   )
@@ -97,12 +94,12 @@ function EmbedContentInner({
 function SidebarItemEmbedContent({
   targetItemId,
   sourceItemId,
-  onIntrinsicAspectRatio,
+  onMediaLayout,
   renderSidebarItem,
 }: {
   targetItemId: Id<'sidebarItems'>
   sourceItemId: Id<'sidebarItems'> | null
-  onIntrinsicAspectRatio?: IntrinsicAspectRatioReporter
+  onMediaLayout?: EmbedMediaLayoutReporter
   renderSidebarItem: (item: AnySidebarItemWithContent) => ReactNode
 }) {
   const ancestry = useEmbedAncestry()
@@ -131,7 +128,7 @@ function SidebarItemEmbedContent({
             contentType={itemState.item.contentType}
             previewUrl={itemState.item.previewUrl}
             name={itemState.item.name}
-            onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+            onMediaLayout={onMediaLayout}
           />
         </EmbedAncestryProvider>
       )
@@ -139,7 +136,10 @@ function SidebarItemEmbedContent({
 
     return (
       <EmbedAncestryProvider itemId={targetItemId}>
-        {renderSidebarItem(itemState.item)}
+        {createElement(
+          renderSidebarItem as ComponentType<AnySidebarItemWithContent>,
+          itemState.item,
+        )}
       </EmbedAncestryProvider>
     )
   }

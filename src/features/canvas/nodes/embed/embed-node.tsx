@@ -30,12 +30,14 @@ import { SidebarItemPreviewContent } from '~/features/previews/components/sideba
 import { EmbeddedCanvasContent } from './embedded-canvas-content'
 import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
 import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
 import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
+import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import type { Id } from 'convex/_generated/dataModel'
@@ -53,6 +55,7 @@ function persistEmbedTextColor(
 }
 
 export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
+  const canvasEngine = useCanvasEngine()
   const normalizedData = normalizeEmbedNodeData(data)
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const target = normalizedData.target
@@ -75,6 +78,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const { domRuntime } = useCanvasViewportRuntime()
   const { canEdit, editSession } = useCanvasInteractionRuntime()
   const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const [mediaLayout, setMediaLayout] = useState<EmbedMediaLayout | null>(null)
   const editableSession = useCanvasEditableNodeSession({
     id,
     canEdit: canEdit && interactiveRenderMode,
@@ -95,15 +99,25 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const showFloatingLabel = !showsFormattingToolbar
   const isEditableEmbed = canEdit && interactiveRenderMode
   const lastStoredAspectRatioRef = useRef<number | null>(normalizedData.lockedAspectRatio ?? null)
-  const setIntrinsicAspectRatio = (aspectRatio: number | null) => {
-    const lockedAspectRatio =
-      typeof aspectRatio === 'number' && Number.isFinite(aspectRatio) && aspectRatio > 0
-        ? aspectRatio
-        : null
-    if (lastStoredAspectRatioRef.current === lockedAspectRatio) return
+  const setEmbedMediaLayout = (layout: EmbedMediaLayout) => {
+    setMediaLayout(layout)
+    const lockedAspectRatio = getEmbedMediaAspectRatio(layout)
+    if (lastStoredAspectRatioRef.current !== lockedAspectRatio) {
+      lastStoredAspectRatioRef.current = lockedAspectRatio
+      patchNodeData(new Map([[id, { lockedAspectRatio }]]))
+    }
 
-    lastStoredAspectRatioRef.current = lockedAspectRatio
-    patchNodeData(new Map([[id, { lockedAspectRatio }]]))
+    if (layout.kind === 'fixedHeight') {
+      const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node
+      if (node && node.height !== layout.height) {
+        documentWriter.resizeNode(
+          id,
+          node.width ?? CANVAS_NODE_MIN_SIZE,
+          layout.height,
+          node.position,
+        )
+      }
+    }
   }
   const setTarget = async (nextTarget: EmbedTarget) => {
     patchNodeData(new Map([[id, { target: nextTarget }]]))
@@ -146,12 +160,9 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       nodeType="embed"
       dragging={!!dragging}
       minWidth={CANVAS_NODE_MIN_SIZE}
-      minHeight={CANVAS_NODE_MIN_SIZE}
-      lockedAspectRatio={getLockedAspectRatio(
-        target,
-        contentItem,
-        normalizedData.lockedAspectRatio,
-      )}
+      minHeight={getEmbedResizeMinHeight(mediaLayout)}
+      lockedAspectRatio={getLockedAspectRatio(target, contentItem, mediaLayout, normalizedData)}
+      resizeAxes={mediaLayout?.kind === 'fixedHeight' ? 'horizontal' : 'both'}
       editing={showsFormattingToolbar}
       chrome={
         <>
@@ -197,7 +208,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
               sourceCanvasId={canvasId}
               target={target}
               setTarget={setTarget}
-              onIntrinsicAspectRatio={setIntrinsicAspectRatio}
+              onMediaLayout={setEmbedMediaLayout}
               renderSidebarItem={renderSidebarItem}
             />
           ) : (
@@ -205,7 +216,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
               target={target}
               sourceItemId={canvasId}
               mode="readonly"
-              onIntrinsicAspectRatio={setIntrinsicAspectRatio}
+              onMediaLayout={setEmbedMediaLayout}
               renderSidebarItem={renderSidebarItem}
             />
           )}
@@ -220,14 +231,14 @@ function EditableCanvasEmbedContent({
   sourceCanvasId,
   target,
   setTarget,
-  onIntrinsicAspectRatio,
+  onMediaLayout,
   renderSidebarItem,
 }: {
   rootRef: RefObject<HTMLElement | null>
   sourceCanvasId: Id<'sidebarItems'> | null
   target: EmbedTarget
   setTarget: (target: EmbedTarget) => Promise<void>
-  onIntrinsicAspectRatio: (aspectRatio: number | null) => void
+  onMediaLayout: (layout: EmbedMediaLayout) => void
   renderSidebarItem: (item: AnySidebarItemWithContent) => ReactNode
 }) {
   const embedControls = useEditableEmbedTargetControls({ setTarget })
@@ -248,7 +259,7 @@ function EditableCanvasEmbedContent({
         mode="editable"
         onUpload={embedControls.openFilePicker}
         onLinkExternal={embedControls.openLinkDraft}
-        onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+        onMediaLayout={onMediaLayout}
         renderSidebarItem={renderSidebarItem}
       />
       <input
@@ -413,8 +424,15 @@ function getEmbedFloatingLabel(target: EmbedNodeData['target'], sidebarItemLabel
 function getLockedAspectRatio(
   target: EmbedNodeData['target'],
   contentItem: AnySidebarItemWithContent | undefined,
-  lockedAspectRatio: number | undefined,
+  mediaLayout: EmbedMediaLayout | null,
+  normalizedData: EmbedNodeData,
 ) {
+  if (mediaLayout?.kind === 'fixedHeight') {
+    return undefined
+  }
+
+  const lockedAspectRatio =
+    getEmbedMediaAspectRatio(mediaLayout) ?? normalizedData.lockedAspectRatio
   if (typeof lockedAspectRatio !== 'number') {
     return undefined
   }
@@ -432,4 +450,21 @@ function getLockedAspectRatio(
   }
 
   return undefined
+}
+
+function getEmbedMediaAspectRatio(mediaLayout: EmbedMediaLayout | null) {
+  if (
+    mediaLayout?.kind === 'intrinsicAspectRatio' &&
+    typeof mediaLayout.aspectRatio === 'number' &&
+    Number.isFinite(mediaLayout.aspectRatio) &&
+    mediaLayout.aspectRatio > 0
+  ) {
+    return mediaLayout.aspectRatio
+  }
+
+  return null
+}
+
+function getEmbedResizeMinHeight(mediaLayout: EmbedMediaLayout | null) {
+  return mediaLayout?.kind === 'fixedHeight' ? mediaLayout.height : CANVAS_NODE_MIN_SIZE
 }

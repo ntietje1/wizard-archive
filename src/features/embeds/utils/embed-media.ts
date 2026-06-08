@@ -1,7 +1,13 @@
 import { inferExternalEmbedMediaKind } from 'shared/embeds/embedTargets'
 
 export type EmbedMediaKind = 'image' | 'video' | 'audio' | 'pdf' | 'unknown'
-export type IntrinsicAspectRatioReporter = (aspectRatio: number | null) => void
+export const AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK = 40
+
+export type EmbedMediaLayout =
+  | { kind: 'intrinsicAspectRatio'; aspectRatio: number | null }
+  | { kind: 'fixedHeight'; height: number }
+
+export type EmbedMediaLayoutReporter = (layout: EmbedMediaLayout) => void
 
 export function inferEmbedMediaKindFromUrl(url: string): EmbedMediaKind {
   return inferExternalEmbedMediaKind(url)

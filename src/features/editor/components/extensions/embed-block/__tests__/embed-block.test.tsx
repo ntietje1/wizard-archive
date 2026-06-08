@@ -2,13 +2,30 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NoteEmbedBlockView } from '../embed-block'
+import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '~/features/embeds/utils/embed-media'
+import { clearInternalNativeDrag } from '~/features/dnd/utils/internal-native-drag'
+import { getExternalUrlDropTarget } from '~/features/embeds/utils/embed-targets'
+import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 
 const uploadEmbedFileMock = vi.hoisted(() => vi.fn())
+const blockDragStartMock = vi.hoisted(() => vi.fn())
+const blockDragEndMock = vi.hoisted(() => vi.fn())
 type ElementDropTargetArgs = {
   canDrop: (args: { source: { data: Record<string, unknown> } }) => boolean
   onDrop: (args: { source: { data: Record<string, unknown> } }) => void
 }
 const dropTargetForElementsMock = vi.hoisted(() => vi.fn((_args: ElementDropTargetArgs) => vi.fn()))
+
+vi.mock('@blocknote/react', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>
+  return {
+    ...actual,
+    useExtension: () => ({
+      blockDragStart: blockDragStartMock,
+      blockDragEnd: blockDragEndMock,
+    }),
+  }
+})
 
 vi.mock('~/features/embeds/components/embed-content', () => ({
   EmbedContent: (props: {
@@ -16,16 +33,35 @@ vi.mock('~/features/embeds/components/embed-content', () => ({
     mode: 'editable' | 'readonly'
     onUpload?: () => void
     onLinkExternal?: () => void
-    onIntrinsicAspectRatio?: (aspectRatio: number | null) => void
+    onMediaLayout?: (layout: EmbedMediaLayout) => void
   }) => (
     <div>
       <div data-testid="shared-embed-content" data-kind={props.target.kind} data-mode={props.mode}>
         {props.target.name ?? props.target.url ?? props.target.kind}
       </div>
+      <input type="range" aria-label="mock media slider" data-embed-media-control="true" />
       {props.onUpload ? <button onClick={props.onUpload}>mock upload</button> : null}
       {props.onLinkExternal ? <button onClick={props.onLinkExternal}>mock link</button> : null}
-      {props.onIntrinsicAspectRatio ? (
-        <button onClick={() => props.onIntrinsicAspectRatio?.(16 / 9)}>mock aspect ratio</button>
+      {props.onMediaLayout ? (
+        <>
+          <button
+            onClick={() =>
+              props.onMediaLayout?.({ kind: 'intrinsicAspectRatio', aspectRatio: 16 / 9 })
+            }
+          >
+            mock aspect ratio
+          </button>
+          <button
+            onClick={() =>
+              props.onMediaLayout?.({
+                kind: 'fixedHeight',
+                height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+              })
+            }
+          >
+            mock audio layout
+          </button>
+        </>
       ) : null}
     </div>
   ),
@@ -42,8 +78,11 @@ vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
 describe('NoteEmbedBlockView', () => {
   beforeEach(() => {
     uploadEmbedFileMock.mockReset()
+    blockDragStartMock.mockReset()
+    blockDragEndMock.mockReset()
     dropTargetForElementsMock.mockClear()
     dropTargetForElementsMock.mockReturnValue(vi.fn())
+    clearInternalNativeDrag()
   })
 
   it('renders an empty shared embed in editable mode', async () => {
@@ -147,7 +186,7 @@ describe('NoteEmbedBlockView', () => {
     const dropTargetArgs = dropTargetForElementsMock.mock.calls[0]?.[0]
     expect(dropTargetArgs).toBeDefined()
 
-    dropTargetArgs!.onDrop({ source: { data: { sidebarItemId: 'map-1' } } })
+    dropTargetArgs!.onDrop({ source: { data: sidebarDragData('map-1') } })
 
     expect(editor.replaceBlocks).toHaveBeenCalledWith(
       [block],
@@ -215,10 +254,10 @@ describe('NoteEmbedBlockView', () => {
     const dropTargetArgs = dropTargetForElementsMock.mock.calls[0]?.[0]
     expect(dropTargetArgs).toBeDefined()
 
-    expect(dropTargetArgs!.canDrop({ source: { data: { sidebarItemId: 'note-1' } } })).toBe(false)
-    expect(dropTargetArgs!.canDrop({ source: { data: { sidebarItemId: 'map-1' } } })).toBe(true)
+    expect(dropTargetArgs!.canDrop({ source: { data: sidebarDragData('note-1') } })).toBe(false)
+    expect(dropTargetArgs!.canDrop({ source: { data: sidebarDragData('map-1') } })).toBe(true)
 
-    dropTargetArgs!.onDrop({ source: { data: { sidebarItemId: 'map-1' } } })
+    dropTargetArgs!.onDrop({ source: { data: sidebarDragData('map-1') } })
 
     expect(editor.replaceBlocks).toHaveBeenCalledWith(
       [block],
@@ -270,11 +309,140 @@ describe('NoteEmbedBlockView', () => {
     expect(screen.getByTestId('note-embed-visual-surface')).toHaveAttribute('draggable', 'false')
     expect(screen.getByTestId('note-embed-resize-fill')).toHaveClass('bg-canvas-selection-fill')
     expect(screen.getByTestId('note-embed-resize-outline')).toBeInTheDocument()
+    expect(screen.getByTestId('note-embed-block')).toHaveClass('select-none')
+    expect(screen.getByTestId('note-embed-visual-surface')).toHaveClass('select-none')
     expect(screen.queryAllByTestId(/note-embed-resize-zone-/)).toHaveLength(8)
     expect(screen.getByRole('button', { name: 'Resize top selection edge' })).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Resize bottom-right selection corner' }),
     ).toBeInTheDocument()
+  })
+
+  it('allows BlockNote to start embed block drags', async () => {
+    const editor = createEditor()
+    render(
+      <NoteEmbedBlockView
+        block={
+          {
+            id: 'block-1',
+            props: {
+              targetKind: 'externalUrl',
+              url: 'https://example.com/sound.mp3',
+              name: 'Sound',
+            },
+          } as never
+        }
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    await screen.findByTestId('shared-embed-content')
+
+    const root = screen.getByTestId('note-embed-block')
+    expect(fireEvent.dragStart(root)).toBe(true)
+    expect(blockDragStartMock).toHaveBeenCalledWith(expect.any(Object), expect.any(Object))
+  })
+
+  it('does not start embed block drags from embedded media controls', async () => {
+    const editor = createEditor()
+    render(
+      <NoteEmbedBlockView
+        block={
+          {
+            id: 'block-1',
+            props: {
+              targetKind: 'externalUrl',
+              url: 'https://example.com/sound.mp3',
+              name: 'Sound',
+            },
+          } as never
+        }
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const slider = await screen.findByRole('slider', { name: 'mock media slider' })
+
+    expect(fireEvent.dragStart(slider)).toBe(false)
+    expect(blockDragStartMock).not.toHaveBeenCalled()
+  })
+
+  it('does not promote media slider pointer sequences into embed block drags', async () => {
+    const editor = createEditor()
+    render(
+      <NoteEmbedBlockView
+        block={
+          {
+            id: 'block-1',
+            props: {
+              targetKind: 'externalUrl',
+              url: 'https://example.com/sound.mp3',
+              name: 'Sound',
+            },
+          } as never
+        }
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const root = screen.getByTestId('note-embed-block')
+    const slider = await screen.findByRole('slider', { name: 'mock media slider' })
+
+    fireEvent.pointerDown(slider, { button: 0 })
+
+    expect(fireEvent.dragStart(root)).toBe(false)
+    expect(blockDragStartMock).not.toHaveBeenCalled()
+  })
+
+  it('marks embed block drags as app-internal native drags', async () => {
+    const editor = createEditor()
+    render(
+      <NoteEmbedBlockView
+        block={
+          {
+            id: 'block-1',
+            props: {
+              targetKind: 'externalUrl',
+              url: 'https://example.com/map.png',
+              name: 'Map',
+            },
+          } as never
+        }
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    await screen.findByTestId('shared-embed-content')
+
+    fireEvent.dragStart(screen.getByTestId('note-embed-block'))
+    expect(blockDragStartMock).toHaveBeenCalled()
+
+    expect(
+      getExternalUrlDropTarget(
+        createDataTransfer({ 'text/plain': 'https://example.com/copy.png' }),
+      ),
+    ).toBeNull()
+
+    fireEvent.dragEnd(screen.getByTestId('note-embed-block'))
+    expect(blockDragEndMock).toHaveBeenCalled()
+
+    expect(
+      getExternalUrlDropTarget(
+        createDataTransfer({ 'text/plain': 'https://example.com/copy.png' }),
+      ),
+    ).toEqual({
+      kind: 'externalUrl',
+      url: 'https://example.com/copy.png',
+      name: 'copy.png',
+    })
   })
 
   it('resizes embed blocks by mutating width until committing preview width on release', () => {
@@ -454,6 +622,57 @@ describe('NoteEmbedBlockView', () => {
       },
     })
   })
+
+  it('wraps fixed-height media and exposes only horizontal resize handles', async () => {
+    const user = userEvent.setup()
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/sound.mp3',
+        name: 'Sound',
+        previewWidth: 300,
+      },
+    }
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'mock audio layout' }))
+
+    const body = screen
+      .getByTestId('note-embed-block')
+      .querySelector('[data-note-embed-body="true"]')
+    expect(body).toBeInstanceOf(HTMLElement)
+    expect(body).toHaveStyle({ height: `${AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK}px` })
+
+    fireEvent.pointerDown(screen.getByTestId('note-embed-block'), { button: 0 })
+
+    expect(screen.getByRole('button', { name: 'Resize left selection edge' })).toHaveStyle({
+      bottom: '0px',
+      left: '-9px',
+      top: '0px',
+      width: '18px',
+    })
+    expect(screen.getByRole('button', { name: 'Resize right selection edge' })).toHaveStyle({
+      bottom: '0px',
+      right: '-9px',
+      top: '0px',
+      width: '18px',
+    })
+    expect(screen.queryByRole('button', { name: 'Resize top selection edge' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Resize bottom selection edge' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Resize top-left selection corner' })).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Resize bottom-right selection corner' }),
+    ).toBeNull()
+  })
 })
 
 function createEditor() {
@@ -462,4 +681,19 @@ function createEditor() {
     setTextCursorPosition: vi.fn(),
     updateBlock: vi.fn(),
   }
+}
+
+function sidebarDragData(sidebarItemId: string) {
+  return {
+    sidebarItemId,
+    sidebarItemIds: [sidebarItemId],
+    sidebarDragPreviewItemIds: [sidebarItemId],
+  }
+}
+
+function createDataTransfer(data: Record<string, string>): DataTransfer {
+  return {
+    types: Object.keys(data),
+    getData: (type: string) => data[type] ?? '',
+  } as unknown as DataTransfer
 }

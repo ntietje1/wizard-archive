@@ -19,6 +19,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/compo
 import { openEditorBlockContextMenuFromEvent } from '~/features/editor/utils/open-editor-block-context-menu-from-event'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useFloatingMenuDismiss } from '~/shared/hooks/use-floating-menu-dismiss'
+import {
+  clearInternalNativeDrag,
+  markInternalNativeDrag,
+} from '~/features/dnd/utils/internal-native-drag'
 
 const MENU_WIDTH = 192
 const MENU_GUTTER = 4
@@ -85,11 +89,14 @@ export function BlockDragHandleButton({ note }: { note: NoteWithContent }) {
 
   function handleDragStart(event: React.DragEvent) {
     didDragRef.current = true
+    markInternalNativeDrag(event.dataTransfer)
     sideMenu.blockDragStart(event, activeBlock)
+    markInternalNativeDrag(event.dataTransfer)
   }
 
   function handleDragEnd() {
     sideMenu.blockDragEnd()
+    clearInternalNativeDrag()
     window.setTimeout(() => {
       didDragRef.current = false
     }, 0)

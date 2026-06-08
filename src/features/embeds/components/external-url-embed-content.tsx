@@ -2,18 +2,18 @@ import { FileText } from 'lucide-react'
 import { deriveExternalEmbedName } from 'shared/embeds/embedTargets'
 import { MediaEmbedRenderer } from './media-embed-renderer'
 import { inferEmbedMediaKindFromUrl } from '../utils/embed-media'
-import type { IntrinsicAspectRatioReporter } from '../utils/embed-media'
+import type { EmbedMediaLayoutReporter } from '../utils/embed-media'
 
 type ExternalUrlEmbedContentProps = {
   url: string
   name: string | null
-  onIntrinsicAspectRatio?: IntrinsicAspectRatioReporter
+  onMediaLayout?: EmbedMediaLayoutReporter
 }
 
 export function ExternalUrlEmbedContent({
   url,
   name,
-  onIntrinsicAspectRatio,
+  onMediaLayout,
 }: ExternalUrlEmbedContentProps) {
   const label = name ?? deriveExternalEmbedName(url) ?? url
   const kind = inferEmbedMediaKindFromUrl(url)
@@ -23,7 +23,7 @@ export function ExternalUrlEmbedContent({
       sourceUrl={url}
       label={label}
       kind={kind}
-      onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+      onMediaLayout={onMediaLayout}
       renderUnknown={() => <ExternalFileLinkCard url={url} label={label} />}
     />
   )

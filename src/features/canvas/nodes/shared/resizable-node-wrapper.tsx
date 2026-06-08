@@ -1,6 +1,7 @@
 import { CanvasNodeFrame } from './canvas-node-frame'
 import { CANVAS_NODE_MIN_SIZE } from './canvas-node-resize-constants'
 import { useRegisterCanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
+import type { CanvasNodeResizeAxes } from './canvas-node-resize-metadata'
 
 interface ResizableNodeWrapperProps {
   id: string
@@ -11,6 +12,7 @@ interface ResizableNodeWrapperProps {
   minWidth?: number
   minHeight?: number
   lockedAspectRatio?: number
+  resizeAxes?: CanvasNodeResizeAxes
   editing?: boolean
 }
 
@@ -23,6 +25,7 @@ export function ResizableNodeWrapper({
   minWidth = CANVAS_NODE_MIN_SIZE,
   minHeight = CANVAS_NODE_MIN_SIZE,
   lockedAspectRatio,
+  resizeAxes = 'both',
   editing = false,
 }: ResizableNodeWrapperProps) {
   useRegisterCanvasNodeResizeMetadata(id, {
@@ -30,6 +33,7 @@ export function ResizableNodeWrapper({
     lockedAspectRatio,
     minHeight,
     minWidth,
+    resizeAxes,
   })
 
   return (

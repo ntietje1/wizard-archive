@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ExternalUrlEmbedContent } from '../external-url-embed-content'
 import { FileMediaEmbedContent } from '../file-media-embed-content'
+import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '../../utils/embed-media'
 import type * as TanStackRouter from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 
@@ -44,15 +46,17 @@ describe('ExternalUrlEmbedContent', () => {
       'src',
       'https://x.test/a.png',
     )
+    expect(screen.getByRole('img', { name: 'a.png' })).toHaveAttribute('draggable', 'false')
+    expect(screen.getByRole('img', { name: 'a.png' })).toHaveClass('pointer-events-none')
   })
 
   it('reports external image intrinsic aspect ratios', () => {
-    const onIntrinsicAspectRatio = vi.fn()
+    const onMediaLayout = vi.fn()
     render(
       <ExternalUrlEmbedContent
         url="https://x.test/a.png"
         name="a.png"
-        onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+        onMediaLayout={onMediaLayout}
       />,
     )
 
@@ -61,17 +65,150 @@ describe('ExternalUrlEmbedContent', () => {
     Object.defineProperty(image, 'naturalHeight', { value: 900 })
     fireEvent.load(image)
 
-    expect(onIntrinsicAspectRatio).toHaveBeenLastCalledWith(1.777778)
+    expect(onMediaLayout).toHaveBeenLastCalledWith({
+      kind: 'intrinsicAspectRatio',
+      aspectRatio: 1.777778,
+    })
   })
 
-  it('renders video and audio urls with native media elements', () => {
+  it('renders video and audio urls with custom media controls', () => {
     const { rerender } = render(
       <ExternalUrlEmbedContent url="https://x.test/movie.mp4" name="movie.mp4" />,
     )
     expect(document.querySelector('video')).toHaveAttribute('src', 'https://x.test/movie.mp4')
+    expect(document.querySelector('video')).toHaveAttribute('draggable', 'false')
+    expect(document.querySelector('video')).not.toHaveAttribute('controls')
+    expect(screen.getByRole('button', { name: 'Play movie.mp4' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toBeInTheDocument()
 
     rerender(<ExternalUrlEmbedContent url="https://x.test/sound.mp3" name="sound.mp3" />)
     expect(document.querySelector('audio')).toHaveAttribute('src', 'https://x.test/sound.mp3')
+    expect(document.querySelector('audio')).toHaveAttribute('draggable', 'false')
+    expect(document.querySelector('audio')).not.toHaveAttribute('controls')
+    expect(screen.getByRole('button', { name: 'Play sound.mp3' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Enter fullscreen' })).not.toBeInTheDocument()
+  })
+
+  it('only plays videos from the custom play button', async () => {
+    const user = userEvent.setup()
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockReturnValue(undefined)
+    const onPointerDown = vi.fn()
+    render(
+      <div onPointerDown={onPointerDown}>
+        <ExternalUrlEmbedContent url="https://x.test/movie.mp4" name="movie.mp4" />
+      </div>,
+    )
+
+    fireEvent.pointerDown(screen.getByTestId('video-embed-player'))
+    expect(onPointerDown).toHaveBeenCalled()
+    expect(play).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Play movie.mp4' }))
+
+    expect(play).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: 'Pause movie.mp4' }))
+
+    expect(pause).toHaveBeenCalledTimes(1)
+    play.mockRestore()
+    pause.mockRestore()
+  })
+
+  it('requests fullscreen from the custom video fullscreen button', async () => {
+    const user = userEvent.setup()
+    const requestFullscreen = vi.fn()
+    render(<ExternalUrlEmbedContent url="https://x.test/movie.mp4" name="movie.mp4" />)
+    Object.defineProperty(screen.getByTestId('video-embed-player'), 'requestFullscreen', {
+      configurable: true,
+      value: requestFullscreen,
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Enter fullscreen' }))
+
+    expect(requestFullscreen).toHaveBeenCalled()
+  })
+
+  it('prevents native image and media-control drags without blocking media surfaces', () => {
+    const { rerender } = render(<ExternalUrlEmbedContent url="https://x.test/a.png" name="a.png" />)
+    expect(fireEvent.dragStart(screen.getByRole('img', { name: 'a.png' }))).toBe(false)
+
+    rerender(<ExternalUrlEmbedContent url="https://x.test/movie.mp4" name="movie.mp4" />)
+    expect(fireEvent.dragStart(document.querySelector('video')!)).toBe(true)
+    expect(fireEvent.dragStart(screen.getByRole('button', { name: 'Play movie.mp4' }))).toBe(false)
+
+    rerender(<ExternalUrlEmbedContent url="https://x.test/sound.mp3" name="sound.mp3" />)
+    expect(fireEvent.dragStart(screen.getByTestId('audio-embed-player'))).toBe(true)
+    expect(fireEvent.dragStart(screen.getByRole('button', { name: 'Play sound.mp3' }))).toBe(false)
+  })
+
+  it('reports audio as a fixed-height layout', () => {
+    const onMediaLayout = vi.fn()
+    render(
+      <ExternalUrlEmbedContent
+        url="https://x.test/sound.mp3"
+        name="sound.mp3"
+        onMediaLayout={onMediaLayout}
+      />,
+    )
+
+    expect(screen.getByTestId('audio-embed-player').style.height).toBe('')
+    expect(onMediaLayout).toHaveBeenLastCalledWith({
+      kind: 'fixedHeight',
+      height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+    })
+  })
+
+  it('updates audio fixed-height layout from the rendered custom control height', () => {
+    const onMediaLayout = vi.fn()
+    render(
+      <ExternalUrlEmbedContent
+        url="https://x.test/sound.mp3"
+        name="sound.mp3"
+        onMediaLayout={onMediaLayout}
+      />,
+    )
+
+    const audio = document.querySelector('audio')
+    expect(audio).not.toBeNull()
+    vi.spyOn(screen.getByTestId('audio-embed-player'), 'getBoundingClientRect').mockReturnValue({
+      bottom: 37,
+      height: 37,
+      left: 0,
+      right: 100,
+      top: 0,
+      width: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    fireEvent.loadedMetadata(audio!)
+
+    expect(onMediaLayout).toHaveBeenLastCalledWith({
+      kind: 'fixedHeight',
+      height: 37,
+    })
+  })
+
+  it('uses custom audio controls without blocking block-surface pointer events', async () => {
+    const user = userEvent.setup()
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    const onPointerDown = vi.fn()
+    render(
+      <div onPointerDown={onPointerDown}>
+        <ExternalUrlEmbedContent url="https://x.test/sound.mp3" name="sound.mp3" />
+      </div>,
+    )
+
+    fireEvent.pointerDown(screen.getByTestId('audio-embed-player'))
+    expect(onPointerDown).toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Play sound.mp3' }))
+
+    expect(play).toHaveBeenCalled()
+    expect(screen.getByRole('slider', { name: 'Seek sound.mp3' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Volume sound.mp3' })).toBeInTheDocument()
+    play.mockRestore()
   })
 
   it('renders PDFs through the React PDF viewer', async () => {
@@ -84,18 +221,21 @@ describe('ExternalUrlEmbedContent', () => {
   })
 
   it('forwards external PDF page aspect ratios', async () => {
-    const onIntrinsicAspectRatio = vi.fn()
+    const onMediaLayout = vi.fn()
     render(
       <ExternalUrlEmbedContent
         url="https://x.test/doc.pdf"
         name="doc.pdf"
-        onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+        onMediaLayout={onMediaLayout}
       />,
     )
 
     fireEvent.click(await screen.findByTestId('pdf-viewer'))
 
-    expect(onIntrinsicAspectRatio).toHaveBeenLastCalledWith(0.75)
+    expect(onMediaLayout).toHaveBeenLastCalledWith({
+      kind: 'intrinsicAspectRatio',
+      aspectRatio: 0.75,
+    })
   })
 
   it('renders unknown urls as open-link cards', () => {
@@ -126,14 +266,14 @@ describe('FileMediaEmbedContent', () => {
   })
 
   it('reports file video intrinsic aspect ratios from media metadata', () => {
-    const onIntrinsicAspectRatio = vi.fn()
+    const onMediaLayout = vi.fn()
     render(
       <FileMediaEmbedContent
         downloadUrl="https://x.test/movie.mp4"
         contentType="video/mp4"
         previewUrl={null}
         name="movie.mp4"
-        onIntrinsicAspectRatio={onIntrinsicAspectRatio}
+        onMediaLayout={onMediaLayout}
       />,
     )
 
@@ -143,7 +283,10 @@ describe('FileMediaEmbedContent', () => {
     Object.defineProperty(video, 'videoHeight', { value: 1080 })
     fireEvent.loadedMetadata(video!)
 
-    expect(onIntrinsicAspectRatio).toHaveBeenLastCalledWith(1.777778)
+    expect(onMediaLayout).toHaveBeenLastCalledWith({
+      kind: 'intrinsicAspectRatio',
+      aspectRatio: 1.777778,
+    })
   })
 
   it('falls back to a file preview when no download URL is available', () => {

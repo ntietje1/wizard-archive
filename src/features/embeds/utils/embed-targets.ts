@@ -1,6 +1,7 @@
 import { deriveExternalEmbedName, embedTargetSchema } from 'shared/embeds/embedTargets'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { Id } from 'convex/_generated/dataModel'
+import { isInternalNativeDrag } from '~/features/dnd/utils/internal-native-drag'
 
 export function externalEmbedTargetFromUrl(rawUrl: string): EmbedTarget | null {
   const url = rawUrl.trim()
@@ -27,6 +28,7 @@ export function getSidebarItemIdFromDragData(
 
 export function getExternalUrlDropTarget(dataTransfer: DataTransfer | null): EmbedTarget | null {
   if (!dataTransfer) return null
+  if (isInternalNativeDrag(dataTransfer)) return null
   const uriList = getFirstUriListUrl(dataTransfer.getData('text/uri-list'))
   const plainText = dataTransfer.getData('text/plain')
   return externalEmbedTargetFromUrl(uriList || plainText)

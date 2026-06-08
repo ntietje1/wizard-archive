@@ -33,17 +33,17 @@ describe('useEmbedDropTarget', () => {
 
     expect(
       dropTargetState.args!.canDrop({
-        source: { data: { sidebarItemId: testId<'sidebarItems'>('canvas-1') } },
+        source: { data: sidebarDragData(testId<'sidebarItems'>('canvas-1')) },
       }),
     ).toBe(false)
     expect(
       dropTargetState.args!.canDrop({
-        source: { data: { sidebarItemId: testId<'sidebarItems'>('note-1') } },
+        source: { data: sidebarDragData(testId<'sidebarItems'>('note-1')) },
       }),
     ).toBe(true)
 
     dropTargetState.args!.onDrop({
-      source: { data: { sidebarItemId: testId<'sidebarItems'>('note-1') } },
+      source: { data: sidebarDragData(testId<'sidebarItems'>('note-1')) },
     })
 
     await waitFor(() =>
@@ -52,6 +52,24 @@ describe('useEmbedDropTarget', () => {
         sidebarItemId: testId<'sidebarItems'>('note-1'),
       }),
     )
+  })
+
+  it('ignores editor block drag data that only contains embed block props', async () => {
+    const setTarget = vi.fn(() => Promise.resolve())
+    renderHookHarness({ setTarget })
+
+    await waitFor(() => expect(dropTargetState.args).not.toBeNull())
+
+    const blockDragData = {
+      targetKind: 'sidebarItem',
+      sidebarItemId: testId<'sidebarItems'>('note-1'),
+    }
+
+    expect(dropTargetState.args!.canDrop({ source: { data: blockDragData } })).toBe(false)
+
+    dropTargetState.args!.onDrop({ source: { data: blockDragData } })
+
+    expect(setTarget).not.toHaveBeenCalled()
   })
 
   it('replaces from external URL drops', async () => {
@@ -70,6 +88,25 @@ describe('useEmbedDropTarget', () => {
         name: 'file.pdf',
       }),
     )
+  })
+
+  it('ignores app-internal native URL drops', () => {
+    const setTarget = vi.fn(() => Promise.resolve())
+    renderHookHarness({ setTarget })
+
+    const { event, dataTransfer } = dispatchNativeDrop({
+      types: ['application/x-wizard-archive-internal-drag', 'text/plain'],
+      getData: (type) =>
+        type === 'text/plain'
+          ? 'https://example.com/internal-image.png'
+          : type === 'application/x-wizard-archive-internal-drag'
+            ? 'true'
+            : '',
+    })
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(dataTransfer.dropEffect).toBeUndefined()
+    expect(setTarget).not.toHaveBeenCalled()
   })
 
   it('replaces from uri-list URL drops with comments', async () => {
@@ -133,6 +170,14 @@ function renderHookHarness({
   )
 }
 
+function sidebarDragData(sidebarItemId: Id<'sidebarItems'>) {
+  return {
+    sidebarItemId,
+    sidebarItemIds: [sidebarItemId],
+    sidebarDragPreviewItemIds: [sidebarItemId],
+  }
+}
+
 function CanvasEmbedDropTargetHarness({
   sourceItemId,
   setTarget,
@@ -156,14 +201,17 @@ function CanvasEmbedDropTargetHarness({
 function dispatchNativeDrop(dataTransfer: {
   types: Array<string>
   getData: (type: string) => string
+  dropEffect?: DataTransfer['dropEffect']
   files?: { item: (index: number) => File | null }
 }) {
   const event = new Event('drop', { bubbles: true, cancelable: true })
+  const transfer = {
+    files: { item: () => null },
+    ...dataTransfer,
+  }
   Object.defineProperty(event, 'dataTransfer', {
-    value: {
-      files: { item: () => null },
-      ...dataTransfer,
-    },
+    value: transfer,
   })
   screen.getByTestId('drop-target').dispatchEvent(event)
+  return { event, dataTransfer: transfer }
 }

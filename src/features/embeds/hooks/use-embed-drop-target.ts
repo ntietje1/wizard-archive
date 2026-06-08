@@ -45,12 +45,12 @@ function useElementDropTarget({
     return dropTargetForElements({
       element,
       canDrop: ({ source }) => {
-        const id = getSidebarItemIdFromDragData(source.data)
+        const id = getSidebarItemIdFromAppDragData(source.data)
         return id !== null && id !== sourceItemId
       },
       getDropEffect: () => 'copy',
       onDrop: ({ source }) => {
-        const id = getSidebarItemIdFromDragData(source.data)
+        const id = getSidebarItemIdFromAppDragData(source.data)
         if (!id || id === sourceItemId) return
         void Promise.resolve(setTarget(sidebarItemEmbedTarget(id))).catch((error) => {
           handleError(error, 'Failed to update embed target')
@@ -58,6 +58,12 @@ function useElementDropTarget({
       },
     })
   }, [enabled, ref, setTarget, sourceItemId])
+}
+
+function getSidebarItemIdFromAppDragData(data: Record<string | symbol, unknown>) {
+  const id = getSidebarItemIdFromDragData(data)
+  if (!id || !Array.isArray(data.sidebarItemIds)) return null
+  return data.sidebarItemIds.some((itemId) => typeof itemId === 'string') ? id : null
 }
 
 function useNativeDropTarget({

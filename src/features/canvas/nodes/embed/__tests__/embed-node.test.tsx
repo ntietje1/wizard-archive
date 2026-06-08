@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
@@ -6,6 +6,8 @@ import { EmbedNode } from '../embed-node'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import { CANVAS_NODE_MIN_SIZE } from '../../shared/canvas-node-resize-constants'
+import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '~/features/embeds/utils/embed-media'
+import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 import { testId } from '~/test/helpers/test-id'
 
 const sidebarItemPreviewSpy = vi.hoisted(() => vi.fn())
@@ -22,6 +24,7 @@ const canvasRuntimeState = vi.hoisted(() => ({
   canvasId: 'source-canvas',
   flushUpdates: vi.fn(),
   patchNodeData: vi.fn(),
+  resizeNode: vi.fn(),
 }))
 const contentItemState = vi.hoisted((): { data: Record<string, unknown> } => ({
   data: {},
@@ -46,9 +49,7 @@ vi.mock('../embedded-canvas-content', () => ({
 }))
 
 vi.mock('~/features/embeds/components/file-media-embed-content', () => ({
-  FileMediaEmbedContent: (props: {
-    onIntrinsicAspectRatio?: (aspectRatio: number | null) => void
-  }) => {
+  FileMediaEmbedContent: (props: { onMediaLayout?: (layout: EmbedMediaLayout) => void }) => {
     fileMediaEmbedSpy(props)
     return <div data-testid="shared-file-media-embed">shared-file-media</div>
   },
@@ -73,6 +74,7 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
     canvasId: canvasRuntimeState.canvasId,
     documentWriter: {
       patchNodeData: canvasRuntimeState.patchNodeData,
+      resizeNode: canvasRuntimeState.resizeNode,
     },
     provider: {
       flushUpdates: canvasRuntimeState.flushUpdates,
@@ -197,6 +199,7 @@ describe('EmbedNode', () => {
     canvasRuntimeState.canvasId = 'source-canvas'
     canvasRuntimeState.flushUpdates.mockClear()
     canvasRuntimeState.patchNodeData.mockClear()
+    canvasRuntimeState.resizeNode.mockClear()
     setEditingEmbedId.mockClear()
     activeItemsState.itemsMap = new Map([
       ['canvas-1', { name: 'Canvas Item' }],
@@ -285,7 +288,7 @@ describe('EmbedNode', () => {
       contentType: 'application/pdf',
       downloadUrl: 'document.pdf',
       previewUrl: 'preview.png',
-      onIntrinsicAspectRatio: expect.any(Function),
+      onMediaLayout: expect.any(Function),
     })
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
   })
@@ -302,12 +305,50 @@ describe('EmbedNode', () => {
     renderEmbedNode('node-1', 'file-1')
 
     const props = fileMediaEmbedSpy.mock.calls[0]?.[0] as {
-      onIntrinsicAspectRatio?: (aspectRatio: number | null) => void
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
     }
-    props.onIntrinsicAspectRatio?.(2)
+    act(() => {
+      props.onMediaLayout?.({ kind: 'intrinsicAspectRatio', aspectRatio: 2 })
+    })
 
     expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
       new Map([['node-1', { lockedAspectRatio: 2 }]]),
+    )
+  })
+
+  it('uses fixed-height horizontal resizing for audio file embeds', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'Audio Item',
+      contentType: 'audio/mpeg',
+      downloadUrl: 'audio.mp3',
+      previewUrl: null,
+    }
+    renderEmbedNode('node-1', 'file-1', { zoom: 1 }, { lockedAspectRatio: 2 })
+
+    const props = fileMediaEmbedSpy.mock.calls[0]?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      props.onMediaLayout?.({ kind: 'fixedHeight', height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK })
+    })
+
+    expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
+      new Map([['node-1', { lockedAspectRatio: null }]]),
+    )
+    expect(canvasRuntimeState.resizeNode).toHaveBeenCalledWith(
+      'node-1',
+      320,
+      AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+      { x: 10, y: 20 },
+    )
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        minHeight: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+        resizeAxes: 'horizontal',
+        lockedAspectRatio: undefined,
+      }),
     )
   })
 
@@ -369,7 +410,7 @@ describe('EmbedNode', () => {
       contentType: 'application/pdf',
       downloadUrl: 'document.pdf',
       previewUrl: 'preview.png',
-      onIntrinsicAspectRatio: expect.any(Function),
+      onMediaLayout: expect.any(Function),
     })
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
   })
@@ -458,6 +499,18 @@ function renderEmbedNode(
 ) {
   const engine = createCanvasEngine()
   engine.setViewport({ x: 0, y: 0, zoom: viewport.zoom })
+  engine.setDocumentSnapshot({
+    nodes: [
+      {
+        id,
+        type: 'embed',
+        data: {},
+        position: { x: 10, y: 20 },
+        width: 320,
+        height: 180,
+      },
+    ],
+  })
 
   return render(
     <CanvasEngineProvider engine={engine}>
