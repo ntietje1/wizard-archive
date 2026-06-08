@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -96,10 +96,10 @@ export function PdfFileViewer({
   const scrollViewportRef = useRef<HTMLDivElement | null>(null)
   const [scrollViewportElement, setScrollViewportElement] = useState<HTMLDivElement | null>(null)
   const scrollViewportSize = useElementSize(scrollViewportElement)
-  const setScrollViewport = useCallback((element: HTMLDivElement | null) => {
+  const setScrollViewport = (element: HTMLDivElement | null) => {
     scrollViewportRef.current = element
     setScrollViewportElement(element)
-  }, [])
+  }
 
   const isValid = isValidFileUrl(pdfUrl)
   const numPages = documentState.status === 'ready' ? documentState.numPages : 0
