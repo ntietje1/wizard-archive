@@ -91,7 +91,6 @@ export function BlockDragHandleButton({ note }: { note: NoteWithContent }) {
     didDragRef.current = true
     markInternalNativeDrag(event.dataTransfer)
     sideMenu.blockDragStart(event, activeBlock)
-    markInternalNativeDrag(event.dataTransfer)
   }
 
   function handleDragEnd() {

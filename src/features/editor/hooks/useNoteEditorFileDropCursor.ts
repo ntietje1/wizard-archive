@@ -13,6 +13,7 @@ interface TiptapEditorLike {
 }
 
 const registeredEditors = new WeakSet<TiptapEditorLike>()
+const MAX_DROP_CURSOR_REGISTRATION_FRAMES = 120
 
 export function useNoteEditorFileDropCursor(editor: CustomBlockNoteEditor, enabled: boolean) {
   useEffect(() => {
@@ -26,12 +27,17 @@ function registerNoteEditorDropCursorPlugin(tiptapEditor: TiptapEditorLike | und
 
   let cancelled = false
   let frameId: number | null = null
+  let attempts = 0
 
   const registerWhenReady = () => {
     if (cancelled) return
 
     const view = getMountedEditorView(tiptapEditor)
     if (!view) {
+      attempts += 1
+      if (attempts >= MAX_DROP_CURSOR_REGISTRATION_FRAMES) {
+        return
+      }
       frameId = requestAnimationFrame(registerWhenReady)
       return
     }
@@ -59,8 +65,7 @@ function getMountedEditorView(tiptapEditor: TiptapEditorLike) {
   try {
     const view = tiptapEditor.view
     if (!view) return undefined
-    void view.dom
-    return view
+    return 'dom' in view && view.dom ? view : undefined
   } catch {
     return undefined
   }

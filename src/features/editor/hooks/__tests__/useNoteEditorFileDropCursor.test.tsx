@@ -24,6 +24,18 @@ function createEditor() {
   }
 }
 
+function createUnmountedEditor() {
+  const tiptapEditor = {
+    view: undefined,
+    registerPlugin: vi.fn(),
+  }
+
+  return {
+    editor: { _tiptapEditor: tiptapEditor } as unknown as CustomBlockNoteEditor,
+    tiptapEditor,
+  }
+}
+
 async function flushAnimationFrame() {
   await act(async () => {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
@@ -73,5 +85,32 @@ describe('useNoteEditorFileDropCursor', () => {
 
     expect(dropCursor).toHaveBeenCalledTimes(1)
     expect(tiptapEditor.registerPlugin).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops polling when the ProseMirror view never mounts', () => {
+    const callbacks: Array<FrameRequestCallback> = []
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callbacks.push(callback)
+        return callbacks.length
+      })
+    const cancelAnimationFrameSpy = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation(() => undefined)
+    const { editor, tiptapEditor } = createUnmountedEditor()
+
+    const { unmount } = renderHook(() => useNoteEditorFileDropCursor(editor, true))
+    while (callbacks.length > 0) {
+      const callback = callbacks.shift()
+      callback?.(0)
+    }
+    unmount()
+
+    expect(dropCursor).not.toHaveBeenCalled()
+    expect(tiptapEditor.registerPlugin).not.toHaveBeenCalled()
+
+    requestAnimationFrameSpy.mockRestore()
+    cancelAnimationFrameSpy.mockRestore()
   })
 })

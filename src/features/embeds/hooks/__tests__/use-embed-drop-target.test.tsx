@@ -12,6 +12,7 @@ const dropTargetState = vi.hoisted(() => ({
     onDrop: (input: { source: { data: Record<string | symbol, unknown> } }) => void
   },
 }))
+const handleErrorMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
   dropTargetForElements: vi.fn((args) => {
@@ -20,9 +21,14 @@ vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
   }),
 }))
 
+vi.mock('~/shared/utils/logger', () => ({
+  handleError: handleErrorMock,
+}))
+
 describe('useEmbedDropTarget', () => {
   beforeEach(() => {
     dropTargetState.args = null
+    handleErrorMock.mockReset()
   })
 
   it('replaces from sidebar item drops and rejects the current canvas', async () => {
@@ -68,6 +74,24 @@ describe('useEmbedDropTarget', () => {
     expect(dropTargetState.args!.canDrop({ source: { data: blockDragData } })).toBe(false)
 
     dropTargetState.args!.onDrop({ source: { data: blockDragData } })
+
+    expect(setTarget).not.toHaveBeenCalled()
+  })
+
+  it('rejects sidebar item drops when the extracted item is not in the drag id set', async () => {
+    const setTarget = vi.fn(() => Promise.resolve())
+    renderHookHarness({ setTarget })
+
+    await waitFor(() => expect(dropTargetState.args).not.toBeNull())
+
+    const forgedDragData = {
+      sidebarItemId: testId<'sidebarItems'>('note-1'),
+      sidebarItemIds: [testId<'sidebarItems'>('note-2')],
+    }
+
+    expect(dropTargetState.args!.canDrop({ source: { data: forgedDragData } })).toBe(false)
+
+    dropTargetState.args!.onDrop({ source: { data: forgedDragData } })
 
     expect(setTarget).not.toHaveBeenCalled()
   })
@@ -147,6 +171,27 @@ describe('useEmbedDropTarget', () => {
       kind: 'sidebarItem',
       sidebarItemId: testId<'sidebarItems'>('file-1'),
     })
+  })
+
+  it('reports native file upload failures instead of silently keeping the old target', async () => {
+    const setTarget = vi.fn(() => Promise.resolve())
+    const uploadFile = vi.fn(() => Promise.resolve(null))
+    const file = new File(['x'], 'image.png', { type: 'image/png' })
+    renderHookHarness({ setTarget, uploadFile })
+
+    dispatchNativeDrop({
+      types: ['Files'],
+      files: { item: () => file },
+      getData: () => '',
+    })
+
+    await waitFor(() =>
+      expect(handleErrorMock).toHaveBeenCalledWith(
+        expect.any(Error),
+        'Could not upload file. Please try again.',
+      ),
+    )
+    expect(setTarget).not.toHaveBeenCalled()
   })
 })
 

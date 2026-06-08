@@ -22,7 +22,6 @@ export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | nu
         positiveNumber(block.props.previewAspectRatio) ??
         getDocumentEmbedAspectRatioForTarget(target)
       const height = aspectRatio ? undefined : positiveNumber(block.props.previewHeight)
-      const bodyAspectRatio = aspectRatio ?? undefined
       const root = createRoot(reactRootElement)
 
       dom.className = cn(
@@ -36,7 +35,7 @@ export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | nu
       root.render(
         <div
           className="min-h-36 w-full min-w-full overflow-hidden"
-          style={getStaticEmbedBodyStyle({ aspectRatio: bodyAspectRatio, height })}
+          style={getStaticEmbedBodyStyle({ aspectRatio: aspectRatio ?? undefined, height })}
         >
           <EmbedContent
             target={target}

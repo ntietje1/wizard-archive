@@ -36,6 +36,8 @@ function mapEmbedRenderProps(props: EmbedBlockRenderProps): NoteEmbedBlockBasePr
   const editor = props.editor
   return {
     block: props.block,
+    // BlockNote exposes editor methods with broader block shapes than
+    // NoteEmbedBlockView accepts, so this adapter narrows them at the boundary.
     editor: {
       domElement: editor.domElement,
       replaceBlocks: (blocksToRemove, blocksToInsert) => {

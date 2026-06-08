@@ -190,6 +190,16 @@ describe('ResizableNodeWrapper', () => {
     expect(screen.queryByTestId('canvas-selection-resize-zone-bottom-right')).toBeNull()
   })
 
+  it('exposes only vertical resize zones for vertical-only nodes', () => {
+    renderSelectionResize({ resizeAxes: 'vertical' })
+
+    expect(screen.getByTestId('canvas-selection-resize-zone-top')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-selection-resize-zone-bottom')).toBeInTheDocument()
+    expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(2)
+    expect(screen.queryByTestId('canvas-selection-resize-zone-left')).toBeNull()
+    expect(screen.queryByTestId('canvas-selection-resize-zone-bottom-right')).toBeNull()
+  })
+
   it('keeps individual selected-node borders screen-constant with zoom-aware local styles', () => {
     const runtime = renderSelectionResize({
       nodes: [
@@ -400,6 +410,24 @@ describe('ResizableNodeWrapper', () => {
     ])
     expectMapEntries(runtime.nodeActions.onResizeManyEnd, [
       ['node-1', { width: 130, height: 40, position: { x: 10, y: 20 } }],
+    ])
+  })
+
+  it('keeps vertical-only node width and x position fixed while resizing', () => {
+    const runtime = renderSelectionResize({ resizeAxes: 'vertical' })
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-bottom')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 50, clientY: 60 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 120, clientY: 110 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 120, clientY: 110 })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 80, height: 90, position: { x: 10, y: 20 } }],
+    ])
+    expectMapEntries(runtime.nodeActions.onResizeManyEnd, [
+      ['node-1', { width: 80, height: 90, position: { x: 10, y: 20 } }],
     ])
   })
 

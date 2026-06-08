@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useSyncExternalStore } from 'react'
 
-export type CanvasNodeResizeAxes = 'both' | 'horizontal'
+export type CanvasNodeResizeAxes = 'both' | 'horizontal' | 'vertical'
 
 export interface CanvasNodeResizeMetadata {
   dragging: boolean

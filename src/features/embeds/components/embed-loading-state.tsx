@@ -6,12 +6,12 @@ type EmbedLoadingStateProps = {
 
 export function EmbedLoadingState({ label = 'Loading embed' }: EmbedLoadingStateProps) {
   return (
-    <output
+    <div
       aria-label={label}
       data-testid="embed-loading-state"
       className="flex h-full min-h-24 w-full min-w-full items-center justify-center bg-muted/20 p-4 text-muted-foreground"
     >
       <LoadingSpinner size="lg" />
-    </output>
+    </div>
   )
 }

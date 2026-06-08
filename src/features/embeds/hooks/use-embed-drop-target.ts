@@ -10,6 +10,8 @@ import {
 } from '~/features/embeds/utils/embed-targets'
 import { handleError } from '~/shared/utils/logger'
 
+const EMBED_DROP_UPLOAD_ERROR = 'Could not upload file. Please try again.'
+
 export function useEmbedDropTarget({
   ref,
   enabled,
@@ -63,7 +65,7 @@ function useElementDropTarget({
 function getSidebarItemIdFromAppDragData(data: Record<string | symbol, unknown>) {
   const id = getSidebarItemIdFromDragData(data)
   if (!id || !Array.isArray(data.sidebarItemIds)) return null
-  return data.sidebarItemIds.some((itemId) => typeof itemId === 'string') ? id : null
+  return data.sidebarItemIds.includes(id) ? id : null
 }
 
 function useNativeDropTarget({
@@ -96,7 +98,11 @@ function useNativeDropTarget({
       try {
         if (file) {
           const sidebarItemId = await uploadFile(file)
-          if (sidebarItemId) await setTarget(sidebarItemEmbedTarget(sidebarItemId))
+          if (!sidebarItemId) {
+            handleError(new Error(EMBED_DROP_UPLOAD_ERROR), EMBED_DROP_UPLOAD_ERROR)
+            return
+          }
+          await setTarget(sidebarItemEmbedTarget(sidebarItemId))
           return
         }
 

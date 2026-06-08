@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { NoteEmbedBlockView } from '../embed-block'
 import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '~/features/embeds/utils/embed-media'
@@ -108,6 +108,10 @@ describe('NoteEmbedBlockView', () => {
     dropTargetForElementsMock.mockClear()
     dropTargetForElementsMock.mockReturnValue(vi.fn())
     sidebarItemByIdState.data = null
+    clearInternalNativeDrag()
+  })
+
+  afterEach(() => {
     clearInternalNativeDrag()
   })
 

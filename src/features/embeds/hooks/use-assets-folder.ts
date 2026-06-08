@@ -17,7 +17,7 @@ export function useAssetsFolder() {
           ? activeItems.data
           : cachedActiveItems.length > 0
             ? cachedActiveItems
-            : activeItems.data,
+            : (activeItems.data ?? []),
       createItem,
       loadError: activeItems.error,
       loaded: activeItems.status === 'success',

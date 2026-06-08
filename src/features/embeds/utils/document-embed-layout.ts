@@ -9,10 +9,14 @@ import {
 
 export const DOCUMENT_EMBED_ASPECT_RATIO_WIDTH = 612
 export const DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT = 792
-const DOCUMENT_EMBED_ASPECT_RATIO = getIntrinsicAspectRatio(
+const documentEmbedAspectRatio = getIntrinsicAspectRatio(
   DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
   DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT,
-)!
+)
+if (documentEmbedAspectRatio === null) {
+  throw new Error('Invalid document embed aspect ratio constants')
+}
+const DOCUMENT_EMBED_ASPECT_RATIO = documentEmbedAspectRatio
 
 export function getDocumentEmbedAspectRatioForTarget(target: EmbedTarget) {
   return target.kind === 'externalUrl' && inferEmbedMediaKindFromUrl(target.url) === 'pdf'

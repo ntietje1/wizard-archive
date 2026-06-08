@@ -22,6 +22,8 @@ function getExternalFileDropDestination(
   if (typeof rawParentId === 'string') {
     return { kind: 'direct', parentId: rawParentId as Id<'sidebarItems'> }
   }
+  // A present non-string parentId on target.data is an explicit root drop;
+  // a missing parentId can still fall through to sidebarItemId or type data.
   if (Object.hasOwn(target.data, 'parentId')) {
     return { kind: 'direct', parentId: null }
   }
