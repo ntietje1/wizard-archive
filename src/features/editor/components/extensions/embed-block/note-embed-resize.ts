@@ -183,15 +183,13 @@ function getNextSize({
   }
 
   const horizontalWidth = getHorizontalWidth({ handle, pointerX, startWidth, startX })
-  const verticalWidth = activeAspectRatio
-    ? getVerticalWidth({
-        activeAspectRatio,
-        handle,
-        pointerY,
-        startHeight,
-        startY,
-      })
-    : undefined
+  const verticalWidth = getVerticalWidth({
+    activeAspectRatio,
+    handle,
+    pointerY,
+    startHeight,
+    startY,
+  })
 
   if (horizontalWidth === undefined) {
     const width = verticalWidth ?? startWidth

@@ -153,7 +153,7 @@ async function validateSidebarItemEmbedTargets(
   }
 
   await asyncMap([...targetIds], async (targetId) => {
-    const item = await ctx.db.get(targetId)
+    const item = await ctx.db.get('sidebarItems', targetId)
     if (!item) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target not found')
     }
