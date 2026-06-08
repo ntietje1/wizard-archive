@@ -11,7 +11,6 @@ type LegacyBlock = Record<string, unknown> & {
 type EmbedProps = {
   backgroundColor?: string
   name?: string
-  previewHeight?: number
   previewWidth?: number
   targetKind: 'empty' | 'externalUrl'
   textAlignment?: 'left' | 'center' | 'right' | 'justify'
@@ -40,7 +39,16 @@ function migrateLegacyMediaBlock(block: LegacyBlock): LegacyBlock {
     : block.children
 
   if (!isLegacyMediaBlockType(block.type)) {
-    return children === block.children ? block : { ...block, children }
+    if (block.type !== 'embed') {
+      return children === block.children ? block : { ...block, children }
+    }
+
+    return stripUndefined({
+      ...block,
+      props: getCurrentEmbedProps(block.props ?? {}),
+      content: undefined,
+      children,
+    })
   }
 
   return stripUndefined({
@@ -81,8 +89,11 @@ function getLegacyMediaBaseProps(props: Record<string, unknown>) {
     backgroundColor: typeof props.backgroundColor === 'string' ? props.backgroundColor : undefined,
     textAlignment: isTextAlignment(props.textAlignment) ? props.textAlignment : undefined,
     previewWidth: getPositiveNumber(props.previewWidth),
-    previewHeight: getPositiveNumber(props.previewHeight),
   })
+}
+
+function getCurrentEmbedProps(props: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(props).filter(([key]) => key !== 'previewHeight'))
 }
 
 function getLegacyMediaName(props: Record<string, unknown>, url: string): string | null {

@@ -19,6 +19,7 @@ describe('migrateLegacyMediaBlocks', () => {
             url: 'https://example.com/image.png',
             name: 'image.png',
             previewWidth: 320,
+            previewHeight: 180,
           },
         },
       ]),
@@ -34,6 +35,32 @@ describe('migrateLegacyMediaBlocks', () => {
         },
       },
     ])
+  })
+
+  it('strips obsolete embed content and preview height during parsing', () => {
+    const [block] = parseEditorBlocks([
+      {
+        id: testBlockNoteId('legacy-embed-shape'),
+        type: 'embed',
+        content: [{ type: 'text', text: 'legacy caption', styles: {} }],
+        props: {
+          targetKind: 'externalUrl',
+          url: 'https://example.com/image.png',
+          previewWidth: 320,
+          previewHeight: 180,
+        },
+      },
+    ])
+
+    expect(block).toEqual({
+      id: testBlockNoteId('legacy-embed-shape'),
+      type: 'embed',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/image.png',
+        previewWidth: 320,
+      },
+    })
   })
 
   it('preserves children recursively', () => {

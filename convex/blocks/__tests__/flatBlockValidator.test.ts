@@ -91,7 +91,6 @@ describe('flat block content validation', () => {
         url: 'https://example.com/img.png',
         name: 'img.png',
         previewWidth: 300,
-        previewHeight: 200,
         textAlignment: 'center',
       },
     })

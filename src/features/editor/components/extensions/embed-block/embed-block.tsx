@@ -1,16 +1,21 @@
-import { Suspense, lazy, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { File as FileIcon, Link } from 'lucide-react'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { Id } from 'convex/_generated/dataModel'
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react'
-import { useEmbedUpload } from '~/features/embeds/hooks/use-embed-upload'
+import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { cn } from '~/features/shadcn/lib/utils'
+import {
+  RESIZE_HANDLE_DESCRIPTORS,
+  getResizeHandleLabel,
+} from 'shared/resize/resizeHandleDescriptors'
 import { blockPropsFromEmbedTarget, embedTargetFromBlockProps } from './embed-block-targets'
-import { externalEmbedTargetFromUrl } from '~/features/embeds/utils/embed-targets'
+import { getNoteEmbedResizeCursor, startNoteEmbedResizeSession } from './note-embed-resize'
 import { useNoteEmbedBlockDropTarget } from './embed-block-drop'
+import type { NoteEmbedResizeHandle } from './note-embed-resize'
 import type { NoteEmbedBlockProps } from './embed-block-targets'
 
 const EmbedContent = lazy(() =>
@@ -25,10 +30,11 @@ type NoteEmbedBlockViewProps = {
     content?: unknown
     props: NoteEmbedBlockProps
   }
-  contentRef: ((node: HTMLElement | null) => void) | null
   editable: boolean
   editor: {
+    domElement?: HTMLElement | null
     replaceBlocks: (blocksToRemove: Array<unknown>, blocksToInsert: Array<unknown>) => void
+    setTextCursorPosition?: (targetBlock: unknown, placement?: 'start' | 'end') => void
     updateBlock: (block: unknown, update: unknown) => void
   }
   sourceNoteId: Id<'sidebarItems'> | null
@@ -37,11 +43,12 @@ type NoteEmbedBlockViewProps = {
 export function NoteEmbedBlockView({
   block,
   editor,
-  contentRef,
   editable,
   sourceNoteId,
 }: NoteEmbedBlockViewProps) {
   const rootRef = useRef<HTMLElement | null>(null)
+  const [intrinsicAspectRatio, setIntrinsicAspectRatio] = useState<number | null>(null)
+  const [selected, setSelected] = useState(false)
   const blockProps = block.props as NoteEmbedBlockProps
   const target = embedTargetFromBlockProps(blockProps)
 
@@ -63,56 +70,98 @@ export function NoteEmbedBlockView({
   }
 
   const width = positiveNumber(blockProps.previewWidth)
-  const height = positiveNumber(blockProps.previewHeight)
+
+  useEffect(() => {
+    if (!selected) return
+
+    const clearSelectionOutsideEmbed = (event: PointerEvent) => {
+      const eventTarget = event.target
+      if (eventTarget instanceof Node && rootRef.current?.contains(eventTarget)) return
+      setSelected(false)
+    }
+
+    window.addEventListener('pointerdown', clearSelectionOutsideEmbed, true)
+    return () => window.removeEventListener('pointerdown', clearSelectionOutsideEmbed, true)
+  }, [selected])
+
+  const selectEmbed = () => {
+    setSelected(true)
+    editor.setTextCursorPosition?.(block, 'start')
+  }
 
   return (
     <section
       ref={rootRef}
       data-testid="note-embed-block"
       data-note-embed-drop-target="true"
-      className={cn(
-        'note-embed-block relative my-2 overflow-hidden rounded-lg border border-border bg-card text-card-foreground',
-        target.kind === 'empty' && 'border-dashed bg-muted/20',
-      )}
+      className="note-embed-block allow-motion relative my-2 overflow-visible"
       style={{
         width,
-        height,
         maxWidth: '100%',
       }}
+      onPointerDownCapture={(event) => {
+        if (!editable || event.button !== 0) return
+        const eventTarget = event.target
+        if (
+          eventTarget instanceof Element &&
+          eventTarget.closest('[data-note-embed-resize-zone="true"]')
+        ) {
+          return
+        }
+        selectEmbed()
+      }}
     >
-      <span ref={contentRef} className="sr-only" />
-      {target.kind !== 'empty' ? <NoteEmbedBlockHeader target={target} /> : null}
-      {editable ? (
-        <EditableNoteEmbedBlockBody
-          rootRef={rootRef}
-          sourceNoteId={sourceNoteId}
-          target={target}
-          setTarget={setTarget}
-        />
-      ) : (
-        <ReadOnlyNoteEmbedBlockBody sourceNoteId={sourceNoteId} target={target} />
-      )}
-      {editable ? (
-        <button
-          type="button"
-          aria-label="Resize embed"
-          className="absolute bottom-1 right-1 z-10 h-4 w-4 cursor-nwse-resize rounded-sm border border-border bg-background/90 shadow-sm"
-          onPointerDown={(event) => {
-            startResize({
+      <div
+        data-testid="note-embed-visual-surface"
+        contentEditable={false}
+        draggable={false}
+        className={cn(
+          'w-full overflow-hidden border border-border bg-card text-card-foreground',
+          target.kind === 'empty' && 'border-dashed bg-muted/20',
+        )}
+      >
+        {target.kind !== 'empty' ? <NoteEmbedBlockHeader target={target} /> : null}
+        {editable ? (
+          <EditableNoteEmbedBlockBody
+            aspectRatio={intrinsicAspectRatio}
+            rootRef={rootRef}
+            sourceNoteId={sourceNoteId}
+            target={target}
+            onIntrinsicAspectRatio={(aspectRatio) => {
+              setIntrinsicAspectRatio(aspectRatio)
+            }}
+            setTarget={setTarget}
+          />
+        ) : (
+          <ReadOnlyNoteEmbedBlockBody sourceNoteId={sourceNoteId} target={target} />
+        )}
+      </div>
+      {editable && selected ? (
+        <NoteEmbedResizeWrapper
+          onResizeStart={(event, handle) => {
+            startNoteEmbedResizeSession({
+              aspectRatio: intrinsicAspectRatio,
+              editorElement: editor.domElement,
               event,
               root: rootRef.current,
               width,
-              height,
-              onResize: (previewWidth, previewHeight) => {
+              handle,
+              onCommit: (previewWidth) => {
                 editor.updateBlock(block, {
                   props: {
                     previewWidth,
-                    previewHeight,
                   },
                 })
               },
             })
           }}
+        />
+      ) : null}
+      {editable && target.kind !== 'empty' && !selected ? (
+        <div
+          aria-hidden="true"
+          data-testid="note-embed-select-layer"
+          className="note-embed-select-layer absolute inset-0 z-10 bg-transparent"
         />
       ) : null}
     </section>
@@ -141,94 +190,74 @@ function ReadOnlyNoteEmbedBlockBody({
 }
 
 function EditableNoteEmbedBlockBody({
+  aspectRatio,
   rootRef,
   sourceNoteId,
   target,
+  onIntrinsicAspectRatio,
   setTarget,
 }: {
+  aspectRatio: number | null
   rootRef: RefObject<HTMLElement | null>
   sourceNoteId: Id<'sidebarItems'> | null
   target: EmbedTarget
+  onIntrinsicAspectRatio: (aspectRatio: number | null) => void
   setTarget: (target: EmbedTarget) => void
 }) {
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [linkDraftOpen, setLinkDraftOpen] = useState(false)
-  const [linkDraft, setLinkDraft] = useState('')
-  const [linkError, setLinkError] = useState<string | null>(null)
-  const { uploadEmbedFile } = useEmbedUpload()
-  const uploadFile = async (file: globalThis.File) => {
-    const result = await uploadEmbedFile(file)
-    return result?.id ?? null
-  }
-
-  const setTargetAndCloseDraft = (nextTarget: EmbedTarget) => {
-    setTarget(nextTarget)
-    setLinkDraftOpen(false)
-    setLinkDraft('')
-    setLinkError(null)
-  }
+  const embedControls = useEditableEmbedTargetControls({ setTarget })
 
   useNoteEmbedBlockDropTarget({
     ref: rootRef,
     editable: true,
     sourceNoteId,
-    setTarget: setTargetAndCloseDraft,
-    uploadFile,
+    setTarget: embedControls.setTargetAndCloseDraft,
+    uploadFile: embedControls.uploadFile,
   })
 
   return (
     <>
-      <div className="min-h-36">
+      <div
+        data-note-embed-body="true"
+        className="min-h-36 w-full"
+        style={aspectRatio ? { aspectRatio } : undefined}
+      >
         <Suspense fallback={<div className="min-h-36" />}>
           <EmbedContent
             target={target}
             sourceItemId={sourceNoteId}
             mode="editable"
-            onUpload={() => fileInputRef.current?.click()}
-            onLinkExternal={() => setLinkDraftOpen(true)}
+            onUpload={embedControls.openFilePicker}
+            onLinkExternal={embedControls.openLinkDraft}
+            onIntrinsicAspectRatio={onIntrinsicAspectRatio}
             renderSidebarItem={(item) => <SidebarItemPreviewContent item={item} />}
           />
         </Suspense>
       </div>
       <input
-        ref={fileInputRef}
+        ref={embedControls.fileInputRef}
         type="file"
+        aria-label="Embed file upload"
         className="hidden"
-        onChange={async (event) => {
-          const file = event.currentTarget.files?.item(0)
-          event.currentTarget.value = ''
-          if (!file) return
-          const sidebarItemId = await uploadFile(file)
-          if (sidebarItemId) setTargetAndCloseDraft({ kind: 'sidebarItem', sidebarItemId })
-        }}
+        onChange={embedControls.handleFileInputChange}
       />
-      {linkDraftOpen ? (
+      {embedControls.linkDraftOpen ? (
         <form
           className="flex gap-2 border-t border-border p-2"
-          onSubmit={(event) => {
-            event.preventDefault()
-            const nextTarget = externalEmbedTargetFromUrl(linkDraft)
-            if (!nextTarget) {
-              setLinkError('Use an HTTPS file URL')
-              return
-            }
-            setTargetAndCloseDraft(nextTarget)
-          }}
+          action={embedControls.submitLinkDraft}
         >
           <Input
-            value={linkDraft}
+            value={embedControls.linkDraft}
             aria-label="External file URL"
             placeholder="https://example.com/file.pdf"
             onChange={(event) => {
-              setLinkDraft(event.target.value)
-              setLinkError(null)
+              embedControls.setLinkDraftValue(event.target.value)
             }}
           />
           <Button type="submit" size="sm">
             Link
           </Button>
-          {linkError ? (
-            <span className="self-center text-sm text-destructive">{linkError}</span>
+          {embedControls.linkError ? (
+            <span className="self-center text-sm text-destructive">{embedControls.linkError}</span>
           ) : null}
         </form>
       ) : null}
@@ -251,6 +280,90 @@ function NoteEmbedBlockHeader({ target }: { target: EmbedTarget }) {
   )
 }
 
+const NOTE_EMBED_SELECTION_CHROME_OUTSET_PX = 3
+const NOTE_EMBED_SELECTION_CHROME_STROKE_WIDTH_PX = 1.5
+
+function NoteEmbedResizeWrapper({
+  onResizeStart,
+}: {
+  onResizeStart: (event: ReactPointerEvent<HTMLElement>, handle: NoteEmbedResizeHandle) => void
+}) {
+  return (
+    <div
+      data-testid="note-embed-resize-wrapper"
+      contentEditable={false}
+      draggable={false}
+      className="note-embed-resize-wrapper pointer-events-none absolute left-0 top-0 z-30 h-full w-full"
+    >
+      <div
+        data-testid="note-embed-resize-fill"
+        className="pointer-events-none absolute inset-0 bg-canvas-selection-fill"
+      />
+      <div
+        data-testid="note-embed-resize-outline"
+        className="pointer-events-none absolute"
+        style={{
+          borderColor: 'var(--canvas-selection-stroke)',
+          borderStyle: 'solid',
+          borderWidth: NOTE_EMBED_SELECTION_CHROME_STROKE_WIDTH_PX,
+          inset: -NOTE_EMBED_SELECTION_CHROME_OUTSET_PX,
+        }}
+      />
+      <NoteEmbedResizeHandles onResizeStart={onResizeStart} />
+    </div>
+  )
+}
+
+function NoteEmbedResizeHandles({
+  onResizeStart,
+}: {
+  onResizeStart: (event: ReactPointerEvent<HTMLElement>, handle: NoteEmbedResizeHandle) => void
+}) {
+  return (
+    <>
+      {RESIZE_HANDLE_DESCRIPTORS.map(({ position, cursorClassName }) => (
+        <button
+          key={position}
+          type="button"
+          tabIndex={-1}
+          draggable={false}
+          aria-label={getResizeHandleLabel(position)}
+          data-testid={`note-embed-resize-zone-${position}`}
+          data-note-embed-resize-zone="true"
+          className={cn(
+            'note-embed-resize-zone pointer-events-auto absolute z-20 border-0 bg-transparent p-0 touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-canvas-selection-focus-ring focus-visible:ring-offset-0',
+            getNoteEmbedResizeZoneClassName(position),
+            cursorClassName,
+          )}
+          style={{ cursor: getNoteEmbedResizeCursor(position) }}
+          onPointerDown={(event) => onResizeStart(event, position)}
+        />
+      ))}
+    </>
+  )
+}
+
+function getNoteEmbedResizeZoneClassName(handle: NoteEmbedResizeHandle) {
+  switch (handle) {
+    case 'top-left':
+      return '-left-1 -top-1 size-3'
+    case 'top':
+      return '-top-1 inset-x-3 h-2'
+    case 'top-right':
+      return '-right-1 -top-1 size-3'
+    case 'right':
+      return '-right-1 inset-y-3 w-2'
+    case 'bottom-right':
+      return '-bottom-1 -right-1 size-3'
+    case 'bottom':
+      return '-bottom-1 inset-x-3 h-2'
+    case 'bottom-left':
+      return '-bottom-1 -left-1 size-3'
+    case 'left':
+      return '-left-1 inset-y-3 w-2'
+  }
+}
+
 function getTargetTitle(target: EmbedTarget) {
   if (target.kind === 'externalUrl') return target.name ?? target.url
   return null
@@ -265,7 +378,6 @@ function getSharedEmbedBlockProps(props: NoteEmbedBlockProps): NoteEmbedBlockPro
     backgroundColor: props.backgroundColor,
     textAlignment: props.textAlignment,
     previewWidth: props.previewWidth,
-    previewHeight: props.previewHeight,
   })
 }
 
@@ -273,42 +385,4 @@ function stripUndefined<T extends Record<string, unknown>>(value: T): T {
   return Object.fromEntries(
     Object.entries(value).filter(([, entryValue]) => entryValue !== undefined),
   ) as T
-}
-
-function startResize({
-  event,
-  root,
-  width,
-  height,
-  onResize,
-}: {
-  event: ReactPointerEvent
-  root: HTMLElement | null
-  width: number | undefined
-  height: number | undefined
-  onResize: (width: number, height: number) => void
-}) {
-  event.preventDefault()
-  event.stopPropagation()
-
-  const rect = root?.getBoundingClientRect()
-  const startWidth = width ?? (rect && rect.width > 0 ? rect.width : 320)
-  const startHeight = height ?? (rect && rect.height > 0 ? rect.height : 180)
-  const startX = event.clientX
-  const startY = event.clientY
-
-  const onPointerMove = (moveEvent: PointerEvent) => {
-    onResize(
-      Math.max(160, Math.round(startWidth + moveEvent.clientX - startX)),
-      Math.max(144, Math.round(startHeight + moveEvent.clientY - startY)),
-    )
-  }
-
-  const onPointerUp = () => {
-    window.removeEventListener('pointermove', onPointerMove)
-    window.removeEventListener('pointerup', onPointerUp)
-  }
-
-  window.addEventListener('pointermove', onPointerMove)
-  window.addEventListener('pointerup', onPointerUp)
 }

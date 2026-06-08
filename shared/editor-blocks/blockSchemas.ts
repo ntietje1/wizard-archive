@@ -113,7 +113,6 @@ const embedSharedPropsSchema = {
   backgroundColor: z.string().optional(),
   textAlignment: textAlignmentSchema,
   previewWidth: z.number().positive().optional(),
-  previewHeight: z.number().positive().optional(),
 }
 
 const emptyEmbedPropsSchema = z.strictObject({
@@ -134,7 +133,7 @@ const externalUrlEmbedPropsSchema = z.strictObject({
   ...embedSharedPropsSchema,
 })
 
-export const embedPropsSchema = z.union([
+const embedPropsSchema = z.union([
   emptyEmbedPropsSchema,
   sidebarItemEmbedPropsSchema,
   externalUrlEmbedPropsSchema,
@@ -216,7 +215,7 @@ const dividerBlockContentSchema = z.strictObject({
 const embedBlockContentSchema = z.strictObject({
   type: z.literal('embed'),
   props: embedPropsSchema,
-  content: inlineContent,
+  content: z.undefined().optional(),
 })
 
 const tableBlockContentSchema = z.strictObject({

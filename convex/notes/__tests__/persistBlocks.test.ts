@@ -294,7 +294,6 @@ describe('persistBlocks', () => {
             backgroundColor: 'default',
             textAlignment: 'left',
             previewWidth: 320,
-            previewHeight: 180,
           },
           children: [],
         },

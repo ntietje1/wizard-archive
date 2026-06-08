@@ -18,6 +18,7 @@ import { resolveCanvasResize } from '../../system/canvas-resize-geometry'
 import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import { canvasBoundsToScreenBounds } from '../../components/canvas-screen-space-overlay-utils'
+import { RESIZE_HANDLE_DESCRIPTORS } from 'shared/resize/resizeHandleDescriptors'
 import type { CanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
 import type { CanvasResizeHandlePosition } from '../../system/canvas-resize-handles'
 import type { CanvasNodeResizeUpdate } from '../../tools/canvas-tool-types'
@@ -34,44 +35,6 @@ const DEFAULT_RESIZE_METADATA: CanvasNodeResizeMetadata = {
   minHeight: CANVAS_NODE_MIN_SIZE,
   minWidth: CANVAS_NODE_MIN_SIZE,
 }
-
-const RESIZE_HANDLES: Array<{
-  position: CanvasResizeHandlePosition
-  cursorClassName: string
-}> = [
-  {
-    position: 'top-left',
-    cursorClassName: 'cursor-nwse-resize',
-  },
-  {
-    position: 'top',
-    cursorClassName: 'cursor-ns-resize',
-  },
-  {
-    position: 'top-right',
-    cursorClassName: 'cursor-nesw-resize',
-  },
-  {
-    position: 'right',
-    cursorClassName: 'cursor-ew-resize',
-  },
-  {
-    position: 'bottom-right',
-    cursorClassName: 'cursor-nwse-resize',
-  },
-  {
-    position: 'bottom',
-    cursorClassName: 'cursor-ns-resize',
-  },
-  {
-    position: 'bottom-left',
-    cursorClassName: 'cursor-nesw-resize',
-  },
-  {
-    position: 'left',
-    cursorClassName: 'cursor-ew-resize',
-  },
-]
 
 interface CanvasSelectionResizeSession {
   bounds: Bounds
@@ -404,7 +367,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
     addWindowListeners()
   }
 
-  const zones = RESIZE_HANDLES.map(({ position, cursorClassName }) => ({
+  const zones = RESIZE_HANDLE_DESCRIPTORS.map(({ position, cursorClassName }) => ({
     position,
     cursorClassName,
     style: getResizeZoneStyle(position),

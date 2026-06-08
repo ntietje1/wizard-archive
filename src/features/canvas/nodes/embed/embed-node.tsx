@@ -35,8 +35,7 @@ import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
-import { useEmbedUpload } from '~/features/embeds/hooks/use-embed-upload'
-import { externalEmbedTargetFromUrl } from '~/features/embeds/utils/embed-targets'
+import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import type { Id } from 'convex/_generated/dataModel'
@@ -231,28 +230,14 @@ function EditableCanvasEmbedContent({
   onIntrinsicAspectRatio: (aspectRatio: number | null) => void
   renderSidebarItem: (item: AnySidebarItemWithContent) => ReactNode
 }) {
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [linkDraftOpen, setLinkDraftOpen] = useState(false)
-  const [linkDraft, setLinkDraft] = useState('')
-  const [linkError, setLinkError] = useState<string | null>(null)
-  const { uploadEmbedFile } = useEmbedUpload()
-  const uploadFile = async (file: globalThis.File) => {
-    const result = await uploadEmbedFile(file)
-    return result?.id ?? null
-  }
-  const setTargetAndCloseDraft = async (nextTarget: EmbedTarget) => {
-    await setTarget(nextTarget)
-    setLinkDraftOpen(false)
-    setLinkDraft('')
-    setLinkError(null)
-  }
+  const embedControls = useEditableEmbedTargetControls({ setTarget })
 
   useCanvasEmbedDropTarget({
     ref: rootRef,
     enabled: true,
     sourceCanvasId,
-    setTarget: setTargetAndCloseDraft,
-    uploadFile,
+    setTarget: embedControls.setTargetAndCloseDraft,
+    uploadFile: embedControls.uploadFile,
   })
 
   return (
@@ -261,51 +246,37 @@ function EditableCanvasEmbedContent({
         target={target}
         sourceItemId={sourceCanvasId}
         mode="editable"
-        onUpload={() => fileInputRef.current?.click()}
-        onLinkExternal={() => setLinkDraftOpen(true)}
+        onUpload={embedControls.openFilePicker}
+        onLinkExternal={embedControls.openLinkDraft}
         onIntrinsicAspectRatio={onIntrinsicAspectRatio}
         renderSidebarItem={renderSidebarItem}
       />
       <input
-        ref={fileInputRef}
+        ref={embedControls.fileInputRef}
         type="file"
+        aria-label="Embed file upload"
         className="hidden"
-        onChange={async (event) => {
-          const file = event.currentTarget.files?.item(0)
-          event.currentTarget.value = ''
-          if (!file) return
-          const sidebarItemId = await uploadFile(file)
-          if (sidebarItemId) await setTargetAndCloseDraft({ kind: 'sidebarItem', sidebarItemId })
-        }}
+        onChange={embedControls.handleFileInputChange}
       />
-      {linkDraftOpen ? (
+      {embedControls.linkDraftOpen ? (
         <form
           className="absolute inset-x-2 bottom-2 z-20 flex gap-2 rounded-md border border-border bg-background/95 p-2 shadow-sm"
-          onSubmit={async (event) => {
-            event.preventDefault()
-            const nextTarget = externalEmbedTargetFromUrl(linkDraft)
-            if (!nextTarget) {
-              setLinkError('Use an HTTPS file URL')
-              return
-            }
-            await setTargetAndCloseDraft(nextTarget)
-          }}
+          action={embedControls.submitLinkDraft}
         >
           <Input
-            value={linkDraft}
+            value={embedControls.linkDraft}
             aria-label="External file URL"
             placeholder="https://example.com/file.pdf"
             onChange={(event) => {
-              setLinkDraft(event.target.value)
-              setLinkError(null)
+              embedControls.setLinkDraftValue(event.target.value)
             }}
           />
           <Button type="submit" size="sm">
             Link
           </Button>
-          {linkError ? (
+          {embedControls.linkError ? (
             <span className="self-center whitespace-nowrap text-sm text-destructive">
-              {linkError}
+              {embedControls.linkError}
             </span>
           ) : null}
         </form>

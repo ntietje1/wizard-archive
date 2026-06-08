@@ -8,7 +8,7 @@ export const BLOCK_REGISTRY = [
   { type: 'quote', props: 'defaultText', content: 'inline', canvas: true },
   { type: 'codeBlock', props: 'codeBlock', content: 'inline', canvas: true },
   { type: 'divider', props: 'empty', content: 'inline', canvas: false },
-  { type: 'embed', props: 'embed', content: 'inline', canvas: false },
+  { type: 'embed', props: 'embed', content: 'none', canvas: false },
   { type: 'table', props: 'table', content: 'table', canvas: false },
 ] as const
 

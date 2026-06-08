@@ -12,23 +12,19 @@ export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | nu
   return createBlockSpec(embedBlockConfig, {
     render: (block) => {
       const dom = document.createElement('section')
-      const contentDOM = document.createElement('span')
       const reactRootElement = document.createElement('div')
       const target = embedTargetFromBlockProps(block.props as NoteEmbedBlockProps)
       const width = positiveNumber(block.props.previewWidth)
-      const height = positiveNumber(block.props.previewHeight)
       const root = createRoot(reactRootElement)
 
       dom.className = cn(
-        'note-embed-block relative my-2 overflow-hidden rounded-lg border border-border bg-card text-card-foreground',
+        'note-embed-block relative my-2 overflow-hidden border border-border bg-card text-card-foreground',
         target.kind === 'empty' && 'border-dashed bg-muted/20',
       )
       dom.dataset.noteEmbedDropTarget = 'true'
       if (width) dom.style.width = `${width}px`
-      if (height) dom.style.height = `${height}px`
       dom.style.maxWidth = '100%'
-      contentDOM.className = 'sr-only'
-      dom.append(contentDOM, reactRootElement)
+      dom.append(reactRootElement)
 
       root.render(
         <div className="min-h-36">
@@ -42,7 +38,6 @@ export function createStaticEmbedBlockSpec(sourceNoteId: Id<'sidebarItems'> | nu
       )
 
       return {
-        contentDOM,
         destroy: () => root.unmount(),
         dom,
       }

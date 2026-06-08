@@ -61,17 +61,14 @@ export const embedBlockConfig = {
       values: ['left', 'center', 'right', 'justify'] as const,
     },
     previewWidth: { default: undefined, type: 'number' },
-    previewHeight: { default: undefined, type: 'number' },
   },
-  content: 'inline',
+  content: 'none',
 } as const
 
 const embedBlockSpec = createBlockSpec(embedBlockConfig, {
   render: () => {
     const dom = document.createElement('div')
-    const contentDOM = document.createElement('span')
-    dom.appendChild(contentDOM)
-    return { dom, contentDOM }
+    return { dom }
   },
 })()
 

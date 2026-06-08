@@ -111,7 +111,6 @@ describe('valid blocks are accepted', () => {
         url: 'https://example.com/img.png',
         name: 'img.png',
         previewWidth: 300,
-        previewHeight: 200,
         textAlignment: 'center',
       },
     })

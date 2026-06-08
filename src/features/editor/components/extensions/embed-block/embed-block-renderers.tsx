@@ -7,7 +7,7 @@ import type { ComponentProps } from 'react'
 type EmbedBlockRenderProps = ReactCustomBlockRenderProps<
   'embed',
   typeof embedBlockConfig.propSchema,
-  'inline'
+  'none'
 >
 type NoteEmbedBlockBaseProps = Omit<
   ComponentProps<typeof NoteEmbedBlockView>,

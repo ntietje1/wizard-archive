@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { embedPropsSchema } from 'shared/editor-blocks/blockSchemas'
+import { flatBlockContentSchema } from 'shared/editor-blocks/blockSchemas'
 import { blockPropsFromEmbedTarget, embedTargetFromBlockProps } from '../embed-block-targets'
 
 describe('note embed block target props', () => {
@@ -45,18 +45,20 @@ describe('note embed block target props', () => {
 
   it('writes strict variant props accepted by the shared schema', () => {
     expect(
-      embedPropsSchema.safeParse(
-        blockPropsFromEmbedTarget({ kind: 'sidebarItem', sidebarItemId: 'item-1' }),
-      ).success,
+      flatBlockContentSchema.safeParse({
+        type: 'embed',
+        props: blockPropsFromEmbedTarget({ kind: 'sidebarItem', sidebarItemId: 'item-1' }),
+      }).success,
     ).toBe(true)
     expect(
-      embedPropsSchema.safeParse(
-        blockPropsFromEmbedTarget({
+      flatBlockContentSchema.safeParse({
+        type: 'embed',
+        props: blockPropsFromEmbedTarget({
           kind: 'externalUrl',
           url: 'https://example.com/file.pdf',
           name: 'file.pdf',
         }),
-      ).success,
+      }).success,
     ).toBe(true)
   })
 })

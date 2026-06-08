@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NoteEmbedBlockView } from '../embed-block'
@@ -16,6 +16,7 @@ vi.mock('~/features/embeds/components/embed-content', () => ({
     mode: 'editable' | 'readonly'
     onUpload?: () => void
     onLinkExternal?: () => void
+    onIntrinsicAspectRatio?: (aspectRatio: number | null) => void
   }) => (
     <div>
       <div data-testid="shared-embed-content" data-kind={props.target.kind} data-mode={props.mode}>
@@ -23,6 +24,9 @@ vi.mock('~/features/embeds/components/embed-content', () => ({
       </div>
       {props.onUpload ? <button onClick={props.onUpload}>mock upload</button> : null}
       {props.onLinkExternal ? <button onClick={props.onLinkExternal}>mock link</button> : null}
+      {props.onIntrinsicAspectRatio ? (
+        <button onClick={() => props.onIntrinsicAspectRatio?.(16 / 9)}>mock aspect ratio</button>
+      ) : null}
     </div>
   ),
 }))
@@ -49,7 +53,6 @@ describe('NoteEmbedBlockView', () => {
         editor={createEditor() as never}
         editable
         sourceNoteId={'note-1' as never}
-        contentRef={null}
       />,
     )
 
@@ -73,7 +76,6 @@ describe('NoteEmbedBlockView', () => {
         editor={createEditor() as never}
         editable={false}
         sourceNoteId={'note-1' as never}
-        contentRef={null}
       />,
     )
 
@@ -95,7 +97,6 @@ describe('NoteEmbedBlockView', () => {
         editor={editor as never}
         editable
         sourceNoteId={'note-1' as never}
-        contentRef={null}
       />,
     )
 
@@ -140,7 +141,6 @@ describe('NoteEmbedBlockView', () => {
         editor={editor as never}
         editable
         sourceNoteId={'note-1' as never}
-        contentRef={null}
       />,
     )
 
@@ -156,7 +156,6 @@ describe('NoteEmbedBlockView', () => {
           ...block,
           props: {
             previewWidth: 320,
-            previewHeight: 200,
             targetKind: 'sidebarItem',
             sidebarItemId: 'map-1',
           },
@@ -176,7 +175,6 @@ describe('NoteEmbedBlockView', () => {
         editor={editor as never}
         editable
         sourceNoteId={'note-1' as never}
-        contentRef={null}
       />,
     )
     const input = container.querySelector('input[type="file"]')
@@ -211,7 +209,6 @@ describe('NoteEmbedBlockView', () => {
         editor={editor as never}
         editable
         sourceNoteId={'note-1' as never}
-        contentRef={null}
       />,
     )
 
@@ -237,7 +234,7 @@ describe('NoteEmbedBlockView', () => {
     )
   })
 
-  it('resizes embed blocks by patching primitive preview dimensions', async () => {
+  it('selects embed blocks on click and renders canvas-style resize chrome', () => {
     const editor = createEditor()
     const block = {
       id: 'block-1',
@@ -246,7 +243,6 @@ describe('NoteEmbedBlockView', () => {
         url: 'https://example.com/map.png',
         name: 'Map',
         previewWidth: 300,
-        previewHeight: 200,
       },
     }
     render(
@@ -255,21 +251,206 @@ describe('NoteEmbedBlockView', () => {
         editor={editor as never}
         editable
         sourceNoteId={'note-1' as never}
-        contentRef={null}
       />,
     )
 
-    const handle = screen.getByRole('button', { name: 'Resize embed' })
-    await userEvent.pointer([
-      { keys: '[MouseLeft>]', target: handle, coords: { x: 100, y: 100 } },
-      { coords: { x: 160, y: 125 } },
-      { keys: '[/MouseLeft]', coords: { x: 160, y: 125 } },
-    ])
+    expect(screen.queryByTestId('note-embed-resize-wrapper')).not.toBeInTheDocument()
+    expect(screen.getByTestId('note-embed-block')).toHaveClass('allow-motion')
+    expect(screen.getByTestId('note-embed-select-layer')).toBeInTheDocument()
 
+    fireEvent.pointerDown(screen.getByTestId('note-embed-select-layer'), { button: 0 })
+
+    expect(editor.setTextCursorPosition).toHaveBeenCalledWith(block, 'start')
+    expect(screen.queryByTestId('note-embed-select-layer')).not.toBeInTheDocument()
+    expect(screen.getByTestId('note-embed-resize-wrapper')).toBeInTheDocument()
+    expect(screen.getByTestId('note-embed-visual-surface')).toHaveAttribute(
+      'contenteditable',
+      'false',
+    )
+    expect(screen.getByTestId('note-embed-visual-surface')).toHaveAttribute('draggable', 'false')
+    expect(screen.getByTestId('note-embed-resize-fill')).toHaveClass('bg-canvas-selection-fill')
+    expect(screen.getByTestId('note-embed-resize-outline')).toBeInTheDocument()
+    expect(screen.queryAllByTestId(/note-embed-resize-zone-/)).toHaveLength(8)
+    expect(screen.getByRole('button', { name: 'Resize top selection edge' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Resize bottom-right selection corner' }),
+    ).toBeInTheDocument()
+  })
+
+  it('resizes embed blocks by mutating width until committing preview width on release', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/map.png',
+        name: 'Map',
+        previewWidth: 300,
+      },
+    }
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Resize embed' })).not.toBeInTheDocument()
+
+    const root = screen.getByTestId('note-embed-block')
+    fireEvent.pointerDown(root, { button: 0 })
+
+    const handle = screen.getByRole('button', { name: 'Resize right selection edge' })
+
+    fireEvent.pointerDown(handle, { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(window, { clientX: 160, clientY: 999, shiftKey: true })
+
+    expect(root).toHaveStyle({ width: '360px' })
+    expect(root.style.height).toBe('')
+    expect(editor.updateBlock).not.toHaveBeenCalled()
+
+    fireEvent.pointerUp(window)
+
+    expect(root).toHaveStyle({ width: '360px' })
+    expect(root.style.height).toBe('')
     expect(editor.updateBlock).toHaveBeenCalledWith(block, {
       props: {
         previewWidth: 360,
-        previewHeight: 225,
+      },
+    })
+  })
+
+  it('resizes from the left handle using BlockNote width semantics', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/map.png',
+        name: 'Map',
+        previewWidth: 300,
+      },
+    }
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const root = screen.getByTestId('note-embed-block')
+    fireEvent.pointerDown(root, { button: 0 })
+
+    const handle = screen.getByRole('button', { name: 'Resize left selection edge' })
+
+    fireEvent.pointerDown(handle, { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(window, { clientX: 40, clientY: 125 })
+
+    expect(root).toHaveStyle({ width: '360px' })
+    expect(root.style.height).toBe('')
+
+    fireEvent.pointerUp(window)
+    expect(root).toHaveStyle({ width: '360px' })
+    expect(root.style.height).toBe('')
+    expect(editor.updateBlock).toHaveBeenCalledWith(block, {
+      props: {
+        previewWidth: 360,
+      },
+    })
+  })
+
+  it('resizes from vertical handles through the embed aspect ratio', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/map.png',
+        name: 'Map',
+        previewWidth: 300,
+      },
+    }
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const root = screen.getByTestId('note-embed-block')
+    Object.defineProperty(root, 'clientHeight', {
+      configurable: true,
+      value: 200,
+    })
+
+    fireEvent.pointerDown(root, { button: 0 })
+
+    const handle = screen.getByRole('button', { name: 'Resize bottom selection edge' })
+
+    fireEvent.pointerDown(handle, { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(window, { clientX: 100, clientY: 140 })
+
+    expect(root).toHaveStyle({ width: '360px' })
+    expect(root.style.height).toBe('')
+
+    fireEvent.pointerUp(window)
+    expect(editor.updateBlock).toHaveBeenCalledWith(block, {
+      props: {
+        previewWidth: 360,
+      },
+    })
+  })
+
+  it('does not resize intrinsic-ratio embeds below the minimum body height', async () => {
+    const user = userEvent.setup()
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/map.png',
+        name: 'Map',
+        previewWidth: 300,
+      },
+    }
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    await user.click(await screen.findByRole('button', { name: 'mock aspect ratio' }))
+
+    const root = screen.getByTestId('note-embed-block')
+    const body = root.querySelector('[data-note-embed-body="true"]')
+    expect(body).toBeInstanceOf(HTMLElement)
+    Object.defineProperty(body, 'clientWidth', {
+      configurable: true,
+      value: 298,
+    })
+
+    fireEvent.pointerDown(root, { button: 0 })
+
+    const handle = screen.getByRole('button', { name: 'Resize right selection edge' })
+
+    fireEvent.pointerDown(handle, { clientX: 300, clientY: 100 })
+    fireEvent.pointerMove(window, { clientX: 100, clientY: 100 })
+
+    expect(root).toHaveStyle({ width: '258px' })
+
+    fireEvent.pointerUp(window)
+    expect(editor.updateBlock).toHaveBeenCalledWith(block, {
+      props: {
+        previewWidth: 258,
       },
     })
   })
@@ -278,6 +459,7 @@ describe('NoteEmbedBlockView', () => {
 function createEditor() {
   return {
     replaceBlocks: vi.fn(),
+    setTextCursorPosition: vi.fn(),
     updateBlock: vi.fn(),
   }
 }

@@ -123,7 +123,6 @@ const embedSharedPropsValidator = {
   backgroundColor: v.optional(v.string()),
   textAlignment: v.optional(textAlignmentValidator),
   previewWidth: v.optional(v.number()),
-  previewHeight: v.optional(v.number()),
 }
 
 const embedPropsValidator = v.union(
@@ -172,6 +171,10 @@ const blockCommonTableFields = {
 
 const persistedContentFields = {
   inline: {
+    content: v.optional(v.nullable(inlineContentArrayValidator)),
+    inlineContent: v.nullable(inlineContentArrayValidator),
+  },
+  none: {
     content: v.optional(v.nullable(inlineContentArrayValidator)),
     inlineContent: v.nullable(inlineContentArrayValidator),
   },
