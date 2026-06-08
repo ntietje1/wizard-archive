@@ -131,6 +131,7 @@ export function MediaEmbedRenderer({
           <Suspense fallback={pdfFallback}>
             <LazyPdfFileViewer
               pdfUrl={sanitizedSourceUrl}
+              presentation="embed"
               onFirstPageAspectRatio={(aspectRatio) => {
                 onMediaLayoutRef.current?.({ kind: 'intrinsicAspectRatio', aspectRatio })
               }}

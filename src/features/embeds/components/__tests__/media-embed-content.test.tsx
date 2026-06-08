@@ -25,14 +25,17 @@ vi.mock('~/features/editor/components/viewer/file/pdf-file-viewer', () => ({
   PdfFileViewer: ({
     pdfUrl,
     onFirstPageAspectRatio,
+    presentation,
   }: {
     pdfUrl: string
     onFirstPageAspectRatio?: (aspectRatio: number | null) => void
+    presentation?: string
   }) => (
     <button
       type="button"
       data-testid="pdf-viewer"
       data-url={pdfUrl}
+      data-presentation={presentation}
       onClick={() => onFirstPageAspectRatio?.(0.75)}
     >
       report pdf ratio
@@ -300,6 +303,7 @@ describe('ExternalUrlEmbedContent', () => {
       'data-url',
       'https://x.test/doc.pdf',
     )
+    expect(screen.getByTestId('pdf-viewer')).toHaveAttribute('data-presentation', 'embed')
   })
 
   it('forwards external PDF page aspect ratios', async () => {

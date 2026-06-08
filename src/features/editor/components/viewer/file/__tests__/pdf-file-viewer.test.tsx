@@ -38,13 +38,19 @@ vi.mock('react-pdf', () => {
     Page: ({
       pageNumber,
       onLoadSuccess,
+      scale,
+      width,
     }: {
       pageNumber: number
       onLoadSuccess?: (page: { originalWidth: number; originalHeight: number }) => void
+      scale?: number
+      width?: number
     }) => (
       <button
         type="button"
         data-testid={`pdf-page-${pageNumber}`}
+        data-scale={scale ?? ''}
+        data-width={width ?? ''}
         onClick={() => onLoadSuccess?.({ originalWidth: 612, originalHeight: 792 })}
       >
         load page {pageNumber}
@@ -62,6 +68,40 @@ describe('PdfFileViewer', () => {
     }
 
     vi.stubGlobal('IntersectionObserver', IntersectionObserverMock)
+
+    class ResizeObserverMock {
+      readonly callback: ResizeObserverCallback
+
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback
+      }
+
+      disconnect = vi.fn()
+      observe = (target: Element) => {
+        this.callback(
+          [
+            {
+              target,
+              contentRect: {
+                bottom: 300,
+                height: 300,
+                left: 0,
+                right: 420,
+                top: 0,
+                width: 420,
+                x: 0,
+                y: 0,
+                toJSON: () => ({}),
+              },
+            } as ResizeObserverEntry,
+          ],
+          this,
+        )
+      }
+      unobserve = vi.fn()
+    }
+
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
   })
 
   it('shows the PDF load failure without leaving the loading overlay active', () => {
@@ -109,5 +149,22 @@ describe('PdfFileViewer', () => {
 
     expect(onFirstPageAspectRatio).toHaveBeenCalledTimes(1)
     expect(onFirstPageAspectRatio).toHaveBeenCalledWith(0.772727)
+  })
+
+  it('renders embed PDFs to the measured shadcn scroll viewport width', () => {
+    render(
+      <PdfFileViewer
+        pdfUrl="https://example.convex.cloud/api/storage/file-1"
+        presentation="embed"
+      />,
+    )
+
+    expect(screen.getByTestId('pdf-file-viewer')).toHaveAttribute('data-presentation', 'embed')
+
+    fireEvent.click(screen.getByRole('button', { name: 'load pdf' }))
+
+    expect(screen.queryByRole('button', { name: 'Zoom in' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('pdf-page-1')).toHaveAttribute('data-width', '420')
+    expect(screen.getByTestId('pdf-page-1')).toHaveAttribute('data-scale', '')
   })
 })
