@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
 import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
-import { getLegacyMediaBlockProjectionMigrationPatch } from '../../shared/editor-blocks/legacyMediaBlocks'
+import { getLegacyBlockProjectionMigrationPatch } from '../../shared/editor-blocks/legacyMediaBlocks'
 
 describe('migrations', () => {
   describe('getSidebarItemLifecycleMigrationPatch', () => {
@@ -56,10 +56,10 @@ describe('migrations', () => {
     })
   })
 
-  describe('getLegacyMediaBlockProjectionMigrationPatch', () => {
+  describe('getLegacyBlockProjectionMigrationPatch', () => {
     it('rewrites projected legacy media block rows to embed rows', () => {
       expect(
-        getLegacyMediaBlockProjectionMigrationPatch({
+        getLegacyBlockProjectionMigrationPatch({
           type: 'image',
           props: {
             url: 'https://example.com/a.png',
@@ -81,9 +81,74 @@ describe('migrations', () => {
       })
     })
 
-    it('leaves non-media projection rows alone', () => {
+    it('normalizes legacy table projection rows', () => {
       expect(
-        getLegacyMediaBlockProjectionMigrationPatch({ type: 'paragraph', props: {} }),
+        getLegacyBlockProjectionMigrationPatch({
+          type: 'table',
+          props: { textColor: 'default' },
+          inlineContent: {
+            type: 'tableContent',
+            columnWidths: [120],
+            rows: [
+              {
+                cells: [[{ type: 'text', text: 'Cell value', styles: {} }]],
+              },
+            ],
+          },
+        }),
+      ).toEqual({
+        content: {
+          type: 'tableContent',
+          columnWidths: [120],
+          rows: [
+            {
+              cells: [
+                {
+                  type: 'tableCell',
+                  content: [{ type: 'text', text: 'Cell value', styles: {} }],
+                },
+              ],
+            },
+          ],
+        },
+        inlineContent: null,
+      })
+    })
+
+    it('strips legacy embed preview height and clears projection content', () => {
+      expect(
+        getLegacyBlockProjectionMigrationPatch({
+          type: 'embed',
+          props: { targetKind: 'empty', previewWidth: 320, previewHeight: 180 },
+          inlineContent: [],
+        }),
+      ).toEqual({
+        props: { targetKind: 'empty', previewWidth: 320 },
+        content: null,
+        inlineContent: null,
+      })
+    })
+
+    it('backfills missing inline block content from inlineContent', () => {
+      expect(
+        getLegacyBlockProjectionMigrationPatch({
+          type: 'paragraph',
+          props: {},
+          inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
+        }),
+      ).toEqual({
+        content: [{ type: 'text', text: 'Hello', styles: {} }],
+      })
+    })
+
+    it('leaves already-normalized projection rows alone', () => {
+      expect(
+        getLegacyBlockProjectionMigrationPatch({
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'text', text: 'Hello', styles: {} }],
+          inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
+        }),
       ).toBeNull()
     })
   })

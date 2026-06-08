@@ -21,18 +21,20 @@ export function migrateLegacyMediaBlocks(blocks: Array<LegacyBlock>): Array<Lega
   return blocks.map(migrateLegacyMediaBlock)
 }
 
-export function getLegacyMediaBlockProjectionMigrationPatch(block: {
+export function getLegacyBlockProjectionMigrationPatch(block: {
+  content?: unknown
+  inlineContent?: unknown
   props?: Record<string, unknown>
   type?: string
-}): {
-  content: null
-  inlineContent: null
-  plainText: ''
-  props: EmbedProps
-  type: 'embed'
-} | null {
-  if (!isLegacyMediaBlockType(block.type)) return null
+}): Record<string, unknown> | null {
+  if (isLegacyMediaBlockType(block.type)) return getLegacyMediaProjectionPatch(block)
+  if (block.type === 'embed') return getEmbedProjectionPatch(block)
+  if (block.type === 'table') return getTableProjectionPatch(block)
+  if (usesInlineContent(block.type)) return getInlineProjectionPatch(block)
+  return null
+}
 
+function getLegacyMediaProjectionPatch(block: { props?: Record<string, unknown> }) {
   return {
     type: 'embed',
     props: getLegacyMediaEmbedProps(block.props ?? {}),
@@ -40,6 +42,39 @@ export function getLegacyMediaBlockProjectionMigrationPatch(block: {
     inlineContent: null,
     plainText: '',
   }
+}
+
+function getEmbedProjectionPatch(block: {
+  content?: unknown
+  inlineContent?: unknown
+  props?: Record<string, unknown>
+}) {
+  const patch: Record<string, unknown> = {}
+  const props = getCurrentEmbedProps(block.props ?? {})
+  if (props !== block.props) patch.props = props
+  if (block.content === undefined) patch.content = null
+  if (block.inlineContent !== null) patch.inlineContent = null
+  return nonEmptyPatch(patch)
+}
+
+function getTableProjectionPatch(block: { content?: unknown; inlineContent?: unknown }) {
+  const patch: Record<string, unknown> = {}
+  const content =
+    isTableContent(block.content) || block.content === null
+      ? block.content
+      : migrateLegacyTableContent(block.inlineContent)
+  if (content !== block.content) patch.content = content
+  if (block.inlineContent !== null) patch.inlineContent = null
+  return nonEmptyPatch(patch)
+}
+
+function getInlineProjectionPatch(block: { content?: unknown; inlineContent?: unknown }) {
+  if (block.content !== undefined) return null
+  return { content: Array.isArray(block.inlineContent) ? block.inlineContent : null }
+}
+
+function nonEmptyPatch(patch: Record<string, unknown>) {
+  return Object.keys(patch).length > 0 ? patch : null
 }
 
 function migrateLegacyMediaBlock(block: LegacyBlock): LegacyBlock {
@@ -105,6 +140,24 @@ function getCurrentEmbedProps(props: Record<string, unknown>): Record<string, un
   return Object.fromEntries(Object.entries(props).filter(([key]) => key !== 'previewHeight'))
 }
 
+function migrateLegacyTableContent(value: unknown) {
+  if (!isTableContent(value)) return null
+
+  return {
+    ...value,
+    rows: value.rows.map((row) => ({
+      ...row,
+      cells: row.cells.map((cell) => {
+        if (isTableCell(cell)) return cell
+        return {
+          type: 'tableCell' as const,
+          content: Array.isArray(cell) ? cell : [],
+        }
+      }),
+    })),
+  }
+}
+
 function getLegacyMediaName(props: Record<string, unknown>, url: string): string | null {
   for (const key of ['name', 'caption']) {
     const value = props[key]
@@ -118,6 +171,50 @@ function getLegacyMediaName(props: Record<string, unknown>, url: string): string
 
 function isLegacyMediaBlockType(type: unknown): type is 'image' | 'video' | 'audio' | 'file' {
   return typeof type === 'string' && LEGACY_MEDIA_BLOCK_TYPES.has(type)
+}
+
+function usesInlineContent(type: unknown) {
+  return (
+    type === 'paragraph' ||
+    type === 'heading' ||
+    type === 'bulletListItem' ||
+    type === 'numberedListItem' ||
+    type === 'checkListItem' ||
+    type === 'toggleListItem' ||
+    type === 'quote' ||
+    type === 'codeBlock' ||
+    type === 'divider'
+  )
+}
+
+function isTableContent(value: unknown): value is {
+  rows: Array<{ cells: Array<unknown> }>
+  type: 'tableContent'
+} {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    'type' in value &&
+    value.type === 'tableContent' &&
+    'rows' in value &&
+    Array.isArray(value.rows)
+  )
+}
+
+function isTableCell(value: unknown): value is {
+  content: Array<unknown>
+  type: 'tableCell'
+} {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    'type' in value &&
+    value.type === 'tableCell' &&
+    'content' in value &&
+    Array.isArray(value.content)
+  )
 }
 
 function isTextAlignment(value: unknown): value is 'left' | 'center' | 'right' | 'justify' {

@@ -3,7 +3,7 @@ import { components, internal } from './_generated/api'
 import type { DataModel } from './_generated/dataModel'
 import { getBlockSharePermissionLevelMigrationPatch } from './blockShares/permissionLevelMigration'
 import { getSidebarItemLifecycleMigrationPatch } from './sidebarItems/lifecycleMigration'
-import { getLegacyMediaBlockProjectionMigrationPatch } from '../shared/editor-blocks/legacyMediaBlocks'
+import { getLegacyBlockProjectionMigrationPatch } from '../shared/editor-blocks/legacyMediaBlocks'
 
 export const migrations = new Migrations<DataModel>(components.migrations)
 export const run = migrations.runner()
@@ -24,9 +24,7 @@ export const migrateLegacyMediaBlockProjections = migrations.define({
   table: 'blocks',
   batchSize: 25,
   migrateOne: (_ctx, block) =>
-    getLegacyMediaBlockProjectionMigrationPatch(
-      block as { type?: string; props?: Record<string, unknown> },
-    ) ?? undefined,
+    getLegacyBlockProjectionMigrationPatch(block as Record<string, unknown>) ?? undefined,
 })
 
 export const runSidebarItemLifecycleStatusMigration = migrations.runner(
