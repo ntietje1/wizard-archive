@@ -295,9 +295,9 @@ describe('NoteEmbedBlockView', () => {
 
     expect(screen.queryByTestId('note-embed-resize-wrapper')).not.toBeInTheDocument()
     expect(screen.getByTestId('note-embed-block')).toHaveClass('allow-motion')
-    expect(screen.getByTestId('note-embed-select-layer')).toBeInTheDocument()
+    expect(screen.queryByTestId('note-embed-select-layer')).not.toBeInTheDocument()
 
-    fireEvent.pointerDown(screen.getByTestId('note-embed-select-layer'), { button: 0 })
+    fireEvent.pointerDown(screen.getByTestId('note-embed-visual-surface'), { button: 0 })
 
     expect(editor.setTextCursorPosition).toHaveBeenCalledWith(block, 'start')
     expect(screen.queryByTestId('note-embed-select-layer')).not.toBeInTheDocument()
@@ -316,6 +316,36 @@ describe('NoteEmbedBlockView', () => {
     expect(
       screen.getByRole('button', { name: 'Resize bottom-right selection corner' }),
     ).toBeInTheDocument()
+  })
+
+  it('lets embedded media controls handle initial pointer interaction before embed selection', async () => {
+    const editor = createEditor()
+    render(
+      <NoteEmbedBlockView
+        block={
+          {
+            id: 'block-1',
+            props: {
+              targetKind: 'externalUrl',
+              url: 'https://example.com/sound.mp3',
+              name: 'Sound',
+            },
+          } as never
+        }
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const slider = await screen.findByRole('slider', { name: 'mock media slider' })
+
+    expect(screen.queryByTestId('note-embed-select-layer')).not.toBeInTheDocument()
+
+    fireEvent.pointerDown(slider, { button: 0 })
+
+    expect(editor.setTextCursorPosition).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('note-embed-resize-wrapper')).not.toBeInTheDocument()
   })
 
   it('allows BlockNote to start embed block drags', async () => {

@@ -417,6 +417,121 @@
   }
 }
 
+.media-control-button {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--foreground);
+}
+
+.media-control-button:hover,
+.media-control-button[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+}
+
+.media-control-button:active {
+  background: color-mix(in srgb, var(--muted-foreground) 18%, transparent);
+}
+
+.media-control-icon {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+
+.media-control-slider {
+  --media-slider-primary-end: var(--media-slider-value-percent, 0%);
+  --media-slider-preview-start: var(--media-slider-value-percent, 0%);
+  --media-slider-preview-end: var(--media-slider-value-percent, 0%);
+  --media-slider-track: color-mix(in srgb, var(--muted-foreground) 22%, transparent);
+  --media-slider-preview: color-mix(in srgb, var(--primary) 35%, var(--muted));
+  appearance: none;
+  min-height: 14px;
+  cursor: pointer;
+  background: transparent;
+  accent-color: var(--primary);
+}
+
+.media-control-slider:focus,
+.media-control-slider:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.media-control-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--primary) 0 var(--media-slider-primary-end),
+    var(--media-slider-preview) var(--media-slider-preview-start) var(--media-slider-preview-end),
+    var(--media-slider-track) var(--media-slider-preview-end) 100%
+  );
+}
+
+.media-control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 9px;
+  height: 9px;
+  margin-top: -2.5px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--foreground);
+}
+
+.media-control-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--primary) 0 var(--media-slider-primary-end),
+    var(--media-slider-preview) var(--media-slider-preview-start) var(--media-slider-preview-end),
+    var(--media-slider-track) var(--media-slider-preview-end) 100%
+  );
+}
+
+.media-control-slider::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--foreground);
+}
+
+.media-control-slider-vertical {
+  width: 14px;
+  min-height: 0;
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
+.media-control-slider-vertical::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(
+    to top,
+    var(--primary) 0 var(--media-slider-primary-end),
+    var(--media-slider-preview) var(--media-slider-preview-start) var(--media-slider-preview-end),
+    var(--media-slider-track) var(--media-slider-preview-end) 100%
+  );
+}
+
+.media-control-slider-vertical::-webkit-slider-thumb {
+  margin-top: 0;
+  margin-left: -2.5px;
+}
+
+.media-control-slider-vertical::-moz-range-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(
+    to top,
+    var(--primary) 0 var(--media-slider-primary-end),
+    var(--media-slider-preview) var(--media-slider-preview-start) var(--media-slider-preview-end),
+    var(--media-slider-track) var(--media-slider-preview-end) 100%
+  );
+}
+
 /* ==========================================================================
    BlockNote theme integration
    Map BlockNote's internal CSS variables to the app's theme tokens.

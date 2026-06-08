@@ -1,11 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { act } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { ExternalUrlEmbedContent } from '../external-url-embed-content'
 import { FileMediaEmbedContent } from '../file-media-embed-content'
 import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '../../utils/embed-media'
 import type * as TanStackRouter from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+
+type ResizeObserverEntryInput = {
+  target: Element
+  contentRect: DOMRectReadOnly
+}
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof TanStackRouter>()
@@ -211,6 +217,82 @@ describe('ExternalUrlEmbedContent', () => {
     play.mockRestore()
   })
 
+  it('keeps the timeline usable and toggles compact volume at narrow widths', async () => {
+    const user = userEvent.setup()
+    const resizeObserver = installResizeObserverMock()
+    const onPointerDown = vi.fn()
+    const onClick = vi.fn()
+    render(
+      <div onPointerDown={onPointerDown} onClick={onClick}>
+        <ExternalUrlEmbedContent url="https://x.test/sound.mp3" name="sound.mp3" />
+      </div>,
+    )
+
+    resizeObserver.resize(screen.getByTestId('custom-media-controls'), 180)
+
+    expect(screen.queryByText('0:00 / 0:00')).not.toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Seek sound.mp3' })).toHaveClass(
+      'media-control-timeline',
+    )
+    expect(screen.queryByRole('slider', { name: 'Volume sound.mp3' })).not.toBeInTheDocument()
+
+    const volumeButton = screen.getByRole('button', { name: 'Adjust volume sound.mp3' })
+    await user.hover(volumeButton)
+    expect(screen.queryByRole('slider', { name: 'Volume sound.mp3' })).not.toBeInTheDocument()
+
+    await user.click(volumeButton)
+    expect(onPointerDown).not.toHaveBeenCalled()
+    expect(onClick).not.toHaveBeenCalled()
+
+    const compactVolumeSlider = screen.getByRole('slider', { name: 'Volume sound.mp3' })
+    expect(compactVolumeSlider).toBeInTheDocument()
+    expect(compactVolumeSlider).toHaveAttribute('aria-orientation', 'vertical')
+
+    await user.click(volumeButton)
+    expect(screen.queryByRole('slider', { name: 'Volume sound.mp3' })).not.toBeInTheDocument()
+
+    await user.click(volumeButton)
+    expect(screen.getByRole('slider', { name: 'Volume sound.mp3' })).toBeInTheDocument()
+
+    fireEvent.mouseLeave(screen.getByTestId('compact-volume-slider'))
+    expect(screen.queryByRole('slider', { name: 'Volume sound.mp3' })).not.toBeInTheDocument()
+    resizeObserver.restore()
+  })
+
+  it('keeps media time on one line and pins trailing controls to the right', () => {
+    render(<ExternalUrlEmbedContent url="https://x.test/movie.mp4" name="movie.mp4" />)
+
+    expect(screen.getByText('0:00 / 0:00')).toHaveClass('whitespace-nowrap')
+    const trailingControls = screen.getByTestId('media-control-trailing-controls')
+    expect(trailingControls).toHaveClass('ml-auto')
+    expect(trailingControls).toContainElement(
+      screen.getByRole('button', { name: 'Mute movie.mp4' }),
+    )
+    expect(trailingControls).toContainElement(
+      screen.getByRole('button', { name: 'Enter fullscreen' }),
+    )
+  })
+
+  it('updates seek slider hover preview position', () => {
+    render(<ExternalUrlEmbedContent url="https://x.test/movie.mp4" name="movie.mp4" />)
+    const seek = screen.getByRole('slider', { name: 'Seek movie.mp4' })
+    vi.spyOn(seek, 'getBoundingClientRect').mockReturnValue({
+      bottom: 10,
+      height: 10,
+      left: 10,
+      right: 110,
+      top: 0,
+      width: 100,
+      x: 10,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    fireEvent.pointerMove(seek, { clientX: 60 })
+
+    expect(seek).toHaveStyle('--media-slider-hover-percent: 50%')
+  })
+
   it('renders PDFs through the React PDF viewer', async () => {
     render(<ExternalUrlEmbedContent url="https://x.test/doc.pdf" name="doc.pdf" />)
 
@@ -247,6 +329,60 @@ describe('ExternalUrlEmbedContent', () => {
     )
   })
 })
+
+function installResizeObserverMock() {
+  const originalResizeObserver = globalThis.ResizeObserver
+  const callbacks = new Map<Element, ResizeObserverCallback>()
+
+  class MockResizeObserver implements ResizeObserver {
+    readonly callback: ResizeObserverCallback
+
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback
+    }
+
+    observe = (target: Element) => {
+      callbacks.set(target, this.callback)
+    }
+
+    unobserve = (target: Element) => {
+      callbacks.delete(target)
+    }
+
+    disconnect = () => {
+      callbacks.clear()
+    }
+  }
+
+  globalThis.ResizeObserver = MockResizeObserver
+
+  return {
+    resize(target: Element, width: number) {
+      const callback = callbacks.get(target)
+      if (!callback) throw new Error('Expected observed element to have a resize callback')
+      const entry: ResizeObserverEntryInput = {
+        target,
+        contentRect: {
+          bottom: 40,
+          height: 40,
+          left: 0,
+          right: width,
+          top: 0,
+          width,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        },
+      }
+      act(() => {
+        callback([entry as ResizeObserverEntry], {} as ResizeObserver)
+      })
+    },
+    restore() {
+      globalThis.ResizeObserver = originalResizeObserver
+    },
+  }
+}
 
 describe('FileMediaEmbedContent', () => {
   it('uses internal preview metadata for files', () => {

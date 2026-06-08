@@ -303,6 +303,28 @@ test.describe.serial('note embeds', () => {
     await expect(embedBlocks).toHaveCount(2)
     await selectFirstEmbedBlock(page)
     await page.getByRole('button', { name: `Play ${embedName}` }).click()
+    const volumeButton = page.getByRole('button', { name: `Adjust volume ${embedName}` })
+    await volumeButton.click()
+    const compactVolumeSlider = page.getByTestId('compact-volume-slider')
+    await expect(compactVolumeSlider).toBeVisible()
+    const [volumeButtonBox, compactVolumeSliderBox] = await Promise.all([
+      volumeButton.boundingBox(),
+      compactVolumeSlider.boundingBox(),
+    ])
+    expect(volumeButtonBox).not.toBeNull()
+    expect(compactVolumeSliderBox).not.toBeNull()
+    expect(compactVolumeSliderBox!.y).toBeGreaterThan(volumeButtonBox!.y)
+    expect(compactVolumeSliderBox!.y).toBeLessThan(
+      volumeButtonBox!.y + volumeButtonBox!.height + 16,
+    )
+    expect(compactVolumeSliderBox!.x).toBeLessThanOrEqual(
+      volumeButtonBox!.x + volumeButtonBox!.width,
+    )
+    expect(compactVolumeSliderBox!.x + compactVolumeSliderBox!.width).toBeGreaterThanOrEqual(
+      volumeButtonBox!.x,
+    )
+    await volumeButton.click()
+    await expect(compactVolumeSlider).not.toBeVisible()
 
     await dragFirstAudioSurfaceBelowText(page, afterText)
 
@@ -454,8 +476,8 @@ async function dragFirstAudioSurfaceBelowText(page: Page, text: string) {
 
 async function selectFirstEmbedBlock(page: Page) {
   const block = page.getByTestId('note-embed-block').first()
-  await expect(block.getByTestId('note-embed-select-layer')).toBeVisible({ timeout: 5000 })
-  await block.getByTestId('note-embed-select-layer').click()
+  await expect(block.getByTestId('note-embed-visual-surface')).toBeVisible({ timeout: 5000 })
+  await block.getByTestId('note-embed-visual-surface').click({ position: { x: 8, y: 8 } })
   await expect(block.getByTestId('note-embed-resize-wrapper')).toBeVisible({ timeout: 5000 })
 }
 

@@ -2,12 +2,16 @@ import { ClientOnly } from '@tanstack/react-router'
 import { Maximize2, Pause, Play, Volume2, VolumeX } from 'lucide-react'
 import { Suspense, lazy, useEffect, useLayoutEffect, useReducer, useRef } from 'react'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import { Button, buttonVariants } from '~/features/shadcn/components/button'
+import { Popover, PopoverContent } from '~/features/shadcn/components/popover'
 import { cn } from '~/features/shadcn/lib/utils'
 import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK, getIntrinsicAspectRatio } from '../utils/embed-media'
 import type {
+  CSSProperties,
   DragEvent as ReactDragEvent,
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
+  MouseEvent as ReactMouseEvent,
   ReactNode,
   RefObject,
 } from 'react'
@@ -40,6 +44,19 @@ type MediaControlsAction =
   | { type: 'playing'; playing: boolean }
   | { type: 'currentTime'; currentTime: number }
 
+type MediaControlsUiState = {
+  controlsWidth: number | null
+  seekHoverPercent: number | null
+  volumeHoverPercent: number | null
+  volumePopoverOpen: boolean
+}
+
+type MediaControlsUiAction =
+  | { type: 'resize'; controlsWidth: number }
+  | { type: 'seekHover'; percent: number | null }
+  | { type: 'volumeHover'; percent: number | null }
+  | { type: 'setVolumePopover'; open: boolean }
+
 const initialMediaControlsState: MediaControlsState = {
   playing: false,
   muted: false,
@@ -47,6 +64,17 @@ const initialMediaControlsState: MediaControlsState = {
   currentTime: 0,
   duration: 0,
 }
+
+const initialMediaControlsUiState: MediaControlsUiState = {
+  controlsWidth: null,
+  seekHoverPercent: null,
+  volumeHoverPercent: null,
+  volumePopoverOpen: false,
+}
+
+const COMPACT_TIMELINE_WIDTH_PX = 140
+const COMPACT_VOLUME_WIDTH_PX = 380
+const COMPACT_TIME_WIDTH_PX = 220
 
 const LazyPdfFileViewer = lazy(() =>
   import('~/features/editor/components/viewer/file/pdf-file-viewer').then((module) => ({
@@ -226,7 +254,30 @@ function CustomMediaControls({
   label: string
   className?: string
 }) {
+  const controlsRef = useRef<HTMLDivElement | null>(null)
   const [state, dispatch] = useReducer(mediaControlsReducer, initialMediaControlsState)
+  const [uiState, dispatchUi] = useReducer(mediaControlsUiReducer, initialMediaControlsUiState)
+
+  useLayoutEffect(() => {
+    const controls = controlsRef.current
+    if (!controls || typeof ResizeObserver === 'undefined') return undefined
+
+    const updateControlsWidth = () => {
+      dispatchUi({
+        type: 'resize',
+        controlsWidth: controls.getBoundingClientRect().width,
+      })
+    }
+
+    updateControlsWidth()
+    const observer = new ResizeObserver((entries) => {
+      const [entry] = entries
+      const width = entry?.contentRect.width ?? controls.getBoundingClientRect().width
+      dispatchUi({ type: 'resize', controlsWidth: width })
+    })
+    observer.observe(controls)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const media = mediaRef.current
@@ -291,98 +342,340 @@ function CustomMediaControls({
     dispatch({ type: 'sync', state: getMediaControlsState(media) })
   }
 
+  const handleVolumeButtonClick = () => {
+    toggleMuted()
+  }
+
   const enterFullscreen = () => {
     void fullscreenTargetRef?.current?.requestFullscreen?.()
   }
 
+  const duration = state.duration || 0
+  const currentTime = Math.min(state.currentTime, duration || state.currentTime)
+  const volume = state.muted ? 0 : state.volume
+  const compactTimeline = isCompactTimeline(uiState.controlsWidth)
+  const compactTime = isCompactTime(uiState.controlsWidth)
+  const compactVolume = isCompactVolume(uiState.controlsWidth)
+
   return (
     <div
+      ref={controlsRef}
       data-testid="custom-media-controls"
       className={cn(
-        'flex h-10 w-full select-none items-center gap-2 border-t border-border px-2 text-xs text-foreground',
+        'relative flex h-10 w-full select-none items-center gap-2 px-2 text-xs text-foreground',
         className,
       )}
       draggable={false}
     >
-      <button
-        type="button"
-        aria-label={`${state.playing ? 'Pause' : 'Play'} ${label}`}
-        className="inline-flex size-7 shrink-0 items-center justify-center border border-border bg-background text-foreground hover:bg-muted"
-        draggable={false}
-        data-embed-media-control="true"
-        onPointerDown={stopControlPointerEvent}
-        onDragStart={preventNativeMediaDrag}
-        onClick={togglePlayback}
+      <PlayPauseButton label={label} playing={state.playing} onClick={togglePlayback} />
+      {compactTime ? null : <MediaTime currentTime={currentTime} duration={duration} />}
+      {compactTimeline ? null : (
+        <SeekSlider
+          label={label}
+          currentTime={currentTime}
+          duration={duration}
+          hoverPercent={uiState.seekHoverPercent}
+          onHoverPercent={(percent) => dispatchUi({ type: 'seekHover', percent })}
+          onChange={updateCurrentTime}
+        />
+      )}
+      <div
+        data-testid="media-control-trailing-controls"
+        className="ml-auto flex shrink-0 items-center gap-1"
       >
-        {state.playing ? <Pause className="size-4" /> : <Play className="size-4" />}
-      </button>
-      <span className="w-16 select-none tabular-nums text-muted-foreground">
-        {formatMediaTime(state.currentTime)} / {formatMediaTime(state.duration)}
-      </span>
-      <input
-        type="range"
-        aria-label={`Seek ${label}`}
-        className="min-w-0 flex-1"
-        min={0}
-        max={state.duration || 0}
-        step={0.1}
-        value={Math.min(state.currentTime, state.duration || state.currentTime)}
-        draggable={false}
-        data-embed-media-control="true"
-        onPointerDown={stopControlPointerEvent}
-        onDragStart={preventNativeMediaDrag}
-        onChange={(event) => updateCurrentTime(event.currentTarget.value)}
-      />
-      <button
-        type="button"
-        aria-label={`${state.muted ? 'Unmute' : 'Mute'} ${label}`}
-        className="inline-flex size-7 shrink-0 items-center justify-center border border-border bg-background text-foreground hover:bg-muted"
-        draggable={false}
-        data-embed-media-control="true"
-        onPointerDown={stopControlPointerEvent}
-        onDragStart={preventNativeMediaDrag}
-        onClick={toggleMuted}
-      >
-        {state.muted || state.volume === 0 ? (
-          <VolumeX className="size-4" />
-        ) : (
-          <Volume2 className="size-4" />
-        )}
-      </button>
-      <input
-        type="range"
-        aria-label={`Volume ${label}`}
-        className="w-20"
-        min={0}
-        max={1}
-        step={0.05}
-        value={state.muted ? 0 : state.volume}
-        draggable={false}
-        data-embed-media-control="true"
-        onPointerDown={stopControlPointerEvent}
-        onDragStart={preventNativeMediaDrag}
-        onChange={(event) => updateVolume(event.currentTarget.value)}
-      />
-      {fullscreenTargetRef ? (
+        <MediaVolumeControls
+          compact={compactVolume}
+          hoverPercent={uiState.volumeHoverPercent}
+          label={label}
+          muted={state.muted}
+          popoverOpen={uiState.volumePopoverOpen}
+          value={volume}
+          onChange={updateVolume}
+          onClosePopover={() => dispatchUi({ type: 'setVolumePopover', open: false })}
+          onHoverPercent={(percent) => dispatchUi({ type: 'volumeHover', percent })}
+          onMuteClick={handleVolumeButtonClick}
+          onTogglePopover={() =>
+            dispatchUi({ type: 'setVolumePopover', open: !uiState.volumePopoverOpen })
+          }
+        />
+        {fullscreenTargetRef ? <FullscreenButton onClick={enterFullscreen} /> : null}
+      </div>
+    </div>
+  )
+}
+
+function PlayPauseButton({
+  label,
+  onClick,
+  playing,
+}: {
+  label: string
+  onClick: () => void
+  playing: boolean
+}) {
+  return (
+    <Button
+      type="button"
+      aria-label={`${playing ? 'Pause' : 'Play'} ${label}`}
+      variant="ghost"
+      size="icon-sm"
+      className="media-control-button"
+      draggable={false}
+      data-embed-media-control="true"
+      onPointerDown={stopControlPointerEvent}
+      onDragStart={preventNativeMediaDrag}
+      onClick={onClick}
+    >
+      {playing ? (
+        <Pause className="media-control-icon size-4" />
+      ) : (
+        <Play className="media-control-icon size-4" />
+      )}
+    </Button>
+  )
+}
+
+function MediaTime({ currentTime, duration }: { currentTime: number; duration: number }) {
+  return (
+    <span className="shrink-0 select-none whitespace-nowrap tabular-nums text-muted-foreground">
+      {formatMediaTime(currentTime)} / {formatMediaTime(duration)}
+    </span>
+  )
+}
+
+function SeekSlider({
+  currentTime,
+  duration,
+  hoverPercent,
+  label,
+  onChange,
+  onHoverPercent,
+}: {
+  currentTime: number
+  duration: number
+  hoverPercent: number | null
+  label: string
+  onChange: (value: string) => void
+  onHoverPercent: (percent: number | null) => void
+}) {
+  return (
+    <input
+      type="range"
+      aria-label={`Seek ${label}`}
+      className="media-control-slider media-control-timeline min-w-12 flex-1"
+      min={0}
+      max={duration}
+      step={0.1}
+      value={currentTime}
+      draggable={false}
+      data-embed-media-control="true"
+      style={getSliderStyle(getMediaSliderPercent(currentTime, 0, duration), hoverPercent)}
+      onPointerDown={stopControlPointerEvent}
+      onPointerMove={(event) => onHoverPercent(getSliderPointerPercent(event))}
+      onPointerLeave={() => onHoverPercent(null)}
+      onDragStart={preventNativeMediaDrag}
+      onChange={(event) => onChange(event.currentTarget.value)}
+    />
+  )
+}
+
+function MediaVolumeControls({
+  compact,
+  hoverPercent,
+  label,
+  muted,
+  onChange,
+  onClosePopover,
+  onHoverPercent,
+  onMuteClick,
+  onTogglePopover,
+  popoverOpen,
+  value,
+}: {
+  compact: boolean
+  hoverPercent: number | null
+  label: string
+  muted: boolean
+  onChange: (value: string) => void
+  onClosePopover: () => void
+  onHoverPercent: (percent: number | null) => void
+  onMuteClick: () => void
+  onTogglePopover: () => void
+  popoverOpen: boolean
+  value: number
+}) {
+  const compactVolumeButtonRef = useRef<HTMLButtonElement | null>(null)
+  const suppressCompactVolumeClickRef = useRef(false)
+
+  if (compact) {
+    return (
+      <Popover modal={false} open={popoverOpen} onOpenChange={(open) => !open && onClosePopover()}>
         <button
+          ref={compactVolumeButtonRef}
           type="button"
-          aria-label="Enter fullscreen"
-          className="inline-flex size-7 shrink-0 items-center justify-center border border-border bg-background text-foreground hover:bg-muted"
+          aria-label={`Adjust volume ${label}`}
+          aria-expanded={popoverOpen}
+          className={cn(
+            buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
+            'media-control-button',
+          )}
           draggable={false}
           data-embed-media-control="true"
+          onPointerDown={(event) => {
+            stopFocusableControlPointerEvent(event)
+            if (!popoverOpen) return
+            suppressCompactVolumeClickRef.current = true
+            onClosePopover()
+          }}
+          onClick={(event) => {
+            if (suppressCompactVolumeClickRef.current) {
+              suppressCompactVolumeClickRef.current = false
+              stopControlClickEvent(event)
+              return
+            }
+            onTogglePopover()
+            stopControlClickEvent(event)
+          }}
+          onDragStart={preventNativeMediaDrag}
+        >
+          <VolumeIcon muted={muted} value={value} />
+        </button>
+        <PopoverContent
+          anchor={compactVolumeButtonRef}
+          data-testid="compact-volume-slider"
+          data-embed-media-control="true"
+          positionMethod="fixed"
+          side="bottom"
+          align="center"
+          sideOffset={6}
+          className="w-auto rounded-sm !border-0 p-2 !outline-none !ring-0 focus:!outline-none focus:!ring-0 focus-visible:!outline-none focus-visible:!ring-0"
+          onMouseLeave={onClosePopover}
           onPointerDown={stopControlPointerEvent}
           onDragStart={preventNativeMediaDrag}
-          onClick={enterFullscreen}
         >
-          <Maximize2 className="size-4" />
-        </button>
-      ) : null}
-    </div>
+          <VolumeSlider
+            orientation="vertical"
+            label={label}
+            value={value}
+            hoverPercent={hoverPercent}
+            className="h-24"
+            onHoverPercent={onHoverPercent}
+            onChange={onChange}
+          />
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  return (
+    <>
+      <Button
+        type="button"
+        aria-label={`${muted ? 'Unmute' : 'Mute'} ${label}`}
+        variant="ghost"
+        size="icon-sm"
+        className="media-control-button"
+        draggable={false}
+        data-embed-media-control="true"
+        onPointerDown={stopControlPointerEvent}
+        onDragStart={preventNativeMediaDrag}
+        onClick={onMuteClick}
+      >
+        <VolumeIcon muted={muted} value={value} />
+      </Button>
+      <VolumeSlider
+        label={label}
+        value={value}
+        hoverPercent={hoverPercent}
+        className="w-20"
+        onHoverPercent={onHoverPercent}
+        onChange={onChange}
+      />
+    </>
+  )
+}
+
+function VolumeIcon({ muted, value }: { muted: boolean; value: number }) {
+  return muted || value === 0 ? (
+    <VolumeX className="media-control-icon size-4" />
+  ) : (
+    <Volume2 className="media-control-icon size-4" />
+  )
+}
+
+function FullscreenButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      type="button"
+      aria-label="Enter fullscreen"
+      variant="ghost"
+      size="icon-sm"
+      className="media-control-button"
+      draggable={false}
+      data-embed-media-control="true"
+      onPointerDown={stopControlPointerEvent}
+      onDragStart={preventNativeMediaDrag}
+      onClick={onClick}
+    >
+      <Maximize2 className="media-control-icon size-4" />
+    </Button>
   )
 }
 
 function stopControlPointerEvent(event: ReactPointerEvent<HTMLElement>) {
   event.stopPropagation()
+}
+
+function stopFocusableControlPointerEvent(event: ReactPointerEvent<HTMLElement>) {
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+function stopControlClickEvent(event: ReactMouseEvent<HTMLElement>) {
+  event.stopPropagation()
+}
+
+function VolumeSlider({
+  label,
+  value,
+  hoverPercent,
+  className,
+  orientation = 'horizontal',
+  onHoverPercent,
+  onChange,
+}: {
+  label: string
+  value: number
+  hoverPercent: number | null
+  className?: string
+  orientation?: 'horizontal' | 'vertical'
+  onHoverPercent: (percent: number | null) => void
+  onChange: (value: string) => void
+}) {
+  return (
+    <input
+      type="range"
+      aria-label={`Volume ${label}`}
+      aria-orientation={orientation}
+      className={cn(
+        'media-control-slider',
+        orientation === 'vertical' && 'media-control-slider-vertical',
+        className,
+      )}
+      min={0}
+      max={1}
+      step={0.05}
+      value={value}
+      draggable={false}
+      data-embed-media-control="true"
+      style={getSliderStyle(getMediaSliderPercent(value, 0, 1), hoverPercent)}
+      onPointerDown={stopControlPointerEvent}
+      onPointerMove={(event) => onHoverPercent(getSliderPointerPercent(event, orientation))}
+      onPointerLeave={() => onHoverPercent(null)}
+      onDragStart={preventNativeMediaDrag}
+      onChange={(event) => onChange(event.currentTarget.value)}
+    />
+  )
 }
 
 function mediaControlsReducer(
@@ -399,6 +692,25 @@ function mediaControlsReducer(
   }
 }
 
+function mediaControlsUiReducer(
+  state: MediaControlsUiState,
+  action: MediaControlsUiAction,
+): MediaControlsUiState {
+  switch (action.type) {
+    case 'resize':
+      return { ...state, controlsWidth: action.controlsWidth }
+    case 'seekHover':
+      return { ...state, seekHoverPercent: action.percent }
+    case 'volumeHover':
+      return { ...state, volumeHoverPercent: action.percent }
+    case 'setVolumePopover':
+      return {
+        ...state,
+        volumePopoverOpen: action.open,
+      }
+  }
+}
+
 function getMediaControlsState(media: HTMLMediaElement): MediaControlsState {
   return {
     playing: !media.paused,
@@ -407,6 +719,62 @@ function getMediaControlsState(media: HTMLMediaElement): MediaControlsState {
     currentTime: getFiniteMediaTime(media.currentTime),
     duration: getFiniteMediaTime(media.duration),
   }
+}
+
+function isCompactTimeline(width: number | null) {
+  return width !== null && width < COMPACT_TIMELINE_WIDTH_PX
+}
+
+function isCompactTime(width: number | null) {
+  return width !== null && width < COMPACT_TIME_WIDTH_PX
+}
+
+function isCompactVolume(width: number | null) {
+  return width !== null && width < COMPACT_VOLUME_WIDTH_PX
+}
+
+function getMediaSliderPercent(value: number, min: number, max: number) {
+  if (!Number.isFinite(value) || !Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+    return 0
+  }
+
+  return clampPercent(((value - min) / (max - min)) * 100)
+}
+
+function getSliderPointerPercent(
+  event: ReactPointerEvent<HTMLInputElement>,
+  orientation: 'horizontal' | 'vertical' = 'horizontal',
+) {
+  const rect = event.currentTarget.getBoundingClientRect()
+  if (orientation === 'vertical') {
+    if (rect.height <= 0) return 0
+    return clampPercent(((rect.bottom - event.clientY) / rect.height) * 100)
+  }
+
+  if (rect.width <= 0) return 0
+  return clampPercent(((event.clientX - rect.left) / rect.width) * 100)
+}
+
+function getSliderStyle(valuePercent: number, hoverPercent: number | null): CSSProperties {
+  const previewStart = hoverPercent === null ? valuePercent : Math.min(valuePercent, hoverPercent)
+  const previewEnd = hoverPercent === null ? valuePercent : Math.max(valuePercent, hoverPercent)
+
+  return {
+    '--media-slider-value-percent': `${formatPercent(valuePercent)}%`,
+    '--media-slider-hover-percent':
+      hoverPercent === null ? `${formatPercent(valuePercent)}%` : `${formatPercent(hoverPercent)}%`,
+    '--media-slider-primary-end': `${formatPercent(previewStart)}%`,
+    '--media-slider-preview-start': `${formatPercent(previewStart)}%`,
+    '--media-slider-preview-end': `${formatPercent(previewEnd)}%`,
+  } as CSSProperties
+}
+
+function clampPercent(value: number) {
+  return Math.min(Math.max(value, 0), 100)
+}
+
+function formatPercent(value: number) {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(2)
 }
 
 function formatMediaTime(value: number) {

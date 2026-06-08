@@ -251,13 +251,6 @@ export function NoteEmbedBlockView({
           }}
         />
       ) : null}
-      {editable && target.kind !== 'empty' && !selected ? (
-        <div
-          aria-hidden="true"
-          data-testid="note-embed-select-layer"
-          className="note-embed-select-layer absolute inset-0 z-10 bg-transparent"
-        />
-      ) : null}
     </section>
   )
 }
