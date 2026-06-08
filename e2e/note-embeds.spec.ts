@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -26,14 +25,15 @@ import type { CustomPartialBlock } from '../shared/editor-blocks/types'
 
 const campaignName = testName('E2E NoteEmbeds')
 const sourceNoteContent = `Embedded source content ${Date.now()}`
-const testDir = path.dirname(fileURLToPath(import.meta.url))
+const fixtureDir = path.resolve('test-results/fixtures')
 const imageFileName = 'note-embed-upload.png'
-const imageFilePath = path.join(testDir, imageFileName)
+const imageFilePath = path.join(fixtureDir, imageFileName)
 
 test.describe.serial('note embeds', () => {
   test.setTimeout(30_000)
 
   test.beforeAll(async ({ browser }) => {
+    fs.mkdirSync(fixtureDir, { recursive: true })
     fs.writeFileSync(imageFilePath, createOnePixelPng())
 
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
@@ -93,6 +93,9 @@ test.describe.serial('note embeds', () => {
 
     await expect(block.getByTestId('embed-empty-state')).toBeVisible()
     await expect(block.getByText('Drag and drop an item or file here')).toBeVisible()
+    await expect
+      .poll(() => getFirstPersistedEmbedTargetKind(page, hostName), { timeout: 10_000 })
+      .toBe('empty')
   })
 
   test('links an external file from an empty note embed', async ({ page }, testInfo) => {
@@ -510,6 +513,23 @@ async function expectFileInAssetsFolder(page: Page) {
   const assets = await getSidebarItemBySlug({ campaignId, slug: assetsSlug })
   const file = await getSidebarItemBySlug({ campaignId, slug: fileSlug })
   expect(file.parentId).toBe(assets._id)
+}
+
+async function getFirstPersistedEmbedTargetKind(page: Page, itemName: string) {
+  const noteSlug = await getItemSlugFromSidebarLink(page, itemName)
+  const { dmUsername, campaignSlug } = getCampaignRoute(page)
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const noteId = await getSidebarItemIdBySlug({
+    campaignId,
+    slug: noteSlug,
+  })
+  const client = await createE2EConvexClient()
+  const note = await client.query(api.notes.queries.getNote, {
+    campaignId,
+    noteId,
+  })
+  const embedBlock = note?.content.find((block) => block.type === 'embed')
+  return embedBlock?.props.targetKind ?? null
 }
 
 async function getItemSlugFromSidebarLink(page: Page, itemName: string) {

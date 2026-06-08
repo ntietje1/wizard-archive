@@ -41,9 +41,9 @@ import {
 } from '~/features/dnd/utils/internal-native-drag'
 import { SidebarItemPreviewRenderer } from './sidebar-item-preview-renderer'
 
-const EmbedContent = lazy(() =>
-  import('~/features/embeds/components/embed-content').then((module) => ({
-    default: module.EmbedContent,
+const LiveEmbedContent = lazy(() =>
+  import('~/features/embeds/components/live-embed-content').then((module) => ({
+    default: module.LiveEmbedContent,
   })),
 )
 
@@ -356,7 +356,7 @@ function ReadOnlyNoteEmbedBlockBody({
       style={getNoteEmbedBodyStyle(mediaLayout, height)}
     >
       <Suspense fallback={<EmbedLoadingState />}>
-        <EmbedContent
+        <LiveEmbedContent
           target={target}
           sourceItemId={sourceNoteId}
           mode="readonly"
@@ -406,7 +406,7 @@ function EditableNoteEmbedBlockBody({
         style={getNoteEmbedBodyStyle(mediaLayout, height)}
       >
         <Suspense fallback={<EmbedLoadingState />}>
-          <EmbedContent
+          <LiveEmbedContent
             target={target}
             sourceItemId={sourceNoteId}
             mode="editable"

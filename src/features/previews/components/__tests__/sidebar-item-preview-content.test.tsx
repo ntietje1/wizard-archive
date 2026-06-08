@@ -21,7 +21,7 @@ const mapPreviewSpy = vi.hoisted(() => vi.fn())
 const filePreviewSpy = vi.hoisted(() => vi.fn())
 const canvasPreviewSpy = vi.hoisted(() => vi.fn())
 
-vi.mock('~/features/embeds/components/embedded-note-content', () => ({
+vi.mock('~/features/previews/components/embedded-note-content', () => ({
   EmbeddedNoteContent: (props: unknown) => {
     embeddedNoteSpy(props)
     return <div>note-preview</div>

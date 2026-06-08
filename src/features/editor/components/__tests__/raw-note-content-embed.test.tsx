@@ -76,7 +76,7 @@ describe('RawNoteContent embeds', () => {
                 textAlignment: 'left',
                 backgroundColor: 'default',
               },
-              content: [],
+              content: undefined,
               children: [],
             },
           ] as never

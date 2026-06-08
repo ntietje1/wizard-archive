@@ -6,6 +6,7 @@ import { EmbedAncestryProvider } from '../../context/embed-render-ancestry'
 import { EmbedContent } from '../embed-content'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
+import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 
 const useSidebarItemByIdMock = vi.hoisted(() => vi.fn())
 const useSidebarItemAvailabilityStateMock = vi.hoisted(() => vi.fn())
@@ -31,12 +32,8 @@ vi.mock('~/features/file-upload/utils/file-url-validation', () => ({
 
 describe('EmbedContent', () => {
   beforeEach(() => {
-    useSidebarItemByIdMock.mockReturnValue({ data: null, isLoading: false, error: null })
-    useSidebarItemAvailabilityStateMock.mockReturnValue({
-      status: 'not_found',
-      label: 'Embedded item',
-      message: "This item doesn't exist.",
-    })
+    useSidebarItemByIdMock.mockReset()
+    useSidebarItemAvailabilityStateMock.mockReset()
   })
 
   it('renders empty state for empty targets', () => {
@@ -136,6 +133,7 @@ describe('EmbedContent', () => {
         sourceItemId={null}
         mode="readonly"
         SidebarItemRenderer={SidebarItemNameRenderer}
+        resolvedSidebarItemState={availableItemState(item as AnySidebarItemWithContent)}
       />,
     )
 
@@ -155,11 +153,30 @@ describe('EmbedContent', () => {
         sourceItemId={null}
         mode="readonly"
         SidebarItemRenderer={SidebarItemNameRenderer}
+        resolvedSidebarItemState={{ status: 'loading', label: 'Map PDF' }}
       />,
     )
 
-    expect(screen.getByRole('status', { name: 'Loading Map PDF' })).toBeInTheDocument()
+    expect(screen.getByTestId('embed-loading-state')).toHaveAttribute(
+      'aria-label',
+      'Loading Map PDF',
+    )
     expect(screen.queryByText('Embedded item unavailable')).not.toBeInTheDocument()
+  })
+
+  it('renders unresolved static sidebar item embeds without live sidebar lookup', () => {
+    render(
+      <EmbedContent
+        target={{ kind: 'sidebarItem', sidebarItemId: 'file-a' as Id<'sidebarItems'> }}
+        sourceItemId={null}
+        mode="readonly"
+        SidebarItemRenderer={SidebarItemNameRenderer}
+      />,
+    )
+
+    expect(screen.getByText('Embedded item unavailable')).toBeInTheDocument()
+    expect(useSidebarItemByIdMock).not.toHaveBeenCalled()
+    expect(useSidebarItemAvailabilityStateMock).not.toHaveBeenCalled()
   })
 
   it('does not remount sidebar item content when the render callback identity changes', () => {
@@ -183,6 +200,7 @@ describe('EmbedContent', () => {
         sourceItemId={null}
         mode="readonly"
         SidebarItemRenderer={MountProbeRenderer}
+        resolvedSidebarItemState={availableItemState(item as AnySidebarItemWithContent)}
       />,
     )
 
@@ -192,6 +210,7 @@ describe('EmbedContent', () => {
         sourceItemId={null}
         mode="readonly"
         SidebarItemRenderer={MountProbeRenderer}
+        resolvedSidebarItemState={availableItemState(item as AnySidebarItemWithContent)}
       />,
     )
 
@@ -218,6 +237,11 @@ describe('EmbedContent', () => {
         sourceItemId={null}
         mode="readonly"
         SidebarItemRenderer={SidebarItemNameRenderer}
+        resolvedSidebarItemState={{
+          status: 'trashed',
+          label: 'Trashed Note',
+          message: 'This item is in the trash.',
+        }}
       />,
     )
 
@@ -225,7 +249,7 @@ describe('EmbedContent', () => {
     expect(screen.getByText('Embedded item is in the trash')).toBeInTheDocument()
   })
 
-  it('renders internal file sidebar targets through shared media handling', () => {
+  it('passes internal file sidebar targets through the supplied surface renderer', () => {
     const item = {
       _id: 'file-a',
       type: SIDEBAR_ITEM_TYPES.files,
@@ -247,14 +271,12 @@ describe('EmbedContent', () => {
         sourceItemId={null}
         mode="readonly"
         SidebarItemRenderer={SurfaceFallbackRenderer}
+        resolvedSidebarItemState={availableItemState(item as AnySidebarItemWithContent)}
       />,
     )
 
-    expect(document.querySelector('audio')).toHaveAttribute(
-      'src',
-      'https://example.convex.cloud/api/storage/theme-song',
-    )
-    expect(screen.queryByText('surface fallback')).not.toBeInTheDocument()
+    expect(screen.getByText('surface fallback')).toBeInTheDocument()
+    expect(document.querySelector('audio')).not.toBeInTheDocument()
   })
 
   it('wraps rendered sidebar items with target ancestry', () => {
@@ -276,6 +298,7 @@ describe('EmbedContent', () => {
         sourceItemId={null}
         mode="readonly"
         SidebarItemRenderer={RecursiveSameTargetRenderer}
+        resolvedSidebarItemState={availableItemState(item as AnySidebarItemWithContent)}
       />,
     )
 
@@ -302,6 +325,7 @@ describe('EmbedContent', () => {
         sourceItemId={'note-a' as Id<'sidebarItems'>}
         mode="readonly"
         SidebarItemRenderer={RecursiveSourceRenderer}
+        resolvedSidebarItemState={availableItemState(item as AnySidebarItemWithContent)}
       />,
     )
 
@@ -357,4 +381,12 @@ function MountProbeRenderer({ item }: { item: AnySidebarItemWithContent }) {
 function MountProbe({ label, onUnmount }: { label: string; onUnmount: () => void }) {
   useEffect(() => onUnmount, [onUnmount])
   return <div>{label}</div>
+}
+
+function availableItemState(item: AnySidebarItemWithContent): SidebarItemAvailabilityState {
+  return {
+    status: 'available',
+    label: item.name,
+    item,
+  }
 }

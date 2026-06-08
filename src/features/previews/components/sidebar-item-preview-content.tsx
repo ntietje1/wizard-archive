@@ -4,7 +4,7 @@ import { MapImagePreview } from '~/features/editor/components/viewer/map/map-ima
 import { FilePreview } from '~/features/editor/components/viewer/file/file-preview'
 import { assertNever } from '~/shared/utils/utils'
 import { CanvasThumbnailPreview } from './canvas-thumbnail-preview'
-import { EmbeddedNoteContent } from '~/features/embeds/components/embedded-note-content'
+import { EmbeddedNoteContent } from './embedded-note-content'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 
 export function SidebarItemPreviewContent({

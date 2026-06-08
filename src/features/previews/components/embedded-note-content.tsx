@@ -118,10 +118,9 @@ export function EmbeddedNoteContent({
 }
 
 function getEmbeddedNoteTextStyle(textColor: string | null): CSSProperties {
-  const color = textColor ?? 'var(--foreground)'
-
+  if (!textColor) return {}
   return {
-    color,
-    '--bn-colors-editor-text': color,
+    color: textColor,
+    '--editor-text-color': textColor,
   } as CSSProperties
 }

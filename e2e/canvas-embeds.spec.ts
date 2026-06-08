@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -41,14 +40,15 @@ import type { Locator, Page, TestInfo } from '@playwright/test'
 const campaignName = testName('CnvEmbeds')
 const MIN_EMBED_DRAG_DELTA_X = 60
 const MIN_EMBED_DRAG_DELTA_Y = 25
-const testDir = path.dirname(fileURLToPath(import.meta.url))
+const fixtureDir = path.resolve('test-results/fixtures')
 const imageFileName = 'canvas-embed-upload.png'
-const imageFilePath = path.join(testDir, imageFileName)
+const imageFilePath = path.join(fixtureDir, imageFileName)
 
 test.describe.serial('canvas embedded preview behavior', () => {
   test.setTimeout(120_000)
 
   test.beforeAll(async ({ browser }) => {
+    fs.mkdirSync(fixtureDir, { recursive: true })
     fs.writeFileSync(imageFilePath, createOnePixelPng())
 
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })

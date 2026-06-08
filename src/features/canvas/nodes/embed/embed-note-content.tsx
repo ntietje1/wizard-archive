@@ -5,7 +5,7 @@ import type { NoteWithContent } from 'shared/notes/types'
 import type { Doc } from 'yjs'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { useBlockNoteActivationLifecycle } from '../shared/use-blocknote-activation-lifecycle'
-import { EmbeddedNoteContent } from '~/features/embeds/components/embedded-note-content'
+import { EmbeddedNoteContent } from '~/features/previews/components/embedded-note-content'
 import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
 import { BlockShareMenuProvider } from '~/features/sharing/contexts/block-share-menu-context'
 

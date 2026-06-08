@@ -69,7 +69,7 @@ vi.mock('../embedded-canvas-content', () => ({
   },
 }))
 
-vi.mock('~/features/embeds/components/file-media-embed-content', () => ({
+vi.mock('~/features/previews/components/file-media-embed-content', () => ({
   FileMediaEmbedContent: (props: {
     allowInnerScroll?: boolean
     onMediaLayout?: (layout: EmbedMediaLayout) => void
@@ -486,6 +486,53 @@ describe('EmbedNode', () => {
     expect(canvasRuntimeState.resizeNode).not.toHaveBeenCalled()
   })
 
+  it('resets reported media layout when the embed target changes', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'Audio Item',
+      contentType: 'audio/mpeg',
+      downloadUrl: 'audio.mp3',
+      previewUrl: null,
+    }
+    const view = renderEmbedNodeHarness('node-1', 'file-1')
+
+    const props = fileMediaEmbedSpy.mock.calls[0]?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      props.onMediaLayout?.({ kind: 'fixedHeight', height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK })
+    })
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        minHeight: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+        resizeAxes: 'horizontal',
+      }),
+    )
+
+    contentItemState.data = {
+      _id: 'note-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Note Item',
+      content: [],
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    }
+    view.rerender(
+      <CanvasEngineProvider engine={view.engine}>
+        <EmbedNode {...createEmbedNodeProps('node-1', 'note-1', {})} />
+      </CanvasEngineProvider>,
+    )
+
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        minHeight: EMBED_NODE_MIN_SIZE.height,
+        resizeAxes: 'both',
+        lockedAspectRatio: undefined,
+      }),
+    )
+  })
+
   it('falls back to the shared read-only preview path for nested embedded canvases', () => {
     renderModeState.interactive = false
     renderEmbedNode()
@@ -685,6 +732,23 @@ function renderEmbedNode(
   data: Record<string, unknown> = {},
   nodeSize: { height: number; width: number } = { width: 320, height: 180 },
 ) {
+  const { engine: _engine, ...view } = renderEmbedNodeHarness(
+    id,
+    sidebarItemId,
+    viewport,
+    data,
+    nodeSize,
+  )
+  return view
+}
+
+function renderEmbedNodeHarness(
+  id = 'node-1',
+  sidebarItemId = 'canvas-1',
+  viewport: { zoom: number } = { zoom: 1 },
+  data: Record<string, unknown> = {},
+  nodeSize: { height: number; width: number } = { width: 320, height: 180 },
+) {
   const engine = createCanvasEngine()
   engine.setViewport({ x: 0, y: 0, zoom: viewport.zoom })
   engine.setDocumentSnapshot({
@@ -700,11 +764,14 @@ function renderEmbedNode(
     ],
   })
 
-  return render(
-    <CanvasEngineProvider engine={engine}>
-      <EmbedNode {...createEmbedNodeProps(id, sidebarItemId, data)} />
-    </CanvasEngineProvider>,
-  )
+  return {
+    engine,
+    ...render(
+      <CanvasEngineProvider engine={engine}>
+        <EmbedNode {...createEmbedNodeProps(id, sidebarItemId, data)} />
+      </CanvasEngineProvider>,
+    ),
+  }
 }
 
 function createEmbedNodeProps(

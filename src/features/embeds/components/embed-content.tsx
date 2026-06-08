@@ -2,9 +2,6 @@ import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ComponentType } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
-import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { EmbedAncestryProvider } from '../context/embed-render-ancestry'
 import { useEmbedAncestry } from '../context/embed-render-ancestry-context'
@@ -12,7 +9,6 @@ import { EmbedEmptyState } from './embed-empty-state'
 import { EmbedLoadingState } from './embed-loading-state'
 import { EmbedUnavailable } from './embed-unavailable'
 import { ExternalUrlEmbedContent } from './external-url-embed-content'
-import { FileMediaEmbedContent } from './file-media-embed-content'
 import type { EmbedMediaLayoutReporter } from '../utils/embed-media'
 
 type EmbedContentProps = {
@@ -30,6 +26,7 @@ type EmbedContentProps = {
 type SidebarItemEmbedRenderer = ComponentType<{
   item: AnySidebarItemWithContent
   allowInnerScroll?: boolean
+  onMediaLayout?: EmbedMediaLayoutReporter
 }>
 
 export function EmbedContent({
@@ -149,41 +146,13 @@ function SidebarItemEmbedContent({
   }
 
   return (
-    <LiveSidebarItemEmbedContent
-      targetItemId={targetItemId}
-      onMediaLayout={onMediaLayout}
-      allowInnerScroll={allowInnerScroll}
-      SidebarItemRenderer={SidebarItemRenderer}
-    />
-  )
-}
-
-function LiveSidebarItemEmbedContent({
-  targetItemId,
-  onMediaLayout,
-  allowInnerScroll,
-  SidebarItemRenderer,
-}: {
-  targetItemId: Id<'sidebarItems'>
-  onMediaLayout?: EmbedMediaLayoutReporter
-  allowInnerScroll: boolean
-  SidebarItemRenderer: SidebarItemEmbedRenderer
-}) {
-  const contentQuery = useSidebarItemById(targetItemId)
-  const itemState = useSidebarItemAvailabilityState({
-    lookup: { kind: 'id', id: targetItemId },
-    readableItem: contentQuery.data,
-    readableItemLoading: contentQuery.isLoading,
-    readableItemError: contentQuery.error,
-    canView: contentQuery.data != null,
-    subject: 'item',
-    fallbackLabel: 'Embedded item',
-  })
-
-  return (
     <ResolvedSidebarItemEmbedContent
       targetItemId={targetItemId}
-      itemState={itemState}
+      itemState={{
+        status: 'not_found',
+        label: 'Embedded item',
+        message: "This item doesn't exist.",
+      }}
       onMediaLayout={onMediaLayout}
       allowInnerScroll={allowInnerScroll}
       SidebarItemRenderer={SidebarItemRenderer}
@@ -205,24 +174,13 @@ function ResolvedSidebarItemEmbedContent({
   SidebarItemRenderer: SidebarItemEmbedRenderer
 }) {
   if (itemState.status === 'available') {
-    if (itemState.item.type === SIDEBAR_ITEM_TYPES.files) {
-      return (
-        <EmbedAncestryProvider itemId={targetItemId}>
-          <FileMediaEmbedContent
-            downloadUrl={itemState.item.downloadUrl}
-            contentType={itemState.item.contentType}
-            previewUrl={itemState.item.previewUrl}
-            name={itemState.item.name}
-            allowInnerScroll={allowInnerScroll}
-            onMediaLayout={onMediaLayout}
-          />
-        </EmbedAncestryProvider>
-      )
-    }
-
     return (
       <EmbedAncestryProvider itemId={targetItemId}>
-        <SidebarItemRenderer item={itemState.item} allowInnerScroll={allowInnerScroll} />
+        <SidebarItemRenderer
+          item={itemState.item}
+          allowInnerScroll={allowInnerScroll}
+          onMediaLayout={onMediaLayout}
+        />
       </EmbedAncestryProvider>
     )
   }
