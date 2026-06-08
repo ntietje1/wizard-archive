@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { createCanvasNodePlacement } from '../../nodes/canvas-node-modules'
-import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
+import {
+  createEmbedCanvasNode,
+  createSidebarItemEmbedCanvasNode,
+} from '../../nodes/embed/embed-node-creation'
 import { getStrokeBounds } from '../../nodes/stroke/stroke-node-model'
 import { clearAllStrokePathCache } from '../../nodes/stroke/stroke-path-cache'
 import { exposeCanvasPerformanceRuntime } from './canvas-performance-metrics'
@@ -123,11 +126,9 @@ export function useCanvasPerformanceProbeRuntime({
         },
         seedCoordinateProbeNode: ({ id, start = { x: 0, y: 0 } }) => {
           doc.transact(() => {
-            const placement = createCanvasNodePlacement('embed', {
-              position: start,
-            })
+            const embedNode = createEmbedCanvasNode({ kind: 'empty' }, start)
             const node = {
-              ...placement.node,
+              ...embedNode,
               id,
               zIndex: COORDINATE_PROBE_Z_INDEX,
             }
@@ -201,7 +202,7 @@ export function useCanvasPerformanceProbeRuntime({
         },
         seedEmbedNode: ({ id, sidebarItemId, position, width, height, zIndex }) => {
           doc.transact(() => {
-            const node = createEmbedCanvasNode(sidebarItemId, position)
+            const node = createSidebarItemEmbedCanvasNode(sidebarItemId, position)
             nodesMap.set(id, {
               ...node,
               id,

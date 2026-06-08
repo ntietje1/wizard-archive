@@ -1,4 +1,5 @@
 import { parseCanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
+import { embedTargetSchema } from 'shared/embeds/embedTargets'
 import type {
   CanvasEdgeStyle,
   CanvasEdgeType,
@@ -337,12 +338,17 @@ export function parseEmbeddedCanvasStableId(value: unknown): string | undefined 
     : undefined
 }
 
-const embedDataKeys = new Set(['sidebarItemId', 'lockedAspectRatio', ...surfaceStyleKeys])
+const embedDataKeys = new Set(['target', 'sidebarItemId', 'lockedAspectRatio', ...surfaceStyleKeys])
 const textDataKeys = new Set(['content', ...surfaceStyleKeys])
 export function parseCanvasEmbedNodeData(value: unknown): CanvasEmbedNodeData | null {
   if (!isRecord(value) || !hasOnlyKeys(value, embedDataKeys)) return null
 
   const data: CanvasEmbedNodeData = {}
+  if ('target' in value) {
+    const target = embedTargetSchema.safeParse(value.target)
+    if (!target.success) return null
+    data.target = target.data
+  }
   if ('sidebarItemId' in value) {
     const sidebarItemId = parseCanvasSidebarItemId(value.sidebarItemId)
     if (sidebarItemId === undefined) return null

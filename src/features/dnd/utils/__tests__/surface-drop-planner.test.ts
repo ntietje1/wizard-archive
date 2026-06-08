@@ -77,6 +77,27 @@ describe('resolveSurfaceDropCommand', () => {
     })
   })
 
+  it('routes note editor drops to embed creation when requested by modifier state', () => {
+    const note = createNote()
+    const targetNote = createNote()
+
+    const command = resolveSurfaceDropCommand(
+      [note],
+      { type: NOTE_EDITOR_DROP_TYPE, noteId: targetNote._id },
+      planningContext(),
+      { noteEditorDropAction: 'embed' },
+    )
+
+    expect(command).toMatchObject({
+      status: 'ready',
+      commandId: 'surface-drop.embed-sidebar-item-in-note',
+      action: 'noteEmbed',
+      items: [note],
+      rejectedItems: [],
+      label: 'Embed item here',
+    })
+  })
+
   it('rejects wrong-campaign items using planning context campaign id', () => {
     const note = createNote({ campaignId: testId<'campaigns'>('other_campaign') })
 

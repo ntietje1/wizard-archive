@@ -417,6 +417,132 @@
   }
 }
 
+.media-control-button {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--foreground);
+}
+
+.media-control-button:hover,
+.media-control-button[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+}
+
+.media-control-button:active {
+  background: color-mix(in srgb, var(--muted-foreground) 18%, transparent);
+}
+
+.media-control-icon {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.75;
+}
+
+.media-control-slider {
+  --media-slider-primary-end: var(--media-slider-value-percent, 0%);
+  --media-slider-preview-start: var(--media-slider-value-percent, 0%);
+  --media-slider-preview-end: var(--media-slider-value-percent, 0%);
+  --media-slider-track: color-mix(in srgb, var(--muted-foreground) 22%, transparent);
+  --media-slider-preview: color-mix(in srgb, var(--primary) 35%, var(--muted));
+  appearance: none;
+  min-height: 14px;
+  cursor: pointer;
+  background: transparent;
+  accent-color: var(--primary);
+}
+
+.media-control-slider:focus,
+.media-control-slider:focus-visible {
+  outline: none;
+}
+
+.media-control-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--ring);
+}
+
+.media-control-slider:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--ring);
+}
+
+.media-control-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--primary) 0 var(--media-slider-primary-end),
+    var(--media-slider-preview) var(--media-slider-preview-start) var(--media-slider-preview-end),
+    var(--media-slider-track) var(--media-slider-preview-end) 100%
+  );
+}
+
+.media-control-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 9px;
+  height: 9px;
+  margin-top: -2.5px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--foreground);
+}
+
+.media-control-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--primary) 0 var(--media-slider-primary-end),
+    var(--media-slider-preview) var(--media-slider-preview-start) var(--media-slider-preview-end),
+    var(--media-slider-track) var(--media-slider-preview-end) 100%
+  );
+}
+
+.media-control-slider::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--foreground);
+}
+
+.media-control-slider-vertical {
+  width: 14px;
+  min-height: 0;
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
+.media-control-slider-vertical::-webkit-slider-runnable-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(
+    to top,
+    var(--primary) 0 var(--media-slider-primary-end),
+    var(--media-slider-preview) var(--media-slider-preview-start) var(--media-slider-preview-end),
+    var(--media-slider-track) var(--media-slider-preview-end) 100%
+  );
+}
+
+.media-control-slider-vertical::-webkit-slider-thumb {
+  margin-top: 0;
+  margin-left: -2.5px;
+}
+
+.media-control-slider-vertical::-moz-range-track {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(
+    to top,
+    var(--primary) 0 var(--media-slider-primary-end),
+    var(--media-slider-preview) var(--media-slider-preview-start) var(--media-slider-preview-end),
+    var(--media-slider-track) var(--media-slider-preview-end) 100%
+  );
+}
+
 /* ==========================================================================
    BlockNote theme integration
    Map BlockNote's internal CSS variables to the app's theme tokens.
@@ -513,6 +639,16 @@
 /* Nested block indent line */
 :root .bn-block-group .bn-block-group > .bn-block-outer:not([data-prev-depth-changed])::before {
   border-left: 1px solid var(--border);
+}
+
+:root
+  .canvas-rich-text-editor[data-embedded-note-mode]
+  .bn-container
+  .bn-editor
+  .bn-block-group
+  .bn-block-outer::before {
+  content: none;
+  border-left: 0;
 }
 
 /* File block – "add file" button */
@@ -854,6 +990,43 @@
     var(--bn-colors-selected-background),
     var(--bn-colors-selected-background)
   );
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    .bn-block-content[data-content-type='embed'].ProseMirror-selectednode,
+    .bn-block-content[data-content-type='embed']:has(.note-embed-block),
+    .ProseMirror-selectednode > .bn-block-content[data-content-type='embed'],
+    .ProseMirror-selectednode > .bn-block-content:has(.note-embed-block)
+  )
+  > * {
+  outline: none;
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    .bn-block-content[data-content-type='embed'],
+    .bn-block-content:has(.note-embed-block),
+    [data-show-selection]:has(.note-embed-block)
+  )
+  [data-show-selection] {
+  background-color: transparent;
+  background-image: none;
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  .bn-block-content[data-content-type='embed'][data-show-selection],
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  .bn-block-content:has(.note-embed-block)[data-show-selection],
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  [data-show-selection]:has(.note-embed-block) {
+  background-color: transparent;
+  background-image: none;
 }
 
 :root

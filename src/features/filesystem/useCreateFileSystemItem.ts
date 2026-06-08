@@ -6,9 +6,12 @@ import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import { validateCreateItemLocally } from 'shared/sidebar-items/parent-target'
+import { createFileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { deduplicateName } from 'shared/sidebar-items/default-name'
 import { useFileSystemReadModel } from './useFileSystemReadModel'
+import { useSidebarItemsCache } from '~/features/sidebar/hooks/useSidebarItemsCache'
+import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/contexts/sidebar-items-context'
 
 interface CreateItemBase {
   name: string
@@ -29,15 +32,24 @@ type CreateItemResult = {
 export function useCreateFileSystemItem() {
   const { readModel } = useFileSystemReadModel()
   const filesystem = useFileSystem()
+  const sidebarItemsCache = useSidebarItemsCache()
+
+  const getCurrentReadModel = () => {
+    const activeItems = sidebarItemsCache.get(SIDEBAR_ITEMS_VIEW.active)
+    const trashItems = sidebarItemsCache.get(SIDEBAR_ITEMS_VIEW.trash)
+    const cachedItems = [...activeItems, ...trashItems]
+    return cachedItems.length > 0 ? createFileSystemReadModel(cachedItems) : readModel
+  }
 
   const validateCreateItem = (args: CreateItemArgs) => {
+    const currentReadModel = getCurrentReadModel()
     return validateCreateItemLocally(
       {
         name: args.name,
         parentTarget: args.parentTarget,
       },
-      readModel.itemsById,
-      readModel.activeChildrenByParent,
+      currentReadModel.itemsById,
+      currentReadModel.activeChildrenByParent,
     )
   }
 
@@ -45,18 +57,23 @@ export function useCreateFileSystemItem() {
     args: CreateItemArgs,
     initialize?: (created: CreateItemResult) => Promise<void> | void,
   ): Promise<CreateItemResult> => {
+    const currentReadModel = getCurrentReadModel()
     const trimmedName = args.name.trim()
     const candidateName =
       args.parentTarget.kind === 'direct'
         ? deduplicateName(
             trimmedName,
-            readModel.getActiveChildren(args.parentTarget.parentId).map((item) => item.name),
+            currentReadModel.getActiveChildren(args.parentTarget.parentId).map((item) => item.name),
           )
         : trimmedName
-    const nameResult = validateCreateItem({
-      ...args,
-      name: candidateName,
-    })
+    const nameResult = validateCreateItemLocally(
+      {
+        name: candidateName,
+        parentTarget: args.parentTarget,
+      },
+      currentReadModel.itemsById,
+      currentReadModel.activeChildrenByParent,
+    )
     if (!nameResult.valid) {
       throw new Error(nameResult.error)
     }

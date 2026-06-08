@@ -5,15 +5,18 @@ import { PreventExternalDrop } from './extensions/prevent-external-drop/prevent-
 import { SideMenuRenderer } from './extensions/side-menu/side-menu'
 import { SlashMenu } from './extensions/slash-menu/slash-menu'
 import { NoteValueRuntimeProvider } from '../value-block/value-block-runtime'
+import { NoteEmbedSurfaceProvider } from './extensions/embed-block/note-embed-surface-context'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties, ReactNode, RefObject } from 'react'
 import './extensions/wiki-link/wiki-link.css'
 import './extensions/md-link/md-link.css'
+import './note-editor-file-drop-cursor.css'
 import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'
 import { useLinkDecorations } from '~/features/editor/hooks/useLinkDecorations'
+import { useNoteEditorFileDropCursor } from '~/features/editor/hooks/useNoteEditorFileDropCursor'
 import { useResolvedTheme } from '~/shared/theme/context'
 import {
   patchYSyncAfterTypeChanged,
@@ -43,43 +46,47 @@ export function NoteView({
   const resolvedTheme = useResolvedTheme()
   const noteSurfaceRef = useRef<HTMLDivElement | null>(null)
   const isViewerMode = !editable || linkResolver.isViewerMode
+  const sourceNoteId = note?._id ?? noteId ?? null
 
   useLinkDecorations(editor, linkResolver, isViewerMode)
   useDisableAutolink(editor)
   useYjsUndoPatches(editor, editable)
   useNoteYjsUndoShortcutPatch(editor, noteSurfaceRef, !isViewerMode)
+  useNoteEditorFileDropCursor(editor, !isViewerMode)
 
   return (
     <div ref={noteSurfaceRef} className="contents">
       <NoteValueRuntimeProvider
         editor={editor}
-        noteId={note?._id ?? noteId}
+        noteId={sourceNoteId ?? undefined}
         editable={editable}
         evaluateValuesFromEditor={evaluateValuesFromEditor}
       >
-        <BlockNoteView
-          editor={editor}
-          style={style}
-          theme={resolvedTheme}
-          editable={editable}
-          sideMenu={false}
-          formattingToolbar={false}
-          slashMenu={false}
-          linkToolbar={false}
-        >
-          {editable ? (
-            <>
-              <PreventExternalDrop />
-              {note ? (
-                <SideMenuController
-                  sideMenu={(props) => <SideMenuRenderer {...props} note={note} />}
-                />
-              ) : null}
-              <SlashMenu editor={editor} />
-            </>
-          ) : null}
-          {children}
-        </BlockNoteView>
+        <NoteEmbedSurfaceProvider sourceNoteId={sourceNoteId} editable={editable}>
+          <BlockNoteView
+            editor={editor}
+            style={style}
+            theme={resolvedTheme}
+            editable={editable}
+            sideMenu={false}
+            formattingToolbar={false}
+            slashMenu={false}
+            linkToolbar={false}
+          >
+            {editable ? (
+              <>
+                <PreventExternalDrop />
+                {note ? (
+                  <SideMenuController
+                    sideMenu={(props) => <SideMenuRenderer {...props} note={note} />}
+                  />
+                ) : null}
+                <SlashMenu editor={editor} />
+              </>
+            ) : null}
+            {children}
+          </BlockNoteView>
+        </NoteEmbedSurfaceProvider>
       </NoteValueRuntimeProvider>
     </div>
   )

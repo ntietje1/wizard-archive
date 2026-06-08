@@ -1,26 +1,55 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { EmbedNode } from '../embed-node'
+import { EMBED_NODE_MIN_SIZE } from '../embed-node-size'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
-import { CANVAS_NODE_MIN_SIZE } from '../../shared/canvas-node-resize-constants'
+import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '~/features/embeds/utils/embed-media'
+import {
+  DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT,
+  DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
+} from '~/features/embeds/utils/document-embed-layout'
+import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 import { testId } from '~/test/helpers/test-id'
 
 const sidebarItemPreviewSpy = vi.hoisted(() => vi.fn())
 const embeddedCanvasSpy = vi.hoisted(() => vi.fn())
-const embeddedFileSpy = vi.hoisted(() => vi.fn())
 const embeddedMapSpy = vi.hoisted(() => vi.fn())
 const embedNoteSpy = vi.hoisted(() => vi.fn())
+const fileMediaEmbedSpy = vi.hoisted(() => vi.fn())
 const resizableNodeWrapperSpy = vi.hoisted(() => vi.fn())
+const documentEmbedAspectRatio = Number(
+  (DOCUMENT_EMBED_ASPECT_RATIO_WIDTH / DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT).toFixed(6),
+)
 const setEditingEmbedId = vi.hoisted(() => vi.fn())
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
 }))
+const editableSessionState = vi.hoisted(() => ({
+  isExclusivelySelected: false,
+}))
+const canvasRuntimeState = vi.hoisted(() => ({
+  canvasId: 'source-canvas',
+  flushUpdates: vi.fn(),
+  patchNodeData: vi.fn(),
+  resizeNode: vi.fn(),
+}))
 const contentItemState = vi.hoisted((): { data: Record<string, unknown> } => ({
   data: {},
 }))
+const contentItemQuerySequence = vi.hoisted(
+  (): {
+    values: Array<{
+      data: Record<string, unknown> | null | undefined
+      error: unknown
+      isLoading: boolean
+    }>
+  } => ({
+    values: [],
+  }),
+)
 const activeItemsState = vi.hoisted(() => ({
   itemsMap: new Map<string, Record<string, unknown>>(),
   status: 'success' as 'pending' | 'error' | 'success',
@@ -40,10 +69,13 @@ vi.mock('../embedded-canvas-content', () => ({
   },
 }))
 
-vi.mock('../embedded-file-content', () => ({
-  EmbeddedFileContent: (props: unknown) => {
-    embeddedFileSpy(props)
-    return <div data-testid="embedded-file-content">embedded-file</div>
+vi.mock('~/features/previews/components/file-media-embed-content', () => ({
+  FileMediaEmbedContent: (props: {
+    allowInnerScroll?: boolean
+    onMediaLayout?: (layout: EmbedMediaLayout) => void
+  }) => {
+    fileMediaEmbedSpy(props)
+    return <div data-testid="shared-file-media-embed">shared-file-media</div>
   },
 }))
 
@@ -63,8 +95,13 @@ vi.mock('../embed-note-content', () => ({
 
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
   useCanvasDocumentRuntime: () => ({
+    canvasId: canvasRuntimeState.canvasId,
     documentWriter: {
-      patchNodeData: vi.fn(),
+      patchNodeData: canvasRuntimeState.patchNodeData,
+      resizeNode: canvasRuntimeState.resizeNode,
+    },
+    provider: {
+      flushUpdates: canvasRuntimeState.flushUpdates,
     },
   }),
   useCanvasInteractionRuntime: () => ({
@@ -78,6 +115,16 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
     domRuntime: {
       registerNodeSurfaceElement: vi.fn(() => vi.fn()),
     },
+  }),
+}))
+
+vi.mock('~/features/embeds/hooks/use-embed-drop-target', () => ({
+  useEmbedDropTarget: vi.fn(),
+}))
+
+vi.mock('~/features/embeds/hooks/use-embed-upload', () => ({
+  useEmbedUpload: () => ({
+    uploadEmbedFile: vi.fn(),
   }),
 }))
 
@@ -107,7 +154,7 @@ vi.mock('../../shared/use-canvas-editable-node-session', () => ({
   useCanvasEditableNodeSession: () => ({
     editable: false,
     isSelected: false,
-    isExclusivelySelected: false,
+    isExclusivelySelected: editableSessionState.isExclusivelySelected,
     handleDoubleClick: vi.fn(),
     handleActivated: vi.fn(),
     pendingActivationRef: { current: null },
@@ -127,11 +174,12 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
-  useSidebarItemById: () => ({
-    data: contentItemState.data,
-    error: null,
-    isLoading: false,
-  }),
+  useSidebarItemById: () =>
+    contentItemQuerySequence.values.shift() ?? {
+      data: contentItemState.data,
+      error: null,
+      isLoading: false,
+    },
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -173,6 +221,11 @@ vi.mock('../../shared/canvas-node-surface-style', () => ({
 describe('EmbedNode', () => {
   beforeEach(() => {
     renderModeState.interactive = true
+    editableSessionState.isExclusivelySelected = false
+    canvasRuntimeState.canvasId = 'source-canvas'
+    canvasRuntimeState.flushUpdates.mockClear()
+    canvasRuntimeState.patchNodeData.mockClear()
+    canvasRuntimeState.resizeNode.mockClear()
     setEditingEmbedId.mockClear()
     activeItemsState.itemsMap = new Map([
       ['canvas-1', { name: 'Canvas Item' }],
@@ -189,19 +242,20 @@ describe('EmbedNode', () => {
     }
     sidebarItemPreviewSpy.mockReset()
     embeddedCanvasSpy.mockReset()
-    embeddedFileSpy.mockReset()
+    fileMediaEmbedSpy.mockReset()
     embeddedMapSpy.mockReset()
     embedNoteSpy.mockReset()
     resizableNodeWrapperSpy.mockReset()
+    contentItemQuerySequence.values = []
   })
 
-  it('uses the uniform small canvas node resize minimum', () => {
+  it('uses the canvas embed resize minimum', () => {
     renderEmbedNode()
 
     expect(resizableNodeWrapperSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        minHeight: CANVAS_NODE_MIN_SIZE,
-        minWidth: CANVAS_NODE_MIN_SIZE,
+        minHeight: EMBED_NODE_MIN_SIZE.height,
+        minWidth: EMBED_NODE_MIN_SIZE.width,
         nodeType: 'embed',
       }),
     )
@@ -218,6 +272,31 @@ describe('EmbedNode', () => {
       alt: 'Canvas Item',
     })
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
+  })
+
+  it('renders canvas embeds from the canvas-resolved item when shared embed lookup is pending', () => {
+    contentItemQuerySequence.values = [
+      {
+        data: {
+          _id: 'canvas-1',
+          type: SIDEBAR_ITEM_TYPES.canvases,
+          name: 'Canvas Item',
+          previewUrl: 'canvas.png',
+        },
+        error: null,
+        isLoading: false,
+      },
+      {
+        data: null,
+        error: null,
+        isLoading: true,
+      },
+    ]
+
+    renderEmbedNode()
+
+    expect(screen.getByTestId('embedded-canvas-content')).toBeInTheDocument()
+    expect(screen.queryByText('Embedded item unavailable')).not.toBeInTheDocument()
   })
 
   it('renders map embeds through the dedicated embedded map renderer in interactive mode', () => {
@@ -244,7 +323,7 @@ describe('EmbedNode', () => {
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
   })
 
-  it('renders visual file embeds through the dedicated embedded file renderer in interactive mode', () => {
+  it('renders file embeds through the shared media embed renderer in interactive mode', () => {
     contentItemState.data = {
       _id: 'file-1',
       type: SIDEBAR_ITEM_TYPES.files,
@@ -255,19 +334,203 @@ describe('EmbedNode', () => {
     }
     renderEmbedNode('node-1', 'file-1')
 
-    expect(screen.getByTestId('embedded-file-content')).toBeInTheDocument()
-    expect(embeddedFileSpy).toHaveBeenCalledWith({
-      nodeId: 'node-1',
-      file: {
-        _id: 'file-1',
-        type: SIDEBAR_ITEM_TYPES.files,
-        name: 'File Item',
-        contentType: 'application/pdf',
-        downloadUrl: 'document.pdf',
-        previewUrl: 'preview.png',
-      },
+    expect(screen.getByTestId('shared-file-media-embed')).toBeInTheDocument()
+    expect(fileMediaEmbedSpy).toHaveBeenCalledWith({
+      name: 'File Item',
+      contentType: 'application/pdf',
+      downloadUrl: 'document.pdf',
+      previewUrl: 'preview.png',
+      allowInnerScroll: false,
+      onMediaLayout: expect.any(Function),
     })
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
+  })
+
+  it('locks resolved PDF file embeds to the document aspect ratio before the PDF reports dimensions', async () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'File Item',
+      contentType: 'application/pdf',
+      downloadUrl: 'document.pdf',
+      previewUrl: 'preview.png',
+    }
+
+    renderEmbedNode('node-1', 'file-1')
+
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        lockedAspectRatio: documentEmbedAspectRatio,
+      }),
+    )
+    await waitFor(() => {
+      expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
+        new Map([['node-1', { lockedAspectRatio: documentEmbedAspectRatio }]]),
+      )
+    })
+  })
+
+  it('allows inner scrolling for file embeds only when exclusively selected', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'File Item',
+      contentType: 'application/pdf',
+      downloadUrl: 'document.pdf',
+      previewUrl: 'preview.png',
+    }
+    editableSessionState.isExclusivelySelected = true
+
+    renderEmbedNode('node-1', 'file-1')
+
+    expect(fileMediaEmbedSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowInnerScroll: true,
+      }),
+    )
+  })
+
+  it('stores the reported media aspect ratio so file embeds resize locked', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'File Item',
+      contentType: 'image/png',
+      downloadUrl: 'image.png',
+      previewUrl: null,
+    }
+    renderEmbedNode('node-1', 'file-1')
+
+    const props = fileMediaEmbedSpy.mock.calls[0]?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      props.onMediaLayout?.({ kind: 'intrinsicAspectRatio', aspectRatio: 2 })
+    })
+
+    expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
+      new Map([['node-1', { lockedAspectRatio: 2 }]]),
+    )
+  })
+
+  it('uses fixed-height horizontal resizing for audio file embeds', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'Audio Item',
+      contentType: 'audio/mpeg',
+      downloadUrl: 'audio.mp3',
+      previewUrl: null,
+    }
+    renderEmbedNode('node-1', 'file-1', { zoom: 1 }, { lockedAspectRatio: 2 })
+
+    const props = fileMediaEmbedSpy.mock.calls[0]?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      props.onMediaLayout?.({ kind: 'fixedHeight', height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK })
+    })
+
+    expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
+      new Map([['node-1', { lockedAspectRatio: null }]]),
+    )
+    expect(canvasRuntimeState.resizeNode).toHaveBeenCalledWith(
+      'node-1',
+      320,
+      AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+      { x: 10, y: 20 },
+    )
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        minHeight: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+        minWidth: EMBED_NODE_MIN_SIZE.width,
+        resizeAxes: 'horizontal',
+        lockedAspectRatio: undefined,
+      }),
+    )
+  })
+
+  it('ignores repeated identical media layout reports', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'Audio Item',
+      contentType: 'audio/mpeg',
+      downloadUrl: 'audio.mp3',
+      previewUrl: null,
+    }
+    renderEmbedNode('node-1', 'file-1')
+
+    const props = fileMediaEmbedSpy.mock.calls[0]?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      props.onMediaLayout?.({ kind: 'fixedHeight', height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK })
+    })
+    const renderCountAfterFirstReport = fileMediaEmbedSpy.mock.calls.length
+    canvasRuntimeState.patchNodeData.mockClear()
+    canvasRuntimeState.resizeNode.mockClear()
+
+    const latestProps = fileMediaEmbedSpy.mock.lastCall?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      latestProps.onMediaLayout?.({
+        kind: 'fixedHeight',
+        height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+      })
+    })
+
+    expect(fileMediaEmbedSpy).toHaveBeenCalledTimes(renderCountAfterFirstReport)
+    expect(canvasRuntimeState.patchNodeData).not.toHaveBeenCalled()
+    expect(canvasRuntimeState.resizeNode).not.toHaveBeenCalled()
+  })
+
+  it('resets reported media layout when the embed target changes', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'Audio Item',
+      contentType: 'audio/mpeg',
+      downloadUrl: 'audio.mp3',
+      previewUrl: null,
+    }
+    const view = renderEmbedNodeHarness('node-1', 'file-1')
+
+    const props = fileMediaEmbedSpy.mock.calls[0]?.[0] as {
+      onMediaLayout?: (layout: EmbedMediaLayout) => void
+    }
+    act(() => {
+      props.onMediaLayout?.({ kind: 'fixedHeight', height: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK })
+    })
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        minHeight: AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
+        resizeAxes: 'horizontal',
+      }),
+    )
+
+    contentItemState.data = {
+      _id: 'note-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Note Item',
+      content: [],
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    }
+    view.rerender(
+      <CanvasEngineProvider engine={view.engine}>
+        <EmbedNode {...createEmbedNodeProps('node-1', 'note-1', {})} />
+      </CanvasEngineProvider>,
+    )
+
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        minHeight: EMBED_NODE_MIN_SIZE.height,
+        resizeAxes: 'both',
+        lockedAspectRatio: undefined,
+      }),
+    )
   })
 
   it('falls back to the shared read-only preview path for nested embedded canvases', () => {
@@ -310,7 +573,7 @@ describe('EmbedNode', () => {
     expect(embeddedMapSpy).not.toHaveBeenCalled()
   })
 
-  it('falls back to the shared read-only preview path for nested embedded files', () => {
+  it('keeps the shared media renderer for read-only nested embedded files', () => {
     renderModeState.interactive = false
     contentItemState.data = {
       _id: 'file-1',
@@ -322,18 +585,16 @@ describe('EmbedNode', () => {
     }
     renderEmbedNode('node-1', 'file-1')
 
-    expect(screen.getByTestId('shared-sidebar-item-preview')).toBeInTheDocument()
-    expect(sidebarItemPreviewSpy).toHaveBeenCalledWith({
-      item: {
-        _id: 'file-1',
-        type: SIDEBAR_ITEM_TYPES.files,
-        name: 'File Item',
-        contentType: 'application/pdf',
-        downloadUrl: 'document.pdf',
-        previewUrl: 'preview.png',
-      },
+    expect(screen.getByTestId('shared-file-media-embed')).toBeInTheDocument()
+    expect(fileMediaEmbedSpy).toHaveBeenCalledWith({
+      name: 'File Item',
+      contentType: 'application/pdf',
+      downloadUrl: 'document.pdf',
+      previewUrl: 'preview.png',
+      allowInnerScroll: false,
+      onMediaLayout: expect.any(Function),
     })
-    expect(embeddedFileSpy).not.toHaveBeenCalled()
+    expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
   })
 
   it('inverse-scales the floating name label from the current viewport zoom', () => {
@@ -371,6 +632,58 @@ describe('EmbedNode', () => {
     )
   })
 
+  it('uses the document shape as the default size for note embeds without locking resize', async () => {
+    contentItemState.data = {
+      _id: 'note-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Note Item',
+      content: [],
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    }
+
+    renderEmbedNode('node-1', 'note-1', { zoom: 1 }, {}, { width: 320, height: 240 })
+
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        lockedAspectRatio: undefined,
+        resizeAxes: 'both',
+      }),
+    )
+    await waitFor(() => {
+      expect(canvasRuntimeState.resizeNode).toHaveBeenCalledWith(
+        'node-1',
+        240 * documentEmbedAspectRatio,
+        240,
+        { x: 10, y: 20 },
+      )
+    })
+    expect(canvasRuntimeState.patchNodeData).not.toHaveBeenCalled()
+  })
+
+  it('clears stale locked aspect ratios from freeform canvas embeds', async () => {
+    contentItemState.data = {
+      _id: 'canvas-1',
+      type: SIDEBAR_ITEM_TYPES.canvases,
+      name: 'Canvas Item',
+      previewUrl: 'canvas.png',
+    }
+
+    renderEmbedNode('node-1', 'canvas-1', { zoom: 1 }, { lockedAspectRatio: 2 })
+
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        lockedAspectRatio: undefined,
+        resizeAxes: 'both',
+      }),
+    )
+    await waitFor(() => {
+      expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
+        new Map([['node-1', { lockedAspectRatio: null }]]),
+      )
+    })
+  })
+
   it('passes embedded notes whole to NoteContent so it owns visibility filtering', () => {
     contentItemState.data = {
       _id: 'note-1',
@@ -396,7 +709,17 @@ describe('EmbedNode', () => {
 
     renderEmbedNode('node-1', 'canvas-1')
 
-    expect(screen.getByText("This item isn't shared with you.")).toBeInTheDocument()
+    expect(screen.getByText('You do not have access to this embedded item')).toBeInTheDocument()
+    expect(screen.queryByTestId('embedded-canvas-content')).not.toBeInTheDocument()
+    expect(embeddedCanvasSpy).not.toHaveBeenCalled()
+  })
+
+  it('renders the recursive unavailable state for canvas self-embeds', () => {
+    canvasRuntimeState.canvasId = testId<'sidebarItems'>('canvas-1')
+
+    renderEmbedNode('node-1', 'canvas-1')
+
+    expect(screen.getByText('Recursive embed hidden')).toBeInTheDocument()
     expect(screen.queryByTestId('embedded-canvas-content')).not.toBeInTheDocument()
     expect(embeddedCanvasSpy).not.toHaveBeenCalled()
   })
@@ -407,15 +730,48 @@ function renderEmbedNode(
   sidebarItemId = 'canvas-1',
   viewport: { zoom: number } = { zoom: 1 },
   data: Record<string, unknown> = {},
+  nodeSize: { height: number; width: number } = { width: 320, height: 180 },
+) {
+  const { engine: _engine, ...view } = renderEmbedNodeHarness(
+    id,
+    sidebarItemId,
+    viewport,
+    data,
+    nodeSize,
+  )
+  return view
+}
+
+function renderEmbedNodeHarness(
+  id = 'node-1',
+  sidebarItemId = 'canvas-1',
+  viewport: { zoom: number } = { zoom: 1 },
+  data: Record<string, unknown> = {},
+  nodeSize: { height: number; width: number } = { width: 320, height: 180 },
 ) {
   const engine = createCanvasEngine()
   engine.setViewport({ x: 0, y: 0, zoom: viewport.zoom })
+  engine.setDocumentSnapshot({
+    nodes: [
+      {
+        id,
+        type: 'embed',
+        data: {},
+        position: { x: 10, y: 20 },
+        width: nodeSize.width,
+        height: nodeSize.height,
+      },
+    ],
+  })
 
-  return render(
-    <CanvasEngineProvider engine={engine}>
-      <EmbedNode {...createEmbedNodeProps(id, sidebarItemId, data)} />
-    </CanvasEngineProvider>,
-  )
+  return {
+    engine,
+    ...render(
+      <CanvasEngineProvider engine={engine}>
+        <EmbedNode {...createEmbedNodeProps(id, sidebarItemId, data)} />
+      </CanvasEngineProvider>,
+    ),
+  }
 }
 
 function createEmbedNodeProps(
@@ -425,7 +781,10 @@ function createEmbedNodeProps(
 ): Parameters<typeof EmbedNode>[0] {
   return {
     id,
-    data: { sidebarItemId: testId<'sidebarItems'>(sidebarItemId), ...data },
+    data: {
+      target: { kind: 'sidebarItem', sidebarItemId: testId<'sidebarItems'>(sidebarItemId) },
+      ...data,
+    },
     dragging: false,
   } as unknown as Parameters<typeof EmbedNode>[0]
 }

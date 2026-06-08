@@ -54,14 +54,19 @@ function buildBlockTree(
 
     visited.add(block.blockNoteId)
     const childBlocks = buildBlockTree(childrenMap, block.blockNoteId, visited)
-    const content = block.type === 'table' ? block.content : (block.content ?? block.inlineContent)
-    return {
+    const isEmbed = block.type === 'embed'
+    const content = isEmbed
+      ? undefined
+      : block.type === 'table'
+        ? block.content
+        : (block.content ?? block.inlineContent)
+    return stripUndefined({
       id: block.blockNoteId,
       type: block.type,
-      props: block.props,
+      props: isEmbed ? stripLegacyEmbedProps(block.props) : block.props,
       content: content ?? undefined,
       children: childBlocks.length > 0 ? childBlocks : undefined,
-    } as CustomBlock
+    }) as CustomBlock
   })
 }
 
@@ -117,4 +122,15 @@ export function reconstructBlockTree(flatBlocks: Array<Block>): Array<CustomBloc
   warnForUnreachedBlocks(flatBlocks, visited)
 
   return result
+}
+
+function stripLegacyEmbedProps(props: unknown): unknown {
+  if (!props || typeof props !== 'object' || Array.isArray(props)) return props
+  return Object.fromEntries(Object.entries(props).filter(([key]) => key !== 'previewHeight'))
+}
+
+function stripUndefined<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, nestedValue]) => nestedValue !== undefined),
+  ) as T
 }

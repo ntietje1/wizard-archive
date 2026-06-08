@@ -4,6 +4,7 @@ import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-con
 import {
   CANVAS_DROP_ZONE_TYPE,
   MAP_DROP_ZONE_TYPE,
+  NOTE_EDITOR_DROP_TYPE,
   SIDEBAR_ROOT_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
 import type { ResolvedSidebarItemDropData } from '~/features/dnd/utils/drop-target-data'
@@ -153,6 +154,28 @@ describe('resolveDropFeedback', () => {
         type: 'operation',
         action: 'embed',
         label: 'Embed 2 items in canvas',
+      },
+    })
+  })
+
+  it('uses embed feedback for shift-dragging sidebar items into note editors', () => {
+    const note = createNote()
+
+    expect(
+      resolveDropFeedback(
+        [note],
+        {
+          type: NOTE_EDITOR_DROP_TYPE,
+          noteId: testId<'sidebarItems'>('note_target'),
+        },
+        planningContext(),
+        { noteEditorDropAction: 'embed' },
+      ),
+    ).toEqual({
+      outcome: {
+        type: 'operation',
+        action: 'embed',
+        label: 'Embed item here',
       },
     })
   })

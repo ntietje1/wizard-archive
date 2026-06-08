@@ -118,6 +118,7 @@ export function canDropFilesOnTarget(target: SidebarDropData | null): boolean {
   switch (target.type) {
     case CANVAS_DROP_ZONE_TYPE:
     case EMPTY_EDITOR_DROP_TYPE:
+    case NOTE_EDITOR_DROP_TYPE:
     case SIDEBAR_ROOT_DROP_TYPE:
       return true
     case SIDEBAR_ITEM_TYPES.folders:

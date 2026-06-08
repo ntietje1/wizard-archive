@@ -1,7 +1,7 @@
-import { ChevronDown, FilePenLine, FileUp, Highlighter, Pilcrow } from 'lucide-react'
+import { ChevronDown, Highlighter, Pilcrow } from 'lucide-react'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import type { CSSProperties, FormEvent, SyntheticEvent } from 'react'
+import type { CSSProperties, SyntheticEvent } from 'react'
 import {
   applyFormattingToolbarBlockType,
   applyFormattingToolbarStyleColor,
@@ -26,7 +26,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '~/features/shadcn/components/dropdown-menu'
-import { Input } from '~/features/shadcn/components/input'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { Separator } from '~/features/shadcn/components/separator'
 import { textColorCanvasProperty } from '~/features/canvas/properties/canvas-property-definitions'
@@ -44,7 +43,6 @@ import type {
   FormattingEditor,
   FormattingToolbarMode,
   InlineStyle,
-  SelectedFileBlock,
   TextAlignment,
   ToolbarSnapshot,
 } from './formatting-toolbar-model'
@@ -351,14 +349,6 @@ export function EditorFormattingToolbar({
           onClick={() => setTextAlignment(id)}
         />
       ))}
-
-      {isFull && snapshot.selectedFileBlock ? (
-        <>
-          <Separator orientation="vertical" className="h-6" />
-          <FileCaptionPopover editor={editor} fileBlock={snapshot.selectedFileBlock} />
-          <FileReplacePopover editor={editor} fileBlock={snapshot.selectedFileBlock} />
-        </>
-      ) : null}
     </div>
   )
 }
@@ -710,92 +700,6 @@ function getTransparentColor(color: string, intensity: number) {
 
 function isClearHighlightOption(kind: FormattingColorKind, preset: FormattingColorOption) {
   return kind === 'background' && preset.value === 'default'
-}
-
-function FileCaptionPopover({
-  editor,
-  fileBlock,
-}: {
-  editor: FormattingEditor
-  fileBlock: SelectedFileBlock
-}) {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const caption = readFormString(event.currentTarget, 'caption')
-    editor.updateBlock(fileBlock.id, {
-      props: { caption },
-    })
-  }
-
-  return (
-    <Popover>
-      <PopoverTrigger
-        nativeButton
-        render={
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Edit file caption">
-            <FilePenLine className="size-4" />
-          </Button>
-        }
-      />
-      <PopoverContent onPointerDownCapture={stopPropagation}>
-        <form aria-label="Edit file caption form" onSubmit={handleSubmit}>
-          <Input
-            key={`${fileBlock.id}-${fileBlock.caption}`}
-            aria-label="File caption"
-            name="caption"
-            defaultValue={fileBlock.caption}
-            placeholder="File caption"
-          />
-        </form>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-function FileReplacePopover({
-  editor,
-  fileBlock,
-}: {
-  editor: FormattingEditor
-  fileBlock: SelectedFileBlock
-}) {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const url = readFormString(event.currentTarget, 'url')
-    if (!url.trim()) return
-    editor.updateBlock(fileBlock.id, {
-      props: { url: url.trim() },
-    })
-  }
-
-  return (
-    <Popover>
-      <PopoverTrigger
-        nativeButton
-        render={
-          <Button type="button" variant="ghost" size="icon-sm" aria-label="Replace file">
-            <FileUp className="size-4" />
-          </Button>
-        }
-      />
-      <PopoverContent onPointerDownCapture={stopPropagation}>
-        <form aria-label="Replace file form" onSubmit={handleSubmit}>
-          <Input
-            key={`${fileBlock.id}-${fileBlock.url}`}
-            aria-label="Replacement file URL"
-            name="url"
-            defaultValue={fileBlock.url}
-            placeholder="File URL"
-          />
-        </form>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-function readFormString(form: HTMLFormElement, name: string) {
-  const value = new FormData(form).get(name)
-  return typeof value === 'string' ? value : ''
 }
 
 function preventEditorBlur(event: SyntheticEvent) {

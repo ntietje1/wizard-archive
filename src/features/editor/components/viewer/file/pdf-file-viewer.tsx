@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -8,6 +8,12 @@ import { PdfToolbar } from './pdf-toolbar'
 import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { getIntrinsicAspectRatio } from '~/features/embeds/utils/embed-media'
+import {
+  DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT,
+  DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
+} from '~/features/embeds/utils/document-embed-layout'
+import { cn } from '~/features/shadcn/lib/utils'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
@@ -22,16 +28,25 @@ type PdfDocumentState =
 
 interface PdfFileViewerProps {
   pdfUrl: string
+  onFirstPageAspectRatio?: (aspectRatio: number | null) => void
+  presentation?: 'full' | 'embed'
+  allowInnerScroll?: boolean
 }
 
 function PdfPage({
+  pageWidth,
   pageNumber,
+  presentation,
   scale,
   pageRefs,
+  onFirstPageAspectRatio,
 }: {
+  pageWidth?: number
   pageNumber: number
+  presentation: 'full' | 'embed'
   scale: number
   pageRefs: Map<number, HTMLDivElement>
+  onFirstPageAspectRatio?: (aspectRatio: number | null) => void
 }) {
   const setRef = (el: HTMLDivElement | null) => {
     if (el) {
@@ -42,18 +57,34 @@ function PdfPage({
   }
 
   return (
-    <div ref={setRef} data-page-number={pageNumber} className="flex justify-center py-2">
+    <div
+      ref={setRef}
+      data-page-number={pageNumber}
+      className={
+        presentation === 'embed' ? 'flex w-full justify-center' : 'flex justify-center py-2'
+      }
+    >
       <Page
         pageNumber={pageNumber}
-        scale={scale}
+        scale={pageWidth ? undefined : scale}
+        width={pageWidth}
         renderForms={true}
-        loading={<div className="bg-muted w-[612px] h-[792px]" />}
+        loading={<PdfPageLoadingPlaceholder width={pageWidth} />}
+        onLoadSuccess={(page) => {
+          if (pageNumber !== 1) return
+          onFirstPageAspectRatio?.(getIntrinsicAspectRatio(page.originalWidth, page.originalHeight))
+        }}
       />
     </div>
   )
 }
 
-export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
+export function PdfFileViewer({
+  pdfUrl,
+  onFirstPageAspectRatio,
+  presentation = 'full',
+  allowInnerScroll = true,
+}: PdfFileViewerProps) {
   const [documentState, setDocumentState] = useState<PdfDocumentState>({ status: 'loading' })
   const [currentPage, setCurrentPage] = useState(1)
   const [scale, setScale] = useState(1)
@@ -63,9 +94,21 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
   }
   const pageRefsMap = pageRefs.current
   const scrollViewportRef = useRef<HTMLDivElement | null>(null)
+  const [scrollViewportElement, setScrollViewportElement] = useState<HTMLDivElement | null>(null)
+  const scrollViewportSize = useElementSize(scrollViewportElement)
+  const setScrollViewport = (element: HTMLDivElement | null) => {
+    scrollViewportRef.current = element
+    setScrollViewportElement(element)
+  }
 
   const isValid = isValidFileUrl(pdfUrl)
   const numPages = documentState.status === 'ready' ? documentState.numPages : 0
+  const pageWidth =
+    presentation === 'embed' && scrollViewportSize.width > 0
+      ? Math.floor(scrollViewportSize.width)
+      : undefined
+  const hasMultiplePages = numPages > 1
+  const innerScrollEnabled = presentation !== 'embed' || allowInnerScroll || !hasMultiplePages
 
   const handleDocumentLoadSuccess = ({ numPages: pages }: { numPages: number }) => {
     setDocumentState({ status: 'ready', numPages: pages })
@@ -73,6 +116,7 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
 
   const handleDocumentLoadError = () => {
     setDocumentState({ status: 'failed' })
+    onFirstPageAspectRatio?.(null)
   }
 
   // Track the current visible page via IntersectionObserver.
@@ -189,13 +233,25 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-0 bg-background flex flex-col">
-      {documentState.status === 'loading' && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <LoadingSpinner size="lg" />
-        </div>
+    <div
+      ref={containerRef}
+      data-testid="pdf-file-viewer"
+      data-presentation={presentation}
+      data-inner-scroll-enabled={innerScrollEnabled ? 'true' : 'false'}
+      className={cn(
+        'relative flex h-full min-h-0 w-full min-w-full flex-col bg-background',
+        presentation === 'embed' && allowInnerScroll && hasMultiplePages && 'nowheel',
       )}
-      {numPages > 0 && (
+    >
+      {documentState.status === 'loading' && (
+        <output
+          aria-label="Loading PDF"
+          className="absolute inset-0 z-10 flex h-full w-full min-w-full items-center justify-center"
+        >
+          <LoadingSpinner size="lg" aria-label="Loading PDF indicator" />
+        </output>
+      )}
+      {presentation === 'full' && numPages > 0 && (
         <PdfToolbar
           currentPage={currentPage}
           numPages={numPages}
@@ -208,8 +264,12 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
       )}
       <ScrollArea
         className="flex-1 min-h-0"
-        scrollOrientation="both"
-        viewportRef={scrollViewportRef}
+        contentClassName={presentation === 'embed' ? 'w-full max-w-full' : 'min-w-full'}
+        scrollOrientation={
+          presentation === 'embed' ? (innerScrollEnabled ? 'vertical' : 'none') : 'both'
+        }
+        viewportStyle={!innerScrollEnabled ? { overflowY: 'hidden' } : undefined}
+        viewportRef={setScrollViewport}
       >
         {documentState.status === 'failed' ? (
           <div className="flex items-center justify-center py-20">
@@ -221,15 +281,19 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
             onLoadSuccess={handleDocumentLoadSuccess}
             onLoadError={handleDocumentLoadError}
             loading={null}
+            className={presentation === 'embed' ? 'w-full' : undefined}
           >
             {Array.from({ length: numPages }, (_, i) => {
               const pageNumber = i + 1
               return (
                 <PdfPage
                   key={pageNumber}
+                  pageWidth={pageWidth}
                   pageNumber={pageNumber}
+                  presentation={presentation}
                   scale={scale}
                   pageRefs={pageRefsMap}
+                  onFirstPageAspectRatio={onFirstPageAspectRatio}
                 />
               )
             })}
@@ -238,4 +302,48 @@ export function PdfFileViewer({ pdfUrl }: PdfFileViewerProps) {
       </ScrollArea>
     </div>
   )
+}
+
+function PdfPageLoadingPlaceholder({ width }: { width?: number }) {
+  return (
+    <div
+      className="bg-muted"
+      style={{
+        aspectRatio: `${DOCUMENT_EMBED_ASPECT_RATIO_WIDTH} / ${DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT}`,
+        width: width ? `${width}px` : DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
+      }}
+    />
+  )
+}
+
+function useElementSize(element: HTMLElement | null) {
+  const [size, setSize] = useState({ width: 0, height: 0 })
+
+  useLayoutEffect(() => {
+    if (!element) return
+
+    const updateSize = (nextWidth: number, nextHeight: number) => {
+      const width = Math.max(0, Math.round(nextWidth))
+      const height = Math.max(0, Math.round(nextHeight))
+      setSize((current) => {
+        if (current.width === width && current.height === height) return current
+        return { width, height }
+      })
+    }
+
+    const rect = element.getBoundingClientRect()
+    updateSize(rect.width, rect.height)
+
+    if (typeof ResizeObserver === 'undefined') return
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      updateSize(entry.contentRect.width, entry.contentRect.height)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element])
+
+  return size
 }

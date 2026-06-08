@@ -96,9 +96,10 @@ function resolveDropOutcome(
   item: AnySidebarItem | null,
   target: SidebarDropData | null,
   ctx: DropPlanningContext,
+  options?: Parameters<typeof resolveDropFeedback>[3],
 ) {
   if (!item || !target) return null
-  const feedback = resolveDropFeedback([item], target, ctx)
+  const feedback = resolveDropFeedback([item], target, ctx, options)
   if (feedback.outcome?.type === 'operation' && feedback.rejectedItemCount === 1) {
     const command = resolveSurfaceDropCommand([item], target, ctx)
     if (command.status === 'failed') {
@@ -463,6 +464,15 @@ describe('resolveDropOutcome', () => {
       const result = resolveDropOutcome(note, noteEditorTarget(), createCtx())
 
       expect(result).toMatchObject({ type: 'operation', action: 'link' })
+    })
+
+    it('returns embed action for shift-dragged sidebar items', () => {
+      const note = createNote()
+      const result = resolveDropOutcome(note, noteEditorTarget(), createCtx(), {
+        noteEditorDropAction: 'embed',
+      })
+
+      expect(result).toMatchObject({ type: 'operation', action: 'embed' })
     })
 
     it('rejects linking a trashed item', () => {
@@ -889,8 +899,8 @@ describe('canDropFilesOnTarget', () => {
     expect(canDropFilesOnTarget(canvasTarget())).toBe(true)
   })
 
-  it('returns false for note editor zone', () => {
-    expect(canDropFilesOnTarget(noteEditorTarget())).toBe(false)
+  it('returns true for note editor zone', () => {
+    expect(canDropFilesOnTarget(noteEditorTarget())).toBe(true)
   })
 
   it('returns true for empty editor zone', () => {

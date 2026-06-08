@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { RawNoteContent } from '../raw-note-content'
 import type * as BlockNoteCore from '@blocknote/core'
+import type * as BlockNoteReact from '@blocknote/react'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { ReactNode } from 'react'
@@ -26,28 +27,32 @@ vi.mock('@blocknote/core', async (importOriginal) => {
   }
 })
 
-vi.mock('@blocknote/shadcn', () => ({
-  BlockNoteView: ({
-    editor,
-    children,
-  }: {
-    editor: CustomBlockNoteEditor
-    children?: ReactNode
-  }) => (
-    <div data-testid="block-note-view">
-      <div>
-        {editor.document
-          .flatMap((block) =>
-            Array.isArray(block.content)
-              ? block.content.map((item) => (item.type === 'value' ? item.props.slug : ''))
-              : [],
-          )
-          .join(', ')}
+vi.mock('@blocknote/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof BlockNoteReact>()
+  return {
+    ...actual,
+    BlockNoteViewRaw: ({
+      editor,
+      children,
+    }: {
+      editor: CustomBlockNoteEditor
+      children?: ReactNode
+    }) => (
+      <div data-testid="block-note-view">
+        <div>
+          {editor.document
+            .flatMap((block) =>
+              Array.isArray(block.content)
+                ? block.content.map((item) => (item.type === 'value' ? item.props.slug : ''))
+                : [],
+            )
+            .join(', ')}
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
-  ),
-}))
+    ),
+  }
+})
 
 describe('RawNoteContent static viewer', () => {
   it('renders inline values with a plain static editor', () => {

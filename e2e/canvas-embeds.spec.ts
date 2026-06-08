@@ -1,7 +1,9 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createMap } from './helpers/map-helpers'
-import { createNote, selectableSidebarRow } from './helpers/sidebar-helpers'
+import { createNote, selectableSidebarRow, sidebarLink } from './helpers/sidebar-helpers'
 import {
   clearCanvasViaRuntime,
   createCanvas,
@@ -13,6 +15,8 @@ import {
   getCanvasEdgeById,
   expectCanvasRuntimeSelection,
   getCanvasNodeById,
+  getCanvasNodesByType,
+  getCanvasRuntimeSnapshot,
   getCanvasRuntimeCanvasId,
   getCanvasRuntimeNodePosition,
   getEmbeddedCanvasPreview,
@@ -26,16 +30,27 @@ import {
   wheelCanvasPane,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
-import type { Page, TestInfo } from '@playwright/test'
+import {
+  getCampaignIdFromRoute,
+  getCampaignRouteFromUrl,
+  getSidebarItemBySlug,
+} from './helpers/convex-helpers'
+import type { Locator, Page, TestInfo } from '@playwright/test'
 
 const campaignName = testName('CnvEmbeds')
 const MIN_EMBED_DRAG_DELTA_X = 60
 const MIN_EMBED_DRAG_DELTA_Y = 25
+const fixtureDir = path.resolve('test-results/fixtures')
+const imageFileName = 'canvas-embed-upload.png'
+const imageFilePath = path.join(fixtureDir, imageFileName)
 
 test.describe.serial('canvas embedded preview behavior', () => {
-  test.setTimeout(90_000)
+  test.setTimeout(120_000)
 
   test.beforeAll(async ({ browser }) => {
+    fs.mkdirSync(fixtureDir, { recursive: true })
+    fs.writeFileSync(imageFilePath, createOnePixelPng())
+
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
     await page.goto('/campaigns')
@@ -45,6 +60,8 @@ test.describe.serial('canvas embedded preview behavior', () => {
   })
 
   test.afterAll(async ({ browser }) => {
+    if (fs.existsSync(imageFilePath)) fs.unlinkSync(imageFilePath)
+
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
     await page.goto('/campaigns')
@@ -191,6 +208,70 @@ test.describe.serial('canvas embedded preview behavior', () => {
       timeout: 10_000,
     })
   })
+
+  test('creates an empty canvas embed and links an external file into it', async ({
+    page,
+  }, testInfo) => {
+    const hostName = uniqueCanvasName('External Embed Host', testInfo)
+    await createFreshCanvasForTest(page, campaignName, hostName)
+    await clearCanvasViaRuntime(page)
+    await selectCanvasTool(page, 'Pointer')
+
+    const embedNode = await createEmptyEmbedFromPaneMenu(page)
+    await embedNode.getByRole('button', { name: 'or link to an external file' }).click()
+    await page
+      .getByRole('textbox', { name: 'External file URL' })
+      .fill('https://example.com/canvas-lore.wacz')
+    await embedNode.getByRole('button', { exact: true, name: 'Link' }).click()
+
+    await expect(embedNode.getByTestId('external-url-embed-card')).toContainText('canvas-lore.wacz')
+    await expect(embedNode.getByRole('link', { name: 'Open file' })).toHaveAttribute(
+      'href',
+      'https://example.com/canvas-lore.wacz',
+    )
+  })
+
+  test('uploads from an empty canvas embed into the Assets folder and embeds the file', async ({
+    page,
+  }, testInfo) => {
+    const hostName = uniqueCanvasName('Upload Embed Host', testInfo)
+    await createFreshCanvasForTest(page, campaignName, hostName)
+    await clearCanvasViaRuntime(page)
+    await selectCanvasTool(page, 'Pointer')
+
+    const embedNode = await createEmptyEmbedFromPaneMenu(page)
+    const fileChooserPromise = page.waitForEvent('filechooser')
+    await embedNode.getByRole('button', { name: 'Upload' }).click()
+    const fileChooser = await fileChooserPromise
+    await fileChooser.setFiles(imageFilePath)
+
+    await expect(sidebarLink(page, 'Assets')).toBeVisible({ timeout: 15_000 })
+    await expectFileInAssetsFolder(page)
+    await expect(embedNode.getByRole('img', { name: imageFileName })).toBeVisible({
+      timeout: 15_000,
+    })
+  })
+
+  test('rejects dropping the current canvas onto its own empty embed', async ({
+    page,
+  }, testInfo) => {
+    const hostName = uniqueCanvasName('Canvas Self Embed Host', testInfo)
+    await createFreshCanvasForTest(page, campaignName, hostName)
+    await clearCanvasViaRuntime(page)
+    await selectCanvasTool(page, 'Pointer')
+
+    const embedNode = await createEmptyEmbedFromPaneMenu(page)
+    await dragSidebarItemToCanvasNode(page, hostName, embedNode)
+
+    await expect(embedNode.getByTestId('embed-empty-state')).toBeVisible()
+    await expect
+      .poll(async () => {
+        const snapshot = await getCanvasRuntimeSnapshot(page)
+        const embed = snapshot.nodes.find((node) => node.type === 'embed')
+        return embed?.data?.target
+      })
+      .toEqual({ kind: 'empty' })
+  })
 })
 
 async function createEmbeddedCanvasFixture(page: Page, testInfo: TestInfo) {
@@ -289,4 +370,45 @@ async function openPaneNewMenu(page: Page, target: { xRatio: number; yRatio: num
   }, target)
   await expect(page.getByRole('menu')).toBeVisible()
   await page.getByRole('menuitem', { name: 'New...' }).hover()
+}
+
+async function createEmptyEmbedFromPaneMenu(page: Page) {
+  await openPaneNewMenu(page, { xRatio: 0.5, yRatio: 0.5 })
+  await page.getByRole('menuitem', { name: 'Embed' }).click()
+  await expect.poll(() => getCanvasNodesByType(page, 'embed').count()).toBe(1)
+  const embedNode = getCanvasNodesByType(page, 'embed').first()
+  await expect(embedNode.getByTestId('embed-empty-state')).toBeVisible({ timeout: 10_000 })
+  return embedNode
+}
+
+async function dragSidebarItemToCanvasNode(page: Page, itemName: string, target: Locator) {
+  const item = selectableSidebarRow(page, itemName)
+  await expect(item).toBeVisible({ timeout: 10_000 })
+  await item.dragTo(target)
+}
+
+async function expectFileInAssetsFolder(page: Page) {
+  const assetsSlug = await getItemSlugFromSidebarLink(page, 'Assets')
+  const fileSlug = await getItemSlugFromSidebarLink(page, imageFileName)
+  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const assets = await getSidebarItemBySlug({ campaignId, slug: assetsSlug })
+  const file = await getSidebarItemBySlug({ campaignId, slug: fileSlug })
+  expect(file.parentId).toBe(assets._id)
+}
+
+async function getItemSlugFromSidebarLink(page: Page, itemName: string) {
+  const link = sidebarLink(page, itemName)
+  await expect(link).toBeVisible({ timeout: 15_000 })
+  const href = await link.getAttribute('href')
+  const slug = href ? new URL(href, page.url()).searchParams.get('item') : null
+  if (!slug) throw new Error(`Unable to resolve sidebar item slug for ${itemName}`)
+  return slug
+}
+
+function createOnePixelPng() {
+  return Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mP8z8BQDwAFgwJ/l0S4YwAAAABJRU5ErkJggg==',
+    'base64',
+  )
 }

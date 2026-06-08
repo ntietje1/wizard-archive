@@ -119,30 +119,30 @@ const codeBlockPropsValidator = v.object({
 
 const emptyPropsValidator = v.object({})
 
-const mediaPreviewPropsValidator = v.object({
-  name: v.optional(v.string()),
-  url: v.optional(v.string()),
-  caption: v.optional(v.string()),
+const embedSharedPropsValidator = {
   backgroundColor: v.optional(v.string()),
   textAlignment: v.optional(textAlignmentValidator),
-  showPreview: v.optional(v.boolean()),
   previewWidth: v.optional(v.number()),
-})
+  previewAspectRatio: v.optional(v.number()),
+}
 
-const audioPropsValidator = v.object({
-  name: v.optional(v.string()),
-  url: v.optional(v.string()),
-  caption: v.optional(v.string()),
-  backgroundColor: v.optional(v.string()),
-  showPreview: v.optional(v.boolean()),
-})
-
-const filePropsValidator = v.object({
-  name: v.optional(v.string()),
-  url: v.optional(v.string()),
-  caption: v.optional(v.string()),
-  backgroundColor: v.optional(v.string()),
-})
+const embedPropsValidator = v.union(
+  v.object({
+    targetKind: v.optional(v.literal('empty')),
+    ...embedSharedPropsValidator,
+  }),
+  v.object({
+    targetKind: v.literal('sidebarItem'),
+    sidebarItemId: v.string(),
+    ...embedSharedPropsValidator,
+  }),
+  v.object({
+    targetKind: v.literal('externalUrl'),
+    url: v.string(),
+    name: v.optional(v.string()),
+    ...embedSharedPropsValidator,
+  }),
+)
 
 const tablePropsValidator = v.object({
   textColor: v.optional(v.string()),
@@ -155,9 +155,7 @@ const blockPropValidators = {
   checkListItem: checkListItemPropsValidator,
   codeBlock: codeBlockPropsValidator,
   empty: emptyPropsValidator,
-  mediaPreview: mediaPreviewPropsValidator,
-  audio: audioPropsValidator,
-  file: filePropsValidator,
+  embed: embedPropsValidator,
   table: tablePropsValidator,
 } as const
 
@@ -174,6 +172,10 @@ const blockCommonTableFields = {
 
 const persistedContentFields = {
   inline: {
+    content: v.optional(v.nullable(inlineContentArrayValidator)),
+    inlineContent: v.nullable(inlineContentArrayValidator),
+  },
+  none: {
     content: v.optional(v.nullable(inlineContentArrayValidator)),
     inlineContent: v.nullable(inlineContentArrayValidator),
   },

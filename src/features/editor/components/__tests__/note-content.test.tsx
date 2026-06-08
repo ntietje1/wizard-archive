@@ -205,6 +205,26 @@ describe('NoteContent', () => {
     )
   })
 
+  it('can opt read-only embedded notes into the fill-height editor wrapper', async () => {
+    const note = createNoteWithContent({
+      content: [createBlock('visible-block')],
+      myPermissionLevel: PERMISSION_LEVEL.VIEW,
+      blockMeta: {
+        'visible-block': {
+          myPermissionLevel: PERMISSION_LEVEL.VIEW,
+          shareStatus: SHARE_STATUS.ALL_SHARED,
+          sharedWith: [],
+        },
+      },
+    })
+
+    render(<NoteContent note={note} editable={false} fillHeight />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('note-view').closest('.note-editor-fill-height')).not.toBeNull()
+    })
+  })
+
   it('shows a failed state instead of mounting the editor when collaboration errors', () => {
     noteSessionState.error = new Error('Collaboration failed')
     const note = createNoteWithContent({

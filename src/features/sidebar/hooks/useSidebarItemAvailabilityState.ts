@@ -6,6 +6,7 @@ import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
+import { isTrashedSidebarItem } from 'shared/sidebar-items/types'
 
 type SidebarItemAvailabilitySubject = 'item' | 'page'
 
@@ -27,7 +28,7 @@ export type SidebarItemAvailabilityState =
       message?: undefined
     }
   | {
-      status: 'not_shared' | 'not_found' | 'not_found_or_not_shared' | 'error'
+      status: 'trashed' | 'not_shared' | 'not_found' | 'not_found_or_not_shared' | 'error'
       label: string
       item?: undefined
       message: string
@@ -59,6 +60,14 @@ export function useSidebarItemAvailabilityState({
   const activeItems = useActiveSidebarItems()
   const metadata = findAvailabilityMetadata(lookup, activeItems)
   const label = metadata?.name ?? readableItem?.name ?? fallbackLabel
+
+  if (readableItem && isTrashedSidebarItem(readableItem)) {
+    return {
+      status: 'trashed',
+      label,
+      message: `This ${subject} is in the trash.`,
+    }
+  }
 
   if (readableItem && canView) {
     return {

@@ -5,7 +5,11 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { DndMonitorCtx } from '~/features/dnd/types'
 import { useElementDragMonitor } from '~/features/dnd/hooks/useElementDragMonitor'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import { MAP_DROP_ZONE_TYPE, SIDEBAR_ROOT_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
+import {
+  MAP_DROP_ZONE_TYPE,
+  NOTE_EDITOR_DROP_TYPE,
+  SIDEBAR_ROOT_DROP_TYPE,
+} from '~/features/dnd/utils/drop-target-data'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 import { registerSurfaceDropExecutor } from '~/features/dnd/utils/surface-drop-command'
@@ -25,7 +29,7 @@ type DragArgs = {
   source: DragSource
   location: {
     current: {
-      input: { clientX: number; clientY: number; ctrlKey?: boolean }
+      input: { clientX: number; clientY: number; ctrlKey?: boolean; shiftKey?: boolean }
       dropTargets: Array<{ data: Record<string, unknown> }>
     }
   }
@@ -34,7 +38,7 @@ type DropArgs = {
   source: DragSource
   location: {
     current: {
-      input: { clientX: number; clientY: number; ctrlKey?: boolean }
+      input: { clientX: number; clientY: number; ctrlKey?: boolean; shiftKey?: boolean }
       dropTargets: Array<{ data: Record<string, unknown> }>
     }
   }
@@ -346,5 +350,71 @@ describe('useElementDragMonitor', () => {
         options: { copy: true },
       }),
     )
+  })
+
+  it('executes shift-drag note drops into note editors as embed commands', async () => {
+    const note = createNote()
+    const targetNote = createNote()
+    const ctx = createMonitorCtx([note, targetNote])
+    const ctxRef = {
+      current: ctx,
+    } as React.RefObject<DndMonitorCtx>
+    const target = {
+      type: NOTE_EDITOR_DROP_TYPE,
+      noteId: targetNote._id,
+    }
+    const execute = vi.fn(() => Promise.resolve())
+    const dispose = registerSurfaceDropExecutor({
+      action: 'noteEmbed',
+      target,
+      execute,
+    })
+
+    try {
+      renderHook(() => useElementDragMonitor(ctxRef))
+      const monitor = getElementMonitor()
+      const source = createSidebarSource(note._id, [note._id])
+
+      act(() => {
+        monitor.onDrag({
+          source,
+          location: {
+            current: {
+              input: { clientX: 20, clientY: 30, shiftKey: true },
+              dropTargets: [{ data: target }],
+            },
+          },
+        })
+      })
+      expect(useDndStore.getState().dragOutcome).toMatchObject({
+        type: 'operation',
+        action: 'embed',
+        label: 'Embed item here',
+      })
+
+      await act(async () => {
+        await monitor.onDrop({
+          source,
+          location: {
+            current: {
+              input: { clientX: 20, clientY: 30, shiftKey: true },
+              dropTargets: [{ data: target }],
+            },
+          },
+        })
+      })
+
+      expect(execute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'ready',
+          commandId: 'surface-drop.embed-sidebar-item-in-note',
+          action: 'noteEmbed',
+          items: [note],
+        }),
+        { clientX: 20, clientY: 30 },
+      )
+    } finally {
+      dispose()
+    }
   })
 })

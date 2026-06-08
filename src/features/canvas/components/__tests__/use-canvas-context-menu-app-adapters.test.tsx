@@ -121,6 +121,7 @@ function createMenuServices(): CanvasContextMenuServices {
   return {
     hasSelectableCanvasItems: () => true,
     selectAllCanvasItems: vi.fn(),
+    createEmbedNode: vi.fn(),
     createTextNode: vi.fn(),
   }
 }
@@ -131,6 +132,7 @@ describe('useCanvasContextMenuAppAdapters', () => {
     appState.itemsMap = new Map()
     appState.createItem.mockResolvedValue({ id: testId<'sidebarItems'>('created-item') })
     appState.getDefaultName.mockReturnValue('Untitled note')
+    vi.stubGlobal('open', vi.fn())
   })
 
   it('creates a sidebar item and embeds the new canvas node from a create action', async () => {
@@ -158,7 +160,12 @@ describe('useCanvasContextMenuAppAdapters', () => {
       expect.objectContaining({
         type: 'embed',
         position: { x: 21, y: 42 },
-        data: expect.objectContaining({ sidebarItemId: testId<'sidebarItems'>('created-item') }),
+        data: expect.objectContaining({
+          target: {
+            kind: 'sidebarItem',
+            sidebarItemId: testId<'sidebarItems'>('created-item'),
+          },
+        }),
       }),
     )
     expect(context.setSelection).toHaveBeenCalledWith({
@@ -207,8 +214,8 @@ describe('useCanvasContextMenuAppAdapters', () => {
       result.current.getTargetContributors?.({
         kind: 'embed-node',
         nodeId: 'embed-1',
-        sidebarItemId: testId<'sidebarItems'>('note-1'),
         nodeType: 'embed',
+        target: { kind: 'sidebarItem', sidebarItemId: testId<'sidebarItems'>('note-1') },
       }) ?? []
     const [openItem] = contributor?.getItems?.(
       {
@@ -216,8 +223,8 @@ describe('useCanvasContextMenuAppAdapters', () => {
         target: {
           kind: 'embed-node',
           nodeId: 'embed-1',
-          sidebarItemId: testId<'sidebarItems'>('note-1'),
           nodeType: 'embed',
+          target: { kind: 'sidebarItem', sidebarItemId: testId<'sidebarItems'>('note-1') },
         },
       },
       {
@@ -233,5 +240,36 @@ describe('useCanvasContextMenuAppAdapters', () => {
     })
 
     expect(appState.navigateToItem).toHaveBeenCalledWith('note-1')
+  })
+
+  it('opens external embed targets in a new browser tab', async () => {
+    const { result } = renderHook(() => useCanvasContextMenuAppAdapters())
+    const target = {
+      kind: 'embed-node' as const,
+      nodeId: 'embed-1',
+      nodeType: 'embed' as const,
+      target: { kind: 'externalUrl' as const, url: 'https://example.com/file.pdf', name: 'File' },
+    }
+
+    const [contributor] = result.current.getTargetContributors?.(target) ?? []
+    const [openItem] = contributor?.getItems?.(
+      {
+        ...createMenuContext(),
+        target,
+      },
+      createMenuServices(),
+    ) ?? [null]
+
+    expect(openItem?.label).toBe('Open')
+
+    await act(async () => {
+      await openItem!.onSelect!(createMenuContext(), createMenuServices(), undefined)
+    })
+
+    expect(window.open).toHaveBeenCalledWith(
+      'https://example.com/file.pdf',
+      '_blank',
+      'noopener,noreferrer',
+    )
   })
 })

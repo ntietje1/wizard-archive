@@ -20,8 +20,9 @@ const ScrollArea = React.forwardRef<
   React.ComponentRef<typeof ScrollAreaPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & {
     type?: 'auto' | 'always' | 'scroll' | 'hover'
-    scrollOrientation?: 'vertical' | 'horizontal' | 'both'
+    scrollOrientation?: 'vertical' | 'horizontal' | 'both' | 'none'
     viewportClassName?: string
+    viewportStyle?: React.CSSProperties
     contentClassName?: string
     viewportRef?: React.Ref<HTMLDivElement>
   }
@@ -33,6 +34,7 @@ const ScrollArea = React.forwardRef<
       type = 'hover',
       scrollOrientation = 'vertical',
       viewportClassName,
+      viewportStyle,
       contentClassName,
       viewportRef,
       ...props
@@ -60,6 +62,7 @@ const ScrollArea = React.forwardRef<
               !hasVertical && 'overflow-y-hidden',
               viewportClassName,
             )}
+            style={viewportStyle}
           >
             <ScrollAreaPrimitive.Content
               className={cn(!hasHorizontal && 'w-full max-w-full', contentClassName)}

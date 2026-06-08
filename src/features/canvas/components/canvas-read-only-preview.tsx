@@ -8,6 +8,7 @@ import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { CanvasRenderModeProvider } from '../runtime/providers/canvas-render-mode-context'
 import { cn } from '~/features/shadcn/lib/utils'
 import type { CanvasReadOnlyPreviewEmbedRenderer } from './canvas-read-only-preview-renderers'
+import type { Id } from 'convex/_generated/dataModel'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type {
   CanvasDocumentEdge,
@@ -27,6 +28,7 @@ interface CanvasReadOnlyPreviewProps {
   maxZoom?: number
   className?: string
   embedRenderer?: CanvasReadOnlyPreviewEmbedRenderer
+  sourceItemId?: Id<'sidebarItems'> | null
 }
 
 export function CanvasReadOnlyPreview({
@@ -38,6 +40,7 @@ export function CanvasReadOnlyPreview({
   maxZoom = DEFAULT_MAX_ZOOM,
   className,
   embedRenderer,
+  sourceItemId = null,
 }: CanvasReadOnlyPreviewProps) {
   const { backgroundRef, canvasEngine, domRuntime, surfaceRef, viewportRef } =
     useCanvasReadOnlyPreviewRuntime({
@@ -76,6 +79,7 @@ export function CanvasReadOnlyPreview({
             embedRenderer={embedRenderer}
             interactive={interactive}
             onNodeContextMenu={preventCanvasPreviewNodeMenu}
+            sourceItemId={sourceItemId}
           />
         </CanvasSceneViewport>
       </CanvasRenderModeProvider>

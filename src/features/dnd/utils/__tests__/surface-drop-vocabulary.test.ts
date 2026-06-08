@@ -26,5 +26,11 @@ describe('surface drop vocabulary', () => {
       targetType: CANVAS_DROP_ZONE_TYPE,
       failureMessage: 'Failed to add items to canvas',
     })
+    expect(getSurfaceDropContribution('noteEmbed')).toEqual({
+      action: 'noteEmbed',
+      commandId: 'surface-drop.embed-sidebar-item-in-note',
+      targetType: NOTE_EDITOR_DROP_TYPE,
+      failureMessage: 'Failed to add embeds',
+    })
   })
 })

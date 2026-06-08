@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { resolveDefaultEmbedNodeResizeForLockedAspectRatio } from '../embed-node-size'
+import {
+  EMBED_NODE_MIN_SIZE,
+  resolveDefaultEmbedNodeResizeForLockedAspectRatio,
+  resolveEmbedNodeDefaultSize,
+} from '../embed-node-size'
 
 describe('embed node default sizing', () => {
   it('resizes the old default embed box to fit a locked aspect ratio', () => {
@@ -37,5 +41,18 @@ describe('embed node default sizing', () => {
         ),
       ).toBeNull()
     }
+  })
+
+  it('does not auto-fit default embeds below the embed minimum size', () => {
+    expect(resolveEmbedNodeDefaultSize(0.4)).toEqual({
+      width: EMBED_NODE_MIN_SIZE.width,
+      height: 240,
+    })
+    expect(resolveEmbedNodeDefaultSize(320 / EMBED_NODE_MIN_SIZE.height)).toEqual({
+      width: 320,
+      height: EMBED_NODE_MIN_SIZE.height,
+    })
+    expect(resolveEmbedNodeDefaultSize(0.39)).toEqual({ width: 320, height: 240 })
+    expect(resolveEmbedNodeDefaultSize(4.45)).toEqual({ width: 320, height: 240 })
   })
 })

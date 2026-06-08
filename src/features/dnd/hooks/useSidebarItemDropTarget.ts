@@ -23,7 +23,7 @@ export function useSidebarItemDropTarget({
 
   useExternalDropTarget({
     ref,
-    parentId: item._id,
+    data: dropData,
     canAcceptFiles: canDrop && canDropFilesOnTarget(item),
   })
 
@@ -31,7 +31,7 @@ export function useSidebarItemDropTarget({
     (s) => s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
   )
   const isFileDropTarget = useDndStore(
-    (s) => canDrop && s.isDraggingFiles && s.fileDragHoveredId === item._id,
+    (s) => canDrop && s.isDraggingFiles && s.fileDragHoveredTargetKey === item._id,
   )
 
   return { isDropTarget, isTrashAction, isFileDropTarget }

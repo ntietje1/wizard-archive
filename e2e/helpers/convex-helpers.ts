@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { request } from '@playwright/test'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from 'convex/_generated/api'
 import { AUTH_STORAGE_PATH } from './constants'
@@ -6,13 +6,6 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/t
 import type { Id } from 'convex/_generated/dataModel'
 
 const E2E_APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:3000'
-
-interface StorageState {
-  cookies: Array<{
-    name: string
-    value: string
-  }>
-}
 
 export async function getCampaignIdFromRoute({
   dmUsername,
@@ -32,6 +25,17 @@ export async function getCampaignIdFromRoute({
   return campaign._id
 }
 
+export function getCampaignRouteFromUrl(url: string): {
+  dmUsername: string
+  campaignSlug: string
+} {
+  const [, campaignsSegment, dmUsername, campaignSlug] = new URL(url).pathname.split('/')
+  if (campaignsSegment !== 'campaigns' || !dmUsername || !campaignSlug) {
+    throw new Error(`Expected campaign route, got ${url}`)
+  }
+  return { dmUsername, campaignSlug }
+}
+
 export async function getSidebarItemIdBySlug({
   campaignId,
   slug,
@@ -39,6 +43,21 @@ export async function getSidebarItemIdBySlug({
   campaignId: Id<'campaigns'>
   slug: string
 }): Promise<Id<'sidebarItems'>> {
+  return (
+    await getSidebarItemBySlug({
+      campaignId,
+      slug,
+    })
+  )._id
+}
+
+export async function getSidebarItemBySlug({
+  campaignId,
+  slug,
+}: {
+  campaignId: Id<'campaigns'>
+  slug: string
+}) {
   const client = await createE2EConvexClient()
   const item = await client.query(api.sidebarItems.queries.getSidebarItemBySlug, {
     campaignId,
@@ -47,7 +66,7 @@ export async function getSidebarItemIdBySlug({
   if (!item) {
     throw new Error(`Unable to find sidebar item with slug "${slug}"`)
   }
-  return item._id
+  return item
 }
 
 export async function ensureAcceptedPlayerMember({
@@ -91,47 +110,33 @@ export async function createE2EConvexClient() {
     throw new Error('VITE_CONVEX_URL is required for E2E Convex helpers')
   }
 
-  let authStorage: string
-  try {
-    authStorage = await readFile(AUTH_STORAGE_PATH, 'utf8')
-  } catch (error) {
-    throw new Error(`Error reading auth storage at ${AUTH_STORAGE_PATH}: ${getErrorMessage(error)}`)
-  }
-
-  let storage: StorageState
-  try {
-    storage = JSON.parse(authStorage) as StorageState
-  } catch (error) {
-    throw new Error(
-      `Error parsing auth storage JSON at ${AUTH_STORAGE_PATH}: ${getErrorMessage(error)}`,
-    )
-  }
-
-  const token = await fetchConvexAuthToken(storage)
+  const token = await fetchConvexAuthToken()
 
   const client = new ConvexHttpClient(convexUrl)
   client.setAuth(token)
   return client
 }
 
-async function fetchConvexAuthToken(storage: StorageState) {
-  const tokenUrl = new URL('/api/auth/convex/token', E2E_APP_URL)
-  const response = await fetch(tokenUrl, {
-    headers: {
-      Cookie: storage.cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join('; '),
-    },
+async function fetchConvexAuthToken() {
+  const tokenRequest = await request.newContext({
+    baseURL: E2E_APP_URL,
+    storageState: AUTH_STORAGE_PATH,
   })
-  if (!response.ok) {
-    throw new Error(`Unable to fetch Convex auth token: ${response.status} ${response.statusText}`)
-  }
 
-  const payload = (await response.json()) as { token?: unknown }
-  if (typeof payload.token !== 'string' || payload.token.length === 0) {
-    throw new Error('Convex auth token response did not include a token')
-  }
-  return payload.token
-}
+  try {
+    const response = await tokenRequest.get('/api/auth/convex/token')
+    if (!response.ok()) {
+      throw new Error(
+        `Unable to fetch Convex auth token: ${response.status()} ${response.statusText()}`,
+      )
+    }
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error)
+    const payload = (await response.json()) as { token?: unknown }
+    if (typeof payload.token !== 'string' || payload.token.length === 0) {
+      throw new Error('Convex auth token response did not include a token')
+    }
+    return payload.token
+  } finally {
+    await tokenRequest.dispose()
+  }
 }

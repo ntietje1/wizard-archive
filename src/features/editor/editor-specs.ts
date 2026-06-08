@@ -3,6 +3,7 @@ import type { BlockNoteEditor, PartialInlineContent } from '@blocknote/core'
 import { customBlockSpecs } from '../../../shared/editor-blocks/editor-blocknote-spec-factory'
 import { customInlineContentSpecs, customStyleSpecs } from './editor-dom-specs'
 import { reactValueInlineSpec } from './value-block/value-block-react-spec'
+import { reactEmbedBlockSpec } from './components/extensions/embed-block/embed-block-react-spec'
 import type { NoteValueProps } from '../../../shared/note-values/schema'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 
@@ -13,16 +14,18 @@ const editorSchema = BlockNoteSchema.create({
 })
 
 const { value: _value, ...inlineContentSpecsWithoutValue } = customInlineContentSpecs
+const { embed: _embed, ...blockSpecsWithoutEmbed } = customBlockSpecs
 
 /**
- * createEditorSchema returns a BlockNoteSchema that swaps reactValueInlineSpec into
- * inlineContentSpecsWithoutValue for React value rendering/editing. Use editorSchema
- * for the standard DOM value spec; use createEditorSchema when callers need the
- * React-based value inline implementation.
+ * createEditorSchema swaps app-only React specs into the otherwise shared schema.
+ * Serialization remains owned by the shared BlockNote config.
  */
 export function createEditorSchema() {
   return BlockNoteSchema.create({
-    blockSpecs: customBlockSpecs,
+    blockSpecs: {
+      ...blockSpecsWithoutEmbed,
+      embed: reactEmbedBlockSpec,
+    },
     inlineContentSpecs: {
       ...inlineContentSpecsWithoutValue,
       value: reactValueInlineSpec,

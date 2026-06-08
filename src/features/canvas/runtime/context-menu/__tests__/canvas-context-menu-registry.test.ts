@@ -15,6 +15,7 @@ function createServices(
   return {
     hasSelectableCanvasItems: () => false,
     selectAllCanvasItems: vi.fn(),
+    createEmbedNode: vi.fn(() => null),
     createTextNode: vi.fn(() => null),
     ...overrides,
   }
@@ -46,16 +47,21 @@ describe('buildCanvasContextMenu', () => {
       'canvas-pane-select-all',
       'canvas-paste',
     ])
-    expect(menu.flatItems[0]?.children?.map((item) => item.id)).toEqual(['canvas-pane-create-text'])
+    expect(menu.flatItems[0]?.children?.map((item) => item.id)).toEqual([
+      'canvas-pane-create-embed',
+      'canvas-pane-create-text',
+    ])
     expect(menu.flatItems[1]?.disabled).toBe(true)
     expect(menu.flatItems[2]?.disabled).toBe(true)
   })
 
   it('adds injected create items before text-node creation in the pane New submenu', async () => {
     const createNote = vi.fn()
+    const createEmbedNode = vi.fn(() => null)
     const createTextNode = vi.fn(() => null)
     const services = {
       ...createServices(),
+      createEmbedNode,
       createTextNode,
     }
     const context = createContext()
@@ -78,20 +84,32 @@ describe('buildCanvasContextMenu', () => {
     const createSubmenu = menu.flatItems.find((item) => item.id === 'canvas-pane-create-submenu')
     expect(createSubmenu?.children?.map((item) => item.id)).toEqual([
       'canvas-pane-create-note',
+      'canvas-pane-create-embed',
       'canvas-pane-create-text',
     ])
-    expect(createSubmenu?.children?.map((item) => item.group)).toEqual(['create', 'create-node'])
+    expect(createSubmenu?.children?.map((item) => item.group)).toEqual([
+      'create',
+      'create-node',
+      'create-node',
+    ])
 
     const noteItem = createSubmenu!.children!.find((item) => item.id === 'canvas-pane-create-note')
     expect(noteItem).toBeDefined()
+
+    const embedItem = createSubmenu!.children!.find(
+      (item) => item.id === 'canvas-pane-create-embed',
+    )
+    expect(embedItem).toBeDefined()
 
     const textItem = createSubmenu!.children!.find((item) => item.id === 'canvas-pane-create-text')
     expect(textItem).toBeDefined()
 
     await noteItem!.onSelect()
+    await embedItem!.onSelect()
     await textItem!.onSelect()
 
     expect(createNote).toHaveBeenCalledWith(context, services, undefined)
+    expect(createEmbedNode).toHaveBeenCalledWith(context.pointerPosition)
     expect(createTextNode).toHaveBeenCalledWith(context.pointerPosition)
   })
 
@@ -263,7 +281,10 @@ describe('buildCanvasContextMenu', () => {
           kind: 'embed-node',
           nodeId: 'embed-1',
           nodeType: 'embed',
-          sidebarItemId: testId<'sidebarItems'>('sidebar-1'),
+          target: {
+            kind: 'sidebarItem',
+            sidebarItemId: testId<'sidebarItems'>('sidebar-1'),
+          },
         },
       }),
       services,
@@ -286,7 +307,10 @@ describe('buildCanvasContextMenu', () => {
       kind: 'embed-node',
       nodeId: 'embed-1',
       nodeType: 'embed',
-      sidebarItemId: testId<'sidebarItems'>('sidebar-1'),
+      target: {
+        kind: 'sidebarItem',
+        sidebarItemId: testId<'sidebarItems'>('sidebar-1'),
+      },
     })
   })
 })

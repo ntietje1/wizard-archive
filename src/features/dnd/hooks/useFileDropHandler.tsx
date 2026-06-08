@@ -1,16 +1,13 @@
 import { toast } from 'sonner'
-import { api } from 'convex/_generated/api'
 import { isMediaFile, isTextFile, validateFileForUpload } from 'shared/storage/validation'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
-import { deduplicateName } from 'shared/sidebar-items/default-name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/features/file-upload/utils/folder-reader'
 import { logger } from '~/shared/utils/logger'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { convertTextToBlocks } from '~/features/editor/utils/text-to-blocks'
@@ -19,15 +16,19 @@ import {
   FolderProgressContent,
   ToastContent,
 } from '~/features/file-upload/components/file-progress-toasts'
+import type { UploadProgress } from '~/features/file-upload/components/file-progress-toasts'
 import { getDropResultStats } from '~/features/file-upload/utils/folder-reader'
-import { getErrorMessage, uploadFile } from '~/features/file-upload/utils/file-upload'
-import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
-import { useCreateFile } from '~/features/files/hooks/useCreateFile'
+import { getErrorMessage } from '~/features/file-upload/utils/file-upload'
+import { prepareSingleFileUpload } from '~/features/file-upload/utils/single-file-upload-preflight'
+import {
+  showSingleFileUploadErrorToast,
+  showUploadProgressToast,
+  UPLOAD_TOAST_STYLE,
+} from '~/features/file-upload/utils/upload-toast'
+import { useSingleMediaFileUpload } from '~/features/file-upload/hooks/useSingleMediaFileUpload'
 import { useCreateNote } from '~/features/notes/hooks/useCreateNote'
-
-interface DropOptions {
-  parentId: Id<'sidebarItems'> | null
-}
+import { useAssetsFolder } from '~/features/filesystem/filesystem-assets-folder'
+import type { FileDropDestination, FileDropOptions } from '~/features/dnd/types'
 
 interface UploadSingleFileOptions {
   silent?: boolean
@@ -38,17 +39,6 @@ interface UploadSingleFileResult {
   id: Id<'sidebarItems'>
   slug: SidebarItemSlug
 }
-
-export interface UploadProgress {
-  toastId: string | number
-  totalFiles: number
-  totalFolders: number
-  processedFiles: number
-  processedFolders: number
-  skippedFiles: number
-}
-
-const TOAST_STYLE = { width: '100%', maxWidth: '100%' } as const
 
 function renderBatchProgress(
   hasFolders: boolean,
@@ -75,7 +65,7 @@ function showBatchProgress(
   toast.loading(renderBatchProgress(hasFolders, stats, progress), {
     id: toastId,
     duration: Infinity,
-    style: TOAST_STYLE,
+    style: UPLOAD_TOAST_STYLE,
   })
 }
 
@@ -100,23 +90,19 @@ function startSingleFileToast(
       message={textFile ? 'Processing...' : 'Uploading... 0%'}
       progress={textFile ? undefined : 0}
     />,
-    { duration: Infinity, style: TOAST_STYLE },
+    { duration: Infinity, style: UPLOAD_TOAST_STYLE },
   )
 }
 
 export function useFileDropHandler() {
   const { campaignId } = useCampaign()
   const { createItem } = useCreateFileSystemItem()
-  const { createFile } = useCreateFile()
   const { createNote } = useCreateNote()
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
   const { getSiblings } = useSidebarValidation()
-
-  const generateUploadUrl = useAppMutation(api.storage.mutations.generateUploadUrl)
-  const trackUpload = useAppMutation(api.storage.mutations.trackUpload)
-  const commitUpload = useAppMutation(api.storage.mutations.commitUpload)
-  const { generatePdfPreviewIfNeeded } = usePdfPreviewUpload()
+  const { resolveAssetsFolderId } = useAssetsFolder()
+  const { uploadSingleMediaFile } = useSingleMediaFileUpload()
 
   const createTextFileNote = async (
     file: File,
@@ -129,43 +115,6 @@ export function useFileDropHandler() {
       parentTarget: { kind: 'direct', parentId },
       content: blocks,
     })
-  }
-
-  const uploadMediaFile = async (
-    file: File,
-    fileName: string,
-    parentId: Id<'sidebarItems'> | null,
-    toastId: string | number | undefined,
-  ) => {
-    const uploadUrl = await generateUploadUrl.mutateAsync({})
-    const storageId = await uploadFile(file, uploadUrl, {
-      onProgress: toastId
-        ? (pct) => {
-            toast.loading(
-              <ToastContent title={fileName} message={`Uploading... ${pct}%`} progress={pct} />,
-              {
-                id: toastId,
-                duration: Infinity,
-                style: TOAST_STYLE,
-              },
-            )
-          }
-        : undefined,
-    })
-
-    await trackUpload.mutateAsync({
-      storageId,
-      originalFileName: file.name,
-    })
-    await commitUpload.mutateAsync({ storageId })
-    const result = await createFile({
-      name: fileName,
-      parentTarget: { kind: 'direct', parentId },
-      storageId,
-    })
-
-    void generatePdfPreviewIfNeeded(file, result.id)
-    return result
   }
 
   const uploadSupportedFile = async (
@@ -182,8 +131,21 @@ export function useFileDropHandler() {
       }
     }
     if (isMediaFile(file.type)) {
+      const progressOptions = toastId
+        ? {
+            onProgress: (pct: number) => {
+              showUploadProgressToast({ fileName, percentage: pct, toastId })
+            },
+          }
+        : {}
+      const result = await uploadSingleMediaFile(file, parentId, {
+        silent: true,
+        navigate: false,
+        ...progressOptions,
+      })
+      if (!result) return null
       return {
-        result: await uploadMediaFile(file, fileName, parentId, toastId),
+        result,
         opensEditor: false,
         successMessage: 'File created',
       }
@@ -208,7 +170,7 @@ export function useFileDropHandler() {
       toast.dismiss(toastId)
       toast.success(<ToastContent title={fileName} message={upload.successMessage} />, {
         duration: 3000,
-        style: TOAST_STYLE,
+        style: UPLOAD_TOAST_STYLE,
       })
     }
     if (navigate) {
@@ -222,18 +184,9 @@ export function useFileDropHandler() {
     parentId: Id<'sidebarItems'> | null,
     { silent = false, navigate = true }: UploadSingleFileOptions = {},
   ): Promise<UploadSingleFileResult | null> => {
-    if (!campaignId) {
-      toast.error('No campaign selected')
-      return null
-    }
-
-    const siblingNames = getSiblings(parentId).map((s) => s.name)
-    const fileName = deduplicateName(file.name, siblingNames)
-    const validation = validateFileForUpload(file)
-    if (!validation.valid) {
-      if (!silent) toast.error(`${fileName}: ${validation.error}`)
-      return null
-    }
+    const preflight = prepareSingleFileUpload({ campaignId, file, getSiblings, parentId, silent })
+    if (!preflight) return null
+    const { fileName } = preflight
 
     const toastId = startSingleFileToast(file, fileName, silent)
 
@@ -250,11 +203,7 @@ export function useFileDropHandler() {
       return upload.result
     } catch (error) {
       if (!silent && toastId) {
-        toast.dismiss(toastId)
-        toast.error(<ToastContent title={fileName} message={getErrorMessage(error)} />, {
-          duration: 5000,
-          style: TOAST_STYLE,
-        })
+        showSingleFileUploadErrorToast({ error, fileName, toastId })
       }
       throw error
     }
@@ -279,7 +228,7 @@ export function useFileDropHandler() {
     toast.loading(<FolderProgressContent progress={{ ...progress }} />, {
       id: progress.toastId,
       duration: Infinity,
-      style: TOAST_STYLE,
+      style: UPLOAD_TOAST_STYLE,
     })
 
     await folder.files.reduce<Promise<void>>(
@@ -289,7 +238,7 @@ export function useFileDropHandler() {
             toast.loading(<FolderProgressContent progress={{ ...progress }} />, {
               id: progress.toastId,
               duration: Infinity,
-              style: TOAST_STYLE,
+              style: UPLOAD_TOAST_STYLE,
             })
           }),
         ),
@@ -362,7 +311,16 @@ export function useFileDropHandler() {
     )
   }
 
-  const handleDrop = async (dropResult: DropResult, options?: DropOptions): Promise<void> => {
+  const resolveDropDestinationParentId = async (
+    destination: FileDropDestination = { kind: 'direct', parentId: null },
+  ) => {
+    if (destination.kind === 'assets') {
+      return await resolveAssetsFolderId()
+    }
+    return destination.parentId
+  }
+
+  const handleDrop = async (dropResult: DropResult, options?: FileDropOptions): Promise<void> => {
     if (!campaignId) {
       toast.error('No campaign selected')
       return
@@ -373,7 +331,8 @@ export function useFileDropHandler() {
     const isSingleFile = files.length === 1 && !hasFolders
 
     if (isSingleFile) {
-      await uploadSingleFile(files[0].file, options?.parentId ?? null)
+      const parentId = await resolveDropDestinationParentId(options?.destination)
+      await uploadSingleFile(files[0].file, parentId)
       return
     }
 
@@ -393,7 +352,7 @@ export function useFileDropHandler() {
       ) : (
         <FileProgressContent totalFiles={stats.totalFiles} processedFiles={0} skippedFiles={0} />
       ),
-      { duration: Infinity, style: TOAST_STYLE },
+      { duration: Infinity, style: UPLOAD_TOAST_STYLE },
     )
 
     const progress: UploadProgress = {
@@ -406,7 +365,7 @@ export function useFileDropHandler() {
     }
 
     try {
-      const parentId = options?.parentId ?? null
+      const parentId = await resolveDropDestinationParentId(options?.destination)
       await uploadRootFiles(files, parentId, progress, hasFolders, stats)
       const lastFolderId = await uploadRootFolders(rootFolders, parentId, progress)
 
@@ -414,20 +373,20 @@ export function useFileDropHandler() {
       const message = uploadCompleteMessage(hasFolders, progress)
       toast.success(<ToastContent title="Upload complete" message={message} />, {
         duration: 3000,
-        style: TOAST_STYLE,
+        style: UPLOAD_TOAST_STYLE,
       })
 
       if (lastFolderId) {
         openParentFolders(lastFolderId)
-      } else if (options?.parentId) {
-        openParentFolders(options.parentId)
+      } else if (parentId) {
+        openParentFolders(parentId)
       }
     } catch (error) {
       logger.error(error)
       toast.dismiss(toastId)
       toast.error(<ToastContent title="Upload failed" message={getErrorMessage(error)} />, {
         duration: 5000,
-        style: TOAST_STYLE,
+        style: UPLOAD_TOAST_STYLE,
       })
     }
   }

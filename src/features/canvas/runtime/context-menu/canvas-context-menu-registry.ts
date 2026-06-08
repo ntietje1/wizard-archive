@@ -4,6 +4,7 @@ import {
   Copy,
   CopyPlus,
   CornerDownLeft,
+  Paperclip,
   Plus,
   Scissors,
   SquareMousePointer,
@@ -110,6 +111,16 @@ function buildCanvasCreateItems(
 ): Array<CanvasContextMenuItem> {
   return [
     ...injectedCreateItems,
+    {
+      id: 'canvas-pane-create-embed',
+      label: 'Embed',
+      icon: Paperclip,
+      group: 'create-node',
+      priority: 15,
+      onSelect: (context, services) => {
+        services.createEmbedNode(context.pointerPosition)
+      },
+    },
     {
       id: 'canvas-pane-create-text',
       label: 'Text',
