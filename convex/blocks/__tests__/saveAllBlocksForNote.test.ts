@@ -408,7 +408,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       action: 'trash',
     })
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete(deletedCanvasId)
+      await dbCtx.db.delete('sidebarItems', deletedCanvasId)
     })
 
     async function expectRejectedTarget(sidebarItemId: Id<'sidebarItems'>, message: RegExp) {
