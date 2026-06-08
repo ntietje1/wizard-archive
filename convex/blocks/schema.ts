@@ -76,18 +76,6 @@ export const tableContentValidator = v.object({
   ),
 })
 
-const legacyTableContentValidator = v.object({
-  type: v.literal('tableContent'),
-  columnWidths: v.array(v.nullable(v.number())),
-  headerRows: v.optional(v.number()),
-  headerCols: v.optional(v.number()),
-  rows: v.array(
-    v.object({
-      cells: v.array(inlineContentArrayValidator),
-    }),
-  ),
-})
-
 export const blockContentValidator = v.union(inlineContentArrayValidator, tableContentValidator)
 
 const defaultBlockPropsValidator = v.object({
@@ -185,16 +173,16 @@ const blockCommonTableFields = {
 
 const persistedContentFields = {
   inline: {
-    content: v.optional(v.nullable(inlineContentArrayValidator)),
-    inlineContent: v.nullable(inlineContentArrayValidator),
+    content: v.nullable(inlineContentArrayValidator),
+    inlineContent: v.optional(v.nullable(inlineContentArrayValidator)),
   },
   none: {
-    content: v.optional(v.nullable(inlineContentArrayValidator)),
-    inlineContent: v.nullable(inlineContentArrayValidator),
+    content: v.nullable(inlineContentArrayValidator),
+    inlineContent: v.optional(v.nullable(inlineContentArrayValidator)),
   },
   table: {
-    content: v.optional(v.nullable(tableContentValidator)),
-    inlineContent: v.null(),
+    content: v.nullable(tableContentValidator),
+    inlineContent: v.optional(v.null()),
   },
 } as const
 
@@ -213,63 +201,7 @@ const blockTableVariants = BLOCK_REGISTRY.map(blockTableVariant) as unknown as [
   ...Array<ReturnType<typeof blockTableVariant>>,
 ]
 
-const legacyMediaSharedProps = {
-  name: v.optional(v.string()),
-  url: v.optional(v.string()),
-  caption: v.optional(v.string()),
-  backgroundColor: v.optional(v.string()),
-}
-
-const legacyMediaBlockPropsValidator = v.object({
-  ...legacyMediaSharedProps,
-  textAlignment: v.optional(textAlignmentValidator),
-  showPreview: v.optional(v.boolean()),
-  previewWidth: v.optional(v.number()),
-})
-
-const legacyFileBlockPropsValidator = v.object(legacyMediaSharedProps)
-
-const legacyInlineProjectionFields = {
-  content: v.optional(v.nullable(inlineContentArrayValidator)),
-  inlineContent: v.nullable(inlineContentArrayValidator),
-}
-
-function legacyMediaBlockTableVariant(
-  type: 'image' | 'video' | 'audio' | 'file',
-  props:
-    | typeof legacyMediaBlockPropsValidator
-    | typeof legacyFileBlockPropsValidator = legacyMediaBlockPropsValidator,
-) {
-  return v.object({
-    ...blockCommonTableFields,
-    type: v.literal(type),
-    props,
-    ...legacyInlineProjectionFields,
-  })
-}
-
-const legacyTableBlockTableVariant = v.object({
-  ...blockCommonTableFields,
-  type: v.literal('table'),
-  props: tablePropsValidator,
-  content: v.optional(v.null()),
-  inlineContent: legacyTableContentValidator,
-})
-
-const widenedBlockTableVariants = [
-  ...blockTableVariants,
-  legacyMediaBlockTableVariant('image'),
-  legacyMediaBlockTableVariant('video'),
-  legacyMediaBlockTableVariant('audio'),
-  legacyMediaBlockTableVariant('file', legacyFileBlockPropsValidator),
-  legacyTableBlockTableVariant,
-] as unknown as [
-  ReturnType<typeof blockTableVariant>,
-  ReturnType<typeof blockTableVariant>,
-  ...Array<ReturnType<typeof blockTableVariant>>,
-]
-
-const blockTableValidator = v.union(...widenedBlockTableVariants)
+const blockTableValidator = v.union(...blockTableVariants)
 
 export const blocksTables = {
   blocks: defineTable(blockTableValidator)

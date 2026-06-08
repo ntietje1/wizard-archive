@@ -55,11 +55,7 @@ function buildBlockTree(
     visited.add(block.blockNoteId)
     const childBlocks = buildBlockTree(childrenMap, block.blockNoteId, visited)
     const isEmbed = block.type === 'embed'
-    const content = isEmbed
-      ? undefined
-      : block.type === 'table'
-        ? block.content
-        : (block.content ?? block.inlineContent)
+    const content = isEmbed ? undefined : block.content
     return stripUndefined({
       id: block.blockNoteId,
       type: block.type,

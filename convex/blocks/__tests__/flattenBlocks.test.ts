@@ -43,7 +43,6 @@ function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
         type: f.type,
         props: f.props,
         content: f.content,
-        inlineContent: f.inlineContent,
         plainText: f.plainText,
         shareStatus: 'not_shared',
       }) as Block,
@@ -79,7 +78,7 @@ describe('flattenBlocks', () => {
     })
     expect(flatBlock.props).not.toHaveProperty('previewHeight')
     expect(flatBlock.content).toBeNull()
-    expect(flatBlock.inlineContent).toBeNull()
+    expect(flatBlock).not.toHaveProperty('inlineContent')
   })
 
   it('flattens a single top-level block', () => {
@@ -167,7 +166,7 @@ describe('flattenBlocks', () => {
     ]
     const result = flattenBlocks(blocks)
     expect(result[0].plainText).toBe('Cell')
-    expect(result[0].inlineContent).toBeNull()
+    expect(result[0]).not.toHaveProperty('inlineContent')
   })
 
   it('rejects malformed value inline content', () => {
@@ -200,10 +199,11 @@ describe('flattenBlocks', () => {
     ).toThrow(/VALIDATION_FAILED/)
   })
 
-  it('sets inlineContent to null when block has no content', () => {
+  it('sets content to null when block has no content', () => {
     const blocks = [makeBlock('d', { type: 'divider', content: undefined })]
     const result = flattenBlocks(blocks)
-    expect(result[0].inlineContent).toBeNull()
+    expect(result[0].content).toBeNull()
+    expect(result[0]).not.toHaveProperty('inlineContent')
   })
 
   it('no output block has a children key', () => {
@@ -526,7 +526,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
         position: 0,
         type: 'heading',
         props: { level: 3 },
-        inlineContent: [{ type: 'text', text: 'Hi', styles: {} }],
+        content: [{ type: 'text', text: 'Hi', styles: {} }],
       },
       {
         blockNoteId: testBlockNoteId('b'),
@@ -535,7 +535,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
         position: 0,
         type: 'paragraph',
         props: {},
-        inlineContent: [{ type: 'text', text: 'Child', styles: {} }],
+        content: [{ type: 'text', text: 'Child', styles: {} }],
       },
       {
         blockNoteId: testBlockNoteId('c'),
@@ -544,7 +544,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
         position: 1,
         type: 'divider',
         props: {},
-        inlineContent: null,
+        content: null,
       },
     ].map(
       (b) =>

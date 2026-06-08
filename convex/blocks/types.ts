@@ -25,16 +25,16 @@ type PersistedInlineBlock = {
   [Type in InlineBlockType]: {
     type: Type
     props: Extract<FlatBlockContent, { type: Type }>['props']
-    content?: InlineContent | null
-    inlineContent: InlineContent | null
+    content: InlineContent | null
+    inlineContent?: InlineContent | null
   }
 }[InlineBlockType]
 
 type PersistedTableBlock = {
   type: 'table'
   props: Extract<FlatBlockContent, { type: 'table' }>['props']
-  content?: TableContent | null
-  inlineContent: null
+  content: TableContent | null
+  inlineContent?: null
 }
 
 export type PersistedFlatBlock = PersistedBlockCommon & (PersistedInlineBlock | PersistedTableBlock)

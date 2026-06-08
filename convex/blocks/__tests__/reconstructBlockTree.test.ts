@@ -15,7 +15,7 @@ function makeFlatBlock(overrides: Partial<Block> & { blockNoteId: string }): Blo
     position: 0,
     type: 'paragraph',
     props: {},
-    inlineContent: null,
+    content: null,
     plainText: '',
     shareStatus: 'not_shared',
     ...overrides,
@@ -98,15 +98,15 @@ describe('reconstructBlockTree', () => {
     expect(result[0].children![0].children![0].id).toBe(testBlockNoteId('grandchild'))
   })
 
-  it('restores inlineContent as content', () => {
-    const inlineContent = [{ type: 'text' as const, text: 'Hello', styles: {} }]
-    const blocks = [makeFlatBlock({ blockNoteId: testBlockNoteId('a'), inlineContent })]
+  it('restores persisted content', () => {
+    const content = [{ type: 'text' as const, text: 'Hello', styles: {} }]
+    const blocks = [makeFlatBlock({ blockNoteId: testBlockNoteId('a'), content })]
     const result = reconstructBlockTree(blocks)
-    expect(result[0].content).toEqual(inlineContent)
+    expect(result[0].content).toEqual(content)
   })
 
-  it('sets content to undefined when inlineContent is null', () => {
-    const blocks = [makeFlatBlock({ blockNoteId: testBlockNoteId('a'), inlineContent: null })]
+  it('sets content to undefined when persisted content is null', () => {
+    const blocks = [makeFlatBlock({ blockNoteId: testBlockNoteId('a'), content: null })]
     const result = reconstructBlockTree(blocks)
     expect(result[0].content).toBeUndefined()
   })

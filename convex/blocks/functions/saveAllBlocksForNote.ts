@@ -115,7 +115,6 @@ async function replacePersistedBlock(
     type: block.type,
     props: block.props,
     content: block.content,
-    inlineContent: block.inlineContent,
     plainText: block.plainText,
   })
 }

@@ -23,7 +23,6 @@ export function flattenBlocks(blocks: Array<CustomBlock>): Array<PersistedFlatBl
         type: block.type,
         props: block.props,
         content: block.content ?? null,
-        inlineContent: null,
       }
     }
 
@@ -33,7 +32,6 @@ export function flattenBlocks(blocks: Array<CustomBlock>): Array<PersistedFlatBl
       type: block.type,
       props: block.props,
       content,
-      inlineContent: content,
     } as PersistedFlatBlock
   }
 

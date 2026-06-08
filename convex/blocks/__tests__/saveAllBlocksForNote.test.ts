@@ -69,7 +69,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     expect(persistedBlocks).toHaveLength(1)
     expect(persistedBlocks[0].content).toEqual(tableContent)
-    expect(persistedBlocks[0].inlineContent).toBeNull()
+    expect(persistedBlocks[0]).not.toHaveProperty('inlineContent')
   })
 
   it('returns final persisted rows in document order and excludes deleted blocks', async () => {

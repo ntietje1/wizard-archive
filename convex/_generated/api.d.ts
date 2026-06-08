@@ -44,6 +44,7 @@ import type * as blocks_functions_patchBlockMetadata from "../blocks/functions/p
 import type * as blocks_functions_reconstructBlockTree from "../blocks/functions/reconstructBlockTree.js";
 import type * as blocks_functions_saveAllBlocksForNote from "../blocks/functions/saveAllBlocksForNote.js";
 import type * as blocks_functions_searchBlocks from "../blocks/functions/searchBlocks.js";
+import type * as blocks_inlineContentMigration from "../blocks/inlineContentMigration.js";
 import type * as blocks_parseEditorBlocks from "../blocks/parseEditorBlocks.js";
 import type * as blocks_queries from "../blocks/queries.js";
 import type * as blocks_types from "../blocks/types.js";
@@ -285,6 +286,7 @@ declare const fullApi: ApiFromModules<{
   "blocks/functions/reconstructBlockTree": typeof blocks_functions_reconstructBlockTree;
   "blocks/functions/saveAllBlocksForNote": typeof blocks_functions_saveAllBlocksForNote;
   "blocks/functions/searchBlocks": typeof blocks_functions_searchBlocks;
+  "blocks/inlineContentMigration": typeof blocks_inlineContentMigration;
   "blocks/parseEditorBlocks": typeof blocks_parseEditorBlocks;
   "blocks/queries": typeof blocks_queries;
   "blocks/types": typeof blocks_types;

@@ -14,7 +14,7 @@ const blockShareTableFields = {
   blockId: v.id('blocks'),
   campaignMemberId: v.id('campaignMembers'),
   sessionId: v.nullable(v.id('sessions')),
-  permissionLevel: v.optional(v.nullable(blockVisibilityPermissionLevelValidator)),
+  permissionLevel: blockVisibilityPermissionLevelValidator,
 }
 
 export const blockShareTables = {

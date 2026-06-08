@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
+import { getDeleteBlockInlineContentProjectionFieldPatch } from '../blocks/inlineContentMigration'
 import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
-import { getLegacyBlockProjectionMigrationPatch } from '../../shared/editor-blocks/legacyMediaBlocks'
 
 describe('migrations', () => {
   describe('getSidebarItemLifecycleMigrationPatch', () => {
@@ -56,100 +56,15 @@ describe('migrations', () => {
     })
   })
 
-  describe('getLegacyBlockProjectionMigrationPatch', () => {
-    it('rewrites projected legacy media block rows to embed rows', () => {
-      expect(
-        getLegacyBlockProjectionMigrationPatch({
-          type: 'image',
-          props: {
-            url: 'https://example.com/a.png',
-            name: 'a.png',
-            previewWidth: 320,
-          },
-        }),
-      ).toEqual({
-        type: 'embed',
-        props: {
-          targetKind: 'externalUrl',
-          url: 'https://example.com/a.png',
-          name: 'a.png',
-          previewWidth: 320,
-        },
-        content: null,
-        inlineContent: null,
-        plainText: '',
+  describe('getDeleteBlockInlineContentProjectionFieldPatch', () => {
+    it('deletes the deprecated inlineContent projection field when present', () => {
+      expect(getDeleteBlockInlineContentProjectionFieldPatch({ inlineContent: null })).toEqual({
+        inlineContent: undefined,
       })
     })
 
-    it('normalizes legacy table projection rows', () => {
-      expect(
-        getLegacyBlockProjectionMigrationPatch({
-          type: 'table',
-          props: { textColor: 'default' },
-          inlineContent: {
-            type: 'tableContent',
-            columnWidths: [120],
-            rows: [
-              {
-                cells: [[{ type: 'text', text: 'Cell value', styles: {} }]],
-              },
-            ],
-          },
-        }),
-      ).toEqual({
-        content: {
-          type: 'tableContent',
-          columnWidths: [120],
-          rows: [
-            {
-              cells: [
-                {
-                  type: 'tableCell',
-                  content: [{ type: 'text', text: 'Cell value', styles: {} }],
-                },
-              ],
-            },
-          ],
-        },
-        inlineContent: null,
-      })
-    })
-
-    it('strips legacy embed preview height and clears projection content', () => {
-      expect(
-        getLegacyBlockProjectionMigrationPatch({
-          type: 'embed',
-          props: { targetKind: 'empty', previewWidth: 320, previewHeight: 180 },
-          inlineContent: [],
-        }),
-      ).toEqual({
-        props: { targetKind: 'empty', previewWidth: 320 },
-        content: null,
-        inlineContent: null,
-      })
-    })
-
-    it('backfills missing inline block content from inlineContent', () => {
-      expect(
-        getLegacyBlockProjectionMigrationPatch({
-          type: 'paragraph',
-          props: {},
-          inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
-        }),
-      ).toEqual({
-        content: [{ type: 'text', text: 'Hello', styles: {} }],
-      })
-    })
-
-    it('leaves already-normalized projection rows alone', () => {
-      expect(
-        getLegacyBlockProjectionMigrationPatch({
-          type: 'paragraph',
-          props: {},
-          content: [{ type: 'text', text: 'Hello', styles: {} }],
-          inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
-        }),
-      ).toBeNull()
+    it('leaves already-clean projection rows alone', () => {
+      expect(getDeleteBlockInlineContentProjectionFieldPatch({})).toBeNull()
     })
   })
 })

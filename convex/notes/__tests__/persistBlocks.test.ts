@@ -354,7 +354,12 @@ describe('persistBlocks', () => {
     await t.run(async (dbCtx) => {
       const block = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('blockNoteId'), testBlockNoteId('embed-block-1')))
+        .withIndex('by_campaign_note_block', (q) =>
+          q
+            .eq('campaignId', ctx.campaignId)
+            .eq('noteId', noteId)
+            .eq('blockNoteId', testBlockNoteId('embed-block-1')),
+        )
         .first()
 
       expect(block?.props).toMatchObject({
