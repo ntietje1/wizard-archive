@@ -9,6 +9,7 @@ export type NoteEmbedBlockProps = {
   backgroundColor?: string
   textAlignment?: 'left' | 'center' | 'right' | 'justify'
   previewWidth?: number
+  previewHeight?: number
   previewAspectRatio?: number
 }
 

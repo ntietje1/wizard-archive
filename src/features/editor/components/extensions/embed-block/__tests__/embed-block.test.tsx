@@ -1,8 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { NoteEmbedBlockView } from '../embed-block'
 import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '~/features/embeds/utils/embed-media'
+import {
+  DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT,
+  DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
+} from '~/features/embeds/utils/document-embed-layout'
 import { clearInternalNativeDrag } from '~/features/dnd/utils/internal-native-drag'
 import { getExternalUrlDropTarget } from '~/features/embeds/utils/embed-targets'
 import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
@@ -10,11 +15,17 @@ import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 const uploadEmbedFileMock = vi.hoisted(() => vi.fn())
 const blockDragStartMock = vi.hoisted(() => vi.fn())
 const blockDragEndMock = vi.hoisted(() => vi.fn())
+const sidebarItemByIdState = vi.hoisted((): { data: Record<string, unknown> | null } => ({
+  data: null,
+}))
 type ElementDropTargetArgs = {
   canDrop: (args: { source: { data: Record<string, unknown> } }) => boolean
   onDrop: (args: { source: { data: Record<string, unknown> } }) => void
 }
 const dropTargetForElementsMock = vi.hoisted(() => vi.fn((_args: ElementDropTargetArgs) => vi.fn()))
+const documentEmbedAspectRatio = Number(
+  (DOCUMENT_EMBED_ASPECT_RATIO_WIDTH / DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT).toFixed(6),
+)
 
 vi.mock('@blocknote/react', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>
@@ -34,9 +45,15 @@ vi.mock('~/features/embeds/components/embed-content', () => ({
     onUpload?: () => void
     onLinkExternal?: () => void
     onMediaLayout?: (layout: EmbedMediaLayout) => void
+    allowInnerScroll?: boolean
   }) => (
     <div>
-      <div data-testid="shared-embed-content" data-kind={props.target.kind} data-mode={props.mode}>
+      <div
+        data-testid="shared-embed-content"
+        data-kind={props.target.kind}
+        data-mode={props.mode}
+        data-allow-inner-scroll={props.allowInnerScroll ? 'true' : 'false'}
+      >
         {props.target.name ?? props.target.url ?? props.target.kind}
       </div>
       <input type="range" aria-label="mock media slider" data-embed-media-control="true" />
@@ -71,6 +88,14 @@ vi.mock('~/features/embeds/hooks/use-embed-upload', () => ({
   useEmbedUpload: () => ({ uploadEmbedFile: uploadEmbedFileMock }),
 }))
 
+vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
+  useSidebarItemById: () => ({
+    data: sidebarItemByIdState.data,
+    error: null,
+    isLoading: false,
+  }),
+}))
+
 vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
   dropTargetForElements: (args: ElementDropTargetArgs) => dropTargetForElementsMock(args),
 }))
@@ -82,6 +107,7 @@ describe('NoteEmbedBlockView', () => {
     blockDragEndMock.mockReset()
     dropTargetForElementsMock.mockClear()
     dropTargetForElementsMock.mockReturnValue(vi.fn())
+    sidebarItemByIdState.data = null
     clearInternalNativeDrag()
   })
 
@@ -97,6 +123,10 @@ describe('NoteEmbedBlockView', () => {
 
     expect(await screen.findByTestId('shared-embed-content')).toHaveAttribute('data-kind', 'empty')
     expect(screen.getByTestId('shared-embed-content')).toHaveAttribute('data-mode', 'editable')
+    expect(screen.getByTestId('shared-embed-content')).toHaveAttribute(
+      'data-allow-inner-scroll',
+      'false',
+    )
   })
 
   it('renders a filled header from an external target name', async () => {
@@ -196,6 +226,7 @@ describe('NoteEmbedBlockView', () => {
           ...block,
           props: {
             previewWidth: 320,
+            previewHeight: 200,
             targetKind: 'sidebarItem',
             sidebarItemId: 'map-1',
           },
@@ -303,6 +334,10 @@ describe('NoteEmbedBlockView', () => {
     fireEvent.pointerDown(screen.getByTestId('note-embed-visual-surface'), { button: 0 })
 
     expect(editor.setTextCursorPosition).toHaveBeenCalledWith(block, 'start')
+    expect(screen.getByTestId('shared-embed-content')).toHaveAttribute(
+      'data-allow-inner-scroll',
+      'true',
+    )
     expect(screen.queryByTestId('note-embed-select-layer')).not.toBeInTheDocument()
     expect(screen.getByTestId('note-embed-resize-wrapper')).toBeInTheDocument()
     expect(screen.getByTestId('note-embed-visual-surface')).toHaveAttribute(
@@ -348,6 +383,67 @@ describe('NoteEmbedBlockView', () => {
       .querySelector('[data-note-embed-body="true"]')
     expect(body).toBeInstanceOf(HTMLElement)
     expect((body as HTMLElement).style.aspectRatio).toBe('0.75 / 1')
+  })
+
+  it('reserves the document aspect ratio for external PDFs before media finishes rendering', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/bestiary.pdf',
+        name: 'Bestiary',
+        previewWidth: 300,
+      },
+    }
+
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const body = screen
+      .getByTestId('note-embed-block')
+      .querySelector('[data-note-embed-body="true"]')
+    expect(body).toBeInstanceOf(HTMLElement)
+    expect((body as HTMLElement).style.aspectRatio).toBe(`${documentEmbedAspectRatio} / 1`)
+  })
+
+  it('uses the document shape as the default height for resolved note sidebar item embeds', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'sidebarItem',
+        sidebarItemId: 'note-2',
+        previewWidth: 300,
+      },
+    }
+    sidebarItemByIdState.data = {
+      _id: 'note-2',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Nested Note',
+    }
+
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const body = screen
+      .getByTestId('note-embed-block')
+      .querySelector('[data-note-embed-body="true"]')
+    expect(body).toBeInstanceOf(HTMLElement)
+    expect((body as HTMLElement).style.aspectRatio).toBe('')
+    expect((body as HTMLElement).style.height).toBe('388px')
   })
 
   it('persists reported intrinsic aspect ratios for stable refresh layout', async () => {
@@ -664,6 +760,134 @@ describe('NoteEmbedBlockView', () => {
     expect(editor.updateBlock).toHaveBeenCalledWith(block, {
       props: {
         previewWidth: 360,
+      },
+    })
+  })
+
+  it('resizes resolved note embeds freely after using the document-shaped default height', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'sidebarItem',
+        sidebarItemId: 'note-2',
+        previewWidth: 300,
+      },
+    }
+    sidebarItemByIdState.data = {
+      _id: 'note-2',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Nested Note',
+    }
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const root = screen.getByTestId('note-embed-block')
+    const body = root.querySelector('[data-note-embed-body="true"]')
+    expect(body).toBeInstanceOf(HTMLElement)
+    expect((body as HTMLElement).style.height).toBe('388px')
+
+    fireEvent.pointerDown(root, { button: 0 })
+
+    const handle = screen.getByRole('button', { name: 'Resize bottom selection edge' })
+
+    fireEvent.pointerDown(handle, { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(window, { clientX: 100, clientY: 140 })
+
+    expect(root).toHaveStyle({ width: '300px' })
+    expect(body).toHaveStyle({ height: '428px' })
+
+    fireEvent.pointerUp(window)
+    expect(editor.updateBlock).toHaveBeenCalledWith(block, {
+      props: {
+        previewWidth: 300,
+        previewHeight: 428,
+      },
+    })
+  })
+
+  it('uses the document shape as the default height for resolved canvas sidebar item embeds', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'sidebarItem',
+        sidebarItemId: 'canvas-2',
+        previewWidth: 300,
+      },
+    }
+    sidebarItemByIdState.data = {
+      _id: 'canvas-2',
+      type: SIDEBAR_ITEM_TYPES.canvases,
+      name: 'Nested Canvas',
+    }
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const body = screen
+      .getByTestId('note-embed-block')
+      .querySelector('[data-note-embed-body="true"]')
+    expect(body).toBeInstanceOf(HTMLElement)
+    expect((body as HTMLElement).style.height).toBe('388px')
+  })
+
+  it('clamps resolved canvas embed height to the document shape in note embeds', () => {
+    const editor = createEditor()
+    const block = {
+      id: 'block-1',
+      props: {
+        targetKind: 'sidebarItem',
+        sidebarItemId: 'canvas-2',
+        previewWidth: 300,
+        previewHeight: 800,
+      },
+    }
+    sidebarItemByIdState.data = {
+      _id: 'canvas-2',
+      type: SIDEBAR_ITEM_TYPES.canvases,
+      name: 'Nested Canvas',
+    }
+    render(
+      <NoteEmbedBlockView
+        block={block as never}
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const root = screen.getByTestId('note-embed-block')
+    const body = root.querySelector('[data-note-embed-body="true"]')
+    expect(body).toBeInstanceOf(HTMLElement)
+    expect(body).toHaveStyle({ height: '388px' })
+
+    fireEvent.pointerDown(root, { button: 0 })
+
+    const handle = screen.getByRole('button', { name: 'Resize bottom selection edge' })
+
+    fireEvent.pointerDown(handle, { clientX: 100, clientY: 100 })
+    fireEvent.pointerMove(window, { clientX: 100, clientY: 900 })
+
+    expect(root).toHaveStyle({ width: '300px' })
+    expect(body).toHaveStyle({ height: '388px' })
+
+    fireEvent.pointerUp(window)
+    expect(editor.updateBlock).toHaveBeenCalledWith(block, {
+      props: {
+        previewWidth: 300,
+        previewHeight: 388,
       },
     })
   })

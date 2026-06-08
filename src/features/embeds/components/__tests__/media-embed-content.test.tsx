@@ -26,16 +26,19 @@ vi.mock('~/features/editor/components/viewer/file/pdf-file-viewer', () => ({
     pdfUrl,
     onFirstPageAspectRatio,
     presentation,
+    allowInnerScroll,
   }: {
     pdfUrl: string
     onFirstPageAspectRatio?: (aspectRatio: number | null) => void
     presentation?: string
+    allowInnerScroll?: boolean
   }) => (
     <button
       type="button"
       data-testid="pdf-viewer"
       data-url={pdfUrl}
       data-presentation={presentation}
+      data-allow-inner-scroll={allowInnerScroll === false ? 'false' : 'true'}
       onClick={() => onFirstPageAspectRatio?.(0.75)}
     >
       report pdf ratio
@@ -304,6 +307,22 @@ describe('ExternalUrlEmbedContent', () => {
       'https://x.test/doc.pdf',
     )
     expect(screen.getByTestId('pdf-viewer')).toHaveAttribute('data-presentation', 'embed')
+    expect(screen.getByTestId('pdf-viewer')).toHaveAttribute('data-allow-inner-scroll', 'true')
+  })
+
+  it('forwards disabled inner scrolling to embedded PDFs', async () => {
+    render(
+      <ExternalUrlEmbedContent
+        url="https://x.test/doc.pdf"
+        name="doc.pdf"
+        allowInnerScroll={false}
+      />,
+    )
+
+    expect(await screen.findByTestId('pdf-viewer')).toHaveAttribute(
+      'data-allow-inner-scroll',
+      'false',
+    )
   })
 
   it('forwards external PDF page aspect ratios', async () => {

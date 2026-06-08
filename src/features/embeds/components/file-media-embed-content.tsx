@@ -9,6 +9,7 @@ type FileMediaEmbedContentProps = {
   contentType: string | null
   previewUrl: string | null
   name: string
+  allowInnerScroll?: boolean
   onMediaLayout?: EmbedMediaLayoutReporter
 }
 
@@ -17,6 +18,7 @@ export function FileMediaEmbedContent({
   contentType,
   previewUrl,
   name,
+  allowInnerScroll = true,
   onMediaLayout,
 }: FileMediaEmbedContentProps) {
   const kind = inferEmbedMediaKindFromContentType(contentType)
@@ -37,6 +39,7 @@ export function FileMediaEmbedContent({
       sourceUrl={downloadUrl}
       label={name}
       kind={kind}
+      allowInnerScroll={allowInnerScroll}
       onMediaLayout={onMediaLayout}
       renderUnknown={() => <OtherFileViewer fileUrl={downloadUrl} fileName={name} />}
     />

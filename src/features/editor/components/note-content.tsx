@@ -44,6 +44,7 @@ type NoteEditorChangeHandler = (
 type NoteContentBaseProps = {
   editable: boolean
   className?: string
+  fillHeight?: boolean
   style?: CSSProperties
   children?: ReactNode
   onEditorChange?: NoteEditorChangeHandler
@@ -57,6 +58,7 @@ export function NoteContent({
   note,
   editable,
   className,
+  fillHeight = false,
   style,
   children,
   onEditorChange,
@@ -81,7 +83,11 @@ export function NoteContent({
     )
 
   return (
-    <div className={renderState.kind === 'editable' ? 'note-editor-fill-height' : undefined}>
+    <div
+      className={
+        renderState.kind === 'editable' || fillHeight ? 'note-editor-fill-height' : undefined
+      }
+    >
       <div className={className}>{editor}</div>
     </div>
   )

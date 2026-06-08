@@ -630,6 +630,17 @@
   border-left: 1px solid var(--border);
 }
 
+:root
+  .canvas-rich-text-editor[data-embedded-note-mode]
+  .bn-container
+  .bn-editor
+  .bn-block-group
+  .bn-block-outer::before {
+  content: none;
+  display: none;
+  border-left: 0;
+}
+
 /* File block – "add file" button */
 :root [data-file-block] .bn-add-file-button {
   background-color: var(--muted);

@@ -9,9 +9,13 @@ type ResizeSessionOptions = {
   editorElement: HTMLElement | null | undefined
   event: ReactPointerEvent<HTMLElement>
   handle: NoteEmbedResizeHandle
+  height: number | undefined
+  maxHeightAspectRatio: number | null
+  resizeHeight: boolean
   root: HTMLElement | null
+  useMeasuredAspectRatioFallback: boolean
   width: number | undefined
-  onCommit: (width: number) => void
+  onCommit: (size: { height?: number; width: number }) => void
 }
 
 const MIN_WIDTH = 64
@@ -22,7 +26,11 @@ export function startNoteEmbedResizeSession({
   editorElement,
   event,
   handle,
+  height,
+  maxHeightAspectRatio,
+  resizeHeight,
   root,
+  useMeasuredAspectRatioFallback,
   width,
   onCommit,
 }: ResizeSessionOptions) {
@@ -36,20 +44,27 @@ export function startNoteEmbedResizeSession({
   const captureOverlay = createCaptureOverlay(handle)
   const previousUserSelect = document.body.style.userSelect
   const rootRect = root.getBoundingClientRect()
+  const body = getBodyElement(root)
+  const bodyRect = body?.getBoundingClientRect()
   const startWidth = positiveNumber(width) ?? positiveNumber(rootRect.width) ?? root.clientWidth
-  const measuredHeight = positiveNumber(rootRect.height) ?? positiveNumber(root.clientHeight)
+  const startHeight =
+    positiveNumber(height) ??
+    positiveNumber(bodyRect?.height) ??
+    positiveNumber(rootRect.height) ??
+    positiveNumber(root.clientHeight) ??
+    MIN_BODY_HEIGHT
   const activeAspectRatio =
     positiveNumber(aspectRatio) ??
-    (measuredHeight ? positiveNumber(startWidth / measuredHeight) : undefined)
+    (useMeasuredAspectRatioFallback ? getAspectRatio(startWidth, startHeight) : undefined)
   const minWidth = getMinimumWidthForAspectRatio(
     aspectRatio,
     getBodyWidthInset({ root, rootWidth: startWidth }),
   )
-  const startHeight = measuredHeight ?? (activeAspectRatio ? startWidth / activeAspectRatio : 0)
   const startX = event.clientX
   const startY = event.clientY
 
   let latestWidth = startWidth
+  let latestHeight = startHeight
   let moved = false
 
   root.appendChild(captureOverlay)
@@ -57,31 +72,39 @@ export function startNoteEmbedResizeSession({
 
   const onPointerMove = (moveEvent: PointerEvent) => {
     moved = true
-    latestWidth = clampWidth(
-      getNextWidth({
-        activeAspectRatio,
-        handle,
-        pointerX: moveEvent.clientX,
-        pointerY: moveEvent.clientY,
-        startHeight,
-        startWidth,
-        startX,
-        startY,
-      }),
-      editorElement,
-      minWidth,
-    )
+    const nextSize = getNextSize({
+      activeAspectRatio,
+      handle,
+      pointerX: moveEvent.clientX,
+      pointerY: moveEvent.clientY,
+      resizeHeight,
+      startHeight,
+      startWidth,
+      startX,
+      startY,
+    })
+    latestWidth = clampWidth(nextSize.width, editorElement, minWidth)
+    latestHeight = clampHeight(nextSize.height, getMaxHeight(latestWidth, maxHeightAspectRatio))
     root.style.width = `${latestWidth}px`
+    if (!activeAspectRatio && resizeHeight && body) {
+      body.style.height = `${latestHeight}px`
+    }
   }
 
   const onPointerUp = () => {
     cleanup()
-    if (moved) onCommit(latestWidth)
+    if (!moved) return
+    onCommit(
+      activeAspectRatio || !resizeHeight
+        ? { width: latestWidth }
+        : { width: latestWidth, height: latestHeight },
+    )
   }
 
   const onPointerCancel = () => {
     cleanup()
     root.style.width = width ? `${width}px` : ''
+    if (body) body.style.height = height ? `${height}px` : ''
   }
 
   const cleanup = () => {
@@ -111,6 +134,11 @@ function clampWidth(
   return Math.round(Math.min(Math.max(width, minWidth), maxWidth))
 }
 
+function clampHeight(height: number, maxHeight: number | undefined) {
+  const clampedHeight = Math.max(height, MIN_BODY_HEIGHT)
+  return Math.round(maxHeight ? Math.min(clampedHeight, maxHeight) : clampedHeight)
+}
+
 function getMinimumWidthForAspectRatio(aspectRatio: number | null, widthInset: number) {
   const ratio = positiveNumber(aspectRatio)
   if (!ratio) return MIN_WIDTH
@@ -118,17 +146,18 @@ function getMinimumWidthForAspectRatio(aspectRatio: number | null, widthInset: n
 }
 
 function getBodyWidthInset({ root, rootWidth }: { root: HTMLElement; rootWidth: number }) {
-  const body = root.querySelector<HTMLElement>('[data-note-embed-body="true"]')
+  const body = getBodyElement(root)
   const bodyWidth = positiveNumber(body?.clientWidth)
   if (!bodyWidth) return 0
   return Math.max(0, rootWidth - bodyWidth)
 }
 
-function getNextWidth({
+function getNextSize({
   activeAspectRatio,
   handle,
   pointerX,
   pointerY,
+  resizeHeight,
   startHeight,
   startWidth,
   startX,
@@ -138,11 +167,21 @@ function getNextWidth({
   handle: NoteEmbedResizeHandle
   pointerX: number
   pointerY: number
+  resizeHeight: boolean
   startHeight: number
   startWidth: number
   startX: number
   startY: number
 }) {
+  if (!activeAspectRatio) {
+    return {
+      width: getHorizontalWidth({ handle, pointerX, startWidth, startX }) ?? startWidth,
+      height: resizeHeight
+        ? (getVerticalHeight({ handle, pointerY, startHeight, startY }) ?? startHeight)
+        : startHeight,
+    }
+  }
+
   const horizontalWidth = getHorizontalWidth({ handle, pointerX, startWidth, startX })
   const verticalWidth = activeAspectRatio
     ? getVerticalWidth({
@@ -154,12 +193,18 @@ function getNextWidth({
       })
     : undefined
 
-  if (horizontalWidth === undefined) return verticalWidth ?? startWidth
-  if (verticalWidth === undefined) return horizontalWidth
+  if (horizontalWidth === undefined) {
+    const width = verticalWidth ?? startWidth
+    return { width, height: width / activeAspectRatio }
+  }
+  if (verticalWidth === undefined) {
+    return { width: horizontalWidth, height: horizontalWidth / activeAspectRatio }
+  }
 
   const horizontalDelta = Math.abs(horizontalWidth - startWidth)
   const verticalDelta = Math.abs(verticalWidth - startWidth)
-  return verticalDelta > horizontalDelta ? verticalWidth : horizontalWidth
+  const width = verticalDelta > horizontalDelta ? verticalWidth : horizontalWidth
+  return { width, height: width / activeAspectRatio }
 }
 
 function getHorizontalWidth({
@@ -196,8 +241,32 @@ function getVerticalWidth({
   return (startHeight + heightDelta) * activeAspectRatio
 }
 
+function getVerticalHeight({
+  handle,
+  pointerY,
+  startHeight,
+  startY,
+}: {
+  handle: NoteEmbedResizeHandle
+  pointerY: number
+  startHeight: number
+  startY: number
+}) {
+  if (!handle.includes('top') && !handle.includes('bottom')) return undefined
+  return startHeight + (handle.includes('top') ? startY - pointerY : pointerY - startY)
+}
+
 function positiveNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
+}
+
+function getAspectRatio(width: number, height: number) {
+  return height > 0 ? width / height : undefined
+}
+
+function getMaxHeight(width: number, aspectRatio: number | null) {
+  const ratio = positiveNumber(aspectRatio)
+  return ratio ? width / ratio : undefined
 }
 
 function createCaptureOverlay(handle: NoteEmbedResizeHandle) {
@@ -208,4 +277,8 @@ function createCaptureOverlay(handle: NoteEmbedResizeHandle) {
   overlay.style.cursor = getNoteEmbedResizeCursor(handle)
   overlay.style.touchAction = 'none'
   return overlay
+}
+
+function getBodyElement(root: HTMLElement) {
+  return root.querySelector<HTMLElement>('[data-note-embed-body="true"]')
 }

@@ -164,7 +164,33 @@ describe('PdfFileViewer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'load pdf' }))
 
     expect(screen.queryByRole('button', { name: 'Zoom in' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('pdf-file-viewer')).toHaveClass('nowheel')
+    expect(screen.getByTestId('pdf-file-viewer')).toHaveAttribute(
+      'data-inner-scroll-enabled',
+      'true',
+    )
     expect(screen.getByTestId('pdf-page-1')).toHaveAttribute('data-width', '420')
     expect(screen.getByTestId('pdf-page-1')).toHaveAttribute('data-scale', '')
+  })
+
+  it('keeps embed PDF scrolling inert until the embed surface allows inner scroll', () => {
+    render(
+      <PdfFileViewer
+        pdfUrl="https://example.convex.cloud/api/storage/file-1"
+        presentation="embed"
+        allowInnerScroll={false}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'load pdf' }))
+
+    expect(screen.getByTestId('pdf-file-viewer')).not.toHaveClass('nowheel')
+    expect(screen.getByTestId('pdf-file-viewer')).toHaveAttribute(
+      'data-inner-scroll-enabled',
+      'false',
+    )
+    expect(
+      screen.getByTestId('pdf-file-viewer').querySelector('[data-slot="scroll-area-viewport"]'),
+    ).toHaveStyle({ overflowY: 'hidden' })
   })
 })

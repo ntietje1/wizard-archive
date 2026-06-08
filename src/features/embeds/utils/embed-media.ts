@@ -33,3 +33,32 @@ export function getIntrinsicAspectRatio(width: number, height: number): number |
 
   return Number((width / height).toFixed(6))
 }
+
+export function getEmbedMediaAspectRatio(mediaLayout: EmbedMediaLayout | null) {
+  if (
+    mediaLayout?.kind === 'intrinsicAspectRatio' &&
+    typeof mediaLayout.aspectRatio === 'number' &&
+    Number.isFinite(mediaLayout.aspectRatio) &&
+    mediaLayout.aspectRatio > 0
+  ) {
+    return mediaLayout.aspectRatio
+  }
+
+  return null
+}
+
+export function areEmbedMediaLayoutsEqual(
+  currentLayout: EmbedMediaLayout | null,
+  nextLayout: EmbedMediaLayout,
+) {
+  if (!currentLayout || currentLayout.kind !== nextLayout.kind) return false
+  switch (currentLayout.kind) {
+    case 'fixedHeight':
+      return nextLayout.kind === 'fixedHeight' && currentLayout.height === nextLayout.height
+    case 'intrinsicAspectRatio':
+      return (
+        nextLayout.kind === 'intrinsicAspectRatio' &&
+        currentLayout.aspectRatio === nextLayout.aspectRatio
+      )
+  }
+}

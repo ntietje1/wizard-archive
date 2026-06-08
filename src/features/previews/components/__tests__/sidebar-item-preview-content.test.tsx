@@ -15,15 +15,15 @@ import {
 } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
-const notePreviewSpy = vi.hoisted(() => vi.fn())
+const embeddedNoteSpy = vi.hoisted(() => vi.fn())
 const folderPreviewSpy = vi.hoisted(() => vi.fn())
 const mapPreviewSpy = vi.hoisted(() => vi.fn())
 const filePreviewSpy = vi.hoisted(() => vi.fn())
 const canvasPreviewSpy = vi.hoisted(() => vi.fn())
 
-vi.mock('~/features/editor/components/viewer/note/note-preview-content', () => ({
-  NotePreviewContent: (props: unknown) => {
-    notePreviewSpy(props)
+vi.mock('~/features/embeds/components/embedded-note-content', () => ({
+  EmbeddedNoteContent: (props: unknown) => {
+    embeddedNoteSpy(props)
     return <div>note-preview</div>
   },
 }))
@@ -67,7 +67,12 @@ describe('SidebarItemPreviewContent', () => {
     render(<SidebarItemPreviewContent item={note} />)
 
     expect(screen.getByText('note-preview')).toBeInTheDocument()
-    expect(notePreviewSpy).toHaveBeenCalledWith({ note })
+    expect(embeddedNoteSpy).toHaveBeenCalledWith({
+      note,
+      editable: false,
+      allowInnerScroll: true,
+      constrained: false,
+    })
   })
 
   it('passes note previews whole to NoteContent so it owns visibility filtering', () => {
@@ -77,7 +82,45 @@ describe('SidebarItemPreviewContent', () => {
 
     render(<SidebarItemPreviewContent item={note} />)
 
-    expect(notePreviewSpy).toHaveBeenCalledWith({ note })
+    expect(embeddedNoteSpy).toHaveBeenCalledWith({
+      note,
+      editable: false,
+      allowInnerScroll: true,
+      constrained: false,
+    })
+  })
+
+  it('passes embedded note preview constraints to note previews', () => {
+    const note = createNoteItem()
+
+    render(<SidebarItemPreviewContent item={note} allowInnerScroll={false} constrainNotePreview />)
+
+    expect(embeddedNoteSpy).toHaveBeenCalledWith({
+      note,
+      editable: false,
+      allowInnerScroll: false,
+      constrained: true,
+    })
+  })
+
+  it('lets explicitly sized embeds make note previews fill their available height', () => {
+    const note = createNoteItem()
+
+    render(
+      <SidebarItemPreviewContent
+        item={note}
+        allowInnerScroll={false}
+        constrainNotePreview
+        fillAvailableHeight
+      />,
+    )
+
+    expect(embeddedNoteSpy).toHaveBeenCalledWith({
+      note,
+      editable: false,
+      allowInnerScroll: false,
+      constrained: false,
+    })
   })
 
   it('routes folder previews to the simple folder preview', () => {
@@ -113,6 +156,18 @@ describe('SidebarItemPreviewContent', () => {
     expect(canvasPreviewSpy).toHaveBeenCalledWith({
       previewUrl: 'canvas.png',
       alt: 'Battle Map',
+      objectFit: 'contain',
+    })
+  })
+
+  it('uses a filling canvas thumbnail for explicitly sized embeds', () => {
+    render(<SidebarItemPreviewContent item={createCanvasItem()} fillAvailableHeight />)
+
+    expect(screen.getByText('canvas-preview')).toBeInTheDocument()
+    expect(canvasPreviewSpy).toHaveBeenCalledWith({
+      previewUrl: 'canvas.png',
+      alt: 'Battle Map',
+      objectFit: 'cover',
     })
   })
 })

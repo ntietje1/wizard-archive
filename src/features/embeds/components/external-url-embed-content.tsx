@@ -7,12 +7,14 @@ import type { EmbedMediaLayoutReporter } from '../utils/embed-media'
 type ExternalUrlEmbedContentProps = {
   url: string
   name: string | null
+  allowInnerScroll?: boolean
   onMediaLayout?: EmbedMediaLayoutReporter
 }
 
 export function ExternalUrlEmbedContent({
   url,
   name,
+  allowInnerScroll = true,
   onMediaLayout,
 }: ExternalUrlEmbedContentProps) {
   const label = name ?? deriveExternalEmbedName(url) ?? url
@@ -23,6 +25,7 @@ export function ExternalUrlEmbedContent({
       sourceUrl={url}
       label={label}
       kind={kind}
+      allowInnerScroll={allowInnerScroll}
       onMediaLayout={onMediaLayout}
       renderUnknown={() => <ExternalFileLinkCard url={url} label={label} />}
     />

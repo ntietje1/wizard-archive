@@ -22,11 +22,15 @@ type EmbedContentProps = {
   onUpload?: () => void
   onLinkExternal?: () => void
   onMediaLayout?: EmbedMediaLayoutReporter
+  allowInnerScroll?: boolean
   SidebarItemRenderer: SidebarItemEmbedRenderer
   resolvedSidebarItemState?: SidebarItemAvailabilityState
 }
 
-type SidebarItemEmbedRenderer = ComponentType<{ item: AnySidebarItemWithContent }>
+type SidebarItemEmbedRenderer = ComponentType<{
+  item: AnySidebarItemWithContent
+  allowInnerScroll?: boolean
+}>
 
 export function EmbedContent({
   target,
@@ -35,6 +39,7 @@ export function EmbedContent({
   onUpload,
   onLinkExternal,
   onMediaLayout,
+  allowInnerScroll = true,
   SidebarItemRenderer,
   resolvedSidebarItemState,
 }: EmbedContentProps) {
@@ -48,6 +53,7 @@ export function EmbedContent({
           onUpload={onUpload}
           onLinkExternal={onLinkExternal}
           onMediaLayout={onMediaLayout}
+          allowInnerScroll={allowInnerScroll}
           SidebarItemRenderer={SidebarItemRenderer}
           resolvedSidebarItemState={resolvedSidebarItemState}
         />
@@ -63,6 +69,7 @@ export function EmbedContent({
       onUpload={onUpload}
       onLinkExternal={onLinkExternal}
       onMediaLayout={onMediaLayout}
+      allowInnerScroll={allowInnerScroll}
       SidebarItemRenderer={SidebarItemRenderer}
       resolvedSidebarItemState={resolvedSidebarItemState}
     />
@@ -76,6 +83,7 @@ function EmbedContentInner({
   onUpload,
   onLinkExternal,
   onMediaLayout,
+  allowInnerScroll = true,
   SidebarItemRenderer,
   resolvedSidebarItemState,
 }: EmbedContentProps) {
@@ -85,7 +93,12 @@ function EmbedContentInner({
 
   if (target.kind === 'externalUrl') {
     return (
-      <ExternalUrlEmbedContent url={target.url} name={target.name} onMediaLayout={onMediaLayout} />
+      <ExternalUrlEmbedContent
+        url={target.url}
+        name={target.name}
+        allowInnerScroll={allowInnerScroll}
+        onMediaLayout={onMediaLayout}
+      />
     )
   }
 
@@ -94,6 +107,7 @@ function EmbedContentInner({
       targetItemId={target.sidebarItemId as Id<'sidebarItems'>}
       sourceItemId={sourceItemId}
       onMediaLayout={onMediaLayout}
+      allowInnerScroll={allowInnerScroll}
       SidebarItemRenderer={SidebarItemRenderer}
       resolvedSidebarItemState={resolvedSidebarItemState}
     />
@@ -104,12 +118,14 @@ function SidebarItemEmbedContent({
   targetItemId,
   sourceItemId,
   onMediaLayout,
+  allowInnerScroll,
   SidebarItemRenderer,
   resolvedSidebarItemState,
 }: {
   targetItemId: Id<'sidebarItems'>
   sourceItemId: Id<'sidebarItems'> | null
   onMediaLayout?: EmbedMediaLayoutReporter
+  allowInnerScroll: boolean
   SidebarItemRenderer: SidebarItemEmbedRenderer
   resolvedSidebarItemState?: SidebarItemAvailabilityState
 }) {
@@ -126,6 +142,7 @@ function SidebarItemEmbedContent({
         targetItemId={targetItemId}
         itemState={resolvedSidebarItemState}
         onMediaLayout={onMediaLayout}
+        allowInnerScroll={allowInnerScroll}
         SidebarItemRenderer={SidebarItemRenderer}
       />
     )
@@ -135,6 +152,7 @@ function SidebarItemEmbedContent({
     <LiveSidebarItemEmbedContent
       targetItemId={targetItemId}
       onMediaLayout={onMediaLayout}
+      allowInnerScroll={allowInnerScroll}
       SidebarItemRenderer={SidebarItemRenderer}
     />
   )
@@ -143,10 +161,12 @@ function SidebarItemEmbedContent({
 function LiveSidebarItemEmbedContent({
   targetItemId,
   onMediaLayout,
+  allowInnerScroll,
   SidebarItemRenderer,
 }: {
   targetItemId: Id<'sidebarItems'>
   onMediaLayout?: EmbedMediaLayoutReporter
+  allowInnerScroll: boolean
   SidebarItemRenderer: SidebarItemEmbedRenderer
 }) {
   const contentQuery = useSidebarItemById(targetItemId)
@@ -165,6 +185,7 @@ function LiveSidebarItemEmbedContent({
       targetItemId={targetItemId}
       itemState={itemState}
       onMediaLayout={onMediaLayout}
+      allowInnerScroll={allowInnerScroll}
       SidebarItemRenderer={SidebarItemRenderer}
     />
   )
@@ -174,11 +195,13 @@ function ResolvedSidebarItemEmbedContent({
   targetItemId,
   itemState,
   onMediaLayout,
+  allowInnerScroll,
   SidebarItemRenderer,
 }: {
   targetItemId: Id<'sidebarItems'>
   itemState: SidebarItemAvailabilityState
   onMediaLayout?: EmbedMediaLayoutReporter
+  allowInnerScroll: boolean
   SidebarItemRenderer: SidebarItemEmbedRenderer
 }) {
   if (itemState.status === 'available') {
@@ -190,6 +213,7 @@ function ResolvedSidebarItemEmbedContent({
             contentType={itemState.item.contentType}
             previewUrl={itemState.item.previewUrl}
             name={itemState.item.name}
+            allowInnerScroll={allowInnerScroll}
             onMediaLayout={onMediaLayout}
           />
         </EmbedAncestryProvider>
@@ -198,7 +222,7 @@ function ResolvedSidebarItemEmbedContent({
 
     return (
       <EmbedAncestryProvider itemId={targetItemId}>
-        <SidebarItemRenderer item={itemState.item} />
+        <SidebarItemRenderer item={itemState.item} allowInnerScroll={allowInnerScroll} />
       </EmbedAncestryProvider>
     )
   }

@@ -3,6 +3,7 @@ import { useExtension } from '@blocknote/react'
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { File as FileIcon, Link } from 'lucide-react'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react'
 import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
@@ -16,6 +17,15 @@ import {
 } from 'shared/resize/resizeHandleDescriptors'
 import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
 import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
+import {
+  areEmbedMediaLayoutsEqual,
+  getEmbedMediaAspectRatio,
+} from '~/features/embeds/utils/embed-media'
+import {
+  getDefaultDocumentEmbedAspectRatio,
+  getDocumentEmbedAspectRatioForTarget,
+} from '~/features/embeds/utils/document-embed-layout'
+import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import {
   DEFAULT_NOTE_EMBED_PREVIEW_WIDTH,
   blockPropsFromEmbedTarget,
@@ -66,12 +76,30 @@ export function NoteEmbedBlockView({
   const mediaControlDragSuppressionCleanupRef = useRef<(() => void) | null>(null)
   const [selected, setSelected] = useState(false)
   const blockProps = block.props as NoteEmbedBlockProps
-  const [mediaLayout, setMediaLayout] = useState<EmbedMediaLayout | null>(() =>
-    getInitialNoteEmbedMediaLayout(blockProps),
-  )
   const target = embedTargetFromBlockProps(blockProps)
   const layoutSeedKey = getNoteEmbedLayoutSeedKey(blockProps)
-  const layoutSeedKeyRef = useRef(layoutSeedKey)
+  const [reportedMediaLayout, setReportedMediaLayout] = useState<{
+    layout: EmbedMediaLayout
+    seedKey: string
+  } | null>(null)
+  const mediaLayout =
+    reportedMediaLayout?.seedKey === layoutSeedKey
+      ? reportedMediaLayout.layout
+      : getInitialNoteEmbedMediaLayout(blockProps)
+  const targetSidebarItemId =
+    target.kind === 'sidebarItem' ? (target.sidebarItemId as Id<'sidebarItems'>) : null
+  const { data: resolvedTargetItem } = useSidebarItemById(targetSidebarItemId)
+  const documentAspectRatio = getDefaultDocumentEmbedAspectRatio({
+    target,
+    item: resolvedTargetItem ?? undefined,
+  })
+  const usesFreeformHeight = doesTargetUseFreeformNoteEmbedHeight(resolvedTargetItem)
+  const maxHeightAspectRatio = getNoteEmbedMaxHeightAspectRatio({
+    documentAspectRatio,
+    resolvedTargetItem,
+  })
+  const effectiveMediaLayout =
+    mediaLayout ?? (usesFreeformHeight ? null : getDocumentEmbedMediaLayout(documentAspectRatio))
 
   const setTarget = (nextTarget: EmbedTarget) => {
     const nextProps = {
@@ -96,9 +124,23 @@ export function NoteEmbedBlockView({
   const width =
     positiveNumber(blockProps.previewWidth) ??
     (target.kind !== 'empty' ? DEFAULT_NOTE_EMBED_PREVIEW_WIDTH : undefined)
+  const height = clampNoteEmbedPreviewHeight(
+    (usesFreeformHeight ? positiveNumber(blockProps.previewHeight) : undefined) ??
+      getDefaultNoteEmbedPreviewHeight({
+        aspectRatio: documentAspectRatio,
+        usesFreeformHeight,
+        width,
+      }),
+    { maxHeightAspectRatio, width },
+  )
 
   const handleMediaLayout = (layout: EmbedMediaLayout) => {
-    setMediaLayout(layout)
+    setReportedMediaLayout((currentLayout) =>
+      currentLayout?.seedKey === layoutSeedKey &&
+      areEmbedMediaLayoutsEqual(currentLayout.layout, layout)
+        ? currentLayout
+        : { layout, seedKey: layoutSeedKey },
+    )
     if (!editable) return
 
     const aspectRatio = getNoteEmbedAspectRatio(layout)
@@ -110,12 +152,6 @@ export function NoteEmbedBlockView({
       },
     })
   }
-
-  useEffect(() => {
-    if (layoutSeedKeyRef.current === layoutSeedKey) return
-    layoutSeedKeyRef.current = layoutSeedKey
-    setMediaLayout(getInitialNoteEmbedMediaLayout(blockProps))
-  }, [blockProps, layoutSeedKey])
 
   useEffect(() => {
     if (!selected) return
@@ -247,7 +283,9 @@ export function NoteEmbedBlockView({
         {target.kind !== 'empty' ? <NoteEmbedBlockHeader target={target} /> : null}
         {editable ? (
           <EditableNoteEmbedBlockBody
-            mediaLayout={mediaLayout}
+            allowInnerScroll={selected}
+            height={height}
+            mediaLayout={effectiveMediaLayout}
             rootRef={rootRef}
             sourceNoteId={sourceNoteId}
             target={target}
@@ -256,7 +294,9 @@ export function NoteEmbedBlockView({
           />
         ) : (
           <ReadOnlyNoteEmbedBlockBody
-            mediaLayout={mediaLayout}
+            allowInnerScroll={selected}
+            height={height}
+            mediaLayout={effectiveMediaLayout}
             sourceNoteId={sourceNoteId}
             target={target}
             onMediaLayout={handleMediaLayout}
@@ -265,20 +305,25 @@ export function NoteEmbedBlockView({
       </div>
       {editable && selected ? (
         <NoteEmbedResizeWrapper
-          mediaLayout={mediaLayout}
+          mediaLayout={effectiveMediaLayout}
           onResizeStart={(event, handle) => {
             startNoteEmbedResizeSession({
-              aspectRatio: getNoteEmbedAspectRatio(mediaLayout),
+              aspectRatio: getNoteEmbedAspectRatio(effectiveMediaLayout),
               editorElement: editor.domElement,
               event,
+              height,
+              maxHeightAspectRatio,
+              resizeHeight: usesFreeformHeight,
               root: rootRef.current,
+              useMeasuredAspectRatioFallback: !usesFreeformHeight,
               width,
               handle,
-              onCommit: (previewWidth) => {
+              onCommit: ({ width: previewWidth, height: previewHeight }) => {
                 editor.updateBlock(block, {
-                  props: {
+                  props: stripUndefined({
                     previewWidth,
-                  },
+                    previewHeight,
+                  }),
                 })
               },
             })
@@ -290,11 +335,15 @@ export function NoteEmbedBlockView({
 }
 
 function ReadOnlyNoteEmbedBlockBody({
+  allowInnerScroll,
+  height,
   mediaLayout,
   onMediaLayout,
   sourceNoteId,
   target,
 }: {
+  allowInnerScroll: boolean
+  height: number | undefined
   mediaLayout: EmbedMediaLayout | null
   onMediaLayout: (layout: EmbedMediaLayout) => void
   sourceNoteId: Id<'sidebarItems'> | null
@@ -302,14 +351,16 @@ function ReadOnlyNoteEmbedBlockBody({
 }) {
   return (
     <div
+      data-note-embed-body="true"
       className={getNoteEmbedBodyClassName(mediaLayout)}
-      style={getNoteEmbedBodyStyle(mediaLayout)}
+      style={getNoteEmbedBodyStyle(mediaLayout, height)}
     >
       <Suspense fallback={<EmbedLoadingState />}>
         <EmbedContent
           target={target}
           sourceItemId={sourceNoteId}
           mode="readonly"
+          allowInnerScroll={allowInnerScroll}
           onMediaLayout={onMediaLayout}
           SidebarItemRenderer={SidebarItemPreviewRenderer}
         />
@@ -319,6 +370,8 @@ function ReadOnlyNoteEmbedBlockBody({
 }
 
 function EditableNoteEmbedBlockBody({
+  allowInnerScroll,
+  height,
   mediaLayout,
   rootRef,
   sourceNoteId,
@@ -326,6 +379,8 @@ function EditableNoteEmbedBlockBody({
   onMediaLayout,
   setTarget,
 }: {
+  allowInnerScroll: boolean
+  height: number | undefined
   mediaLayout: EmbedMediaLayout | null
   rootRef: RefObject<HTMLElement | null>
   sourceNoteId: Id<'sidebarItems'> | null
@@ -348,7 +403,7 @@ function EditableNoteEmbedBlockBody({
       <div
         data-note-embed-body="true"
         className={getNoteEmbedBodyClassName(mediaLayout)}
-        style={getNoteEmbedBodyStyle(mediaLayout)}
+        style={getNoteEmbedBodyStyle(mediaLayout, height)}
       >
         <Suspense fallback={<EmbedLoadingState />}>
           <EmbedContent
@@ -357,6 +412,7 @@ function EditableNoteEmbedBlockBody({
             mode="editable"
             onUpload={embedControls.openFilePicker}
             onLinkExternal={embedControls.openLinkDraft}
+            allowInnerScroll={allowInnerScroll}
             onMediaLayout={onMediaLayout}
             SidebarItemRenderer={SidebarItemPreviewRenderer}
           />
@@ -512,20 +568,17 @@ function getNoteEmbedResizeZoneStyle(
 }
 
 function getNoteEmbedAspectRatio(mediaLayout: EmbedMediaLayout | null) {
-  if (
-    mediaLayout?.kind === 'intrinsicAspectRatio' &&
-    typeof mediaLayout.aspectRatio === 'number' &&
-    Number.isFinite(mediaLayout.aspectRatio) &&
-    mediaLayout.aspectRatio > 0
-  ) {
-    return mediaLayout.aspectRatio
-  }
-
-  return null
+  return getEmbedMediaAspectRatio(mediaLayout)
 }
 
 function getInitialNoteEmbedMediaLayout(props: NoteEmbedBlockProps): EmbedMediaLayout | null {
-  const aspectRatio = positiveNumber(props.previewAspectRatio)
+  const aspectRatio =
+    positiveNumber(props.previewAspectRatio) ??
+    getDocumentEmbedAspectRatioForTarget(embedTargetFromBlockProps(props))
+  return aspectRatio ? { kind: 'intrinsicAspectRatio', aspectRatio } : null
+}
+
+function getDocumentEmbedMediaLayout(aspectRatio: number | null): EmbedMediaLayout | null {
   return aspectRatio ? { kind: 'intrinsicAspectRatio', aspectRatio } : null
 }
 
@@ -534,6 +587,7 @@ function getNoteEmbedLayoutSeedKey(props: NoteEmbedBlockProps) {
     props.targetKind ?? 'empty',
     props.sidebarItemId ?? '',
     props.url ?? '',
+    props.previewHeight ?? '',
     props.previewAspectRatio ?? '',
   ].join(':')
 }
@@ -545,13 +599,17 @@ function getNoteEmbedBodyClassName(mediaLayout: EmbedMediaLayout | null) {
   )
 }
 
-function getNoteEmbedBodyStyle(mediaLayout: EmbedMediaLayout | null): CSSProperties | undefined {
+function getNoteEmbedBodyStyle(
+  mediaLayout: EmbedMediaLayout | null,
+  height: number | undefined,
+): CSSProperties | undefined {
   if (mediaLayout?.kind === 'fixedHeight') {
     return { height: mediaLayout.height }
   }
 
   const aspectRatio = getNoteEmbedAspectRatio(mediaLayout)
-  return aspectRatio ? { aspectRatio: `${aspectRatio} / 1` } : undefined
+  if (aspectRatio) return { aspectRatio: `${aspectRatio} / 1` }
+  return height ? { height } : undefined
 }
 
 function isNoteEmbedResizeHandleAllowed(
@@ -600,6 +658,7 @@ function getSharedEmbedBlockProps(props: NoteEmbedBlockProps): NoteEmbedBlockPro
     backgroundColor: props.backgroundColor,
     textAlignment: props.textAlignment,
     previewWidth: props.previewWidth,
+    previewHeight: props.previewHeight,
   })
 }
 
@@ -611,4 +670,50 @@ function stripUndefined<T extends Record<string, unknown>>(value: T): T {
 
 function isEmbedMediaControlEventTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest('[data-embed-media-control="true"]')
+}
+
+function doesTargetUseFreeformNoteEmbedHeight(
+  resolvedTargetItem: { type?: unknown } | null | undefined,
+) {
+  return (
+    resolvedTargetItem?.type === SIDEBAR_ITEM_TYPES.notes ||
+    resolvedTargetItem?.type === SIDEBAR_ITEM_TYPES.canvases
+  )
+}
+
+function getDefaultNoteEmbedPreviewHeight({
+  aspectRatio,
+  usesFreeformHeight,
+  width,
+}: {
+  aspectRatio: number | null
+  usesFreeformHeight: boolean
+  width: number | undefined
+}) {
+  if (!usesFreeformHeight || !aspectRatio || !width) return undefined
+  return Math.round(width / aspectRatio)
+}
+
+function getNoteEmbedMaxHeightAspectRatio({
+  documentAspectRatio,
+  resolvedTargetItem,
+}: {
+  documentAspectRatio: number | null
+  resolvedTargetItem: { type?: unknown } | null | undefined
+}) {
+  return resolvedTargetItem?.type === SIDEBAR_ITEM_TYPES.canvases ? documentAspectRatio : null
+}
+
+function clampNoteEmbedPreviewHeight(
+  height: number | undefined,
+  {
+    maxHeightAspectRatio,
+    width,
+  }: {
+    maxHeightAspectRatio: number | null
+    width: number | undefined
+  },
+) {
+  if (!height || !width || !maxHeightAspectRatio) return height
+  return Math.round(Math.min(height, width / maxHeightAspectRatio))
 }

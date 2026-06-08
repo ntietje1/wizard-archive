@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
@@ -7,6 +7,10 @@ import { EMBED_NODE_MIN_SIZE } from '../embed-node-size'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '~/features/embeds/utils/embed-media'
+import {
+  DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT,
+  DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
+} from '~/features/embeds/utils/document-embed-layout'
 import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 import { testId } from '~/test/helpers/test-id'
 
@@ -16,9 +20,15 @@ const embeddedMapSpy = vi.hoisted(() => vi.fn())
 const embedNoteSpy = vi.hoisted(() => vi.fn())
 const fileMediaEmbedSpy = vi.hoisted(() => vi.fn())
 const resizableNodeWrapperSpy = vi.hoisted(() => vi.fn())
+const documentEmbedAspectRatio = Number(
+  (DOCUMENT_EMBED_ASPECT_RATIO_WIDTH / DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT).toFixed(6),
+)
 const setEditingEmbedId = vi.hoisted(() => vi.fn())
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
+}))
+const editableSessionState = vi.hoisted(() => ({
+  isExclusivelySelected: false,
 }))
 const canvasRuntimeState = vi.hoisted(() => ({
   canvasId: 'source-canvas',
@@ -60,7 +70,10 @@ vi.mock('../embedded-canvas-content', () => ({
 }))
 
 vi.mock('~/features/embeds/components/file-media-embed-content', () => ({
-  FileMediaEmbedContent: (props: { onMediaLayout?: (layout: EmbedMediaLayout) => void }) => {
+  FileMediaEmbedContent: (props: {
+    allowInnerScroll?: boolean
+    onMediaLayout?: (layout: EmbedMediaLayout) => void
+  }) => {
     fileMediaEmbedSpy(props)
     return <div data-testid="shared-file-media-embed">shared-file-media</div>
   },
@@ -141,7 +154,7 @@ vi.mock('../../shared/use-canvas-editable-node-session', () => ({
   useCanvasEditableNodeSession: () => ({
     editable: false,
     isSelected: false,
-    isExclusivelySelected: false,
+    isExclusivelySelected: editableSessionState.isExclusivelySelected,
     handleDoubleClick: vi.fn(),
     handleActivated: vi.fn(),
     pendingActivationRef: { current: null },
@@ -208,6 +221,7 @@ vi.mock('../../shared/canvas-node-surface-style', () => ({
 describe('EmbedNode', () => {
   beforeEach(() => {
     renderModeState.interactive = true
+    editableSessionState.isExclusivelySelected = false
     canvasRuntimeState.canvasId = 'source-canvas'
     canvasRuntimeState.flushUpdates.mockClear()
     canvasRuntimeState.patchNodeData.mockClear()
@@ -326,9 +340,54 @@ describe('EmbedNode', () => {
       contentType: 'application/pdf',
       downloadUrl: 'document.pdf',
       previewUrl: 'preview.png',
+      allowInnerScroll: false,
       onMediaLayout: expect.any(Function),
     })
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
+  })
+
+  it('locks resolved PDF file embeds to the document aspect ratio before the PDF reports dimensions', async () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'File Item',
+      contentType: 'application/pdf',
+      downloadUrl: 'document.pdf',
+      previewUrl: 'preview.png',
+    }
+
+    renderEmbedNode('node-1', 'file-1')
+
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        lockedAspectRatio: documentEmbedAspectRatio,
+      }),
+    )
+    await waitFor(() => {
+      expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
+        new Map([['node-1', { lockedAspectRatio: documentEmbedAspectRatio }]]),
+      )
+    })
+  })
+
+  it('allows inner scrolling for file embeds only when exclusively selected', () => {
+    contentItemState.data = {
+      _id: 'file-1',
+      type: SIDEBAR_ITEM_TYPES.files,
+      name: 'File Item',
+      contentType: 'application/pdf',
+      downloadUrl: 'document.pdf',
+      previewUrl: 'preview.png',
+    }
+    editableSessionState.isExclusivelySelected = true
+
+    renderEmbedNode('node-1', 'file-1')
+
+    expect(fileMediaEmbedSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowInnerScroll: true,
+      }),
+    )
   })
 
   it('stores the reported media aspect ratio so file embeds resize locked', () => {
@@ -485,6 +544,7 @@ describe('EmbedNode', () => {
       contentType: 'application/pdf',
       downloadUrl: 'document.pdf',
       previewUrl: 'preview.png',
+      allowInnerScroll: false,
       onMediaLayout: expect.any(Function),
     })
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
@@ -523,6 +583,58 @@ describe('EmbedNode', () => {
         textColor: 'var(--t-purple)',
       }),
     )
+  })
+
+  it('uses the document shape as the default size for note embeds without locking resize', async () => {
+    contentItemState.data = {
+      _id: 'note-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Note Item',
+      content: [],
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    }
+
+    renderEmbedNode('node-1', 'note-1', { zoom: 1 }, {}, { width: 320, height: 240 })
+
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        lockedAspectRatio: undefined,
+        resizeAxes: 'both',
+      }),
+    )
+    await waitFor(() => {
+      expect(canvasRuntimeState.resizeNode).toHaveBeenCalledWith(
+        'node-1',
+        240 * documentEmbedAspectRatio,
+        240,
+        { x: 10, y: 20 },
+      )
+    })
+    expect(canvasRuntimeState.patchNodeData).not.toHaveBeenCalled()
+  })
+
+  it('clears stale locked aspect ratios from freeform canvas embeds', async () => {
+    contentItemState.data = {
+      _id: 'canvas-1',
+      type: SIDEBAR_ITEM_TYPES.canvases,
+      name: 'Canvas Item',
+      previewUrl: 'canvas.png',
+    }
+
+    renderEmbedNode('node-1', 'canvas-1', { zoom: 1 }, { lockedAspectRatio: 2 })
+
+    expect(resizableNodeWrapperSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        lockedAspectRatio: undefined,
+        resizeAxes: 'both',
+      }),
+    )
+    await waitFor(() => {
+      expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
+        new Map([['node-1', { lockedAspectRatio: null }]]),
+      )
+    })
   })
 
   it('passes embedded notes whole to NoteContent so it owns visibility filtering', () => {
@@ -571,6 +683,7 @@ function renderEmbedNode(
   sidebarItemId = 'canvas-1',
   viewport: { zoom: number } = { zoom: 1 },
   data: Record<string, unknown> = {},
+  nodeSize: { height: number; width: number } = { width: 320, height: 180 },
 ) {
   const engine = createCanvasEngine()
   engine.setViewport({ x: 0, y: 0, zoom: viewport.zoom })
@@ -581,8 +694,8 @@ function renderEmbedNode(
         type: 'embed',
         data: {},
         position: { x: 10, y: 20 },
-        width: 320,
-        height: 180,
+        width: nodeSize.width,
+        height: nodeSize.height,
       },
     ],
   })

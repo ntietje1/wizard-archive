@@ -35,11 +35,19 @@ import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
-import { EMBED_NODE_MIN_SIZE } from './embed-node-size'
+import {
+  EMBED_NODE_MIN_SIZE,
+  resolveDefaultEmbedNodeResizeForLockedAspectRatio,
+} from './embed-node-size'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
 import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
 import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
 import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
+import {
+  areEmbedMediaLayoutsEqual,
+  getEmbedMediaAspectRatio,
+} from '~/features/embeds/utils/embed-media'
+import { getDefaultDocumentEmbedAspectRatio } from '~/features/embeds/utils/document-embed-layout'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import type { Id } from 'convex/_generated/dataModel'
@@ -113,17 +121,37 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
     itemState.status !== 'loading'
   const showFloatingLabel = !showsFormattingToolbar
   const isEditableEmbed = canEdit && interactiveRenderMode
+  const allowInnerScroll = interactiveRenderMode && editableSession.isExclusivelySelected
   const mediaLayoutRef = useRef<EmbedMediaLayout | null>(null)
   const lastStoredAspectRatioRef = useRef<number | null>(normalizedData.lockedAspectRatio ?? null)
+  const documentAspectRatio = getDefaultDocumentEmbedAspectRatio({
+    target,
+    item: contentItem,
+  })
+  const patchLockedAspectRatio = (lockedAspectRatio: number | null) => {
+    if (lastStoredAspectRatioRef.current === lockedAspectRatio) return
+
+    lastStoredAspectRatioRef.current = lockedAspectRatio
+    patchNodeData(new Map([[id, { lockedAspectRatio }]]))
+  }
+  const resizeDefaultNodeForAspectRatio = (aspectRatio: number) => {
+    const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node
+    const resize = node
+      ? resolveDefaultEmbedNodeResizeForLockedAspectRatio(node, aspectRatio)
+      : null
+    if (resize) {
+      documentWriter.resizeNode(id, resize.width, resize.height, resize.position)
+    }
+  }
   const setEmbedMediaLayout = (layout: EmbedMediaLayout) => {
     if (areEmbedMediaLayoutsEqual(mediaLayoutRef.current, layout)) return
 
     mediaLayoutRef.current = layout
     setMediaLayout(layout)
     const lockedAspectRatio = getEmbedMediaAspectRatio(layout)
-    if (lastStoredAspectRatioRef.current !== lockedAspectRatio) {
-      lastStoredAspectRatioRef.current = lockedAspectRatio
-      patchNodeData(new Map([[id, { lockedAspectRatio }]]))
+    patchLockedAspectRatio(lockedAspectRatio)
+    if (lockedAspectRatio) {
+      resizeDefaultNodeForAspectRatio(lockedAspectRatio)
     }
 
     if (layout.kind === 'fixedHeight') {
@@ -138,6 +166,57 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       }
     }
   }
+
+  useEffect(() => {
+    if (mediaLayout !== null) return
+
+    if (contentItem?.type === SIDEBAR_ITEM_TYPES.canvases) {
+      if (lastStoredAspectRatioRef.current !== null) {
+        lastStoredAspectRatioRef.current = null
+        patchNodeData(new Map([[id, { lockedAspectRatio: null }]]))
+      }
+      return
+    }
+
+    if (!documentAspectRatio) return
+
+    if (contentItem?.type === SIDEBAR_ITEM_TYPES.notes) {
+      if (lastStoredAspectRatioRef.current !== null) {
+        lastStoredAspectRatioRef.current = null
+        patchNodeData(new Map([[id, { lockedAspectRatio: null }]]))
+      }
+
+      const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node
+      const resize = node
+        ? resolveDefaultEmbedNodeResizeForLockedAspectRatio(node, documentAspectRatio)
+        : null
+      if (resize) {
+        documentWriter.resizeNode(id, resize.width, resize.height, resize.position)
+      }
+      return
+    }
+
+    if (lastStoredAspectRatioRef.current !== documentAspectRatio) {
+      lastStoredAspectRatioRef.current = documentAspectRatio
+      patchNodeData(new Map([[id, { lockedAspectRatio: documentAspectRatio }]]))
+    }
+
+    const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node
+    const resize = node
+      ? resolveDefaultEmbedNodeResizeForLockedAspectRatio(node, documentAspectRatio)
+      : null
+    if (resize) {
+      documentWriter.resizeNode(id, resize.width, resize.height, resize.position)
+    }
+  }, [
+    canvasEngine,
+    contentItem?.type,
+    documentAspectRatio,
+    documentWriter,
+    id,
+    mediaLayout,
+    patchNodeData,
+  ])
   const setTarget = async (nextTarget: EmbedTarget) => {
     patchNodeData(new Map([[id, { target: nextTarget }]]))
     await provider?.flushUpdates()
@@ -177,7 +256,13 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       dragging={!!dragging}
       minWidth={EMBED_NODE_MIN_SIZE.width}
       minHeight={getEmbedResizeMinHeight(mediaLayout)}
-      lockedAspectRatio={getLockedAspectRatio(target, contentItem, mediaLayout, normalizedData)}
+      lockedAspectRatio={getLockedAspectRatio({
+        target,
+        contentItem,
+        mediaLayout,
+        normalizedData,
+        documentAspectRatio,
+      })}
       resizeAxes={mediaLayout?.kind === 'fixedHeight' ? 'horizontal' : 'both'}
       editing={showsFormattingToolbar}
       chrome={
@@ -226,6 +311,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
                 target={target}
                 setTarget={setTarget}
                 onMediaLayout={setEmbedMediaLayout}
+                allowInnerScroll={allowInnerScroll}
                 resolvedSidebarItemState={itemState}
               />
             ) : (
@@ -234,6 +320,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
                 sourceItemId={canvasId}
                 mode="readonly"
                 onMediaLayout={setEmbedMediaLayout}
+                allowInnerScroll={allowInnerScroll}
                 SidebarItemRenderer={CanvasEmbedRichContentRenderer}
                 resolvedSidebarItemState={itemState}
               />
@@ -245,28 +332,13 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   )
 }
 
-function areEmbedMediaLayoutsEqual(
-  currentLayout: EmbedMediaLayout | null,
-  nextLayout: EmbedMediaLayout,
-) {
-  if (!currentLayout || currentLayout.kind !== nextLayout.kind) return false
-  switch (currentLayout.kind) {
-    case 'fixedHeight':
-      return nextLayout.kind === 'fixedHeight' && currentLayout.height === nextLayout.height
-    case 'intrinsicAspectRatio':
-      return (
-        nextLayout.kind === 'intrinsicAspectRatio' &&
-        currentLayout.aspectRatio === nextLayout.aspectRatio
-      )
-  }
-}
-
 function EditableCanvasEmbedContent({
   rootRef,
   sourceCanvasId,
   target,
   setTarget,
   onMediaLayout,
+  allowInnerScroll,
   resolvedSidebarItemState,
 }: {
   rootRef: RefObject<HTMLElement | null>
@@ -274,6 +346,7 @@ function EditableCanvasEmbedContent({
   target: EmbedTarget
   setTarget: (target: EmbedTarget) => Promise<void>
   onMediaLayout: (layout: EmbedMediaLayout) => void
+  allowInnerScroll: boolean
   resolvedSidebarItemState?: SidebarItemAvailabilityState
 }) {
   const embedControls = useEditableEmbedTargetControls({ setTarget })
@@ -295,6 +368,7 @@ function EditableCanvasEmbedContent({
         onUpload={embedControls.openFilePicker}
         onLinkExternal={embedControls.openLinkDraft}
         onMediaLayout={onMediaLayout}
+        allowInnerScroll={allowInnerScroll}
         SidebarItemRenderer={CanvasEmbedRichContentRenderer}
         resolvedSidebarItemState={resolvedSidebarItemState}
       />
@@ -464,18 +538,32 @@ function getEmbedFloatingLabel(target: EmbedNodeData['target'], sidebarItemLabel
   return sidebarItemLabel
 }
 
-function getLockedAspectRatio(
-  target: EmbedNodeData['target'],
-  contentItem: AnySidebarItemWithContent | undefined,
-  mediaLayout: EmbedMediaLayout | null,
-  normalizedData: EmbedNodeData,
-) {
+function getLockedAspectRatio({
+  target,
+  contentItem,
+  mediaLayout,
+  normalizedData,
+  documentAspectRatio,
+}: {
+  target: EmbedNodeData['target']
+  contentItem: AnySidebarItemWithContent | undefined
+  mediaLayout: EmbedMediaLayout | null
+  normalizedData: EmbedNodeData
+  documentAspectRatio: number | null
+}) {
   if (mediaLayout?.kind === 'fixedHeight') {
     return undefined
   }
 
+  if (
+    contentItem?.type === SIDEBAR_ITEM_TYPES.notes ||
+    contentItem?.type === SIDEBAR_ITEM_TYPES.canvases
+  ) {
+    return undefined
+  }
+
   const lockedAspectRatio =
-    getEmbedMediaAspectRatio(mediaLayout) ?? normalizedData.lockedAspectRatio
+    getEmbedMediaAspectRatio(mediaLayout) ?? normalizedData.lockedAspectRatio ?? documentAspectRatio
   if (typeof lockedAspectRatio !== 'number') {
     return undefined
   }
@@ -493,19 +581,6 @@ function getLockedAspectRatio(
   }
 
   return undefined
-}
-
-function getEmbedMediaAspectRatio(mediaLayout: EmbedMediaLayout | null) {
-  if (
-    mediaLayout?.kind === 'intrinsicAspectRatio' &&
-    typeof mediaLayout.aspectRatio === 'number' &&
-    Number.isFinite(mediaLayout.aspectRatio) &&
-    mediaLayout.aspectRatio > 0
-  ) {
-    return mediaLayout.aspectRatio
-  }
-
-  return null
 }
 
 function getEmbedResizeMinHeight(mediaLayout: EmbedMediaLayout | null) {

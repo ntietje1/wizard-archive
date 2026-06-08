@@ -9,6 +9,11 @@ import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { getIntrinsicAspectRatio } from '~/features/embeds/utils/embed-media'
+import {
+  DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT,
+  DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
+} from '~/features/embeds/utils/document-embed-layout'
+import { cn } from '~/features/shadcn/lib/utils'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
@@ -25,6 +30,7 @@ interface PdfFileViewerProps {
   pdfUrl: string
   onFirstPageAspectRatio?: (aspectRatio: number | null) => void
   presentation?: 'full' | 'embed'
+  allowInnerScroll?: boolean
 }
 
 function PdfPage({
@@ -77,6 +83,7 @@ export function PdfFileViewer({
   pdfUrl,
   onFirstPageAspectRatio,
   presentation = 'full',
+  allowInnerScroll = true,
 }: PdfFileViewerProps) {
   const [documentState, setDocumentState] = useState<PdfDocumentState>({ status: 'loading' })
   const [currentPage, setCurrentPage] = useState(1)
@@ -100,6 +107,8 @@ export function PdfFileViewer({
     presentation === 'embed' && scrollViewportSize.width > 0
       ? Math.floor(scrollViewportSize.width)
       : undefined
+  const hasMultiplePages = numPages > 1
+  const innerScrollEnabled = presentation !== 'embed' || allowInnerScroll || !hasMultiplePages
 
   const handleDocumentLoadSuccess = ({ numPages: pages }: { numPages: number }) => {
     setDocumentState({ status: 'ready', numPages: pages })
@@ -228,7 +237,11 @@ export function PdfFileViewer({
       ref={containerRef}
       data-testid="pdf-file-viewer"
       data-presentation={presentation}
-      className="relative flex h-full min-h-0 w-full min-w-full flex-col bg-background"
+      data-inner-scroll-enabled={innerScrollEnabled ? 'true' : 'false'}
+      className={cn(
+        'relative flex h-full min-h-0 w-full min-w-full flex-col bg-background',
+        presentation === 'embed' && allowInnerScroll && hasMultiplePages && 'nowheel',
+      )}
     >
       {documentState.status === 'loading' && (
         <output
@@ -252,7 +265,10 @@ export function PdfFileViewer({
       <ScrollArea
         className="flex-1 min-h-0"
         contentClassName={presentation === 'embed' ? 'w-full max-w-full' : 'min-w-full'}
-        scrollOrientation={presentation === 'embed' ? 'vertical' : 'both'}
+        scrollOrientation={
+          presentation === 'embed' ? (innerScrollEnabled ? 'vertical' : 'none') : 'both'
+        }
+        viewportStyle={!innerScrollEnabled ? { overflowY: 'hidden' } : undefined}
         viewportRef={setScrollViewport}
       >
         {documentState.status === 'failed' ? (
@@ -293,8 +309,8 @@ function PdfPageLoadingPlaceholder({ width }: { width?: number }) {
     <div
       className="bg-muted"
       style={{
-        aspectRatio: '612 / 792',
-        width: width ? `${width}px` : 612,
+        aspectRatio: `${DOCUMENT_EMBED_ASPECT_RATIO_WIDTH} / ${DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT}`,
+        width: width ? `${width}px` : DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
       }}
     />
   )

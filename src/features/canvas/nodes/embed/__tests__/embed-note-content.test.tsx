@@ -58,12 +58,18 @@ vi.mock('~/features/editor/components/note-content', async () => {
 vi.mock('~/features/shadcn/components/scroll-area', () => ({
   ScrollArea: ({
     children,
+    contentClassName,
     viewportRef,
   }: {
     children: ReactNode
+    contentClassName?: string
     viewportRef?: Ref<HTMLDivElement>
   }) => (
-    <div ref={viewportRef} data-testid="embed-note-scroll-area">
+    <div
+      ref={viewportRef}
+      data-testid="embed-note-scroll-area"
+      data-content-class-name={contentClassName}
+    >
       {children}
     </div>
   ),
@@ -89,10 +95,15 @@ describe('EmbedNoteContent', () => {
 
     expect(screen.getByTestId('embed-note-content-editor')).toBeInTheDocument()
     expect(screen.getByTestId('embed-note-content-wrapper')).toHaveClass('nowheel')
+    expect(screen.getByTestId('embed-note-scroll-area')).toHaveAttribute(
+      'data-content-class-name',
+      'note-editor-scroll-content',
+    )
     expect(noteContentSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         blockNoteContextMenuAvailable: true,
         blockShareMenuAvailable: true,
+        fillHeight: true,
       }),
     )
     expect(mockUseBlockNoteActivationLifecycle).toHaveBeenCalledWith(

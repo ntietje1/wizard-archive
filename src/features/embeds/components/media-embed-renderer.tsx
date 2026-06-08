@@ -21,6 +21,7 @@ type MediaEmbedRendererProps = {
   sourceUrl: string
   label: string
   kind: EmbedMediaKind
+  allowInnerScroll?: boolean
   onMediaLayout?: EmbedMediaLayoutReporter
   renderUnknown: () => ReactNode
 }
@@ -82,6 +83,7 @@ export function MediaEmbedRenderer({
   sourceUrl,
   label,
   kind,
+  allowInnerScroll = true,
   onMediaLayout,
   renderUnknown,
 }: MediaEmbedRendererProps) {
@@ -132,6 +134,7 @@ export function MediaEmbedRenderer({
             <LazyPdfFileViewer
               pdfUrl={sanitizedSourceUrl}
               presentation="embed"
+              allowInnerScroll={allowInnerScroll}
               onFirstPageAspectRatio={(aspectRatio) => {
                 onMediaLayoutRef.current?.({ kind: 'intrinsicAspectRatio', aspectRatio })
               }}
