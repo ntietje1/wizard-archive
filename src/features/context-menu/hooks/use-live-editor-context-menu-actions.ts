@@ -3,10 +3,9 @@ import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { MenuDialogState } from './menu-dialogs'
+import type { MenuDialogState } from '../menu-dialogs'
 import type { PermissionLevel } from 'shared/permissions/types'
-import type { MenuContext } from './types'
-import type { ActionHandlers } from './menu-registry'
+import type { EditorContextMenuActionHandlers, MenuContext } from '../types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { handleError } from '~/shared/utils/logger'
@@ -17,15 +16,17 @@ import { useToggleBookmark } from '~/features/sidebar/hooks/useBookmarks'
 import { isFile, isGameMap } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
-import { createDownloadActions } from './download-actions'
-import { createCreationActions } from './creation-actions'
+import { createDownloadActions } from '../download-actions'
+import { createCreationActions } from '../creation-actions'
 
-interface UseMenuActionsOptions {
+interface UseLiveEditorContextMenuActionsOptions {
   onDialogOpen?: () => void
   onDialogClose?: () => void
 }
 
-export function useMenuActions(options: UseMenuActionsOptions = {}) {
+export function useLiveEditorContextMenuActions(
+  options: UseLiveEditorContextMenuActionsOptions = {},
+) {
   const { onDialogOpen, onDialogClose } = options
   const {
     commands: { createSidebarItem, openItem, openParentFolders, setRenamingItemId },
@@ -44,7 +45,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const [editFileDialog, setEditFileDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
 
-  const actions: ActionHandlers = {
+  const actions: EditorContextMenuActionHandlers = {
     open: (ctx: MenuContext) => {
       if (!ctx.item) return
       void openItem(ctx.item.slug)
@@ -295,7 +296,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
   }
 
-  const makeCloseHandler = <T,>(setter: React.Dispatch<React.SetStateAction<T | null>>) => {
+  const makeCloseHandler = <T>(setter: React.Dispatch<React.SetStateAction<T | null>>) => {
     return () => {
       setter(null)
       onDialogClose?.()

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -13,20 +13,35 @@ describe('editor context menu boundaries', () => {
     const liveModel = readRepoFile(
       'src/features/context-menu/hooks/use-live-editor-context-menu-model.ts',
     )
+    const liveActions = readRepoFile(
+      'src/features/context-menu/hooks/use-live-editor-context-menu-actions.ts',
+    )
+    const menuRegistry = readRepoFile('src/features/context-menu/menu-registry.ts')
+    const menuTypes = readRepoFile('src/features/context-menu/types.ts')
 
     expect(liveAdapter).toContain('useLiveEditorContextMenuModel')
     expect(liveAdapter).toContain('EditorContextMenuSurface')
     expect(liveAdapter).toContain('MenuDialogs')
+    expect(liveModel).toContain('useLiveEditorContextMenuActions')
     expect(liveModel).toContain('useSidebarWorkspaceSource')
     expect(liveModel).toContain('useCampaignActorPermissions')
     expect(liveModel).toContain('useBlocksShare')
     expect(liveModel).toContain('dialogState')
+    expect(liveActions).toContain('useSidebarWorkspaceSource')
+    expect(liveActions).toContain('useFileSystem')
+    expect(liveActions).toContain('useConvex')
+    expect(menuTypes).toContain('EditorContextMenuServices')
+    expect(menuTypes).toContain('EditorContextMenuActionHandlers')
 
     expect(surface).not.toContain('MenuDialogs')
     expect(surface).not.toContain('MenuDialogState')
     expect(surface).not.toContain('dialogState')
+    expect(menuRegistry).not.toContain('useFileSystem')
+    expect(menuRegistry).not.toContain('useConvex')
+    expect(menuRegistry).not.toContain('FileSystemValue')
+    expect(existsSync(join(repoRoot, 'src/features/context-menu/actions.tsx'))).toBe(false)
 
-    for (const source of [liveAdapter, surface]) {
+    for (const source of [liveAdapter, surface, menuRegistry]) {
       expect(source).not.toContain('useSidebarWorkspaceSource')
       expect(source).not.toContain('useCampaignActorPermissions')
       expect(source).not.toContain('useBlocksShare')

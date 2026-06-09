@@ -1,6 +1,6 @@
 import { use, useRef, useState } from 'react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
-import { useMenuActions } from '../actions'
+import { useLiveEditorContextMenuActions } from './use-live-editor-context-menu-actions'
 import { VIEW_CONTEXT } from '../constants'
 import { buildMenu } from '../menu-builder'
 import {
@@ -69,7 +69,7 @@ export function useLiveEditorContextMenuModel({
 }: LiveEditorContextMenuModelOptions): LiveEditorContextMenuModel {
   const fallbackRef = useRef<ContextMenuHostRef>(null)
   const hostRef = ref ?? fallbackRef
-  const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
+  const menuActions = useLiveEditorContextMenuActions({ onDialogOpen, onDialogClose })
   const { campaign } = useCampaign()
   const { currentSession } = useSession()
   const mapView = useMapViewOptional()

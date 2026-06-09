@@ -32,6 +32,8 @@ import type {
   ContextMenuContributor,
   ContextMenuGroupConfig,
   ContextMenuItemSpec,
+  EditorContextMenuActionHandlers,
+  EditorContextMenuServices,
   EditorMenuContext,
   EditorModeMenuService,
   ViewAsPlayerMenuService,
@@ -49,7 +51,6 @@ import { usePanelPreferenceStore } from '~/features/settings/stores/panel-prefer
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
-import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
 import { ViewAsPlayerRow } from '~/features/editor/components/view-as-player-row'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
@@ -102,63 +103,15 @@ function getUnpinnedMapItems(context: EditorMenuContext) {
   )
 }
 
-export type ActionHandlers = {
-  open: (context: EditorMenuContext) => void
-  rename: (context: EditorMenuContext) => void
-  delete: (context: EditorMenuContext) => void
-  showInSidebar: (context: EditorMenuContext) => void
-  createNote: (context: EditorMenuContext) => void
-  createFolder: (context: EditorMenuContext) => void
-  createMap: (context: EditorMenuContext) => void
-  createFile: (context: EditorMenuContext) => void
-  createCanvas: (context: EditorMenuContext) => void
-  editMap: (context: EditorMenuContext) => void
-  editFile: (context: EditorMenuContext) => void
-  editItem: (context: EditorMenuContext) => void
-  pinToMap: (context: EditorMenuContext) => void
-  goToMapPin: (context: EditorMenuContext) => void
-  createMapPin: (context: EditorMenuContext) => void
-  removeMapPin: (context: EditorMenuContext) => void
-  moveMapPin: (context: EditorMenuContext) => void
-  togglePinVisibility: (context: EditorMenuContext) => void
-  startSession: (context: EditorMenuContext) => void
-  endSession: (context: EditorMenuContext) => void
-  setGeneralAccessLevel: (context: EditorMenuContext, level: PermissionLevel | null) => void
-  downloadItems: (context: EditorMenuContext) => void
-  downloadAll: (context: EditorMenuContext) => void
-  toggleBookmark: (context: EditorMenuContext) => void
-  paste: (context: EditorMenuContext) => void
-  duplicate: (context: EditorMenuContext) => void
-  restore: (context: EditorMenuContext) => void
-  permanentlyDelete: (context: EditorMenuContext) => void
-  emptyTrash: (context: EditorMenuContext) => void
-}
-
-interface EditorContextMenuServices {
-  actions: ActionHandlers
-  filesystem: Pick<FileSystemValue, 'canPasteIntoTarget'>
-  editorMode: EditorModeMenuService
-  viewAsPlayer: ViewAsPlayerMenuService
-  blockShare: BlockShareMenuService
-}
-
-interface BlockShareMenuService {
-  canOpen: (context: EditorMenuContext) => boolean
-  canToggleAllPlayersPermission: (context: EditorMenuContext) => boolean
-  getBlockCount: (context: EditorMenuContext) => number
-  getAllPlayersPermissionLevel: (context: EditorMenuContext) => 'hidden' | 'visible' | 'mixed'
-  toggleAllPlayersPermission: (context: EditorMenuContext) => void
-}
-
 type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
 type EditorContextMenuContributor = ContextMenuContributor<
   EditorMenuContext,
   EditorContextMenuServices
 >
 
-type SimpleActionKey = Exclude<keyof ActionHandlers, 'setGeneralAccessLevel'>
+type SimpleActionKey = Exclude<keyof EditorContextMenuActionHandlers, 'setGeneralAccessLevel'>
 type SidebarItemCreationActionKey = Pick<
-  ActionHandlers,
+  EditorContextMenuActionHandlers,
   'createNote' | 'createFolder' | 'createMap' | 'createCanvas' | 'createFile'
 >
 type SidebarItemCreationActionId = keyof SidebarItemCreationActionKey

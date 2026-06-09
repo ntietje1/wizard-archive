@@ -85,7 +85,9 @@ describe('sidebar workspace source boundaries', () => {
     )
     const hotkeys = readRepoFile('src/features/sidebar/hooks/useItemSurfaceHotkeys.ts')
     const contextMenu = readRepoFile('src/features/context-menu/components/editor-context-menu.tsx')
-    const contextMenuActions = readRepoFile('src/features/context-menu/actions.tsx')
+    const liveContextMenuActions = readRepoFile(
+      'src/features/context-menu/hooks/use-live-editor-context-menu-actions.ts',
+    )
     const filesystemProvider = readRepoFile('src/features/filesystem/filesystem-provider.tsx')
     const sidebarItem = readRepoFile(
       'src/features/sidebar/components/sidebar-item/sidebar-item.tsx',
@@ -107,7 +109,7 @@ describe('sidebar workspace source boundaries', () => {
       shareButton,
       hotkeys,
       contextMenu,
-      contextMenuActions,
+      liveContextMenuActions,
       filesystemProvider,
       sidebarItem,
       bookmarkedItemsList,
@@ -155,7 +157,9 @@ describe('sidebar workspace source boundaries', () => {
     )
     const hotkeys = readRepoFile('src/features/sidebar/hooks/useItemSurfaceHotkeys.ts')
     const searchDialog = readRepoFile('src/features/search/components/search-dialog.tsx')
-    const contextMenuActions = readRepoFile('src/features/context-menu/actions.tsx')
+    const liveContextMenuActions = readRepoFile(
+      'src/features/context-menu/hooks/use-live-editor-context-menu-actions.ts',
+    )
     const contextMenuCreationActions = readRepoFile('src/features/context-menu/creation-actions.ts')
     const filesystemProvider = readRepoFile('src/features/filesystem/filesystem-provider.tsx')
 
@@ -178,7 +182,7 @@ describe('sidebar workspace source boundaries', () => {
       createNewDashboard,
       hotkeys,
       searchDialog,
-      contextMenuActions,
+      liveContextMenuActions,
     ]) {
       expect(source).toContain('useSidebarWorkspaceSource')
       expect(source).not.toContain('useRunSidebarItemCreationCommand')

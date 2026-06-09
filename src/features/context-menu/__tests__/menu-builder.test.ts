@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { EDITOR_MODE } from 'shared/editor/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { ActionHandlers } from '~/features/context-menu/menu-registry'
 import type {
   ContextMenuCommand,
   ContextMenuContributor,
+  EditorContextMenuActionHandlers,
   EditorModeMenuService,
   ViewAsPlayerMenuService,
   MenuContext,
@@ -32,7 +32,7 @@ vi.mock('sonner', () => ({
   },
 }))
 
-function createActions(): ActionHandlers {
+function createActions(): EditorContextMenuActionHandlers {
   return {
     open: vi.fn(),
     rename: vi.fn(),

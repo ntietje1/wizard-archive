@@ -1,5 +1,4 @@
-import type { ActionHandlers } from './menu-registry'
-import type { MenuContext } from './types'
+import type { EditorContextMenuActionHandlers, MenuContext } from './types'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { handleError } from '~/shared/utils/logger'
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
@@ -7,7 +6,7 @@ import { SIDEBAR_ITEM_CREATION_COMMAND_BY_ID } from '~/features/sidebar/sidebar-
 import type { SidebarWorkspaceCreateItem } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 type CreationActions = Pick<
-  ActionHandlers,
+  EditorContextMenuActionHandlers,
   'createNote' | 'createFolder' | 'createMap' | 'createFile' | 'createCanvas'
 >
 

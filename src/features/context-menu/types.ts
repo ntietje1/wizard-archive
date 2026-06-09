@@ -152,6 +152,47 @@ export interface EditorMenuContext {
   openValueInline?: (valueId: string, instanceId: string | undefined) => void
 }
 
+interface ContextMenuPasteTargetInput {
+  clickedItem?: AnySidebarItem
+  operationItems: Array<AnySidebarItem>
+}
+
+interface ContextMenuFilesystemService {
+  canPasteIntoTarget: (input: ContextMenuPasteTargetInput) => boolean
+}
+
+export interface EditorContextMenuActionHandlers {
+  open: (context: EditorMenuContext) => void
+  rename: (context: EditorMenuContext) => void
+  delete: (context: EditorMenuContext) => void
+  showInSidebar: (context: EditorMenuContext) => void
+  createNote: (context: EditorMenuContext) => void
+  createFolder: (context: EditorMenuContext) => void
+  createMap: (context: EditorMenuContext) => void
+  createFile: (context: EditorMenuContext) => void
+  createCanvas: (context: EditorMenuContext) => void
+  editMap: (context: EditorMenuContext) => void
+  editFile: (context: EditorMenuContext) => void
+  editItem: (context: EditorMenuContext) => void
+  pinToMap: (context: EditorMenuContext) => void
+  goToMapPin: (context: EditorMenuContext) => void
+  createMapPin: (context: EditorMenuContext) => void
+  removeMapPin: (context: EditorMenuContext) => void
+  moveMapPin: (context: EditorMenuContext) => void
+  togglePinVisibility: (context: EditorMenuContext) => void
+  startSession: (context: EditorMenuContext) => void
+  endSession: (context: EditorMenuContext) => void
+  setGeneralAccessLevel: (context: EditorMenuContext, level: PermissionLevel | null) => void
+  downloadItems: (context: EditorMenuContext) => void
+  downloadAll: (context: EditorMenuContext) => void
+  toggleBookmark: (context: EditorMenuContext) => void
+  paste: (context: EditorMenuContext) => void
+  duplicate: (context: EditorMenuContext) => void
+  restore: (context: EditorMenuContext) => void
+  permanentlyDelete: (context: EditorMenuContext) => void
+  emptyTrash: (context: EditorMenuContext) => void
+}
+
 export interface EditorModeMenuService {
   editorMode: EditorMode
   canEdit: boolean
@@ -162,6 +203,22 @@ export interface ViewAsPlayerMenuService {
   viewAsPlayerId: Id<'campaignMembers'> | undefined
   playerMembers: Array<CampaignMemberSummary>
   setViewAsPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
+}
+
+interface BlockShareMenuService {
+  canOpen: (context: EditorMenuContext) => boolean
+  canToggleAllPlayersPermission: (context: EditorMenuContext) => boolean
+  getBlockCount: (context: EditorMenuContext) => number
+  getAllPlayersPermissionLevel: (context: EditorMenuContext) => 'hidden' | 'visible' | 'mixed'
+  toggleAllPlayersPermission: (context: EditorMenuContext) => void
+}
+
+export interface EditorContextMenuServices {
+  actions: EditorContextMenuActionHandlers
+  filesystem: ContextMenuFilesystemService
+  editorMode: EditorModeMenuService
+  viewAsPlayer: ViewAsPlayerMenuService
+  blockShare: BlockShareMenuService
 }
 
 export type MenuContext = EditorMenuContext
