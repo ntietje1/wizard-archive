@@ -22,7 +22,12 @@ export const editorPanelContextMenuCommands = {
   activatePanel: {
     id: 'activatePanel',
     run: (context, services, payload) => {
-      if (typeof payload !== 'string') return
+      if (typeof payload !== 'string') {
+        if (import.meta.env.DEV) {
+          console.warn('activatePanel command requires a string payload', { context, payload })
+        }
+        return
+      }
       services.editorPanels.activatePanel(context, payload)
     },
   },

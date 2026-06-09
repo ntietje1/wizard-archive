@@ -1,4 +1,4 @@
-import { createElement, use, useRef, useState } from 'react'
+import { createElement, use, useEffect, useRef, useState } from 'react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { useLiveEditorContextMenuActions } from './use-live-editor-context-menu-actions'
 import { VIEW_CONTEXT } from '../constants'
@@ -100,6 +100,15 @@ export function useLiveEditorContextMenuModel({
   )
   const [optimisticBlockSharePermission, setOptimisticBlockSharePermission] =
     useState<OptimisticBlockSharePermission | null>(null)
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
+
   const displayedAllPlayersPermissionLevel =
     optimisticBlockSharePermission?.targetKey === blockShareTargetKey
       ? optimisticBlockSharePermission.permissionLevel
@@ -171,7 +180,7 @@ export function useLiveEditorContextMenuModel({
             permissionLevel: nextPermission,
           })
           void blockShare.setAllPlayersPermission(nextPermission).then((updated) => {
-            if (!updated) {
+            if (!updated && isMountedRef.current) {
               setOptimisticBlockSharePermission(null)
             }
           })

@@ -25,23 +25,17 @@ export function EditorContextMenuSurface({
   model,
   onClose,
 }: EditorContextMenuSurfaceProps) {
+  if (disabled) return children
+
   return (
-    <>
-      {disabled ? (
-        children
-      ) : (
-        <>
-          <ContextMenuHost
-            ref={model.hostRef}
-            menu={model.menu}
-            className={className}
-            menuClassName={menuClassName}
-            onClose={onClose}
-          >
-            {children}
-          </ContextMenuHost>
-        </>
-      )}
-    </>
+    <ContextMenuHost
+      ref={model.hostRef}
+      menu={model.menu}
+      className={className}
+      menuClassName={menuClassName}
+      onClose={onClose}
+    >
+      {children}
+    </ContextMenuHost>
   )
 }

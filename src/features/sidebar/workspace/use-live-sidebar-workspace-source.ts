@@ -67,6 +67,12 @@ export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
   }
 }
 
+/**
+ * Intentional SidebarWorkspaceSource['commands']['createSidebarItem'] stub for live sidebar
+ * wiring outside FileSystemProvider.
+ *
+ * @returns Rejected Promise with Error('createSidebarItem requires FileSystemProvider').
+ */
 function createSidebarItemRequiresFileSystemProvider(): ReturnType<
   SidebarWorkspaceSource['commands']['createSidebarItem']
 > {

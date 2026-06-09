@@ -4,6 +4,7 @@ import { CreateNewDashboardSurface } from './create-new-dashboard-surface'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
+import { handleError } from '~/shared/utils/logger'
 
 interface CreateNewDashboardProps {
   parentId: Id<'sidebarItems'> | null
@@ -31,6 +32,8 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
       if (result) {
         await openItem(result.slug)
       }
+    } catch (error) {
+      handleError(error, 'Failed to create item')
     } finally {
       setCreatingCommandId(null)
     }

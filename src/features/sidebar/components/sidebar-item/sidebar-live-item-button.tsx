@@ -76,6 +76,7 @@ export function SidebarLiveItemButton({
       setRenamingId(null)
     } catch (error) {
       handleError(error, 'Failed to rename')
+      setRenamingId(null)
     }
   }
 

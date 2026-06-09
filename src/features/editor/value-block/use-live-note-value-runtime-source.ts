@@ -7,7 +7,6 @@ import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSid
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
-import type { NoteValueRuntimeState } from '../../../../shared/note-values/types'
 import type { NoteValueRuntimeSource } from './note-value-runtime-source'
 
 const EMPTY_ITEMS: NoteValueRuntimeSource['sidebarItems'] = []
@@ -46,13 +45,9 @@ export function useLiveNoteValueRuntimeSource({
     noteId,
     authoredDefinitions,
     externalNoteIdByPath,
-    externalStates: (externalStatesQuery.data ?? []) as Array<
-      NoteValueRuntimeState<Id<'sidebarItems'>>
-    >,
+    externalStates: externalStatesQuery.data ?? [],
     itemsMap,
-    persistedStates: (persistedStatesQuery.data ?? []) as Array<
-      NoteValueRuntimeState<Id<'sidebarItems'>>
-    >,
+    persistedStates: persistedStatesQuery.data ?? [],
     sidebarItems,
   }
 }
