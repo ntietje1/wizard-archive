@@ -134,6 +134,30 @@ describe('NoteView', () => {
     expect(metaEvent).toBe(false)
     expect(runYjsHistoryCommandSpy).toHaveBeenCalledWith(editor._tiptapEditor.view, 'undo')
   })
+
+  it('does not run a second history command after the editor keymap handles the shortcut', () => {
+    const editor = createEditor()
+    render(
+      <NoteView
+        editor={editor}
+        editable
+        linkResolver={createLinkResolver()}
+        noteId={testId<'sidebarItems'>('note-id')}
+      >
+        <input aria-label="editor child" />
+      </NoteView>,
+    )
+    screen.getByLabelText('editor child').addEventListener('keydown', (event) => {
+      event.preventDefault()
+    })
+
+    fireEvent.keyDown(screen.getByLabelText('editor child'), {
+      ctrlKey: true,
+      key: 'y',
+    })
+
+    expect(runYjsHistoryCommandSpy).not.toHaveBeenCalled()
+  })
 })
 
 function createEditor(): CustomBlockNoteEditor {

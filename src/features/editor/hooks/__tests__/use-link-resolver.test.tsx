@@ -3,10 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
 import { useLinkResolver } from '../useLinkResolver'
 
-const { useCampaignMock, useActiveSidebarItemsMock } = vi.hoisted(() => ({
-  useCampaignMock: vi.fn(),
-  useActiveSidebarItemsMock: vi.fn(),
-}))
+const { useCampaignMock, useActiveSidebarItemsMock, useFilteredSidebarItemsMock } = vi.hoisted(
+  () => ({
+    useCampaignMock: vi.fn(),
+    useActiveSidebarItemsMock: vi.fn(),
+    useFilteredSidebarItemsMock: vi.fn(),
+  }),
+)
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => useCampaignMock(),
@@ -16,6 +19,10 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   useActiveSidebarItems: () => useActiveSidebarItemsMock(),
 }))
 
+vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
+  useFilteredSidebarItems: () => useFilteredSidebarItemsMock(),
+}))
+
 describe('useLinkResolver', () => {
   beforeEach(() => {
     useCampaignMock.mockReturnValue({
@@ -23,6 +30,10 @@ describe('useLinkResolver', () => {
       campaignSlug: 'world',
     })
     useActiveSidebarItemsMock.mockReturnValue({
+      data: [],
+      itemsMap: new Map(),
+    })
+    useFilteredSidebarItemsMock.mockReturnValue({
       data: [],
       itemsMap: new Map(),
     })
@@ -83,7 +94,7 @@ describe('useLinkResolver', () => {
   })
 
   it('resolves relative links from the source note parent', () => {
-    useActiveSidebarItemsMock.mockReturnValue({
+    const sidebarItemsValue = {
       data: [
         { _id: 'folder-1' as Id<'sidebarItems'>, name: 'Lore', parentId: null },
         {
@@ -127,7 +138,9 @@ describe('useLinkResolver', () => {
           },
         ],
       ]),
-    })
+    }
+    useActiveSidebarItemsMock.mockReturnValue(sidebarItemsValue)
+    useFilteredSidebarItemsMock.mockReturnValue(sidebarItemsValue)
 
     const { result } = renderHook(() => useLinkResolver('note-1' as Id<'sidebarItems'>))
 
@@ -148,5 +161,43 @@ describe('useLinkResolver', () => {
       href: '/campaigns/dm/world/editor?item=sibling-note',
       isExternal: false,
     })
+  })
+
+  it('does not resolve links to sidebar items missing from the filtered view', () => {
+    const hiddenNote = {
+      _id: 'note-hidden' as Id<'sidebarItems'>,
+      name: 'Hidden Note',
+      parentId: null,
+      slug: 'hidden-note',
+    }
+    useActiveSidebarItemsMock.mockReturnValue({
+      data: [hiddenNote],
+      itemsMap: new Map([[hiddenNote._id, hiddenNote]]),
+    })
+    useFilteredSidebarItemsMock.mockReturnValue({
+      data: [],
+      itemsMap: new Map(),
+    })
+
+    const { result } = renderHook(() => useLinkResolver())
+
+    const resolved = result.current.resolveLink({
+      syntax: 'wiki',
+      pathKind: 'global',
+      itemPath: ['Hidden Note'],
+      itemName: 'Hidden Note',
+      headingPath: [],
+      displayName: null,
+      rawTarget: 'Hidden Note',
+      isExternal: false,
+    })
+
+    expect(resolved).toMatchObject({
+      resolved: false,
+      itemId: null,
+      href: null,
+      color: null,
+    })
+    expect(result.current.allItems).toEqual([])
   })
 })

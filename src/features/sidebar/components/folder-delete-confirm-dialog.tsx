@@ -1,7 +1,7 @@
 import type { Folder } from 'shared/folders/types'
 import { handleError } from '~/shared/utils/logger'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { collectDescendantIds } from '~/features/sidebar/utils/sidebar-item-maps'
 
 interface FolderDeleteConfirmDialogProps {
@@ -18,7 +18,7 @@ export function FolderDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: FolderDeleteConfirmDialogProps) {
-  const { data } = useActiveSidebarItems()
+  const { data } = useFilteredSidebarItems()
 
   const descendantCount = collectDescendantIds(folder._id, data).size
 

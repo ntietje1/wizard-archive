@@ -12,6 +12,7 @@ import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { CANVAS_NODE_MIN_SIZE } from '../canvas-node-resize-constants'
 import { CanvasNodeResizeMetadataProvider } from '../canvas-node-resize-metadata-provider'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
+import type { CanvasNodeResizeAxes } from '../canvas-node-resize-metadata'
 import type { CanvasNodeResizeUpdate } from '../../../tools/canvas-tool-types'
 import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/canvas-document'
 const modifierState = vi.hoisted(() => ({
@@ -177,6 +178,26 @@ describe('ResizableNodeWrapper', () => {
     expect(screen.getByTestId('canvas-selection-resize-zone-top')).toHaveAccessibleName(
       'Resize top selection edge',
     )
+  })
+
+  it('exposes only horizontal resize zones for horizontal-only nodes', () => {
+    renderSelectionResize({ resizeAxes: 'horizontal' })
+
+    expect(screen.getByTestId('canvas-selection-resize-zone-left')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-selection-resize-zone-right')).toBeInTheDocument()
+    expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(2)
+    expect(screen.queryByTestId('canvas-selection-resize-zone-top')).toBeNull()
+    expect(screen.queryByTestId('canvas-selection-resize-zone-bottom-right')).toBeNull()
+  })
+
+  it('exposes only vertical resize zones for vertical-only nodes', () => {
+    renderSelectionResize({ resizeAxes: 'vertical' })
+
+    expect(screen.getByTestId('canvas-selection-resize-zone-top')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-selection-resize-zone-bottom')).toBeInTheDocument()
+    expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(2)
+    expect(screen.queryByTestId('canvas-selection-resize-zone-left')).toBeNull()
+    expect(screen.queryByTestId('canvas-selection-resize-zone-bottom-right')).toBeNull()
   })
 
   it('keeps individual selected-node borders screen-constant with zoom-aware local styles', () => {
@@ -371,6 +392,42 @@ describe('ResizableNodeWrapper', () => {
     expectMapEntries(runtime.nodeActions.onResizeManyEnd, [
       ['node-1', { width: 160, height: 40, position: { x: 10, y: 20 } }],
       ['node-2', { width: 80, height: 40, position: { x: 210, y: 20 } }],
+    ])
+  })
+
+  it('keeps horizontal-only node height and y position fixed while resizing', () => {
+    const runtime = renderSelectionResize({ resizeAxes: 'horizontal' })
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 90, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 140, clientY: 90 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 140, clientY: 90 })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 130, height: 40, position: { x: 10, y: 20 } }],
+    ])
+    expectMapEntries(runtime.nodeActions.onResizeManyEnd, [
+      ['node-1', { width: 130, height: 40, position: { x: 10, y: 20 } }],
+    ])
+  })
+
+  it('keeps vertical-only node width and x position fixed while resizing', () => {
+    const runtime = renderSelectionResize({ resizeAxes: 'vertical' })
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-bottom')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 50, clientY: 60 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 120, clientY: 110 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 120, clientY: 110 })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 80, height: 90, position: { x: 10, y: 20 } }],
+    ])
+    expectMapEntries(runtime.nodeActions.onResizeManyEnd, [
+      ['node-1', { width: 80, height: 90, position: { x: 10, y: 20 } }],
     ])
   })
 
@@ -585,6 +642,7 @@ function renderSelectionResize({
   lockedAspectRatio,
   nodes = [createNode('node-1', { x: 10, y: 20 }, 80, 40)],
   pendingPreview = null,
+  resizeAxes,
   selectedEdgeIds = new Set<string>(),
   selectedNodeIds = new Set(['node-1']),
 }: {
@@ -593,6 +651,7 @@ function renderSelectionResize({
   lockedAspectRatio?: number
   nodes?: Array<Node>
   pendingPreview?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> } | null
+  resizeAxes?: CanvasNodeResizeAxes
   selectedEdgeIds?: ReadonlySet<string>
   selectedNodeIds?: ReadonlySet<string>
 } = {}) {
@@ -627,6 +686,7 @@ function renderSelectionResize({
               nodeType={node.type}
               dragging={draggingNodeIds.has(node.id)}
               lockedAspectRatio={lockedAspectRatio}
+              resizeAxes={resizeAxes}
             >
               <div>node body</div>
             </ResizableNodeWrapper>

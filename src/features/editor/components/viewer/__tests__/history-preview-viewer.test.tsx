@@ -3,11 +3,13 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { HistoryPreviewViewer } from '../history-preview-viewer'
 import type * as BlockNoteCore from '@blocknote/core'
+import type * as BlockNoteReact from '@blocknote/react'
 import type { Id } from 'convex/_generated/dataModel'
+import type { ReactNode } from 'react'
 
-const { canvasReadOnlyPreviewMock, noteContentMock, useCampaignQueryMock } = vi.hoisted(() => ({
+const { canvasReadOnlyPreviewMock, rawNoteContentMock, useCampaignQueryMock } = vi.hoisted(() => ({
   canvasReadOnlyPreviewMock: vi.fn(),
-  noteContentMock: vi.fn(),
+  rawNoteContentMock: vi.fn(),
   useCampaignQueryMock: vi.fn(),
 }))
 const canvasPreviewEmbedNodeMock = vi.hoisted(() => vi.fn())
@@ -17,8 +19,25 @@ vi.mock('@blocknote/core', async (importOriginal) => {
   return {
     ...actual,
     BlockNoteEditor: {
-      create: vi.fn(() => ({})),
+      create: vi.fn((options: { initialContent?: Array<unknown> }) => ({
+        document: options.initialContent ?? [],
+        getExtension: vi.fn(() => undefined),
+        replaceBlocks: vi.fn(),
+        _tiptapEditor: {
+          destroy: vi.fn(),
+        },
+      })),
     },
+  }
+})
+
+vi.mock('@blocknote/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof BlockNoteReact>()
+  return {
+    ...actual,
+    BlockNoteViewRaw: ({ children }: { children?: ReactNode }) => (
+      <div data-testid="block-note-view">{children}</div>
+    ),
   }
 })
 
@@ -38,10 +57,10 @@ vi.mock('../history-preview-banner', () => ({
   HistoryPreviewBanner: () => <div data-testid="history-preview-banner" />,
 }))
 
-vi.mock('~/features/editor/components/note-content', () => ({
-  NoteContent: (props: unknown) => {
-    noteContentMock(props)
-    return <div data-testid="note-content" />
+vi.mock('~/features/editor/components/raw-note-content-with-embeds', () => ({
+  RawNoteContentWithEmbeds: (props: unknown) => {
+    rawNoteContentMock(props)
+    return <div data-testid="raw-note-content" />
   },
 }))
 
@@ -75,7 +94,7 @@ vi.mock('~/features/editor/utils/destroy-blocknote-editor', () => ({
 describe('HistoryPreviewViewer', () => {
   beforeEach(() => {
     canvasReadOnlyPreviewMock.mockClear()
-    noteContentMock.mockClear()
+    rawNoteContentMock.mockClear()
     useCampaignQueryMock.mockReset()
   })
 
@@ -103,8 +122,8 @@ describe('HistoryPreviewViewer', () => {
 
     render(<HistoryPreviewViewer itemId={noteId} entryId={'history-1' as Id<'editHistory'>} />)
 
-    expect(screen.getByTestId('note-content')).toBeInTheDocument()
-    expect(noteContentMock).toHaveBeenCalledWith(
+    expect(screen.getByTestId('raw-note-content')).toBeInTheDocument()
+    expect(rawNoteContentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         noteId,
         editable: false,
@@ -138,7 +157,7 @@ describe('HistoryPreviewViewer', () => {
     )
 
     expect(screen.getByText('Snapshot data is corrupted.')).toBeInTheDocument()
-    expect(noteContentMock).not.toHaveBeenCalled()
+    expect(rawNoteContentMock).not.toHaveBeenCalled()
   })
 
   it('shows a corrupted state for invalid canvas snapshots', () => {
@@ -205,6 +224,7 @@ describe('HistoryPreviewViewer', () => {
       expect.objectContaining({
         interactive: true,
         embedRenderer: canvasPreviewEmbedNodeMock,
+        sourceItemId: canvasId,
         nodes: [
           {
             id: 'embed-1',

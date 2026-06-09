@@ -33,9 +33,11 @@ describe('CanvasRuntimeProvider', () => {
     )
 
     expect(renderHook(() => useCanvasDocumentRuntime(), { wrapper }).result.current).toEqual({
+      canvasId: null,
       commands: runtime.commands,
       documentWriter: runtime.documentWriter,
       history: runtime.history,
+      provider: null,
     })
     expect(renderHook(() => useCanvasInteractionRuntime(), { wrapper }).result.current).toEqual({
       canEdit: runtime.canEdit,

@@ -1,10 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useSyncExternalStore } from 'react'
 
+export type CanvasNodeResizeAxes = 'both' | 'horizontal' | 'vertical'
+
 export interface CanvasNodeResizeMetadata {
   dragging: boolean
   lockedAspectRatio?: number
   minHeight: number
   minWidth: number
+  resizeAxes: CanvasNodeResizeAxes
 }
 
 type CanvasNodeResizeMetadataSnapshot = ReadonlyMap<string, CanvasNodeResizeMetadata>
@@ -27,7 +30,7 @@ export function useRegisterCanvasNodeResizeMetadata(
   metadata: CanvasNodeResizeMetadata,
 ) {
   const store = useContext(CanvasNodeResizeMetadataContext)
-  const { dragging, lockedAspectRatio, minHeight, minWidth } = metadata
+  const { dragging, lockedAspectRatio, minHeight, minWidth, resizeAxes } = metadata
 
   useEffect(() => {
     if (!store) {
@@ -39,8 +42,9 @@ export function useRegisterCanvasNodeResizeMetadata(
       lockedAspectRatio,
       minHeight,
       minWidth,
+      resizeAxes,
     })
-  }, [dragging, lockedAspectRatio, minHeight, minWidth, nodeId, store])
+  }, [dragging, lockedAspectRatio, minHeight, minWidth, nodeId, resizeAxes, store])
 }
 
 export function useCanvasNodeResizeMetadataSnapshot(): CanvasNodeResizeMetadataSnapshot {

@@ -2,6 +2,7 @@ import { SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blockn
 import { isInsideWikiLink } from '../wiki-link/wiki-link-utils'
 import type { DefaultReactSuggestionItem, SuggestionMenuProps } from '@blocknote/react'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
+import { createEmbedSlashMenuItem } from './embed-slash-menu-item'
 import { createValueReferenceSlashMenuItem } from '../../../value-block/value-block-slash-menu-item'
 import { filterSuggestionItems } from '~/features/editor/utils/filter-suggestion-items'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -72,6 +73,7 @@ function CustomSlashMenu(props: SuggestionMenuProps<DefaultReactSuggestionItem>)
 
 export const SlashMenu = ({ editor }: { editor: CustomBlockNoteEditor }) => {
   const valueItem = createValueReferenceSlashMenuItem(editor)
+  const embedItem = createEmbedSlashMenuItem(editor)
 
   return (
     <SuggestionMenuController
@@ -82,7 +84,10 @@ export const SlashMenu = ({ editor }: { editor: CustomBlockNoteEditor }) => {
           return Promise.resolve([])
         }
         return Promise.resolve(
-          filterSuggestionItems([valueItem, ...getDefaultReactSlashMenuItems(editor)], query),
+          filterSuggestionItems(
+            [valueItem, embedItem, ...getDefaultReactSlashMenuItems(editor)],
+            query,
+          ),
         )
       }}
     />

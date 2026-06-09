@@ -1,5 +1,5 @@
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
-import { validateCanvasEmbedDropTarget } from '~/features/canvas/domain/dropValidation'
+import { validateEmbedDropTarget } from 'shared/embeds/drop-validation'
 import { validateNoteLinkDropTarget } from 'shared/links/drop-validation'
 import { validatePinDropTarget } from 'shared/game-maps/drop-validation'
 import { assertNever } from '~/shared/utils/utils'
@@ -44,6 +44,11 @@ type BatchDropTarget =
       commandId: SurfaceDropCommandIdForAction<'embed'>
       target: CanvasDropZoneData
     }
+  | {
+      action: 'noteEmbed'
+      commandId: SurfaceDropCommandIdForAction<'noteEmbed'>
+      target: NoteEditorDropZoneData
+    }
 
 type DropRejectedItem = {
   item: AnySidebarItem
@@ -57,6 +62,8 @@ export type SurfaceBatchDropCommand =
   | ({ status: 'partial' } & SurfaceBatchDropBase<'link', NoteEditorDropZoneData>)
   | ({ status: 'ready' } & SurfaceBatchDropBase<'embed', CanvasDropZoneData>)
   | ({ status: 'partial' } & SurfaceBatchDropBase<'embed', CanvasDropZoneData>)
+  | ({ status: 'ready' } & SurfaceBatchDropBase<'noteEmbed', NoteEditorDropZoneData>)
+  | ({ status: 'partial' } & SurfaceBatchDropBase<'noteEmbed', NoteEditorDropZoneData>)
   | ({ status: 'failed'; items: [] } & Omit<SurfaceBatchDropBase<'pin', MapDropZoneData>, 'items'>)
   | ({ status: 'failed'; items: [] } & Omit<
       SurfaceBatchDropBase<'link', NoteEditorDropZoneData>,
@@ -66,11 +73,19 @@ export type SurfaceBatchDropCommand =
       SurfaceBatchDropBase<'embed', CanvasDropZoneData>,
       'items'
     >)
+  | ({ status: 'failed'; items: [] } & Omit<
+      SurfaceBatchDropBase<'noteEmbed', NoteEditorDropZoneData>,
+      'items'
+    >)
 
 export type SurfaceDropCommand =
   | { status: 'noop' }
   | { status: 'blocked'; reason: DropRejectionReason }
   | SurfaceBatchDropCommand
+
+export type SurfaceDropOptions = {
+  noteEditorDropAction?: 'link' | 'embed'
+}
 
 function getBatchLabel(batchTarget: BatchDropTarget, count: number) {
   switch (batchTarget.action) {
@@ -82,6 +97,8 @@ function getBatchLabel(batchTarget: BatchDropTarget, count: number) {
       return count === 1 ? 'Add link here' : `Add ${count} links here`
     case 'embed':
       return count === 1 ? 'Embed item in canvas' : `Embed ${count} items in canvas`
+    case 'noteEmbed':
+      return count === 1 ? 'Embed item here' : `Embed ${count} items here`
     default:
       return assertNever(batchTarget)
   }
@@ -100,6 +117,8 @@ function getFailedLabel(batchTarget: BatchDropTarget, rejectedCount: number) {
       return isSingleItem
         ? 'This item cannot be embedded in canvas'
         : 'No items can be embedded in canvas'
+    case 'noteEmbed':
+      return isSingleItem ? 'This item cannot be embedded here' : 'No items can be embedded here'
     default:
       return assertNever(batchTarget)
   }
@@ -140,6 +159,13 @@ function createSurfaceBatchCommand(
         action: 'embed',
         target: batchTarget.target,
       }
+    case 'noteEmbed':
+      return {
+        ...base,
+        commandId: batchTarget.commandId,
+        action: 'noteEmbed',
+        target: batchTarget.target,
+      }
     default:
       return assertNever(batchTarget)
   }
@@ -178,18 +204,32 @@ function createFailedSurfaceBatchCommand(
         action: 'embed',
         target: batchTarget.target,
       }
+    case 'noteEmbed':
+      return {
+        ...base,
+        commandId: batchTarget.commandId,
+        action: 'noteEmbed',
+        target: batchTarget.target,
+      }
     default:
       return assertNever(batchTarget)
   }
 }
 
-function resolveBatchDropTarget(target: SidebarDropData): BatchDropTarget | null {
+function resolveBatchDropTarget(
+  target: SidebarDropData,
+  options: SurfaceDropOptions = {},
+): BatchDropTarget | null {
   switch (target.type) {
     case MAP_DROP_ZONE_TYPE: {
       const contribution = getSurfaceDropContribution('pin')
       return { action: contribution.action, commandId: contribution.commandId, target }
     }
     case NOTE_EDITOR_DROP_TYPE: {
+      if (options.noteEditorDropAction === 'embed') {
+        const contribution = getSurfaceDropContribution('noteEmbed')
+        return { action: contribution.action, commandId: contribution.commandId, target }
+      }
       const contribution = getSurfaceDropContribution('link')
       return { action: contribution.action, commandId: contribution.commandId, target }
     }
@@ -222,8 +262,14 @@ function validateSurfaceDropItem(
         campaignId: ctx.campaignId,
       })
     case 'embed':
-      return validateCanvasEmbedDropTarget({
-        canvasId: batchTarget.target.canvasId,
+      return validateEmbedDropTarget({
+        targetId: batchTarget.target.canvasId,
+        item,
+        campaignId: ctx.campaignId,
+      })
+    case 'noteEmbed':
+      return validateEmbedDropTarget({
+        targetId: batchTarget.target.noteId,
         item,
         campaignId: ctx.campaignId,
       })
@@ -236,10 +282,11 @@ export function resolveSurfaceDropCommand(
   items: Array<AnySidebarItem>,
   target: SidebarDropData,
   ctx: SurfaceDropPlanningContext,
+  options: SurfaceDropOptions = {},
 ): SurfaceDropCommand {
   if (items.length === 0) return { status: 'noop' }
 
-  const batchTarget = resolveBatchDropTarget(target)
+  const batchTarget = resolveBatchDropTarget(target, options)
   if (!batchTarget) return { status: 'noop' }
   const acceptedItems: Array<AnySidebarItem> = []
   const rejectedItems: Array<DropRejectedItem> = []

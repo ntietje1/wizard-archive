@@ -43,7 +43,6 @@ function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
         type: f.type,
         props: f.props,
         content: f.content,
-        inlineContent: f.inlineContent,
         plainText: f.plainText,
         shareStatus: 'not_shared',
       }) as Block,
@@ -55,23 +54,31 @@ describe('flattenBlocks', () => {
     expect(flattenBlocks([])).toEqual([])
   })
 
-  it('accepts BlockNote audio preview props before flattening', () => {
-    const [audioBlock] = parseEditorBlocks([
+  it('normalizes legacy embed content and height before flattening', () => {
+    const [embedBlock] = parseEditorBlocks([
       {
-        id: testBlockNoteId('audio'),
-        type: 'audio',
+        id: testBlockNoteId('embed'),
+        type: 'embed',
+        content: [{ type: 'text', text: 'legacy caption', styles: {} }],
         props: {
+          targetKind: 'externalUrl',
           name: 'clip.mp3',
           url: 'https://example.com/clip.mp3',
-          showPreview: true,
+          previewWidth: 320,
+          previewHeight: 180,
         },
       },
     ])
 
-    expect(flattenBlocks([audioBlock])[0].props).toMatchObject({
+    const [flatBlock] = flattenBlocks([embedBlock])
+    expect(flatBlock.props).toMatchObject({
+      targetKind: 'externalUrl',
       name: 'clip.mp3',
-      showPreview: true,
+      previewWidth: 320,
     })
+    expect(flatBlock.props).not.toHaveProperty('previewHeight')
+    expect(flatBlock.content).toBeNull()
+    expect(flatBlock).not.toHaveProperty('inlineContent')
   })
 
   it('flattens a single top-level block', () => {
@@ -159,7 +166,7 @@ describe('flattenBlocks', () => {
     ]
     const result = flattenBlocks(blocks)
     expect(result[0].plainText).toBe('Cell')
-    expect(result[0].inlineContent).toBeNull()
+    expect(result[0]).not.toHaveProperty('inlineContent')
   })
 
   it('rejects malformed value inline content', () => {
@@ -192,10 +199,11 @@ describe('flattenBlocks', () => {
     ).toThrow(/VALIDATION_FAILED/)
   })
 
-  it('sets inlineContent to null when block has no content', () => {
+  it('sets content to null when block has no content', () => {
     const blocks = [makeBlock('d', { type: 'divider', content: undefined })]
     const result = flattenBlocks(blocks)
-    expect(result[0].inlineContent).toBeNull()
+    expect(result[0].content).toBeNull()
+    expect(result[0]).not.toHaveProperty('inlineContent')
   })
 
   it('no output block has a children key', () => {
@@ -518,7 +526,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
         position: 0,
         type: 'heading',
         props: { level: 3 },
-        inlineContent: [{ type: 'text', text: 'Hi', styles: {} }],
+        content: [{ type: 'text', text: 'Hi', styles: {} }],
       },
       {
         blockNoteId: testBlockNoteId('b'),
@@ -527,7 +535,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
         position: 0,
         type: 'paragraph',
         props: {},
-        inlineContent: [{ type: 'text', text: 'Child', styles: {} }],
+        content: [{ type: 'text', text: 'Child', styles: {} }],
       },
       {
         blockNoteId: testBlockNoteId('c'),
@@ -536,7 +544,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
         position: 1,
         type: 'divider',
         props: {},
-        inlineContent: null,
+        content: null,
       },
     ].map(
       (b) =>
@@ -556,5 +564,41 @@ describe('flatten ↔ reconstruct symmetry', () => {
     const tree2 = reconstructBlockTree(toFakeBlocks(flat))
 
     expect(normalizeTree(tree2)).toEqual(normalizeTree(tree1))
+  })
+
+  it('reconstructs persisted embeds as atomic blocks', () => {
+    const legacyStoredEmbed = {
+      _id: `blocks:${testBlockNoteId('persisted-embed')}` as Id<'blocks'>,
+      _creationTime: 0,
+      noteId: 'sidebarItems:n' as Id<'sidebarItems'>,
+      campaignId: 'campaigns:c' as Id<'campaigns'>,
+      blockNoteId: testBlockNoteId('persisted-embed'),
+      parentBlockId: null,
+      depth: 0,
+      position: 0,
+      type: 'embed',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/map.png',
+        previewWidth: 320,
+        previewHeight: 180,
+      },
+      content: [{ type: 'text', text: 'legacy caption', styles: {} }],
+      inlineContent: [{ type: 'text', text: 'legacy caption', styles: {} }],
+      plainText: 'legacy caption',
+      shareStatus: 'not_shared',
+    } as unknown as Block
+
+    const [block] = reconstructBlockTree([legacyStoredEmbed])
+
+    expect(block).toEqual({
+      id: testBlockNoteId('persisted-embed'),
+      type: 'embed',
+      props: {
+        targetKind: 'externalUrl',
+        url: 'https://example.com/map.png',
+        previewWidth: 320,
+      },
+    })
   })
 })

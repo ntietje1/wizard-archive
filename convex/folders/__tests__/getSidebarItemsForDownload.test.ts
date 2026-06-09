@@ -59,7 +59,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
     await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
-      inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
+      content: [{ type: 'text', text: 'Hello', styles: {} }],
       plainText: 'Hello',
     })
 
@@ -91,14 +91,14 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
     const parent = await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
-      inlineContent: [{ type: 'text', text: 'Parent', styles: {} }],
+      content: [{ type: 'text', text: 'Parent', styles: {} }],
       plainText: 'Parent',
     })
     await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       parentBlockId: parent.blockNoteId,
       depth: 1,
-      inlineContent: [{ type: 'text', text: 'Child', styles: {} }],
+      content: [{ type: 'text', text: 'Child', styles: {} }],
       plainText: 'Child',
     })
 
@@ -333,12 +333,12 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
 
     await createBlock(t, noteId, ctx.campaignId, {
       position: 2,
-      inlineContent: [{ type: 'text', text: 'Second', styles: {} }],
+      content: [{ type: 'text', text: 'Second', styles: {} }],
       plainText: 'Second',
     })
     await createBlock(t, noteId, ctx.campaignId, {
       position: 1,
-      inlineContent: [{ type: 'text', text: 'First', styles: {} }],
+      content: [{ type: 'text', text: 'First', styles: {} }],
       plainText: 'First',
     })
 
@@ -371,26 +371,26 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
 
     const parentBlock = await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
-      inlineContent: [{ type: 'text', text: 'Parent', styles: {} }],
+      content: [{ type: 'text', text: 'Parent', styles: {} }],
       plainText: 'Parent',
     })
     await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       parentBlockId: parentBlock.blockNoteId,
       depth: 1,
-      inlineContent: [{ type: 'text', text: 'Nested child', styles: {} }],
+      content: [{ type: 'text', text: 'Nested child', styles: {} }],
       plainText: 'Nested child',
     })
     const parentBlock2 = await createBlock(t, noteId, ctx.campaignId, {
       position: 1,
-      inlineContent: [{ type: 'text', text: 'Parent 2', styles: {} }],
+      content: [{ type: 'text', text: 'Parent 2', styles: {} }],
       plainText: 'Parent 2',
     })
     await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       parentBlockId: parentBlock2.blockNoteId,
       depth: 1,
-      inlineContent: [{ type: 'text', text: 'Nested child 2', styles: {} }],
+      content: [{ type: 'text', text: 'Nested child 2', styles: {} }],
       plainText: 'Nested child 2',
     })
 
@@ -489,7 +489,7 @@ describe('getSidebarItemsForDownload', () => {
     })
     await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
-      inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
+      content: [{ type: 'text', text: 'Hello', styles: {} }],
       plainText: 'Hello',
     })
 

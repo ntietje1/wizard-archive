@@ -1,7 +1,7 @@
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasEngineSnapshot } from '../../system/canvas-engine-types'
-import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasContextMenuTarget } from './canvas-context-menu-types'
+import { normalizeEmbedNodeData } from '../../nodes/embed/embed-node-data'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
@@ -54,12 +54,20 @@ function resolveNodeSelectionTarget(
 
   if (selectedNodes.length === 1) {
     const [selectedNode] = selectedNodes
-    if (selectedNode.type === 'embed' && selectedNode.data.sidebarItemId) {
+    if (selectedNode.type === 'embed') {
+      const target = normalizeEmbedNodeData(selectedNode.data).target
+      if (target.kind === 'empty') {
+        return {
+          kind: 'node-selection',
+          nodeIds: [selectedNode.id],
+          nodeType: 'embed',
+        }
+      }
       return {
         kind: 'embed-node',
         nodeId: selectedNode.id,
         nodeType: 'embed',
-        sidebarItemId: selectedNode.data.sidebarItemId as Id<'sidebarItems'>,
+        target,
       }
     }
   }

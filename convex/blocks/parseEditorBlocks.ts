@@ -1,12 +1,14 @@
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
 import { blockNoteBlockSchema } from '../../shared/editor-blocks/blockSchemas'
+import { migrateLegacyMediaBlocks } from '../../shared/editor-blocks/legacyMediaBlocks'
 import type { CustomBlock } from '../../shared/editor-blocks/types'
 
 const editorBlocksSchema = blockNoteBlockSchema.array()
 
 export function parseEditorBlocks(input: unknown): Array<CustomBlock> {
-  const result = editorBlocksSchema.safeParse(input)
+  const normalizedInput = Array.isArray(input) ? migrateLegacyMediaBlocks(input) : input
+  const result = editorBlocksSchema.safeParse(normalizedInput)
   if (!result.success) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,

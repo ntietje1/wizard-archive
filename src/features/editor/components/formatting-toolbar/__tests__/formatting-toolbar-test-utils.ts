@@ -103,7 +103,7 @@ export function createFormattingToolbarTestEditor({
           propSchema: { backgroundColor: {}, checked: {}, textAlignment: {}, textColor: {} },
         },
         codeBlock: { propSchema: { language: {} } },
-        file: { propSchema: { caption: {}, name: {}, url: {} } },
+        embed: { propSchema: { name: {}, targetKind: {}, url: {} } },
         heading: {
           propSchema: {
             backgroundColor: {},
@@ -181,12 +181,12 @@ export function createHeadingBlock(id: string, level: number, textAlignment: str
   }
 }
 
-export function createFileBlock(id: string): TestBlock {
+export function createEmbedBlock(id: string): TestBlock {
   return {
     id,
-    type: 'file',
+    type: 'embed',
     props: {
-      caption: 'Existing caption',
+      targetKind: 'externalUrl',
       name: 'file.pdf',
       url: 'https://example.com/file.pdf',
     },

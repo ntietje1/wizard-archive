@@ -1,6 +1,5 @@
-import { CANVAS_NODE_MIN_SIZE } from '../shared/canvas-node-resize-constants'
-
 const EMBED_NODE_DEFAULT_SIZE = { width: 320, height: 240 } as const
+export const EMBED_NODE_MIN_SIZE = { width: 96, height: 72 } as const
 
 export function resolveEmbedNodeDefaultSize(lockedAspectRatio: unknown = null) {
   if (
@@ -11,8 +10,8 @@ export function resolveEmbedNodeDefaultSize(lockedAspectRatio: unknown = null) {
     return EMBED_NODE_DEFAULT_SIZE
   }
 
-  const minimumAspectRatio = CANVAS_NODE_MIN_SIZE / EMBED_NODE_DEFAULT_SIZE.height
-  const maximumAspectRatio = EMBED_NODE_DEFAULT_SIZE.width / CANVAS_NODE_MIN_SIZE
+  const minimumAspectRatio = EMBED_NODE_MIN_SIZE.width / EMBED_NODE_DEFAULT_SIZE.height
+  const maximumAspectRatio = EMBED_NODE_DEFAULT_SIZE.width / EMBED_NODE_MIN_SIZE.height
   if (lockedAspectRatio < minimumAspectRatio || lockedAspectRatio > maximumAspectRatio) {
     return EMBED_NODE_DEFAULT_SIZE
   }

@@ -531,7 +531,6 @@ export async function createBlock(
     type: BlockType
     props: BlockProps
     content: InlineContent | TableContent | null
-    inlineContent: InlineContent | null
     plainText: string
     shareStatus: ShareStatus | null
   }>,
@@ -548,7 +547,6 @@ export async function createBlock(
     type,
     props: type === 'heading' ? { level: 1 } : {},
     content: null,
-    inlineContent: null,
     plainText: '',
     campaignId,
     shareStatus,

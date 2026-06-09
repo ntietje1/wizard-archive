@@ -28,6 +28,7 @@ export function NoteView({
   children?: ReactNode
 }) {
   const isViewerMode = !editable || linkResolver.isViewerMode
+  const sourceNoteId = note?._id ?? noteId ?? null
 
   return (
     <NoteValueRuntimeProvider
@@ -46,6 +47,7 @@ export function NoteView({
         }
         enableYjsHistory={!isViewerMode}
         linkResolver={linkResolver}
+        sourceNoteId={sourceNoteId}
         style={style}
       >
         {children}

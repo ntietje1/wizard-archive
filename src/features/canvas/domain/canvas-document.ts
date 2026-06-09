@@ -9,6 +9,7 @@ import {
   parseCanvasPoint2D,
 } from './validation'
 import type { CanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
+import type { EmbedTarget } from 'shared/embeds/embedTargets'
 
 export interface CanvasStrokeNodeData {
   points: Array<[number, number, number]>
@@ -24,6 +25,8 @@ export interface CanvasStrokeNodeData {
 }
 
 export interface CanvasEmbedNodeData {
+  target?: EmbedTarget
+  /** Legacy canvas embeds stored the target directly as a sidebar item id. */
   sidebarItemId?: string
   lockedAspectRatio?: number
   textColor?: string | null

@@ -5,6 +5,7 @@ import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type {
   CanvasDropZoneData,
+  EmptyEmbedDropZoneData,
   MapDropZoneData,
   NoteEditorDropZoneData,
   ResolvedSidebarItemDropData,
@@ -31,6 +32,7 @@ import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-pla
 import {
   CANVAS_DROP_ZONE_TYPE,
   EMPTY_EDITOR_DROP_TYPE,
+  EMPTY_EMBED_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
   SIDEBAR_ROOT_DROP_TYPE,
@@ -96,9 +98,10 @@ function resolveDropOutcome(
   item: AnySidebarItem | null,
   target: SidebarDropData | null,
   ctx: DropPlanningContext,
+  options?: Parameters<typeof resolveDropFeedback>[3],
 ) {
   if (!item || !target) return null
-  const feedback = resolveDropFeedback([item], target, ctx)
+  const feedback = resolveDropFeedback([item], target, ctx, options)
   if (feedback.outcome?.type === 'operation' && feedback.rejectedItemCount === 1) {
     const command = resolveSurfaceDropCommand([item], target, ctx)
     if (command.status === 'failed') {
@@ -118,6 +121,12 @@ function rootTarget(): SidebarRootDropZoneData {
 
 function emptyEditorTarget(): EmptyEditorDropZoneData {
   return { type: EMPTY_EDITOR_DROP_TYPE }
+}
+
+function emptyEmbedTarget(
+  sourceItemId = testId<'sidebarItems'>('note_99'),
+): EmptyEmbedDropZoneData {
+  return { type: EMPTY_EMBED_DROP_TYPE, sourceItemId }
 }
 
 function noteEditorTarget(noteId = testId<'sidebarItems'>('note_99')): NoteEditorDropZoneData {
@@ -205,7 +214,7 @@ describe('rejectionReasonMessage', () => {
     expect(rejectionReasonMessage('circular')).toBe('Cannot move folder into itself')
     expect(rejectionReasonMessage('self_pin')).toBe('Cannot pin map to itself')
     expect(rejectionReasonMessage('self_link')).toBe('Cannot link note to itself')
-    expect(rejectionReasonMessage('self_embed')).toBe('Cannot embed canvas into itself')
+    expect(rejectionReasonMessage('self_embed')).toBe('Cannot embed item into itself')
     expect(rejectionReasonMessage('already_pinned')).toBe('Already pinned to this map')
     expect(rejectionReasonMessage('wrong_campaign')).toBe('Item belongs to another campaign')
     expect(rejectionReasonMessage('not_folder')).toBe('Cannot drop here')
@@ -463,6 +472,15 @@ describe('resolveDropOutcome', () => {
       const result = resolveDropOutcome(note, noteEditorTarget(), createCtx())
 
       expect(result).toMatchObject({ type: 'operation', action: 'link' })
+    })
+
+    it('returns embed action for shift-dragged sidebar items', () => {
+      const note = createNote()
+      const result = resolveDropOutcome(note, noteEditorTarget(), createCtx(), {
+        noteEditorDropAction: 'embed',
+      })
+
+      expect(result).toMatchObject({ type: 'operation', action: 'embed' })
     })
 
     it('rejects linking a trashed item', () => {
@@ -889,8 +907,8 @@ describe('canDropFilesOnTarget', () => {
     expect(canDropFilesOnTarget(canvasTarget())).toBe(true)
   })
 
-  it('returns false for note editor zone', () => {
-    expect(canDropFilesOnTarget(noteEditorTarget())).toBe(false)
+  it('returns true for note editor zone', () => {
+    expect(canDropFilesOnTarget(noteEditorTarget())).toBe(true)
   })
 
   it('returns true for empty editor zone', () => {
@@ -931,6 +949,19 @@ describe('getDropTargetKey', () => {
     expect(getDropTargetKey({ type: SIDEBAR_ROOT_DROP_TYPE })).toBe(SIDEBAR_ROOT_DROP_TYPE)
   })
 
+  it('returns a source-scoped custom key for empty embed zones', () => {
+    expect(
+      getDropTargetKey({
+        type: EMPTY_EMBED_DROP_TYPE,
+        sourceItemId: 'note_5',
+      }),
+    ).toBe('empty-embed:note_5')
+  })
+
+  it('returns null when empty embed source item id is missing', () => {
+    expect(getDropTargetKey({ type: EMPTY_EMBED_DROP_TYPE })).toBeNull()
+  })
+
   it('returns custom key for canvas zone', () => {
     expect(getDropTargetKey({ type: CANVAS_DROP_ZONE_TYPE, canvasId: 'canvas_5' })).toBe(
       'canvas:canvas_5',
@@ -968,6 +999,12 @@ describe('getHighlightId', () => {
 
   it('returns zone type for empty editor', () => {
     expect(getHighlightId(emptyEditorTarget())).toBe(EMPTY_EDITOR_DROP_TYPE)
+  })
+
+  it('returns source-scoped highlight id for empty embed', () => {
+    expect(getHighlightId(emptyEmbedTarget(testId<'sidebarItems'>('note_7')))).toBe(
+      'empty-embed:note_7',
+    )
   })
 
   it('returns zone type for root', () => {
@@ -1054,6 +1091,13 @@ describe('resolveDropTarget', () => {
     expect(result).toEqual(raw)
   })
 
+  it('resolves empty embed zone data with a source item id', () => {
+    const raw = { type: EMPTY_EMBED_DROP_TYPE, sourceItemId: 'note_1' }
+    const result = resolveDropTarget(raw, emptyMap, emptyMap, vi.fn())
+
+    expect(result).toEqual(raw)
+  })
+
   it('returns null for known zones missing required ids', () => {
     expect(
       resolveDropTarget({ type: CANVAS_DROP_ZONE_TYPE }, emptyMap, emptyMap, vi.fn()),
@@ -1061,6 +1105,17 @@ describe('resolveDropTarget', () => {
     expect(resolveDropTarget({ type: MAP_DROP_ZONE_TYPE }, emptyMap, emptyMap, vi.fn())).toBeNull()
     expect(
       resolveDropTarget({ type: NOTE_EDITOR_DROP_TYPE }, emptyMap, emptyMap, vi.fn()),
+    ).toBeNull()
+    expect(
+      resolveDropTarget({ type: EMPTY_EMBED_DROP_TYPE }, emptyMap, emptyMap, vi.fn()),
+    ).toBeNull()
+    expect(
+      resolveDropTarget(
+        { type: EMPTY_EMBED_DROP_TYPE, sourceItemId: undefined },
+        emptyMap,
+        emptyMap,
+        vi.fn(),
+      ),
     ).toBeNull()
   })
 

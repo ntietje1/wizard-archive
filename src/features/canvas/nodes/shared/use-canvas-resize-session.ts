@@ -18,6 +18,7 @@ import { resolveCanvasResize } from '../../system/canvas-resize-geometry'
 import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import { canvasBoundsToScreenBounds } from '../../components/canvas-screen-space-overlay-utils'
+import { RESIZE_HANDLE_DESCRIPTORS } from 'shared/resize/resizeHandleDescriptors'
 import type { CanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
 import type { CanvasResizeHandlePosition } from '../../system/canvas-resize-handles'
 import type { CanvasNodeResizeUpdate } from '../../tools/canvas-tool-types'
@@ -33,45 +34,8 @@ const DEFAULT_RESIZE_METADATA: CanvasNodeResizeMetadata = {
   dragging: false,
   minHeight: CANVAS_NODE_MIN_SIZE,
   minWidth: CANVAS_NODE_MIN_SIZE,
+  resizeAxes: 'both',
 }
-
-const RESIZE_HANDLES: Array<{
-  position: CanvasResizeHandlePosition
-  cursorClassName: string
-}> = [
-  {
-    position: 'top-left',
-    cursorClassName: 'cursor-nwse-resize',
-  },
-  {
-    position: 'top',
-    cursorClassName: 'cursor-ns-resize',
-  },
-  {
-    position: 'top-right',
-    cursorClassName: 'cursor-nesw-resize',
-  },
-  {
-    position: 'right',
-    cursorClassName: 'cursor-ew-resize',
-  },
-  {
-    position: 'bottom-right',
-    cursorClassName: 'cursor-nwse-resize',
-  },
-  {
-    position: 'bottom',
-    cursorClassName: 'cursor-ns-resize',
-  },
-  {
-    position: 'bottom-left',
-    cursorClassName: 'cursor-nesw-resize',
-  },
-  {
-    position: 'left',
-    cursorClassName: 'cursor-ew-resize',
-  },
-]
 
 interface CanvasSelectionResizeSession {
   bounds: Bounds
@@ -404,20 +368,22 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
     addWindowListeners()
   }
 
-  const zones = RESIZE_HANDLES.map(({ position, cursorClassName }) => ({
-    position,
-    cursorClassName,
-    style: getResizeZoneStyle(position),
-    onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
-      if (event.button !== 0) {
-        return
-      }
+  const zones = getCanvasResizeHandleDescriptors(getSelectionResizeAxes(selection)).map(
+    ({ position, cursorClassName }) => ({
+      position,
+      cursorClassName,
+      style: getResizeZoneStyle(position),
+      onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
+        if (event.button !== 0) {
+          return
+        }
 
-      event.preventDefault()
-      event.stopPropagation()
-      startSelectionResize(position, event.currentTarget, event.pointerId)
-    },
-  }))
+        event.preventDefault()
+        event.stopPropagation()
+        startSelectionResize(position, event.currentTarget, event.pointerId)
+      },
+    }),
+  )
 
   return {
     bounds: selection.bounds,
@@ -444,41 +410,124 @@ function resolveSelectionResizeUpdates({
 
   for (const selectionNode of nodes) {
     const { bounds, metadata } = selectionNode
-    const centerX = nextBounds.x + (bounds.x + bounds.width / 2 - startBounds.x) * scaleX
-    const centerY = nextBounds.y + (bounds.y + bounds.height / 2 - startBounds.y) * scaleY
-    let width = Math.max(bounds.width * scaleX, metadata.minWidth)
-    let height = Math.max(bounds.height * scaleY, metadata.minHeight)
-
-    if (metadata.lockedAspectRatio) {
-      const scale = getLockedNodeScale(handlePosition, scaleX, scaleY)
-      if (affectsCanvasResizeAxis(handlePosition, 'x')) {
-        width = Math.max(
-          bounds.width * scale,
-          metadata.minWidth,
-          metadata.minHeight * metadata.lockedAspectRatio,
-        )
-        height = width / metadata.lockedAspectRatio
-      } else {
-        height = Math.max(
-          bounds.height * scale,
-          metadata.minHeight,
-          metadata.minWidth / metadata.lockedAspectRatio,
-        )
-        width = height * metadata.lockedAspectRatio
-      }
-    }
+    const center = getSelectionNodeResizeCenter({
+      bounds,
+      metadata,
+      nextBounds,
+      scaleX,
+      scaleY,
+      startBounds,
+    })
+    const size = getSelectionNodeResizeSize({
+      bounds,
+      handlePosition,
+      metadata,
+      scaleX,
+      scaleY,
+    })
 
     updates.set(selectionNode.id, {
-      width,
-      height,
+      ...size,
       position: {
-        x: centerX - width / 2,
-        y: centerY - height / 2,
+        x: center.x - size.width / 2,
+        y: center.y - size.height / 2,
       },
     })
   }
 
   return updates
+}
+
+function getSelectionNodeResizeCenter({
+  bounds,
+  metadata,
+  nextBounds,
+  scaleX,
+  scaleY,
+  startBounds,
+}: {
+  bounds: Bounds
+  metadata: CanvasNodeResizeMetadata
+  nextBounds: Bounds
+  scaleX: number
+  scaleY: number
+  startBounds: Bounds
+}) {
+  return {
+    x:
+      metadata.resizeAxes === 'vertical'
+        ? bounds.x + bounds.width / 2
+        : nextBounds.x + (bounds.x + bounds.width / 2 - startBounds.x) * scaleX,
+    y:
+      metadata.resizeAxes === 'horizontal'
+        ? bounds.y + bounds.height / 2
+        : nextBounds.y + (bounds.y + bounds.height / 2 - startBounds.y) * scaleY,
+  }
+}
+
+function getSelectionNodeResizeSize({
+  bounds,
+  handlePosition,
+  metadata,
+  scaleX,
+  scaleY,
+}: {
+  bounds: Bounds
+  handlePosition: CanvasResizeHandlePosition
+  metadata: CanvasNodeResizeMetadata
+  scaleX: number
+  scaleY: number
+}) {
+  if (metadata.lockedAspectRatio && metadata.resizeAxes === 'both') {
+    return getLockedAspectRatioNodeSize({
+      aspectRatio: metadata.lockedAspectRatio,
+      bounds,
+      handlePosition,
+      metadata,
+      scaleX,
+      scaleY,
+    })
+  }
+
+  return {
+    width:
+      metadata.resizeAxes === 'vertical'
+        ? Math.max(bounds.width, metadata.minWidth)
+        : Math.max(bounds.width * scaleX, metadata.minWidth),
+    height:
+      metadata.resizeAxes === 'horizontal'
+        ? Math.max(bounds.height, metadata.minHeight)
+        : Math.max(bounds.height * scaleY, metadata.minHeight),
+  }
+}
+
+function getLockedAspectRatioNodeSize({
+  aspectRatio,
+  bounds,
+  handlePosition,
+  metadata,
+  scaleX,
+  scaleY,
+}: {
+  aspectRatio: number
+  bounds: Bounds
+  handlePosition: CanvasResizeHandlePosition
+  metadata: CanvasNodeResizeMetadata
+  scaleX: number
+  scaleY: number
+}) {
+  const scale = getLockedNodeScale(handlePosition, scaleX, scaleY)
+  if (!affectsCanvasResizeAxis(handlePosition, 'x')) {
+    const height = Math.max(
+      bounds.height * scale,
+      metadata.minHeight,
+      metadata.minWidth / aspectRatio,
+    )
+    return { width: height * aspectRatio, height }
+  }
+
+  const width = Math.max(bounds.width * scale, metadata.minWidth, metadata.minHeight * aspectRatio)
+  return { width, height: width / aspectRatio }
 }
 
 function getResizeUpdateBounds(updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) {
@@ -578,6 +627,39 @@ function getSingleSelectionLockedAspectRatio(selection: {
     : undefined
 }
 
+function getSelectionResizeAxes(selection: { nodes: ReadonlyArray<SelectionResizeNode> }) {
+  if (selection.nodes.length !== 1) {
+    return 'both'
+  }
+
+  return selection.nodes[0].metadata.resizeAxes
+}
+
+function isCanvasResizeHandleAllowed(
+  position: CanvasResizeHandlePosition,
+  resizeAxes: CanvasNodeResizeMetadata['resizeAxes'],
+) {
+  if (resizeAxes === 'horizontal') {
+    return position === 'left' || position === 'right'
+  }
+
+  if (resizeAxes === 'vertical') {
+    return position === 'top' || position === 'bottom'
+  }
+
+  return true
+}
+
+function getCanvasResizeHandleDescriptors(resizeAxes: CanvasNodeResizeMetadata['resizeAxes']) {
+  const descriptors: Array<(typeof RESIZE_HANDLE_DESCRIPTORS)[number]> = []
+  for (const descriptor of RESIZE_HANDLE_DESCRIPTORS) {
+    if (isCanvasResizeHandleAllowed(descriptor.position, resizeAxes)) {
+      descriptors.push(descriptor)
+    }
+  }
+  return descriptors
+}
+
 function getSelectionDragNodeId(selection: { nodes: ReadonlyArray<SelectionResizeNode> }) {
   return selection.nodes.length > 1 ? selection.nodes[0].id : undefined
 }
@@ -597,7 +679,7 @@ function getMinimumSelectionResizeSize(selection: {
   let minScaleY = 0
 
   for (const { bounds, metadata } of selection.nodes) {
-    if (bounds.width > 0) {
+    if (bounds.width > 0 && metadata.resizeAxes !== 'vertical') {
       const lockedMinimumWidth = metadata.lockedAspectRatio
         ? metadata.minHeight * metadata.lockedAspectRatio
         : 0
@@ -607,7 +689,7 @@ function getMinimumSelectionResizeSize(selection: {
       )
     }
 
-    if (bounds.height > 0) {
+    if (bounds.height > 0 && metadata.resizeAxes !== 'horizontal') {
       const lockedMinimumHeight = metadata.lockedAspectRatio
         ? metadata.minWidth / metadata.lockedAspectRatio
         : 0

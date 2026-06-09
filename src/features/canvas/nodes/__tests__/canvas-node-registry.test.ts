@@ -4,7 +4,6 @@ import {
   getCanvasNodeInspectableProperties,
 } from '../canvas-node-modules'
 import { normalizeCanvasNode } from '../canvas-node-normalization'
-import type { Id } from 'convex/_generated/dataModel'
 
 describe('canvas node specs', () => {
   it('creates default text nodes from the text node spec', () => {
@@ -39,7 +38,7 @@ describe('canvas node specs', () => {
   it('merges embed defaults with provided creation data', () => {
     const { node } = createCanvasNodePlacement('embed', {
       position: { x: 40, y: 60 },
-      data: { sidebarItemId: 'folder-1' as Id<'sidebarItems'> },
+      data: { target: { kind: 'sidebarItem', sidebarItemId: 'folder-1' } },
     })
 
     expect(node).toMatchObject({
@@ -48,7 +47,7 @@ describe('canvas node specs', () => {
       width: 320,
       height: 240,
       data: {
-        sidebarItemId: 'folder-1',
+        target: { kind: 'sidebarItem', sidebarItemId: 'folder-1' },
         backgroundColor: 'var(--background)',
         borderStroke: 'var(--border)',
       },
@@ -58,11 +57,17 @@ describe('canvas node specs', () => {
   it('fits default embed size to a provided locked aspect ratio', () => {
     const wide = createCanvasNodePlacement('embed', {
       position: { x: 40, y: 60 },
-      data: { sidebarItemId: 'wide-file' as Id<'sidebarItems'>, lockedAspectRatio: 2 },
+      data: {
+        target: { kind: 'sidebarItem', sidebarItemId: 'wide-file' },
+        lockedAspectRatio: 2,
+      },
     }).node
     const tall = createCanvasNodePlacement('embed', {
       position: { x: 40, y: 60 },
-      data: { sidebarItemId: 'tall-file' as Id<'sidebarItems'>, lockedAspectRatio: 0.5 },
+      data: {
+        target: { kind: 'sidebarItem', sidebarItemId: 'tall-file' },
+        lockedAspectRatio: 0.5,
+      },
     }).node
 
     expect(wide).toMatchObject({
@@ -81,7 +86,10 @@ describe('canvas node specs', () => {
     const { node } = createCanvasNodePlacement('embed', {
       position: { x: 40, y: 60 },
       size: { width: 200, height: 200 },
-      data: { sidebarItemId: 'file-1' as Id<'sidebarItems'>, lockedAspectRatio: 2 },
+      data: {
+        target: { kind: 'sidebarItem', sidebarItemId: 'file-1' },
+        lockedAspectRatio: 2,
+      },
     })
 
     expect(node).toMatchObject({

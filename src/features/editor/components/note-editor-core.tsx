@@ -2,9 +2,11 @@ import { BlockNoteView } from '@blocknote/shadcn'
 import { useEffect, useRef } from 'react'
 import { PreventExternalDrop } from './extensions/prevent-external-drop/prevent-external-drop'
 import { SlashMenu } from './extensions/slash-menu/slash-menu'
+import { NoteEmbedSurfaceProvider } from './extensions/embed-block/note-embed-surface-context'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import type { CSSProperties, ReactNode, RefObject } from 'react'
+import type { Id } from 'convex/_generated/dataModel'
 import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'
 import { useLinkDecorations } from '~/features/editor/hooks/useLinkDecorations'
 import { useResolvedTheme } from '~/shared/theme/context'
@@ -22,6 +24,7 @@ export function NoteEditorCore({
   editableChrome = null,
   enableYjsHistory = false,
   linkResolver,
+  sourceNoteId = null,
   style,
   children,
 }: {
@@ -30,6 +33,7 @@ export function NoteEditorCore({
   editableChrome?: ReactNode
   enableYjsHistory?: boolean
   linkResolver: LinkResolver
+  sourceNoteId?: Id<'sidebarItems'> | null
   style?: CSSProperties
   children?: ReactNode
 }) {
@@ -44,25 +48,27 @@ export function NoteEditorCore({
 
   return (
     <div ref={noteSurfaceRef} className="contents">
-      <BlockNoteView
-        editor={editor}
-        style={style}
-        theme={resolvedTheme}
-        editable={editable}
-        sideMenu={false}
-        formattingToolbar={false}
-        slashMenu={false}
-        linkToolbar={false}
-      >
-        {editable ? (
-          <>
-            <PreventExternalDrop />
-            {editableChrome}
-            <SlashMenu editor={editor} />
-          </>
-        ) : null}
-        {children}
-      </BlockNoteView>
+      <NoteEmbedSurfaceProvider sourceNoteId={sourceNoteId} editable={editable}>
+        <BlockNoteView
+          editor={editor}
+          style={style}
+          theme={resolvedTheme}
+          editable={editable}
+          sideMenu={false}
+          formattingToolbar={false}
+          slashMenu={false}
+          linkToolbar={false}
+        >
+          {editable ? (
+            <>
+              <PreventExternalDrop />
+              {editableChrome}
+              <SlashMenu editor={editor} />
+            </>
+          ) : null}
+          {children}
+        </BlockNoteView>
+      </NoteEmbedSurfaceProvider>
     </div>
   )
 }
@@ -89,6 +95,7 @@ function useNoteYjsUndoShortcutPatch(
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (
+        event.defaultPrevented ||
         !isHistoryShortcut(event) ||
         !editor._tiptapEditor.view.hasFocus() ||
         !isEventInsideNoteSurface(event, surface)

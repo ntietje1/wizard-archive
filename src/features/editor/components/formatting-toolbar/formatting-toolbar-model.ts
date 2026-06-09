@@ -73,13 +73,6 @@ export interface BlockTypeOption {
   type: SupportedBlockType
 }
 
-export interface SelectedFileBlock {
-  caption: string
-  id: string
-  type: string
-  url: string
-}
-
 export interface ToolbarSnapshot {
   activeAlignment: TextAlignment | null
   activeBackgroundColor: string
@@ -89,7 +82,6 @@ export interface ToolbarSnapshot {
   canAlign: boolean
   canFormatInline: boolean
   hasTextSelection: boolean
-  selectedFileBlock: SelectedFileBlock | null
   supportedBlockTypes: Array<BlockTypeOption>
 }
 
@@ -226,7 +218,6 @@ export const EMPTY_TOOLBAR_SNAPSHOT: ToolbarSnapshot = {
   canAlign: false,
   canFormatInline: false,
   hasTextSelection: false,
-  selectedFileBlock: null,
   supportedBlockTypes: [],
 }
 
@@ -269,10 +260,6 @@ export function toolbarSnapshotsEqual(current: ToolbarSnapshot, next: ToolbarSna
     next.activeTextColor.kind === 'value' &&
     !areCanvasPaintValuesEqual(current.activeTextColor.value, next.activeTextColor.value)
   ) {
-    return false
-  }
-
-  if (!selectedFileBlocksEqual(current.selectedFileBlock, next.selectedFileBlock)) {
     return false
   }
 
@@ -361,7 +348,6 @@ function getToolbarSnapshot(
     canAlign: alignableBlocks.length > 0,
     canFormatInline: selectedBlocks.some((block) => block.content !== undefined),
     hasTextSelection,
-    selectedFileBlock: getSelectedFileBlock(editor, selectedBlocks),
     supportedBlockTypes,
   }
 }
@@ -422,44 +408,4 @@ function matchesBlockTypeOption(block: FormattingBlock, option: BlockTypeOption)
   return Object.entries(option.props ?? {}).every(([propName, propValue]) => {
     return block.props[propName] === propValue
   })
-}
-
-function getSelectedFileBlock(
-  editor: FormattingEditor,
-  selectedBlocks: Array<FormattingBlock>,
-): SelectedFileBlock | null {
-  if (selectedBlocks.length !== 1) {
-    return null
-  }
-
-  const block = selectedBlocks[0]
-  if (!blockTypeSupportsProp(editor, block.type, 'url')) {
-    return null
-  }
-
-  const url = block.props.url
-  if (typeof url !== 'string') {
-    return null
-  }
-
-  const caption = blockTypeSupportsProp(editor, block.type, 'caption') ? block.props.caption : ''
-
-  return {
-    caption: typeof caption === 'string' ? caption : '',
-    id: block.id,
-    type: block.type,
-    url,
-  }
-}
-
-function selectedFileBlocksEqual(
-  current: SelectedFileBlock | null,
-  next: SelectedFileBlock | null,
-) {
-  return (
-    current?.id === next?.id &&
-    current?.caption === next?.caption &&
-    current?.type === next?.type &&
-    current?.url === next?.url
-  )
 }

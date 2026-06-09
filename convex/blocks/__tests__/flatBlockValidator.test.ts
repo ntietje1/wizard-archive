@@ -83,19 +83,44 @@ describe('flat block content validation', () => {
     expect(result.success).toBe(true)
   })
 
-  it('accepts an image block with all props', () => {
+  it('accepts an embed block with all props', () => {
     const result = flatBlockContentSchema.safeParse({
-      type: 'image',
+      type: 'embed',
       props: {
+        targetKind: 'externalUrl',
         url: 'https://example.com/img.png',
         name: 'img.png',
-        caption: 'A photo',
-        showPreview: true,
         previewWidth: 300,
         textAlignment: 'center',
       },
     })
     expect(result.success).toBe(true)
+  })
+
+  it('rejects legacy media blocks after migration', () => {
+    for (const type of ['image', 'video', 'audio', 'file']) {
+      const result = flatBlockContentSchema.safeParse({
+        type,
+        props: { url: 'https://example.com/item' },
+      })
+      expect(result.success, `expected ${type} to be rejected`).toBe(false)
+    }
+  })
+
+  it('rejects embeds missing their target-specific locator', () => {
+    expect(
+      flatBlockContentSchema.safeParse({
+        type: 'embed',
+        props: { targetKind: 'externalUrl' },
+      }).success,
+    ).toBe(false)
+
+    expect(
+      flatBlockContentSchema.safeParse({
+        type: 'embed',
+        props: { targetKind: 'sidebarItem' },
+      }).success,
+    ).toBe(false)
   })
 
   it('accepts a paragraph with inline value content', () => {

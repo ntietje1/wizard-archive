@@ -1,13 +1,13 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useReducer } from 'react'
+import type { ReactNode } from 'react'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { Doc } from 'yjs'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
-import { NoteContent } from '~/features/editor/components/note-content'
 import { useBlockNoteActivationLifecycle } from '../shared/use-blocknote-activation-lifecycle'
-import { getCanvasNodeTextStyle } from '../shared/canvas-node-surface-style'
-import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import { cn } from '~/features/shadcn/lib/utils'
+import { EmbeddedNoteContent } from '~/features/previews/components/embedded-note-content'
+import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
+import { BlockShareMenuProvider } from '~/features/sharing/contexts/block-share-menu-context'
 
 interface EmbedNoteEditorState {
   doc: Doc | null
@@ -31,9 +31,6 @@ export function EmbedNoteContent({
   pendingActivationRef: PendingRichEmbedActivationRef
   textColor: string | null
 }) {
-  const viewportRef = useRef<HTMLDivElement>(null)
-  const scrollTopRef = useRef(0)
-  const textStyle = getCanvasNodeTextStyle({ textColor })
   const [{ doc, editor }, setEditorState] = useReducer(
     (_state: EmbedNoteEditorState, nextState: EmbedNoteEditorState) => nextState,
     {
@@ -61,53 +58,23 @@ export function EmbedNoteContent({
     pendingActivationRef,
   })
 
-  useEffect(() => {
-    const viewport = viewportRef.current
-    if (!viewport) return
-
-    const onScroll = () => {
-      scrollTopRef.current = viewport.scrollTop
-    }
-    viewport.addEventListener('scroll', onScroll, { passive: true })
-
-    return () => {
-      viewport.removeEventListener('scroll', onScroll)
-    }
-  }, [])
-
-  useEffect(() => {
-    const viewport = viewportRef.current
-    if (!viewport || scrollTopRef.current <= 0) return
-
-    const raf = requestAnimationFrame(() => {
-      viewport.scrollTop = scrollTopRef.current
-    })
-
-    return () => cancelAnimationFrame(raf)
-  }, [doc, editable, editor])
-
   return (
-    <div
-      className={cn(
-        'canvas-rich-text-editor h-full pt-2',
-        editable && 'nodrag nopan',
-        isExclusivelySelected && 'nowheel',
-      )}
-      data-testid="embed-note-content-wrapper"
-      style={textStyle}
-    >
-      <ScrollArea
-        viewportRef={viewportRef}
-        className="h-full"
-        contentClassName={editable ? 'note-editor-scroll-content' : undefined}
-      >
-        <NoteContent
-          note={note}
-          editable={editable}
-          style={textStyle}
-          onEditorChange={onEditorChange}
-        />
-      </ScrollArea>
-    </div>
+    <EmbeddedNoteContent
+      note={note}
+      editable={editable}
+      allowInnerScroll={isExclusivelySelected}
+      isExclusivelySelected={isExclusivelySelected}
+      textColor={textColor}
+      onEditorChange={onEditorChange}
+      Provider={CanvasEmbeddedNoteProviders}
+    />
+  )
+}
+
+function CanvasEmbeddedNoteProviders({ children }: { children: ReactNode }) {
+  return (
+    <BlockShareMenuProvider>
+      <BlockNoteContextMenuProvider>{children}</BlockNoteContextMenuProvider>
+    </BlockShareMenuProvider>
   )
 }

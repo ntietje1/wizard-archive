@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
+import { getDeleteBlockInlineContentProjectionFieldPatch } from '../blocks/inlineContentMigration'
 import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
 
 describe('migrations', () => {
@@ -52,6 +53,18 @@ describe('migrations', () => {
       expect(
         getBlockSharePermissionLevelMigrationPatch({ permissionLevel: PERMISSION_LEVEL.VIEW }),
       ).toBeNull()
+    })
+  })
+
+  describe('getDeleteBlockInlineContentProjectionFieldPatch', () => {
+    it('deletes the deprecated inlineContent projection field when present', () => {
+      expect(getDeleteBlockInlineContentProjectionFieldPatch({ inlineContent: null })).toEqual({
+        inlineContent: undefined,
+      })
+    })
+
+    it('leaves already-clean projection rows alone', () => {
+      expect(getDeleteBlockInlineContentProjectionFieldPatch({})).toBeNull()
     })
   })
 })

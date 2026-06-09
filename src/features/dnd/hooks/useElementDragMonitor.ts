@@ -13,11 +13,13 @@ import {
   getHighlightId,
   resolveDropTarget,
   EMPTY_EDITOR_DROP_TYPE,
+  EMPTY_EMBED_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
 import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
 import { executeRegisteredSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-command'
 import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-planner'
 import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'
+import type { SurfaceDropOptions } from '~/features/dnd/utils/surface-drop-planner'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
 import { resolveFileSystemDropTarget } from '~/features/filesystem/filesystem-drop-planner'
@@ -87,7 +89,7 @@ async function executeElementDrop(
   sourceData: Record<string, unknown>,
   targetData: Record<string, unknown>,
   input: { clientX: number; clientY: number },
-  options: FileSystemDropOptions,
+  options: ElementDropOptions,
 ) {
   const draggedItems = resolveDraggedItems(sourceData, ctx)
   if (draggedItems.length === 0) return
@@ -99,6 +101,7 @@ async function executeElementDrop(
     ctx.getAncestorIds,
   )
   if (!resolvedTarget) return
+  if (resolvedTarget.type === EMPTY_EMBED_DROP_TYPE) return
   if (resolvedTarget.type === EMPTY_EDITOR_DROP_TYPE) {
     await ctx.dndContext.openItem(draggedItems[0])
     return
@@ -106,14 +109,16 @@ async function executeElementDrop(
 
   const fileSystemTarget = resolveFileSystemDropTarget(resolvedTarget, ctx.dropPlanningContext)
   if (!fileSystemTarget) {
+    const surfaceInput = { clientX: input.clientX, clientY: input.clientY }
     const surfaceCommand = resolveSurfaceDropCommand(
       draggedItems,
       resolvedTarget,
       ctx.dropPlanningContext,
+      options,
     )
     await executeRegisteredSurfaceDropCommand({
       command: surfaceCommand,
-      input,
+      input: surfaceInput,
       setBatchDecision: useDndStore.getState().setBatchDecision,
     })
     return
@@ -122,12 +127,92 @@ async function executeElementDrop(
   await ctx.dndContext.executeFileSystemDrop({
     itemIds: draggedItems.map((item) => item._id),
     target: fileSystemTarget,
-    options,
+    options: { copy: options.copy },
   })
 }
 
-function globalDropOptionsFromInput(input: { ctrlKey?: boolean }): FileSystemDropOptions {
-  return { copy: input.ctrlKey === true }
+type ElementDropOptions = FileSystemDropOptions & SurfaceDropOptions
+type ElementDragUpdateArgs = {
+  source: { data: Record<string, unknown> }
+  location: {
+    current: {
+      input: {
+        clientX: number
+        clientY: number
+        ctrlKey?: boolean
+        shiftKey?: boolean
+      }
+      dropTargets: Array<{ data: Record<string, unknown> }>
+    }
+  }
+}
+
+function globalDropOptionsFromInput(input: {
+  ctrlKey?: boolean
+  shiftKey?: boolean
+}): ElementDropOptions {
+  return {
+    copy: input.ctrlKey === true,
+    noteEditorDropAction: input.shiftKey === true ? 'embed' : 'link',
+  }
+}
+
+function updateOverlayPosition(
+  overlayRef: React.RefObject<HTMLDivElement | null>,
+  input: { clientX: number; clientY: number },
+) {
+  if (!overlayRef.current) return
+  overlayRef.current.style.transform = `translate(${input.clientX + 8}px, ${input.clientY + 8}px)`
+}
+
+function getElementDragFeedbackInput(location: ElementDragUpdateArgs['location']) {
+  const input = location.current.input
+  const topTarget = location.current.dropTargets[0]
+  const rawDropTarget = topTarget ? topTarget.data : null
+  const key = getDropTargetKey(rawDropTarget)
+  const options = globalDropOptionsFromInput(input)
+
+  return {
+    feedbackKey: `${key ?? 'none'}:${options.copy ? 'copy' : 'default'}:${options.noteEditorDropAction}`,
+    options,
+    rawDropTarget,
+  }
+}
+
+function applyElementDragFeedback({
+  ctx,
+  options,
+  rawDropTarget,
+  setDragOutcome,
+  setDragState,
+  setSidebarDragTargetId,
+  sourceData,
+}: {
+  ctx: DndMonitorCtx
+  options: ElementDropOptions
+  rawDropTarget: Record<string, unknown> | null
+  setDragOutcome: (outcome: DropOutcome | null) => void
+  setDragState: React.Dispatch<React.SetStateAction<DragOverlayState>>
+  setSidebarDragTargetId: (id: string | null) => void
+  sourceData: Record<string, unknown>
+}) {
+  const dropTarget = resolveMonitorDropTarget(rawDropTarget, ctx)
+  const draggedItems = resolveDraggedItems(sourceData, ctx)
+  const draggedPreviewItems = resolveDraggedPreviewItems(sourceData, ctx)
+  const feedback = resolveDropFeedback(draggedItems, dropTarget, ctx.dropPlanningContext, options)
+
+  setDragState((prev) => {
+    if (!prev) return null
+    return {
+      ...prev,
+      draggedItemCount: overlayItemCount(draggedPreviewItems),
+      outcome: feedback.outcome,
+      rejectedItemCount: feedback.rejectedItemCount,
+    }
+  })
+
+  setSidebarDragTargetId(getHighlightId(dropTarget))
+  setDragOutcome(feedback.outcome)
 }
 
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
@@ -193,6 +278,27 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
   }, [])
 
   useEffect(() => {
+    const handleDragUpdate = ({ location, source }: ElementDragUpdateArgs) => {
+      updateOverlayPosition(overlayRef, location.current.input)
+      const { feedbackKey, options, rawDropTarget } = getElementDragFeedbackInput(location)
+
+      if (feedbackKey !== lastDropTargetKeyRef.current) {
+        lastDropTargetKeyRef.current = feedbackKey
+        const ctx = ctxRef.current
+        if (!ctx) return
+
+        applyElementDragFeedback({
+          ctx,
+          options,
+          rawDropTarget,
+          setDragOutcome,
+          setDragState,
+          setSidebarDragTargetId,
+          sourceData: source.data,
+        })
+      }
+    }
+
     return monitorForElements({
       onDragStart: ({ source, location }) => {
         isElementDragRef.current = true
@@ -222,47 +328,8 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
           })
         }
       },
-      onDrag: ({ location, source }) => {
-        const input = location.current.input
-        if (overlayRef.current) {
-          overlayRef.current.style.transform = `translate(${input.clientX + 8}px, ${input.clientY + 8}px)`
-        }
-
-        const topTarget = location.current.dropTargets[0]
-        const rawDropTarget = topTarget ? topTarget.data : null
-        const key = getDropTargetKey(rawDropTarget)
-        const options = globalDropOptionsFromInput(input)
-        const feedbackKey = `${key ?? 'none'}:${options.copy ? 'copy' : 'default'}`
-
-        if (feedbackKey !== lastDropTargetKeyRef.current) {
-          lastDropTargetKeyRef.current = feedbackKey
-          const ctx = ctxRef.current
-          if (!ctx) return
-
-          const dropTarget = resolveMonitorDropTarget(rawDropTarget, ctx)
-          const draggedItems = resolveDraggedItems(source.data, ctx)
-          const draggedPreviewItems = resolveDraggedPreviewItems(source.data, ctx)
-          const feedback = resolveDropFeedback(
-            draggedItems,
-            dropTarget,
-            ctx.dropPlanningContext,
-            options,
-          )
-
-          setDragState((prev) => {
-            if (!prev) return null
-            return {
-              ...prev,
-              draggedItemCount: overlayItemCount(draggedPreviewItems),
-              outcome: feedback.outcome,
-              rejectedItemCount: feedback.rejectedItemCount,
-            }
-          })
-
-          setSidebarDragTargetId(getHighlightId(dropTarget))
-          setDragOutcome(feedback.outcome)
-        }
-      },
+      onDrag: handleDragUpdate,
+      onDropTargetChange: handleDragUpdate,
       onDrop: async ({ source, location }) => {
         isElementDragRef.current = false
         resetElementDragState({

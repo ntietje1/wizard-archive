@@ -115,6 +115,7 @@ function CanvasEditorRuntime({
   return (
     <CanvasEngineProvider engine={runtime.canvasEngine}>
       <CanvasRuntimeProvider
+        canvasId={canvasId}
         canEdit={canEdit}
         commands={runtime.commands}
         documentWriter={runtime.documentWriter}
@@ -122,6 +123,7 @@ function CanvasEditorRuntime({
         editSession={runtime.editSession}
         history={runtime.history}
         nodeActions={runtime.nodeActions}
+        provider={provider}
         remoteHighlights={runtime.remoteHighlights}
         selection={runtime.selection}
         viewportController={runtime.viewportController}

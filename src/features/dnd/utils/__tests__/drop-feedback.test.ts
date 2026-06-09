@@ -3,7 +3,9 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import {
   CANVAS_DROP_ZONE_TYPE,
+  EMPTY_EMBED_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
+  NOTE_EDITOR_DROP_TYPE,
   SIDEBAR_ROOT_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
 import type { ResolvedSidebarItemDropData } from '~/features/dnd/utils/drop-target-data'
@@ -154,6 +156,63 @@ describe('resolveDropFeedback', () => {
         action: 'embed',
         label: 'Embed 2 items in canvas',
       },
+    })
+  })
+
+  it('uses embed feedback for shift-dragging sidebar items into note editors', () => {
+    const note = createNote()
+
+    expect(
+      resolveDropFeedback(
+        [note],
+        {
+          type: NOTE_EDITOR_DROP_TYPE,
+          noteId: testId<'sidebarItems'>('note_target'),
+        },
+        planningContext(),
+        { noteEditorDropAction: 'embed' },
+      ),
+    ).toEqual({
+      outcome: {
+        type: 'operation',
+        action: 'embed',
+        label: 'Embed item here',
+      },
+    })
+  })
+
+  it('uses embed feedback when hovering an empty embed drop target', () => {
+    const note = createNote()
+    const target = createNote()
+
+    expect(
+      resolveDropFeedback(
+        [note],
+        { type: EMPTY_EMBED_DROP_TYPE, sourceItemId: target._id },
+        planningContext(),
+      ),
+    ).toEqual({
+      outcome: {
+        type: 'operation',
+        action: 'embed',
+        label: 'Embed item here',
+      },
+    })
+  })
+
+  it('rejects multi-item empty embed replacement feedback', () => {
+    const first = createNote()
+    const second = createNote()
+    const target = createNote()
+
+    expect(
+      resolveDropFeedback(
+        [first, second],
+        { type: EMPTY_EMBED_DROP_TYPE, sourceItemId: target._id },
+        planningContext(),
+      ),
+    ).toEqual({
+      outcome: { type: 'rejection', reason: 'unexpected_action' },
     })
   })
 

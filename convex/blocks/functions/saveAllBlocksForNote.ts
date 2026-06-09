@@ -3,6 +3,7 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { flattenBlocks } from './flattenBlocks'
+import { parseEditorBlocks } from '../parseEditorBlocks'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { CustomBlock } from '../../../shared/editor-blocks/types'
@@ -29,7 +30,13 @@ export async function saveAllBlocksForNote(
 
   const existingBlocksMap = new Map(existingBlocks.map((block) => [block.blockNoteId, block]))
 
-  const rawFlatBlocks = flattenBlocks(content)
+  const canonicalContent = parseEditorBlocks(content)
+  const rawFlatBlocks = flattenBlocks(canonicalContent)
+  await validateSidebarItemEmbedTargets(ctx, {
+    noteId,
+    campaignId,
+    flatBlocks: rawFlatBlocks,
+  })
   const deduped = new Map<string, (typeof rawFlatBlocks)[number]>()
   for (const flat of rawFlatBlocks) {
     if (deduped.has(flat.blockNoteId)) {
@@ -108,7 +115,6 @@ async function replacePersistedBlock(
     type: block.type,
     props: block.props,
     content: block.content,
-    inlineContent: block.inlineContent,
     plainText: block.plainText,
   })
 }
@@ -121,4 +127,66 @@ function validatePersistedBlockDepth(block: Pick<PersistedFlatBlock, 'depth' | '
   if (block.parentBlockId !== null && block.depth === 0) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be > 0 when parentBlockId is set')
   }
+}
+
+async function validateSidebarItemEmbedTargets(
+  ctx: Pick<MutationCtx, 'db'>,
+  {
+    noteId,
+    campaignId,
+    flatBlocks,
+  }: {
+    noteId: Id<'sidebarItems'>
+    campaignId: Id<'campaigns'>
+    flatBlocks: Array<PersistedFlatBlock>
+  },
+) {
+  const targetIds = new Set<Id<'sidebarItems'>>()
+  for (const block of flatBlocks) {
+    const targetId = getSidebarItemEmbedTargetId(ctx, block)
+    if (!targetId) continue
+    if (targetId === noteId) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'A note cannot embed itself')
+    }
+    targetIds.add(targetId)
+  }
+
+  await asyncMap([...targetIds], async (targetId) => {
+    const item = await ctx.db.get('sidebarItems', targetId)
+    if (!item) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target not found')
+    }
+    if (item.campaignId !== campaignId) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target belongs to different campaign')
+    }
+    if (!isActiveSidebarItem(item)) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target is not an active sidebar item')
+    }
+  })
+}
+
+function getSidebarItemEmbedTargetId(
+  ctx: Pick<MutationCtx, 'db'>,
+  block: PersistedFlatBlock,
+): Id<'sidebarItems'> | null {
+  if (block.type !== 'embed') return null
+  const props = block.props
+  if (
+    props &&
+    typeof props === 'object' &&
+    'targetKind' in props &&
+    props.targetKind === 'sidebarItem' &&
+    'sidebarItemId' in props &&
+    typeof props.sidebarItemId === 'string'
+  ) {
+    const sidebarItemId = ctx.db.normalizeId('sidebarItems', props.sidebarItemId)
+    if (!sidebarItemId) {
+      throwClientError(
+        ERROR_CODE.VALIDATION_FAILED,
+        `Invalid embed target sidebarItemId for block ${block.blockNoteId}`,
+      )
+    }
+    return sidebarItemId
+  }
+  return null
 }

@@ -20,6 +20,7 @@ import { ValueInlineContent } from '../value-block-spec'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())
 const useActiveSidebarItemsMock = vi.hoisted(() => vi.fn())
+const useFilteredSidebarItemsMock = vi.hoisted(() => vi.fn())
 
 vi.mock('~/shared/hooks/useCampaignQuery', () => ({
   useCampaignQuery: (...args: Array<unknown>) => useCampaignQueryMock(...args),
@@ -29,12 +30,20 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   useActiveSidebarItems: () => useActiveSidebarItemsMock(),
 }))
 
+vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
+  useFilteredSidebarItems: () => useFilteredSidebarItemsMock(),
+}))
+
 beforeEach(() => {
   useCampaignQueryMock.mockReturnValue({
     data: [],
     status: 'success',
   })
   useActiveSidebarItemsMock.mockReturnValue({
+    data: [],
+    itemsMap: new Map(),
+  })
+  useFilteredSidebarItemsMock.mockReturnValue({
     data: [],
     itemsMap: new Map(),
   })
@@ -197,6 +206,7 @@ function renderRuntimeProviderChip({
   persistedStates,
   externalStates = [],
   sidebarItems = [],
+  filteredSidebarItems = sidebarItems,
   extraValues = [],
 }: {
   expressionSource: string
@@ -204,11 +214,16 @@ function renderRuntimeProviderChip({
   persistedStates: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
   externalStates?: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
   sidebarItems?: Array<AnySidebarItem>
+  filteredSidebarItems?: Array<AnySidebarItem>
   extraValues?: Parameters<typeof makeRuntimeProviderEditor>[1]
 }) {
   useActiveSidebarItemsMock.mockReturnValue({
     data: sidebarItems,
     itemsMap: new Map(sidebarItems.map((item) => [item._id, item])),
+  })
+  useFilteredSidebarItemsMock.mockReturnValue({
+    data: filteredSidebarItems,
+    itemsMap: new Map(filteredSidebarItems.map((item) => [item._id, item])),
   })
   useCampaignQueryMock.mockImplementation((_query, args) => {
     if (args && typeof args === 'object' && 'noteIds' in args) {
@@ -330,6 +345,35 @@ describe('inline value chip runtime', () => {
 
     expect(screen.getByTestId('provider-value-state')).toHaveTextContent(
       'error:Cyclic dependency detected:Cyclic dependency detected',
+    )
+  })
+
+  it('does not resolve external values for notes missing from the filtered sidebar view', () => {
+    const currentNote = noteItem('note-1' as Id<'sidebarItems'>, 'Current Note')
+    const hiddenNote = noteItem('note-2' as Id<'sidebarItems'>, 'Hidden Note')
+
+    renderRuntimeProviderChip({
+      expressionSource: '[[Hidden Note.prof_bonus]] + 1',
+      sidebarItems: [currentNote, hiddenNote],
+      filteredSidebarItems: [currentNote],
+      persistedStates: [],
+      externalStates: [
+        runtimeState({
+          noteId: hiddenNote._id,
+          valueId: 'hidden-value-1',
+          slug: 'prof_bonus',
+          rawValue: 2,
+          formattedValue: '2',
+        }),
+      ],
+    })
+
+    expect(screen.getByTestId('provider-value-state')).toHaveTextContent(
+      'Unknown reference "prof_bonus"',
+    )
+    expect(useCampaignQueryMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ noteIds: [hiddenNote._id] }),
     )
   })
 

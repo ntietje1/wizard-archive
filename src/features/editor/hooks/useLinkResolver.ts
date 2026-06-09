@@ -3,7 +3,7 @@ import { normalizeSidebarItemColorOrDefault } from 'shared/sidebar-items/color'
 import { isDangerousUrl } from 'shared/links/parsing'
 import { resolveParsedItemPath } from 'shared/links/resolution'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import type { ParsedLinkData, ResolvedLink } from 'shared/links/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -21,7 +21,7 @@ export function useLinkResolver(
   sourceNoteId?: Id<'sidebarItems'>,
   options: { isViewerMode: boolean } = { isViewerMode: false },
 ): LinkResolver {
-  const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
+  const { data: sidebarItems, itemsMap } = useFilteredSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
 
   const allItems = sidebarItems ?? EMPTY_ITEMS

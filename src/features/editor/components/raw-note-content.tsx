@@ -1,19 +1,18 @@
 import { BlockNoteEditor } from '@blocknote/core'
+import { BlockNoteViewRaw as BlockNoteView } from '@blocknote/react'
 import { partialBlockNoteBlockSchema } from 'shared/editor-blocks/blockSchemas'
-import { isDangerousUrl } from 'shared/links/parsing'
 import { createStaticEditorSchema } from '../static-editor-schema'
-import { NoteEditorCore } from './note-editor-core'
 import { NoteValueRuntimeContext } from '../value-block/value-block-runtime-context'
+import { NoteEmbedSurfaceProvider } from './extensions/embed-block/note-embed-surface-context'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 import { logger } from '~/shared/utils/logger'
+import { useResolvedTheme } from '~/shared/theme/context'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import type { NoteValueRuntimeContextValue } from '../value-block/value-block-runtime-context'
 import type { PartialBlock } from '@blocknote/core'
 import type { CSSProperties, ReactNode } from 'react'
-import type { ParsedLinkData, ResolvedLink } from 'shared/links/types'
 import type { NoteValueAuthoringDefinition, NoteValueRuntimeState } from 'shared/note-values/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -26,6 +25,7 @@ type RawNoteContentProps = {
   fillHeight?: boolean
   noteId?: Id<'sidebarItems'>
   onEditorChange?: (editor: CustomBlockNoteEditor | null) => void
+  schemaFactory?: (sourceNoteId: Id<'sidebarItems'> | null) => StaticEditorSchema
   style?: CSSProperties
 }
 
@@ -34,6 +34,7 @@ const EMPTY_ITEM_MAP = new Map<Id<'sidebarItems'>, AnySidebarItem>()
 const EMPTY_VALUE_DEFINITIONS: Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>> = []
 const EMPTY_VALUE_STATES: Array<NoteValueRuntimeState<Id<'sidebarItems'>>> = []
 type RawEditorSchema = ReturnType<typeof createStaticEditorSchema>
+type StaticEditorSchema = RawEditorSchema
 type RawNoteInitialContent = Array<
   PartialBlock<
     RawEditorSchema['blockSchema'],
@@ -41,8 +42,6 @@ type RawNoteInitialContent = Array<
     RawEditorSchema['styleSchema']
   >
 >
-const RAW_EDITABLE_LINK_RESOLVER = createRawLinkResolver(false)
-const RAW_VIEWER_LINK_RESOLVER = createRawLinkResolver(true)
 
 function createRawValueRuntime({
   editable,
@@ -59,35 +58,6 @@ function createRawValueRuntime({
     stateByValueId: new Map(),
     sidebarItems: EMPTY_ITEMS,
     itemsMap: EMPTY_ITEM_MAP,
-  }
-}
-
-function createRawLinkResolver(isViewerMode: boolean): LinkResolver {
-  return {
-    allItems: EMPTY_ITEMS,
-    itemsMap: EMPTY_ITEM_MAP,
-    isViewerMode,
-    resolveLink: resolveRawLink,
-  }
-}
-
-function resolveRawLink(parsed: ParsedLinkData): ResolvedLink<Id<'sidebarItems'>> {
-  if (parsed.isExternal) {
-    return {
-      ...parsed,
-      resolved: true,
-      itemId: null,
-      href: isDangerousUrl(parsed.rawTarget) ? null : parsed.rawTarget,
-      color: null,
-    }
-  }
-
-  return {
-    ...parsed,
-    resolved: false,
-    itemId: null,
-    href: null,
-    color: null,
   }
 }
 
@@ -127,15 +97,17 @@ export function RawNoteContent({
   fillHeight = false,
   noteId,
   onEditorChange,
+  schemaFactory,
   style,
 }: RawNoteContentProps) {
+  const resolvedTheme = useResolvedTheme()
   const editor = useOwnedBlockNoteEditor({
     identity: `${noteId ?? 'raw-note-content'}:${editable}`,
     createEditor: () =>
       BlockNoteEditor.create({
-        schema: createStaticEditorSchema(),
+        schema: (schemaFactory ?? createStaticEditorSchema)(noteId ?? null),
         initialContent: validateInitialContent({ content, noteId }),
-      }) as CustomBlockNoteEditor,
+      }) as unknown as CustomBlockNoteEditor,
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange,
   })
@@ -146,14 +118,24 @@ export function RawNoteContent({
     <div className={editable || fillHeight ? 'note-editor-fill-height' : undefined}>
       <div className={className}>
         <NoteValueRuntimeContext.Provider value={createRawValueRuntime({ editable, noteId })}>
-          <NoteEditorCore
-            editor={editor}
-            style={style}
-            editable={editable}
-            linkResolver={editable ? RAW_EDITABLE_LINK_RESOLVER : RAW_VIEWER_LINK_RESOLVER}
-          >
-            {children}
-          </NoteEditorCore>
+          <NoteEmbedSurfaceProvider sourceNoteId={noteId ?? null} editable={editable}>
+            <BlockNoteView
+              editor={editor}
+              style={style}
+              theme={resolvedTheme}
+              editable={editable}
+              sideMenu={false}
+              formattingToolbar={false}
+              slashMenu={false}
+              linkToolbar={false}
+              emojiPicker={false}
+              filePanel={false}
+              tableHandles={false}
+              comments={false}
+            >
+              {children}
+            </BlockNoteView>
+          </NoteEmbedSurfaceProvider>
         </NoteValueRuntimeContext.Provider>
       </div>
     </div>

@@ -13,6 +13,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import type { EditorWorkspaceSource } from '../workspace/editor-workspace-source'
+import { RequestAccessButton } from '~/features/sidebar/components/request-access-button'
 
 const SidebarItemEditor = lazy(() =>
   import('./viewer/sidebar-item-editor').then((m) => ({
@@ -75,22 +76,23 @@ export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
 
 function EmptyEditorContent({ campaign }: { campaign: EditorWorkspaceSource['campaign'] }) {
   const ref = useRef<HTMLDivElement>(null)
+  const dropData = { type: EMPTY_EDITOR_DROP_TYPE } as const
 
   const { isDropTarget } = useDndDropTarget({
     ref,
-    data: { type: EMPTY_EDITOR_DROP_TYPE },
+    data: dropData,
     highlightId: EMPTY_EDITOR_DROP_TYPE,
   })
 
   useExternalDropTarget({
     ref,
-    parentId: null,
+    data: dropData,
     canAcceptFiles: true,
   })
 
   const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
-  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
-  const isFileDragTarget = isDraggingFiles && fileDragHoveredId === null
+  const fileDragHoveredTargetKey = useDndStore((s) => s.fileDragHoveredTargetKey)
+  const isFileDragTarget = isDraggingFiles && fileDragHoveredTargetKey === EMPTY_EDITOR_DROP_TYPE
 
   return (
     <div
@@ -137,6 +139,11 @@ function UnavailableEditorContent({
               Create it
             </Button>
           </p>
+        )}
+        {state.status === 'not_shared' && (
+          <div className="mt-3">
+            <RequestAccessButton />
+          </div>
         )}
       </div>
     </div>

@@ -1,5 +1,13 @@
-import type { UploadProgress } from '~/features/dnd/hooks/useFileDropHandler'
 import { Progress } from '~/features/shadcn/components/progress'
+
+export interface UploadProgress {
+  toastId: string | number
+  totalFiles: number
+  totalFolders: number
+  processedFiles: number
+  processedFolders: number
+  skippedFiles: number
+}
 
 export const ToastContent = ({
   title,

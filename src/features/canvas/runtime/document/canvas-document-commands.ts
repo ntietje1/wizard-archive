@@ -9,12 +9,14 @@ import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-
 import type { CanvasReorderPlan } from './canvas-reorder-plan'
 import type { CanvasContextMenuPoint } from '../context-menu/canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
+import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type {
   CanvasConnection as Connection,
   CanvasPosition,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 import type {
+  CanvasEmbedDocumentNode,
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
@@ -148,7 +150,7 @@ export function patchCanvasNodeDataCommand({
           case 'embed':
             return {
               ...existing,
-              data: { ...existing.data, ...data } as typeof existing.data,
+              data: normalizeEmbedNodeDataPatch(existing.data, data),
             } satisfies CanvasDocumentNode
           case 'stroke':
             return {
@@ -178,6 +180,20 @@ export function patchCanvasNodeDataCommand({
   }
 
   applyCanvasNodeMapUpdates(nodesMap, nodeUpdates)
+}
+
+function normalizeEmbedNodeDataPatch(
+  existingData: CanvasEmbedDocumentNode['data'],
+  patch: CanvasNodeDataPatch<'embed'>,
+): CanvasEmbedDocumentNode['data'] {
+  const nextData = { ...existingData, ...patch } as CanvasEmbedDocumentNode['data']
+  if ('target' in patch) {
+    delete nextData.sidebarItemId
+  }
+  if (patch.lockedAspectRatio === null) {
+    delete nextData.lockedAspectRatio
+  }
+  return nextData
 }
 
 export function patchCanvasEdgesCommand({
@@ -413,7 +429,29 @@ export function createAndSelectEmbeddedCanvasNode({
   createNode: (node: CanvasDocumentNode) => void
   setSelection: (selection: CanvasSelectionSnapshot) => void
 }) {
-  const embedNode = createEmbedCanvasNode(sidebarItemId, screenToCanvasPosition(pointerPosition))
+  return createAndSelectEmbedCanvasNode({
+    target: { kind: 'sidebarItem', sidebarItemId },
+    pointerPosition,
+    screenToCanvasPosition,
+    createNode,
+    setSelection,
+  })
+}
+
+export function createAndSelectEmbedCanvasNode({
+  target,
+  pointerPosition,
+  screenToCanvasPosition,
+  createNode,
+  setSelection,
+}: {
+  target: EmbedTarget
+  pointerPosition: CanvasContextMenuPoint
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  createNode: (node: CanvasDocumentNode) => void
+  setSelection: (selection: CanvasSelectionSnapshot) => void
+}) {
+  const embedNode = createEmbedCanvasNode(target, screenToCanvasPosition(pointerPosition))
   createNode(embedNode)
 
   const nextSelection = { nodeIds: new Set([embedNode.id]), edgeIds: new Set<string>() }

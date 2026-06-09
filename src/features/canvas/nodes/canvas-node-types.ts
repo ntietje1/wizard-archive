@@ -18,7 +18,7 @@ export interface CanvasNodeDataByType {
   text: CanvasTextNodeData
 }
 
-export interface CanvasNodeRenderDataByType {
+interface CanvasNodeRenderDataByType {
   embed: EmbedNodeData
   stroke: StrokeNodeData
   text: CanvasRichTextNodeData

@@ -285,15 +285,14 @@ describe('persistBlocks', () => {
           children: [],
         },
         {
-          id: testBlockNoteId('image-block-1'),
-          type: 'image',
+          id: testBlockNoteId('embed-block-1'),
+          type: 'embed',
           props: {
+            targetKind: 'externalUrl',
             name: 'Preview',
             url: 'https://example.com/image.png',
-            caption: 'A caption',
             backgroundColor: 'default',
             textAlignment: 'left',
-            showPreview: true,
             previewWidth: 320,
           },
           children: [],
@@ -312,10 +311,61 @@ describe('persistBlocks', () => {
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
 
-      expect(blocks.map((block) => block.blockNoteId).sort()).toEqual([
-        testBlockNoteId('image-block-1'),
-        testBlockNoteId('table-block-1'),
-      ])
+      expect(blocks.map((block) => block.blockNoteId).sort()).toEqual(
+        [testBlockNoteId('embed-block-1'), testBlockNoteId('table-block-1')].sort(),
+      )
+    })
+  })
+
+  it('persists embed preview aspect ratios from canonical Yjs updates', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Embed Aspect Ratio Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: testBlockNoteId('embed-block-1'),
+          type: 'embed',
+          props: {
+            targetKind: 'externalUrl',
+            name: 'Preview',
+            url: 'https://example.com/document.pdf',
+            previewWidth: 320,
+            previewAspectRatio: 0.772727,
+          },
+          children: [],
+        },
+      ]),
+    })
+
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+    })
+
+    await t.run(async (dbCtx) => {
+      const block = await dbCtx.db
+        .query('blocks')
+        .withIndex('by_campaign_note_block', (q) =>
+          q
+            .eq('campaignId', ctx.campaignId)
+            .eq('noteId', noteId)
+            .eq('blockNoteId', testBlockNoteId('embed-block-1')),
+        )
+        .first()
+
+      expect(block?.props).toMatchObject({
+        previewAspectRatio: 0.772727,
+        previewWidth: 320,
+      })
     })
   })
 

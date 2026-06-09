@@ -15,7 +15,7 @@ import type {
 import { NoteValueRuntimeContext } from './value-block-runtime-context'
 import { resolveExternalNoteId } from './use-value-reference-authoring'
 import { useValueTransferBehavior } from './value-transfer-plugin'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 
 type EditorDocumentSnapshot = {
@@ -168,8 +168,8 @@ function getExternalNoteIdByPathForDefinitions({
 }: {
   definitions: Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>>
   noteId: Id<'sidebarItems'>
-  sidebarItems: ReturnType<typeof useActiveSidebarItems>['data']
-  itemsMap: ReturnType<typeof useActiveSidebarItems>['itemsMap']
+  sidebarItems: ReturnType<typeof useFilteredSidebarItems>['data']
+  itemsMap: ReturnType<typeof useFilteredSidebarItems>['itemsMap']
 }) {
   const sourceParentId = itemsMap.get(noteId)?.parentId
   const noteIdByPath = new Map<string, Id<'sidebarItems'>>()
@@ -203,7 +203,7 @@ export function NoteValueRuntimeProvider({
   evaluateValuesFromEditor: boolean
   children: React.ReactNode
 }) {
-  const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
+  const { data: sidebarItems, itemsMap } = useFilteredSidebarItems()
   const editorDocumentSnapshot = useEditorDocumentSnapshot(editor)
 
   const persistedStatesQuery = useCampaignQuery(

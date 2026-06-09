@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { createContext, use, useEffect, useRef, useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
 import {
@@ -17,6 +18,7 @@ import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
@@ -26,18 +28,50 @@ import {
   getCanvasNodeTextStyle,
 } from '../shared/canvas-node-surface-style'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
-import { resolveFilePreviewImageUrl } from '~/features/editor/components/viewer/file/file-preview-source'
+import { FileMediaEmbedContent } from '~/features/previews/components/file-media-embed-content'
 import { EmbeddedCanvasContent } from './embedded-canvas-content'
-import { EmbeddedFileContent } from './embedded-file-content'
 import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
-import { EmbeddedSidebarItemUnavailable } from './embedded-sidebar-item-unavailable'
+import {
+  EMBED_NODE_MIN_SIZE,
+  resolveDefaultEmbedNodeResizeForLockedAspectRatio,
+} from './embed-node-size'
+import { EmbedContent } from '~/features/embeds/components/embed-content'
+import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
+import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
+import type {
+  EmbedMediaLayout,
+  EmbedMediaLayoutReporter,
+} from '~/features/embeds/utils/embed-media'
+import {
+  areEmbedMediaLayoutsEqual,
+  getEmbedMediaAspectRatio,
+} from '~/features/embeds/utils/embed-media'
+import { getDefaultDocumentEmbedAspectRatio } from '~/features/embeds/utils/document-embed-layout'
+import { Button } from '~/features/shadcn/components/button'
+import { Input } from '~/features/shadcn/components/input'
+import type { Id } from 'convex/_generated/dataModel'
+import type { RefObject } from 'react'
 
 const EMBED_FLOATING_LABEL_GAP_PX = 6
 const EMBED_FLOATING_LABEL_LINE_HEIGHT_PX = 16
+
+type CanvasEmbedRichContentContextValue = {
+  nodeId: string
+  isEditing: boolean
+  isExclusivelySelected: boolean
+  interactiveRenderMode: boolean
+  onActivated: () => void
+  onEditorChange: (editor: CustomBlockNoteEditor | null) => void
+  pendingActivationRef: PendingRichEmbedActivationRef
+  textColor: string | null
+}
+
+const CanvasEmbedRichContentContext = createContext<CanvasEmbedRichContentContextValue | null>(null)
 
 function persistEmbedTextColor(
   patchNodeData: CanvasDocumentWriter['patchNodeData'],
@@ -47,10 +81,193 @@ function persistEmbedTextColor(
   patchNodeData(new Map([[id, { textColor }]]))
 }
 
+function useEmbedNodeMediaLayout({
+  canvasEngine,
+  contentItemType,
+  documentAspectRatio,
+  documentWriter,
+  id,
+  lockedAspectRatio,
+  patchNodeData,
+  target,
+}: {
+  canvasEngine: ReturnType<typeof useCanvasEngine>
+  contentItemType: AnySidebarItemWithContent['type'] | undefined
+  documentAspectRatio: number | null
+  documentWriter: CanvasDocumentWriter
+  id: string
+  lockedAspectRatio: number | null
+  patchNodeData: CanvasDocumentWriter['patchNodeData']
+  target: EmbedTarget
+}) {
+  const targetIdentity = getEmbedTargetIdentity(target)
+  const [reportedMediaLayout, setReportedMediaLayout] = useState<{
+    layout: EmbedMediaLayout
+    targetIdentity: string
+  } | null>(null)
+  const mediaLayout =
+    reportedMediaLayout?.targetIdentity === targetIdentity ? reportedMediaLayout.layout : null
+  const mediaLayoutRef = useRef<{
+    layout: EmbedMediaLayout
+    targetIdentity: string
+  } | null>(null)
+  if (mediaLayoutRef.current?.targetIdentity !== targetIdentity) {
+    mediaLayoutRef.current = null
+  }
+  const lastStoredAspectRatioRef = useRef<number | null>(lockedAspectRatio)
+
+  const resizeDefaultNodeForAspectRatio = (aspectRatio: number) => {
+    const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node
+    const resize = node
+      ? resolveDefaultEmbedNodeResizeForLockedAspectRatio(node, aspectRatio)
+      : null
+    if (resize) {
+      documentWriter.resizeNode(id, resize.width, resize.height, resize.position)
+    }
+  }
+
+  const resetMediaLayout = () => {
+    mediaLayoutRef.current = null
+    setReportedMediaLayout(null)
+    lastStoredAspectRatioRef.current = null
+  }
+
+  const setEmbedMediaLayout = (layout: EmbedMediaLayout) => {
+    if (
+      mediaLayoutRef.current?.targetIdentity === targetIdentity &&
+      areEmbedMediaLayoutsEqual(mediaLayoutRef.current.layout, layout)
+    ) {
+      return
+    }
+
+    mediaLayoutRef.current = { layout, targetIdentity }
+    setReportedMediaLayout({ layout, targetIdentity })
+    const nextLockedAspectRatio = getEmbedMediaAspectRatio(layout)
+    patchStoredEmbedAspectRatio({
+      id,
+      lastStoredAspectRatioRef,
+      lockedAspectRatio: nextLockedAspectRatio,
+      patchNodeData,
+    })
+    if (nextLockedAspectRatio) {
+      resizeDefaultNodeForAspectRatio(nextLockedAspectRatio)
+    }
+
+    if (layout.kind === 'fixedHeight') {
+      const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node
+      if (node && node.height !== layout.height) {
+        documentWriter.resizeNode(
+          id,
+          node.width ?? CANVAS_NODE_MIN_SIZE,
+          layout.height,
+          node.position,
+        )
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (mediaLayout !== null) return
+    syncDefaultEmbedNodeLayout({
+      canvasEngine,
+      contentItemType,
+      documentAspectRatio,
+      documentWriter,
+      id,
+      lastStoredAspectRatioRef,
+      patchNodeData,
+    })
+  }, [
+    canvasEngine,
+    contentItemType,
+    documentAspectRatio,
+    documentWriter,
+    id,
+    mediaLayout,
+    patchNodeData,
+  ])
+
+  return { mediaLayout, resetMediaLayout, setEmbedMediaLayout }
+}
+
+function syncDefaultEmbedNodeLayout({
+  canvasEngine,
+  contentItemType,
+  documentAspectRatio,
+  documentWriter,
+  id,
+  lastStoredAspectRatioRef,
+  patchNodeData,
+}: {
+  canvasEngine: ReturnType<typeof useCanvasEngine>
+  contentItemType: AnySidebarItemWithContent['type'] | undefined
+  documentAspectRatio: number | null
+  documentWriter: CanvasDocumentWriter
+  id: string
+  lastStoredAspectRatioRef: RefObject<number | null>
+  patchNodeData: CanvasDocumentWriter['patchNodeData']
+}) {
+  if (contentItemType === SIDEBAR_ITEM_TYPES.canvases) {
+    patchStoredEmbedAspectRatio({
+      id,
+      lastStoredAspectRatioRef,
+      lockedAspectRatio: null,
+      patchNodeData,
+    })
+    return
+  }
+
+  if (!documentAspectRatio) return
+
+  if (contentItemType === SIDEBAR_ITEM_TYPES.notes) {
+    patchStoredEmbedAspectRatio({
+      id,
+      lastStoredAspectRatioRef,
+      lockedAspectRatio: null,
+      patchNodeData,
+    })
+  } else {
+    patchStoredEmbedAspectRatio({
+      id,
+      lastStoredAspectRatioRef,
+      lockedAspectRatio: documentAspectRatio,
+      patchNodeData,
+    })
+  }
+
+  const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node
+  const resize = node
+    ? resolveDefaultEmbedNodeResizeForLockedAspectRatio(node, documentAspectRatio)
+    : null
+  if (resize) {
+    documentWriter.resizeNode(id, resize.width, resize.height, resize.position)
+  }
+}
+
+function patchStoredEmbedAspectRatio({
+  id,
+  lastStoredAspectRatioRef,
+  lockedAspectRatio,
+  patchNodeData,
+}: {
+  id: string
+  lastStoredAspectRatioRef: RefObject<number | null>
+  lockedAspectRatio: number | null
+  patchNodeData: CanvasDocumentWriter['patchNodeData']
+}) {
+  if (lastStoredAspectRatioRef.current === lockedAspectRatio) return
+
+  lastStoredAspectRatioRef.current = lockedAspectRatio
+  patchNodeData(new Map([[id, { lockedAspectRatio }]]))
+}
+
 export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
+  const canvasEngine = useCanvasEngine()
   const normalizedData = normalizeEmbedNodeData(data)
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const sidebarItemId = normalizedData.sidebarItemId
+  const target = normalizedData.target
+  const sidebarItemId =
+    target.kind === 'sidebarItem' ? (target.sidebarItemId as Id<'sidebarItems'>) : null
   const contentQuery = useSidebarItemById(sidebarItemId)
   const itemState = useSidebarItemAvailabilityState({
     lookup: { kind: 'id', id: sidebarItemId },
@@ -63,7 +280,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   })
   const contentItem = itemState.status === 'available' ? itemState.item : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const { documentWriter } = useCanvasDocumentRuntime()
+  const { canvasId, documentWriter, provider } = useCanvasDocumentRuntime()
   const { patchNodeData } = documentWriter
   const { domRuntime } = useCanvasViewportRuntime()
   const { canEdit, editSession } = useCanvasInteractionRuntime()
@@ -80,9 +297,43 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const defaultTextColor = getCanvasNodeDefaultTextColor(normalizedData)
 
   const zoom = useCanvasViewportZoom()
-  const label = itemState.label
-  const isUnavailable = itemState.status !== 'available' && itemState.status !== 'loading'
+  const label = getEmbedFloatingLabel(target, itemState.label)
+  const isUnavailable =
+    target.kind === 'sidebarItem' &&
+    itemState.status !== 'available' &&
+    itemState.status !== 'loading'
   const showFloatingLabel = !showsFormattingToolbar
+  const isEditableEmbed = canEdit && interactiveRenderMode
+  const allowInnerScroll = interactiveRenderMode && editableSession.isExclusivelySelected
+  const documentAspectRatio = getDefaultDocumentEmbedAspectRatio({
+    target,
+    item: contentItem,
+  })
+  const { mediaLayout, resetMediaLayout, setEmbedMediaLayout } = useEmbedNodeMediaLayout({
+    canvasEngine,
+    contentItemType: contentItem?.type,
+    documentAspectRatio,
+    documentWriter,
+    id,
+    lockedAspectRatio: normalizedData.lockedAspectRatio ?? null,
+    patchNodeData,
+    target,
+  })
+  const setTarget = async (nextTarget: EmbedTarget) => {
+    resetMediaLayout()
+    patchNodeData(new Map([[id, { target: nextTarget, lockedAspectRatio: null }]]))
+    await provider?.flushUpdates()
+  }
+  const richContentContext: CanvasEmbedRichContentContextValue = {
+    nodeId: id,
+    isEditing,
+    isExclusivelySelected: editableSession.isExclusivelySelected,
+    interactiveRenderMode,
+    onActivated: editableSession.handleActivated,
+    onEditorChange: setEditor,
+    pendingActivationRef: editableSession.pendingActivationRef,
+    textColor: normalizedData.textColor,
+  }
 
   useEffect(() => domRuntime.registerNodeSurfaceElement(id, surfaceRef.current), [domRuntime, id])
 
@@ -106,9 +357,16 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       id={id}
       nodeType="embed"
       dragging={!!dragging}
-      minWidth={CANVAS_NODE_MIN_SIZE}
-      minHeight={CANVAS_NODE_MIN_SIZE}
-      lockedAspectRatio={getLockedAspectRatio(contentItem, normalizedData.lockedAspectRatio)}
+      minWidth={EMBED_NODE_MIN_SIZE.width}
+      minHeight={getEmbedResizeMinHeight(mediaLayout)}
+      lockedAspectRatio={getLockedAspectRatio({
+        target,
+        contentItem,
+        mediaLayout,
+        normalizedData,
+        documentAspectRatio,
+      })}
+      resizeAxes={mediaLayout?.kind === 'fixedHeight' ? 'horizontal' : 'both'}
       editing={showsFormattingToolbar}
       chrome={
         <>
@@ -147,25 +405,117 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
           editableSession.handleDoubleClick(event)
         }}
       >
-        <div className="h-full w-full min-h-0 min-w-0">
-          {itemState.status === 'available' ? (
-            <EmbedRichContent
-              nodeId={id}
-              contentItem={itemState.item}
-              isEditing={isEditing}
-              isExclusivelySelected={editableSession.isExclusivelySelected}
-              interactiveRenderMode={interactiveRenderMode}
-              onActivated={editableSession.handleActivated}
-              onEditorChange={setEditor}
-              pendingActivationRef={editableSession.pendingActivationRef}
-              textColor={normalizedData.textColor}
-            />
-          ) : (
-            <EmbeddedSidebarItemUnavailable state={itemState} />
-          )}
-        </div>
+        <CanvasEmbedRichContentContext.Provider value={richContentContext}>
+          <div className="h-full w-full min-h-0 min-w-0">
+            {isEditableEmbed ? (
+              <EditableCanvasEmbedContent
+                rootRef={surfaceRef}
+                sourceCanvasId={canvasId}
+                target={target}
+                setTarget={setTarget}
+                onMediaLayout={setEmbedMediaLayout}
+                allowInnerScroll={allowInnerScroll}
+                resolvedSidebarItemState={itemState}
+              />
+            ) : (
+              <EmbedContent
+                target={target}
+                sourceItemId={canvasId}
+                mode="readonly"
+                onMediaLayout={setEmbedMediaLayout}
+                allowInnerScroll={allowInnerScroll}
+                SidebarItemRenderer={CanvasEmbedRichContentRenderer}
+                resolvedSidebarItemState={itemState}
+              />
+            )}
+          </div>
+        </CanvasEmbedRichContentContext.Provider>
       </div>
     </ResizableNodeWrapper>
+  )
+}
+
+function EditableCanvasEmbedContent({
+  rootRef,
+  sourceCanvasId,
+  target,
+  setTarget,
+  onMediaLayout,
+  allowInnerScroll,
+  resolvedSidebarItemState,
+}: {
+  rootRef: RefObject<HTMLElement | null>
+  sourceCanvasId: Id<'sidebarItems'> | null
+  target: EmbedTarget
+  setTarget: (target: EmbedTarget) => Promise<void>
+  onMediaLayout: (layout: EmbedMediaLayout) => void
+  allowInnerScroll: boolean
+  resolvedSidebarItemState?: SidebarItemAvailabilityState
+}) {
+  const embedControls = useEditableEmbedTargetControls({ setTarget })
+
+  const dropVisualState = useEmbedDropTarget({
+    ref: rootRef,
+    enabled: true,
+    sourceItemId: sourceCanvasId,
+    setTarget: embedControls.setTargetAndCloseDraft,
+    uploadFile: embedControls.uploadFile,
+  })
+
+  return (
+    <>
+      <EmbedContent
+        target={target}
+        sourceItemId={sourceCanvasId}
+        mode="editable"
+        onUpload={embedControls.openFilePicker}
+        onLinkExternal={embedControls.openLinkDraft}
+        onMediaLayout={onMediaLayout}
+        allowInnerScroll={allowInnerScroll}
+        dropVisualState={target.kind === 'empty' ? dropVisualState : undefined}
+        SidebarItemRenderer={CanvasEmbedRichContentRenderer}
+        resolvedSidebarItemState={resolvedSidebarItemState}
+      />
+      <input
+        ref={embedControls.fileInputRef}
+        type="file"
+        aria-label="Embed file upload"
+        className="hidden"
+        onChange={embedControls.handleFileInputChange}
+      />
+      {embedControls.isUploading || embedControls.uploadError ? (
+        <div className="absolute inset-x-2 bottom-2 z-20 rounded-md border border-border bg-background/95 px-3 py-2 text-sm shadow-sm">
+          {embedControls.uploadError ? (
+            <span className="text-destructive">{embedControls.uploadError}</span>
+          ) : (
+            <span className="text-muted-foreground">Uploading...</span>
+          )}
+        </div>
+      ) : null}
+      {embedControls.linkDraftOpen ? (
+        <form
+          className="absolute inset-x-2 bottom-2 z-20 flex gap-2 rounded-md border border-border bg-background/95 p-2 shadow-sm"
+          action={embedControls.submitLinkDraft}
+        >
+          <Input
+            value={embedControls.linkDraft}
+            aria-label="External file URL"
+            placeholder="https://example.com/file.pdf"
+            onChange={(event) => {
+              embedControls.setLinkDraftValue(event.target.value)
+            }}
+          />
+          <Button type="submit" size="sm">
+            Link
+          </Button>
+          {embedControls.linkError ? (
+            <span className="self-center whitespace-nowrap text-sm text-destructive">
+              {embedControls.linkError}
+            </span>
+          ) : null}
+        </form>
+      ) : null}
+    </>
   )
 }
 
@@ -205,7 +555,30 @@ function EmbedFloatingLabel({
   )
 }
 
+function CanvasEmbedRichContentRenderer({
+  item,
+  allowInnerScroll = true,
+  onMediaLayout,
+}: {
+  item: AnySidebarItemWithContent
+  allowInnerScroll?: boolean
+  onMediaLayout?: EmbedMediaLayoutReporter
+}) {
+  const context = use(CanvasEmbedRichContentContext)
+  if (!context) return null
+
+  return (
+    <EmbedRichContent
+      {...context}
+      contentItem={item}
+      allowInnerScroll={allowInnerScroll}
+      onMediaLayout={onMediaLayout}
+    />
+  )
+}
+
 function EmbedRichContent({
+  allowInnerScroll,
   nodeId,
   contentItem,
   isEditing,
@@ -213,9 +586,11 @@ function EmbedRichContent({
   interactiveRenderMode,
   onActivated,
   onEditorChange,
+  onMediaLayout,
   pendingActivationRef,
   textColor,
 }: {
+  allowInnerScroll: boolean
   nodeId: string
   contentItem: AnySidebarItemWithContent
   isEditing: boolean
@@ -223,6 +598,7 @@ function EmbedRichContent({
   interactiveRenderMode: boolean
   onActivated: () => void
   onEditorChange: (editor: CustomBlockNoteEditor | null) => void
+  onMediaLayout?: EmbedMediaLayoutReporter
   pendingActivationRef: PendingRichEmbedActivationRef
   textColor: string | null
 }): React.ReactElement | null {
@@ -262,10 +638,15 @@ function EmbedRichContent({
   }
 
   if (contentItem.type === SIDEBAR_ITEM_TYPES.files) {
-    return interactiveRenderMode ? (
-      <EmbeddedFileContent nodeId={nodeId} file={contentItem} />
-    ) : (
-      <SidebarItemPreviewContent item={contentItem} />
+    return (
+      <FileMediaEmbedContent
+        downloadUrl={contentItem.downloadUrl}
+        contentType={contentItem.contentType}
+        previewUrl={contentItem.previewUrl}
+        name={contentItem.name}
+        allowInnerScroll={allowInnerScroll}
+        onMediaLayout={onMediaLayout}
+      />
     )
   }
 
@@ -283,24 +664,68 @@ function EmbedRichContent({
   )
 }
 
-function getLockedAspectRatio(
-  contentItem: AnySidebarItemWithContent | undefined,
-  lockedAspectRatio: number | undefined,
-) {
+function getEmbedFloatingLabel(target: EmbedNodeData['target'], sidebarItemLabel: string) {
+  if (target.kind === 'externalUrl') return target.name ?? target.url
+  if (target.kind === 'empty') return 'Empty embed'
+  return sidebarItemLabel
+}
+
+function getLockedAspectRatio({
+  target,
+  contentItem,
+  mediaLayout,
+  normalizedData,
+  documentAspectRatio,
+}: {
+  target: EmbedNodeData['target']
+  contentItem: AnySidebarItemWithContent | undefined
+  mediaLayout: EmbedMediaLayout | null
+  normalizedData: EmbedNodeData
+  documentAspectRatio: number | null
+}) {
+  if (mediaLayout?.kind === 'fixedHeight') {
+    return undefined
+  }
+
+  if (
+    contentItem?.type === SIDEBAR_ITEM_TYPES.notes ||
+    contentItem?.type === SIDEBAR_ITEM_TYPES.canvases
+  ) {
+    return undefined
+  }
+
+  const lockedAspectRatio =
+    getEmbedMediaAspectRatio(mediaLayout) ?? normalizedData.lockedAspectRatio ?? documentAspectRatio
+  if (typeof lockedAspectRatio !== 'number') {
+    return undefined
+  }
+
+  if (target.kind === 'externalUrl') {
+    return lockedAspectRatio
+  }
+
   if (contentItem?.type === SIDEBAR_ITEM_TYPES.gameMaps) {
     return lockedAspectRatio
   }
 
   if (contentItem?.type === SIDEBAR_ITEM_TYPES.files) {
-    const hasVisualPreview =
-      resolveFilePreviewImageUrl({
-        downloadUrl: contentItem.downloadUrl,
-        contentType: contentItem.contentType,
-        previewUrl: contentItem.previewUrl,
-      }) !== null
-
-    return hasVisualPreview ? lockedAspectRatio : undefined
+    return lockedAspectRatio
   }
 
   return undefined
+}
+
+function getEmbedResizeMinHeight(mediaLayout: EmbedMediaLayout | null) {
+  return mediaLayout?.kind === 'fixedHeight' ? mediaLayout.height : EMBED_NODE_MIN_SIZE.height
+}
+
+function getEmbedTargetIdentity(target: EmbedTarget) {
+  switch (target.kind) {
+    case 'empty':
+      return 'empty'
+    case 'externalUrl':
+      return `external:${target.url}`
+    case 'sidebarItem':
+      return `sidebar:${target.sidebarItemId}`
+  }
 }
