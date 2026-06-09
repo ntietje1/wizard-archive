@@ -3,16 +3,13 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
-import { handleError } from '~/shared/utils/logger'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import type { EditorWorkspaceSource } from './editor-workspace-source'
 
 export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
@@ -22,10 +19,8 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const campaign = useCampaign()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const { createItem } = useCreateFileSystemItem()
-  const { getDefaultName } = useSidebarValidation()
   const {
-    commands: { openParentFolders },
+    commands: { createSidebarItem },
   } = useSidebarWorkspaceSource()
   const [isCreatingMissingRequestedNote, startCreateTransition] = useTransition()
 
@@ -50,17 +45,11 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     if (!campaign.campaignId || !requestedSlug || isCreatingMissingRequestedNote) return
 
     startCreateTransition(async () => {
-      try {
-        const result = await createItem({
-          type: SIDEBAR_ITEM_TYPES.notes,
-          parentTarget: { kind: 'direct', parentId: null },
-          name:
-            getRequestedNoteName(requestedSlug) ?? getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
-        })
-        openParentFolders(result.id)
-      } catch (error) {
-        handleError(error, 'Failed to create note')
-      }
+      await createSidebarItem({
+        type: SIDEBAR_ITEM_TYPES.notes,
+        parentId: null,
+        name: getRequestedNoteName(requestedSlug) ?? undefined,
+      })
     })
   }
 

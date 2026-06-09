@@ -18,6 +18,8 @@ describe('editor workspace source boundaries', () => {
 
     expect(liveSource).toContain('useCurrentItem')
     expect(liveSource).toContain('useEditorMode')
+    expect(liveSource).toContain('createSidebarItem')
+    expect(liveSource).not.toContain('useCreateFileSystemItem')
     expect(page).toContain('useLiveEditorWorkspaceSource')
 
     for (const source of [page, content, topbar, rightSidebar]) {

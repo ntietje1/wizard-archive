@@ -193,6 +193,8 @@ function sidebarWorkspaceSourceFromStore(): SidebarWorkspaceSource {
       toggleBookmarksOnlyMode: () => undefined,
     },
     commands: {
+      createSidebarItem: vi.fn(),
+      openItem: vi.fn(),
       openParentFolders: () => undefined,
       setRenamingItemId: () => undefined,
     },

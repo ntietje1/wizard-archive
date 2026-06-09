@@ -11,6 +11,7 @@ import type { Editor, SortOptions } from 'shared/editor/types'
 import type { CampaignActor } from 'shared/campaigns/actor'
 import { useCampaignActor } from '~/features/campaigns/hooks/useCampaignActor'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarItemsQueries } from '~/features/sidebar/hooks/useSidebarItems'
 import {
   useCampaignSidebarActions,
@@ -18,9 +19,9 @@ import {
   useSidebarUIStore,
 } from '~/features/sidebar/stores/sidebar-ui-store'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
-import { handleError } from '~/shared/utils/logger'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { handleError } from '~/shared/utils/logger'
 import type { SidebarItemsValue } from '../contexts/sidebar-items-context'
 import type { SidebarWorkspaceSelection, SidebarWorkspaceSource } from './sidebar-workspace-source'
 
@@ -32,6 +33,7 @@ export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
   const uiCommands = useCampaignSidebarActions(campaignId)
   const renamingItemId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingItemId = useSidebarUIStore((s) => s.setRenamingId)
+  const { navigateToItem } = useEditorNavigation()
   const selection = useSidebarWorkspaceSelection()
   const selectionCommands = useSidebarWorkspaceSelectionCommands()
   const filteredActiveItems =
@@ -45,13 +47,14 @@ export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
       uiCommands.setFolderState(ancestor._id, true)
     }
   }
-
   return {
     items,
     filteredActiveItems,
     ui,
     uiCommands,
     commands: {
+      createSidebarItem: createSidebarItemRequiresFileSystemProvider,
+      openItem: navigateToItem,
       openParentFolders,
       setRenamingItemId,
     },
@@ -62,6 +65,12 @@ export function useLiveSidebarWorkspaceSource(): SidebarWorkspaceSource {
     selection,
     selectionCommands,
   }
+}
+
+function createSidebarItemRequiresFileSystemProvider(): ReturnType<
+  SidebarWorkspaceSource['commands']['createSidebarItem']
+> {
+  return Promise.reject(new Error('createSidebarItem requires FileSystemProvider'))
 }
 
 function useSidebarWorkspaceSelection() {

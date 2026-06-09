@@ -10,7 +10,7 @@ import {
 } from '~/features/shadcn/components/context-menu'
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
-import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 interface NewItemCardProps {
   parentId: Id<'sidebarItems'>
@@ -20,7 +20,9 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
   const [isOpen, setIsOpen] = useState(false)
   const triggerRef = useRef<HTMLDivElement>(null)
 
-  const { runCreationCommand } = useRunSidebarItemCreationCommand()
+  const {
+    commands: { createSidebarItem },
+  } = useSidebarWorkspaceSource()
 
   const openMenuAt = (clientX: number, clientY: number) => {
     if (triggerRef.current) {
@@ -43,7 +45,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
   }
 
   const handleCreate = async (command: SidebarItemCreationCommand) => {
-    await runCreationCommand(command, { parentId })
+    await createSidebarItem({ type: command.type, parentId })
   }
 
   return (

@@ -139,24 +139,55 @@ describe('sidebar workspace source boundaries', () => {
     }
   })
 
-  it('keeps open-parent-folder behavior inside the sidebar workspace source', () => {
+  it('keeps sidebar workspace commands inside the sidebar workspace source', () => {
     const liveSource = readRepoFile(
       'src/features/sidebar/workspace/use-live-sidebar-workspace-source.ts',
     )
     const sourceContract = readRepoFile(
       'src/features/sidebar/workspace/sidebar-workspace-source.ts',
     )
-    const creationCommand = readRepoFile(
-      'src/features/sidebar/hooks/useRunSidebarItemCreationCommand.ts',
+    const newNote = readRepoFile('src/features/sidebar/components/sidebar-toolbar/new-note.tsx')
+    const newItemCard = readRepoFile(
+      'src/features/editor/components/viewer/folder/new-item-card.tsx',
+    )
+    const createNewDashboard = readRepoFile(
+      'src/features/editor/components/create-new-dashboard.tsx',
     )
     const hotkeys = readRepoFile('src/features/sidebar/hooks/useItemSurfaceHotkeys.ts')
+    const searchDialog = readRepoFile('src/features/search/components/search-dialog.tsx')
+    const contextMenuActions = readRepoFile('src/features/context-menu/actions.tsx')
+    const contextMenuCreationActions = readRepoFile('src/features/context-menu/creation-actions.ts')
+    const filesystemProvider = readRepoFile('src/features/filesystem/filesystem-provider.tsx')
 
     expect(liveSource).toContain('openParentFolders')
+    expect(liveSource).toContain('createSidebarItem')
+    expect(liveSource).not.toContain('useCreateFileSystemItem')
+    expect(liveSource).toContain('createSidebarItemRequiresFileSystemProvider')
+    expect(filesystemProvider).toContain('createSidebarItem')
+    expect(filesystemProvider).toContain('SidebarWorkspaceSourceProvider')
+    expect(liveSource).toContain('useEditorNavigation')
     expect(sourceContract).toContain('SidebarItemId')
+    expect(sourceContract).toContain('createSidebarItem')
+    expect(sourceContract).toContain('openItem')
     expect(sourceContract).not.toContain("from 'convex/_generated/dataModel'")
-    expect(creationCommand).toContain('useSidebarWorkspaceSource')
+    expect(sourceContract).not.toContain('SidebarItemCreationCommand')
     expect(hotkeys).toContain('useSidebarWorkspaceSource')
-    expect(creationCommand).not.toContain('useOpenParentFolders')
+    for (const source of [
+      newNote,
+      newItemCard,
+      createNewDashboard,
+      hotkeys,
+      searchDialog,
+      contextMenuActions,
+    ]) {
+      expect(source).toContain('useSidebarWorkspaceSource')
+      expect(source).not.toContain('useRunSidebarItemCreationCommand')
+      expect(source).not.toContain('useCreateFileSystemItem')
+      expect(source).not.toContain('useEditorNavigation')
+    }
+    expect(contextMenuCreationActions).not.toContain('useRunSidebarItemCreationCommand')
+    expect(contextMenuCreationActions).not.toContain('useCreateFileSystemItem')
+    expect(contextMenuCreationActions).not.toContain('useEditorNavigation')
     expect(hotkeys).not.toContain('useOpenParentFolders')
   })
 })

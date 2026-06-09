@@ -10,10 +10,7 @@ import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { handleError } from '~/shared/utils/logger'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
-import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useToggleBookmark } from '~/features/sidebar/hooks/useBookmarks'
@@ -30,12 +27,9 @@ interface UseMenuActionsOptions {
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
-  const { navigateToItem } = useEditorNavigation()
   const {
-    commands: { openParentFolders, setRenamingItemId },
+    commands: { createSidebarItem, openItem, openParentFolders, setRenamingItemId },
   } = useSidebarWorkspaceSource()
-  const { createItem } = useCreateFileSystemItem()
-  const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
@@ -43,10 +37,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const filesystemActionsApi = useFileSystem()
   const downloadActions = createDownloadActions({ campaignId, convex })
   const creationActions = createCreationActions({
-    campaignId,
-    createItem,
-    getDefaultName,
-    openParentFolders,
+    createSidebarItem,
   })
 
   const [editMapDialog, setEditMapDialog] = useState<Id<'sidebarItems'> | null>(null)
@@ -56,7 +47,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const actions: ActionHandlers = {
     open: (ctx: MenuContext) => {
       if (!ctx.item) return
-      void navigateToItem(ctx.item.slug)
+      void openItem(ctx.item.slug)
     },
 
     rename: (ctx: MenuContext) => {
@@ -129,7 +120,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       try {
         // Navigate to the map
         const map = ctx.activeMap
-        void navigateToItem(map.slug)
+        void openItem(map.slug)
         toast.info('Highlighting map pin... (coming soon)')
       } catch (error) {
         handleError(error, 'Failed to navigate to map pin')

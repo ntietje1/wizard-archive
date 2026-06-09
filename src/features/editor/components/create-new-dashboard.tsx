@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
 import { CreateNewDashboardSurface } from './create-new-dashboard-surface'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
-import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 interface CreateNewDashboardProps {
   parentId: Id<'sidebarItems'> | null
@@ -14,10 +11,9 @@ interface CreateNewDashboardProps {
 }
 
 export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardProps) {
-  const { campaignId } = useCampaign()
-  const { getDefaultName } = useSidebarValidation()
-  const { runCreationCommand } = useRunSidebarItemCreationCommand()
-  const { navigateToItem } = useEditorNavigation()
+  const {
+    commands: { createSidebarItem, openItem },
+  } = useSidebarWorkspaceSource()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const [creatingCommandId, setCreatingCommandId] = useState<
     SidebarItemCreationCommand['id'] | null
@@ -26,15 +22,18 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
   const isDisabled = creatingCommandId !== null
 
   const handleCreate = async (command: SidebarItemCreationCommand) => {
-    if (!campaignId || isDisabled) return
+    if (isDisabled) return
 
     setCreatingCommandId(command.id)
-    const name = pendingItemName.trim() || getDefaultName(command.type, parentId)
-    const result = await runCreationCommand(command, { parentId, name })
-    if (result) {
-      await navigateToItem(result.slug)
+    try {
+      const name = pendingItemName.trim() || undefined
+      const result = await createSidebarItem({ type: command.type, parentId, name })
+      if (result) {
+        await openItem(result.slug)
+      }
+    } finally {
+      setCreatingCommandId(null)
     }
-    setCreatingCommandId(null)
   }
 
   return (

@@ -1,15 +1,10 @@
 import type { ActionHandlers } from './menu-registry'
 import type { MenuContext } from './types'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
-import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { handleError } from '~/shared/utils/logger'
-import type {
-  SidebarItemCreationCommand,
-  SidebarItemCreationType,
-} from '~/features/sidebar/sidebar-item-creation-catalog'
+import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { SIDEBAR_ITEM_CREATION_COMMAND_BY_ID } from '~/features/sidebar/sidebar-item-creation-catalog'
+import type { SidebarWorkspaceCreateItem } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 type CreationActions = Pick<
   ActionHandlers,
@@ -17,39 +12,18 @@ type CreationActions = Pick<
 >
 
 export function createCreationActions({
-  campaignId,
-  createItem,
-  getDefaultName,
-  openParentFolders,
+  createSidebarItem: runCreateSidebarItem,
 }: {
-  campaignId: Id<'campaigns'> | undefined
-  createItem: (args: {
-    type: SidebarItemCreationType
-    campaignId: Id<'campaigns'>
-    parentTarget: { kind: 'direct'; parentId: Id<'sidebarItems'> | null }
-    name: string
-  }) => Promise<{ id: Id<'sidebarItems'>; slug: SidebarItemSlug }>
-  getDefaultName: (type: SidebarItemCreationType, parentId: Id<'sidebarItems'> | null) => string
-  openParentFolders: (itemId: SidebarItemId) => void
+  createSidebarItem: SidebarWorkspaceCreateItem
 }): CreationActions {
   const createSidebarItem = async (ctx: MenuContext, command: SidebarItemCreationCommand) => {
-    if (!campaignId) {
-      handleError(new Error('Missing campaign id'), command.failureMessage)
-      return
-    }
     if (ctx.item && !isFolder(ctx.item)) {
       handleError(new Error('Invalid parent type'), command.failureMessage)
       return
     }
     const parentId = ctx.item?._id ?? null
     try {
-      const result = await createItem({
-        type: command.type,
-        campaignId,
-        parentTarget: { kind: 'direct', parentId },
-        name: getDefaultName(command.type, parentId),
-      })
-      openParentFolders(result.id)
+      await runCreateSidebarItem({ type: command.type, parentId })
     } catch (error) {
       handleError(error, command.failureMessage)
     }

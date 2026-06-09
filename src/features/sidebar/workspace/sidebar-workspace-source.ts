@@ -2,6 +2,7 @@ import { createContext, createElement, useContext } from 'react'
 import type { SidebarItemId } from 'shared/common/ids'
 import type { SortOptions } from 'shared/editor/types'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { SidebarItemsContextValue, SidebarItemsValue } from '../contexts/sidebar-items-context'
 
 interface SidebarWorkspaceUiState {
@@ -19,7 +20,19 @@ interface SidebarWorkspaceUiCommands {
   toggleBookmarksOnlyMode: () => void
 }
 
+interface SidebarWorkspaceCreateItemInput {
+  type: SidebarItemType
+  parentId: SidebarItemId | null
+  name?: string
+}
+
+export type SidebarWorkspaceCreateItem = (
+  input: SidebarWorkspaceCreateItemInput,
+) => Promise<{ id: SidebarItemId; slug: SidebarItemSlug } | null>
+
 interface SidebarWorkspaceCommands {
+  createSidebarItem: SidebarWorkspaceCreateItem
+  openItem: (slug: SidebarItemSlug, replace?: boolean) => Promise<void>
   openParentFolders: (itemId: SidebarItemId) => void
   setRenamingItemId: (itemId: SidebarItemId | null) => void
 }

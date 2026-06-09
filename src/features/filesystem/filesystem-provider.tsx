@@ -4,12 +4,14 @@ import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import { deduplicateName, findUniqueDefaultName } from 'shared/sidebar-items/default-name'
 import type { FileSystemCommand } from 'shared/sidebar-items/filesystem/commands'
 import type { FileSystemTransactionReceipt } from 'shared/sidebar-items/filesystem/receipts'
 import type {
   ConflictDecision,
   ItemOperationConflict,
 } from 'shared/sidebar-items/filesystem/conflicts'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import { FileSystemEmptyTrashDialog, FileSystemPermanentDeleteDialog } from './filesystem-dialogs'
 import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
@@ -34,7 +36,14 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useItemSurfaceHotkeys } from '~/features/sidebar/hooks/useItemSurfaceHotkeys'
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
-import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
+import {
+  SidebarWorkspaceSourceProvider,
+  useSidebarWorkspaceSource,
+} from '~/features/sidebar/workspace/sidebar-workspace-source'
+import type {
+  SidebarWorkspaceCreateItem,
+  SidebarWorkspaceSource,
+} from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { handleError, logger } from '~/shared/utils/logger'
 import { createFileSystemCacheAdapter } from './filesystem-cache-adapter'
 import { executeFileSystemCommandLifecycle } from './filesystem-command-lifecycle'
@@ -92,6 +101,7 @@ function reportFileSystemError(error: unknown, message: string) {
 type FileSystemProviderState = {
   value: FileSystemValue
   dialog: ReactNode
+  sidebarWorkspaceSource: SidebarWorkspaceSource
 }
 
 function useFileSystemValue(): FileSystemProviderState {
@@ -109,6 +119,7 @@ function useFileSystemValue(): FileSystemProviderState {
   const redoMutation = useCampaignMutation(
     api.sidebarItems.filesystem.mutations.redoFileSystemTransaction,
   )
+  const sidebarWorkspaceSource = useSidebarWorkspaceSource()
   const {
     selection: { activeItemSurface },
     selectionCommands: {
@@ -118,7 +129,7 @@ function useFileSystemValue(): FileSystemProviderState {
       setSelectedItemIds,
     },
     uiCommands,
-  } = useSidebarWorkspaceSource()
+  } = sidebarWorkspaceSource
   const clipboard = useFileSystemClipboard()
   const undoStack = useFileSystemUndoStore((s) => s.undoStack)
   const redoStack = useFileSystemUndoStore((s) => s.redoStack)
@@ -274,6 +285,35 @@ function useFileSystemValue(): FileSystemProviderState {
       throw error
     }
     return { id: created.id, slug: created.slug }
+  }
+
+  const createSidebarItem: SidebarWorkspaceCreateItem = async (input) => {
+    if (!campaignId) return null
+    const currentReadModel = cacheAdapter.getReadModel()
+    const siblings = currentReadModel.getActiveChildren(input.parentId)
+    const fallbackName = findUniqueDefaultName(input.type, siblings)
+    const requestedName = input.name?.trim() || fallbackName
+    const name = assertSidebarItemName(
+      deduplicateName(
+        requestedName,
+        siblings.map((item) => item.name),
+      ),
+    )
+
+    try {
+      const result = await createItem({
+        itemType: input.type,
+        parentTarget: { kind: 'direct', parentId: input.parentId },
+        name,
+      })
+      if (result) {
+        sidebarWorkspaceSource.commands.openParentFolders(result.id)
+      }
+      return result
+    } catch (error) {
+      handleError(error, 'Failed to create item')
+      return null
+    }
   }
 
   const renameItem: FileSystemValue['renameItem'] = async (input) => {
@@ -543,6 +583,13 @@ function useFileSystemValue(): FileSystemProviderState {
       canUndo: pendingOperationCount === 0 && undoStack.length > 0,
       canRedo: pendingOperationCount === 0 && redoStack.length > 0,
     },
+    sidebarWorkspaceSource: {
+      ...sidebarWorkspaceSource,
+      commands: {
+        ...sidebarWorkspaceSource.commands,
+        createSidebarItem,
+      },
+    },
     dialog: (
       <>
         <output
@@ -564,14 +611,16 @@ function useFileSystemValue(): FileSystemProviderState {
 }
 
 export function FileSystemProvider({ children }: { children: ReactNode }) {
-  const { value, dialog } = useFileSystemValue()
+  const { value, dialog, sidebarWorkspaceSource } = useFileSystemValue()
   useFileSystemUndoHotkeys(value)
 
   useItemSurfaceHotkeys(value)
 
   return (
     <FileSystemContext.Provider value={value}>
-      {children}
+      <SidebarWorkspaceSourceProvider value={sidebarWorkspaceSource}>
+        {children}
+      </SidebarWorkspaceSourceProvider>
       {dialog}
     </FileSystemContext.Provider>
   )

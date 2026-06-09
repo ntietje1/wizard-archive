@@ -105,6 +105,8 @@ function sidebarWorkspaceSource(): SidebarWorkspaceSource {
       toggleBookmarksOnlyMode: vi.fn(),
     },
     commands: {
+      createSidebarItem: vi.fn(),
+      openItem: vi.fn(),
       openParentFolders: vi.fn(),
       setRenamingItemId: vi.fn(),
     },

@@ -31,8 +31,8 @@ const searchDataState = vi.hoisted(() => ({
     isLoading: false,
     error: null as unknown,
   },
-  navigateToItem: vi.fn(),
-  runCreationCommand: vi.fn(),
+  openItem: vi.fn(),
+  createSidebarItem: vi.fn(),
 }))
 
 vi.mock('~/features/search/stores/search-store', () => ({
@@ -49,17 +49,16 @@ vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
   }),
 }))
 
-vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
-  useEditorNavigation: () => ({ navigateToItem: searchDataState.navigateToItem }),
-}))
-
 vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
   useSidebarItemById: () => searchDataState.previewQuery,
 }))
 
-vi.mock('~/features/sidebar/hooks/useRunSidebarItemCreationCommand', () => ({
-  useRunSidebarItemCreationCommand: () => ({
-    runCreationCommand: searchDataState.runCreationCommand,
+vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', () => ({
+  useSidebarWorkspaceSource: () => ({
+    commands: {
+      createSidebarItem: searchDataState.createSidebarItem,
+      openItem: searchDataState.openItem,
+    },
   }),
 }))
 
@@ -115,8 +114,8 @@ describe('SearchDialog', () => {
     searchDataState.items = []
     searchDataState.bodyQuery = { data: undefined, isPending: false, error: null }
     searchDataState.previewQuery = { data: undefined, isLoading: false, error: null }
-    searchDataState.navigateToItem.mockReset()
-    searchDataState.runCreationCommand.mockReset()
+    searchDataState.openItem.mockReset()
+    searchDataState.createSidebarItem.mockReset()
   })
 
   it('shows matching creation commands from the command catalog', () => {
@@ -131,47 +130,47 @@ describe('SearchDialog', () => {
   it('runs a selected creation command from the keyboard launcher', async () => {
     const user = userEvent.setup()
     searchState.query = 'note'
-    searchDataState.runCreationCommand.mockResolvedValue({ id: 'note_1', slug: 'new-note' })
+    searchDataState.createSidebarItem.mockResolvedValue({ id: 'note_1', slug: 'new-note' })
 
     render(<SearchDialog />)
 
     await user.keyboard('{Enter}')
 
-    expect(searchDataState.runCreationCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'create.note' }),
-      { parentId: null },
-    )
+    expect(searchDataState.createSidebarItem).toHaveBeenCalledWith({
+      type: expect.any(String),
+      parentId: null,
+    })
     expect(searchState.close).toHaveBeenCalled()
   })
 
   it('ignores repeated creation command activation while the command is pending', async () => {
     const user = userEvent.setup()
     searchState.query = 'note'
-    searchDataState.runCreationCommand.mockReturnValue(new Promise(() => {}))
+    searchDataState.createSidebarItem.mockReturnValue(new Promise(() => {}))
 
     render(<SearchDialog />)
 
     await user.keyboard('{Enter}{Enter}')
     await user.click(screen.getByRole('button', { name: /New Note/i }))
 
-    expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(1)
+    expect(searchDataState.createSidebarItem).toHaveBeenCalledTimes(1)
   })
 
   it('allows retrying a creation command after an unexpected command failure', async () => {
     const user = userEvent.setup()
     searchState.query = 'note'
-    searchDataState.runCreationCommand
+    searchDataState.createSidebarItem
       .mockRejectedValueOnce(new Error('failed'))
       .mockResolvedValueOnce({ id: 'note_1', slug: 'new-note' })
 
     render(<SearchDialog />)
 
     await user.keyboard('{Enter}')
-    await waitFor(() => expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(searchDataState.createSidebarItem).toHaveBeenCalledTimes(1))
 
     await user.keyboard('{Enter}')
 
-    await waitFor(() => expect(searchDataState.runCreationCommand).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(searchDataState.createSidebarItem).toHaveBeenCalledTimes(2))
     expect(searchState.close).toHaveBeenCalled()
   })
 
@@ -227,6 +226,6 @@ describe('SearchDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open result' }))
 
-    expect(searchDataState.navigateToItem).toHaveBeenCalledWith(note.slug)
+    expect(searchDataState.openItem).toHaveBeenCalledWith(note.slug)
   })
 })

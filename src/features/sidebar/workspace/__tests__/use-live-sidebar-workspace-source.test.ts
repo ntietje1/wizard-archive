@@ -3,6 +3,8 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'shared/editor/types'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Editor, SortOptions } from 'shared/editor/types'
 import { createElement } from 'react'
 import type { ReactNode } from 'react'
@@ -36,6 +38,7 @@ const mutationCalls = vi.hoisted(
     }>,
 )
 const handleErrorMock = vi.hoisted(() => vi.fn())
+const navigateToItemMock = vi.hoisted(() => vi.fn())
 const currentEditorState = vi.hoisted(() => ({
   data: null as Editor | null,
 }))
@@ -61,6 +64,16 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 
 vi.mock('~/features/campaigns/hooks/useCampaignActor', () => ({
   useCampaignActor: () => ({ kind: 'dm' }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
+  useEditorNavigation: () => ({ navigateToItem: navigateToItemMock }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
+  useSidebarValidation: () => ({
+    getDefaultName: (type: string) => `New ${type}`,
+  }),
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
@@ -162,6 +175,7 @@ describe('useLiveSidebarWorkspaceSource', () => {
     liveSourceState.selectedItemIds = []
     liveSourceState.setFolderState.mockReset()
     liveSourceState.setRenamingId.mockReset()
+    navigateToItemMock.mockReset()
     mutationCalls.length = 0
     handleErrorMock.mockReset()
     currentEditorState.data = null
@@ -180,6 +194,25 @@ describe('useLiveSidebarWorkspaceSource', () => {
     expect(liveSourceState.setFolderState).toHaveBeenCalledTimes(2)
     expect(liveSourceState.setFolderState).toHaveBeenNthCalledWith(1, childFolder._id, true)
     expect(liveSourceState.setFolderState).toHaveBeenNthCalledWith(2, rootFolder._id, true)
+  })
+
+  it('leaves filesystem-backed creation to FileSystemProvider', async () => {
+    const { result } = renderHook(() => useLiveSidebarWorkspaceSource(), { wrapper })
+
+    await expect(
+      result.current.commands.createSidebarItem({
+        type: SIDEBAR_ITEM_TYPES.notes,
+        parentId: null,
+      }),
+    ).rejects.toThrow('createSidebarItem requires FileSystemProvider')
+  })
+
+  it('opens items through live editor navigation', async () => {
+    const { result } = renderHook(() => useLiveSidebarWorkspaceSource(), { wrapper })
+
+    await result.current.commands.openItem('new-note' as SidebarItemSlug)
+
+    expect(navigateToItemMock).toHaveBeenCalledWith('new-note')
   })
 
   it('uses current editor data and writes optimistic sort updates to the query cache', async () => {

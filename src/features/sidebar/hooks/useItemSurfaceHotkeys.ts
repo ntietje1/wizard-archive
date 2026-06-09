@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import type { SidebarWorkspaceSelection } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import {
@@ -47,8 +45,7 @@ interface HotkeyHandlerContext {
     visibleItemIds: Array<AnySidebarItem['_id']>,
     extendSelection: boolean,
   ) => void
-  navigateToItem: ReturnType<typeof useEditorNavigation>['navigateToItem']
-  setLastSelectedItem: ReturnType<typeof useLastEditorItem>['setLastSelectedItem']
+  openItem: ReturnType<typeof useSidebarWorkspaceSource>['commands']['openItem']
   openParentFolders: ReturnType<typeof useSidebarWorkspaceSource>['commands']['openParentFolders']
 }
 
@@ -173,10 +170,7 @@ function handleOpen(event: KeyboardEvent, context: HotkeyHandlerContext): boolea
   })
   if (!itemToOpen) return true
 
-  context.setLastSelectedItem(itemToOpen.slug)
-  void context
-    .navigateToItem(itemToOpen.slug)
-    .catch((error) => handleError(error, 'Failed to open item'))
+  void context.openItem(itemToOpen.slug).catch((error) => handleError(error, 'Failed to open item'))
   return true
 }
 
@@ -197,10 +191,8 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
   const filesystemRef = useRef(filesystem)
   filesystemRef.current = filesystem
   const { campaignId } = useCampaign()
-  const { navigateToItem } = useEditorNavigation()
-  const { setLastSelectedItem } = useLastEditorItem()
   const {
-    commands: { openParentFolders, setRenamingItemId },
+    commands: { openItem, openParentFolders, setRenamingItemId },
     items,
     selectionCommands: { clearItemSelection, getSelectionSnapshot, moveFocus, setSelectedItemIds },
   } = useSidebarWorkspaceSource()
@@ -210,11 +202,10 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
     clearItemSelection,
     getSelectionSnapshot,
     moveFocus,
-    navigateToItem,
+    openItem,
     openParentFolders,
     setSelectedItemIds,
     setRenamingItemId,
-    setLastSelectedItem,
     trashedItemsMap: items.trash.itemsMap,
   })
   contextRef.current = {
@@ -223,11 +214,10 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
     clearItemSelection,
     getSelectionSnapshot,
     moveFocus,
-    navigateToItem,
+    openItem,
     openParentFolders,
     setSelectedItemIds,
     setRenamingItemId,
-    setLastSelectedItem,
     trashedItemsMap: items.trash.itemsMap,
   }
 
@@ -270,8 +260,7 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
         clearItemSelection: currentContext.clearItemSelection,
         setRenamingItemId: currentContext.setRenamingItemId,
         moveFocus: currentContext.moveFocus,
-        navigateToItem: currentContext.navigateToItem,
-        setLastSelectedItem: currentContext.setLastSelectedItem,
+        openItem: currentContext.openItem,
         openParentFolders: currentContext.openParentFolders,
         ...selection,
       })
