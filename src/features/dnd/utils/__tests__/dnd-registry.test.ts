@@ -206,7 +206,7 @@ describe('rejectionReasonMessage', () => {
     expect(rejectionReasonMessage('circular')).toBe('Cannot move folder into itself')
     expect(rejectionReasonMessage('self_pin')).toBe('Cannot pin map to itself')
     expect(rejectionReasonMessage('self_link')).toBe('Cannot link note to itself')
-    expect(rejectionReasonMessage('self_embed')).toBe('Cannot embed canvas into itself')
+    expect(rejectionReasonMessage('self_embed')).toBe('Cannot embed item into itself')
     expect(rejectionReasonMessage('already_pinned')).toBe('Already pinned to this map')
     expect(rejectionReasonMessage('wrong_campaign')).toBe('Item belongs to another campaign')
     expect(rejectionReasonMessage('not_folder')).toBe('Cannot drop here')

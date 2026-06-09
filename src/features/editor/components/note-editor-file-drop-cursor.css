@@ -2,3 +2,9 @@
   border-radius: 999px;
   background: hsl(var(--primary));
 }
+
+:root[data-note-empty-embed-drop-cursor-suppressed='true'] .note-editor-file-drop-cursor,
+:root[data-note-empty-embed-drop-cursor-suppressed='true'] .prosemirror-dropcursor-block,
+:root[data-note-empty-embed-drop-cursor-suppressed='true'] .prosemirror-dropcursor-inline {
+  display: none !important;
+}

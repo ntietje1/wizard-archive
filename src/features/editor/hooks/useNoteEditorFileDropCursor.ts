@@ -14,20 +14,25 @@ interface TiptapEditorLike {
 
 const registeredEditors = new WeakSet<TiptapEditorLike>()
 const MAX_DROP_CURSOR_REGISTRATION_FRAMES = 120
+const EMPTY_NOTE_EMBED_DROP_TARGET_SELECTOR =
+  '[data-note-embed-drop-target="true"][data-note-embed-target-kind="empty"]'
+const SUPPRESS_EMPTY_EMBED_DROP_CURSOR_ATTRIBUTE = 'data-note-empty-embed-drop-cursor-suppressed'
 
 export function useNoteEditorFileDropCursor(editor: CustomBlockNoteEditor, enabled: boolean) {
   useEffect(() => {
     if (!enabled) return
-    return registerNoteEditorDropCursorPlugin(editor._tiptapEditor)
+    return registerNoteEditorDropCursorPlugin(editor)
   }, [editor, enabled])
 }
 
-function registerNoteEditorDropCursorPlugin(tiptapEditor: TiptapEditorLike | undefined) {
-  if (!tiptapEditor || registeredEditors.has(tiptapEditor)) return undefined
+function registerNoteEditorDropCursorPlugin(editor: CustomBlockNoteEditor) {
+  const tiptapEditor = editor._tiptapEditor
+  if (!tiptapEditor) return undefined
 
   let cancelled = false
   let frameId: number | null = null
   let attempts = 0
+  let cleanupRegisteredDropCursor: (() => void) | null = null
 
   const registerWhenReady = () => {
     if (cancelled) return
@@ -45,14 +50,18 @@ function registerNoteEditorDropCursorPlugin(tiptapEditor: TiptapEditorLike | und
       return
     }
 
-    registeredEditors.add(tiptapEditor)
-    installEmptyEmbedDropCursorGuard(view)
-    const cursorPlugin = dropCursor({
-      color: false,
-      width: 2,
-      class: 'note-editor-file-drop-cursor',
-    }) as unknown as Plugin
-    tiptapEditor.registerPlugin(cursorPlugin)
+    const cleanupEmptyEmbedSuppression = installEmptyEmbedDropCursorSuppression(view)
+    cleanupRegisteredDropCursor = cleanupEmptyEmbedSuppression
+    if (!registeredEditors.has(tiptapEditor)) {
+      registeredEditors.add(tiptapEditor)
+      installEmptyEmbedDropCursorGuard(view)
+      const cursorPlugin = dropCursor({
+        color: false,
+        width: 2,
+        class: 'note-editor-file-drop-cursor',
+      }) as unknown as Plugin
+      tiptapEditor.registerPlugin(cursorPlugin)
+    }
   }
 
   frameId = requestAnimationFrame(registerWhenReady)
@@ -62,6 +71,7 @@ function registerNoteEditorDropCursorPlugin(tiptapEditor: TiptapEditorLike | und
     if (frameId !== null) {
       cancelAnimationFrame(frameId)
     }
+    cleanupRegisteredDropCursor?.()
   }
 }
 
@@ -79,18 +89,60 @@ function installEmptyEmbedDropCursorGuard(view: EditorView) {
   }
 }
 
+function installEmptyEmbedDropCursorSuppression(view: EditorView) {
+  const eventDocument = view.dom.ownerDocument
+  const rootElement = eventDocument.documentElement
+
+  const setSuppressed = (suppressed: boolean) => {
+    if (suppressed) {
+      rootElement.setAttribute(SUPPRESS_EMPTY_EMBED_DROP_CURSOR_ATTRIBUTE, 'true')
+      return
+    }
+    rootElement.removeAttribute(SUPPRESS_EMPTY_EMBED_DROP_CURSOR_ATTRIBUTE)
+  }
+
+  const handleDragOver = (event: DragEvent) => {
+    setSuppressed(isEmptyNoteEmbedDropTargetAtEvent(event, eventDocument))
+  }
+  const clearSuppression = () => setSuppressed(false)
+
+  eventDocument.addEventListener('dragover', handleDragOver, true)
+  eventDocument.addEventListener('drop', clearSuppression, true)
+  eventDocument.addEventListener('dragend', clearSuppression, true)
+
+  return () => {
+    eventDocument.removeEventListener('dragover', handleDragOver, true)
+    eventDocument.removeEventListener('drop', clearSuppression, true)
+    eventDocument.removeEventListener('dragend', clearSuppression, true)
+    clearSuppression()
+  }
+}
+
 function isEmptyNoteEmbedDropTargetAtEvent(event: DragEvent, eventDocument: Document) {
   return (
     isEmptyNoteEmbedDropTarget(event.target) ||
-    isEmptyNoteEmbedDropTarget(getElementAtEventPoint(event, eventDocument))
+    isEmptyNoteEmbedDropTarget(getElementAtEventPoint(event, eventDocument)) ||
+    isEmptyNoteEmbedDropTargetAtCoordinates(event, eventDocument)
   )
 }
 
 function isEmptyNoteEmbedDropTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return false
-  return Boolean(
-    target.closest('[data-note-embed-drop-target="true"][data-note-embed-target-kind="empty"]'),
-  )
+  return Boolean(target.closest(EMPTY_NOTE_EMBED_DROP_TARGET_SELECTOR))
+}
+
+function isEmptyNoteEmbedDropTargetAtCoordinates(event: DragEvent, eventDocument: Document) {
+  return Array.from(
+    eventDocument.querySelectorAll<HTMLElement>(EMPTY_NOTE_EMBED_DROP_TARGET_SELECTOR),
+  ).some((element) => {
+    const rect = element.getBoundingClientRect()
+    return (
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom
+    )
+  })
 }
 
 function getElementAtEventPoint(event: DragEvent, eventDocument: Document) {

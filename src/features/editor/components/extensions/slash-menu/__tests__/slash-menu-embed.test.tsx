@@ -2,19 +2,18 @@ import { describe, expect, it, vi } from 'vitest'
 import { createEmbedSlashMenuItem } from '../embed-slash-menu-item'
 
 describe('embed slash menu item', () => {
-  it('inserts an empty embed block after the current block', () => {
+  it('replaces the current slash block with an empty embed block', () => {
     const currentBlock = { id: 'paragraph-1' }
     const editor = {
       getTextCursorPosition: vi.fn(() => ({ block: currentBlock })),
-      insertBlocks: vi.fn(),
+      replaceBlocks: vi.fn(),
     }
 
     createEmbedSlashMenuItem(editor as never).onItemClick?.()
 
-    expect(editor.insertBlocks).toHaveBeenCalledWith(
+    expect(editor.replaceBlocks).toHaveBeenCalledWith(
+      [currentBlock],
       [{ type: 'embed', props: { targetKind: 'empty', previewWidth: 480 } }],
-      currentBlock,
-      'after',
     )
   })
 })

@@ -12,6 +12,7 @@ import { blockPropsFromEmbedTargetWithDefaultPreview } from '~/features/editor/c
 import { sidebarItemEmbedTarget } from '~/features/embeds/utils/embed-targets'
 import { useEmbedUpload } from '~/features/embeds/hooks/use-embed-upload'
 import { handleError } from '~/shared/utils/logger'
+import { getNearestNoteEditorBlockDropPlacement } from '~/features/editor/utils/note-editor-block-drop-position'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import { focusEditorViewAtNearestPoint } from '~/features/editor/utils/note-editor-focus'
 
@@ -20,34 +21,21 @@ type NoteDropInput = {
   clientY: number
 }
 
-function getBlockReferenceAtPoint(editor: CustomBlockNoteEditor, input: NoteDropInput) {
-  const pointElement =
-    typeof document.elementFromPoint === 'function'
-      ? document.elementFromPoint(input.clientX, input.clientY)
-      : null
-  const blockElement = pointElement?.closest('[data-node-type="blockContainer"]')
-  const blockId = blockElement?.getAttribute('data-id')
-  const blockAtPoint = blockId ? editor.getBlock(blockId) : undefined
-  if (blockAtPoint) return blockAtPoint
-
-  return editor.getTextCursorPosition().block ?? editor.document.at(-1) ?? null
-}
-
 function insertSidebarItemEmbedBlocks(
   editor: CustomBlockNoteEditor,
   sidebarItemIds: Array<Id<'sidebarItems'>>,
   input: NoteDropInput,
 ) {
-  const referenceBlock = getBlockReferenceAtPoint(editor, input)
-  if (!referenceBlock) return false
+  const dropPlacement = getNearestNoteEditorBlockDropPlacement(editor, input)
+  if (!dropPlacement) return false
 
   editor.insertBlocks(
     sidebarItemIds.map((sidebarItemId) => ({
       type: 'embed' as const,
       props: blockPropsFromEmbedTargetWithDefaultPreview(sidebarItemEmbedTarget(sidebarItemId)),
     })),
-    referenceBlock,
-    'after',
+    dropPlacement.referenceBlock,
+    dropPlacement.placement,
   )
   return true
 }

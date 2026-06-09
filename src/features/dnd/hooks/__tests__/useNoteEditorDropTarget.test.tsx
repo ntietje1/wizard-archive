@@ -45,15 +45,22 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
 
 function createEditor() {
   const referenceBlock = { id: 'block-1' }
+  const beforeBlock = { id: 'block-0' }
+  const editorElement = document.createElement('div')
   const insertBlocks = vi.fn()
   const flushUpdates = vi.fn(() => Promise.resolve())
   const editor = {
-    document: [referenceBlock],
-    getBlock: vi.fn((id: string) => (id === referenceBlock.id ? referenceBlock : undefined)),
+    document: [beforeBlock, referenceBlock],
+    getBlock: vi.fn((id: string) => {
+      if (id === beforeBlock.id) return beforeBlock
+      if (id === referenceBlock.id) return referenceBlock
+      return undefined
+    }),
     getTextCursorPosition: vi.fn(() => ({ block: referenceBlock })),
     insertBlocks,
     _tiptapEditor: {
       view: {
+        dom: editorElement,
         posAtCoords: vi.fn(() => ({ pos: 1 })),
       },
       chain: vi.fn(() => ({
@@ -69,6 +76,7 @@ function createEditor() {
     flushUpdates,
   } as unknown as ConvexYjsProvider
   return {
+    beforeBlock,
     editor,
     provider,
     referenceBlock,
@@ -76,6 +84,29 @@ function createEditor() {
     flushUpdates,
     editorView: editor._tiptapEditor.view,
   }
+}
+
+function createBlockContainer(
+  parent: HTMLElement,
+  id: string,
+  { top, bottom }: { top: number; bottom: number },
+) {
+  const element = document.createElement('div')
+  element.setAttribute('data-node-type', 'blockContainer')
+  element.setAttribute('data-id', id)
+  element.getBoundingClientRect = vi.fn(() => ({
+    bottom,
+    height: bottom - top,
+    left: 100,
+    right: 500,
+    top,
+    width: 400,
+    x: 100,
+    y: top,
+    toJSON: () => ({}),
+  }))
+  parent.append(element)
+  return element
 }
 
 function mountHook(noteId: Id<'sidebarItems'>) {
@@ -90,6 +121,7 @@ function mountHook(noteId: Id<'sidebarItems'>) {
 
 describe('useNoteEditorDropTarget', () => {
   beforeEach(() => {
+    document.body.replaceChildren()
     uploadEmbedFile.mockReset()
     vi.mocked(focusEditorViewAtNearestPoint).mockReset()
     activeSidebarItems.data = []
@@ -141,6 +173,58 @@ describe('useNoteEditorDropTarget', () => {
       y: 20,
     })
     expect(flushUpdates).toHaveBeenCalled()
+  })
+
+  it('snaps shift-dropped sidebar item embeds to the nearest block insertion boundary', async () => {
+    const noteId = testId<'sidebarItems'>('note_target')
+    const dragged = createNote()
+    activeSidebarItems.data = [dragged]
+    activeSidebarItems.itemsMap = new Map([[dragged._id, dragged]])
+    const { editor, provider, referenceBlock, insertBlocks } = createEditor()
+    const blockElement = createBlockContainer(editor._tiptapEditor.view.dom, referenceBlock.id, {
+      top: 100,
+      bottom: 160,
+    })
+    const child = document.createElement('span')
+    blockElement.append(child)
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(child)
+    useNoteEditorStore.getState().claimEditor(editor, provider)
+
+    mountHook(noteId)
+
+    const command = resolveSurfaceDropCommand(
+      [dragged],
+      { type: NOTE_EDITOR_DROP_TYPE, noteId },
+      { campaignId: dragged.campaignId },
+      { noteEditorDropAction: 'embed' },
+    )
+
+    await act(async () => {
+      await executeRegisteredSurfaceDropCommand({
+        command,
+        input: { clientX: 300, clientY: 104 },
+        setBatchDecision: vi.fn(),
+      })
+    })
+
+    expect(insertBlocks).toHaveBeenCalledWith(
+      [
+        {
+          type: 'embed',
+          props: {
+            previewWidth: 480,
+            targetKind: 'sidebarItem',
+            sidebarItemId: dragged._id,
+          },
+        },
+      ],
+      referenceBlock,
+      'before',
+    )
   })
 
   it('uploads external files and inserts embeds for the created sidebar items', async () => {

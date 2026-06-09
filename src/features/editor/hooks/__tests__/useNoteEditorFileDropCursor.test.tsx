@@ -58,6 +58,7 @@ async function flushAnimationFrame() {
 describe('useNoteEditorFileDropCursor', () => {
   afterEach(() => {
     dropCursor.mockClear()
+    document.documentElement.removeAttribute('data-note-empty-embed-drop-cursor-suppressed')
     vi.restoreAllMocks()
   })
 
@@ -107,6 +108,90 @@ describe('useNoteEditorFileDropCursor', () => {
     expect(elementFromPointSpy).toHaveBeenCalledWith(12, 18)
   })
 
+  it('suppresses a stale visible drop cursor while the pointer is over an empty embed block', async () => {
+    const { editor } = createEditor()
+
+    renderHook(() => useNoteEditorFileDropCursor(editor, true))
+    await flushAnimationFrame()
+
+    const emptyEmbed = document.createElement('section')
+    emptyEmbed.setAttribute('data-note-embed-drop-target', 'true')
+    emptyEmbed.setAttribute('data-note-embed-target-kind', 'empty')
+    document.body.appendChild(emptyEmbed)
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(emptyEmbed)
+
+    const dragOver = new Event('dragover', { bubbles: true, cancelable: true })
+    Object.defineProperties(dragOver, {
+      clientX: { value: 12 },
+      clientY: { value: 18 },
+    })
+
+    emptyEmbed.dispatchEvent(dragOver)
+
+    expect(document.documentElement).toHaveAttribute(
+      'data-note-empty-embed-drop-cursor-suppressed',
+      'true',
+    )
+
+    emptyEmbed.dispatchEvent(new Event('dragleave', { bubbles: true }))
+
+    expect(document.documentElement).toHaveAttribute(
+      'data-note-empty-embed-drop-cursor-suppressed',
+      'true',
+    )
+
+    document.dispatchEvent(new Event('drop', { bubbles: true }))
+
+    expect(document.documentElement).not.toHaveAttribute(
+      'data-note-empty-embed-drop-cursor-suppressed',
+    )
+  })
+
+  it('suppresses the drop cursor from drag coordinates when the drag event target is not the embed', async () => {
+    const { editor } = createEditor()
+
+    renderHook(() => useNoteEditorFileDropCursor(editor, true))
+    await flushAnimationFrame()
+
+    const emptyEmbed = document.createElement('section')
+    emptyEmbed.setAttribute('data-note-embed-drop-target', 'true')
+    emptyEmbed.setAttribute('data-note-embed-target-kind', 'empty')
+    emptyEmbed.getBoundingClientRect = vi.fn(() => ({
+      bottom: 40,
+      height: 30,
+      left: 10,
+      right: 60,
+      top: 10,
+      width: 50,
+      x: 10,
+      y: 10,
+      toJSON: () => ({}),
+    }))
+    document.body.appendChild(emptyEmbed)
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(document.body)
+
+    const dragOver = new Event('dragover', { bubbles: true, cancelable: true })
+    Object.defineProperties(dragOver, {
+      clientX: { value: 20 },
+      clientY: { value: 20 },
+    })
+
+    document.body.dispatchEvent(dragOver)
+
+    expect(document.documentElement).toHaveAttribute(
+      'data-note-empty-embed-drop-cursor-suppressed',
+      'true',
+    )
+  })
+
   it('does not register a dropcursor for non-editable note editors', async () => {
     const { editor, tiptapEditor } = createEditor()
 
@@ -129,8 +214,29 @@ describe('useNoteEditorFileDropCursor', () => {
     rerender({ enabled: true })
     await flushAnimationFrame()
 
+    const emptyEmbed = document.createElement('section')
+    emptyEmbed.setAttribute('data-note-embed-drop-target', 'true')
+    emptyEmbed.setAttribute('data-note-embed-target-kind', 'empty')
+    document.body.appendChild(emptyEmbed)
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    vi.spyOn(document, 'elementFromPoint').mockReturnValue(emptyEmbed)
+
+    const dragOver = new Event('dragover', { bubbles: true, cancelable: true })
+    Object.defineProperties(dragOver, {
+      clientX: { value: 12 },
+      clientY: { value: 18 },
+    })
+    emptyEmbed.dispatchEvent(dragOver)
+
     expect(dropCursor).toHaveBeenCalledTimes(1)
     expect(tiptapEditor.registerPlugin).toHaveBeenCalledTimes(1)
+    expect(document.documentElement).toHaveAttribute(
+      'data-note-empty-embed-drop-cursor-suppressed',
+      'true',
+    )
   })
 
   it('stops polling when the ProseMirror view never mounts', () => {
