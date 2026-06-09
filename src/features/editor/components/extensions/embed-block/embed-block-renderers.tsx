@@ -1,4 +1,6 @@
 import { NoteEmbedBlockView } from './embed-block'
+import { NOTE_EMBED_EXTERNAL_HTML_ATTRIBUTE } from './embed-block-html'
+import type { NoteEmbedBlockProps } from './embed-block-targets'
 import { useNoteEmbedSurface } from './note-embed-surface-context-value'
 import type { embedBlockConfig } from '../../../../../../shared/editor-blocks/editor-blocknote-spec-factory'
 import type { ReactCustomBlockRenderProps } from '@blocknote/react'
@@ -27,9 +29,15 @@ export function RenderEmbedBlock(props: EmbedBlockRenderProps) {
 }
 
 export function RenderExternalEmbedBlock(props: EmbedBlockRenderProps) {
-  const surface = useNoteEmbedSurface()
-  const viewProps = mapEmbedRenderProps(props)
-  return <NoteEmbedBlockView {...viewProps} editable={false} sourceNoteId={surface.sourceNoteId} />
+  return (
+    <section
+      className="note-embed-block"
+      data-content-type="embed"
+      {...{ [NOTE_EMBED_EXTERNAL_HTML_ATTRIBUTE]: 'true' }}
+    >
+      {getExternalEmbedLabel(props.block.props as NoteEmbedBlockProps)}
+    </section>
+  )
 }
 
 function mapEmbedRenderProps(props: EmbedBlockRenderProps): NoteEmbedBlockBaseProps {
@@ -62,4 +70,11 @@ function mapEmbedRenderProps(props: EmbedBlockRenderProps): NoteEmbedBlockBasePr
       },
     },
   }
+}
+
+function getExternalEmbedLabel(props: NoteEmbedBlockProps) {
+  if (props.name) return props.name
+  if (props.url) return props.url
+  if (props.sidebarItemId) return 'Embedded item'
+  return 'Empty embed'
 }

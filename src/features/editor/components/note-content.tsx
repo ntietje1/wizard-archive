@@ -8,6 +8,7 @@ import { hasPermissionForRequirement } from 'shared/permissions/requirements'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createEditorSchema } from '../editor-specs'
 import { NoteView } from './note-view'
+import { noteEditorPasteHandler } from './extensions/embed-block/embed-block-paste-handler'
 import { LinkClickHandler } from './extensions/link-click-handler'
 import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocomplete'
 import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
@@ -252,6 +253,7 @@ function CollaborativeNoteEditor({
     createEditor: () =>
       BlockNoteEditor.create({
         schema: createEditorSchema(),
+        pasteHandler: noteEditorPasteHandler,
         collaboration: {
           provider,
           fragment: doc.getXmlFragment('document'),

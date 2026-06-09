@@ -39,11 +39,15 @@ import {
   isInternalNativeDrag,
   markInternalNativeDrag,
 } from '~/features/dnd/utils/internal-native-drag'
-import { SidebarItemPreviewRenderer } from './sidebar-item-preview-renderer'
 
 const LiveEmbedContent = lazy(() =>
   import('~/features/embeds/components/live-embed-content').then((module) => ({
     default: module.LiveEmbedContent,
+  })),
+)
+const SidebarItemPreviewRenderer = lazy(() =>
+  import('./sidebar-item-preview-renderer').then((module) => ({
+    default: module.SidebarItemPreviewRenderer,
   })),
 )
 
@@ -74,6 +78,7 @@ export function NoteEmbedBlockView({
   const dragCleanupRef = useRef<(() => void) | null>(null)
   const mediaControlDragSuppressionRef = useRef(false)
   const mediaControlDragSuppressionCleanupRef = useRef<(() => void) | null>(null)
+  const pointerStartedInsideRef = useRef(false)
   const [selected, setSelected] = useState(false)
   const blockProps = block.props as NoteEmbedBlockProps
   const target = embedTargetFromBlockProps(blockProps)
@@ -87,7 +92,12 @@ export function NoteEmbedBlockView({
       ? reportedMediaLayout.layout
       : getInitialNoteEmbedMediaLayout(blockProps)
   const targetSidebarItemId =
-    target.kind === 'sidebarItem' ? (target.sidebarItemId as Id<'sidebarItems'>) : null
+    target.kind === 'sidebarItem'
+      ? ((target.sidebarItemId as Id<'sidebarItems'> | undefined) ?? null)
+      : null
+  const [readySidebarItemId, setReadySidebarItemId] = useState<Id<'sidebarItems'> | null>(null)
+  const sidebarPreviewReady =
+    target.kind !== 'sidebarItem' || readySidebarItemId === targetSidebarItemId
   const { data: resolvedTargetItem } = useSidebarItemById(targetSidebarItemId)
   const documentAspectRatio = getDefaultDocumentEmbedAspectRatio({
     target,
@@ -173,6 +183,13 @@ export function NoteEmbedBlockView({
     [],
   )
 
+  useEffect(() => {
+    if (target.kind !== 'sidebarItem') return
+
+    const frame = requestAnimationFrame(() => setReadySidebarItemId(targetSidebarItemId))
+    return () => cancelAnimationFrame(frame)
+  }, [target.kind, targetSidebarItemId])
+
   const selectEmbed = () => {
     setSelected(true)
     editor.setTextCursorPosition?.(block, 'start')
@@ -237,6 +254,7 @@ export function NoteEmbedBlockView({
         maxWidth: '100%',
       }}
       onPointerDownCapture={(event) => {
+        pointerStartedInsideRef.current = true
         if (!editable || event.button !== 0) return
         const eventTarget = event.target
         if (
@@ -250,6 +268,15 @@ export function NoteEmbedBlockView({
           return
         }
         selectEmbed()
+      }}
+      onPointerUpCapture={(event) => {
+        const startedInside = pointerStartedInsideRef.current
+        pointerStartedInsideRef.current = false
+        if (startedInside || !editable || event.button !== 0) return
+        restoreTextRangeSelectionToEmbedBoundary(event.currentTarget)
+      }}
+      onPointerCancelCapture={() => {
+        pointerStartedInsideRef.current = false
       }}
       onDragStart={(event) => {
         if (event.defaultPrevented) return
@@ -288,6 +315,7 @@ export function NoteEmbedBlockView({
             height={height}
             mediaLayout={effectiveMediaLayout}
             rootRef={rootRef}
+            sidebarPreviewReady={sidebarPreviewReady}
             sourceNoteId={sourceNoteId}
             target={target}
             onMediaLayout={handleMediaLayout}
@@ -298,6 +326,7 @@ export function NoteEmbedBlockView({
             allowInnerScroll={selected}
             height={height}
             mediaLayout={effectiveMediaLayout}
+            sidebarPreviewReady={sidebarPreviewReady}
             sourceNoteId={sourceNoteId}
             target={target}
             onMediaLayout={handleMediaLayout}
@@ -335,11 +364,41 @@ export function NoteEmbedBlockView({
   )
 }
 
+function restoreTextRangeSelectionToEmbedBoundary(root: HTMLElement) {
+  const selection = root.ownerDocument.getSelection()
+  const anchorNode = selection?.anchorNode
+  if (!selection?.isCollapsed || anchorNode?.nodeType !== Node.TEXT_NODE) return
+
+  const anchorElement = anchorNode.parentElement
+  if (!anchorElement?.closest('.bn-editor') || anchorElement.closest('.note-embed-block')) {
+    return
+  }
+
+  const blockContent = root.closest<HTMLElement>('[data-content-type="embed"]')
+  const blockBoundary = root.closest<HTMLElement>('[data-node-type="blockOuter"]') ?? blockContent
+  if (!blockContent || !blockBoundary) return
+
+  const anchorComesBeforeEmbed =
+    anchorNode.compareDocumentPosition(blockContent) & Node.DOCUMENT_POSITION_FOLLOWING
+  const range = root.ownerDocument.createRange()
+  if (anchorComesBeforeEmbed) {
+    range.setStart(anchorNode, selection.anchorOffset)
+    range.setEndAfter(blockBoundary)
+  } else {
+    range.setStartBefore(blockBoundary)
+    range.setEnd(anchorNode, selection.anchorOffset)
+  }
+
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
 function ReadOnlyNoteEmbedBlockBody({
   allowInnerScroll,
   height,
   mediaLayout,
   onMediaLayout,
+  sidebarPreviewReady,
   sourceNoteId,
   target,
 }: {
@@ -347,6 +406,7 @@ function ReadOnlyNoteEmbedBlockBody({
   height: number | undefined
   mediaLayout: EmbedMediaLayout | null
   onMediaLayout: (layout: EmbedMediaLayout) => void
+  sidebarPreviewReady: boolean
   sourceNoteId: Id<'sidebarItems'> | null
   target: EmbedTarget
 }) {
@@ -357,14 +417,18 @@ function ReadOnlyNoteEmbedBlockBody({
       style={getNoteEmbedBodyStyle(mediaLayout, height)}
     >
       <Suspense fallback={<EmbedLoadingState />}>
-        <LiveEmbedContent
-          target={target}
-          sourceItemId={sourceNoteId}
-          mode="readonly"
-          allowInnerScroll={allowInnerScroll}
-          onMediaLayout={onMediaLayout}
-          SidebarItemRenderer={SidebarItemPreviewRenderer}
-        />
+        {sidebarPreviewReady ? (
+          <LiveEmbedContent
+            target={target}
+            sourceItemId={sourceNoteId}
+            mode="readonly"
+            allowInnerScroll={allowInnerScroll}
+            onMediaLayout={onMediaLayout}
+            SidebarItemRenderer={SidebarItemPreviewRenderer}
+          />
+        ) : (
+          <EmbedLoadingState />
+        )}
       </Suspense>
     </div>
   )
@@ -375,6 +439,7 @@ function EditableNoteEmbedBlockBody({
   height,
   mediaLayout,
   rootRef,
+  sidebarPreviewReady,
   sourceNoteId,
   target,
   onMediaLayout,
@@ -384,6 +449,7 @@ function EditableNoteEmbedBlockBody({
   height: number | undefined
   mediaLayout: EmbedMediaLayout | null
   rootRef: RefObject<HTMLElement | null>
+  sidebarPreviewReady: boolean
   sourceNoteId: Id<'sidebarItems'> | null
   target: EmbedTarget
   onMediaLayout: (layout: EmbedMediaLayout) => void
@@ -407,17 +473,21 @@ function EditableNoteEmbedBlockBody({
         style={getNoteEmbedBodyStyle(mediaLayout, height)}
       >
         <Suspense fallback={<EmbedLoadingState />}>
-          <LiveEmbedContent
-            target={target}
-            sourceItemId={sourceNoteId}
-            mode="editable"
-            onUpload={embedControls.openFilePicker}
-            onLinkExternal={embedControls.openLinkDraft}
-            allowInnerScroll={allowInnerScroll}
-            onMediaLayout={onMediaLayout}
-            dropVisualState={target.kind === 'empty' ? dropVisualState : undefined}
-            SidebarItemRenderer={SidebarItemPreviewRenderer}
-          />
+          {sidebarPreviewReady ? (
+            <LiveEmbedContent
+              target={target}
+              sourceItemId={sourceNoteId}
+              mode="editable"
+              onUpload={embedControls.openFilePicker}
+              onLinkExternal={embedControls.openLinkDraft}
+              allowInnerScroll={allowInnerScroll}
+              onMediaLayout={onMediaLayout}
+              dropVisualState={target.kind === 'empty' ? dropVisualState : undefined}
+              SidebarItemRenderer={SidebarItemPreviewRenderer}
+            />
+          ) : (
+            <EmbedLoadingState />
+          )}
         </Suspense>
       </div>
       <input
