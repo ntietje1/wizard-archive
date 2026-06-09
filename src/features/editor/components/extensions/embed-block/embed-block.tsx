@@ -80,6 +80,7 @@ export function NoteEmbedBlockView({
   const mediaControlDragSuppressionCleanupRef = useRef<(() => void) | null>(null)
   const pointerStartedInsideRef = useRef(false)
   const [selected, setSelected] = useState(false)
+  const rangeHighlighted = useEmbedBlockRangeHighlight(rootRef)
   const blockProps = block.props as NoteEmbedBlockProps
   const target = embedTargetFromBlockProps(blockProps)
   const layoutSeedKey = getNoteEmbedLayoutSeedKey(blockProps)
@@ -95,9 +96,7 @@ export function NoteEmbedBlockView({
     target.kind === 'sidebarItem'
       ? ((target.sidebarItemId as Id<'sidebarItems'> | undefined) ?? null)
       : null
-  const [readySidebarItemId, setReadySidebarItemId] = useState<Id<'sidebarItems'> | null>(null)
-  const sidebarPreviewReady =
-    target.kind !== 'sidebarItem' || readySidebarItemId === targetSidebarItemId
+  const sidebarPreviewReady = useSidebarPreviewReady(target.kind, targetSidebarItemId)
   const { data: resolvedTargetItem } = useSidebarItemById(targetSidebarItemId)
   const documentAspectRatio = getDefaultDocumentEmbedAspectRatio({
     target,
@@ -182,13 +181,6 @@ export function NoteEmbedBlockView({
     },
     [],
   )
-
-  useEffect(() => {
-    if (target.kind !== 'sidebarItem') return
-
-    const frame = requestAnimationFrame(() => setReadySidebarItemId(targetSidebarItemId))
-    return () => cancelAnimationFrame(frame)
-  }, [target.kind, targetSidebarItemId])
 
   const selectEmbed = () => {
     setSelected(true)
@@ -299,43 +291,22 @@ export function NoteEmbedBlockView({
         }
       }}
     >
-      <div
-        data-testid="note-embed-visual-surface"
-        contentEditable={false}
-        draggable={false}
-        className={cn(
-          'w-full select-none overflow-hidden border border-border bg-card text-card-foreground',
-          target.kind === 'empty' && 'border-dashed bg-muted/20',
-        )}
-      >
-        {target.kind !== 'empty' ? <NoteEmbedBlockHeader target={target} /> : null}
-        {editable ? (
-          <EditableNoteEmbedBlockBody
-            allowInnerScroll={selected}
-            height={height}
-            mediaLayout={effectiveMediaLayout}
-            rootRef={rootRef}
-            sidebarPreviewReady={sidebarPreviewReady}
-            sourceNoteId={sourceNoteId}
-            target={target}
-            onMediaLayout={handleMediaLayout}
-            setTarget={setTarget}
-          />
-        ) : (
-          <ReadOnlyNoteEmbedBlockBody
-            allowInnerScroll={selected}
-            height={height}
-            mediaLayout={effectiveMediaLayout}
-            sidebarPreviewReady={sidebarPreviewReady}
-            sourceNoteId={sourceNoteId}
-            target={target}
-            onMediaLayout={handleMediaLayout}
-          />
-        )}
-      </div>
-      {editable && selected ? (
+      <NoteEmbedVisualSurface
+        editable={editable}
+        selected={selected}
+        height={height}
+        mediaLayout={effectiveMediaLayout}
+        rootRef={rootRef}
+        sidebarPreviewReady={sidebarPreviewReady}
+        sourceNoteId={sourceNoteId}
+        target={target}
+        onMediaLayout={handleMediaLayout}
+        setTarget={setTarget}
+      />
+      {selected || rangeHighlighted ? (
         <NoteEmbedResizeWrapper
           mediaLayout={effectiveMediaLayout}
+          resizeEnabled={editable && selected}
           onResizeStart={(event, handle) => {
             startNoteEmbedResizeSession({
               aspectRatio: getNoteEmbedAspectRatio(effectiveMediaLayout),
@@ -362,6 +333,81 @@ export function NoteEmbedBlockView({
       ) : null}
     </section>
   )
+}
+
+function useSidebarPreviewReady(
+  targetKind: EmbedTarget['kind'],
+  targetSidebarItemId: Id<'sidebarItems'> | null,
+) {
+  const [readySidebarItemId, setReadySidebarItemId] = useState<Id<'sidebarItems'> | null>(null)
+
+  useEffect(() => {
+    if (targetKind !== 'sidebarItem') return
+
+    const frame = requestAnimationFrame(() => setReadySidebarItemId(targetSidebarItemId))
+    return () => cancelAnimationFrame(frame)
+  }, [targetKind, targetSidebarItemId])
+
+  return targetKind !== 'sidebarItem' || readySidebarItemId === targetSidebarItemId
+}
+
+function useEmbedBlockRangeHighlight(rootRef: RefObject<HTMLElement | null>) {
+  const [rangeHighlighted, setRangeHighlighted] = useState(false)
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+
+    const document = root.ownerDocument
+    const updateRangeHighlight = () => {
+      const nextRangeHighlighted = isEmbedBlockHighlightedBySelection(root)
+      setRangeHighlighted((currentRangeHighlighted) =>
+        currentRangeHighlighted === nextRangeHighlighted
+          ? currentRangeHighlighted
+          : nextRangeHighlighted,
+      )
+    }
+
+    document.addEventListener('selectionchange', updateRangeHighlight)
+    document.addEventListener('pointerup', updateRangeHighlight, true)
+    document.addEventListener('keyup', updateRangeHighlight, true)
+    return () => {
+      document.removeEventListener('selectionchange', updateRangeHighlight)
+      document.removeEventListener('pointerup', updateRangeHighlight, true)
+      document.removeEventListener('keyup', updateRangeHighlight, true)
+    }
+  }, [rootRef])
+
+  return rangeHighlighted
+}
+
+function isEmbedBlockHighlightedBySelection(root: HTMLElement) {
+  const selection = root.ownerDocument.getSelection()
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return false
+
+  if (
+    selection.anchorNode &&
+    selection.focusNode &&
+    root.contains(selection.anchorNode) &&
+    root.contains(selection.focusNode)
+  ) {
+    return false
+  }
+
+  const blockContent = root.closest<HTMLElement>('[data-content-type="embed"]')
+  const blockBoundary = root.closest<HTMLElement>('[data-node-type="blockOuter"]') ?? blockContent
+  if (!blockBoundary) return false
+
+  for (let index = 0; index < selection.rangeCount; index += 1) {
+    const range = selection.getRangeAt(index)
+    try {
+      if (range.intersectsNode(blockBoundary)) return true
+    } catch {
+      return false
+    }
+  }
+
+  return false
 }
 
 function restoreTextRangeSelectionToEmbedBoundary(root: HTMLElement) {
@@ -391,6 +437,68 @@ function restoreTextRangeSelectionToEmbedBoundary(root: HTMLElement) {
 
   selection.removeAllRanges()
   selection.addRange(range)
+  root.ownerDocument.dispatchEvent(new Event('selectionchange'))
+}
+
+function NoteEmbedVisualSurface({
+  editable,
+  height,
+  mediaLayout,
+  onMediaLayout,
+  rootRef,
+  selected,
+  setTarget,
+  sidebarPreviewReady,
+  sourceNoteId,
+  target,
+}: {
+  editable: boolean
+  height: number | undefined
+  mediaLayout: EmbedMediaLayout | null
+  onMediaLayout: (layout: EmbedMediaLayout) => void
+  rootRef: RefObject<HTMLElement | null>
+  selected: boolean
+  setTarget: (target: EmbedTarget) => void
+  sidebarPreviewReady: boolean
+  sourceNoteId: Id<'sidebarItems'> | null
+  target: EmbedTarget
+}) {
+  return (
+    <div
+      data-testid="note-embed-visual-surface"
+      contentEditable={false}
+      draggable={false}
+      className={cn(
+        'w-full select-none overflow-hidden border border-border bg-card text-card-foreground',
+        target.kind === 'empty' && 'border-dashed bg-muted/20',
+      )}
+    >
+      {target.kind !== 'empty' ? <NoteEmbedBlockHeader target={target} /> : null}
+      {editable ? (
+        <EditableNoteEmbedBlockBody
+          allowInnerScroll={selected}
+          height={height}
+          mediaLayout={mediaLayout}
+          rootRef={rootRef}
+          sidebarPreviewReady={sidebarPreviewReady}
+          sourceNoteId={sourceNoteId}
+          target={target}
+          onMediaLayout={onMediaLayout}
+          setTarget={setTarget}
+        />
+      ) : (
+        <ReadOnlyNoteEmbedBlockBody
+          allowInnerScroll={selected}
+          height={height}
+          mediaLayout={mediaLayout}
+          sidebarPreviewReady={sidebarPreviewReady}
+          sourceNoteId={sourceNoteId}
+          target={target}
+          onMediaLayout={onMediaLayout}
+        />
+      )}
+    </div>
+  )
 }
 
 function ReadOnlyNoteEmbedBlockBody({
@@ -552,9 +660,11 @@ const NOTE_EMBED_SELECTION_CHROME_STROKE_WIDTH_PX = 1.5
 function NoteEmbedResizeWrapper({
   mediaLayout,
   onResizeStart,
+  resizeEnabled,
 }: {
   mediaLayout: EmbedMediaLayout | null
   onResizeStart: (event: ReactPointerEvent<HTMLElement>, handle: NoteEmbedResizeHandle) => void
+  resizeEnabled: boolean
 }) {
   return (
     <div
@@ -563,6 +673,17 @@ function NoteEmbedResizeWrapper({
       draggable={false}
       className="note-embed-resize-wrapper pointer-events-none absolute left-0 top-0 z-30 h-full w-full"
     >
+      <NoteEmbedSelectionChrome />
+      {resizeEnabled ? (
+        <NoteEmbedResizeHandles mediaLayout={mediaLayout} onResizeStart={onResizeStart} />
+      ) : null}
+    </div>
+  )
+}
+
+function NoteEmbedSelectionChrome() {
+  return (
+    <>
       <div
         data-testid="note-embed-resize-fill"
         className="pointer-events-none absolute inset-0 bg-canvas-selection-fill"
@@ -577,8 +698,7 @@ function NoteEmbedResizeWrapper({
           inset: -NOTE_EMBED_SELECTION_CHROME_OUTSET_PX,
         }}
       />
-      <NoteEmbedResizeHandles mediaLayout={mediaLayout} onResizeStart={onResizeStart} />
-    </div>
+    </>
   )
 }
 

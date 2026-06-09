@@ -257,6 +257,7 @@ test.describe.serial('note embeds', () => {
         selectedTextIncludesAfter: true,
         selectedTextIncludesBefore: true,
       })
+    await expect(page.getByTestId('note-embed-resize-outline')).toHaveCount(2)
 
     await pressCopy(page)
     await expect
@@ -313,6 +314,7 @@ test.describe.serial('note embeds', () => {
         intersectingEmbedCount: 2,
         selectedTextIncludesBefore: true,
       })
+    await expect(page.getByTestId('note-embed-resize-outline')).toHaveCount(2)
   })
 
   test('copies, pastes, undoes, and redoes a text range containing an embedded note', async ({
