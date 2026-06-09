@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { EDITOR_MODE } from 'shared/editor/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { ArrowUpLeft, ArrowUpRight, History, List } from 'lucide-react'
 import type {
   ContextMenuCommand,
   ContextMenuContributor,
@@ -86,11 +88,13 @@ function createServices({
   viewAsPlayer: viewAsPlayerOverrides,
   sidebarItemSharing: sidebarItemSharingOverrides,
   blockShare: blockShareOverrides,
+  editorPanels: editorPanelsOverrides,
 }: {
   editorMode?: Partial<typeof baseEditorModeService>
   viewAsPlayer?: Partial<typeof baseViewAsPlayerService>
   sidebarItemSharing?: Partial<typeof baseSidebarItemSharingService>
   blockShare?: Partial<typeof baseBlockShareService>
+  editorPanels?: Partial<typeof baseEditorPanelService>
 } = {}) {
   return {
     actions: createActions(),
@@ -102,6 +106,7 @@ function createServices({
       ...sidebarItemSharingOverrides,
     },
     blockShare: { ...baseBlockShareService, ...blockShareOverrides },
+    editorPanels: { ...baseEditorPanelService, ...editorPanelsOverrides },
   }
 }
 
@@ -141,6 +146,21 @@ const baseBlockShareService: TestBlockShareService = {
   getBlockCount: vi.fn(() => 0),
   getAllPlayersPermissionLevel: vi.fn((): 'hidden' => 'hidden'),
   toggleAllPlayersPermission: vi.fn(),
+}
+
+const baseEditorPanelService: EditorContextMenuServices['editorPanels'] = {
+  getPanelItems: (context) => {
+    const history = { id: 'history', label: 'Edit History', icon: History }
+    if (context.item?.type === SIDEBAR_ITEM_TYPES.files) return [history]
+    return [
+      history,
+      { id: 'backlinks', label: 'Back Links', icon: ArrowUpLeft },
+      { id: 'outgoing', label: 'Outgoing Links', icon: ArrowUpRight },
+      { id: 'outline', label: 'Outline', icon: List },
+    ]
+  },
+  isPanelActive: vi.fn(() => false),
+  activatePanel: vi.fn(),
 }
 
 function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {

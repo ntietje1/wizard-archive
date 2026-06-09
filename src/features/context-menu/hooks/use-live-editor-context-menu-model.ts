@@ -19,6 +19,15 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
 import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import type { BlockNoteContextMenuContextType } from '~/features/editor/hooks/useBlockNoteContextMenu'
+import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
+import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
+import { RIGHT_SIDEBAR_PANEL_ID } from '~/features/editor/components/right-sidebar/constants'
+import {
+  canShowRightSidebarContent,
+  resolveRightSidebarContent,
+} from '~/features/editor/components/right-sidebar/right-sidebar-model'
+import { RIGHT_SIDEBAR_PANELS } from '~/features/editor/components/right-sidebar/right-sidebar-registry'
+import { useRightSidebarStateStore } from '~/features/editor/stores/right-sidebar-state-store'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
@@ -28,6 +37,7 @@ import { getBlockShareTargetBlocks } from '~/features/editor/utils/block-share-t
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
+import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 
 const FILESYSTEM_SELECTION_SURFACES = new Set<ViewContext>([
   VIEW_CONTEXT.SIDEBAR,
@@ -165,6 +175,34 @@ export function useLiveEditorContextMenuModel({
               setOptimisticBlockSharePermission(null)
             }
           })
+        },
+      },
+      editorPanels: {
+        getPanelItems: (context) => {
+          if (!context.item) return []
+          return RIGHT_SIDEBAR_PANELS.filter((panel) =>
+            canShowRightSidebarContent(context.item?.type, panel.id),
+          ).map((panel) => ({
+            id: panel.id,
+            label: panel.label === 'History' ? 'Edit History' : panel.label,
+            icon: panel.icon,
+          }))
+        },
+        isPanelActive: (context, panelId) => {
+          if (!context.item || !isRightSidebarContentId(panelId)) return false
+          if (!canShowRightSidebarContent(context.item.type, panelId)) return false
+          const panel = usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
+          const activeContentId = resolveRightSidebarContent(
+            context.item.type,
+            useRightSidebarStateStore.getState().activeContentByItemType[context.item.type],
+          )
+          return panel?.visible === true && activeContentId === panelId
+        },
+        activatePanel: (context, panelId) => {
+          if (!context.item || !isRightSidebarContentId(panelId)) return
+          if (!canShowRightSidebarContent(context.item.type, panelId)) return
+          useRightSidebarStateStore.getState().setActiveContent(context.item.type, panelId)
+          usePanelPreferenceStore.getState().setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
         },
       },
     },
@@ -315,4 +353,8 @@ function getBlockShareTargetKey(
 function getContextMenuBlockShareTargets(context: EditorMenuContext) {
   if (!context.editor || !context.note) return []
   return getBlockShareTargetBlocks(context.editor, context.blockNoteId)
+}
+
+function isRightSidebarContentId(value: string): value is RightSidebarContentId {
+  return Object.values(RIGHT_SIDEBAR_CONTENT).includes(value as RightSidebarContentId)
 }

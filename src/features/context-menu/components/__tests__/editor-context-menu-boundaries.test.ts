@@ -18,6 +18,17 @@ describe('editor context menu boundaries', () => {
     )
     const menuRegistry = readRepoFile('src/features/context-menu/menu-registry.ts')
     const menuTypes = readRepoFile('src/features/context-menu/types.ts')
+    const domainRegistryPaths = [
+      'src/features/context-menu/registry/sidebar-item-menu.ts',
+      'src/features/context-menu/registry/creation-menu.ts',
+      'src/features/context-menu/registry/map-pin-menu.ts',
+      'src/features/context-menu/registry/editor-panel-menu.ts',
+      'src/features/context-menu/registry/sharing-menu.ts',
+      'src/features/context-menu/registry/download-menu.ts',
+      'src/features/context-menu/registry/filesystem-menu.ts',
+      'src/features/context-menu/registry/note-menu.ts',
+      'src/features/context-menu/registry/session-menu.ts',
+    ]
 
     expect(liveAdapter).toContain('useLiveEditorContextMenuModel')
     expect(liveAdapter).toContain('EditorContextMenuSurface')
@@ -45,8 +56,21 @@ describe('editor context menu boundaries', () => {
     expect(menuRegistry).not.toContain('FileSystemValue')
     expect(menuRegistry).not.toContain('services.actions[id]')
     expect(menuRegistry).not.toContain('~/features/sharing/components/sidebar-items-share-panel')
-    expect(menuRegistry).toContain('services.sidebarItemSharing.renderSidebarItemsSharePanel')
+    expect(menuRegistry).not.toContain('useRightSidebarStateStore')
+    expect(menuRegistry).not.toContain('usePanelPreferenceStore')
+    expect(menuRegistry).not.toContain('from ./predicates')
+    expect(menuRegistry).not.toContain("from 'lucide-react'")
+    expect(menuRegistry).not.toMatch(/import type \{[^}]*ContextMenuCommand/)
+    expect(menuRegistry).not.toMatch(/import type \{[^}]*ContextMenuContributor/)
+    expect(menuRegistry).not.toContain('satisfies Record<string, ContextMenuCommand')
+    expect(menuRegistry).not.toContain('satisfies ReadonlyArray<ContextMenuContributor')
     expect(existsSync(join(repoRoot, 'src/features/context-menu/actions.tsx'))).toBe(false)
+    for (const domainRegistryPath of domainRegistryPaths) {
+      expect(existsSync(join(repoRoot, domainRegistryPath))).toBe(true)
+    }
+    expect(liveModel).toContain('useRightSidebarStateStore')
+    expect(liveModel).toContain('usePanelPreferenceStore')
+    expect(menuTypes).toContain('EditorPanelMenuService')
 
     for (const source of [liveAdapter, surface, menuRegistry]) {
       expect(source).not.toContain('useSidebarWorkspaceSource')

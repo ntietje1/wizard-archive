@@ -241,6 +241,18 @@ interface BlockShareMenuService {
   toggleAllPlayersPermission: (context: EditorMenuContext) => void
 }
 
+interface EditorPanelMenuItem {
+  id: string
+  label: string
+  icon: LucideIcon
+}
+
+interface EditorPanelMenuService {
+  getPanelItems: (context: EditorMenuContext) => Array<EditorPanelMenuItem>
+  isPanelActive: (context: EditorMenuContext, panelId: string) => boolean
+  activatePanel: (context: EditorMenuContext, panelId: string) => void
+}
+
 export interface EditorContextMenuServices {
   actions: EditorContextMenuActions
   filesystem: ContextMenuFilesystemService
@@ -248,6 +260,7 @@ export interface EditorContextMenuServices {
   viewAsPlayer: ViewAsPlayerMenuService
   sidebarItemSharing: SidebarItemSharingMenuService
   blockShare: BlockShareMenuService
+  editorPanels: EditorPanelMenuService
 }
 
 export type MenuContext = EditorMenuContext
