@@ -1,36 +1,22 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { WikiLinkAutocomplete } from '../wiki-link-autocomplete'
+import {
+  buildWikiLinkAutocompleteModel,
+  getWikiLinkAutocompleteContext,
+} from '../wiki-link-autocomplete-model'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import { NoteValueRuntimeContext } from '~/features/editor/value-block/value-block-runtime-context'
 import type { Id } from 'convex/_generated/dataModel'
-
-const filteredSidebarItemsMock = vi.hoisted(() => vi.fn())
-const activeSidebarItemsMock = vi.hoisted(() => vi.fn())
-
-vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
-  useFilteredSidebarItems: () => filteredSidebarItemsMock(),
-}))
-
-vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useActiveSidebarItems: () => activeSidebarItemsMock(),
-}))
-
-vi.mock('~/shared/hooks/useCampaignQuery', () => ({
-  useCampaignQuery: () => ({ data: [], isPending: false }),
-}))
-
-function sidebarValue(data: Array<AnySidebarItem>) {
-  return {
-    data,
-    status: 'success',
-    ...buildSidebarItemMaps(data),
-  }
-}
+import type { NoteValueRuntimeState } from 'shared/note-values/types'
+import type {
+  WikiLinkAutocompleteMenuState,
+  WikiLinkAutocompleteModelData,
+} from '../wiki-link-autocomplete-source'
 
 function createEditorStub(text = '[[') {
   const domElement = document.createElement('div')
@@ -69,22 +55,80 @@ function createEditorStub(text = '[[') {
   }
 }
 
+function createAutocompleteModelData({
+  sidebarItems,
+  values = [],
+}: {
+  sidebarItems: Array<AnySidebarItem>
+  values?: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
+}): (args: {
+  menu: WikiLinkAutocompleteMenuState
+  sourceNoteId?: Id<'sidebarItems'>
+}) => WikiLinkAutocompleteModelData {
+  return ({ menu, sourceNoteId }) => {
+    const { itemsMap } = buildSidebarItemMaps(sidebarItems)
+    const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
+    const context = menu.show
+      ? getWikiLinkAutocompleteContext(menu.query, sidebarItems, itemsMap, sourceParentId)
+      : null
+    return {
+      context,
+      headingsPending: false,
+      model: buildWikiLinkAutocompleteModel({
+        context,
+        sidebarItems,
+        itemsMap,
+        headings: [],
+        values,
+      }),
+      valuesPending: false,
+    }
+  }
+}
+
+function TestWikiLinkAutocomplete({
+  editor,
+  sourceNoteId,
+  getModelData,
+}: {
+  editor: CustomBlockNoteEditor | undefined
+  sourceNoteId?: Id<'sidebarItems'>
+  getModelData: (args: {
+    menu: WikiLinkAutocompleteMenuState
+    sourceNoteId?: Id<'sidebarItems'>
+  }) => WikiLinkAutocompleteModelData
+}) {
+  const [menu, setMenu] = useState<WikiLinkAutocompleteMenuState>({
+    show: false,
+    query: '',
+    pos: null,
+  })
+  const modelData = getModelData({ menu, sourceNoteId })
+
+  return (
+    <WikiLinkAutocomplete
+      editor={editor}
+      menu={menu}
+      modelData={modelData}
+      setMenu={setMenu}
+      sourceNoteId={sourceNoteId}
+    />
+  )
+}
+
 describe('WikiLinkAutocomplete', () => {
   it('suggests only sidebar items from the permission-filtered list', async () => {
     const visibleNote = createNote({
       name: 'Visible Note',
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
-    const hiddenNote = createNote({
-      name: 'Hidden Note',
-      myPermissionLevel: PERMISSION_LEVEL.NONE,
-    })
-
-    activeSidebarItemsMock.mockReturnValue(sidebarValue([visibleNote, hiddenNote]))
-    filteredSidebarItemsMock.mockReturnValue(sidebarValue([visibleNote]))
-
     const { editor, openAutocomplete } = createEditorStub()
-    render(<WikiLinkAutocomplete editor={editor} />)
+    render(
+      <TestWikiLinkAutocomplete
+        editor={editor}
+        getModelData={createAutocompleteModelData({ sidebarItems: [visibleNote] })}
+      />,
+    )
 
     act(() => {
       openAutocomplete()
@@ -103,59 +147,27 @@ describe('WikiLinkAutocomplete', () => {
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
 
-    activeSidebarItemsMock.mockReturnValue(sidebarValue([currentNote]))
-    filteredSidebarItemsMock.mockReturnValue(sidebarValue([currentNote]))
-
     const { editor, openAutocomplete } = createEditorStub('[[Current Note.')
+    const currentNoteValue: NoteValueRuntimeState<Id<'sidebarItems'>> = {
+      noteId: currentNote._id,
+      blockNoteId: 'block-1',
+      valueId: 'value-1',
+      slug: 'draft_value',
+      status: 'ok',
+      rawValue: 1,
+      formattedValue: '1',
+      errorCode: null,
+      errorMessage: null,
+    }
     render(
-      <NoteValueRuntimeContext.Provider
-        value={{
-          noteId: currentNote._id,
-          editable: true,
-          authoredDefinitions: [
-            {
-              noteId: currentNote._id,
-              blockNoteId: 'block-1',
-              valueId: 'value-1',
-              slug: 'draft_value',
-              expressionSource: '1',
-            },
-          ],
-          authoredValueStates: [
-            {
-              noteId: currentNote._id,
-              blockNoteId: 'block-1',
-              valueId: 'value-1',
-              slug: 'draft_value',
-              status: 'ok',
-              rawValue: 1,
-              formattedValue: '1',
-              errorCode: null,
-              errorMessage: null,
-            },
-          ],
-          stateByValueId: new Map([
-            [
-              'value-1',
-              {
-                noteId: currentNote._id,
-                blockNoteId: 'block-1',
-                valueId: 'value-1',
-                slug: 'draft_value',
-                status: 'ok',
-                rawValue: 1,
-                formattedValue: '1',
-                errorCode: null,
-                errorMessage: null,
-              },
-            ],
-          ]),
+      <TestWikiLinkAutocomplete
+        editor={editor}
+        getModelData={createAutocompleteModelData({
           sidebarItems: [currentNote],
-          itemsMap: new Map([[currentNote._id, currentNote]]),
-        }}
-      >
-        <WikiLinkAutocomplete editor={editor} sourceNoteId={currentNote._id} />
-      </NoteValueRuntimeContext.Provider>,
+          values: [currentNoteValue],
+        })}
+        sourceNoteId={currentNote._id}
+      />,
     )
 
     act(() => {

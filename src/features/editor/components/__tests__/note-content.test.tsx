@@ -82,8 +82,8 @@ vi.mock('../extensions/link-click-handler', () => ({
   LinkClickHandler: () => null,
 }))
 
-vi.mock('../extensions/wiki-link/wiki-link-autocomplete', () => ({
-  WikiLinkAutocomplete: () => null,
+vi.mock('../extensions/wiki-link/live-wiki-link-autocomplete', () => ({
+  LiveWikiLinkAutocomplete: () => null,
 }))
 
 vi.mock('~/features/editor/hooks/useLinkResolver', () => ({

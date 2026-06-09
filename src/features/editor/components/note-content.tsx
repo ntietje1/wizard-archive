@@ -9,7 +9,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createEditorSchema } from '../editor-specs'
 import { NoteView } from './note-view'
 import { LinkClickHandler } from './extensions/link-click-handler'
-import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocomplete'
+import { LiveWikiLinkAutocomplete } from './extensions/wiki-link/live-wiki-link-autocomplete'
 import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import { useLiveNoteValueRuntimeSource } from '~/features/editor/value-block/use-live-note-value-runtime-source'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
@@ -284,13 +284,13 @@ function CollaborativeNoteEditor({
         style={style}
       >
         {children}
+        <LiveWikiLinkAutocomplete
+          editor={editor}
+          onForceOpenRef={forceOpenLinkPopover}
+          sourceNoteId={note._id}
+        />
       </NoteView>
       <LinkClickHandler editor={editor} sourceNoteId={note._id} />
-      <WikiLinkAutocomplete
-        editor={editor}
-        onForceOpenRef={forceOpenLinkPopover}
-        sourceNoteId={note._id}
-      />
     </>
   )
 }
