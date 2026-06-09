@@ -32,7 +32,8 @@ import type {
   ContextMenuContributor,
   ContextMenuGroupConfig,
   ContextMenuItemSpec,
-  EditorContextMenuActionHandlers,
+  EditorContextMenuActions,
+  EditorCreationContextMenuActions,
   EditorContextMenuServices,
   EditorMenuContext,
   EditorModeMenuService,
@@ -108,12 +109,7 @@ type EditorContextMenuContributor = ContextMenuContributor<
   EditorContextMenuServices
 >
 
-type SimpleActionKey = Exclude<keyof EditorContextMenuActionHandlers, 'setGeneralAccessLevel'>
-type SidebarItemCreationActionKey = Pick<
-  EditorContextMenuActionHandlers,
-  'createNote' | 'createFolder' | 'createMap' | 'createCanvas' | 'createFile'
->
-type SidebarItemCreationActionId = keyof SidebarItemCreationActionKey
+type SidebarItemCreationActionId = keyof EditorCreationContextMenuActions
 
 const sidebarItemCreationActionIds = {
   'create.note': 'createNote',
@@ -159,47 +155,99 @@ function createViewAsPlayerItems(
 }
 
 function createActionCommand(
-  id: SimpleActionKey,
+  id: string,
+  run: (actions: EditorContextMenuActions, context: EditorMenuContext) => void,
 ): ContextMenuCommand<EditorMenuContext, EditorContextMenuServices> {
   return {
     id,
-    run: (context, services) => services.actions[id](context),
+    run: (context, services) => run(services.actions, context),
   }
 }
 
 export const editorContextMenuCommands = {
-  open: createActionCommand('open'),
-  rename: createActionCommand('rename'),
-  delete: createActionCommand('delete'),
-  showInSidebar: createActionCommand('showInSidebar'),
-  createNote: createActionCommand('createNote'),
-  createFolder: createActionCommand('createFolder'),
-  createMap: createActionCommand('createMap'),
-  createFile: createActionCommand('createFile'),
-  createCanvas: createActionCommand('createCanvas'),
-  editMap: createActionCommand('editMap'),
-  editFile: createActionCommand('editFile'),
-  editItem: createActionCommand('editItem'),
-  pinToMap: createActionCommand('pinToMap'),
-  goToMapPin: createActionCommand('goToMapPin'),
-  createMapPin: createActionCommand('createMapPin'),
-  removeMapPin: createActionCommand('removeMapPin'),
-  moveMapPin: createActionCommand('moveMapPin'),
-  togglePinVisibility: createActionCommand('togglePinVisibility'),
-  startSession: createActionCommand('startSession'),
-  endSession: createActionCommand('endSession'),
-  downloadItems: createActionCommand('downloadItems'),
-  downloadAll: createActionCommand('downloadAll'),
-  toggleBookmark: createActionCommand('toggleBookmark'),
-  paste: createActionCommand('paste'),
-  duplicate: createActionCommand('duplicate'),
-  restore: createActionCommand('restore'),
-  permanentlyDelete: createActionCommand('permanentlyDelete'),
-  emptyTrash: createActionCommand('emptyTrash'),
+  open: createActionCommand('open', (actions, context) => actions.sidebarItem.open(context)),
+  rename: createActionCommand('rename', (actions, context) => actions.sidebarItem.rename(context)),
+  delete: createActionCommand('delete', (actions, context) => actions.filesystem.delete(context)),
+  showInSidebar: createActionCommand('showInSidebar', (actions, context) =>
+    actions.sidebarItem.showInSidebar(context),
+  ),
+  createNote: createActionCommand('createNote', (actions, context) =>
+    actions.creation.createNote(context),
+  ),
+  createFolder: createActionCommand('createFolder', (actions, context) =>
+    actions.creation.createFolder(context),
+  ),
+  createMap: createActionCommand('createMap', (actions, context) =>
+    actions.creation.createMap(context),
+  ),
+  createFile: createActionCommand('createFile', (actions, context) =>
+    actions.creation.createFile(context),
+  ),
+  createCanvas: createActionCommand('createCanvas', (actions, context) =>
+    actions.creation.createCanvas(context),
+  ),
+  editMap: createActionCommand('editMap', (actions, context) =>
+    actions.sidebarItem.editMap(context),
+  ),
+  editFile: createActionCommand('editFile', (actions, context) =>
+    actions.sidebarItem.editFile(context),
+  ),
+  editItem: createActionCommand('editItem', (actions, context) =>
+    actions.sidebarItem.editItem(context),
+  ),
+  pinToMap: createActionCommand('pinToMap', (actions, context) =>
+    actions.mapPins.pinToMap(context),
+  ),
+  goToMapPin: createActionCommand('goToMapPin', (actions, context) =>
+    actions.mapPins.goToMapPin(context),
+  ),
+  createMapPin: createActionCommand('createMapPin', (actions, context) =>
+    actions.mapPins.createMapPin(context),
+  ),
+  removeMapPin: createActionCommand('removeMapPin', (actions, context) =>
+    actions.mapPins.removeMapPin(context),
+  ),
+  moveMapPin: createActionCommand('moveMapPin', (actions, context) =>
+    actions.mapPins.moveMapPin(context),
+  ),
+  togglePinVisibility: createActionCommand('togglePinVisibility', (actions, context) =>
+    actions.mapPins.togglePinVisibility(context),
+  ),
+  startSession: createActionCommand('startSession', (actions, context) =>
+    actions.session.startSession(context),
+  ),
+  endSession: createActionCommand('endSession', (actions, context) =>
+    actions.session.endSession(context),
+  ),
+  downloadItems: createActionCommand('downloadItems', (actions, context) =>
+    actions.download.downloadItems(context),
+  ),
+  downloadAll: createActionCommand('downloadAll', (actions, context) =>
+    actions.download.downloadAll(context),
+  ),
+  toggleBookmark: createActionCommand('toggleBookmark', (actions, context) =>
+    actions.sidebarItem.toggleBookmark(context),
+  ),
+  paste: createActionCommand('paste', (actions, context) => actions.filesystem.paste(context)),
+  duplicate: createActionCommand('duplicate', (actions, context) =>
+    actions.filesystem.duplicate(context),
+  ),
+  restore: createActionCommand('restore', (actions, context) =>
+    actions.filesystem.restore(context),
+  ),
+  permanentlyDelete: createActionCommand('permanentlyDelete', (actions, context) =>
+    actions.filesystem.permanentlyDelete(context),
+  ),
+  emptyTrash: createActionCommand('emptyTrash', (actions, context) =>
+    actions.filesystem.emptyTrash(context),
+  ),
   setGeneralAccessLevel: {
     id: 'setGeneralAccessLevel',
     run: (context, services, payload) =>
-      services.actions.setGeneralAccessLevel(context, (payload as PermissionLevel | null) ?? null),
+      services.actions.sharing.setGeneralAccessLevel(
+        context,
+        (payload as PermissionLevel | null) ?? null,
+      ),
   },
   activatePanel: {
     id: 'activatePanel',

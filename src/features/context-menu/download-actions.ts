@@ -3,7 +3,7 @@ import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { useConvex } from '@convex-dev/react-query'
-import type { EditorContextMenuActionHandlers, MenuContext } from './types'
+import type { EditorDownloadContextMenuActions, MenuContext } from './types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { handleError, logger } from '~/shared/utils/logger'
@@ -12,7 +12,6 @@ import { convertBlocksToMarkdown } from '~/features/editor/utils/text-to-blocks'
 import { assertNever } from '~/shared/utils/utils'
 
 type ConvexClient = ReturnType<typeof useConvex>
-type DownloadActions = Pick<EditorContextMenuActionHandlers, 'downloadItems' | 'downloadAll'>
 
 type DownloadZipItem =
   | { type: typeof SIDEBAR_ITEM_TYPES.files; downloadUrl: string | null; path: string }
@@ -226,7 +225,7 @@ export function createDownloadActions({
 }: {
   campaignId: Id<'campaigns'> | undefined
   convex: ConvexClient
-}): DownloadActions {
+}): EditorDownloadContextMenuActions {
   return {
     downloadItems: async (ctx: MenuContext) => {
       const items = ctx.selectedItems ?? []

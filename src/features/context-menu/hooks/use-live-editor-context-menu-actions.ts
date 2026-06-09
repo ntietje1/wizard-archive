@@ -5,7 +5,7 @@ import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { MenuDialogState } from '../menu-dialogs'
 import type { PermissionLevel } from 'shared/permissions/types'
-import type { EditorContextMenuActionHandlers, MenuContext } from '../types'
+import type { EditorContextMenuActions, MenuContext } from '../types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { handleError } from '~/shared/utils/logger'
@@ -45,7 +45,7 @@ export function useLiveEditorContextMenuActions(
   const [editFileDialog, setEditFileDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
 
-  const actions: EditorContextMenuActionHandlers = {
+  const sidebarItemActions: EditorContextMenuActions['sidebarItem'] = {
     open: (ctx: MenuContext) => {
       if (!ctx.item) return
       void openItem(ctx.item.slug)
@@ -83,6 +83,37 @@ export function useLiveEditorContextMenuActions(
       }
     },
 
+    toggleBookmark: async (ctx: MenuContext) => {
+      if (!campaignId) return
+      const items = ctx.selectedItems ?? []
+      if (items.length === 0) return
+
+      const results = await Promise.allSettled(
+        items.map((item) =>
+          toggleBookmarkMutation.mutateAsync({
+            sidebarItemId: item._id,
+          }),
+        ),
+      )
+      const failures = results.filter((result) => result.status === 'rejected')
+      const successCount = results.length - failures.length
+      if (failures.length > 0) {
+        const error = new Error(`${failures.length} of ${items.length} bookmark updates failed`)
+        if (successCount === 0) {
+          handleError(
+            error,
+            items.length === 1 ? 'Failed to toggle bookmark' : 'Failed to toggle bookmarks',
+          )
+          return
+        }
+        toast.error(`${successCount} bookmarks updated, ${failures.length} failed`)
+        return
+      }
+      toast.success(items.length === 1 ? 'Bookmark updated' : 'Bookmarks updated')
+    },
+  }
+
+  const mapPinActions: EditorContextMenuActions['mapPins'] = {
     pinToMap: (ctx: MenuContext) => {
       if (!ctx.activeMap) return
       const pinnedItemIds = new Set(ctx.activeMap.pins.map((pin) => pin.itemId))
@@ -177,7 +208,9 @@ export function useLiveEditorContextMenuActions(
       })
       window.dispatchEvent(event)
     },
+  }
 
+  const sessionActions: EditorContextMenuActions['session'] = {
     startSession: () => {
       startNewSession.mutate(
         {},
@@ -195,7 +228,9 @@ export function useLiveEditorContextMenuActions(
         },
       )
     },
+  }
 
+  const sharingActions: EditorContextMenuActions['sharing'] = {
     setGeneralAccessLevel: async (ctx: MenuContext, level: PermissionLevel | null) => {
       if (!campaignId) return
       const items = ctx.selectedItems ?? []
@@ -219,10 +254,9 @@ export function useLiveEditorContextMenuActions(
         handleError(error, 'Failed to update access level')
       }
     },
+  }
 
-    ...creationActions,
-    ...downloadActions,
-
+  const filesystemContextMenuActions: EditorContextMenuActions['filesystem'] = {
     delete: async (ctx: MenuContext) => {
       const items = ctx.selectedItems ?? []
       if (items.length > 0) {
@@ -265,35 +299,16 @@ export function useLiveEditorContextMenuActions(
       filesystemActionsApi.confirmEmptyTrash()
       onDialogOpen?.()
     },
+  }
 
-    toggleBookmark: async (ctx: MenuContext) => {
-      if (!campaignId) return
-      const items = ctx.selectedItems ?? []
-      if (items.length === 0) return
-
-      const results = await Promise.allSettled(
-        items.map((item) =>
-          toggleBookmarkMutation.mutateAsync({
-            sidebarItemId: item._id,
-          }),
-        ),
-      )
-      const failures = results.filter((result) => result.status === 'rejected')
-      const successCount = results.length - failures.length
-      if (failures.length > 0) {
-        const error = new Error(`${failures.length} of ${items.length} bookmark updates failed`)
-        if (successCount === 0) {
-          handleError(
-            error,
-            items.length === 1 ? 'Failed to toggle bookmark' : 'Failed to toggle bookmarks',
-          )
-          return
-        }
-        toast.error(`${successCount} bookmarks updated, ${failures.length} failed`)
-        return
-      }
-      toast.success(items.length === 1 ? 'Bookmark updated' : 'Bookmarks updated')
-    },
+  const actions: EditorContextMenuActions = {
+    sidebarItem: sidebarItemActions,
+    creation: creationActions,
+    mapPins: mapPinActions,
+    session: sessionActions,
+    sharing: sharingActions,
+    download: downloadActions,
+    filesystem: filesystemContextMenuActions,
   }
 
   const makeCloseHandler = <T>(setter: React.Dispatch<React.SetStateAction<T | null>>) => {

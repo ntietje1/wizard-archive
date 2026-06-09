@@ -5,7 +5,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type {
   ContextMenuCommand,
   ContextMenuContributor,
-  EditorContextMenuActionHandlers,
+  EditorContextMenuActions,
   EditorContextMenuServices,
   EditorModeMenuService,
   ViewAsPlayerMenuService,
@@ -33,37 +33,51 @@ vi.mock('sonner', () => ({
   },
 }))
 
-function createActions(): EditorContextMenuActionHandlers {
+function createActions(): EditorContextMenuActions {
   return {
-    open: vi.fn(),
-    rename: vi.fn(),
-    delete: vi.fn(),
-    showInSidebar: vi.fn(),
-    createNote: vi.fn(),
-    createFolder: vi.fn(),
-    createMap: vi.fn(),
-    createFile: vi.fn(),
-    createCanvas: vi.fn(),
-    editMap: vi.fn(),
-    editFile: vi.fn(),
-    editItem: vi.fn(),
-    pinToMap: vi.fn(),
-    goToMapPin: vi.fn(),
-    createMapPin: vi.fn(),
-    removeMapPin: vi.fn(),
-    moveMapPin: vi.fn(),
-    togglePinVisibility: vi.fn(),
-    startSession: vi.fn(),
-    endSession: vi.fn(),
-    setGeneralAccessLevel: vi.fn(),
-    downloadItems: vi.fn(),
-    downloadAll: vi.fn(),
-    toggleBookmark: vi.fn(),
-    paste: vi.fn(),
-    duplicate: vi.fn(),
-    restore: vi.fn(),
-    permanentlyDelete: vi.fn(),
-    emptyTrash: vi.fn(),
+    sidebarItem: {
+      open: vi.fn(),
+      rename: vi.fn(),
+      showInSidebar: vi.fn(),
+      editMap: vi.fn(),
+      editFile: vi.fn(),
+      editItem: vi.fn(),
+      toggleBookmark: vi.fn(),
+    },
+    creation: {
+      createNote: vi.fn(),
+      createFolder: vi.fn(),
+      createMap: vi.fn(),
+      createFile: vi.fn(),
+      createCanvas: vi.fn(),
+    },
+    mapPins: {
+      pinToMap: vi.fn(),
+      goToMapPin: vi.fn(),
+      createMapPin: vi.fn(),
+      removeMapPin: vi.fn(),
+      moveMapPin: vi.fn(),
+      togglePinVisibility: vi.fn(),
+    },
+    session: {
+      startSession: vi.fn(),
+      endSession: vi.fn(),
+    },
+    sharing: {
+      setGeneralAccessLevel: vi.fn(),
+    },
+    download: {
+      downloadItems: vi.fn(),
+      downloadAll: vi.fn(),
+    },
+    filesystem: {
+      delete: vi.fn(),
+      paste: vi.fn(),
+      duplicate: vi.fn(),
+      restore: vi.fn(),
+      permanentlyDelete: vi.fn(),
+      emptyTrash: vi.fn(),
+    },
   }
 }
 
@@ -141,6 +155,29 @@ function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
 
 describe('buildMenu', () => {
   const services = createServices()
+
+  it('routes command execution through domain-owned action fragments', async () => {
+    const context = sidebarCtx({ item: createNote() })
+
+    await editorContextMenuCommands.open.run(context, services)
+    await editorContextMenuCommands.createNote.run(context, services)
+    await editorContextMenuCommands.pinToMap.run(context, services)
+    editorContextMenuCommands.setGeneralAccessLevel.run(context, services, PERMISSION_LEVEL.VIEW)
+    await editorContextMenuCommands.downloadItems.run(context, services)
+    await editorContextMenuCommands.paste.run(context, services)
+    await editorContextMenuCommands.delete.run(context, services)
+
+    expect(services.actions.sidebarItem.open).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.creation.createNote).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.mapPins.pinToMap).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.sharing.setGeneralAccessLevel).toHaveBeenCalledExactlyOnceWith(
+      context,
+      PERMISSION_LEVEL.VIEW,
+    )
+    expect(services.actions.download.downloadItems).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.filesystem.paste).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.filesystem.delete).toHaveBeenCalledExactlyOnceWith(context)
+  })
 
   it('DM sees edit and delete actions on a note in sidebar', () => {
     const menu = buildMenu({

@@ -32,11 +32,7 @@ export interface ContextMenuCommand<TContext, TServices, TPayload = unknown> {
   shortcut?: ContextMenuResolver<string | undefined, TContext, TServices, TPayload>
   isEnabled?: ContextMenuPredicate<TContext, TServices, TPayload>
   isChecked?: ContextMenuPredicate<TContext, TServices, TPayload>
-  run: (
-    context: TContext,
-    services: TServices,
-    payload: TPayload | undefined,
-  ) => void | Promise<void>
+  run: (context: TContext, services: TServices, payload?: TPayload) => void | Promise<void>
 }
 
 export interface ContextMenuItemSpec<TContext, TServices, TPayload = unknown> {
@@ -161,36 +157,64 @@ interface ContextMenuFilesystemService {
   canPasteIntoTarget: (input: ContextMenuPasteTargetInput) => boolean
 }
 
-export interface EditorContextMenuActionHandlers {
+interface EditorSidebarItemContextMenuActions {
   open: (context: EditorMenuContext) => void
   rename: (context: EditorMenuContext) => void
-  delete: (context: EditorMenuContext) => void
   showInSidebar: (context: EditorMenuContext) => void
+  editMap: (context: EditorMenuContext) => void
+  editFile: (context: EditorMenuContext) => void
+  editItem: (context: EditorMenuContext) => void
+  toggleBookmark: (context: EditorMenuContext) => void
+}
+
+export interface EditorCreationContextMenuActions {
   createNote: (context: EditorMenuContext) => void
   createFolder: (context: EditorMenuContext) => void
   createMap: (context: EditorMenuContext) => void
   createFile: (context: EditorMenuContext) => void
   createCanvas: (context: EditorMenuContext) => void
-  editMap: (context: EditorMenuContext) => void
-  editFile: (context: EditorMenuContext) => void
-  editItem: (context: EditorMenuContext) => void
+}
+
+interface EditorMapPinContextMenuActions {
   pinToMap: (context: EditorMenuContext) => void
   goToMapPin: (context: EditorMenuContext) => void
   createMapPin: (context: EditorMenuContext) => void
   removeMapPin: (context: EditorMenuContext) => void
   moveMapPin: (context: EditorMenuContext) => void
   togglePinVisibility: (context: EditorMenuContext) => void
+}
+
+interface EditorSessionContextMenuActions {
   startSession: (context: EditorMenuContext) => void
   endSession: (context: EditorMenuContext) => void
+}
+
+interface EditorSharingContextMenuActions {
   setGeneralAccessLevel: (context: EditorMenuContext, level: PermissionLevel | null) => void
+}
+
+export interface EditorDownloadContextMenuActions {
   downloadItems: (context: EditorMenuContext) => void
   downloadAll: (context: EditorMenuContext) => void
-  toggleBookmark: (context: EditorMenuContext) => void
+}
+
+interface EditorFilesystemContextMenuActions {
+  delete: (context: EditorMenuContext) => void
   paste: (context: EditorMenuContext) => void
   duplicate: (context: EditorMenuContext) => void
   restore: (context: EditorMenuContext) => void
   permanentlyDelete: (context: EditorMenuContext) => void
   emptyTrash: (context: EditorMenuContext) => void
+}
+
+export interface EditorContextMenuActions {
+  sidebarItem: EditorSidebarItemContextMenuActions
+  creation: EditorCreationContextMenuActions
+  mapPins: EditorMapPinContextMenuActions
+  session: EditorSessionContextMenuActions
+  sharing: EditorSharingContextMenuActions
+  download: EditorDownloadContextMenuActions
+  filesystem: EditorFilesystemContextMenuActions
 }
 
 export interface EditorModeMenuService {
@@ -218,7 +242,7 @@ interface BlockShareMenuService {
 }
 
 export interface EditorContextMenuServices {
-  actions: EditorContextMenuActionHandlers
+  actions: EditorContextMenuActions
   filesystem: ContextMenuFilesystemService
   editorMode: EditorModeMenuService
   viewAsPlayer: ViewAsPlayerMenuService
