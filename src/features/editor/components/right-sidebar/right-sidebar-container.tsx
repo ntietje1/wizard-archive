@@ -7,12 +7,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/compo
 import { canShowRightSidebarContent } from './right-sidebar-model'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { EditorWorkspaceRightSidebarChrome } from '../../workspace/editor-workspace-chrome'
+import type { RightSidebarPanelServices } from './right-sidebar-panel-source'
 
 export function RightSidebarContainer({
   item,
+  panelServices,
   sidebar,
 }: {
   item: AnySidebarItem | null
+  panelServices: RightSidebarPanelServices
   sidebar: EditorWorkspaceRightSidebarChrome
 }) {
   if (!item) return null
@@ -57,6 +60,7 @@ export function RightSidebarContainer({
             activeContentId={sidebar.activeContentId}
             onContentChange={sidebar.setActiveContent}
             onClose={sidebar.close}
+            panelServices={panelServices}
           />
         </ResizableSidebar>
       )}

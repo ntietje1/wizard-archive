@@ -5,6 +5,7 @@ import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-co
 import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
 import { RightSidebarContainer } from '../right-sidebar-container'
 import { createFile, createNote } from '~/test/factories/sidebar-item-factory'
+import type { RightSidebarPanelServices } from '../right-sidebar-panel-source'
 
 const sidebarState = vi.hoisted(() => ({
   visible: true,
@@ -18,6 +19,13 @@ const sidebarState = vi.hoisted(() => ({
   close: vi.fn(),
   toggle: vi.fn(),
 }))
+
+const panelServices: RightSidebarPanelServices = {
+  [RIGHT_SIDEBAR_CONTENT.history]: () => <div />,
+  [RIGHT_SIDEBAR_CONTENT.backlinks]: () => <div />,
+  [RIGHT_SIDEBAR_CONTENT.outgoing]: () => <div />,
+  [RIGHT_SIDEBAR_CONTENT.outline]: () => <div />,
+}
 
 vi.mock('~/features/sidebar/components/resizable-sidebar', () => ({
   ResizableSidebar: ({ children }: { children: ReactNode }) => (
@@ -50,7 +58,9 @@ describe('RightSidebarContainer', () => {
     sidebarState.visible = true
     sidebarState.activeContentId = RIGHT_SIDEBAR_CONTENT.history
 
-    render(<RightSidebarContainer item={file} sidebar={sidebarState} />)
+    render(
+      <RightSidebarContainer item={file} panelServices={panelServices} sidebar={sidebarState} />,
+    )
 
     const sidebar = screen.getByTestId('right-sidebar')
     expect(sidebar).toHaveAttribute('data-item-id', file._id)
@@ -62,7 +72,9 @@ describe('RightSidebarContainer', () => {
     const note = createNote()
     sidebarState.visible = false
 
-    render(<RightSidebarContainer item={note} sidebar={sidebarState} />)
+    render(
+      <RightSidebarContainer item={note} panelServices={panelServices} sidebar={sidebarState} />,
+    )
 
     expect(screen.getByTestId('outline-toggle-container')).toHaveClass(
       'absolute',
@@ -76,8 +88,20 @@ describe('RightSidebarContainer', () => {
     const secondNote = createNote()
     sidebarState.visible = true
 
-    const { rerender } = render(<RightSidebarContainer item={firstNote} sidebar={sidebarState} />)
-    rerender(<RightSidebarContainer item={secondNote} sidebar={sidebarState} />)
+    const { rerender } = render(
+      <RightSidebarContainer
+        item={firstNote}
+        panelServices={panelServices}
+        sidebar={sidebarState}
+      />,
+    )
+    rerender(
+      <RightSidebarContainer
+        item={secondNote}
+        panelServices={panelServices}
+        sidebar={sidebarState}
+      />,
+    )
 
     expect(sidebarState.close).not.toHaveBeenCalled()
   })

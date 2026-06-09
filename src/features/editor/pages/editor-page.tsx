@@ -3,6 +3,7 @@ import { EditorWorkspaceSurface } from '../components/editor-workspace-surface'
 import { FileTopbar } from '../components/topbar/file-topbar'
 import { TrashBanner } from '../components/deleted-item-banner'
 import { RightSidebarContainer } from '../components/right-sidebar/right-sidebar-container'
+import { liveRightSidebarPanelServices } from '../components/right-sidebar/live-right-sidebar-panel-source'
 import { useLiveEditorWorkspaceSource } from '../workspace/use-live-editor-workspace-source'
 import { useSelectedItemSync } from '~/features/sidebar/hooks/useSelectedItem'
 import type { EditorWorkspaceSource } from '../workspace/editor-workspace-source'
@@ -18,6 +19,7 @@ export function EditorPage() {
       rightSidebar={
         <RightSidebarContainer
           item={workspaceSource.currentItem.item}
+          panelServices={liveRightSidebarPanelServices}
           sidebar={workspaceSource.chrome.rightSidebar}
         />
       }
