@@ -9,7 +9,7 @@ import {
 } from 'shared/links/parsing'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { LinkResolver } from './useLinkResolver'
+import type { LinkResolver } from '../links/link-resolver'
 import type { MdLinkDecorationMatch } from '~/features/editor/utils/md-link-decorations'
 import type { WikiLinkDecorationMatch } from '~/features/editor/utils/wiki-link-decorations'
 import { buildMdLinkDecorationEntries } from '~/features/editor/utils/md-link-decorations'

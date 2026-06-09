@@ -4,7 +4,7 @@ import { PreventExternalDrop } from './extensions/prevent-external-drop/prevent-
 import { SlashMenu } from './extensions/slash-menu/slash-menu'
 import { NoteEmbedSurfaceProvider } from './extensions/embed-block/note-embed-surface-context'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
+import type { LinkResolver } from '~/features/editor/links/link-resolver'
 import type { CSSProperties, ReactNode, RefObject } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
 import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'

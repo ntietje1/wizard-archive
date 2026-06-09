@@ -6,7 +6,7 @@ import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties, ReactNode } from 'react'
-import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
+import type { LinkResolver } from '~/features/editor/links/link-resolver'
 
 export function NoteView({
   editor,
