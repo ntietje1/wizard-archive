@@ -7,6 +7,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties, ReactNode } from 'react'
 import type { LinkResolver } from '~/features/editor/links/link-resolver'
+import type { NoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
 
 export function NoteView({
   editor,
@@ -15,6 +16,7 @@ export function NoteView({
   editable,
   evaluateValuesFromEditor = editable,
   linkResolver,
+  valueRuntimeSource,
   style,
   children,
 }: {
@@ -24,6 +26,7 @@ export function NoteView({
   editable: boolean
   evaluateValuesFromEditor?: boolean
   linkResolver: LinkResolver
+  valueRuntimeSource: NoteValueRuntimeSource
   style?: CSSProperties
   children?: ReactNode
 }) {
@@ -33,7 +36,7 @@ export function NoteView({
   return (
     <NoteValueRuntimeProvider
       editor={editor}
-      noteId={note?._id ?? noteId}
+      source={valueRuntimeSource}
       editable={editable}
       evaluateValuesFromEditor={evaluateValuesFromEditor}
     >

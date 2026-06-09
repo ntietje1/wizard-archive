@@ -11,6 +11,7 @@ import { NoteView } from './note-view'
 import { LinkClickHandler } from './extensions/link-click-handler'
 import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocomplete'
 import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
+import { useLiveNoteValueRuntimeSource } from '~/features/editor/value-block/use-live-note-value-runtime-source'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
@@ -161,6 +162,7 @@ function StaticNoteEditor({
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, null, null),
   })
+  const valueRuntimeSource = useLiveNoteValueRuntimeSource({ editor, noteId })
 
   if (!editor) return null
 
@@ -173,6 +175,7 @@ function StaticNoteEditor({
         editable={false}
         evaluateValuesFromEditor={evaluateValuesFromEditor}
         linkResolver={linkResolver}
+        valueRuntimeSource={valueRuntimeSource}
         style={style}
       >
         {children}
@@ -266,12 +269,20 @@ function CollaborativeNoteEditor({
   useEffect(() => {
     updateConvexYjsProviderUser(provider, { name: user.name, color: user.color })
   }, [provider, user.name, user.color])
+  const valueRuntimeSource = useLiveNoteValueRuntimeSource({ editor, noteId: note._id })
 
   if (!editor) return null
 
   return (
     <>
-      <NoteView editor={editor} note={note} editable linkResolver={linkResolver} style={style}>
+      <NoteView
+        editor={editor}
+        note={note}
+        editable
+        linkResolver={linkResolver}
+        valueRuntimeSource={valueRuntimeSource}
+        style={style}
+      >
         {children}
       </NoteView>
       <LinkClickHandler editor={editor} sourceNoteId={note._id} />

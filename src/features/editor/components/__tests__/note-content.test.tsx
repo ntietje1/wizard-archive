@@ -12,6 +12,7 @@ import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
 import type { CampaignActor } from 'shared/campaigns/actor'
+import type { NoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
 
 const {
   activeItemsState,
@@ -92,6 +93,22 @@ vi.mock('~/features/editor/hooks/useLinkResolver', () => ({
   ) => ({
     isViewerMode: options.isViewerMode,
     resolveLink: vi.fn(),
+  }),
+}))
+
+vi.mock('~/features/editor/value-block/use-live-note-value-runtime-source', () => ({
+  useLiveNoteValueRuntimeSource: ({
+    noteId,
+  }: {
+    noteId?: Id<'sidebarItems'>
+  }): NoteValueRuntimeSource => ({
+    noteId,
+    authoredDefinitions: [],
+    externalNoteIdByPath: new Map(),
+    externalStates: [],
+    itemsMap: new Map(),
+    persistedStates: [],
+    sidebarItems: [],
   }),
 }))
 
