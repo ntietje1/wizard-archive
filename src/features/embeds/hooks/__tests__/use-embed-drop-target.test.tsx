@@ -105,6 +105,24 @@ describe('useEmbedDropTarget', () => {
     expect(setTarget).not.toHaveBeenCalled()
   })
 
+  it('rejects multi-item sidebar drops because one empty embed has one target slot', async () => {
+    const setTarget = vi.fn(() => Promise.resolve())
+    renderHookHarness({ sourceItemId: testId<'sidebarItems'>('canvas-1'), setTarget })
+
+    await waitFor(() => expect(dropTargetState.args).not.toBeNull())
+
+    const multiItemDragData = {
+      sidebarItemId: testId<'sidebarItems'>('note-1'),
+      sidebarItemIds: [testId<'sidebarItems'>('note-1'), testId<'sidebarItems'>('note-2')],
+    }
+
+    expect(dropTargetState.args!.canDrop({ source: { data: multiItemDragData } })).toBe(false)
+
+    dropTargetState.args!.onDrop({ source: { data: multiItemDragData } })
+
+    expect(setTarget).not.toHaveBeenCalled()
+  })
+
   it('reports valid sidebar item drops as active shared drop target feedback', async () => {
     renderHookHarness({ sourceItemId: testId<'sidebarItems'>('canvas-1') })
 
@@ -246,6 +264,34 @@ describe('useEmbedDropTarget', () => {
     )
   })
 
+  it('keeps editor dragover handlers from reacting while hovering the embed target', () => {
+    renderHookHarness()
+    const editorElement = screen.getByTestId('drop-target').parentElement
+    const editorContainer = editorElement?.parentElement
+    const parentDragOver = vi.fn()
+    editorElement?.addEventListener('dragover', parentDragOver)
+
+    const { event } = dispatchNativeDragEvent('dragover', {
+      types: [],
+      getData: () => '',
+    })
+
+    expect(parentDragOver).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(false)
+    expect(editorElement).toHaveAttribute('data-note-empty-embed-drop-active', 'true')
+    expect(editorContainer).toHaveAttribute('data-note-empty-embed-drop-active', 'true')
+    expect(document.body).toHaveAttribute('data-note-empty-embed-drop-active', 'true')
+
+    dispatchNativeDragEvent('dragleave', {
+      types: [],
+      getData: () => '',
+    })
+
+    expect(editorElement).not.toHaveAttribute('data-note-empty-embed-drop-active')
+    expect(editorContainer).not.toHaveAttribute('data-note-empty-embed-drop-active')
+    expect(document.body).not.toHaveAttribute('data-note-empty-embed-drop-active')
+  })
+
   it('reports native file upload failures instead of silently keeping the old target', async () => {
     const setTarget = vi.fn(() => Promise.resolve())
     const uploadFile = vi.fn(() => Promise.resolve(null))
@@ -314,12 +360,16 @@ function CanvasEmbedDropTargetHarness({
     uploadFile,
   })
   return (
-    <div
-      ref={ref}
-      data-testid="drop-target"
-      data-drop-target={dropVisualState.isDropTarget ? 'true' : 'false'}
-      data-file-drop-target={dropVisualState.isFileDropTarget ? 'true' : 'false'}
-    />
+    <div className="bn-container">
+      <div className="bn-editor">
+        <div
+          ref={ref}
+          data-testid="drop-target"
+          data-drop-target={dropVisualState.isDropTarget ? 'true' : 'false'}
+          data-file-drop-target={dropVisualState.isFileDropTarget ? 'true' : 'false'}
+        />
+      </div>
+    </div>
   )
 }
 
@@ -333,7 +383,7 @@ function dispatchNativeDrop(dataTransfer: {
 }
 
 function dispatchNativeDragEvent(
-  type: 'dragenter' | 'dragleave' | 'drop',
+  type: 'dragenter' | 'dragover' | 'dragleave' | 'drop',
   dataTransfer: {
     types: Array<string>
     getData: (type: string) => string

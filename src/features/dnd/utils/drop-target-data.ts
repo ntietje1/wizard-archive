@@ -116,7 +116,7 @@ function customDropTargetKey(rawTarget: Record<string, unknown>, type: DropZoneT
     case EMPTY_EMBED_DROP_TYPE:
       return typeof rawTarget.sourceItemId === 'string'
         ? `empty-embed:${rawTarget.sourceItemId}`
-        : EMPTY_EMBED_DROP_TYPE
+        : null
     case SIDEBAR_ITEM_TYPES.folders:
     case SIDEBAR_ITEM_TYPES.notes:
     case SIDEBAR_ITEM_TYPES.gameMaps:
@@ -148,7 +148,9 @@ export function getDropTargetKey(target: Record<string, unknown> | null): string
   if (!target) return null
   const { type } = target
   if (!isDropZoneType(type)) return null
-  return customDropTargetKey(target, type) ?? type
+  const targetKey = customDropTargetKey(target, type)
+  if (targetKey) return targetKey
+  return type === EMPTY_EMBED_DROP_TYPE ? null : type
 }
 
 export function getHighlightId(target: SidebarDropData | null): string | null {

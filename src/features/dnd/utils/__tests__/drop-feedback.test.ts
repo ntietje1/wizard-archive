@@ -200,6 +200,22 @@ describe('resolveDropFeedback', () => {
     })
   })
 
+  it('rejects multi-item empty embed replacement feedback', () => {
+    const first = createNote()
+    const second = createNote()
+    const target = createNote()
+
+    expect(
+      resolveDropFeedback(
+        [first, second],
+        { type: EMPTY_EMBED_DROP_TYPE, sourceItemId: target._id },
+        planningContext(),
+      ),
+    ).toEqual({
+      outcome: { type: 'rejection', reason: 'unexpected_action' },
+    })
+  })
+
   it('reports partial surface rejection counts without losing accepted operation feedback', () => {
     const map = createGameMap()
     const note = createNote()

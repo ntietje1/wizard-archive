@@ -12,11 +12,9 @@ import type { NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties, ReactNode, RefObject } from 'react'
 import './extensions/wiki-link/wiki-link.css'
 import './extensions/md-link/md-link.css'
-import './note-editor-file-drop-cursor.css'
 import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'
 import { useLinkDecorations } from '~/features/editor/hooks/useLinkDecorations'
-import { useNoteEditorFileDropCursor } from '~/features/editor/hooks/useNoteEditorFileDropCursor'
 import { useResolvedTheme } from '~/shared/theme/context'
 import {
   patchYSyncAfterTypeChanged,
@@ -52,7 +50,6 @@ export function NoteView({
   useDisableAutolink(editor)
   useYjsUndoPatches(editor, editable)
   useNoteYjsUndoShortcutPatch(editor, noteSurfaceRef, !isViewerMode)
-  useNoteEditorFileDropCursor(editor, !isViewerMode)
 
   return (
     <div ref={noteSurfaceRef} className="contents">

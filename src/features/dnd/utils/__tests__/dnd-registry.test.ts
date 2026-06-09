@@ -958,8 +958,8 @@ describe('getDropTargetKey', () => {
     ).toBe('empty-embed:note_5')
   })
 
-  it('falls back to the empty embed type when the source item id is missing', () => {
-    expect(getDropTargetKey({ type: EMPTY_EMBED_DROP_TYPE })).toBe(EMPTY_EMBED_DROP_TYPE)
+  it('returns null when empty embed source item id is missing', () => {
+    expect(getDropTargetKey({ type: EMPTY_EMBED_DROP_TYPE })).toBeNull()
   })
 
   it('returns custom key for canvas zone', () => {

@@ -41,8 +41,49 @@ export function useEmbedDropTarget({
 
   useElementDropTarget({ ref, enabled, sourceItemId, setTarget, setDropVisualState })
   useNativeDropTarget({ ref, enabled, setTarget, uploadFile, setDropVisualState })
+  useLocalEditorDragBoundary({ ref, enabled })
 
   return dropVisualState
+}
+
+function useLocalEditorDragBoundary({
+  ref,
+  enabled,
+}: {
+  ref: RefObject<HTMLElement | null>
+  enabled: boolean
+}) {
+  useEffect(() => {
+    const element = ref.current
+    if (!element || !enabled) return
+    const editorElement = element.closest<HTMLElement>('.bn-editor')
+    const editorContainer = element.closest<HTMLElement>('.bn-container')
+    const bodyElement = element.ownerDocument.body
+
+    const stopEditorDragOver = (event: DragEvent) => {
+      editorElement?.setAttribute('data-note-empty-embed-drop-active', 'true')
+      editorContainer?.setAttribute('data-note-empty-embed-drop-active', 'true')
+      bodyElement.setAttribute('data-note-empty-embed-drop-active', 'true')
+      event.stopPropagation()
+    }
+    const clearEditorDropState = () => {
+      editorElement?.removeAttribute('data-note-empty-embed-drop-active')
+      editorContainer?.removeAttribute('data-note-empty-embed-drop-active')
+      bodyElement.removeAttribute('data-note-empty-embed-drop-active')
+    }
+
+    element.addEventListener('dragover', stopEditorDragOver)
+    element.addEventListener('dragleave', clearEditorDropState)
+    element.addEventListener('drop', clearEditorDropState)
+    element.ownerDocument.addEventListener('dragend', clearEditorDropState, true)
+    return () => {
+      element.removeEventListener('dragover', stopEditorDragOver)
+      element.removeEventListener('dragleave', clearEditorDropState)
+      element.removeEventListener('drop', clearEditorDropState)
+      element.ownerDocument.removeEventListener('dragend', clearEditorDropState, true)
+      clearEditorDropState()
+    }
+  }, [enabled, ref])
 }
 
 function useElementDropTarget({
@@ -73,13 +114,13 @@ function useElementDropTarget({
           : {},
       canDrop: ({ source }) => {
         const id = getSidebarItemIdFromAppDragData(source.data)
-        return id !== null && id !== sourceItemId
+        return isSingleSidebarItemDrag(source.data) && id !== null && id !== sourceItemId
       },
       getDropEffect: () => 'copy',
       onDragEnter: ({ source }) => {
         const id = getSidebarItemIdFromAppDragData(source.data)
         setDropVisualState(
-          id && id !== sourceItemId
+          isSingleSidebarItemDrag(source.data) && id && id !== sourceItemId
             ? { isDropTarget: true, isFileDropTarget: false }
             : inactiveDropVisualState,
         )
@@ -90,7 +131,7 @@ function useElementDropTarget({
       onDrop: ({ source }) => {
         setDropVisualState(inactiveDropVisualState)
         const id = getSidebarItemIdFromAppDragData(source.data)
-        if (!id || id === sourceItemId) return
+        if (!isSingleSidebarItemDrag(source.data) || !id || id === sourceItemId) return
         void Promise.resolve(setTarget(sidebarItemEmbedTarget(id))).catch((error) => {
           handleError(error, 'Failed to update embed target')
         })
@@ -103,6 +144,10 @@ function getSidebarItemIdFromAppDragData(data: Record<string | symbol, unknown>)
   const id = getSidebarItemIdFromDragData(data)
   if (!id || !Array.isArray(data.sidebarItemIds)) return null
   return data.sidebarItemIds.includes(id) ? id : null
+}
+
+function isSingleSidebarItemDrag(data: Record<string | symbol, unknown>) {
+  return Array.isArray(data.sidebarItemIds) && data.sidebarItemIds.length === 1
 }
 
 function useNativeDropTarget({

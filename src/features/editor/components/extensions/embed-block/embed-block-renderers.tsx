@@ -29,13 +29,15 @@ export function RenderEmbedBlock(props: EmbedBlockRenderProps) {
 }
 
 export function RenderExternalEmbedBlock(props: EmbedBlockRenderProps) {
+  const blockProps = props.block.props as NoteEmbedBlockProps
   return (
     <section
       className="note-embed-block"
       data-content-type="embed"
+      {...getExternalEmbedDataAttributes(blockProps)}
       {...{ [NOTE_EMBED_EXTERNAL_HTML_ATTRIBUTE]: 'true' }}
     >
-      {getExternalEmbedLabel(props.block.props as NoteEmbedBlockProps)}
+      {getExternalEmbedLabel(blockProps)}
     </section>
   )
 }
@@ -77,4 +79,16 @@ function getExternalEmbedLabel(props: NoteEmbedBlockProps) {
   if (props.url) return props.url
   if (props.sidebarItemId) return 'Embedded item'
   return 'Empty embed'
+}
+
+function getExternalEmbedDataAttributes(props: NoteEmbedBlockProps) {
+  return {
+    'data-target-kind': props.targetKind,
+    'data-sidebar-item-id': props.targetKind === 'sidebarItem' ? props.sidebarItemId : undefined,
+    'data-url': props.targetKind === 'externalUrl' ? props.url : undefined,
+    'data-name': props.targetKind === 'externalUrl' ? props.name : undefined,
+    'data-preview-width': props.previewWidth,
+    'data-preview-height': props.previewHeight,
+    'data-preview-aspect-ratio': props.previewAspectRatio,
+  }
 }

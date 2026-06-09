@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
@@ -49,6 +49,17 @@ function createEditor() {
   const editorElement = document.createElement('div')
   const insertBlocks = vi.fn()
   const flushUpdates = vi.fn(() => Promise.resolve())
+  const resolvedPosition = {
+    depth: 1,
+    pos: 8,
+    node: vi.fn(() => ({ attrs: { id: referenceBlock.id }, nodeSize: 10 })),
+    before: vi.fn(() => 0),
+    after: vi.fn(() => 10),
+  }
+  const doc = {
+    resolve: vi.fn(() => resolvedPosition),
+  }
+  const posAtCoords = vi.fn(() => ({ pos: resolvedPosition.pos }))
   const editor = {
     document: [beforeBlock, referenceBlock],
     getBlock: vi.fn((id: string) => {
@@ -61,7 +72,8 @@ function createEditor() {
     _tiptapEditor: {
       view: {
         dom: editorElement,
-        posAtCoords: vi.fn(() => ({ pos: 1 })),
+        state: { doc },
+        posAtCoords,
       },
       chain: vi.fn(() => ({
         focus: vi.fn(() => ({
@@ -83,30 +95,9 @@ function createEditor() {
     insertBlocks,
     flushUpdates,
     editorView: editor._tiptapEditor.view,
+    posAtCoords,
+    resolvedPosition,
   }
-}
-
-function createBlockContainer(
-  parent: HTMLElement,
-  id: string,
-  { top, bottom }: { top: number; bottom: number },
-) {
-  const element = document.createElement('div')
-  element.setAttribute('data-node-type', 'blockContainer')
-  element.setAttribute('data-id', id)
-  element.getBoundingClientRect = vi.fn(() => ({
-    bottom,
-    height: bottom - top,
-    left: 100,
-    right: 500,
-    top,
-    width: 400,
-    x: 100,
-    y: top,
-    toJSON: () => ({}),
-  }))
-  parent.append(element)
-  return element
 }
 
 function mountHook(noteId: Id<'sidebarItems'>) {
@@ -127,6 +118,10 @@ describe('useNoteEditorDropTarget', () => {
     activeSidebarItems.data = []
     activeSidebarItems.itemsMap = new Map()
     useNoteEditorStore.setState({ editor: null, provider: null })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('inserts sidebar item embed blocks for shift-drops into note editors', async () => {
@@ -175,23 +170,13 @@ describe('useNoteEditorDropTarget', () => {
     expect(flushUpdates).toHaveBeenCalled()
   })
 
-  it('snaps shift-dropped sidebar item embeds to the nearest block insertion boundary', async () => {
+  it('uses the native editor position to choose the nearest block insertion boundary', async () => {
     const noteId = testId<'sidebarItems'>('note_target')
     const dragged = createNote()
     activeSidebarItems.data = [dragged]
     activeSidebarItems.itemsMap = new Map([[dragged._id, dragged]])
-    const { editor, provider, referenceBlock, insertBlocks } = createEditor()
-    const blockElement = createBlockContainer(editor._tiptapEditor.view.dom, referenceBlock.id, {
-      top: 100,
-      bottom: 160,
-    })
-    const child = document.createElement('span')
-    blockElement.append(child)
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: vi.fn(),
-    })
-    vi.spyOn(document, 'elementFromPoint').mockReturnValue(child)
+    const { editor, provider, referenceBlock, insertBlocks, resolvedPosition } = createEditor()
+    resolvedPosition.pos = 2
     useNoteEditorStore.getState().claimEditor(editor, provider)
 
     mountHook(noteId)

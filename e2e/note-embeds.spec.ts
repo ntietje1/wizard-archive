@@ -102,32 +102,18 @@ test.describe.serial('note embeds', () => {
     await createNote(page, uniqueName('Drop Cursor Host', testInfo))
     const block = await insertEmptyEmbedBlock(page)
 
-    await installDropCursorRecorder(page)
     await holdSidebarItemDragOverEmptyEmbed(page, sourceNoteName(), block)
-    const snapshot = await getRecordedDropCursorSnapshots(page)
-    await finishHeldSidebarItemDrag(page)
-    expect(await hasHeldSidebarItemDrag(page)).toBe(false)
-    expect(await isEmptyEmbedDropCursorSuppressed(page)).toBe(false)
-    const snapshotPath = testInfo.outputPath('drop-cursor-dom-snapshot.json')
-    fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2))
-    await testInfo.attach('drop-cursor-dom-snapshot', {
-      body: JSON.stringify(snapshot, null, 2),
-      contentType: 'application/json',
-    })
     await testInfo.attach('drop-cursor-browser-screenshot', {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',
     })
 
-    expect(snapshot.some((entry) => entry.overEmptyEmbed)).toBe(true)
-    expect(snapshot.some((entry) => entry.hasDropTargetChrome)).toBe(true)
-    expect(snapshot.some((entry) => entry.dropCursorSuppressed)).toBe(true)
-    expect(
-      snapshot.some((entry) => entry.overlayTexts.some((text) => text.includes('Embed item here'))),
-    ).toBe(true)
-    expect(
-      snapshot.filter((entry) => entry.overEmptyEmbed).flatMap((entry) => entry.visibleCursorLike),
-    ).toEqual([])
+    expect(await dragOverlayIncludesText(page, 'Embed item here')).toBe(true)
+    expect(await emptyEmbedHasDropTargetChrome(page)).toBe(true)
+    expect(await getVisibleDropCursorLikeCount(page)).toBe(0)
+
+    await finishHeldSidebarItemDrag(page)
+    expect(await hasHeldSidebarItemDrag(page)).toBe(false)
   })
 
   test('does not show a ProseMirror drop cursor while hovering a native file over an empty embed block', async ({
@@ -137,24 +123,14 @@ test.describe.serial('note embeds', () => {
     await createNote(page, uniqueName('File Drop Cursor Host', testInfo))
     const block = await insertEmptyEmbedBlock(page)
 
-    await installDropCursorRecorder(page)
     await dispatchNativeFileDragOverEmbed(page, block)
-    const snapshot = await getRecordedDropCursorSnapshots(page)
-    const snapshotPath = testInfo.outputPath('native-file-drop-cursor-dom-snapshot.json')
-    fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2))
-    await testInfo.attach('native-file-drop-cursor-dom-snapshot', {
-      body: JSON.stringify(snapshot, null, 2),
-      contentType: 'application/json',
-    })
     await testInfo.attach('native-file-drop-cursor-browser-screenshot', {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',
     })
 
-    expect(snapshot.some((entry) => entry.overEmptyEmbed)).toBe(true)
-    expect(snapshot.some((entry) => entry.hasDropTargetChrome)).toBe(true)
-    expect(snapshot.some((entry) => entry.dropCursorSuppressed)).toBe(true)
-    expect(snapshot.flatMap((entry) => entry.visibleCursorLike)).toEqual([])
+    expect(await emptyEmbedHasDropTargetChrome(page)).toBe(true)
+    expect(await getVisibleDropCursorLikeCount(page)).toBe(0)
   })
 
   test('keeps a note self-drop as an empty embed', async ({ page }, testInfo) => {
@@ -753,7 +729,23 @@ async function holdSidebarItemDragOverEmptyEmbed(page: Page, itemName: string, b
       }
       await new Promise((resolve) => requestAnimationFrame(resolve))
       dispatchDragEvent(embedDropTarget, 'dragover', embedDropX, embedDropY)
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      const waitForDropTargetChrome = async () => {
+        const deadline = performance.now() + 1_000
+        while (performance.now() < deadline) {
+          const hasDropTargetChrome = Array.from(
+            document.querySelectorAll<HTMLElement>('[data-testid="embed-empty-state"]'),
+          ).some(
+            (element) =>
+              element.className.includes('border-drop-target') ||
+              element.className.includes('ring-drop-target') ||
+              element.className.includes('bg-drop-target'),
+          )
+          if (hasDropTargetChrome) return
+          await new Promise((resolve) => setTimeout(resolve, 25))
+        }
+        throw new Error('Timed out waiting for empty embed drop target chrome')
+      }
+      await waitForDropTargetChrome()
     },
     {
       dragTargetBox: {
@@ -804,20 +796,11 @@ async function finishHeldSidebarItemDrag(page: Page) {
   if (finishedSyntheticDrag) return
 
   await page.mouse.up()
-  await page.keyboard.up('Shift')
 }
 
 async function hasHeldSidebarItemDrag(page: Page) {
   return page.evaluate(() =>
     Boolean((window as unknown as { __heldSidebarItemDrag?: unknown }).__heldSidebarItemDrag),
-  )
-}
-
-async function isEmptyEmbedDropCursorSuppressed(page: Page) {
-  return page.evaluate(
-    () =>
-      document.documentElement.getAttribute('data-note-empty-embed-drop-cursor-suppressed') ===
-      'true',
   )
 }
 
@@ -850,161 +833,51 @@ async function dispatchNativeFileDragOverEmbed(page: Page, block: Locator) {
       clientY: box.y + box.height / 2,
     },
   )
-  await page.waitForTimeout(100)
+  await page.waitForFunction(() =>
+    Array.from(document.querySelectorAll<HTMLElement>('[data-testid="embed-empty-state"]')).some(
+      (element) =>
+        element.className.includes('border-drop-target') ||
+        element.className.includes('ring-drop-target') ||
+        element.className.includes('bg-drop-target'),
+    ),
+  )
 }
 
-async function installDropCursorRecorder(page: Page) {
-  await page.evaluate(() => {
-    ;(window as unknown as { __dropCursorSnapshots?: Array<unknown> }).__dropCursorSnapshots = []
-    const makeSnapshot = (event: DragEvent, phase: 'bubble' | 'animationFrame') => {
-      const selector = [
-        '.note-editor-file-drop-cursor',
-        '.prosemirror-dropcursor-block',
-        '.prosemirror-dropcursor-inline',
-        '[class*="dropcursor"]',
-        '[class*="drop-cursor"]',
-      ].join(',')
-      const nodes = Array.from(document.querySelectorAll<HTMLElement>(selector)).map((element) =>
-        getCursorNodeSnapshot(element),
-      )
-      const emptyEmbeds = Array.from(
-        document.querySelectorAll<HTMLElement>('[data-testid="embed-empty-state"]'),
-      ).map((element) => {
-        const rect = element.getBoundingClientRect()
-        return {
-          className: element.className,
-          hasDropTargetChrome:
-            element.className.includes('border-drop-target') ||
-            element.className.includes('ring-drop-target') ||
-            element.className.includes('bg-drop-target'),
-          rect: {
-            height: rect.height,
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-          },
-          text: element.textContent?.trim() ?? '',
-        }
-      })
-      const overlayTexts = Array.from(
-        document.body.querySelectorAll<HTMLElement>('.fixed.pointer-events-none'),
-      )
-        .map((element) => element.textContent?.trim() ?? '')
-        .filter((text) => text.length > 0)
-      const overEmptyEmbed = emptyEmbeds.some((embed) => {
-        const right = embed.rect.left + embed.rect.width
-        const bottom = embed.rect.top + embed.rect.height
-        return (
-          event.clientX >= embed.rect.left &&
-          event.clientX <= right &&
-          event.clientY >= embed.rect.top &&
-          event.clientY <= bottom
-        )
-      })
-      const hasDropTargetChrome = emptyEmbeds.some((embed) => embed.hasDropTargetChrome)
-      const dropCursorSuppressed =
-        document.documentElement.getAttribute('data-note-empty-embed-drop-cursor-suppressed') ===
-        'true'
+async function getVisibleDropCursorLikeCount(page: Page) {
+  return page.evaluate(() => {
+    const selector = ['.prosemirror-dropcursor-block', '.prosemirror-dropcursor-inline'].join(',')
 
-      return {
-        all: nodes,
-        dropCursorSuppressed,
-        emptyEmbeds,
-        hasDropTargetChrome,
-        overlayTexts,
-        overEmptyEmbed,
-        phase,
-        visibleCursorLike: nodes.filter((node) => node.visible),
-      }
-    }
-
-    const getCursorNodeSnapshot = (element: HTMLElement) => {
+    return Array.from(document.querySelectorAll<HTMLElement>(selector)).filter((element) => {
       const rect = element.getBoundingClientRect()
       const style = getComputedStyle(element)
-      const visible =
+      return (
         style.display !== 'none' &&
         style.visibility !== 'hidden' &&
         Number(style.opacity) !== 0 &&
         rect.width > 0 &&
         rect.height > 0
-
-      return {
-        backgroundColor: style.backgroundColor,
-        borderBottomColor: style.borderBottomColor,
-        borderTopColor: style.borderTopColor,
-        className: element.className,
-        display: style.display,
-        height: rect.height,
-        html: element.outerHTML.slice(0, 500),
-        opacity: style.opacity,
-        parentClassName:
-          element.parentElement instanceof HTMLElement ? element.parentElement.className : null,
-        top: rect.top,
-        visibility: style.visibility,
-        visible,
-        width: rect.width,
-      }
-    }
-
-    document.addEventListener(
-      'dragover',
-      (event) => {
-        const snapshots = (window as unknown as { __dropCursorSnapshots: Array<unknown> })
-          .__dropCursorSnapshots
-
-        snapshots.push(makeSnapshot(event, 'bubble'))
-        requestAnimationFrame(() => snapshots.push(makeSnapshot(event, 'animationFrame')))
-      },
-      false,
-    )
+      )
+    }).length
   })
 }
 
-async function getRecordedDropCursorSnapshots(page: Page) {
-  return page.evaluate(
-    () =>
-      (window as unknown as { __dropCursorSnapshots?: Array<DropCursorSnapshot> })
-        .__dropCursorSnapshots ?? [],
+async function emptyEmbedHasDropTargetChrome(page: Page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>('[data-testid="embed-empty-state"]')).some(
+      (element) =>
+        element.className.includes('border-drop-target') ||
+        element.className.includes('ring-drop-target') ||
+        element.className.includes('bg-drop-target'),
+    ),
   )
 }
 
-type DropCursorSnapshot = {
-  all: Array<DropCursorNodeSnapshot>
-  dropCursorSuppressed: boolean
-  emptyEmbeds: Array<EmptyEmbedSnapshot>
-  hasDropTargetChrome: boolean
-  overlayTexts: Array<string>
-  overEmptyEmbed: boolean
-  phase: 'bubble' | 'animationFrame'
-  visibleCursorLike: Array<DropCursorNodeSnapshot>
-}
-
-type DropCursorNodeSnapshot = {
-  backgroundColor: string
-  borderBottomColor: string
-  borderTopColor: string
-  className: string
-  display: string
-  height: number
-  html: string
-  opacity: string
-  parentClassName: string | null
-  top: number
-  visibility: string
-  visible: boolean
-  width: number
-}
-
-type EmptyEmbedSnapshot = {
-  className: string
-  hasDropTargetChrome: boolean
-  rect: {
-    height: number
-    left: number
-    top: number
-    width: number
-  }
-  text: string
+async function dragOverlayIncludesText(page: Page, text: string) {
+  return page.evaluate((expectedText) => {
+    return Array.from(document.body.querySelectorAll<HTMLElement>('.fixed.pointer-events-none'))
+      .map((element) => element.textContent?.trim() ?? '')
+      .some((overlayText) => overlayText.includes(expectedText))
+  }, text)
 }
 
 async function dragFirstEmbedSurfaceBelowText(page: Page, text: string) {

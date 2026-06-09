@@ -36,15 +36,15 @@ function surfaceDropOutcomeAction(
   }
 }
 
-function getEmptyEmbedLabel(count: number) {
-  return count === 1 ? 'Embed item here' : `Embed ${count} items here`
-}
-
 function resolveEmptyEmbedDropFeedback(
   draggedItems: Array<AnySidebarItem>,
   dropTarget: EmptyEmbedDropZoneData,
   ctx: DropPlanningContext,
 ): DropFeedback {
+  if (draggedItems.length !== 1) {
+    return { outcome: { type: 'rejection', reason: 'unexpected_action' } }
+  }
+
   const rejectedReasons: Array<DropRejectionReason> = []
   let acceptedCount = 0
 
@@ -69,7 +69,7 @@ function resolveEmptyEmbedDropFeedback(
     outcome: {
       type: 'operation',
       action: 'embed',
-      label: getEmptyEmbedLabel(acceptedCount),
+      label: 'Embed item here',
     },
     rejectedItemCount: rejectedReasons.length > 0 ? rejectedReasons.length : undefined,
   }
