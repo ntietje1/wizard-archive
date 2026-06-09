@@ -34,6 +34,6 @@ export function PreventExternalDrop() {
 
 function removeProseMirrorDropCursors(document: Document) {
   document
-    .querySelectorAll('.note-editor-file-drop-cursor')
+    .querySelectorAll('.prosemirror-dropcursor-block, .prosemirror-dropcursor-inline')
     .forEach((element) => element.parentElement?.removeChild(element))
 }

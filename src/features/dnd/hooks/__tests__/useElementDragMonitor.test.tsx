@@ -6,6 +6,7 @@ import type { DndMonitorCtx } from '~/features/dnd/types'
 import { useElementDragMonitor } from '~/features/dnd/hooks/useElementDragMonitor'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import {
+  EMPTY_EMBED_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
   SIDEBAR_ROOT_DROP_TYPE,
@@ -46,6 +47,7 @@ type DropArgs = {
 type ElementMonitor = {
   onDragStart: (args: DragStartArgs) => void
   onDrag: (args: DragArgs) => void
+  onDropTargetChange: (args: DragArgs) => void
   onDrop: (args: DropArgs) => Promise<void>
 }
 
@@ -240,6 +242,107 @@ describe('useElementDragMonitor', () => {
       label: 'Pin item to "World Map"',
     })
     expect(result.current.dragState?.rejectedItemCount).toBe(1)
+  })
+
+  it('shows embed overlay feedback without executing the local empty embed drop', async () => {
+    const sourceItem = createNote()
+    const targetItem = createNote()
+    const ctx = createMonitorCtx([sourceItem, targetItem])
+    const ctxRef = {
+      current: ctx,
+    } as React.RefObject<DndMonitorCtx>
+
+    const { result } = renderHook(() => useElementDragMonitor(ctxRef))
+    const monitor = getElementMonitor()
+    const source = createSidebarSource(sourceItem._id, [sourceItem._id])
+
+    act(() => {
+      startDrag(monitor, source)
+      dragOver(monitor, source, [
+        {
+          data: {
+            type: EMPTY_EMBED_DROP_TYPE,
+            sourceItemId: targetItem._id,
+          },
+        },
+      ])
+    })
+
+    expect(result.current.dragState?.outcome).toMatchObject({
+      type: 'operation',
+      action: 'embed',
+      label: 'Embed item here',
+    })
+    expect(useDndStore.getState().dragOutcome).toMatchObject({
+      type: 'operation',
+      action: 'embed',
+      label: 'Embed item here',
+    })
+
+    await act(async () => {
+      await monitor.onDrop({
+        source,
+        location: {
+          current: {
+            input: { clientX: 20, clientY: 30 },
+            dropTargets: [
+              {
+                data: {
+                  type: EMPTY_EMBED_DROP_TYPE,
+                  sourceItemId: targetItem._id,
+                },
+              },
+            ],
+          },
+        },
+      })
+    })
+
+    expect(ctx.dndContext.executeFileSystemDrop).not.toHaveBeenCalled()
+    expect(ctx.dndContext.openItem).not.toHaveBeenCalled()
+  })
+
+  it('updates embed overlay feedback when the drop target changes without another drag tick', () => {
+    const sourceItem = createNote()
+    const targetItem = createNote()
+    const ctxRef = {
+      current: createMonitorCtx([sourceItem, targetItem]),
+    } as React.RefObject<DndMonitorCtx>
+
+    const { result } = renderHook(() => useElementDragMonitor(ctxRef))
+    const monitor = getElementMonitor()
+    const source = createSidebarSource(sourceItem._id, [sourceItem._id])
+
+    act(() => {
+      startDrag(monitor, source)
+      monitor.onDropTargetChange({
+        source,
+        location: {
+          current: {
+            input: { clientX: 20, clientY: 30 },
+            dropTargets: [
+              {
+                data: {
+                  type: EMPTY_EMBED_DROP_TYPE,
+                  sourceItemId: targetItem._id,
+                },
+              },
+            ],
+          },
+        },
+      })
+    })
+
+    expect(result.current.dragState?.outcome).toMatchObject({
+      type: 'operation',
+      action: 'embed',
+      label: 'Embed item here',
+    })
+    expect(useDndStore.getState().dragOutcome).toMatchObject({
+      type: 'operation',
+      action: 'embed',
+      label: 'Embed item here',
+    })
   })
 
   it('dispatches registered surface executors from the central monitor', async () => {

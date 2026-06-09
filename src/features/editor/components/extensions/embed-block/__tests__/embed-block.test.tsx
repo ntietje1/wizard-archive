@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
@@ -19,6 +19,8 @@ const sidebarItemByIdState = vi.hoisted((): { data: Record<string, unknown> | nu
 }))
 type ElementDropTargetArgs = {
   canDrop: (args: { source: { data: Record<string, unknown> } }) => boolean
+  onDragEnter: (args: { source: { data: Record<string, unknown> } }) => void
+  onDragLeave: () => void
   onDrop: (args: { source: { data: Record<string, unknown> } }) => void
 }
 const dropTargetForElementsMock = vi.hoisted(() => vi.fn((_args: ElementDropTargetArgs) => vi.fn()))
@@ -272,6 +274,39 @@ describe('NoteEmbedBlockView', () => {
         },
       ],
     )
+  })
+
+  it('shows shared drop target feedback on empty note embeds during valid sidebar item drags', async () => {
+    render(
+      <NoteEmbedBlockView
+        block={{ id: 'block-1', type: 'embed', props: { targetKind: 'empty' } } as never}
+        editor={createEditor() as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const dropTargetArgs = dropTargetForElementsMock.mock.calls[0]?.[0]
+    expect(dropTargetArgs).toBeDefined()
+
+    act(() => {
+      dropTargetArgs!.onDragEnter({ source: { data: sidebarDragData('map-1') } })
+    })
+
+    expect(await screen.findByTestId('shared-embed-content')).toHaveAttribute(
+      'data-drop-target',
+      'true',
+    )
+    expect(screen.getByTestId('shared-embed-content')).toHaveAttribute(
+      'data-file-drop-target',
+      'false',
+    )
+
+    act(() => {
+      dropTargetArgs!.onDragLeave()
+    })
+
+    expect(screen.getByTestId('shared-embed-content')).toHaveAttribute('data-drop-target', 'false')
   })
 
   it('selects embed blocks on click and renders canvas-style resize chrome', () => {
@@ -552,6 +587,39 @@ describe('NoteEmbedBlockView', () => {
 
     fireEvent.pointerDown(slider, { button: 0 })
 
+    expect(fireEvent.dragStart(root)).toBe(false)
+    expect(blockDragStartMock).not.toHaveBeenCalled()
+  })
+
+  it('does not start embed block drags from embedded note scroll controls', () => {
+    const editor = createEditor()
+    render(
+      <NoteEmbedBlockView
+        block={
+          {
+            id: 'block-1',
+            props: {
+              targetKind: 'externalUrl',
+              url: 'https://example.com/sound.mp3',
+              name: 'Sound',
+            },
+          } as never
+        }
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const root = screen.getByTestId('note-embed-block')
+    const scrollThumb = document.createElement('div')
+    scrollThumb.setAttribute('data-slot', 'scroll-area-thumb')
+    root.append(scrollThumb)
+
+    expect(fireEvent.dragStart(scrollThumb)).toBe(false)
+    expect(blockDragStartMock).not.toHaveBeenCalled()
+
+    fireEvent.pointerDown(scrollThumb, { button: 0 })
     expect(fireEvent.dragStart(root)).toBe(false)
     expect(blockDragStartMock).not.toHaveBeenCalled()
   })

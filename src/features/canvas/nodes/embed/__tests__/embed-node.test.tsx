@@ -30,6 +30,9 @@ const renderModeState = vi.hoisted(() => ({
 const editableSessionState = vi.hoisted(() => ({
   isExclusivelySelected: false,
 }))
+const useEmbedDropTargetMock = vi.hoisted(() =>
+  vi.fn(() => ({ isDropTarget: false, isFileDropTarget: false })),
+)
 const canvasRuntimeState = vi.hoisted(() => ({
   canvasId: 'source-canvas',
   flushUpdates: vi.fn(),
@@ -119,7 +122,7 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
 }))
 
 vi.mock('~/features/embeds/hooks/use-embed-drop-target', () => ({
-  useEmbedDropTarget: vi.fn(),
+  useEmbedDropTarget: useEmbedDropTargetMock,
 }))
 
 vi.mock('~/features/embeds/hooks/use-embed-upload', () => ({
@@ -246,6 +249,8 @@ describe('EmbedNode', () => {
     embeddedMapSpy.mockReset()
     embedNoteSpy.mockReset()
     resizableNodeWrapperSpy.mockReset()
+    useEmbedDropTargetMock.mockReset()
+    useEmbedDropTargetMock.mockReturnValue({ isDropTarget: false, isFileDropTarget: false })
     contentItemQuerySequence.values = []
   })
 
@@ -258,6 +263,19 @@ describe('EmbedNode', () => {
         minWidth: EMBED_NODE_MIN_SIZE.width,
         nodeType: 'embed',
       }),
+    )
+  })
+
+  it('shows shared drop target chrome on empty canvas embeds during file drags', () => {
+    useEmbedDropTargetMock.mockReturnValue({ isDropTarget: true, isFileDropTarget: true })
+
+    renderEmbedNode('node-1', 'canvas-1', { zoom: 1 }, { target: { kind: 'empty' } })
+
+    expect(screen.getByTestId('embed-empty-state')).toHaveClass(
+      'ring-2',
+      'ring-inset',
+      'ring-drop-target-file',
+      'bg-drop-target-fill',
     )
   })
 

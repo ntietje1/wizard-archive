@@ -5,6 +5,7 @@ import type { Id } from 'convex/_generated/dataModel'
 
 export const CANVAS_DROP_ZONE_TYPE = 'canvas-drop-zone' as const
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
+export const EMPTY_EMBED_DROP_TYPE = 'empty-embed' as const
 export const MAP_DROP_ZONE_TYPE = 'map-drop-zone' as const
 export const NOTE_EDITOR_DROP_TYPE = 'note-editor-drop' as const
 export const SIDEBAR_ROOT_DROP_TYPE = 'root' as const
@@ -38,6 +39,12 @@ interface EmptyEditorDropZoneData {
   type: typeof EMPTY_EDITOR_DROP_TYPE
 }
 
+export interface EmptyEmbedDropZoneData {
+  [key: string | symbol]: unknown
+  type: typeof EMPTY_EMBED_DROP_TYPE
+  sourceItemId: Id<'sidebarItems'>
+}
+
 export interface NoteEditorDropZoneData {
   [key: string | symbol]: unknown
   type: typeof NOTE_EDITOR_DROP_TYPE
@@ -54,6 +61,7 @@ export type SidebarDropData =
   | SidebarRootDropZoneData
   | CanvasDropZoneData
   | EmptyEditorDropZoneData
+  | EmptyEmbedDropZoneData
   | MapDropZoneData
   | NoteEditorDropZoneData
   | TrashDropZoneData
@@ -63,6 +71,7 @@ type DropZoneType =
   | typeof TRASH_DROP_ZONE_TYPE
   | typeof MAP_DROP_ZONE_TYPE
   | typeof NOTE_EDITOR_DROP_TYPE
+  | typeof EMPTY_EMBED_DROP_TYPE
   | typeof EMPTY_EDITOR_DROP_TYPE
   | typeof SIDEBAR_ROOT_DROP_TYPE
   | SidebarItemType
@@ -73,6 +82,7 @@ function isDropZoneType(type: unknown): type is DropZoneType {
     type === TRASH_DROP_ZONE_TYPE ||
     type === MAP_DROP_ZONE_TYPE ||
     type === NOTE_EDITOR_DROP_TYPE ||
+    type === EMPTY_EMBED_DROP_TYPE ||
     type === EMPTY_EDITOR_DROP_TYPE ||
     type === SIDEBAR_ROOT_DROP_TYPE ||
     type === SIDEBAR_ITEM_TYPES.folders ||
@@ -89,6 +99,7 @@ function isCustomDropZoneType(type: unknown): boolean {
     type === TRASH_DROP_ZONE_TYPE ||
     type === MAP_DROP_ZONE_TYPE ||
     type === NOTE_EDITOR_DROP_TYPE ||
+    type === EMPTY_EMBED_DROP_TYPE ||
     type === EMPTY_EDITOR_DROP_TYPE ||
     type === SIDEBAR_ROOT_DROP_TYPE
   )
@@ -102,6 +113,10 @@ function customDropTargetKey(rawTarget: Record<string, unknown>, type: DropZoneT
       return typeof rawTarget.mapId === 'string' ? `map:${rawTarget.mapId}` : null
     case NOTE_EDITOR_DROP_TYPE:
       return typeof rawTarget.noteId === 'string' ? `note:${rawTarget.noteId}` : null
+    case EMPTY_EMBED_DROP_TYPE:
+      return typeof rawTarget.sourceItemId === 'string'
+        ? `empty-embed:${rawTarget.sourceItemId}`
+        : null
     case SIDEBAR_ITEM_TYPES.folders:
     case SIDEBAR_ITEM_TYPES.notes:
     case SIDEBAR_ITEM_TYPES.gameMaps:
@@ -117,6 +132,7 @@ export function canDropFilesOnTarget(target: SidebarDropData | null): boolean {
   if (!target) return false
   switch (target.type) {
     case CANVAS_DROP_ZONE_TYPE:
+    case EMPTY_EMBED_DROP_TYPE:
     case EMPTY_EDITOR_DROP_TYPE:
     case NOTE_EDITOR_DROP_TYPE:
     case SIDEBAR_ROOT_DROP_TYPE:
@@ -132,7 +148,9 @@ export function getDropTargetKey(target: Record<string, unknown> | null): string
   if (!target) return null
   const { type } = target
   if (!isDropZoneType(type)) return null
-  return customDropTargetKey(target, type) ?? type
+  const targetKey = customDropTargetKey(target, type)
+  if (targetKey) return targetKey
+  return type === EMPTY_EMBED_DROP_TYPE ? null : type
 }
 
 export function getHighlightId(target: SidebarDropData | null): string | null {
@@ -144,6 +162,8 @@ export function getHighlightId(target: SidebarDropData | null): string | null {
       return `map:${target.mapId}`
     case NOTE_EDITOR_DROP_TYPE:
       return `note:${target.noteId}`
+    case EMPTY_EMBED_DROP_TYPE:
+      return `empty-embed:${target.sourceItemId}`
     case EMPTY_EDITOR_DROP_TYPE:
     case SIDEBAR_ROOT_DROP_TYPE:
     case TRASH_DROP_ZONE_TYPE:
@@ -190,6 +210,13 @@ function resolveCustomDropTarget(rawData: Record<string, unknown>): SidebarDropD
     case NOTE_EDITOR_DROP_TYPE:
       return typeof rawData.noteId === 'string'
         ? { type: NOTE_EDITOR_DROP_TYPE, noteId: rawData.noteId as Id<'sidebarItems'> }
+        : null
+    case EMPTY_EMBED_DROP_TYPE:
+      return typeof rawData.sourceItemId === 'string'
+        ? {
+            type: EMPTY_EMBED_DROP_TYPE,
+            sourceItemId: rawData.sourceItemId as Id<'sidebarItems'>,
+          }
         : null
     case EMPTY_EDITOR_DROP_TYPE:
       return { type: EMPTY_EDITOR_DROP_TYPE }

@@ -22,7 +22,7 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
     case 'self_link':
       return 'Cannot link note to itself'
     case 'self_embed':
-      return 'Cannot embed canvas into itself'
+      return 'Cannot embed item into itself'
     case 'already_pinned':
       return 'Already pinned to this map'
     case 'not_folder':

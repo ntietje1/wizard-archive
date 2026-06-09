@@ -3,7 +3,8 @@ import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import { api } from 'convex/_generated/api'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { getEditor, selectSlashMenuItem } from './helpers/editor-helpers'
+import { getEditor, newParagraphAtEnd, selectSlashMenuItem } from './helpers/editor-helpers'
+import { pressCopy, pressPaste, pressRedo, pressUndo } from './helpers/keyboard-helpers'
 import {
   createNote,
   openItem,
@@ -83,6 +84,55 @@ test.describe.serial('note embeds', () => {
     })
   })
 
+  test('inserts an empty embed without leaving a blank slash paragraph before it', async ({
+    page,
+  }, testInfo) => {
+    await openCampaign(page)
+    await createNote(page, uniqueName('Embed Insert Host', testInfo))
+
+    await insertEmptyEmbedBlock(page)
+
+    await expect.poll(() => getEditorBlocksBeforeFirstEmbed(page)).toEqual([])
+  })
+
+  test('does not show an editor drop cursor while hovering a sidebar item over an empty embed block', async ({
+    page,
+  }, testInfo) => {
+    await openCampaign(page)
+    await createNote(page, uniqueName('Drop Cursor Host', testInfo))
+    const block = await insertEmptyEmbedBlock(page)
+
+    await holdSidebarItemDragOverEmptyEmbed(page, sourceNoteName(), block)
+    await testInfo.attach('drop-cursor-browser-screenshot', {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: 'image/png',
+    })
+
+    expect(await dragOverlayIncludesText(page, 'Embed item here')).toBe(true)
+    expect(await emptyEmbedHasDropTargetChrome(page)).toBe(true)
+    expect(await getVisibleDropCursorLikeCount(page)).toBe(0)
+
+    await finishHeldSidebarItemDrag(page)
+    expect(await hasHeldSidebarItemDrag(page)).toBe(false)
+  })
+
+  test('does not show a ProseMirror drop cursor while hovering a native file over an empty embed block', async ({
+    page,
+  }, testInfo) => {
+    await openCampaign(page)
+    await createNote(page, uniqueName('File Drop Cursor Host', testInfo))
+    const block = await insertEmptyEmbedBlock(page)
+
+    await dispatchNativeFileDragOverEmbed(page, block)
+    await testInfo.attach('native-file-drop-cursor-browser-screenshot', {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: 'image/png',
+    })
+
+    expect(await emptyEmbedHasDropTargetChrome(page)).toBe(true)
+    expect(await getVisibleDropCursorLikeCount(page)).toBe(0)
+  })
+
   test('keeps a note self-drop as an empty embed', async ({ page }, testInfo) => {
     const hostName = uniqueName('Self Embed Host', testInfo)
     await openCampaign(page)
@@ -131,6 +181,194 @@ test.describe.serial('note embeds', () => {
     await expect(sidebarLink(page, 'Assets')).toBeVisible({ timeout: 15_000 })
     await expectFileInAssetsFolder(page)
     await expect(block.getByRole('img', { name: imageFileName })).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('selects embed blocks when dragging a text range across them', async ({
+    page,
+  }, testInfo) => {
+    const hostName = uniqueName('Embed Range Selection Host', testInfo)
+    const beforeText = uniqueName('Before embed selection', testInfo)
+    const afterText = uniqueName('After embed selection', testInfo)
+    const externalEmbedName = 'selectable-embed.png'
+
+    await openCampaign(page)
+    await createNote(page, hostName)
+    await persistNoteBlocks(page, hostName, [
+      paragraphBlock('embed-selection-before', beforeText),
+      {
+        id: 'embed-selection-empty',
+        type: 'embed',
+        props: { targetKind: 'empty' },
+        children: [],
+      },
+      {
+        id: 'embed-selection-external',
+        type: 'embed',
+        props: {
+          targetKind: 'externalUrl',
+          url: 'https://example.com/selectable-embed.png',
+          name: externalEmbedName,
+          previewWidth: 320,
+        },
+        children: [],
+      },
+      paragraphBlock('embed-selection-after', afterText),
+    ])
+    await openItem(page, hostName)
+
+    await expect(page.getByText(beforeText)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('note-embed-block')).toHaveCount(2)
+    await expect(page.getByText(afterText)).toBeVisible({ timeout: 10_000 })
+
+    await installEditorCopyRecorder(page, {
+      afterText,
+      beforeText,
+    })
+    await dragTextSelectionAcrossEmbeds(page, beforeText, afterText)
+
+    await expect
+      .poll(() => getEmbedSelectionSnapshot(page, beforeText, afterText), { timeout: 5_000 })
+      .toMatchObject({
+        intersectingEmbedCount: 2,
+        selectedTextIncludesAfter: true,
+        selectedTextIncludesBefore: true,
+      })
+    await expect(page.getByTestId('note-embed-resize-outline')).toHaveCount(2)
+
+    await pressCopy(page)
+    await expect
+      .poll(() => getRecordedEditorCopy(page), { timeout: 5_000 })
+      .toMatchObject({
+        htmlIncludesEmbedBlock: true,
+        plainTextIncludesAfter: true,
+        plainTextIncludesBefore: true,
+      })
+    await newParagraphAtEnd(page)
+    await pressPaste(page)
+
+    await expect
+      .poll(async () => (await getEditorBlockOrder(page)).filter((kind) => kind === 'embed').length)
+      .toBe(4)
+  })
+
+  test('can end a text range selection on an embed block', async ({ page }, testInfo) => {
+    const hostName = uniqueName('Embed Range Endpoint Host', testInfo)
+    const beforeText = uniqueName('Before embed endpoint', testInfo)
+
+    await openCampaign(page)
+    await createNote(page, hostName)
+    await persistNoteBlocks(page, hostName, [
+      paragraphBlock('embed-endpoint-before', beforeText),
+      {
+        id: 'embed-endpoint-empty',
+        type: 'embed',
+        props: { targetKind: 'empty' },
+        children: [],
+      },
+      {
+        id: 'embed-endpoint-external',
+        type: 'embed',
+        props: {
+          targetKind: 'externalUrl',
+          url: 'https://example.com/endpoint-embed.png',
+          name: 'endpoint-embed.png',
+          previewWidth: 320,
+        },
+        children: [],
+      },
+    ])
+    await openItem(page, hostName)
+
+    await expect(page.getByText(beforeText)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('note-embed-block')).toHaveCount(2)
+
+    await dragTextSelectionOntoLastEmbed(page, beforeText)
+
+    await expect
+      .poll(() => getEmbedEndpointSelectionSnapshot(page, beforeText), { timeout: 5_000 })
+      .toMatchObject({
+        intersectingEmbedCount: 2,
+        selectedTextIncludesBefore: true,
+      })
+    await expect(page.getByTestId('note-embed-resize-outline')).toHaveCount(2)
+  })
+
+  test('copies, pastes, undoes, and redoes a text range containing an embedded note', async ({
+    page,
+  }, testInfo) => {
+    const hostName = uniqueName('Embedded Note Clipboard Host', testInfo)
+    const beforeText = uniqueName('Before embedded note clipboard', testInfo)
+    const afterText = uniqueName('After embedded note clipboard', testInfo)
+
+    await openCampaign(page)
+    await createNote(page, hostName)
+    const sourceNoteId = await getSourceNoteId(page)
+    await persistNoteBlocks(page, hostName, [
+      paragraphBlock('embedded-note-clipboard-before', beforeText),
+      {
+        id: 'embedded-note-clipboard-target',
+        type: 'embed',
+        props: {
+          targetKind: 'sidebarItem',
+          sidebarItemId: sourceNoteId,
+          previewWidth: 320,
+        },
+        children: [],
+      },
+      paragraphBlock('embedded-note-clipboard-after', afterText),
+    ])
+    await openItem(page, hostName)
+
+    await expect(page.getByText(beforeText)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('note-embed-block')).toHaveCount(1)
+    await expect(page.getByTestId('note-embed-block').getByText(sourceNoteContent)).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByText(afterText)).toBeVisible({ timeout: 10_000 })
+
+    await installEditorCopyRecorder(page, {
+      afterText,
+      beforeText,
+    })
+    await dragTextSelectionAcrossEmbeds(page, beforeText, afterText)
+
+    await expect
+      .poll(() => getEmbedSelectionSnapshot(page, beforeText, afterText), { timeout: 5_000 })
+      .toMatchObject({
+        intersectingEmbedCount: 1,
+        selectedTextIncludesAfter: true,
+        selectedTextIncludesBefore: true,
+      })
+
+    await pressCopy(page)
+    await expect
+      .poll(() => getRecordedEditorCopy(page), { timeout: 5_000 })
+      .toMatchObject({
+        blocknoteHtmlIncludesEmbedBlock: true,
+        htmlIncludesEmbedBlock: true,
+        htmlIncludesEmbedExternalAttribute: true,
+        plainTextIncludesAfter: true,
+        plainTextIncludesBefore: true,
+      })
+
+    await newParagraphAtEnd(page)
+    await pressPaste(page)
+    await expect.poll(() => page.getByTestId('note-embed-block').count()).toBe(2)
+    await expect
+      .poll(() => page.getByTestId('note-embed-block').getByText(sourceNoteContent).count())
+      .toBe(2)
+
+    await pressUndo(page)
+    await expect.poll(() => page.getByTestId('note-embed-block').count()).toBe(1)
+    await expect
+      .poll(() => page.getByTestId('note-embed-block').getByText(sourceNoteContent).count())
+      .toBe(1)
+
+    await pressRedo(page)
+    await expect.poll(() => page.getByTestId('note-embed-block').count()).toBe(2)
+    await expect
+      .poll(() => page.getByTestId('note-embed-block').getByText(sourceNoteContent).count())
+      .toBe(2)
   })
 
   test('moves an existing media embed block without duplicating it', async ({ page }, testInfo) => {
@@ -405,6 +643,243 @@ async function dragSidebarItemToEmbed(page: Page, itemName: string, block: Locat
   await item.dragTo(block)
 }
 
+async function holdSidebarItemDragOverEmptyEmbed(page: Page, itemName: string, block: Locator) {
+  const item = selectableSidebarRow(page, itemName)
+  await expect(item).toBeVisible({ timeout: 10_000 })
+  const sourceHandle = await item.elementHandle()
+  const emptyEmbedBox = await block.boundingBox()
+  if (!sourceHandle) throw new Error(`Expected sidebar item "${itemName}" to resolve to an element`)
+  if (!emptyEmbedBox) throw new Error('Expected empty embed block to have a bounding box')
+
+  await sourceHandle.evaluate(
+    async (sourceElement, { dragTargetBox }) => {
+      const draggableSource = sourceElement.closest('[draggable="true"]') ?? sourceElement
+      if (!(draggableSource instanceof HTMLElement)) {
+        throw new Error('Expected sidebar item drag source to be an HTMLElement')
+      }
+
+      const dragState = window as unknown as {
+        __heldSidebarItemDrag?: {
+          dataTransfer: DataTransfer
+          lastClientX: number
+          lastClientY: number
+          source: HTMLElement
+          target: EventTarget
+        }
+      }
+      const dataTransfer = new DataTransfer()
+      const sourceRect = draggableSource.getBoundingClientRect()
+      const startX = sourceRect.left + Math.min(sourceRect.width / 2, 80)
+      const startY = sourceRect.top + sourceRect.height / 2
+      const editorDropX = dragTargetBox.x + dragTargetBox.width / 2
+      const editorDropY = dragTargetBox.y + dragTargetBox.height + 16
+      const embedDropX = dragTargetBox.x + dragTargetBox.width / 2
+      const embedDropY = dragTargetBox.y + dragTargetBox.height / 2
+
+      const dispatchDragEvent = (
+        target: EventTarget,
+        type: 'dragstart' | 'dragenter' | 'dragover' | 'dragleave' | 'drop',
+        clientX: number,
+        clientY: number,
+      ) =>
+        target.dispatchEvent(
+          new DragEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            clientX,
+            clientY,
+            dataTransfer,
+          }),
+        )
+
+      dispatchDragEvent(draggableSource, 'dragstart', startX, startY)
+      dragState.__heldSidebarItemDrag = {
+        dataTransfer,
+        lastClientX: startX,
+        lastClientY: startY,
+        source: draggableSource,
+        target: draggableSource,
+      }
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+
+      const editorDropTarget = document.elementFromPoint(editorDropX, editorDropY)
+      if (!editorDropTarget) throw new Error('Expected an editor drop target below the empty embed')
+      dispatchDragEvent(editorDropTarget, 'dragenter', editorDropX, editorDropY)
+      dispatchDragEvent(editorDropTarget, 'dragover', editorDropX, editorDropY)
+      dragState.__heldSidebarItemDrag = {
+        dataTransfer,
+        lastClientX: editorDropX,
+        lastClientY: editorDropY,
+        source: draggableSource,
+        target: editorDropTarget,
+      }
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+
+      const embedDropTarget = document.elementFromPoint(embedDropX, embedDropY)
+      if (!embedDropTarget) throw new Error('Expected an empty embed drop target')
+      dispatchDragEvent(editorDropTarget, 'dragleave', embedDropX, embedDropY)
+      dispatchDragEvent(embedDropTarget, 'dragenter', embedDropX, embedDropY)
+      dispatchDragEvent(embedDropTarget, 'dragover', embedDropX, embedDropY)
+      dragState.__heldSidebarItemDrag = {
+        dataTransfer,
+        lastClientX: embedDropX,
+        lastClientY: embedDropY,
+        source: draggableSource,
+        target: embedDropTarget,
+      }
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      dispatchDragEvent(embedDropTarget, 'dragover', embedDropX, embedDropY)
+      const waitForDropTargetChrome = async () => {
+        const deadline = performance.now() + 1_000
+        while (performance.now() < deadline) {
+          const hasDropTargetChrome = Array.from(
+            document.querySelectorAll<HTMLElement>('[data-testid="embed-empty-state"]'),
+          ).some(
+            (element) =>
+              element.className.includes('border-drop-target') ||
+              element.className.includes('ring-drop-target') ||
+              element.className.includes('bg-drop-target'),
+          )
+          if (hasDropTargetChrome) return
+          await new Promise((resolve) => setTimeout(resolve, 25))
+        }
+        throw new Error('Timed out waiting for empty embed drop target chrome')
+      }
+      await waitForDropTargetChrome()
+    },
+    {
+      dragTargetBox: {
+        height: emptyEmbedBox.height,
+        width: emptyEmbedBox.width,
+        x: emptyEmbedBox.x,
+        y: emptyEmbedBox.y,
+      },
+    },
+  )
+}
+
+async function finishHeldSidebarItemDrag(page: Page) {
+  const finishedSyntheticDrag = await page.evaluate(() => {
+    const dragState = window as unknown as {
+      __heldSidebarItemDrag?: {
+        dataTransfer: DataTransfer
+        lastClientX: number
+        lastClientY: number
+        source: HTMLElement
+        target: EventTarget
+      }
+    }
+    const heldDrag = dragState.__heldSidebarItemDrag
+    if (!heldDrag) return false
+
+    for (const type of ['dragleave', 'drop'] as const) {
+      heldDrag.target.dispatchEvent(
+        new DragEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: heldDrag.lastClientX,
+          clientY: heldDrag.lastClientY,
+          dataTransfer: heldDrag.dataTransfer,
+        }),
+      )
+    }
+    heldDrag.source.dispatchEvent(
+      new DragEvent('dragend', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: heldDrag.dataTransfer,
+      }),
+    )
+    delete dragState.__heldSidebarItemDrag
+    return true
+  })
+  if (finishedSyntheticDrag) return
+
+  await page.mouse.up()
+}
+
+async function hasHeldSidebarItemDrag(page: Page) {
+  return page.evaluate(() =>
+    Boolean((window as unknown as { __heldSidebarItemDrag?: unknown }).__heldSidebarItemDrag),
+  )
+}
+
+async function dispatchNativeFileDragOverEmbed(page: Page, block: Locator) {
+  const box = await block.boundingBox()
+  if (!box) throw new Error('Expected empty embed block to have a bounding box')
+  await page.evaluate(
+    ({ clientX, clientY }) => {
+      const target = document.elementFromPoint(clientX, clientY)
+      if (!(target instanceof HTMLElement)) {
+        throw new Error('Expected a native drag target element at the embed center')
+      }
+      const dataTransfer = new DataTransfer()
+      dataTransfer.items.add(new File(['x'], 'native-drag.png', { type: 'image/png' }))
+
+      for (const type of ['dragenter', 'dragover'] as const) {
+        target.dispatchEvent(
+          new DragEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            clientX,
+            clientY,
+            dataTransfer,
+          }),
+        )
+      }
+    },
+    {
+      clientX: box.x + box.width / 2,
+      clientY: box.y + box.height / 2,
+    },
+  )
+  await page.waitForFunction(() =>
+    Array.from(document.querySelectorAll<HTMLElement>('[data-testid="embed-empty-state"]')).some(
+      (element) =>
+        element.className.includes('border-drop-target') ||
+        element.className.includes('ring-drop-target') ||
+        element.className.includes('bg-drop-target'),
+    ),
+  )
+}
+
+async function getVisibleDropCursorLikeCount(page: Page) {
+  return page.evaluate(() => {
+    const selector = ['.prosemirror-dropcursor-block', '.prosemirror-dropcursor-inline'].join(',')
+
+    return Array.from(document.querySelectorAll<HTMLElement>(selector)).filter((element) => {
+      const rect = element.getBoundingClientRect()
+      const style = getComputedStyle(element)
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        Number(style.opacity) !== 0 &&
+        rect.width > 0 &&
+        rect.height > 0
+      )
+    }).length
+  })
+}
+
+async function emptyEmbedHasDropTargetChrome(page: Page) {
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll<HTMLElement>('[data-testid="embed-empty-state"]')).some(
+      (element) =>
+        element.className.includes('border-drop-target') ||
+        element.className.includes('ring-drop-target') ||
+        element.className.includes('bg-drop-target'),
+    ),
+  )
+}
+
+async function dragOverlayIncludesText(page: Page, text: string) {
+  return page.evaluate((expectedText) => {
+    return Array.from(document.body.querySelectorAll<HTMLElement>('.fixed.pointer-events-none'))
+      .map((element) => element.textContent?.trim() ?? '')
+      .some((overlayText) => overlayText.includes(expectedText))
+  }, text)
+}
+
 async function dragFirstEmbedSurfaceBelowText(page: Page, text: string) {
   const sourceEmbed = page.getByTestId('note-embed-block').first()
   await expect(sourceEmbed).toBeVisible({ timeout: 5000 })
@@ -495,6 +970,225 @@ async function getEditorBlockOrder(page: Page) {
   )
 }
 
+async function dragTextSelectionAcrossEmbeds(page: Page, startText: string, endText: string) {
+  const points = await page.evaluate(
+    ({ endText: targetEndText, startText: targetStartText }) => {
+      const getTextPoint = (
+        targetText: string,
+        offset: number,
+        horizontalBias: 'left' | 'right',
+      ) => {
+        const editor = document.querySelector('.bn-editor')
+        if (!editor) throw new Error('Editor not found')
+
+        const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
+        let node = walker.nextNode()
+        while (node) {
+          const text = node.textContent ?? ''
+          const index = text.indexOf(targetText)
+          if (index >= 0) {
+            const range = document.createRange()
+            const rangeOffset = index + offset
+            range.setStart(node, rangeOffset)
+            range.setEnd(node, Math.min(rangeOffset + 1, text.length))
+            const rect = range.getBoundingClientRect()
+            if (!rect.width && !rect.height) {
+              throw new Error(`Unable to measure text range for ${targetText}`)
+            }
+            return {
+              x: horizontalBias === 'left' ? rect.left + 1 : rect.right - 1,
+              y: rect.top + rect.height / 2,
+            }
+          }
+          node = walker.nextNode()
+        }
+
+        throw new Error(`Text not found: ${targetText}`)
+      }
+
+      return {
+        end: getTextPoint(targetEndText, Math.max(targetEndText.length - 2, 0), 'right'),
+        start: getTextPoint(targetStartText, 1, 'left'),
+      }
+    },
+    { endText, startText },
+  )
+
+  await page.mouse.move(points.start.x, points.start.y)
+  await page.mouse.down()
+  await page.mouse.move(points.end.x, points.end.y, { steps: 16 })
+  await page.mouse.up()
+}
+
+async function dragTextSelectionOntoLastEmbed(page: Page, startText: string) {
+  const start = await page.evaluate((targetStartText) => {
+    const editor = document.querySelector('.bn-editor')
+    if (!editor) throw new Error('Editor not found')
+
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
+    let node = walker.nextNode()
+    while (node) {
+      const text = node.textContent ?? ''
+      const index = text.indexOf(targetStartText)
+      if (index >= 0) {
+        const range = document.createRange()
+        const rangeOffset = index + 1
+        range.setStart(node, rangeOffset)
+        range.setEnd(node, Math.min(rangeOffset + 1, text.length))
+        const rect = range.getBoundingClientRect()
+        if (!rect.width && !rect.height) {
+          throw new Error(`Unable to measure text range for ${targetStartText}`)
+        }
+        return {
+          x: rect.left + 1,
+          y: rect.top + rect.height / 2,
+        }
+      }
+      node = walker.nextNode()
+    }
+
+    throw new Error(`Text not found: ${targetStartText}`)
+  }, startText)
+  const lastEmbedBox = await page.getByTestId('note-embed-block').last().boundingBox()
+  if (!lastEmbedBox) throw new Error('Expected last embed block to have a bounding box')
+
+  await page.mouse.move(start.x, start.y)
+  await page.mouse.down()
+  await page.mouse.move(
+    lastEmbedBox.x + lastEmbedBox.width / 2,
+    lastEmbedBox.y + lastEmbedBox.height / 2,
+    { steps: 16 },
+  )
+  await page.mouse.up()
+}
+
+async function getEmbedSelectionSnapshot(page: Page, beforeText: string, afterText: string) {
+  return page.evaluate(
+    ({ afterText: targetAfterText, beforeText: targetBeforeText }) => {
+      const selection = window.getSelection()
+      const range =
+        selection && selection.rangeCount > 0 && !selection.isCollapsed
+          ? selection.getRangeAt(0)
+          : null
+      const selectedText = selection?.toString() ?? ''
+
+      return {
+        intersectingEmbedCount: range
+          ? Array.from(document.querySelectorAll('[data-testid="note-embed-block"]')).filter(
+              (embed) => range.intersectsNode(embed),
+            ).length
+          : 0,
+        selectedText,
+        selectedTextIncludesAfter: selectedText.includes(targetAfterText.slice(0, -1)),
+        selectedTextIncludesBefore: selectedText.includes(targetBeforeText.slice(1)),
+      }
+    },
+    { afterText, beforeText },
+  )
+}
+
+async function getEmbedEndpointSelectionSnapshot(page: Page, beforeText: string) {
+  return page.evaluate((targetBeforeText) => {
+    const selection = window.getSelection()
+    const range =
+      selection && selection.rangeCount > 0 && !selection.isCollapsed
+        ? selection.getRangeAt(0)
+        : null
+    const selectedText = selection?.toString() ?? ''
+
+    return {
+      intersectingEmbedCount: range
+        ? Array.from(document.querySelectorAll('[data-testid="note-embed-block"]')).filter(
+            (embed) => range.intersectsNode(embed),
+          ).length
+        : 0,
+      selectedText,
+      selectedTextIncludesBefore: selectedText.includes(targetBeforeText.slice(1)),
+    }
+  }, beforeText)
+}
+
+async function installEditorCopyRecorder(
+  page: Page,
+  {
+    afterText,
+    beforeText,
+  }: {
+    afterText: string
+    beforeText: string
+  },
+) {
+  await page.evaluate(
+    ({ afterText: targetAfterText, beforeText: targetBeforeText }) => {
+      ;(window as unknown as { __editorCopyRecord?: unknown }).__editorCopyRecord = null
+      document.addEventListener(
+        'copy',
+        (event) => {
+          const clipboardData = event.clipboardData
+          const html = clipboardData?.getData('text/html') ?? ''
+          const blocknoteHtml = clipboardData?.getData('blocknote/html') ?? ''
+          const plainText = clipboardData?.getData('text/plain') ?? ''
+          const types = clipboardData ? Array.from(clipboardData.types) : []
+          ;(window as unknown as { __editorCopyRecord?: unknown }).__editorCopyRecord = {
+            html,
+            blocknoteHtml,
+            blocknoteHtmlIncludesEmbedBlock:
+              blocknoteHtml.includes('data-content-type="embed"') ||
+              blocknoteHtml.includes('data-node-type="embed"') ||
+              blocknoteHtml.includes('note-embed-block') ||
+              blocknoteHtml.includes('"type":"embed"'),
+            htmlIncludesEmbedBlock:
+              html.includes('data-content-type="embed"') ||
+              html.includes('data-node-type="embed"') ||
+              html.includes('note-embed-block') ||
+              html.includes('"type":"embed"'),
+            htmlIncludesEmbedExternalAttribute: html.includes('data-note-embed-external-html'),
+            plainText,
+            plainTextIncludesAfter: plainText.includes(targetAfterText.slice(0, -1)),
+            plainTextIncludesBefore: plainText.includes(targetBeforeText.slice(1)),
+            types,
+          }
+        },
+        false,
+      )
+    },
+    { afterText, beforeText },
+  )
+}
+
+async function getRecordedEditorCopy(page: Page) {
+  return page.evaluate(
+    () =>
+      (
+        window as unknown as {
+          __editorCopyRecord?: {
+            blocknoteHtml: string
+            blocknoteHtmlIncludesEmbedBlock: boolean
+            html: string
+            htmlIncludesEmbedBlock: boolean
+            htmlIncludesEmbedExternalAttribute: boolean
+            plainText: string
+            plainTextIncludesAfter: boolean
+            plainTextIncludesBefore: boolean
+            types: Array<string>
+          } | null
+        }
+      ).__editorCopyRecord ?? null,
+  )
+}
+
+async function getEditorBlocksBeforeFirstEmbed(page: Page) {
+  return page.locator('[data-node-type="blockContainer"]').evaluateAll((blocks) => {
+    const summaries = blocks.map((block) => ({
+      hasEmbed: Boolean(block.querySelector('[data-testid="note-embed-block"]')),
+      text: block.textContent?.trim() ?? '',
+    }))
+    const embedIndex = summaries.findIndex((block) => block.hasEmbed)
+    if (embedIndex === -1) return summaries
+    return summaries.slice(0, embedIndex)
+  })
+}
+
 function paragraphBlock(id: string, text: string): CustomPartialBlock {
   return {
     id,
@@ -530,6 +1224,15 @@ async function getFirstPersistedEmbedTargetKind(page: Page, itemName: string) {
   })
   const embedBlock = note?.content.find((block) => block.type === 'embed')
   return embedBlock?.props.targetKind ?? null
+}
+
+async function getSourceNoteId(page: Page) {
+  const { dmUsername, campaignSlug } = getCampaignRoute(page)
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  return await getSidebarItemIdBySlug({
+    campaignId,
+    slug: 'embeddable-source-note',
+  })
 }
 
 async function getItemSlugFromSidebarLink(page: Page, itemName: string) {

@@ -674,6 +674,18 @@
   background-color: var(--primary) !important;
 }
 
+.bn-editor[data-note-empty-embed-drop-active='true'] .prosemirror-dropcursor-block,
+.bn-editor[data-note-empty-embed-drop-active='true'] .prosemirror-dropcursor-inline,
+.bn-container[data-note-empty-embed-drop-active='true'] .prosemirror-dropcursor-block,
+.bn-container[data-note-empty-embed-drop-active='true'] .prosemirror-dropcursor-inline {
+  display: none !important;
+}
+
+body[data-note-empty-embed-drop-active='true'] .prosemirror-dropcursor-block,
+body[data-note-empty-embed-drop-active='true'] .prosemirror-dropcursor-inline {
+  display: none !important;
+}
+
 /* Placeholder text */
 :root .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
   color: var(--muted-foreground);
@@ -740,6 +752,29 @@
 :root .canvas-rich-text-editor {
   --bn-colors-editor-background: transparent;
   background-color: transparent;
+}
+
+:root .canvas-rich-text-editor[data-note-block-embed-preview='true'] .note-editor-scroll-content {
+  height: auto;
+  min-height: 100%;
+  background-color: var(--card);
+}
+
+:root
+  .canvas-rich-text-editor[data-note-block-embed-preview='true']
+  .note-editor-scroll-content
+  > .note-editor-fill-height,
+:root .canvas-rich-text-editor[data-note-block-embed-preview='true'] .note-editor-fill-height > div,
+:root
+  .canvas-rich-text-editor[data-note-block-embed-preview='true']
+  .note-editor-fill-height
+  .bn-container,
+:root
+  .canvas-rich-text-editor[data-note-block-embed-preview='true']
+  .note-editor-fill-height
+  .bn-editor {
+  height: auto;
+  min-height: 100%;
 }
 
 :root .canvas-node-shell[data-node-type='embed'] .bn-container,

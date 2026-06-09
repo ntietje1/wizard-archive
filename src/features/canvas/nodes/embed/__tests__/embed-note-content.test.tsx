@@ -203,7 +203,7 @@ describe('EmbedNoteContent', () => {
     expect(noteContentSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         style: expect.objectContaining({
-          '--bn-colors-editor-text': 'var(--t-purple)',
+          '--editor-text-color': 'var(--t-purple)',
           color: 'var(--t-purple)',
         }),
       }),

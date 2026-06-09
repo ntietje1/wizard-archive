@@ -1,4 +1,6 @@
 import { NoteEmbedBlockView } from './embed-block'
+import { NOTE_EMBED_EXTERNAL_HTML_ATTRIBUTE } from './embed-block-html'
+import type { NoteEmbedBlockProps } from './embed-block-targets'
 import { useNoteEmbedSurface } from './note-embed-surface-context-value'
 import type { embedBlockConfig } from '../../../../../../shared/editor-blocks/editor-blocknote-spec-factory'
 import type { ReactCustomBlockRenderProps } from '@blocknote/react'
@@ -27,9 +29,17 @@ export function RenderEmbedBlock(props: EmbedBlockRenderProps) {
 }
 
 export function RenderExternalEmbedBlock(props: EmbedBlockRenderProps) {
-  const surface = useNoteEmbedSurface()
-  const viewProps = mapEmbedRenderProps(props)
-  return <NoteEmbedBlockView {...viewProps} editable={false} sourceNoteId={surface.sourceNoteId} />
+  const blockProps = props.block.props as NoteEmbedBlockProps
+  return (
+    <section
+      className="note-embed-block"
+      data-content-type="embed"
+      {...getExternalEmbedDataAttributes(blockProps)}
+      {...{ [NOTE_EMBED_EXTERNAL_HTML_ATTRIBUTE]: 'true' }}
+    >
+      {getExternalEmbedLabel(blockProps)}
+    </section>
+  )
 }
 
 function mapEmbedRenderProps(props: EmbedBlockRenderProps): NoteEmbedBlockBaseProps {
@@ -61,5 +71,24 @@ function mapEmbedRenderProps(props: EmbedBlockRenderProps): NoteEmbedBlockBasePr
         )
       },
     },
+  }
+}
+
+function getExternalEmbedLabel(props: NoteEmbedBlockProps) {
+  if (props.name) return props.name
+  if (props.url) return props.url
+  if (props.sidebarItemId) return 'Embedded item'
+  return 'Empty embed'
+}
+
+function getExternalEmbedDataAttributes(props: NoteEmbedBlockProps) {
+  return {
+    'data-target-kind': props.targetKind,
+    'data-sidebar-item-id': props.targetKind === 'sidebarItem' ? props.sidebarItemId : undefined,
+    'data-url': props.targetKind === 'externalUrl' ? props.url : undefined,
+    'data-name': props.targetKind === 'externalUrl' ? props.name : undefined,
+    'data-preview-width': props.previewWidth,
+    'data-preview-height': props.previewHeight,
+    'data-preview-aspect-ratio': props.previewAspectRatio,
   }
 }

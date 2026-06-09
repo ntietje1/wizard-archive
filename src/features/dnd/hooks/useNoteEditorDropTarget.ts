@@ -14,23 +14,11 @@ import { useEmbedUpload } from '~/features/embeds/hooks/use-embed-upload'
 import { handleError } from '~/shared/utils/logger'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import { focusEditorViewAtNearestPoint } from '~/features/editor/utils/note-editor-focus'
+import type { Node as ProseMirrorNode, ResolvedPos } from '@tiptap/pm/model'
 
 type NoteDropInput = {
   clientX: number
   clientY: number
-}
-
-function getBlockReferenceAtPoint(editor: CustomBlockNoteEditor, input: NoteDropInput) {
-  const pointElement =
-    typeof document.elementFromPoint === 'function'
-      ? document.elementFromPoint(input.clientX, input.clientY)
-      : null
-  const blockElement = pointElement?.closest('[data-node-type="blockContainer"]')
-  const blockId = blockElement?.getAttribute('data-id')
-  const blockAtPoint = blockId ? editor.getBlock(blockId) : undefined
-  if (blockAtPoint) return blockAtPoint
-
-  return editor.getTextCursorPosition().block ?? editor.document.at(-1) ?? null
 }
 
 function insertSidebarItemEmbedBlocks(
@@ -38,18 +26,67 @@ function insertSidebarItemEmbedBlocks(
   sidebarItemIds: Array<Id<'sidebarItems'>>,
   input: NoteDropInput,
 ) {
-  const referenceBlock = getBlockReferenceAtPoint(editor, input)
-  if (!referenceBlock) return false
+  const dropPlacement = getNoteEditorBlockDropPlacement(editor, input)
+  if (!dropPlacement) return false
 
   editor.insertBlocks(
     sidebarItemIds.map((sidebarItemId) => ({
       type: 'embed' as const,
       props: blockPropsFromEmbedTargetWithDefaultPreview(sidebarItemEmbedTarget(sidebarItemId)),
     })),
-    referenceBlock,
-    'after',
+    dropPlacement.referenceBlock,
+    dropPlacement.placement,
   )
   return true
+}
+
+function getNoteEditorBlockDropPlacement(editor: CustomBlockNoteEditor, input: NoteDropInput) {
+  const view = editor._tiptapEditor.view
+  const position = view?.posAtCoords({
+    left: input.clientX,
+    top: input.clientY,
+  })
+
+  if (view && position) {
+    const placement = getBlockDropPlacementAtPosition(editor, view.state.doc.resolve(position.pos))
+    if (placement) return placement
+  }
+
+  const fallbackBlock = editor.getTextCursorPosition().block ?? getLastEditorBlock(editor)
+  return fallbackBlock
+    ? {
+        placement: 'after' as const,
+        referenceBlock: fallbackBlock,
+      }
+    : null
+}
+
+function getBlockDropPlacementAtPosition(editor: CustomBlockNoteEditor, position: ResolvedPos) {
+  for (let depth = position.depth; depth >= 0; depth -= 1) {
+    const blockId = getBlockId(position.node(depth))
+    const referenceBlock = blockId ? editor.getBlock(blockId) : undefined
+    if (!referenceBlock) continue
+
+    const start = depth === 0 ? 0 : position.before(depth)
+    const end = depth === 0 ? position.node(depth).nodeSize : position.after(depth)
+    return {
+      placement:
+        position.pos - start <= end - position.pos ? ('before' as const) : ('after' as const),
+      referenceBlock,
+    }
+  }
+
+  return null
+}
+
+function getBlockId(node: ProseMirrorNode) {
+  const id = node.attrs.id
+  return typeof id === 'string' ? id : null
+}
+
+function getLastEditorBlock(editor: CustomBlockNoteEditor) {
+  const lastBlock = editor.document[editor.document.length - 1]
+  return lastBlock ? editor.getBlock(lastBlock.id) : undefined
 }
 
 function focusNoteEditorAtDropPoint(editor: CustomBlockNoteEditor, input: NoteDropInput) {

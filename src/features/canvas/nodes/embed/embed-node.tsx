@@ -454,7 +454,7 @@ function EditableCanvasEmbedContent({
 }) {
   const embedControls = useEditableEmbedTargetControls({ setTarget })
 
-  useEmbedDropTarget({
+  const dropVisualState = useEmbedDropTarget({
     ref: rootRef,
     enabled: true,
     sourceItemId: sourceCanvasId,
@@ -472,6 +472,7 @@ function EditableCanvasEmbedContent({
         onLinkExternal={embedControls.openLinkDraft}
         onMediaLayout={onMediaLayout}
         allowInnerScroll={allowInnerScroll}
+        dropVisualState={target.kind === 'empty' ? dropVisualState : undefined}
         SidebarItemRenderer={CanvasEmbedRichContentRenderer}
         resolvedSidebarItemState={resolvedSidebarItemState}
       />

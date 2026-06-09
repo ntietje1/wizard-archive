@@ -13,15 +13,14 @@ export function createEmbedSlashMenuItem(
     aliases: ['file', 'image', 'pdf', 'audio', 'video'],
     onItemClick: () => {
       const currentBlock = editor.getTextCursorPosition().block
-      editor.insertBlocks(
+      editor.replaceBlocks(
+        [currentBlock],
         [
           {
             type: 'embed',
             props: { targetKind: 'empty', previewWidth: DEFAULT_NOTE_EMBED_PREVIEW_WIDTH },
           },
         ],
-        currentBlock,
-        'after',
       )
     },
   }

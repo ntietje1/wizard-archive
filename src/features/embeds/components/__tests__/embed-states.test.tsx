@@ -34,6 +34,28 @@ describe('embed states', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('uses the shared successful drop target chrome while an item is dragged over it', () => {
+    render(<EmbedEmptyState dropVisualState={{ isDropTarget: true, isFileDropTarget: false }} />)
+
+    expect(screen.getByTestId('embed-empty-state')).toHaveClass(
+      'ring-2',
+      'ring-inset',
+      'ring-drop-target',
+      'bg-drop-target-fill',
+    )
+  })
+
+  it('uses the shared file drop target chrome while a file is dragged over it', () => {
+    render(<EmbedEmptyState dropVisualState={{ isDropTarget: true, isFileDropTarget: true }} />)
+
+    expect(screen.getByTestId('embed-empty-state')).toHaveClass(
+      'ring-2',
+      'ring-inset',
+      'ring-drop-target-file',
+      'bg-drop-target-fill',
+    )
+  })
+
   it('uses passive copy in readonly mode', () => {
     render(<EmbedEmptyState mode="readonly" />)
 
