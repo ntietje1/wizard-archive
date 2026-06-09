@@ -157,6 +157,64 @@ function globalDropOptionsFromInput(input: {
   }
 }
 
+function updateOverlayPosition(
+  overlayRef: React.RefObject<HTMLDivElement | null>,
+  input: { clientX: number; clientY: number },
+) {
+  if (!overlayRef.current) return
+  overlayRef.current.style.transform = `translate(${input.clientX + 8}px, ${input.clientY + 8}px)`
+}
+
+function getElementDragFeedbackInput(location: ElementDragUpdateArgs['location']) {
+  const input = location.current.input
+  const topTarget = location.current.dropTargets[0]
+  const rawDropTarget = topTarget ? topTarget.data : null
+  const key = getDropTargetKey(rawDropTarget)
+  const options = globalDropOptionsFromInput(input)
+
+  return {
+    feedbackKey: `${key ?? 'none'}:${options.copy ? 'copy' : 'default'}:${options.noteEditorDropAction}`,
+    options,
+    rawDropTarget,
+  }
+}
+
+function applyElementDragFeedback({
+  ctx,
+  options,
+  rawDropTarget,
+  setDragOutcome,
+  setDragState,
+  setSidebarDragTargetId,
+  sourceData,
+}: {
+  ctx: DndMonitorCtx
+  options: ElementDropOptions
+  rawDropTarget: Record<string, unknown> | null
+  setDragOutcome: (outcome: DropOutcome | null) => void
+  setDragState: React.Dispatch<React.SetStateAction<DragOverlayState>>
+  setSidebarDragTargetId: (id: string | null) => void
+  sourceData: Record<string, unknown>
+}) {
+  const dropTarget = resolveMonitorDropTarget(rawDropTarget, ctx)
+  const draggedItems = resolveDraggedItems(sourceData, ctx)
+  const draggedPreviewItems = resolveDraggedPreviewItems(sourceData, ctx)
+  const feedback = resolveDropFeedback(draggedItems, dropTarget, ctx.dropPlanningContext, options)
+
+  setDragState((prev) => {
+    if (!prev) return null
+    return {
+      ...prev,
+      draggedItemCount: overlayItemCount(draggedPreviewItems),
+      outcome: feedback.outcome,
+      rejectedItemCount: feedback.rejectedItemCount,
+    }
+  })
+
+  setSidebarDragTargetId(getHighlightId(dropTarget))
+  setDragOutcome(feedback.outcome)
+}
+
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
   const setSidebarDragTargetId = useDndStore((s) => s.setSidebarDragTargetId)
   const setDragOutcome = useDndStore((s) => s.setDragOutcome)
@@ -221,44 +279,23 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
 
   useEffect(() => {
     const handleDragUpdate = ({ location, source }: ElementDragUpdateArgs) => {
-      const input = location.current.input
-      if (overlayRef.current) {
-        overlayRef.current.style.transform = `translate(${input.clientX + 8}px, ${input.clientY + 8}px)`
-      }
-
-      const topTarget = location.current.dropTargets[0]
-      const rawDropTarget = topTarget ? topTarget.data : null
-      const key = getDropTargetKey(rawDropTarget)
-      const options = globalDropOptionsFromInput(input)
-      const feedbackKey = `${key ?? 'none'}:${options.copy ? 'copy' : 'default'}:${options.noteEditorDropAction}`
+      updateOverlayPosition(overlayRef, location.current.input)
+      const { feedbackKey, options, rawDropTarget } = getElementDragFeedbackInput(location)
 
       if (feedbackKey !== lastDropTargetKeyRef.current) {
         lastDropTargetKeyRef.current = feedbackKey
         const ctx = ctxRef.current
         if (!ctx) return
 
-        const dropTarget = resolveMonitorDropTarget(rawDropTarget, ctx)
-        const draggedItems = resolveDraggedItems(source.data, ctx)
-        const draggedPreviewItems = resolveDraggedPreviewItems(source.data, ctx)
-        const feedback = resolveDropFeedback(
-          draggedItems,
-          dropTarget,
-          ctx.dropPlanningContext,
+        applyElementDragFeedback({
+          ctx,
           options,
-        )
-
-        setDragState((prev) => {
-          if (!prev) return null
-          return {
-            ...prev,
-            draggedItemCount: overlayItemCount(draggedPreviewItems),
-            outcome: feedback.outcome,
-            rejectedItemCount: feedback.rejectedItemCount,
-          }
+          rawDropTarget,
+          setDragOutcome,
+          setDragState,
+          setSidebarDragTargetId,
+          sourceData: source.data,
         })
-
-        setSidebarDragTargetId(getHighlightId(dropTarget))
-        setDragOutcome(feedback.outcome)
       }
     }
 

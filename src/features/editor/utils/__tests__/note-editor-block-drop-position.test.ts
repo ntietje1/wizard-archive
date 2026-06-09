@@ -31,6 +31,9 @@ function createEditor() {
 
   const firstBlock = { id: 'first' }
   const secondBlock = { id: 'second' }
+  const getTextCursorPosition = vi.fn<() => { block: typeof secondBlock | null }>(() => ({
+    block: secondBlock,
+  }))
   const editor = {
     document: [firstBlock, secondBlock],
     getBlock: vi.fn((id: string) => {
@@ -38,7 +41,7 @@ function createEditor() {
       if (id === 'second') return secondBlock
       return undefined
     }),
-    getTextCursorPosition: vi.fn(() => ({ block: secondBlock })),
+    getTextCursorPosition,
     _tiptapEditor: {
       view: {
         dom: editorElement,
@@ -46,7 +49,7 @@ function createEditor() {
     },
   } as unknown as CustomBlockNoteEditor
 
-  return { editor, firstBlock, firstElement, secondBlock, secondElement }
+  return { editor, firstBlock, firstElement, getTextCursorPosition, secondBlock, secondElement }
 }
 
 describe('getNearestNoteEditorBlockDropPlacement', () => {
@@ -78,6 +81,18 @@ describe('getNearestNoteEditorBlockDropPlacement', () => {
   it('falls back to the active cursor block when no block DOM can be resolved', () => {
     const { editor, secondBlock } = createEditor()
     editor._tiptapEditor.view.dom.replaceChildren()
+
+    expect(getNearestNoteEditorBlockDropPlacement(editor, { clientX: 300, clientY: 184 })).toEqual({
+      blockElement: null,
+      placement: 'after',
+      referenceBlock: secondBlock,
+    })
+  })
+
+  it('falls back to the last document block when no block DOM or cursor block can be resolved', () => {
+    const { editor, getTextCursorPosition, secondBlock } = createEditor()
+    editor._tiptapEditor.view.dom.replaceChildren()
+    getTextCursorPosition.mockReturnValue({ block: null })
 
     expect(getNearestNoteEditorBlockDropPlacement(editor, { clientX: 300, clientY: 184 })).toEqual({
       blockElement: null,

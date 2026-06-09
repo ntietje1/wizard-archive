@@ -59,6 +59,9 @@ describe('useNoteEditorFileDropCursor', () => {
   afterEach(() => {
     dropCursor.mockClear()
     document.documentElement.removeAttribute('data-note-empty-embed-drop-cursor-suppressed')
+    document
+      .querySelectorAll('[data-note-embed-drop-target][data-note-embed-target-kind]')
+      .forEach((element) => element.remove())
     vi.restoreAllMocks()
   })
 

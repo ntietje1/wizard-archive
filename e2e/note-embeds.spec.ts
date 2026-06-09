@@ -105,6 +105,8 @@ test.describe.serial('note embeds', () => {
     await holdSidebarItemDragOverEmptyEmbed(page, sourceNoteName(), block)
     const snapshot = await getRecordedDropCursorSnapshots(page)
     await finishHeldSidebarItemDrag(page)
+    expect(await hasHeldSidebarItemDrag(page)).toBe(false)
+    expect(await isEmptyEmbedDropCursorSuppressed(page)).toBe(false)
     const snapshotPath = testInfo.outputPath('drop-cursor-dom-snapshot.json')
     fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2))
     await testInfo.attach('drop-cursor-dom-snapshot', {
@@ -119,7 +121,9 @@ test.describe.serial('note embeds', () => {
     expect(snapshot.some((entry) => entry.overEmptyEmbed)).toBe(true)
     expect(snapshot.some((entry) => entry.hasDropTargetChrome)).toBe(true)
     expect(snapshot.some((entry) => entry.dropCursorSuppressed)).toBe(true)
-    expect(snapshot.some((entry) => entry.overlayText.includes('Embed item here'))).toBe(true)
+    expect(
+      snapshot.some((entry) => entry.overlayTexts.some((text) => text.includes('Embed item here'))),
+    ).toBe(true)
     expect(
       snapshot.filter((entry) => entry.overEmptyEmbed).flatMap((entry) => entry.visibleCursorLike),
     ).toEqual([])
@@ -148,6 +152,7 @@ test.describe.serial('note embeds', () => {
 
     expect(snapshot.some((entry) => entry.overEmptyEmbed)).toBe(true)
     expect(snapshot.some((entry) => entry.hasDropTargetChrome)).toBe(true)
+    expect(snapshot.some((entry) => entry.dropCursorSuppressed)).toBe(true)
     expect(snapshot.flatMap((entry) => entry.visibleCursorLike)).toEqual([])
   })
 
@@ -491,7 +496,10 @@ async function holdSidebarItemDragOverEmptyEmbed(page: Page, itemName: string, b
       const dragState = window as unknown as {
         __heldSidebarItemDrag?: {
           dataTransfer: DataTransfer
+          lastClientX: number
+          lastClientY: number
           source: HTMLElement
+          target: EventTarget
         }
       }
       const dataTransfer = new DataTransfer()
@@ -505,7 +513,7 @@ async function holdSidebarItemDragOverEmptyEmbed(page: Page, itemName: string, b
 
       const dispatchDragEvent = (
         target: EventTarget,
-        type: 'dragstart' | 'dragenter' | 'dragover' | 'dragleave',
+        type: 'dragstart' | 'dragenter' | 'dragover' | 'dragleave' | 'drop',
         clientX: number,
         clientY: number,
       ) =>
@@ -520,13 +528,26 @@ async function holdSidebarItemDragOverEmptyEmbed(page: Page, itemName: string, b
         )
 
       dispatchDragEvent(draggableSource, 'dragstart', startX, startY)
-      dragState.__heldSidebarItemDrag = { dataTransfer, source: draggableSource }
+      dragState.__heldSidebarItemDrag = {
+        dataTransfer,
+        lastClientX: startX,
+        lastClientY: startY,
+        source: draggableSource,
+        target: draggableSource,
+      }
       await new Promise((resolve) => requestAnimationFrame(resolve))
 
       const editorDropTarget = document.elementFromPoint(editorDropX, editorDropY)
       if (!editorDropTarget) throw new Error('Expected an editor drop target below the empty embed')
       dispatchDragEvent(editorDropTarget, 'dragenter', editorDropX, editorDropY)
       dispatchDragEvent(editorDropTarget, 'dragover', editorDropX, editorDropY)
+      dragState.__heldSidebarItemDrag = {
+        dataTransfer,
+        lastClientX: editorDropX,
+        lastClientY: editorDropY,
+        source: draggableSource,
+        target: editorDropTarget,
+      }
       await new Promise((resolve) => requestAnimationFrame(resolve))
 
       const embedDropTarget = document.elementFromPoint(embedDropX, embedDropY)
@@ -534,6 +555,13 @@ async function holdSidebarItemDragOverEmptyEmbed(page: Page, itemName: string, b
       dispatchDragEvent(editorDropTarget, 'dragleave', embedDropX, embedDropY)
       dispatchDragEvent(embedDropTarget, 'dragenter', embedDropX, embedDropY)
       dispatchDragEvent(embedDropTarget, 'dragover', embedDropX, embedDropY)
+      dragState.__heldSidebarItemDrag = {
+        dataTransfer,
+        lastClientX: embedDropX,
+        lastClientY: embedDropY,
+        source: draggableSource,
+        target: embedDropTarget,
+      }
       await new Promise((resolve) => requestAnimationFrame(resolve))
       dispatchDragEvent(embedDropTarget, 'dragover', embedDropX, embedDropY)
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -554,12 +582,26 @@ async function finishHeldSidebarItemDrag(page: Page) {
     const dragState = window as unknown as {
       __heldSidebarItemDrag?: {
         dataTransfer: DataTransfer
+        lastClientX: number
+        lastClientY: number
         source: HTMLElement
+        target: EventTarget
       }
     }
     const heldDrag = dragState.__heldSidebarItemDrag
     if (!heldDrag) return false
 
+    for (const type of ['dragleave', 'drop'] as const) {
+      heldDrag.target.dispatchEvent(
+        new DragEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: heldDrag.lastClientX,
+          clientY: heldDrag.lastClientY,
+          dataTransfer: heldDrag.dataTransfer,
+        }),
+      )
+    }
     heldDrag.source.dispatchEvent(
       new DragEvent('dragend', {
         bubbles: true,
@@ -574,6 +616,20 @@ async function finishHeldSidebarItemDrag(page: Page) {
 
   await page.mouse.up()
   await page.keyboard.up('Shift')
+}
+
+async function hasHeldSidebarItemDrag(page: Page) {
+  return page.evaluate(() =>
+    Boolean((window as unknown as { __heldSidebarItemDrag?: unknown }).__heldSidebarItemDrag),
+  )
+}
+
+async function isEmptyEmbedDropCursorSuppressed(page: Page) {
+  return page.evaluate(
+    () =>
+      document.documentElement.getAttribute('data-note-empty-embed-drop-cursor-suppressed') ===
+      'true',
+  )
 }
 
 async function dispatchNativeFileDragOverEmbed(page: Page, block: Locator) {
@@ -641,10 +697,11 @@ async function installDropCursorRecorder(page: Page) {
           text: element.textContent?.trim() ?? '',
         }
       })
-      const overlayText =
-        Array.from(document.body.querySelectorAll<HTMLElement>('.fixed.pointer-events-none'))
-          .map((element) => element.textContent?.trim() ?? '')
-          .find((text) => text.length > 0) ?? ''
+      const overlayTexts = Array.from(
+        document.body.querySelectorAll<HTMLElement>('.fixed.pointer-events-none'),
+      )
+        .map((element) => element.textContent?.trim() ?? '')
+        .filter((text) => text.length > 0)
       const overEmptyEmbed = emptyEmbeds.some((embed) => {
         const right = embed.rect.left + embed.rect.width
         const bottom = embed.rect.top + embed.rect.height
@@ -665,7 +722,7 @@ async function installDropCursorRecorder(page: Page) {
         dropCursorSuppressed,
         emptyEmbeds,
         hasDropTargetChrome,
-        overlayText,
+        overlayTexts,
         overEmptyEmbed,
         phase,
         visibleCursorLike: nodes.filter((node) => node.visible),
@@ -727,7 +784,7 @@ type DropCursorSnapshot = {
   dropCursorSuppressed: boolean
   emptyEmbeds: Array<EmptyEmbedSnapshot>
   hasDropTargetChrome: boolean
-  overlayText: string
+  overlayTexts: Array<string>
   overEmptyEmbed: boolean
   phase: 'bubble' | 'animationFrame'
   visibleCursorLike: Array<DropCursorNodeSnapshot>
