@@ -236,6 +236,7 @@ export async function createCampaignWithDm(
     slug: string
     status: 'Active' | 'Inactive'
     currentSessionId: Id<'sessions'> | null
+    defaultFolderInheritShares: boolean
   }>,
 ) {
   const n = nextId()
@@ -247,6 +248,7 @@ export async function createCampaignWithDm(
     slug: assertCampaignSlug(`campaign-${n}`),
     status: 'Active' as const,
     currentSessionId: null,
+    defaultFolderInheritShares: false,
   }
   const campaignData = {
     ...defaults,

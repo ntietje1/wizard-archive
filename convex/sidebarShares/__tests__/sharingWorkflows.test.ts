@@ -106,7 +106,7 @@ describe('sharing workflows', () => {
     expect(visibleIds).toContain(note2Id)
   })
 
-  it('folder inheritance chain: share, ignored inherit flag, allPermissionLevel override', async () => {
+  it('folder inheritance chain: source folder toggle gates its own selected permissions', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
@@ -137,11 +137,12 @@ describe('sharing workflows', () => {
       inheritShares: false,
     })
 
-    const noteAfterDisablingFlag = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
-      id: leaf,
-    })
-    expect(noteAfterDisablingFlag.myPermissionLevel).toBe('view')
+    await expectNotFound(
+      playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
+        id: leaf,
+      }),
+    )
 
     await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
       campaignId: ctx.campaignId,

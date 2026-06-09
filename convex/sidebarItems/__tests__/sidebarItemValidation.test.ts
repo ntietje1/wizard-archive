@@ -663,6 +663,82 @@ describe('cross-table slug uniqueness', () => {
   })
 })
 
+describe('folder share inheritance defaults', () => {
+  const t = createTestContext()
+
+  async function getFolderInheritShares(
+    client: ReturnType<typeof asDm>,
+    campaignId: Id<'campaigns'>,
+    folderId: Id<'sidebarItems'>,
+  ) {
+    const item = await client.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId,
+      id: folderId,
+    })
+    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.folders)
+    if (item.type !== SIDEBAR_ITEM_TYPES.folders) throw new Error('Expected folder')
+    return item.inheritShares
+  }
+
+  it('creates folders with inheritance disabled by default', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const folder = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'default-off',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expect(getFolderInheritShares(dmAuth, ctx.campaignId, folder.folderId)).resolves.toBe(
+      false,
+    )
+  })
+
+  it('uses the campaign folder inheritance default only for future folders', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const before = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'before-setting-change',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
+      campaignId: ctx.campaignId,
+      defaultFolderInheritShares: true,
+    })
+
+    const afterEnabled = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'after-setting-enabled',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
+      campaignId: ctx.campaignId,
+      defaultFolderInheritShares: false,
+    })
+
+    const afterDisabled = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'after-setting-disabled',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expect(getFolderInheritShares(dmAuth, ctx.campaignId, before.folderId)).resolves.toBe(
+      false,
+    )
+    await expect(
+      getFolderInheritShares(dmAuth, ctx.campaignId, afterEnabled.folderId),
+    ).resolves.toBe(true)
+    await expect(
+      getFolderInheritShares(dmAuth, ctx.campaignId, afterDisabled.folderId),
+    ).resolves.toBe(false)
+  })
+})
+
 describe('input coercion helpers', () => {
   it('coerces valid icon and color inputs', () => {
     expect(coerceSidebarItemIconNameForInput('Shield')).toBe('Shield')

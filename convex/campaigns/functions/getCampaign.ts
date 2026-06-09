@@ -24,6 +24,7 @@ function toCampaignFromDb(campaign: Doc<'campaigns'>): CampaignFromDb {
   return {
     ...campaign,
     slug: assertCampaignSlug(campaign.slug),
+    defaultFolderInheritShares: campaign.defaultFolderInheritShares ?? false,
   }
 }
 

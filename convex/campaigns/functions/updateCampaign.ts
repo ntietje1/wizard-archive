@@ -13,10 +13,12 @@ export async function updateCampaign(
     name,
     description,
     slug,
+    defaultFolderInheritShares,
   }: {
     name?: string
     description?: string
     slug?: CampaignSlug
+    defaultFolderInheritShares?: boolean
   },
 ): Promise<Id<'campaigns'>> {
   const campaign = ctx.campaign
@@ -29,6 +31,9 @@ export async function updateCampaign(
   }
   if (description !== undefined) {
     updates.description = prepareCampaignDescription(description) ?? ''
+  }
+  if (defaultFolderInheritShares !== undefined) {
+    updates.defaultFolderInheritShares = defaultFolderInheritShares
   }
 
   if (slug !== undefined && slug !== campaign.slug) {

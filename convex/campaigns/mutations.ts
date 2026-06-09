@@ -46,6 +46,7 @@ export const updateCampaign = dmMutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     slug: v.optional(campaignSlugValidator),
+    defaultFolderInheritShares: v.optional(v.boolean()),
   },
   returns: v.id('campaigns'),
   handler: async (ctx, args): Promise<Id<'campaigns'>> => {
@@ -53,6 +54,7 @@ export const updateCampaign = dmMutation({
       name: args.name,
       description: args.description,
       slug: args.slug ? assertCampaignSlug(args.slug) : undefined,
+      defaultFolderInheritShares: args.defaultFolderInheritShares,
     })
   },
 })

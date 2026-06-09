@@ -36,6 +36,7 @@ export type CampaignFromDb = {
   slug: CampaignSlug
   status: CampaignStatus
   currentSessionId: SessionId | null
+  defaultFolderInheritShares: boolean
 }
 
 export type Campaign = CampaignFromDb & {

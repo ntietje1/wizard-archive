@@ -37,7 +37,7 @@ describe('permission inheritance through nested folder trees', () => {
     expect(leafItem.myPermissionLevel).toBe('view')
   })
 
-  it('passes inherited permissions through folders even when inheritShares is disabled', async () => {
+  it('stops passing a folder permission after inheritShares is disabled on that folder', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
@@ -66,14 +66,15 @@ describe('permission inheritance through nested folder trees', () => {
       inheritShares: false,
     })
 
-    const leafAfterDisable = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
-      id: leaf,
-    })
-    expect(leafAfterDisable.myPermissionLevel).toBe('view')
+    await expectNotFound(
+      playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
+        id: leaf,
+      }),
+    )
   })
 
-  it('passes inherited permissions through folders whose inheritShares flag starts false', async () => {
+  it('does not pass a folder permission when that folder starts with inheritShares disabled', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
@@ -90,11 +91,12 @@ describe('permission inheritance through nested folder trees', () => {
       permissionLevel: 'view',
     })
 
-    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
-      id: leaf,
-    })
-    expect(leafItem.myPermissionLevel).toBe('view')
+    await expectNotFound(
+      playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
+        id: leaf,
+      }),
+    )
   })
 
   it('allPermissionLevel on intermediate folder overrides inherited share', async () => {
