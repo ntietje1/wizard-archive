@@ -742,6 +742,23 @@
   background-color: transparent;
 }
 
+:root .canvas-rich-text-editor[data-embedded-note-mode] .note-editor-scroll-content {
+  height: auto;
+  min-height: 100%;
+  background-color: var(--card);
+}
+
+:root
+  .canvas-rich-text-editor[data-embedded-note-mode]
+  .note-editor-scroll-content
+  > .note-editor-fill-height,
+:root .canvas-rich-text-editor[data-embedded-note-mode] .note-editor-fill-height > div,
+:root .canvas-rich-text-editor[data-embedded-note-mode] .note-editor-fill-height .bn-container,
+:root .canvas-rich-text-editor[data-embedded-note-mode] .note-editor-fill-height .bn-editor {
+  height: auto;
+  min-height: 100%;
+}
+
 :root .canvas-node-shell[data-node-type='embed'] .bn-container,
 :root .canvas-node-shell[data-node-type='embed'] .bn-editor {
   --bn-colors-editor-background: transparent;

@@ -76,8 +76,8 @@ export function NoteEmbedBlockView({
   const sideMenu = useExtension(SideMenuExtension)
   const rootRef = useRef<HTMLElement | null>(null)
   const dragCleanupRef = useRef<(() => void) | null>(null)
-  const mediaControlDragSuppressionRef = useRef(false)
-  const mediaControlDragSuppressionCleanupRef = useRef<(() => void) | null>(null)
+  const surfaceDragSuppressionRef = useRef(false)
+  const surfaceDragSuppressionCleanupRef = useRef<(() => void) | null>(null)
   const pointerStartedInsideRef = useRef(false)
   const [selected, setSelected] = useState(false)
   const rangeHighlighted = useEmbedBlockRangeHighlight(rootRef)
@@ -177,7 +177,7 @@ export function NoteEmbedBlockView({
 
   useEffect(
     () => () => {
-      mediaControlDragSuppressionCleanupRef.current?.()
+      surfaceDragSuppressionCleanupRef.current?.()
     },
     [],
   )
@@ -215,20 +215,20 @@ export function NoteEmbedBlockView({
     view.addEventListener('drop', cleanup, true)
   }
 
-  const suppressSurfaceDragForMediaControlPointer = (view: Window | null) => {
-    mediaControlDragSuppressionCleanupRef.current?.()
-    mediaControlDragSuppressionRef.current = true
+  const suppressSurfaceDragForPointer = (view: Window | null) => {
+    surfaceDragSuppressionCleanupRef.current?.()
+    surfaceDragSuppressionRef.current = true
 
     if (!view) return
 
     const cleanup = () => {
       view.removeEventListener('pointerup', cleanup, true)
       view.removeEventListener('pointercancel', cleanup, true)
-      mediaControlDragSuppressionRef.current = false
-      mediaControlDragSuppressionCleanupRef.current = null
+      surfaceDragSuppressionRef.current = false
+      surfaceDragSuppressionCleanupRef.current = null
     }
 
-    mediaControlDragSuppressionCleanupRef.current = cleanup
+    surfaceDragSuppressionCleanupRef.current = cleanup
     view.addEventListener('pointerup', cleanup, true)
     view.addEventListener('pointercancel', cleanup, true)
   }
@@ -255,8 +255,8 @@ export function NoteEmbedBlockView({
         ) {
           return
         }
-        if (isEmbedMediaControlEventTarget(eventTarget)) {
-          suppressSurfaceDragForMediaControlPointer(event.currentTarget.ownerDocument.defaultView)
+        if (isEmbedSurfaceDragExemptEventTarget(eventTarget)) {
+          suppressSurfaceDragForPointer(event.currentTarget.ownerDocument.defaultView)
           return
         }
         selectEmbed()
@@ -273,8 +273,8 @@ export function NoteEmbedBlockView({
       onDragStart={(event) => {
         if (event.defaultPrevented) return
         if (
-          mediaControlDragSuppressionRef.current ||
-          isEmbedMediaControlEventTarget(event.target)
+          surfaceDragSuppressionRef.current ||
+          isEmbedSurfaceDragExemptEventTarget(event.target)
         ) {
           event.preventDefault()
           event.stopPropagation()
@@ -862,6 +862,17 @@ function stripUndefined<T extends Record<string, unknown>>(value: T): T {
 
 function isEmbedMediaControlEventTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest('[data-embed-media-control="true"]')
+}
+
+function isEmbedScrollControlEventTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    target.closest('[data-slot="scroll-area-scrollbar"], [data-slot="scroll-area-thumb"]')
+  )
+}
+
+function isEmbedSurfaceDragExemptEventTarget(target: EventTarget | null) {
+  return isEmbedMediaControlEventTarget(target) || isEmbedScrollControlEventTarget(target)
 }
 
 function doesTargetUseFreeformNoteEmbedHeight(

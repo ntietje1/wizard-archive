@@ -591,6 +591,39 @@ describe('NoteEmbedBlockView', () => {
     expect(blockDragStartMock).not.toHaveBeenCalled()
   })
 
+  it('does not start embed block drags from embedded note scroll controls', () => {
+    const editor = createEditor()
+    render(
+      <NoteEmbedBlockView
+        block={
+          {
+            id: 'block-1',
+            props: {
+              targetKind: 'externalUrl',
+              url: 'https://example.com/sound.mp3',
+              name: 'Sound',
+            },
+          } as never
+        }
+        editor={editor as never}
+        editable
+        sourceNoteId={'note-1' as never}
+      />,
+    )
+
+    const root = screen.getByTestId('note-embed-block')
+    const scrollThumb = document.createElement('div')
+    scrollThumb.setAttribute('data-slot', 'scroll-area-thumb')
+    root.append(scrollThumb)
+
+    expect(fireEvent.dragStart(scrollThumb)).toBe(false)
+    expect(blockDragStartMock).not.toHaveBeenCalled()
+
+    fireEvent.pointerDown(scrollThumb, { button: 0 })
+    expect(fireEvent.dragStart(root)).toBe(false)
+    expect(blockDragStartMock).not.toHaveBeenCalled()
+  })
+
   it('marks embed block drags as app-internal native drags', async () => {
     const editor = createEditor()
     render(

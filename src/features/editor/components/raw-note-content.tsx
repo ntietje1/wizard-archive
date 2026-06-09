@@ -20,6 +20,7 @@ type RawNoteContentProps = {
   className?: string
   content: Array<CustomBlock>
   editable: boolean
+  fillHeight?: boolean
   noteId?: Id<'sidebarItems'>
   onEditorChange?: (editor: CustomBlockNoteEditor | null) => void
   schemaFactory?: (sourceNoteId: Id<'sidebarItems'> | null) => StaticEditorSchema
@@ -88,6 +89,7 @@ export function RawNoteContent({
   className,
   content,
   editable,
+  fillHeight = false,
   noteId,
   onEditorChange,
   schemaFactory,
@@ -108,7 +110,7 @@ export function RawNoteContent({
   if (!editor) return null
 
   return (
-    <div className={editable ? 'note-editor-fill-height' : undefined}>
+    <div className={editable || fillHeight ? 'note-editor-fill-height' : undefined}>
       <div className={className}>
         <NoteValueRuntimeContext.Provider value={createRawValueRuntime({ editable, noteId })}>
           <NoteEmbedSurfaceProvider sourceNoteId={noteId ?? null} editable={editable}>
