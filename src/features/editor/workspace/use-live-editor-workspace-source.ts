@@ -1,9 +1,11 @@
 import { useEffect, useRef, useTransition } from 'react'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
@@ -11,14 +13,18 @@ import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
+import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
+import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
+import type { EditorWorkspaceShareChrome } from './editor-workspace-chrome'
 import type { EditorWorkspaceSource } from './editor-workspace-source'
-import { LiveEmptyWorkspaceDropZone } from './live-empty-workspace-drop-zone'
+import { useLiveEmptyWorkspaceDropCapability } from './use-live-empty-workspace-drop'
 
 export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const currentItem = useCurrentItem()
   const editorMode = useEditorMode()
   const filesystem = useFileSystemReadModel()
   const campaign = useCampaign()
+  const campaignMembers = useCampaignMembers()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
   const {
@@ -26,6 +32,29 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   } = useSidebarWorkspaceSource()
   const [isCreatingMissingRequestedNote, startCreateTransition] = useTransition()
   const rightSidebar = useRightSidebar(currentItem.item?.type)
+  const emptyWorkspaceDrop = useLiveEmptyWorkspaceDropCapability()
+  const shareItems = currentItem.item ? [currentItem.item] : []
+  const { isPending, isMutating, aggregateShareStatus, canShare } = useSidebarItemsShare(shareItems)
+  const playerMembers =
+    campaignMembers.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
+  const share: EditorWorkspaceShareChrome = campaign.isDm
+    ? {
+        disabled:
+          currentItem.isLoading ||
+          !currentItem.item ||
+          currentItem.item.isTrashed === true ||
+          !canShare ||
+          isMutating ||
+          isPending,
+        items: shareItems,
+        shared: Boolean(
+          currentItem.item && aggregateShareStatus && aggregateShareStatus !== 'not_shared',
+        ),
+        visible: true,
+      }
+    : {
+        visible: false,
+      }
   const currentItemId = currentItem.item?._id
   const prevItemIdRef = useRef(currentItemId)
   useEffect(() => {
@@ -71,16 +100,25 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     campaign,
     chrome: {
       rightSidebar,
+      topbar: {
+        contextMenu: {
+          item: currentItem.item,
+        },
+        history: {
+          toggle: () => rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history),
+        },
+        share,
+        viewAsPlayer: {
+          isPending: campaignMembers.isPending,
+          playerMembers,
+          selectedPlayerId: editorMode.viewAsPlayerId,
+          setSelectedPlayerId: editorMode.setViewAsPlayerId,
+          visible: Boolean(campaign.isDm),
+        },
+      },
     },
     interactions: {
-      emptyWorkspaceDrop: {
-        status: 'enabled',
-        accepts: {
-          externalFiles: true,
-          sidebarItems: true,
-        },
-        DropZone: LiveEmptyWorkspaceDropZone,
-      },
+      emptyWorkspaceDrop,
     },
     pendingItemName,
     setPendingItemName,

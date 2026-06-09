@@ -7,7 +7,6 @@ import { Button } from '~/features/shadcn/components/button'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { cn } from '~/features/shadcn/lib/utils'
-import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -142,7 +141,7 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
 
   const toggleHistory = () => {
     if (!canOpenHistory) return
-    source.chrome.rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
+    source.chrome.topbar.history.toggle()
   }
 
   const timestampLabel = itemTimestampLabel(item)
@@ -170,7 +169,9 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
     return { kind: 'none' }
   })()
 
-  const middleContent = <ItemButtonWrapper isTrashView={isTrashView} />
+  const middleContent = (
+    <ItemButtonWrapper chrome={source.chrome.topbar} isTrashView={isTrashView} />
+  )
 
   return (
     <EditorContextMenu

@@ -3,37 +3,24 @@ import { ChevronDown, ChevronUp, Lock, Users } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
+import type { EditorWorkspaceShareChrome } from '../../workspace/editor-workspace-chrome'
 
-export function ShareButton() {
-  const { item, isLoading: isItemLoading } = useCurrentItem()
-  const { isDm } = useCampaign()
+export function ShareButton({ share }: { share: EditorWorkspaceShareChrome }) {
   const [open, setOpen] = useState(false)
 
-  const items = item ? [item] : []
-
-  const { isPending, isMutating, aggregateShareStatus, canShare } = useSidebarItemsShare(items)
-
-  if (!isDm) {
+  if (!share.visible) {
     return null
   }
 
-  const isItemTrashed = item?.isTrashed === true
-  const isDisabled = isItemLoading || !item || isItemTrashed || !canShare || isMutating || isPending
-  const isShared = Boolean(item && aggregateShareStatus && aggregateShareStatus !== 'not_shared')
-  const hasShareData = Boolean(item)
-
   const Chevron = open ? ChevronUp : ChevronDown
-  const StatusIcon = isShared ? Users : Lock
-  const label = isShared ? 'Shared' : 'Private'
+  const StatusIcon = share.shared ? Users : Lock
+  const label = share.shared ? 'Shared' : 'Private'
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         nativeButton
-        disabled={isDisabled}
+        disabled={share.disabled}
         render={
           <Button variant="outline" size="sm" className="gap-1.5">
             <StatusIcon className="size-3.5" />
@@ -42,9 +29,9 @@ export function ShareButton() {
           </Button>
         }
       />
-      {hasShareData && (
+      {share.items.length > 0 && (
         <PopoverContent align="start" side="bottom" sideOffset={4} className="w-auto p-2">
-          <SidebarItemsSharePanel items={items} />
+          <SidebarItemsSharePanel items={share.items} />
         </PopoverContent>
       )}
     </Popover>

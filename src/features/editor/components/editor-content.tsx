@@ -6,6 +6,8 @@ import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { Button } from '~/features/shadcn/components/button'
+import { cn } from '~/features/shadcn/lib/utils'
+import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import type { EditorWorkspaceSource } from '../workspace/editor-workspace-source'
 import { RequestAccessButton } from '~/features/sidebar/components/request-access-button'
 
@@ -80,8 +82,22 @@ function EmptyEditorContent({ source }: { source: EditorWorkspaceSource }) {
 
   const emptyWorkspaceDrop = source.interactions.emptyWorkspaceDrop
   if (emptyWorkspaceDrop.status === 'enabled') {
-    const DropZone = emptyWorkspaceDrop.DropZone
-    return <DropZone className={EMPTY_EDITOR_CONTENT_CLASS}>{content}</DropZone>
+    const { target } = emptyWorkspaceDrop
+    return (
+      <div
+        ref={target.ref}
+        className={cn(
+          EMPTY_EDITOR_CONTENT_CLASS,
+          target.isSidebarItemDropTarget &&
+            !target.isFileDropTarget &&
+            dropTargetChromeClass('default'),
+          target.isFileDropTarget && dropTargetChromeClass('file'),
+        )}
+        data-testid="empty-workspace-drop-zone"
+      >
+        {content}
+      </div>
+    )
   }
 
   return <div className={EMPTY_EDITOR_CONTENT_CLASS}>{content}</div>

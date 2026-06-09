@@ -1,3 +1,4 @@
+import { createRef } from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
@@ -70,6 +71,24 @@ function createEmptyWorkspaceSource({
         close: vi.fn(),
         toggle: vi.fn(),
       },
+      topbar: {
+        contextMenu: {
+          item: null,
+        },
+        history: {
+          toggle: vi.fn(),
+        },
+        share: {
+          visible: false,
+        },
+        viewAsPlayer: {
+          isPending: false,
+          playerMembers: [],
+          selectedPlayerId: undefined,
+          setSelectedPlayerId: vi.fn(),
+          visible: false,
+        },
+      },
     },
     interactions: {
       emptyWorkspaceDrop:
@@ -80,11 +99,11 @@ function createEmptyWorkspaceSource({
                 externalFiles: true,
                 sidebarItems: true,
               },
-              DropZone: ({ children, className }) => (
-                <div className={className} data-testid="empty-workspace-drop-zone">
-                  {children}
-                </div>
-              ),
+              target: {
+                ref: createRef<HTMLDivElement>(),
+                isFileDropTarget: false,
+                isSidebarItemDropTarget: false,
+              },
             }
           : {
               status: 'disabled',

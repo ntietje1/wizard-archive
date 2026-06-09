@@ -1,15 +1,10 @@
 import { useRef } from 'react'
 import { EMPTY_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
-import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { cn } from '~/features/shadcn/lib/utils'
-import type { EditorEmptyWorkspaceDropZoneProps } from './editor-workspace-source'
+import type { EditorWorkspaceSource } from './editor-workspace-source'
 
-export function LiveEmptyWorkspaceDropZone({
-  children,
-  className,
-}: EditorEmptyWorkspaceDropZoneProps) {
+export function useLiveEmptyWorkspaceDropCapability(): EditorWorkspaceSource['interactions']['emptyWorkspaceDrop'] {
   const ref = useRef<HTMLDivElement>(null)
   const dropData = { type: EMPTY_EDITOR_DROP_TYPE } as const
 
@@ -25,16 +20,16 @@ export function LiveEmptyWorkspaceDropZone({
     canAcceptFiles: true,
   })
 
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        className,
-        isDropTarget && !isFileDropTarget && dropTargetChromeClass('default'),
-        isFileDropTarget && dropTargetChromeClass('file'),
-      )}
-    >
-      {children}
-    </div>
-  )
+  return {
+    status: 'enabled',
+    accepts: {
+      externalFiles: true,
+      sidebarItems: true,
+    },
+    target: {
+      ref,
+      isFileDropTarget,
+      isSidebarItemDropTarget: isDropTarget,
+    },
+  }
 }

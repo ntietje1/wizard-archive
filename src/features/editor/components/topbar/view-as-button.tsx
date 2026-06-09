@@ -1,4 +1,3 @@
-import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { Eye } from 'lucide-react'
 import { useState } from 'react'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
@@ -13,24 +12,20 @@ import {
   DropdownMenuTrigger,
 } from '~/features/shadcn/components/dropdown-menu'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { ViewAsPlayerRow } from '../view-as-player-row'
+import type { EditorWorkspaceViewAsPlayerChrome } from '../../workspace/editor-workspace-chrome'
 
 const label = 'View as player'
 
-export const ViewAsPlayerButton = () => {
-  const campaignMembersQuery = useCampaignMembers()
-  const { isDm } = useCampaign()
-  const playerMembers =
-    campaignMembersQuery.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
-  const { viewAsPlayerId, setViewAsPlayerId } = useEditorMode()
+export const ViewAsPlayerButton = ({
+  viewAsPlayer,
+}: {
+  viewAsPlayer: EditorWorkspaceViewAsPlayerChrome
+}) => {
   const [isOpen, setIsOpen] = useState(false)
 
-  const isPending = campaignMembersQuery.isPending
   const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen && viewAsPlayerId) {
+    if (nextOpen && viewAsPlayer.selectedPlayerId) {
       setIsOpen(false)
       return
     }
@@ -38,7 +33,7 @@ export const ViewAsPlayerButton = () => {
     setIsOpen(nextOpen)
   }
 
-  if (!isDm) {
+  if (!viewAsPlayer.visible) {
     return null
   }
 
@@ -53,16 +48,18 @@ export const ViewAsPlayerButton = () => {
                 variant="ghost"
                 size="icon"
                 className={
-                  viewAsPlayerId ? 'text-primary hover:text-primary aria-expanded:text-primary' : ''
+                  viewAsPlayer.selectedPlayerId
+                    ? 'text-primary hover:text-primary aria-expanded:text-primary'
+                    : ''
                 }
-                disabled={isPending}
+                disabled={viewAsPlayer.isPending}
                 aria-label={label}
                 title={label}
                 onClick={(event) => {
-                  if (!viewAsPlayerId) return
+                  if (!viewAsPlayer.selectedPlayerId) return
                   event.preventDefault()
                   event.stopPropagation()
-                  setViewAsPlayerId(undefined)
+                  viewAsPlayer.setSelectedPlayerId(undefined)
                   setIsOpen(false)
                 }}
               >
@@ -74,11 +71,11 @@ export const ViewAsPlayerButton = () => {
             <DropdownMenuGroup>
               <DropdownMenuLabel className="pb-0 pt-0.5">View as player</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {isPending ? (
+              {viewAsPlayer.isPending ? (
                 <div className="p-2">
                   <div className="text-xs text-muted-foreground">Loading players&hellip;</div>
                 </div>
-              ) : playerMembers.length === 0 ? (
+              ) : viewAsPlayer.playerMembers.length === 0 ? (
                 <div className="p-2">
                   <div className="text-xs text-muted-foreground">
                     No other players in this campaign.
@@ -86,8 +83,8 @@ export const ViewAsPlayerButton = () => {
                 </div>
               ) : (
                 <>
-                  {playerMembers.map((member) => {
-                    const isSelected = viewAsPlayerId === member._id
+                  {viewAsPlayer.playerMembers.map((member) => {
+                    const isSelected = viewAsPlayer.selectedPlayerId === member._id
 
                     return (
                       <DropdownMenuCheckboxItem
@@ -96,7 +93,7 @@ export const ViewAsPlayerButton = () => {
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          setViewAsPlayerId(isSelected ? undefined : member._id)
+                          viewAsPlayer.setSelectedPlayerId(isSelected ? undefined : member._id)
                         }}
                         className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
                       >

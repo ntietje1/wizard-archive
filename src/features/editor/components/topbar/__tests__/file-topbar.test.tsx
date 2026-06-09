@@ -87,6 +87,24 @@ function createWorkspaceSource(): EditorWorkspaceSource {
         close: vi.fn(),
         toggle: rightSidebarState.toggle,
       },
+      topbar: {
+        contextMenu: {
+          item,
+        },
+        history: {
+          toggle: rightSidebarState.toggle,
+        },
+        share: {
+          visible: false,
+        },
+        viewAsPlayer: {
+          isPending: false,
+          playerMembers: [],
+          selectedPlayerId: undefined,
+          setSelectedPlayerId: vi.fn(),
+          visible: false,
+        },
+      },
     },
     interactions: {
       emptyWorkspaceDrop: {

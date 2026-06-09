@@ -3,7 +3,7 @@ import type { EditorMode } from 'shared/editor/types'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ComponentType, ReactNode } from 'react'
+import type { RefObject } from 'react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import type { EditorWorkspaceChrome } from './editor-workspace-chrome'
@@ -37,11 +37,6 @@ interface EditorCampaignSnapshot {
   isDm: boolean | undefined
 }
 
-export interface EditorEmptyWorkspaceDropZoneProps {
-  children: ReactNode
-  className?: string
-}
-
 type EditorEmptyWorkspaceDropCapability =
   | {
       status: 'disabled'
@@ -53,7 +48,11 @@ type EditorEmptyWorkspaceDropCapability =
         externalFiles: boolean
         sidebarItems: boolean
       }
-      DropZone: ComponentType<EditorEmptyWorkspaceDropZoneProps>
+      target: {
+        ref: RefObject<HTMLDivElement | null>
+        isFileDropTarget: boolean
+        isSidebarItemDropTarget: boolean
+      }
     }
 
 interface EditorWorkspaceInteractions {
