@@ -5,7 +5,7 @@ import { FilteredSidebarItemsContext } from '~/features/sidebar/contexts/filtere
 export const useFilteredSidebarItems = (): SidebarItemsValue => {
   const ctx = useContext(FilteredSidebarItemsContext)
   if (!ctx) {
-    throw new Error('useFilteredSidebarItems must be used within a FilteredSidebarItemsProvider')
+    throw new Error('useFilteredSidebarItems must be used within a SidebarItemsPassthroughProvider')
   }
   return ctx
 }

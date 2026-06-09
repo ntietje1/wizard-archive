@@ -125,14 +125,15 @@ describe('landing feature demos', () => {
   it('lets the hero preview navigate between production-derived surfaces', async () => {
     const { unmount } = render(<HeroProductDemoIsland />)
 
-    expect(await screen.findByRole('button', { name: 'Last edited today' })).toHaveTextContent(
-      'Edited today',
-    )
-    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'View as player' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument()
+    expect(await screen.findByText('Edited today')).toBeInTheDocument()
+    expect(screen.getByText('Private')).toBeInTheDocument()
+    expect(screen.getByTitle('View as player')).toBeInTheDocument()
+    expect(screen.getByTitle('More options')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'View as player' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'More options' })).not.toBeInTheDocument()
     expect(screen.getByText('New')).toBeInTheDocument()
-    expect(screen.getByText('Trash')).toBeInTheDocument()
+    expect(screen.queryByText('Trash')).not.toBeInTheDocument()
     expect(screen.getByText('Lanterns of Brindlehook')).toBeInTheDocument()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Harbor Heist Board' }))

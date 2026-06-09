@@ -76,7 +76,7 @@ function CreateNewButton({
     <Button
       variant="outline"
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || isCreating}
       className="group flex h-auto w-full items-center justify-start gap-4 px-4 py-3 text-left"
     >
       <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">

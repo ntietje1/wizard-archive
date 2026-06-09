@@ -54,7 +54,8 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.notes,
           parentTarget: { kind: 'direct', parentId: null },
-          name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
+          name:
+            getRequestedNoteName(requestedSlug) ?? getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
         })
         openParentFolders(result.id)
       } catch (error) {
@@ -76,4 +77,9 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     createMissingRequestedNote,
     isCreatingMissingRequestedNote,
   }
+}
+
+function getRequestedNoteName(requestedSlug: string | null) {
+  const name = requestedSlug?.trim()
+  return name ? name : null
 }

@@ -8,7 +8,7 @@ export function BookmarkedItemsList() {
   const {
     commands: { setRenamingItemId },
     editing: { renamingItemId },
-    filteredActiveItems: { data: filteredItems, status },
+    filteredActiveItems: { data: filteredItems = [], status },
     sort: { options: sortOptions },
   } = useSidebarWorkspaceSource()
 

@@ -28,7 +28,12 @@ export function HeroProductDemo() {
 export function WorkspaceFeatureDemo() {
   return (
     <ClientIsland fallback={<ProductDemoFrame className="h-[420px]" />}>
-      <LazyWorkspaceFeatureDemo />
+      <section
+        className="demo-elevated-frame h-[420px] overflow-hidden rounded-lg border border-border/70 bg-background"
+        aria-label="Workspace demo"
+      >
+        <LazyWorkspaceFeatureDemo />
+      </section>
     </ClientIsland>
   )
 }

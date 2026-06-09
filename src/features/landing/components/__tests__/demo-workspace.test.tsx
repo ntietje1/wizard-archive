@@ -124,12 +124,13 @@ describe('DemoWorkspace', () => {
   it('renders the app-like editor chrome without restoring the removed demo wrapper labels', () => {
     render(<DemoWorkspace />)
 
-    expect(screen.getByRole('button', { name: 'Last edited today' })).toHaveTextContent(
-      'Edited today',
-    )
-    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'View as player' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'More options' })).toBeInTheDocument()
+    expect(screen.getByText('Edited today')).toBeInTheDocument()
+    expect(screen.getByText('Private')).toBeInTheDocument()
+    expect(screen.getByTitle('View as player')).toBeInTheDocument()
+    expect(screen.getByTitle('More options')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'View as player' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'More options' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument()
     expect(screen.getByText('Lanterns of Brindlehook')).toBeInTheDocument()

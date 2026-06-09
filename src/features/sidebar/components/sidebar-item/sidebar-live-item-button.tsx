@@ -20,6 +20,7 @@ import {
   sidebarItemActionButtonClass,
   sidebarItemNameClass,
 } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { handleError } from '~/shared/utils/logger'
 import type { SidebarWorkspaceItemSurfaceName } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import type { MouseEvent, Ref } from 'react'
 
@@ -70,8 +71,12 @@ export function SidebarLiveItemButton({
   }
 
   const handleFinishRename = async (name: string) => {
-    await editItem({ item, name })
-    setRenamingId(null)
+    try {
+      await editItem({ item, name })
+      setRenamingId(null)
+    } catch (error) {
+      handleError(error, 'Failed to rename')
+    }
   }
 
   const handleCancelRename = () => {

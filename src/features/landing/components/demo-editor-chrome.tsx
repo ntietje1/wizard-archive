@@ -1,7 +1,6 @@
 import { ChevronDown, ChevronRight, Eye, Lock, MoreVertical, Plus } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { EditorTopbarSurface } from '~/features/editor/components/topbar/editor-topbar-surface'
-import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { SidebarRow } from '~/features/sidebar/components/sidebar-row'
 import type { KeyboardEvent, ReactNode } from 'react'
@@ -11,15 +10,9 @@ export function DemoEditorTopbar({ title }: { title: ReactNode }) {
     <EditorTopbarSurface
       title={title}
       timestampControl={
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-auto shrink-0 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-          aria-label="Last edited today"
-          tabIndex={-1}
-        >
+        <span className="h-auto shrink-0 px-1.5 py-0.5 text-xs text-muted-foreground">
           Edited today
-        </Button>
+        </span>
       }
       middleContent={<DemoEditorTopbarActions />}
     />
@@ -50,39 +43,24 @@ export function DemoSidebarFooter({
 
 function DemoEditorTopbarActions() {
   return (
-    <div className="flex shrink-0 items-center gap-1">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="gap-1.5"
-        aria-label="Share"
-        tabIndex={-1}
-      >
+    <div className="flex shrink-0 items-center gap-1" aria-hidden="true">
+      <span className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground">
         <Lock className="size-3.5" />
         <span className="text-xs">Private</span>
         <ChevronDown className="size-3 text-muted-foreground" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="View as player"
+      </span>
+      <span
+        className="inline-flex size-8 items-center justify-center rounded-md text-sm font-medium"
         title="View as player"
-        tabIndex={-1}
       >
         <Eye className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="More options"
+      </span>
+      <span
+        className="inline-flex size-8 items-center justify-center rounded-md text-sm font-medium"
         title="More options"
-        tabIndex={-1}
       >
         <MoreVertical className="size-4" />
-      </Button>
+      </span>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { createElement } from 'react'
 import { FilteredSidebarItemsContext } from '~/features/sidebar/contexts/filtered-sidebar-items-context'
 import type { SidebarItemsValue } from './sidebar-items-context'
 
-export function FilteredSidebarItemsProvider({
+export function SidebarItemsPassthroughProvider({
   children,
   value,
 }: {

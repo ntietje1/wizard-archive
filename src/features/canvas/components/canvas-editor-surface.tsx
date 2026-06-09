@@ -88,10 +88,6 @@ function CanvasPendingSelectionStatus({
   nodeCount: number
   edgeCount: number
 }) {
-  if (nodeCount === 0 && edgeCount === 0) {
-    return null
-  }
-
   const parts = [
     nodeCount > 0 ? `${nodeCount} node${nodeCount === 1 ? '' : 's'}` : null,
     edgeCount > 0 ? `${edgeCount} edge${edgeCount === 1 ? '' : 's'}` : null,
