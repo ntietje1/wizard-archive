@@ -36,16 +36,14 @@ import type {
   EditorModeMenuService,
   ViewAsPlayerMenuService,
 } from './types'
-import {
-  RIGHT_SIDEBAR_CONTENT,
-  RIGHT_SIDEBAR_PANEL_ID,
-} from '~/features/editor/components/right-sidebar/constants'
+import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
+import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
+import { RIGHT_SIDEBAR_PANEL_ID } from '~/features/editor/components/right-sidebar/constants'
 import {
   canShowRightSidebarContent,
   resolveRightSidebarContent,
 } from '~/features/editor/components/right-sidebar/right-sidebar-model'
 import { RIGHT_SIDEBAR_PANELS } from '~/features/editor/components/right-sidebar/right-sidebar-registry'
-import type { RightSidebarContentId } from '~/features/editor/components/right-sidebar/constants'
 import { useRightSidebarStateStore } from '~/features/editor/stores/right-sidebar-state-store'
 import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { logger } from '~/shared/utils/logger'

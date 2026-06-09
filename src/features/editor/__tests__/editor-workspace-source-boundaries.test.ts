@@ -21,6 +21,8 @@ describe('editor workspace source boundaries', () => {
 
     expect(liveSource).toContain('useCurrentItem')
     expect(liveSource).toContain('useEditorMode')
+    expect(liveSource).toContain('useRightSidebar')
+    expect(liveSource).toContain('rightSidebar.close()')
     expect(liveSource).toContain('createSidebarItem')
     expect(liveSource).toContain('LiveEmptyWorkspaceDropZone')
     expect(liveSource).not.toContain('useCreateFileSystemItem')
@@ -31,11 +33,13 @@ describe('editor workspace source boundaries', () => {
     for (const source of [page, content, topbar, rightSidebar]) {
       expect(source).not.toContain('useCurrentItem')
       expect(source).not.toContain('useEditorMode')
+      expect(source).not.toContain('useRightSidebar')
     }
     expect(content).not.toContain('useDndDropTarget')
     expect(content).not.toContain('useExternalDropTarget')
     expect(content).not.toContain('useDndStore')
     expect(content).toContain('emptyWorkspaceDrop')
+    expect(rightSidebar).not.toContain('sidebar.close()')
   })
 })
 

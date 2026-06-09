@@ -6,6 +6,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { ComponentType, ReactNode } from 'react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import type { EditorWorkspaceChrome } from './editor-workspace-chrome'
 
 interface EditorCurrentItemSnapshot {
   item: AnySidebarItem | null
@@ -64,6 +65,7 @@ export interface EditorWorkspaceSource {
   editorMode: EditorModeSnapshot
   filesystem: EditorFileSystemSnapshot
   campaign: EditorCampaignSnapshot
+  chrome: EditorWorkspaceChrome
   interactions: EditorWorkspaceInteractions
   pendingItemName: string
   setPendingItemName: (name: string) => void

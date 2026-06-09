@@ -2,7 +2,7 @@ import {
   RIGHT_SIDEBAR_DEFAULTS,
   RIGHT_SIDEBAR_PANEL_ID,
 } from '~/features/editor/components/right-sidebar/constants'
-import type { RightSidebarContentId } from '~/features/editor/components/right-sidebar/constants'
+import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
 import { resolveRightSidebarContent } from '~/features/editor/components/right-sidebar/right-sidebar-model'
 import type { RightSidebarItemType } from '~/features/editor/components/right-sidebar/right-sidebar-model'
 import { useRightSidebarStateStore } from '~/features/editor/stores/right-sidebar-state-store'

@@ -1,7 +1,7 @@
 import { ArrowUpLeft, ArrowUpRight, History, List } from 'lucide-react'
-import { RIGHT_SIDEBAR_CONTENT } from './constants'
+import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
+import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
 import { getRightSidebarContentItemTypes } from './right-sidebar-model'
-import type { RightSidebarContentId } from './constants'
 import type { LucideIcon } from 'lucide-react'
 import type { RightSidebarItemType } from './right-sidebar-model'
 

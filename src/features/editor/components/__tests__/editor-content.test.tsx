@@ -57,6 +57,20 @@ function createEmptyWorkspaceSource({
       isCampaignLoaded: true,
       isDm: false,
     },
+    chrome: {
+      rightSidebar: {
+        visible: false,
+        activeContentId: 'history',
+        size: 300,
+        isLoaded: true,
+        setSize: vi.fn(),
+        setVisible: vi.fn(),
+        setActiveContent: vi.fn(),
+        open: vi.fn(),
+        close: vi.fn(),
+        toggle: vi.fn(),
+      },
+    },
     interactions: {
       emptyWorkspaceDrop:
         dropStatus === 'enabled'

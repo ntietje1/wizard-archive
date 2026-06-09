@@ -1,6 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { RIGHT_SIDEBAR_CONTENT } from './constants'
-import type { RightSidebarContentId } from './constants'
+import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
+import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
 
 export type RightSidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
 

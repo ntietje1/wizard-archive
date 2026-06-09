@@ -29,10 +29,6 @@ vi.mock('~/features/context-menu/components/editor-context-menu', () => ({
   EditorContextMenu: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('~/features/editor/hooks/useRightSidebar', () => ({
-  useRightSidebar: () => rightSidebarState,
-}))
-
 describe('FileTopbar', () => {
   it('does not open history when the current item only grants view permission', () => {
     currentItemState.item = createNote({
@@ -77,6 +73,20 @@ function createWorkspaceSource(): EditorWorkspaceSource {
       campaignId,
       isCampaignLoaded: true,
       isDm: false,
+    },
+    chrome: {
+      rightSidebar: {
+        visible: false,
+        activeContentId: 'history',
+        size: 300,
+        isLoaded: true,
+        setSize: vi.fn(),
+        setVisible: vi.fn(),
+        setActiveContent: vi.fn(),
+        open: vi.fn(),
+        close: vi.fn(),
+        toggle: rightSidebarState.toggle,
+      },
     },
     interactions: {
       emptyWorkspaceDrop: {

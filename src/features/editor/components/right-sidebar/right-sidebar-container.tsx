@@ -1,25 +1,20 @@
-import { useEffect, useRef } from 'react'
 import { List } from 'lucide-react'
-import { RIGHT_SIDEBAR_CONTENT } from './constants'
+import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
 import { RightSidebar } from './right-sidebar'
-import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
 import { ResizableSidebar } from '~/features/sidebar/components/resizable-sidebar'
 import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { canShowRightSidebarContent } from './right-sidebar-model'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import type { EditorWorkspaceRightSidebarChrome } from '../../workspace/editor-workspace-chrome'
 
-export function RightSidebarContainer({ item }: { item: AnySidebarItem | null }) {
-  const sidebar = useRightSidebar(item?.type)
-
-  const prevItemIdRef = useRef(item?._id)
-  useEffect(() => {
-    if (prevItemIdRef.current !== item?._id) {
-      prevItemIdRef.current = item?._id
-      sidebar.close()
-    }
-  }, [sidebar, item?._id])
-
+export function RightSidebarContainer({
+  item,
+  sidebar,
+}: {
+  item: AnySidebarItem | null
+  sidebar: EditorWorkspaceRightSidebarChrome
+}) {
   if (!item) return null
 
   const canOpenOutline = canShowRightSidebarContent(item.type, RIGHT_SIDEBAR_CONTENT.outline)

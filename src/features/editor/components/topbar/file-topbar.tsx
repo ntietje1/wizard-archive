@@ -7,8 +7,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { cn } from '~/features/shadcn/lib/utils'
-import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/components/right-sidebar/constants'
-import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
+import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -141,10 +140,9 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
   const canOpenHistory =
     !!item && !isPendingItem && effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.EDIT, permOpts)
 
-  const rightSidebar = useRightSidebar(item?.type)
   const toggleHistory = () => {
     if (!canOpenHistory) return
-    rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
+    source.chrome.rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
   }
 
   const timestampLabel = itemTimestampLabel(item)

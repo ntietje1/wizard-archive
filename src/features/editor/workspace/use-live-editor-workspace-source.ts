@@ -1,4 +1,4 @@
-import { useTransition } from 'react'
+import { useEffect, useRef, useTransition } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
@@ -10,6 +10,7 @@ import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadM
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
 import type { EditorWorkspaceSource } from './editor-workspace-source'
 import { LiveEmptyWorkspaceDropZone } from './live-empty-workspace-drop-zone'
 
@@ -24,6 +25,15 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     commands: { createSidebarItem },
   } = useSidebarWorkspaceSource()
   const [isCreatingMissingRequestedNote, startCreateTransition] = useTransition()
+  const rightSidebar = useRightSidebar(currentItem.item?.type)
+  const currentItemId = currentItem.item?._id
+  const prevItemIdRef = useRef(currentItemId)
+  useEffect(() => {
+    if (prevItemIdRef.current === currentItemId) return
+
+    prevItemIdRef.current = currentItemId
+    rightSidebar.close()
+  }, [rightSidebar, currentItemId])
 
   const requestedSlug = getSlug(currentItem.editorSearch)
   const canViewCurrentItem =
@@ -59,6 +69,9 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     editorMode,
     filesystem,
     campaign,
+    chrome: {
+      rightSidebar,
+    },
     interactions: {
       emptyWorkspaceDrop: {
         status: 'enabled',

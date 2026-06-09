@@ -15,7 +15,12 @@ export function EditorPage() {
     <EditorWorkspaceSurface
       topbar={<FileTopbar source={workspaceSource} />}
       banner={<EditorBanner source={workspaceSource} />}
-      rightSidebar={<RightSidebarContainer item={workspaceSource.currentItem.item} />}
+      rightSidebar={
+        <RightSidebarContainer
+          item={workspaceSource.currentItem.item}
+          sidebar={workspaceSource.chrome.rightSidebar}
+        />
+      }
     >
       <EditorContent source={workspaceSource} />
     </EditorWorkspaceSurface>
