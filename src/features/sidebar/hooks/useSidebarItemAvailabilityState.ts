@@ -7,6 +7,8 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 import { isTrashedSidebarItem } from 'shared/sidebar-items/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
+import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 
 type SidebarItemAvailabilitySubject = 'item' | 'page'
 
@@ -60,8 +62,15 @@ export function useSidebarItemAvailabilityState({
   const activeItems = useActiveSidebarItems()
   const metadata = findAvailabilityMetadata(lookup, activeItems)
   const label = metadata?.name ?? readableItem?.name ?? fallbackLabel
+  const actorCanViewReadableItem =
+    !!readableItem &&
+    canView &&
+    effectiveHasAtLeastPermission(readableItem, PERMISSION_LEVEL.VIEW, {
+      actor: campaignActor,
+      allItemsMap: activeItems.itemsMap,
+    })
 
-  if (readableItem && isTrashedSidebarItem(readableItem)) {
+  if (readableItem && actorCanViewReadableItem && isTrashedSidebarItem(readableItem)) {
     return {
       status: 'trashed',
       label,
@@ -69,7 +78,7 @@ export function useSidebarItemAvailabilityState({
     }
   }
 
-  if (readableItem && canView) {
+  if (readableItem && actorCanViewReadableItem) {
     return {
       status: 'available',
       item: readableItem,

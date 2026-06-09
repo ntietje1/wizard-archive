@@ -20,6 +20,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
+import { RequestAccessButton } from '~/features/sidebar/components/request-access-button'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { handleError } from '~/shared/utils/logger'
@@ -173,6 +174,11 @@ function UnavailableEditorContent({
               Create it
             </Button>
           </p>
+        )}
+        {state.status === 'not_shared' && (
+          <div className="mt-3">
+            <RequestAccessButton />
+          </div>
         )}
       </div>
     </div>

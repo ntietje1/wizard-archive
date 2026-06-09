@@ -2,6 +2,8 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { EmbedNode } from '../embed-node'
 import { EMBED_NODE_MIN_SIZE } from '../embed-node-size'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
@@ -56,6 +58,13 @@ const contentItemQuerySequence = vi.hoisted(
 const activeItemsState = vi.hoisted(() => ({
   itemsMap: new Map<string, Record<string, unknown>>(),
   status: 'success' as 'pending' | 'error' | 'success',
+}))
+const viewAsState = vi.hoisted(() => ({
+  viewAsPlayer: null as { campaignId: string; memberId: string } | null,
+  setViewAsPlayer: vi.fn(),
+}))
+const campaignMembersState = vi.hoisted(() => ({
+  data: [] as Array<Record<string, unknown>>,
 }))
 
 vi.mock('~/features/previews/components/sidebar-item-preview-content', () => ({
@@ -193,15 +202,11 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 }))
 
 vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
-  useSidebarUIStore: (
-    selector: (state: { viewAsPlayer: null; setViewAsPlayer: () => void }) => unknown,
-  ) => selector({ viewAsPlayer: null, setViewAsPlayer: vi.fn() }),
+  useSidebarUIStore: (selector: (state: typeof viewAsState) => unknown) => selector(viewAsState),
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({
-  useCampaignMembers: () => ({
-    data: [],
-  }),
+  useCampaignMembers: () => campaignMembersState,
 }))
 
 vi.mock('../../shared/canvas-node-surface-style', () => ({
@@ -237,6 +242,9 @@ describe('EmbedNode', () => {
       ['note-1', { name: 'Note Item' }],
     ])
     activeItemsState.status = 'success'
+    viewAsState.viewAsPlayer = null
+    viewAsState.setViewAsPlayer.mockReset()
+    campaignMembersState.data = []
     contentItemState.data = {
       _id: 'canvas-1',
       type: SIDEBAR_ITEM_TYPES.canvases,
@@ -727,7 +735,42 @@ describe('EmbedNode', () => {
 
     renderEmbedNode('node-1', 'canvas-1')
 
-    expect(screen.getByText('You do not have access to this embedded item')).toBeInTheDocument()
+    expect(screen.getByText("This embedded item isn't shared with you")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Request Access' })).toBeInTheDocument()
+    expect(screen.queryByTestId('embedded-canvas-content')).not.toBeInTheDocument()
+    expect(embeddedCanvasSpy).not.toHaveBeenCalled()
+  })
+
+  it('renders request-access state in DM view-as when an embedded canvas is hidden from the viewed player', () => {
+    viewAsState.viewAsPlayer = {
+      campaignId: testId<'campaigns'>('campaign_1'),
+      memberId: testId<'campaignMembers'>('player_1'),
+    }
+    campaignMembersState.data = [
+      {
+        _id: testId<'campaignMembers'>('player_1'),
+        campaignId: testId<'campaigns'>('campaign_1'),
+        role: CAMPAIGN_MEMBER_ROLE.Player,
+        status: CAMPAIGN_MEMBER_STATUS.Accepted,
+        userProfile: { name: 'Mina', username: 'mina' },
+      },
+    ]
+    contentItemState.data = {
+      _id: 'canvas-1',
+      type: SIDEBAR_ITEM_TYPES.canvases,
+      name: 'Canvas Item',
+      previewUrl: 'canvas.png',
+      allPermissionLevel: PERMISSION_LEVEL.NONE,
+      shares: [],
+      myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      parentId: null,
+    }
+
+    renderEmbedNode()
+
+    expect(screen.getByText('Canvas Item')).toBeInTheDocument()
+    expect(screen.getByText("This embedded item isn't shared with you")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Request Access' })).toBeInTheDocument()
     expect(screen.queryByTestId('embedded-canvas-content')).not.toBeInTheDocument()
     expect(embeddedCanvasSpy).not.toHaveBeenCalled()
   })

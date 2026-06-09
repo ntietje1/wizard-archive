@@ -1,10 +1,22 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EmbedEmptyState } from '../embed-empty-state'
 import { EmbedUnavailable } from '../embed-unavailable'
 
+const toastInfo = vi.hoisted(() => vi.fn())
+
+vi.mock('sonner', () => ({
+  toast: {
+    info: toastInfo,
+  },
+}))
+
 describe('embed states', () => {
+  beforeEach(() => {
+    toastInfo.mockReset()
+  })
+
   it('describes all empty embed creation paths', () => {
     render(<EmbedEmptyState onUpload={vi.fn()} onLinkExternal={vi.fn()} />)
 
@@ -67,5 +79,14 @@ describe('embed states', () => {
     render(<EmbedUnavailable reason="recursive" label="Note A" />)
 
     expect(screen.getByText(/recursive embed/i)).toBeInTheDocument()
+  })
+
+  it('offers request access for permission unavailable embeds', async () => {
+    render(<EmbedUnavailable reason="permission" label="Secret Note" />)
+
+    expect(screen.getByText('Secret Note')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Request Access' }))
+
+    expect(toastInfo).toHaveBeenCalledWith('coming soon')
   })
 })

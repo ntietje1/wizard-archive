@@ -19,6 +19,7 @@ const appState = vi.hoisted(() => ({
   createItem: vi.fn(),
   getDefaultName: vi.fn(),
   itemsMap: new Map(),
+  filteredItemsMap: new Map(),
   loggerError: vi.fn(),
   navigateToItem: vi.fn(),
   toastError: vi.fn(),
@@ -45,6 +46,12 @@ vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   useActiveSidebarItems: () => ({
     itemsMap: appState.itemsMap,
+  }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
+  useFilteredSidebarItems: () => ({
+    itemsMap: appState.filteredItemsMap,
   }),
 }))
 
@@ -130,6 +137,7 @@ describe('useCanvasContextMenuAppAdapters', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     appState.itemsMap = new Map()
+    appState.filteredItemsMap = new Map()
     appState.createItem.mockResolvedValue({ id: testId<'sidebarItems'>('created-item') })
     appState.getDefaultName.mockReturnValue('Untitled note')
     vi.stubGlobal('open', vi.fn())
@@ -201,13 +209,12 @@ describe('useCanvasContextMenuAppAdapters', () => {
   })
 
   it('opens embed targets through the sidebar navigation adapter', async () => {
-    appState.itemsMap.set(
-      testId<'sidebarItems'>('note-1'),
-      createMockSidebarItem({
-        _id: testId<'sidebarItems'>('note-1'),
-        slug: 'note-1' as AnySidebarItem['slug'],
-      }),
-    )
+    const item = createMockSidebarItem({
+      _id: testId<'sidebarItems'>('note-1'),
+      slug: 'note-1' as AnySidebarItem['slug'],
+    })
+    appState.itemsMap.set(testId<'sidebarItems'>('note-1'), item)
+    appState.filteredItemsMap.set(testId<'sidebarItems'>('note-1'), item)
     const { result } = renderHook(() => useCanvasContextMenuAppAdapters())
 
     const [contributor] =
@@ -240,6 +247,36 @@ describe('useCanvasContextMenuAppAdapters', () => {
     })
 
     expect(appState.navigateToItem).toHaveBeenCalledWith('note-1')
+  })
+
+  it('does not offer open actions for unreadable sidebar embed targets', () => {
+    appState.itemsMap.set(
+      testId<'sidebarItems'>('note-1'),
+      createMockSidebarItem({
+        _id: testId<'sidebarItems'>('note-1'),
+        slug: 'note-1' as AnySidebarItem['slug'],
+        myPermissionLevel: PERMISSION_LEVEL.NONE,
+      }),
+    )
+    const { result } = renderHook(() => useCanvasContextMenuAppAdapters())
+
+    const target = {
+      kind: 'embed-node' as const,
+      nodeId: 'embed-1',
+      nodeType: 'embed' as const,
+      target: { kind: 'sidebarItem' as const, sidebarItemId: testId<'sidebarItems'>('note-1') },
+    }
+    const [contributor] = result.current.getTargetContributors?.(target) ?? []
+    const items =
+      contributor?.getItems?.(
+        {
+          ...createMenuContext(),
+          target,
+        },
+        createMenuServices(),
+      ) ?? []
+
+    expect(items).toEqual([])
   })
 
   it('opens external embed targets in a new browser tab', async () => {

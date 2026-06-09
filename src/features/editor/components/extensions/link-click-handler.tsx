@@ -1,18 +1,22 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
-import { handleError } from '~/shared/utils/logger'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { getLinkAt } from '~/features/editor/utils/link-hit-testing'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { CREATE_PARENT_TARGET_KIND } from 'shared/sidebar-items/parent-target'
+import {
+  CREATE_PARENT_TARGET_KIND,
+  validateCreateItemLocally,
+} from 'shared/sidebar-items/parent-target'
 import type { CreateItemArgs } from '~/features/filesystem/useCreateFileSystemItem'
 import type { ValidationResult } from 'shared/sidebar-items/name'
+import { logger } from '~/shared/utils/logger'
+import { toast } from 'sonner'
 
 interface TooltipState {
   show: boolean
@@ -201,10 +205,19 @@ export function LinkClickHandler({
   const { campaign } = useCampaign()
   const campaignData = campaign.data
   const { editorMode } = useEditorMode()
-  const { createItem, validateCreateItem } = useCreateFileSystemItem()
-  const { itemsMap } = useActiveSidebarItems()
+  const { createItem } = useCreateFileSystemItem()
+  const { itemsMap, parentItemsMap } = useFilteredSidebarItems()
   const editorEl = useEditorDomElement(editor)
   const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
+  const validateVisibleCreateItem = useCallback(
+    (args: CreateItemArgs) =>
+      validateCreateItemLocally(
+        { name: args.name, parentTarget: args.parentTarget },
+        itemsMap,
+        parentItemsMap,
+      ),
+    [itemsMap, parentItemsMap],
+  )
 
   const [tooltip, setTooltip] = useReducer(
     (_state: TooltipState, next: TooltipState) => next,
@@ -229,7 +242,7 @@ export function LinkClickHandler({
         editorMode,
         campaignId: campaignData?._id,
         sourceParentId,
-        validateCreateItem,
+        validateCreateItem: validateVisibleCreateItem,
       })
       const nextTooltip = feedback ? getTooltipState(link, feedback.tooltipText) : null
       setTooltip(nextTooltip ?? HIDDEN_TOOLTIP)
@@ -310,7 +323,7 @@ export function LinkClickHandler({
         link,
         campaignId: campaignData?._id,
         sourceParentId,
-        validateCreateItem,
+        validateCreateItem: validateVisibleCreateItem,
       })
       if (!feedback || !isCtrlClick) {
         return
@@ -329,7 +342,8 @@ export function LinkClickHandler({
       try {
         await createItem(feedback.createArgs)
       } catch (error) {
-        handleError(error, 'Failed to create note')
+        toast.error('Could not create note. Please try again.')
+        logger.error(error)
       } finally {
         creatingLinks.delete(creationKey)
       }
@@ -340,7 +354,7 @@ export function LinkClickHandler({
   }, [
     campaignData?._id,
     createItem,
-    validateCreateItem,
+    validateVisibleCreateItem,
     editorEl,
     editorMode,
     navigate,

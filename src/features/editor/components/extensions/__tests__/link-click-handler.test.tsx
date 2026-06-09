@@ -16,10 +16,12 @@ const {
   handleErrorMock,
   loggerErrorMock,
   navigateMock,
+  toastErrorMock,
   useCampaignMock,
   useEditorDomElementMock,
   useEditorModeMock,
   activeSidebarItemsMock,
+  filteredSidebarItemsMock,
   openMock,
 } = vi.hoisted(() => ({
   createFolderMock: vi.fn(),
@@ -31,10 +33,12 @@ const {
   handleErrorMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   navigateMock: vi.fn(),
+  toastErrorMock: vi.fn(),
   useCampaignMock: vi.fn(),
   useEditorDomElementMock: vi.fn(),
   useEditorModeMock: vi.fn(),
   activeSidebarItemsMock: vi.fn(),
+  filteredSidebarItemsMock: vi.fn(),
   openMock: vi.fn(),
 }))
 
@@ -120,6 +124,12 @@ vi.mock('~/shared/utils/logger', () => ({
   },
 }))
 
+vi.mock('sonner', () => ({
+  toast: {
+    error: (...args: Array<unknown>) => toastErrorMock(...args),
+  },
+}))
+
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => useCampaignMock(),
 }))
@@ -134,6 +144,10 @@ vi.mock('~/features/editor/hooks/useEditorDomElement', () => ({
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   useActiveSidebarItems: () => activeSidebarItemsMock(),
+}))
+
+vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
+  useFilteredSidebarItems: () => filteredSidebarItemsMock(),
 }))
 
 vi.mock('~/features/filesystem/useCreateFileSystemItem', async () => {
@@ -223,7 +237,7 @@ describe('LinkClickHandler', () => {
     useEditorDomElementMock.mockReturnValue(editorEl)
     useCampaignMock.mockReturnValue({ campaign: { data: { _id: 'campaign-1' } } })
     useEditorModeMock.mockReturnValue({ editorMode: 'editor' })
-    activeSidebarItemsMock.mockReturnValue({
+    const defaultSidebarItems = {
       data: [
         { _id: 'folder-1', name: 'Lore', parentId: null, type: SIDEBAR_ITEM_TYPES.folders },
         {
@@ -266,7 +280,9 @@ describe('LinkClickHandler', () => {
         ],
         ['folder-2', []],
       ]),
-    })
+    }
+    activeSidebarItemsMock.mockReturnValue(defaultSidebarItems)
+    filteredSidebarItemsMock.mockReturnValue(defaultSidebarItems)
     createNoteMock.mockReset()
     createNoteMock.mockResolvedValue({ noteId: 'note-1', slug: 'new-note' })
     createFolderMock.mockReset()
@@ -281,6 +297,7 @@ describe('LinkClickHandler', () => {
     handleErrorMock.mockReset()
     loggerErrorMock.mockReset()
     navigateMock.mockReset()
+    toastErrorMock.mockReset()
     openMock.mockReset()
     vi.stubGlobal('open', openMock)
   })
@@ -507,7 +524,7 @@ describe('LinkClickHandler', () => {
     })
   })
 
-  it('routes create-note failures through handleError', async () => {
+  it('reports create-note failures without exposing backend details in the toast', async () => {
     const error = new Error('creation failed')
     createNoteMock.mockRejectedValue(error)
     getLinkAtMock.mockReturnValue(
@@ -524,8 +541,9 @@ describe('LinkClickHandler', () => {
     fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
 
     await waitFor(() => {
-      expect(handleErrorMock).toHaveBeenCalledWith(error, 'Failed to create note')
+      expect(toastErrorMock).toHaveBeenCalledWith('Could not create note. Please try again.')
     })
+    expect(loggerErrorMock).toHaveBeenCalledWith(error)
     expect(createNoteMock).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Ghost Note',
@@ -586,8 +604,9 @@ describe('LinkClickHandler', () => {
     fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
 
     await waitFor(() => {
-      expect(handleErrorMock).toHaveBeenCalledWith(error, 'Failed to create note')
+      expect(toastErrorMock).toHaveBeenCalledWith('Could not create note. Please try again.')
     })
+    expect(loggerErrorMock).toHaveBeenCalledWith(error)
     expect(createFolderMock).not.toHaveBeenCalled()
     expect(createNoteMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -602,7 +621,7 @@ describe('LinkClickHandler', () => {
   })
 
   it('creates relative ghost notes from the source note parent folder', async () => {
-    activeSidebarItemsMock.mockReturnValue({
+    const sidebarItems = {
       data: [
         { _id: 'folder-1', name: 'Lore', parentId: null, type: SIDEBAR_ITEM_TYPES.folders },
         {
@@ -643,7 +662,9 @@ describe('LinkClickHandler', () => {
         ],
       ]),
       parentItemsMap: new Map(),
-    })
+    }
+    activeSidebarItemsMock.mockReturnValue(sidebarItems)
+    filteredSidebarItemsMock.mockReturnValue(sidebarItems)
     getLinkAtMock.mockReturnValue(
       createLink({
         exists: false,
@@ -724,6 +745,56 @@ describe('LinkClickHandler', () => {
     await waitFor(() => {
       expect(createNoteMock).not.toHaveBeenCalled()
     })
+  })
+
+  it('does not reveal hidden sibling conflicts in ghost-link validation feedback', () => {
+    const visibleFolder = {
+      _id: 'folder-1',
+      name: 'Lore',
+      parentId: null,
+      type: SIDEBAR_ITEM_TYPES.folders,
+    }
+    const hiddenSibling = {
+      _id: 'note-hidden',
+      name: 'Hidden Note',
+      parentId: 'folder-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+    }
+    activeSidebarItemsMock.mockReturnValue({
+      data: [visibleFolder, hiddenSibling],
+      itemsMap: new Map<string, typeof visibleFolder | typeof hiddenSibling>([
+        ['folder-1', visibleFolder],
+        ['note-hidden', hiddenSibling],
+      ]),
+      parentItemsMap: new Map([
+        [null, [visibleFolder]],
+        ['folder-1', [hiddenSibling]],
+      ]),
+    })
+    filteredSidebarItemsMock.mockReturnValue({
+      data: [visibleFolder],
+      itemsMap: new Map([['folder-1', visibleFolder]]),
+      parentItemsMap: new Map([
+        [null, [visibleFolder]],
+        ['folder-1', []],
+      ]),
+    })
+    getLinkAtMock.mockReturnValue(
+      createLink({
+        exists: false,
+        type: 'wiki',
+        itemPath: ['Lore', 'Hidden Note'],
+        itemName: 'Hidden Note',
+      }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseMove(editorEl, { clientX: 10, clientY: 20 })
+    fireEvent.keyDown(document, { key: 'Control' })
+
+    expect(screen.getByText('Click to create note: "Hidden Note"')).toBeInTheDocument()
+    expect(screen.queryByText('An item with this name already exists here')).not.toBeInTheDocument()
   })
 
   it('does not show ghost-link validation feedback on ctrl hover in viewer mode', () => {

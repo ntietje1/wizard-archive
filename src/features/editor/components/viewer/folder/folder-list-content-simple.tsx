@@ -1,10 +1,10 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 
 export function FolderListContentSimple({ folderId }: { folderId: Id<'sidebarItems'> }) {
-  const { parentItemsMap } = useActiveSidebarItems()
+  const { parentItemsMap } = useFilteredSidebarItems()
   const children = parentItemsMap.get(folderId) ?? []
 
   if (children.length === 0) {

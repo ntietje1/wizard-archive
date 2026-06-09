@@ -81,7 +81,7 @@ export function EmbeddedNoteContent({
   return (
     <div
       className={cn(
-        'canvas-rich-text-editor h-full pt-2',
+        'canvas-rich-text-editor h-full',
         constrained && 'overflow-hidden',
         editable && 'nodrag nopan',
         isExclusivelySelected && 'nowheel',

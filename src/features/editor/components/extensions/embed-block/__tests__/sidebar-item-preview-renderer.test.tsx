@@ -30,7 +30,7 @@ vi.mock('~/features/previews/components/file-media-embed-content', () => ({
 }))
 
 describe('SidebarItemPreviewRenderer', () => {
-  it('routes note previews through the embedded note block preview renderer', () => {
+  it('routes note previews through the static embedded note block renderer', () => {
     const note = createNoteItem()
 
     render(<SidebarItemPreviewRenderer item={note} allowInnerScroll={false} />)

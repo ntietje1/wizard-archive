@@ -4,7 +4,7 @@ import { NOTE_EDITOR_DROP_TYPE, canDropFilesOnTarget } from '~/features/dnd/util
 import { registerSurfaceDropExecutor } from '~/features/dnd/utils/surface-drop-command'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { getMinDisambiguationPath } from 'shared/links/resolution'
 import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { registerExternalFileDropExecutor } from '~/features/dnd/utils/external-file-drop-command'
@@ -118,7 +118,7 @@ export function useNoteEditorDropTarget({
     canAcceptFiles: canDropFilesOnTarget(dropData),
   })
 
-  const { data: allItems, itemsMap } = useActiveSidebarItems()
+  const { data: allItems, itemsMap } = useFilteredSidebarItems()
   const allItemsRef = useRef(allItems)
   allItemsRef.current = allItems
   const itemsMapRef = useRef(itemsMap)

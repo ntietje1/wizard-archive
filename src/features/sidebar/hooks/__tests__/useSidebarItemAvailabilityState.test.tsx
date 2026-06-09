@@ -6,8 +6,15 @@ import { useSidebarItemAvailabilityState } from '../useSidebarItemAvailabilitySt
 import type { Id } from 'convex/_generated/dataModel'
 import type { NoteWithContent } from 'shared/notes/types'
 import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 
 const activeItemsState = vi.hoisted(() => ({
+  data: [] as Array<Record<string, unknown>>,
+  itemsMap: new Map<string, Record<string, unknown>>(),
+  status: 'success' as 'pending' | 'error' | 'success',
+}))
+const filteredItemsState = vi.hoisted(() => ({
   data: [] as Array<Record<string, unknown>>,
   itemsMap: new Map<string, Record<string, unknown>>(),
   status: 'success' as 'pending' | 'error' | 'success',
@@ -26,6 +33,10 @@ const campaignMembersState = vi.hoisted(() => ({
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   useActiveSidebarItems: () => activeItemsState,
+}))
+
+vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
+  useFilteredSidebarItems: () => filteredItemsState,
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -50,6 +61,9 @@ describe('useSidebarItemAvailabilityState', () => {
     activeItemsState.data = [metadata]
     activeItemsState.itemsMap = new Map([[metadata._id, metadata]])
     activeItemsState.status = 'success'
+    filteredItemsState.data = [metadata]
+    filteredItemsState.itemsMap = new Map([[metadata._id, metadata]])
+    filteredItemsState.status = 'success'
     campaignState.campaignId = testId<'campaigns'>('campaign-1')
     campaignState.isDm = true
     viewAsState.viewAsPlayer = null
@@ -115,6 +129,9 @@ describe('useSidebarItemAvailabilityState', () => {
   })
 
   it('returns item not_shared copy when metadata exists but content is not viewable', () => {
+    filteredItemsState.data = []
+    filteredItemsState.itemsMap = new Map()
+
     const { result } = renderHook(() =>
       useSidebarItemAvailabilityState({
         lookup: { kind: 'id', id: createItemId('note-1') },
@@ -130,6 +147,51 @@ describe('useSidebarItemAvailabilityState', () => {
       label: 'Secret Note',
       message: "This item isn't shared with you.",
     })
+  })
+
+  it('returns not_shared in DM view-as when the DM-readable item is hidden from the viewed player', () => {
+    viewAsState.viewAsPlayer = {
+      campaignId: testId<'campaigns'>('campaign-1'),
+      memberId: testId<'campaignMembers'>('player-1'),
+    }
+    campaignMembersState.data = [
+      {
+        _id: testId<'campaignMembers'>('player-1'),
+        campaignId: testId<'campaigns'>('campaign-1'),
+        role: CAMPAIGN_MEMBER_ROLE.Player,
+        status: CAMPAIGN_MEMBER_STATUS.Accepted,
+        userProfile: { name: 'Mina', username: 'mina' },
+      },
+    ]
+    const readableItem: NoteWithContent = {
+      ...createNote({
+        _id: createItemId('note-1'),
+        name: 'Secret Note',
+        allPermissionLevel: PERMISSION_LEVEL.NONE,
+        shares: [],
+      }),
+      ancestors: [],
+      content: [],
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    }
+
+    const { result } = renderHook(() =>
+      useSidebarItemAvailabilityState({
+        lookup: { kind: 'id', id: createItemId('note-1') },
+        readableItem,
+        canView: true,
+        subject: 'item',
+        fallbackLabel: 'Embedded item',
+      }),
+    )
+
+    expect(result.current).toMatchObject({
+      status: 'not_shared',
+      label: 'Secret Note',
+      message: "This item isn't shared with Mina.",
+    })
+    expect(result.current).not.toHaveProperty('item')
   })
 
   it('returns page not_shared copy for full editor view-as mode', () => {

@@ -43,6 +43,10 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   useActiveSidebarItems: () => activeSidebarItems,
 }))
 
+vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
+  useFilteredSidebarItems: () => activeSidebarItems,
+}))
+
 function createEditor() {
   const referenceBlock = { id: 'block-1' }
   const beforeBlock = { id: 'block-0' }

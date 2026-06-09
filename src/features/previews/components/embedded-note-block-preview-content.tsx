@@ -11,14 +11,13 @@ export function EmbeddedNoteBlockPreviewContent({
 }) {
   return (
     <div
-      className="canvas-rich-text-editor h-full pt-2"
+      className="canvas-rich-text-editor h-full"
       data-embedded-note-mode="readonly"
-      data-note-block-embed-preview="true"
       data-testid="embed-note-content-wrapper"
     >
       <ScrollArea
         className="h-full"
-        contentClassName="note-editor-scroll-content"
+        contentClassName="note-editor-scroll-content embedded-note-block-scroll-content"
         scrollOrientation={allowInnerScroll ? 'vertical' : 'none'}
         viewportStyle={!allowInnerScroll ? { overflowY: 'hidden' } : undefined}
       >
