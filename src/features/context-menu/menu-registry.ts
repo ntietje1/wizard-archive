@@ -50,7 +50,6 @@ import { useRightSidebarStateStore } from '~/features/editor/stores/right-sideba
 import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
-import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
 import { ViewAsPlayerRow } from '~/features/editor/components/view-as-player-row'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
@@ -529,10 +528,8 @@ export const editorContextMenuContributors = [
         icon: Share2,
         group: 'share',
         priority: 78,
-        submenuContent: (context) =>
-          createElement(SidebarItemsSharePanel, {
-            items: context.selectedItems ?? [],
-          }),
+        submenuContent: (context, services) =>
+          services.sidebarItemSharing.renderSidebarItemsSharePanel(context.selectedItems ?? []),
         applies: (context) =>
           p.isDm(context) &&
           p.isSidebarItem(context) &&

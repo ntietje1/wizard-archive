@@ -26,6 +26,7 @@ describe('editor context menu boundaries', () => {
     expect(liveModel).toContain('useSidebarWorkspaceSource')
     expect(liveModel).toContain('useCampaignActorPermissions')
     expect(liveModel).toContain('useBlocksShare')
+    expect(liveModel).toContain('~/features/sharing/components/sidebar-items-share-panel')
     expect(liveModel).toContain('dialogState')
     expect(liveActions).toContain('useSidebarWorkspaceSource')
     expect(liveActions).toContain('useFileSystem')
@@ -39,6 +40,8 @@ describe('editor context menu boundaries', () => {
     expect(menuRegistry).not.toContain('useFileSystem')
     expect(menuRegistry).not.toContain('useConvex')
     expect(menuRegistry).not.toContain('FileSystemValue')
+    expect(menuRegistry).not.toContain('~/features/sharing/components/sidebar-items-share-panel')
+    expect(menuRegistry).toContain('services.sidebarItemSharing.renderSidebarItemsSharePanel')
     expect(existsSync(join(repoRoot, 'src/features/context-menu/actions.tsx'))).toBe(false)
 
     for (const source of [liveAdapter, surface, menuRegistry]) {

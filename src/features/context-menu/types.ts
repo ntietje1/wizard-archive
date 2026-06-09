@@ -205,6 +205,10 @@ export interface ViewAsPlayerMenuService {
   setViewAsPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
 }
 
+interface SidebarItemSharingMenuService {
+  renderSidebarItemsSharePanel: (items: Array<AnySidebarItem>) => React.ReactNode
+}
+
 interface BlockShareMenuService {
   canOpen: (context: EditorMenuContext) => boolean
   canToggleAllPlayersPermission: (context: EditorMenuContext) => boolean
@@ -218,6 +222,7 @@ export interface EditorContextMenuServices {
   filesystem: ContextMenuFilesystemService
   editorMode: EditorModeMenuService
   viewAsPlayer: ViewAsPlayerMenuService
+  sidebarItemSharing: SidebarItemSharingMenuService
   blockShare: BlockShareMenuService
 }
 

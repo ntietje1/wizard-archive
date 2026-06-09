@@ -1,4 +1,4 @@
-import { use, useRef, useState } from 'react'
+import { createElement, use, useRef, useState } from 'react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { useLiveEditorContextMenuActions } from './use-live-editor-context-menu-actions'
 import { VIEW_CONTEXT } from '../constants'
@@ -27,6 +27,7 @@ import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMember
 import { getBlockShareTargetBlocks } from '~/features/editor/utils/block-share-targets'
 import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
 import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
+import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
 
 const FILESYSTEM_SELECTION_SURFACES = new Set<ViewContext>([
   VIEW_CONTEXT.SIDEBAR,
@@ -138,6 +139,10 @@ export function useLiveEditorContextMenuModel({
         viewAsPlayerId: editorMode.viewAsPlayerId,
         playerMembers,
         setViewAsPlayerId: editorMode.setViewAsPlayerId,
+      },
+      sidebarItemSharing: {
+        renderSidebarItemsSharePanel: (shareItems) =>
+          createElement(SidebarItemsSharePanel, { items: shareItems }),
       },
       blockShare: {
         canOpen: (context) =>

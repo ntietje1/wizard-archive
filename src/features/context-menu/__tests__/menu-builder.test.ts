@@ -6,6 +6,7 @@ import type {
   ContextMenuCommand,
   ContextMenuContributor,
   EditorContextMenuActionHandlers,
+  EditorContextMenuServices,
   EditorModeMenuService,
   ViewAsPlayerMenuService,
   MenuContext,
@@ -69,10 +70,12 @@ function createActions(): EditorContextMenuActionHandlers {
 function createServices({
   editorMode: editorModeOverrides,
   viewAsPlayer: viewAsPlayerOverrides,
+  sidebarItemSharing: sidebarItemSharingOverrides,
   blockShare: blockShareOverrides,
 }: {
   editorMode?: Partial<typeof baseEditorModeService>
   viewAsPlayer?: Partial<typeof baseViewAsPlayerService>
+  sidebarItemSharing?: Partial<typeof baseSidebarItemSharingService>
   blockShare?: Partial<typeof baseBlockShareService>
 } = {}) {
   return {
@@ -80,6 +83,10 @@ function createServices({
     filesystem: { canPasteIntoTarget: () => false },
     editorMode: { ...baseEditorModeService, ...editorModeOverrides },
     viewAsPlayer: { ...baseViewAsPlayerService, ...viewAsPlayerOverrides },
+    sidebarItemSharing: {
+      ...baseSidebarItemSharingService,
+      ...sidebarItemSharingOverrides,
+    },
     blockShare: { ...baseBlockShareService, ...blockShareOverrides },
   }
 }
@@ -100,6 +107,10 @@ const baseViewAsPlayerService: ViewAsPlayerMenuService = {
       userProfile: { name: 'Mina', username: 'mina', imageUrl: 'https://example.com/mina.png' },
     } as unknown as ViewAsPlayerMenuService['playerMembers'][number],
   ],
+}
+
+const baseSidebarItemSharingService: EditorContextMenuServices['sidebarItemSharing'] = {
+  renderSidebarItemsSharePanel: vi.fn(() => 'share-panel'),
 }
 
 interface TestBlockShareService {
@@ -316,9 +327,17 @@ describe('buildMenu', () => {
 
   it('renders share as submenu content instead of an action command', () => {
     const note = createNote()
+    const renderSidebarItemsSharePanel = vi.fn(() => 'share-panel')
+    const shareServices = createServices({
+      sidebarItemSharing: { renderSidebarItemsSharePanel },
+    })
     const menu = buildMenu({
-      context: sidebarCtx({ item: note }),
-      services,
+      context: sidebarCtx({
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: shareServices,
       contributors: editorContextMenuContributors,
       commands: editorContextMenuCommands,
       groupConfig,
@@ -326,7 +345,8 @@ describe('buildMenu', () => {
 
     const shareItem = menu.flatItems.find((i) => i.id === 'share-items')
     expect(shareItem?.commandId).toBeUndefined()
-    expect(shareItem?.submenuContent).toBeDefined()
+    expect(shareItem?.submenuContent).toBe('share-panel')
+    expect(renderSidebarItemsSharePanel).toHaveBeenCalledExactlyOnceWith([note])
   })
 
   it('multi-selection can pin multiple selected items to a map', () => {
