@@ -78,6 +78,12 @@ function createWorkspaceSource(): EditorWorkspaceSource {
       isCampaignLoaded: true,
       isDm: false,
     },
+    interactions: {
+      emptyWorkspaceDrop: {
+        status: 'disabled',
+        reason: 'unsupported',
+      },
+    },
     pendingItemName: '',
     setPendingItemName: vi.fn(),
     requestedSlug: null,

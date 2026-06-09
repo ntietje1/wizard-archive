@@ -3,6 +3,7 @@ import type { EditorMode } from 'shared/editor/types'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
+import type { ComponentType, ReactNode } from 'react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 
@@ -35,11 +36,35 @@ interface EditorCampaignSnapshot {
   isDm: boolean | undefined
 }
 
+export interface EditorEmptyWorkspaceDropZoneProps {
+  children: ReactNode
+  className?: string
+}
+
+type EditorEmptyWorkspaceDropCapability =
+  | {
+      status: 'disabled'
+      reason: 'unsupported' | 'read_only'
+    }
+  | {
+      status: 'enabled'
+      accepts: {
+        externalFiles: boolean
+        sidebarItems: boolean
+      }
+      DropZone: ComponentType<EditorEmptyWorkspaceDropZoneProps>
+    }
+
+interface EditorWorkspaceInteractions {
+  emptyWorkspaceDrop: EditorEmptyWorkspaceDropCapability
+}
+
 export interface EditorWorkspaceSource {
   currentItem: EditorCurrentItemSnapshot
   editorMode: EditorModeSnapshot
   filesystem: EditorFileSystemSnapshot
   campaign: EditorCampaignSnapshot
+  interactions: EditorWorkspaceInteractions
   pendingItemName: string
   setPendingItemName: (name: string) => void
   requestedSlug: SidebarItemSlug | null

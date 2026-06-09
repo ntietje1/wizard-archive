@@ -1,19 +1,15 @@
-import { Suspense, lazy, useRef } from 'react'
+import { Suspense, lazy } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
-import { EMPTY_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
-import { cn } from '~/features/shadcn/lib/utils'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
-import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { Button } from '~/features/shadcn/components/button'
-import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import type { EditorWorkspaceSource } from '../workspace/editor-workspace-source'
 import { RequestAccessButton } from '~/features/sidebar/components/request-access-button'
+
+const EMPTY_EDITOR_CONTENT_CLASS = 'flex-1 min-h-0 flex items-center justify-center'
 
 const SidebarItemEditor = lazy(() =>
   import('./viewer/sidebar-item-editor').then((m) => ({
@@ -60,7 +56,7 @@ export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
         />
       )
     }
-    return <EmptyEditorContent campaign={source.campaign} />
+    return <EmptyEditorContent source={source} />
   }
 
   if (!contentItem) {
@@ -74,42 +70,21 @@ export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
   )
 }
 
-function EmptyEditorContent({ campaign }: { campaign: EditorWorkspaceSource['campaign'] }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const dropData = { type: EMPTY_EDITOR_DROP_TYPE } as const
-
-  const { isDropTarget } = useDndDropTarget({
-    ref,
-    data: dropData,
-    highlightId: EMPTY_EDITOR_DROP_TYPE,
-  })
-
-  useExternalDropTarget({
-    ref,
-    data: dropData,
-    canAcceptFiles: true,
-  })
-
-  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
-  const fileDragHoveredTargetKey = useDndStore((s) => s.fileDragHoveredTargetKey)
-  const isFileDragTarget = isDraggingFiles && fileDragHoveredTargetKey === EMPTY_EDITOR_DROP_TYPE
-
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        'flex-1 min-h-0 flex items-center justify-center',
-        isDropTarget && !isFileDragTarget && dropTargetChromeClass('default'),
-        isFileDragTarget && dropTargetChromeClass('file'),
-      )}
-    >
-      {!campaign.isCampaignLoaded ? null : campaign.isDm ? (
-        <CreateNewDashboard parentId={null} />
-      ) : (
-        <p className="text-muted-foreground">Select an item from the sidebar to view it.</p>
-      )}
-    </div>
+function EmptyEditorContent({ source }: { source: EditorWorkspaceSource }) {
+  const { campaign } = source
+  const content = !campaign.isCampaignLoaded ? null : campaign.isDm ? (
+    <CreateNewDashboard parentId={null} />
+  ) : (
+    <p className="text-muted-foreground">Select an item from the sidebar to view it.</p>
   )
+
+  const emptyWorkspaceDrop = source.interactions.emptyWorkspaceDrop
+  if (emptyWorkspaceDrop.status === 'enabled') {
+    const DropZone = emptyWorkspaceDrop.DropZone
+    return <DropZone className={EMPTY_EDITOR_CONTENT_CLASS}>{content}</DropZone>
+  }
+
+  return <div className={EMPTY_EDITOR_CONTENT_CLASS}>{content}</div>
 }
 
 function UnavailableEditorContent({

@@ -11,6 +11,7 @@ import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { EditorWorkspaceSource } from './editor-workspace-source'
+import { LiveEmptyWorkspaceDropZone } from './live-empty-workspace-drop-zone'
 
 export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const currentItem = useCurrentItem()
@@ -58,6 +59,16 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     editorMode,
     filesystem,
     campaign,
+    interactions: {
+      emptyWorkspaceDrop: {
+        status: 'enabled',
+        accepts: {
+          externalFiles: true,
+          sidebarItems: true,
+        },
+        DropZone: LiveEmptyWorkspaceDropZone,
+      },
+    },
     pendingItemName,
     setPendingItemName,
     requestedSlug,
