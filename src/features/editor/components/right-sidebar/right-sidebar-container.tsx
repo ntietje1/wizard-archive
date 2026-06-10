@@ -6,8 +6,20 @@ import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { canShowRightSidebarContent } from './right-sidebar-model'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
-import type { EditorWorkspaceRightSidebarChrome } from '../../workspace/editor-workspace-chrome'
+import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
 import type { RightSidebarPanelServices } from './right-sidebar-panel-source'
+
+interface RightSidebarState {
+  activeContentId: RightSidebarContentId
+  close: () => void
+  isLoaded: boolean
+  open: (contentId: RightSidebarContentId) => void
+  setActiveContent: (contentId: RightSidebarContentId) => void
+  setSize: (size: number) => void
+  setVisible: (visible: boolean) => void
+  size: number
+  visible: boolean
+}
 
 export function RightSidebarContainer({
   item,
@@ -16,7 +28,7 @@ export function RightSidebarContainer({
 }: {
   item: AnySidebarItem | null
   panelServices: RightSidebarPanelServices
-  sidebar: EditorWorkspaceRightSidebarChrome
+  sidebar: RightSidebarState
 }) {
   if (!item) return null
 

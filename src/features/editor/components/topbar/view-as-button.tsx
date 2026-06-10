@@ -13,14 +13,14 @@ import {
 } from '~/features/shadcn/components/dropdown-menu'
 import { TooltipButton } from '~/shared/components/tooltip-button'
 import { ViewAsPlayerRow } from '../view-as-player-row'
-import type { EditorWorkspaceViewAsPlayerChrome } from '../../workspace/editor-workspace-chrome'
+import type { EditorWorkspaceViewAsPlayerCapability } from '../../workspace/editor-workspace-source'
 
 const label = 'View as player'
 
 export const ViewAsPlayerButton = ({
   viewAsPlayer,
 }: {
-  viewAsPlayer: EditorWorkspaceViewAsPlayerChrome
+  viewAsPlayer: EditorWorkspaceViewAsPlayerCapability
 }) => {
   const [isOpen, setIsOpen] = useState(false)
 

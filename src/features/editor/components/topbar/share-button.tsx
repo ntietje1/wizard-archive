@@ -3,9 +3,9 @@ import { ChevronDown, ChevronUp, Lock, Users } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
-import type { EditorWorkspaceShareChrome } from '../../workspace/editor-workspace-chrome'
+import type { EditorWorkspaceSharingState } from '../../workspace/editor-workspace-source'
 
-export function ShareButton({ share }: { share: EditorWorkspaceShareChrome }) {
+export function ShareButton({ share }: { share: EditorWorkspaceSharingState }) {
   const [open, setOpen] = useState(false)
 
   if (!share.visible) {

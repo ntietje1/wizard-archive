@@ -33,65 +33,58 @@ function createEmptyWorkspaceSource({
 }): EditorWorkspaceSource {
   const campaignId = 'campaign_1' as Id<'campaigns'>
   return {
-    currentItem: {
-      item: null,
-      contentItem: null,
-      editorSearch: {},
-      isLoading: false,
-      itemError: null,
-      hasRequestedItem: false,
+    content: {
+      currentItem: {
+        item: null,
+        contentItem: null,
+        editorSearch: {},
+        isLoading: false,
+        itemError: null,
+        hasRequestedItem: false,
+      },
+      requestedSlug: null,
+      canViewCurrentItem: false,
+      availabilityState: {
+        status: 'not_found',
+        label: 'Page',
+        message: 'Page not found.',
+      },
     },
-    editorMode: {
+    permissions: {
       editorMode: 'editor',
       canEdit: true,
       campaignActor: { kind: 'player', campaignId },
       viewAsPlayerId: undefined,
       setEditorMode: vi.fn(),
       setViewAsPlayerId: vi.fn(),
+      viewAsPlayer: {
+        isPending: false,
+        playerMembers: [],
+        selectedPlayerId: undefined,
+        setSelectedPlayerId: vi.fn(),
+        visible: false,
+      },
     },
-    filesystem: {
+    index: {
       activeItemsById: new Map(),
       trashItems: [],
     },
-    campaign: {
+    workspace: {
       campaignId,
       isCampaignLoaded: true,
       isDm: false,
     },
-    chrome: {
-      rightSidebar: {
-        visible: false,
-        activeContentId: 'history',
-        size: 300,
-        isLoaded: true,
-        setSize: vi.fn(),
-        setVisible: vi.fn(),
-        setActiveContent: vi.fn(),
-        open: vi.fn(),
-        close: vi.fn(),
-        toggle: vi.fn(),
+    items: {
+      itemActions: {
+        enabled: false,
+        item: null,
       },
-      topbar: {
-        contextMenu: {
-          enabled: false,
-          item: null,
-        },
-        history: {
-          toggle: vi.fn(),
-        },
-        share: {
-          visible: false,
-        },
-        viewAsPlayer: {
-          isPending: false,
-          playerMembers: [],
-          selectedPlayerId: undefined,
-          setSelectedPlayerId: vi.fn(),
-          visible: false,
-        },
+      createItem: vi.fn(() => null),
+      createMissingRequestedNote: vi.fn(),
+      creationDraft: {
+        pendingName: '',
+        setPendingName: vi.fn(),
       },
-    },
-    interactions: {
       emptyWorkspaceDrop:
         dropStatus === 'enabled'
           ? {
@@ -110,15 +103,30 @@ function createEmptyWorkspaceSource({
               status: 'disabled',
               reason: 'unsupported',
             },
+      renameItem: vi.fn(),
+      isCreatingMissingRequestedNote: false,
+      validateItemName: vi.fn(() => ({ valid: true as const })),
     },
-    historyPreview: {
-      previewingEntryId: null,
-      clearItemSession: vi.fn(),
-      PreviewComponent: () => null,
-      RollbackDialogComponent: () => null,
+    navigation: {
+      openItem: vi.fn(),
+      openItemBySlug: vi.fn(),
+      getItemLinkProps: vi.fn(() => null),
     },
-    viewers: {
-      file: {
+    history: {
+      preview: {
+        previewingEntryId: null,
+        clearItemSession: vi.fn(),
+        PreviewComponent: () => null,
+      },
+      rollback: {
+        DialogComponent: () => null,
+      },
+    },
+    sharing: {
+      visible: false,
+    },
+    files: {
+      viewer: {
         resolveFile: (file) => ({
           allowObjectUrl: false,
           contentType: file.contentType,
@@ -129,22 +137,5 @@ function createEmptyWorkspaceSource({
         getEmptyFileUpload: () => null,
       },
     },
-    commands: {
-      renameItem: vi.fn(),
-      openItem: vi.fn(),
-      getItemLinkProps: vi.fn(() => null),
-      validateItemName: vi.fn(() => ({ valid: true as const })),
-    },
-    pendingItemName: '',
-    setPendingItemName: vi.fn(),
-    requestedSlug: null,
-    canViewCurrentItem: false,
-    availabilityState: {
-      status: 'not_found',
-      label: 'Page',
-      message: 'Page not found.',
-    },
-    createMissingRequestedNote: vi.fn(),
-    isCreatingMissingRequestedNote: false,
   }
 }

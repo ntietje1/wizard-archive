@@ -1,14 +1,13 @@
 import { Suspense, lazy } from 'react'
-import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
-import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
 import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import type { EditorWorkspaceSource } from '../workspace/editor-workspace-source'
+import { EditorWorkspaceSourceProvider } from '../workspace/editor-workspace-source-context'
 import { RequestAccessButton } from '~/features/sidebar/components/request-access-button'
 
 const EMPTY_EDITOR_CONTENT_CLASS = 'flex-1 min-h-0 flex items-center justify-center'
@@ -28,15 +27,17 @@ function EditorLoading() {
 }
 
 export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
-  const { item, contentItem, editorSearch, isLoading, hasRequestedItem } = source.currentItem
-  const { campaignActor } = source.editorMode
+  return (
+    <EditorWorkspaceSourceProvider value={source}>
+      <EditorContentBody source={source} />
+    </EditorWorkspaceSourceProvider>
+  )
+}
 
-  const canView =
-    !!item &&
-    effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, {
-      actor: campaignActor,
-      allItemsMap: source.filesystem.activeItemsById,
-    })
+function EditorContentBody({ source }: { source: EditorWorkspaceSource }) {
+  const { item, contentItem, editorSearch, isLoading, hasRequestedItem } =
+    source.content.currentItem
+  const canView = source.content.canViewCurrentItem
 
   if (isLoading) {
     return <EditorLoading />
@@ -51,10 +52,10 @@ export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
     if (hasRequestedItem) {
       return (
         <UnavailableEditorContent
-          state={source.availabilityState}
-          requestedSlug={source.requestedSlug}
-          isCreatingMissingItem={source.isCreatingMissingRequestedNote}
-          onCreateMissingItem={source.createMissingRequestedNote}
+          state={source.content.availabilityState}
+          requestedSlug={source.content.requestedSlug}
+          isCreatingMissingItem={source.items.isCreatingMissingRequestedNote}
+          onCreateMissingItem={source.items.createMissingRequestedNote}
         />
       )
     }
@@ -67,24 +68,20 @@ export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
 
   return (
     <Suspense fallback={<EditorLoading />}>
-      <SidebarItemEditor
-        item={contentItem}
-        historyPreview={source.historyPreview}
-        viewers={source.viewers}
-      />
+      <SidebarItemEditor item={contentItem} history={source.history} files={source.files} />
     </Suspense>
   )
 }
 
 function EmptyEditorContent({ source }: { source: EditorWorkspaceSource }) {
-  const { campaign } = source
-  const content = !campaign.isCampaignLoaded ? null : campaign.isDm ? (
+  const { workspace } = source
+  const content = !workspace.isCampaignLoaded ? null : workspace.isDm ? (
     <CreateNewDashboard parentId={null} />
   ) : (
     <p className="text-muted-foreground">Select an item from the sidebar to view it.</p>
   )
 
-  const emptyWorkspaceDrop = source.interactions.emptyWorkspaceDrop
+  const emptyWorkspaceDrop = source.items.emptyWorkspaceDrop
   if (emptyWorkspaceDrop.status === 'enabled') {
     const { target } = emptyWorkspaceDrop
     return (

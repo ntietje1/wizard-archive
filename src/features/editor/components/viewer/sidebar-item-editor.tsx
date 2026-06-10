@@ -8,13 +8,13 @@ import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-w
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 
 type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent> & {
-  historyPreview: EditorWorkspaceSource['historyPreview']
-  viewers: EditorWorkspaceSource['viewers']
+  files: EditorWorkspaceSource['files']
+  history: EditorWorkspaceSource['history']
 }
 
-export function SidebarItemEditor({ historyPreview, item, viewers }: SidebarItemEditorProps) {
-  const { clearItemSession, PreviewComponent, previewingEntryId, RollbackDialogComponent } =
-    historyPreview
+export function SidebarItemEditor({ files, history, item }: SidebarItemEditorProps) {
+  const { clearItemSession, PreviewComponent, previewingEntryId } = history.preview
+  const { DialogComponent: RollbackDialogComponent } = history.rollback
 
   useEffect(() => {
     return () => clearItemSession(item._id)
@@ -34,7 +34,7 @@ export function SidebarItemEditor({ historyPreview, item, viewers }: SidebarItem
   return (
     <>
       <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
-        <FileViewerSourceProvider value={viewers.file}>
+        <FileViewerSourceProvider value={files.viewer}>
           <SidebarItemViewer item={item} />
         </FileViewerSourceProvider>
       </ErrorBoundary>

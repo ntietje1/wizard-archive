@@ -9,10 +9,6 @@ import type { Id } from 'convex/_generated/dataModel'
 const liveSourceState = vi.hoisted(() => ({
   contentItem: null as AnySidebarItemWithContent | null,
   item: null as AnySidebarItemWithContent | null,
-  rightSidebar: {
-    close: vi.fn(),
-    toggle: vi.fn(),
-  },
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -89,21 +85,6 @@ vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
   ) => selector({ pendingItemName: '', setPendingItemName: vi.fn() }),
 }))
 
-vi.mock('~/features/editor/hooks/useRightSidebar', () => ({
-  useRightSidebar: () => ({
-    activeContentId: 'history',
-    close: liveSourceState.rightSidebar.close,
-    isLoaded: true,
-    open: vi.fn(),
-    setActiveContent: vi.fn(),
-    setSize: vi.fn(),
-    setVisible: vi.fn(),
-    size: 320,
-    toggle: liveSourceState.rightSidebar.toggle,
-    visible: false,
-  }),
-}))
-
 vi.mock('~/features/sharing/hooks/useSidebarItemsShare', () => ({
   useSidebarItemsShare: () => ({
     isPending: false,
@@ -152,8 +133,6 @@ describe('useLiveEditorWorkspaceSource', () => {
   beforeEach(() => {
     liveSourceState.contentItem = createContentNote('note-1')
     liveSourceState.item = liveSourceState.contentItem
-    liveSourceState.rightSidebar.close.mockReset()
-    liveSourceState.rightSidebar.toggle.mockReset()
     useHistoryPreviewStore.setState({ preview: null, rollback: null })
   })
 
@@ -163,7 +142,7 @@ describe('useLiveEditorWorkspaceSource', () => {
 
     const { result } = renderHook(() => useLiveEditorWorkspaceSource())
 
-    expect(result.current.historyPreview.previewingEntryId).toBe(entryId)
+    expect(result.current.history.preview.previewingEntryId).toBe(entryId)
   })
 
   it('does not expose a history preview entry for a different item', () => {
@@ -173,7 +152,7 @@ describe('useLiveEditorWorkspaceSource', () => {
 
     const { result } = renderHook(() => useLiveEditorWorkspaceSource())
 
-    expect(result.current.historyPreview.previewingEntryId).toBeNull()
+    expect(result.current.history.preview.previewingEntryId).toBeNull()
   })
 
   it('keys history preview to the rendered content item when sidebar metadata is optimistic', () => {
@@ -183,7 +162,7 @@ describe('useLiveEditorWorkspaceSource', () => {
 
     const { result } = renderHook(() => useLiveEditorWorkspaceSource())
 
-    expect(result.current.historyPreview.previewingEntryId).toBe(entryId)
+    expect(result.current.history.preview.previewingEntryId).toBe(entryId)
   })
 })
 

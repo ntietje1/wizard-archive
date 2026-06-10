@@ -36,7 +36,9 @@ describe('FileTopbar', () => {
       updatedTime: Date.now(),
     })
 
-    render(<FileTopbar source={createWorkspaceSource()} />)
+    render(
+      <FileTopbar onToggleHistory={rightSidebarState.toggle} source={createWorkspaceSource()} />,
+    )
 
     fireEvent.click(screen.getByRole('button', { name: /toggle history panel/i }))
 
@@ -49,78 +51,86 @@ function createWorkspaceSource(): EditorWorkspaceSource {
   const contentItem = item as AnySidebarItemWithContent | null
   const campaignId = 'campaign_1' as Id<'campaigns'>
   return {
-    currentItem: {
-      item,
-      contentItem,
-      editorSearch: {},
-      isLoading: false,
-      itemError: null,
-      hasRequestedItem: true,
+    content: {
+      currentItem: {
+        item,
+        contentItem,
+        editorSearch: {},
+        isLoading: false,
+        itemError: null,
+        hasRequestedItem: true,
+      },
+      requestedSlug: null,
+      canViewCurrentItem: true,
+      availabilityState: {
+        status: 'available',
+        label: item?.name ?? 'Page',
+        item: contentItem!,
+      },
     },
-    editorMode: {
+    permissions: {
       editorMode: 'editor',
       canEdit: true,
       campaignActor: { kind: 'player', campaignId },
       viewAsPlayerId: undefined,
       setEditorMode: vi.fn(),
       setViewAsPlayerId: vi.fn(),
+      viewAsPlayer: {
+        isPending: false,
+        playerMembers: [],
+        selectedPlayerId: undefined,
+        setSelectedPlayerId: vi.fn(),
+        visible: false,
+      },
     },
-    filesystem: {
+    index: {
       activeItemsById: new Map(item ? [[item._id, item]] : []),
       trashItems: [],
     },
-    campaign: {
+    workspace: {
       campaignId,
       isCampaignLoaded: true,
       isDm: false,
     },
-    chrome: {
-      rightSidebar: {
-        visible: false,
-        activeContentId: 'history',
-        size: 300,
-        isLoaded: true,
-        setSize: vi.fn(),
-        setVisible: vi.fn(),
-        setActiveContent: vi.fn(),
-        open: vi.fn(),
-        close: vi.fn(),
-        toggle: rightSidebarState.toggle,
+    items: {
+      itemActions: {
+        enabled: false,
+        item,
       },
-      topbar: {
-        contextMenu: {
-          enabled: false,
-          item,
-        },
-        history: {
-          toggle: rightSidebarState.toggle,
-        },
-        share: {
-          visible: false,
-        },
-        viewAsPlayer: {
-          isPending: false,
-          playerMembers: [],
-          selectedPlayerId: undefined,
-          setSelectedPlayerId: vi.fn(),
-          visible: false,
-        },
+      createItem: vi.fn(() => null),
+      createMissingRequestedNote: vi.fn(),
+      creationDraft: {
+        pendingName: '',
+        setPendingName: vi.fn(),
       },
-    },
-    interactions: {
       emptyWorkspaceDrop: {
         status: 'disabled',
         reason: 'unsupported',
       },
+      renameItem: vi.fn(),
+      isCreatingMissingRequestedNote: false,
+      validateItemName: vi.fn(() => ({ valid: true as const })),
     },
-    historyPreview: {
-      previewingEntryId: null,
-      clearItemSession: vi.fn(),
-      PreviewComponent: () => null,
-      RollbackDialogComponent: () => null,
+    navigation: {
+      openItem: vi.fn(),
+      openItemBySlug: vi.fn(),
+      getItemLinkProps: vi.fn(() => null),
     },
-    viewers: {
-      file: {
+    history: {
+      preview: {
+        previewingEntryId: null,
+        clearItemSession: vi.fn(),
+        PreviewComponent: () => null,
+      },
+      rollback: {
+        DialogComponent: () => null,
+      },
+    },
+    sharing: {
+      visible: false,
+    },
+    files: {
+      viewer: {
         resolveFile: (file) => ({
           allowObjectUrl: false,
           contentType: file.contentType,
@@ -131,22 +141,5 @@ function createWorkspaceSource(): EditorWorkspaceSource {
         getEmptyFileUpload: () => null,
       },
     },
-    commands: {
-      renameItem: vi.fn(),
-      openItem: vi.fn(),
-      getItemLinkProps: vi.fn(() => null),
-      validateItemName: vi.fn(() => ({ valid: true as const })),
-    },
-    pendingItemName: '',
-    setPendingItemName: vi.fn(),
-    requestedSlug: null,
-    canViewCurrentItem: true,
-    availabilityState: {
-      status: 'available',
-      label: item?.name ?? 'Page',
-      item: contentItem!,
-    },
-    createMissingRequestedNote: vi.fn(),
-    isCreatingMissingRequestedNote: false,
   }
 }

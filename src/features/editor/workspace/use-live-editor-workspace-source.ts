@@ -1,4 +1,4 @@
-import { useEffect, useRef, useTransition } from 'react'
+import { useTransition } from 'react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
@@ -13,9 +13,7 @@ import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadM
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
-import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { buildEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
@@ -24,8 +22,7 @@ import { LiveHistoryPreviewViewer } from '~/features/editor/components/viewer/li
 import { LiveRollbackConfirmDialog } from '~/features/editor/components/viewer/live-rollback-confirm-dialog'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import { useLiveFileViewerSource } from '~/features/editor/components/viewer/file/live-file-viewer-source'
-import type { EditorWorkspaceShareChrome } from './editor-workspace-chrome'
-import type { EditorWorkspaceSource } from './editor-workspace-source'
+import type { EditorWorkspaceSharingState, EditorWorkspaceSource } from './editor-workspace-source'
 import { useLiveEmptyWorkspaceDropCapability } from './use-live-empty-workspace-drop'
 
 export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
@@ -44,7 +41,6 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     commands: { createSidebarItem },
   } = useSidebarWorkspaceSource()
   const [isCreatingMissingRequestedNote, startCreateTransition] = useTransition()
-  const rightSidebar = useRightSidebar(currentItem.item?.type)
   const emptyWorkspaceDrop = useLiveEmptyWorkspaceDropCapability()
   const fileViewerSource = useLiveFileViewerSource(currentItem.contentItem)
   const shareItems = currentItem.item ? [currentItem.item] : []
@@ -57,7 +53,7 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const clearItemPreviewSession = useHistoryPreviewStore((s) => s.clearItemSession)
   const playerMembers =
     campaignMembers.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
-  const share: EditorWorkspaceShareChrome = campaign.isDm
+  const sharing: EditorWorkspaceSharingState = campaign.isDm
     ? {
         disabled:
           currentItem.isLoading ||
@@ -75,15 +71,6 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     : {
         visible: false,
       }
-  const currentItemId = currentItem.item?._id
-  const prevItemIdRef = useRef(currentItemId)
-  useEffect(() => {
-    if (prevItemIdRef.current === currentItemId) return
-
-    prevItemIdRef.current = currentItemId
-    rightSidebar.close()
-  }, [rightSidebar, currentItemId])
-
   const requestedSlug = getSlug(currentItem.editorSearch)
   const canViewCurrentItem =
     !!currentItem.item &&
@@ -114,64 +101,75 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   }
 
   return {
-    currentItem,
-    editorMode,
-    filesystem,
-    campaign,
-    chrome: {
-      rightSidebar,
-      topbar: {
-        contextMenu: {
-          enabled: true,
-          item: currentItem.item,
-        },
-        history: {
-          toggle: () => rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history),
-        },
-        share,
-        viewAsPlayer: {
-          isPending: campaignMembers.isPending,
-          playerMembers,
-          selectedPlayerId: editorMode.viewAsPlayerId,
-          setSelectedPlayerId: editorMode.setViewAsPlayerId,
-          visible: Boolean(campaign.isDm),
-        },
+    content: {
+      currentItem,
+      requestedSlug,
+      canViewCurrentItem,
+      availabilityState,
+    },
+    permissions: {
+      ...editorMode,
+      viewAsPlayer: {
+        isPending: campaignMembers.isPending,
+        playerMembers,
+        selectedPlayerId: editorMode.viewAsPlayerId,
+        setSelectedPlayerId: editorMode.setViewAsPlayerId,
+        visible: Boolean(campaign.isDm),
       },
     },
-    interactions: {
+    index: filesystem,
+    workspace: {
+      campaignId: campaign.campaignId,
+      isCampaignLoaded: campaign.isCampaignLoaded,
+      isDm: campaign.isDm,
+    },
+    items: {
+      itemActions: {
+        enabled: true,
+        item: currentItem.item,
+      },
+      createItem: createSidebarItem,
+      createMissingRequestedNote,
+      creationDraft: {
+        pendingName: pendingItemName,
+        setPendingName: setPendingItemName,
+      },
       emptyWorkspaceDrop,
-    },
-    historyPreview: {
-      previewingEntryId,
-      clearItemSession: clearItemPreviewSession,
-      PreviewComponent: LiveHistoryPreviewViewer,
-      RollbackDialogComponent: LiveRollbackConfirmDialog,
-    },
-    viewers: {
-      file: fileViewerSource,
-    },
-    commands: {
+      isCreatingMissingRequestedNote,
       renameItem: async (item, name) => {
         await editItem({ item, name })
       },
+      validateItemName: sidebarValidation.validateName,
+    },
+    navigation: {
       openItem: (item) => {
         setLastSelectedItem(item.slug)
         return navigateToItem(item.slug)
+      },
+      openItemBySlug: (slug, replace) => {
+        setLastSelectedItem(slug)
+        return navigateToItem(slug, replace)
       },
       getItemLinkProps: (item) =>
         buildEditorLinkProps(item, {
           dmUsername: campaign.dmUsername,
           campaignSlug: campaign.campaignSlug,
         }),
-      validateItemName: sidebarValidation.validateName,
     },
-    pendingItemName,
-    setPendingItemName,
-    requestedSlug,
-    canViewCurrentItem,
-    availabilityState,
-    createMissingRequestedNote,
-    isCreatingMissingRequestedNote,
+    history: {
+      preview: {
+        previewingEntryId,
+        clearItemSession: clearItemPreviewSession,
+        PreviewComponent: LiveHistoryPreviewViewer,
+      },
+      rollback: {
+        DialogComponent: LiveRollbackConfirmDialog,
+      },
+    },
+    sharing,
+    files: {
+      viewer: fileViewerSource,
+    },
   }
 }
 

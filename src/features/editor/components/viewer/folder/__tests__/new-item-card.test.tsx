@@ -5,19 +5,19 @@ import { SIDEBAR_ITEM_CREATION_COMMAND_BY_ID } from '~/features/sidebar/sidebar-
 import { NewItemCard } from '../new-item-card'
 import type { Id } from 'convex/_generated/dataModel'
 
-const createSidebarItemMock = vi.hoisted(() => vi.fn())
+const createItemMock = vi.hoisted(() => vi.fn())
 
-vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', () => ({
-  useSidebarWorkspaceSource: () => ({
-    commands: {
-      createSidebarItem: createSidebarItemMock,
+vi.mock('~/features/editor/workspace/editor-workspace-source-context', () => ({
+  useEditorWorkspaceSource: () => ({
+    items: {
+      createItem: createItemMock,
     },
   }),
 }))
 
 describe('NewItemCard', () => {
   beforeEach(() => {
-    createSidebarItemMock.mockReset()
+    createItemMock.mockReset()
   })
 
   it('names the create trigger as a menu button', () => {
@@ -43,14 +43,14 @@ describe('NewItemCard', () => {
 
   it('creates a canvas in the current folder', async () => {
     const user = userEvent.setup()
-    createSidebarItemMock.mockResolvedValue({ id: 'canvas_1', slug: 'canvas-1' })
+    createItemMock.mockResolvedValue({ id: 'canvas_1', slug: 'canvas-1' })
     render(<NewItemCard parentId={'folder_1' as Id<'sidebarItems'>} />)
 
     await user.click(screen.getByRole('button', { name: 'Create item in this folder' }))
     await user.click(await screen.findByText('New Canvas'))
 
     await waitFor(() =>
-      expect(createSidebarItemMock).toHaveBeenCalledWith({
+      expect(createItemMock).toHaveBeenCalledWith({
         type: SIDEBAR_ITEM_CREATION_COMMAND_BY_ID['create.canvas'].type,
         parentId: 'folder_1',
       }),

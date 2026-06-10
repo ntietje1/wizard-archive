@@ -5,19 +5,19 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import type { EditorWorkspaceContextMenuChrome } from '../../workspace/editor-workspace-chrome'
+import type { EditorWorkspaceItemActionsCapability } from '../../workspace/editor-workspace-source'
 
 export function ContextMenuButton({
-  contextMenu,
+  itemActions,
   isTrashView,
 }: {
-  contextMenu: EditorWorkspaceContextMenuChrome
+  itemActions: EditorWorkspaceItemActionsCapability
   isTrashView?: boolean
 }) {
   const topbarContextMenuRef = useRef<ContextMenuHostRef>(null)
 
-  const item = contextMenu.item
-  const hasMenu = contextMenu.enabled && (!!item || isTrashView)
+  const item = itemActions.item
+  const hasMenu = itemActions.enabled && (!!item || isTrashView)
 
   const baseButton = (
     <EmptyContextMenu>

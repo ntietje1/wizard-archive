@@ -6,7 +6,7 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/t
 import { assertUsername } from 'shared/users/validation'
 import { testId } from '~/test/helpers/test-id'
 import { ViewAsPlayerButton } from '../view-as-button'
-import type { EditorWorkspaceViewAsPlayerChrome } from '../../../workspace/editor-workspace-chrome'
+import type { EditorWorkspaceViewAsPlayerCapability } from '../../../workspace/editor-workspace-source'
 
 const editorModeState = vi.hoisted(() => ({
   viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined,
@@ -21,7 +21,7 @@ describe('ViewAsPlayerButton', () => {
 
   it('opens the player menu when view-as mode is inactive', async () => {
     const user = userEvent.setup()
-    render(<ViewAsPlayerButton viewAsPlayer={createViewAsPlayerChrome()} />)
+    render(<ViewAsPlayerButton viewAsPlayer={createViewAsPlayerCapability()} />)
 
     await user.click(screen.getByRole('button', { name: 'View as player' }))
 
@@ -33,7 +33,7 @@ describe('ViewAsPlayerButton', () => {
   it('clears view-as mode without opening the player menu when active', async () => {
     const user = userEvent.setup()
     editorModeState.viewAsPlayerId = testId<'campaignMembers'>('player-1')
-    render(<ViewAsPlayerButton viewAsPlayer={createViewAsPlayerChrome()} />)
+    render(<ViewAsPlayerButton viewAsPlayer={createViewAsPlayerCapability()} />)
 
     await user.click(screen.getByRole('button', { name: 'View as player' }))
 
@@ -44,7 +44,7 @@ describe('ViewAsPlayerButton', () => {
   })
 })
 
-function createViewAsPlayerChrome(): EditorWorkspaceViewAsPlayerChrome {
+function createViewAsPlayerCapability(): EditorWorkspaceViewAsPlayerCapability {
   return {
     visible: true,
     isPending: false,

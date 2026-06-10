@@ -49,6 +49,8 @@ const itemIcons = {
   file: FolderOpen,
 } satisfies Record<DemoWorkspaceItemType, typeof FileText>
 
+const noop = () => {}
+
 export function DemoWorkspace() {
   const [workspace, dispatch] = useReducer(demoWorkspaceReducer, INITIAL_DEMO_WORKSPACE)
   const fileViewerSource = useLocalDemoFileViewerSource(workspace)
@@ -73,7 +75,9 @@ export function DemoWorkspace() {
           />
         }
       >
-        <EditorWorkspaceSurface topbar={<FileTopbar source={workspaceSource} />}>
+        <EditorWorkspaceSurface
+          topbar={<FileTopbar onToggleHistory={noop} source={workspaceSource} />}
+        >
           <DemoWorkspaceSurfaces
             workspace={workspace}
             selectedItem={selectedItem}

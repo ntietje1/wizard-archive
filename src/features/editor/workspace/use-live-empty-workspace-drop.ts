@@ -4,7 +4,7 @@ import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import type { EditorWorkspaceSource } from './editor-workspace-source'
 
-export function useLiveEmptyWorkspaceDropCapability(): EditorWorkspaceSource['interactions']['emptyWorkspaceDrop'] {
+export function useLiveEmptyWorkspaceDropCapability(): EditorWorkspaceSource['items']['emptyWorkspaceDrop'] {
   const ref = useRef<HTMLDivElement>(null)
   const dropData = { type: EMPTY_EDITOR_DROP_TYPE } as const
 

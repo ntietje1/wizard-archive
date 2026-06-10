@@ -86,21 +86,23 @@ type FileTopbarTitleState =
       kind: 'pending'
       item: AnySidebarItem
       ancestors: Array<AnySidebarItem>
-      commands: EditorWorkspaceSource['commands']
+      items: EditorWorkspaceSource['items']
+      navigation: EditorWorkspaceSource['navigation']
     }
   | {
       kind: 'item'
       item: AnySidebarItemWithContent
       canRename: boolean
       isNotShared: boolean
-      commands: EditorWorkspaceSource['commands']
+      items: EditorWorkspaceSource['items']
+      navigation: EditorWorkspaceSource['navigation']
     }
   | {
       kind: 'empty'
       campaignId: Id<'campaigns'> | null | undefined
       pendingItemName: string
       setPendingItemName: (name: string) => void
-      commands: EditorWorkspaceSource['commands']
+      items: EditorWorkspaceSource['items']
     }
   | { kind: 'none' }
 
@@ -116,8 +118,8 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           item={title.item}
           ancestors={title.ancestors}
           canRename={false}
-          onOpenAncestor={title.commands.openItem}
-          getAncestorLinkProps={title.commands.getItemLinkProps}
+          onOpenAncestor={title.navigation.openItem}
+          getAncestorLinkProps={title.navigation.getItemLinkProps}
         />
       )}
       {title.kind === 'item' && (
@@ -126,10 +128,10 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           item={title.item}
           canRename={title.canRename && !title.isNotShared}
           showNotSharedTooltip={title.isNotShared}
-          onRename={title.commands.renameItem}
-          onOpenAncestor={title.commands.openItem}
-          getAncestorLinkProps={title.commands.getItemLinkProps}
-          validateName={title.commands.validateItemName}
+          onRename={title.items.renameItem}
+          onOpenAncestor={title.navigation.openItem}
+          getAncestorLinkProps={title.navigation.getItemLinkProps}
+          validateName={title.items.validateItemName}
         />
       )}
       {title.kind === 'empty' && (
@@ -137,25 +139,31 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           campaignId={title.campaignId}
           pendingItemName={title.pendingItemName}
           setPendingItemName={title.setPendingItemName}
-          validateName={title.commands.validateItemName}
+          validateName={title.items.validateItemName}
         />
       )}
     </div>
   )
 }
 
-export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
-  const { canEdit, campaignActor, viewAsPlayerId } = source.editorMode
-  const { item, editorSearch, isLoading, hasRequestedItem } = source.currentItem
-  const filesystem = source.filesystem
-  const permOpts = { actor: campaignActor, allItemsMap: filesystem.activeItemsById }
+export function FileTopbar({
+  onToggleHistory,
+  source,
+}: {
+  onToggleHistory: () => void
+  source: EditorWorkspaceSource
+}) {
+  const { canEdit, campaignActor, viewAsPlayerId } = source.permissions
+  const { item, editorSearch, isLoading, hasRequestedItem } = source.content.currentItem
+  const index = source.index
+  const permOpts = { actor: campaignActor, allItemsMap: index.activeItemsById }
 
   const isTrashView = editorSearch.trash === true && !item
   const isPendingItem = isOptimisticSidebarItem(item)
   const loadedItem: AnySidebarItemWithContent | null =
     item && !isPendingItem ? (item as AnySidebarItemWithContent) : null
 
-  const rootTrashedItems = filesystem.trashItems.filter((candidate) => !candidate.parentId)
+  const rootTrashedItems = index.trashItems.filter((candidate) => !candidate.parentId)
 
   const canRename =
     !!item &&
@@ -172,7 +180,7 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
 
   const toggleHistory = () => {
     if (!canOpenHistory) return
-    source.chrome.topbar.history.toggle()
+    onToggleHistory()
   }
 
   const timestampLabel = itemTimestampLabel(item)
@@ -183,8 +191,9 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
       return {
         kind: 'pending',
         item,
-        ancestors: buildAncestorTrail(item, filesystem.activeItemsById),
-        commands: source.commands,
+        ancestors: buildAncestorTrail(item, index.activeItemsById),
+        items: source.items,
+        navigation: source.navigation,
       }
     }
     if (loadedItem) {
@@ -193,23 +202,29 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
         item: loadedItem,
         canRename,
         isNotShared: isNotSharedWithPlayer,
-        commands: source.commands,
+        items: source.items,
+        navigation: source.navigation,
       }
     }
     if (isEmptyEditor) {
       return {
         kind: 'empty',
-        campaignId: source.campaign.campaignId,
-        pendingItemName: source.pendingItemName,
-        setPendingItemName: source.setPendingItemName,
-        commands: source.commands,
+        campaignId: source.workspace.campaignId,
+        pendingItemName: source.items.creationDraft.pendingName,
+        setPendingItemName: source.items.creationDraft.setPendingName,
+        items: source.items,
       }
     }
     return { kind: 'none' }
   })()
 
   const middleContent = (
-    <ItemButtonWrapper chrome={source.chrome.topbar} isTrashView={isTrashView} />
+    <ItemButtonWrapper
+      itemActions={source.items.itemActions}
+      isTrashView={isTrashView}
+      sharing={source.sharing}
+      viewAsPlayer={source.permissions.viewAsPlayer}
+    />
   )
 
   const topbarSurface = (
@@ -231,7 +246,7 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
     />
   )
 
-  if (!source.chrome.topbar.contextMenu.enabled) {
+  if (!source.items.itemActions.enabled) {
     return topbarSurface
   }
 

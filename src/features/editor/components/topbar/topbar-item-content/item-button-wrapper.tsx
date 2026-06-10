@@ -2,23 +2,27 @@ import { ContextMenuButton } from '../editor-action-buttons'
 import { ShareButton } from '../share-button'
 import { ViewAsPlayerButton } from '../view-as-button'
 import type { ReactNode } from 'react'
-import type { EditorWorkspaceTopbarChrome } from '../../../workspace/editor-workspace-chrome'
+import type { EditorWorkspaceSource } from '../../../workspace/editor-workspace-source'
 
 export const ItemButtonWrapper = ({
   children,
-  chrome,
+  itemActions,
   isTrashView,
+  sharing,
+  viewAsPlayer,
 }: {
   children?: ReactNode | undefined
-  chrome: EditorWorkspaceTopbarChrome
+  itemActions: EditorWorkspaceSource['items']['itemActions']
   isTrashView?: boolean
+  sharing: EditorWorkspaceSource['sharing']
+  viewAsPlayer: EditorWorkspaceSource['permissions']['viewAsPlayer']
 }) => {
   return (
     <div className="flex items-center gap-1 flex-shrink-0">
       {children}
-      <ShareButton share={chrome.share} />
-      <ViewAsPlayerButton viewAsPlayer={chrome.viewAsPlayer} />
-      <ContextMenuButton contextMenu={chrome.contextMenu} isTrashView={isTrashView} />
+      <ShareButton share={sharing} />
+      <ViewAsPlayerButton viewAsPlayer={viewAsPlayer} />
+      <ContextMenuButton itemActions={itemActions} isTrashView={isTrashView} />
     </div>
   )
 }

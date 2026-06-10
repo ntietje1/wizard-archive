@@ -30,13 +30,7 @@ describe('SidebarItemEditor', () => {
       blockShareAccessWarnings: [],
     }
 
-    render(
-      <SidebarItemEditor
-        item={item}
-        historyPreview={createHistoryPreview()}
-        viewers={createViewers()}
-      />,
-    )
+    render(<SidebarItemEditor files={createFiles()} item={item} history={createHistory()} />)
 
     expect(screen.getByText('note editor')).toBeInTheDocument()
   })
@@ -67,9 +61,9 @@ describe('SidebarItemEditor', () => {
 
     render(
       <SidebarItemEditor
+        files={createFiles()}
         item={item}
-        historyPreview={createHistoryPreview({ previewingEntryId: entryId })}
-        viewers={createViewers()}
+        history={createHistory({ previewingEntryId: entryId })}
       />,
     )
 
@@ -88,11 +82,7 @@ describe('SidebarItemEditor', () => {
     }
 
     const { unmount } = render(
-      <SidebarItemEditor
-        item={item}
-        historyPreview={createHistoryPreview()}
-        viewers={createViewers()}
-      />,
+      <SidebarItemEditor files={createFiles()} item={item} history={createHistory()} />,
     )
 
     unmount()
@@ -100,26 +90,30 @@ describe('SidebarItemEditor', () => {
     expect(clearItemSession).toHaveBeenCalledWith(item._id)
   })
 
-  function createHistoryPreview({
+  function createHistory({
     previewingEntryId = null,
   }: {
     previewingEntryId?: Id<'editHistory'> | null
-  } = {}): EditorWorkspaceSource['historyPreview'] {
+  } = {}): EditorWorkspaceSource['history'] {
     return {
-      previewingEntryId,
-      clearItemSession,
-      PreviewComponent: ({ itemId, entryId }) => (
-        <div data-testid="history-preview" data-item-id={itemId} data-entry-id={entryId} />
-      ),
-      RollbackDialogComponent: ({ itemId }) => (
-        <div data-testid="rollback-dialog" data-item-id={itemId} />
-      ),
+      preview: {
+        previewingEntryId,
+        clearItemSession,
+        PreviewComponent: ({ itemId, entryId }) => (
+          <div data-testid="history-preview" data-item-id={itemId} data-entry-id={entryId} />
+        ),
+      },
+      rollback: {
+        DialogComponent: ({ itemId }) => (
+          <div data-testid="rollback-dialog" data-item-id={itemId} />
+        ),
+      },
     }
   }
 
-  function createViewers(): EditorWorkspaceSource['viewers'] {
+  function createFiles(): EditorWorkspaceSource['files'] {
     return {
-      file: createFileViewerSource(),
+      viewer: createFileViewerSource(),
     }
   }
 

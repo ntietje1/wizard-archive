@@ -20,40 +20,53 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
       workspace: INITIAL_DEMO_WORKSPACE,
     })
 
-    expect(source.currentItem.contentItem).toMatchObject({
+    expect(source.content.currentItem.contentItem).toMatchObject({
       _id: 'note-market',
       name: 'The Lantern Market',
       type: SIDEBAR_ITEM_TYPES.notes,
     })
-    expect(source.currentItem.contentItem).toBe(
-      source.filesystem.activeItemsById.get('note-market' as Id<'sidebarItems'>),
+    expect(source.content.currentItem.contentItem).toBe(
+      source.index.activeItemsById.get('note-market' as Id<'sidebarItems'>),
     )
-    expect(source.campaign.isDm).toBe(true)
-    expect(source.editorMode.canEdit).toBe(true)
-    expect(source.chrome.topbar.share.visible).toBe(false)
-    expect(source.historyPreview.previewingEntryId).toBeNull()
+    expect(source.workspace.isDm).toBe(true)
+    expect(source.permissions.canEdit).toBe(true)
+    expect(source.sharing.visible).toBe(false)
+    expect(source.history.preview.previewingEntryId).toBeNull()
     const { container } = render(
-      createElement(source.historyPreview.PreviewComponent, {
+      createElement(source.history.preview.PreviewComponent, {
         itemId: 'note-market' as Id<'sidebarItems'>,
         entryId: 'history-1' as Id<'editHistory'>,
       }),
     )
     expect(container).toBeEmptyDOMElement()
 
-    source.setPendingItemName('Renamed market')
+    source.items.creationDraft.setPendingName('Renamed market')
     expect(dispatch).toHaveBeenCalledWith({
       type: 'renameSelectedItem',
       title: 'Renamed market',
     })
 
-    void source.commands.renameItem(
-      source.filesystem.activeItemsById.get('canvas-heist' as Id<'sidebarItems'>)!,
+    void source.items.renameItem(
+      source.index.activeItemsById.get('canvas-heist' as Id<'sidebarItems'>)!,
       'Board',
     )
     expect(dispatch).toHaveBeenCalledWith({
       type: 'renameItem',
       itemId: 'canvas-heist',
       title: 'Board',
+    })
+
+    const created = source.items.createItem({
+      type: SIDEBAR_ITEM_TYPES.notes,
+      parentId: null,
+      name: 'Local note',
+    })
+    expect(created).toEqual({ id: 'local-note-2', slug: 'local-note-2' })
+    expect(dispatch).toHaveBeenCalledWith({ type: 'createItem', commandKey: 'note' })
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'renameItem',
+      itemId: 'local-note-2',
+      title: 'Local note',
     })
   })
 
@@ -71,9 +84,9 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
       'canvas-heist' as Id<'sidebarItems'>,
     )
 
-    expect(source.currentItem.contentItem).toEqual(projectedCanvas)
-    expect(source.currentItem.editorSearch.item).toBe(projectedCanvas?.slug)
-    expect(source.filesystem.activeItemsById.get('canvas-heist' as Id<'sidebarItems'>)).toEqual(
+    expect(source.content.currentItem.contentItem).toEqual(projectedCanvas)
+    expect(source.content.currentItem.editorSearch.item).toBe(projectedCanvas?.slug)
+    expect(source.index.activeItemsById.get('canvas-heist' as Id<'sidebarItems'>)).toEqual(
       projectedCanvas,
     )
   })
