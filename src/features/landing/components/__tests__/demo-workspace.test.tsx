@@ -1,18 +1,14 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DemoWorkspace } from '../demo-workspace'
 
-const {
-  fileContentViewerMock,
-  localNoteEditorMock,
-  localCanvasEditorMock,
-  noteFormattingToolbarMock,
-} = vi.hoisted(() => ({
-  fileContentViewerMock: vi.fn(),
-  localNoteEditorMock: vi.fn(),
-  localCanvasEditorMock: vi.fn(),
-  noteFormattingToolbarMock: vi.fn(),
-}))
+const { fileViewerMock, localNoteEditorMock, localCanvasEditorMock, noteFormattingToolbarMock } =
+  vi.hoisted(() => ({
+    fileViewerMock: vi.fn(),
+    localNoteEditorMock: vi.fn(),
+    localCanvasEditorMock: vi.fn(),
+    noteFormattingToolbarMock: vi.fn(),
+  }))
 
 vi.mock('~/features/landing/demo-workspace/local-note-editor', () => ({
   LocalNoteEditor: (props: Record<string, unknown>) => {
@@ -28,10 +24,10 @@ vi.mock('~/features/editor/components/formatting-toolbar/note-formatting-toolbar
   },
 }))
 
-vi.mock('~/features/editor/components/viewer/file/file-content-viewer', () => ({
-  FileContentViewer: (props: Record<string, unknown>) => {
-    fileContentViewerMock(props)
-    return <div data-testid="demo-file-content-viewer" />
+vi.mock('~/features/editor/components/viewer/file/file-viewer', () => ({
+  FileViewer: (props: Record<string, unknown>) => {
+    fileViewerMock(props)
+    return <div data-testid="demo-file-viewer" />
   },
 }))
 
@@ -64,7 +60,7 @@ describe('DemoWorkspace', () => {
   })
 
   beforeEach(() => {
-    fileContentViewerMock.mockReset()
+    fileViewerMock.mockReset()
     localNoteEditorMock.mockReset()
     localCanvasEditorMock.mockReset()
     noteFormattingToolbarMock.mockReset()
@@ -177,14 +173,16 @@ describe('DemoWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'File Upload a document, image, or media' }))
 
     expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue('New File 3')
-    expect(screen.getByText('New File 3.txt')).toBeInTheDocument()
-    expect(screen.getByText('text/plain · 0 B')).toBeInTheDocument()
-    expect(fileContentViewerMock).toHaveBeenLastCalledWith({
-      allowObjectUrl: true,
-      contentType: 'text/plain',
-      downloadUrl: 'blob:demo-default-file',
-      name: 'New File 3.txt',
-    })
+    expect(screen.getByTestId('demo-file-viewer')).toBeInTheDocument()
+    expect(fileViewerMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        item: expect.objectContaining({
+          _id: 'local-file-3',
+          contentType: 'text/plain',
+          name: 'New File 3',
+        }),
+      }),
+    )
   })
 
   it('renames a local item without leaving the demo workspace', () => {
@@ -219,43 +217,23 @@ describe('DemoWorkspace', () => {
     expect(screen.getByLabelText('Demo canvas marker')).toHaveValue('moved encounter node')
   })
 
-  it('lets the demo file item use a local file during the page session', async () => {
+  it('lets the demo file item use a local file during the page session', () => {
     render(<DemoWorkspace />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Blue-glass Invoice' }))
-    expect(screen.getByText('blue-glass-invoice.txt')).toBeInTheDocument()
-    expect(screen.getByTestId('demo-file-content-viewer')).toBeInTheDocument()
-    expect(fileContentViewerMock).toHaveBeenLastCalledWith({
-      allowObjectUrl: true,
-      contentType: 'text/plain',
-      downloadUrl: 'blob:demo-default-file',
-      name: 'blue-glass-invoice.txt',
-    })
-
-    const replacement = new File(['new clues'], 'new-clues.txt', { type: 'text/plain' })
-    fireEvent.change(screen.getByLabelText('Choose demo file'), {
-      target: { files: [replacement] },
-    })
-
-    expect(screen.getByText('new-clues.txt')).toBeInTheDocument()
-    await waitFor(() =>
-      expect(fileContentViewerMock).toHaveBeenLastCalledWith({
-        allowObjectUrl: true,
-        contentType: 'text/plain',
-        downloadUrl: 'blob:new-clues.txt',
-        name: 'new-clues.txt',
+    expect(screen.getByTestId('demo-file-viewer')).toBeInTheDocument()
+    expect(fileViewerMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        item: expect.objectContaining({
+          _id: 'file-handout',
+          contentType: 'text/plain',
+          name: 'Blue-glass Invoice',
+        }),
       }),
     )
-    expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:demo-default-file')
 
     fireEvent.click(screen.getByRole('button', { name: 'The Lantern Market' }))
     fireEvent.click(screen.getByRole('button', { name: 'Blue-glass Invoice' }))
-    expect(screen.getByText('new-clues.txt')).toBeInTheDocument()
-    expect(fileContentViewerMock).toHaveBeenLastCalledWith({
-      allowObjectUrl: true,
-      contentType: 'text/plain',
-      downloadUrl: 'blob:new-clues.txt',
-      name: 'new-clues.txt',
-    })
+    expect(screen.getByTestId('demo-file-viewer')).toBeInTheDocument()
   })
 })

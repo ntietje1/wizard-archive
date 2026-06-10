@@ -6,6 +6,7 @@ import { createNote } from '~/test/factories/sidebar-item-factory'
 import { SidebarItemEditor } from '../sidebar-item-editor'
 import { SidebarItemViewer } from '../sidebar-item-viewer'
 import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
+import type { FileViewerSource } from '../file/file-viewer-source'
 
 vi.mock('../note/note-editor', () => ({ NoteEditor: () => <div>note editor</div> }))
 vi.mock('../map/map-viewer', () => ({ MapViewer: () => <div /> }))
@@ -29,7 +30,13 @@ describe('SidebarItemEditor', () => {
       blockShareAccessWarnings: [],
     }
 
-    render(<SidebarItemEditor item={item} historyPreview={createHistoryPreview()} />)
+    render(
+      <SidebarItemEditor
+        item={item}
+        historyPreview={createHistoryPreview()}
+        viewers={createViewers()}
+      />,
+    )
 
     expect(screen.getByText('note editor')).toBeInTheDocument()
   })
@@ -62,6 +69,7 @@ describe('SidebarItemEditor', () => {
       <SidebarItemEditor
         item={item}
         historyPreview={createHistoryPreview({ previewingEntryId: entryId })}
+        viewers={createViewers()}
       />,
     )
 
@@ -80,7 +88,11 @@ describe('SidebarItemEditor', () => {
     }
 
     const { unmount } = render(
-      <SidebarItemEditor item={item} historyPreview={createHistoryPreview()} />,
+      <SidebarItemEditor
+        item={item}
+        historyPreview={createHistoryPreview()}
+        viewers={createViewers()}
+      />,
     )
 
     unmount()
@@ -102,6 +114,25 @@ describe('SidebarItemEditor', () => {
       RollbackDialogComponent: ({ itemId }) => (
         <div data-testid="rollback-dialog" data-item-id={itemId} />
       ),
+    }
+  }
+
+  function createViewers(): EditorWorkspaceSource['viewers'] {
+    return {
+      file: createFileViewerSource(),
+    }
+  }
+
+  function createFileViewerSource(): FileViewerSource {
+    return {
+      resolveFile: (file) => ({
+        allowObjectUrl: false,
+        contentType: file.contentType,
+        downloadUrl: file.downloadUrl,
+        name: file.name,
+        size: null,
+      }),
+      getEmptyFileUpload: () => null,
     }
   }
 })

@@ -1,6 +1,7 @@
 import { EDITOR_MODE } from 'shared/editor/types'
 import { validateSidebarItemNameWithSiblings } from 'shared/sidebar-items/name'
 import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
+import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
 import type { INITIAL_DEMO_WORKSPACE, DemoWorkspaceAction } from './demo-workspace-model'
 import { createDemoWorkspaceProjection, selectedDemoItem } from './demo-workspace-model'
 import type { Dispatch } from 'react'
@@ -16,9 +17,11 @@ const EmptyRollbackDialog = () => null
 
 export function createLocalDemoEditorWorkspaceSource({
   dispatch,
+  fileViewerSource,
   workspace,
 }: {
   dispatch: Dispatch<DemoWorkspaceAction>
+  fileViewerSource: FileViewerSource
   workspace: DemoWorkspaceState
 }): EditorWorkspaceSource {
   const selectedItem = selectedDemoItem(workspace)
@@ -94,6 +97,9 @@ export function createLocalDemoEditorWorkspaceSource({
       clearItemSession: noop,
       PreviewComponent: EmptyHistoryPreview,
       RollbackDialogComponent: EmptyRollbackDialog,
+    },
+    viewers: {
+      file: fileViewerSource,
     },
     commands: {
       renameItem: (item, name) =>

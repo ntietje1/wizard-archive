@@ -119,6 +119,18 @@ function createWorkspaceSource(): EditorWorkspaceSource {
       PreviewComponent: () => null,
       RollbackDialogComponent: () => null,
     },
+    viewers: {
+      file: {
+        resolveFile: (file) => ({
+          allowObjectUrl: false,
+          contentType: file.contentType,
+          downloadUrl: file.downloadUrl,
+          name: file.name,
+          size: null,
+        }),
+        getEmptyFileUpload: () => null,
+      },
+    },
     commands: {
       renameItem: vi.fn(),
       openItem: vi.fn(),

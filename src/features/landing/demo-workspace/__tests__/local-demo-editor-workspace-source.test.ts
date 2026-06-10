@@ -9,12 +9,14 @@ import {
 } from '../demo-workspace-model'
 import { createLocalDemoEditorWorkspaceSource } from '../local-demo-editor-workspace-source'
 import type { Id } from 'convex/_generated/dataModel'
+import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
 
 describe('createLocalDemoEditorWorkspaceSource', () => {
   it('projects demo workspace state into the shared editor workspace source contract', () => {
     const dispatch = vi.fn()
     const source = createLocalDemoEditorWorkspaceSource({
       dispatch,
+      fileViewerSource: createFileViewerSource(),
       workspace: INITIAL_DEMO_WORKSPACE,
     })
 
@@ -62,6 +64,7 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
     })
     const source = createLocalDemoEditorWorkspaceSource({
       dispatch: vi.fn(),
+      fileViewerSource: createFileViewerSource(),
       workspace,
     })
     const projectedCanvas = createDemoWorkspaceProjection(workspace).itemsById.get(
@@ -75,3 +78,16 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
     )
   })
 })
+
+function createFileViewerSource(): FileViewerSource {
+  return {
+    resolveFile: (file) => ({
+      allowObjectUrl: false,
+      contentType: file.contentType,
+      downloadUrl: file.downloadUrl,
+      name: file.name,
+      size: null,
+    }),
+    getEmptyFileUpload: () => null,
+  }
+}

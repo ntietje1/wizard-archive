@@ -244,6 +244,14 @@ export function createDemoWorkspaceProjection(state: DemoWorkspaceState) {
   return { items, itemsById }
 }
 
+export function demoFileSidebarItemWithContent(
+  state: DemoWorkspaceState,
+  itemId: string,
+): FileWithContent | null {
+  const item = createDemoWorkspaceProjection(state).itemsById.get(itemId as Id<'sidebarItems'>)
+  return item?.type === SIDEBAR_ITEM_TYPES.files ? item : null
+}
+
 function projectDemoSidebarItemWithContent(
   state: DemoWorkspaceState,
   item: DemoWorkspaceItem,

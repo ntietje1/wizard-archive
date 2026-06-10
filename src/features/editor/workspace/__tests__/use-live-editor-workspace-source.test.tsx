@@ -141,6 +141,13 @@ vi.mock('~/features/editor/components/viewer/live-rollback-confirm-dialog', () =
   LiveRollbackConfirmDialog: () => null,
 }))
 
+vi.mock('~/features/editor/components/viewer/file/live-file-viewer-source', () => ({
+  useLiveFileViewerSource: () => ({
+    resolveFile: vi.fn(),
+    getEmptyFileUpload: vi.fn(() => null),
+  }),
+}))
+
 describe('useLiveEditorWorkspaceSource', () => {
   beforeEach(() => {
     liveSourceState.contentItem = createContentNote('note-1')

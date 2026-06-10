@@ -1,15 +1,17 @@
-import { Download, FileText, FolderOpen, MapIcon, Network, Upload } from 'lucide-react'
-import { Fragment, useEffect, useReducer, useRef, useState } from 'react'
+import { FileText, FolderOpen, MapIcon, Network } from 'lucide-react'
+import { Fragment, useReducer, useState } from 'react'
 import { CreateNewDashboardSurface } from '~/features/editor/components/create-new-dashboard-surface'
 import { EditorWorkspaceSurface } from '~/features/editor/components/editor-workspace-surface'
 import { NoteFormattingToolbar } from '~/features/editor/components/formatting-toolbar/note-formatting-toolbar'
 import { FileTopbar } from '~/features/editor/components/topbar/file-topbar'
-import { FileContentViewer } from '~/features/editor/components/viewer/file/file-content-viewer'
+import { FileViewer } from '~/features/editor/components/viewer/file/file-viewer'
 import { LocalCanvasEditor } from '~/features/landing/demo-workspace/local-canvas-editor'
+import {
+  LocalDemoFileViewerSourceProvider,
+  useLocalDemoFileViewerSource,
+} from '~/features/landing/demo-workspace/local-demo-file-viewer-source'
 import { LocalNoteEditor } from '~/features/landing/demo-workspace/local-note-editor'
-import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import { cn } from '~/features/shadcn/lib/utils'
 import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-surface'
 import { SidebarWorkspaceShell } from '~/features/sidebar/components/sidebar-workspace-shell'
 import { buildSidebarTreeSurfaceItems } from '~/features/sidebar/workspace/sidebar-tree-projection'
@@ -21,7 +23,7 @@ import { createLocalDemoEditorWorkspaceSource } from '../demo-workspace/local-de
 import {
   INITIAL_DEMO_WORKSPACE,
   demoCanvasForItem,
-  demoFileForItem,
+  demoFileSidebarItemWithContent,
   demoMapPinsForItem,
   demoNoteBodyForItem,
   demoSidebarItemsWithContent,
@@ -37,7 +39,7 @@ import type {
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
-import type { ChangeEvent, Dispatch, MouseEvent, RefObject } from 'react'
+import type { Dispatch, MouseEvent } from 'react'
 
 const itemIcons = {
   note: FileText,
@@ -49,7 +51,12 @@ const itemIcons = {
 
 export function DemoWorkspace() {
   const [workspace, dispatch] = useReducer(demoWorkspaceReducer, INITIAL_DEMO_WORKSPACE)
-  const workspaceSource = createLocalDemoEditorWorkspaceSource({ dispatch, workspace })
+  const fileViewerSource = useLocalDemoFileViewerSource(workspace)
+  const workspaceSource = createLocalDemoEditorWorkspaceSource({
+    dispatch,
+    fileViewerSource,
+    workspace,
+  })
   const selectedItem = selectedDemoItem(workspace)
 
   return (
@@ -71,6 +78,7 @@ export function DemoWorkspace() {
             workspace={workspace}
             selectedItem={selectedItem}
             dispatch={dispatch}
+            fileViewerSource={fileViewerSource}
           />
         </EditorWorkspaceSurface>
       </SidebarWorkspaceShell>
@@ -129,10 +137,12 @@ function DemoWorkspaceSidebar({
 
 function DemoWorkspaceSurfaces({
   dispatch,
+  fileViewerSource,
   selectedItem,
   workspace,
 }: {
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
+  fileViewerSource: ReturnType<typeof useLocalDemoFileViewerSource>
   selectedItem: DemoWorkspaceItem | null
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
@@ -160,6 +170,7 @@ function DemoWorkspaceSurfaces({
               active={item.id === selectedItem.id}
               workspace={workspace}
               dispatch={dispatch}
+              fileViewerSource={fileViewerSource}
             />
           )}
         </Fragment>
@@ -171,16 +182,19 @@ function DemoWorkspaceSurfaces({
 function DemoWorkspaceSurface({
   active,
   dispatch,
+  fileViewerSource,
   item,
   workspace,
 }: {
   active: boolean
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
+  fileViewerSource: ReturnType<typeof useLocalDemoFileViewerSource>
   item: DemoWorkspaceItem
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
   const canvas = item.type === 'canvas' ? demoCanvasForItem(workspace, item.id) : null
-  const file = item.type === 'file' ? demoFileForItem(workspace, item) : null
+  const fileSidebarItem =
+    item.type === 'file' ? demoFileSidebarItemWithContent(workspace, item.id) : null
   const SidebarItemEmbedResolver = createDemoSidebarItemEmbedResolver(workspace)
   const EmbeddedCanvasStateResolver = createDemoEmbeddedCanvasStateResolver(workspace)
 
@@ -214,11 +228,9 @@ function DemoWorkspaceSurface({
       )}
       {item.type === 'map' && <DemoMapSurface pins={demoMapPinsForItem(workspace, item.id)} />}
       {item.type === 'file' && (
-        <DemoFileSurface
-          initialBody={file?.body ?? ''}
-          initialContentType={file?.contentType ?? 'text/plain'}
-          initialName={file?.name ?? 'Untitled File.txt'}
-        />
+        <LocalDemoFileViewerSourceProvider source={fileViewerSource}>
+          {fileSidebarItem && <FileViewer item={fileSidebarItem} />}
+        </LocalDemoFileViewerSourceProvider>
       )}
     </section>
   )
@@ -265,153 +277,4 @@ function DemoMapSurface({ pins }: { pins: Array<DemoMapPin> }) {
       </div>
     </div>
   )
-}
-
-type LocalDemoFile = {
-  name: string
-  contentType: string
-  size: number
-  url: string
-}
-
-function DemoFileSurface({
-  initialBody,
-  initialContentType,
-  initialName,
-}: {
-  initialBody: string
-  initialContentType: string
-  initialName: string
-}) {
-  const { file, fileInputRef, handleFileChange } = useLocalDemoFile({
-    initialBody,
-    initialContentType,
-    initialName,
-  })
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
-      <DemoFileHeader file={file} fileInputRef={fileInputRef} onFileChange={handleFileChange} />
-      <section className="min-h-0 flex-1" aria-label="Demo file preview">
-        <FileContentViewer
-          allowObjectUrl
-          contentType={file.contentType}
-          downloadUrl={file.url}
-          name={file.name}
-        />
-      </section>
-    </div>
-  )
-}
-
-function useLocalDemoFile({
-  initialBody,
-  initialContentType,
-  initialName,
-}: {
-  initialBody: string
-  initialContentType: string
-  initialName: string
-}) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [file, setFile] = useState<LocalDemoFile>(() =>
-    createTextDemoFile({
-      body: initialBody,
-      contentType: initialContentType,
-      name: initialName,
-    }),
-  )
-
-  useEffect(() => {
-    return () => URL.revokeObjectURL(file.url)
-  }, [file.url])
-
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.currentTarget.files?.[0]
-    event.currentTarget.value = ''
-    if (!selectedFile) return
-
-    const url = URL.createObjectURL(selectedFile)
-    const contentType = selectedFile.type || 'application/octet-stream'
-    const nextFile: LocalDemoFile = {
-      name: selectedFile.name,
-      contentType,
-      size: selectedFile.size,
-      url,
-    }
-    setFile(nextFile)
-  }
-
-  return { file, fileInputRef, handleFileChange }
-}
-
-function DemoFileHeader({
-  file,
-  fileInputRef,
-  onFileChange,
-}: {
-  file: LocalDemoFile
-  fileInputRef: RefObject<HTMLInputElement | null>
-  onFileChange: (event: ChangeEvent<HTMLInputElement>) => void
-}) {
-  return (
-    <header className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b bg-background px-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{file.name}</p>
-        <p className="text-xs text-muted-foreground">
-          {`${file.contentType} · ${formatFileSize(file.size)}`}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <a
-          href={file.url}
-          download={file.name}
-          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
-        >
-          <Download aria-hidden="true" />
-          Download
-        </a>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Upload aria-hidden="true" />
-          Replace
-        </Button>
-        <input
-          ref={fileInputRef}
-          aria-label="Choose demo file"
-          className="sr-only"
-          type="file"
-          onChange={onFileChange}
-        />
-      </div>
-    </header>
-  )
-}
-
-function createTextDemoFile({
-  body,
-  contentType,
-  name,
-}: {
-  body: string
-  contentType: string
-  name: string
-}): LocalDemoFile {
-  const blob = new Blob([body], { type: contentType })
-  return {
-    name,
-    contentType,
-    size: blob.size,
-    url: URL.createObjectURL(blob),
-  }
-}
-
-function formatFileSize(size: number) {
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import type { UseFileWithPreviewReturn } from '../hooks/useFileWithPreview'
+import type { FileUploadControl } from '../file-upload-control'
 import { FileUploadSection } from './file-upload-section'
 
 export function FileUploadEmptyState({
@@ -12,7 +12,7 @@ export function FileUploadEmptyState({
   dragDropText,
   ariaLabel,
 }: {
-  fileUpload: UseFileWithPreviewReturn
+  fileUpload: FileUploadControl
   icon: LucideIcon
   title: string
   description: string

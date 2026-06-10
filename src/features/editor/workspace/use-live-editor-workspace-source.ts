@@ -23,6 +23,7 @@ import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidat
 import { LiveHistoryPreviewViewer } from '~/features/editor/components/viewer/live-history-preview-viewer'
 import { LiveRollbackConfirmDialog } from '~/features/editor/components/viewer/live-rollback-confirm-dialog'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
+import { useLiveFileViewerSource } from '~/features/editor/components/viewer/file/live-file-viewer-source'
 import type { EditorWorkspaceShareChrome } from './editor-workspace-chrome'
 import type { EditorWorkspaceSource } from './editor-workspace-source'
 import { useLiveEmptyWorkspaceDropCapability } from './use-live-empty-workspace-drop'
@@ -45,6 +46,7 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const [isCreatingMissingRequestedNote, startCreateTransition] = useTransition()
   const rightSidebar = useRightSidebar(currentItem.item?.type)
   const emptyWorkspaceDrop = useLiveEmptyWorkspaceDropCapability()
+  const fileViewerSource = useLiveFileViewerSource(currentItem.contentItem)
   const shareItems = currentItem.item ? [currentItem.item] : []
   const { isPending, isMutating, aggregateShareStatus, canShare } = useSidebarItemsShare(shareItems)
   const previewingEntryId = useHistoryPreviewStore((s) =>
@@ -144,6 +146,9 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
       clearItemSession: clearItemPreviewSession,
       PreviewComponent: LiveHistoryPreviewViewer,
       RollbackDialogComponent: LiveRollbackConfirmDialog,
+    },
+    viewers: {
+      file: fileViewerSource,
     },
     commands: {
       renameItem: async (item, name) => {

@@ -9,6 +9,7 @@ import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
 import type { EditorWorkspaceChrome } from './editor-workspace-chrome'
+import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
 
 interface EditorCurrentItemSnapshot {
   item: AnySidebarItem | null
@@ -79,6 +80,10 @@ interface EditorWorkspaceCommands {
   ) => ValidationResult
 }
 
+interface EditorWorkspaceViewers {
+  file: FileViewerSource
+}
+
 export interface EditorWorkspaceSource {
   currentItem: EditorCurrentItemSnapshot
   editorMode: EditorModeSnapshot
@@ -87,6 +92,7 @@ export interface EditorWorkspaceSource {
   chrome: EditorWorkspaceChrome
   interactions: EditorWorkspaceInteractions
   historyPreview: EditorWorkspaceHistoryPreview
+  viewers: EditorWorkspaceViewers
   commands: EditorWorkspaceCommands
   pendingItemName: string
   setPendingItemName: (name: string) => void
