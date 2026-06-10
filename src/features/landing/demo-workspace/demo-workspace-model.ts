@@ -1,9 +1,24 @@
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
+import type { CanvasWithContent } from 'shared/canvases/types'
 import type { CustomBlock } from 'shared/editor-blocks/types'
+import type { FileWithContent } from 'shared/files/types'
+import type { FolderWithContent } from 'shared/folders/types'
+import type { GameMapWithContent } from 'shared/game-maps/types'
+import type { NoteWithContent } from 'shared/notes/types'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
+import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
+import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_STATUS,
+  SIDEBAR_ITEM_TYPES,
+} from 'shared/sidebar-items/types'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
 import { assertNever } from '~/shared/utils/utils'
+import type { Id } from 'convex/_generated/dataModel'
 
 export type DemoWorkspaceItemType = 'note' | 'folder' | 'canvas' | 'map' | 'file'
 
@@ -52,7 +67,7 @@ interface DemoWorkspaceState {
   }
 }
 
-type DemoWorkspaceAction =
+export type DemoWorkspaceAction =
   | { type: 'createItem'; commandKey: string }
   | { type: 'openCreateDashboard' }
   | { type: 'selectItem'; itemId: string }
@@ -209,6 +224,104 @@ export function demoFileForItem(state: DemoWorkspaceState, item: DemoWorkspaceIt
     contentType: 'text/plain',
     body: '',
   }
+}
+
+export function demoSidebarItemsWithContent(
+  state: DemoWorkspaceState,
+): Array<AnySidebarItemWithContent> {
+  return createDemoWorkspaceProjection(state).items
+}
+
+export function createDemoWorkspaceProjection(state: DemoWorkspaceState) {
+  const items = state.items.map((item) => projectDemoSidebarItemWithContent(state, item))
+  const itemsById = new Map(items.map((item) => [item._id, item]))
+
+  return { items, itemsById }
+}
+
+function projectDemoSidebarItemWithContent(
+  state: DemoWorkspaceState,
+  item: DemoWorkspaceItem,
+): AnySidebarItemWithContent {
+  const baseItem = {
+    _id: item.id as Id<'sidebarItems'>,
+    _creationTime: 0,
+    name: assertSidebarItemName(item.title || 'Untitled'),
+    iconName: null,
+    color: null,
+    slug: assertSidebarItemSlug(item.id),
+    campaignId: 'demo-campaign' as Id<'campaigns'>,
+    parentId: null,
+    allPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    location: SIDEBAR_ITEM_LOCATION.sidebar,
+    status: SIDEBAR_ITEM_STATUS.active,
+    previewStorageId: null,
+    previewLockedUntil: null,
+    previewClaimToken: null,
+    previewUpdatedAt: null,
+    updatedTime: null,
+    updatedBy: null,
+    createdBy: 'demo-user' as Id<'userProfiles'>,
+    deletionTime: null,
+    deletedBy: null,
+    shares: [],
+    isBookmarked: false,
+    myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    previewUrl: null,
+    isActive: true,
+    isTrashed: false,
+    ancestors: [],
+  }
+
+  if (item.type === 'note') {
+    const note = {
+      ...baseItem,
+      type: SIDEBAR_ITEM_TYPES.notes,
+      content: noteBodyToBlocks(demoNoteBodyForItem(state, item.id)),
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    } satisfies NoteWithContent
+    return note
+  }
+
+  if (item.type === 'canvas') {
+    const canvas = {
+      ...baseItem,
+      type: SIDEBAR_ITEM_TYPES.canvases,
+    } satisfies CanvasWithContent
+    return canvas
+  }
+
+  if (item.type === 'map') {
+    const map = {
+      ...baseItem,
+      type: SIDEBAR_ITEM_TYPES.gameMaps,
+      imageStorageId: null,
+      imageUrl: null,
+      pins: [],
+    } satisfies GameMapWithContent
+    return map
+  }
+
+  if (item.type === 'file') {
+    const file = demoFileForItem(state, item)
+
+    const sidebarFile = {
+      ...baseItem,
+      type: SIDEBAR_ITEM_TYPES.files,
+      storageId: null,
+      downloadUrl: null,
+      contentType: file.contentType,
+    } satisfies FileWithContent
+    return sidebarFile
+  }
+
+  const folder = {
+    ...baseItem,
+    type: SIDEBAR_ITEM_TYPES.folders,
+    inheritShares: false,
+  } satisfies FolderWithContent
+  return folder
 }
 
 export function noteBodyToBlocks(body: string): Array<CustomBlock> {

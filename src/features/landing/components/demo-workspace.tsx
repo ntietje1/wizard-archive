@@ -17,12 +17,14 @@ import {
   createDemoEmbeddedCanvasStateResolver,
   createDemoSidebarItemEmbedResolver,
 } from '../demo-workspace/local-demo-embed-resolvers'
+import { createLocalDemoEditorWorkspaceSource } from '../demo-workspace/local-demo-editor-workspace-source'
 import {
   INITIAL_DEMO_WORKSPACE,
   demoCanvasForItem,
   demoFileForItem,
   demoMapPinsForItem,
   demoNoteBodyForItem,
+  demoSidebarItemsWithContent,
   demoWorkspaceReducer,
   selectedDemoItem,
 } from '../demo-workspace/demo-workspace-model'
@@ -47,6 +49,7 @@ const itemIcons = {
 
 export function DemoWorkspace() {
   const [workspace, dispatch] = useReducer(demoWorkspaceReducer, INITIAL_DEMO_WORKSPACE)
+  const workspaceSource = createLocalDemoEditorWorkspaceSource({ dispatch, workspace })
   const selectedItem = selectedDemoItem(workspace)
 
   return (
@@ -63,9 +66,7 @@ export function DemoWorkspace() {
           />
         }
       >
-        <EditorWorkspaceSurface
-          topbar={<DemoWorkspaceTopbar selectedItem={selectedItem} dispatch={dispatch} />}
-        >
+        <EditorWorkspaceSurface topbar={<DemoWorkspaceTopbar source={workspaceSource} />}>
           <DemoWorkspaceSurfaces
             workspace={workspace}
             selectedItem={selectedItem}
@@ -86,15 +87,19 @@ function DemoWorkspaceSidebar({
   selectedItem: DemoWorkspaceItem | null
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
+  const projectedItemsById = new Map(
+    demoSidebarItemsWithContent(workspace).map((item) => [String(item._id), item]),
+  )
   const sidebarItems = buildSidebarTreeSurfaceItems(
     workspace.items.map((item) => {
       const selected = item.id === selectedItem?.id
+      const projectedItem = projectedItemsById.get(item.id)
 
       return {
         id: item.id,
         parentId: null,
         icon: itemIcons[item.type],
-        name: assertSidebarItemName(item.title || 'Untitled'),
+        name: projectedItem?.name ?? assertSidebarItemName(item.title || 'Untitled'),
         visualState: {
           isSelected: selected,
           isViewing: selected,
@@ -123,12 +128,11 @@ function DemoWorkspaceSidebar({
 }
 
 function DemoWorkspaceTopbar({
-  dispatch,
-  selectedItem,
+  source,
 }: {
-  dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
-  selectedItem: (typeof INITIAL_DEMO_WORKSPACE.items)[number] | null
+  source: ReturnType<typeof createLocalDemoEditorWorkspaceSource>
 }) {
+  const selectedItem = source.currentItem.contentItem
   const title = (() => {
     if (selectedItem === null) {
       return <p className="truncate text-sm font-semibold">Untitled Item</p>
@@ -137,10 +141,8 @@ function DemoWorkspaceTopbar({
     return (
       <Input
         aria-label="Selected item name"
-        value={selectedItem.title}
-        onChange={(event) =>
-          dispatch({ type: 'renameSelectedItem', title: event.currentTarget.value })
-        }
+        value={selectedItem.name}
+        onChange={(event) => source.setPendingItemName(event.currentTarget.value)}
         className="h-8 max-w-lg border-transparent bg-transparent px-1 text-base font-medium shadow-none focus-visible:bg-control-surface focus-visible:px-2"
       />
     )
