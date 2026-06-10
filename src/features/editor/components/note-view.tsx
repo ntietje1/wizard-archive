@@ -1,5 +1,3 @@
-import { SideMenuController } from '@blocknote/react'
-import { SideMenuRenderer } from './extensions/side-menu/side-menu'
 import { NoteEditorCore } from './note-editor-core'
 import { NoteValueRuntimeProvider } from '../value-block/value-block-runtime'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
@@ -17,6 +15,7 @@ export function NoteView({
   evaluateValuesFromEditor = editable,
   linkResolver,
   valueRuntimeSource,
+  editableChrome = null,
   style,
   children,
 }: {
@@ -27,6 +26,7 @@ export function NoteView({
   evaluateValuesFromEditor?: boolean
   linkResolver: LinkResolver
   valueRuntimeSource: NoteValueRuntimeSource
+  editableChrome?: ReactNode
   style?: CSSProperties
   children?: ReactNode
 }) {
@@ -43,11 +43,7 @@ export function NoteView({
       <NoteEditorCore
         editor={editor}
         editable={editable}
-        editableChrome={
-          note ? (
-            <SideMenuController sideMenu={(props) => <SideMenuRenderer {...props} note={note} />} />
-          ) : null
-        }
+        editableChrome={editableChrome}
         enableYjsHistory={!isViewerMode}
         linkResolver={linkResolver}
         sourceNoteId={sourceNoteId}

@@ -23,6 +23,8 @@ describe('link resolver source boundaries', () => {
     expect(noteEditorCore).toContain('~/features/editor/links/link-resolver')
     expect(noteView).not.toContain('~/features/editor/hooks/useLinkResolver')
     expect(noteEditorCore).not.toContain('~/features/editor/hooks/useLinkResolver')
+    expect(noteView).not.toContain('./extensions/side-menu/side-menu')
+    expect(noteView).not.toContain('~/features/sharing')
 
     for (const liveDependency of [
       'useCampaign',

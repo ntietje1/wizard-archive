@@ -25,6 +25,26 @@ export interface NoteValueRuntimeSource {
   sidebarItems: Array<AnySidebarItem>
 }
 
+const EMPTY_ITEMS: Array<AnySidebarItem> = []
+const EMPTY_ITEM_MAP = new Map<Id<'sidebarItems'>, AnySidebarItem>()
+const EMPTY_VALUE_DEFINITIONS: Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>> = []
+const EMPTY_VALUE_STATES: Array<NoteValueRuntimeState<Id<'sidebarItems'>>> = []
+const EMPTY_EXTERNAL_NOTE_ID_BY_PATH = new Map<string, Id<'sidebarItems'>>()
+
+export function createEmptyNoteValueRuntimeSource(
+  noteId?: Id<'sidebarItems'>,
+): NoteValueRuntimeSource {
+  return {
+    noteId,
+    authoredDefinitions: EMPTY_VALUE_DEFINITIONS,
+    externalNoteIdByPath: EMPTY_EXTERNAL_NOTE_ID_BY_PATH,
+    externalStates: EMPTY_VALUE_STATES,
+    itemsMap: EMPTY_ITEM_MAP,
+    persistedStates: EMPTY_VALUE_STATES,
+    sidebarItems: EMPTY_ITEMS,
+  }
+}
+
 const editorDocumentSnapshots = new WeakMap<CustomBlockNoteEditor, EditorDocumentSnapshot>()
 const EMPTY_DOCUMENT: CustomBlockNoteEditor['document'] = []
 const EMPTY_SNAPSHOT: EditorDocumentSnapshot = { revision: 0, document: EMPTY_DOCUMENT }

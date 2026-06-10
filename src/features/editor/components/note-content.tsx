@@ -1,4 +1,5 @@
 import { BlockNoteEditor } from '@blocknote/core'
+import { SideMenuController } from '@blocknote/react'
 import { useEffect, useRef } from 'react'
 import {
   getBlockAllPlayersPermissionLevel,
@@ -10,6 +11,7 @@ import { createEditorSchema } from '../editor-specs'
 import { NoteView } from './note-view'
 import { LinkClickHandler } from './extensions/link-click-handler'
 import { LiveWikiLinkAutocomplete } from './extensions/wiki-link/live-wiki-link-autocomplete'
+import { SideMenuRenderer } from './extensions/side-menu/side-menu'
 import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import { useLiveNoteValueRuntimeSource } from '~/features/editor/value-block/use-live-note-value-runtime-source'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
@@ -279,6 +281,9 @@ function CollaborativeNoteEditor({
         editor={editor}
         note={note}
         editable
+        editableChrome={
+          <SideMenuController sideMenu={(props) => <SideMenuRenderer {...props} note={note} />} />
+        }
         linkResolver={linkResolver}
         valueRuntimeSource={valueRuntimeSource}
         style={style}

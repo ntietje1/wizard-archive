@@ -4,19 +4,19 @@ import { DemoWorkspace } from '../demo-workspace'
 
 const {
   fileContentViewerMock,
+  localNoteEditorMock,
   localCanvasEditorMock,
   noteFormattingToolbarMock,
-  rawNoteContentMock,
 } = vi.hoisted(() => ({
   fileContentViewerMock: vi.fn(),
+  localNoteEditorMock: vi.fn(),
   localCanvasEditorMock: vi.fn(),
   noteFormattingToolbarMock: vi.fn(),
-  rawNoteContentMock: vi.fn(),
 }))
 
-vi.mock('~/features/editor/components/raw-note-content', () => ({
-  RawNoteContent: (props: Record<string, unknown>) => {
-    rawNoteContentMock(props)
+vi.mock('~/features/landing/demo-workspace/local-note-editor', () => ({
+  LocalNoteEditor: (props: Record<string, unknown>) => {
+    localNoteEditorMock(props)
     return <textarea aria-label="Demo note body" data-testid="demo-note-editor" defaultValue="" />
   },
 }))
@@ -65,9 +65,9 @@ describe('DemoWorkspace', () => {
 
   beforeEach(() => {
     fileContentViewerMock.mockReset()
+    localNoteEditorMock.mockReset()
     localCanvasEditorMock.mockReset()
     noteFormattingToolbarMock.mockReset()
-    rawNoteContentMock.mockReset()
     createObjectURLMock.mockClear()
     revokeObjectURLMock.mockClear()
   })
@@ -76,24 +76,19 @@ describe('DemoWorkspace', () => {
     vi.unstubAllGlobals()
   })
 
-  it('mounts the real note content boundary as an editable local note', () => {
+  it('mounts the shared note view boundary as an editable local note', () => {
     render(<DemoWorkspace />)
 
     expect(screen.getByTestId('demo-note-editor')).toBeInTheDocument()
-    expect(rawNoteContentMock).toHaveBeenCalledWith(
+    expect(localNoteEditorMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        body: expect.stringContaining(
+          'A waterfront bazaar where every stall hides a second ledger.',
+        ),
+        className: 'note-editor-surface',
         editable: true,
         noteId: 'note-market',
-        content: expect.arrayContaining([
-          expect.objectContaining({
-            type: 'paragraph',
-            content: expect.arrayContaining([
-              expect.objectContaining({
-                text: 'A waterfront bazaar where every stall hides a second ledger.',
-              }),
-            ]),
-          }),
-        ]),
+        onEditorChange: expect.any(Function),
       }),
     )
     expect(screen.getByRole('toolbar', { name: 'Note formatting toolbar' })).toBeInTheDocument()
@@ -152,11 +147,11 @@ describe('DemoWorkspace', () => {
 
     expect(screen.getByRole('textbox', { name: 'Selected item name' })).toHaveValue('Untitled Note')
     expect(screen.getByTestId('selectable-row-Untitled Note')).toBeInTheDocument()
-    expect(rawNoteContentMock).toHaveBeenLastCalledWith(
+    expect(localNoteEditorMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        body: '',
         editable: true,
         noteId: 'local-note-2',
-        content: [],
       }),
     )
   })

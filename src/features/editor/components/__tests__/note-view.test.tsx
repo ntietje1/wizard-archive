@@ -100,6 +100,7 @@ describe('NoteView', () => {
       <NoteView
         editor={editor}
         editable
+        editableChrome={<div data-testid="side-menu-controller" />}
         note={note}
         linkResolver={linkResolver}
         valueRuntimeSource={valueRuntimeSource}

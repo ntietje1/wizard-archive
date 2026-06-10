@@ -1,11 +1,11 @@
-import { Download, FileText, FolderOpen, Map, Network, Upload } from 'lucide-react'
+import { Download, FileText, FolderOpen, MapIcon, Network, Upload } from 'lucide-react'
 import { Fragment, useEffect, useReducer, useRef, useState } from 'react'
 import { CreateNewDashboardSurface } from '~/features/editor/components/create-new-dashboard-surface'
 import { EditorWorkspaceSurface } from '~/features/editor/components/editor-workspace-surface'
 import { NoteFormattingToolbar } from '~/features/editor/components/formatting-toolbar/note-formatting-toolbar'
 import { FileContentViewer } from '~/features/editor/components/viewer/file/file-content-viewer'
-import { RawNoteContent } from '~/features/editor/components/raw-note-content'
 import { LocalCanvasEditor } from '~/features/landing/demo-workspace/local-canvas-editor'
+import { LocalNoteEditor } from '~/features/landing/demo-workspace/local-note-editor'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -20,7 +20,6 @@ import {
   demoMapPinsForItem,
   demoNoteBodyForItem,
   demoWorkspaceReducer,
-  noteBodyToBlocks,
   selectedDemoItem,
 } from '../demo-workspace/demo-workspace-model'
 import { DemoEditorTopbar, DemoSidebarFooter } from './demo-editor-chrome'
@@ -38,7 +37,7 @@ const itemIcons = {
   note: FileText,
   folder: FolderOpen,
   canvas: Network,
-  map: Map,
+  map: MapIcon,
   file: FolderOpen,
 } satisfies Record<DemoWorkspaceItemType, typeof FileText>
 
@@ -246,9 +245,9 @@ function DemoNoteEditor({ body, noteId }: { body: string; noteId: Id<'sidebarIte
     <div className="flex min-h-0 flex-1 flex-col">
       <NoteFormattingToolbar editor={editor} visible />
       <ScrollArea className="min-h-0 flex-1" contentClassName="note-editor-scroll-content">
-        <RawNoteContent
+        <LocalNoteEditor
           noteId={noteId}
-          content={noteBodyToBlocks(body)}
+          body={body}
           editable
           className="note-editor-surface"
           onEditorChange={setEditor}
