@@ -1,21 +1,15 @@
 import * as Y from 'yjs'
-import { api } from 'convex/_generated/api'
 import { Loader2 } from 'lucide-react'
-import { SNAPSHOT_TYPE } from 'shared/document-snapshots/types'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
 } from 'shared/sidebar-items/color'
 import { HistoryPreviewBanner } from './history-preview-banner'
-import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemId } from 'shared/common/ids'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { GameMapSnapshotData } from 'shared/game-maps/types'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { CanvasPreviewEmbedNode } from '~/features/canvas/components/canvas-preview-embed-node'
 import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { RawNoteContentWithEmbeds } from '~/features/editor/components/raw-note-content-with-embeds'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
@@ -28,6 +22,28 @@ import type {
 } from '~/features/canvas/domain/canvas-document'
 
 type SnapshotReadResult<T> = { status: 'ready'; value: T } | { status: 'corrupted' }
+
+export type GameMapSnapshotImageUrlState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'ready'; url: string }
+
+export type HistoryPreviewSnapshot =
+  | { kind: 'note-yjs'; noteId: SidebarItemId; data: ArrayBuffer }
+  | { kind: 'canvas-yjs'; canvasId: SidebarItemId; data: ArrayBuffer }
+  | {
+      kind: 'game-map'
+      snapshotData: GameMapSnapshotData | null
+      imageUrlState: GameMapSnapshotImageUrlState
+    }
+  | { kind: 'unsupported' }
+
+export type HistoryPreviewViewerState =
+  | { status: 'loading'; entryTime: number | undefined }
+  | { status: 'error'; entryTime: number | undefined }
+  | { status: 'unavailable'; entryTime: number | undefined }
+  | { status: 'ready'; entryTime: number | undefined; snapshot: HistoryPreviewSnapshot }
 
 function readNoteYjsSnapshot(data: ArrayBuffer): SnapshotReadResult<Array<CustomBlock>> {
   const doc = new Y.Doc()
@@ -68,34 +84,18 @@ function readCanvasSnapshot(data: ArrayBuffer): SnapshotReadResult<{
   }
 }
 
-function readGameMapSnapshot(data: ArrayBuffer): GameMapSnapshotData | null {
-  try {
-    return JSON.parse(new TextDecoder().decode(data))
-  } catch (error) {
-    logger.error('Failed to parse game map snapshot data:', error)
-    return null
-  }
-}
-
 export function HistoryPreviewViewer({
-  itemId,
-  entryId,
+  canEdit,
+  onExit,
+  onRestore,
+  state,
 }: {
-  itemId: Id<'sidebarItems'>
-  entryId: Id<'editHistory'>
+  canEdit: boolean
+  onExit: () => void
+  onRestore: () => void
+  state: HistoryPreviewViewerState
 }) {
-  const snapshotQuery = useCampaignQuery(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
-    editHistoryId: entryId,
-  })
-  const { canEdit } = useEditorMode()
-
-  const historyEntry = useCampaignQuery(api.editHistory.queries.getHistoryEntry, {
-    editHistoryId: entryId,
-  })
-
-  const entryTime = historyEntry.data?._creationTime
-
-  if (snapshotQuery.isLoading || historyEntry.isLoading) {
+  if (state.status === 'loading') {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -103,14 +103,14 @@ export function HistoryPreviewViewer({
     )
   }
 
-  if (snapshotQuery.error || historyEntry.error) {
+  if (state.status === 'error') {
     return (
       <div className="flex flex-col h-full">
         <HistoryPreviewBanner
-          itemId={itemId}
-          entryId={entryId}
-          entryTime={entryTime}
           canEdit={canEdit}
+          entryTime={state.entryTime}
+          onExit={onExit}
+          onRestore={onRestore}
         />
         <div className="flex-1 min-h-0 flex items-center justify-center">
           <p className="text-sm text-muted-foreground">Failed to load history preview.</p>
@@ -119,14 +119,14 @@ export function HistoryPreviewViewer({
     )
   }
 
-  if (!snapshotQuery.data) {
+  if (state.status === 'unavailable') {
     return (
       <div className="flex flex-col h-full">
         <HistoryPreviewBanner
-          itemId={itemId}
-          entryId={entryId}
-          entryTime={entryTime}
           canEdit={canEdit}
+          entryTime={state.entryTime}
+          onExit={onExit}
+          onRestore={onRestore}
         />
         <div className="flex-1 min-h-0 flex items-center justify-center">
           <p className="text-sm text-muted-foreground">Preview not available for this version.</p>
@@ -135,46 +135,38 @@ export function HistoryPreviewViewer({
     )
   }
 
-  const snapshot = snapshotQuery.data
-
   return (
     <div className="flex flex-col h-full">
       <HistoryPreviewBanner
-        itemId={itemId}
-        entryId={entryId}
-        entryTime={entryTime}
         canEdit={canEdit}
+        entryTime={state.entryTime}
+        onExit={onExit}
+        onRestore={onRestore}
       />
-      {snapshot.snapshotType === SNAPSHOT_TYPE.yjs_state &&
-        snapshot.itemType === SIDEBAR_ITEM_TYPES.notes && (
-          <NoteYjsSnapshotPreview noteId={snapshot.itemId} data={snapshot.data} />
-        )}
-      {snapshot.snapshotType === SNAPSHOT_TYPE.yjs_state &&
-        snapshot.itemType === SIDEBAR_ITEM_TYPES.canvases && (
-          <CanvasSnapshotPreview canvasId={snapshot.itemId} data={snapshot.data} />
-        )}
-      {snapshot.snapshotType === SNAPSHOT_TYPE.game_map && (
-        <GameMapSnapshotPreview data={snapshot.data} />
+      {state.snapshot.kind === 'note-yjs' && (
+        <NoteYjsSnapshotPreview noteId={state.snapshot.noteId} data={state.snapshot.data} />
       )}
-      {snapshot.snapshotType !== SNAPSHOT_TYPE.yjs_state &&
-        snapshot.snapshotType !== SNAPSHOT_TYPE.game_map && (
-          <div className="flex-1 min-h-0 flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Preview not available for this snapshot type.
-            </p>
-          </div>
-        )}
+      {state.snapshot.kind === 'canvas-yjs' && (
+        <CanvasSnapshotPreview canvasId={state.snapshot.canvasId} data={state.snapshot.data} />
+      )}
+      {state.snapshot.kind === 'game-map' && (
+        <GameMapSnapshotPreview
+          snapshotData={state.snapshot.snapshotData}
+          imageUrlState={state.snapshot.imageUrlState}
+        />
+      )}
+      {state.snapshot.kind === 'unsupported' && (
+        <div className="flex-1 min-h-0 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground">
+            Preview not available for this snapshot type.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
 
-function NoteYjsSnapshotPreview({
-  noteId,
-  data,
-}: {
-  noteId: Id<'sidebarItems'>
-  data: ArrayBuffer
-}) {
+function NoteYjsSnapshotPreview({ noteId, data }: { noteId: SidebarItemId; data: ArrayBuffer }) {
   const result = readNoteYjsSnapshot(data)
 
   if (result.status === 'corrupted') {
@@ -193,13 +185,7 @@ function NoteYjsSnapshotPreview({
   )
 }
 
-function CanvasSnapshotPreview({
-  canvasId,
-  data,
-}: {
-  canvasId: Id<'sidebarItems'>
-  data: ArrayBuffer
-}) {
+function CanvasSnapshotPreview({ canvasId, data }: { canvasId: SidebarItemId; data: ArrayBuffer }) {
   const result = readCanvasSnapshot(data)
 
   if (result.status === 'corrupted') {
@@ -227,16 +213,13 @@ function CorruptedSnapshotState() {
   )
 }
 
-function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
-  const snapshotData = readGameMapSnapshot(data)
-
-  const imageUrl = useAuthQuery(
-    api.storage.queries.getDownloadUrl,
-    snapshotData?.imageStorageId
-      ? { storageId: snapshotData.imageStorageId as Id<'_storage'> }
-      : 'skip',
-  )
-
+function GameMapSnapshotPreview({
+  imageUrlState,
+  snapshotData,
+}: {
+  imageUrlState: GameMapSnapshotImageUrlState
+  snapshotData: GameMapSnapshotData | null
+}) {
   if (!snapshotData) {
     return <CorruptedSnapshotState />
   }
@@ -251,14 +234,14 @@ function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
 
   return (
     <div className="flex-1 min-h-0 relative overflow-auto">
-      {imageUrl.data ? (
+      {imageUrlState.status === 'ready' ? (
         <div className="relative">
-          <img src={imageUrl.data} alt="Map preview" className="max-w-full" />
+          <img src={imageUrlState.url} alt="Map preview" className="max-w-full" />
           {snapshotData.pins.map((pin) => (
             <SnapshotPin key={`${pin.itemId}:${pin.x}:${pin.y}`} pin={pin} />
           ))}
         </div>
-      ) : imageUrl.isLoading ? (
+      ) : imageUrlState.status === 'loading' ? (
         <div className="flex items-center justify-center min-h-48">
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>

@@ -1,10 +1,6 @@
 import { useState } from 'react'
-import { api } from 'convex/_generated/api'
 import { ChevronRight, List } from 'lucide-react'
-import type { Id } from 'convex/_generated/dataModel'
 import type { BlockNoteId, Heading, HeadingLevel } from 'shared/editor-blocks/types'
-import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
-import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
 
@@ -14,6 +10,11 @@ interface HeadingNode {
   level: HeadingLevel
   children: Array<HeadingNode>
 }
+
+export type OutlinePanelState =
+  | { status: 'pending' }
+  | { status: 'error' }
+  | { status: 'success'; headings: Array<Heading> }
 
 function buildHeadingTree(headings: Array<Heading>): Array<HeadingNode> {
   const root: Array<HeadingNode> = []
@@ -41,21 +42,6 @@ function buildHeadingTree(headings: Array<Heading>): Array<HeadingNode> {
   }
 
   return root
-}
-
-function scrollToHeading(
-  blockNoteId: BlockNoteId,
-  editor: ReturnType<typeof useNoteEditorStore.getState>['editor'],
-) {
-  const escapedId = CSS.escape(blockNoteId)
-  const blockEl = document.querySelector(`[data-id="${escapedId}"]`)
-  if (!blockEl) return
-
-  blockEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-
-  if (!editor?._tiptapEditor?.view) return
-  editor.focus()
-  editor.setTextCursorPosition(blockNoteId, 'end')
 }
 
 function HeadingItem({
@@ -119,13 +105,14 @@ function HeadingItem({
   )
 }
 
-export function OutlinePanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
-  const headingsQuery = useCampaignQuery(api.blocks.queries.getHeadingsByNote, { noteId: itemId })
-  const editor = useNoteEditorStore((s) => s.editor)
-
-  const onNavigate = (blockNoteId: BlockNoteId) => scrollToHeading(blockNoteId, editor)
-
-  if (headingsQuery.isPending) {
+export function OutlinePanel({
+  onNavigate,
+  state,
+}: {
+  onNavigate: (blockNoteId: BlockNoteId) => void
+  state: OutlinePanelState
+}) {
+  if (state.status === 'pending') {
     return (
       <div className="flex flex-col h-full">
         <p className="text-sm text-muted-foreground p-4 text-center">Loading outline...</p>
@@ -133,7 +120,7 @@ export function OutlinePanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
     )
   }
 
-  if (headingsQuery.isError) {
+  if (state.status === 'error') {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
         <List className="h-8 w-8 text-muted-foreground mb-2" aria-hidden="true" />
@@ -142,7 +129,7 @@ export function OutlinePanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
     )
   }
 
-  const headings = headingsQuery.data ?? []
+  const { headings } = state
 
   if (headings.length === 0) {
     return (

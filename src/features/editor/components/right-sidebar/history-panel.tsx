@@ -1,19 +1,28 @@
 import { useEffect, useRef } from 'react'
-import { api } from 'convex/_generated/api'
 import { Loader2, RotateCcw } from 'lucide-react'
-import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { EditHistoryEntry } from 'shared/edit-history/types'
-import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
-import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
+import type { EditHistoryId } from 'shared/common/ids'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { UserProfileImage } from '~/shared/components/user-profile-image'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import { cn } from '~/features/shadcn/lib/utils'
 import { getUserDisplayName } from '~/shared/utils/user-display-name'
+
+export type HistoryPanelLoadStatus =
+  | 'LoadingFirstPage'
+  | 'CanLoadMore'
+  | 'LoadingMore'
+  | 'Exhausted'
+
+export type HistoryPanelState = {
+  canEdit: boolean
+  entries: Array<EditHistoryEntry>
+  membersMap: ReadonlyMap<string, CampaignMemberSummary>
+  myMemberId: string | null
+  previewingEntryId: EditHistoryId | null
+  status: HistoryPanelLoadStatus
+}
 
 function str(value: unknown, fallback = '(unknown)'): string {
   return typeof value === 'string' ? value : fallback
@@ -110,37 +119,18 @@ function groupByDay(
   }))
 }
 
-const PAGE_SIZE = 20
-
-export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
-  const membersQuery = useCampaignMembers()
-  const { campaign, campaignId } = useCampaign()
-
-  const {
-    results = [],
-    status,
-    loadMore,
-  } = useAuthPaginatedQuery(
-    api.editHistory.queries.getItemHistory,
-    campaignId ? { campaignId, itemId } : 'skip',
-    { initialNumItems: PAGE_SIZE },
-  )
-  const { canEdit } = useEditorMode()
-  const myMemberId = campaign.data?.myMembership?._id
-  const previewingEntryId = useHistoryPreviewStore((s) =>
-    s.preview?.itemId === itemId ? s.preview.entryId : null,
-  )
-  const setPreviewingEntry = useHistoryPreviewStore((s) => s.setPreviewingEntry)
-  const setRollbackEntry = useHistoryPreviewStore((s) => s.setRollbackEntry)
-
-  const membersMap = new Map<string, CampaignMemberSummary>()
-  if (membersQuery.data) {
-    for (const m of membersQuery.data) {
-      membersMap.set(m._id, m)
-    }
-  }
-
-  const entries = results as Array<EditHistoryEntry>
+export function HistoryPanel({
+  onLoadMore,
+  onPreviewEntryChange,
+  onRollbackEntry,
+  state,
+}: {
+  onLoadMore: () => void
+  onPreviewEntryChange: (entryId: EditHistoryId | null) => void
+  onRollbackEntry: (entryId: EditHistoryId) => void
+  state: HistoryPanelState
+}) {
+  const { canEdit, entries, membersMap, myMemberId, previewingEntryId, status } = state
   const dayGroups = groupByDay(entries)
 
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -154,7 +144,7 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
     const observer = new IntersectionObserver(
       (observerEntries) => {
         if (observerEntries[0]?.isIntersecting && status === 'CanLoadMore') {
-          loadMore(PAGE_SIZE)
+          onLoadMore()
         }
       },
       { root: viewport, rootMargin: '100px' },
@@ -162,7 +152,7 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [status, loadMore])
+  }, [status, onLoadMore])
 
   return (
     <div data-testid="history-panel" className="flex flex-col h-full bg-background">
@@ -241,7 +231,7 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
                     )}
                     onClick={(e) => {
                       e.stopPropagation()
-                      setRollbackEntry(itemId, entry._id)
+                      onRollbackEntry(entry._id)
                     }}
                   >
                     <RotateCcw className="size-3.5" />
@@ -259,7 +249,7 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
                     type="button"
                     aria-pressed={isSelected}
                     className="flex min-w-0 flex-1 items-start gap-2.5 border-0 bg-transparent p-0 text-left text-foreground"
-                    onClick={() => setPreviewingEntry(itemId, isSelected ? null : entry._id)}
+                    onClick={() => onPreviewEntryChange(isSelected ? null : entry._id)}
                   >
                     {entryContent}
                   </button>

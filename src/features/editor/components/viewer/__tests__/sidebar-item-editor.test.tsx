@@ -12,12 +12,12 @@ vi.mock('../map/map-viewer', () => ({ MapViewer: () => <div /> }))
 vi.mock('../folder/folder-viewer', () => ({ FolderViewer: () => <div /> }))
 vi.mock('../file/file-viewer', () => ({ FileViewer: () => <div /> }))
 vi.mock('~/features/canvas/components/canvas-viewer', () => ({ CanvasViewer: () => <div /> }))
-vi.mock('../history-preview-viewer', () => ({
-  HistoryPreviewViewer: ({ itemId, entryId }: { itemId: string; entryId: string }) => (
+vi.mock('../live-history-preview-viewer', () => ({
+  LiveHistoryPreviewViewer: ({ itemId, entryId }: { itemId: string; entryId: string }) => (
     <div data-testid="history-preview" data-item-id={itemId} data-entry-id={entryId} />
   ),
 }))
-vi.mock('../rollback-confirm-dialog', () => ({ RollbackConfirmDialog: () => null }))
+vi.mock('../live-rollback-confirm-dialog', () => ({ LiveRollbackConfirmDialog: () => null }))
 
 describe('SidebarItemEditor', () => {
   beforeEach(() => {
