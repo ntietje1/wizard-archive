@@ -119,13 +119,12 @@ describe('DemoWorkspace', () => {
   it('renders the app-like editor chrome without restoring the removed demo wrapper labels', () => {
     render(<DemoWorkspace />)
 
-    expect(screen.getByText('Edited today')).toBeInTheDocument()
-    expect(screen.getByText('Private')).toBeInTheDocument()
-    expect(screen.getByTitle('View as player')).toBeInTheDocument()
-    expect(screen.getByTitle('More options')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Toggle history panel, Edited/i }),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'View as player' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'More options' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'More options' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Trash' })).not.toBeInTheDocument()
     expect(screen.getByText('Lanterns of Brindlehook')).toBeInTheDocument()
@@ -145,7 +144,7 @@ describe('DemoWorkspace', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Note Write and organize your thoughts' }))
 
-    expect(screen.getByRole('textbox', { name: 'Selected item name' })).toHaveValue('Untitled Note')
+    expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue('Untitled Note')
     expect(screen.getByTestId('selectable-row-Untitled Note')).toBeInTheDocument()
     expect(localNoteEditorMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -164,7 +163,7 @@ describe('DemoWorkspace', () => {
       screen.getByRole('button', { name: 'Canvas Create a whiteboard to draw and organize nodes' }),
     )
 
-    expect(screen.getByRole('textbox', { name: 'Selected item name' })).toHaveValue('New Canvas')
+    expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue('New Canvas')
     expect(localCanvasEditorMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
         canvasId: 'local-canvas-2',
@@ -177,7 +176,7 @@ describe('DemoWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'New' }))
     fireEvent.click(screen.getByRole('button', { name: 'File Upload a document, image, or media' }))
 
-    expect(screen.getByRole('textbox', { name: 'Selected item name' })).toHaveValue('New File 3')
+    expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue('New File 3')
     expect(screen.getByText('New File 3.txt')).toBeInTheDocument()
     expect(screen.getByText('text/plain · 0 B')).toBeInTheDocument()
     expect(fileContentViewerMock).toHaveBeenLastCalledWith({
@@ -191,9 +190,12 @@ describe('DemoWorkspace', () => {
   it('renames a local item without leaving the demo workspace', () => {
     render(<DemoWorkspace />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Selected item name' }), {
+    const nameInput = screen.getByRole('textbox', { name: 'Item name' })
+    fireEvent.focus(nameInput)
+    fireEvent.change(nameInput, {
       target: { value: 'Market Leads' },
     })
+    fireEvent.blur(nameInput)
 
     expect(screen.getByTestId('selectable-row-Market Leads')).toBeInTheDocument()
     expect(screen.getByTestId('demo-note-editor')).toBeInTheDocument()

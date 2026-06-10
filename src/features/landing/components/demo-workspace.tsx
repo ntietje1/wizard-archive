@@ -3,11 +3,11 @@ import { Fragment, useEffect, useReducer, useRef, useState } from 'react'
 import { CreateNewDashboardSurface } from '~/features/editor/components/create-new-dashboard-surface'
 import { EditorWorkspaceSurface } from '~/features/editor/components/editor-workspace-surface'
 import { NoteFormattingToolbar } from '~/features/editor/components/formatting-toolbar/note-formatting-toolbar'
+import { FileTopbar } from '~/features/editor/components/topbar/file-topbar'
 import { FileContentViewer } from '~/features/editor/components/viewer/file/file-content-viewer'
 import { LocalCanvasEditor } from '~/features/landing/demo-workspace/local-canvas-editor'
 import { LocalNoteEditor } from '~/features/landing/demo-workspace/local-note-editor'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
-import { Input } from '~/features/shadcn/components/input'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
 import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-surface'
@@ -28,7 +28,7 @@ import {
   demoWorkspaceReducer,
   selectedDemoItem,
 } from '../demo-workspace/demo-workspace-model'
-import { DemoEditorTopbar, DemoSidebarFooter } from './demo-editor-chrome'
+import { DemoSidebarFooter } from './demo-editor-chrome'
 import type {
   DemoMapPin,
   DemoWorkspaceItem,
@@ -66,7 +66,7 @@ export function DemoWorkspace() {
           />
         }
       >
-        <EditorWorkspaceSurface topbar={<DemoWorkspaceTopbar source={workspaceSource} />}>
+        <EditorWorkspaceSurface topbar={<FileTopbar source={workspaceSource} />}>
           <DemoWorkspaceSurfaces
             workspace={workspace}
             selectedItem={selectedItem}
@@ -125,30 +125,6 @@ function DemoWorkspaceSidebar({
       />
     </aside>
   )
-}
-
-function DemoWorkspaceTopbar({
-  source,
-}: {
-  source: ReturnType<typeof createLocalDemoEditorWorkspaceSource>
-}) {
-  const selectedItem = source.currentItem.contentItem
-  const title = (() => {
-    if (selectedItem === null) {
-      return <p className="truncate text-sm font-semibold">Untitled Item</p>
-    }
-
-    return (
-      <Input
-        aria-label="Selected item name"
-        value={selectedItem.name}
-        onChange={(event) => source.setPendingItemName(event.currentTarget.value)}
-        className="h-8 max-w-lg border-transparent bg-transparent px-1 text-base font-medium shadow-none focus-visible:bg-control-surface focus-visible:px-2"
-      />
-    )
-  })()
-
-  return <DemoEditorTopbar title={title} />
 }
 
 function DemoWorkspaceSurfaces({

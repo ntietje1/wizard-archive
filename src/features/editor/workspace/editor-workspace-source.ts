@@ -2,9 +2,11 @@ import type { CampaignActor } from 'shared/campaigns/actor'
 import type { EditorMode } from 'shared/editor/types'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
+import type { ValidationResult } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { RefObject } from 'react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
+import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
 import type { EditorWorkspaceChrome } from './editor-workspace-chrome'
 
@@ -59,6 +61,17 @@ interface EditorWorkspaceInteractions {
   emptyWorkspaceDrop: EditorEmptyWorkspaceDropCapability
 }
 
+interface EditorWorkspaceCommands {
+  renameItem: (item: AnySidebarItem, name: string) => Promise<void> | void
+  openItem: (item: AnySidebarItem) => Promise<void> | void
+  getItemLinkProps: (item: AnySidebarItem) => EditorLinkProps | null
+  validateItemName: (
+    name: string,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
+  ) => ValidationResult
+}
+
 export interface EditorWorkspaceSource {
   currentItem: EditorCurrentItemSnapshot
   editorMode: EditorModeSnapshot
@@ -66,6 +79,7 @@ export interface EditorWorkspaceSource {
   campaign: EditorCampaignSnapshot
   chrome: EditorWorkspaceChrome
   interactions: EditorWorkspaceInteractions
+  commands: EditorWorkspaceCommands
   pendingItemName: string
   setPendingItemName: (name: string) => void
   requestedSlug: SidebarItemSlug | null

@@ -8,6 +8,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
+import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
@@ -15,6 +16,10 @@ import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
 import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
+import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
+import { buildEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import type { EditorWorkspaceShareChrome } from './editor-workspace-chrome'
 import type { EditorWorkspaceSource } from './editor-workspace-source'
 import { useLiveEmptyWorkspaceDropCapability } from './use-live-empty-workspace-drop'
@@ -25,6 +30,10 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const filesystem = useFileSystemReadModel()
   const campaign = useCampaign()
   const campaignMembers = useCampaignMembers()
+  const { editItem } = useEditFileSystemItem()
+  const { navigateToItem } = useEditorNavigation()
+  const { setLastSelectedItem } = useLastEditorItem()
+  const sidebarValidation = useSidebarValidation()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
   const {
@@ -102,6 +111,7 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
       rightSidebar,
       topbar: {
         contextMenu: {
+          enabled: true,
           item: currentItem.item,
         },
         history: {
@@ -119,6 +129,21 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     },
     interactions: {
       emptyWorkspaceDrop,
+    },
+    commands: {
+      renameItem: async (item, name) => {
+        await editItem({ item, name })
+      },
+      openItem: (item) => {
+        setLastSelectedItem(item.slug)
+        return navigateToItem(item.slug)
+      },
+      getItemLinkProps: (item) =>
+        buildEditorLinkProps(item, {
+          dmUsername: campaign.dmUsername,
+          campaignSlug: campaign.campaignSlug,
+        }),
+      validateItemName: sidebarValidation.validateName,
     },
     pendingItemName,
     setPendingItemName,

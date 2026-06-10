@@ -73,6 +73,7 @@ function createEmptyWorkspaceSource({
       },
       topbar: {
         contextMenu: {
+          enabled: false,
           item: null,
         },
         history: {
@@ -109,6 +110,12 @@ function createEmptyWorkspaceSource({
               status: 'disabled',
               reason: 'unsupported',
             },
+    },
+    commands: {
+      renameItem: vi.fn(),
+      openItem: vi.fn(),
+      getItemLinkProps: vi.fn(() => null),
+      validateItemName: vi.fn(() => ({ valid: true as const })),
     },
     pendingItemName: '',
     setPendingItemName: vi.fn(),

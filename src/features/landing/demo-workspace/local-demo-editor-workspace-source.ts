@@ -1,4 +1,5 @@
 import { EDITOR_MODE } from 'shared/editor/types'
+import { validateSidebarItemNameWithSiblings } from 'shared/sidebar-items/name'
 import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
 import type { INITIAL_DEMO_WORKSPACE, DemoWorkspaceAction } from './demo-workspace-model'
 import { createDemoWorkspaceProjection, selectedDemoItem } from './demo-workspace-model'
@@ -65,6 +66,7 @@ export function createLocalDemoEditorWorkspaceSource({
       },
       topbar: {
         contextMenu: {
+          enabled: false,
           item: contentItem,
         },
         history: {
@@ -84,6 +86,18 @@ export function createLocalDemoEditorWorkspaceSource({
     },
     interactions: {
       emptyWorkspaceDrop: { status: 'disabled', reason: 'unsupported' },
+    },
+    commands: {
+      renameItem: (item, name) =>
+        dispatch({ type: 'renameItem', itemId: String(item._id), title: name }),
+      openItem: (item) => dispatch({ type: 'selectItem', itemId: String(item._id) }),
+      getItemLinkProps: () => null,
+      validateItemName: (name, parentId, excludeId) =>
+        validateSidebarItemNameWithSiblings(
+          name,
+          projection.items.filter((item) => item.parentId === parentId),
+          excludeId,
+        ),
     },
     pendingItemName: selectedItem?.title ?? '',
     setPendingItemName: (title) => dispatch({ type: 'renameSelectedItem', title }),

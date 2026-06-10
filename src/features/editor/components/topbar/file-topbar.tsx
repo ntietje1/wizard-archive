@@ -1,6 +1,7 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName, SidebarItemBreadcrumb } from './editable-breadcrumb'
+import type { ValidationResult } from 'shared/sidebar-items/name'
 import { EditorTopbarSurface } from './editor-topbar-surface'
 import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'
 import { Button } from '~/features/shadcn/components/button'
@@ -29,10 +30,16 @@ function EmptyEditorTitle({
   campaignId,
   pendingItemName,
   setPendingItemName,
+  validateName,
 }: {
   campaignId: Id<'campaigns'> | null | undefined
   pendingItemName: string
   setPendingItemName: (name: string) => void
+  validateName: (
+    name: string,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
+  ) => ValidationResult
 }) {
   return (
     <EditableName
@@ -41,6 +48,7 @@ function EmptyEditorTitle({
       onChange={setPendingItemName}
       campaignId={campaignId ?? undefined}
       parentId={null}
+      validateName={validateName}
     />
   )
 }
@@ -74,13 +82,25 @@ function buildAncestorTrail(
 type FileTopbarTitleState =
   | { kind: 'loading' }
   | { kind: 'trash'; itemCount: number }
-  | { kind: 'pending'; item: AnySidebarItem; ancestors: Array<AnySidebarItem> }
-  | { kind: 'item'; item: AnySidebarItemWithContent; canRename: boolean; isNotShared: boolean }
+  | {
+      kind: 'pending'
+      item: AnySidebarItem
+      ancestors: Array<AnySidebarItem>
+      commands: EditorWorkspaceSource['commands']
+    }
+  | {
+      kind: 'item'
+      item: AnySidebarItemWithContent
+      canRename: boolean
+      isNotShared: boolean
+      commands: EditorWorkspaceSource['commands']
+    }
   | {
       kind: 'empty'
       campaignId: Id<'campaigns'> | null | undefined
       pendingItemName: string
       setPendingItemName: (name: string) => void
+      commands: EditorWorkspaceSource['commands']
     }
   | { kind: 'none' }
 
@@ -92,7 +112,13 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
       {title.kind === 'loading' && <div className="bg-muted rounded-md h-5 w-32 my-0.5" />}
       {title.kind === 'trash' && <TrashTopbarTitle itemCount={title.itemCount} />}
       {title.kind === 'pending' && (
-        <SidebarItemBreadcrumb item={title.item} ancestors={title.ancestors} canRename={false} />
+        <SidebarItemBreadcrumb
+          item={title.item}
+          ancestors={title.ancestors}
+          canRename={false}
+          onOpenAncestor={title.commands.openItem}
+          getAncestorLinkProps={title.commands.getItemLinkProps}
+        />
       )}
       {title.kind === 'item' && (
         <EditableBreadcrumb
@@ -100,6 +126,10 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           item={title.item}
           canRename={title.canRename && !title.isNotShared}
           showNotSharedTooltip={title.isNotShared}
+          onRename={title.commands.renameItem}
+          onOpenAncestor={title.commands.openItem}
+          getAncestorLinkProps={title.commands.getItemLinkProps}
+          validateName={title.commands.validateItemName}
         />
       )}
       {title.kind === 'empty' && (
@@ -107,6 +137,7 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           campaignId={title.campaignId}
           pendingItemName={title.pendingItemName}
           setPendingItemName={title.setPendingItemName}
+          validateName={title.commands.validateItemName}
         />
       )}
     </div>
@@ -153,10 +184,17 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
         kind: 'pending',
         item,
         ancestors: buildAncestorTrail(item, filesystem.activeItemsById),
+        commands: source.commands,
       }
     }
     if (loadedItem) {
-      return { kind: 'item', item: loadedItem, canRename, isNotShared: isNotSharedWithPlayer }
+      return {
+        kind: 'item',
+        item: loadedItem,
+        canRename,
+        isNotShared: isNotSharedWithPlayer,
+        commands: source.commands,
+      }
     }
     if (isEmptyEditor) {
       return {
@@ -164,6 +202,7 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
         campaignId: source.campaign.campaignId,
         pendingItemName: source.pendingItemName,
         setPendingItemName: source.setPendingItemName,
+        commands: source.commands,
       }
     }
     return { kind: 'none' }
@@ -173,6 +212,29 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
     <ItemButtonWrapper chrome={source.chrome.topbar} isTrashView={isTrashView} />
   )
 
+  const topbarSurface = (
+    <EditorTopbarSurface
+      title={<FileTopbarTitle title={title} />}
+      timestampControl={
+        timestampLabel && (
+          <Button
+            variant="ghost"
+            onClick={toggleHistory}
+            aria-label={`Toggle history panel, ${timestampLabel}`}
+            className="text-xs text-muted-foreground hover:text-foreground h-auto px-1.5 py-0.5 shrink-0"
+          >
+            {timestampLabel}
+          </Button>
+        )
+      }
+      middleContent={middleContent}
+    />
+  )
+
+  if (!source.chrome.topbar.contextMenu.enabled) {
+    return topbarSurface
+  }
+
   return (
     <EditorContextMenu
       viewContext="topbar"
@@ -180,22 +242,7 @@ export function FileTopbar({ source }: { source: EditorWorkspaceSource }) {
       isTrashView={isTrashView}
       disabled={isPendingItem}
     >
-      <EditorTopbarSurface
-        title={<FileTopbarTitle title={title} />}
-        timestampControl={
-          timestampLabel && (
-            <Button
-              variant="ghost"
-              onClick={toggleHistory}
-              aria-label={`Toggle history panel, ${timestampLabel}`}
-              className="text-xs text-muted-foreground hover:text-foreground h-auto px-1.5 py-0.5 shrink-0"
-            >
-              {timestampLabel}
-            </Button>
-          )
-        }
-        middleContent={middleContent}
-      />
+      {topbarSurface}
     </EditorContextMenu>
   )
 }

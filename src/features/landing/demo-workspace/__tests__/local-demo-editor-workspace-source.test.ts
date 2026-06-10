@@ -33,6 +33,16 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
       type: 'renameSelectedItem',
       title: 'Renamed market',
     })
+
+    void source.commands.renameItem(
+      source.filesystem.activeItemsById.get('canvas-heist' as Id<'sidebarItems'>)!,
+      'Board',
+    )
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'renameItem',
+      itemId: 'canvas-heist',
+      title: 'Board',
+    })
   })
 
   it('uses the same canonical projection for source current item and embed resolution', () => {

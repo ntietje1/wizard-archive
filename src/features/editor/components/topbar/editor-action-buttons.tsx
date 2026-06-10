@@ -17,7 +17,7 @@ export function ContextMenuButton({
   const topbarContextMenuRef = useRef<ContextMenuHostRef>(null)
 
   const item = contextMenu.item
-  const hasMenu = !!item || isTrashView
+  const hasMenu = contextMenu.enabled && (!!item || isTrashView)
 
   const baseButton = (
     <EmptyContextMenu>

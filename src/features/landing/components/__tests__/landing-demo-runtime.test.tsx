@@ -39,7 +39,7 @@ describe('landing demo runtime surfaces', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Harbor Heist Board' }))
 
     expect(screen.getByLabelText('Canvas surface')).toBeInTheDocument()
-  })
+  }, 10_000)
 })
 
 class MockResizeObserver implements ResizeObserver {

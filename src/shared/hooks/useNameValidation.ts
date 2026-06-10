@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import debounce from 'lodash-es/debounce'
-import { validateItemName } from 'shared/sidebar-items/name'
+import { validateItemName, validateSidebarItemNameWithSiblings } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
+import type { ValidationResult } from 'shared/sidebar-items/name'
+import { useOptionalActiveSidebarItems } from '~/features/sidebar/contexts/sidebar-items-context'
 
 const NAME_VALIDATION_DEBOUNCE_MS = 300
 
@@ -13,6 +14,11 @@ interface UseNameValidationOptions {
   campaignId?: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null
   excludeId?: Id<'sidebarItems'>
+  validateName?: (
+    name: string,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
+  ) => ValidationResult
 }
 
 export function useNameValidation({
@@ -22,8 +28,9 @@ export function useNameValidation({
   campaignId,
   parentId,
   excludeId,
+  validateName,
 }: UseNameValidationOptions) {
-  const { validateName } = useSidebarValidation()
+  const activeSidebarItems = useOptionalActiveSidebarItems()
   const [debouncedName, setDebouncedName] = useState(name)
   const debouncedSetNameRef = useRef(
     debounce((value: string) => {
@@ -51,7 +58,14 @@ export function useNameValidation({
   const checkUniqueness = (trimmed: string) => {
     if (!campaignId || trimmed === trimmedInitialName)
       return { valid: true as const, error: undefined }
-    return validateName(trimmed, parentId, excludeId)
+    if (validateName) return validateName(trimmed, parentId, excludeId)
+    if (!activeSidebarItems) return { valid: true as const, error: undefined }
+
+    return validateSidebarItemNameWithSiblings(
+      trimmed,
+      activeSidebarItems.parentItemsMap.get(parentId) ?? [],
+      excludeId,
+    )
   }
 
   const isPendingDebounce = trimmedName !== trimmedDebouncedName

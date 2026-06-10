@@ -71,6 +71,7 @@ export type DemoWorkspaceAction =
   | { type: 'createItem'; commandKey: string }
   | { type: 'openCreateDashboard' }
   | { type: 'selectItem'; itemId: string }
+  | { type: 'renameItem'; itemId: string; title: string }
   | { type: 'renameSelectedItem'; title: string }
 
 const INITIAL_NOTE_BODY = [
@@ -80,6 +81,8 @@ const INITIAL_NOTE_BODY = [
   '- The bell tower guard changes posts after the third tide bell.',
   '- Players know the public auction starts at dusk.',
 ].join('\n')
+
+const DEMO_TIMESTAMP = Date.now()
 
 export const INITIAL_DEMO_WORKSPACE = createInitialDemoWorkspace()
 
@@ -181,6 +184,8 @@ export function demoWorkspaceReducer(
           ? state.mountedItemIds
           : [...state.mountedItemIds, action.itemId],
       }
+    case 'renameItem':
+      return renameItem(state, action.itemId, action.title)
     case 'renameSelectedItem':
       return renameSelectedItem(state, action.title)
     default:
@@ -245,7 +250,7 @@ function projectDemoSidebarItemWithContent(
 ): AnySidebarItemWithContent {
   const baseItem = {
     _id: item.id as Id<'sidebarItems'>,
-    _creationTime: 0,
+    _creationTime: DEMO_TIMESTAMP,
     name: assertSidebarItemName(item.title || 'Untitled'),
     iconName: null,
     color: null,
@@ -259,7 +264,7 @@ function projectDemoSidebarItemWithContent(
     previewLockedUntil: null,
     previewClaimToken: null,
     previewUpdatedAt: null,
-    updatedTime: null,
+    updatedTime: DEMO_TIMESTAMP,
     updatedBy: null,
     createdBy: 'demo-user' as Id<'userProfiles'>,
     deletionTime: null,
@@ -357,8 +362,14 @@ export function noteBodyToBlocks(body: string): Array<CustomBlock> {
 
 function renameSelectedItem(state: DemoWorkspaceState, title: string): DemoWorkspaceState {
   if (state.activeView !== 'item') return state
-  const nextTitle = title.trimStart()
   const item = selectedDemoItem(state)
+  if (!item) return state
+  return renameItem(state, item.id, title)
+}
+
+function renameItem(state: DemoWorkspaceState, itemId: string, title: string): DemoWorkspaceState {
+  const nextTitle = title.trimStart()
+  const item = state.items.find((candidate) => candidate.id === itemId)
   if (!item) return state
   const items = state.items.map((candidate) =>
     candidate.id === item.id ? { ...candidate, title: nextTitle } : candidate,

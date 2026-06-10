@@ -41,6 +41,7 @@ export interface EditorWorkspaceViewAsPlayerChrome {
 }
 
 export interface EditorWorkspaceContextMenuChrome {
+  enabled: boolean
   item: AnySidebarItem | null
 }
 

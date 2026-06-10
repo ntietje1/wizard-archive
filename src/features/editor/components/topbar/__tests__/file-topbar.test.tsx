@@ -89,6 +89,7 @@ function createWorkspaceSource(): EditorWorkspaceSource {
       },
       topbar: {
         contextMenu: {
+          enabled: false,
           item,
         },
         history: {
@@ -111,6 +112,12 @@ function createWorkspaceSource(): EditorWorkspaceSource {
         status: 'disabled',
         reason: 'unsupported',
       },
+    },
+    commands: {
+      renameItem: vi.fn(),
+      openItem: vi.fn(),
+      getItemLinkProps: vi.fn(() => null),
+      validateItemName: vi.fn(() => ({ valid: true as const })),
     },
     pendingItemName: '',
     setPendingItemName: vi.fn(),

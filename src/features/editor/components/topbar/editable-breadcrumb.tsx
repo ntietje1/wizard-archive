@@ -3,14 +3,11 @@ import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
+import type { ValidationResult } from 'shared/sidebar-items/name'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
-import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'
-import { buildEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { handleError } from '~/shared/utils/logger'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 
@@ -24,6 +21,11 @@ interface EditableNameProps {
   excludeId?: Id<'sidebarItems'>
   disabled?: boolean
   showNotSharedTooltip?: boolean
+  validateName?: (
+    name: string,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
+  ) => ValidationResult
 }
 
 export function EditableName({
@@ -36,6 +38,7 @@ export function EditableName({
   excludeId,
   disabled,
   showNotSharedTooltip,
+  validateName,
 }: EditableNameProps) {
   const [draftName, setDraftName] = useState<string>('')
   const [isEditing, setIsEditing] = useState(false)
@@ -50,6 +53,7 @@ export function EditableName({
     campaignId,
     parentId,
     excludeId,
+    validateName,
   })
 
   const finishRename = async () => {
@@ -161,22 +165,51 @@ export function EditableName({
 
 interface BreadcrumbAncestorProps {
   ancestor: AnySidebarItem
-  linkProps: EditorLinkProps
-  onClick: () => void
+  linkProps?: EditorLinkProps | null
+  onOpen?: (item: AnySidebarItem) => void
 }
 
-function BreadcrumbAncestor({ ancestor, linkProps, onClick }: BreadcrumbAncestorProps) {
+function BreadcrumbAncestor({ ancestor, linkProps, onOpen }: BreadcrumbAncestorProps) {
+  const className =
+    'rounded-sm truncate text-muted-foreground min-w-0 px-0.5 mx-0.5 hover:text-foreground hover:bg-muted'
+  const content = (() => {
+    if (linkProps) {
+      return (
+        <Link
+          {...linkProps}
+          activeOptions={{ includeSearch: false }}
+          className={cn(className, 'cursor-pointer')}
+          title={ancestor.name}
+          onClick={() => onOpen?.(ancestor)}
+        >
+          {ancestor.name}
+        </Link>
+      )
+    }
+
+    if (onOpen) {
+      return (
+        <button
+          type="button"
+          className={cn(className, 'cursor-pointer')}
+          title={ancestor.name}
+          onClick={() => onOpen(ancestor)}
+        >
+          {ancestor.name}
+        </button>
+      )
+    }
+
+    return (
+      <span className={className} title={ancestor.name}>
+        {ancestor.name}
+      </span>
+    )
+  })()
+
   return (
     <div key={ancestor._id} className="flex items-center min-w-6 flex-shrink">
-      <Link
-        {...linkProps}
-        activeOptions={{ includeSearch: false }}
-        className="rounded-sm truncate text-muted-foreground min-w-0 px-0.5 mx-0.5 cursor-pointer hover:text-foreground hover:bg-muted"
-        title={ancestor.name}
-        onClick={onClick}
-      >
-        {ancestor.name}
-      </Link>
+      {content}
       <span className="text-muted-foreground flex-shrink-0">/</span>
     </div>
   )
@@ -186,6 +219,14 @@ interface EditableBreadcrumbProps {
   item: AnySidebarItemWithContent
   canRename: boolean
   showNotSharedTooltip?: boolean
+  onRename?: (item: AnySidebarItemWithContent, name: string) => Promise<void> | void
+  onOpenAncestor?: (item: AnySidebarItem) => Promise<void> | void
+  getAncestorLinkProps?: (item: AnySidebarItem) => EditorLinkProps | null
+  validateName?: (
+    name: string,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
+  ) => ValidationResult
 }
 
 interface SidebarItemBreadcrumbProps {
@@ -193,6 +234,14 @@ interface SidebarItemBreadcrumbProps {
   ancestors: Array<AnySidebarItem>
   canRename: boolean
   showNotSharedTooltip?: boolean
+  onRename?: (item: AnySidebarItem, name: string) => Promise<void> | void
+  onOpenAncestor?: (item: AnySidebarItem) => Promise<void> | void
+  getAncestorLinkProps?: (item: AnySidebarItem) => EditorLinkProps | null
+  validateName?: (
+    name: string,
+    parentId: Id<'sidebarItems'> | null,
+    excludeId?: Id<'sidebarItems'>,
+  ) => ValidationResult
 }
 
 export function SidebarItemBreadcrumb({
@@ -200,14 +249,13 @@ export function SidebarItemBreadcrumb({
   ancestors,
   canRename,
   showNotSharedTooltip,
+  onRename,
+  onOpenAncestor,
+  getAncestorLinkProps,
+  validateName,
 }: SidebarItemBreadcrumbProps) {
-  const { editItem } = useEditFileSystemItem()
-  const { setLastSelectedItem } = useLastEditorItem()
-  const { dmUsername, campaignSlug } = useCampaign()
-  const routeParams = { dmUsername, campaignSlug }
-
   const handleRename = async (newName: string) => {
-    await editItem({ item, name: newName })
+    await onRename?.(item, newName)
   }
 
   return (
@@ -217,8 +265,8 @@ export function SidebarItemBreadcrumb({
           <BreadcrumbAncestor
             key={ancestor._id}
             ancestor={ancestor}
-            linkProps={buildEditorLinkProps(ancestor, routeParams)}
-            onClick={() => setLastSelectedItem(ancestor.slug)}
+            linkProps={getAncestorLinkProps?.(ancestor)}
+            onOpen={onOpenAncestor}
           />
         ))}
       </div>
@@ -230,11 +278,23 @@ export function SidebarItemBreadcrumb({
         excludeId={item._id}
         disabled={!canRename}
         showNotSharedTooltip={showNotSharedTooltip}
+        validateName={validateName}
       />
     </div>
   )
 }
 
 export function EditableBreadcrumb(props: EditableBreadcrumbProps) {
-  return <SidebarItemBreadcrumb {...props} ancestors={props.item.ancestors} />
+  return (
+    <SidebarItemBreadcrumb
+      item={props.item}
+      ancestors={props.item.ancestors}
+      canRename={props.canRename}
+      showNotSharedTooltip={props.showNotSharedTooltip}
+      onRename={props.onRename ? (_item, name) => props.onRename?.(props.item, name) : undefined}
+      onOpenAncestor={props.onOpenAncestor}
+      getAncestorLinkProps={props.getAncestorLinkProps}
+      validateName={props.validateName}
+    />
+  )
 }
