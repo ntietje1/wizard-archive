@@ -322,6 +322,22 @@ function useFileSystemValue(): FileSystemProviderState {
     return { slug: getReceiptRenamedSlug(receipt) }
   }
 
+  const setAllPlayersPermission: FileSystemValue['setAllPlayersPermission'] = async (input) => {
+    await executeCommand({ type: 'setAllPlayersPermission', ...input })
+  }
+
+  const setMemberPermission: FileSystemValue['setMemberPermission'] = async (input) => {
+    await executeCommand({ type: 'setSidebarItemsMemberPermission', ...input })
+  }
+
+  const clearMemberPermission: FileSystemValue['clearMemberPermission'] = async (input) => {
+    await executeCommand({ type: 'clearSidebarItemsMemberPermission', ...input })
+  }
+
+  const setFolderInheritShares: FileSystemValue['setFolderInheritShares'] = async (input) => {
+    await executeCommand({ type: 'setFolderInheritShares', ...input })
+  }
+
   const duplicateItems: FileSystemValue['duplicateItems'] = async (itemIds) => {
     const command = createFileSystemDuplicateCommand(itemIds, cacheAdapter.getReadModel())
     if (command) await executeCommand(command)
@@ -565,6 +581,10 @@ function useFileSystemValue(): FileSystemProviderState {
     value: {
       createItem,
       renameItem,
+      setAllPlayersPermission,
+      setMemberPermission,
+      clearMemberPermission,
+      setFolderInheritShares,
       duplicateItems,
       requestTrashItems,
       restoreItems,

@@ -77,6 +77,10 @@ function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue
   return {
     createItem: vi.fn().mockResolvedValue(undefined),
     renameItem: vi.fn().mockResolvedValue(undefined),
+    setAllPlayersPermission: vi.fn().mockResolvedValue(undefined),
+    setMemberPermission: vi.fn().mockResolvedValue(undefined),
+    clearMemberPermission: vi.fn().mockResolvedValue(undefined),
+    setFolderInheritShares: vi.fn().mockResolvedValue(undefined),
     duplicateItems: vi.fn().mockResolvedValue(undefined),
     requestTrashItems: vi.fn().mockResolvedValue(false),
     restoreItems: vi.fn().mockResolvedValue(undefined),

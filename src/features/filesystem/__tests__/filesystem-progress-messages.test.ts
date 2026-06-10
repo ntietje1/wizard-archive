@@ -69,6 +69,14 @@ describe('filesystem progress messages', () => {
       'Deleting 2 items forever...',
     ],
     [{ type: 'emptyTrash' }, 'Emptying trash...'],
+    [
+      {
+        type: 'setAllPlayersPermission',
+        itemIds: [itemId('shared_item')],
+        permissionLevel: 'view',
+      },
+      'Updating sharing...',
+    ],
   ] satisfies Array<[FileSystemCommand, string]>)('formats %s as %s', (command, expected) => {
     expect(getCommandProgressToastText(command)).toBe(expected)
   })

@@ -1,5 +1,4 @@
-import { api } from 'convex/_generated/api'
-import { toast } from 'sonner'
+import { useState } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
@@ -10,11 +9,12 @@ import type { AggregateShareStatus, ShareItem } from '~/features/sharing/utils/b
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { handleError } from '~/shared/utils/logger'
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/utils/block-share-state'
-import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
+import { api } from 'convex/_generated/api'
 
 type MixedPermissionLevel = 'mixed'
 type AggregatePermissionLevel = PermissionLevel | MixedPermissionLevel
@@ -111,6 +111,8 @@ function canRunShareMutation({
 
 export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const { campaign, isDm } = useCampaign()
+  const fileSystem = useFileSystem()
+  const [isMutating, setIsMutating] = useState(false)
   const campaignData = campaign.data
   const campaignMembersQuery = useCampaignMembers()
   const playerMembers =
@@ -127,29 +129,23 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       : 'skip',
   )
 
-  const setMemberPermissionMutation = useCampaignMutation(
-    api.sidebarShares.mutations.setSidebarItemsMemberPermission,
-  )
-  const clearMemberPermissionMutation = useCampaignMutation(
-    api.sidebarShares.mutations.clearSidebarItemsMemberPermission,
-  )
-  const setAllPlayersPermissionMutation = useCampaignMutation(
-    api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems,
-  )
-  const setFolderInheritSharesMutation = useCampaignMutation(
-    api.sidebarShares.mutations.setFolderInheritShares,
-  )
-  const isMutating =
-    setMemberPermissionMutation.isPending ||
-    clearMemberPermissionMutation.isPending ||
-    setAllPlayersPermissionMutation.isPending ||
-    setFolderInheritSharesMutation.isPending
   const canMutateShares = canRunShareMutation({
     campaignId: campaignData?._id,
     isDm,
     isMutating,
     hasPersistedItems,
   })
+
+  const runShareCommand = async (command: () => Promise<void>, errorMessage: string) => {
+    try {
+      setIsMutating(true)
+      await command()
+    } catch (error) {
+      handleError(error, errorMessage)
+    } finally {
+      setIsMutating(false)
+    }
+  }
 
   const itemShareInfoMap = (() => {
     const map = new Map<Id<'sidebarItems'>, SidebarItemShareInfo>()
@@ -239,52 +235,45 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const toggleShareStatus = async () => {
     if (!canMutateShares || !hasCompleteData) return
 
-    try {
-      const isCurrentlyShared = aggregateShareStatus !== AGGREGATE_SHARE_STATUS.NOT_SHARED
-      const newLevel: PermissionLevel = isCurrentlyShared
-        ? PERMISSION_LEVEL.NONE
-        : PERMISSION_LEVEL.VIEW
+    const isCurrentlyShared = aggregateShareStatus !== AGGREGATE_SHARE_STATUS.NOT_SHARED
+    const newLevel: PermissionLevel = isCurrentlyShared
+      ? PERMISSION_LEVEL.NONE
+      : PERMISSION_LEVEL.VIEW
 
-      await setAllPlayersPermissionMutation.mutateAsync({
-        sidebarItemIds: itemIds,
-        permissionLevel: newLevel,
-      })
-
-      if (newLevel !== PERMISSION_LEVEL.NONE) {
-        toast.success(
-          playerMembers.length === 0
-            ? 'Shared with all players'
-            : `Shared with ${playerMembers.length} player(s)`,
-        )
-      } else {
-        toast.success('Unshared from all players')
-      }
-    } catch (error) {
-      handleError(error, 'Failed to update share')
-    }
+    await runShareCommand(
+      () =>
+        fileSystem.setAllPlayersPermission({
+          itemIds,
+          permissionLevel: newLevel,
+        }),
+      'Failed to update share',
+    )
   }
 
   const toggleShareWithMember = async (memberId: CampaignMemberId) => {
     if (!canMutateShares || !hasCompleteData) return
 
-    try {
-      if (getShareState(memberId) === 'all') {
-        await clearMemberPermissionMutation.mutateAsync({
-          sidebarItemIds: itemIds,
-          campaignMemberId: memberId,
-        })
-        toast.success('Unshared from player')
-      } else {
-        await setMemberPermissionMutation.mutateAsync({
-          sidebarItemIds: itemIds,
+    if (getShareState(memberId) === 'all') {
+      await runShareCommand(
+        () =>
+          fileSystem.clearMemberPermission({
+            itemIds,
+            campaignMemberId: memberId,
+          }),
+        'Failed to update share',
+      )
+      return
+    }
+
+    await runShareCommand(
+      () =>
+        fileSystem.setMemberPermission({
+          itemIds,
           campaignMemberId: memberId,
           permissionLevel: PERMISSION_LEVEL.VIEW,
-        })
-        toast.success('Shared with player')
-      }
-    } catch (error) {
-      handleError(error, 'Failed to update share')
-    }
+        }),
+      'Failed to update share',
+    )
   }
 
   const allPlayersPermissionLevel = aggregateNullablePermissionValues(
@@ -309,54 +298,54 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const setInheritShares = async (enabled: boolean) => {
     if (!canMutateShares || !singleItem || !isFolder) return
 
-    try {
-      await setFolderInheritSharesMutation.mutateAsync({
-        folderId: singleItem._id,
-        inheritShares: enabled,
-      })
-    } catch (error) {
-      handleError(error, 'Failed to update share')
-    }
+    await runShareCommand(
+      () =>
+        fileSystem.setFolderInheritShares({
+          folderId: singleItem._id,
+          inheritShares: enabled,
+        }),
+      'Failed to update share',
+    )
   }
 
   const setMemberPermission = async (memberId: CampaignMemberId, level: PermissionLevel) => {
     if (!canMutateShares) return
 
-    try {
-      await setMemberPermissionMutation.mutateAsync({
-        sidebarItemIds: itemIds,
-        campaignMemberId: memberId,
-        permissionLevel: level,
-      })
-    } catch (error) {
-      handleError(error, 'Failed to update share')
-    }
+    await runShareCommand(
+      () =>
+        fileSystem.setMemberPermission({
+          itemIds,
+          campaignMemberId: memberId,
+          permissionLevel: level,
+        }),
+      'Failed to update share',
+    )
   }
 
   const setAllPlayersPermission = async (level: PermissionLevel | null) => {
     if (!canMutateShares) return
 
-    try {
-      await setAllPlayersPermissionMutation.mutateAsync({
-        sidebarItemIds: itemIds,
-        permissionLevel: level,
-      })
-    } catch (error) {
-      handleError(error, 'Failed to update share')
-    }
+    await runShareCommand(
+      () =>
+        fileSystem.setAllPlayersPermission({
+          itemIds,
+          permissionLevel: level,
+        }),
+      'Failed to update share',
+    )
   }
 
   const clearMemberPermission = async (memberId: CampaignMemberId) => {
     if (!canMutateShares) return
 
-    try {
-      await clearMemberPermissionMutation.mutateAsync({
-        sidebarItemIds: itemIds,
-        campaignMemberId: memberId,
-      })
-    } catch (error) {
-      handleError(error, 'Failed to update share')
-    }
+    await runShareCommand(
+      () =>
+        fileSystem.clearMemberPermission({
+          itemIds,
+          campaignMemberId: memberId,
+        }),
+      'Failed to update share',
+    )
   }
 
   const shareItems: Array<ShareItemWithPermission> = playerMembers.map((member) => {

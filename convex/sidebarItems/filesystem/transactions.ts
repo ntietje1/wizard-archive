@@ -13,6 +13,7 @@ import { collectDescendants } from '../functions/collectDescendants'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
 import { hardDeleteTree } from './treeWrites'
 import { normalizedName } from '../../../shared/sidebar-items/filesystem/conflicts'
+import { getSidebarItemShareRow } from './shareRows'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type {
@@ -190,6 +191,29 @@ export async function recordFilesystemTransaction(
 
 async function applyPatch(ctx: CampaignMutationCtx, patch: FileSystemPatch) {
   assertUndoablePatch(patch)
+  switch (patch.type) {
+    case 'updateSidebarItem':
+      await applySidebarItemPatch(ctx, patch)
+      return
+    case 'updateSidebarItemShare':
+      await applySidebarItemSharePatch(ctx, patch)
+      return
+    case 'removeSidebarItemShare':
+      await applySidebarItemShareRemoval(ctx, patch)
+      return
+    case 'upsertSidebarItemShare':
+      await applySidebarItemShareUpsert(ctx, patch)
+      return
+    case 'updateFolderShare':
+      await applyFolderSharePatch(ctx, patch)
+      return
+  }
+}
+
+async function applySidebarItemPatch(
+  ctx: CampaignMutationCtx,
+  patch: Extract<FileSystemPatch, { type: 'updateSidebarItem' }>,
+) {
   const item = await ctx.db.get('sidebarItems', patch.itemId)
   if (!item || item.campaignId !== ctx.campaign._id) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
@@ -201,6 +225,84 @@ async function applyPatch(ctx: CampaignMutationCtx, patch: FileSystemPatch) {
     )
   }
   await ctx.db.patch('sidebarItems', patch.itemId, patch.fields)
+}
+
+async function applySidebarItemSharePatch(
+  ctx: CampaignMutationCtx,
+  patch: Extract<FileSystemPatch, { type: 'updateSidebarItemShare' }>,
+) {
+  const share = await getSidebarItemShareRow(ctx, patch)
+  if (!share) throwClientError(ERROR_CODE.NOT_FOUND, 'Sidebar item share no longer exists')
+  if (hasMismatchedPrecondition(share, patch.before)) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  await ctx.db.patch('sidebarItemShares', share._id, patch.fields)
+}
+
+async function applySidebarItemShareRemoval(
+  ctx: CampaignMutationCtx,
+  patch: Extract<FileSystemPatch, { type: 'removeSidebarItemShare' }>,
+) {
+  const share = await getSidebarItemShareRow(ctx, {
+    sidebarItemId: patch.share.sidebarItemId,
+    campaignMemberId: patch.share.campaignMemberId,
+  })
+  if (!share) return
+  if (hasMismatchedPrecondition(share, { permissionLevel: patch.share.permissionLevel })) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  await ctx.db.delete('sidebarItemShares', share._id)
+}
+
+async function applySidebarItemShareUpsert(
+  ctx: CampaignMutationCtx,
+  patch: Extract<FileSystemPatch, { type: 'upsertSidebarItemShare' }>,
+) {
+  const existing = await getSidebarItemShareRow(ctx, {
+    sidebarItemId: patch.share.sidebarItemId,
+    campaignMemberId: patch.share.campaignMemberId,
+  })
+  if (existing) {
+    if (existing.permissionLevel !== patch.share.permissionLevel) {
+      throwClientError(
+        ERROR_CODE.VALIDATION_FAILED,
+        'Filesystem transaction can no longer be applied cleanly',
+      )
+    }
+    return
+  }
+  await ctx.db.insert('sidebarItemShares', {
+    campaignId: ctx.campaign._id,
+    sidebarItemId: patch.share.sidebarItemId,
+    sidebarItemType: patch.share.sidebarItemType,
+    campaignMemberId: patch.share.campaignMemberId,
+    sessionId: patch.share.sessionId,
+    permissionLevel: patch.share.permissionLevel,
+  })
+}
+
+async function applyFolderSharePatch(
+  ctx: CampaignMutationCtx,
+  patch: Extract<FileSystemPatch, { type: 'updateFolderShare' }>,
+) {
+  const folder = await ctx.db
+    .query('folders')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', patch.folderId))
+    .unique()
+  if (!folder) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder no longer exists')
+  if (hasMismatchedPrecondition(folder, patch.before)) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  await ctx.db.patch('folders', folder._id, patch.fields)
 }
 
 function patchRestoresActiveItem(

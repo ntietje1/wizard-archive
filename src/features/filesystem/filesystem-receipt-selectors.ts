@@ -162,6 +162,7 @@ const successMessageFormatters: Partial<
     message.affectedCount === 1
       ? 'Item permanently deleted'
       : `${message.affectedCount} items permanently deleted`,
+  shared: () => 'Sharing updated',
 }
 
 const undoMessageFormatters: Partial<
@@ -182,6 +183,7 @@ const undoMessageFormatters: Partial<
       : `Moved ${message.affectedCount} items to trash`,
   trashed: (message) =>
     message.affectedCount === 1 ? 'Item restored' : `${message.affectedCount} items restored`,
+  shared: () => 'Reverted sharing update',
 }
 
 function formatReceiptMessage(receipt: FileSystemTransactionReceipt) {

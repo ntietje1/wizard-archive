@@ -244,6 +244,8 @@ export function applyFileSystemPatchesToSnapshot<T extends { _id: SidebarItemId 
       continue
     }
 
+    if (patch.type !== 'updateSidebarItem') continue
+
     const existing = itemsById.get(patch.itemId)
     if (!existing) {
       throw new Error(`Cannot apply filesystem patch for missing sidebar item ${patch.itemId}`)

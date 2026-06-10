@@ -6,7 +6,9 @@ import { hardDeleteTree, restoreTreeDescendants, trashTree } from './treeWrites'
 import type { TrashTreePatch } from './treeWrites'
 import { insertFilesystemSidebarItem } from './sidebarItemWriter'
 import {
+  diffFolderShareFields,
   diffSidebarItemFields,
+  diffSidebarItemShareFields,
   setPatchField,
   valuesMatch,
 } from '../../../shared/sidebar-items/filesystem/patches'
@@ -27,8 +29,10 @@ import type {
   FileSystemDelta,
   FileSystemEvent,
   FileSystemPatch,
+  FolderSharePatchRow,
   SidebarItemFieldPatch,
   SidebarItemPatchPrecondition,
+  SidebarItemSharePatchRow,
 } from '../../../shared/sidebar-items/filesystem/receipts'
 import type { FileSystemCommand } from '../../../shared/sidebar-items/filesystem/commands'
 import type { SidebarItemPatchRow } from '../../../shared/sidebar-items/filesystem/types'
@@ -40,6 +44,7 @@ const UNDOABLE_UPDATE_FIELD_KEYS = [
   'color',
   'parentId',
   'status',
+  'allPermissionLevel',
   'deletionTime',
   'deletedBy',
 ] as const satisfies ReadonlyArray<keyof SidebarItemFieldPatch>
@@ -105,6 +110,29 @@ function changedUndoableItemPatch(before: SidebarItemPatchRow, after: SidebarIte
   }
 }
 
+function changedSharePatch(before: SidebarItemSharePatchRow, after: SidebarItemSharePatchRow) {
+  const { changed, previous } = diffSidebarItemShareFields(before, after)
+  if (Object.keys(changed).length === 0) return null
+  return {
+    type: 'updateSidebarItemShare' as const,
+    sidebarItemId: before.sidebarItemId,
+    campaignMemberId: before.campaignMemberId,
+    before: previous,
+    fields: changed,
+  }
+}
+
+function changedFolderSharePatch(before: FolderSharePatchRow, after: FolderSharePatchRow) {
+  const { changed, previous } = diffFolderShareFields(before, after)
+  if (Object.keys(changed).length === 0) return null
+  return {
+    type: 'updateFolderShare' as const,
+    folderId: before.folderId,
+    before: previous,
+    fields: changed,
+  }
+}
+
 function insertedItemForwardPatch(after: SidebarItemPatchRow): FileSystemPatch {
   const hidden = undoHiddenSidebarItemFields()
   const afterFields = lifecyclePatchFields(after)
@@ -159,6 +187,22 @@ export function receiptPatchesFromChangeSet(changes: Array<FileSystemChange>) {
           snapshot: change.before,
         })
         break
+      case 'insertSidebarItemShare':
+        patches.push({ type: 'upsertSidebarItemShare', share: change.after })
+        break
+      case 'updateSidebarItemShare': {
+        const patch = changedSharePatch(change.before, change.after)
+        if (patch) patches.push(patch)
+        break
+      }
+      case 'removeSidebarItemShare':
+        patches.push({ type: 'removeSidebarItemShare', share: change.before })
+        break
+      case 'updateFolderShare': {
+        const patch = changedFolderSharePatch(change.before, change.after)
+        if (patch) patches.push(patch)
+        break
+      }
     }
   }
   return patches
@@ -173,6 +217,22 @@ export function redoPatchesFromChangeSet(changes: Array<FileSystemChange>) {
         break
       case 'updateSidebarItem': {
         const patch = changedUndoableItemPatch(change.before, change.after)
+        if (patch) patches.push(patch)
+        break
+      }
+      case 'insertSidebarItemShare':
+        patches.push({ type: 'upsertSidebarItemShare', share: change.after })
+        break
+      case 'updateSidebarItemShare': {
+        const patch = changedSharePatch(change.before, change.after)
+        if (patch) patches.push(patch)
+        break
+      }
+      case 'removeSidebarItemShare':
+        patches.push({ type: 'removeSidebarItemShare', share: change.before })
+        break
+      case 'updateFolderShare': {
+        const patch = changedFolderSharePatch(change.before, change.after)
         if (patch) patches.push(patch)
         break
       }
@@ -193,6 +253,22 @@ export function undoPatchesFromChangeSet(changes: Array<FileSystemChange>) {
         if (patch) patches.push(patch)
         break
       }
+      case 'insertSidebarItemShare':
+        patches.push({ type: 'removeSidebarItemShare', share: change.after })
+        break
+      case 'updateSidebarItemShare': {
+        const patch = changedSharePatch(change.after, change.before)
+        if (patch) patches.push(patch)
+        break
+      }
+      case 'removeSidebarItemShare':
+        patches.push({ type: 'upsertSidebarItemShare', share: change.before })
+        break
+      case 'updateFolderShare': {
+        const patch = changedFolderSharePatch(change.after, change.before)
+        if (patch) patches.push(patch)
+        break
+      }
     }
   }
   return patches
@@ -210,6 +286,12 @@ export type FileSystemWriteSession = {
   trashSidebarTree: (item: AnySidebarItemRow) => Promise<void>
   restoreSidebarTree: (item: AnySidebarItemRow, rootFields: SidebarItemFieldPatch) => Promise<void>
   deleteSidebarTree: (item: AnySidebarItemRow) => Promise<void>
+  recordSidebarItemChange: (before: SidebarItemPatchRow, after: SidebarItemPatchRow | null) => void
+  recordSidebarItemShareChange: (
+    before: SidebarItemSharePatchRow | null,
+    after: SidebarItemSharePatchRow | null,
+  ) => void
+  recordFolderShareChange: (before: FolderSharePatchRow, after: FolderSharePatchRow) => void
   build: (args: {
     command: FileSystemCommand
     events: Array<FileSystemEvent>
@@ -251,6 +333,13 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
       return
     }
     changes.push({ type: 'removeSidebarItem', itemId, before })
+  }
+
+  const recordSidebarItemChange: FileSystemWriteSession['recordSidebarItemChange'] = (
+    before,
+    after,
+  ) => {
+    recordChangedItem(before._id, before, after)
   }
 
   const recordTreeUpdatePatches = (
@@ -349,6 +438,34 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
     recordTreeUpdatePatches(beforeItems, () => null)
   }
 
+  const recordSidebarItemShareChange: FileSystemWriteSession['recordSidebarItemShareChange'] = (
+    before,
+    after,
+  ) => {
+    if (before && after) {
+      if (!valuesMatch(before, after)) {
+        changes.push({ type: 'updateSidebarItemShare', before, after })
+      }
+      return
+    }
+    if (after) {
+      changes.push({ type: 'insertSidebarItemShare', after })
+      return
+    }
+    if (before) {
+      changes.push({ type: 'removeSidebarItemShare', before })
+    }
+  }
+
+  const recordFolderShareChange: FileSystemWriteSession['recordFolderShareChange'] = (
+    before,
+    after,
+  ) => {
+    if (!valuesMatch(before, after)) {
+      changes.push({ type: 'updateFolderShare', before, after })
+    }
+  }
+
   const build: FileSystemWriteSession['build'] = ({ command, events, undoable = true }) => {
     const canUndo = undoable && changeSetIsUndoable(changes)
     return Promise.resolve({
@@ -365,13 +482,19 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
     trashSidebarTree,
     restoreSidebarTree,
     deleteSidebarTree,
+    recordSidebarItemChange,
+    recordSidebarItemShareChange,
+    recordFolderShareChange,
     build,
   }
 }
 
 export function assertUndoablePatch(
   patch: FileSystemPatch,
-): asserts patch is Extract<FileSystemPatch, { type: 'updateSidebarItem' }> {
-  if (patch.type === 'updateSidebarItem') return
+): asserts patch is Exclude<
+  FileSystemPatch,
+  Extract<FileSystemPatch, { type: 'upsertSidebarItem' | 'removeSidebarItem' }>
+> {
+  if (patch.type !== 'upsertSidebarItem' && patch.type !== 'removeSidebarItem') return
   throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Filesystem patch is not undoable')
 }

@@ -237,9 +237,8 @@ export function useLiveEditorContextMenuActions(
       if (items.length === 0) return
 
       try {
-        await convex.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-          campaignId,
-          sidebarItemIds: items.map((item) => item._id),
+        await filesystemActionsApi.setAllPlayersPermission({
+          itemIds: items.map((item) => item._id),
           permissionLevel: level,
         })
         const target = items.length === 1 ? 'item' : `${items.length} items`

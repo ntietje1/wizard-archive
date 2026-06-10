@@ -164,10 +164,12 @@ import type * as sidebarItems_filesystem_commandModules_deleteForever from "../s
 import type * as sidebarItems_filesystem_commandModules_emptyTrash from "../sidebarItems/filesystem/commandModules/emptyTrash.js";
 import type * as sidebarItems_filesystem_commandModules_move from "../sidebarItems/filesystem/commandModules/move.js";
 import type * as sidebarItems_filesystem_commandModules_rename from "../sidebarItems/filesystem/commandModules/rename.js";
+import type * as sidebarItems_filesystem_commandModules_share from "../sidebarItems/filesystem/commandModules/share.js";
 import type * as sidebarItems_filesystem_companionInitialization from "../sidebarItems/filesystem/companionInitialization.js";
 import type * as sidebarItems_filesystem_deltas from "../sidebarItems/filesystem/deltas.js";
 import type * as sidebarItems_filesystem_mutations from "../sidebarItems/filesystem/mutations.js";
 import type * as sidebarItems_filesystem_pathParentResolver from "../sidebarItems/filesystem/pathParentResolver.js";
+import type * as sidebarItems_filesystem_shareRows from "../sidebarItems/filesystem/shareRows.js";
 import type * as sidebarItems_filesystem_siblings from "../sidebarItems/filesystem/siblings.js";
 import type * as sidebarItems_filesystem_sidebarItemRows from "../sidebarItems/filesystem/sidebarItemRows.js";
 import type * as sidebarItems_filesystem_sidebarItemWriter from "../sidebarItems/filesystem/sidebarItemWriter.js";
@@ -406,10 +408,12 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/filesystem/commandModules/emptyTrash": typeof sidebarItems_filesystem_commandModules_emptyTrash;
   "sidebarItems/filesystem/commandModules/move": typeof sidebarItems_filesystem_commandModules_move;
   "sidebarItems/filesystem/commandModules/rename": typeof sidebarItems_filesystem_commandModules_rename;
+  "sidebarItems/filesystem/commandModules/share": typeof sidebarItems_filesystem_commandModules_share;
   "sidebarItems/filesystem/companionInitialization": typeof sidebarItems_filesystem_companionInitialization;
   "sidebarItems/filesystem/deltas": typeof sidebarItems_filesystem_deltas;
   "sidebarItems/filesystem/mutations": typeof sidebarItems_filesystem_mutations;
   "sidebarItems/filesystem/pathParentResolver": typeof sidebarItems_filesystem_pathParentResolver;
+  "sidebarItems/filesystem/shareRows": typeof sidebarItems_filesystem_shareRows;
   "sidebarItems/filesystem/siblings": typeof sidebarItems_filesystem_siblings;
   "sidebarItems/filesystem/sidebarItemRows": typeof sidebarItems_filesystem_sidebarItemRows;
   "sidebarItems/filesystem/sidebarItemWriter": typeof sidebarItems_filesystem_sidebarItemWriter;

@@ -9,6 +9,7 @@ import { executeCopyCommand } from './commandModules/copy'
 import { executeMoveCommand } from './commandModules/move'
 import { executeDeleteForeverCommand } from './commandModules/deleteForever'
 import { executeEmptyTrashCommand } from './commandModules/emptyTrash'
+import { executeShareCommand } from './commandModules/share'
 import {
   applyFilesystemTransactionDirection,
   fileSystemRequestFingerprint,
@@ -40,10 +41,14 @@ function commandItemIds(command: FileSystemCommand): Array<Id<'sidebarItems'>> {
     case FILE_SYSTEM_COMMAND_TYPE.copy:
     case FILE_SYSTEM_COMMAND_TYPE.trash:
     case FILE_SYSTEM_COMMAND_TYPE.deleteForever:
+    case FILE_SYSTEM_COMMAND_TYPE.setAllPlayersPermission:
+    case FILE_SYSTEM_COMMAND_TYPE.setSidebarItemsMemberPermission:
+    case FILE_SYSTEM_COMMAND_TYPE.clearSidebarItemsMemberPermission:
       return command.itemIds
     case FILE_SYSTEM_COMMAND_TYPE.create:
     case FILE_SYSTEM_COMMAND_TYPE.rename:
     case FILE_SYSTEM_COMMAND_TYPE.emptyTrash:
+    case FILE_SYSTEM_COMMAND_TYPE.setFolderInheritShares:
       return []
   }
 }
@@ -90,6 +95,11 @@ async function executeCommand(
       return await executeDeleteForeverCommand(ctx, { command })
     case FILE_SYSTEM_COMMAND_TYPE.emptyTrash:
       return await executeEmptyTrashCommand(ctx, { command })
+    case FILE_SYSTEM_COMMAND_TYPE.setAllPlayersPermission:
+    case FILE_SYSTEM_COMMAND_TYPE.setSidebarItemsMemberPermission:
+    case FILE_SYSTEM_COMMAND_TYPE.clearSidebarItemsMemberPermission:
+    case FILE_SYSTEM_COMMAND_TYPE.setFolderInheritShares:
+      return await executeShareCommand(ctx, { command })
   }
 }
 

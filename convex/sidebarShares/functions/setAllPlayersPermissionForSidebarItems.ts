@@ -26,6 +26,8 @@ const applyAllPlayersPermissionToSidebarItem = async (
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
+  if ((item.allPermissionLevel ?? null) === permissionLevel) return
+
   await ctx.db.patch('sidebarItems', sidebarItemId, {
     allPermissionLevel: permissionLevel,
     updatedBy: ctx.membership.userId,

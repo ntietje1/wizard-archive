@@ -190,7 +190,10 @@ interface EditorSessionContextMenuActions {
 }
 
 interface EditorSharingContextMenuActions {
-  setGeneralAccessLevel: (context: EditorMenuContext, level: PermissionLevel | null) => void
+  setGeneralAccessLevel: (
+    context: EditorMenuContext,
+    level: PermissionLevel | null,
+  ) => void | Promise<void>
 }
 
 export interface EditorDownloadContextMenuActions {

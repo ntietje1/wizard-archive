@@ -182,7 +182,11 @@ describe('buildMenu', () => {
     await editorContextMenuCommands.open.run(context, services)
     await editorContextMenuCommands.createNote.run(context, services)
     await editorContextMenuCommands.pinToMap.run(context, services)
-    editorContextMenuCommands.setGeneralAccessLevel.run(context, services, PERMISSION_LEVEL.VIEW)
+    await editorContextMenuCommands.setGeneralAccessLevel.run(
+      context,
+      services,
+      PERMISSION_LEVEL.VIEW,
+    )
     await editorContextMenuCommands.downloadItems.run(context, services)
     await editorContextMenuCommands.paste.run(context, services)
     await editorContextMenuCommands.delete.run(context, services)
