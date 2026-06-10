@@ -93,7 +93,7 @@ vi.mock('~/features/editor/components/viewer/file/file-viewer', () => ({
   },
 }))
 
-vi.mock('~/features/landing/demo-workspace/local-canvas-editor', () => ({
+vi.mock('~/features/canvas/components/local-canvas-editor', () => ({
   LocalCanvasEditor: (props: Record<string, unknown>) => {
     localCanvasEditorMock(props)
     return (
@@ -258,6 +258,19 @@ describe('DemoWorkspace', () => {
         }),
       )
     })
+  })
+
+  it('routes maps through the shared unavailable editor state instead of a demo map surface', () => {
+    render(<DemoWorkspace />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Moonwell Docks' }))
+
+    expect(
+      screen.getByText(
+        'Map editing is not available in this demo yet. Use the canvas board for interactive planning.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('demo-local-canvas-editor')).not.toBeInTheDocument()
   })
 
   it('renames a local item without leaving the demo workspace', async () => {

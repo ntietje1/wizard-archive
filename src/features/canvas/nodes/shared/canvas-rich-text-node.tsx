@@ -209,7 +209,7 @@ export function CanvasRichTextNode({
           )}
         >
           <ScrollArea viewportRef={editorSession.viewportRef} className="h-full">
-            {editorSession.editor ? (
+            {editorSession.editor && editableSession.editable ? (
               <div className={cn('h-full w-full', variant.contentClassName, variant.textClassName)}>
                 <CanvasRichTextView
                   editor={editorSession.editor}

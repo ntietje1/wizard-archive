@@ -140,12 +140,15 @@ describe('canvas architecture boundaries', () => {
   })
 
   it('keeps demo canvas on shared runtime assembly instead of a parallel editor implementation', () => {
-    const localEditor = readRepoFile('src/features/landing/demo-workspace/local-canvas-editor.tsx')
+    const demoWorkspace = readRepoFile('src/features/landing/components/demo-workspace.tsx')
+    const localEditor = readRepoFile('src/features/canvas/components/local-canvas-editor.tsx')
     const runtimeCore = readRepoFile(
       'src/features/canvas/runtime/use-canvas-editor-runtime-core.ts',
     )
     const liveRuntime = readRepoFile('src/features/canvas/runtime/use-canvas-editor-runtime.ts')
 
+    expect(demoWorkspace).toContain('~/features/canvas/components/local-canvas-editor')
+    expect(demoWorkspace).not.toContain('~/features/landing/demo-workspace/local-canvas-editor')
     expect(localEditor).toContain('useCanvasEditorRuntimeCore')
     expect(localEditor).toContain('CanvasEditorRuntimeHost')
     expect(localEditor).toContain('EmbedNode')

@@ -1,13 +1,13 @@
 import * as Y from 'yjs'
 import { useEffect, useState } from 'react'
-import { CanvasEditorRuntimeHost } from '~/features/canvas/components/canvas-editor-runtime-host'
-import { CanvasNodeContentRenderer } from '~/features/canvas/components/canvas-node-content-renderer'
-import { EmbedNode } from '~/features/canvas/nodes/embed/embed-node'
-import { StrokeNode } from '~/features/canvas/nodes/stroke/stroke-node'
-import { TextNode } from '~/features/canvas/nodes/text/text-node'
-import { useCanvasToolStore } from '~/features/canvas/stores/canvas-tool-store'
-import { useCanvasEditorRuntimeCore } from '~/features/canvas/runtime/use-canvas-editor-runtime-core'
-import type { CanvasNodeRendererMap } from '~/features/canvas/components/canvas-node-content-renderer'
+import { CanvasEditorRuntimeHost } from './canvas-editor-runtime-host'
+import { CanvasNodeContentRenderer } from './canvas-node-content-renderer'
+import { EmbedNode } from '../nodes/embed/embed-node'
+import { StrokeNode } from '../nodes/stroke/stroke-node'
+import { TextNode } from '../nodes/text/text-node'
+import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasEditorRuntimeCore } from '../runtime/use-canvas-editor-runtime-core'
+import type { CanvasNodeRendererMap } from './canvas-node-content-renderer'
 import type { EmbeddedCanvasStateResolver } from '~/features/embeds/context/embedded-canvas-state-resolution'
 import type { EmbedSidebarItemResolver } from '~/features/embeds/context/embed-sidebar-item-resolution'
 import type {
@@ -83,7 +83,7 @@ function useLocalCanvasDocumentSource({
     doc.transact(() => {
       nodes.forEach((node) => nodesMap.set(node.id, node))
       edges.forEach((edge) => edgesMap.set(edge.id, edge))
-    }, 'demo-canvas-init')
+    }, 'local-canvas-init')
     return { canvasId, doc, nodesMap, edgesMap }
   })
 

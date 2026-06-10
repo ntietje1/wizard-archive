@@ -2,6 +2,7 @@ import { EDITOR_MODE } from 'shared/editor/types'
 import { blocksToYDoc } from 'shared/editor-blocks/blocknote-yjs'
 import { validateSidebarItemNameWithSiblings } from 'shared/sidebar-items/name'
 import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type {
   EditorNoteCollaborationProvider,
   EditorWorkspaceNoteDocuments,
@@ -78,6 +79,17 @@ export function createLocalDemoEditorWorkspaceSource({
   const contentItem = selectedItem
     ? (projection.itemsById.get(selectedItem.id as Id<'sidebarItems'>) ?? null)
     : null
+  const unsupportedDemoItem = contentItem
+    ? contentItem.type === SIDEBAR_ITEM_TYPES.gameMaps
+      ? {
+          status: 'error' as const,
+          label: contentItem.name,
+          message:
+            'Map editing is not available in this demo yet. Use the canvas board for interactive planning.',
+        }
+      : null
+    : null
+  const canViewCurrentItem = Boolean(contentItem) && !unsupportedDemoItem
 
   return {
     content: {
@@ -90,14 +102,16 @@ export function createLocalDemoEditorWorkspaceSource({
         hasRequestedItem: sourceWorkspace.activeView === 'item',
       },
       requestedSlug: contentItem?.slug ?? null,
-      canViewCurrentItem: Boolean(contentItem),
-      availabilityState: contentItem
-        ? { status: 'available', label: contentItem.name, item: contentItem }
-        : {
-            status: 'not_found',
-            label: 'Demo item',
-            message: 'Select an item from the sidebar.',
-          },
+      canViewCurrentItem,
+      availabilityState: unsupportedDemoItem
+        ? unsupportedDemoItem
+        : contentItem
+          ? { status: 'available', label: contentItem.name, item: contentItem }
+          : {
+              status: 'not_found',
+              label: 'Demo item',
+              message: 'Select an item from the sidebar.',
+            },
     },
     permissions: {
       editorMode: EDITOR_MODE.EDITOR,

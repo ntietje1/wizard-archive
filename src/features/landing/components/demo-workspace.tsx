@@ -4,7 +4,7 @@ import { CreateNewDashboardSurface } from '~/features/editor/components/create-n
 import { EditorContent } from '~/features/editor/components/editor-content'
 import { EditorWorkspaceSurface } from '~/features/editor/components/editor-workspace-surface'
 import { FileTopbar } from '~/features/editor/components/topbar/file-topbar'
-import { LocalCanvasEditor } from '~/features/landing/demo-workspace/local-canvas-editor'
+import { LocalCanvasEditor } from '~/features/canvas/components/local-canvas-editor'
 import { useLocalDemoFileViewerSource } from '~/features/landing/demo-workspace/local-demo-file-viewer-source'
 import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-surface'
 import { SidebarWorkspaceShell } from '~/features/sidebar/components/sidebar-workspace-shell'
@@ -20,14 +20,12 @@ import {
 import {
   INITIAL_DEMO_WORKSPACE,
   demoCanvasForItem,
-  demoMapPinsForItem,
   demoSidebarItemsWithContent,
   demoWorkspaceReducer,
   selectedDemoItem,
 } from '../demo-workspace/demo-workspace-model'
 import { DemoSidebarFooter } from './demo-editor-chrome'
 import type {
-  DemoMapPin,
   DemoWorkspaceItem,
   DemoWorkspaceItemType,
 } from '../demo-workspace/demo-workspace-model'
@@ -188,7 +186,7 @@ function DemoWorkspaceSurfaces({
 }
 
 function isEditorContentDemoItem(item: DemoWorkspaceItem) {
-  return item.type === 'note' || item.type === 'file'
+  return item.type === 'note' || item.type === 'file' || item.type === 'map'
 }
 
 function DemoEditorContentSurface({
@@ -257,31 +255,6 @@ function DemoWorkspaceSurface({
           SidebarItemEmbedResolver={SidebarItemEmbedResolver}
         />
       )}
-      {item.type === 'map' && <DemoMapSurface pins={demoMapPinsForItem(workspace, item.id)} />}
     </section>
-  )
-}
-
-function DemoMapSurface({ pins }: { pins: Array<DemoMapPin> }) {
-  return (
-    <div className="flex min-h-0 flex-1 items-center justify-center bg-muted/20 p-6">
-      <div className="relative h-full max-h-[42rem] w-full max-w-5xl overflow-hidden rounded-lg border bg-[linear-gradient(135deg,var(--muted),transparent_55%),radial-gradient(circle_at_35%_40%,var(--t-blue)_0,transparent_24%),radial-gradient(circle_at_70%_65%,var(--t-green)_0,transparent_22%)]">
-        <ul className="sr-only">
-          {pins.map((pin) => (
-            <li key={pin.id}>{`${pin.label}: ${pin.detail}`}</li>
-          ))}
-        </ul>
-        {pins.map((pin) => (
-          <span
-            key={pin.id}
-            className="absolute size-9 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary bg-background text-primary shadow-sm"
-            style={{ left: `${pin.x}%`, top: `${pin.y}%` }}
-            aria-hidden="true"
-            title={pin.detail}
-            data-visible-to-players={pin.visibleToPlayers}
-          />
-        ))}
-      </div>
-    </div>
   )
 }

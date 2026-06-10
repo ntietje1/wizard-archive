@@ -29,15 +29,6 @@ export interface DemoWorkspaceItem {
   description: string
 }
 
-export interface DemoMapPin {
-  id: string
-  label: string
-  detail: string
-  x: number
-  y: number
-  visibleToPlayers: boolean
-}
-
 interface DemoWorkspaceState {
   activeView: 'item' | 'create'
   mountedItemIds: Array<string>
@@ -54,10 +45,6 @@ interface DemoWorkspaceState {
     id: string
     nodes: Array<CanvasDocumentNode>
     edges: Array<CanvasDocumentEdge>
-  }
-  map: {
-    id: string
-    pins: Array<DemoMapPin>
   }
   file: {
     id: string
@@ -129,27 +116,6 @@ function createInitialDemoWorkspace(): DemoWorkspaceState {
       nodes: createInitialCanvasNodes(),
       edges: createInitialCanvasEdges(),
     },
-    map: {
-      id: 'map-docks',
-      pins: [
-        {
-          id: 'pin-warehouse',
-          label: 'Salt warehouse',
-          detail: 'Locked office and false floor.',
-          x: 28,
-          y: 42,
-          visibleToPlayers: false,
-        },
-        {
-          id: 'pin-pier',
-          label: 'Blue pier',
-          detail: 'Meeting spot after the auction.',
-          x: 63,
-          y: 58,
-          visibleToPlayers: true,
-        },
-      ],
-    },
     file: {
       id: 'file-handout',
       name: 'blue-glass-invoice.txt',
@@ -208,14 +174,6 @@ export function demoCanvasForItem(state: DemoWorkspaceState, itemId: string) {
   }
 
   return { id: itemId, nodes: [], edges: [] }
-}
-
-export function demoMapPinsForItem(state: DemoWorkspaceState, itemId: string) {
-  if (itemId === state.map.id) {
-    return state.map.pins
-  }
-
-  return []
 }
 
 export function demoFileForItem(state: DemoWorkspaceState, item: DemoWorkspaceItem) {

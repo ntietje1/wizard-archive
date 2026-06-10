@@ -56,7 +56,7 @@ vi.mock('~/features/editor/components/formatting-toolbar/note-formatting-toolbar
   },
 }))
 
-vi.mock('~/features/landing/demo-workspace/local-canvas-editor', () => ({
+vi.mock('~/features/canvas/components/local-canvas-editor', () => ({
   LocalCanvasEditor: (props: Record<string, unknown>) => {
     localCanvasEditorMock(props)
     return <input aria-label="Demo canvas marker" data-testid="demo-local-canvas-editor" />

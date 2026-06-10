@@ -146,7 +146,7 @@ describe('CanvasRichTextNode', () => {
     })
   })
 
-  it('passes node textColor to the BlockNote container as the default editor text color', () => {
+  it('passes node textColor to the BlockNote container as the default editor text color while editing', async () => {
     ownedEditorState.editor = createEditor()
 
     render(
@@ -155,6 +155,8 @@ describe('CanvasRichTextNode', () => {
         textColor="var(--t-blue)"
       />,
     )
+
+    await enterPendingEditMode()
 
     expect(richTextViewSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -233,6 +235,15 @@ function CanvasRichTextNodeHarness({
 
 function getCanvasNode() {
   return screen.getByTestId('canvas-node')
+}
+
+async function enterPendingEditMode() {
+  await act(async () => {
+    await Promise.resolve()
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    await Promise.resolve()
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  })
 }
 
 function createEditor() {
