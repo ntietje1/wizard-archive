@@ -1,19 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { handleError } from '~/shared/utils/logger'
 import {
+  ITEM_SURFACE_FLOATING_COMMAND_SELECTOR,
   isEditableHotkeyTarget,
   isItemSurfaceHotkeyTarget,
 } from '~/features/sidebar/utils/item-surface-hotkeys'
-
-const FILESYSTEM_COMMAND_OVERLAY_SELECTOR = [
-  '[data-slot="context-menu-content"]',
-  '[data-slot="context-menu-sub-content"]',
-  '[data-slot="context-menu-rich-submenu-content"]',
-  '[data-slot="popover-content"]',
-  '[data-slot="select-content"]',
-  '[data-slot="dropdown-menu-content"]',
-  '[data-share-menu-overlay="true"]',
-].join(',')
 
 type UndoRedoHandlers = {
   canUndo: boolean
@@ -61,7 +52,7 @@ function hasConcreteHotkeyTarget(target: EventTarget | null): boolean {
 }
 
 function hasOpenFileSystemCommandOverlay(): boolean {
-  return globalThis.document?.querySelector(FILESYSTEM_COMMAND_OVERLAY_SELECTOR) !== null
+  return globalThis.document?.querySelector(ITEM_SURFACE_FLOATING_COMMAND_SELECTOR) !== null
 }
 
 function isFileSystemCommandOverlayFallbackTarget(target: EventTarget | null): boolean {
@@ -71,7 +62,7 @@ function isFileSystemCommandOverlayFallbackTarget(target: EventTarget | null): b
 function isFileSystemCommandOverlayTarget(target: EventTarget | null): boolean {
   return (
     getHotkeyTargetCandidates(target).some(
-      (candidate) => candidate.closest(FILESYSTEM_COMMAND_OVERLAY_SELECTOR) !== null,
+      (candidate) => candidate.closest(ITEM_SURFACE_FLOATING_COMMAND_SELECTOR) !== null,
     ) || isFileSystemCommandOverlayFallbackTarget(target)
   )
 }

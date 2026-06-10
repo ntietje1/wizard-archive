@@ -60,6 +60,8 @@ function SidebarShareButtonPopover({
               variant="ghost"
               size="sm"
               className={cn('size-6 p-0 hover:bg-item-action-hover rounded-sm', buttonClassName)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               aria-label="Share"
             >

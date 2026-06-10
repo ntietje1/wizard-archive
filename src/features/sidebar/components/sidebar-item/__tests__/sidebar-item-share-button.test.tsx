@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SORT_OPTIONS } from 'shared/editor/types'
@@ -10,6 +10,7 @@ import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { SidebarWorkspaceSourceProvider } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import type { SidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
+import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -18,7 +19,10 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 
 vi.mock('~/features/sharing/components/sidebar-items-share-panel', () => ({
   SidebarItemsSharePanel: ({ items }: { items: Array<AnySidebarItem> }) => (
-    <div data-testid="share-panel">{items.map((item) => item.name).join(', ')}</div>
+    <div data-testid="share-panel">
+      {items.map((item) => item.name).join(', ')}
+      <div data-slot="select-content" data-testid="share-permission-select-content" />
+    </div>
   ),
 }))
 
@@ -42,6 +46,44 @@ function renderShareButton(item: AnySidebarItem, activeItems: Array<AnySidebarIt
         <SidebarShareButton item={item} />
       </SidebarItemsContext.Provider>
     </SidebarWorkspaceSourceProvider>,
+  )
+}
+
+function renderShareButtonInSidebarSurface(
+  item: AnySidebarItem,
+  activeItems: Array<AnySidebarItem>,
+) {
+  const active = sidebarItemsValue(activeItems)
+  const trash = sidebarItemsValue([])
+
+  return render(
+    <SidebarWorkspaceSourceProvider value={sidebarWorkspaceSource(active, trash)}>
+      <SidebarItemsContext.Provider value={{ active, trash }}>
+        <SidebarSurfaceHarness items={activeItems}>
+          <SidebarShareButton item={item} />
+        </SidebarSurfaceHarness>
+      </SidebarItemsContext.Provider>
+    </SidebarWorkspaceSourceProvider>,
+  )
+}
+
+function SidebarSurfaceHarness({
+  children,
+  items,
+}: {
+  children: React.ReactNode
+  items: Array<AnySidebarItem>
+}) {
+  const { handleSurfacePointerDown, itemSurfaceHotkeyProps } = useItemSurfaceRegistration({
+    surface: 'sidebar',
+    parentId: null,
+    visibleItemIds: items.map((item) => item._id),
+  })
+
+  return (
+    <div onPointerDownCapture={handleSurfacePointerDown} {...itemSurfaceHotkeyProps}>
+      {children}
+    </div>
   )
 }
 
@@ -82,6 +124,73 @@ describe('SidebarShareButton', () => {
     await user.click(screen.getByRole('button', { name: 'Share' }))
 
     expect(await screen.findByTestId('share-panel')).toHaveTextContent('First, Second')
+  })
+
+  it('does not let share trigger pointer events collapse the current row selection', () => {
+    const first = createNote({ name: 'First' })
+    const active = sidebarItemsValue([first])
+    const trash = sidebarItemsValue([])
+    const parentPointerDown = vi.fn()
+    const parentMouseDown = vi.fn()
+
+    render(
+      <div onPointerDown={parentPointerDown} onMouseDown={parentMouseDown}>
+        <SidebarWorkspaceSourceProvider value={sidebarWorkspaceSource(active, trash)}>
+          <SidebarItemsContext.Provider value={{ active, trash }}>
+            <SidebarShareButton item={first} />
+          </SidebarItemsContext.Provider>
+        </SidebarWorkspaceSourceProvider>
+      </div>,
+    )
+
+    const shareButton = screen.getByRole('button', { name: 'Share' })
+    fireEvent.pointerDown(shareButton)
+    fireEvent.mouseDown(shareButton)
+
+    expect(parentPointerDown).not.toHaveBeenCalled()
+    expect(parentMouseDown).not.toHaveBeenCalled()
+  })
+
+  it('keeps multi-selection after opening the visible share menu', async () => {
+    const user = userEvent.setup()
+    const first = createNote({ name: 'First' })
+    const second = createNote({ name: 'Second' })
+    useSidebarUIStore.setState({
+      selectedItemIds: [first._id, second._id],
+      anchorItemId: first._id,
+    })
+    setActiveSurface([first, second])
+
+    renderShareButton(first, [first, second])
+
+    await user.click(screen.getByRole('button', { name: 'Share' }))
+
+    expect(await screen.findByTestId('share-panel')).toHaveTextContent('First, Second')
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([first._id, second._id])
+  })
+
+  it('keeps multi-selection when interacting with the opened share menu content', async () => {
+    const user = userEvent.setup()
+    const first = createNote({ name: 'First' })
+    const second = createNote({ name: 'Second' })
+    useSidebarUIStore.setState({
+      selectedItemIds: [first._id, second._id],
+      anchorItemId: first._id,
+    })
+
+    renderShareButtonInSidebarSurface(first, [first, second])
+
+    await user.click(screen.getByRole('button', { name: 'Share' }))
+    const sharePanel = await screen.findByTestId('share-panel')
+
+    fireEvent.pointerDown(sharePanel)
+
+    expect(sharePanel).toHaveTextContent('First, Second')
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([first._id, second._id])
+
+    fireEvent.pointerDown(screen.getByTestId('share-permission-select-content'))
+
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([first._id, second._id])
   })
 
   it('shares only the clicked row when the row is outside the current selection', async () => {

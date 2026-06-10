@@ -614,7 +614,7 @@ describe('ContextMenuHost', () => {
     }
   })
 
-  it('keeps custom submenu content interactive when it opens a nested select', async () => {
+  it('keeps custom submenu content interactive when it opens a portal-backed nested select', async () => {
     const user = userEvent.setup()
     const onValueChange = vi.fn()
     const menu: BuiltContextMenu = {
@@ -636,7 +636,7 @@ describe('ContextMenuHost', () => {
                     <SelectTrigger aria-label="Access">
                       <SelectValue>View</SelectValue>
                     </SelectTrigger>
-                    <SelectContent portal={false}>
+                    <SelectContent>
                       <SelectItem value="view">View</SelectItem>
                       <SelectItem value="edit">Edit</SelectItem>
                     </SelectContent>

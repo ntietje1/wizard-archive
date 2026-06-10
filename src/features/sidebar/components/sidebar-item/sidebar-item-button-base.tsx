@@ -44,6 +44,8 @@ function SidebarItemIconToggle({
         size="sm"
         className="size-6 hover:text-foreground hover:bg-item-action-hover rounded-sm"
         aria-label={expanded ? 'Collapse folder' : 'Expand folder'}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
           e.preventDefault()
@@ -92,7 +94,10 @@ function SidebarItemActions({
               sidebarItemActionButtonClass(visualState),
             )}
             aria-label="More options"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
+              e.stopPropagation()
               e.preventDefault()
               onMoreOptions(e)
             }}
