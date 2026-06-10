@@ -77,9 +77,8 @@ describe('useCanvasToolRuntimeCore', () => {
     expect(contextMenuSpy).toHaveBeenCalledWith({
       activeTool: 'select',
       canEdit: true,
-      campaignId: 'campaign-id',
-      canvasParentId: 'parent-id',
       canvasEngine: harness.canvasEngine,
+      source: harness.contextMenuSource,
       createNode: harness.documentWriter.createNode,
       setPendingEditNodeId: harness.session.editSession.setPendingEditNodeId,
       setPendingEditNodePoint: harness.session.editSession.setPendingEditNodePoint,
@@ -158,14 +157,16 @@ describe('useCanvasToolRuntimeCore', () => {
 
 function createToolRuntimeHarness() {
   const harness = {
-    campaignId: testId<'campaigns'>('campaign-id'),
     canvasEngine: {
       getSnapshot: () => ({ nodes: [], edges: [] }),
     },
     canvasId: testId<'sidebarItems'>('canvas-id'),
-    canvasParentId: testId<'sidebarItems'>('parent-id'),
     canEdit: true,
     commands: {},
+    contextMenuSource: {
+      createItems: vi.fn(() => []),
+      getTargetContributors: vi.fn(() => []),
+    },
     documentWriter: {
       createNode: vi.fn(),
       createNodes: vi.fn(),

@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
+import { render } from '@testing-library/react'
+import { createElement } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import {
   INITIAL_DEMO_WORKSPACE,
@@ -27,6 +29,14 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
     expect(source.campaign.isDm).toBe(true)
     expect(source.editorMode.canEdit).toBe(true)
     expect(source.chrome.topbar.share.visible).toBe(false)
+    expect(source.historyPreview.previewingEntryId).toBeNull()
+    const { container } = render(
+      createElement(source.historyPreview.PreviewComponent, {
+        itemId: 'note-market' as Id<'sidebarItems'>,
+        entryId: 'history-1' as Id<'editHistory'>,
+      }),
+    )
+    expect(container).toBeEmptyDOMElement()
 
     source.setPendingItemName('Renamed market')
     expect(dispatch).toHaveBeenCalledWith({

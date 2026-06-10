@@ -1,17 +1,18 @@
 import { useCanvasContextMenuCore } from './use-canvas-context-menu-core'
-import { useCanvasContextMenuAdapters } from './canvas-context-menu-adapters-context'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { CanvasEngine } from '../../system/canvas-engine-types'
-import type { CanvasContextMenuCommands, CanvasContextMenuPoint } from './canvas-context-menu-types'
-import type { Id } from 'convex/_generated/dataModel'
+import type {
+  CanvasContextMenuCommands,
+  CanvasContextMenuPoint,
+  CanvasContextMenuSource,
+} from './canvas-context-menu-types'
 import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-document'
 
 interface UseCanvasContextMenuOptions {
   activeTool: string
   canEdit: boolean
-  campaignId?: Id<'campaigns'>
-  canvasParentId: Id<'sidebarItems'> | null
   canvasEngine: CanvasEngine
+  source?: CanvasContextMenuSource
   createNode: (node: CanvasDocumentNode) => void
   setPendingEditNodeId: (nodeId: string | null) => void
   setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
@@ -23,9 +24,8 @@ interface UseCanvasContextMenuOptions {
 export function useCanvasContextMenu({
   activeTool,
   canEdit,
-  campaignId,
-  canvasParentId,
   canvasEngine,
+  source,
   createNode,
   setPendingEditNodeId,
   setPendingEditNodePoint,
@@ -33,18 +33,13 @@ export function useCanvasContextMenu({
   selection,
   commands,
 }: UseCanvasContextMenuOptions) {
-  const adapters = useCanvasContextMenuAdapters()
   const createItems =
-    adapters?.createItems && campaignId
-      ? adapters.createItems({
-          campaignId,
-          canEdit,
-          canvasParentId,
-          createNode,
-          screenToCanvasPosition,
-          setSelection: selection.setSelection,
-        })
-      : []
+    source?.createItems?.({
+      canEdit,
+      createNode,
+      screenToCanvasPosition,
+      setSelection: selection.setSelection,
+    }) ?? []
 
   return useCanvasContextMenuCore({
     activeTool,
@@ -52,7 +47,7 @@ export function useCanvasContextMenu({
     canvasEngine,
     createItems,
     createNode,
-    getTargetContributors: adapters?.getTargetContributors,
+    getTargetContributors: source?.getTargetContributors,
     setPendingEditNodeId,
     setPendingEditNodePoint,
     screenToCanvasPosition,

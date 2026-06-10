@@ -20,6 +20,9 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { buildEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
+import { LiveHistoryPreviewViewer } from '~/features/editor/components/viewer/live-history-preview-viewer'
+import { LiveRollbackConfirmDialog } from '~/features/editor/components/viewer/live-rollback-confirm-dialog'
+import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import type { EditorWorkspaceShareChrome } from './editor-workspace-chrome'
 import type { EditorWorkspaceSource } from './editor-workspace-source'
 import { useLiveEmptyWorkspaceDropCapability } from './use-live-empty-workspace-drop'
@@ -44,6 +47,12 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const emptyWorkspaceDrop = useLiveEmptyWorkspaceDropCapability()
   const shareItems = currentItem.item ? [currentItem.item] : []
   const { isPending, isMutating, aggregateShareStatus, canShare } = useSidebarItemsShare(shareItems)
+  const previewingEntryId = useHistoryPreviewStore((s) =>
+    currentItem.contentItem && s.preview?.itemId === currentItem.contentItem._id
+      ? s.preview.entryId
+      : null,
+  )
+  const clearItemPreviewSession = useHistoryPreviewStore((s) => s.clearItemSession)
   const playerMembers =
     campaignMembers.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
   const share: EditorWorkspaceShareChrome = campaign.isDm
@@ -129,6 +138,12 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     },
     interactions: {
       emptyWorkspaceDrop,
+    },
+    historyPreview: {
+      previewingEntryId,
+      clearItemSession: clearItemPreviewSession,
+      PreviewComponent: LiveHistoryPreviewViewer,
+      RollbackDialogComponent: LiveRollbackConfirmDialog,
     },
     commands: {
       renameItem: async (item, name) => {

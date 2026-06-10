@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasContextMenu } from '../use-canvas-context-menu'
-import { CanvasContextMenuAdaptersContext } from '../canvas-context-menu-adapters-context'
 import { createEmbedNodeContextMenuContributor } from '../../../nodes/embed/embed-node-context-menu'
 import { createAndSelectEmbeddedCanvasNode } from '../../document/canvas-document-commands'
 import {
@@ -9,7 +8,7 @@ import {
   TEXT_NODE_DEFAULT_WIDTH,
 } from '../../../nodes/text/text-node-constants'
 import { createCanvasEngine } from '../../../system/canvas-engine'
-import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
@@ -21,7 +20,10 @@ import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
 } from '~/features/canvas/domain/canvas-document'
-import type { CanvasContextMenuAdapters } from '../canvas-context-menu-types'
+import type {
+  CanvasContextMenuCreateItemSourceContext,
+  CanvasContextMenuSource,
+} from '../canvas-context-menu-types'
 
 const sidebarItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),
@@ -46,7 +48,6 @@ function createSelectionController(
 }
 
 const openEngines: Array<CanvasEngine> = []
-const testCampaignId = testId<'campaigns'>('campaign-1')
 
 function createContextMenuEngine({
   edges = [],
@@ -95,7 +96,7 @@ function createMockSidebarItem(overrides: Partial<AnySidebarItem> = {}): AnySide
   } as AnySidebarItem
 }
 
-function createTestAppAdapters(): CanvasContextMenuAdapters {
+function createTestContextMenuSource(): CanvasContextMenuSource {
   return {
     createItems: (context) =>
       [
@@ -112,7 +113,7 @@ function createTestAppAdapters(): CanvasContextMenuAdapters {
         onSelect: async (menuContext) => {
           const result = await sidebarItemsState.createItem({
             type: command.type,
-            parentTarget: { kind: 'direct', parentId: context.canvasParentId },
+            parentTarget: { kind: 'direct', parentId: null },
             name: 'Item',
           })
 
@@ -151,16 +152,6 @@ function createTestAppAdapters(): CanvasContextMenuAdapters {
   }
 }
 
-function createAdapterWrapper(adapters: CanvasContextMenuAdapters) {
-  return function CanvasContextMenuAdapterWrapper({ children }: { children: ReactNode }) {
-    return (
-      <CanvasContextMenuAdaptersContext.Provider value={adapters}>
-        {children}
-      </CanvasContextMenuAdaptersContext.Provider>
-    )
-  }
-}
-
 describe('useCanvasContextMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -184,8 +175,6 @@ describe('useCanvasContextMenu', () => {
       useCanvasContextMenu({
         activeTool: 'select',
         canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
         canvasEngine,
         createNode: vi.fn(),
         setPendingEditNodeId: vi.fn(),
@@ -211,26 +200,78 @@ describe('useCanvasContextMenu', () => {
     expect(result.current.menu.isEmpty).toBe(false)
   })
 
-  it('injects sidebar-backed create actions into the pane menu adapter', async () => {
+  it('passes a source-neutral create context to pane menu sources', () => {
     const selection = createSelectionController()
     const canvasEngine = createContextMenuEngine()
     const createNode = vi.fn()
-    const { result } = renderHook(
-      () =>
-        useCanvasContextMenu({
-          activeTool: 'select',
-          canEdit: true,
-          campaignId: testCampaignId,
-          canvasParentId: null,
-          canvasEngine,
-          createNode,
-          setPendingEditNodeId: vi.fn(),
-          setPendingEditNodePoint: vi.fn(),
-          screenToCanvasPosition: ({ x, y }) => ({ x, y }),
-          selection,
-          commands: createCommands(),
-        }),
-      { wrapper: createAdapterWrapper(createTestAppAdapters()) },
+    const sourceContexts: Array<CanvasContextMenuCreateItemSourceContext> = []
+    const { result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        canvasEngine,
+        source: {
+          ...createTestContextMenuSource(),
+          createItems: (context) => {
+            sourceContexts.push(context)
+            return []
+          },
+        },
+        createNode,
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+        selection,
+        commands: createCommands(),
+      }),
+    )
+
+    result.current.hostRef.current = {
+      open: vi.fn(),
+      close: vi.fn(),
+    }
+
+    act(() => {
+      result.current.openForPane(createContextMenuEvent(20, 40))
+    })
+
+    const createSubmenu = result.current.menu.flatItems.find(
+      (item) => item.id === 'canvas-pane-create-submenu',
+    )
+    expect(createSubmenu?.children?.map((item) => item.id)).toEqual([
+      'canvas-pane-create-embed',
+      'canvas-pane-create-text',
+    ])
+    expect(sourceContexts.length).toBeGreaterThan(0)
+    for (const sourceContext of sourceContexts) {
+      expect(sourceContext).toEqual({
+        canEdit: true,
+        createNode,
+        screenToCanvasPosition: expect.any(Function),
+        setSelection: selection.setSelection,
+      })
+      expect(sourceContext).not.toHaveProperty('campaignId')
+      expect(sourceContext).not.toHaveProperty('canvasParentId')
+    }
+  })
+
+  it('uses source create actions from a source-neutral runtime context', async () => {
+    const selection = createSelectionController()
+    const canvasEngine = createContextMenuEngine()
+    const createNode = vi.fn()
+    const { result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        canvasEngine,
+        source: createTestContextMenuSource(),
+        createNode,
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+        selection,
+        commands: createCommands(),
+      }),
     )
 
     result.current.hostRef.current = {
@@ -300,8 +341,6 @@ describe('useCanvasContextMenu', () => {
       useCanvasContextMenu({
         activeTool: 'select',
         canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
         canvasEngine,
         createNode: vi.fn(),
         setPendingEditNodeId: vi.fn(),
@@ -345,8 +384,6 @@ describe('useCanvasContextMenu', () => {
       useCanvasContextMenu({
         activeTool: 'select',
         canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
         canvasEngine,
         createNode,
         setPendingEditNodeId,
@@ -410,8 +447,6 @@ describe('useCanvasContextMenu', () => {
       useCanvasContextMenu({
         activeTool: 'select',
         canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
         canvasEngine,
         createNode: vi.fn(),
         setPendingEditNodeId: vi.fn(),
@@ -447,8 +482,6 @@ describe('useCanvasContextMenu', () => {
       useCanvasContextMenu({
         activeTool: 'draw',
         canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
         canvasEngine,
         createNode: vi.fn(),
         setPendingEditNodeId: vi.fn(),
@@ -495,22 +528,19 @@ describe('useCanvasContextMenu', () => {
     } as Node
     const canvasEngine = createContextMenuEngine({ nodes: [embedNode] })
 
-    const { result } = renderHook(
-      () =>
-        useCanvasContextMenu({
-          activeTool: 'select',
-          canEdit: true,
-          campaignId: testCampaignId,
-          canvasParentId: null,
-          canvasEngine,
-          createNode: vi.fn(),
-          setPendingEditNodeId: vi.fn(),
-          setPendingEditNodePoint: vi.fn(),
-          screenToCanvasPosition: ({ x, y }) => ({ x, y }),
-          selection,
-          commands: createCommands(),
-        }),
-      { wrapper: createAdapterWrapper(createTestAppAdapters()) },
+    const { result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        canvasEngine,
+        source: createTestContextMenuSource(),
+        createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+        selection,
+        commands: createCommands(),
+      }),
     )
 
     const open = vi.fn()
@@ -549,22 +579,19 @@ describe('useCanvasContextMenu', () => {
     } as Node
     const canvasEngine = createContextMenuEngine({ nodes: [embedNode] })
 
-    const { rerender, result } = renderHook(
-      () =>
-        useCanvasContextMenu({
-          activeTool: 'select',
-          canEdit: true,
-          campaignId: testCampaignId,
-          canvasParentId: null,
-          canvasEngine,
-          createNode: vi.fn(),
-          setPendingEditNodeId: vi.fn(),
-          setPendingEditNodePoint: vi.fn(),
-          screenToCanvasPosition: ({ x, y }) => ({ x, y }),
-          selection,
-          commands: createCommands(),
-        }),
-      { wrapper: createAdapterWrapper(createTestAppAdapters()) },
+    const { rerender, result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        canvasEngine,
+        source: createTestContextMenuSource(),
+        createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+        selection,
+        commands: createCommands(),
+      }),
     )
 
     result.current.hostRef.current = {
@@ -607,8 +634,6 @@ describe('useCanvasContextMenu', () => {
       useCanvasContextMenu({
         activeTool: 'select',
         canEdit: true,
-        campaignId: testCampaignId,
-        canvasParentId: null,
         canvasEngine,
         createNode: vi.fn(),
         setPendingEditNodeId: vi.fn(),

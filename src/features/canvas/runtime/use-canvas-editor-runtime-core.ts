@@ -7,6 +7,7 @@ import {
 import { useCanvasToolRuntimeCore } from './use-canvas-tool-runtime-core'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
+import type { CanvasContextMenuSource } from './context-menu/canvas-context-menu-types'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
@@ -16,9 +17,8 @@ export interface UseCanvasEditorRuntimeCoreOptions {
   nodesMap: Y.Map<CanvasDocumentNode>
   edgesMap: Y.Map<CanvasDocumentEdge>
   canvasId: Id<'sidebarItems'>
-  campaignId?: Id<'campaigns'>
-  canvasParentId: Id<'sidebarItems'> | null
   canEdit: boolean
+  contextMenuSource?: CanvasContextMenuSource
   provider: ConvexYjsProvider | null
   doc: Y.Doc
   initialViewport: CanvasViewport
@@ -28,9 +28,8 @@ export function useCanvasEditorRuntimeCore({
   nodesMap,
   edgesMap,
   canvasId,
-  campaignId,
-  canvasParentId,
   canEdit,
+  contextMenuSource,
   provider,
   doc,
   initialViewport,
@@ -45,11 +44,10 @@ export function useCanvasEditorRuntimeCore({
   })
   const tools = useCanvasToolRuntimeCore({
     activeTool: base.activeTool,
-    campaignId,
     canvasEngine: base.canvasEngine,
-    canvasParentId,
     canEdit,
     commands: base.document.commands,
+    contextMenuSource,
     documentWriter: base.document.documentWriter,
     modifiers: base.modifiers,
     pointerRouter: base.pointerRouter,

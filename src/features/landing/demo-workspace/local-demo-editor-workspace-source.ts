@@ -11,6 +11,8 @@ type DemoWorkspaceState = typeof INITIAL_DEMO_WORKSPACE
 const DEMO_CAMPAIGN_ID = 'demo-campaign' as Id<'campaigns'>
 
 const noop = () => {}
+const EmptyHistoryPreview = () => null
+const EmptyRollbackDialog = () => null
 
 export function createLocalDemoEditorWorkspaceSource({
   dispatch,
@@ -86,6 +88,12 @@ export function createLocalDemoEditorWorkspaceSource({
     },
     interactions: {
       emptyWorkspaceDrop: { status: 'disabled', reason: 'unsupported' },
+    },
+    historyPreview: {
+      previewingEntryId: null,
+      clearItemSession: noop,
+      PreviewComponent: EmptyHistoryPreview,
+      RollbackDialogComponent: EmptyRollbackDialog,
     },
     commands: {
       renameItem: (item, name) =>

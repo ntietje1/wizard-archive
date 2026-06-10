@@ -5,23 +5,19 @@ import type { Id } from 'convex/_generated/dataModel'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { SidebarItemEditor } from '../sidebar-item-editor'
 import { SidebarItemViewer } from '../sidebar-item-viewer'
-import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
+import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
 
 vi.mock('../note/note-editor', () => ({ NoteEditor: () => <div>note editor</div> }))
 vi.mock('../map/map-viewer', () => ({ MapViewer: () => <div /> }))
 vi.mock('../folder/folder-viewer', () => ({ FolderViewer: () => <div /> }))
 vi.mock('../file/file-viewer', () => ({ FileViewer: () => <div /> }))
 vi.mock('~/features/canvas/components/canvas-viewer', () => ({ CanvasViewer: () => <div /> }))
-vi.mock('../live-history-preview-viewer', () => ({
-  LiveHistoryPreviewViewer: ({ itemId, entryId }: { itemId: string; entryId: string }) => (
-    <div data-testid="history-preview" data-item-id={itemId} data-entry-id={entryId} />
-  ),
-}))
-vi.mock('../live-rollback-confirm-dialog', () => ({ LiveRollbackConfirmDialog: () => null }))
 
 describe('SidebarItemEditor', () => {
+  const clearItemSession = vi.fn()
+
   beforeEach(() => {
-    useHistoryPreviewStore.setState({ preview: null, rollback: null })
+    clearItemSession.mockReset()
   })
 
   it('renders the editor for a loaded item', () => {
@@ -33,7 +29,7 @@ describe('SidebarItemEditor', () => {
       blockShareAccessWarnings: [],
     }
 
-    render(<SidebarItemEditor item={item} />)
+    render(<SidebarItemEditor item={item} historyPreview={createHistoryPreview()} />)
 
     expect(screen.getByText('note editor')).toBeInTheDocument()
   })
@@ -52,32 +48,60 @@ describe('SidebarItemEditor', () => {
     expect(screen.getByText('note editor')).toBeInTheDocument()
   })
 
-  it('renders preview only for the current item session', () => {
-    const firstItem: NoteWithContent = {
+  it('renders the source-provided history preview when present', () => {
+    const item: NoteWithContent = {
       ...createNote({ _id: 'note-1' as Id<'sidebarItems'> }),
       ancestors: [],
       content: [],
       blockMeta: {},
       blockShareAccessWarnings: [],
     }
-    const secondItem: NoteWithContent = {
-      ...createNote({ _id: 'note-2' as Id<'sidebarItems'> }),
+    const entryId = 'history-1' as Id<'editHistory'>
+
+    render(
+      <SidebarItemEditor
+        item={item}
+        historyPreview={createHistoryPreview({ previewingEntryId: entryId })}
+      />,
+    )
+
+    expect(screen.getByTestId('history-preview')).toHaveAttribute('data-item-id', item._id)
+    expect(screen.getByTestId('history-preview')).toHaveAttribute('data-entry-id', entryId)
+    expect(screen.queryByText('note editor')).not.toBeInTheDocument()
+  })
+
+  it('clears the source-owned history session when the item unmounts', () => {
+    const item: NoteWithContent = {
+      ...createNote({ _id: 'note-1' as Id<'sidebarItems'> }),
       ancestors: [],
       content: [],
       blockMeta: {},
       blockShareAccessWarnings: [],
     }
-    useHistoryPreviewStore
-      .getState()
-      .setPreviewingEntry(firstItem._id, 'history-1' as Id<'editHistory'>)
 
-    const { rerender } = render(<SidebarItemEditor item={firstItem} />)
+    const { unmount } = render(
+      <SidebarItemEditor item={item} historyPreview={createHistoryPreview()} />,
+    )
 
-    expect(screen.getByTestId('history-preview')).toHaveAttribute('data-item-id', firstItem._id)
+    unmount()
 
-    rerender(<SidebarItemEditor item={secondItem} />)
-
-    expect(screen.queryByTestId('history-preview')).not.toBeInTheDocument()
-    expect(screen.getByText('note editor')).toBeInTheDocument()
+    expect(clearItemSession).toHaveBeenCalledWith(item._id)
   })
+
+  function createHistoryPreview({
+    previewingEntryId = null,
+  }: {
+    previewingEntryId?: Id<'editHistory'> | null
+  } = {}): EditorWorkspaceSource['historyPreview'] {
+    return {
+      previewingEntryId,
+      clearItemSession,
+      PreviewComponent: ({ itemId, entryId }) => (
+        <div data-testid="history-preview" data-item-id={itemId} data-entry-id={entryId} />
+      ),
+      RollbackDialogComponent: ({ itemId }) => (
+        <div data-testid="rollback-dialog" data-item-id={itemId} />
+      ),
+    }
+  }
 })

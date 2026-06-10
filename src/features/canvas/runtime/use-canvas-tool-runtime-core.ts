@@ -1,4 +1,3 @@
-import type { Id } from 'convex/_generated/dataModel'
 import { useCallback, useMemo } from 'react'
 import type { createCanvasDocumentWriter } from './document/use-canvas-document-writer'
 import type { useCanvasDocumentCommands } from './document/use-canvas-commands'
@@ -14,14 +13,14 @@ import type { createCanvasViewportController } from '../system/canvas-viewport-c
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type { CanvasToolId } from '../tools/canvas-tool-types'
 import type { CanvasConnection } from '../types/canvas-domain-types'
+import type { CanvasContextMenuSource } from './context-menu/canvas-context-menu-types'
 
 interface UseCanvasToolRuntimeCoreOptions {
   activeTool: CanvasToolId
-  campaignId?: Id<'campaigns'>
   canvasEngine: ReturnType<typeof createCanvasEngine>
-  canvasParentId: Id<'sidebarItems'> | null
   canEdit: boolean
   commands: ReturnType<typeof useCanvasDocumentCommands>
+  contextMenuSource?: CanvasContextMenuSource
   documentWriter: ReturnType<typeof createCanvasDocumentWriter>
   modifiers: ReturnType<typeof useCanvasModifierKeys>
   pointerRouter: ReturnType<typeof useCanvasPointerRouterController>
@@ -32,11 +31,10 @@ interface UseCanvasToolRuntimeCoreOptions {
 
 export function useCanvasToolRuntimeCore({
   activeTool,
-  campaignId,
   canvasEngine,
-  canvasParentId,
   canEdit,
   commands,
+  contextMenuSource,
   documentWriter,
   modifiers,
   pointerRouter,
@@ -80,9 +78,8 @@ export function useCanvasToolRuntimeCore({
   const contextMenu = useCanvasContextMenu({
     activeTool,
     canEdit,
-    campaignId,
-    canvasParentId,
     canvasEngine,
+    source: contextMenuSource,
     createNode: documentWriter.createNode,
     setPendingEditNodeId: session.editSession.setPendingEditNodeId,
     setPendingEditNodePoint: session.editSession.setPendingEditNodePoint,

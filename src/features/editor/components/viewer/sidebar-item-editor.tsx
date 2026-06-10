@@ -1,20 +1,18 @@
 import { useEffect } from 'react'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
-import { LiveHistoryPreviewViewer } from '~/features/editor/components/viewer/live-history-preview-viewer'
-import { LiveRollbackConfirmDialog } from '~/features/editor/components/viewer/live-rollback-confirm-dialog'
 import { SidebarItemViewer } from '~/features/editor/components/viewer/sidebar-item-viewer'
 import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
-import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
+import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 
-type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent>
+type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent> & {
+  historyPreview: EditorWorkspaceSource['historyPreview']
+}
 
-export function SidebarItemEditor({ item }: SidebarItemEditorProps) {
-  const previewingEntryId = useHistoryPreviewStore((s) =>
-    s.preview?.itemId === item._id ? s.preview.entryId : null,
-  )
-  const clearItemSession = useHistoryPreviewStore((s) => s.clearItemSession)
+export function SidebarItemEditor({ historyPreview, item }: SidebarItemEditorProps) {
+  const { clearItemSession, PreviewComponent, previewingEntryId, RollbackDialogComponent } =
+    historyPreview
 
   useEffect(() => {
     return () => clearItemSession(item._id)
@@ -24,9 +22,9 @@ export function SidebarItemEditor({ item }: SidebarItemEditorProps) {
     return (
       <>
         <ErrorBoundary FallbackComponent={ErrorFallback} key={`preview-${previewingEntryId}`}>
-          <LiveHistoryPreviewViewer itemId={item._id} entryId={previewingEntryId} />
+          <PreviewComponent itemId={item._id} entryId={previewingEntryId} />
         </ErrorBoundary>
-        <LiveRollbackConfirmDialog itemId={item._id} />
+        <RollbackDialogComponent itemId={item._id} />
       </>
     )
   }
@@ -36,7 +34,7 @@ export function SidebarItemEditor({ item }: SidebarItemEditorProps) {
       <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
         <SidebarItemViewer item={item} />
       </ErrorBoundary>
-      <LiveRollbackConfirmDialog itemId={item._id} />
+      <RollbackDialogComponent itemId={item._id} />
     </>
   )
 }

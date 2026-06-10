@@ -3,7 +3,6 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
-import { CanvasContextMenuAdaptersContext } from '../runtime/context-menu/canvas-context-menu-adapters-context'
 import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
 import { useLiveCanvasDocumentSource } from '../runtime/session/use-live-canvas-document-source'
 import { useCanvasEditorRuntime } from '../runtime/use-canvas-editor-runtime'
@@ -55,33 +54,32 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
 type ReadyCanvasSession = Extract<CanvasDocumentSource, { status: 'ready' }>
 
 function CanvasEditor(session: ReadyCanvasSession) {
-  const contextMenuAdapters = useCanvasContextMenuAppAdapters()
+  const contextMenuSource = useCanvasContextMenuAppAdapters({
+    campaignId: session.campaignId,
+    canvasParentId: session.parentId,
+  })
 
-  return (
-    <CanvasContextMenuAdaptersContext.Provider value={contextMenuAdapters}>
-      <CanvasEditorRuntime {...session} />
-    </CanvasContextMenuAdaptersContext.Provider>
-  )
+  return <CanvasEditorRuntime {...session} contextMenuSource={contextMenuSource} />
 }
 
 function CanvasEditorRuntime({
   canvasId,
-  campaignId,
   canEdit,
-  parentId,
   provider,
   doc,
   nodesMap,
   edgesMap,
-}: ReadyCanvasSession) {
+  contextMenuSource,
+}: ReadyCanvasSession & {
+  contextMenuSource: ReturnType<typeof useCanvasContextMenuAppAdapters>
+}) {
   const initialViewport = loadPersistedCanvasViewport(canvasId)
   const runtime = useCanvasEditorRuntime({
     nodesMap,
     edgesMap,
     canvasId,
-    campaignId,
-    canvasParentId: parentId,
     canEdit,
+    contextMenuSource,
     provider,
     doc,
     initialViewport,

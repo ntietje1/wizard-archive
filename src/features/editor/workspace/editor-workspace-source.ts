@@ -4,7 +4,7 @@ import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-i
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { ValidationResult } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
-import type { RefObject } from 'react'
+import type { ComponentType, RefObject } from 'react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
@@ -61,6 +61,13 @@ interface EditorWorkspaceInteractions {
   emptyWorkspaceDrop: EditorEmptyWorkspaceDropCapability
 }
 
+interface EditorWorkspaceHistoryPreview {
+  previewingEntryId: Id<'editHistory'> | null
+  clearItemSession: (itemId: Id<'sidebarItems'>) => void
+  PreviewComponent: ComponentType<{ itemId: Id<'sidebarItems'>; entryId: Id<'editHistory'> }>
+  RollbackDialogComponent: ComponentType<{ itemId: Id<'sidebarItems'> }>
+}
+
 interface EditorWorkspaceCommands {
   renameItem: (item: AnySidebarItem, name: string) => Promise<void> | void
   openItem: (item: AnySidebarItem) => Promise<void> | void
@@ -79,6 +86,7 @@ export interface EditorWorkspaceSource {
   campaign: EditorCampaignSnapshot
   chrome: EditorWorkspaceChrome
   interactions: EditorWorkspaceInteractions
+  historyPreview: EditorWorkspaceHistoryPreview
   commands: EditorWorkspaceCommands
   pendingItemName: string
   setPendingItemName: (name: string) => void

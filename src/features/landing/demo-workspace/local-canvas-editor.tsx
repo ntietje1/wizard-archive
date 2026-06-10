@@ -43,7 +43,6 @@ export function LocalCanvasEditor({
     doc: document.doc,
     nodesMap: document.nodesMap,
     edgesMap: document.edgesMap,
-    canvasParentId: null,
     canEdit: true,
     provider: null,
     initialViewport: { x: 0, y: 0, zoom: 1 },

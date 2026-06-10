@@ -67,7 +67,7 @@ export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
 
   return (
     <Suspense fallback={<EditorLoading />}>
-      <SidebarItemEditor item={contentItem} />
+      <SidebarItemEditor item={contentItem} historyPreview={source.historyPreview} />
     </Suspense>
   )
 }

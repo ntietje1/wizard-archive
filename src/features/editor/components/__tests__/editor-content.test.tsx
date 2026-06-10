@@ -111,6 +111,12 @@ function createEmptyWorkspaceSource({
               reason: 'unsupported',
             },
     },
+    historyPreview: {
+      previewingEntryId: null,
+      clearItemSession: vi.fn(),
+      PreviewComponent: () => null,
+      RollbackDialogComponent: () => null,
+    },
     commands: {
       renameItem: vi.fn(),
       openItem: vi.fn(),
