@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react'
 import type { EditorView } from '@tiptap/pm/view'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useBlockNoteActivationLifecycle } from '../use-blocknote-activation-lifecycle'
-import type { PendingRichEmbedActivationRef } from '../../embed/use-rich-embed-lifecycle'
+import type { PendingRichEmbedActivationRef } from '../use-rich-embed-lifecycle'
 
 const {
   mockLoggerWarn,
@@ -36,8 +36,8 @@ vi.mock('~/shared/utils/logger', () => ({
   },
 }))
 
-vi.mock('../../embed/use-rich-embed-lifecycle', async () => {
-  const actual = await vi.importActual('../../embed/use-rich-embed-lifecycle')
+vi.mock('../use-rich-embed-lifecycle', async () => {
+  const actual = await vi.importActual('../use-rich-embed-lifecycle')
 
   return {
     ...actual,

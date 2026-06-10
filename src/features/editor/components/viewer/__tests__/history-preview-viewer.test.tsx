@@ -1,10 +1,13 @@
 import * as Y from 'yjs'
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SNAPSHOT_TYPE } from 'shared/document-snapshots/types'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { HistoryPreviewViewer } from '../history-preview-viewer'
 import { LiveHistoryPreviewViewer } from '../live-history-preview-viewer'
 import type * as BlockNoteCore from '@blocknote/core'
 import type * as BlockNoteReact from '@blocknote/react'
+import type { DocumentSnapshot } from 'convex/documentSnapshots/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ReactNode } from 'react'
 
@@ -117,6 +120,20 @@ function encodeSnapshot(doc: Y.Doc): ArrayBuffer {
   const copy = new Uint8Array(update.byteLength)
   copy.set(update)
   return copy.buffer as ArrayBuffer
+}
+
+function documentSnapshot(overrides: Partial<DocumentSnapshot>): DocumentSnapshot {
+  return {
+    _id: 'snapshot-1' as Id<'documentSnapshots'>,
+    _creationTime: 1,
+    itemId: 'item-1' as Id<'sidebarItems'>,
+    itemType: SIDEBAR_ITEM_TYPES.notes,
+    editHistoryId: 'history-1' as Id<'editHistory'>,
+    campaignId: 'campaign-1' as Id<'campaigns'>,
+    snapshotType: SNAPSHOT_TYPE.yjs_state,
+    data: new ArrayBuffer(0),
+    ...overrides,
+  }
 }
 
 describe('HistoryPreviewViewer', () => {
@@ -250,12 +267,12 @@ describe('HistoryPreviewViewer', () => {
     doc.destroy()
     useCampaignQueryMock
       .mockReturnValueOnce({
-        data: {
+        data: documentSnapshot({
           itemId: noteId,
-          itemType: 'note',
-          snapshotType: 'yjs_state',
+          itemType: SIDEBAR_ITEM_TYPES.notes,
+          snapshotType: SNAPSHOT_TYPE.yjs_state,
           data: snapshotData,
-        },
+        }),
         isLoading: false,
         error: null,
       })
@@ -274,5 +291,31 @@ describe('HistoryPreviewViewer', () => {
     expect(useCampaignQueryMock).toHaveBeenNthCalledWith(2, 'getHistoryEntry', {
       editHistoryId: entryId,
     })
+  })
+
+  it('treats invalid live snapshot data as unavailable instead of casting it', () => {
+    const noteId = 'note-1' as Id<'sidebarItems'>
+    const entryId = 'history-1' as Id<'editHistory'>
+    useCampaignQueryMock
+      .mockReturnValueOnce({
+        data: {
+          itemId: noteId,
+          itemType: SIDEBAR_ITEM_TYPES.notes,
+          snapshotType: SNAPSHOT_TYPE.yjs_state,
+          data: 'not-binary',
+        },
+        isLoading: false,
+        error: null,
+      })
+      .mockReturnValueOnce({
+        data: { _creationTime: 1 },
+        isLoading: false,
+        error: null,
+      })
+
+    render(<LiveHistoryPreviewViewer itemId={noteId} entryId={entryId} />)
+
+    expect(screen.getByText('Preview not available for this version.')).toBeInTheDocument()
+    expect(rawNoteContentMock).not.toHaveBeenCalled()
   })
 })

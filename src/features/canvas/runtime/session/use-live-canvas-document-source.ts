@@ -82,7 +82,7 @@ export function useLiveCanvasDocumentSource(canvas: CanvasWithContent): CanvasDo
     }
   }
 
-  if (profileQuery.isLoading || isLoading || !profile || !doc || !nodesMap || !edgesMap) {
+  if (profileQuery.isLoading || isLoading || !doc || !nodesMap || !edgesMap) {
     return { status: 'loading' }
   }
 

@@ -14,6 +14,7 @@ import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
+import { logger } from '~/shared/utils/logger'
 
 export function LiveHistoryPreviewViewer({
   entryId,
@@ -32,7 +33,16 @@ export function LiveHistoryPreviewViewer({
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
   const setRollbackEntry = useHistoryPreviewStore((s) => s.setRollbackEntry)
 
-  const snapshot = snapshotQuery.data as DocumentSnapshot | null | undefined
+  const rawSnapshot = snapshotQuery.data
+  const snapshot =
+    rawSnapshot === null || rawSnapshot === undefined
+      ? rawSnapshot
+      : isValidDocumentSnapshot(rawSnapshot)
+        ? rawSnapshot
+        : null
+  if (rawSnapshot && !snapshot) {
+    logger.error('Invalid document snapshot shape', rawSnapshot)
+  }
   const gameMapSnapshotData = readLiveGameMapSnapshot(snapshot)
   const imageStorageId = gameMapSnapshotData?.imageStorageId as Id<'_storage'> | undefined
   const imageUrl = useAuthQuery(
@@ -71,6 +81,25 @@ function readLiveGameMapSnapshot(snapshot: DocumentSnapshot | null | undefined) 
     return null
   }
   return readGameMapSnapshot(snapshot.data)
+}
+
+function isValidDocumentSnapshot(data: unknown): data is DocumentSnapshot {
+  if (!isRecord(data)) return false
+
+  return (
+    typeof data._id === 'string' &&
+    typeof data._creationTime === 'number' &&
+    typeof data.itemId === 'string' &&
+    typeof data.itemType === 'string' &&
+    typeof data.editHistoryId === 'string' &&
+    typeof data.campaignId === 'string' &&
+    typeof data.snapshotType === 'string' &&
+    data.data instanceof ArrayBuffer
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }
 
 function toGameMapImageUrlState(

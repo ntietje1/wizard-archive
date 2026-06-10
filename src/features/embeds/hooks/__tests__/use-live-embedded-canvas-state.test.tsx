@@ -2,7 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { parseEmbeddedCanvasStableId } from '~/features/canvas/domain/validation'
-import { useEmbeddedCanvasState } from '../use-embedded-canvas-state'
+import { useLiveEmbeddedCanvasState } from '~/features/embeds/hooks/use-live-embedded-canvas-state'
 import { testId } from '~/test/helpers/test-id'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())
@@ -11,7 +11,7 @@ vi.mock('~/shared/hooks/useCampaignQuery', () => ({
   useCampaignQuery: (...args: Array<unknown>) => useCampaignQueryMock(...args),
 }))
 
-describe('useEmbeddedCanvasState', () => {
+describe('useLiveEmbeddedCanvasState', () => {
   afterEach(() => {
     useCampaignQueryMock.mockReset()
   })
@@ -30,7 +30,7 @@ describe('useEmbeddedCanvasState', () => {
     useCampaignQueryMock.mockImplementation(() => currentResult)
 
     const { result, rerender } = renderHook(() =>
-      useEmbeddedCanvasState(createTestCanvasId('canvas-1')),
+      useLiveEmbeddedCanvasState(createTestCanvasId('canvas-1')),
     )
 
     await waitFor(() => {
@@ -67,7 +67,7 @@ describe('useEmbeddedCanvasState', () => {
       isError: true,
     })
 
-    const { result } = renderHook(() => useEmbeddedCanvasState(createTestCanvasId('canvas-1')))
+    const { result } = renderHook(() => useLiveEmbeddedCanvasState(createTestCanvasId('canvas-1')))
 
     expect(result.current.isError).toBe(true)
     expect(result.current.isLoading).toBe(false)
@@ -82,7 +82,7 @@ describe('useEmbeddedCanvasState', () => {
     })
     const destroySpy = vi.spyOn(Y.Doc.prototype, 'destroy')
 
-    const { unmount } = renderHook(() => useEmbeddedCanvasState(createTestCanvasId('canvas-1')))
+    const { unmount } = renderHook(() => useLiveEmbeddedCanvasState(createTestCanvasId('canvas-1')))
 
     unmount()
 
@@ -107,9 +107,12 @@ describe('useEmbeddedCanvasState', () => {
 
     useCampaignQueryMock.mockImplementation(() => currentResult)
 
-    const { result, rerender } = renderHook(({ canvasId }) => useEmbeddedCanvasState(canvasId), {
-      initialProps: { canvasId: createTestCanvasId('canvas-1') },
-    })
+    const { result, rerender } = renderHook(
+      ({ canvasId }) => useLiveEmbeddedCanvasState(canvasId),
+      {
+        initialProps: { canvasId: createTestCanvasId('canvas-1') },
+      },
+    )
 
     await waitFor(() => {
       expect(result.current.nodes[0]?.id).toBe('node-1')

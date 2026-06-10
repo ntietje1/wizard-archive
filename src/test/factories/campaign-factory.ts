@@ -19,7 +19,12 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
   campaignCounter++
   const dmUser = createUser()
   const campaignId = overrides?._id ?? testId(`campaign_${campaignCounter}`)
-  const { myMembership: memberOverrides, slug, ...rest } = overrides ?? {}
+  const {
+    defaultFolderInheritShares = false,
+    myMembership: memberOverrides,
+    slug,
+    ...rest
+  } = overrides ?? {}
   const campaign: Campaign = {
     _id: campaignId,
     _creationTime: Date.now(),
@@ -29,7 +34,7 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
     slug: assertCampaignSlug(slug ?? `test-campaign-${campaignCounter}`),
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
-    defaultFolderInheritShares: false,
+    defaultFolderInheritShares,
     dmUserProfile: dmUser,
     myMembership: memberOverrides ? createCampaignMember({ ...memberOverrides, campaignId }) : null,
     acceptedMemberCount: 0,

@@ -76,7 +76,7 @@ vi.mock('~/features/previews/components/sidebar-item-preview-content', () => ({
   },
 }))
 
-vi.mock('../embedded-canvas-content', () => ({
+vi.mock('~/features/embeds/components/embedded-canvas-content', () => ({
   EmbeddedCanvasContent: (props: unknown) => {
     embeddedCanvasSpy(props)
     return <div data-testid="embedded-canvas-content">embedded-canvas</div>
@@ -93,14 +93,14 @@ vi.mock('~/features/previews/components/file-media-embed-content', () => ({
   },
 }))
 
-vi.mock('../embedded-map-content', () => ({
+vi.mock('~/features/embeds/components/embedded-map-content', () => ({
   EmbeddedMapContent: (props: unknown) => {
     embeddedMapSpy(props)
     return <div data-testid="embedded-map-content">embedded-map</div>
   },
 }))
 
-vi.mock('../embed-note-content', () => ({
+vi.mock('~/features/embeds/components/canvas-embed-note-content', () => ({
   EmbedNoteContent: (props: unknown) => {
     embedNoteSpy(props)
     return <div data-testid="embed-note-content">embedded-note</div>
@@ -294,7 +294,6 @@ describe('EmbedNode', () => {
 
     expect(screen.getByTestId('embedded-canvas-content')).toBeInTheDocument()
     expect(embeddedCanvasSpy).toHaveBeenCalledWith({
-      nodeId: 'node-1',
       canvasId: 'canvas-1',
       previewUrl: 'canvas.png',
       alt: 'Canvas Item',
@@ -339,7 +338,6 @@ describe('EmbedNode', () => {
 
     expect(screen.getByTestId('embedded-map-content')).toBeInTheDocument()
     expect(embeddedMapSpy).toHaveBeenCalledWith({
-      nodeId: 'node-1',
       map: {
         _id: 'map-1',
         type: SIDEBAR_ITEM_TYPES.gameMaps,
@@ -347,6 +345,7 @@ describe('EmbedNode', () => {
         imageUrl: 'map.png',
         pins: [],
       },
+      onMediaLayout: expect.any(Function),
     })
     expect(sidebarItemPreviewSpy).not.toHaveBeenCalled()
   })

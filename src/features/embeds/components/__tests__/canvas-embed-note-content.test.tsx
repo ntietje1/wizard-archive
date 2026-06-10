@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { EmbedNoteContent } from '../embed-note-content'
+import { EmbedNoteContent } from '~/features/embeds/components/canvas-embed-note-content'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type * as ReactModule from 'react'
@@ -14,7 +14,7 @@ const mockEditor = vi.hoisted(() => ({ id: 'editor' }) as unknown as CustomBlock
 const mockUseBlockNoteActivationLifecycle = vi.hoisted(() => vi.fn())
 const noteContentSpy = vi.hoisted(() => vi.fn())
 
-vi.mock('../../shared/use-blocknote-activation-lifecycle', () => ({
+vi.mock('~/features/embeds/hooks/use-blocknote-activation-lifecycle', () => ({
   useBlockNoteActivationLifecycle: (...args: Array<unknown>) =>
     mockUseBlockNoteActivationLifecycle(...args),
 }))

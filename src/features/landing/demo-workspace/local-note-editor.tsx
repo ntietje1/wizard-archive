@@ -1,5 +1,5 @@
 import { BlockNoteEditor } from '@blocknote/core'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { blocksToYDoc } from 'shared/editor-blocks/blocknote-yjs'
 import { NoteView } from '~/features/editor/components/note-view'
 import { createEditorSchema } from '~/features/editor/editor-specs'
@@ -8,7 +8,7 @@ import { createLinkResolver } from '~/features/editor/links/link-resolver'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 import { createEmptyNoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
 import { noteBodyToBlocks } from './demo-workspace-model'
-import { destroyLocalYjsProvider, LocalYjsProvider } from './local-yjs-provider'
+import { LocalYjsProvider } from './local-yjs-provider'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 
@@ -33,10 +33,19 @@ export function LocalNoteEditor({
     const provider = new LocalYjsProvider(doc)
     return { doc, provider }
   })
+  const editorCreatedRef = useRef(false)
+  const sessionDestroyedRef = useRef(false)
+  const destroySession = () => {
+    if (sessionDestroyedRef.current) return
+
+    sessionDestroyedRef.current = true
+    session.provider.destroy()
+    session.doc.destroy()
+  }
   const editor = useOwnedBlockNoteEditor({
     identity: session.provider,
-    createEditor: () =>
-      BlockNoteEditor.create({
+    createEditor: () => {
+      const nextEditor = BlockNoteEditor.create({
         schema: createEditorSchema(),
         collaboration: {
           provider: session.provider,
@@ -44,8 +53,14 @@ export function LocalNoteEditor({
           user: { name: 'Demo', color: '#61afef' },
           showCursorLabels: 'activity',
         },
-      }) as unknown as CustomBlockNoteEditor,
-    destroyEditor: destroyBlockNoteEditor,
+      }) as unknown as CustomBlockNoteEditor
+      editorCreatedRef.current = true
+      return nextEditor
+    },
+    destroyEditor: (blockNoteEditor) => {
+      destroyBlockNoteEditor(blockNoteEditor)
+      destroySession()
+    },
     onEditorChange,
   })
   const linkResolver = createLinkResolver({
@@ -57,7 +72,10 @@ export function LocalNoteEditor({
 
   useEffect(
     () => () => {
-      destroyLocalYjsProvider(session.provider)
+      if (editorCreatedRef.current || sessionDestroyedRef.current) return
+
+      sessionDestroyedRef.current = true
+      session.provider.destroy()
       session.doc.destroy()
     },
     [session],

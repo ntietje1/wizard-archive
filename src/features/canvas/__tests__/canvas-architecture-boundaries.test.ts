@@ -174,7 +174,7 @@ describe('canvas architecture boundaries', () => {
       'src/features/canvas/components/canvas-preview-embed-node.tsx',
     )
     const embeddedCanvasContent = readRepoFile(
-      'src/features/canvas/nodes/embed/embedded-canvas-content.tsx',
+      'src/features/embeds/components/embedded-canvas-content.tsx',
     )
     const toolbarModel = readRepoFile('src/features/canvas/components/use-canvas-toolbar-model.ts')
     const liveEmbedResolver = readRepoFile(
@@ -185,13 +185,13 @@ describe('canvas architecture boundaries', () => {
       'src/features/embeds/context/embed-sidebar-item-resolution.ts',
     )
     const liveEmbeddedCanvasResolver = readRepoFile(
-      'src/features/canvas/nodes/embed/live-embedded-canvas-state-resolver.tsx',
+      'src/features/embeds/components/live-embedded-canvas-state-resolver.tsx',
     )
     const embeddedMapContent = readRepoFile(
-      'src/features/canvas/nodes/embed/embedded-map-content.tsx',
+      'src/features/embeds/components/embedded-map-content.tsx',
     )
     const liveEmbeddedMapResolver = readRepoFile(
-      'src/features/canvas/nodes/embed/live-embedded-map-state-resolver.tsx',
+      'src/features/embeds/components/live-embedded-map-state-resolver.tsx',
     )
     const editableEmbedControls = readRepoFile(
       'src/features/embeds/hooks/use-editable-embed-target-controls.ts',
@@ -225,9 +225,28 @@ describe('canvas architecture boundaries', () => {
     expect(editableEmbedControls).not.toContain('useEmbedUpload')
     expect(liveEmbedResolver).toContain('useSidebarItemById')
     expect(liveEmbedResolver).toContain('useSidebarItemAvailabilityState')
-    expect(liveEmbeddedCanvasResolver).toContain('useEmbeddedCanvasState')
+    expect(liveEmbeddedCanvasResolver).toContain('useLiveEmbeddedCanvasState')
     expect(liveEmbeddedMapResolver).toContain('useMapRenderPins')
     expect(liveEmbedTargetOperations).toContain('useEmbedUpload')
+  })
+
+  it('keeps the canvas embed node shell independent from concrete sidebar item presentations', () => {
+    const embedNode = readRepoFile('src/features/canvas/nodes/embed/embed-node.tsx')
+    const canvasSidebarItemEmbedRenderer = readRepoFile(
+      'src/features/embeds/components/canvas-sidebar-item-embed-renderer.tsx',
+    )
+
+    expect(embedNode).toContain('CanvasSidebarItemEmbedRenderer')
+    expect(embedNode).toContain('isCanvasSidebarItemEmbedRichTextEditable')
+    expect(embedNode).not.toContain('SIDEBAR_ITEM_TYPES')
+    expect(embedNode).not.toContain('EmbedNoteContent')
+    expect(embedNode).not.toContain('EmbeddedCanvasContent')
+    expect(embedNode).not.toContain('EmbeddedMapContent')
+    expect(embedNode).not.toContain('FileMediaEmbedContent')
+    expect(embedNode).not.toContain('SidebarItemPreviewContent')
+
+    expect(canvasSidebarItemEmbedRenderer).not.toContain('useCanvasDocumentRuntime')
+    expect(canvasSidebarItemEmbedRenderer).not.toContain('useCanvasEngine')
   })
 })
 

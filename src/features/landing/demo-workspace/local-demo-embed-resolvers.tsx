@@ -15,7 +15,7 @@ import {
 import type {
   EmbeddedCanvasState,
   EmbeddedCanvasStateResolver,
-} from '~/features/canvas/nodes/embed/embedded-canvas-state-resolution'
+} from '~/features/embeds/context/embedded-canvas-state-resolution'
 import type {
   EmbedSidebarItemResolver,
   EmbedSidebarItemState,
@@ -141,9 +141,55 @@ function demoSidebarItemWithContent(
   return asDemoSidebarItem({
     ...baseItem,
     type: SIDEBAR_ITEM_TYPES.folders,
+    inheritShares: false,
   })
 }
 
 function asDemoSidebarItem(item: unknown): AnySidebarItemWithContent {
-  return item as AnySidebarItemWithContent
+  if (isDemoSidebarItem(item)) return item
+
+  throw new Error('Invalid demo sidebar item shape')
+}
+
+function isDemoSidebarItem(item: unknown): item is AnySidebarItemWithContent {
+  if (!isRecord(item)) return false
+  if (
+    typeof item._id !== 'string' ||
+    typeof item.name !== 'string' ||
+    typeof item.slug !== 'string' ||
+    typeof item.campaignId !== 'string' ||
+    typeof item.type !== 'string' ||
+    !Array.isArray(item.shares) ||
+    !Array.isArray(item.ancestors)
+  ) {
+    return false
+  }
+
+  switch (item.type) {
+    case SIDEBAR_ITEM_TYPES.notes:
+      return (
+        Array.isArray(item.content) &&
+        isRecord(item.blockMeta) &&
+        Array.isArray(item.blockShareAccessWarnings)
+      )
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return true
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      return (
+        (typeof item.imageUrl === 'string' || item.imageUrl === null) && Array.isArray(item.pins)
+      )
+    case SIDEBAR_ITEM_TYPES.files:
+      return (
+        (typeof item.downloadUrl === 'string' || item.downloadUrl === null) &&
+        (typeof item.contentType === 'string' || item.contentType === null)
+      )
+    case SIDEBAR_ITEM_TYPES.folders:
+      return typeof item.inheritShares === 'boolean'
+    default:
+      return false
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }

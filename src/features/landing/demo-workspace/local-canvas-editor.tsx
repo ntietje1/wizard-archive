@@ -8,7 +8,7 @@ import { TextNode } from '~/features/canvas/nodes/text/text-node'
 import { useCanvasToolStore } from '~/features/canvas/stores/canvas-tool-store'
 import { useCanvasEditorRuntimeCore } from '~/features/canvas/runtime/use-canvas-editor-runtime-core'
 import type { CanvasNodeRendererMap } from '~/features/canvas/components/canvas-node-content-renderer'
-import type { EmbeddedCanvasStateResolver } from '~/features/canvas/nodes/embed/embedded-canvas-state-resolution'
+import type { EmbeddedCanvasStateResolver } from '~/features/embeds/context/embedded-canvas-state-resolution'
 import type { EmbedSidebarItemResolver } from '~/features/embeds/context/embed-sidebar-item-resolution'
 import type {
   CanvasDocumentEdge,

@@ -104,6 +104,7 @@ import type * as folders_functions_enhanceFolder from "../folders/functions/enha
 import type * as folders_functions_folderCompanion from "../folders/functions/folderCompanion.js";
 import type * as folders_functions_getItemsForDownload from "../folders/functions/getItemsForDownload.js";
 import type * as folders_functions_getSidebarItemAncestors from "../folders/functions/getSidebarItemAncestors.js";
+import type * as folders_inheritSharesMigration from "../folders/inheritSharesMigration.js";
 import type * as folders_queries from "../folders/queries.js";
 import type * as folders_triggers from "../folders/triggers.js";
 import type * as functions from "../functions.js";
@@ -348,6 +349,7 @@ declare const fullApi: ApiFromModules<{
   "folders/functions/folderCompanion": typeof folders_functions_folderCompanion;
   "folders/functions/getItemsForDownload": typeof folders_functions_getItemsForDownload;
   "folders/functions/getSidebarItemAncestors": typeof folders_functions_getSidebarItemAncestors;
+  "folders/inheritSharesMigration": typeof folders_inheritSharesMigration;
   "folders/queries": typeof folders_queries;
   "folders/triggers": typeof folders_triggers;
   functions: typeof functions;

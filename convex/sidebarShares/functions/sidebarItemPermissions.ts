@@ -131,7 +131,9 @@ export async function resolveInheritedPermissions(
     const folder = await getSidebarItem(ctx, currentParentId)
     if (!folder) break
 
-    if (folder.type === SIDEBAR_ITEM_TYPES.folders && folder.inheritShares) {
+    const inheritsFolderShares =
+      folder.type === SIDEBAR_ITEM_TYPES.folders && folder.inheritShares === true
+    if (inheritsFolderShares) {
       await applyFolderMemberShares(ctx, {
         campaignId,
         folderId: currentParentId,

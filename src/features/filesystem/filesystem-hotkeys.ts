@@ -113,6 +113,7 @@ export function useFileSystemUndoHotkeys({ canUndo, canRedo, undo, redo }: UndoR
       }
     }
 
+    // Capture keeps filesystem undo/redo available while floating menus or overlays have focus.
     window.addEventListener('keydown', onKeyDown, true)
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])

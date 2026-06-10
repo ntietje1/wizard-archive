@@ -44,7 +44,7 @@ vi.mock('../canvas-floating-formatting-toolbar', () => ({
   CanvasFloatingFormattingToolbar: () => null,
 }))
 
-vi.mock('../use-blocknote-activation-lifecycle', () => ({
+vi.mock('~/features/embeds/hooks/use-blocknote-activation-lifecycle', () => ({
   useBlockNoteActivationLifecycle: () => undefined,
 }))
 

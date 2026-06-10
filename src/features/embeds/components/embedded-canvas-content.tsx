@@ -1,9 +1,9 @@
 import { Loader2 } from 'lucide-react'
-import { useEmbeddedCanvasStateResolver } from './embedded-canvas-state-resolution'
-import type { EmbeddedCanvasState } from './embedded-canvas-state-resolution'
+import { useEmbeddedCanvasStateResolver } from '../context/embedded-canvas-state-resolution'
+import type { EmbeddedCanvasState } from '../context/embedded-canvas-state-resolution'
 import { CanvasThumbnailPreview } from '~/features/previews/components/canvas-thumbnail-preview'
-import { CanvasPreviewEmbedNode } from '../../components/canvas-preview-embed-node'
-import { CanvasReadOnlyPreview } from '../../components/canvas-read-only-preview'
+import { CanvasPreviewEmbedNode } from '~/features/canvas/components/canvas-preview-embed-node'
+import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
 import type { Id } from 'convex/_generated/dataModel'
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.01
@@ -14,7 +14,6 @@ export function EmbeddedCanvasContent({
   previewUrl,
   alt,
 }: {
-  nodeId: string
   canvasId: Id<'sidebarItems'>
   previewUrl: string | null
   alt: string

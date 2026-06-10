@@ -3,8 +3,8 @@ import type { ReactNode } from 'react'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { Doc } from 'yjs'
-import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
-import { useBlockNoteActivationLifecycle } from '../shared/use-blocknote-activation-lifecycle'
+import type { PendingRichEmbedActivationRef } from '../hooks/use-rich-embed-lifecycle'
+import { useBlockNoteActivationLifecycle } from '../hooks/use-blocknote-activation-lifecycle'
 import { EmbeddedNoteContent } from '~/features/previews/components/embedded-note-content'
 import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
 import { BlockShareMenuProvider } from '~/features/sharing/contexts/block-share-menu-context'
@@ -53,7 +53,7 @@ export function EmbedNoteContent({
     editable,
     isReady,
     onActivationErrorMessage:
-      'useNoteEmbedLifecycle: failed to compute selection from posAtCoords/TextSelection.create',
+      'useBlockNoteActivationLifecycle: failed to compute selection from posAtCoords/TextSelection.create',
     onActivated,
     pendingActivationRef,
   })

@@ -3,6 +3,7 @@ import { components, internal } from './_generated/api'
 import type { DataModel } from './_generated/dataModel'
 import { getBlockSharePermissionLevelMigrationPatch } from './blockShares/permissionLevelMigration'
 import { getDeleteBlockInlineContentProjectionFieldPatch } from './blocks/inlineContentMigration'
+import { getFolderInheritSharesMigrationPatch } from './folders/inheritSharesMigration'
 import { getSidebarItemLifecycleMigrationPatch } from './sidebarItems/lifecycleMigration'
 
 export const migrations = new Migrations<DataModel>(components.migrations)
@@ -31,6 +32,14 @@ export const deleteBlockInlineContentProjectionField = migrations.define({
   },
 })
 
+export const backfillFolderInheritShares = migrations.define({
+  table: 'folders',
+  batchSize: 100,
+  migrateOne: (_ctx, folder) => {
+    return getFolderInheritSharesMigrationPatch(folder as { inheritShares?: boolean }) ?? undefined
+  },
+})
+
 export const runSidebarItemLifecycleStatusMigration = migrations.runner(
   internal.migrations.migrateSidebarItemLifecycleStatus,
 )
@@ -43,8 +52,13 @@ export const runDeleteBlockInlineContentProjectionFieldMigration = migrations.ru
   internal.migrations.deleteBlockInlineContentProjectionField,
 )
 
+export const runBackfillFolderInheritSharesMigration = migrations.runner(
+  internal.migrations.backfillFolderInheritShares,
+)
+
 export const runAll = migrations.runner([
   internal.migrations.migrateSidebarItemLifecycleStatus,
   internal.migrations.migrateBlockSharePermissionLevel,
   internal.migrations.deleteBlockInlineContentProjectionField,
+  internal.migrations.backfillFolderInheritShares,
 ])

@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { EmbeddedCanvasContent } from '../embedded-canvas-content'
-import { EmbeddedCanvasStateResolutionProvider } from '../embedded-canvas-state-resolution'
+import { EmbeddedCanvasContent } from '~/features/embeds/components/embedded-canvas-content'
+import { EmbeddedCanvasStateResolutionProvider } from '~/features/embeds/context/embedded-canvas-state-resolution'
 import { testId } from '~/test/helpers/test-id'
-import type { EmbeddedCanvasStateResolver } from '../embedded-canvas-state-resolution'
+import type { EmbeddedCanvasStateResolver } from '~/features/embeds/context/embedded-canvas-state-resolution'
 
 const useEmbeddedCanvasStateMock = vi.hoisted(() => vi.fn())
 const canvasThumbnailPreviewSpy = vi.hoisted(() => vi.fn())
@@ -17,11 +17,11 @@ vi.mock('~/features/previews/components/canvas-thumbnail-preview', () => ({
   },
 }))
 
-vi.mock('../../../components/canvas-preview-embed-node', () => ({
+vi.mock('~/features/canvas/components/canvas-preview-embed-node', () => ({
   CanvasPreviewEmbedNode: canvasPreviewEmbedNodeMock,
 }))
 
-vi.mock('../../../components/canvas-read-only-preview', () => ({
+vi.mock('~/features/canvas/components/canvas-read-only-preview', () => ({
   CanvasReadOnlyPreview: (props: Record<string, unknown>) => {
     canvasPreviewSpy(props)
     return <div data-testid="embedded-canvas-preview" />
@@ -150,7 +150,6 @@ function renderEmbeddedCanvasContent() {
   return render(
     <EmbeddedCanvasStateResolutionProvider resolver={TestEmbeddedCanvasStateResolver}>
       <EmbeddedCanvasContent
-        nodeId="embed-node-1"
         canvasId={createCanvasId('canvas-1')}
         previewUrl="canvas.png"
         alt="Canvas"

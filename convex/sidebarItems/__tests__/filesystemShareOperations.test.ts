@@ -60,16 +60,19 @@ describe('filesystem share operations', () => {
     expect((await getShareInfo(dmAuth, ctx.campaignId, noteId)).allPermissionLevel).toBe('view')
     expect((await getShareInfo(dmAuth, ctx.campaignId, folderId)).allPermissionLevel).toBe('view')
 
+    const transactionId = receipt.transactionId
+    expect(transactionId).toBeDefined()
+
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignId,
-      transactionId: receipt.transactionId!,
+      transactionId: transactionId!,
     })
     expect((await getShareInfo(dmAuth, ctx.campaignId, noteId)).allPermissionLevel).toBeNull()
     expect((await getShareInfo(dmAuth, ctx.campaignId, folderId)).allPermissionLevel).toBeNull()
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
       campaignId: ctx.campaignId,
-      transactionId: receipt.transactionId!,
+      transactionId: transactionId!,
     })
     expect((await getShareInfo(dmAuth, ctx.campaignId, noteId)).allPermissionLevel).toBe('view')
     expect((await getShareInfo(dmAuth, ctx.campaignId, folderId)).allPermissionLevel).toBe('view')

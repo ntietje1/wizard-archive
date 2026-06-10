@@ -1,8 +1,8 @@
-import { useEmbeddedCanvasState } from './use-embedded-canvas-state'
+import { useLiveEmbeddedCanvasState } from '../hooks/use-live-embedded-canvas-state'
 import type {
   EmbeddedCanvasStateResolver,
   EmbeddedCanvasStateResolverProps,
-} from './embedded-canvas-state-resolution'
+} from '../context/embedded-canvas-state-resolution'
 
 export const LiveEmbeddedCanvasStateResolver: EmbeddedCanvasStateResolver = ({
   canvasId,
@@ -16,7 +16,7 @@ export const LiveEmbeddedCanvasStateResolver: EmbeddedCanvasStateResolver = ({
 }
 
 function LiveResolvedEmbeddedCanvasState({ canvasId, children }: EmbeddedCanvasStateResolverProps) {
-  const state = useEmbeddedCanvasState(canvasId)
+  const state = useLiveEmbeddedCanvasState(canvasId)
 
   return <>{children(state)}</>
 }

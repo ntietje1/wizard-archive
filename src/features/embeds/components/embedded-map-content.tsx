@@ -1,34 +1,24 @@
-import { useRef } from 'react'
 import { Loader2 } from 'lucide-react'
 import type { GameMapWithContent } from 'shared/game-maps/types'
 import { MapPinsLayer } from '~/features/editor/components/viewer/map/map-pins-layer'
 import { useMapImageStatus } from '~/features/editor/components/viewer/map/use-map-image-status'
 import { MapImagePreview } from '~/features/editor/components/viewer/map/map-image-preview'
-import { useCanvasDocumentRuntime } from '../../runtime/providers/canvas-runtime'
-import { useCanvasEngine } from '../../react/canvas-engine-context-value'
-import { resolveDefaultEmbedNodeResizeForLockedAspectRatio } from './embed-node-size'
-import { useEmbeddedMapStateResolver } from './embedded-map-state-resolution'
+import { useEmbeddedMapStateResolver } from '../context/embedded-map-state-resolution'
+import type { EmbedMediaLayoutReporter } from '../utils/embed-media'
+import { getIntrinsicAspectRatio } from '../utils/embed-media'
 
-export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameMapWithContent }) {
+export function EmbeddedMapContent({
+  map,
+  onMediaLayout,
+}: {
+  map: GameMapWithContent
+  onMediaLayout?: EmbedMediaLayoutReporter
+}) {
   const MapStateResolver = useEmbeddedMapStateResolver()
-  const { documentWriter } = useCanvasDocumentRuntime()
-  const { patchNodeData, resizeNode } = documentWriter
-  const canvasEngine = useCanvasEngine()
   const { imageLoaded, imageError, handleImageLoad, handleImageError } = useMapImageStatus(
     map._id,
     map.imageUrl,
   )
-  const lastStoredAspectRatioRef = useRef<number | null>(null)
-  const patchLockedAspectRatio = (aspectRatio: number) => {
-    patchNodeData(new Map([[nodeId, { lockedAspectRatio: aspectRatio }]]))
-    const node = canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node
-    const resize = node
-      ? resolveDefaultEmbedNodeResizeForLockedAspectRatio(node, aspectRatio)
-      : null
-    if (resize) {
-      resizeNode(nodeId, resize.width, resize.height, resize.position)
-    }
-  }
 
   return (
     <MapStateResolver map={map}>
@@ -53,13 +43,8 @@ export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameM
               draggable={false}
               onLoad={(event) => {
                 const { naturalWidth, naturalHeight } = event.currentTarget
-                if (naturalWidth > 0 && naturalHeight > 0) {
-                  const aspectRatio = Number((naturalWidth / naturalHeight).toFixed(6))
-                  if (lastStoredAspectRatioRef.current !== aspectRatio) {
-                    lastStoredAspectRatioRef.current = aspectRatio
-                    patchLockedAspectRatio(aspectRatio)
-                  }
-                }
+                const aspectRatio = getIntrinsicAspectRatio(naturalWidth, naturalHeight)
+                onMediaLayout?.({ kind: 'intrinsicAspectRatio', aspectRatio })
 
                 handleImageLoad()
               }}

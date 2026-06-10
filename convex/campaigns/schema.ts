@@ -60,7 +60,6 @@ const campaignValidatorFields = {
   myMembership: v.nullable(campaignMemberValidator),
   acceptedMemberCount: v.number(),
   ...campaignTableFields,
-  defaultFolderInheritShares: v.boolean(),
 }
 
 export const campaignValidator = v.object(campaignValidatorFields)

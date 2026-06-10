@@ -6,25 +6,26 @@ type LocalYjsProviderEvents = {
   sync: (synced: boolean) => void
 }
 
-const destroyedProviders = new WeakSet<LocalYjsProvider>()
-
 export class LocalYjsProvider extends ObservableV2<LocalYjsProviderEvents> {
   readonly awareness: Awareness
+  private destroyed = false
 
   constructor(readonly doc: Y.Doc) {
     super()
     this.awareness = new Awareness(doc)
     queueMicrotask(() => {
-      if (!destroyedProviders.has(this)) {
+      if (!this.destroyed) {
         this.emit('sync', [true])
       }
     })
   }
-}
 
-export function destroyLocalYjsProvider(provider: LocalYjsProvider) {
-  destroyedProviders.add(provider)
-  removeAwarenessStates(provider.awareness, [provider.doc.clientID], 'local-disconnect')
-  provider.awareness.destroy()
-  provider.destroy()
+  override destroy() {
+    if (this.destroyed) return
+
+    this.destroyed = true
+    removeAwarenessStates(this.awareness, [this.doc.clientID], 'local-disconnect')
+    this.awareness.destroy()
+    super.destroy()
+  }
 }

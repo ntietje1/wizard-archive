@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { api } from 'convex/_generated/api'
 import { parseEmbeddedCanvasStableId } from '~/features/canvas/domain/validation'
 import * as Y from 'yjs'
-import { yMapToArray } from '../../utils/canvas-yjs-utils'
+import { yMapToArray } from '~/features/canvas/utils/canvas-yjs-utils'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
@@ -33,7 +33,7 @@ function useYMapAsArray<T>(doc: Y.Doc, mapName: string): Array<T> {
   )
 }
 
-export function useEmbeddedCanvasState(canvasId: Id<'sidebarItems'>) {
+export function useLiveEmbeddedCanvasState(canvasId: Id<'sidebarItems'>) {
   const doc = useMemo(() => createEmbeddedCanvasDoc(canvasId), [canvasId])
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)

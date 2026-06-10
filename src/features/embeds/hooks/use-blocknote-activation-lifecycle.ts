@@ -3,8 +3,8 @@ import type { EditorView } from '@tiptap/pm/view'
 import type {
   PendingRichEmbedActivationRef,
   RichEmbedActivationPayload,
-} from '../embed/use-rich-embed-lifecycle'
-import { useDeferredRichEmbedActivation } from '../embed/use-rich-embed-lifecycle'
+} from './use-rich-embed-lifecycle'
+import { useDeferredRichEmbedActivation } from './use-rich-embed-lifecycle'
 import {
   focusEditorViewAtEnd,
   focusEditorViewAtNearestPoint,
@@ -34,6 +34,8 @@ function getMountedBlockNoteView(
       return null
     }
 
+    // BlockNote does not expose an official EditorView mount signal yet; docView is an
+    // internal EditorView readiness workaround to revisit when BlockNote adds a public API.
     if (!(view as EditorView & { docView?: object | null }).docView) {
       return null
     }
