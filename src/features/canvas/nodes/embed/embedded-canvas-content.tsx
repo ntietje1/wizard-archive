@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
-import { useEmbeddedCanvasState } from './use-embedded-canvas-state'
+import { useEmbeddedCanvasStateResolver } from './embedded-canvas-state-resolution'
+import type { EmbeddedCanvasState } from './embedded-canvas-state-resolution'
 import { CanvasThumbnailPreview } from '~/features/previews/components/canvas-thumbnail-preview'
 import { CanvasPreviewEmbedNode } from '../../components/canvas-preview-embed-node'
 import { CanvasReadOnlyPreview } from '../../components/canvas-read-only-preview'
@@ -18,7 +19,34 @@ export function EmbeddedCanvasContent({
   previewUrl: string | null
   alt: string
 }) {
-  const { nodes, edges, isLoading, isError } = useEmbeddedCanvasState(canvasId)
+  const EmbeddedCanvasStateResolver = useEmbeddedCanvasStateResolver()
+
+  return (
+    <EmbeddedCanvasStateResolver canvasId={canvasId}>
+      {(state) => (
+        <ResolvedEmbeddedCanvasContent
+          canvasId={canvasId}
+          state={state}
+          previewUrl={previewUrl}
+          alt={alt}
+        />
+      )}
+    </EmbeddedCanvasStateResolver>
+  )
+}
+
+function ResolvedEmbeddedCanvasContent({
+  alt,
+  canvasId,
+  previewUrl,
+  state,
+}: {
+  alt: string
+  canvasId: Id<'sidebarItems'>
+  previewUrl: string | null
+  state: EmbeddedCanvasState
+}) {
+  const { nodes, edges, isLoading, isError } = state
 
   if (isLoading) {
     return (

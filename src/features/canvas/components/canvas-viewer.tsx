@@ -10,6 +10,10 @@ import { useCanvasEditorRuntime } from '../runtime/use-canvas-editor-runtime'
 import { CanvasEditorRuntimeHost } from './canvas-editor-runtime-host'
 import { CanvasNodeContent } from './canvas-node-content'
 import { useCanvasContextMenuAppAdapters } from './use-canvas-context-menu-app-adapters'
+import { LiveEmbeddedCanvasStateResolver } from '../nodes/embed/live-embedded-canvas-state-resolver'
+import { LiveEmbeddedMapStateResolver } from '../nodes/embed/live-embedded-map-state-resolver'
+import { LiveEmbedTargetOperationsProvider } from '~/features/embeds/components/live-embed-target-operations-provider'
+import { LiveSidebarItemEmbedResolver } from '~/features/embeds/components/live-sidebar-item-embed-resolver'
 import type { CanvasDocumentSource } from '../runtime/session/use-live-canvas-document-source'
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { CanvasWithContent } from 'shared/canvases/types'
@@ -89,8 +93,12 @@ function CanvasEditorRuntime({
       canEdit={canEdit}
       canvasCursor={canvasCursor}
       NodeContentComponent={CanvasNodeContent}
+      EmbeddedCanvasStateResolver={LiveEmbeddedCanvasStateResolver}
+      EmbeddedMapStateResolver={LiveEmbeddedMapStateResolver}
+      EmbedTargetOperationsSource={LiveEmbedTargetOperationsProvider}
       provider={provider}
       runtime={runtime}
+      SidebarItemEmbedResolver={LiveSidebarItemEmbedResolver}
       dropOverlay={
         <CanvasDropOverlay
           ref={runtime.dropTarget.dropOverlayRef}

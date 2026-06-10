@@ -8,6 +8,8 @@ import { EmbedNode } from '../embed-node'
 import { EMBED_NODE_MIN_SIZE } from '../embed-node-size'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
+import { LiveSidebarItemEmbedResolver } from '~/features/embeds/components/live-sidebar-item-embed-resolver'
+import { EmbedSidebarItemResolutionProvider } from '~/features/embeds/context/embed-sidebar-item-resolution'
 import { AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK } from '~/features/embeds/utils/embed-media'
 import {
   DOCUMENT_EMBED_ASPECT_RATIO_HEIGHT,
@@ -546,7 +548,9 @@ describe('EmbedNode', () => {
     }
     view.rerender(
       <CanvasEngineProvider engine={view.engine}>
-        <EmbedNode {...createEmbedNodeProps('node-1', 'note-1', {})} />
+        <EmbedSidebarItemResolutionProvider resolver={LiveSidebarItemEmbedResolver}>
+          <EmbedNode {...createEmbedNodeProps('node-1', 'note-1', {})} />
+        </EmbedSidebarItemResolutionProvider>
       </CanvasEngineProvider>,
     )
 
@@ -829,7 +833,9 @@ function renderEmbedNodeHarness(
     engine,
     ...render(
       <CanvasEngineProvider engine={engine}>
-        <EmbedNode {...createEmbedNodeProps(id, sidebarItemId, data)} />
+        <EmbedSidebarItemResolutionProvider resolver={LiveSidebarItemEmbedResolver}>
+          <EmbedNode {...createEmbedNodeProps(id, sidebarItemId, data)} />
+        </EmbedSidebarItemResolutionProvider>
       </CanvasEngineProvider>,
     ),
   }

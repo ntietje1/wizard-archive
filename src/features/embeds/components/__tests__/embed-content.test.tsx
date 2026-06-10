@@ -4,21 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { EmbedAncestryProvider } from '../../context/embed-render-ancestry'
 import { EmbedContent } from '../embed-content'
+import type { EmbedSidebarItemState } from '../../context/embed-sidebar-item-resolution'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
-import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
-
-const useSidebarItemByIdMock = vi.hoisted(() => vi.fn())
-const useSidebarItemAvailabilityStateMock = vi.hoisted(() => vi.fn())
-
-vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
-  useSidebarItemById: (...args: Array<unknown>) => useSidebarItemByIdMock(...args),
-}))
-
-vi.mock('~/features/sidebar/hooks/useSidebarItemAvailabilityState', () => ({
-  useSidebarItemAvailabilityState: (...args: Array<unknown>) =>
-    useSidebarItemAvailabilityStateMock(...args),
-}))
 
 vi.mock('~/features/editor/components/viewer/file/pdf-file-viewer', () => ({
   PdfFileViewer: ({ pdfUrl }: { pdfUrl: string }) => (
@@ -32,8 +20,7 @@ vi.mock('~/features/file-upload/utils/file-url-validation', () => ({
 
 describe('EmbedContent', () => {
   beforeEach(() => {
-    useSidebarItemByIdMock.mockReset()
-    useSidebarItemAvailabilityStateMock.mockReset()
+    vi.clearAllMocks()
   })
 
   it('renders empty state for empty targets', () => {
@@ -120,12 +107,6 @@ describe('EmbedContent', () => {
       type: SIDEBAR_ITEM_TYPES.folders,
       name: 'Folder A',
     }
-    useSidebarItemByIdMock.mockReturnValue({ data: item, isLoading: false, error: null })
-    useSidebarItemAvailabilityStateMock.mockReturnValue({
-      status: 'available',
-      label: 'Folder A',
-      item,
-    })
 
     render(
       <EmbedContent
@@ -141,12 +122,6 @@ describe('EmbedContent', () => {
   })
 
   it('renders loading sidebar item embeds as stable loading placeholders', () => {
-    useSidebarItemByIdMock.mockReturnValue({ data: null, isLoading: true, error: null })
-    useSidebarItemAvailabilityStateMock.mockReturnValue({
-      status: 'loading',
-      label: 'Map PDF',
-    })
-
     render(
       <EmbedContent
         target={{ kind: 'sidebarItem', sidebarItemId: 'file-a' as Id<'sidebarItems'> }}
@@ -175,8 +150,6 @@ describe('EmbedContent', () => {
     )
 
     expect(screen.getByText('Embedded item unavailable')).toBeInTheDocument()
-    expect(useSidebarItemByIdMock).not.toHaveBeenCalled()
-    expect(useSidebarItemAvailabilityStateMock).not.toHaveBeenCalled()
   })
 
   it('does not remount sidebar item content when the render callback identity changes', () => {
@@ -187,12 +160,6 @@ describe('EmbedContent', () => {
     }
     const unmountSpy = vi.fn()
     mountProbeUnmountSpy = unmountSpy
-    useSidebarItemByIdMock.mockReturnValue({ data: item, isLoading: false, error: null })
-    useSidebarItemAvailabilityStateMock.mockReturnValue({
-      status: 'available',
-      label: 'Canvas A',
-      item,
-    })
 
     const { rerender } = render(
       <EmbedContent
@@ -219,18 +186,6 @@ describe('EmbedContent', () => {
   })
 
   it('renders trashed sidebar item embeds as unavailable instead of rich content', () => {
-    const item = {
-      _id: 'note-a',
-      type: SIDEBAR_ITEM_TYPES.notes,
-      name: 'Trashed Note',
-    }
-    useSidebarItemByIdMock.mockReturnValue({ data: item, isLoading: false, error: null })
-    useSidebarItemAvailabilityStateMock.mockReturnValue({
-      status: 'trashed',
-      label: 'Trashed Note',
-      message: 'This item is in the trash.',
-    })
-
     render(
       <EmbedContent
         target={{ kind: 'sidebarItem', sidebarItemId: 'note-a' as Id<'sidebarItems'> }}
@@ -258,12 +213,6 @@ describe('EmbedContent', () => {
       contentType: 'audio/mpeg',
       previewUrl: null,
     }
-    useSidebarItemByIdMock.mockReturnValue({ data: item, isLoading: false, error: null })
-    useSidebarItemAvailabilityStateMock.mockReturnValue({
-      status: 'available',
-      label: 'Theme Song',
-      item,
-    })
 
     render(
       <EmbedContent
@@ -285,12 +234,6 @@ describe('EmbedContent', () => {
       type: SIDEBAR_ITEM_TYPES.folders,
       name: 'Folder A',
     }
-    useSidebarItemByIdMock.mockReturnValue({ data: item, isLoading: false, error: null })
-    useSidebarItemAvailabilityStateMock.mockReturnValue({
-      status: 'available',
-      label: 'Folder A',
-      item,
-    })
 
     render(
       <EmbedContent
@@ -312,12 +255,6 @@ describe('EmbedContent', () => {
       type: SIDEBAR_ITEM_TYPES.notes,
       name: 'Note B',
     }
-    useSidebarItemByIdMock.mockReturnValue({ data: item, isLoading: false, error: null })
-    useSidebarItemAvailabilityStateMock.mockReturnValue({
-      status: 'available',
-      label: 'Note B',
-      item,
-    })
 
     render(
       <EmbedContent
@@ -383,7 +320,7 @@ function MountProbe({ label, onUnmount }: { label: string; onUnmount: () => void
   return <div>{label}</div>
 }
 
-function availableItemState(item: AnySidebarItemWithContent): SidebarItemAvailabilityState {
+function availableItemState(item: AnySidebarItemWithContent): EmbedSidebarItemState {
   return {
     status: 'available',
     label: item.name,

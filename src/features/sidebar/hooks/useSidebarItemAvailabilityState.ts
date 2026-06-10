@@ -5,6 +5,7 @@ import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMember
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
+import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 import { isTrashedSidebarItem } from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
@@ -15,26 +16,6 @@ type SidebarItemAvailabilitySubject = 'item' | 'page'
 type SidebarItemAvailabilityLookup =
   | { kind: 'id'; id: Id<'sidebarItems'> | null | undefined }
   | { kind: 'slug'; slug: string | null | undefined }
-
-export type SidebarItemAvailabilityState =
-  | {
-      status: 'loading'
-      label: string
-      item?: undefined
-      message?: undefined
-    }
-  | {
-      status: 'available'
-      label: string
-      item: AnySidebarItemWithContent
-      message?: undefined
-    }
-  | {
-      status: 'trashed' | 'not_shared' | 'not_found' | 'not_found_or_not_shared' | 'error'
-      label: string
-      item?: undefined
-      message: string
-    }
 
 interface UseSidebarItemAvailabilityStateArgs {
   lookup: SidebarItemAvailabilityLookup

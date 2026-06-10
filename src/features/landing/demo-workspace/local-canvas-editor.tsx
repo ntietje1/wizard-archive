@@ -2,12 +2,14 @@ import * as Y from 'yjs'
 import { useEffect, useState } from 'react'
 import { CanvasEditorRuntimeHost } from '~/features/canvas/components/canvas-editor-runtime-host'
 import { CanvasNodeContentRenderer } from '~/features/canvas/components/canvas-node-content-renderer'
-import { CanvasPreviewDefaultEmbedNode } from '~/features/canvas/components/canvas-preview-default-embed-node'
-import { CanvasPreviewStrokeNode } from '~/features/canvas/components/canvas-preview-stroke-node'
-import { CanvasPreviewTextNode } from '~/features/canvas/components/canvas-preview-text-node'
+import { EmbedNode } from '~/features/canvas/nodes/embed/embed-node'
+import { StrokeNode } from '~/features/canvas/nodes/stroke/stroke-node'
+import { TextNode } from '~/features/canvas/nodes/text/text-node'
 import { useCanvasToolStore } from '~/features/canvas/stores/canvas-tool-store'
 import { useCanvasEditorRuntimeCore } from '~/features/canvas/runtime/use-canvas-editor-runtime-core'
 import type { CanvasNodeRendererMap } from '~/features/canvas/components/canvas-node-content-renderer'
+import type { EmbeddedCanvasStateResolver } from '~/features/canvas/nodes/embed/embedded-canvas-state-resolution'
+import type { EmbedSidebarItemResolver } from '~/features/embeds/context/embed-sidebar-item-resolution'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
@@ -15,18 +17,26 @@ import type {
 import type { Id } from 'convex/_generated/dataModel'
 
 const LOCAL_CANVAS_NODE_RENDERERS = {
-  embed: CanvasPreviewDefaultEmbedNode,
-  stroke: CanvasPreviewStrokeNode,
-  text: CanvasPreviewTextNode,
+  embed: EmbedNode,
+  stroke: StrokeNode,
+  text: TextNode,
 } as const satisfies CanvasNodeRendererMap
 
 interface LocalCanvasEditorProps {
   canvasId: Id<'sidebarItems'>
   nodes: ReadonlyArray<CanvasDocumentNode>
   edges: ReadonlyArray<CanvasDocumentEdge>
+  EmbeddedCanvasStateResolver?: EmbeddedCanvasStateResolver
+  SidebarItemEmbedResolver?: EmbedSidebarItemResolver
 }
 
-export function LocalCanvasEditor({ canvasId, nodes, edges }: LocalCanvasEditorProps) {
+export function LocalCanvasEditor({
+  canvasId,
+  nodes,
+  edges,
+  EmbeddedCanvasStateResolver,
+  SidebarItemEmbedResolver,
+}: LocalCanvasEditorProps) {
   const document = useLocalCanvasDocumentSource({ canvasId, nodes, edges })
   const runtime = useCanvasEditorRuntimeCore({
     canvasId: document.canvasId,
@@ -47,6 +57,8 @@ export function LocalCanvasEditor({ canvasId, nodes, edges }: LocalCanvasEditorP
       canvasCursor={canvasCursor}
       NodeContentComponent={LocalCanvasNodeContent}
       runtime={runtime}
+      EmbeddedCanvasStateResolver={EmbeddedCanvasStateResolver}
+      SidebarItemEmbedResolver={SidebarItemEmbedResolver}
     />
   )
 }

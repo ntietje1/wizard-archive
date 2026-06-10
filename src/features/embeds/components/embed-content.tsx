@@ -2,7 +2,7 @@ import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ComponentType } from 'react'
-import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import type { EmbedSidebarItemState } from '../context/embed-sidebar-item-resolution'
 import { EmbedAncestryProvider } from '../context/embed-render-ancestry'
 import { useEmbedAncestry } from '../context/embed-render-ancestry-context'
 import { EmbedEmptyState } from './embed-empty-state'
@@ -22,7 +22,7 @@ type EmbedContentProps = {
   allowInnerScroll?: boolean
   dropVisualState?: EmbedDropTargetVisualState
   SidebarItemRenderer: SidebarItemEmbedRenderer
-  resolvedSidebarItemState?: SidebarItemAvailabilityState
+  resolvedSidebarItemState?: EmbedSidebarItemState
 }
 
 type SidebarItemEmbedRenderer = ComponentType<{
@@ -137,7 +137,7 @@ function SidebarItemEmbedContent({
   onMediaLayout?: EmbedMediaLayoutReporter
   allowInnerScroll: boolean
   SidebarItemRenderer: SidebarItemEmbedRenderer
-  resolvedSidebarItemState?: SidebarItemAvailabilityState
+  resolvedSidebarItemState?: EmbedSidebarItemState
 }) {
   const ancestry = useEmbedAncestry()
   const isRecursive = targetItemId === sourceItemId || ancestry.has(targetItemId)
@@ -181,7 +181,7 @@ function ResolvedSidebarItemEmbedContent({
   SidebarItemRenderer,
 }: {
   targetItemId: Id<'sidebarItems'>
-  itemState: SidebarItemAvailabilityState
+  itemState: EmbedSidebarItemState
   onMediaLayout?: EmbedMediaLayoutReporter
   allowInnerScroll: boolean
   SidebarItemRenderer: SidebarItemEmbedRenderer

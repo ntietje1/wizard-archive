@@ -6,6 +6,7 @@ import {
 } from '../nodes/shared/canvas-node-surface-style'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
+import { useEmbedSidebarItemResolver } from '~/features/embeds/context/embed-sidebar-item-resolution'
 import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { EmbedNodeData } from '../nodes/embed/embed-node-data'
 import type { Id } from 'convex/_generated/dataModel'
@@ -22,6 +23,7 @@ export function CanvasPreviewEmbedNode({
   sourceItemId?: Id<'sidebarItems'> | null
 }) {
   const normalizedData = normalizeEmbedNodeData(data)
+  const SidebarItemResolver = useEmbedSidebarItemResolver()
 
   return (
     <CanvasPreviewNodeFrame nodeType="embed" dragging={!!dragging}>
@@ -34,12 +36,17 @@ export function CanvasPreviewEmbedNode({
           minWidth: DEFAULT_EMBED_MIN_WIDTH,
         }}
       >
-        <EmbedContent
-          target={normalizedData.target}
-          sourceItemId={sourceItemId}
-          mode="readonly"
-          SidebarItemRenderer={SidebarItemPreviewRenderer}
-        />
+        <SidebarItemResolver target={normalizedData.target}>
+          {(itemState) => (
+            <EmbedContent
+              target={normalizedData.target}
+              sourceItemId={sourceItemId}
+              mode="readonly"
+              SidebarItemRenderer={SidebarItemPreviewRenderer}
+              resolvedSidebarItemState={itemState}
+            />
+          )}
+        </SidebarItemResolver>
       </div>
     </CanvasPreviewNodeFrame>
   )

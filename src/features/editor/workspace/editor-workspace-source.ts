@@ -5,7 +5,7 @@ import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { RefObject } from 'react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
-import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
 import type { EditorWorkspaceChrome } from './editor-workspace-chrome'
 
 interface EditorCurrentItemSnapshot {

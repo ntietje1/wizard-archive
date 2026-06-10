@@ -14,6 +14,10 @@ import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-s
 import { SidebarWorkspaceShell } from '~/features/sidebar/components/sidebar-workspace-shell'
 import { buildSidebarTreeSurfaceItems } from '~/features/sidebar/workspace/sidebar-tree-projection'
 import {
+  createDemoEmbeddedCanvasStateResolver,
+  createDemoSidebarItemEmbedResolver,
+} from '../demo-workspace/local-demo-embed-resolvers'
+import {
   INITIAL_DEMO_WORKSPACE,
   demoCanvasForItem,
   demoFileForItem,
@@ -199,6 +203,8 @@ function DemoWorkspaceSurface({
 }) {
   const canvas = item.type === 'canvas' ? demoCanvasForItem(workspace, item.id) : null
   const file = item.type === 'file' ? demoFileForItem(workspace, item) : null
+  const SidebarItemEmbedResolver = createDemoSidebarItemEmbedResolver(workspace)
+  const EmbeddedCanvasStateResolver = createDemoEmbeddedCanvasStateResolver(workspace)
 
   return (
     <section
@@ -224,6 +230,8 @@ function DemoWorkspaceSurface({
           canvasId={canvas?.id as Id<'sidebarItems'>}
           nodes={canvas?.nodes ?? []}
           edges={canvas?.edges ?? []}
+          EmbeddedCanvasStateResolver={EmbeddedCanvasStateResolver}
+          SidebarItemEmbedResolver={SidebarItemEmbedResolver}
         />
       )}
       {item.type === 'map' && <DemoMapSurface pins={demoMapPinsForItem(workspace, item.id)} />}

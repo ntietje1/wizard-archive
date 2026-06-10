@@ -4,13 +4,13 @@ import type { GameMapWithContent } from 'shared/game-maps/types'
 import { MapPinsLayer } from '~/features/editor/components/viewer/map/map-pins-layer'
 import { useMapImageStatus } from '~/features/editor/components/viewer/map/use-map-image-status'
 import { MapImagePreview } from '~/features/editor/components/viewer/map/map-image-preview'
-import { useMapRenderPins } from '~/features/editor/components/viewer/map/use-map-render-pins'
 import { useCanvasDocumentRuntime } from '../../runtime/providers/canvas-runtime'
 import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { resolveDefaultEmbedNodeResizeForLockedAspectRatio } from './embed-node-size'
+import { useEmbeddedMapStateResolver } from './embedded-map-state-resolution'
 
 export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameMapWithContent }) {
-  const { pins, isPinGhost } = useMapRenderPins(map)
+  const MapStateResolver = useEmbeddedMapStateResolver()
   const { documentWriter } = useCanvasDocumentRuntime()
   const { patchNodeData, resizeNode } = documentWriter
   const canvasEngine = useCanvasEngine()
@@ -30,40 +30,46 @@ export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameM
     }
   }
 
-  if (!map.imageUrl || imageError) {
-    return <MapImagePreview imageUrl={imageError ? null : map.imageUrl} />
-  }
-
   return (
-    <div className="relative h-full w-full overflow-hidden bg-background">
-      {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-          <span className="sr-only">Loading embedded map</span>
-        </div>
-      )}
+    <MapStateResolver map={map}>
+      {({ pins, isPinGhost }) => {
+        if (!map.imageUrl || imageError) {
+          return <MapImagePreview imageUrl={imageError ? null : map.imageUrl} />
+        }
 
-      <img
-        src={map.imageUrl}
-        alt={map.name || 'Map'}
-        className="block h-full w-full select-none object-contain"
-        draggable={false}
-        onLoad={(event) => {
-          const { naturalWidth, naturalHeight } = event.currentTarget
-          if (naturalWidth > 0 && naturalHeight > 0) {
-            const aspectRatio = Number((naturalWidth / naturalHeight).toFixed(6))
-            if (lastStoredAspectRatioRef.current !== aspectRatio) {
-              lastStoredAspectRatioRef.current = aspectRatio
-              patchLockedAspectRatio(aspectRatio)
-            }
-          }
+        return (
+          <div className="relative h-full w-full overflow-hidden bg-background">
+            {!imageLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+                <span className="sr-only">Loading embedded map</span>
+              </div>
+            )}
 
-          handleImageLoad()
-        }}
-        onError={handleImageError}
-      />
+            <img
+              src={map.imageUrl}
+              alt={map.name || 'Map'}
+              className="block h-full w-full select-none object-contain"
+              draggable={false}
+              onLoad={(event) => {
+                const { naturalWidth, naturalHeight } = event.currentTarget
+                if (naturalWidth > 0 && naturalHeight > 0) {
+                  const aspectRatio = Number((naturalWidth / naturalHeight).toFixed(6))
+                  if (lastStoredAspectRatioRef.current !== aspectRatio) {
+                    lastStoredAspectRatioRef.current = aspectRatio
+                    patchLockedAspectRatio(aspectRatio)
+                  }
+                }
 
-      {imageLoaded && <MapPinsLayer pins={pins} isPinGhost={isPinGhost} />}
-    </div>
+                handleImageLoad()
+              }}
+              onError={handleImageError}
+            />
+
+            {imageLoaded && <MapPinsLayer pins={pins} isPinGhost={isPinGhost} />}
+          </div>
+        )
+      }}
+    </MapStateResolver>
   )
 }

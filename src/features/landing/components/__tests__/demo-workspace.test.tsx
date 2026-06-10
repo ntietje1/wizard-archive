@@ -165,11 +165,14 @@ describe('DemoWorkspace', () => {
     )
 
     expect(screen.getByRole('textbox', { name: 'Selected item name' })).toHaveValue('New Canvas')
-    expect(localCanvasEditorMock).toHaveBeenLastCalledWith({
-      canvasId: 'local-canvas-2',
-      nodes: [],
-      edges: [],
-    })
+    expect(localCanvasEditorMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        canvasId: 'local-canvas-2',
+        nodes: [],
+        edges: [],
+        SidebarItemEmbedResolver: expect.any(Function),
+      }),
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'New' }))
     fireEvent.click(screen.getByRole('button', { name: 'File Upload a document, image, or media' }))

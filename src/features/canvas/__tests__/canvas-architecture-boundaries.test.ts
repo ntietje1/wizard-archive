@@ -148,10 +148,14 @@ describe('canvas architecture boundaries', () => {
 
     expect(localEditor).toContain('useCanvasEditorRuntimeCore')
     expect(localEditor).toContain('CanvasEditorRuntimeHost')
+    expect(localEditor).toContain('EmbedNode')
+    expect(localEditor).toContain('TextNode')
+    expect(localEditor).toContain('StrokeNode')
     expect(localEditor).not.toContain('useCanvasEditorRuntimeBase')
     expect(localEditor).not.toContain('useCanvasEditorSceneRuntime')
     expect(localEditor).not.toContain('createCanvasToolRuntime')
     expect(localEditor).not.toContain('useCanvasContextMenuCore')
+    expect(localEditor).not.toContain('CanvasPreviewDefaultEmbedNode')
     expect(localEditor).not.toContain('CanvasRuntimeProvider')
     expect(localEditor).not.toContain('CanvasEditorSurface')
 
@@ -162,6 +166,68 @@ describe('canvas architecture boundaries', () => {
     expect(liveRuntime).toContain('useCanvasEditorRuntimeCore')
     expect(liveRuntime).toContain('useYjsPreviewUpload')
     expect(liveRuntime).toContain('useCanvasDropIntegration')
+  })
+
+  it('keeps canvas embed renderers behind explicit embed source resolution', () => {
+    const embedNode = readRepoFile('src/features/canvas/nodes/embed/embed-node.tsx')
+    const previewEmbedNode = readRepoFile(
+      'src/features/canvas/components/canvas-preview-embed-node.tsx',
+    )
+    const embeddedCanvasContent = readRepoFile(
+      'src/features/canvas/nodes/embed/embedded-canvas-content.tsx',
+    )
+    const toolbarModel = readRepoFile('src/features/canvas/components/use-canvas-toolbar-model.ts')
+    const liveEmbedResolver = readRepoFile(
+      'src/features/embeds/components/live-sidebar-item-embed-resolver.tsx',
+    )
+    const embedContent = readRepoFile('src/features/embeds/components/embed-content.tsx')
+    const embedSidebarItemResolution = readRepoFile(
+      'src/features/embeds/context/embed-sidebar-item-resolution.ts',
+    )
+    const liveEmbeddedCanvasResolver = readRepoFile(
+      'src/features/canvas/nodes/embed/live-embedded-canvas-state-resolver.tsx',
+    )
+    const embeddedMapContent = readRepoFile(
+      'src/features/canvas/nodes/embed/embedded-map-content.tsx',
+    )
+    const liveEmbeddedMapResolver = readRepoFile(
+      'src/features/canvas/nodes/embed/live-embedded-map-state-resolver.tsx',
+    )
+    const editableEmbedControls = readRepoFile(
+      'src/features/embeds/hooks/use-editable-embed-target-controls.ts',
+    )
+    const liveEmbedTargetOperations = readRepoFile(
+      'src/features/embeds/components/live-embed-target-operations-provider.tsx',
+    )
+
+    for (const source of [
+      embedNode,
+      previewEmbedNode,
+      embeddedCanvasContent,
+      embeddedMapContent,
+      toolbarModel,
+    ]) {
+      expect(source).not.toContain('useSidebarItemById')
+      expect(source).not.toContain('useSidebarItemAvailabilityState')
+      expect(source).not.toContain('useCampaignQuery')
+      expect(source).not.toContain('convex/_generated/api')
+    }
+
+    expect(embedNode).toContain('useEmbedSidebarItemResolver')
+    expect(previewEmbedNode).toContain('useEmbedSidebarItemResolver')
+    expect(embeddedCanvasContent).toContain('useEmbeddedCanvasStateResolver')
+    expect(embeddedCanvasContent).not.toMatch(/import\s+\{\s*useEmbeddedCanvasState\s*\}\s+from/)
+    expect(embeddedMapContent).toContain('useEmbeddedMapStateResolver')
+    expect(embeddedMapContent).not.toContain('useMapRenderPins')
+    expect(embedContent).not.toContain('useSidebarItemAvailabilityState')
+    expect(embedSidebarItemResolution).not.toContain('useSidebarItemAvailabilityState')
+    expect(editableEmbedControls).toContain('useEmbedTargetOperations')
+    expect(editableEmbedControls).not.toContain('useEmbedUpload')
+    expect(liveEmbedResolver).toContain('useSidebarItemById')
+    expect(liveEmbedResolver).toContain('useSidebarItemAvailabilityState')
+    expect(liveEmbeddedCanvasResolver).toContain('useEmbeddedCanvasState')
+    expect(liveEmbeddedMapResolver).toContain('useMapRenderPins')
+    expect(liveEmbedTargetOperations).toContain('useEmbedUpload')
   })
 })
 

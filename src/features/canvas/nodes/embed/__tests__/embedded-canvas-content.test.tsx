@@ -1,16 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EmbeddedCanvasContent } from '../embedded-canvas-content'
+import { EmbeddedCanvasStateResolutionProvider } from '../embedded-canvas-state-resolution'
 import { testId } from '~/test/helpers/test-id'
+import type { EmbeddedCanvasStateResolver } from '../embedded-canvas-state-resolution'
 
 const useEmbeddedCanvasStateMock = vi.hoisted(() => vi.fn())
 const canvasThumbnailPreviewSpy = vi.hoisted(() => vi.fn())
 const canvasPreviewSpy = vi.hoisted(() => vi.fn())
 const canvasPreviewEmbedNodeMock = vi.hoisted(() => vi.fn())
-
-vi.mock('../use-embedded-canvas-state', () => ({
-  useEmbeddedCanvasState: (canvasId: string) => useEmbeddedCanvasStateMock(canvasId),
-}))
 
 vi.mock('~/features/previews/components/canvas-thumbnail-preview', () => ({
   CanvasThumbnailPreview: (props: unknown) => {
@@ -44,14 +42,7 @@ describe('EmbeddedCanvasContent', () => {
       isError: false,
     })
 
-    render(
-      <EmbeddedCanvasContent
-        nodeId="embed-node-1"
-        canvasId={createCanvasId('canvas-1')}
-        previewUrl="canvas.png"
-        alt="Canvas"
-      />,
-    )
+    renderEmbeddedCanvasContent()
 
     expect(screen.getByText('Loading embedded canvas')).toBeInTheDocument()
     expect(screen.queryByTestId('embedded-canvas-preview')).not.toBeInTheDocument()
@@ -65,14 +56,7 @@ describe('EmbeddedCanvasContent', () => {
       isError: true,
     })
 
-    render(
-      <EmbeddedCanvasContent
-        nodeId="embed-node-1"
-        canvasId={createCanvasId('canvas-1')}
-        previewUrl="canvas.png"
-        alt="Canvas"
-      />,
-    )
+    renderEmbeddedCanvasContent()
 
     expect(screen.getByTestId('canvas-thumbnail-preview')).toBeInTheDocument()
     expect(canvasThumbnailPreviewSpy).toHaveBeenCalledWith({
@@ -89,14 +73,7 @@ describe('EmbeddedCanvasContent', () => {
       isError: false,
     })
 
-    render(
-      <EmbeddedCanvasContent
-        nodeId="embed-node-1"
-        canvasId={createCanvasId('canvas-1')}
-        previewUrl="canvas.png"
-        alt="Canvas"
-      />,
-    )
+    renderEmbeddedCanvasContent()
 
     expect(screen.getByTestId('embedded-canvas-preview')).toBeInTheDocument()
     expect(canvasPreviewSpy).toHaveBeenLastCalledWith(
@@ -146,14 +123,7 @@ describe('EmbeddedCanvasContent', () => {
       isLoading: false,
       isError: false,
     })
-    render(
-      <EmbeddedCanvasContent
-        nodeId="embed-node-1"
-        canvasId={createCanvasId('canvas-1')}
-        previewUrl="canvas.png"
-        alt="Canvas"
-      />,
-    )
+    renderEmbeddedCanvasContent()
 
     expect(canvasPreviewSpy).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -171,6 +141,23 @@ describe('EmbeddedCanvasContent', () => {
     )
   })
 })
+
+const TestEmbeddedCanvasStateResolver: EmbeddedCanvasStateResolver = ({ canvasId, children }) => (
+  <>{children(useEmbeddedCanvasStateMock(canvasId))}</>
+)
+
+function renderEmbeddedCanvasContent() {
+  return render(
+    <EmbeddedCanvasStateResolutionProvider resolver={TestEmbeddedCanvasStateResolver}>
+      <EmbeddedCanvasContent
+        nodeId="embed-node-1"
+        canvasId={createCanvasId('canvas-1')}
+        previewUrl="canvas.png"
+        alt="Canvas"
+      />
+    </EmbeddedCanvasStateResolutionProvider>,
+  )
+}
 
 function createCanvasId(value: string) {
   return testId<'sidebarItems'>(value)
