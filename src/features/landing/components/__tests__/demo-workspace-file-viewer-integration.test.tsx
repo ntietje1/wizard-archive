@@ -1,18 +1,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DemoWorkspace } from '../demo-workspace'
+import type { FileWithContent } from 'shared/files/types'
+import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
 
-const {
-  fileContentViewerMock,
-  localCanvasEditorMock,
-  localNoteEditorMock,
-  noteFormattingToolbarMock,
-} = vi.hoisted(() => ({
-  fileContentViewerMock: vi.fn(),
-  localCanvasEditorMock: vi.fn(),
-  localNoteEditorMock: vi.fn(),
-  noteFormattingToolbarMock: vi.fn(),
-}))
+const { fileContentViewerMock, localCanvasEditorMock, noteFormattingToolbarMock } = vi.hoisted(
+  () => ({
+    fileContentViewerMock: vi.fn(),
+    localCanvasEditorMock: vi.fn(),
+    noteFormattingToolbarMock: vi.fn(),
+  }),
+)
 
 vi.mock('~/features/editor/components/viewer/file/file-content-viewer', () => ({
   FileContentViewer: (props: Record<string, unknown>) => {
@@ -21,12 +19,35 @@ vi.mock('~/features/editor/components/viewer/file/file-content-viewer', () => ({
   },
 }))
 
-vi.mock('~/features/landing/demo-workspace/local-note-editor', () => ({
-  LocalNoteEditor: (props: Record<string, unknown>) => {
-    localNoteEditorMock(props)
-    return <textarea aria-label="Demo note body" data-testid="demo-note-editor" defaultValue="" />
-  },
+vi.mock('~/features/editor/components/viewer/note/note-editor', () => ({
+  NoteEditor: () => <textarea aria-label="Demo note body" data-testid="demo-note-content" />,
 }))
+
+vi.mock('../../../editor/components/viewer/sidebar-item-editor', async () => {
+  const { FileViewer } = await import('~/features/editor/components/viewer/file/file-viewer')
+  const { FileViewerSourceProvider } =
+    await import('~/features/editor/components/viewer/file/file-viewer-source')
+
+  return {
+    SidebarItemEditor: ({
+      files,
+      item,
+    }: {
+      files: { viewer: FileViewerSource }
+      item: Record<string, unknown>
+    }) => {
+      if (item.type === 'file') {
+        return (
+          <FileViewerSourceProvider value={files.viewer}>
+            <FileViewer item={item as FileWithContent} />
+          </FileViewerSourceProvider>
+        )
+      }
+
+      return <textarea aria-label="Demo note body" data-testid="demo-note-content" />
+    },
+  }
+})
 
 vi.mock('~/features/editor/components/formatting-toolbar/note-formatting-toolbar', () => ({
   NoteFormattingToolbar: (props: Record<string, unknown>) => {
@@ -60,7 +81,6 @@ describe('DemoWorkspace file viewer integration', () => {
   beforeEach(() => {
     fileContentViewerMock.mockReset()
     localCanvasEditorMock.mockReset()
-    localNoteEditorMock.mockReset()
     noteFormattingToolbarMock.mockReset()
     createObjectURLMock.mockClear()
     revokeObjectURLMock.mockClear()

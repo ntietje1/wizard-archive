@@ -23,6 +23,7 @@ import { LiveRollbackConfirmDialog } from '~/features/editor/components/viewer/l
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import { useLiveFileViewerSource } from '~/features/editor/components/viewer/file/live-file-viewer-source'
 import type { EditorWorkspaceSharingState, EditorWorkspaceSource } from './editor-workspace-source'
+import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from './live-note-document-source'
 import { useLiveEmptyWorkspaceDropCapability } from './use-live-empty-workspace-drop'
 
 export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
@@ -169,6 +170,9 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     sharing,
     files: {
       viewer: fileViewerSource,
+    },
+    documents: {
+      notes: LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS,
     },
   }
 }

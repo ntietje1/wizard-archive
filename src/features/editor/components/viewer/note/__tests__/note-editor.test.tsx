@@ -8,6 +8,9 @@ import { EDITOR_MODE } from 'shared/editor/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { testId } from '~/test/helpers/test-id'
+import { EditorWorkspaceSourceProvider } from '~/features/editor/workspace/editor-workspace-source-context'
+import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from '~/features/editor/workspace/live-note-document-source'
+import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
 
 const noteContentSpy = vi.hoisted(() => vi.fn())
 const noteFormattingToolbarSpy = vi.hoisted(() => vi.fn())
@@ -188,6 +191,28 @@ describe('NoteEditor', () => {
     })
   })
 
+  it('uses editor workspace source permissions when rendered inside the editor workspace', () => {
+    mockUseEditorMode.mockReturnValue({ canEdit: false, editorMode: EDITOR_MODE.VIEWER })
+    const note = createNote()
+
+    render(
+      <EditorWorkspaceSourceProvider value={createWorkspaceSource(note)}>
+        <NoteEditor item={note} />
+      </EditorWorkspaceSourceProvider>,
+    )
+
+    expect(noteFormattingToolbarSpy).toHaveBeenCalledWith({
+      editor: null,
+      visible: true,
+    })
+    expect(noteContentSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        editable: true,
+        note,
+      }),
+    )
+  })
+
   it('shows block-share access warning with a grant note access action', async () => {
     const user = userEvent.setup()
     const note = createNote({
@@ -323,4 +348,99 @@ function createNote(overrides: Partial<NoteWithContent> = {}): NoteWithContent {
     updatedTime: null,
     ...overrides,
   } as unknown as NoteWithContent
+}
+
+function createWorkspaceSource(note: NoteWithContent): EditorWorkspaceSource {
+  const campaignId = note.campaignId
+  return {
+    content: {
+      currentItem: {
+        item: note,
+        contentItem: note,
+        editorSearch: { item: note.slug },
+        isLoading: false,
+        itemError: null,
+        hasRequestedItem: true,
+      },
+      requestedSlug: note.slug,
+      canViewCurrentItem: true,
+      availabilityState: { status: 'available', label: note.name, item: note },
+    },
+    permissions: {
+      editorMode: EDITOR_MODE.EDITOR,
+      canEdit: true,
+      campaignActor: { kind: 'dm', campaignId },
+      viewAsPlayerId: undefined,
+      setEditorMode: vi.fn(),
+      setViewAsPlayerId: vi.fn(),
+      viewAsPlayer: {
+        isPending: false,
+        playerMembers: [],
+        selectedPlayerId: undefined,
+        setSelectedPlayerId: vi.fn(),
+        visible: false,
+      },
+    },
+    index: {
+      activeItemsById: new Map([[note._id, note]]),
+      trashItems: [],
+    },
+    workspace: {
+      campaignId,
+      isCampaignLoaded: true,
+      isDm: true,
+    },
+    items: {
+      itemActions: {
+        enabled: false,
+        item: note,
+      },
+      createItem: vi.fn(() => null),
+      createMissingRequestedNote: vi.fn(),
+      creationDraft: {
+        pendingName: '',
+        setPendingName: vi.fn(),
+      },
+      emptyWorkspaceDrop: {
+        status: 'disabled',
+        reason: 'unsupported',
+      },
+      isCreatingMissingRequestedNote: false,
+      renameItem: vi.fn(),
+      validateItemName: vi.fn(() => ({ valid: true as const })),
+    },
+    navigation: {
+      openItem: vi.fn(),
+      openItemBySlug: vi.fn(),
+      getItemLinkProps: vi.fn(() => null),
+    },
+    history: {
+      preview: {
+        previewingEntryId: null,
+        clearItemSession: vi.fn(),
+        PreviewComponent: () => null,
+      },
+      rollback: {
+        DialogComponent: () => null,
+      },
+    },
+    sharing: {
+      visible: false,
+    },
+    files: {
+      viewer: {
+        resolveFile: (file) => ({
+          allowObjectUrl: false,
+          contentType: file.contentType,
+          downloadUrl: file.downloadUrl,
+          name: file.name,
+          size: null,
+        }),
+        getEmptyFileUpload: () => null,
+      },
+    },
+    documents: {
+      notes: LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS,
+    },
+  }
 }

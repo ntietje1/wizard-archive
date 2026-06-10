@@ -1,13 +1,26 @@
 import { EDITOR_MODE } from 'shared/editor/types'
+import { blocksToYDoc } from 'shared/editor-blocks/blocknote-yjs'
 import { validateSidebarItemNameWithSiblings } from 'shared/sidebar-items/name'
 import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
-import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
+import type {
+  EditorNoteCollaborationProvider,
+  EditorWorkspaceNoteDocuments,
+  EditorWorkspaceNoteEditableSession,
+  EditorWorkspaceNoteEditableSessionProviderProps,
+  EditorWorkspaceNoteRuntimeProviderProps,
+  EditorWorkspaceSource,
+} from '~/features/editor/workspace/editor-workspace-source'
 import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
 import type { INITIAL_DEMO_WORKSPACE, DemoWorkspaceAction } from './demo-workspace-model'
 import { createDemoWorkspaceProjection, selectedDemoItem } from './demo-workspace-model'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
-import type { Dispatch } from 'react'
+import { createLinkResolver } from '~/features/editor/links/link-resolver'
+import { createEmptyNoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
+import { LocalYjsProvider } from './local-yjs-provider'
 import type { Id } from 'convex/_generated/dataModel'
+import { useEffect, useRef } from 'react'
+import type { Dispatch } from 'react'
+import type { NoteWithContent } from 'shared/notes/types'
 
 type DemoWorkspaceState = typeof INITIAL_DEMO_WORKSPACE
 
@@ -18,16 +31,27 @@ const EmptyHistoryPreview = () => null
 const EmptyRollbackDialog = () => null
 
 export function createLocalDemoEditorWorkspaceSource({
+  activeView,
   dispatch,
   fileViewerSource,
+  noteDocuments,
+  selectedItemId,
   workspace,
 }: {
+  activeView?: DemoWorkspaceState['activeView']
   dispatch: Dispatch<DemoWorkspaceAction>
   fileViewerSource: FileViewerSource
+  noteDocuments: EditorWorkspaceNoteDocuments
+  selectedItemId?: string | null
   workspace: DemoWorkspaceState
 }): EditorWorkspaceSource {
-  const selectedItem = selectedDemoItem(workspace)
-  const projection = createDemoWorkspaceProjection(workspace)
+  const sourceWorkspace = {
+    ...workspace,
+    activeView: activeView ?? workspace.activeView,
+    selectedItemId: selectedItemId === undefined ? workspace.selectedItemId : selectedItemId,
+  }
+  const selectedItem = selectedDemoItem(sourceWorkspace)
+  const projection = createDemoWorkspaceProjection(sourceWorkspace)
   const contentItem = selectedItem
     ? (projection.itemsById.get(selectedItem.id as Id<'sidebarItems'>) ?? null)
     : null
@@ -40,7 +64,7 @@ export function createLocalDemoEditorWorkspaceSource({
         editorSearch: selectedItem ? { item: contentItem?.slug } : {},
         isLoading: false,
         itemError: null,
-        hasRequestedItem: workspace.activeView === 'item',
+        hasRequestedItem: sourceWorkspace.activeView === 'item',
       },
       requestedSlug: contentItem?.slug ?? null,
       canViewCurrentItem: Boolean(contentItem),
@@ -129,5 +153,91 @@ export function createLocalDemoEditorWorkspaceSource({
     files: {
       viewer: fileViewerSource,
     },
+    documents: {
+      notes: noteDocuments,
+    },
   }
+}
+
+function createLocalDemoNoteEditableSession(
+  note: NoteWithContent,
+): EditorWorkspaceNoteEditableSession {
+  const doc = blocksToYDoc(note.content, 'document')
+  const provider = new LocalYjsProvider(doc)
+  const collaborationProvider: EditorNoteCollaborationProvider = {
+    awareness: provider.awareness,
+    destroy: () => provider.destroy(),
+    doc,
+    emit: provider.emit.bind(provider),
+    flushUpdates: () => Promise.resolve(),
+    off: provider.off.bind(provider),
+    on: provider.on.bind(provider),
+  }
+
+  return {
+    destroy: () => {
+      provider.destroy()
+      doc.destroy()
+    },
+    doc,
+    error: null,
+    instanceId: `local-demo-note:${note._id}`,
+    isLoading: false,
+    provider: collaborationProvider,
+    updateUser: (user) => provider.awareness.setLocalStateField('user', user),
+    user: { name: 'Demo', color: '#61afef' },
+  }
+}
+
+export function useLocalDemoNoteDocuments(
+  workspace: DemoWorkspaceState,
+): EditorWorkspaceNoteDocuments {
+  const projectionRef = useRef(createDemoWorkspaceProjection(workspace))
+  const sessionsRef = useRef(new Map<Id<'sidebarItems'>, EditorWorkspaceNoteEditableSession>())
+  const documentsRef = useRef<EditorWorkspaceNoteDocuments | null>(null)
+  projectionRef.current = createDemoWorkspaceProjection(workspace)
+
+  useEffect(() => {
+    const sessions = sessionsRef.current
+    return () => {
+      sessions.forEach((session) => session.destroy())
+      sessions.clear()
+    }
+  }, [])
+
+  if (!documentsRef.current) {
+    documentsRef.current = {
+      EditableSessionProvider: function LocalDemoEditableNoteSessionProvider({
+        children,
+        note,
+      }: EditorWorkspaceNoteEditableSessionProviderProps) {
+        let session = sessionsRef.current.get(note._id)
+        if (!session) {
+          session = createLocalDemoNoteEditableSession(note)
+          sessionsRef.current.set(note._id, session)
+        }
+
+        return children(session)
+      },
+      RuntimeProvider: function LocalDemoNoteRuntimeProvider({
+        children,
+        editor: _editor,
+        isViewerMode,
+        noteId,
+      }: EditorWorkspaceNoteRuntimeProviderProps) {
+        const projection = projectionRef.current
+        return children({
+          linkResolver: createLinkResolver({
+            allItems: projection.items,
+            isViewerMode,
+            itemsMap: projection.itemsById,
+            sourceNoteId: noteId,
+          }),
+          valueRuntimeSource: createEmptyNoteValueRuntimeSource(noteId),
+        })
+      },
+    }
+  }
+
+  return documentsRef.current
 }

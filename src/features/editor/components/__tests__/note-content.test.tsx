@@ -5,14 +5,22 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { NoteContent } from '../note-content'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
+import { EditorWorkspaceSourceProvider } from '~/features/editor/workspace/editor-workspace-source-context'
+import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from '~/features/editor/workspace/live-note-document-source'
 import type * as BlockNoteCore from '@blocknote/core'
 import type { Id } from 'convex/_generated/dataModel'
+import type { Doc } from 'yjs'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
 import type { CampaignActor } from 'shared/campaigns/actor'
 import type { NoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
+import type {
+  EditorNoteCollaborationProvider,
+  EditorWorkspaceNoteDocuments,
+  EditorWorkspaceSource,
+} from '~/features/editor/workspace/editor-workspace-source'
 
 const {
   activeItemsState,
@@ -63,6 +71,7 @@ vi.mock('../note-view', () => ({
   NoteView: ({
     editor,
     editable,
+    editableChrome,
     note,
     noteId,
     children,
@@ -71,9 +80,10 @@ vi.mock('../note-view', () => ({
     editable: boolean
     note?: NoteWithContent
     noteId?: Id<'sidebarItems'>
+    editableChrome?: ReactNode
     children?: ReactNode
   }) => {
-    noteViewSpy({ editor, editable, note, noteId })
+    noteViewSpy({ editor, editable, editableChrome, note, noteId })
     return <div data-testid="note-view">{children}</div>
   },
 }))
@@ -211,6 +221,47 @@ describe('NoteContent', () => {
       expect(noteViewSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           editable: true,
+          note,
+        }),
+      )
+    })
+    expect(blockNoteCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collaboration: expect.any(Object),
+      }),
+    )
+  })
+
+  it('uses source note document capabilities with the shared editable note chrome', async () => {
+    const visibleBlock = createBlock('visible-block')
+    editorModeState.campaignActor = {
+      kind: 'player',
+      campaignId: testId<'campaigns'>('campaign_1'),
+    }
+    const note = createNoteWithContent({
+      content: [visibleBlock],
+      myPermissionLevel: PERMISSION_LEVEL.VIEW,
+      blockMeta: {
+        [visibleBlock.id]: {
+          myPermissionLevel: PERMISSION_LEVEL.VIEW,
+          shareStatus: SHARE_STATUS.ALL_SHARED,
+          sharedWith: [],
+        },
+      },
+    })
+    const sourceNoteDocuments = createSourceNoteDocuments(note._id)
+
+    render(
+      <EditorWorkspaceSourceProvider value={createWorkspaceSource(note, sourceNoteDocuments)}>
+        <NoteContent note={note} editable />
+      </EditorWorkspaceSourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(noteViewSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          editable: true,
+          editableChrome: expect.anything(),
           note,
         }),
       )
@@ -431,5 +482,155 @@ function createNoteWithContent({
     content,
     blockMeta,
     blockShareAccessWarnings: [],
+  }
+}
+
+function createWorkspaceSource(
+  note: NoteWithContent,
+  noteDocuments: EditorWorkspaceNoteDocuments = LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS,
+): EditorWorkspaceSource {
+  const campaignId = note.campaignId
+  return {
+    content: {
+      currentItem: {
+        item: note,
+        contentItem: note,
+        editorSearch: { item: note.slug },
+        isLoading: false,
+        itemError: null,
+        hasRequestedItem: true,
+      },
+      requestedSlug: note.slug,
+      canViewCurrentItem: true,
+      availabilityState: { status: 'available', label: note.name, item: note },
+    },
+    permissions: {
+      editorMode: 'editor',
+      canEdit: true,
+      campaignActor: { kind: 'dm', campaignId },
+      viewAsPlayerId: undefined,
+      setEditorMode: vi.fn(),
+      setViewAsPlayerId: vi.fn(),
+      viewAsPlayer: {
+        isPending: false,
+        playerMembers: [],
+        selectedPlayerId: undefined,
+        setSelectedPlayerId: vi.fn(),
+        visible: false,
+      },
+    },
+    index: {
+      activeItemsById: new Map([[note._id, note]]),
+      trashItems: [],
+    },
+    workspace: {
+      campaignId,
+      isCampaignLoaded: true,
+      isDm: true,
+    },
+    items: {
+      itemActions: {
+        enabled: false,
+        item: note,
+      },
+      createItem: vi.fn(() => null),
+      createMissingRequestedNote: vi.fn(),
+      creationDraft: {
+        pendingName: '',
+        setPendingName: vi.fn(),
+      },
+      emptyWorkspaceDrop: {
+        status: 'disabled',
+        reason: 'unsupported',
+      },
+      isCreatingMissingRequestedNote: false,
+      renameItem: vi.fn(),
+      validateItemName: vi.fn(() => ({ valid: true as const })),
+    },
+    navigation: {
+      openItem: vi.fn(),
+      openItemBySlug: vi.fn(),
+      getItemLinkProps: vi.fn(() => null),
+    },
+    history: {
+      preview: {
+        previewingEntryId: null,
+        clearItemSession: vi.fn(),
+        PreviewComponent: () => null,
+      },
+      rollback: {
+        DialogComponent: () => null,
+      },
+    },
+    sharing: {
+      visible: false,
+    },
+    files: {
+      viewer: {
+        resolveFile: (file) => ({
+          allowObjectUrl: false,
+          contentType: file.contentType,
+          downloadUrl: file.downloadUrl,
+          name: file.name,
+          size: null,
+        }),
+        getEmptyFileUpload: () => null,
+      },
+    },
+    documents: {
+      notes: noteDocuments,
+    },
+  }
+}
+
+function createSourceNoteDocuments(noteId: Id<'sidebarItems'>): EditorWorkspaceNoteDocuments {
+  return {
+    EditableSessionProvider: ({ children }) =>
+      children({
+        destroy: vi.fn(),
+        doc: { getXmlFragment: vi.fn(() => ({})) } as unknown as Doc,
+        error: null,
+        instanceId: `source:${noteId}`,
+        isLoading: false,
+        provider: createCollaborationProvider(),
+        user: { name: 'Source User', color: '#61afef' },
+      }),
+    RuntimeProvider: ({ children, isViewerMode }) =>
+      children({
+        linkResolver: {
+          allItems: [],
+          isViewerMode,
+          itemsMap: new Map(),
+          resolveLink: vi.fn(),
+        },
+        valueRuntimeSource: createNoteValueRuntimeSource(noteId),
+      }),
+  }
+}
+
+function createCollaborationProvider(): EditorNoteCollaborationProvider {
+  const doc = { getXmlFragment: vi.fn(() => ({})) } as unknown as Doc
+  return {
+    awareness: {
+      setLocalStateField: vi.fn(),
+    } as unknown as EditorNoteCollaborationProvider['awareness'],
+    destroy: vi.fn(),
+    doc,
+    emit: vi.fn(),
+    flushUpdates: vi.fn(() => Promise.resolve()),
+    off: vi.fn(),
+    on: vi.fn(),
+  }
+}
+
+function createNoteValueRuntimeSource(noteId: Id<'sidebarItems'>): NoteValueRuntimeSource {
+  return {
+    noteId,
+    authoredDefinitions: [],
+    externalNoteIdByPath: new Map(),
+    externalStates: [],
+    itemsMap: new Map(),
+    persistedStates: [],
+    sidebarItems: [],
   }
 }

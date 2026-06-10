@@ -21,3 +21,7 @@ export function useEditorWorkspaceSource() {
   }
   return source
 }
+
+export function useOptionalEditorWorkspaceSource() {
+  return useContext(EditorWorkspaceSourceContext)
+}

@@ -1,24 +1,12 @@
-import { createElement, useEffect, useRef, useState } from 'react'
-import { FileViewerSourceProvider } from '~/features/editor/components/viewer/file/file-viewer-source'
+import { useEffect, useRef, useState } from 'react'
 import { demoFileForItem } from './demo-workspace-model'
 import type {
   FileViewerSource,
   ResolvedFileViewerFile,
 } from '~/features/editor/components/viewer/file/file-viewer-source'
 import type { INITIAL_DEMO_WORKSPACE } from './demo-workspace-model'
-import type { ReactNode } from 'react'
 
 type DemoWorkspaceState = typeof INITIAL_DEMO_WORKSPACE
-
-export function LocalDemoFileViewerSourceProvider({
-  children,
-  source,
-}: {
-  children: ReactNode
-  source: FileViewerSource
-}) {
-  return createElement(FileViewerSourceProvider, { value: source }, children)
-}
 
 export function useLocalDemoFileViewerSource(workspace: DemoWorkspaceState): FileViewerSource {
   const [replacementsById, setReplacementsById] = useState<Record<string, ResolvedFileViewerFile>>(

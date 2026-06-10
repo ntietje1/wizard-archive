@@ -6,11 +6,17 @@ import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { ValidationResult } from 'shared/sidebar-items/name'
 import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ComponentType, RefObject } from 'react'
+import type { ComponentType, ReactNode, RefObject } from 'react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
 import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
+import type { LinkResolver } from '~/features/editor/links/link-resolver'
+import type { NoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
+import type { NoteWithContent } from 'shared/notes/types'
+import type { Doc } from 'yjs'
+import type { Awareness } from 'y-protocols/awareness'
 
 interface EditorWorkspaceContent {
   currentItem: EditorCurrentItemSnapshot
@@ -145,6 +151,56 @@ interface EditorWorkspaceFiles {
   viewer: FileViewerSource
 }
 
+export interface EditorWorkspaceNoteDocuments {
+  EditableSessionProvider: ComponentType<EditorWorkspaceNoteEditableSessionProviderProps>
+  RuntimeProvider: ComponentType<EditorWorkspaceNoteRuntimeProviderProps>
+}
+
+export interface EditorWorkspaceNoteEditableSession {
+  destroy: () => void
+  doc: Doc | null
+  error: Error | null
+  instanceId: string | number
+  isLoading: boolean
+  provider: EditorNoteCollaborationProvider | null
+  updateUser?: (user: { color: string; name: string }) => void
+  user: {
+    color: string
+    name: string
+  }
+}
+
+export interface EditorWorkspaceNoteEditableSessionProviderProps {
+  children: (session: EditorWorkspaceNoteEditableSession) => ReactNode
+  note: NoteWithContent
+}
+
+interface EditorWorkspaceNoteRuntime {
+  linkResolver: LinkResolver
+  valueRuntimeSource: NoteValueRuntimeSource
+}
+
+export interface EditorWorkspaceNoteRuntimeProviderProps {
+  children: (runtime: EditorWorkspaceNoteRuntime) => ReactNode
+  editor: CustomBlockNoteEditor | null
+  isViewerMode: boolean
+  noteId?: Id<'sidebarItems'>
+}
+
+export interface EditorNoteCollaborationProvider {
+  awareness: Awareness
+  doc: Doc
+  destroy: () => void
+  emit: (name: 'sync', args: [boolean]) => void
+  flushUpdates: () => Promise<void>
+  off: (name: 'sync', handler: (synced: boolean) => void) => void
+  on: (name: 'sync', handler: (synced: boolean) => void) => void
+}
+
+interface EditorWorkspaceDocuments {
+  notes: EditorWorkspaceNoteDocuments
+}
+
 export interface EditorWorkspaceSource {
   content: EditorWorkspaceContent
   permissions: EditorWorkspacePermissions
@@ -155,4 +211,5 @@ export interface EditorWorkspaceSource {
   history: EditorWorkspaceHistory
   sharing: EditorWorkspaceSharingState
   files: EditorWorkspaceFiles
+  documents: EditorWorkspaceDocuments
 }

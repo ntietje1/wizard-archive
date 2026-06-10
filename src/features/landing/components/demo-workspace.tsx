@@ -1,17 +1,11 @@
 import { FileText, FolderOpen, MapIcon, Network } from 'lucide-react'
-import { Fragment, useReducer, useState } from 'react'
+import { Fragment, useReducer } from 'react'
 import { CreateNewDashboardSurface } from '~/features/editor/components/create-new-dashboard-surface'
+import { EditorContent } from '~/features/editor/components/editor-content'
 import { EditorWorkspaceSurface } from '~/features/editor/components/editor-workspace-surface'
-import { NoteFormattingToolbar } from '~/features/editor/components/formatting-toolbar/note-formatting-toolbar'
 import { FileTopbar } from '~/features/editor/components/topbar/file-topbar'
-import { FileViewer } from '~/features/editor/components/viewer/file/file-viewer'
 import { LocalCanvasEditor } from '~/features/landing/demo-workspace/local-canvas-editor'
-import {
-  LocalDemoFileViewerSourceProvider,
-  useLocalDemoFileViewerSource,
-} from '~/features/landing/demo-workspace/local-demo-file-viewer-source'
-import { LocalNoteEditor } from '~/features/landing/demo-workspace/local-note-editor'
-import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { useLocalDemoFileViewerSource } from '~/features/landing/demo-workspace/local-demo-file-viewer-source'
 import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-surface'
 import { SidebarWorkspaceShell } from '~/features/sidebar/components/sidebar-workspace-shell'
 import { buildSidebarTreeSurfaceItems } from '~/features/sidebar/workspace/sidebar-tree-projection'
@@ -19,13 +13,14 @@ import {
   createDemoEmbeddedCanvasStateResolver,
   createDemoSidebarItemEmbedResolver,
 } from '../demo-workspace/local-demo-embed-resolvers'
-import { createLocalDemoEditorWorkspaceSource } from '../demo-workspace/local-demo-editor-workspace-source'
+import {
+  createLocalDemoEditorWorkspaceSource,
+  useLocalDemoNoteDocuments,
+} from '../demo-workspace/local-demo-editor-workspace-source'
 import {
   INITIAL_DEMO_WORKSPACE,
   demoCanvasForItem,
-  demoFileSidebarItemWithContent,
   demoMapPinsForItem,
-  demoNoteBodyForItem,
   demoSidebarItemsWithContent,
   demoWorkspaceReducer,
   selectedDemoItem,
@@ -36,7 +31,6 @@ import type {
   DemoWorkspaceItem,
   DemoWorkspaceItemType,
 } from '../demo-workspace/demo-workspace-model'
-import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { Dispatch, MouseEvent } from 'react'
@@ -54,9 +48,11 @@ const noop = () => {}
 export function DemoWorkspace() {
   const [workspace, dispatch] = useReducer(demoWorkspaceReducer, INITIAL_DEMO_WORKSPACE)
   const fileViewerSource = useLocalDemoFileViewerSource(workspace)
+  const noteDocuments = useLocalDemoNoteDocuments(workspace)
   const workspaceSource = createLocalDemoEditorWorkspaceSource({
     dispatch,
     fileViewerSource,
+    noteDocuments,
     workspace,
   })
   const selectedItem = selectedDemoItem(workspace)
@@ -83,6 +79,8 @@ export function DemoWorkspace() {
             selectedItem={selectedItem}
             dispatch={dispatch}
             fileViewerSource={fileViewerSource}
+            noteDocuments={noteDocuments}
+            workspaceSource={workspaceSource}
           />
         </EditorWorkspaceSurface>
       </SidebarWorkspaceShell>
@@ -142,22 +140,20 @@ function DemoWorkspaceSidebar({
 function DemoWorkspaceSurfaces({
   dispatch,
   fileViewerSource,
+  noteDocuments,
   selectedItem,
   workspace,
+  workspaceSource,
 }: {
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
   fileViewerSource: ReturnType<typeof useLocalDemoFileViewerSource>
+  noteDocuments: ReturnType<typeof useLocalDemoNoteDocuments>
   selectedItem: DemoWorkspaceItem | null
   workspace: typeof INITIAL_DEMO_WORKSPACE
+  workspaceSource: ReturnType<typeof createLocalDemoEditorWorkspaceSource>
 }) {
   if (workspace.activeView === 'create') {
-    return (
-      <main className="flex min-h-0 flex-1 flex-col">
-        <CreateNewDashboardSurface
-          onCreate={(command) => dispatch({ type: 'createItem', commandKey: command.key })}
-        />
-      </main>
-    )
+    return <EditorContent source={workspaceSource} />
   }
 
   if (!selectedItem) {
@@ -168,13 +164,21 @@ function DemoWorkspaceSurfaces({
     <main className="flex min-h-0 flex-1 flex-col">
       {workspace.items.map((item) => (
         <Fragment key={item.id}>
-          {workspace.mountedItemIds.includes(item.id) && (
+          {workspace.mountedItemIds.includes(item.id) && !isEditorContentDemoItem(item) && (
             <DemoWorkspaceSurface
               item={item}
               active={item.id === selectedItem.id}
               workspace={workspace}
               dispatch={dispatch}
+            />
+          )}
+          {item.id === selectedItem.id && isEditorContentDemoItem(item) && (
+            <DemoEditorContentSurface
+              item={item}
+              workspace={workspace}
+              dispatch={dispatch}
               fileViewerSource={fileViewerSource}
+              noteDocuments={noteDocuments}
             />
           )}
         </Fragment>
@@ -183,22 +187,51 @@ function DemoWorkspaceSurfaces({
   )
 }
 
+function isEditorContentDemoItem(item: DemoWorkspaceItem) {
+  return item.type === 'note' || item.type === 'file'
+}
+
+function DemoEditorContentSurface({
+  dispatch,
+  fileViewerSource,
+  item,
+  noteDocuments,
+  workspace,
+}: {
+  dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
+  fileViewerSource: ReturnType<typeof useLocalDemoFileViewerSource>
+  item: DemoWorkspaceItem
+  noteDocuments: ReturnType<typeof useLocalDemoNoteDocuments>
+  workspace: typeof INITIAL_DEMO_WORKSPACE
+}) {
+  const source = createLocalDemoEditorWorkspaceSource({
+    activeView: 'item',
+    dispatch,
+    fileViewerSource,
+    noteDocuments,
+    selectedItemId: item.id,
+    workspace,
+  })
+
+  return (
+    <section className="contents" aria-label={item.title} data-demo-surface={item.type}>
+      <EditorContent source={source} />
+    </section>
+  )
+}
+
 function DemoWorkspaceSurface({
   active,
   dispatch,
-  fileViewerSource,
   item,
   workspace,
 }: {
   active: boolean
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
-  fileViewerSource: ReturnType<typeof useLocalDemoFileViewerSource>
   item: DemoWorkspaceItem
   workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
   const canvas = item.type === 'canvas' ? demoCanvasForItem(workspace, item.id) : null
-  const fileSidebarItem =
-    item.type === 'file' ? demoFileSidebarItemWithContent(workspace, item.id) : null
   const SidebarItemEmbedResolver = createDemoSidebarItemEmbedResolver(workspace)
   const EmbeddedCanvasStateResolver = createDemoEmbeddedCanvasStateResolver(workspace)
 
@@ -209,12 +242,6 @@ function DemoWorkspaceSurface({
       aria-label={item.title}
       data-demo-surface={item.type}
     >
-      {item.type === 'note' && (
-        <DemoNoteEditor
-          noteId={item.id as Id<'sidebarItems'>}
-          body={demoNoteBodyForItem(workspace, item.id)}
-        />
-      )}
       {item.type === 'folder' && (
         <CreateNewDashboardSurface
           folderPath={item.title}
@@ -231,31 +258,7 @@ function DemoWorkspaceSurface({
         />
       )}
       {item.type === 'map' && <DemoMapSurface pins={demoMapPinsForItem(workspace, item.id)} />}
-      {item.type === 'file' && (
-        <LocalDemoFileViewerSourceProvider source={fileViewerSource}>
-          {fileSidebarItem && <FileViewer item={fileSidebarItem} />}
-        </LocalDemoFileViewerSourceProvider>
-      )}
     </section>
-  )
-}
-
-function DemoNoteEditor({ body, noteId }: { body: string; noteId: Id<'sidebarItems'> }) {
-  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <NoteFormattingToolbar editor={editor} visible />
-      <ScrollArea className="min-h-0 flex-1" contentClassName="note-editor-scroll-content">
-        <LocalNoteEditor
-          noteId={noteId}
-          body={body}
-          editable
-          className="note-editor-surface"
-          onEditorChange={setEditor}
-        />
-      </ScrollArea>
-    </div>
   )
 }
 

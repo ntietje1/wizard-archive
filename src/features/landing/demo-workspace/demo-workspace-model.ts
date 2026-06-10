@@ -198,7 +198,7 @@ export function selectedDemoItem(state: DemoWorkspaceState) {
   return state.items.find((item) => item.id === state.selectedItemId) ?? state.items[0] ?? null
 }
 
-export function demoNoteBodyForItem(state: DemoWorkspaceState, itemId: string) {
+function demoNoteBodyForItem(state: DemoWorkspaceState, itemId: string) {
   return state.noteBodiesById[itemId] ?? ''
 }
 
@@ -242,14 +242,6 @@ export function createDemoWorkspaceProjection(state: DemoWorkspaceState) {
   const itemsById = new Map(items.map((item) => [item._id, item]))
 
   return { items, itemsById }
-}
-
-export function demoFileSidebarItemWithContent(
-  state: DemoWorkspaceState,
-  itemId: string,
-): FileWithContent | null {
-  const item = createDemoWorkspaceProjection(state).itemsById.get(itemId as Id<'sidebarItems'>)
-  return item?.type === SIDEBAR_ITEM_TYPES.files ? item : null
 }
 
 function projectDemoSidebarItemWithContent(

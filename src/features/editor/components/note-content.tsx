@@ -12,20 +12,16 @@ import { NoteView } from './note-view'
 import { LinkClickHandler } from './extensions/link-click-handler'
 import { LiveWikiLinkAutocomplete } from './extensions/wiki-link/live-wiki-link-autocomplete'
 import { SideMenuRenderer } from './extensions/side-menu/side-menu'
-import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
-import { useLiveNoteValueRuntimeSource } from '~/features/editor/value-block/use-live-note-value-runtime-source'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
-import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { getCursorColor } from '~/features/editor/utils/cursor-colors'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 import {
   effectiveHasAtLeastPermission,
   resolveSidebarItemPermissionLevel,
 } from '~/features/sharing/utils/permission-utils'
-import { api } from 'convex/_generated/api'
+import { useOptionalEditorWorkspaceSource } from '../workspace/editor-workspace-source-context'
+import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from '../workspace/live-note-document-source'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
@@ -34,14 +30,17 @@ import type { PermissionLevel } from 'shared/permissions/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { BlockMeta, NoteWithContent } from 'shared/notes/types'
 import type { CSSProperties, ReactNode } from 'react'
-import { updateConvexYjsProviderUser } from '~/shared/collaboration/convex-yjs-provider'
-import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
 import type { CampaignActor } from 'shared/campaigns/actor'
+import type {
+  EditorNoteCollaborationProvider,
+  EditorWorkspaceNoteDocuments,
+  EditorWorkspaceNoteEditableSession,
+} from '../workspace/editor-workspace-source'
 
 type NoteEditorChangeHandler = (
   editor: CustomBlockNoteEditor | null,
   doc: Doc | null,
-  provider: ConvexYjsProvider | null,
+  provider: EditorNoteCollaborationProvider | null,
 ) => void
 
 type NoteContentBaseProps = {
@@ -57,25 +56,83 @@ type LiveNoteContentProps = NoteContentBaseProps & {
   note: NoteWithContent
 }
 
-export function NoteContent({
+export function NoteContent({ note, ...props }: LiveNoteContentProps) {
+  const source = useOptionalEditorWorkspaceSource()
+  const noteDocuments = source?.documents.notes ?? LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS
+  if (source) {
+    return (
+      <SourceBackedNoteContent
+        {...props}
+        note={note}
+        noteDocuments={noteDocuments}
+        renderState={getSourceNoteRenderState({
+          note,
+          editable: props.editable,
+          source,
+        })}
+      />
+    )
+  }
+
+  return <LiveNoteContent note={note} noteDocuments={noteDocuments} {...props} />
+}
+
+function LiveNoteContent({
   note,
   editable,
   className,
   fillHeight = false,
   style,
   children,
+  noteDocuments,
   onEditorChange,
-}: LiveNoteContentProps) {
-  const renderState = useNoteRenderState({ note, editable })
+}: LiveNoteContentProps & { noteDocuments: EditorWorkspaceNoteDocuments }) {
+  const renderState = useLiveNoteRenderState({ note, editable })
+
+  return (
+    <SourceBackedNoteContent
+      className={className}
+      editable={editable}
+      fillHeight={fillHeight}
+      note={note}
+      noteDocuments={noteDocuments}
+      renderState={renderState}
+      style={style}
+      onEditorChange={onEditorChange}
+    >
+      {children}
+    </SourceBackedNoteContent>
+  )
+}
+
+function SourceBackedNoteContent({
+  children,
+  className,
+  fillHeight = false,
+  noteDocuments,
+  onEditorChange,
+  renderState,
+  style,
+}: NoteContentBaseProps & {
+  note: NoteWithContent
+  noteDocuments: EditorWorkspaceNoteDocuments
+  renderState: ReturnType<typeof getSourceNoteRenderState>
+}) {
   const editor =
     renderState.kind === 'editable' ? (
-      <EditableNoteEditor note={renderState.note} style={style} onEditorChange={onEditorChange}>
+      <EditableNoteEditor
+        note={renderState.note}
+        noteDocuments={noteDocuments}
+        style={style}
+        onEditorChange={onEditorChange}
+      >
         {children}
       </EditableNoteEditor>
     ) : (
       <StaticNoteEditor
         note={renderState.note}
         noteId={renderState.noteId}
+        noteDocuments={noteDocuments}
         content={renderState.content}
         evaluateValuesFromEditor={renderState.evaluateValuesFromEditor}
         style={style}
@@ -96,7 +153,7 @@ export function NoteContent({
   )
 }
 
-function useNoteRenderState({ note, editable }: { note: NoteWithContent; editable: boolean }):
+function useLiveNoteRenderState({ note, editable }: { note: NoteWithContent; editable: boolean }):
   | { kind: 'editable'; note: NoteWithContent }
   | {
       kind: 'static'
@@ -131,24 +188,77 @@ function useNoteRenderState({ note, editable }: { note: NoteWithContent; editabl
   }
 }
 
+function getSourceNoteRenderState({
+  editable,
+  note,
+  source,
+}: {
+  editable: boolean
+  note: NoteWithContent
+  source: ReturnType<typeof useOptionalEditorWorkspaceSource>
+}):
+  | { kind: 'editable'; note: NoteWithContent }
+  | {
+      kind: 'static'
+      note?: NoteWithContent
+      noteId?: Id<'sidebarItems'>
+      content: Array<CustomBlock>
+      evaluateValuesFromEditor: boolean
+    } {
+  if (!source) {
+    return {
+      kind: 'static',
+      note,
+      noteId: note._id,
+      content: note.content,
+      evaluateValuesFromEditor: false,
+    }
+  }
+
+  const { campaignActor, viewAsPlayerId } = source.permissions
+  const allItemsById = source.index.activeItemsById
+  const hasEditAccess = effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.EDIT, {
+    actor: campaignActor,
+    allItemsMap: allItemsById,
+  })
+  const isViewAs = campaignActor?.kind === 'dm_view_as'
+
+  if (editable && hasEditAccess && !isViewAs) {
+    return { kind: 'editable', note }
+  }
+
+  const hasFullContent = hasEditAccess && !isViewAs
+
+  return {
+    kind: 'static',
+    note,
+    noteId: note._id,
+    content: hasFullContent
+      ? note.content
+      : filterViewableBlocks(note, { actor: campaignActor, viewAsPlayerId, allItemsById }),
+    evaluateValuesFromEditor: hasFullContent,
+  }
+}
+
 function StaticNoteEditor({
   note,
   noteId,
   content,
   evaluateValuesFromEditor,
+  noteDocuments,
   style,
   children,
   onEditorChange,
 }: {
   note?: NoteWithContent
   noteId?: Id<'sidebarItems'>
+  noteDocuments: EditorWorkspaceNoteDocuments
   content: Array<CustomBlock>
   evaluateValuesFromEditor: boolean
   style?: CSSProperties
   children?: ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
-  const linkResolver = useLinkResolver(noteId, { isViewerMode: true })
   const editor = useOwnedBlockNoteEditor({
     identity: `${noteId ?? 'raw-static-note-content'}:${JSON.stringify(content)}`,
     createEditor: () =>
@@ -164,48 +274,80 @@ function StaticNoteEditor({
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, null, null),
   })
-  const valueRuntimeSource = useLiveNoteValueRuntimeSource({ editor, noteId })
+  const RuntimeProvider = noteDocuments.RuntimeProvider
 
   if (!editor) return null
 
   return (
-    <>
-      <NoteView
-        editor={editor}
-        note={note}
-        noteId={noteId}
-        editable={false}
-        evaluateValuesFromEditor={evaluateValuesFromEditor}
-        linkResolver={linkResolver}
-        valueRuntimeSource={valueRuntimeSource}
-        style={style}
-      >
-        {children}
-      </NoteView>
-      <LinkClickHandler editor={editor} sourceNoteId={noteId} />
-    </>
+    <RuntimeProvider editor={editor} isViewerMode noteId={noteId}>
+      {({ linkResolver, valueRuntimeSource }) => (
+        <>
+          <NoteView
+            editor={editor}
+            note={note}
+            noteId={noteId}
+            editable={false}
+            evaluateValuesFromEditor={evaluateValuesFromEditor}
+            linkResolver={linkResolver}
+            valueRuntimeSource={valueRuntimeSource}
+            style={style}
+          >
+            {children}
+          </NoteView>
+          <LinkClickHandler editor={editor} sourceNoteId={noteId} />
+        </>
+      )}
+    </RuntimeProvider>
   )
 }
 
 function EditableNoteEditor({
   note,
+  noteDocuments,
   style,
   children,
   onEditorChange,
 }: {
   note: NoteWithContent
+  noteDocuments: EditorWorkspaceNoteDocuments
   style?: CSSProperties
   children?: ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
-  const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
-  const profile = profileQuery.data
-  const user = {
-    name: profile?.name ?? profile?.username ?? 'Anonymous',
-    color: profile ? getCursorColor(profile._id) : '#61afef',
-  }
-  const session = useNoteYjsCollaboration(note._id, user, true)
+  const EditableSessionProvider = noteDocuments.EditableSessionProvider
 
+  return (
+    <EditableSessionProvider note={note}>
+      {(session) => (
+        <EditableNoteSessionContent
+          note={note}
+          noteDocuments={noteDocuments}
+          session={session}
+          style={style}
+          onEditorChange={onEditorChange}
+        >
+          {children}
+        </EditableNoteSessionContent>
+      )}
+    </EditableSessionProvider>
+  )
+}
+
+function EditableNoteSessionContent({
+  note,
+  noteDocuments,
+  session,
+  style,
+  children,
+  onEditorChange,
+}: {
+  note: NoteWithContent
+  noteDocuments: EditorWorkspaceNoteDocuments
+  session: EditorWorkspaceNoteEditableSession
+  style?: CSSProperties
+  children?: ReactNode
+  onEditorChange?: NoteEditorChangeHandler
+}) {
   if (session.error) {
     return (
       <div role="alert" className="min-h-8 text-sm text-muted-foreground">
@@ -224,8 +366,10 @@ function EditableNoteEditor({
       note={note}
       doc={session.doc}
       provider={session.provider}
-      user={user}
+      user={session.user}
+      updateUser={session.updateUser}
       style={style}
+      noteDocuments={noteDocuments}
       onEditorChange={onEditorChange}
     >
       {children}
@@ -238,19 +382,22 @@ function CollaborativeNoteEditor({
   doc,
   provider,
   user,
+  updateUser,
   style,
   children,
+  noteDocuments,
   onEditorChange,
 }: {
   note: NoteWithContent
   doc: Doc
-  provider: ConvexYjsProvider
+  provider: EditorNoteCollaborationProvider
   user: { name: string; color: string }
+  updateUser?: (user: { color: string; name: string }) => void
   style?: CSSProperties
   children?: ReactNode
+  noteDocuments: EditorWorkspaceNoteDocuments
   onEditorChange?: NoteEditorChangeHandler
 }) {
-  const linkResolver = useLinkResolver(note._id, { isViewerMode: false })
   const forceOpenLinkPopover = useRef<(() => void) | null>(null)
   const editor = useOwnedBlockNoteEditor({
     identity: provider,
@@ -269,34 +416,40 @@ function CollaborativeNoteEditor({
   })
 
   useEffect(() => {
-    updateConvexYjsProviderUser(provider, { name: user.name, color: user.color })
-  }, [provider, user.name, user.color])
-  const valueRuntimeSource = useLiveNoteValueRuntimeSource({ editor, noteId: note._id })
+    updateUser?.({ name: user.name, color: user.color })
+  }, [updateUser, user.name, user.color])
+  const RuntimeProvider = noteDocuments.RuntimeProvider
 
   if (!editor) return null
 
   return (
-    <>
-      <NoteView
-        editor={editor}
-        note={note}
-        editable
-        editableChrome={
-          <SideMenuController sideMenu={(props) => <SideMenuRenderer {...props} note={note} />} />
-        }
-        linkResolver={linkResolver}
-        valueRuntimeSource={valueRuntimeSource}
-        style={style}
-      >
-        {children}
-        <LiveWikiLinkAutocomplete
-          editor={editor}
-          onForceOpenRef={forceOpenLinkPopover}
-          sourceNoteId={note._id}
-        />
-      </NoteView>
-      <LinkClickHandler editor={editor} sourceNoteId={note._id} />
-    </>
+    <RuntimeProvider editor={editor} isViewerMode={false} noteId={note._id}>
+      {({ linkResolver, valueRuntimeSource }) => (
+        <>
+          <NoteView
+            editor={editor}
+            note={note}
+            editable
+            editableChrome={
+              <SideMenuController
+                sideMenu={(props) => <SideMenuRenderer {...props} note={note} />}
+              />
+            }
+            linkResolver={linkResolver}
+            valueRuntimeSource={valueRuntimeSource}
+            style={style}
+          >
+            {children}
+            <LiveWikiLinkAutocomplete
+              editor={editor}
+              onForceOpenRef={forceOpenLinkPopover}
+              sourceNoteId={note._id}
+            />
+          </NoteView>
+          <LinkClickHandler editor={editor} sourceNoteId={note._id} />
+        </>
+      )}
+    </RuntimeProvider>
   )
 }
 
