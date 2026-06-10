@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import type { ComponentProps, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
@@ -13,8 +14,8 @@ import type { Doc } from 'yjs'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
-import type { ReactNode } from 'react'
 import type { CampaignActor } from 'shared/campaigns/actor'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { NoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
 import type {
   EditorNoteCollaborationProvider,
@@ -90,10 +91,15 @@ vi.mock('../note-view', () => ({
 
 vi.mock('../extensions/link-click-handler', () => ({
   LinkClickHandler: () => null,
+  LinkClickHandlerSurface: () => null,
 }))
 
 vi.mock('../extensions/wiki-link/live-wiki-link-autocomplete', () => ({
   LiveWikiLinkAutocomplete: () => null,
+}))
+
+vi.mock('../extensions/wiki-link/wiki-link-autocomplete', () => ({
+  WikiLinkAutocomplete: () => null,
 }))
 
 vi.mock('~/features/editor/hooks/useLinkResolver', () => ({
@@ -184,7 +190,7 @@ describe('NoteContent', () => {
       },
     })
 
-    render(<NoteContent note={note} editable={false} />)
+    renderNoteContent(note, { editable: false })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -215,7 +221,7 @@ describe('NoteContent', () => {
       },
     })
 
-    render(<NoteContent note={note} editable />)
+    renderNoteContent(note, { editable: true })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -240,7 +246,7 @@ describe('NoteContent', () => {
     }
     const note = createNoteWithContent({
       content: [visibleBlock],
-      myPermissionLevel: PERMISSION_LEVEL.VIEW,
+      myPermissionLevel: PERMISSION_LEVEL.EDIT,
       blockMeta: {
         [visibleBlock.id]: {
           myPermissionLevel: PERMISSION_LEVEL.VIEW,
@@ -286,7 +292,7 @@ describe('NoteContent', () => {
       },
     })
 
-    render(<NoteContent note={note} editable={false} fillHeight />)
+    renderNoteContent(note, { editable: false, fillHeight: true })
 
     await waitFor(() => {
       expect(screen.getByTestId('note-view').closest('.note-editor-fill-height')).not.toBeNull()
@@ -301,7 +307,7 @@ describe('NoteContent', () => {
       blockMeta: {},
     })
 
-    render(<NoteContent note={note} editable />)
+    renderNoteContent(note, { editable: true })
 
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to load note content.')
     expect(noteViewSpy).not.toHaveBeenCalled()
@@ -349,7 +355,7 @@ describe('NoteContent', () => {
       },
     })
 
-    render(<NoteContent note={note} editable={false} />)
+    renderNoteContent(note, { editable: false })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -402,7 +408,7 @@ describe('NoteContent', () => {
     }
     activeItemsState.itemsMap = new Map([[note._id, note]])
 
-    render(<NoteContent note={note} editable={false} />)
+    renderNoteContent(note, { editable: false })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -441,7 +447,7 @@ describe('NoteContent', () => {
     })
     activeItemsState.itemsMap = new Map([[note._id, note]])
 
-    render(<NoteContent note={note} editable />)
+    renderNoteContent(note, { editable: true })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -463,6 +469,18 @@ describe('NoteContent', () => {
 
 function createBlock(id: string): CustomBlock {
   return { id, type: 'paragraph', content: [] } as unknown as CustomBlock
+}
+
+function renderNoteContent(
+  note: NoteWithContent,
+  props: Omit<ComponentProps<typeof NoteContent>, 'note'>,
+  source: EditorWorkspaceSource = createWorkspaceSource(note),
+) {
+  return render(
+    <EditorWorkspaceSourceProvider value={source}>
+      <NoteContent note={note} {...props} />
+    </EditorWorkspaceSourceProvider>,
+  )
 }
 
 function createNoteWithContent({
@@ -507,8 +525,8 @@ function createWorkspaceSource(
     permissions: {
       editorMode: 'editor',
       canEdit: true,
-      campaignActor: { kind: 'dm', campaignId },
-      viewAsPlayerId: undefined,
+      campaignActor: editorModeState.campaignActor,
+      viewAsPlayerId: editorModeState.viewAsPlayerId,
       setEditorMode: vi.fn(),
       setViewAsPlayerId: vi.fn(),
       viewAsPlayer: {
@@ -520,13 +538,16 @@ function createWorkspaceSource(
       },
     },
     index: {
-      activeItemsById: new Map([[note._id, note]]),
+      activeItemsById:
+        activeItemsState.itemsMap.size > 0
+          ? activeItemsState.itemsMap
+          : new Map([[note._id, note]]),
       trashItems: [],
     },
     workspace: {
       campaignId,
       isCampaignLoaded: true,
-      isDm: true,
+      isDm: campaignState.isDm,
     },
     items: {
       itemActions: {
@@ -584,27 +605,30 @@ function createWorkspaceSource(
 }
 
 function createSourceNoteDocuments(noteId: Id<'sidebarItems'>): EditorWorkspaceNoteDocuments {
+  const items: Array<AnySidebarItem> = []
   return {
-    EditableSessionProvider: ({ children }) =>
-      children({
-        destroy: vi.fn(),
-        doc: { getXmlFragment: vi.fn(() => ({})) } as unknown as Doc,
-        error: null,
-        instanceId: `source:${noteId}`,
-        isLoading: false,
-        provider: createCollaborationProvider(),
-        user: { name: 'Source User', color: '#61afef' },
-      }),
-    RuntimeProvider: ({ children, isViewerMode }) =>
-      children({
-        linkResolver: {
-          allItems: [],
-          isViewerMode,
-          itemsMap: new Map(),
-          resolveLink: vi.fn(),
-        },
-        valueRuntimeSource: createNoteValueRuntimeSource(noteId),
-      }),
+    kind: 'client',
+    getSidebarItems: () => ({
+      items,
+      itemsMap: new Map(),
+      parentItemsMap: new Map(),
+    }),
+    createEditableSession: () => ({
+      destroy: vi.fn(),
+      doc: { getXmlFragment: vi.fn(() => ({})) } as unknown as Doc,
+      error: null,
+      instanceId: `source:${noteId}`,
+      isLoading: false,
+      provider: createCollaborationProvider(),
+      user: { name: 'Source User', color: '#61afef' },
+    }),
+    createLinkResolver: (_noteId, { isViewerMode }) => ({
+      allItems: [],
+      isViewerMode,
+      itemsMap: new Map(),
+      resolveLink: vi.fn(),
+    }),
+    createValueRuntimeSource: () => createNoteValueRuntimeSource(noteId),
   }
 }
 

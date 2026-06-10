@@ -6,8 +6,7 @@ import type {
   EditorNoteCollaborationProvider,
   EditorWorkspaceNoteDocuments,
   EditorWorkspaceNoteEditableSession,
-  EditorWorkspaceNoteEditableSessionProviderProps,
-  EditorWorkspaceNoteRuntimeProviderProps,
+  EditorWorkspaceNoteSidebarItems,
   EditorWorkspaceSource,
 } from '~/features/editor/workspace/editor-workspace-source'
 import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
@@ -21,6 +20,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useEffect, useRef } from 'react'
 import type { Dispatch } from 'react'
 import type { NoteWithContent } from 'shared/notes/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 
 type DemoWorkspaceState = typeof INITIAL_DEMO_WORKSPACE
 
@@ -29,6 +29,29 @@ const DEMO_CAMPAIGN_ID = 'demo-campaign' as Id<'campaigns'>
 const noop = () => {}
 const EmptyHistoryPreview = () => null
 const EmptyRollbackDialog = () => null
+
+function createParentItemsMap(
+  items: Array<AnySidebarItem>,
+): Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>> {
+  const parentItemsMap = new Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>()
+  items.forEach((item) => {
+    const siblings = parentItemsMap.get(item.parentId) ?? []
+    siblings.push(item)
+    parentItemsMap.set(item.parentId, siblings)
+  })
+  return parentItemsMap
+}
+
+function createLocalDemoNoteSidebarItems(
+  workspace: DemoWorkspaceState,
+): EditorWorkspaceNoteSidebarItems {
+  const projection = createDemoWorkspaceProjection(workspace)
+  return {
+    items: projection.items,
+    itemsMap: projection.itemsById,
+    parentItemsMap: createParentItemsMap(projection.items),
+  }
+}
 
 export function createLocalDemoEditorWorkspaceSource({
   activeView,
@@ -193,9 +216,11 @@ export function useLocalDemoNoteDocuments(
   workspace: DemoWorkspaceState,
 ): EditorWorkspaceNoteDocuments {
   const projectionRef = useRef(createDemoWorkspaceProjection(workspace))
+  const sidebarItemsRef = useRef(createLocalDemoNoteSidebarItems(workspace))
   const sessionsRef = useRef(new Map<Id<'sidebarItems'>, EditorWorkspaceNoteEditableSession>())
   const documentsRef = useRef<EditorWorkspaceNoteDocuments | null>(null)
   projectionRef.current = createDemoWorkspaceProjection(workspace)
+  sidebarItemsRef.current = createLocalDemoNoteSidebarItems(workspace)
 
   useEffect(() => {
     const sessions = sessionsRef.current
@@ -207,35 +232,27 @@ export function useLocalDemoNoteDocuments(
 
   if (!documentsRef.current) {
     documentsRef.current = {
-      EditableSessionProvider: function LocalDemoEditableNoteSessionProvider({
-        children,
-        note,
-      }: EditorWorkspaceNoteEditableSessionProviderProps) {
+      kind: 'client',
+      getSidebarItems: () => sidebarItemsRef.current,
+      createEditableSession: (note) => {
         let session = sessionsRef.current.get(note._id)
         if (!session) {
           session = createLocalDemoNoteEditableSession(note)
           sessionsRef.current.set(note._id, session)
         }
 
-        return children(session)
+        return session
       },
-      RuntimeProvider: function LocalDemoNoteRuntimeProvider({
-        children,
-        editor: _editor,
-        isViewerMode,
-        noteId,
-      }: EditorWorkspaceNoteRuntimeProviderProps) {
+      createLinkResolver: (noteId, { isViewerMode }) => {
         const projection = projectionRef.current
-        return children({
-          linkResolver: createLinkResolver({
-            allItems: projection.items,
-            isViewerMode,
-            itemsMap: projection.itemsById,
-            sourceNoteId: noteId,
-          }),
-          valueRuntimeSource: createEmptyNoteValueRuntimeSource(noteId),
+        return createLinkResolver({
+          allItems: projection.items,
+          isViewerMode,
+          itemsMap: projection.itemsById,
+          sourceNoteId: noteId,
         })
       },
+      createValueRuntimeSource: ({ noteId }) => createEmptyNoteValueRuntimeSource(noteId),
     }
   }
 

@@ -6,7 +6,7 @@ import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { ValidationResult } from 'shared/sidebar-items/name'
 import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ComponentType, ReactNode, RefObject } from 'react'
+import type { ComponentType, RefObject } from 'react'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
@@ -151,9 +151,28 @@ interface EditorWorkspaceFiles {
   viewer: FileViewerSource
 }
 
-export interface EditorWorkspaceNoteDocuments {
-  EditableSessionProvider: ComponentType<EditorWorkspaceNoteEditableSessionProviderProps>
-  RuntimeProvider: ComponentType<EditorWorkspaceNoteRuntimeProviderProps>
+export type EditorWorkspaceNoteDocuments =
+  | {
+      kind: 'live'
+    }
+  | {
+      kind: 'client'
+      getSidebarItems: () => EditorWorkspaceNoteSidebarItems
+      createEditableSession: (note: NoteWithContent) => EditorWorkspaceNoteEditableSession
+      createLinkResolver: (
+        noteId: Id<'sidebarItems'> | undefined,
+        options: { isViewerMode: boolean },
+      ) => LinkResolver
+      createValueRuntimeSource: (input: {
+        editor: CustomBlockNoteEditor | null
+        noteId?: Id<'sidebarItems'>
+      }) => NoteValueRuntimeSource
+    }
+
+export interface EditorWorkspaceNoteSidebarItems {
+  items: Array<AnySidebarItem>
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
+  parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
 }
 
 export interface EditorWorkspaceNoteEditableSession {
@@ -168,23 +187,6 @@ export interface EditorWorkspaceNoteEditableSession {
     color: string
     name: string
   }
-}
-
-export interface EditorWorkspaceNoteEditableSessionProviderProps {
-  children: (session: EditorWorkspaceNoteEditableSession) => ReactNode
-  note: NoteWithContent
-}
-
-interface EditorWorkspaceNoteRuntime {
-  linkResolver: LinkResolver
-  valueRuntimeSource: NoteValueRuntimeSource
-}
-
-export interface EditorWorkspaceNoteRuntimeProviderProps {
-  children: (runtime: EditorWorkspaceNoteRuntime) => ReactNode
-  editor: CustomBlockNoteEditor | null
-  isViewerMode: boolean
-  noteId?: Id<'sidebarItems'>
 }
 
 export interface EditorNoteCollaborationProvider {

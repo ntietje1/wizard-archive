@@ -16,7 +16,6 @@ import type { FileViewerSource } from '~/features/editor/components/viewer/file/
 import type {
   EditorWorkspaceNoteDocuments,
   EditorWorkspaceNoteEditableSession,
-  EditorWorkspaceNoteEditableSessionProviderProps,
 } from '~/features/editor/workspace/editor-workspace-source'
 import type { NoteWithContent } from 'shared/notes/types'
 
@@ -112,15 +111,11 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
       const noteDocuments = useLocalDemoNoteDocuments(INITIAL_DEMO_WORKSPACE)
       if (!show) return null
 
-      const props: EditorWorkspaceNoteEditableSessionProviderProps = {
-        note,
-        children: (session) => {
-          sessions.push(session)
-          return createElement('span', { 'data-testid': 'session' }, session.instanceId)
-        },
-      }
+      if (noteDocuments.kind !== 'client') return null
+      const session = noteDocuments.createEditableSession(note)
+      sessions.push(session)
 
-      return createElement(noteDocuments.EditableSessionProvider, props)
+      return createElement('span', { 'data-testid': 'session' }, session.instanceId)
     }
 
     const { rerender } = render(createElement(Harness, { show: true }))
@@ -147,34 +142,5 @@ function createFileViewerSource(): FileViewerSource {
 }
 
 function createNoteDocuments(): EditorWorkspaceNoteDocuments {
-  return {
-    EditableSessionProvider: ({ children }) =>
-      children({
-        destroy: vi.fn(),
-        doc: null,
-        error: null,
-        instanceId: 'test-note-session',
-        isLoading: true,
-        provider: null,
-        user: { name: 'Test', color: '#61afef' },
-      }),
-    RuntimeProvider: ({ children, isViewerMode, noteId }) =>
-      children({
-        linkResolver: {
-          allItems: [],
-          isViewerMode,
-          itemsMap: new Map(),
-          resolveLink: vi.fn(),
-        },
-        valueRuntimeSource: {
-          noteId,
-          authoredDefinitions: [],
-          externalNoteIdByPath: new Map(),
-          externalStates: [],
-          itemsMap: new Map(),
-          persistedStates: [],
-          sidebarItems: [],
-        },
-      }),
-  }
+  return { kind: 'live' }
 }
