@@ -32,7 +32,7 @@ function getCursorColor(userId: string): string {
   return CURSOR_COLORS[Math.abs(hash) % CURSOR_COLORS.length]
 }
 
-export type CanvasViewerSession =
+export type CanvasDocumentSource =
   | { status: 'loading' }
   | { status: 'error'; error: Error | string }
   | {
@@ -49,7 +49,7 @@ export type CanvasViewerSession =
       edgesMap: Y.Map<CanvasDocumentEdge>
     }
 
-export function useCanvasViewerSession(canvas: CanvasWithContent): CanvasViewerSession {
+export function useLiveCanvasDocumentSource(canvas: CanvasWithContent): CanvasDocumentSource {
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
   const resolvedTheme = useResolvedTheme()

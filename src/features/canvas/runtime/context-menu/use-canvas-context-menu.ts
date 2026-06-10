@@ -9,7 +9,7 @@ import type { CanvasDocumentNode } from '~/features/canvas/domain/canvas-documen
 interface UseCanvasContextMenuOptions {
   activeTool: string
   canEdit: boolean
-  campaignId: Id<'campaigns'>
+  campaignId?: Id<'campaigns'>
   canvasParentId: Id<'sidebarItems'> | null
   canvasEngine: CanvasEngine
   createNode: (node: CanvasDocumentNode) => void
@@ -35,14 +35,16 @@ export function useCanvasContextMenu({
 }: UseCanvasContextMenuOptions) {
   const adapters = useCanvasContextMenuAdapters()
   const createItems =
-    adapters?.createItems?.({
-      campaignId,
-      canEdit,
-      canvasParentId,
-      createNode,
-      screenToCanvasPosition,
-      setSelection: selection.setSelection,
-    }) ?? []
+    adapters?.createItems && campaignId
+      ? adapters.createItems({
+          campaignId,
+          canEdit,
+          canvasParentId,
+          createNode,
+          screenToCanvasPosition,
+          setSelection: selection.setSelection,
+        })
+      : []
 
   return useCanvasContextMenuCore({
     activeTool,

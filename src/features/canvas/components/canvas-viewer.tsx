@@ -1,28 +1,18 @@
 import { ClientOnly } from '@tanstack/react-router'
-import { Profiler } from 'react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
-import {
-  isCanvasPerformanceEnabled,
-  recordCanvasPerformanceMetric,
-} from '../runtime/performance/canvas-performance-metrics'
 import { CanvasContextMenuAdaptersContext } from '../runtime/context-menu/canvas-context-menu-adapters-context'
-import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime'
-import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
-import { useCanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
+import { useLiveCanvasDocumentSource } from '../runtime/session/use-live-canvas-document-source'
 import { useCanvasEditorRuntime } from '../runtime/use-canvas-editor-runtime'
-import { CanvasEditorSurface } from './canvas-editor-surface'
+import { CanvasEditorRuntimeHost } from './canvas-editor-runtime-host'
 import { CanvasNodeContent } from './canvas-node-content'
 import { useCanvasContextMenuAppAdapters } from './use-canvas-context-menu-app-adapters'
-import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
+import type { CanvasDocumentSource } from '../runtime/session/use-live-canvas-document-source'
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 import type { CanvasWithContent } from 'shared/canvases/types'
-
-// React Profiler durations are milliseconds; this ignores trivial sampling noise.
-const MIN_TRIVIAL_COMMIT_DURATION_MS = 1
 
 export function CanvasViewer({ item: canvas }: ViewerProps<CanvasWithContent>) {
   return (
@@ -33,7 +23,7 @@ export function CanvasViewer({ item: canvas }: ViewerProps<CanvasWithContent>) {
 }
 
 function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
-  const session = useCanvasViewerSession(canvas)
+  const session = useLiveCanvasDocumentSource(canvas)
 
   if (session.status === 'error') {
     return (
@@ -58,7 +48,7 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
   return <CanvasEditor {...session} />
 }
 
-type ReadyCanvasSession = Extract<CanvasViewerSession, { status: 'ready' }>
+type ReadyCanvasSession = Extract<CanvasDocumentSource, { status: 'ready' }>
 
 function CanvasEditor(session: ReadyCanvasSession) {
   const contextMenuAdapters = useCanvasContextMenuAppAdapters()
@@ -93,15 +83,14 @@ function CanvasEditorRuntime({
     initialViewport,
   })
   const canvasCursor = runtime.toolCursor ?? 'pointer'
-  const canvasEditorContent = (
-    <CanvasEditorSurface
+  return (
+    <CanvasEditorRuntimeHost
+      canvasId={canvasId}
       canEdit={canEdit}
       canvasCursor={canvasCursor}
-      canvasSurfaceRef={runtime.canvasSurfaceRef}
-      contextMenu={runtime.contextMenu}
       NodeContentComponent={CanvasNodeContent}
-      remoteUsers={runtime.remoteUsers}
-      sceneHandlers={runtime.sceneHandlers}
+      provider={provider}
+      runtime={runtime}
       dropOverlay={
         <CanvasDropOverlay
           ref={runtime.dropTarget.dropOverlayRef}
@@ -110,45 +99,6 @@ function CanvasEditorRuntime({
         />
       }
     />
-  )
-
-  return (
-    <CanvasEngineProvider engine={runtime.canvasEngine}>
-      <CanvasRuntimeProvider
-        canvasId={canvasId}
-        canEdit={canEdit}
-        commands={runtime.commands}
-        documentWriter={runtime.documentWriter}
-        domRuntime={runtime.domRuntime}
-        editSession={runtime.editSession}
-        history={runtime.history}
-        nodeActions={runtime.nodeActions}
-        provider={provider}
-        remoteHighlights={runtime.remoteHighlights}
-        selection={runtime.selection}
-        viewportController={runtime.viewportController}
-      >
-        {isCanvasPerformanceEnabled() ? (
-          <Profiler
-            id="CanvasEditor"
-            onRender={(_id, phase, actualDuration, baseDuration) => {
-              if (actualDuration < MIN_TRIVIAL_COMMIT_DURATION_MS) {
-                return
-              }
-
-              recordCanvasPerformanceMetric('canvas.react.commit', actualDuration, {
-                phase,
-                baseDuration,
-              })
-            }}
-          >
-            {canvasEditorContent}
-          </Profiler>
-        ) : (
-          canvasEditorContent
-        )}
-      </CanvasRuntimeProvider>
-    </CanvasEngineProvider>
   )
 }
 

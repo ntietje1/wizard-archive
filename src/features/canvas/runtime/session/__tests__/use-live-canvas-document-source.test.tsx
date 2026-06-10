@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { useCanvasViewerSession } from '../use-canvas-viewer-session'
+import { useLiveCanvasDocumentSource } from '../use-live-canvas-document-source'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 import type { CanvasWithContent } from 'shared/canvases/types'
@@ -66,7 +66,7 @@ vi.mock('~/features/filesystem/useFileSystemReadModel', () => ({
   useFileSystemReadModel: () => filesystemState,
 }))
 
-describe('useCanvasViewerSession', () => {
+describe('useLiveCanvasDocumentSource', () => {
   beforeEach(() => {
     collaborationMock.mockClear()
     doc.getMap.mockClear()
@@ -97,7 +97,7 @@ describe('useCanvasViewerSession', () => {
     }
     filesystemState.allItemsById = new Map([[canvas._id, canvas]])
 
-    const { result } = renderHook(() => useCanvasViewerSession(canvas))
+    const { result } = renderHook(() => useLiveCanvasDocumentSource(canvas))
 
     expect(result.current).toMatchObject({ status: 'ready', canEdit: false })
     expect(collaborationMock).toHaveBeenCalledWith(
@@ -117,7 +117,7 @@ describe('useCanvasViewerSession', () => {
     }
     filesystemState.allItemsById = new Map([[canvas._id, canvas]])
 
-    const { result } = renderHook(() => useCanvasViewerSession(canvas))
+    const { result } = renderHook(() => useLiveCanvasDocumentSource(canvas))
 
     expect(result.current).toMatchObject({ status: 'ready', canEdit: true })
     expect(collaborationMock).toHaveBeenCalledWith(

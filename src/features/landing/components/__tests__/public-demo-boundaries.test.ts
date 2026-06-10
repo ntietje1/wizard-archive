@@ -17,7 +17,7 @@ const AUTHENTICATED_APP_SERVICE_PATHS = [
   'src/features/canvas/components/canvas-viewer',
   'src/features/canvas/runtime/interaction/use-canvas-drop-integration',
   'src/features/canvas/runtime/interaction/use-canvas-drop-target',
-  'src/features/canvas/runtime/session/use-canvas-viewer-session',
+  'src/features/canvas/runtime/session/use-live-canvas-document-source',
   'src/features/canvas/runtime/use-canvas-editor-runtime',
   'src/features/filesystem',
   'src/features/file-upload',
