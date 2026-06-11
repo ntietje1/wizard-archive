@@ -1,16 +1,13 @@
 import { Bookmark, BookmarkCheck } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import {
-  useCampaignSidebarActions,
-  useCampaignSidebarState,
-} from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 export function BookmarksFilterButton() {
-  const { campaignId } = useCampaign()
-  const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
-  const { toggleBookmarksOnlyMode } = useCampaignSidebarActions(campaignId)
+  const {
+    ui: { bookmarksOnlyMode },
+    uiCommands: { toggleBookmarksOnlyMode },
+  } = useSidebarWorkspaceSource()
 
   return (
     <TooltipButton tooltip={bookmarksOnlyMode ? 'Exit bookmarks' : 'Show bookmarks'} side="bottom">

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { handleError } from '~/shared/utils/logger'
 import {
+  ITEM_SURFACE_FLOATING_COMMAND_SELECTOR,
   isEditableHotkeyTarget,
   isItemSurfaceHotkeyTarget,
 } from '~/features/sidebar/utils/item-surface-hotkeys'
@@ -30,6 +31,46 @@ function isFileSystemRedoShortcut(event: KeyboardEvent) {
   )
 }
 
+function getHotkeyTargetCandidates(target: EventTarget | null): Array<Element> {
+  const candidates: Array<Element> = []
+  if (typeof Element !== 'undefined' && target instanceof Element) candidates.push(target)
+  if (globalThis.document?.activeElement instanceof Element) {
+    candidates.push(globalThis.document.activeElement)
+  }
+  return candidates
+}
+
+function isConcreteHotkeyElement(element: Element | null): boolean {
+  return element !== null && element !== document.body && element !== document.documentElement
+}
+
+function hasConcreteHotkeyTarget(target: EventTarget | null): boolean {
+  const targetElement = typeof Element !== 'undefined' && target instanceof Element ? target : null
+  const activeElement =
+    globalThis.document?.activeElement instanceof Element ? globalThis.document.activeElement : null
+  return isConcreteHotkeyElement(targetElement) || isConcreteHotkeyElement(activeElement)
+}
+
+function hasOpenFileSystemCommandOverlay(): boolean {
+  return globalThis.document?.querySelector(ITEM_SURFACE_FLOATING_COMMAND_SELECTOR) !== null
+}
+
+function isFileSystemCommandOverlayFallbackTarget(target: EventTarget | null): boolean {
+  return !hasConcreteHotkeyTarget(target) && hasOpenFileSystemCommandOverlay()
+}
+
+function isFileSystemCommandOverlayTarget(target: EventTarget | null): boolean {
+  return (
+    getHotkeyTargetCandidates(target).some(
+      (candidate) => candidate.closest(ITEM_SURFACE_FLOATING_COMMAND_SELECTOR) !== null,
+    ) || isFileSystemCommandOverlayFallbackTarget(target)
+  )
+}
+
+function isFileSystemUndoRedoTarget(target: EventTarget | null): boolean {
+  return isItemSurfaceHotkeyTarget(target) || isFileSystemCommandOverlayTarget(target)
+}
+
 export function useFileSystemUndoHotkeys({ canUndo, canRedo, undo, redo }: UndoRedoHandlers) {
   const isOperationInFlightRef = useRef(false)
   const handlersRef = useRef({ canUndo, canRedo, undo, redo })
@@ -37,8 +78,14 @@ export function useFileSystemUndoHotkeys({ canUndo, canRedo, undo, redo }: UndoR
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isOperationInFlightRef.current || isEditableHotkeyTarget(event.target)) return
-      if (!isItemSurfaceHotkeyTarget(event.target)) return
+      const isOverlayFallbackTarget = isFileSystemCommandOverlayFallbackTarget(event.target)
+      if (
+        isOperationInFlightRef.current ||
+        (!isOverlayFallbackTarget && isEditableHotkeyTarget(event.target))
+      ) {
+        return
+      }
+      if (!isFileSystemUndoRedoTarget(event.target)) return
 
       if (isFileSystemRedoShortcut(event)) {
         if (!handlersRef.current.canRedo) return
@@ -66,7 +113,8 @@ export function useFileSystemUndoHotkeys({ canUndo, canRedo, undo, redo }: UndoR
       }
     }
 
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    // Capture keeps filesystem undo/redo available while floating menus or overlays have focus.
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])
 }

@@ -22,6 +22,11 @@ export function getCommandProgressToastText(command: FileSystemCommand): string 
       return `Deleting ${itemCountText(command.itemIds.length)} forever...`
     case 'emptyTrash':
       return 'Emptying trash...'
+    case 'setAllPlayersPermission':
+    case 'setSidebarItemsMemberPermission':
+    case 'clearSidebarItemsMemberPermission':
+    case 'setFolderInheritShares':
+      return 'Updating sharing...'
   }
 }
 

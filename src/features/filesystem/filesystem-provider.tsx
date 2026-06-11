@@ -4,12 +4,14 @@ import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import { deduplicateName, findUniqueDefaultName } from 'shared/sidebar-items/default-name'
 import type { FileSystemCommand } from 'shared/sidebar-items/filesystem/commands'
 import type { FileSystemTransactionReceipt } from 'shared/sidebar-items/filesystem/receipts'
 import type {
   ConflictDecision,
   ItemOperationConflict,
 } from 'shared/sidebar-items/filesystem/conflicts'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import { FileSystemEmptyTrashDialog, FileSystemPermanentDeleteDialog } from './filesystem-dialogs'
 import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
@@ -34,7 +36,14 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { useItemSurfaceHotkeys } from '~/features/sidebar/hooks/useItemSurfaceHotkeys'
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import {
+  SidebarWorkspaceSourceProvider,
+  useSidebarWorkspaceSource,
+} from '~/features/sidebar/workspace/sidebar-workspace-source'
+import type {
+  SidebarWorkspaceCreateItem,
+  SidebarWorkspaceSource,
+} from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { handleError, logger } from '~/shared/utils/logger'
 import { createFileSystemCacheAdapter } from './filesystem-cache-adapter'
 import { executeFileSystemCommandLifecycle } from './filesystem-command-lifecycle'
@@ -92,6 +101,7 @@ function reportFileSystemError(error: unknown, message: string) {
 type FileSystemProviderState = {
   value: FileSystemValue
   dialog: ReactNode
+  sidebarWorkspaceSource: SidebarWorkspaceSource
 }
 
 function useFileSystemValue(): FileSystemProviderState {
@@ -109,10 +119,18 @@ function useFileSystemValue(): FileSystemProviderState {
   const redoMutation = useCampaignMutation(
     api.sidebarItems.filesystem.mutations.redoFileSystemTransaction,
   )
-  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
-  const setFolderState = useSidebarUIStore((s) => s.setFolderState)
+  const sidebarWorkspaceSource = useSidebarWorkspaceSource()
+  const {
+    selection: { activeItemSurface },
+    selectionCommands: {
+      clearItemSelection,
+      getSelectionSnapshot,
+      setSelected,
+      setSelectedItemIds,
+    },
+    uiCommands,
+  } = sidebarWorkspaceSource
   const clipboard = useFileSystemClipboard()
-  const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
   const undoStack = useFileSystemUndoStore((s) => s.undoStack)
   const redoStack = useFileSystemUndoStore((s) => s.redoStack)
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null)
@@ -145,7 +163,7 @@ function useFileSystemValue(): FileSystemProviderState {
       receipt,
       readModel: cacheAdapter.getReadModel(),
       currentSlug: getSelectedSlug(),
-      getSelectedItemIds: () => useSidebarUIStore.getState().selectedItemIds,
+      getSelectedItemIds: () => getSelectionSnapshot().selectedItemIds,
       setSelectedItemIds,
       clearEditorContent,
       navigateToItem,
@@ -160,9 +178,14 @@ function useFileSystemValue(): FileSystemProviderState {
       intents,
       previousSlug,
       adapters: {
-        setFolderState,
+        setFolderState: (_campaignId, folderId, isOpen) =>
+          uiCommands.setFolderState(folderId, isOpen),
         setSelectedItemIds,
-        getSelectionState: () => useSidebarUIStore.getState(),
+        getSelectionState: () => ({
+          ...getSelectionSnapshot(),
+          clearItemSelection,
+          setSelected,
+        }),
         navigateToItem,
         clearEditorContent,
       },
@@ -264,10 +287,55 @@ function useFileSystemValue(): FileSystemProviderState {
     return { id: created.id, slug: created.slug }
   }
 
+  const createSidebarItem: SidebarWorkspaceCreateItem = async (input) => {
+    if (!campaignId) return null
+    const currentReadModel = cacheAdapter.getReadModel()
+    const siblings = currentReadModel.getActiveChildren(input.parentId)
+    const fallbackName = findUniqueDefaultName(input.type, siblings)
+    const requestedName = input.name?.trim() || fallbackName
+    const name = assertSidebarItemName(
+      deduplicateName(
+        requestedName,
+        siblings.map((item) => item.name),
+      ),
+    )
+
+    try {
+      const result = await createItem({
+        itemType: input.type,
+        parentTarget: { kind: 'direct', parentId: input.parentId },
+        name,
+      })
+      if (result) {
+        sidebarWorkspaceSource.commands.openParentFolders(result.id)
+      }
+      return result
+    } catch (error) {
+      handleError(error, 'Failed to create item')
+      return null
+    }
+  }
+
   const renameItem: FileSystemValue['renameItem'] = async (input) => {
     const receipt = await executeCommand({ type: 'rename', ...input })
     if (!receipt) return null
     return { slug: getReceiptRenamedSlug(receipt) }
+  }
+
+  const setAllPlayersPermission: FileSystemValue['setAllPlayersPermission'] = async (input) => {
+    await executeCommand({ type: 'setAllPlayersPermission', ...input })
+  }
+
+  const setMemberPermission: FileSystemValue['setMemberPermission'] = async (input) => {
+    await executeCommand({ type: 'setSidebarItemsMemberPermission', ...input })
+  }
+
+  const clearMemberPermission: FileSystemValue['clearMemberPermission'] = async (input) => {
+    await executeCommand({ type: 'clearSidebarItemsMemberPermission', ...input })
+  }
+
+  const setFolderInheritShares: FileSystemValue['setFolderInheritShares'] = async (input) => {
+    await executeCommand({ type: 'setFolderInheritShares', ...input })
   }
 
   const duplicateItems: FileSystemValue['duplicateItems'] = async (itemIds) => {
@@ -424,7 +492,7 @@ function useFileSystemValue(): FileSystemProviderState {
       command.command.type === 'trash' ? null : command.command.targetParentId
     const openDropTargetOnSuccess =
       dropTargetParentId && campaignId
-        ? () => setFolderState(campaignId, dropTargetParentId, true)
+        ? () => uiCommands.setFolderState(dropTargetParentId, true)
         : undefined
     try {
       switch (command.action) {
@@ -513,6 +581,10 @@ function useFileSystemValue(): FileSystemProviderState {
     value: {
       createItem,
       renameItem,
+      setAllPlayersPermission,
+      setMemberPermission,
+      clearMemberPermission,
+      setFolderInheritShares,
       duplicateItems,
       requestTrashItems,
       restoreItems,
@@ -530,6 +602,13 @@ function useFileSystemValue(): FileSystemProviderState {
       executeDrop,
       canUndo: pendingOperationCount === 0 && undoStack.length > 0,
       canRedo: pendingOperationCount === 0 && redoStack.length > 0,
+    },
+    sidebarWorkspaceSource: {
+      ...sidebarWorkspaceSource,
+      commands: {
+        ...sidebarWorkspaceSource.commands,
+        createSidebarItem,
+      },
     },
     dialog: (
       <>
@@ -552,14 +631,16 @@ function useFileSystemValue(): FileSystemProviderState {
 }
 
 export function FileSystemProvider({ children }: { children: ReactNode }) {
-  const { value, dialog } = useFileSystemValue()
+  const { value, dialog, sidebarWorkspaceSource } = useFileSystemValue()
   useFileSystemUndoHotkeys(value)
 
   useItemSurfaceHotkeys(value)
 
   return (
     <FileSystemContext.Provider value={value}>
-      {children}
+      <SidebarWorkspaceSourceProvider value={sidebarWorkspaceSource}>
+        {children}
+      </SidebarWorkspaceSourceProvider>
       {dialog}
     </FileSystemContext.Provider>
   )

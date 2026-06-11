@@ -15,15 +15,15 @@ import {
 } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
-const embeddedNoteSpy = vi.hoisted(() => vi.fn())
+const rawNoteSpy = vi.hoisted(() => vi.fn())
 const folderPreviewSpy = vi.hoisted(() => vi.fn())
 const mapPreviewSpy = vi.hoisted(() => vi.fn())
 const filePreviewSpy = vi.hoisted(() => vi.fn())
 const canvasPreviewSpy = vi.hoisted(() => vi.fn())
 
-vi.mock('~/features/previews/components/embedded-note-content', () => ({
-  EmbeddedNoteContent: (props: unknown) => {
-    embeddedNoteSpy(props)
+vi.mock('~/features/editor/components/raw-note-content', () => ({
+  RawNoteContent: (props: unknown) => {
+    rawNoteSpy(props)
     return <div>note-preview</div>
   },
 }))
@@ -67,26 +67,27 @@ describe('SidebarItemPreviewContent', () => {
     render(<SidebarItemPreviewContent item={note} />)
 
     expect(screen.getByText('note-preview')).toBeInTheDocument()
-    expect(embeddedNoteSpy).toHaveBeenCalledWith({
-      note,
+    expect(rawNoteSpy).toHaveBeenCalledWith({
+      content: [],
       editable: false,
-      allowInnerScroll: true,
-      constrained: false,
+      fillHeight: false,
+      noteId: 'note-1',
     })
   })
 
-  it('passes note previews whole to NoteContent so it owns visibility filtering', () => {
+  it('passes raw note content to the static preview renderer', () => {
+    const content = [{ id: 'block-1', type: 'paragraph' }] as NoteWithContent['content']
     const note = createNoteItem({
-      content: [{ id: 'block-1', type: 'paragraph' }] as NoteWithContent['content'],
+      content,
     })
 
     render(<SidebarItemPreviewContent item={note} />)
 
-    expect(embeddedNoteSpy).toHaveBeenCalledWith({
-      note,
+    expect(rawNoteSpy).toHaveBeenCalledWith({
+      content,
       editable: false,
-      allowInnerScroll: true,
-      constrained: false,
+      fillHeight: false,
+      noteId: 'note-1',
     })
   })
 
@@ -95,11 +96,11 @@ describe('SidebarItemPreviewContent', () => {
 
     render(<SidebarItemPreviewContent item={note} allowInnerScroll={false} constrainNotePreview />)
 
-    expect(embeddedNoteSpy).toHaveBeenCalledWith({
-      note,
+    expect(rawNoteSpy).toHaveBeenCalledWith({
+      content: [],
       editable: false,
-      allowInnerScroll: false,
-      constrained: true,
+      fillHeight: false,
+      noteId: 'note-1',
     })
   })
 
@@ -115,11 +116,11 @@ describe('SidebarItemPreviewContent', () => {
       />,
     )
 
-    expect(embeddedNoteSpy).toHaveBeenCalledWith({
-      note,
+    expect(rawNoteSpy).toHaveBeenCalledWith({
+      content: [],
       editable: false,
-      allowInnerScroll: false,
-      constrained: false,
+      fillHeight: true,
+      noteId: 'note-1',
     })
   })
 

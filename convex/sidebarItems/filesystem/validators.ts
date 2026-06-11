@@ -4,6 +4,7 @@ import {
   sidebarItemColorValidator,
   sidebarItemIconNameValidator,
   sidebarItemNameValidator,
+  permissionLevelValidator,
   sidebarItemSlugValidator,
   sidebarItemStatusValidator,
   sidebarItemTypeValidator,
@@ -61,6 +62,31 @@ const emptyTrashCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.emptyTrash),
 })
 
+const setAllPlayersPermissionCommandValidator = v.object({
+  type: v.literal(FILE_SYSTEM_COMMAND_TYPE.setAllPlayersPermission),
+  itemIds: v.array(v.id('sidebarItems')),
+  permissionLevel: v.nullable(permissionLevelValidator),
+})
+
+const setSidebarItemsMemberPermissionCommandValidator = v.object({
+  type: v.literal(FILE_SYSTEM_COMMAND_TYPE.setSidebarItemsMemberPermission),
+  itemIds: v.array(v.id('sidebarItems')),
+  campaignMemberId: v.id('campaignMembers'),
+  permissionLevel: permissionLevelValidator,
+})
+
+const clearSidebarItemsMemberPermissionCommandValidator = v.object({
+  type: v.literal(FILE_SYSTEM_COMMAND_TYPE.clearSidebarItemsMemberPermission),
+  itemIds: v.array(v.id('sidebarItems')),
+  campaignMemberId: v.id('campaignMembers'),
+})
+
+const setFolderInheritSharesCommandValidator = v.object({
+  type: v.literal(FILE_SYSTEM_COMMAND_TYPE.setFolderInheritShares),
+  folderId: v.id('sidebarItems'),
+  inheritShares: v.boolean(),
+})
+
 export const fileSystemCommandValidator = v.union(
   createCommandValidator,
   renameCommandValidator,
@@ -70,6 +96,10 @@ export const fileSystemCommandValidator = v.union(
   restoreCommandValidator,
   deleteForeverCommandValidator,
   emptyTrashCommandValidator,
+  setAllPlayersPermissionCommandValidator,
+  setSidebarItemsMemberPermissionCommandValidator,
+  clearSidebarItemsMemberPermissionCommandValidator,
+  setFolderInheritSharesCommandValidator,
 )
 
 export const fileSystemOperationDecisionValidator = v.object({
@@ -144,6 +174,7 @@ const fileSystemSummaryValidator = v.object({
     v.literal('restored'),
     v.literal('trashed'),
     v.literal('deletedForever'),
+    v.literal('shared'),
     v.literal('noop'),
   ),
   affectedCount: v.number(),
@@ -165,6 +196,7 @@ const sidebarItemPatchCommonFields = {
   color: v.optional(v.nullable(sidebarItemColorValidator)),
   parentId: v.optional(v.nullable(v.id('sidebarItems'))),
   status: v.optional(sidebarItemStatusValidator),
+  allPermissionLevel: v.optional(v.nullable(permissionLevelValidator)),
   previewStorageId: v.optional(v.nullable(v.id('_storage'))),
   previewLockedUntil: v.optional(v.nullable(v.number())),
   previewClaimToken: v.optional(v.nullable(v.string())),
@@ -183,6 +215,30 @@ const sidebarItemPatchPreconditionValidator = v.object({
   createdBy: v.optional(v.id('userProfiles')),
 })
 
+const sidebarItemShareSnapshotValidator = v.object({
+  _id: v.id('sidebarItemShares'),
+  _creationTime: v.number(),
+  campaignId: v.id('campaigns'),
+  sidebarItemId: v.id('sidebarItems'),
+  sidebarItemType: sidebarItemTypeValidator,
+  campaignMemberId: v.id('campaignMembers'),
+  sessionId: v.nullable(v.id('sessions')),
+  permissionLevel: v.nullable(permissionLevelValidator),
+})
+
+const sidebarItemSharePatchFieldsValidator = v.object({
+  permissionLevel: v.optional(v.nullable(permissionLevelValidator)),
+})
+
+const folderShareSnapshotValidator = v.object({
+  folderId: v.id('sidebarItems'),
+  inheritShares: v.boolean(),
+})
+
+const folderSharePatchFieldsValidator = v.object({
+  inheritShares: v.optional(v.boolean()),
+})
+
 export const fileSystemPatchValidator = v.union(
   v.object({
     type: v.literal('upsertSidebarItem'),
@@ -198,6 +254,27 @@ export const fileSystemPatchValidator = v.union(
     type: v.literal('removeSidebarItem'),
     itemId: v.id('sidebarItems'),
     snapshot: sidebarItemSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('upsertSidebarItemShare'),
+    share: sidebarItemShareSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('updateSidebarItemShare'),
+    sidebarItemId: v.id('sidebarItems'),
+    campaignMemberId: v.id('campaignMembers'),
+    before: sidebarItemSharePatchFieldsValidator,
+    fields: sidebarItemSharePatchFieldsValidator,
+  }),
+  v.object({
+    type: v.literal('removeSidebarItemShare'),
+    share: sidebarItemShareSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('updateFolderShare'),
+    folderId: v.id('sidebarItems'),
+    before: folderSharePatchFieldsValidator,
+    fields: folderSharePatchFieldsValidator,
   }),
 )
 
@@ -217,6 +294,24 @@ export const fileSystemChangeValidator = v.union(
     type: v.literal('removeSidebarItem'),
     itemId: v.id('sidebarItems'),
     before: sidebarItemSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('insertSidebarItemShare'),
+    after: sidebarItemShareSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('updateSidebarItemShare'),
+    before: sidebarItemShareSnapshotValidator,
+    after: sidebarItemShareSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('removeSidebarItemShare'),
+    before: sidebarItemShareSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('updateFolderShare'),
+    before: folderShareSnapshotValidator,
+    after: folderShareSnapshotValidator,
   }),
 )
 

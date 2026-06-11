@@ -17,7 +17,7 @@ export function AssetPlaceholder({
   return (
     <div
       className={cn(
-        'relative flex w-full items-center justify-center overflow-hidden rounded-lg border border-border/50 bg-secondary/35',
+        'demo-elevated-frame relative flex w-full items-center justify-center overflow-hidden rounded-lg border border-border/50 bg-secondary/35',
         className,
       )}
       style={{ aspectRatio }}

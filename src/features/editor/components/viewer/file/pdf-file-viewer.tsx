@@ -1,3 +1,4 @@
+import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -5,7 +6,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 // eslint-disable-next-line import/default
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PdfToolbar } from './pdf-toolbar'
-import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
+import { isValidFileUrl } from './file-url-validation'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { getIntrinsicAspectRatio } from '~/features/embeds/utils/embed-media'
@@ -27,6 +28,7 @@ type PdfDocumentState =
   | { status: 'failed' }
 
 interface PdfFileViewerProps {
+  allowObjectUrl?: boolean
   pdfUrl: string
   onFirstPageAspectRatio?: (aspectRatio: number | null) => void
   presentation?: 'full' | 'embed'
@@ -80,6 +82,7 @@ function PdfPage({
 }
 
 export function PdfFileViewer({
+  allowObjectUrl = false,
   pdfUrl,
   onFirstPageAspectRatio,
   presentation = 'full',
@@ -87,26 +90,14 @@ export function PdfFileViewer({
 }: PdfFileViewerProps) {
   const [documentState, setDocumentState] = useState<PdfDocumentState>({ status: 'loading' })
   const [currentPage, setCurrentPage] = useState(1)
-  const [scale, setScale] = useState(1)
-  const pageRefs = useRef<Map<number, HTMLDivElement> | null>(null)
-  if (pageRefs.current === null) {
-    pageRefs.current = new Map()
-  }
-  const pageRefsMap = pageRefs.current
-  const scrollViewportRef = useRef<HTMLDivElement | null>(null)
-  const [scrollViewportElement, setScrollViewportElement] = useState<HTMLDivElement | null>(null)
+  const pageRefsMap = useStablePageRefs()
+  const { scrollViewportRef, scrollViewportElement, setScrollViewport } = usePdfScrollViewport()
   const scrollViewportSize = useElementSize(scrollViewportElement)
-  const setScrollViewport = (element: HTMLDivElement | null) => {
-    scrollViewportRef.current = element
-    setScrollViewportElement(element)
-  }
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const { scale, handleZoomIn, handleZoomOut, handleZoomReset } = usePdfZoom(containerRef)
 
-  const isValid = isValidFileUrl(pdfUrl)
+  const isValid = isValidFileUrl(pdfUrl, { allowObjectUrl })
   const numPages = documentState.status === 'ready' ? documentState.numPages : 0
-  const pageWidth =
-    presentation === 'embed' && scrollViewportSize.width > 0
-      ? Math.floor(scrollViewportSize.width)
-      : undefined
   const hasMultiplePages = numPages > 1
   const innerScrollEnabled = presentation !== 'embed' || allowInnerScroll || !hasMultiplePages
 
@@ -119,10 +110,201 @@ export function PdfFileViewer({
     onFirstPageAspectRatio?.(null)
   }
 
-  // Track the current visible page via IntersectionObserver.
-  // Uses a persistent visibility map so every callback considers ALL pages,
-  // not just the entries in the current batch. Updates are debounced with rAF
-  // to coalesce rapid intersection events into a single state update.
+  usePdfCurrentPageTracking({
+    numPages,
+    pageRefsMap,
+    scrollViewportRef,
+    setCurrentPage,
+  })
+
+  const scrollToPage = (pageNumber: number) => {
+    const el = pageRefsMap.get(pageNumber)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      scrollToPage(currentPage - 1)
+    }
+  }
+
+  const handleNextPage = () => {
+    if (currentPage < numPages) {
+      scrollToPage(currentPage + 1)
+    }
+  }
+
+  if (!isValid) {
+    return <InvalidPdfUrlMessage />
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      data-testid="pdf-file-viewer"
+      data-presentation={presentation}
+      data-inner-scroll-enabled={innerScrollEnabled ? 'true' : 'false'}
+      className={cn(
+        'relative flex h-full min-h-0 w-full min-w-full flex-col bg-background',
+        presentation === 'embed' && allowInnerScroll && hasMultiplePages && 'nowheel',
+      )}
+    >
+      {documentState.status === 'loading' && <PdfLoadingOverlay />}
+      {presentation === 'full' && numPages > 0 && (
+        <PdfToolbar
+          currentPage={currentPage}
+          numPages={numPages}
+          onPrevPage={handlePrevPage}
+          onNextPage={handleNextPage}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+        />
+      )}
+      <ScrollArea
+        className="flex-1 min-h-0"
+        contentClassName={presentation === 'embed' ? 'w-full max-w-full' : 'min-w-full'}
+        scrollOrientation={
+          presentation === 'embed' ? (innerScrollEnabled ? 'vertical' : 'none') : 'both'
+        }
+        viewportStyle={!innerScrollEnabled ? { overflowY: 'hidden' } : undefined}
+        viewportRef={setScrollViewport}
+      >
+        {documentState.status === 'failed' ? (
+          <PdfLoadFailure />
+        ) : (
+          <PdfDocumentPages
+            numPages={numPages}
+            onDocumentLoadSuccess={handleDocumentLoadSuccess}
+            onDocumentLoadError={handleDocumentLoadError}
+            onFirstPageAspectRatio={onFirstPageAspectRatio}
+            pageRefs={pageRefsMap}
+            pdfUrl={pdfUrl}
+            presentation={presentation}
+            scale={scale}
+            scrollViewportWidth={scrollViewportSize.width}
+          />
+        )}
+      </ScrollArea>
+    </div>
+  )
+}
+
+function InvalidPdfUrlMessage() {
+  return (
+    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+      <div className="text-center p-4">
+        <p className="text-lg font-medium text-destructive">Invalid PDF URL</p>
+        <p className="text-sm mt-2">The PDF URL does not meet security requirements.</p>
+      </div>
+    </div>
+  )
+}
+
+function PdfLoadingOverlay() {
+  return (
+    <output
+      aria-label="Loading PDF"
+      className="absolute inset-0 z-10 flex h-full w-full min-w-full items-center justify-center"
+    >
+      <LoadingSpinner size="lg" aria-label="Loading PDF indicator" />
+    </output>
+  )
+}
+
+function PdfLoadFailure() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <p className="text-muted-foreground">Failed to load PDF</p>
+    </div>
+  )
+}
+
+function PdfDocumentPages({
+  numPages,
+  onDocumentLoadError,
+  onDocumentLoadSuccess,
+  onFirstPageAspectRatio,
+  pageRefs,
+  pdfUrl,
+  presentation,
+  scale,
+  scrollViewportWidth,
+}: {
+  numPages: number
+  onDocumentLoadError: () => void
+  onDocumentLoadSuccess: ({ numPages }: { numPages: number }) => void
+  onFirstPageAspectRatio?: (aspectRatio: number | null) => void
+  pageRefs: Map<number, HTMLDivElement>
+  pdfUrl: string
+  presentation: 'full' | 'embed'
+  scale: number
+  scrollViewportWidth: number
+}) {
+  const pageWidth =
+    presentation === 'embed' && scrollViewportWidth > 0
+      ? Math.floor(scrollViewportWidth)
+      : undefined
+
+  return (
+    <Document
+      file={pdfUrl}
+      onLoadSuccess={onDocumentLoadSuccess}
+      onLoadError={onDocumentLoadError}
+      loading={null}
+      className={presentation === 'embed' ? 'w-full' : undefined}
+    >
+      {Array.from({ length: numPages }, (_, i) => {
+        const pageNumber = i + 1
+        return (
+          <PdfPage
+            key={pageNumber}
+            pageWidth={pageWidth}
+            pageNumber={pageNumber}
+            presentation={presentation}
+            scale={scale}
+            pageRefs={pageRefs}
+            onFirstPageAspectRatio={onFirstPageAspectRatio}
+          />
+        )
+      })}
+    </Document>
+  )
+}
+
+function useStablePageRefs() {
+  const pageRefs = useRef<Map<number, HTMLDivElement> | null>(null)
+  if (pageRefs.current === null) {
+    pageRefs.current = new Map()
+  }
+  return pageRefs.current
+}
+
+function usePdfScrollViewport() {
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null)
+  const [scrollViewportElement, setScrollViewportElement] = useState<HTMLDivElement | null>(null)
+
+  const setScrollViewport = (element: HTMLDivElement | null) => {
+    scrollViewportRef.current = element
+    setScrollViewportElement(element)
+  }
+
+  return { scrollViewportRef, scrollViewportElement, setScrollViewport }
+}
+
+function usePdfCurrentPageTracking({
+  numPages,
+  pageRefsMap,
+  scrollViewportRef,
+  setCurrentPage,
+}: {
+  numPages: number
+  pageRefsMap: Map<number, HTMLDivElement>
+  scrollViewportRef: RefObject<HTMLDivElement | null>
+  setCurrentPage: Dispatch<SetStateAction<number>>
+}) {
   useEffect(() => {
     if (numPages === 0) return
 
@@ -171,26 +353,11 @@ export function PdfFileViewer({
       observer.disconnect()
       if (rafId !== null) cancelAnimationFrame(rafId)
     }
-  }, [numPages, pageRefsMap])
+  }, [numPages, pageRefsMap, scrollViewportRef, setCurrentPage])
+}
 
-  const scrollToPage = (pageNumber: number) => {
-    const el = pageRefsMap.get(pageNumber)
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      scrollToPage(currentPage - 1)
-    }
-  }
-
-  const handleNextPage = () => {
-    if (currentPage < numPages) {
-      scrollToPage(currentPage + 1)
-    }
-  }
+function usePdfZoom(containerRef: RefObject<HTMLDivElement | null>) {
+  const [scale, setScale] = useState(1)
 
   const handleZoomIn = () => {
     setScale((s) => Math.min(MAX_SCALE, s + SCALE_STEP))
@@ -204,8 +371,6 @@ export function PdfFileViewer({
     setScale(1)
   }
 
-  // Ctrl+wheel / pinch-to-zoom on the PDF viewer
-  const containerRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -219,89 +384,9 @@ export function PdfFileViewer({
 
     el.addEventListener('wheel', handleWheel, { passive: true })
     return () => el.removeEventListener('wheel', handleWheel)
-  }, [])
+  }, [containerRef])
 
-  if (!isValid) {
-    return (
-      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-        <div className="text-center p-4">
-          <p className="text-lg font-medium text-destructive">Invalid PDF URL</p>
-          <p className="text-sm mt-2">The PDF URL does not meet security requirements.</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      data-testid="pdf-file-viewer"
-      data-presentation={presentation}
-      data-inner-scroll-enabled={innerScrollEnabled ? 'true' : 'false'}
-      className={cn(
-        'relative flex h-full min-h-0 w-full min-w-full flex-col bg-background',
-        presentation === 'embed' && allowInnerScroll && hasMultiplePages && 'nowheel',
-      )}
-    >
-      {documentState.status === 'loading' && (
-        <output
-          aria-label="Loading PDF"
-          className="absolute inset-0 z-10 flex h-full w-full min-w-full items-center justify-center"
-        >
-          <LoadingSpinner size="lg" aria-label="Loading PDF indicator" />
-        </output>
-      )}
-      {presentation === 'full' && numPages > 0 && (
-        <PdfToolbar
-          currentPage={currentPage}
-          numPages={numPages}
-          onPrevPage={handlePrevPage}
-          onNextPage={handleNextPage}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onZoomReset={handleZoomReset}
-        />
-      )}
-      <ScrollArea
-        className="flex-1 min-h-0"
-        contentClassName={presentation === 'embed' ? 'w-full max-w-full' : 'min-w-full'}
-        scrollOrientation={
-          presentation === 'embed' ? (innerScrollEnabled ? 'vertical' : 'none') : 'both'
-        }
-        viewportStyle={!innerScrollEnabled ? { overflowY: 'hidden' } : undefined}
-        viewportRef={setScrollViewport}
-      >
-        {documentState.status === 'failed' ? (
-          <div className="flex items-center justify-center py-20">
-            <p className="text-muted-foreground">Failed to load PDF</p>
-          </div>
-        ) : (
-          <Document
-            file={pdfUrl}
-            onLoadSuccess={handleDocumentLoadSuccess}
-            onLoadError={handleDocumentLoadError}
-            loading={null}
-            className={presentation === 'embed' ? 'w-full' : undefined}
-          >
-            {Array.from({ length: numPages }, (_, i) => {
-              const pageNumber = i + 1
-              return (
-                <PdfPage
-                  key={pageNumber}
-                  pageWidth={pageWidth}
-                  pageNumber={pageNumber}
-                  presentation={presentation}
-                  scale={scale}
-                  pageRefs={pageRefsMap}
-                  onFirstPageAspectRatio={onFirstPageAspectRatio}
-                />
-              )
-            })}
-          </Document>
-        )}
-      </ScrollArea>
-    </div>
-  )
+  return { scale, handleZoomIn, handleZoomOut, handleZoomReset }
 }
 
 function PdfPageLoadingPlaceholder({ width }: { width?: number }) {

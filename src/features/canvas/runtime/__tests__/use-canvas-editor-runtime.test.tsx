@@ -107,6 +107,10 @@ const contextMenuMock = vi.hoisted(
       openForPane: vi.fn(),
     }) as const,
 )
+const contextMenuSourceMock = vi.hoisted(() => ({
+  createItems: vi.fn(() => []),
+  getTargetContributors: vi.fn(() => []),
+}))
 const toolHandlersMock = vi.hoisted(
   () =>
     ({
@@ -316,6 +320,8 @@ describe('useCanvasEditorRuntime', () => {
     viewportInteractionsSpy.mockReset()
     dropIntegrationSpy.mockReset()
     contextMenuSpy.mockReset()
+    contextMenuSourceMock.createItems.mockClear()
+    contextMenuSourceMock.getTargetContributors.mockClear()
     toolHandlersSpy.mockReset()
     clearToolTransientStateSpy.mockReset()
     toolHandlersMock.onNodeClick.mockReset()
@@ -341,9 +347,8 @@ describe('useCanvasEditorRuntime', () => {
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),
-        campaignId: testId<'campaigns'>('campaign-id'),
-        canvasParentId: testId<'sidebarItems'>('parent-id'),
         canEdit: true,
+        contextMenuSource: contextMenuSourceMock,
         provider: null,
         doc,
         initialViewport: { x: 0, y: 0, zoom: 1 },
@@ -426,11 +431,10 @@ describe('useCanvasEditorRuntime', () => {
     expect(contextMenuSpy).toHaveBeenCalledWith({
       activeTool: 'select',
       canEdit: true,
-      campaignId: 'campaign-id',
-      canvasParentId: 'parent-id',
       canvasEngine: expect.objectContaining({
         getSnapshot: expect.any(Function),
       }),
+      source: contextMenuSourceMock,
       createNode: documentWriterMock.createNode,
       setPendingEditNodeId: session.editSession.setPendingEditNodeId,
       setPendingEditNodePoint: session.editSession.setPendingEditNodePoint,
@@ -485,9 +489,8 @@ describe('useCanvasEditorRuntime', () => {
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),
-        campaignId: testId<'campaigns'>('campaign-id'),
-        canvasParentId: null,
         canEdit: true,
+        contextMenuSource: contextMenuSourceMock,
         provider: null,
         doc,
         initialViewport: { x: 0, y: 0, zoom: 1 },
@@ -521,9 +524,8 @@ describe('useCanvasEditorRuntime', () => {
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),
-        campaignId: testId<'campaigns'>('campaign-id'),
-        canvasParentId: null,
         canEdit: true,
+        contextMenuSource: contextMenuSourceMock,
         provider: null,
         doc,
         initialViewport: { x: 0, y: 0, zoom: 1 },
@@ -552,9 +554,8 @@ describe('useCanvasEditorRuntime', () => {
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),
-        campaignId: testId<'campaigns'>('campaign-id'),
-        canvasParentId: null,
         canEdit: false,
+        contextMenuSource: contextMenuSourceMock,
         provider: null,
         doc,
         initialViewport: { x: 0, y: 0, zoom: 1 },
@@ -590,9 +591,8 @@ describe('useCanvasEditorRuntime', () => {
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),
-        campaignId: testId<'campaigns'>('campaign-id'),
-        canvasParentId: null,
         canEdit: false,
+        contextMenuSource: contextMenuSourceMock,
         provider: null,
         doc,
         initialViewport: { x: 0, y: 0, zoom: 1 },
@@ -623,9 +623,8 @@ describe('useCanvasEditorRuntime', () => {
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),
-        campaignId: testId<'campaigns'>('campaign-id'),
-        canvasParentId: null,
         canEdit: false,
+        contextMenuSource: contextMenuSourceMock,
         provider: null,
         doc,
         initialViewport: { x: 0, y: 0, zoom: 1 },

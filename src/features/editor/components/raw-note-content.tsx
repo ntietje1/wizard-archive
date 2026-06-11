@@ -6,13 +6,15 @@ import { NoteValueRuntimeContext } from '../value-block/value-block-runtime-cont
 import { NoteEmbedSurfaceProvider } from './extensions/embed-block/note-embed-surface-context'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
-import { useResolvedTheme } from '~/shared/theme/context'
 import { logger } from '~/shared/utils/logger'
+import { useResolvedTheme } from '~/shared/theme/context'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteValueRuntimeContextValue } from '../value-block/value-block-runtime-context'
 import type { PartialBlock } from '@blocknote/core'
 import type { CSSProperties, ReactNode } from 'react'
+import type { NoteValueAuthoringDefinition, NoteValueRuntimeState } from 'shared/note-values/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 
 type RawNoteContentProps = {
@@ -27,14 +29,17 @@ type RawNoteContentProps = {
   style?: CSSProperties
 }
 
-const EMPTY_ITEMS: [] = []
-const EMPTY_ITEM_MAP = new Map()
-type StaticEditorSchema = ReturnType<typeof createStaticEditorSchema>
+const EMPTY_ITEMS: Array<AnySidebarItem> = []
+const EMPTY_ITEM_MAP = new Map<Id<'sidebarItems'>, AnySidebarItem>()
+const EMPTY_VALUE_DEFINITIONS: Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>> = []
+const EMPTY_VALUE_STATES: Array<NoteValueRuntimeState<Id<'sidebarItems'>>> = []
+type RawEditorSchema = ReturnType<typeof createStaticEditorSchema>
+type StaticEditorSchema = RawEditorSchema
 type RawNoteInitialContent = Array<
   PartialBlock<
-    StaticEditorSchema['blockSchema'],
-    StaticEditorSchema['inlineContentSchema'],
-    StaticEditorSchema['styleSchema']
+    RawEditorSchema['blockSchema'],
+    RawEditorSchema['inlineContentSchema'],
+    RawEditorSchema['styleSchema']
   >
 >
 
@@ -44,16 +49,16 @@ function createRawValueRuntime({
 }: {
   editable: boolean
   noteId?: Id<'sidebarItems'>
-}) {
+}): NoteValueRuntimeContextValue {
   return {
     noteId,
     editable,
-    authoredDefinitions: EMPTY_ITEMS,
-    authoredValueStates: EMPTY_ITEMS,
+    authoredDefinitions: EMPTY_VALUE_DEFINITIONS,
+    authoredValueStates: EMPTY_VALUE_STATES,
     stateByValueId: new Map(),
     sidebarItems: EMPTY_ITEMS,
     itemsMap: EMPTY_ITEM_MAP,
-  } satisfies NoteValueRuntimeContextValue
+  }
 }
 
 function validateInitialContent({
@@ -102,7 +107,7 @@ export function RawNoteContent({
       BlockNoteEditor.create({
         schema: (schemaFactory ?? createStaticEditorSchema)(noteId ?? null),
         initialContent: validateInitialContent({ content, noteId }),
-      }) as CustomBlockNoteEditor,
+      }) as unknown as CustomBlockNoteEditor,
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange,
   })

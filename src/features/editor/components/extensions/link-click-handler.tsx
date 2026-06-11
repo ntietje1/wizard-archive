@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
@@ -15,6 +15,7 @@ import {
 } from 'shared/sidebar-items/parent-target'
 import type { CreateItemArgs } from '~/features/filesystem/useCreateFileSystemItem'
 import type { ValidationResult } from 'shared/sidebar-items/name'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { logger } from '~/shared/utils/logger'
 import { toast } from 'sonner'
 
@@ -207,17 +208,42 @@ export function LinkClickHandler({
   const { editorMode } = useEditorMode()
   const { createItem } = useCreateFileSystemItem()
   const { itemsMap, parentItemsMap } = useFilteredSidebarItems()
+
+  return (
+    <LinkClickHandlerSurface
+      campaignId={campaignData?._id}
+      createItem={createItem}
+      editor={editor}
+      editorMode={editorMode}
+      itemsMap={itemsMap}
+      navigate={navigate}
+      parentItemsMap={parentItemsMap}
+      sourceNoteId={sourceNoteId}
+    />
+  )
+}
+
+export function LinkClickHandlerSurface({
+  campaignId,
+  createItem,
+  editor,
+  editorMode,
+  itemsMap,
+  navigate,
+  parentItemsMap,
+  sourceNoteId,
+}: {
+  campaignId: Id<'campaigns'> | undefined
+  createItem?: (args: CreateItemArgs) => Promise<unknown>
+  editor: CustomBlockNoteEditor | undefined
+  editorMode: 'editor' | 'viewer'
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
+  navigate: (args: { to: string; search: Record<string, string> }) => unknown
+  parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
+  sourceNoteId?: Id<'sidebarItems'>
+}) {
   const editorEl = useEditorDomElement(editor)
   const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
-  const validateVisibleCreateItem = useCallback(
-    (args: CreateItemArgs) =>
-      validateCreateItemLocally(
-        { name: args.name, parentTarget: args.parentTarget },
-        itemsMap,
-        parentItemsMap,
-      ),
-    [itemsMap, parentItemsMap],
-  )
 
   const [tooltip, setTooltip] = useReducer(
     (_state: TooltipState, next: TooltipState) => next,
@@ -240,9 +266,14 @@ export function LinkClickHandler({
       const feedback = getHoverFeedback({
         link,
         editorMode,
-        campaignId: campaignData?._id,
+        campaignId,
         sourceParentId,
-        validateCreateItem: validateVisibleCreateItem,
+        validateCreateItem: (args) =>
+          validateCreateItemLocally(
+            { name: args.name ?? '', parentTarget: args.parentTarget },
+            itemsMap,
+            parentItemsMap,
+          ),
       })
       const nextTooltip = feedback ? getTooltipState(link, feedback.tooltipText) : null
       setTooltip(nextTooltip ?? HIDDEN_TOOLTIP)
@@ -321,11 +352,16 @@ export function LinkClickHandler({
 
       const feedback = getGhostLinkFeedback({
         link,
-        campaignId: campaignData?._id,
+        campaignId,
         sourceParentId,
-        validateCreateItem: validateVisibleCreateItem,
+        validateCreateItem: (args) =>
+          validateCreateItemLocally(
+            { name: args.name ?? '', parentTarget: args.parentTarget },
+            itemsMap,
+            parentItemsMap,
+          ),
       })
-      if (!feedback || !isCtrlClick) {
+      if (!feedback || !isCtrlClick || !createItem) {
         return
       }
 
@@ -352,12 +388,13 @@ export function LinkClickHandler({
     editorEl.addEventListener('mousedown', onMouseDown, true)
     return () => editorEl.removeEventListener('mousedown', onMouseDown, true)
   }, [
-    campaignData?._id,
+    campaignId,
     createItem,
-    validateVisibleCreateItem,
     editorEl,
     editorMode,
+    itemsMap,
     navigate,
+    parentItemsMap,
     sourceParentId,
   ])
 

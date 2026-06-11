@@ -1,10 +1,10 @@
 import { createEmbedNodeContextMenuContributor } from '../nodes/embed/embed-node-context-menu'
 import { createAndSelectEmbeddedCanvasNode } from '../runtime/document/canvas-document-commands'
 import type {
-  CanvasContextMenuAdapters,
-  CanvasContextMenuCreateItemContext,
   CanvasEmbedNodeTarget,
   CanvasContextMenuItem,
+  CanvasContextMenuCreateItemSourceContext,
+  CanvasContextMenuSource,
 } from '../runtime/context-menu/canvas-context-menu-types'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
@@ -14,8 +14,14 @@ import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { logger } from '~/shared/utils/logger'
 import { toast } from 'sonner'
+import type { Id } from 'convex/_generated/dataModel'
 
 type VisibleSidebarItemsMap = ReturnType<typeof useFilteredSidebarItems>['itemsMap']
+
+type LiveCanvasContextMenuCreateItemContext = CanvasContextMenuCreateItemSourceContext & {
+  campaignId: Id<'campaigns'>
+  canvasParentId: Id<'sidebarItems'> | null
+}
 
 function buildEmbeddedSidebarItemCreateItem({
   command,
@@ -24,7 +30,7 @@ function buildEmbeddedSidebarItemCreateItem({
   getDefaultName,
 }: {
   command: SidebarItemCreationCommand
-  context: CanvasContextMenuCreateItemContext
+  context: LiveCanvasContextMenuCreateItemContext
   createItem: ReturnType<typeof useCreateFileSystemItem>['createItem']
   getDefaultName: ReturnType<typeof useSidebarValidation>['getDefaultName']
 }): CanvasContextMenuItem {
@@ -68,7 +74,13 @@ function buildEmbeddedSidebarItemCreateItem({
   }
 }
 
-export function useCanvasContextMenuAppAdapters(): CanvasContextMenuAdapters {
+export function useCanvasContextMenuAppAdapters({
+  campaignId,
+  canvasParentId,
+}: {
+  campaignId: Id<'campaigns'>
+  canvasParentId: Id<'sidebarItems'> | null
+}): CanvasContextMenuSource {
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
@@ -79,7 +91,7 @@ export function useCanvasContextMenuAppAdapters(): CanvasContextMenuAdapters {
       SIDEBAR_ITEM_CREATION_COMMANDS.map((command) =>
         buildEmbeddedSidebarItemCreateItem({
           command,
-          context,
+          context: { ...context, campaignId, canvasParentId },
           createItem,
           getDefaultName,
         }),

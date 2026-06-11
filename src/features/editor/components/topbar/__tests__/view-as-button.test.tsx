@@ -2,60 +2,26 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
-import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
+import { assertUsername } from 'shared/users/validation'
 import { testId } from '~/test/helpers/test-id'
 import { ViewAsPlayerButton } from '../view-as-button'
-
-const campaignState = vi.hoisted(() => ({
-  isDm: true,
-}))
-
-const campaignMembersState = vi.hoisted(() => ({
-  data: [
-    {
-      _id: 'player-1' as Id<'campaignMembers'>,
-      role: 'Player',
-      userProfile: { name: 'Mina', username: 'mina', imageUrl: 'https://example.com/mina.png' },
-    },
-  ],
-  isPending: false,
-}))
+import type { EditorWorkspaceViewAsPlayerCapability } from '../../../workspace/editor-workspace-source'
 
 const editorModeState = vi.hoisted(() => ({
   viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined,
   setViewAsPlayerId: vi.fn(),
 }))
 
-vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => campaignState,
-}))
-
-vi.mock('~/features/campaigns/hooks/useCampaignMembers', () => ({
-  useCampaignMembers: () => campaignMembersState,
-}))
-
-vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
-  useEditorMode: () => editorModeState,
-}))
-
 describe('ViewAsPlayerButton', () => {
   beforeEach(() => {
-    campaignState.isDm = true
-    campaignMembersState.data = [
-      {
-        _id: testId<'campaignMembers'>('player-1'),
-        role: CAMPAIGN_MEMBER_ROLE.Player,
-        userProfile: { name: 'Mina', username: 'mina', imageUrl: 'https://example.com/mina.png' },
-      },
-    ]
-    campaignMembersState.isPending = false
     editorModeState.viewAsPlayerId = undefined
     editorModeState.setViewAsPlayerId.mockReset()
   })
 
   it('opens the player menu when view-as mode is inactive', async () => {
     const user = userEvent.setup()
-    render(<ViewAsPlayerButton />)
+    render(<ViewAsPlayerButton viewAsPlayer={createViewAsPlayerCapability()} />)
 
     await user.click(screen.getByRole('button', { name: 'View as player' }))
 
@@ -67,7 +33,7 @@ describe('ViewAsPlayerButton', () => {
   it('clears view-as mode without opening the player menu when active', async () => {
     const user = userEvent.setup()
     editorModeState.viewAsPlayerId = testId<'campaignMembers'>('player-1')
-    render(<ViewAsPlayerButton />)
+    render(<ViewAsPlayerButton viewAsPlayer={createViewAsPlayerCapability()} />)
 
     await user.click(screen.getByRole('button', { name: 'View as player' }))
 
@@ -77,3 +43,27 @@ describe('ViewAsPlayerButton', () => {
     })
   })
 })
+
+function createViewAsPlayerCapability(): EditorWorkspaceViewAsPlayerCapability {
+  return {
+    visible: true,
+    isPending: false,
+    selectedPlayerId: editorModeState.viewAsPlayerId,
+    setSelectedPlayerId: editorModeState.setViewAsPlayerId,
+    playerMembers: [
+      {
+        _id: testId<'campaignMembers'>('player-1'),
+        _creationTime: 1,
+        userId: testId<'userProfiles'>('user-1'),
+        campaignId: testId<'campaigns'>('campaign-1'),
+        role: CAMPAIGN_MEMBER_ROLE.Player,
+        status: CAMPAIGN_MEMBER_STATUS.Accepted,
+        userProfile: {
+          name: 'Mina',
+          username: assertUsername('mina'),
+          imageUrl: 'https://example.com/mina.png',
+        },
+      },
+    ],
+  }
+}

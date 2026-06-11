@@ -397,11 +397,9 @@ describe('selection', () => {
 })
 
 describe('renaming', () => {
-  it('setRenamingId and setPendingItemName update state', () => {
+  it('setRenamingId updates state', () => {
     useSidebarUIStore.getState().setRenamingId(testId<'sidebarItems'>('note_1'))
-    useSidebarUIStore.getState().setPendingItemName('New Name')
     expect(useSidebarUIStore.getState().renamingId).toBe('note_1')
-    expect(useSidebarUIStore.getState().pendingItemName).toBe('New Name')
   })
 })
 

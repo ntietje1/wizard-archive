@@ -17,6 +17,7 @@ const campaignTableFields = {
   slug: v.string(),
   status: campaignStatusValidator,
   currentSessionId: v.nullable(v.id('sessions')),
+  defaultFolderInheritShares: v.optional(v.boolean()),
 }
 
 const campaignMemberTableFields = {

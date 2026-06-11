@@ -9,14 +9,39 @@ describe('canvas architecture boundaries', () => {
   it('keeps main editor entry points on the canvas-owned runtime and scene', () => {
     const viewer = readRepoFile('src/features/canvas/components/canvas-viewer.tsx')
     const runtime = readRepoFile('src/features/canvas/runtime/use-canvas-editor-runtime.ts')
+    const liveRuntime = readRepoFile(
+      'src/features/canvas/components/live-canvas-viewer-runtime.tsx',
+    )
+    const localRuntime = readRepoFile(
+      'src/features/canvas/components/local-canvas-viewer-runtime.tsx',
+    )
+    const runtimeCoreShell = readRepoFile(
+      'src/features/canvas/runtime/use-canvas-editor-runtime-core.ts',
+    )
     const runtimeBase = readRepoFile(
       'src/features/canvas/runtime/use-canvas-editor-runtime-base.ts',
     )
+    const runtimeHost = readRepoFile(
+      'src/features/canvas/components/canvas-editor-runtime-host.tsx',
+    )
+    const viewerRuntimeHost = readRepoFile(
+      'src/features/canvas/components/canvas-viewer-runtime-host.tsx',
+    )
     const coreRuntime = readRepoFile('src/features/canvas/runtime/use-canvas-core-runtime.ts')
+    const surface = readRepoFile('src/features/canvas/components/canvas-editor-surface.tsx')
 
-    expect(viewer).toContain('useCanvasEditorRuntime')
-    expect(viewer).toContain('CanvasScene')
-    expect(runtime).toContain('useCanvasEditorRuntimeBase')
+    expect(viewer).toContain('RuntimeComponent')
+    expect(viewer).not.toContain('useCanvasEditorRuntime')
+    expect(viewer).not.toContain('CanvasEditorRuntimeHost')
+    expect(liveRuntime).toContain('useCanvasEditorRuntime')
+    expect(localRuntime).toContain('useCanvasEditorRuntimeCore')
+    expect(liveRuntime).toContain('CanvasViewerRuntimeHost')
+    expect(localRuntime).toContain('CanvasViewerRuntimeHost')
+    expect(viewerRuntimeHost).toContain('CanvasEditorRuntimeHost')
+    expect(runtimeHost).toContain('CanvasEditorSurface')
+    expect(surface).toContain('CanvasScene')
+    expect(runtime).toContain('useCanvasEditorRuntimeCore')
+    expect(runtimeCoreShell).toContain('useCanvasEditorRuntimeBase')
     expect(runtime).not.toContain('createCanvasEngine')
     expect(runtime).not.toContain('createCanvasViewportController')
     expect(runtimeBase).toContain('useCanvasCoreRuntime')
@@ -127,6 +152,134 @@ describe('canvas architecture boundaries', () => {
     expect(preview).not.toContain('createReadOnlyPreviewServices')
     expect(preview).not.toContain('CanvasRuntimeProvider')
     expect(preview).not.toMatch(/\bdocumentWriter\s*:/)
+  })
+
+  it('keeps demo canvas on shared runtime assembly instead of a parallel editor implementation', () => {
+    const demoWorkspace = readRepoFile('src/features/landing/components/demo-workspace.tsx')
+    const sidebarItemViewer = readRepoFile(
+      'src/features/editor/components/viewer/sidebar-item-viewer.tsx',
+    )
+    const localSource = readRepoFile(
+      'src/features/landing/demo-workspace/local-demo-editor-workspace-source.ts',
+    )
+    const canvasViewer = readRepoFile('src/features/canvas/components/canvas-viewer.tsx')
+    const localRuntime = readRepoFile(
+      'src/features/canvas/components/local-canvas-viewer-runtime.tsx',
+    )
+    const viewerRuntimeHost = readRepoFile(
+      'src/features/canvas/components/canvas-viewer-runtime-host.tsx',
+    )
+    const runtimeCore = readRepoFile(
+      'src/features/canvas/runtime/use-canvas-editor-runtime-core.ts',
+    )
+    const liveRuntime = readRepoFile('src/features/canvas/runtime/use-canvas-editor-runtime.ts')
+
+    expect(demoWorkspace).toContain('EditorContent')
+    expect(demoWorkspace).not.toContain('local-canvas-editor')
+    expect(sidebarItemViewer).toContain('CanvasViewer')
+    expect(sidebarItemViewer).toContain('source={canvases.viewer}')
+    expect(localSource).toContain('LocalCanvasViewerRuntime')
+    expect(canvasViewer).toContain('RuntimeComponent')
+    expect(canvasViewer).not.toContain('LocalCanvasViewerRuntime')
+    expect(demoWorkspace).not.toContain('~/features/landing/demo-workspace/local-canvas-editor')
+    expect(localRuntime).toContain('useCanvasEditorRuntimeCore')
+    expect(localRuntime).toContain('CanvasViewerRuntimeHost')
+    expect(viewerRuntimeHost).toContain('CanvasEditorRuntimeHost')
+    expect(viewerRuntimeHost).toContain('CanvasNodeContent')
+    expect(localRuntime).not.toContain('useCanvasEditorRuntimeBase')
+    expect(localRuntime).not.toContain('useCanvasEditorSceneRuntime')
+    expect(localRuntime).not.toContain('createCanvasToolRuntime')
+    expect(localRuntime).not.toContain('useCanvasContextMenuCore')
+    expect(localRuntime).not.toContain('CanvasPreviewDefaultEmbedNode')
+
+    expect(runtimeCore).toContain('useCanvasEditorRuntimeBase')
+    expect(runtimeCore).toContain('useCanvasToolRuntimeCore')
+    expect(runtimeCore).not.toContain('useYjsPreviewUpload')
+    expect(runtimeCore).not.toContain('useCanvasDropIntegration')
+    expect(liveRuntime).toContain('useCanvasEditorRuntimeCore')
+    expect(liveRuntime).toContain('useYjsPreviewUpload')
+    expect(liveRuntime).toContain('useCanvasDropIntegration')
+  })
+
+  it('keeps canvas embed renderers behind explicit embed source resolution', () => {
+    const embedNode = readRepoFile('src/features/canvas/nodes/embed/embed-node.tsx')
+    const previewEmbedNode = readRepoFile(
+      'src/features/canvas/components/canvas-preview-embed-node.tsx',
+    )
+    const embeddedCanvasContent = readRepoFile(
+      'src/features/embeds/components/embedded-canvas-content.tsx',
+    )
+    const toolbarModel = readRepoFile('src/features/canvas/components/use-canvas-toolbar-model.ts')
+    const liveEmbedResolver = readRepoFile(
+      'src/features/embeds/components/live-sidebar-item-embed-resolver.tsx',
+    )
+    const embedContent = readRepoFile('src/features/embeds/components/embed-content.tsx')
+    const embedSidebarItemResolution = readRepoFile(
+      'src/features/embeds/context/embed-sidebar-item-resolution.ts',
+    )
+    const liveEmbeddedCanvasResolver = readRepoFile(
+      'src/features/embeds/components/live-embedded-canvas-state-resolver.tsx',
+    )
+    const embeddedMapContent = readRepoFile(
+      'src/features/embeds/components/embedded-map-content.tsx',
+    )
+    const liveEmbeddedMapResolver = readRepoFile(
+      'src/features/embeds/components/live-embedded-map-state-resolver.tsx',
+    )
+    const editableEmbedControls = readRepoFile(
+      'src/features/embeds/hooks/use-editable-embed-target-controls.ts',
+    )
+    const liveEmbedTargetOperations = readRepoFile(
+      'src/features/embeds/components/live-embed-target-operations-provider.tsx',
+    )
+
+    for (const source of [
+      embedNode,
+      previewEmbedNode,
+      embeddedCanvasContent,
+      embeddedMapContent,
+      toolbarModel,
+    ]) {
+      expect(source).not.toContain('useSidebarItemById')
+      expect(source).not.toContain('useSidebarItemAvailabilityState')
+      expect(source).not.toContain('useCampaignQuery')
+      expect(source).not.toContain('convex/_generated/api')
+    }
+
+    expect(embedNode).toContain('useEmbedSidebarItemResolver')
+    expect(previewEmbedNode).toContain('useEmbedSidebarItemResolver')
+    expect(embeddedCanvasContent).toContain('useEmbeddedCanvasStateResolver')
+    expect(embeddedCanvasContent).not.toMatch(/import\s+\{\s*useEmbeddedCanvasState\s*\}\s+from/)
+    expect(embeddedMapContent).toContain('useEmbeddedMapStateResolver')
+    expect(embeddedMapContent).not.toContain('useMapRenderPins')
+    expect(embedContent).not.toContain('useSidebarItemAvailabilityState')
+    expect(embedSidebarItemResolution).not.toContain('useSidebarItemAvailabilityState')
+    expect(editableEmbedControls).toContain('useEmbedTargetOperations')
+    expect(editableEmbedControls).not.toContain('useEmbedUpload')
+    expect(liveEmbedResolver).toContain('useSidebarItemById')
+    expect(liveEmbedResolver).toContain('useSidebarItemAvailabilityState')
+    expect(liveEmbeddedCanvasResolver).toContain('useLiveEmbeddedCanvasState')
+    expect(liveEmbeddedMapResolver).toContain('useMapRenderPins')
+    expect(liveEmbedTargetOperations).toContain('useEmbedUpload')
+  })
+
+  it('keeps the canvas embed node shell independent from concrete sidebar item presentations', () => {
+    const embedNode = readRepoFile('src/features/canvas/nodes/embed/embed-node.tsx')
+    const canvasSidebarItemEmbedRenderer = readRepoFile(
+      'src/features/embeds/components/canvas-sidebar-item-embed-renderer.tsx',
+    )
+
+    expect(embedNode).toContain('CanvasSidebarItemEmbedRenderer')
+    expect(embedNode).toContain('isCanvasSidebarItemEmbedRichTextEditable')
+    expect(embedNode).not.toContain('SIDEBAR_ITEM_TYPES')
+    expect(embedNode).not.toContain('EmbedNoteContent')
+    expect(embedNode).not.toContain('EmbeddedCanvasContent')
+    expect(embedNode).not.toContain('EmbeddedMapContent')
+    expect(embedNode).not.toContain('FileMediaEmbedContent')
+    expect(embedNode).not.toContain('SidebarItemPreviewContent')
+
+    expect(canvasSidebarItemEmbedRenderer).not.toContain('useCanvasDocumentRuntime')
+    expect(canvasSidebarItemEmbedRenderer).not.toContain('useCanvasEngine')
   })
 })
 

@@ -232,6 +232,10 @@ export function planFileSystemOptimisticCommand(args: PlannerArgs): FileSystemOp
     case 'rename':
       return planRename({ ...args, command: args.command })
     case 'emptyTrash':
+    case 'setAllPlayersPermission':
+    case 'setSidebarItemsMemberPermission':
+    case 'clearSidebarItemsMemberPermission':
+    case 'setFolderInheritShares':
       return ready()
   }
 }

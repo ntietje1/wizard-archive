@@ -9,6 +9,7 @@ import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { FileSystemGlobalDropTarget } from './filesystem-drop-planner'
+import type { PermissionLevel } from 'shared/permissions/types'
 
 // Public filesystem API. Callers describe user intent; this module owns command construction,
 // conflict handling, optimistic patches, receipts, clipboard state, and undo/redo.
@@ -34,6 +35,27 @@ type RenameFileSystemItemInput = {
   color?: SidebarItemColor | null
 }
 
+type SetAllPlayersPermissionInput = {
+  itemIds: Array<Id<'sidebarItems'>>
+  permissionLevel: PermissionLevel | null
+}
+
+type SetMemberPermissionInput = {
+  itemIds: Array<Id<'sidebarItems'>>
+  campaignMemberId: Id<'campaignMembers'>
+  permissionLevel: PermissionLevel
+}
+
+type ClearMemberPermissionInput = {
+  itemIds: Array<Id<'sidebarItems'>>
+  campaignMemberId: Id<'campaignMembers'>
+}
+
+type SetFolderInheritSharesInput = {
+  folderId: Id<'sidebarItems'>
+  inheritShares: boolean
+}
+
 export type FileSystemDropIntent = {
   itemIds: Array<Id<'sidebarItems'>>
   target: FileSystemGlobalDropTarget
@@ -51,6 +73,10 @@ export type FileSystemValue = {
     initialize?: CreateFileSystemItemInitializer,
   ) => Promise<CreatedFileSystemItem | null>
   renameItem: (input: RenameFileSystemItemInput) => Promise<{ slug: SidebarItemSlug | null } | null>
+  setAllPlayersPermission: (input: SetAllPlayersPermissionInput) => Promise<void>
+  setMemberPermission: (input: SetMemberPermissionInput) => Promise<void>
+  clearMemberPermission: (input: ClearMemberPermissionInput) => Promise<void>
+  setFolderInheritShares: (input: SetFolderInheritSharesInput) => Promise<void>
   duplicateItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<void>
   requestTrashItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<void>
   restoreItems: (

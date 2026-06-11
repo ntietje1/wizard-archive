@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { externalEmbedTargetFromUrl } from '../utils/embed-targets'
-import { useEmbedUpload } from './use-embed-upload'
+import { useEmbedTargetOperations } from '../context/embed-target-operations'
 import { handleError } from '~/shared/utils/logger'
 import type { ChangeEvent } from 'react'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
@@ -19,11 +19,7 @@ export function useEditableEmbedTargetControls({
   const [linkError, setLinkError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const { uploadEmbedFile } = useEmbedUpload()
-  const uploadFile = async (file: globalThis.File) => {
-    const result = await uploadEmbedFile(file)
-    return result?.id ?? null
-  }
+  const { uploadFile } = useEmbedTargetOperations()
 
   const setTargetAndCloseDraft = async (nextTarget: EmbedTarget) => {
     await setTarget(nextTarget)

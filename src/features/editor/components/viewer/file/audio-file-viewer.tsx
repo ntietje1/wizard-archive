@@ -1,11 +1,14 @@
-import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
+import { isValidFileUrl } from './file-url-validation'
+
+const EMPTY_CAPTIONS_TRACK = 'data:text/vtt;charset=utf-8,WEBVTT%0A'
 
 interface AudioFileViewerProps {
+  allowObjectUrl?: boolean
   audioUrl: string
 }
 
-export function AudioFileViewer({ audioUrl }: AudioFileViewerProps) {
-  const isValid = isValidFileUrl(audioUrl)
+export function AudioFileViewer({ allowObjectUrl = false, audioUrl }: AudioFileViewerProps) {
+  const isValid = isValidFileUrl(audioUrl, { allowObjectUrl })
   if (!isValid) {
     return (
       <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -27,6 +30,7 @@ export function AudioFileViewer({ audioUrl }: AudioFileViewerProps) {
             </svg>
           </div>
           <audio src={audioUrl} controls className="w-full">
+            <track kind="captions" src={EMPTY_CAPTIONS_TRACK} srcLang="en" label="No captions" />
             Your browser does not support the audio tag.
           </audio>
         </div>

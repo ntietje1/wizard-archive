@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type {
   PendingRichEmbedActivationRef,
   RichEmbedActivationPayload,
-} from '../embed/use-rich-embed-lifecycle'
+} from '~/features/embeds/hooks/use-rich-embed-lifecycle'
 import { useCanvasInteractionRuntime } from '../../runtime/providers/canvas-runtime'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import { areStringSetsEqual, isExclusivelySelectedNode } from '../../system/canvas-selection'

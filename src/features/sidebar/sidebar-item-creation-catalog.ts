@@ -1,21 +1,15 @@
 import { File, FilePlus, FolderPlus, Grid2x2Plus, MapPin } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { LucideIcon } from 'lucide-react'
 
 type SidebarItemCreationKey = 'note' | 'folder' | 'map' | 'canvas' | 'file'
 type SidebarItemCreationId = `create.${SidebarItemCreationKey}`
 
-export type SidebarItemCreationType =
-  | typeof SIDEBAR_ITEM_TYPES.notes
-  | typeof SIDEBAR_ITEM_TYPES.folders
-  | typeof SIDEBAR_ITEM_TYPES.gameMaps
-  | typeof SIDEBAR_ITEM_TYPES.canvases
-  | typeof SIDEBAR_ITEM_TYPES.files
-
 export interface SidebarItemCreationCommand {
   id: SidebarItemCreationId
   key: SidebarItemCreationKey
-  type: SidebarItemCreationType
+  type: SidebarItemType
   label: string
   dashboardDescription: string
   failureMessage: string

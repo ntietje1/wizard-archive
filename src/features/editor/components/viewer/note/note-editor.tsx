@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { EDITOR_MODE } from 'shared/editor/types'
 import { NoteContent } from '../../note-content'
@@ -16,7 +16,27 @@ import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { BlockShareMenuProvider } from '~/features/sharing/contexts/block-share-menu-context'
 import { BlockShareAccessWarningIndicator } from './block-share-access-warning-indicator'
+import {
+  useEditorWorkspaceSource,
+  useOptionalEditorWorkspaceSource,
+} from '~/features/editor/workspace/editor-workspace-source-context'
 import type { BlockNoteId } from 'shared/editor-blocks/types'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
+import type { Doc } from 'yjs'
+import type { Id } from 'convex/_generated/dataModel'
+import type { EditorNoteCollaborationProvider } from '~/features/editor/workspace/editor-workspace-source'
+import type { EditorMode } from 'shared/editor/types'
+
+type NoteEditorChangeHandler = (
+  editor: CustomBlockNoteEditor | null,
+  doc: Doc | null,
+  provider: EditorNoteCollaborationProvider | null,
+) => void
+
+type NoteEditorState = {
+  onEditorChange: NoteEditorChangeHandler
+  wrapperRef: React.RefObject<HTMLDivElement | null>
+}
 
 function getContextMenuTarget(target: EventTarget | null): Element | null {
   if (target instanceof Element) {
@@ -49,14 +69,63 @@ function getBlockNoteContextFromTarget(
 }
 
 export function NoteEditor({ item: note }: ViewerProps<NoteWithContent>) {
-  const { editorMode, canEdit } = useEditorMode()
+  const source = useOptionalEditorWorkspaceSource()
+  if (source) {
+    return <SourceNoteEditor note={note} />
+  }
 
+  return <LiveNoteEditor note={note} />
+}
+
+function LiveNoteEditor({ note }: { note: NoteWithContent }) {
+  const { editorMode, canEdit } = useEditorMode()
+  const editorState = useNoteEditorState(note._id)
+  const { hasHeadingParam } = useScrollToHeading(note.content)
+
+  return (
+    <NoteEditorBody
+      note={note}
+      editorMode={editorMode}
+      canEdit={canEdit}
+      editorState={editorState}
+      hasHeadingParam={hasHeadingParam}
+    />
+  )
+}
+
+function SourceNoteEditor({ note }: { note: NoteWithContent }) {
+  const source = useEditorWorkspaceSource()
+  const editorState = useSourceNoteEditorState(note._id)
+
+  return (
+    <NoteEditorBody
+      note={note}
+      editorMode={source.permissions.editorMode}
+      canEdit={source.permissions.canEdit}
+      editorState={editorState}
+      hasHeadingParam={false}
+    />
+  )
+}
+
+function NoteEditorBody({
+  canEdit,
+  editorState,
+  editorMode,
+  hasHeadingParam,
+  note,
+}: {
+  canEdit: boolean
+  editorState: NoteEditorState
+  editorMode: EditorMode
+  hasHeadingParam: boolean
+  note: NoteWithContent
+}) {
   const editable = editorMode === EDITOR_MODE.EDITOR && canEdit
 
-  const { onEditorChange, wrapperRef } = useNoteEditorState(note._id)
+  const { onEditorChange, wrapperRef } = editorState
   const editor = useNoteEditorStore((s) => s.editor)
   const viewportRef = useRef<HTMLDivElement>(null)
-  const { hasHeadingParam } = useScrollToHeading(note.content)
   useScrollPersistence(note._id, viewportRef, hasHeadingParam)
 
   if (!isNote(note)) {
@@ -107,10 +176,12 @@ export function NoteEditor({ item: note }: ViewerProps<NoteWithContent>) {
             data-testid="note-editor-wrapper"
             onContextMenu={handleWrapperContextMenu}
           >
-            <BlockShareAccessWarningIndicator
-              noteId={note._id}
-              warnings={note.blockShareAccessWarnings}
-            />
+            {note.blockShareAccessWarnings.length > 0 && (
+              <BlockShareAccessWarningIndicator
+                noteId={note._id}
+                warnings={note.blockShareAccessWarnings}
+              />
+            )}
             <NoteFormattingToolbar editor={editor} visible={editable} />
             <ScrollArea
               viewportRef={viewportRef}
@@ -130,4 +201,23 @@ export function NoteEditor({ item: note }: ViewerProps<NoteWithContent>) {
       </BlockShareMenuProvider>
     </ClientOnly>
   )
+}
+
+function useSourceNoteEditorState(noteId: Id<'sidebarItems'>): NoteEditorState {
+  const claimEditor = useNoteEditorStore((s) => s.claimEditor)
+  const [releaseEditor, setReleaseEditor] = useState<(() => void) | null>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  const onEditorChange: NoteEditorChangeHandler = (newEditor, _newDoc, provider) => {
+    const nextReleaseEditor = claimEditor(newEditor, provider)
+    setReleaseEditor(() => nextReleaseEditor)
+  }
+
+  useEffect(() => {
+    return () => {
+      releaseEditor?.()
+    }
+  }, [noteId, releaseEditor])
+
+  return { onEditorChange, wrapperRef }
 }

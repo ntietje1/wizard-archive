@@ -17,6 +17,8 @@ import { testId } from '~/test/helpers/test-id'
 let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
 let clipboardCanPaste = false
+const openItemMock = vi.hoisted(() => vi.fn())
+const openParentFoldersMock = vi.hoisted(() => vi.fn())
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({ campaignId: 'campaign_1' as Id<'campaigns'> }),
@@ -35,22 +37,50 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   }),
 }))
 
-vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
-  useEditorNavigation: () => ({ navigateToItem: vi.fn() }),
-}))
-
-vi.mock('~/features/sidebar/hooks/useLastEditorItem', () => ({
-  useLastEditorItem: () => ({ setLastSelectedItem: vi.fn() }),
-}))
-
-vi.mock('~/features/sidebar/hooks/useOpenParentFolders', () => ({
-  useOpenParentFolders: () => ({ openParentFolders: vi.fn() }),
+vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', () => ({
+  useSidebarWorkspaceSource: () => ({
+    commands: {
+      openItem: openItemMock,
+      openParentFolders: openParentFoldersMock,
+      setRenamingItemId: useSidebarUIStore.getState().setRenamingId,
+    },
+    items: {
+      active: {
+        data: sidebarItems,
+        status: 'success',
+        ...buildSidebarItemMaps(sidebarItems),
+      },
+      trash: {
+        data: trashItems,
+        status: 'success',
+        ...buildSidebarItemMaps(trashItems),
+      },
+    },
+    selectionCommands: {
+      clearItemSelection: useSidebarUIStore.getState().clearItemSelection,
+      getSelectionSnapshot: () => {
+        const state = useSidebarUIStore.getState()
+        return {
+          selectedSlug: state.selectedSlug,
+          selectedItemIds: state.selectedItemIds,
+          focusedItemId: state.focusedItemId,
+          activeItemSurface: state.activeItemSurface,
+        }
+      },
+      moveFocus: useSidebarUIStore.getState().moveFocus,
+      setSelectedItemIds: useSidebarUIStore.getState().setSelectedItemIds,
+    },
+  }),
 }))
 
 function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue {
   return {
     createItem: vi.fn().mockResolvedValue(undefined),
     renameItem: vi.fn().mockResolvedValue(undefined),
+    setAllPlayersPermission: vi.fn().mockResolvedValue(undefined),
+    setMemberPermission: vi.fn().mockResolvedValue(undefined),
+    clearMemberPermission: vi.fn().mockResolvedValue(undefined),
+    setFolderInheritShares: vi.fn().mockResolvedValue(undefined),
     duplicateItems: vi.fn().mockResolvedValue(undefined),
     requestTrashItems: vi.fn().mockResolvedValue(false),
     restoreItems: vi.fn().mockResolvedValue(undefined),
@@ -91,6 +121,9 @@ describe('useItemSurfaceHotkeys', () => {
     resetSidebarUIStore()
     setFileSystemClipboard(null)
     clipboardCanPaste = false
+    openItemMock.mockReset()
+    openItemMock.mockResolvedValue(undefined)
+    openParentFoldersMock.mockReset()
     sidebarItems = []
     trashItems = []
   })
@@ -256,6 +289,26 @@ describe('useItemSurfaceHotkeys', () => {
     })
 
     expect(filesystem.requestTrashItems).toHaveBeenCalledWith([currentNote._id])
+  })
+
+  it('opens the selected item through the workspace source', () => {
+    const note = createNote({ slug: 'scene-start' })
+    sidebarItems = [note]
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: [note._id],
+    })
+    useSidebarUIStore.getState().setSelectedItemIds([note._id], note._id)
+    const filesystem = createFileSystem()
+
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
+
+    act(() => {
+      dispatchItemSurfaceKeyboardEvent('Enter')
+    })
+
+    expect(openItemMock).toHaveBeenCalledWith('scene-start')
   })
 
   it('ignores selected ids that are not visible in the active surface', () => {

@@ -4,6 +4,7 @@ import { NoteView } from '../note-view'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { ReactNode } from 'react'
+import type { NoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
 import { testId } from '~/test/helpers/test-id'
 
 const {
@@ -50,13 +51,13 @@ vi.mock('../../value-block/value-block-runtime', () => ({
   NoteValueRuntimeProvider: ({
     children,
     editable,
-    noteId,
+    source,
   }: {
     children?: ReactNode
     editable: boolean
-    noteId?: string
+    source: NoteValueRuntimeSource
   }) => {
-    valueRuntimeSpy({ editable, noteId })
+    valueRuntimeSpy({ editable, source })
     return <div data-testid="value-runtime">{children}</div>
   },
 }))
@@ -93,14 +94,24 @@ describe('NoteView', () => {
     const editor = createEditor()
     const linkResolver = createLinkResolver()
     const note = createNote()
+    const valueRuntimeSource = createValueRuntimeSource(note._id)
 
-    render(<NoteView editor={editor} editable note={note} linkResolver={linkResolver} />)
+    render(
+      <NoteView
+        editor={editor}
+        editable
+        editableChrome={<div data-testid="side-menu-controller" />}
+        note={note}
+        linkResolver={linkResolver}
+        valueRuntimeSource={valueRuntimeSource}
+      />,
+    )
 
     expect(linkDecorationsSpy).toHaveBeenCalledWith(editor, linkResolver, false)
     expect(disableAutolinkSpy).toHaveBeenCalledWith(editor)
     expect(patchDestroySpy).toHaveBeenCalledWith(editor._tiptapEditor.view)
     expect(patchSyncSpy).toHaveBeenCalledWith(editor._tiptapEditor.view)
-    expect(valueRuntimeSpy).toHaveBeenCalledWith({ editable: true, noteId: note._id })
+    expect(valueRuntimeSpy).toHaveBeenCalledWith({ editable: true, source: valueRuntimeSource })
     expect(screen.getByTestId('prevent-external-drop')).toBeInTheDocument()
     expect(screen.getByTestId('side-menu-controller')).toBeInTheDocument()
     expect(screen.getByTestId('slash-menu')).toBeInTheDocument()
@@ -114,6 +125,7 @@ describe('NoteView', () => {
         editable
         linkResolver={createLinkResolver()}
         noteId={testId<'sidebarItems'>('note-id')}
+        valueRuntimeSource={createValueRuntimeSource(testId<'sidebarItems'>('note-id'))}
       />,
     )
 
@@ -143,6 +155,7 @@ describe('NoteView', () => {
         editable
         linkResolver={createLinkResolver()}
         noteId={testId<'sidebarItems'>('note-id')}
+        valueRuntimeSource={createValueRuntimeSource(testId<'sidebarItems'>('note-id'))}
       >
         <input aria-label="editor child" />
       </NoteView>,
@@ -185,4 +198,16 @@ function createNote(): NoteWithContent {
     _id: testId<'sidebarItems'>('note-id'),
     content: [],
   } as unknown as NoteWithContent
+}
+
+function createValueRuntimeSource(noteId: NoteWithContent['_id']): NoteValueRuntimeSource {
+  return {
+    noteId,
+    authoredDefinitions: [],
+    externalNoteIdByPath: new Map(),
+    externalStates: [],
+    itemsMap: new Map(),
+    persistedStates: [],
+    sidebarItems: [],
+  }
 }

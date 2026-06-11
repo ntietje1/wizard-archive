@@ -1,61 +1,38 @@
 import { useEffect, useRef } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { SidebarItemButtonBase } from './sidebar-item-button-base'
-import { SidebarShareButton } from './sidebar-item-share-button'
-import { EditableName } from './editable-item-name'
-import { DraggableSidebarItem } from './draggable-sidebar-item'
 import { DroppableSidebarItem } from './droppable-sidebar-item'
+import { SidebarLiveItemButton } from './sidebar-live-item-button'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SortOptions } from 'shared/editor/types'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
-import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
-import {
-  useIsFocusedItem,
-  useSidebarItemVisualState,
-} from '~/features/sidebar/hooks/useSelectedItem'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
-import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
-import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { getSidebarItemIcon } from '~/shared/utils/category-icons'
-import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
-import { Collapsible, CollapsibleContent } from '~/features/shadcn/components/collapsible'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
-import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
-import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
-import {
-  sidebarItemActionButtonClass,
-  sidebarItemNameClass,
-} from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { SidebarTreeNodeShell } from '~/features/sidebar/components/sidebar-tree-surface'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
-import type { MouseEvent } from 'react'
 
 interface SidebarItemProps {
   item: AnySidebarItem
   parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
+  sortOptions: SortOptions
   visibleItemIds: Array<Id<'sidebarItems'>>
   depth?: number
 }
 
-export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }: SidebarItemProps) {
-  const { editItem } = useEditFileSystemItem()
-  const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const linkProps = useEditorLinkProps(item)
-  const { setLastSelectedItem } = useLastEditorItem()
-  const visualState = useSidebarItemVisualState(item)
-  const isFocused = useIsFocusedItem(item)
+export function SidebarItem({
+  item,
+  parentItemsMap,
+  sortOptions,
+  visibleItemIds,
+  depth = 0,
+}: SidebarItemProps) {
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
-  const renamingId = useSidebarUIStore((s) => s.renamingId)
-  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
-  const { sortOptions } = useSortOptions()
-  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
-    surface: 'sidebar',
-    parentId: null,
-    visibleItemIds,
-  })
+  const {
+    commands: { setRenamingItemId },
+    editing: { renamingItemId },
+  } = useSidebarWorkspaceSource()
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
-  const icon = getSidebarItemIcon(item)
   const isPending = isOptimisticSidebarItem(item)
   const children = isFolder && isExpanded ? parentItemsMap.get(item._id) : undefined
   const shouldScrollPendingItem = isPending && visibleItemIds.includes(item._id)
@@ -69,96 +46,41 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
 
   const sortedChildren = sortItemsByOptions(sortOptions, children) ?? []
 
-  const selectSidebarItem = (event: MouseEvent) => {
-    handleItemClick(event, () => setLastSelectedItem(item.slug))
-  }
-
-  const handleFinishRename = async (name: string) => {
-    await editItem({ item, name })
-    setRenamingId(null)
-  }
-
-  const handleCancelRename = () => {
-    setRenamingId(null)
-  }
-
   const itemButton = (
-    <DraggableSidebarItem item={item} disabled={isPending}>
-      <EditorContextMenu
-        ref={contextMenuRef}
-        viewContext="sidebar"
-        item={item}
-        disabled={isPending}
-      >
-        <SidebarItemButtonBase
-          icon={icon}
-          name={item.name}
-          nameContent={
-            <EditableName
-              initialName={item.name}
-              isRenaming={renamingId === item._id}
-              onFinishRename={handleFinishRename}
-              onCancelRename={handleCancelRename}
-              displayClassName={sidebarItemNameClass(visualState)}
-              campaignId={item.campaignId}
-              parentId={item.parentId}
-              excludeId={item._id}
-            />
-          }
-          presentation={{
-            visualState,
-            focused: isFocused,
-            expanded: isExpanded,
-            renaming: renamingId === item._id,
-            showChevron: isFolder && !isPending,
-            pending: isPending,
-            indentLevel: depth,
-          }}
-          linkProps={linkProps}
-          onClick={selectSidebarItem}
-          onContextMenu={handleItemContextMenu}
-          onToggleExpanded={toggleExpanded}
-          onMoreOptions={(event) => {
-            handleItemContextMenu(event)
-            handleMoreOptions(event)
-          }}
-          shareButton={
-            isPending ? null : (
-              <SidebarShareButton
-                item={item}
-                buttonClassName={sidebarItemActionButtonClass(visualState)}
-              />
-            )
-          }
-          rowRef={rowRef}
-        />
-      </EditorContextMenu>
-    </DraggableSidebarItem>
+    <SidebarLiveItemButton
+      expanded={isExpanded}
+      indentLevel={depth}
+      item={item}
+      onToggleExpanded={toggleExpanded}
+      renamingId={renamingItemId}
+      rowRef={rowRef}
+      setRenamingId={setRenamingItemId}
+      showChevron={isFolder && !isPending}
+      showShareButton
+      surface="sidebar"
+      visibleItemIds={visibleItemIds}
+    />
   )
 
   if (isFolder && !isPending) {
     return (
       <DroppableSidebarItem item={item}>
-        <Collapsible open={isExpanded} onOpenChange={toggleExpanded}>
-          {itemButton}
-          <CollapsibleContent
-            transition={{
-              duration: isExpanded ? 0.2 : 0.15,
-              ease: 'easeInOut',
-            }}
-            keepRendered={false}
-          >
-            {sortedChildren.map((childItem) => (
-              <SidebarItem
-                key={childItem._id}
-                item={childItem}
-                parentItemsMap={parentItemsMap}
-                visibleItemIds={visibleItemIds}
-                depth={depth + 1}
-              />
-            ))}
-          </CollapsibleContent>
-        </Collapsible>
+        <SidebarTreeNodeShell
+          expanded={isExpanded}
+          itemButton={itemButton}
+          onExpandedChange={toggleExpanded}
+        >
+          {sortedChildren.map((childItem) => (
+            <SidebarItem
+              key={childItem._id}
+              item={childItem}
+              parentItemsMap={parentItemsMap}
+              sortOptions={sortOptions}
+              visibleItemIds={visibleItemIds}
+              depth={depth + 1}
+            />
+          ))}
+        </SidebarTreeNodeShell>
       </DroppableSidebarItem>
     )
   }

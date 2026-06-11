@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 
 vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({ default: 'pdf-worker.js' }))
 
-vi.mock('~/features/file-upload/utils/file-url-validation', () => ({
+vi.mock('../file-url-validation', () => ({
   isValidFileUrl: () => true,
 }))
 

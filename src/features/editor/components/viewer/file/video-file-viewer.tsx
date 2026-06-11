@@ -1,11 +1,14 @@
-import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
+import { isValidFileUrl } from './file-url-validation'
+
+const EMPTY_CAPTIONS_TRACK = 'data:text/vtt;charset=utf-8,WEBVTT%0A'
 
 interface VideoFileViewerProps {
+  allowObjectUrl?: boolean
   videoUrl: string
 }
 
-export function VideoFileViewer({ videoUrl }: VideoFileViewerProps) {
-  const isValid = isValidFileUrl(videoUrl)
+export function VideoFileViewer({ allowObjectUrl = false, videoUrl }: VideoFileViewerProps) {
+  const isValid = isValidFileUrl(videoUrl, { allowObjectUrl })
 
   if (!isValid) {
     return (
@@ -22,6 +25,7 @@ export function VideoFileViewer({ videoUrl }: VideoFileViewerProps) {
     <div className="relative w-full h-full min-h-0 bg-background overflow-auto flex flex-col">
       <div className="flex-1 relative min-h-0 flex items-center justify-center p-4">
         <video src={videoUrl} controls className="max-w-full max-h-full">
+          <track kind="captions" src={EMPTY_CAPTIONS_TRACK} srcLang="en" label="No captions" />
           Your browser does not support the video tag.
         </video>
       </div>

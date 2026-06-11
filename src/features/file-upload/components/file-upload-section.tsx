@@ -1,6 +1,6 @@
 import { File, FileText, Image, Music, Upload, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { UseFileWithPreviewReturn } from '~/features/file-upload/hooks/useFileWithPreview'
+import type { FileUploadControl } from '~/features/file-upload/file-upload-control'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
 import { Card, CardContent } from '~/features/shadcn/components/card'
@@ -10,7 +10,7 @@ import { cn } from '~/features/shadcn/lib/utils'
 
 interface FileUploadSectionProps {
   label?: string
-  fileUpload: UseFileWithPreviewReturn
+  fileUpload: FileUploadControl
   isSubmitting: boolean
   acceptPattern: string
   dragDropText: string
@@ -66,7 +66,7 @@ function FileUploadInput({
   disabled,
   previewMode = false,
 }: {
-  fileUpload: UseFileWithPreviewReturn
+  fileUpload: FileUploadControl
   acceptPattern: string
   disabled: boolean
   previewMode?: boolean
@@ -117,7 +117,7 @@ function FilePreviewUploadContent({
   acceptPattern,
   disabled,
 }: {
-  fileUpload: UseFileWithPreviewReturn
+  fileUpload: FileUploadControl
   fileName?: string
   fileSize: string | null
   FileIcon: LucideIcon
@@ -191,7 +191,7 @@ function EmptyFileUploadContent({
   disabled,
   dragDropText,
 }: {
-  fileUpload: UseFileWithPreviewReturn
+  fileUpload: FileUploadControl
   acceptPattern: string
   disabled: boolean
   dragDropText: string

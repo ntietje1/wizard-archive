@@ -1,17 +1,28 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import type { ComponentProps, ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { NoteContent } from '../note-content'
 import { createNote } from '~/test/factories/sidebar-item-factory'
+import { createTestCanvasViewerSource } from '~/test/factories/canvas-viewer-source-factory'
 import { testId } from '~/test/helpers/test-id'
+import { EditorWorkspaceSourceProvider } from '~/features/editor/workspace/editor-workspace-source-context'
+import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from '~/features/editor/workspace/live-note-document-source'
 import type * as BlockNoteCore from '@blocknote/core'
 import type { Id } from 'convex/_generated/dataModel'
+import type { Doc } from 'yjs'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'shared/notes/types'
-import type { ReactNode } from 'react'
 import type { CampaignActor } from 'shared/campaigns/actor'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import type { NoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
+import type {
+  EditorNoteCollaborationProvider,
+  EditorWorkspaceNoteDocuments,
+  EditorWorkspaceSource,
+} from '~/features/editor/workspace/editor-workspace-source'
 
 const {
   activeItemsState,
@@ -62,6 +73,7 @@ vi.mock('../note-view', () => ({
   NoteView: ({
     editor,
     editable,
+    editableChrome,
     note,
     noteId,
     children,
@@ -70,15 +82,21 @@ vi.mock('../note-view', () => ({
     editable: boolean
     note?: NoteWithContent
     noteId?: Id<'sidebarItems'>
+    editableChrome?: ReactNode
     children?: ReactNode
   }) => {
-    noteViewSpy({ editor, editable, note, noteId })
+    noteViewSpy({ editor, editable, editableChrome, note, noteId })
     return <div data-testid="note-view">{children}</div>
   },
 }))
 
 vi.mock('../extensions/link-click-handler', () => ({
   LinkClickHandler: () => null,
+  LinkClickHandlerSurface: () => null,
+}))
+
+vi.mock('../extensions/wiki-link/live-wiki-link-autocomplete', () => ({
+  LiveWikiLinkAutocomplete: () => null,
 }))
 
 vi.mock('../extensions/wiki-link/wiki-link-autocomplete', () => ({
@@ -92,6 +110,22 @@ vi.mock('~/features/editor/hooks/useLinkResolver', () => ({
   ) => ({
     isViewerMode: options.isViewerMode,
     resolveLink: vi.fn(),
+  }),
+}))
+
+vi.mock('~/features/editor/value-block/use-live-note-value-runtime-source', () => ({
+  useLiveNoteValueRuntimeSource: ({
+    noteId,
+  }: {
+    noteId?: Id<'sidebarItems'>
+  }): NoteValueRuntimeSource => ({
+    noteId,
+    authoredDefinitions: [],
+    externalNoteIdByPath: new Map(),
+    externalStates: [],
+    itemsMap: new Map(),
+    persistedStates: [],
+    sidebarItems: [],
   }),
 }))
 
@@ -157,7 +191,7 @@ describe('NoteContent', () => {
       },
     })
 
-    render(<NoteContent note={note} editable={false} />)
+    renderNoteContent(note, { editable: false })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -188,12 +222,53 @@ describe('NoteContent', () => {
       },
     })
 
-    render(<NoteContent note={note} editable />)
+    renderNoteContent(note, { editable: true })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           editable: true,
+          note,
+        }),
+      )
+    })
+    expect(blockNoteCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collaboration: expect.any(Object),
+      }),
+    )
+  })
+
+  it('uses source note document capabilities with the shared editable note chrome', async () => {
+    const visibleBlock = createBlock('visible-block')
+    editorModeState.campaignActor = {
+      kind: 'player',
+      campaignId: testId<'campaigns'>('campaign_1'),
+    }
+    const note = createNoteWithContent({
+      content: [visibleBlock],
+      myPermissionLevel: PERMISSION_LEVEL.EDIT,
+      blockMeta: {
+        [visibleBlock.id]: {
+          myPermissionLevel: PERMISSION_LEVEL.VIEW,
+          shareStatus: SHARE_STATUS.ALL_SHARED,
+          sharedWith: [],
+        },
+      },
+    })
+    const sourceNoteDocuments = createSourceNoteDocuments(note._id)
+
+    render(
+      <EditorWorkspaceSourceProvider value={createWorkspaceSource(note, sourceNoteDocuments)}>
+        <NoteContent note={note} editable />
+      </EditorWorkspaceSourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(noteViewSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          editable: true,
+          editableChrome: expect.anything(),
           note,
         }),
       )
@@ -218,7 +293,7 @@ describe('NoteContent', () => {
       },
     })
 
-    render(<NoteContent note={note} editable={false} fillHeight />)
+    renderNoteContent(note, { editable: false, fillHeight: true })
 
     await waitFor(() => {
       expect(screen.getByTestId('note-view').closest('.note-editor-fill-height')).not.toBeNull()
@@ -233,7 +308,7 @@ describe('NoteContent', () => {
       blockMeta: {},
     })
 
-    render(<NoteContent note={note} editable />)
+    renderNoteContent(note, { editable: true })
 
     expect(screen.getByRole('alert')).toHaveTextContent('Failed to load note content.')
     expect(noteViewSpy).not.toHaveBeenCalled()
@@ -281,7 +356,7 @@ describe('NoteContent', () => {
       },
     })
 
-    render(<NoteContent note={note} editable={false} />)
+    renderNoteContent(note, { editable: false })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -334,7 +409,7 @@ describe('NoteContent', () => {
     }
     activeItemsState.itemsMap = new Map([[note._id, note]])
 
-    render(<NoteContent note={note} editable={false} />)
+    renderNoteContent(note, { editable: false })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -373,7 +448,7 @@ describe('NoteContent', () => {
     })
     activeItemsState.itemsMap = new Map([[note._id, note]])
 
-    render(<NoteContent note={note} editable />)
+    renderNoteContent(note, { editable: true })
 
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
@@ -397,6 +472,18 @@ function createBlock(id: string): CustomBlock {
   return { id, type: 'paragraph', content: [] } as unknown as CustomBlock
 }
 
+function renderNoteContent(
+  note: NoteWithContent,
+  props: Omit<ComponentProps<typeof NoteContent>, 'note'>,
+  source: EditorWorkspaceSource = createWorkspaceSource(note),
+) {
+  return render(
+    <EditorWorkspaceSourceProvider value={source}>
+      <NoteContent note={note} {...props} />
+    </EditorWorkspaceSourceProvider>,
+  )
+}
+
 function createNoteWithContent({
   content,
   myPermissionLevel,
@@ -414,5 +501,160 @@ function createNoteWithContent({
     content,
     blockMeta,
     blockShareAccessWarnings: [],
+  }
+}
+
+function createWorkspaceSource(
+  note: NoteWithContent,
+  noteDocuments: EditorWorkspaceNoteDocuments = LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS,
+): EditorWorkspaceSource {
+  const campaignId = note.campaignId
+  return {
+    content: {
+      currentItem: {
+        item: note,
+        contentItem: note,
+        editorSearch: { item: note.slug },
+        isLoading: false,
+        itemError: null,
+        hasRequestedItem: true,
+      },
+      requestedSlug: note.slug,
+      canViewCurrentItem: true,
+      availabilityState: { status: 'available', label: note.name, item: note },
+    },
+    permissions: {
+      editorMode: 'editor',
+      canEdit: true,
+      campaignActor: editorModeState.campaignActor,
+      viewAsPlayerId: editorModeState.viewAsPlayerId,
+      setEditorMode: vi.fn(),
+      setViewAsPlayerId: vi.fn(),
+      viewAsPlayer: {
+        isPending: false,
+        playerMembers: [],
+        selectedPlayerId: undefined,
+        setSelectedPlayerId: vi.fn(),
+        visible: false,
+      },
+    },
+    index: {
+      activeItemsById:
+        activeItemsState.itemsMap.size > 0
+          ? activeItemsState.itemsMap
+          : new Map([[note._id, note]]),
+      trashItems: [],
+    },
+    workspace: {
+      campaignId,
+      isCampaignLoaded: true,
+      isDm: campaignState.isDm,
+    },
+    items: {
+      itemActions: {
+        enabled: false,
+        item: note,
+      },
+      createItem: vi.fn(() => null),
+      createMissingRequestedNote: vi.fn(),
+      emptyWorkspaceDrop: {
+        status: 'disabled',
+        reason: 'unsupported',
+      },
+      isCreatingMissingRequestedNote: false,
+      renameItem: vi.fn(),
+      validateItemName: vi.fn(() => ({ valid: true as const })),
+    },
+    navigation: {
+      openItem: vi.fn(),
+      openItemBySlug: vi.fn(),
+      getItemLinkProps: vi.fn(() => null),
+    },
+    history: {
+      preview: {
+        previewingEntryId: null,
+        clearItemSession: vi.fn(),
+        PreviewComponent: () => null,
+      },
+      rollback: {
+        DialogComponent: () => null,
+      },
+    },
+    sharing: {
+      visible: false,
+    },
+    files: {
+      viewer: {
+        resolveFile: (file) => ({
+          allowObjectUrl: false,
+          contentType: file.contentType,
+          downloadUrl: file.downloadUrl,
+          name: file.name,
+          size: null,
+        }),
+        getEmptyFileUpload: () => null,
+      },
+    },
+    documents: {
+      canvases: {
+        viewer: createTestCanvasViewerSource(),
+      },
+      notes: noteDocuments,
+    },
+  }
+}
+
+function createSourceNoteDocuments(noteId: Id<'sidebarItems'>): EditorWorkspaceNoteDocuments {
+  const items: Array<AnySidebarItem> = []
+  return {
+    kind: 'client',
+    getSidebarItems: () => ({
+      items,
+      itemsMap: new Map(),
+      parentItemsMap: new Map(),
+    }),
+    createEditableSession: () => ({
+      destroy: vi.fn(),
+      doc: { getXmlFragment: vi.fn(() => ({})) } as unknown as Doc,
+      error: null,
+      instanceId: `source:${noteId}`,
+      isLoading: false,
+      provider: createCollaborationProvider(),
+      user: { name: 'Source User', color: '#61afef' },
+    }),
+    createLinkResolver: (_noteId, { isViewerMode }) => ({
+      allItems: [],
+      isViewerMode,
+      itemsMap: new Map(),
+      resolveLink: vi.fn(),
+    }),
+    createValueRuntimeSource: () => createNoteValueRuntimeSource(noteId),
+  }
+}
+
+function createCollaborationProvider(): EditorNoteCollaborationProvider {
+  const doc = { getXmlFragment: vi.fn(() => ({})) } as unknown as Doc
+  return {
+    awareness: {
+      setLocalStateField: vi.fn(),
+    } as unknown as EditorNoteCollaborationProvider['awareness'],
+    destroy: vi.fn(),
+    doc,
+    emit: vi.fn(),
+    flushUpdates: vi.fn(() => Promise.resolve()),
+    off: vi.fn(),
+    on: vi.fn(),
+  }
+}
+
+function createNoteValueRuntimeSource(noteId: Id<'sidebarItems'>): NoteValueRuntimeSource {
+  return {
+    noteId,
+    authoredDefinitions: [],
+    externalNoteIdByPath: new Map(),
+    externalStates: [],
+    itemsMap: new Map(),
+    persistedStates: [],
+    sidebarItems: [],
   }
 }

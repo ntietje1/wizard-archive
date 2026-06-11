@@ -1,16 +1,10 @@
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import {
-  useCampaignSidebarActions,
-  useCampaignSidebarState,
-} from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 export function useFolderState(folderId: string) {
-  const { campaignId } = useCampaign()
-
-  const { closeAllFoldersMode, folderStates } = useCampaignSidebarState(campaignId)
-
-  const { clearAllFolderStates, exitCloseAllMode, setFolderState, toggleFolderState } =
-    useCampaignSidebarActions(campaignId)
+  const {
+    ui: { closeAllFoldersMode, folderStates },
+    uiCommands: { clearAllFolderStates, exitCloseAllMode, setFolderState, toggleFolderState },
+  } = useSidebarWorkspaceSource()
 
   const isExpanded = !closeAllFoldersMode && (folderStates[folderId] ?? false)
 

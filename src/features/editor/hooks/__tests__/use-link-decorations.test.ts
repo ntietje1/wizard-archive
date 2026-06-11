@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { ParsedLinkData, ResolvedLink } from 'shared/links/types'
 import type { Plugin } from '@tiptap/pm/state'
-import type { LinkResolver } from '../useLinkResolver'
+import type { LinkResolver } from '../../links/link-resolver'
 import { useLinkDecorations } from '../useLinkDecorations'
 
 const { mockRegisterLinkPlugins } = vi.hoisted(() => ({

@@ -1,26 +1,21 @@
 import { useEffect } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
-import { assertNever } from '~/shared/utils/utils'
-import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor'
-import { MapViewer } from '~/features/editor/components/viewer/map/map-viewer'
-import { FolderViewer } from '~/features/editor/components/viewer/folder/folder-viewer'
-import { FileViewer } from '~/features/editor/components/viewer/file/file-viewer'
-import { CanvasViewer } from '~/features/canvas/components/canvas-viewer'
-import { HistoryPreviewViewer } from '~/features/editor/components/viewer/history-preview-viewer'
-import { RollbackConfirmDialog } from '~/features/editor/components/viewer/rollback-confirm-dialog'
+import { SidebarItemViewer } from '~/features/editor/components/viewer/sidebar-item-viewer'
+import { FileViewerSourceProvider } from '~/features/editor/components/viewer/file/file-viewer-source'
 import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
-import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
+import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 
-type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent>
+type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent> & {
+  canvases: EditorWorkspaceSource['documents']['canvases']
+  files: EditorWorkspaceSource['files']
+  history: EditorWorkspaceSource['history']
+}
 
-export function SidebarItemEditor({ item }: SidebarItemEditorProps) {
-  const previewingEntryId = useHistoryPreviewStore((s) =>
-    s.preview?.itemId === item._id ? s.preview.entryId : null,
-  )
-  const clearItemSession = useHistoryPreviewStore((s) => s.clearItemSession)
+export function SidebarItemEditor({ canvases, files, history, item }: SidebarItemEditorProps) {
+  const { clearItemSession, PreviewComponent, previewingEntryId } = history.preview
+  const { DialogComponent: RollbackDialogComponent } = history.rollback
 
   useEffect(() => {
     return () => clearItemSession(item._id)
@@ -30,37 +25,21 @@ export function SidebarItemEditor({ item }: SidebarItemEditorProps) {
     return (
       <>
         <ErrorBoundary FallbackComponent={ErrorFallback} key={`preview-${previewingEntryId}`}>
-          <HistoryPreviewViewer itemId={item._id} entryId={previewingEntryId} />
+          <PreviewComponent itemId={item._id} entryId={previewingEntryId} />
         </ErrorBoundary>
-        <RollbackConfirmDialog itemId={item._id} />
+        <RollbackDialogComponent itemId={item._id} />
       </>
     )
   }
 
-  const loadedItem = item
-  const content = (() => {
-    switch (loadedItem.type) {
-      case SIDEBAR_ITEM_TYPES.notes:
-        return <NoteEditor item={loadedItem} />
-      case SIDEBAR_ITEM_TYPES.gameMaps:
-        return <MapViewer key={loadedItem._id} item={loadedItem} />
-      case SIDEBAR_ITEM_TYPES.folders:
-        return <FolderViewer key={loadedItem._id} item={loadedItem} />
-      case SIDEBAR_ITEM_TYPES.files:
-        return <FileViewer key={loadedItem._id} item={loadedItem} />
-      case SIDEBAR_ITEM_TYPES.canvases:
-        return <CanvasViewer key={loadedItem._id} item={loadedItem} />
-      default:
-        return assertNever(loadedItem)
-    }
-  })()
-
   return (
     <>
       <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
-        {content}
+        <FileViewerSourceProvider value={files.viewer}>
+          <SidebarItemViewer canvases={canvases} item={item} />
+        </FileViewerSourceProvider>
       </ErrorBoundary>
-      <RollbackConfirmDialog itemId={item._id} />
+      <RollbackDialogComponent itemId={item._id} />
     </>
   )
 }

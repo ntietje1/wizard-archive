@@ -1,104 +1,148 @@
-import { ClientOnly } from '@tanstack/react-router'
-import { toast } from 'sonner'
-import { File } from 'lucide-react'
-import { api } from 'convex/_generated/api'
-import { FILE_UPLOAD_ACCEPT_PATTERN, validateFileForUpload } from 'shared/storage/validation'
-import { AudioFileViewer } from './audio-file-viewer'
-import { ImageFileViewer } from './image-file-viewer'
-import { OtherFileViewer } from './other-file-viewer'
-import { VideoFileViewer } from './video-file-viewer'
-import { PdfFileViewer } from './pdf-file-viewer'
-import type { ViewerProps } from '~/shared/viewer/viewer-props'
-import type { Id } from 'convex/_generated/dataModel'
-import type { FileWithContent } from 'shared/files/types'
-import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
-import { handleError } from '~/shared/utils/logger'
-import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
+import { Download, File, Upload } from 'lucide-react'
+import { FILE_UPLOAD_ACCEPT_PATTERN } from 'shared/storage/validation'
 import { FileUploadEmptyState } from '~/features/file-upload/components/file-upload-empty-state'
-import { assertNever } from '~/shared/utils/utils'
-import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import { FileContentViewer } from './file-content-viewer'
+import type { ViewerProps } from '~/shared/viewer/viewer-props'
+import type { FileWithContent } from 'shared/files/types'
+import { Button, buttonVariants } from '~/features/shadcn/components/button'
+import { cn } from '~/features/shadcn/lib/utils'
+import { useFileViewerSource } from './file-viewer-source'
+import type { ResolvedFileViewerFile } from './file-viewer-source'
+import type { ChangeEvent, RefObject } from 'react'
+import { useRef } from 'react'
 
-const pdfFallback = (
-  <div className="flex items-center justify-center w-full h-full">
-    <LoadingSpinner size="lg" />
-  </div>
-)
+export function FileViewer({ item: file }: ViewerProps<FileWithContent>) {
+  const source = useFileViewerSource()
+  const resolvedFile = source.resolveFile(file)
 
-function getFileType(
-  contentType: string | null | undefined,
-): 'image' | 'pdf' | 'video' | 'audio' | 'other' {
-  if (!contentType) {
-    return 'other'
+  if (!resolvedFile.downloadUrl) {
+    return <EmptyFileViewer file={file} source={source} />
   }
-  const mimeType = contentType.toLowerCase()
-  if (mimeType.startsWith('image/')) {
-    return 'image'
-  } else if (mimeType === 'application/pdf') {
-    return 'pdf'
-  } else if (mimeType.startsWith('video/')) {
-    return 'video'
-  } else if (mimeType.startsWith('audio/')) {
-    return 'audio'
-  } else {
-    return 'other'
-  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
+      <FileViewerHeader file={file} resolvedFile={resolvedFile} replaceFile={source.replaceFile} />
+      <section className="min-h-0 flex-1" aria-label="File preview">
+        <FileContentViewer
+          key={resolvedFile.downloadUrl}
+          allowObjectUrl={resolvedFile.allowObjectUrl}
+          downloadUrl={resolvedFile.downloadUrl}
+          contentType={resolvedFile.contentType}
+          name={resolvedFile.name}
+        />
+      </section>
+    </div>
+  )
 }
 
-function FileUpload({ fileId }: { fileId: Id<'sidebarItems'> }) {
-  const updateFileStorage = useCampaignMutation(api.files.mutations.updateFileStorage)
+function EmptyFileViewer({ file, source }: { file: FileWithContent; source: FileViewerSource }) {
+  const upload = source.getEmptyFileUpload(file)
 
-  const fileUpload = useFileWithPreview({
-    isOpen: true,
-    uploadOnSelect: true,
-    fileTypeValidator: validateFileForUpload,
-    onUploadComplete: async (storageId) => {
-      try {
-        await updateFileStorage.mutateAsync({ fileId, storageId })
-        toast.success('File uploaded')
-      } catch (error) {
-        handleError(error, 'Failed to attach file')
-      }
-    },
-  })
+  if (!upload) {
+    return (
+      <div className="flex h-full w-full items-center justify-center p-8 text-sm text-muted-foreground">
+        No file has been attached.
+      </div>
+    )
+  }
 
   return (
     <FileUploadEmptyState
-      fileUpload={fileUpload}
+      fileUpload={upload.fileUpload}
       icon={File}
       title="Upload File"
       description="Upload a file to add it to your campaign."
-      isSubmitting={fileUpload.isUploading || updateFileStorage.isPending}
+      isSubmitting={upload.isSubmitting}
       acceptPattern={FILE_UPLOAD_ACCEPT_PATTERN}
       dragDropText="Drag a file here or click to browse"
     />
   )
 }
 
-export function FileViewer({ item: file }: ViewerProps<FileWithContent>) {
-  if (!file.downloadUrl) {
-    return <FileUpload fileId={file._id} />
+function FileViewerHeader({
+  file,
+  replaceFile,
+  resolvedFile,
+}: {
+  file: FileWithContent
+  replaceFile: FileViewerSourceReplaceFile | undefined
+  resolvedFile: ResolvedFileViewerFile
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!selectedFile || !replaceFile) return
+    void replaceFile(file, selectedFile)
   }
 
-  const fileType = getFileType(file.contentType)
+  return (
+    <header className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b bg-background px-3">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{resolvedFile.name}</p>
+        <p className="text-xs text-muted-foreground">
+          {fileMetadataLabel(resolvedFile.contentType, resolvedFile.size)}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <a
+          href={resolvedFile.downloadUrl ?? undefined}
+          download={resolvedFile.name}
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+        >
+          <Download aria-hidden="true" />
+          Download
+        </a>
+        {replaceFile && (
+          <FileReplaceButton fileInputRef={fileInputRef} onFileChange={handleFileChange} />
+        )}
+      </div>
+    </header>
+  )
+}
 
-  switch (fileType) {
-    case 'image':
-      return (
-        <ImageFileViewer key={file._id} imageUrl={file.downloadUrl} alt={file.name || 'File'} />
-      )
-    case 'pdf':
-      return (
-        <ClientOnly fallback={pdfFallback}>
-          <PdfFileViewer key={file.downloadUrl} pdfUrl={file.downloadUrl} />
-        </ClientOnly>
-      )
-    case 'video':
-      return <VideoFileViewer videoUrl={file.downloadUrl} />
-    case 'audio':
-      return <AudioFileViewer audioUrl={file.downloadUrl} />
-    case 'other':
-      return <OtherFileViewer fileUrl={file.downloadUrl} fileName={file.name || 'File'} />
-    default:
-      return assertNever(fileType)
-  }
+type FileViewerSource = ReturnType<typeof useFileViewerSource>
+type FileViewerSourceReplaceFile = NonNullable<
+  ReturnType<typeof useFileViewerSource>['replaceFile']
+>
+
+function FileReplaceButton({
+  fileInputRef,
+  onFileChange,
+}: {
+  fileInputRef: RefObject<HTMLInputElement | null>
+  onFileChange: (event: ChangeEvent<HTMLInputElement>) => void
+}) {
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <Upload aria-hidden="true" />
+        Replace
+      </Button>
+      <input
+        ref={fileInputRef}
+        aria-label="Choose file replacement"
+        className="sr-only"
+        type="file"
+        onChange={onFileChange}
+      />
+    </>
+  )
+}
+
+function fileMetadataLabel(contentType: string | null, size: number | null) {
+  const type = contentType ?? 'Unknown type'
+  return size === null ? type : `${type} · ${formatFileSize(size)}`
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }

@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { Folder } from 'lucide-react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import { SidebarItemButtonBase } from '../sidebar-item-button-base'
 
@@ -63,5 +63,79 @@ describe('SidebarItemButtonBase', () => {
     )
 
     expect(screen.getByRole('button', { name: 'Quests' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('only renders the more-options action when a handler is supplied', () => {
+    const onMoreOptions = vi.fn()
+    const { rerender } = render(
+      <SidebarItemButtonBase
+        icon={Folder}
+        name={assertSidebarItemName('Quests')}
+        presentation={{
+          visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
+          focused: false,
+          renaming: false,
+          expanded: false,
+          showChevron: false,
+        }}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'More options' })).not.toBeInTheDocument()
+
+    rerender(
+      <SidebarItemButtonBase
+        icon={Folder}
+        name={assertSidebarItemName('Quests')}
+        presentation={{
+          visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
+          focused: false,
+          renaming: false,
+          expanded: false,
+          showChevron: false,
+        }}
+        onMoreOptions={onMoreOptions}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    expect(onMoreOptions).toHaveBeenCalledTimes(1)
+  })
+
+  it('only renders the folder chevron when toggle behavior is supplied', () => {
+    const onToggleExpanded = vi.fn()
+    const { rerender } = render(
+      <SidebarItemButtonBase
+        icon={Folder}
+        name={assertSidebarItemName('Quests')}
+        presentation={{
+          visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
+          focused: false,
+          renaming: false,
+          expanded: false,
+          showChevron: true,
+        }}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Expand folder' })).not.toBeInTheDocument()
+
+    rerender(
+      <SidebarItemButtonBase
+        icon={Folder}
+        name={assertSidebarItemName('Quests')}
+        presentation={{
+          visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
+          focused: false,
+          renaming: false,
+          expanded: false,
+          showChevron: true,
+        }}
+        onToggleExpanded={onToggleExpanded}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand folder' }))
+    expect(onToggleExpanded).toHaveBeenCalledTimes(1)
   })
 })

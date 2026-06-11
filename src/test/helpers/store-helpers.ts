@@ -4,7 +4,6 @@ export function resetSidebarUIStore() {
   useSidebarUIStore.setState({
     campaignStates: {},
     renamingId: null,
-    pendingItemName: '',
     selectedSlug: null,
     selectedItemIds: [],
     anchorItemId: null,

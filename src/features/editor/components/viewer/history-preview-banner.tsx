@@ -1,35 +1,30 @@
 import { History, RotateCcw, X } from 'lucide-react'
-import type { Id } from 'convex/_generated/dataModel'
-import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import { Banner, BannerButton } from '~/shared/components/banner'
 
 export function HistoryPreviewBanner({
-  itemId,
-  entryId,
-  entryTime,
   canEdit,
+  entryTime,
+  onExit,
+  onRestore,
 }: {
-  itemId: Id<'sidebarItems'>
-  entryId: Id<'editHistory'>
-  entryTime: number | undefined
   canEdit: boolean
+  entryTime: number | undefined
+  onExit: () => void
+  onRestore: () => void
 }) {
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
-  const setRollbackEntry = useHistoryPreviewStore((s) => s.setRollbackEntry)
-
   return (
     <Banner
       icon={<History className="h-3.5 w-3.5" />}
       actions={
         <>
           {canEdit && (
-            <BannerButton onClick={() => setRollbackEntry(itemId, entryId)}>
+            <BannerButton onClick={onRestore}>
               <RotateCcw className="h-3 w-3 mr-0.5" />
               Restore
             </BannerButton>
           )}
-          <BannerButton onClick={() => clearPreview(itemId)}>
+          <BannerButton onClick={onExit}>
             <X className="h-3 w-3 mr-0.5" />
             Exit
           </BannerButton>

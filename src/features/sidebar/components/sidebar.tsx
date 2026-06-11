@@ -2,14 +2,15 @@ import { ClientOnly } from '@tanstack/react-router'
 import { BookmarkedItemsList } from './bookmarked-items-list'
 import { DroppableRoot } from './sidebar-root/droppable-root'
 import { SidebarList } from './sidebar-list'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignSidebarState } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 export function FileSidebar() {
-  const { status, error, refetch } = useActiveSidebarItems()
-  const { campaignId } = useCampaign()
-  const { bookmarksOnlyMode } = useCampaignSidebarState(campaignId)
+  const {
+    items: {
+      active: { status, error, refetch },
+    },
+    ui: { bookmarksOnlyMode },
+  } = useSidebarWorkspaceSource()
 
   if (status === 'pending') {
     return <SidebarLoading />

@@ -2,10 +2,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { EDITOR_MODE } from 'shared/editor/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { ActionHandlers } from '~/features/context-menu/menu-registry'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { ArrowUpLeft, ArrowUpRight, History, List } from 'lucide-react'
 import type {
   ContextMenuCommand,
   ContextMenuContributor,
+  EditorContextMenuActions,
+  EditorContextMenuServices,
   EditorModeMenuService,
   ViewAsPlayerMenuService,
   MenuContext,
@@ -32,55 +35,78 @@ vi.mock('sonner', () => ({
   },
 }))
 
-function createActions(): ActionHandlers {
+function createActions(): EditorContextMenuActions {
   return {
-    open: vi.fn(),
-    rename: vi.fn(),
-    delete: vi.fn(),
-    showInSidebar: vi.fn(),
-    createNote: vi.fn(),
-    createFolder: vi.fn(),
-    createMap: vi.fn(),
-    createFile: vi.fn(),
-    createCanvas: vi.fn(),
-    editMap: vi.fn(),
-    editFile: vi.fn(),
-    editItem: vi.fn(),
-    pinToMap: vi.fn(),
-    goToMapPin: vi.fn(),
-    createMapPin: vi.fn(),
-    removeMapPin: vi.fn(),
-    moveMapPin: vi.fn(),
-    togglePinVisibility: vi.fn(),
-    startSession: vi.fn(),
-    endSession: vi.fn(),
-    setGeneralAccessLevel: vi.fn(),
-    downloadItems: vi.fn(),
-    downloadAll: vi.fn(),
-    toggleBookmark: vi.fn(),
-    paste: vi.fn(),
-    duplicate: vi.fn(),
-    restore: vi.fn(),
-    permanentlyDelete: vi.fn(),
-    emptyTrash: vi.fn(),
+    sidebarItem: {
+      open: vi.fn(),
+      rename: vi.fn(),
+      showInSidebar: vi.fn(),
+      editMap: vi.fn(),
+      editFile: vi.fn(),
+      editItem: vi.fn(),
+      toggleBookmark: vi.fn(),
+    },
+    creation: {
+      createNote: vi.fn(),
+      createFolder: vi.fn(),
+      createMap: vi.fn(),
+      createFile: vi.fn(),
+      createCanvas: vi.fn(),
+    },
+    mapPins: {
+      pinToMap: vi.fn(),
+      goToMapPin: vi.fn(),
+      createMapPin: vi.fn(),
+      removeMapPin: vi.fn(),
+      moveMapPin: vi.fn(),
+      togglePinVisibility: vi.fn(),
+    },
+    session: {
+      startSession: vi.fn(),
+      endSession: vi.fn(),
+    },
+    sharing: {
+      setGeneralAccessLevel: vi.fn(),
+    },
+    download: {
+      downloadItems: vi.fn(),
+      downloadAll: vi.fn(),
+    },
+    filesystem: {
+      delete: vi.fn(),
+      paste: vi.fn(),
+      duplicate: vi.fn(),
+      restore: vi.fn(),
+      permanentlyDelete: vi.fn(),
+      emptyTrash: vi.fn(),
+    },
   }
 }
 
 function createServices({
   editorMode: editorModeOverrides,
   viewAsPlayer: viewAsPlayerOverrides,
+  sidebarItemSharing: sidebarItemSharingOverrides,
   blockShare: blockShareOverrides,
+  editorPanels: editorPanelsOverrides,
 }: {
   editorMode?: Partial<typeof baseEditorModeService>
   viewAsPlayer?: Partial<typeof baseViewAsPlayerService>
+  sidebarItemSharing?: Partial<typeof baseSidebarItemSharingService>
   blockShare?: Partial<typeof baseBlockShareService>
+  editorPanels?: Partial<typeof baseEditorPanelService>
 } = {}) {
   return {
     actions: createActions(),
     filesystem: { canPasteIntoTarget: () => false },
     editorMode: { ...baseEditorModeService, ...editorModeOverrides },
     viewAsPlayer: { ...baseViewAsPlayerService, ...viewAsPlayerOverrides },
+    sidebarItemSharing: {
+      ...baseSidebarItemSharingService,
+      ...sidebarItemSharingOverrides,
+    },
     blockShare: { ...baseBlockShareService, ...blockShareOverrides },
+    editorPanels: { ...baseEditorPanelService, ...editorPanelsOverrides },
   }
 }
 
@@ -102,6 +128,10 @@ const baseViewAsPlayerService: ViewAsPlayerMenuService = {
   ],
 }
 
+const baseSidebarItemSharingService: EditorContextMenuServices['sidebarItemSharing'] = {
+  renderSidebarItemsSharePanel: vi.fn(() => 'share-panel'),
+}
+
 interface TestBlockShareService {
   canOpen: (context: MenuContext) => boolean
   canToggleAllPlayersPermission: (context: MenuContext) => boolean
@@ -118,6 +148,21 @@ const baseBlockShareService: TestBlockShareService = {
   toggleAllPlayersPermission: vi.fn(),
 }
 
+const baseEditorPanelService: EditorContextMenuServices['editorPanels'] = {
+  getPanelItems: (context) => {
+    const history = { id: 'history', label: 'Edit History', icon: History }
+    if (context.item?.type === SIDEBAR_ITEM_TYPES.files) return [history]
+    return [
+      history,
+      { id: 'backlinks', label: 'Back Links', icon: ArrowUpLeft },
+      { id: 'outgoing', label: 'Outgoing Links', icon: ArrowUpRight },
+      { id: 'outline', label: 'Outline', icon: List },
+    ]
+  },
+  isPanelActive: vi.fn(() => false),
+  activatePanel: vi.fn(),
+}
+
 function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
   return {
     item: createNote(),
@@ -130,6 +175,33 @@ function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
 
 describe('buildMenu', () => {
   const services = createServices()
+
+  it('routes command execution through domain-owned action fragments', async () => {
+    const context = sidebarCtx({ item: createNote() })
+
+    await editorContextMenuCommands.open.run(context, services)
+    await editorContextMenuCommands.createNote.run(context, services)
+    await editorContextMenuCommands.pinToMap.run(context, services)
+    await editorContextMenuCommands.setGeneralAccessLevel.run(
+      context,
+      services,
+      PERMISSION_LEVEL.VIEW,
+    )
+    await editorContextMenuCommands.downloadItems.run(context, services)
+    await editorContextMenuCommands.paste.run(context, services)
+    await editorContextMenuCommands.delete.run(context, services)
+
+    expect(services.actions.sidebarItem.open).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.creation.createNote).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.mapPins.pinToMap).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.sharing.setGeneralAccessLevel).toHaveBeenCalledExactlyOnceWith(
+      context,
+      PERMISSION_LEVEL.VIEW,
+    )
+    expect(services.actions.download.downloadItems).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.filesystem.paste).toHaveBeenCalledExactlyOnceWith(context)
+    expect(services.actions.filesystem.delete).toHaveBeenCalledExactlyOnceWith(context)
+  })
 
   it('DM sees edit and delete actions on a note in sidebar', () => {
     const menu = buildMenu({
@@ -316,9 +388,17 @@ describe('buildMenu', () => {
 
   it('renders share as submenu content instead of an action command', () => {
     const note = createNote()
+    const renderSidebarItemsSharePanel = vi.fn(() => 'share-panel')
+    const shareServices = createServices({
+      sidebarItemSharing: { renderSidebarItemsSharePanel },
+    })
     const menu = buildMenu({
-      context: sidebarCtx({ item: note }),
-      services,
+      context: sidebarCtx({
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: shareServices,
       contributors: editorContextMenuContributors,
       commands: editorContextMenuCommands,
       groupConfig,
@@ -326,7 +406,8 @@ describe('buildMenu', () => {
 
     const shareItem = menu.flatItems.find((i) => i.id === 'share-items')
     expect(shareItem?.commandId).toBeUndefined()
-    expect(shareItem?.submenuContent).toBeDefined()
+    expect(shareItem?.submenuContent).toBe('share-panel')
+    expect(renderSidebarItemsSharePanel).toHaveBeenCalledExactlyOnceWith([note])
   })
 
   it('multi-selection can pin multiple selected items to a map', () => {

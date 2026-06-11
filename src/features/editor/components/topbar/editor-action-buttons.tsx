@@ -5,13 +5,19 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
+import type { EditorWorkspaceItemActionsCapability } from '../../workspace/editor-workspace-source'
 
-export function ContextMenuButton({ isTrashView }: { isTrashView?: boolean }) {
-  const { item } = useCurrentItem()
+export function ContextMenuButton({
+  itemActions,
+  isTrashView,
+}: {
+  itemActions: EditorWorkspaceItemActionsCapability
+  isTrashView?: boolean
+}) {
   const topbarContextMenuRef = useRef<ContextMenuHostRef>(null)
 
-  const hasMenu = !!item || isTrashView
+  const item = itemActions.item
+  const hasMenu = itemActions.enabled && (!!item || isTrashView)
 
   const baseButton = (
     <EmptyContextMenu>

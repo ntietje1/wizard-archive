@@ -1,33 +1,11 @@
-import { useMenuActions } from '../actions'
-import { VIEW_CONTEXT } from '../constants'
-import { buildMenu } from '../menu-builder'
-import {
-  editorContextMenuCommands,
-  editorContextMenuContributors,
-  groupConfig,
-} from '../menu-registry'
+import { useLiveEditorContextMenuModel } from '../hooks/use-live-editor-context-menu-model'
 import { MenuDialogs } from '../menu-dialogs'
-import { ContextMenuHost } from './context-menu-host'
+import { EditorContextMenuSurface } from './editor-context-menu-surface'
 import type { ContextMenuHostRef } from './context-menu-host'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
-import type { EditorMenuContext, ViewContext } from '../types'
+import type { ViewContext } from '../types'
 import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
-import { use, useRef, useState } from 'react'
 import type { Ref } from 'react'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
-import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
-import type { BlockNoteContextMenuContextType } from '~/features/editor/hooks/useBlockNoteContextMenu'
-import { useSession } from '~/features/sidebar/hooks/useGameSession'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
-import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
-import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
-import { getBlockShareTargetBlocks } from '~/features/editor/utils/block-share-targets'
-import { useCampaignActorPermissions } from '~/features/campaigns/hooks/useCampaignActorPermissions'
-import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
 
 interface EditorContextMenuProps {
   ref?: Ref<ContextMenuHostRef>
@@ -45,19 +23,6 @@ interface EditorContextMenuProps {
   onDialogClose?: () => void
 }
 
-const FILESYSTEM_SELECTION_SURFACES = new Set<ViewContext>([
-  VIEW_CONTEXT.SIDEBAR,
-  VIEW_CONTEXT.FOLDER_VIEW,
-  VIEW_CONTEXT.TRASH_VIEW,
-])
-
-type BlockShareAllPlayersPermissionLevel = 'hidden' | 'visible' | 'mixed'
-
-interface OptimisticBlockSharePermission {
-  targetKey: string
-  permissionLevel: Exclude<BlockShareAllPlayersPermissionLevel, 'mixed'>
-}
-
 export function EditorContextMenu({
   ref,
   viewContext,
@@ -73,7 +38,7 @@ export function EditorContextMenu({
   onDialogOpen,
   onDialogClose,
 }: EditorContextMenuProps) {
-  const { hostRef, menuActions, menu } = useEditorContextMenuModel({
+  const { dialogState, surfaceModel } = useLiveEditorContextMenuModel({
     ref,
     viewContext,
     item,
@@ -86,281 +51,16 @@ export function EditorContextMenu({
 
   return (
     <>
-      {disabled ? (
-        children
-      ) : (
-        <>
-          <ContextMenuHost
-            ref={hostRef}
-            menu={menu}
-            className={className}
-            menuClassName={menuClassName}
-            onClose={onClose}
-          >
-            {children}
-          </ContextMenuHost>
-          <MenuDialogs {...menuActions.dialogState} />
-        </>
-      )}
+      <EditorContextMenuSurface
+        model={surfaceModel}
+        disabled={disabled}
+        className={className}
+        menuClassName={menuClassName}
+        onClose={onClose}
+      >
+        {children}
+      </EditorContextMenuSurface>
+      {disabled ? null : <MenuDialogs {...dialogState} />}
     </>
   )
-}
-
-function useEditorContextMenuModel({
-  ref,
-  viewContext,
-  item,
-  isTrashView,
-  activeMap,
-  activePin,
-  onDialogOpen,
-  onDialogClose,
-}: {
-  ref?: Ref<ContextMenuHostRef>
-  viewContext: ViewContext
-  item?: AnySidebarItem
-  isTrashView?: boolean
-  activeMap?: GameMapWithContent
-  activePin?: MapPinWithItem
-  onDialogOpen?: () => void
-  onDialogClose?: () => void
-}) {
-  const fallbackRef = useRef<ContextMenuHostRef>(null)
-  const hostRef = ref ?? fallbackRef
-  const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
-  const { campaign } = useCampaign()
-  const { currentSession } = useSession()
-  const mapView = useMapViewOptional()
-  const blockNoteContext = use(BlockNoteContextMenuContext)
-  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const filesystemReadModel = useFileSystemReadModel()
-  const editorMode = useEditorMode()
-  const actorPermissions = useCampaignActorPermissions()
-  const campaignMembersQuery = useCampaignMembers()
-  const blockShareTargets = getBlockShareTargetsFromContext(blockNoteContext)
-  const blockShare = useBlocksShare(blockShareTargets.blocks, blockShareTargets.note)
-  const blockShareTargetKey = getBlockShareTargetKey(
-    blockShareTargets,
-    blockShare.allPlayersPermissionLevel,
-  )
-  const [optimisticBlockSharePermission, setOptimisticBlockSharePermission] =
-    useState<OptimisticBlockSharePermission | null>(null)
-  const displayedAllPlayersPermissionLevel =
-    optimisticBlockSharePermission?.targetKey === blockShareTargetKey
-      ? optimisticBlockSharePermission.permissionLevel
-      : blockShare.allPlayersPermissionLevel
-  const optimisticBlockShareIsPending =
-    optimisticBlockSharePermission?.targetKey === blockShareTargetKey
-  const canToggleBlockShare =
-    blockShare.hasCompleteData && !blockShare.isMutating && !optimisticBlockShareIsPending
-  const playerMembers =
-    campaignMembersQuery.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
-  const selectedItems = resolveClickedSidebarOperationItems({
-    item,
-    selectedItemIds,
-    activeItemsMap: filesystemReadModel.activeItemsById,
-    trashedItemsMap: filesystemReadModel.trashedItemsById,
-    canUseItemSelection: canUseItemSelection(viewContext),
-  })
-  const primaryItem = selectedItems[0] ?? item
-  const actionItem = item ? actorPermissions.projectActionItem(item) : undefined
-  const actionPrimaryItem = primaryItem
-    ? actorPermissions.projectActionItem(primaryItem)
-    : undefined
-  const actionSelectedItems = selectedItems.map(actorPermissions.projectActionItem)
-
-  const menuContext = buildEditorMenuContext({
-    blockNoteContext,
-    campaign,
-    currentSession,
-    item: actionItem,
-    isViewingAsPlayer: editorMode.viewAsPlayerId !== undefined,
-    isTrashView,
-    mapView,
-    activeMap,
-    activePin,
-    primaryItem: actionPrimaryItem,
-    selectedItems: actionSelectedItems,
-    viewContext,
-  })
-
-  const menu = buildMenu({
-    context: menuContext,
-    services: {
-      actions: menuActions.actions,
-      filesystem: menuActions.filesystem,
-      editorMode,
-      viewAsPlayer: {
-        viewAsPlayerId: editorMode.viewAsPlayerId,
-        playerMembers,
-        setViewAsPlayerId: editorMode.setViewAsPlayerId,
-      },
-      blockShare: {
-        canOpen: (context) =>
-          blockShare.canShare &&
-          blockShare.hasCompleteData &&
-          getContextMenuBlockShareTargets(context).length > 0,
-        canToggleAllPlayersPermission: () => canToggleBlockShare,
-        getBlockCount: (context) => getContextMenuBlockShareTargets(context).length,
-        getAllPlayersPermissionLevel: () => displayedAllPlayersPermissionLevel,
-        toggleAllPlayersPermission: () => {
-          if (!canToggleBlockShare) return
-          const nextPermission =
-            displayedAllPlayersPermissionLevel === 'visible' ? 'hidden' : 'visible'
-          setOptimisticBlockSharePermission({
-            targetKey: blockShareTargetKey,
-            permissionLevel: nextPermission,
-          })
-          void blockShare.setAllPlayersPermission(nextPermission).then((updated) => {
-            if (!updated) {
-              setOptimisticBlockSharePermission(null)
-            }
-          })
-        },
-      },
-    },
-    contributors: editorContextMenuContributors,
-    commands: editorContextMenuCommands,
-    groupConfig,
-  })
-
-  return { hostRef, menuActions, menu }
-}
-
-function canUseItemSelection(viewContext: ViewContext) {
-  return FILESYSTEM_SELECTION_SURFACES.has(viewContext)
-}
-
-function buildEditorMenuContext({
-  blockNoteContext,
-  campaign,
-  currentSession,
-  item,
-  isViewingAsPlayer,
-  isTrashView,
-  mapView,
-  activeMap,
-  activePin,
-  primaryItem,
-  selectedItems,
-  viewContext,
-}: {
-  blockNoteContext: BlockNoteContextMenuContextType | null
-  campaign: ReturnType<typeof useCampaign>['campaign']
-  currentSession: ReturnType<typeof useSession>['currentSession']
-  item?: AnySidebarItem
-  isViewingAsPlayer?: boolean
-  isTrashView?: boolean
-  mapView: ReturnType<typeof useMapViewOptional>
-  activeMap?: GameMapWithContent
-  activePin?: MapPinWithItem
-  primaryItem?: AnySidebarItem
-  selectedItems: Array<AnySidebarItem>
-  viewContext: ViewContext
-}) {
-  const membershipContext = getCampaignMembershipContext(campaign)
-  const mapContext = getMapMenuContext({ mapView, activeMap, activePin })
-  const blockNoteMenuContext = getBlockNoteMenuContext(blockNoteContext)
-
-  return {
-    surface: viewContext,
-    item,
-    primaryItem,
-    selectedItems,
-    isItemTrashed: itemIsTrashed(item),
-    isTrashView: isTrashSurface({ explicitTrashView: isTrashView, viewContext }),
-    ...membershipContext,
-    isViewingAsPlayer,
-    permissionLevel: item?.myPermissionLevel,
-    ...mapContext,
-    hasActiveSession: sessionIsActive(currentSession),
-    ...blockNoteMenuContext,
-  }
-}
-
-function itemIsTrashed(item?: AnySidebarItem) {
-  return item?.isTrashed === true
-}
-
-function isTrashSurface({
-  explicitTrashView,
-  viewContext,
-}: {
-  explicitTrashView?: boolean
-  viewContext: ViewContext
-}) {
-  return explicitTrashView === true || viewContext === VIEW_CONTEXT.TRASH_VIEW
-}
-
-function getCampaignMembershipContext(campaign: ReturnType<typeof useCampaign>['campaign']) {
-  const membership = campaign.data?.myMembership
-
-  return {
-    currentUserId: membership?.userId,
-    memberRole: membership?.role,
-  }
-}
-
-function getMapMenuContext({
-  mapView,
-  activeMap,
-  activePin,
-}: {
-  mapView: ReturnType<typeof useMapViewOptional>
-  activeMap?: GameMapWithContent
-  activePin?: MapPinWithItem
-}) {
-  const context: Partial<Pick<EditorMenuContext, 'activeMap' | 'activePin'>> = {}
-  const resolvedActiveMap = activeMap ?? mapView?.activeMap
-  const resolvedActivePin = activePin ?? mapView?.activePin
-
-  if (resolvedActiveMap != null) {
-    context.activeMap = resolvedActiveMap
-  }
-  if (resolvedActivePin != null) {
-    context.activePin = resolvedActivePin
-  }
-  return context
-}
-
-function sessionIsActive(currentSession: ReturnType<typeof useSession>['currentSession']) {
-  return Boolean(currentSession.data)
-}
-
-function getBlockNoteMenuContext(blockNoteContext: BlockNoteContextMenuContextType | null) {
-  if (!blockNoteContext) {
-    return {}
-  }
-
-  return {
-    note: blockNoteContext.note,
-    editor: blockNoteContext.editor ?? undefined,
-    position: blockNoteContext.position,
-    blockNoteId: blockNoteContext.blockNoteId,
-    isEditorTextContext: blockNoteContext.isEditorTextContext,
-    valueInlineId: blockNoteContext.valueInlineId,
-    valueInlineInstanceId: blockNoteContext.valueInlineInstanceId,
-    valueInlineEditable: blockNoteContext.valueInlineEditable,
-    openValueInline: blockNoteContext.openValueInline,
-  }
-}
-
-function getBlockShareTargetsFromContext(blockNoteContext: BlockNoteContextMenuContextType | null) {
-  if (!blockNoteContext?.editor) return { blocks: [], note: undefined }
-  return {
-    blocks: getBlockShareTargetBlocks(blockNoteContext.editor, blockNoteContext.blockNoteId),
-    note: blockNoteContext.note,
-  }
-}
-
-function getBlockShareTargetKey(
-  { blocks, note }: ReturnType<typeof getBlockShareTargetsFromContext>,
-  permissionLevel: string,
-) {
-  return `${note?._id ?? 'no-note'}:${blocks.map((block) => block.id).join(',')}:${permissionLevel}`
-}
-
-function getContextMenuBlockShareTargets(context: EditorMenuContext) {
-  if (!context.editor || !context.note) return []
-  return getBlockShareTargetBlocks(context.editor, context.blockNoteId)
 }

@@ -1,7 +1,5 @@
-import { createContext, use, useEffect, useRef, useState } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { useEffect, useRef, useState } from 'react'
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
-import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
 import {
   useCanvasDocumentRuntime,
@@ -11,14 +9,10 @@ import {
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import { CANVAS_NODE_MIN_SIZE } from '../shared/canvas-node-resize-constants'
 import type { EmbedNodeData } from './embed-node-data'
-import { EmbedNoteContent } from './embed-note-content'
 import { CanvasFloatingFormattingToolbar } from '../shared/canvas-floating-formatting-toolbar'
 import { registerCanvasRichTextFormattingSession } from '../shared/canvas-rich-text-formatting-session'
 import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node-session'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
-import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
-import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
-import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
@@ -27,10 +21,6 @@ import {
   getCanvasNodeSurfaceStyle,
   getCanvasNodeTextStyle,
 } from '../shared/canvas-node-surface-style'
-import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
-import { FileMediaEmbedContent } from '~/features/previews/components/file-media-embed-content'
-import { EmbeddedCanvasContent } from './embedded-canvas-content'
-import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
@@ -41,17 +31,28 @@ import {
   resolveDefaultEmbedNodeResizeForLockedAspectRatio,
 } from './embed-node-size'
 import { EmbedContent } from '~/features/embeds/components/embed-content'
+import {
+  CanvasSidebarItemEmbedProvider,
+  CanvasSidebarItemEmbedRenderer,
+} from '~/features/embeds/components/canvas-sidebar-item-embed-renderer'
+import type { CanvasSidebarItemEmbedContextValue } from '~/features/embeds/components/canvas-sidebar-item-embed-renderer'
+import { useEmbedSidebarItemResolver } from '~/features/embeds/context/embed-sidebar-item-resolution'
+import type { EmbedSidebarItemState } from '~/features/embeds/context/embed-sidebar-item-resolution'
 import { useEmbedDropTarget } from '~/features/embeds/hooks/use-embed-drop-target'
 import { useEditableEmbedTargetControls } from '~/features/embeds/hooks/use-editable-embed-target-controls'
-import type {
-  EmbedMediaLayout,
-  EmbedMediaLayoutReporter,
-} from '~/features/embeds/utils/embed-media'
+import type { EmbedMediaLayout } from '~/features/embeds/utils/embed-media'
 import {
   areEmbedMediaLayoutsEqual,
   getEmbedMediaAspectRatio,
 } from '~/features/embeds/utils/embed-media'
 import { getDefaultDocumentEmbedAspectRatio } from '~/features/embeds/utils/document-embed-layout'
+import {
+  isCanvasSidebarItemEmbedRichTextEditable,
+  shouldCanvasSidebarItemEmbedLockToMediaAspectRatio,
+  shouldCanvasSidebarItemEmbedUseDocumentShapeDefault,
+  shouldCanvasSidebarItemEmbedUseFreeformResize,
+  shouldClearDefaultCanvasSidebarItemEmbedAspectRatio,
+} from '~/features/embeds/utils/canvas-sidebar-item-embed-capabilities'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
 import type { Id } from 'convex/_generated/dataModel'
@@ -59,19 +60,6 @@ import type { RefObject } from 'react'
 
 const EMBED_FLOATING_LABEL_GAP_PX = 6
 const EMBED_FLOATING_LABEL_LINE_HEIGHT_PX = 16
-
-type CanvasEmbedRichContentContextValue = {
-  nodeId: string
-  isEditing: boolean
-  isExclusivelySelected: boolean
-  interactiveRenderMode: boolean
-  onActivated: () => void
-  onEditorChange: (editor: CustomBlockNoteEditor | null) => void
-  pendingActivationRef: PendingRichEmbedActivationRef
-  textColor: string | null
-}
-
-const CanvasEmbedRichContentContext = createContext<CanvasEmbedRichContentContextValue | null>(null)
 
 function persistEmbedTextColor(
   patchNodeData: CanvasDocumentWriter['patchNodeData'],
@@ -83,7 +71,7 @@ function persistEmbedTextColor(
 
 function useEmbedNodeMediaLayout({
   canvasEngine,
-  contentItemType,
+  contentItem,
   documentAspectRatio,
   documentWriter,
   id,
@@ -92,7 +80,7 @@ function useEmbedNodeMediaLayout({
   target,
 }: {
   canvasEngine: ReturnType<typeof useCanvasEngine>
-  contentItemType: AnySidebarItemWithContent['type'] | undefined
+  contentItem: AnySidebarItemWithContent | undefined
   documentAspectRatio: number | null
   documentWriter: CanvasDocumentWriter
   id: string
@@ -170,7 +158,7 @@ function useEmbedNodeMediaLayout({
     if (mediaLayout !== null) return
     syncDefaultEmbedNodeLayout({
       canvasEngine,
-      contentItemType,
+      contentItem,
       documentAspectRatio,
       documentWriter,
       id,
@@ -179,7 +167,7 @@ function useEmbedNodeMediaLayout({
     })
   }, [
     canvasEngine,
-    contentItemType,
+    contentItem,
     documentAspectRatio,
     documentWriter,
     id,
@@ -192,7 +180,7 @@ function useEmbedNodeMediaLayout({
 
 function syncDefaultEmbedNodeLayout({
   canvasEngine,
-  contentItemType,
+  contentItem,
   documentAspectRatio,
   documentWriter,
   id,
@@ -200,33 +188,26 @@ function syncDefaultEmbedNodeLayout({
   patchNodeData,
 }: {
   canvasEngine: ReturnType<typeof useCanvasEngine>
-  contentItemType: AnySidebarItemWithContent['type'] | undefined
+  contentItem: AnySidebarItemWithContent | undefined
   documentAspectRatio: number | null
   documentWriter: CanvasDocumentWriter
   id: string
   lastStoredAspectRatioRef: RefObject<number | null>
   patchNodeData: CanvasDocumentWriter['patchNodeData']
 }) {
-  if (contentItemType === SIDEBAR_ITEM_TYPES.canvases) {
+  if (shouldClearDefaultCanvasSidebarItemEmbedAspectRatio(contentItem)) {
     patchStoredEmbedAspectRatio({
       id,
       lastStoredAspectRatioRef,
       lockedAspectRatio: null,
       patchNodeData,
     })
-    return
+    if (!shouldCanvasSidebarItemEmbedUseDocumentShapeDefault(contentItem)) return
   }
 
   if (!documentAspectRatio) return
 
-  if (contentItemType === SIDEBAR_ITEM_TYPES.notes) {
-    patchStoredEmbedAspectRatio({
-      id,
-      lastStoredAspectRatioRef,
-      lockedAspectRatio: null,
-      patchNodeData,
-    })
-  } else {
+  if (!shouldClearDefaultCanvasSidebarItemEmbedAspectRatio(contentItem)) {
     patchStoredEmbedAspectRatio({
       id,
       lastStoredAspectRatioRef,
@@ -262,26 +243,127 @@ function patchStoredEmbedAspectRatio({
 }
 
 export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
-  const canvasEngine = useCanvasEngine()
   const normalizedData = normalizeEmbedNodeData(data)
-  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const target = normalizedData.target
-  const sidebarItemId =
-    target.kind === 'sidebarItem' ? (target.sidebarItemId as Id<'sidebarItems'>) : null
-  const contentQuery = useSidebarItemById(sidebarItemId)
-  const itemState = useSidebarItemAvailabilityState({
-    lookup: { kind: 'id', id: sidebarItemId },
-    readableItem: contentQuery.data,
-    readableItemLoading: contentQuery.isLoading,
-    readableItemError: contentQuery.error,
-    canView: contentQuery.data !== undefined,
-    subject: 'item',
-    fallbackLabel: 'Embedded item',
+  const SidebarItemResolver = useEmbedSidebarItemResolver()
+
+  return (
+    <SidebarItemResolver target={target}>
+      {(itemState) => (
+        <ResolvedEmbedNode
+          id={id}
+          normalizedData={normalizedData}
+          dragging={dragging}
+          itemState={itemState}
+        />
+      )}
+    </SidebarItemResolver>
+  )
+}
+
+function ResolvedEmbedNode({
+  dragging,
+  id,
+  itemState,
+  normalizedData,
+}: {
+  id: string
+  normalizedData: EmbedNodeData
+  dragging?: boolean
+  itemState: EmbedSidebarItemState | undefined
+}) {
+  const target = normalizedData.target
+  const resolvedItem = getResolvedEmbedSidebarItemState({ target, itemState })
+  const editingRuntime = useEmbedNodeEditingRuntime({
+    id,
+    contentItem: resolvedItem.contentItem,
+    normalizedData,
   })
-  const contentItem = itemState.status === 'available' ? itemState.item : undefined
+  const documentRuntime = useEmbedNodeDocumentRuntime({
+    id,
+    target,
+    contentItem: resolvedItem.contentItem,
+    normalizedData,
+  })
+
+  return (
+    <ResizableNodeWrapper
+      id={id}
+      nodeType="embed"
+      dragging={!!dragging}
+      minWidth={EMBED_NODE_MIN_SIZE.width}
+      minHeight={getEmbedResizeMinHeight(documentRuntime.mediaLayout)}
+      lockedAspectRatio={getLockedAspectRatio({
+        target,
+        contentItem: resolvedItem.contentItem,
+        mediaLayout: documentRuntime.mediaLayout,
+        normalizedData,
+        documentAspectRatio: documentRuntime.documentAspectRatio,
+      })}
+      resizeAxes={documentRuntime.mediaLayout?.kind === 'fixedHeight' ? 'horizontal' : 'both'}
+      editing={editingRuntime.showsFormattingToolbar}
+      chrome={
+        <EmbedNodeChrome
+          defaultTextColor={editingRuntime.defaultTextColor}
+          id={id}
+          isUnavailable={resolvedItem.isUnavailable}
+          label={resolvedItem.label}
+          noteEditor={editingRuntime.noteEditor}
+          patchNodeData={documentRuntime.patchNodeData}
+          showFloatingLabel={!editingRuntime.showsFormattingToolbar}
+          showsFormattingToolbar={editingRuntime.showsFormattingToolbar}
+          zoom={editingRuntime.zoom}
+        />
+      }
+    >
+      <EmbedNodeSurface
+        allowInnerScroll={editingRuntime.allowInnerScroll}
+        canvasId={documentRuntime.canvasId}
+        contentItem={resolvedItem.contentItem}
+        editableSession={editingRuntime.editableSession}
+        interactiveRenderMode={editingRuntime.interactiveRenderMode}
+        isEditableEmbed={editingRuntime.isEditableEmbed}
+        isEditing={editingRuntime.isEditing}
+        itemState={itemState}
+        normalizedData={normalizedData}
+        richContentContext={editingRuntime.richContentContext}
+        setEmbedMediaLayout={documentRuntime.setEmbedMediaLayout}
+        setTarget={documentRuntime.setTarget}
+        surfaceRef={editingRuntime.surfaceRef}
+        target={target}
+      />
+    </ResizableNodeWrapper>
+  )
+}
+
+function getResolvedEmbedSidebarItemState({
+  itemState,
+  target,
+}: {
+  itemState: EmbedSidebarItemState | undefined
+  target: EmbedTarget
+}) {
+  const contentItem = itemState?.status === 'available' ? itemState.item : undefined
+  const label = getEmbedFloatingLabel(target, itemState?.label ?? 'Embedded item')
+  const isUnavailable =
+    target.kind === 'sidebarItem' &&
+    itemState?.status !== 'available' &&
+    itemState?.status !== 'loading'
+
+  return { contentItem, isUnavailable, label }
+}
+
+function useEmbedNodeEditingRuntime({
+  contentItem,
+  id,
+  normalizedData,
+}: {
+  contentItem: AnySidebarItemWithContent | undefined
+  id: string
+  normalizedData: EmbedNodeData
+}) {
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const { canvasId, documentWriter, provider } = useCanvasDocumentRuntime()
-  const { patchNodeData } = documentWriter
   const { domRuntime } = useCanvasViewportRuntime()
   const { canEdit, editSession } = useCanvasInteractionRuntime()
   const surfaceRef = useRef<HTMLDivElement | null>(null)
@@ -291,51 +373,18 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
     editing: editSession.editingEmbedId === id,
     setEditing: (editing) => editSession.setEditingEmbedId(editing ? id : null),
   })
-  const isEditing = editableSession.editable && contentItem?.type === SIDEBAR_ITEM_TYPES.notes
-  const noteEditor = contentItem?.type === SIDEBAR_ITEM_TYPES.notes ? editor : null
+  const supportsRichTextEditing = isCanvasSidebarItemEmbedRichTextEditable(contentItem)
+  const isEditing = editableSession.editable && supportsRichTextEditing
+  const noteEditor = supportsRichTextEditing ? editor : null
   const showsFormattingToolbar = isEditing && noteEditor !== null
   const defaultTextColor = getCanvasNodeDefaultTextColor(normalizedData)
-
   const zoom = useCanvasViewportZoom()
-  const label = getEmbedFloatingLabel(target, itemState.label)
-  const isUnavailable =
-    target.kind === 'sidebarItem' &&
-    itemState.status !== 'available' &&
-    itemState.status !== 'loading'
-  const showFloatingLabel = !showsFormattingToolbar
   const isEditableEmbed = canEdit && interactiveRenderMode
   const allowInnerScroll = interactiveRenderMode && editableSession.isExclusivelySelected
-  const documentAspectRatio = getDefaultDocumentEmbedAspectRatio({
-    target,
-    item: contentItem,
-  })
-  const { mediaLayout, resetMediaLayout, setEmbedMediaLayout } = useEmbedNodeMediaLayout({
-    canvasEngine,
-    contentItemType: contentItem?.type,
-    documentAspectRatio,
-    documentWriter,
-    id,
-    lockedAspectRatio: normalizedData.lockedAspectRatio ?? null,
-    patchNodeData,
-    target,
-  })
-  const setTarget = async (nextTarget: EmbedTarget) => {
-    resetMediaLayout()
-    patchNodeData(new Map([[id, { target: nextTarget, lockedAspectRatio: null }]]))
-    await provider?.flushUpdates()
-  }
-  const richContentContext: CanvasEmbedRichContentContextValue = {
-    nodeId: id,
-    isEditing,
-    isExclusivelySelected: editableSession.isExclusivelySelected,
-    interactiveRenderMode,
-    onActivated: editableSession.handleActivated,
-    onEditorChange: setEditor,
-    pendingActivationRef: editableSession.pendingActivationRef,
-    textColor: normalizedData.textColor,
-  }
 
   useEffect(() => domRuntime.registerNodeSurfaceElement(id, surfaceRef.current), [domRuntime, id])
+
+  const { patchNodeData } = useCanvasDocumentRuntime().documentWriter
 
   useEffect(() => {
     if (!showsFormattingToolbar || !noteEditor) {
@@ -352,86 +401,190 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
     })
   }, [defaultTextColor, id, noteEditor, patchNodeData, showsFormattingToolbar])
 
-  return (
-    <ResizableNodeWrapper
-      id={id}
-      nodeType="embed"
-      dragging={!!dragging}
-      minWidth={EMBED_NODE_MIN_SIZE.width}
-      minHeight={getEmbedResizeMinHeight(mediaLayout)}
-      lockedAspectRatio={getLockedAspectRatio({
-        target,
-        contentItem,
-        mediaLayout,
-        normalizedData,
-        documentAspectRatio,
-      })}
-      resizeAxes={mediaLayout?.kind === 'fixedHeight' ? 'horizontal' : 'both'}
-      editing={showsFormattingToolbar}
-      chrome={
-        <>
-          <CanvasFloatingFormattingToolbar
-            defaultTextColor={defaultTextColor}
-            editor={noteEditor}
-            onDefaultTextColorChange={(textColor) => {
-              persistEmbedTextColor(patchNodeData, id, textColor)
-            }}
-            visible={showsFormattingToolbar}
-          />
-          <CanvasNodeConnectionHandles />
-          {showFloatingLabel && (
-            <EmbedFloatingLabel label={label} missing={isUnavailable} zoom={zoom} />
-          )}
-        </>
-      }
-    >
-      <div
-        ref={surfaceRef}
-        className={cn(
-          'relative h-full w-full overflow-hidden rounded-lg',
-          isEditing ? 'select-text' : 'select-none',
-        )}
-        style={{
-          ...getCanvasNodeSurfaceStyle(normalizedData),
-          ...getCanvasNodeTextStyle(normalizedData),
-        }}
-        onDoubleClick={(event) => {
-          if (!interactiveRenderMode || contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {
-            return
-          }
+  return {
+    allowInnerScroll,
+    defaultTextColor,
+    editableSession,
+    interactiveRenderMode,
+    isEditableEmbed,
+    isEditing,
+    noteEditor,
+    richContentContext: {
+      isEditing,
+      isExclusivelySelected: editableSession.isExclusivelySelected,
+      interactiveRenderMode,
+      onActivated: editableSession.handleActivated,
+      onEditorChange: setEditor,
+      pendingActivationRef: editableSession.pendingActivationRef,
+      textColor: normalizedData.textColor,
+    },
+    showsFormattingToolbar,
+    surfaceRef,
+    zoom,
+  }
+}
 
-          event.preventDefault()
-          event.stopPropagation()
-          editableSession.handleDoubleClick(event)
+function useEmbedNodeDocumentRuntime({
+  contentItem,
+  id,
+  normalizedData,
+  target,
+}: {
+  contentItem: AnySidebarItemWithContent | undefined
+  id: string
+  normalizedData: EmbedNodeData
+  target: EmbedTarget
+}) {
+  const canvasEngine = useCanvasEngine()
+  const { canvasId, documentWriter, provider } = useCanvasDocumentRuntime()
+  const { patchNodeData } = documentWriter
+  const documentAspectRatio = getDefaultDocumentEmbedAspectRatio({
+    target,
+    item: contentItem,
+  })
+  const { mediaLayout, resetMediaLayout, setEmbedMediaLayout } = useEmbedNodeMediaLayout({
+    canvasEngine,
+    contentItem,
+    documentAspectRatio,
+    documentWriter,
+    id,
+    lockedAspectRatio: normalizedData.lockedAspectRatio ?? null,
+    patchNodeData,
+    target,
+  })
+  const setTarget = async (nextTarget: EmbedTarget) => {
+    resetMediaLayout()
+    patchNodeData(new Map([[id, { target: nextTarget, lockedAspectRatio: null }]]))
+    await provider?.flushUpdates()
+  }
+
+  return {
+    canvasId,
+    documentAspectRatio,
+    mediaLayout,
+    patchNodeData,
+    setEmbedMediaLayout,
+    setTarget,
+  }
+}
+
+function EmbedNodeChrome({
+  defaultTextColor,
+  id,
+  isUnavailable,
+  label,
+  noteEditor,
+  patchNodeData,
+  showFloatingLabel,
+  showsFormattingToolbar,
+  zoom,
+}: {
+  defaultTextColor: string
+  id: string
+  isUnavailable: boolean
+  label: string
+  noteEditor: CustomBlockNoteEditor | null
+  patchNodeData: CanvasDocumentWriter['patchNodeData']
+  showFloatingLabel: boolean
+  showsFormattingToolbar: boolean
+  zoom: number
+}) {
+  return (
+    <>
+      <CanvasFloatingFormattingToolbar
+        defaultTextColor={defaultTextColor}
+        editor={noteEditor}
+        onDefaultTextColorChange={(textColor) => {
+          persistEmbedTextColor(patchNodeData, id, textColor)
         }}
-      >
-        <CanvasEmbedRichContentContext.Provider value={richContentContext}>
-          <div className="h-full w-full min-h-0 min-w-0">
-            {isEditableEmbed ? (
-              <EditableCanvasEmbedContent
-                rootRef={surfaceRef}
-                sourceCanvasId={canvasId}
-                target={target}
-                setTarget={setTarget}
-                onMediaLayout={setEmbedMediaLayout}
-                allowInnerScroll={allowInnerScroll}
-                resolvedSidebarItemState={itemState}
-              />
-            ) : (
-              <EmbedContent
-                target={target}
-                sourceItemId={canvasId}
-                mode="readonly"
-                onMediaLayout={setEmbedMediaLayout}
-                allowInnerScroll={allowInnerScroll}
-                SidebarItemRenderer={CanvasEmbedRichContentRenderer}
-                resolvedSidebarItemState={itemState}
-              />
-            )}
-          </div>
-        </CanvasEmbedRichContentContext.Provider>
-      </div>
-    </ResizableNodeWrapper>
+        visible={showsFormattingToolbar}
+      />
+      <CanvasNodeConnectionHandles />
+      {showFloatingLabel && (
+        <EmbedFloatingLabel label={label} missing={isUnavailable} zoom={zoom} />
+      )}
+    </>
+  )
+}
+
+function EmbedNodeSurface({
+  allowInnerScroll,
+  canvasId,
+  contentItem,
+  editableSession,
+  interactiveRenderMode,
+  isEditableEmbed,
+  isEditing,
+  itemState,
+  normalizedData,
+  richContentContext,
+  setEmbedMediaLayout,
+  setTarget,
+  surfaceRef,
+  target,
+}: {
+  allowInnerScroll: boolean
+  canvasId: Id<'sidebarItems'> | null
+  contentItem: AnySidebarItemWithContent | undefined
+  editableSession: ReturnType<typeof useCanvasEditableNodeSession>
+  interactiveRenderMode: boolean
+  isEditableEmbed: boolean
+  isEditing: boolean
+  itemState: EmbedSidebarItemState | undefined
+  normalizedData: EmbedNodeData
+  richContentContext: CanvasSidebarItemEmbedContextValue
+  setEmbedMediaLayout: (layout: EmbedMediaLayout) => void
+  setTarget: (target: EmbedTarget) => Promise<void>
+  surfaceRef: RefObject<HTMLDivElement | null>
+  target: EmbedTarget
+}) {
+  return (
+    <div
+      ref={surfaceRef}
+      className={cn(
+        'relative h-full w-full overflow-hidden rounded-lg',
+        isEditing ? 'select-text' : 'select-none',
+      )}
+      style={{
+        ...getCanvasNodeSurfaceStyle(normalizedData),
+        ...getCanvasNodeTextStyle(normalizedData),
+      }}
+      onDoubleClick={(event) => {
+        if (!interactiveRenderMode || !isCanvasSidebarItemEmbedRichTextEditable(contentItem)) {
+          return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        editableSession.handleDoubleClick(event)
+      }}
+    >
+      <CanvasSidebarItemEmbedProvider value={richContentContext}>
+        <div className="h-full w-full min-h-0 min-w-0">
+          {isEditableEmbed ? (
+            <EditableCanvasEmbedContent
+              rootRef={surfaceRef}
+              sourceCanvasId={canvasId}
+              target={target}
+              setTarget={setTarget}
+              onMediaLayout={setEmbedMediaLayout}
+              allowInnerScroll={allowInnerScroll}
+              resolvedSidebarItemState={itemState}
+            />
+          ) : (
+            <EmbedContent
+              target={target}
+              sourceItemId={canvasId}
+              mode="readonly"
+              onMediaLayout={setEmbedMediaLayout}
+              allowInnerScroll={allowInnerScroll}
+              SidebarItemRenderer={CanvasSidebarItemEmbedRenderer}
+              resolvedSidebarItemState={itemState}
+            />
+          )}
+        </div>
+      </CanvasSidebarItemEmbedProvider>
+    </div>
   )
 }
 
@@ -450,7 +603,7 @@ function EditableCanvasEmbedContent({
   setTarget: (target: EmbedTarget) => Promise<void>
   onMediaLayout: (layout: EmbedMediaLayout) => void
   allowInnerScroll: boolean
-  resolvedSidebarItemState?: SidebarItemAvailabilityState
+  resolvedSidebarItemState?: EmbedSidebarItemState
 }) {
   const embedControls = useEditableEmbedTargetControls({ setTarget })
 
@@ -473,7 +626,7 @@ function EditableCanvasEmbedContent({
         onMediaLayout={onMediaLayout}
         allowInnerScroll={allowInnerScroll}
         dropVisualState={target.kind === 'empty' ? dropVisualState : undefined}
-        SidebarItemRenderer={CanvasEmbedRichContentRenderer}
+        SidebarItemRenderer={CanvasSidebarItemEmbedRenderer}
         resolvedSidebarItemState={resolvedSidebarItemState}
       />
       <input
@@ -555,115 +708,6 @@ function EmbedFloatingLabel({
   )
 }
 
-function CanvasEmbedRichContentRenderer({
-  item,
-  allowInnerScroll = true,
-  onMediaLayout,
-}: {
-  item: AnySidebarItemWithContent
-  allowInnerScroll?: boolean
-  onMediaLayout?: EmbedMediaLayoutReporter
-}) {
-  const context = use(CanvasEmbedRichContentContext)
-  if (!context) return null
-
-  return (
-    <EmbedRichContent
-      {...context}
-      contentItem={item}
-      allowInnerScroll={allowInnerScroll}
-      onMediaLayout={onMediaLayout}
-    />
-  )
-}
-
-function EmbedRichContent({
-  allowInnerScroll,
-  nodeId,
-  contentItem,
-  isEditing,
-  isExclusivelySelected,
-  interactiveRenderMode,
-  onActivated,
-  onEditorChange,
-  onMediaLayout,
-  pendingActivationRef,
-  textColor,
-}: {
-  allowInnerScroll: boolean
-  nodeId: string
-  contentItem: AnySidebarItemWithContent
-  isEditing: boolean
-  isExclusivelySelected: boolean
-  interactiveRenderMode: boolean
-  onActivated: () => void
-  onEditorChange: (editor: CustomBlockNoteEditor | null) => void
-  onMediaLayout?: EmbedMediaLayoutReporter
-  pendingActivationRef: PendingRichEmbedActivationRef
-  textColor: string | null
-}): React.ReactElement | null {
-  if (contentItem.type === SIDEBAR_ITEM_TYPES.notes) {
-    return (
-      <EmbedNoteContent
-        note={contentItem}
-        editable={isEditing}
-        isExclusivelySelected={isExclusivelySelected}
-        onActivated={onActivated}
-        onCanvasEditorChange={onEditorChange}
-        pendingActivationRef={pendingActivationRef}
-        textColor={textColor}
-      />
-    )
-  }
-
-  if (contentItem.type === SIDEBAR_ITEM_TYPES.canvases) {
-    return interactiveRenderMode ? (
-      <EmbeddedCanvasContent
-        nodeId={nodeId}
-        canvasId={contentItem._id}
-        previewUrl={contentItem.previewUrl}
-        alt={contentItem.name}
-      />
-    ) : (
-      <SidebarItemPreviewContent item={contentItem} />
-    )
-  }
-
-  if (contentItem.type === SIDEBAR_ITEM_TYPES.gameMaps) {
-    return interactiveRenderMode ? (
-      <EmbeddedMapContent nodeId={nodeId} map={contentItem} />
-    ) : (
-      <SidebarItemPreviewContent item={contentItem} />
-    )
-  }
-
-  if (contentItem.type === SIDEBAR_ITEM_TYPES.files) {
-    return (
-      <FileMediaEmbedContent
-        downloadUrl={contentItem.downloadUrl}
-        contentType={contentItem.contentType}
-        previewUrl={contentItem.previewUrl}
-        name={contentItem.name}
-        allowInnerScroll={allowInnerScroll}
-        onMediaLayout={onMediaLayout}
-      />
-    )
-  }
-
-  const hasScrollableContent = contentItem.type === SIDEBAR_ITEM_TYPES.folders
-
-  return (
-    <div
-      className={cn(
-        'h-full overflow-hidden',
-        hasScrollableContent && interactiveRenderMode && isExclusivelySelected && 'nowheel',
-      )}
-    >
-      <SidebarItemPreviewContent item={contentItem} />
-    </div>
-  )
-}
-
 function getEmbedFloatingLabel(target: EmbedNodeData['target'], sidebarItemLabel: string) {
   if (target.kind === 'externalUrl') return target.name ?? target.url
   if (target.kind === 'empty') return 'Empty embed'
@@ -687,10 +731,7 @@ function getLockedAspectRatio({
     return undefined
   }
 
-  if (
-    contentItem?.type === SIDEBAR_ITEM_TYPES.notes ||
-    contentItem?.type === SIDEBAR_ITEM_TYPES.canvases
-  ) {
+  if (shouldCanvasSidebarItemEmbedUseFreeformResize(contentItem)) {
     return undefined
   }
 
@@ -704,11 +745,7 @@ function getLockedAspectRatio({
     return lockedAspectRatio
   }
 
-  if (contentItem?.type === SIDEBAR_ITEM_TYPES.gameMaps) {
-    return lockedAspectRatio
-  }
-
-  if (contentItem?.type === SIDEBAR_ITEM_TYPES.files) {
+  if (shouldCanvasSidebarItemEmbedLockToMediaAspectRatio(contentItem)) {
     return lockedAspectRatio
   }
 

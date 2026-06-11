@@ -1,5 +1,14 @@
 export const ITEM_SURFACE_HOTKEY_TARGET_ATTRIBUTE = 'data-item-surface-hotkey-target'
 const ITEM_SURFACE_HOTKEY_TARGET_SELECTOR = `[${ITEM_SURFACE_HOTKEY_TARGET_ATTRIBUTE}="true"]`
+export const ITEM_SURFACE_FLOATING_COMMAND_SELECTOR = [
+  '[data-slot="context-menu-content"]',
+  '[data-slot="context-menu-sub-content"]',
+  '[data-slot="context-menu-rich-submenu-content"]',
+  '[data-slot="popover-content"]',
+  '[data-slot="select-content"]',
+  '[data-slot="dropdown-menu-content"]',
+  '[data-share-menu-overlay="true"]',
+].join(',')
 
 export function isEditableHotkeyTarget(target: EventTarget | null): boolean {
   const candidates = getHotkeyTargetCandidates(target)
@@ -78,7 +87,7 @@ export function isItemSurfaceInteractionTarget(target: EventTarget | null): bool
   if (!(target instanceof Element)) return false
   return (
     target.closest(
-      'a[href],button:not([disabled]),[data-item-selection-target="true"],[data-slot="context-menu-content"]',
+      `a[href],button:not([disabled]),[data-item-selection-target="true"],${ITEM_SURFACE_FLOATING_COMMAND_SELECTOR}`,
     ) !== null
   )
 }

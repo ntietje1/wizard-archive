@@ -5,16 +5,19 @@ import type { SidebarItemType } from 'shared/sidebar-items/types'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
-import { validateCreateItemLocally } from 'shared/sidebar-items/parent-target'
+import {
+  validateCreateItemLocally,
+  validateCreateParentTarget,
+} from 'shared/sidebar-items/parent-target'
 import { createFileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
-import { deduplicateName } from 'shared/sidebar-items/default-name'
+import { deduplicateName, findUniqueDefaultName } from 'shared/sidebar-items/default-name'
 import { useFileSystemReadModel } from './useFileSystemReadModel'
 import { useSidebarItemsCache } from '~/features/sidebar/hooks/useSidebarItemsCache'
 import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/contexts/sidebar-items-context'
 
 interface CreateItemBase {
-  name: string
+  name?: string
   parentTarget: CreateParentTarget
   iconName?: string
   color?: string
@@ -43,9 +46,17 @@ export function useCreateFileSystemItem() {
 
   const validateCreateItem = (args: CreateItemArgs) => {
     const currentReadModel = getCurrentReadModel()
+    const parentResult = validateCreateParentTarget(
+      args.parentTarget,
+      currentReadModel.itemsById,
+      currentReadModel.activeChildrenByParent,
+    )
+    if (!parentResult.valid) return parentResult
+    const name = resolveCreateItemName(args, parentResult.siblings)
+
     return validateCreateItemLocally(
       {
-        name: args.name,
+        name,
         parentTarget: args.parentTarget,
       },
       currentReadModel.itemsById,
@@ -58,14 +69,15 @@ export function useCreateFileSystemItem() {
     initialize?: (created: CreateItemResult) => Promise<void> | void,
   ): Promise<CreateItemResult> => {
     const currentReadModel = getCurrentReadModel()
-    const trimmedName = args.name.trim()
-    const candidateName =
-      args.parentTarget.kind === 'direct'
-        ? deduplicateName(
-            trimmedName,
-            currentReadModel.getActiveChildren(args.parentTarget.parentId).map((item) => item.name),
-          )
-        : trimmedName
+    const parentResult = validateCreateParentTarget(
+      args.parentTarget,
+      currentReadModel.itemsById,
+      currentReadModel.activeChildrenByParent,
+    )
+    if (!parentResult.valid) {
+      throw new Error(parentResult.error)
+    }
+    const candidateName = resolveCreateItemName(args, parentResult.siblings)
     const nameResult = validateCreateItemLocally(
       {
         name: candidateName,
@@ -101,4 +113,17 @@ export function useCreateFileSystemItem() {
   }
 
   return { createItem, validateCreateItem }
+}
+
+function resolveCreateItemName(args: CreateItemArgs, siblings: Array<{ name: string }>): string {
+  const requestedName =
+    args.name?.trim() ||
+    findUniqueDefaultName(
+      args.type,
+      siblings.map((item) => ({ name: assertSidebarItemName(item.name) })),
+    )
+  return deduplicateName(
+    requestedName,
+    siblings.map((item) => item.name),
+  )
 }

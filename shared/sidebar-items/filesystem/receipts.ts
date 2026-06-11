@@ -1,12 +1,17 @@
 import type {
+  CampaignMemberId,
+  CampaignId,
   FileSystemTransactionId,
+  SessionId,
   SidebarItemId,
+  SidebarItemShareId,
   StorageId,
   UserProfileId,
 } from '../../common/ids'
 import type { FileSystemCommand } from './commands'
 import type { SidebarItemPatchRow } from './types'
-import type { SidebarItemStatus } from '../types'
+import type { PermissionLevel } from '../../permissions/types'
+import type { SidebarItemStatus, SidebarItemType } from '../types'
 
 export const FILE_SYSTEM_EVENT_TYPE = {
   created: 'created',
@@ -66,6 +71,7 @@ export type FileSystemMessageKind =
   | 'restored'
   | 'trashed'
   | 'deletedForever'
+  | 'shared'
   | 'noop'
 
 export type FileSystemReceiptMessage = {
@@ -83,6 +89,7 @@ export type SidebarItemPatchFields = {
   color: string | null
   parentId: SidebarItemId | null
   status: SidebarItemStatus
+  allPermissionLevel: PermissionLevel | null
   previewStorageId: StorageId | null
   previewLockedUntil: number | null
   previewClaimToken: string | null
@@ -95,6 +102,34 @@ export type SidebarItemPatchFields = {
 export type SidebarItemFieldPatch = Partial<SidebarItemPatchFields>
 export type SidebarItemPatchPrecondition = SidebarItemFieldPatch &
   Partial<Pick<SidebarItemPatchRow, 'type' | 'createdBy'>>
+
+export type SidebarItemSharePatchRow = {
+  _id: SidebarItemShareId
+  _creationTime: number
+  campaignId: CampaignId
+  sidebarItemId: SidebarItemId
+  sidebarItemType: SidebarItemType
+  campaignMemberId: CampaignMemberId
+  sessionId: SessionId | null
+  permissionLevel: PermissionLevel | null
+}
+
+type SidebarItemSharePatchFields = {
+  permissionLevel: PermissionLevel | null
+}
+export type SidebarItemShareFieldPatch = Partial<SidebarItemSharePatchFields>
+type SidebarItemSharePatchPrecondition = SidebarItemShareFieldPatch
+
+export type FolderSharePatchRow = {
+  folderId: SidebarItemId
+  inheritShares: boolean
+}
+
+type FolderSharePatchFields = {
+  inheritShares: boolean
+}
+export type FolderShareFieldPatch = Partial<FolderSharePatchFields>
+type FolderSharePatchPrecondition = FolderShareFieldPatch
 
 export type FileSystemPatch =
   | {
@@ -111,6 +146,27 @@ export type FileSystemPatch =
       type: 'removeSidebarItem'
       itemId: SidebarItemId
       snapshot: SidebarItemPatchRow
+    }
+  | {
+      type: 'upsertSidebarItemShare'
+      share: SidebarItemSharePatchRow
+    }
+  | {
+      type: 'updateSidebarItemShare'
+      sidebarItemId: SidebarItemId
+      campaignMemberId: CampaignMemberId
+      before: SidebarItemSharePatchPrecondition
+      fields: SidebarItemShareFieldPatch
+    }
+  | {
+      type: 'removeSidebarItemShare'
+      share: SidebarItemSharePatchRow
+    }
+  | {
+      type: 'updateFolderShare'
+      folderId: SidebarItemId
+      before: FolderSharePatchPrecondition
+      fields: FolderShareFieldPatch
     }
 
 export type FileSystemChange =
@@ -129,6 +185,24 @@ export type FileSystemChange =
       type: 'removeSidebarItem'
       itemId: SidebarItemId
       before: SidebarItemPatchRow
+    }
+  | {
+      type: 'insertSidebarItemShare'
+      after: SidebarItemSharePatchRow
+    }
+  | {
+      type: 'updateSidebarItemShare'
+      before: SidebarItemSharePatchRow
+      after: SidebarItemSharePatchRow
+    }
+  | {
+      type: 'removeSidebarItemShare'
+      before: SidebarItemSharePatchRow
+    }
+  | {
+      type: 'updateFolderShare'
+      before: FolderSharePatchRow
+      after: FolderSharePatchRow
     }
 
 export type FileSystemDelta = {
@@ -215,6 +289,13 @@ function messageKindForFileSystemCommand(
     case 'deleteForever':
     case 'emptyTrash':
       return 'deletedForever'
+    case 'setAllPlayersPermission':
+    case 'setSidebarItemsMemberPermission':
+    case 'clearSidebarItemsMemberPermission':
+    case 'setFolderInheritShares':
+      return events.some((event) => event.type === FILE_SYSTEM_EVENT_TYPE.updated)
+        ? 'shared'
+        : 'noop'
   }
 }
 

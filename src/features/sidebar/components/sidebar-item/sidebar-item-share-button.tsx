@@ -6,9 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/compo
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { cn } from '~/features/shadcn/lib/utils'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
-import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 
 export function SidebarShareButton({
   item,
@@ -36,13 +35,15 @@ function SidebarShareButtonPopover({
   buttonClassName?: string
 }) {
   const [open, setOpen] = useState(false)
-  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const filesystemReadModel = useFileSystemReadModel()
+  const {
+    items,
+    selection: { selectedItemIds },
+  } = useSidebarWorkspaceSource()
   const shareItems = resolveClickedSidebarOperationItems({
     item,
     selectedItemIds,
-    activeItemsMap: filesystemReadModel.activeItemsById,
-    trashedItemsMap: filesystemReadModel.trashedItemsById,
+    activeItemsMap: items.active.itemsMap,
+    trashedItemsMap: items.trash.itemsMap,
     canUseItemSelection: true,
   })
 
@@ -59,6 +60,8 @@ function SidebarShareButtonPopover({
               variant="ghost"
               size="sm"
               className={cn('size-6 p-0 hover:bg-item-action-hover rounded-sm', buttonClassName)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               aria-label="Share"
             >

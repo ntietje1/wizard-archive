@@ -6,9 +6,9 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCreateFile } from '~/features/files/hooks/useCreateFile'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
 import { logger } from '~/shared/utils/logger'
 import { uploadFile } from '~/features/file-upload/utils/file-upload'
@@ -42,7 +42,9 @@ function startSingleMediaFileToast(fileName: string, silent: boolean): string | 
 export function useSingleMediaFileUpload() {
   const { campaignId } = useCampaign()
   const { createFile } = useCreateFile()
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
   const { navigateToItem } = useEditorNavigation()
   const { getSiblings } = useSidebarValidation()
   const generateUploadUrl = useAppMutation(api.storage.mutations.generateUploadUrl)

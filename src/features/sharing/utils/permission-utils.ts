@@ -1,6 +1,7 @@
 import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import { normalizeExplicitSharePermissionLevel } from 'shared/permissions/share-permissions'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
@@ -42,6 +43,8 @@ function resolveInheritedPermission(
     const folder = allItemsMap.get(currentParentId) as Folder | undefined
     if (!folder) return null
     currentParentId = folder.parentId
+
+    if (folder.type !== SIDEBAR_ITEM_TYPES.folders || !folder.inheritShares) continue
 
     const memberPermission = getMemberPermission(folder, memberId)
     if (memberPermission !== null) return { level: memberPermission, source: folder.name }

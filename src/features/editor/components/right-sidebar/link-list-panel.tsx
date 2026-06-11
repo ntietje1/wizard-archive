@@ -2,24 +2,24 @@ import { Link2, Link2Off } from 'lucide-react'
 import type { FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 
 type LinkPanelRow = FunctionReturnType<typeof api.links.queries.getOutgoingLinkPanelRows>[number]
-type NavigateToItem = ReturnType<typeof useEditorNavigation>['navigateToItem']
+type NavigateToItem = (slug: SidebarItemSlug) => void
 
 export function LinkListPanel({
   rows,
   emptyTitle,
   emptyDescription,
+  onNavigate,
 }: {
   rows: Array<LinkPanelRow>
   emptyTitle: string
   emptyDescription: string
+  onNavigate: NavigateToItem
 }) {
-  const { navigateToItem } = useEditorNavigation()
-
   if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
@@ -35,7 +35,7 @@ export function LinkListPanel({
       <ScrollArea className="flex-1 min-h-0">
         <div className="py-1">
           {rows.map((row) => (
-            <LinkListRow key={row._id} row={row} onNavigate={navigateToItem} />
+            <LinkListRow key={row._id} row={row} onNavigate={onNavigate} />
           ))}
         </div>
       </ScrollArea>

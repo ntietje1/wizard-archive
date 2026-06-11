@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { ConvexYjsProvider } from '~/shared/collaboration/convex-yjs-provider'
+import type { EditorNoteCollaborationProvider } from '~/features/editor/workspace/editor-workspace-source'
 
 interface NoteEditorStore {
   editor: CustomBlockNoteEditor | null
-  provider: ConvexYjsProvider | null
+  provider: EditorNoteCollaborationProvider | null
   claimEditor: (
     editor: CustomBlockNoteEditor | null,
-    provider?: ConvexYjsProvider | null,
+    provider?: EditorNoteCollaborationProvider | null,
   ) => () => void
 }
 

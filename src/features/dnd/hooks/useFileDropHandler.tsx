@@ -5,7 +5,7 @@ import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/features/file-upload/utils/folder-reader'
 import { logger } from '~/shared/utils/logger'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
@@ -98,7 +98,9 @@ export function useFileDropHandler() {
   const { campaignId } = useCampaign()
   const { createItem } = useCreateFileSystemItem()
   const { createNote } = useCreateNote()
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
   const { navigateToItem } = useEditorNavigation()
   const { getSiblings } = useSidebarValidation()
   const { resolveAssetsFolderId } = useAssetsFolder()

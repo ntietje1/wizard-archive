@@ -1,22 +1,17 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { Trash2 } from 'lucide-react'
-import { EditableBreadcrumb, EditableName, SidebarItemBreadcrumb } from './editable-breadcrumb'
+import { EditableBreadcrumb, SidebarItemBreadcrumb } from './editable-breadcrumb'
+import { EditorTopbarSurface } from './editor-topbar-surface'
 import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'
 import { Button } from '~/features/shadcn/components/button'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { cn } from '~/features/shadcn/lib/utils'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/components/right-sidebar/constants'
-import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
-import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
+import type { EditorWorkspaceSource } from '../../workspace/editor-workspace-source'
 
 function TrashTopbarTitle({ itemCount }: { itemCount: number }) {
   return (
@@ -27,26 +22,6 @@ function TrashTopbarTitle({ itemCount }: { itemCount: number }) {
         {`${itemCount} item${itemCount !== 1 ? 's' : ''}`}
       </span>
     </div>
-  )
-}
-
-function EmptyEditorTitle({
-  campaignId,
-  pendingItemName,
-  setPendingItemName,
-}: {
-  campaignId: Id<'campaigns'> | null | undefined
-  pendingItemName: string
-  setPendingItemName: (name: string) => void
-}) {
-  return (
-    <EditableName
-      initialName={pendingItemName}
-      defaultName="Untitled Item"
-      onChange={setPendingItemName}
-      campaignId={campaignId ?? undefined}
-      parentId={null}
-    />
   )
 }
 
@@ -79,15 +54,24 @@ function buildAncestorTrail(
 type FileTopbarTitleState =
   | { kind: 'loading' }
   | { kind: 'trash'; itemCount: number }
-  | { kind: 'pending'; item: AnySidebarItem; ancestors: Array<AnySidebarItem> }
-  | { kind: 'item'; item: AnySidebarItemWithContent; canRename: boolean; isNotShared: boolean }
   | {
-      kind: 'empty'
-      campaignId: Id<'campaigns'> | null | undefined
-      pendingItemName: string
-      setPendingItemName: (name: string) => void
+      kind: 'pending'
+      item: AnySidebarItem
+      ancestors: Array<AnySidebarItem>
+      items: EditorWorkspaceSource['items']
+      navigation: EditorWorkspaceSource['navigation']
     }
-  | { kind: 'none' }
+  | {
+      kind: 'item'
+      item: AnySidebarItemWithContent
+      canRename: boolean
+      isNotShared: boolean
+      items: EditorWorkspaceSource['items']
+      navigation: EditorWorkspaceSource['navigation']
+    }
+  | {
+      kind: 'none'
+    }
 
 function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
   const isDimmed = title.kind === 'item' && title.isNotShared
@@ -97,7 +81,13 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
       {title.kind === 'loading' && <div className="bg-muted rounded-md h-5 w-32 my-0.5" />}
       {title.kind === 'trash' && <TrashTopbarTitle itemCount={title.itemCount} />}
       {title.kind === 'pending' && (
-        <SidebarItemBreadcrumb item={title.item} ancestors={title.ancestors} canRename={false} />
+        <SidebarItemBreadcrumb
+          item={title.item}
+          ancestors={title.ancestors}
+          canRename={false}
+          onOpenAncestor={title.navigation.openItem}
+          getAncestorLinkProps={title.navigation.getItemLinkProps}
+        />
       )}
       {title.kind === 'item' && (
         <EditableBreadcrumb
@@ -105,34 +95,34 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           item={title.item}
           canRename={title.canRename && !title.isNotShared}
           showNotSharedTooltip={title.isNotShared}
-        />
-      )}
-      {title.kind === 'empty' && (
-        <EmptyEditorTitle
-          campaignId={title.campaignId}
-          pendingItemName={title.pendingItemName}
-          setPendingItemName={title.setPendingItemName}
+          onRename={title.items.renameItem}
+          onOpenAncestor={title.navigation.openItem}
+          getAncestorLinkProps={title.navigation.getItemLinkProps}
+          validateName={title.items.validateItemName}
         />
       )}
     </div>
   )
 }
 
-export function FileTopbar() {
-  const { canEdit, campaignActor, viewAsPlayerId } = useEditorMode()
-  const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
-  const filesystemReadModel = useFileSystemReadModel()
-  const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
-  const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const { campaignId } = useCampaign()
-  const permOpts = { actor: campaignActor, allItemsMap: filesystemReadModel.activeItemsById }
+export function FileTopbar({
+  onToggleHistory,
+  source,
+}: {
+  onToggleHistory: () => void
+  source: EditorWorkspaceSource
+}) {
+  const { canEdit, campaignActor, viewAsPlayerId } = source.permissions
+  const { item, editorSearch, isLoading } = source.content.currentItem
+  const index = source.index
+  const permOpts = { actor: campaignActor, allItemsMap: index.activeItemsById }
 
   const isTrashView = editorSearch.trash === true && !item
   const isPendingItem = isOptimisticSidebarItem(item)
   const loadedItem: AnySidebarItemWithContent | null =
     item && !isPendingItem ? (item as AnySidebarItemWithContent) : null
 
-  const rootTrashedItems = filesystemReadModel.trashItems.filter((candidate) => !candidate.parentId)
+  const rootTrashedItems = index.trashItems.filter((candidate) => !candidate.parentId)
 
   const canRename =
     !!item &&
@@ -143,14 +133,12 @@ export function FileTopbar() {
   const isNotSharedWithPlayer = Boolean(
     item && viewAsPlayerId && !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
   )
-  const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
   const canOpenHistory =
     !!item && !isPendingItem && effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.EDIT, permOpts)
 
-  const rightSidebar = useRightSidebar(item?.type)
   const toggleHistory = () => {
     if (!canOpenHistory) return
-    rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
+    onToggleHistory()
   }
 
   const timestampLabel = itemTimestampLabel(item)
@@ -161,29 +149,38 @@ export function FileTopbar() {
       return {
         kind: 'pending',
         item,
-        ancestors: buildAncestorTrail(item, filesystemReadModel.activeItemsById),
+        ancestors: buildAncestorTrail(item, index.activeItemsById),
+        items: source.items,
+        navigation: source.navigation,
       }
     }
     if (loadedItem) {
-      return { kind: 'item', item: loadedItem, canRename, isNotShared: isNotSharedWithPlayer }
+      return {
+        kind: 'item',
+        item: loadedItem,
+        canRename,
+        isNotShared: isNotSharedWithPlayer,
+        items: source.items,
+        navigation: source.navigation,
+      }
     }
-    if (isEmptyEditor) return { kind: 'empty', campaignId, pendingItemName, setPendingItemName }
     return { kind: 'none' }
   })()
 
-  const middleContent = <ItemButtonWrapper isTrashView={isTrashView} />
-
-  return (
-    <EditorContextMenu
-      viewContext="topbar"
-      item={item ?? undefined}
+  const middleContent = (
+    <ItemButtonWrapper
+      itemActions={source.items.itemActions}
       isTrashView={isTrashView}
-      disabled={isPendingItem}
-    >
-      <div className="flex items-center py-0.5 pl-3 pr-1 shrink-0 w-full min-w-0 overflow-hidden gap-4 border-b">
-        <FileTopbarTitle title={title} />
+      sharing={source.sharing}
+      viewAsPlayer={source.permissions.viewAsPlayer}
+    />
+  )
 
-        {timestampLabel && (
+  const topbarSurface = (
+    <EditorTopbarSurface
+      title={<FileTopbarTitle title={title} />}
+      timestampControl={
+        timestampLabel && (
           <Button
             variant="ghost"
             onClick={toggleHistory}
@@ -192,10 +189,24 @@ export function FileTopbar() {
           >
             {timestampLabel}
           </Button>
-        )}
+        )
+      }
+      middleContent={middleContent}
+    />
+  )
 
-        {middleContent}
-      </div>
+  if (!source.items.itemActions.enabled) {
+    return topbarSurface
+  }
+
+  return (
+    <EditorContextMenu
+      viewContext="topbar"
+      item={item ?? undefined}
+      isTrashView={isTrashView}
+      disabled={isPendingItem}
+    >
+      {topbarSurface}
     </EditorContextMenu>
   )
 }

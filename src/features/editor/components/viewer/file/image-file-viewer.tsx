@@ -1,27 +1,28 @@
 import { useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
-import { isValidFileUrl } from '~/features/file-upload/utils/file-url-validation'
+import { isValidFileUrl } from './file-url-validation'
 import { ZoomControls } from '~/features/editor/components/viewer/zoom-controls'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
 interface ImageFileViewerProps {
+  allowObjectUrl?: boolean
   imageUrl: string
   alt: string
 }
 
-export function ImageFileViewer({ imageUrl, alt }: ImageFileViewerProps) {
+export function ImageFileViewer({ allowObjectUrl = false, imageUrl, alt }: ImageFileViewerProps) {
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const imageRef = useRef<HTMLImageElement>(null)
+  const previousImageUrlRef = useRef(imageUrl)
   const [imageError, setImageError] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [prevImageUrl, setPrevImageUrl] = useState(imageUrl)
-  const isValid = isValidFileUrl(imageUrl)
+  const isValid = isValidFileUrl(imageUrl, { allowObjectUrl })
 
-  if (imageUrl !== prevImageUrl) {
-    setPrevImageUrl(imageUrl)
-    setImageLoaded(false)
-    setImageError(false)
+  if (imageUrl !== previousImageUrlRef.current) {
+    previousImageUrlRef.current = imageUrl
+    if (imageLoaded) setImageLoaded(false)
+    if (imageError) setImageError(false)
   }
 
   const handleZoomIn = () => {

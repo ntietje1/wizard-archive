@@ -2,6 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
@@ -130,17 +131,21 @@ export async function resolveInheritedPermissions(
     const folder = await getSidebarItem(ctx, currentParentId)
     if (!folder) break
 
-    await applyFolderMemberShares(ctx, {
-      campaignId,
-      folderId: currentParentId,
-      folderName: folder.name,
-      result,
-      unresolvedMembers,
-    })
-    allPlayersResolved = applyFolderAllPlayersPermission(
-      { folderName: folder.name, allPermissionLevel: folder.allPermissionLevel },
-      { allPlayersResolved, result, unresolvedMembers },
-    )
+    const inheritsFolderShares =
+      folder.type === SIDEBAR_ITEM_TYPES.folders && folder.inheritShares === true
+    if (inheritsFolderShares) {
+      await applyFolderMemberShares(ctx, {
+        campaignId,
+        folderId: currentParentId,
+        folderName: folder.name,
+        result,
+        unresolvedMembers,
+      })
+      allPlayersResolved = applyFolderAllPlayersPermission(
+        { folderName: folder.name, allPermissionLevel: folder.allPermissionLevel },
+        { allPlayersResolved, result, unresolvedMembers },
+      )
+    }
 
     if (allPlayersResolved && unresolvedMembers.size === 0) break
 

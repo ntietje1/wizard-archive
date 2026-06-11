@@ -32,11 +32,11 @@ function SidebarItemIconToggle({
   pending: boolean
   showChevron: boolean
   expanded: boolean
-  onToggleExpanded: NonNullable<SidebarItemButtonProps['onToggleExpanded']>
+  onToggleExpanded: SidebarItemButtonProps['onToggleExpanded']
 }) {
   const defaultIcon = pending ? <PendingIcon /> : <Icon className="size-4 shrink-0" />
   const hoverIcon =
-    pending || !showChevron ? (
+    pending || !showChevron || !onToggleExpanded ? (
       defaultIcon
     ) : (
       <Button
@@ -44,6 +44,8 @@ function SidebarItemIconToggle({
         size="sm"
         className="size-6 hover:text-foreground hover:bg-item-action-hover rounded-sm"
         aria-label={expanded ? 'Collapse folder' : 'Expand folder'}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
           e.preventDefault()
@@ -75,28 +77,35 @@ function SidebarItemActions({
 }: {
   visualState: SidebarItemVisualState
   shareButton: SidebarItemButtonProps['shareButton']
-  onMoreOptions: NonNullable<SidebarItemButtonProps['onMoreOptions']>
+  onMoreOptions: SidebarItemButtonProps['onMoreOptions']
 }) {
+  if (!shareButton && !onMoreOptions) return null
+
   return (
     <div className={sidebarItemActionGroupClass}>
       {shareButton}
-      <div className="relative size-6 shrink-0 flex items-center justify-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'size-6 p-0 hover:bg-item-action-hover rounded-sm',
-            sidebarItemActionButtonClass(visualState),
-          )}
-          aria-label="More options"
-          onClick={(e) => {
-            e.preventDefault()
-            onMoreOptions(e)
-          }}
-        >
-          <MoreHorizontal className="size-4" />
-        </Button>
-      </div>
+      {onMoreOptions && (
+        <div className="relative size-6 shrink-0 flex items-center justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'size-6 p-0 hover:bg-item-action-hover rounded-sm',
+              sidebarItemActionButtonClass(visualState),
+            )}
+            aria-label="More options"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              onMoreOptions(e)
+            }}
+          >
+            <MoreHorizontal className="size-4" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -161,8 +170,8 @@ export function SidebarItemButtonBase({
   linkProps,
   onClick,
   onContextMenu,
-  onMoreOptions = () => {},
-  onToggleExpanded = () => {},
+  onMoreOptions,
+  onToggleExpanded,
   shareButton,
   rowRef,
 }: SidebarItemButtonProps) {
@@ -217,7 +226,6 @@ export function SidebarItemButtonBase({
         {renderedNameContent}
       </SidebarItemNameTarget>
 
-      {/* Action Buttons */}
       {!renaming && !pending && (
         <SidebarItemActions
           visualState={visualState}

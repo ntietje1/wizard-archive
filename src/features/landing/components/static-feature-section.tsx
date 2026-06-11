@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { AssetPlaceholder } from '~/features/landing/components/asset-placeholder'
 import { LandingContainer } from '~/features/landing/components/landing-container'
 import { buttonVariants } from '~/features/shadcn/components/button'
@@ -11,6 +12,7 @@ type StaticFeatureSectionProps = {
   items: Array<string>
   cta: string
   visualDescription: string
+  visual?: ReactNode
   reverse?: boolean
   className?: string
 }
@@ -21,6 +23,7 @@ export function StaticFeatureSection({
   items,
   cta,
   visualDescription,
+  visual: customVisual,
   reverse = false,
   className,
 }: StaticFeatureSectionProps) {
@@ -43,7 +46,7 @@ export function StaticFeatureSection({
     </div>
   )
 
-  const visual = <AssetPlaceholder label={visualDescription} />
+  const visual = customVisual ?? <AssetPlaceholder label={visualDescription} />
 
   return (
     <section id={id} className={cn('py-24', className)}>

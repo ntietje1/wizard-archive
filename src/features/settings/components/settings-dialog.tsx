@@ -4,6 +4,7 @@ import { useMatch } from '@tanstack/react-router'
 import { useSettingsStore } from '../hooks/settings-store'
 import { ProfileTab } from './tabs/account-profile/profile-tab'
 import { PreferencesTab } from './tabs/account-preferences/preferences-tab'
+import { CampaignGeneralTab } from './tabs/campaign-general/campaign-general-tab'
 import { PeopleTab } from './tabs/campaign-people/people-tab'
 import { StubTab } from './tabs/stub-tab'
 import type { SettingsTab } from '../hooks/settings-store'
@@ -65,14 +66,7 @@ const tabContent: Record<SettingsTab, React.ReactNode> = {
       icon={CreditCard}
     />
   ),
-  'campaign-general': (
-    <StubTab
-      category="Campaign"
-      title="General"
-      description="Configure your campaign's basic settings and preferences"
-      icon={Settings}
-    />
-  ),
+  'campaign-general': <CampaignGeneralTab />,
   'campaign-people': <PeopleTab />,
   'campaign-import': (
     <StubTab

@@ -1,18 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { ReactNode } from 'react'
-import { RIGHT_SIDEBAR_CONTENT } from '../constants'
+import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/chrome/right-sidebar-content'
+import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
 import { RightSidebarContainer } from '../right-sidebar-container'
 import { createFile, createNote } from '~/test/factories/sidebar-item-factory'
-
-const currentItemState = vi.hoisted(() => ({
-  item: null as AnySidebarItem | null,
-}))
+import type { RightSidebarPanelServices } from '../right-sidebar-panel-source'
 
 const sidebarState = vi.hoisted(() => ({
   visible: true,
-  activeContentId: 'history',
+  activeContentId: 'history' as RightSidebarContentId,
   size: 300,
   isLoaded: true,
   setSize: vi.fn(),
@@ -20,15 +17,15 @@ const sidebarState = vi.hoisted(() => ({
   setActiveContent: vi.fn(),
   open: vi.fn(),
   close: vi.fn(),
+  toggle: vi.fn(),
 }))
 
-vi.mock('~/features/sidebar/hooks/useCurrentItem', () => ({
-  useCurrentItem: () => ({ item: currentItemState.item }),
-}))
-
-vi.mock('~/features/editor/hooks/useRightSidebar', () => ({
-  useRightSidebar: () => sidebarState,
-}))
+const panelServices: RightSidebarPanelServices = {
+  [RIGHT_SIDEBAR_CONTENT.history]: () => <div />,
+  [RIGHT_SIDEBAR_CONTENT.backlinks]: () => <div />,
+  [RIGHT_SIDEBAR_CONTENT.outgoing]: () => <div />,
+  [RIGHT_SIDEBAR_CONTENT.outline]: () => <div />,
+}
 
 vi.mock('~/features/sidebar/components/resizable-sidebar', () => ({
   ResizableSidebar: ({ children }: { children: ReactNode }) => (
@@ -58,11 +55,12 @@ vi.mock('../right-sidebar', () => ({
 describe('RightSidebarContainer', () => {
   it('shows the history sidebar for file items', () => {
     const file = createFile()
-    currentItemState.item = file
     sidebarState.visible = true
     sidebarState.activeContentId = RIGHT_SIDEBAR_CONTENT.history
 
-    render(<RightSidebarContainer />)
+    render(
+      <RightSidebarContainer item={file} panelServices={panelServices} sidebar={sidebarState} />,
+    )
 
     const sidebar = screen.getByTestId('right-sidebar')
     expect(sidebar).toHaveAttribute('data-item-id', file._id)
@@ -71,15 +69,40 @@ describe('RightSidebarContainer', () => {
   })
 
   it('places the collapsed outline button under the toolbar area', () => {
-    currentItemState.item = createNote()
+    const note = createNote()
     sidebarState.visible = false
 
-    render(<RightSidebarContainer />)
+    render(
+      <RightSidebarContainer item={note} panelServices={panelServices} sidebar={sidebarState} />,
+    )
 
     expect(screen.getByTestId('outline-toggle-container')).toHaveClass(
       'absolute',
       'top-12',
       'right-2',
     )
+  })
+
+  it('does not own sidebar close policy when the item changes', () => {
+    const firstNote = createNote()
+    const secondNote = createNote()
+    sidebarState.visible = true
+
+    const { rerender } = render(
+      <RightSidebarContainer
+        item={firstNote}
+        panelServices={panelServices}
+        sidebar={sidebarState}
+      />,
+    )
+    rerender(
+      <RightSidebarContainer
+        item={secondNote}
+        panelServices={panelServices}
+        sidebar={sidebarState}
+      />,
+    )
+
+    expect(sidebarState.close).not.toHaveBeenCalled()
   })
 })

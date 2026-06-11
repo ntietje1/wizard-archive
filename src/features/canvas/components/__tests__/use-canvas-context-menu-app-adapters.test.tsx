@@ -11,7 +11,7 @@ import { testId } from '~/test/helpers/test-id'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type {
   CanvasContextMenuContext,
-  CanvasContextMenuCreateItemContext,
+  CanvasContextMenuCreateItemSourceContext,
   CanvasContextMenuServices,
 } from '../../runtime/context-menu/canvas-context-menu-types'
 
@@ -24,6 +24,9 @@ const appState = vi.hoisted(() => ({
   navigateToItem: vi.fn(),
   toastError: vi.fn(),
 }))
+
+const boundCampaignId = testId<'campaigns'>('campaign-1')
+const boundCanvasParentId = testId<'sidebarItems'>('canvas-parent')
 
 vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
   useCreateFileSystemItem: () => ({
@@ -101,12 +104,10 @@ function createMockSidebarItem(overrides: Partial<AnySidebarItem> = {}): AnySide
 }
 
 function createAdapterContext(
-  overrides: Partial<CanvasContextMenuCreateItemContext> = {},
-): CanvasContextMenuCreateItemContext {
+  overrides: Partial<CanvasContextMenuCreateItemSourceContext> = {},
+): CanvasContextMenuCreateItemSourceContext {
   return {
-    campaignId: testId<'campaigns'>('campaign-1'),
     canEdit: true,
-    canvasParentId: testId<'sidebarItems'>('canvas-parent'),
     createNode: vi.fn(),
     screenToCanvasPosition: ({ x, y }) => ({ x: x + 1, y: y + 2 }),
     setSelection: vi.fn(),
@@ -145,7 +146,12 @@ describe('useCanvasContextMenuAppAdapters', () => {
 
   it('creates a sidebar item and embeds the new canvas node from a create action', async () => {
     const context = createAdapterContext()
-    const { result } = renderHook(() => useCanvasContextMenuAppAdapters())
+    const { result } = renderHook(() =>
+      useCanvasContextMenuAppAdapters({
+        campaignId: boundCampaignId,
+        canvasParentId: boundCanvasParentId,
+      }),
+    )
 
     const [noteItem] = result.current.createItems?.(context) ?? []
     expect(noteItem?.id).toBe('canvas-pane-create-note')
@@ -157,11 +163,11 @@ describe('useCanvasContextMenuAppAdapters', () => {
 
     expect(appState.getDefaultName).toHaveBeenCalledWith(
       SIDEBAR_ITEM_TYPES.notes,
-      context.canvasParentId,
+      boundCanvasParentId,
     )
     expect(appState.createItem).toHaveBeenCalledWith({
       type: SIDEBAR_ITEM_TYPES.notes,
-      parentTarget: { kind: 'direct', parentId: context.canvasParentId },
+      parentTarget: { kind: 'direct', parentId: boundCanvasParentId },
       name: 'Untitled note',
     })
     expect(context.createNode).toHaveBeenCalledWith(
@@ -186,7 +192,12 @@ describe('useCanvasContextMenuAppAdapters', () => {
     const error = new Error('create failed')
     appState.createItem.mockRejectedValue(error)
     const context = createAdapterContext()
-    const { result } = renderHook(() => useCanvasContextMenuAppAdapters())
+    const { result } = renderHook(() =>
+      useCanvasContextMenuAppAdapters({
+        campaignId: boundCampaignId,
+        canvasParentId: boundCanvasParentId,
+      }),
+    )
     const [noteItem] = result.current.createItems?.(context) ?? []
     expect(noteItem?.onSelect).toBeDefined()
 
@@ -197,8 +208,8 @@ describe('useCanvasContextMenuAppAdapters', () => {
     expect(appState.loggerError).toHaveBeenCalledWith(
       'Failed to create embedded sidebar item from canvas context menu',
       expect.objectContaining({
-        campaignId: context.campaignId,
-        canvasParentId: context.canvasParentId,
+        campaignId: boundCampaignId,
+        canvasParentId: boundCanvasParentId,
         pointerPosition: { x: 20, y: 40 },
         type: SIDEBAR_ITEM_TYPES.notes,
         error,
@@ -215,7 +226,12 @@ describe('useCanvasContextMenuAppAdapters', () => {
     })
     appState.itemsMap.set(testId<'sidebarItems'>('note-1'), item)
     appState.filteredItemsMap.set(testId<'sidebarItems'>('note-1'), item)
-    const { result } = renderHook(() => useCanvasContextMenuAppAdapters())
+    const { result } = renderHook(() =>
+      useCanvasContextMenuAppAdapters({
+        campaignId: boundCampaignId,
+        canvasParentId: boundCanvasParentId,
+      }),
+    )
 
     const [contributor] =
       result.current.getTargetContributors?.({
@@ -258,7 +274,12 @@ describe('useCanvasContextMenuAppAdapters', () => {
         myPermissionLevel: PERMISSION_LEVEL.NONE,
       }),
     )
-    const { result } = renderHook(() => useCanvasContextMenuAppAdapters())
+    const { result } = renderHook(() =>
+      useCanvasContextMenuAppAdapters({
+        campaignId: boundCampaignId,
+        canvasParentId: boundCanvasParentId,
+      }),
+    )
 
     const target = {
       kind: 'embed-node' as const,
@@ -280,7 +301,12 @@ describe('useCanvasContextMenuAppAdapters', () => {
   })
 
   it('opens external embed targets in a new browser tab', async () => {
-    const { result } = renderHook(() => useCanvasContextMenuAppAdapters())
+    const { result } = renderHook(() =>
+      useCanvasContextMenuAppAdapters({
+        campaignId: boundCampaignId,
+        canvasParentId: boundCanvasParentId,
+      }),
+    )
     const target = {
       kind: 'embed-node' as const,
       nodeId: 'embed-1',

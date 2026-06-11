@@ -1,10 +1,8 @@
 import { useEffect, useRef } from 'react'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
+import type { SidebarWorkspaceSelection } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import {
   isEditableHotkeyTarget,
   isItemSurfaceHotkeyTarget,
@@ -13,13 +11,10 @@ import {
 import { getKeyboardOpenItem } from '~/features/sidebar/utils/item-surface-keyboard'
 import { getKeyboardPasteParentId } from '~/features/filesystem/filesystem-targets'
 import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
-import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { selectionBelongsToSurface } from 'shared/sidebar-items/filesystem/selection'
 import { handleError } from '~/shared/utils/logger'
 
-type ActiveItemSurface = NonNullable<
-  ReturnType<typeof useSidebarUIStore.getState>['activeItemSurface']
->
+type ActiveItemSurface = NonNullable<SidebarWorkspaceSelection['activeItemSurface']>
 
 interface ResolvedHotkeySelection {
   selectedItems: Array<AnySidebarItem>
@@ -44,11 +39,14 @@ interface HotkeyHandlerContext {
   filesystem: HotkeyFileSystemActions
   setSelectedItemIds: (ids: Array<AnySidebarItem['_id']>) => void
   clearItemSelection: () => void
-  setRenamingId: ReturnType<typeof useSidebarUIStore.getState>['setRenamingId']
-  moveFocus: ReturnType<typeof useSidebarUIStore.getState>['moveFocus']
-  navigateToItem: ReturnType<typeof useEditorNavigation>['navigateToItem']
-  setLastSelectedItem: ReturnType<typeof useLastEditorItem>['setLastSelectedItem']
-  openParentFolders: ReturnType<typeof useOpenParentFolders>['openParentFolders']
+  setRenamingItemId: (itemId: AnySidebarItem['_id'] | null) => void
+  moveFocus: (
+    direction: 'up' | 'down',
+    visibleItemIds: Array<AnySidebarItem['_id']>,
+    extendSelection: boolean,
+  ) => void
+  openItem: ReturnType<typeof useSidebarWorkspaceSource>['commands']['openItem']
+  openParentFolders: ReturnType<typeof useSidebarWorkspaceSource>['commands']['openParentFolders']
 }
 
 function resolveSelection(
@@ -158,7 +156,7 @@ function handleRename(event: KeyboardEvent, context: HotkeyHandlerContext): bool
 
   event.preventDefault()
   context.openParentFolders(context.selectedItems[0]._id)
-  context.setRenamingId(context.selectedItems[0]._id)
+  context.setRenamingItemId(context.selectedItems[0]._id)
   return true
 }
 
@@ -172,10 +170,7 @@ function handleOpen(event: KeyboardEvent, context: HotkeyHandlerContext): boolea
   })
   if (!itemToOpen) return true
 
-  context.setLastSelectedItem(itemToOpen.slug)
-  void context
-    .navigateToItem(itemToOpen.slug)
-    .catch((error) => handleError(error, 'Failed to open item'))
+  void context.openItem(itemToOpen.slug).catch((error) => handleError(error, 'Failed to open item'))
   return true
 }
 
@@ -196,44 +191,53 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
   const filesystemRef = useRef(filesystem)
   filesystemRef.current = filesystem
   const { campaignId } = useCampaign()
-  const filesystemReadModel = useFileSystemReadModel()
-  const { navigateToItem } = useEditorNavigation()
-  const { setLastSelectedItem } = useLastEditorItem()
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openItem, openParentFolders, setRenamingItemId },
+    items,
+    selectionCommands: { clearItemSelection, getSelectionSnapshot, moveFocus, setSelectedItemIds },
+  } = useSidebarWorkspaceSource()
   const contextRef = useRef({
-    activeItemsMap: filesystemReadModel.activeItemsById,
+    activeItemsMap: items.active.itemsMap,
     campaignId,
-    navigateToItem,
+    clearItemSelection,
+    getSelectionSnapshot,
+    moveFocus,
+    openItem,
     openParentFolders,
-    setLastSelectedItem,
-    trashedItemsMap: filesystemReadModel.trashedItemsById,
+    setSelectedItemIds,
+    setRenamingItemId,
+    trashedItemsMap: items.trash.itemsMap,
   })
   contextRef.current = {
-    activeItemsMap: filesystemReadModel.activeItemsById,
+    activeItemsMap: items.active.itemsMap,
     campaignId,
-    navigateToItem,
+    clearItemSelection,
+    getSelectionSnapshot,
+    moveFocus,
+    openItem,
     openParentFolders,
-    setLastSelectedItem,
-    trashedItemsMap: filesystemReadModel.trashedItemsById,
+    setSelectedItemIds,
+    setRenamingItemId,
+    trashedItemsMap: items.trash.itemsMap,
   }
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const store = useSidebarUIStore.getState()
-      const { activeItemSurface, focusedItemId, selectedItemIds } = store
+      const currentContext = contextRef.current
+      const { activeItemSurface, focusedItemId, selectedItemIds } =
+        currentContext.getSelectionSnapshot()
       if (isEditableHotkeyTarget(event.target)) return
       const isTargetingItemSurface = isItemSurfaceHotkeyTarget(event.target)
 
       if (event.key === 'Escape' && !activeItemSurface) {
         event.preventDefault()
-        clearSelectionOrClipboard(filesystemRef.current, store.clearItemSelection)
+        clearSelectionOrClipboard(filesystemRef.current, currentContext.clearItemSelection)
         return
       }
 
       if (!activeItemSurface) return
       if (!isTargetingItemSurface) return
 
-      const currentContext = contextRef.current
       const surfaceSelectedItemIds = selectionBelongsToSurface(
         selectedItemIds,
         activeItemSurface.visibleItemIds,
@@ -252,12 +256,11 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
         focusedItemId,
         selectedIds: surfaceSelectedItemIds,
         filesystem: filesystemRef.current,
-        setSelectedItemIds: store.setSelectedItemIds,
-        clearItemSelection: store.clearItemSelection,
-        setRenamingId: store.setRenamingId,
-        moveFocus: store.moveFocus,
-        navigateToItem: currentContext.navigateToItem,
-        setLastSelectedItem: currentContext.setLastSelectedItem,
+        setSelectedItemIds: currentContext.setSelectedItemIds,
+        clearItemSelection: currentContext.clearItemSelection,
+        setRenamingItemId: currentContext.setRenamingItemId,
+        moveFocus: currentContext.moveFocus,
+        openItem: currentContext.openItem,
         openParentFolders: currentContext.openParentFolders,
         ...selection,
       })

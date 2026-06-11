@@ -1,8 +1,10 @@
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import { useRef } from 'react'
 import { SharePermissionMenu } from './share-permission-menu'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
 
 export function SidebarItemsSharePanel({ items }: { items: Array<AnySidebarItem> }) {
+  const shareTargetItems = useRef(items).current
   const {
     isPending,
     isMutating,
@@ -16,19 +18,19 @@ export function SidebarItemsSharePanel({ items }: { items: Array<AnySidebarItem>
     clearMemberPermission,
     setAllPlayersPermission,
     setInheritShares,
-  } = useSidebarItemsShare(items)
+  } = useSidebarItemsShare(shareTargetItems)
 
-  if (items.length === 0) return null
+  if (shareTargetItems.length === 0) return null
 
   return (
     <SharePermissionMenu
       title={
-        items.length === 1 ? (
+        shareTargetItems.length === 1 ? (
           <>
-            Share <span className="text-muted-foreground">"{items[0]!.name}"</span>
+            Share <span className="text-muted-foreground">"{shareTargetItems[0]!.name}"</span>
           </>
         ) : (
-          `Share ${items.length} items`
+          `Share ${shareTargetItems.length} items`
         )
       }
       isPending={isPending}

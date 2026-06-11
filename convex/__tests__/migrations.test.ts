@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
 import { getDeleteBlockInlineContentProjectionFieldPatch } from '../blocks/inlineContentMigration'
+import { getFolderInheritSharesMigrationPatch } from '../folders/inheritSharesMigration'
 import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
 
 describe('migrations', () => {
@@ -65,6 +66,17 @@ describe('migrations', () => {
 
     it('leaves already-clean projection rows alone', () => {
       expect(getDeleteBlockInlineContentProjectionFieldPatch({})).toBeNull()
+    })
+  })
+
+  describe('getFolderInheritSharesMigrationPatch', () => {
+    it('defaults existing folders with missing inheritShares to false', () => {
+      expect(getFolderInheritSharesMigrationPatch({})).toEqual({ inheritShares: false })
+    })
+
+    it('preserves existing inheritShares values', () => {
+      expect(getFolderInheritSharesMigrationPatch({ inheritShares: false })).toBeNull()
+      expect(getFolderInheritSharesMigrationPatch({ inheritShares: true })).toBeNull()
     })
   })
 })

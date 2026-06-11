@@ -1,29 +1,16 @@
-import { Suspense, lazy, useRef, useTransition } from 'react'
-import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { Suspense, lazy } from 'react'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
-import { EMPTY_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
-import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
-import { cn } from '~/features/shadcn/lib/utils'
-import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
-import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
-import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
 import { Button } from '~/features/shadcn/components/button'
-import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { cn } from '~/features/shadcn/lib/utils'
 import { dropTargetChromeClass } from '~/features/dnd/utils/drop-target-visual-state'
-import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
+import type { EditorWorkspaceSource } from '../workspace/editor-workspace-source'
+import { EditorWorkspaceSourceProvider } from '../workspace/editor-workspace-source-context'
 import { RequestAccessButton } from '~/features/sidebar/components/request-access-button'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { handleError } from '~/shared/utils/logger'
+
+const EMPTY_EDITOR_CONTENT_CLASS = 'flex-1 min-h-0 flex items-center justify-center'
 
 const SidebarItemEditor = lazy(() =>
   import('./viewer/sidebar-item-editor').then((m) => ({
@@ -39,28 +26,18 @@ function EditorLoading() {
   )
 }
 
-export function EditorContent() {
-  const { item, contentItem, editorSearch, isLoading, itemError, hasRequestedItem } =
-    useCurrentItem()
-  const { campaignActor } = useEditorMode()
-  const { itemsMap } = useActiveSidebarItems()
-  const requestedSlug = getSlug(editorSearch)
+export function EditorContent({ source }: { source: EditorWorkspaceSource }) {
+  return (
+    <EditorWorkspaceSourceProvider value={source}>
+      <EditorContentBody source={source} />
+    </EditorWorkspaceSourceProvider>
+  )
+}
 
-  const canView =
-    !!item &&
-    effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, {
-      actor: campaignActor,
-      allItemsMap: itemsMap,
-    })
-  const availabilityState = useSidebarItemAvailabilityState({
-    lookup: { kind: 'slug', slug: requestedSlug },
-    readableItem: contentItem,
-    readableItemLoading: isLoading,
-    readableItemError: itemError,
-    canView,
-    subject: 'page',
-    fallbackLabel: 'Page',
-  })
+function EditorContentBody({ source }: { source: EditorWorkspaceSource }) {
+  const { item, contentItem, editorSearch, isLoading, hasRequestedItem } =
+    source.content.currentItem
+  const canView = source.content.canViewCurrentItem
 
   if (isLoading) {
     return <EditorLoading />
@@ -73,9 +50,16 @@ export function EditorContent() {
 
   if (!canView) {
     if (hasRequestedItem) {
-      return <UnavailableEditorContent state={availabilityState} requestedSlug={requestedSlug} />
+      return (
+        <UnavailableEditorContent
+          state={source.content.availabilityState}
+          requestedSlug={source.content.requestedSlug}
+          isCreatingMissingItem={source.items.isCreatingMissingRequestedNote}
+          onCreateMissingItem={source.items.createMissingRequestedNote}
+        />
+      )
     }
-    return <EmptyEditorContent />
+    return <EmptyEditorContent source={source} />
   }
 
   if (!contentItem) {
@@ -84,80 +68,58 @@ export function EditorContent() {
 
   return (
     <Suspense fallback={<EditorLoading />}>
-      <SidebarItemEditor item={contentItem} />
+      <SidebarItemEditor
+        item={contentItem}
+        canvases={source.documents.canvases}
+        history={source.history}
+        files={source.files}
+      />
     </Suspense>
   )
 }
 
-function EmptyEditorContent() {
-  const { isDm, isCampaignLoaded } = useCampaign()
-  const ref = useRef<HTMLDivElement>(null)
-  const dropData = { type: EMPTY_EDITOR_DROP_TYPE } as const
-
-  const { isDropTarget } = useDndDropTarget({
-    ref,
-    data: dropData,
-    highlightId: EMPTY_EDITOR_DROP_TYPE,
-  })
-
-  useExternalDropTarget({
-    ref,
-    data: dropData,
-    canAcceptFiles: true,
-  })
-
-  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
-  const fileDragHoveredTargetKey = useDndStore((s) => s.fileDragHoveredTargetKey)
-  const isFileDragTarget = isDraggingFiles && fileDragHoveredTargetKey === EMPTY_EDITOR_DROP_TYPE
-
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        'flex-1 min-h-0 flex items-center justify-center',
-        isDropTarget && !isFileDragTarget && dropTargetChromeClass('default'),
-        isFileDragTarget && dropTargetChromeClass('file'),
-      )}
-    >
-      {!isCampaignLoaded ? null : isDm ? (
-        <CreateNewDashboard parentId={null} />
-      ) : (
-        <p className="text-muted-foreground">Select an item from the sidebar to view it.</p>
-      )}
-    </div>
+function EmptyEditorContent({ source }: { source: EditorWorkspaceSource }) {
+  const { workspace } = source
+  const content = !workspace.isCampaignLoaded ? null : workspace.isDm ? (
+    <CreateNewDashboard parentId={null} />
+  ) : (
+    <p className="text-muted-foreground">Select an item from the sidebar to view it.</p>
   )
+
+  const emptyWorkspaceDrop = source.items.emptyWorkspaceDrop
+  if (emptyWorkspaceDrop.status === 'enabled') {
+    const { target } = emptyWorkspaceDrop
+    return (
+      <div
+        ref={target.ref}
+        className={cn(
+          EMPTY_EDITOR_CONTENT_CLASS,
+          target.isSidebarItemDropTarget &&
+            !target.isFileDropTarget &&
+            dropTargetChromeClass('default'),
+          target.isFileDropTarget && dropTargetChromeClass('file'),
+        )}
+        data-testid="empty-workspace-drop-zone"
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return <div className={EMPTY_EDITOR_CONTENT_CLASS}>{content}</div>
 }
 
 function UnavailableEditorContent({
   state,
   requestedSlug,
+  isCreatingMissingItem,
+  onCreateMissingItem,
 }: {
   state: SidebarItemAvailabilityState
   requestedSlug: string | null
+  isCreatingMissingItem: boolean
+  onCreateMissingItem: () => void
 }) {
-  const { campaignId } = useCampaign()
-  const { createItem } = useCreateFileSystemItem()
-  const { getDefaultName } = useSidebarValidation()
-  const { openParentFolders } = useOpenParentFolders()
-  const [isPending, startCreateTransition] = useTransition()
-
-  const handleCreate = () => {
-    if (!campaignId || !requestedSlug || isPending) return
-
-    startCreateTransition(async () => {
-      try {
-        const result = await createItem({
-          type: SIDEBAR_ITEM_TYPES.notes,
-          parentTarget: { kind: 'direct', parentId: null },
-          name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
-        })
-        openParentFolders(result.id)
-      } catch (error) {
-        handleError(error, 'Failed to create note')
-      }
-    })
-  }
-
   // UnavailableEditorContent is only rendered when canView is false; an
   // available state prop here would violate that caller invariant.
   if (state.status === 'available') {
@@ -170,7 +132,7 @@ function UnavailableEditorContent({
         <p>{state.message}</p>
         {state.status === 'not_found' && requestedSlug && (
           <p className="mt-2">
-            <Button variant="link" onClick={handleCreate} disabled={isPending}>
+            <Button variant="link" onClick={onCreateMissingItem} disabled={isCreatingMissingItem}>
               Create it
             </Button>
           </p>

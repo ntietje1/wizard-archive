@@ -13,6 +13,10 @@ const { blockNoteCreateMock } = vi.hoisted(() => ({
     replaceBlocks: vi.fn(),
     _tiptapEditor: {
       destroy: vi.fn(),
+      extensionManager: {
+        extensions: [],
+      },
+      registerPlugin: vi.fn(),
     },
   })),
 }))
@@ -55,7 +59,7 @@ vi.mock('@blocknote/react', async (importOriginal) => {
 })
 
 describe('RawNoteContent static viewer', () => {
-  it('renders inline values with a plain static editor', () => {
+  it('renders inline values through the shared note editor core', () => {
     render(
       <RawNoteContent
         editable={false}

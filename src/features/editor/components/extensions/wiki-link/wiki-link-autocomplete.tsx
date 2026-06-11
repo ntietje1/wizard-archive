@@ -1,6 +1,5 @@
-import { use, useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { getWikiLinkContext, splitWikiLinkTargetAndDisplayName } from './wiki-link-utils'
 import {
@@ -10,9 +9,7 @@ import {
   buildInsertedFileLinkText,
   buildInsertedHeadingLinkText,
   buildValueReferenceText,
-  buildWikiLinkAutocompleteModel,
   clampAutocompleteSelectedIndex,
-  getWikiLinkAutocompleteContext,
 } from './wiki-link-autocomplete-model'
 import type {
   ActiveAutocompleteModel,
@@ -25,6 +22,10 @@ import type {
   ValueSuggestion,
 } from './wiki-link-autocomplete-model'
 import type {
+  WikiLinkAutocompleteModelData,
+  WikiLinkAutocompleteMenuState,
+} from './wiki-link-autocomplete-source'
+import type {
   CustomBlockNoteEditor,
   CustomValuePartialInlineContent,
 } from '~/features/editor/editor-specs'
@@ -33,21 +34,12 @@ import type { ReactNode } from 'react'
 import { NOTE_VALUE_SLUG_OPTIONS } from '../../../../../../shared/note-values/constants'
 import { extractNoteValueDefinitions } from '../../../../../../shared/note-values/extract-definitions'
 import { deduplicateSlug } from '../../../../../../shared/slugs'
-import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
-import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { SearchResultItem } from '~/features/search/components/search-result-item'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
 import { useScrollSelectedItemIntoView } from '~/shared/hooks/use-scroll-selected-item-into-view'
 import { createUuidV4 } from '~/shared/utils/create-uuid-v4'
-import { NoteValueRuntimeContext } from '~/features/editor/value-block/value-block-runtime-context'
-
-interface MenuState {
-  show: boolean
-  query: string
-  pos: DOMRect | null
-}
 
 function getAutocompleteAnchorRect(
   tiptap: CustomBlockNoteEditor['_tiptapEditor'],
@@ -66,7 +58,7 @@ function menuFromWikiContext(
   startPos: number,
   tiptap: CustomBlockNoteEditor['_tiptapEditor'],
   preservedDisplayNameRef: React.RefObject<string | null>,
-) {
+): WikiLinkAutocompleteMenuState {
   const pos = getAutocompleteAnchorRect(tiptap, startPos)
 
   if (preservedDisplayNameRef.current === null) {
@@ -112,7 +104,7 @@ function useAutocompleteTransactions({
   hasEditedRef: React.RefObject<boolean>
   isDraggingRef: React.RefObject<boolean>
   preservedDisplayNameRef: React.RefObject<string | null>
-  setMenu: (menu: MenuState) => void
+  setMenu: (menu: WikiLinkAutocompleteMenuState) => void
 }) {
   useEffect(() => {
     if (!editorEl) return
@@ -167,9 +159,9 @@ function useForceOpenAutocomplete({
   editor: CustomBlockNoteEditor | undefined
   hasEditedRef: React.RefObject<boolean>
   preservedDisplayNameRef: React.RefObject<string | null>
-  setMenu: (menu: MenuState) => void
+  setMenu: (menu: WikiLinkAutocompleteMenuState) => void
 }) {
-  return useCallback(() => {
+  return () => {
     if (!editor) return
     const tiptap = editor._tiptapEditor
     if (!tiptap) return
@@ -186,7 +178,7 @@ function useForceOpenAutocomplete({
       query: ctx.query.includes('|') ? targetQuery : ctx.query,
       pos,
     })
-  }, [editor, hasEditedRef, preservedDisplayNameRef, setMenu])
+  }
 }
 
 function useClosedMenuEnterShortcut({
@@ -373,81 +365,28 @@ function continueSelectedSuggestion(
   }
 }
 
-function useWikiAutocompleteModelData({
-  itemsMap,
-  menu,
-  sidebarItems,
-  sourceNoteId,
-}: {
-  itemsMap: ReturnType<typeof useFilteredSidebarItems>['itemsMap']
-  menu: MenuState
-  sidebarItems: ReturnType<typeof useFilteredSidebarItems>['data']
-  sourceNoteId?: Id<'sidebarItems'>
-}) {
-  const valueRuntime = use(NoteValueRuntimeContext)
-  const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
-  const context = menu.show
-    ? getWikiLinkAutocompleteContext(menu.query, sidebarItems, itemsMap, sourceParentId)
-    : null
-
-  const headingsQuery = useCampaignQuery(
-    api.blocks.queries.getHeadingsByNote,
-    context?.mode === 'heading' ? { noteId: context.resolvedItem._id } : 'skip',
-  )
-
-  const selectedValueNoteId = context?.mode === 'value' ? context.resolvedItem._id : null
-  const shouldLoadPersistedValues =
-    selectedValueNoteId !== null && selectedValueNoteId !== valueRuntime?.noteId
-  const valuesQuery = useCampaignQuery(
-    api.noteValues.queries.getNoteValueStates,
-    shouldLoadPersistedValues ? { noteId: selectedValueNoteId } : 'skip',
-  )
-  const values =
-    selectedValueNoteId !== null && selectedValueNoteId === valueRuntime?.noteId
-      ? valueRuntime.authoredValueStates
-      : (valuesQuery.data ?? [])
-
-  return {
-    context,
-    headingsPending: headingsQuery.isPending,
-    model: buildWikiLinkAutocompleteModel({
-      context,
-      sidebarItems,
-      itemsMap,
-      headings: headingsQuery.data ?? [],
-      values,
-    }),
-    valuesPending: valuesQuery.isPending,
-  }
-}
-
 export function WikiLinkAutocomplete({
   editor,
+  menu,
+  modelData,
   onForceOpenRef,
   sourceNoteId,
+  setMenu,
 }: {
   editor: CustomBlockNoteEditor | undefined
+  menu: WikiLinkAutocompleteMenuState
+  modelData: WikiLinkAutocompleteModelData
   onForceOpenRef?: React.RefObject<(() => void) | null>
   sourceNoteId?: Id<'sidebarItems'>
+  setMenu: (menu: WikiLinkAutocompleteMenuState) => void
 }) {
-  const { data: sidebarItems, itemsMap } = useFilteredSidebarItems()
   const editorEl = useEditorDomElement(editor)
 
-  const [menu, setMenu] = useState<MenuState>({
-    show: false,
-    query: '',
-    pos: null,
-  })
   const [selectedIndex, setSelectedIndex] = useState(0)
   const hasEditedRef = useRef(false)
   const isDraggingRef = useRef(false)
   const preservedDisplayNameRef = useRef<string | null>(null)
-  const { context, headingsPending, model, valuesPending } = useWikiAutocompleteModelData({
-    menu,
-    sidebarItems,
-    itemsMap,
-    sourceNoteId,
-  })
+  const { context, headingsPending, model, valuesPending } = modelData
 
   useResetSelectedIndex(context, setSelectedIndex)
 
@@ -476,94 +415,73 @@ export function WikiLinkAutocomplete({
 
   useClosedMenuEnterShortcut({ editor, editorEl, forceOpen, menuShowing: menu.show })
 
-  const closeMenu = useCallback(() => {
+  const closeMenu = () => {
     preservedDisplayNameRef.current = null
     setMenu({ show: false, query: '', pos: null })
-  }, [])
+  }
 
-  const replaceActiveWikiLink = useCallback(
-    (linkText: string) => {
-      if (!editor) return
-      const wikiCtx = getWikiLinkContext(editor)
-      const tiptap = editor._tiptapEditor
-      if (!wikiCtx || !tiptap) return
+  const replaceActiveWikiLink = (linkText: string) => {
+    if (!editor) return
+    const wikiCtx = getWikiLinkContext(editor)
+    const tiptap = editor._tiptapEditor
+    if (!wikiCtx || !tiptap) return
 
-      tiptap
-        .chain()
-        .focus()
-        .insertContentAt({ from: wikiCtx.startPos, to: wikiCtx.endPos }, linkText)
-        .run()
-    },
-    [editor],
-  )
+    tiptap
+      .chain()
+      .focus()
+      .insertContentAt({ from: wikiCtx.startPos, to: wikiCtx.endPos }, linkText)
+      .run()
+  }
 
-  const insertFileLink = useCallback(
-    (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => {
-      replaceActiveWikiLink(
-        `[[${buildInsertedFileLinkText(suggestion, ctx, preservedDisplayNameRef.current)}]]`,
-      )
-      closeMenu()
-    },
-    [closeMenu, replaceActiveWikiLink],
-  )
+  const insertFileLink = (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => {
+    replaceActiveWikiLink(
+      `[[${buildInsertedFileLinkText(suggestion, ctx, preservedDisplayNameRef.current)}]]`,
+    )
+    closeMenu()
+  }
 
-  const insertHeadingLink = useCallback(
-    (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => {
-      replaceActiveWikiLink(
-        `[[${buildInsertedHeadingLinkText(suggestion, ctx, preservedDisplayNameRef.current)}]]`,
-      )
-      closeMenu()
-    },
-    [closeMenu, replaceActiveWikiLink],
-  )
+  const insertHeadingLink = (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => {
+    replaceActiveWikiLink(
+      `[[${buildInsertedHeadingLinkText(suggestion, ctx, preservedDisplayNameRef.current)}]]`,
+    )
+    closeMenu()
+  }
 
-  const insertValueInline = useCallback(
-    (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => {
-      if (!editor) return
-      const wikiCtx = getWikiLinkContext(editor)
-      const tiptap = editor._tiptapEditor
-      if (!wikiCtx || !tiptap) return
+  const insertValueInline = (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => {
+    if (!editor) return
+    const wikiCtx = getWikiLinkContext(editor)
+    const tiptap = editor._tiptapEditor
+    if (!wikiCtx || !tiptap) return
 
-      const existingSlugs = sourceNoteId
-        ? extractNoteValueDefinitions(editor.document, sourceNoteId).map(
-            (definition) => definition.slug,
-          )
-        : []
-      tiptap.chain().focus().setTextSelection({ from: wikiCtx.startPos, to: wikiCtx.endPos }).run()
-      const valueInline: CustomValuePartialInlineContent = {
-        type: 'value',
-        props: {
-          valueId: createUuidV4(),
-          slug: deduplicateSlug(suggestion.slug, existingSlugs, NOTE_VALUE_SLUG_OPTIONS),
-          expressionSource: buildValueReferenceText(suggestion, ctx),
-        },
-      }
-      editor.insertInlineContent([valueInline], { updateSelection: true })
-      closeMenu()
-    },
-    [closeMenu, editor, sourceNoteId],
-  )
+    const existingSlugs = sourceNoteId
+      ? extractNoteValueDefinitions(editor.document, sourceNoteId).map(
+          (definition) => definition.slug,
+        )
+      : []
+    tiptap.chain().focus().setTextSelection({ from: wikiCtx.startPos, to: wikiCtx.endPos }).run()
+    const valueInline: CustomValuePartialInlineContent = {
+      type: 'value',
+      props: {
+        valueId: createUuidV4(),
+        slug: deduplicateSlug(suggestion.slug, existingSlugs, NOTE_VALUE_SLUG_OPTIONS),
+        expressionSource: buildValueReferenceText(suggestion, ctx),
+      },
+    }
+    editor.insertInlineContent([valueInline], { updateSelection: true })
+    closeMenu()
+  }
 
-  const continueFileLink = useCallback(
-    (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => {
-      replaceActiveWikiLink(`[[${buildContinuedFileLinkText(suggestion, ctx)}#`)
-    },
-    [replaceActiveWikiLink],
-  )
+  const continueFileLink = (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => {
+    replaceActiveWikiLink(`[[${buildContinuedFileLinkText(suggestion, ctx)}#`)
+  }
 
-  const continueHeadingLink = useCallback(
-    (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => {
-      replaceActiveWikiLink(`[[${buildContinuedHeadingLinkText(suggestion, ctx)}#`)
-    },
-    [replaceActiveWikiLink],
-  )
+  const continueHeadingLink = (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => {
+    replaceActiveWikiLink(`[[${buildContinuedHeadingLinkText(suggestion, ctx)}#`)
+  }
 
-  const continueFolderPath = useCallback(
-    (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => {
-      replaceActiveWikiLink(`[[${buildContinuedFolderPathText(suggestion, ctx)}`)
-    },
-    [replaceActiveWikiLink],
-  )
+  const continueFolderPath = (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => {
+    replaceActiveWikiLink(`[[${buildContinuedFolderPathText(suggestion, ctx)}`)
+  }
 
   const activeModel = model.mode === 'empty' ? null : model
   const clampedSelectedIndex = activeModel

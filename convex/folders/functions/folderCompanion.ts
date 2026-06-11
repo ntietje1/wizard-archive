@@ -12,7 +12,7 @@ export async function createFolderCompanion(
 ): Promise<void> {
   await ctx.db.insert('folders', {
     sidebarItemId: folderId,
-    inheritShares: false,
+    inheritShares: ctx.campaign.defaultFolderInheritShares ?? false,
   })
 
   await logEditHistory(ctx, {

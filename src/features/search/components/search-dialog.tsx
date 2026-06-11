@@ -17,8 +17,8 @@ import { Separator } from '~/features/shadcn/components/separator'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { useSearchStore } from '../stores/search-store'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { buildBreadcrumbs } from '~/features/sidebar/utils/sidebar-item-utils'
@@ -31,7 +31,6 @@ import { useDebouncedValue } from '~/shared/hooks/useDebouncedValue'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
 import type { SidebarItemCreationCommand } from '~/features/sidebar/sidebar-item-creation-catalog'
-import { useRunSidebarItemCreationCommand } from '~/features/sidebar/hooks/useRunSidebarItemCreationCommand'
 import type { BlockSearchResult } from 'shared/search/types'
 import { handleError } from '~/shared/utils/logger'
 
@@ -351,8 +350,9 @@ function SearchPreviewPanel({
 export function SearchDialog() {
   const { isOpen, query, close, setQuery, open, showPreview, togglePreview } = useSearchStore()
   const { data: items, itemsMap } = useFilteredSidebarItems()
-  const { navigateToItem } = useEditorNavigation()
-  const { runCreationCommand } = useRunSidebarItemCreationCommand()
+  const {
+    commands: { createSidebarItem, openItem },
+  } = useSidebarWorkspaceSource()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const selectedItemRef = useRef<HTMLDivElement>(null)
   const runningCommandIdRef = useRef<SidebarItemCreationCommand['id'] | null>(null)
@@ -413,7 +413,7 @@ export function SearchDialog() {
   } = useSidebarItemById(selectedResult?.item._id)
 
   const handleSelect = (result: SearchResult) => {
-    void navigateToItem(result.item.slug)
+    void openItem(result.item.slug)
     close()
   }
 
@@ -428,7 +428,7 @@ export function SearchDialog() {
     runningCommandIdRef.current = command.id
     void (async () => {
       try {
-        const result = await runCreationCommand(command, { parentId: null })
+        const result = await createSidebarItem({ type: command.type, parentId: null })
         if (result) close()
       } catch (error) {
         handleError(error, command.failureMessage)

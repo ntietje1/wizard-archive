@@ -1,7 +1,6 @@
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import { parseWikiLinkText } from 'shared/links/parsing'
-import { getMinDisambiguationPath, resolveParsedItemPath } from 'shared/links/resolution'
+import { getMinDisambiguationPath } from 'shared/links/resolution'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import {
   buildExternalNoteValuePrefix,
@@ -9,6 +8,7 @@ import {
 } from '../../../../shared/note-values/authoring'
 import type { NoteValueRuntimeState } from '../../../../shared/note-values/types'
 import { useNoteValueRuntime } from './value-block-runtime-context'
+import { resolveExternalNoteId } from './value-reference-resolution'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 
 export interface ValueReferenceCandidate {
@@ -141,33 +141,4 @@ function groupValuesByNoteId(
     }
   }
   return valuesByNoteId
-}
-
-export function resolveExternalNoteId(
-  notePathRaw: string | null,
-  sidebarItems: ReturnType<typeof useNoteValueRuntime>['sidebarItems'],
-  itemsMap: ReturnType<typeof useNoteValueRuntime>['itemsMap'],
-  sourceParentId: Id<'sidebarItems'> | null | undefined,
-): Id<'sidebarItems'> | null {
-  if (!notePathRaw) {
-    return null
-  }
-
-  const parsed = parseWikiLinkText(notePathRaw)
-  if (
-    parsed.displayName !== null ||
-    parsed.headingPath.length > 0 ||
-    parsed.itemPath.length === 0
-  ) {
-    return null
-  }
-
-  const resolvedItem = resolveParsedItemPath(
-    parsed.pathKind,
-    parsed.itemPath,
-    sidebarItems,
-    itemsMap,
-    sourceParentId,
-  )
-  return resolvedItem?.type === SIDEBAR_ITEM_TYPES.notes ? resolvedItem._id : null
 }

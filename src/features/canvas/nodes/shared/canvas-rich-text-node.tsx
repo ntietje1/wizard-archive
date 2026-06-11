@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, KeyboardEvent, MouseEvent, RefObject } from 'react'
 import { CanvasNodeConnectionHandles } from './canvas-node-connection-handles'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { extractCanvasRichTextPlainText } from './canvas-rich-text-editor'
@@ -42,6 +42,9 @@ interface CanvasRichTextNodeVariant {
 interface CanvasRichTextNodeComponentProps extends CanvasNodeComponentProps<CanvasRichTextNodeData> {
   variant: CanvasRichTextNodeVariant
 }
+
+type CanvasRichTextEditableSession = ReturnType<typeof useCanvasEditableNodeSession>
+type CanvasRichTextEditorSession = ReturnType<typeof useCanvasRichTextEditorSession>
 
 function persistCanvasRichTextDefaultTextColor(
   patchNodeData: CanvasDocumentWriter['patchNodeData'],
@@ -143,10 +146,65 @@ export function CanvasRichTextNode({
   }, [defaultTextColor, editorSession.editor, id, patchNodeData, showsFormattingToolbar])
 
   return (
+    <CanvasRichTextNodeSurface
+      ariaLabel={ariaLabel}
+      content={content}
+      data={data}
+      defaultTextColor={defaultTextColor}
+      dragging={!!dragging}
+      editableSession={editableSession}
+      editorSession={editorSession}
+      hasInvalidContent={hasInvalidContent}
+      id={id}
+      interactiveRenderMode={interactiveRenderMode}
+      onDefaultTextColorChange={(textColor) => {
+        persistCanvasRichTextDefaultTextColor(patchNodeData, id, textColor)
+      }}
+      showsFormattingToolbar={showsFormattingToolbar}
+      variant={variant}
+      wrapperRef={wrapperRef}
+    />
+  )
+}
+
+function CanvasRichTextNodeSurface({
+  ariaLabel,
+  content,
+  data,
+  defaultTextColor,
+  dragging,
+  editableSession,
+  editorSession,
+  hasInvalidContent,
+  id,
+  interactiveRenderMode,
+  onDefaultTextColorChange,
+  showsFormattingToolbar,
+  variant,
+  wrapperRef,
+}: {
+  ariaLabel: string
+  content: Array<CanvasRichTextPartialBlock>
+  data: CanvasRichTextNodeData
+  defaultTextColor: string
+  dragging: boolean
+  editableSession: CanvasRichTextEditableSession
+  editorSession: CanvasRichTextEditorSession
+  hasInvalidContent: boolean
+  id: string
+  interactiveRenderMode: boolean
+  onDefaultTextColorChange: (textColor: string) => void
+  showsFormattingToolbar: boolean
+  variant: CanvasRichTextNodeVariant
+  wrapperRef: RefObject<HTMLDivElement | null>
+}) {
+  const canActivateNode = interactiveRenderMode && !hasInvalidContent
+
+  return (
     <ResizableNodeWrapper
       id={id}
       nodeType={variant.nodeType}
-      dragging={!!dragging}
+      dragging={dragging}
       minWidth={variant.minWidth}
       minHeight={variant.minHeight}
       editing={editableSession.editable}
@@ -155,9 +213,7 @@ export function CanvasRichTextNode({
           <CanvasFloatingFormattingToolbar
             defaultTextColor={defaultTextColor}
             editor={editorSession.editor}
-            onDefaultTextColorChange={(textColor) => {
-              persistCanvasRichTextDefaultTextColor(patchNodeData, id, textColor)
-            }}
+            onDefaultTextColorChange={onDefaultTextColorChange}
             visible={showsFormattingToolbar}
           />
           <CanvasNodeConnectionHandles />
@@ -168,34 +224,19 @@ export function CanvasRichTextNode({
         ref={wrapperRef}
         className={cn('h-full w-full overflow-hidden', variant.containerClassName)}
         style={getContainerStyle(data)}
-        role="group"
+        role="textbox"
         aria-label={ariaLabel}
-        tabIndex={interactiveRenderMode ? 0 : -1}
+        aria-multiline="true"
+        tabIndex={canActivateNode ? 0 : -1}
         onDoubleClick={
-          interactiveRenderMode && !hasInvalidContent
-            ? (event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                editableSession.handleDoubleClick(event)
-              }
+          canActivateNode
+            ? (event) => handleCanvasRichTextSurfaceDoubleClick(event, editableSession)
             : undefined
         }
         onKeyDown={
-          interactiveRenderMode && !hasInvalidContent
+          canActivateNode
             ? (event) => {
-                if (!editableSession.editable && (event.key === 'Enter' || event.key === 'F2')) {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  editableSession.startEditing()
-                  return
-                }
-
-                if (editableSession.editable && event.key === 'Escape') {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  editableSession.stopEditing()
-                  wrapperRef.current?.focus()
-                }
+                handleCanvasRichTextSurfaceKeyDown(event, editableSession, wrapperRef)
               }
             : undefined
         }
@@ -209,7 +250,7 @@ export function CanvasRichTextNode({
           )}
         >
           <ScrollArea viewportRef={editorSession.viewportRef} className="h-full">
-            {editorSession.editor ? (
+            {editorSession.editor && !hasInvalidContent ? (
               <div className={cn('h-full w-full', variant.contentClassName, variant.textClassName)}>
                 <CanvasRichTextView
                   editor={editorSession.editor}
@@ -223,19 +264,48 @@ export function CanvasRichTextNode({
                   style={getCanvasNodeTextStyle(data)}
                 />
               </div>
-            ) : (
+            ) : hasInvalidContent ? (
               <CanvasRichTextPreview
                 content={content}
                 data={data}
                 invalid={hasInvalidContent}
                 variant={variant}
               />
-            )}
+            ) : null}
           </ScrollArea>
         </div>
       </div>
     </ResizableNodeWrapper>
   )
+}
+
+function handleCanvasRichTextSurfaceDoubleClick(
+  event: MouseEvent<HTMLDivElement>,
+  editableSession: CanvasRichTextEditableSession,
+) {
+  event.preventDefault()
+  event.stopPropagation()
+  editableSession.handleDoubleClick(event)
+}
+
+function handleCanvasRichTextSurfaceKeyDown(
+  event: KeyboardEvent<HTMLDivElement>,
+  editableSession: CanvasRichTextEditableSession,
+  wrapperRef: RefObject<HTMLDivElement | null>,
+) {
+  if (!editableSession.editable && (event.key === 'Enter' || event.key === 'F2')) {
+    event.preventDefault()
+    event.stopPropagation()
+    editableSession.startEditing()
+    return
+  }
+
+  if (editableSession.editable && event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    editableSession.stopEditing()
+    wrapperRef.current?.focus()
+  }
 }
 
 function getContainerStyle(data: CanvasRichTextNodeData): CSSProperties {

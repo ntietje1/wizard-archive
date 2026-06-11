@@ -1,19 +1,15 @@
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { selectionBelongsToSurface } from 'shared/sidebar-items/filesystem/selection'
-import {
-  useActiveSidebarItems,
-  useTrashSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
 import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 export function useSidebarDragData(item: AnySidebarItem) {
-  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
-  const { itemsMap } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
-  const activeItemsMap = new Map(itemsMap)
-  const trashItemsMap = new Map(trashedItemsMap)
+  const {
+    items,
+    selection: { activeItemSurface, selectedItemIds },
+  } = useSidebarWorkspaceSource()
+  const activeItemsMap = new Map(items.active.itemsMap)
+  const trashItemsMap = new Map(items.trash.itemsMap)
   if (item.isTrashed) {
     trashItemsMap.set(item._id, item)
   } else {

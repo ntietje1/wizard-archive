@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import type { PendingRichEmbedActivationRef } from '../embed/use-rich-embed-lifecycle'
+import type { PendingRichEmbedActivationRef } from '~/features/embeds/hooks/use-rich-embed-lifecycle'
 import {
   cloneCanvasRichTextContent,
   snapshotCanvasRichTextContent,
@@ -9,7 +9,7 @@ import {
   createCanvasRichTextBlockNoteEditor,
   observeCanvasRichTextChanges,
 } from './canvas-rich-text-blocknote-adapter'
-import { useBlockNoteActivationLifecycle } from './use-blocknote-activation-lifecycle'
+import { useBlockNoteActivationLifecycle } from '~/features/embeds/hooks/use-blocknote-activation-lifecycle'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 

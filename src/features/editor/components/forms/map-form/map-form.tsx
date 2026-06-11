@@ -15,7 +15,7 @@ import { getIconByName } from '~/shared/utils/category-icons'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
-import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { ImageUploadSection } from '~/features/file-upload/components/image-upload-section'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
@@ -49,7 +49,9 @@ const defaultMapFormValues: MapFormValues = {
 }
 
 export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: MapFormProps) {
-  const { openParentFolders } = useOpenParentFolders()
+  const {
+    commands: { openParentFolders },
+  } = useSidebarWorkspaceSource()
   const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditFileSystemItem()
   const { createMap } = useCreateMap()

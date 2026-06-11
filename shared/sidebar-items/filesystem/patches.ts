@@ -1,5 +1,12 @@
 import type { SidebarItemPatchRow } from './types'
-import type { SidebarItemFieldPatch, SidebarItemPatchFields } from './receipts'
+import type {
+  FolderShareFieldPatch,
+  FolderSharePatchRow,
+  SidebarItemFieldPatch,
+  SidebarItemPatchFields,
+  SidebarItemShareFieldPatch,
+  SidebarItemSharePatchRow,
+} from './receipts'
 
 const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
   'name',
@@ -8,6 +15,7 @@ const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
   'color',
   'parentId',
   'status',
+  'allPermissionLevel',
   'previewStorageId',
   'previewLockedUntil',
   'previewClaimToken',
@@ -100,6 +108,32 @@ export function diffSidebarItemFields(
   }
 
   return { changed, previous }
+}
+
+export function diffSidebarItemShareFields(
+  before: SidebarItemSharePatchRow,
+  after: SidebarItemSharePatchRow,
+): { changed: SidebarItemShareFieldPatch; previous: SidebarItemShareFieldPatch } {
+  if (valuesMatch(before.permissionLevel, after.permissionLevel)) {
+    return { changed: {}, previous: {} }
+  }
+  return {
+    changed: { permissionLevel: after.permissionLevel },
+    previous: { permissionLevel: before.permissionLevel },
+  }
+}
+
+export function diffFolderShareFields(
+  before: FolderSharePatchRow,
+  after: FolderSharePatchRow,
+): { changed: FolderShareFieldPatch; previous: FolderShareFieldPatch } {
+  if (valuesMatch(before.inheritShares, after.inheritShares)) {
+    return { changed: {}, previous: {} }
+  }
+  return {
+    changed: { inheritShares: after.inheritShares },
+    previous: { inheritShares: before.inheritShares },
+  }
 }
 
 export function hasMismatchedPrecondition(

@@ -50,7 +50,7 @@ describe('effectiveHasAtLeastPermission', () => {
     ).toBe(false)
   })
 
-  it('DM with view-as inherits player permission through folders with inheritShares disabled', () => {
+  it('DM with view-as does not inherit player permission through folders with inheritShares disabled', () => {
     const folder = createFolder({
       _id: testId<'sidebarItems'>('folder_parent'),
       inheritShares: false,
@@ -67,7 +67,7 @@ describe('effectiveHasAtLeastPermission', () => {
         actor: dmViewAsActor,
         allItemsMap: buildMap([folder, note]),
       }),
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it('exposes viewed-player permission while keeping DM view-as read-only for mutations', () => {

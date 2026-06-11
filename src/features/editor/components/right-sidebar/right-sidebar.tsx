@@ -1,40 +1,12 @@
 import { X } from 'lucide-react'
-import { RIGHT_SIDEBAR_CONTENT } from './constants'
-import { HistoryPanel } from './history-panel'
-import { BackLinksPanel } from './back-links-panel'
-import { OutgoingLinksPanel } from './outgoing-links-panel'
-import { OutlinePanel } from './outline-panel'
-import type { RightSidebarContentId } from './constants'
+import type { RightSidebarContentId } from '~/features/editor/chrome/right-sidebar-content'
 import type { Id } from 'convex/_generated/dataModel'
 import { getRightSidebarPanelsForItemType } from './right-sidebar-registry'
+import type { RightSidebarPanelServices } from './right-sidebar-panel-source'
 import type { RightSidebarItemType } from './right-sidebar-model'
 import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { cn } from '~/features/shadcn/lib/utils'
-import { assertNever } from '~/shared/utils/utils'
-
-function PanelContent({
-  contentId,
-  itemId,
-}: {
-  contentId: RightSidebarContentId
-  itemId: Id<'sidebarItems'>
-}) {
-  switch (contentId) {
-    case RIGHT_SIDEBAR_CONTENT.history:
-      return <HistoryPanel itemId={itemId} />
-    case RIGHT_SIDEBAR_CONTENT.backlinks:
-      return <BackLinksPanel itemId={itemId} />
-    case RIGHT_SIDEBAR_CONTENT.outgoing:
-      return <OutgoingLinksPanel itemId={itemId} />
-    case RIGHT_SIDEBAR_CONTENT.outline:
-      return <OutlinePanel itemId={itemId} />
-    default: {
-      const _exhaustiveCheck: never = contentId
-      assertNever(_exhaustiveCheck)
-    }
-  }
-}
 
 export function RightSidebar({
   itemId,
@@ -42,14 +14,17 @@ export function RightSidebar({
   activeContentId,
   onContentChange,
   onClose,
+  panelServices,
 }: {
   itemId: Id<'sidebarItems'>
   itemType: RightSidebarItemType
   activeContentId: RightSidebarContentId
   onContentChange: (contentId: RightSidebarContentId) => void
   onClose: () => void
+  panelServices: RightSidebarPanelServices
 }) {
   const tabs = getRightSidebarPanelsForItemType(itemType)
+  const ActivePanel = panelServices[activeContentId]
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -90,7 +65,7 @@ export function RightSidebar({
       </div>
 
       <div className="flex-1 min-h-0">
-        <PanelContent contentId={activeContentId} itemId={itemId} />
+        <ActivePanel itemId={itemId} />
       </div>
     </div>
   )

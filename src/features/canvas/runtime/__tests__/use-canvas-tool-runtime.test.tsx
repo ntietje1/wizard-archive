@@ -1,12 +1,11 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useCanvasToolRuntime } from '../use-canvas-tool-runtime'
+import { useCanvasToolRuntimeCore } from '../use-canvas-tool-runtime-core'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { testId } from '~/test/helpers/test-id'
 import type { CanvasConnection } from '../../types/canvas-domain-types'
 
 const cursorPresenceSpy = vi.hoisted(() => vi.fn())
-const dropIntegrationSpy = vi.hoisted(() => vi.fn())
 const contextMenuSpy = vi.hoisted(() => vi.fn())
 const toolHandlersSpy = vi.hoisted(() => vi.fn())
 const cursorPresenceMock = vi.hoisted(() => ({
@@ -14,24 +13,12 @@ const cursorPresenceMock = vi.hoisted(() => ({
   onMouseLeave: vi.fn(),
 }))
 const contextMenuMock = vi.hoisted(() => ({ menu: { groups: [], flatItems: [], isEmpty: true } }))
-const dropTargetMock = vi.hoisted(() => ({
-  dropOverlayRef: { current: null },
-  isDropTarget: false,
-  isFileDropTarget: false,
-}))
-type UseCanvasToolRuntimeOptions = Parameters<typeof useCanvasToolRuntime>[0]
+type UseCanvasToolRuntimeOptions = Parameters<typeof useCanvasToolRuntimeCore>[0]
 
 vi.mock('../interaction/use-canvas-cursor-presence', () => ({
   useCanvasCursorPresence: (...args: Array<unknown>) => {
     cursorPresenceSpy(...args)
     return cursorPresenceMock
-  },
-}))
-
-vi.mock('../interaction/use-canvas-drop-integration', () => ({
-  useCanvasDropIntegration: (...args: Array<unknown>) => {
-    dropIntegrationSpy(...args)
-    return dropTargetMock
   },
 }))
 
@@ -61,18 +48,19 @@ vi.mock('../../tools/canvas-tool-modules', () => ({
   },
 }))
 
-describe('useCanvasToolRuntime', () => {
+describe('useCanvasToolRuntimeCore', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
     cursorPresenceSpy.mockReset()
-    dropIntegrationSpy.mockReset()
     contextMenuSpy.mockReset()
     toolHandlersSpy.mockReset()
   })
 
-  it('builds tool handlers, drop target, context menu, and cursor presence from explicit inputs', () => {
+  it('builds tool handlers, context menu, and cursor presence from explicit inputs', () => {
     const harness = createToolRuntimeHarness()
-    const { result } = renderHook(() => useCanvasToolRuntime({ ...harness, activeTool: 'select' }))
+    const { result } = renderHook(() =>
+      useCanvasToolRuntimeCore({ ...harness, activeTool: 'select' }),
+    )
 
     expect(toolHandlersSpy).toHaveBeenCalledWith(
       'select',
@@ -86,20 +74,11 @@ describe('useCanvasToolRuntime', () => {
       screenToCanvasPosition: harness.viewportController.screenToCanvasPosition,
       awareness: harness.session.awareness.core,
     })
-    expect(dropIntegrationSpy).toHaveBeenCalledWith({
-      canvasId: 'canvas-id',
-      canEdit: true,
-      isSelectMode: true,
-      createNodes: harness.documentWriter.createNodes,
-      provider: null,
-      screenToCanvasPosition: harness.viewportController.screenToCanvasPosition,
-    })
     expect(contextMenuSpy).toHaveBeenCalledWith({
       activeTool: 'select',
       canEdit: true,
-      campaignId: 'campaign-id',
-      canvasParentId: 'parent-id',
       canvasEngine: harness.canvasEngine,
+      source: harness.contextMenuSource,
       createNode: harness.documentWriter.createNode,
       setPendingEditNodeId: harness.session.editSession.setPendingEditNodeId,
       setPendingEditNodePoint: harness.session.editSession.setPendingEditNodePoint,
@@ -111,7 +90,6 @@ describe('useCanvasToolRuntime', () => {
       expect.objectContaining({
         contextMenu: contextMenuMock,
         cursorPresence: cursorPresenceMock,
-        dropTarget: dropTargetMock,
       }),
     )
   })
@@ -119,7 +97,7 @@ describe('useCanvasToolRuntime', () => {
   it('keeps active tool handlers stable across identical rerenders', () => {
     const harness = createToolRuntimeHarness()
     const { result, rerender } = renderHook(() =>
-      useCanvasToolRuntime({ ...harness, activeTool: 'select' }),
+      useCanvasToolRuntimeCore({ ...harness, activeTool: 'select' }),
     )
     const initialHandlers = result.current.activeToolHandlers
 
@@ -132,7 +110,7 @@ describe('useCanvasToolRuntime', () => {
   it('recreates handlers when activeTool changes', () => {
     const harness = createToolRuntimeHarness()
     const { result, rerender } = renderHook(
-      ({ activeTool }) => useCanvasToolRuntime({ ...harness, activeTool }),
+      ({ activeTool }) => useCanvasToolRuntimeCore({ ...harness, activeTool }),
       { initialProps: { activeTool: 'select' as UseCanvasToolRuntimeOptions['activeTool'] } },
     )
     const initialHandlers = result.current.activeToolHandlers
@@ -154,7 +132,7 @@ describe('useCanvasToolRuntime', () => {
     })
     const connection: CanvasConnection = { source: 'source', target: 'target' }
     const { result, rerender } = renderHook(
-      ({ canEdit }) => useCanvasToolRuntime({ ...harness, activeTool: 'edge', canEdit }),
+      ({ canEdit }) => useCanvasToolRuntimeCore({ ...harness, activeTool: 'edge', canEdit }),
       { initialProps: { canEdit: true } },
     )
 
@@ -179,14 +157,16 @@ describe('useCanvasToolRuntime', () => {
 
 function createToolRuntimeHarness() {
   const harness = {
-    campaignId: testId<'campaigns'>('campaign-id'),
     canvasEngine: {
       getSnapshot: () => ({ nodes: [], edges: [] }),
     },
     canvasId: testId<'sidebarItems'>('canvas-id'),
-    canvasParentId: testId<'sidebarItems'>('parent-id'),
     canEdit: true,
     commands: {},
+    contextMenuSource: {
+      createItems: vi.fn(() => []),
+      getTargetContributors: vi.fn(() => []),
+    },
     documentWriter: {
       createNode: vi.fn(),
       createNodes: vi.fn(),
@@ -219,7 +199,6 @@ function createToolRuntimeHarness() {
       getZoom: () => 1,
       screenToCanvasPosition: vi.fn((point) => point),
     },
-    provider: null,
   }
 
   return harness as typeof harness & UseCanvasToolRuntimeOptions

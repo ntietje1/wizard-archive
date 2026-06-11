@@ -19,33 +19,15 @@ import { NoteValueRuntimeProvider } from '../value-block-runtime'
 import { ValueInlineContent } from '../value-block-spec'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())
-const useActiveSidebarItemsMock = vi.hoisted(() => vi.fn())
-const useFilteredSidebarItemsMock = vi.hoisted(() => vi.fn())
 
 vi.mock('~/shared/hooks/useCampaignQuery', () => ({
   useCampaignQuery: (...args: Array<unknown>) => useCampaignQueryMock(...args),
-}))
-
-vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useActiveSidebarItems: () => useActiveSidebarItemsMock(),
-}))
-
-vi.mock('~/features/sidebar/hooks/useFilteredSidebarItems', () => ({
-  useFilteredSidebarItems: () => useFilteredSidebarItemsMock(),
 }))
 
 beforeEach(() => {
   useCampaignQueryMock.mockReturnValue({
     data: [],
     status: 'success',
-  })
-  useActiveSidebarItemsMock.mockReturnValue({
-    data: [],
-    itemsMap: new Map(),
-  })
-  useFilteredSidebarItemsMock.mockReturnValue({
-    data: [],
-    itemsMap: new Map(),
   })
 })
 
@@ -217,23 +199,27 @@ function renderRuntimeProviderChip({
   filteredSidebarItems?: Array<AnySidebarItem>
   extraValues?: Parameters<typeof makeRuntimeProviderEditor>[1]
 }) {
-  useActiveSidebarItemsMock.mockReturnValue({
-    data: sidebarItems,
-    itemsMap: new Map(sidebarItems.map((item) => [item._id, item])),
-  })
-  useFilteredSidebarItemsMock.mockReturnValue({
-    data: filteredSidebarItems,
-    itemsMap: new Map(filteredSidebarItems.map((item) => [item._id, item])),
-  })
-  useCampaignQueryMock.mockImplementation((_query, args) => {
-    if (args && typeof args === 'object' && 'noteIds' in args) {
-      return { data: externalStates, status: 'success' }
-    }
-    if (args && typeof args === 'object' && 'noteId' in args) {
-      return { data: persistedStates, status: 'success' }
-    }
-    return { data: [], status: 'success' }
-  })
+  const authoredDefinitions: Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>> = [
+    {
+      noteId: 'note-1' as Id<'sidebarItems'>,
+      blockNoteId: 'block-1',
+      valueId: 'value-1',
+      slug: 'draft_total',
+      expressionSource,
+    },
+    ...extraValues.map((value, index) => ({
+      noteId: 'note-1' as Id<'sidebarItems'>,
+      blockNoteId: `block-${index + 2}`,
+      valueId: value.valueId,
+      slug: value.slug,
+      expressionSource: value.expressionSource,
+    })),
+  ]
+  const itemsMap = new Map(filteredSidebarItems.map((item) => [item._id, item]))
+  const externalNoteIdByPath = new Map<string, Id<'sidebarItems'>>()
+  for (const item of filteredSidebarItems) {
+    externalNoteIdByPath.set(String(item.name), item._id)
+  }
 
   function RuntimeStateChip() {
     const { stateByValueId } = useNoteValueRuntimeForTest()
@@ -248,9 +234,17 @@ function renderRuntimeProviderChip({
   render(
     <NoteValueRuntimeProvider
       editor={makeRuntimeProviderEditor(expressionSource, extraValues)}
-      noteId={'note-1' as Id<'sidebarItems'>}
       editable={false}
       evaluateValuesFromEditor={evaluateValuesFromEditor}
+      source={{
+        noteId: 'note-1' as Id<'sidebarItems'>,
+        authoredDefinitions,
+        externalNoteIdByPath,
+        externalStates,
+        itemsMap,
+        persistedStates,
+        sidebarItems: filteredSidebarItems,
+      }}
     >
       <RuntimeStateChip />
     </NoteValueRuntimeProvider>,
@@ -276,6 +270,57 @@ function evaluateTestDefinitions(
 }
 
 describe('inline value chip runtime', () => {
+  it('evaluates authored values from a supplied runtime source without live data hooks', () => {
+    useCampaignQueryMock.mockClear()
+
+    function RuntimeStateChip() {
+      const { stateByValueId } = useNoteValueRuntimeForTest()
+      const state = stateByValueId.get('value-1')
+      return (
+        <div data-testid="provider-value-state">
+          {state?.status}:{state?.formattedValue}:{state?.errorMessage ?? ''}
+        </div>
+      )
+    }
+
+    render(
+      <NoteValueRuntimeProvider
+        editor={makeRuntimeProviderEditor('100')}
+        editable={false}
+        evaluateValuesFromEditor
+        source={{
+          noteId: 'note-1' as Id<'sidebarItems'>,
+          authoredDefinitions: [
+            {
+              noteId: 'note-1' as Id<'sidebarItems'>,
+              blockNoteId: 'block-1',
+              valueId: 'value-1',
+              slug: 'draft_total',
+              expressionSource: '2 + 1',
+            },
+          ],
+          externalNoteIdByPath: new Map(),
+          externalStates: [],
+          itemsMap: new Map(),
+          persistedStates: [
+            runtimeState({
+              valueId: 'value-1',
+              slug: 'draft_total',
+              rawValue: 100,
+              formattedValue: '100',
+            }),
+          ],
+          sidebarItems: [],
+        }}
+      >
+        <RuntimeStateChip />
+      </NoteValueRuntimeProvider>,
+    )
+
+    expect(screen.getByTestId('provider-value-state')).toHaveTextContent('ok:3:')
+    expect(useCampaignQueryMock).not.toHaveBeenCalled()
+  })
+
   it('evaluates changed external-reference drafts instead of showing stale persisted state', () => {
     const currentNote = noteItem('note-1' as Id<'sidebarItems'>, 'Current Note')
     const sourceNote = noteItem('note-2' as Id<'sidebarItems'>, 'Source Note')

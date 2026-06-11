@@ -1,4 +1,5 @@
-import type { SidebarItemId } from '../../common/ids'
+import type { CampaignMemberId, SidebarItemId } from '../../common/ids'
+import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemColor } from '../color'
 import type { SidebarItemIconName } from '../icon'
 import type { SidebarItemName } from '../name'
@@ -14,6 +15,10 @@ export const FILE_SYSTEM_COMMAND_TYPE = {
   restore: 'restore',
   deleteForever: 'deleteForever',
   emptyTrash: 'emptyTrash',
+  setAllPlayersPermission: 'setAllPlayersPermission',
+  setSidebarItemsMemberPermission: 'setSidebarItemsMemberPermission',
+  clearSidebarItemsMemberPermission: 'clearSidebarItemsMemberPermission',
+  setFolderInheritShares: 'setFolderInheritShares',
 } as const
 
 export type CreateFileSystemCommand = {
@@ -65,6 +70,31 @@ export type EmptyTrashFileSystemCommand = {
   type: typeof FILE_SYSTEM_COMMAND_TYPE.emptyTrash
 }
 
+export type SetAllPlayersPermissionFileSystemCommand = {
+  type: typeof FILE_SYSTEM_COMMAND_TYPE.setAllPlayersPermission
+  itemIds: Array<SidebarItemId>
+  permissionLevel: PermissionLevel | null
+}
+
+export type SetSidebarItemsMemberPermissionFileSystemCommand = {
+  type: typeof FILE_SYSTEM_COMMAND_TYPE.setSidebarItemsMemberPermission
+  itemIds: Array<SidebarItemId>
+  campaignMemberId: CampaignMemberId
+  permissionLevel: PermissionLevel
+}
+
+export type ClearSidebarItemsMemberPermissionFileSystemCommand = {
+  type: typeof FILE_SYSTEM_COMMAND_TYPE.clearSidebarItemsMemberPermission
+  itemIds: Array<SidebarItemId>
+  campaignMemberId: CampaignMemberId
+}
+
+export type SetFolderInheritSharesFileSystemCommand = {
+  type: typeof FILE_SYSTEM_COMMAND_TYPE.setFolderInheritShares
+  folderId: SidebarItemId
+  inheritShares: boolean
+}
+
 export type FileSystemCommand =
   | CreateFileSystemCommand
   | RenameFileSystemCommand
@@ -74,6 +104,10 @@ export type FileSystemCommand =
   | RestoreFileSystemCommand
   | DeleteForeverFileSystemCommand
   | EmptyTrashFileSystemCommand
+  | SetAllPlayersPermissionFileSystemCommand
+  | SetSidebarItemsMemberPermissionFileSystemCommand
+  | ClearSidebarItemsMemberPermissionFileSystemCommand
+  | SetFolderInheritSharesFileSystemCommand
 
 export type FileSystemOperationDecision = {
   sourceItemId: SidebarItemId

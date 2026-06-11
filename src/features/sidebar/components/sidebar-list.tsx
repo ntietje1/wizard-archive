@@ -1,19 +1,17 @@
 import { SidebarItem } from './sidebar-item/sidebar-item'
 import { sortItemsByOptions } from '~/features/sidebar/utils/sidebar-item-sort'
-import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
-import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignSidebarState } from '~/features/sidebar/stores/sidebar-ui-store'
 import { buildVisibleSidebarItemIds } from '~/features/sidebar/utils/item-selection-order'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import type { Id } from 'convex/_generated/dataModel'
 
 export function SidebarList() {
-  const { parentItemsMap, status } = useFilteredSidebarItems()
-  const { sortOptions } = useSortOptions()
-  const { campaignId } = useCampaign()
-  const { closeAllFoldersMode, folderStates } = useCampaignSidebarState(campaignId)
+  const {
+    filteredActiveItems: { parentItemsMap, status },
+    ui: { closeAllFoldersMode, folderStates },
+    sort: { options: sortOptions },
+  } = useSidebarWorkspaceSource()
 
   const rootItems = sortItemsByOptions(sortOptions, parentItemsMap.get(null)) ?? []
   const expandedFolderIds = new Set<Id<'sidebarItems'>>()
@@ -51,6 +49,7 @@ export function SidebarList() {
           key={item._id}
           item={item}
           parentItemsMap={parentItemsMap}
+          sortOptions={sortOptions}
           visibleItemIds={visibleItemIds}
         />
       ))}

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ReactNode } from 'react'
 import { SidebarItemBreadcrumb } from '../editable-breadcrumb'
+import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
 const nameValidationState = vi.hoisted(() => ({
@@ -25,7 +26,9 @@ interface TestLinkProps {
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children, title, className, to, params, search, onClick }: TestLinkProps) => (
     <a
-      href={`${String(to)}${params ? JSON.stringify(params) : ''}${search ? `?${JSON.stringify(search)}` : ''}`}
+      href={`${String(to)}${params ? JSON.stringify(params) : ''}${
+        search ? `?${JSON.stringify(search)}` : ''
+      }`}
       title={title}
       className={className}
       onClick={onClick}
@@ -33,18 +36,6 @@ vi.mock('@tanstack/react-router', () => ({
       {children}
     </a>
   ),
-}))
-
-vi.mock('~/features/filesystem/useEditFileSystemItem', () => ({
-  useEditFileSystemItem: () => ({ editItem: vi.fn() }),
-}))
-
-vi.mock('~/features/sidebar/hooks/useLastEditorItem', () => ({
-  useLastEditorItem: () => ({ setLastSelectedItem: vi.fn() }),
-}))
-
-vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => ({ dmUsername: 'dm', campaignSlug: 'campaign' }),
 }))
 
 vi.mock('~/shared/hooks/useNameValidation', () => ({
@@ -82,7 +73,18 @@ describe('SidebarItemBreadcrumb', () => {
     })
 
     render(
-      <SidebarItemBreadcrumb item={child} ancestors={[grandparent, parent]} canRename={false} />,
+      <SidebarItemBreadcrumb
+        item={child}
+        ancestors={[grandparent, parent]}
+        canRename={false}
+        getAncestorLinkProps={(item) =>
+          ({
+            to: '/campaigns/$dmUsername/$campaignSlug/editor',
+            params: { dmUsername: 'dm', campaignSlug: 'campaign' },
+            search: { item: item.slug },
+          }) as EditorLinkProps
+        }
+      />,
     )
 
     expect(screen.getByRole('link', { name: 'World' })).toBeInTheDocument()
@@ -100,7 +102,7 @@ describe('SidebarItemBreadcrumb', () => {
 
     render(<SidebarItemBreadcrumb item={item} ancestors={[]} canRename={false} />)
 
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Root Note' })).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue('Root Note')
   })
 
@@ -119,7 +121,9 @@ describe('SidebarItemBreadcrumb', () => {
 
     render(<SidebarItemBreadcrumb item={child} ancestors={[parent]} canRename={false} />)
 
-    expect(screen.getByRole('link', { name: 'Places' })).toBeInTheDocument()
+    expect(screen.getByText('Places')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Places' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Places' })).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue('Tavern')
   })
 
@@ -135,6 +139,36 @@ describe('SidebarItemBreadcrumb', () => {
     rerender(<SidebarItemBreadcrumb item={item} ancestors={[]} canRename={true} />)
 
     expect(screen.getByRole('textbox', { name: 'Item name' })).not.toBeDisabled()
+  })
+
+  it('delegates ancestor navigation and rename to caller-owned handlers', async () => {
+    const user = userEvent.setup()
+    nameValidationState.checkNameUnique.mockReturnValue(undefined)
+    const parent = createFolder({ name: 'Places' })
+    const item = createNote({ name: 'Scene', parentId: parent._id })
+    const onOpenAncestor = vi.fn()
+    const onRename = vi.fn()
+
+    render(
+      <SidebarItemBreadcrumb
+        item={item}
+        ancestors={[parent]}
+        canRename
+        onOpenAncestor={onOpenAncestor}
+        onRename={onRename}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Places' }))
+    expect(onOpenAncestor).toHaveBeenCalledWith(parent)
+
+    const input = screen.getByRole('textbox', { name: 'Item name' })
+    await user.click(input)
+    await user.clear(input)
+    await user.type(input, 'New Scene')
+    await user.tab()
+
+    expect(onRename).toHaveBeenCalledWith(item, 'New Scene')
   })
 
   it('shows name validation errors', () => {

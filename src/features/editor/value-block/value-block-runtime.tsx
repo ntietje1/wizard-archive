@@ -1,10 +1,4 @@
-import { useSyncExternalStore } from 'react'
-import { api } from 'convex/_generated/api'
-import {
-  collectFormulaReferences,
-  evaluateNoteValueAuthoringDefinitions,
-} from '../../../../shared/note-values/formula'
-import { extractNoteValueDefinitions } from '../../../../shared/note-values/extract-definitions'
+import { evaluateNoteValueAuthoringDefinitions } from '../../../../shared/note-values/formula'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
@@ -13,62 +7,8 @@ import type {
   NoteValueRuntimeState,
 } from '../../../../shared/note-values/types'
 import { NoteValueRuntimeContext } from './value-block-runtime-context'
-import { resolveExternalNoteId } from './use-value-reference-authoring'
 import { useValueTransferBehavior } from './value-transfer-plugin'
-import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
-import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
-
-type EditorDocumentSnapshot = {
-  revision: number
-  document: CustomBlockNoteEditor['document']
-}
-
-const editorDocumentSnapshots = new WeakMap<CustomBlockNoteEditor, EditorDocumentSnapshot>()
-
-function getEditorDocumentSnapshot(editor: CustomBlockNoteEditor): EditorDocumentSnapshot {
-  const existing = editorDocumentSnapshots.get(editor)
-  if (existing) {
-    return existing
-  }
-
-  const initialSnapshot = {
-    revision: 0,
-    document: editor.document,
-  }
-  editorDocumentSnapshots.set(editor, initialSnapshot)
-  return initialSnapshot
-}
-
-function bumpEditorDocumentSnapshot(editor: CustomBlockNoteEditor): void {
-  const previous = getEditorDocumentSnapshot(editor)
-  editorDocumentSnapshots.set(editor, {
-    revision: previous.revision + 1,
-    document: editor.document,
-  })
-}
-
-function useEditorDocumentSnapshot(editor: CustomBlockNoteEditor): EditorDocumentSnapshot {
-  return useSyncExternalStore(
-    (onStoreChange) => {
-      const tiptap = editor._tiptapEditor
-      if (!tiptap) {
-        return () => {}
-      }
-
-      const handleTransaction = () => {
-        bumpEditorDocumentSnapshot(editor)
-        onStoreChange()
-      }
-
-      tiptap.on('transaction', handleTransaction)
-      return () => {
-        tiptap.off('transaction', handleTransaction)
-      }
-    },
-    () => getEditorDocumentSnapshot(editor),
-    () => getEditorDocumentSnapshot(editor),
-  )
-}
+import type { NoteValueRuntimeSource } from './note-value-runtime-source'
 
 function evaluateSameNoteAuthoringStates({
   noteId,
@@ -160,76 +100,28 @@ function evaluateSameNoteAuthoringStates({
   })
 }
 
-function getExternalNoteIdByPathForDefinitions({
-  definitions,
-  noteId,
-  sidebarItems,
-  itemsMap,
-}: {
-  definitions: Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>>
-  noteId: Id<'sidebarItems'>
-  sidebarItems: ReturnType<typeof useFilteredSidebarItems>['data']
-  itemsMap: ReturnType<typeof useFilteredSidebarItems>['itemsMap']
-}) {
-  const sourceParentId = itemsMap.get(noteId)?.parentId
-  const noteIdByPath = new Map<string, Id<'sidebarItems'>>()
-  for (const definition of definitions) {
-    for (const reference of collectFormulaReferences(definition.expressionSource)) {
-      if (reference.kind !== 'external') continue
-      const externalNoteId = resolveExternalNoteId(
-        reference.notePathRaw,
-        sidebarItems,
-        itemsMap,
-        sourceParentId,
-      )
-      if (externalNoteId) {
-        noteIdByPath.set(reference.notePathRaw, externalNoteId)
-      }
-    }
-  }
-  return noteIdByPath
-}
-
 export function NoteValueRuntimeProvider({
   editor,
-  noteId,
+  source,
   editable,
   evaluateValuesFromEditor,
   children,
 }: {
   editor: CustomBlockNoteEditor
-  noteId?: Id<'sidebarItems'>
+  source: NoteValueRuntimeSource
   editable: boolean
   evaluateValuesFromEditor: boolean
   children: React.ReactNode
 }) {
-  const { data: sidebarItems, itemsMap } = useFilteredSidebarItems()
-  const editorDocumentSnapshot = useEditorDocumentSnapshot(editor)
-
-  const persistedStatesQuery = useCampaignQuery(
-    api.noteValues.queries.getNoteValueStates,
-    noteId ? { noteId } : 'skip',
-  )
-  const persistedStates: Array<NoteValueRuntimeState<Id<'sidebarItems'>>> =
-    persistedStatesQuery.data ?? []
-  const authoredDefinitions = noteId
-    ? extractNoteValueDefinitions(editorDocumentSnapshot.document, noteId)
-    : []
-  const externalNoteIdByPath = noteId
-    ? getExternalNoteIdByPathForDefinitions({
-        definitions: authoredDefinitions,
-        noteId,
-        sidebarItems,
-        itemsMap,
-      })
-    : new Map<string, Id<'sidebarItems'>>()
-  const externalNoteIds = [...new Set(externalNoteIdByPath.values())].filter((id) => id !== noteId)
-  const externalStatesQuery = useCampaignQuery(
-    api.noteValues.queries.getNoteValueStatesByNotes,
-    externalNoteIds.length > 0 ? { noteIds: externalNoteIds } : 'skip',
-  )
-  const externalStates: Array<NoteValueRuntimeState<Id<'sidebarItems'>>> =
-    externalStatesQuery.data ?? []
+  const {
+    authoredDefinitions,
+    externalNoteIdByPath,
+    externalStates,
+    itemsMap,
+    noteId,
+    persistedStates,
+    sidebarItems,
+  } = source
   const existingSlugs = authoredDefinitions.map((definition) => definition.slug)
   useValueTransferBehavior(editor, editable, () => existingSlugs)
 

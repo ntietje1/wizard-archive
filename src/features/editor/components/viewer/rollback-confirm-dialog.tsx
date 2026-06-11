@@ -1,9 +1,3 @@
-import { toast } from 'sonner'
-import { api } from 'convex/_generated/api'
-import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
-import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
-import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
-import { handleError } from '~/shared/utils/logger'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import {
   AlertDialog,
@@ -15,45 +9,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '~/features/shadcn/components/alert-dialog'
-import type { Id } from 'convex/_generated/dataModel'
 
-export function RollbackConfirmDialog({ itemId }: { itemId: Id<'sidebarItems'> }) {
-  const rollbackEntryId = useHistoryPreviewStore((s) =>
-    s.rollback?.itemId === itemId ? s.rollback.entryId : null,
-  )
-  const clearRollback = useHistoryPreviewStore((s) => s.clearRollback)
-  const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
+export type RollbackConfirmDialogState =
+  | { status: 'closed'; isRestoring: false }
+  | { status: 'loading'; isRestoring: boolean }
+  | { status: 'error'; isRestoring: boolean }
+  | { status: 'ready'; entryTime: number; isRestoring: boolean }
 
-  const historyEntry = useCampaignQuery(
-    api.editHistory.queries.getHistoryEntry,
-    rollbackEntryId ? { editHistoryId: rollbackEntryId } : 'skip',
-  )
-
-  const rollback = useCampaignMutation(api.documentSnapshots.mutations.rollbackToSnapshot)
-
-  const handleRestore = async () => {
-    if (!rollbackEntryId || rollback.isPending) return
-    try {
-      await rollback.mutateAsync({ editHistoryId: rollbackEntryId })
-      clearPreview(itemId)
-      toast.success('Version restored')
-      clearRollback(itemId)
-    } catch (error) {
-      handleError(error, 'Failed to restore version')
-    }
-  }
-
-  const entryTime = historyEntry.data?._creationTime
-  const hasError = !!historyEntry.error
-  const isReady = !historyEntry.isLoading && !!historyEntry.data
+export function RollbackConfirmDialog({
+  onOpenChange,
+  onRestore,
+  state,
+}: {
+  onOpenChange: (open: boolean) => void
+  onRestore: () => void
+  state: RollbackConfirmDialogState
+}) {
+  const open = state.status !== 'closed'
+  const hasError = state.status === 'error'
+  const isReady = state.status === 'ready'
+  const isRestoring = state.isRestoring
 
   return (
-    <AlertDialog
-      open={rollbackEntryId !== null}
-      onOpenChange={(open) => {
-        if (!open && !rollback.isPending) clearRollback(itemId)
-      }}
-    >
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Restore this version?</AlertDialogTitle>
@@ -62,8 +40,9 @@ export function RollbackConfirmDialog({ itemId }: { itemId: Id<'sidebarItems'> }
               'Failed to load version details. Please close and try again.'
             ) : isReady ? (
               <>
-                This will restore the document to its state from {formatRelativeTime(entryTime!)}.
-                The current content will be preserved in the edit history.
+                This will restore the document to its state from{' '}
+                {formatRelativeTime(state.entryTime)}. The current content will be preserved in the
+                edit history.
               </>
             ) : (
               'Loading version details\u2026'
@@ -71,12 +50,9 @@ export function RollbackConfirmDialog({ itemId }: { itemId: Id<'sidebarItems'> }
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={rollback.isPending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleRestore}
-            disabled={!isReady || hasError || rollback.isPending}
-          >
-            {rollback.isPending ? 'Restoring\u2026' : 'Restore'}
+          <AlertDialogCancel disabled={isRestoring}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onRestore} disabled={!isReady || hasError || isRestoring}>
+            {isRestoring ? 'Restoring\u2026' : 'Restore'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -8,6 +8,7 @@ import {
   NAV_COLUMN_WIDTH,
 } from './sidebar-toolbar/constants'
 import { ResizableSidebar } from './resizable-sidebar'
+import { SidebarWorkspaceShell } from './sidebar-workspace-shell'
 import { CampaignPanel } from '~/features/sidebar/components/campaign-panel/campaign-panel'
 import { ResizablePanel, ResizablePanelGroup } from '~/features/shadcn/components/resizable'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
@@ -47,24 +48,26 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const panelState = usePanelPreference(LEFT_SIDEBAR_PANEL_ID, LEFT_SIDEBAR_DEFAULTS)
 
   return (
-    <div className="relative flex flex-1 min-h-0 min-w-0">
-      <ResizableSidebar
-        side="left"
-        size={panelState.size}
-        visible={panelState.visible}
-        onSizeChange={panelState.setSize}
-        onVisibleChange={panelState.setVisible}
-        isLoaded={panelState.isLoaded}
-        extraWidth={NAV_COLUMN_WIDTH}
-      >
-        <nav aria-label="Sidebar" className="h-full">
-          <SidebarWrapper>
-            <SidebarContent />
-          </SidebarWrapper>
-        </nav>
-      </ResizableSidebar>
-
-      <div className="flex flex-col flex-1 min-h-0 min-w-0">{children}</div>
-    </div>
+    <SidebarWorkspaceShell
+      sidebar={
+        <ResizableSidebar
+          side="left"
+          size={panelState.size}
+          visible={panelState.visible}
+          onSizeChange={panelState.setSize}
+          onVisibleChange={panelState.setVisible}
+          isLoaded={panelState.isLoaded}
+          extraWidth={NAV_COLUMN_WIDTH}
+        >
+          <nav aria-label="Sidebar" className="h-full">
+            <SidebarWrapper>
+              <SidebarContent />
+            </SidebarWrapper>
+          </nav>
+        </ResizableSidebar>
+      }
+    >
+      {children}
+    </SidebarWorkspaceShell>
   )
 }

@@ -1,16 +1,13 @@
 import { FolderDot, FolderOpenDot } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import {
-  useCampaignSidebarActions,
-  useCampaignSidebarState,
-} from '~/features/sidebar/stores/sidebar-ui-store'
+import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 
 export function CloseAllFoldersButton() {
-  const { campaignId } = useCampaign()
-  const { closeAllFoldersMode } = useCampaignSidebarState(campaignId)
-  const { toggleCloseAllFoldersMode } = useCampaignSidebarActions(campaignId)
+  const {
+    ui: { closeAllFoldersMode },
+    uiCommands: { toggleCloseAllFoldersMode },
+  } = useSidebarWorkspaceSource()
 
   return (
     <TooltipButton tooltip="Close all folders" side="bottom">
