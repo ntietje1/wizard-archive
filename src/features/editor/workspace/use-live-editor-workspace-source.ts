@@ -6,11 +6,11 @@ import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permissi
 import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
-import { useSidebarWorkspaceSource } from '~/features/sidebar/workspace/sidebar-workspace-source'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
@@ -26,6 +26,7 @@ import { useLiveFileViewerSource } from '~/features/editor/components/viewer/fil
 import type { EditorWorkspaceSharingState, EditorWorkspaceSource } from './editor-workspace-source'
 import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from './live-note-document-source'
 import { useLiveEmptyWorkspaceDropCapability } from './use-live-empty-workspace-drop'
+import { handleError } from '~/shared/utils/logger'
 
 export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const currentItem = useCurrentItem()
@@ -34,14 +35,12 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const campaign = useCampaign()
   const campaignMembers = useCampaignMembers()
   const { editItem } = useEditFileSystemItem()
+  const { createItem: createFileSystemItem } = useCreateFileSystemItem()
   const { navigateToItem } = useEditorNavigation()
   const { setLastSelectedItem } = useLastEditorItem()
   const sidebarValidation = useSidebarValidation()
   const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
-  const {
-    commands: { createSidebarItem },
-  } = useSidebarWorkspaceSource()
   const [isCreatingMissingRequestedNote, startCreateTransition] = useTransition()
   const emptyWorkspaceDrop = useLiveEmptyWorkspaceDropCapability()
   const fileViewerSource = useLiveFileViewerSource(currentItem.contentItem)
@@ -90,11 +89,30 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
     fallbackLabel: 'Page',
   })
 
+  const createWorkspaceItem: EditorWorkspaceSource['items']['createItem'] = async ({
+    name,
+    parentId,
+    type,
+  }) => {
+    if (!campaign.campaignId) return null
+
+    try {
+      return await createFileSystemItem({
+        type,
+        parentTarget: { kind: 'direct', parentId },
+        name,
+      })
+    } catch (error) {
+      handleError(error, 'Failed to create item')
+      return null
+    }
+  }
+
   const createMissingRequestedNote = () => {
     if (!campaign.campaignId || !requestedSlug || isCreatingMissingRequestedNote) return
 
     startCreateTransition(async () => {
-      await createSidebarItem({
+      await createWorkspaceItem({
         type: SIDEBAR_ITEM_TYPES.notes,
         parentId: null,
         name: getRequestedNoteName(requestedSlug) ?? undefined,
@@ -130,7 +148,7 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
         enabled: true,
         item: currentItem.item,
       },
-      createItem: createSidebarItem,
+      createItem: createWorkspaceItem,
       createMissingRequestedNote,
       creationDraft: {
         pendingName: pendingItemName,

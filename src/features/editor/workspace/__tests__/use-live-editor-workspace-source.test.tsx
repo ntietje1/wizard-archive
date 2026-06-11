@@ -3,12 +3,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import { useLiveEditorWorkspaceSource } from '../use-live-editor-workspace-source'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 
 const liveSourceState = vi.hoisted(() => ({
   contentItem: null as AnySidebarItemWithContent | null,
   item: null as AnySidebarItemWithContent | null,
+}))
+
+const fileSystemItemMocks = vi.hoisted(() => ({
+  createItem: vi.fn(),
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -51,19 +56,18 @@ vi.mock('~/features/filesystem/useEditFileSystemItem', () => ({
   useEditFileSystemItem: () => ({ editItem: vi.fn() }),
 }))
 
+vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
+  useCreateFileSystemItem: () => ({ createItem: fileSystemItemMocks.createItem }),
+}))
+
 vi.mock('~/features/filesystem/useFileSystemReadModel', () => ({
   useFileSystemReadModel: () => ({
     activeItemsById: new Map<Id<'sidebarItems'>, AnySidebarItem>(
       liveSourceState.item ? [[liveSourceState.item._id, liveSourceState.item]] : [],
     ),
     trashItems: [],
-  }),
-}))
-
-vi.mock('~/features/sidebar/workspace/sidebar-workspace-source', () => ({
-  useSidebarWorkspaceSource: () => ({
-    commands: {
-      createSidebarItem: vi.fn(),
+    readModel: {
+      getActiveChildren: vi.fn(() => []),
     },
   }),
 }))
@@ -133,6 +137,11 @@ describe('useLiveEditorWorkspaceSource', () => {
   beforeEach(() => {
     liveSourceState.contentItem = createContentNote('note-1')
     liveSourceState.item = liveSourceState.contentItem
+    fileSystemItemMocks.createItem.mockReset()
+    fileSystemItemMocks.createItem.mockResolvedValue({
+      id: 'created-note' as Id<'sidebarItems'>,
+      slug: 'created-note',
+    })
     useHistoryPreviewStore.setState({ preview: null, rollback: null })
   })
 
@@ -163,6 +172,25 @@ describe('useLiveEditorWorkspaceSource', () => {
     const { result } = renderHook(() => useLiveEditorWorkspaceSource())
 
     expect(result.current.history.preview.previewingEntryId).toBe(entryId)
+  })
+
+  it('creates editor items through the filesystem operation capability', async () => {
+    const { result } = renderHook(() => useLiveEditorWorkspaceSource())
+
+    await result.current.items.createItem({
+      type: SIDEBAR_ITEM_TYPES.notes,
+      parentId: 'folder-1' as Id<'sidebarItems'>,
+      name: 'Session Notes',
+    })
+
+    expect(fileSystemItemMocks.createItem).toHaveBeenCalledWith({
+      type: SIDEBAR_ITEM_TYPES.notes,
+      parentTarget: {
+        kind: 'direct',
+        parentId: 'folder-1',
+      },
+      name: 'Session Notes',
+    })
   })
 })
 

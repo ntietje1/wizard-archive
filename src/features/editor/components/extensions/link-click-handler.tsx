@@ -270,7 +270,7 @@ export function LinkClickHandlerSurface({
         sourceParentId,
         validateCreateItem: (args) =>
           validateCreateItemLocally(
-            { name: args.name, parentTarget: args.parentTarget },
+            { name: args.name ?? '', parentTarget: args.parentTarget },
             itemsMap,
             parentItemsMap,
           ),
@@ -356,7 +356,7 @@ export function LinkClickHandlerSurface({
         sourceParentId,
         validateCreateItem: (args) =>
           validateCreateItemLocally(
-            { name: args.name, parentTarget: args.parentTarget },
+            { name: args.name ?? '', parentTarget: args.parentTarget },
             itemsMap,
             parentItemsMap,
           ),
