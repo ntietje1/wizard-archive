@@ -6,7 +6,7 @@ import type { UseCanvasEditorRuntimeCoreOptions } from './use-canvas-editor-runt
 import type { CanvasContextMenuSource } from './context-menu/canvas-context-menu-types'
 
 type UseCanvasEditorRuntimeOptions = UseCanvasEditorRuntimeCoreOptions & {
-  contextMenuSource: CanvasContextMenuSource
+  contextMenuSource?: CanvasContextMenuSource
   provider: ConvexYjsProvider | null
 }
 

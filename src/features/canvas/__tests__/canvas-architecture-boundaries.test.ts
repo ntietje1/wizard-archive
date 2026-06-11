@@ -9,6 +9,12 @@ describe('canvas architecture boundaries', () => {
   it('keeps main editor entry points on the canvas-owned runtime and scene', () => {
     const viewer = readRepoFile('src/features/canvas/components/canvas-viewer.tsx')
     const runtime = readRepoFile('src/features/canvas/runtime/use-canvas-editor-runtime.ts')
+    const liveRuntime = readRepoFile(
+      'src/features/canvas/components/live-canvas-viewer-runtime.tsx',
+    )
+    const localRuntime = readRepoFile(
+      'src/features/canvas/components/local-canvas-viewer-runtime.tsx',
+    )
     const runtimeCoreShell = readRepoFile(
       'src/features/canvas/runtime/use-canvas-editor-runtime-core.ts',
     )
@@ -18,11 +24,20 @@ describe('canvas architecture boundaries', () => {
     const runtimeHost = readRepoFile(
       'src/features/canvas/components/canvas-editor-runtime-host.tsx',
     )
+    const viewerRuntimeHost = readRepoFile(
+      'src/features/canvas/components/canvas-viewer-runtime-host.tsx',
+    )
     const coreRuntime = readRepoFile('src/features/canvas/runtime/use-canvas-core-runtime.ts')
     const surface = readRepoFile('src/features/canvas/components/canvas-editor-surface.tsx')
 
-    expect(viewer).toContain('useCanvasEditorRuntime')
-    expect(viewer).toContain('CanvasEditorRuntimeHost')
+    expect(viewer).toContain('RuntimeComponent')
+    expect(viewer).not.toContain('useCanvasEditorRuntime')
+    expect(viewer).not.toContain('CanvasEditorRuntimeHost')
+    expect(liveRuntime).toContain('useCanvasEditorRuntime')
+    expect(localRuntime).toContain('useCanvasEditorRuntimeCore')
+    expect(liveRuntime).toContain('CanvasViewerRuntimeHost')
+    expect(localRuntime).toContain('CanvasViewerRuntimeHost')
+    expect(viewerRuntimeHost).toContain('CanvasEditorRuntimeHost')
     expect(runtimeHost).toContain('CanvasEditorSurface')
     expect(surface).toContain('CanvasScene')
     expect(runtime).toContain('useCanvasEditorRuntimeCore')
@@ -141,26 +156,41 @@ describe('canvas architecture boundaries', () => {
 
   it('keeps demo canvas on shared runtime assembly instead of a parallel editor implementation', () => {
     const demoWorkspace = readRepoFile('src/features/landing/components/demo-workspace.tsx')
-    const localEditor = readRepoFile('src/features/canvas/components/local-canvas-editor.tsx')
+    const sidebarItemViewer = readRepoFile(
+      'src/features/editor/components/viewer/sidebar-item-viewer.tsx',
+    )
+    const localSource = readRepoFile(
+      'src/features/landing/demo-workspace/local-demo-editor-workspace-source.ts',
+    )
+    const canvasViewer = readRepoFile('src/features/canvas/components/canvas-viewer.tsx')
+    const localRuntime = readRepoFile(
+      'src/features/canvas/components/local-canvas-viewer-runtime.tsx',
+    )
+    const viewerRuntimeHost = readRepoFile(
+      'src/features/canvas/components/canvas-viewer-runtime-host.tsx',
+    )
     const runtimeCore = readRepoFile(
       'src/features/canvas/runtime/use-canvas-editor-runtime-core.ts',
     )
     const liveRuntime = readRepoFile('src/features/canvas/runtime/use-canvas-editor-runtime.ts')
 
-    expect(demoWorkspace).toContain('~/features/canvas/components/local-canvas-editor')
+    expect(demoWorkspace).toContain('EditorContent')
+    expect(demoWorkspace).not.toContain('local-canvas-editor')
+    expect(sidebarItemViewer).toContain('CanvasViewer')
+    expect(sidebarItemViewer).toContain('source={canvases.viewer}')
+    expect(localSource).toContain('LocalCanvasViewerRuntime')
+    expect(canvasViewer).toContain('RuntimeComponent')
+    expect(canvasViewer).not.toContain('LocalCanvasViewerRuntime')
     expect(demoWorkspace).not.toContain('~/features/landing/demo-workspace/local-canvas-editor')
-    expect(localEditor).toContain('useCanvasEditorRuntimeCore')
-    expect(localEditor).toContain('CanvasEditorRuntimeHost')
-    expect(localEditor).toContain('EmbedNode')
-    expect(localEditor).toContain('TextNode')
-    expect(localEditor).toContain('StrokeNode')
-    expect(localEditor).not.toContain('useCanvasEditorRuntimeBase')
-    expect(localEditor).not.toContain('useCanvasEditorSceneRuntime')
-    expect(localEditor).not.toContain('createCanvasToolRuntime')
-    expect(localEditor).not.toContain('useCanvasContextMenuCore')
-    expect(localEditor).not.toContain('CanvasPreviewDefaultEmbedNode')
-    expect(localEditor).not.toContain('CanvasRuntimeProvider')
-    expect(localEditor).not.toContain('CanvasEditorSurface')
+    expect(localRuntime).toContain('useCanvasEditorRuntimeCore')
+    expect(localRuntime).toContain('CanvasViewerRuntimeHost')
+    expect(viewerRuntimeHost).toContain('CanvasEditorRuntimeHost')
+    expect(viewerRuntimeHost).toContain('CanvasNodeContent')
+    expect(localRuntime).not.toContain('useCanvasEditorRuntimeBase')
+    expect(localRuntime).not.toContain('useCanvasEditorSceneRuntime')
+    expect(localRuntime).not.toContain('createCanvasToolRuntime')
+    expect(localRuntime).not.toContain('useCanvasContextMenuCore')
+    expect(localRuntime).not.toContain('CanvasPreviewDefaultEmbedNode')
 
     expect(runtimeCore).toContain('useCanvasEditorRuntimeBase')
     expect(runtimeCore).toContain('useCanvasToolRuntimeCore')

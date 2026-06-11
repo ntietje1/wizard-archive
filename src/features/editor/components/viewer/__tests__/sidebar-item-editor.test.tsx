@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { createNote } from '~/test/factories/sidebar-item-factory'
+import { createTestCanvasViewerSource } from '~/test/factories/canvas-viewer-source-factory'
 import { SidebarItemEditor } from '../sidebar-item-editor'
 import { SidebarItemViewer } from '../sidebar-item-viewer'
 import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
@@ -30,7 +31,14 @@ describe('SidebarItemEditor', () => {
       blockShareAccessWarnings: [],
     }
 
-    render(<SidebarItemEditor files={createFiles()} item={item} history={createHistory()} />)
+    render(
+      <SidebarItemEditor
+        canvases={createCanvases()}
+        files={createFiles()}
+        item={item}
+        history={createHistory()}
+      />,
+    )
 
     expect(screen.getByText('note editor')).toBeInTheDocument()
   })
@@ -44,7 +52,7 @@ describe('SidebarItemEditor', () => {
       blockShareAccessWarnings: [],
     }
 
-    render(<SidebarItemViewer item={item} />)
+    render(<SidebarItemViewer canvases={createCanvases()} item={item} />)
 
     expect(screen.getByText('note editor')).toBeInTheDocument()
   })
@@ -61,6 +69,7 @@ describe('SidebarItemEditor', () => {
 
     render(
       <SidebarItemEditor
+        canvases={createCanvases()}
         files={createFiles()}
         item={item}
         history={createHistory({ previewingEntryId: entryId })}
@@ -82,7 +91,12 @@ describe('SidebarItemEditor', () => {
     }
 
     const { unmount } = render(
-      <SidebarItemEditor files={createFiles()} item={item} history={createHistory()} />,
+      <SidebarItemEditor
+        canvases={createCanvases()}
+        files={createFiles()}
+        item={item}
+        history={createHistory()}
+      />,
     )
 
     unmount()
@@ -114,6 +128,12 @@ describe('SidebarItemEditor', () => {
   function createFiles(): EditorWorkspaceSource['files'] {
     return {
       viewer: createFileViewerSource(),
+    }
+  }
+
+  function createCanvases(): EditorWorkspaceSource['documents']['canvases'] {
+    return {
+      viewer: createTestCanvasViewerSource(),
     }
   }
 

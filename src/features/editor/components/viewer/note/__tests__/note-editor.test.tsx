@@ -8,6 +8,7 @@ import { EDITOR_MODE } from 'shared/editor/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { testId } from '~/test/helpers/test-id'
+import { createTestCanvasViewerSource } from '~/test/factories/canvas-viewer-source-factory'
 import { EditorWorkspaceSourceProvider } from '~/features/editor/workspace/editor-workspace-source-context'
 import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from '~/features/editor/workspace/live-note-document-source'
 import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
@@ -440,6 +441,9 @@ function createWorkspaceSource(note: NoteWithContent): EditorWorkspaceSource {
       },
     },
     documents: {
+      canvases: {
+        viewer: createTestCanvasViewerSource(),
+      },
       notes: LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS,
     },
   }

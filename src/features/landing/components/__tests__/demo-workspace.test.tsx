@@ -4,12 +4,12 @@ import { DemoWorkspace } from '../demo-workspace'
 import type { ReactNode } from 'react'
 import type * as TanStackRouter from '@tanstack/react-router'
 
-const { fileViewerMock, localCanvasEditorMock, noteContentMock, noteFormattingToolbarMock } =
+const { fileViewerMock, noteContentMock, noteFormattingToolbarMock, sidebarItemEditorMock } =
   vi.hoisted(() => ({
     fileViewerMock: vi.fn(),
-    localCanvasEditorMock: vi.fn(),
     noteContentMock: vi.fn(),
     noteFormattingToolbarMock: vi.fn(),
+    sidebarItemEditorMock: vi.fn(),
   }))
 
 vi.mock('~/features/editor/components/formatting-toolbar/note-formatting-toolbar', () => ({
@@ -39,6 +39,8 @@ vi.mock('~/features/editor/components/viewer/note/note-editor', () => ({
 
 vi.mock('../../../editor/components/viewer/sidebar-item-editor', () => ({
   SidebarItemEditor: ({ files, item }: { files: unknown; item: Record<string, unknown> }) => {
+    sidebarItemEditorMock({ files, item })
+
     if (item.type === 'file') {
       fileViewerMock({ item, source: files })
       return <div data-testid="demo-file-viewer" />
@@ -58,6 +60,10 @@ vi.mock('../../../editor/components/viewer/sidebar-item-editor', () => ({
           <div role="toolbar" aria-label="Note formatting toolbar" />
         </>
       )
+    }
+
+    if (item.type === 'canvas') {
+      return <input aria-label="Demo canvas editor" data-testid="demo-canvas-viewer" />
     }
 
     return null
@@ -93,19 +99,6 @@ vi.mock('~/features/editor/components/viewer/file/file-viewer', () => ({
   },
 }))
 
-vi.mock('~/features/canvas/components/local-canvas-editor', () => ({
-  LocalCanvasEditor: (props: Record<string, unknown>) => {
-    localCanvasEditorMock(props)
-    return (
-      <input
-        aria-label="Demo canvas marker"
-        data-testid="demo-local-canvas-editor"
-        defaultValue=""
-      />
-    )
-  },
-}))
-
 const createObjectURLMock = vi.fn((value: Blob | MediaSource) => {
   if (value instanceof File) return `blob:${value.name}`
   return 'blob:demo-default-file'
@@ -123,9 +116,9 @@ describe('DemoWorkspace', () => {
 
   beforeEach(() => {
     fileViewerMock.mockReset()
-    localCanvasEditorMock.mockReset()
     noteContentMock.mockReset()
     noteFormattingToolbarMock.mockReset()
+    sidebarItemEditorMock.mockReset()
     createObjectURLMock.mockClear()
     revokeObjectURLMock.mockClear()
   })
@@ -165,21 +158,18 @@ describe('DemoWorkspace', () => {
     )
   })
 
-  it('navigates inside the demo sidebar and mounts the local canvas editor runtime', () => {
+  it('navigates inside the demo sidebar and mounts the canvas through the shared editor boundary', () => {
     render(<DemoWorkspace />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Harbor Heist Board' }))
 
-    expect(screen.getByTestId('demo-local-canvas-editor')).toBeInTheDocument()
-    expect(localCanvasEditorMock).toHaveBeenCalledWith(
+    expect(screen.getByTestId('demo-canvas-viewer')).toBeInTheDocument()
+    expect(sidebarItemEditorMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        canvasId: 'canvas-heist',
-        nodes: expect.arrayContaining([
-          expect.objectContaining({ id: 'scene-brief', type: 'text' }),
-        ]),
-        edges: expect.arrayContaining([
-          expect.objectContaining({ id: 'brief-to-map', source: 'scene-brief' }),
-        ]),
+        item: expect.objectContaining({
+          _id: 'canvas-heist',
+          type: 'canvas',
+        }),
       }),
     )
   })
@@ -233,15 +223,15 @@ describe('DemoWorkspace', () => {
     )
 
     expect(screen.getByRole('textbox', { name: 'Item name' })).toHaveValue('New Canvas')
-    expect(localCanvasEditorMock).toHaveBeenLastCalledWith(
+    expect(screen.getByTestId('demo-canvas-viewer')).toBeInTheDocument()
+    expect(sidebarItemEditorMock).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        canvasId: 'local-canvas-2',
-        nodes: [],
-        edges: [],
-        SidebarItemEmbedResolver: expect.any(Function),
+        item: expect.objectContaining({
+          _id: 'local-canvas-2',
+          type: 'canvas',
+        }),
       }),
     )
-
     fireEvent.click(screen.getByRole('button', { name: 'New' }))
     fireEvent.click(screen.getByRole('button', { name: 'File Upload a document, image, or media' }))
 
@@ -270,7 +260,7 @@ describe('DemoWorkspace', () => {
         'Map editing is not available in this demo yet. Use the canvas board for interactive planning.',
       ),
     ).toBeInTheDocument()
-    expect(screen.queryByTestId('demo-local-canvas-editor')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('demo-canvas-viewer')).not.toBeInTheDocument()
   })
 
   it('renames a local item without leaving the demo workspace', async () => {
@@ -287,7 +277,7 @@ describe('DemoWorkspace', () => {
     expect(await screen.findByTestId('demo-note-content')).toBeInTheDocument()
   })
 
-  it('mounts only the active production editor while legacy local canvas state remains mounted', async () => {
+  it('mounts only the active production editor while navigating notes and canvases', async () => {
     render(<DemoWorkspace />)
 
     fireEvent.change(await screen.findByLabelText('Demo note body'), {
@@ -296,7 +286,7 @@ describe('DemoWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Harbor Heist Board' }))
     expect(screen.queryByLabelText('Demo note body')).not.toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('Demo canvas marker'), {
+    fireEvent.change(screen.getByLabelText('Demo canvas editor'), {
       target: { value: 'moved encounter node' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'The Lantern Market' }))
@@ -304,7 +294,7 @@ describe('DemoWorkspace', () => {
     expect(screen.getByLabelText('Demo note body')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Harbor Heist Board' }))
-    expect(screen.getByLabelText('Demo canvas marker')).toHaveValue('moved encounter node')
+    expect(screen.getByLabelText('Demo canvas editor')).toBeInTheDocument()
   })
 
   it('lets the demo file item use a local file during the page session', async () => {

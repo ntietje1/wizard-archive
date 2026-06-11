@@ -5,6 +5,7 @@ import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { NoteContent } from '../note-content'
 import { createNote } from '~/test/factories/sidebar-item-factory'
+import { createTestCanvasViewerSource } from '~/test/factories/canvas-viewer-source-factory'
 import { testId } from '~/test/helpers/test-id'
 import { EditorWorkspaceSourceProvider } from '~/features/editor/workspace/editor-workspace-source-context'
 import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from '~/features/editor/workspace/live-note-document-source'
@@ -599,6 +600,9 @@ function createWorkspaceSource(
       },
     },
     documents: {
+      canvases: {
+        viewer: createTestCanvasViewerSource(),
+      },
       notes: noteDocuments,
     },
   }

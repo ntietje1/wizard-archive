@@ -20,6 +20,7 @@ import { buildEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProp
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { LiveHistoryPreviewViewer } from '~/features/editor/components/viewer/live-history-preview-viewer'
 import { LiveRollbackConfirmDialog } from '~/features/editor/components/viewer/live-rollback-confirm-dialog'
+import { LIVE_CANVAS_VIEWER_SOURCE } from '~/features/canvas/components/live-canvas-viewer-source'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 import { useLiveFileViewerSource } from '~/features/editor/components/viewer/file/live-file-viewer-source'
 import type { EditorWorkspaceSharingState, EditorWorkspaceSource } from './editor-workspace-source'
@@ -172,6 +173,9 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
       viewer: fileViewerSource,
     },
     documents: {
+      canvases: {
+        viewer: LIVE_CANVAS_VIEWER_SOURCE,
+      },
       notes: LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS,
     },
   }

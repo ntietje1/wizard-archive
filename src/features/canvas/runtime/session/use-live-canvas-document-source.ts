@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import type * as Y from 'yjs'
 import type { CanvasWithContent } from 'shared/canvases/types'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
 import { useResolvedTheme } from '~/shared/theme/context'
@@ -12,6 +11,7 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from '~/features/canvas/domain/canvas-document'
+import type { CanvasDocumentSource } from './canvas-document-source'
 
 const CURSOR_COLORS = [
   '#e06c75',
@@ -31,23 +31,6 @@ function getCursorColor(userId: string): string {
   }
   return CURSOR_COLORS[Math.abs(hash) % CURSOR_COLORS.length]
 }
-
-export type CanvasDocumentSource =
-  | { status: 'loading' }
-  | { status: 'error'; error: Error | string }
-  | {
-      status: 'ready'
-      canvasId: CanvasWithContent['_id']
-      campaignId: CanvasWithContent['campaignId']
-      canEdit: boolean
-      colorMode: 'light' | 'dark'
-      parentId: CanvasWithContent['parentId']
-      provider: ReturnType<typeof useConvexYjsCollaboration>['provider']
-      user: { name: string; color: string }
-      doc: Y.Doc
-      nodesMap: Y.Map<CanvasDocumentNode>
-      edgesMap: Y.Map<CanvasDocumentEdge>
-    }
 
 export function useLiveCanvasDocumentSource(canvas: CanvasWithContent): CanvasDocumentSource {
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})

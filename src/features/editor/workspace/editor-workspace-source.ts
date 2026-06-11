@@ -11,6 +11,7 @@ import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import type { SidebarItemAvailabilityState } from 'shared/sidebar-items/availability'
 import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
+import type { CanvasViewerSource } from '~/features/canvas/components/canvas-viewer-source'
 import type { LinkResolver } from '~/features/editor/links/link-resolver'
 import type { NoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
@@ -200,6 +201,9 @@ export interface EditorNoteCollaborationProvider {
 }
 
 interface EditorWorkspaceDocuments {
+  canvases: {
+    viewer: CanvasViewerSource
+  }
   notes: EditorWorkspaceNoteDocuments
 }
 

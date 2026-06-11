@@ -1,8 +1,16 @@
+import * as Y from 'yjs'
 import { EDITOR_MODE } from 'shared/editor/types'
 import { blocksToYDoc } from 'shared/editor-blocks/blocknote-yjs'
 import { validateSidebarItemNameWithSiblings } from 'shared/sidebar-items/name'
 import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { useCanvasToolStore } from '~/features/canvas/stores/canvas-tool-store'
+import { CanvasViewerSession } from '~/features/canvas/components/canvas-viewer'
+import { LocalCanvasViewerRuntime } from '~/features/canvas/components/local-canvas-viewer-runtime'
+import type {
+  CanvasViewerSource,
+  CanvasViewerSourceComponentProps,
+} from '~/features/canvas/components/canvas-viewer-source'
 import type {
   EditorNoteCollaborationProvider,
   EditorWorkspaceNoteDocuments,
@@ -10,15 +18,28 @@ import type {
   EditorWorkspaceNoteSidebarItems,
   EditorWorkspaceSource,
 } from '~/features/editor/workspace/editor-workspace-source'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/domain/canvas-document'
+import type { ReadyCanvasDocumentSource } from '~/features/canvas/runtime/session/canvas-document-source'
 import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
 import type { INITIAL_DEMO_WORKSPACE, DemoWorkspaceAction } from './demo-workspace-model'
-import { createDemoWorkspaceProjection, selectedDemoItem } from './demo-workspace-model'
+import {
+  createDemoWorkspaceProjection,
+  demoCanvasForItem,
+  selectedDemoItem,
+} from './demo-workspace-model'
+import {
+  createDemoEmbeddedCanvasStateResolver,
+  createDemoSidebarItemEmbedResolver,
+} from './local-demo-embed-resolvers'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '~/features/sidebar/sidebar-item-creation-catalog'
 import { createLinkResolver } from '~/features/editor/links/link-resolver'
 import { createEmptyNoteValueRuntimeSource } from '~/features/editor/value-block/note-value-runtime-source'
 import { LocalYjsProvider } from './local-yjs-provider'
 import type { Id } from 'convex/_generated/dataModel'
-import { useEffect, useRef } from 'react'
+import { createElement, useEffect, useRef } from 'react'
 import type { Dispatch } from 'react'
 import type { NoteWithContent } from 'shared/notes/types'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
@@ -57,6 +78,7 @@ function createLocalDemoNoteSidebarItems(
 export function createLocalDemoEditorWorkspaceSource({
   activeView,
   dispatch,
+  canvasViewerSource,
   fileViewerSource,
   noteDocuments,
   selectedItemId,
@@ -64,6 +86,7 @@ export function createLocalDemoEditorWorkspaceSource({
 }: {
   activeView?: DemoWorkspaceState['activeView']
   dispatch: Dispatch<DemoWorkspaceAction>
+  canvasViewerSource: CanvasViewerSource
   fileViewerSource: FileViewerSource
   noteDocuments: EditorWorkspaceNoteDocuments
   selectedItemId?: string | null
@@ -191,9 +214,107 @@ export function createLocalDemoEditorWorkspaceSource({
       viewer: fileViewerSource,
     },
     documents: {
+      canvases: {
+        viewer: canvasViewerSource,
+      },
       notes: noteDocuments,
     },
   }
+}
+
+function createLocalDemoCanvasSession({
+  canvasId,
+  edges,
+  nodes,
+}: {
+  canvasId: Id<'sidebarItems'>
+  edges: ReadonlyArray<CanvasDocumentEdge>
+  nodes: ReadonlyArray<CanvasDocumentNode>
+}): ReadyCanvasDocumentSource {
+  const doc = new Y.Doc()
+  const nodesMap = doc.getMap<CanvasDocumentNode>('nodes')
+  const edgesMap = doc.getMap<CanvasDocumentEdge>('edges')
+  doc.transact(() => {
+    nodes.forEach((node) => nodesMap.set(node.id, node))
+    edges.forEach((edge) => edgesMap.set(edge.id, edge))
+  }, 'local-canvas-init')
+
+  return {
+    status: 'ready',
+    canvasId,
+    campaignId: DEMO_CAMPAIGN_ID,
+    canEdit: true,
+    colorMode: 'light',
+    parentId: null,
+    provider: null,
+    user: { name: 'Demo', color: '#61afef' },
+    doc,
+    nodesMap,
+    edgesMap,
+  }
+}
+
+export function useLocalDemoCanvasViewerSource(workspace: DemoWorkspaceState): CanvasViewerSource {
+  const workspaceRef = useRef(workspace)
+  const sessionsRef = useRef(new Map<Id<'sidebarItems'>, ReadyCanvasDocumentSource>())
+  const sourceRef = useRef<CanvasViewerSource | null>(null)
+  workspaceRef.current = workspace
+
+  useEffect(() => {
+    const sessions = sessionsRef.current
+    return () => {
+      sessions.forEach((session) => session.doc.destroy())
+      sessions.clear()
+      useCanvasToolStore.getState().reset()
+    }
+  }, [])
+
+  if (!sourceRef.current) {
+    sourceRef.current = {
+      SourceComponent: function LocalDemoCanvasViewerSourceComponent({
+        canvas,
+        source,
+      }: CanvasViewerSourceComponentProps) {
+        useEffect(() => {
+          return () => {
+            useCanvasToolStore.getState().reset()
+          }
+        }, [canvas._id])
+
+        const sessions = sessionsRef.current
+        const existingSession = sessions.get(canvas._id)
+        const localCanvas = demoCanvasForItem(workspaceRef.current, String(canvas._id))
+        const session =
+          existingSession ??
+          createLocalDemoCanvasSession({
+            canvasId: canvas._id,
+            nodes: localCanvas.nodes,
+            edges: localCanvas.edges,
+          })
+
+        if (!existingSession) {
+          sessions.set(canvas._id, session)
+        }
+
+        return createElement(CanvasViewerSession, {
+          contextMenuSource: undefined,
+          session,
+          source,
+        })
+      },
+      RuntimeComponent: LocalCanvasViewerRuntime,
+      EmbeddedCanvasStateResolver: (props) => {
+        const Resolver = createDemoEmbeddedCanvasStateResolver(workspaceRef.current)
+        return createElement(Resolver, props)
+      },
+      SidebarItemEmbedResolver: (props) => {
+        const Resolver = createDemoSidebarItemEmbedResolver(workspaceRef.current)
+        return createElement(Resolver, props)
+      },
+    }
+  }
+
+  return sourceRef.current
 }
 
 function createLocalDemoNoteEditableSession(

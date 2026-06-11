@@ -68,7 +68,12 @@ function EditorContentBody({ source }: { source: EditorWorkspaceSource }) {
 
   return (
     <Suspense fallback={<EditorLoading />}>
-      <SidebarItemEditor item={contentItem} history={source.history} files={source.files} />
+      <SidebarItemEditor
+        item={contentItem}
+        canvases={source.documents.canvases}
+        history={source.history}
+        files={source.files}
+      />
     </Suspense>
   )
 }

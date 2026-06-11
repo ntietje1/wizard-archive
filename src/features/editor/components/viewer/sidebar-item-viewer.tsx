@@ -6,11 +6,14 @@ import { FolderViewer } from '~/features/editor/components/viewer/folder/folder-
 import { MapViewer } from '~/features/editor/components/viewer/map/map-viewer'
 import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor'
 import { assertNever } from '~/shared/utils/utils'
+import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-workspace-source'
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 
-type SidebarItemViewerProps = ViewerProps<AnySidebarItemWithContent>
+type SidebarItemViewerProps = ViewerProps<AnySidebarItemWithContent> & {
+  canvases: EditorWorkspaceSource['documents']['canvases']
+}
 
-export function SidebarItemViewer({ item }: SidebarItemViewerProps) {
+export function SidebarItemViewer({ canvases, item }: SidebarItemViewerProps) {
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.notes:
       return <NoteEditor key={item._id} item={item} />
@@ -21,7 +24,7 @@ export function SidebarItemViewer({ item }: SidebarItemViewerProps) {
     case SIDEBAR_ITEM_TYPES.files:
       return <FileViewer key={item._id} item={item} />
     case SIDEBAR_ITEM_TYPES.canvases:
-      return <CanvasViewer key={item._id} item={item} />
+      return <CanvasViewer key={item._id} item={item} source={canvases.viewer} />
     default:
       return assertNever(item)
   }

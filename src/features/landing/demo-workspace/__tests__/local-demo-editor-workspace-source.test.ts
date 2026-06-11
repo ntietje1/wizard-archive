@@ -17,12 +17,14 @@ import type {
   EditorWorkspaceNoteDocuments,
   EditorWorkspaceNoteEditableSession,
 } from '~/features/editor/workspace/editor-workspace-source'
+import { createTestCanvasViewerSource } from '~/test/factories/canvas-viewer-source-factory'
 import type { NoteWithContent } from 'shared/notes/types'
 
 describe('createLocalDemoEditorWorkspaceSource', () => {
   it('projects demo workspace state into the shared editor workspace source contract', () => {
     const dispatch = vi.fn()
     const source = createLocalDemoEditorWorkspaceSource({
+      canvasViewerSource: createTestCanvasViewerSource(),
       dispatch,
       fileViewerSource: createFileViewerSource(),
       noteDocuments: createNoteDocuments(),
@@ -85,6 +87,7 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
       itemId: 'canvas-heist',
     })
     const source = createLocalDemoEditorWorkspaceSource({
+      canvasViewerSource: createTestCanvasViewerSource(),
       dispatch: vi.fn(),
       fileViewerSource: createFileViewerSource(),
       noteDocuments: createNoteDocuments(),

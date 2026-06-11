@@ -4,13 +4,10 @@ import { DemoWorkspace } from '../demo-workspace'
 import type { FileWithContent } from 'shared/files/types'
 import type { FileViewerSource } from '~/features/editor/components/viewer/file/file-viewer-source'
 
-const { fileContentViewerMock, localCanvasEditorMock, noteFormattingToolbarMock } = vi.hoisted(
-  () => ({
-    fileContentViewerMock: vi.fn(),
-    localCanvasEditorMock: vi.fn(),
-    noteFormattingToolbarMock: vi.fn(),
-  }),
-)
+const { fileContentViewerMock, noteFormattingToolbarMock } = vi.hoisted(() => ({
+  fileContentViewerMock: vi.fn(),
+  noteFormattingToolbarMock: vi.fn(),
+}))
 
 vi.mock('~/features/editor/components/viewer/file/file-content-viewer', () => ({
   FileContentViewer: (props: Record<string, unknown>) => {
@@ -56,13 +53,6 @@ vi.mock('~/features/editor/components/formatting-toolbar/note-formatting-toolbar
   },
 }))
 
-vi.mock('~/features/canvas/components/local-canvas-editor', () => ({
-  LocalCanvasEditor: (props: Record<string, unknown>) => {
-    localCanvasEditorMock(props)
-    return <input aria-label="Demo canvas marker" data-testid="demo-local-canvas-editor" />
-  },
-}))
-
 const createObjectURLMock = vi.fn((value: Blob | MediaSource) => {
   if (value instanceof File) return `blob:${value.name}`
   return 'blob:demo-default-file'
@@ -80,7 +70,6 @@ describe('DemoWorkspace file viewer integration', () => {
 
   beforeEach(() => {
     fileContentViewerMock.mockReset()
-    localCanvasEditorMock.mockReset()
     noteFormattingToolbarMock.mockReset()
     createObjectURLMock.mockClear()
     revokeObjectURLMock.mockClear()

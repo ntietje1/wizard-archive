@@ -8,11 +8,12 @@ import type { EditorWorkspaceSource } from '~/features/editor/workspace/editor-w
 import type { ViewerProps } from '~/shared/viewer/viewer-props'
 
 type SidebarItemEditorProps = ViewerProps<AnySidebarItemWithContent> & {
+  canvases: EditorWorkspaceSource['documents']['canvases']
   files: EditorWorkspaceSource['files']
   history: EditorWorkspaceSource['history']
 }
 
-export function SidebarItemEditor({ files, history, item }: SidebarItemEditorProps) {
+export function SidebarItemEditor({ canvases, files, history, item }: SidebarItemEditorProps) {
   const { clearItemSession, PreviewComponent, previewingEntryId } = history.preview
   const { DialogComponent: RollbackDialogComponent } = history.rollback
 
@@ -35,7 +36,7 @@ export function SidebarItemEditor({ files, history, item }: SidebarItemEditorPro
     <>
       <ErrorBoundary FallbackComponent={ErrorFallback} key={item._id}>
         <FileViewerSourceProvider value={files.viewer}>
-          <SidebarItemViewer item={item} />
+          <SidebarItemViewer canvases={canvases} item={item} />
         </FileViewerSourceProvider>
       </ErrorBoundary>
       <RollbackDialogComponent itemId={item._id} />

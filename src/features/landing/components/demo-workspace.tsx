@@ -4,22 +4,17 @@ import { CreateNewDashboardSurface } from '~/features/editor/components/create-n
 import { EditorContent } from '~/features/editor/components/editor-content'
 import { EditorWorkspaceSurface } from '~/features/editor/components/editor-workspace-surface'
 import { FileTopbar } from '~/features/editor/components/topbar/file-topbar'
-import { LocalCanvasEditor } from '~/features/canvas/components/local-canvas-editor'
 import { useLocalDemoFileViewerSource } from '~/features/landing/demo-workspace/local-demo-file-viewer-source'
 import { SidebarTreeSurface } from '~/features/sidebar/components/sidebar-tree-surface'
 import { SidebarWorkspaceShell } from '~/features/sidebar/components/sidebar-workspace-shell'
 import { buildSidebarTreeSurfaceItems } from '~/features/sidebar/workspace/sidebar-tree-projection'
 import {
-  createDemoEmbeddedCanvasStateResolver,
-  createDemoSidebarItemEmbedResolver,
-} from '../demo-workspace/local-demo-embed-resolvers'
-import {
   createLocalDemoEditorWorkspaceSource,
+  useLocalDemoCanvasViewerSource,
   useLocalDemoNoteDocuments,
 } from '../demo-workspace/local-demo-editor-workspace-source'
 import {
   INITIAL_DEMO_WORKSPACE,
-  demoCanvasForItem,
   demoSidebarItemsWithContent,
   demoWorkspaceReducer,
   selectedDemoItem,
@@ -29,7 +24,6 @@ import type {
   DemoWorkspaceItem,
   DemoWorkspaceItemType,
 } from '../demo-workspace/demo-workspace-model'
-import type { Id } from 'convex/_generated/dataModel'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { Dispatch, MouseEvent } from 'react'
 
@@ -45,9 +39,11 @@ const noop = () => {}
 
 export function DemoWorkspace() {
   const [workspace, dispatch] = useReducer(demoWorkspaceReducer, INITIAL_DEMO_WORKSPACE)
+  const canvasViewerSource = useLocalDemoCanvasViewerSource(workspace)
   const fileViewerSource = useLocalDemoFileViewerSource(workspace)
   const noteDocuments = useLocalDemoNoteDocuments(workspace)
   const workspaceSource = createLocalDemoEditorWorkspaceSource({
+    canvasViewerSource,
     dispatch,
     fileViewerSource,
     noteDocuments,
@@ -78,6 +74,7 @@ export function DemoWorkspace() {
             dispatch={dispatch}
             fileViewerSource={fileViewerSource}
             noteDocuments={noteDocuments}
+            canvasViewerSource={canvasViewerSource}
             workspaceSource={workspaceSource}
           />
         </EditorWorkspaceSurface>
@@ -137,6 +134,7 @@ function DemoWorkspaceSidebar({
 
 function DemoWorkspaceSurfaces({
   dispatch,
+  canvasViewerSource,
   fileViewerSource,
   noteDocuments,
   selectedItem,
@@ -144,6 +142,7 @@ function DemoWorkspaceSurfaces({
   workspaceSource,
 }: {
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
+  canvasViewerSource: ReturnType<typeof useLocalDemoCanvasViewerSource>
   fileViewerSource: ReturnType<typeof useLocalDemoFileViewerSource>
   noteDocuments: ReturnType<typeof useLocalDemoNoteDocuments>
   selectedItem: DemoWorkspaceItem | null
@@ -166,7 +165,6 @@ function DemoWorkspaceSurfaces({
             <DemoWorkspaceSurface
               item={item}
               active={item.id === selectedItem.id}
-              workspace={workspace}
               dispatch={dispatch}
             />
           )}
@@ -177,6 +175,7 @@ function DemoWorkspaceSurfaces({
               dispatch={dispatch}
               fileViewerSource={fileViewerSource}
               noteDocuments={noteDocuments}
+              canvasViewerSource={canvasViewerSource}
             />
           )}
         </Fragment>
@@ -186,16 +185,20 @@ function DemoWorkspaceSurfaces({
 }
 
 function isEditorContentDemoItem(item: DemoWorkspaceItem) {
-  return item.type === 'note' || item.type === 'file' || item.type === 'map'
+  return (
+    item.type === 'note' || item.type === 'canvas' || item.type === 'file' || item.type === 'map'
+  )
 }
 
 function DemoEditorContentSurface({
+  canvasViewerSource,
   dispatch,
   fileViewerSource,
   item,
   noteDocuments,
   workspace,
 }: {
+  canvasViewerSource: ReturnType<typeof useLocalDemoCanvasViewerSource>
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
   fileViewerSource: ReturnType<typeof useLocalDemoFileViewerSource>
   item: DemoWorkspaceItem
@@ -204,6 +207,7 @@ function DemoEditorContentSurface({
 }) {
   const source = createLocalDemoEditorWorkspaceSource({
     activeView: 'item',
+    canvasViewerSource,
     dispatch,
     fileViewerSource,
     noteDocuments,
@@ -222,17 +226,11 @@ function DemoWorkspaceSurface({
   active,
   dispatch,
   item,
-  workspace,
 }: {
   active: boolean
   dispatch: Dispatch<Parameters<typeof demoWorkspaceReducer>[1]>
   item: DemoWorkspaceItem
-  workspace: typeof INITIAL_DEMO_WORKSPACE
 }) {
-  const canvas = item.type === 'canvas' ? demoCanvasForItem(workspace, item.id) : null
-  const SidebarItemEmbedResolver = createDemoSidebarItemEmbedResolver(workspace)
-  const EmbeddedCanvasStateResolver = createDemoEmbeddedCanvasStateResolver(workspace)
-
   return (
     <section
       className="contents"
@@ -244,15 +242,6 @@ function DemoWorkspaceSurface({
         <CreateNewDashboardSurface
           folderPath={item.title}
           onCreate={(command) => dispatch({ type: 'createItem', commandKey: command.key })}
-        />
-      )}
-      {item.type === 'canvas' && (
-        <LocalCanvasEditor
-          canvasId={canvas?.id as Id<'sidebarItems'>}
-          nodes={canvas?.nodes ?? []}
-          edges={canvas?.edges ?? []}
-          EmbeddedCanvasStateResolver={EmbeddedCanvasStateResolver}
-          SidebarItemEmbedResolver={SidebarItemEmbedResolver}
         />
       )}
     </section>

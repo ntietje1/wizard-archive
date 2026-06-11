@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import HeroProductDemoIsland from '../hero-product-demo-island'
+import type { ReactNode } from 'react'
+import type * as TanStackRouter from '@tanstack/react-router'
 
 vi.mock('~/features/editor/components/viewer/file/file-content-viewer', () => ({
   FileContentViewer: () => <div data-testid="runtime-file-viewer" />,
@@ -9,6 +11,20 @@ vi.mock('~/features/editor/components/viewer/file/file-content-viewer', () => ({
 vi.mock('~/features/editor/components/raw-note-content', () => ({
   RawNoteContent: () => <div>A waterfront bazaar where every stall hides a second ledger.</div>,
 }))
+
+vi.mock('~/features/canvas/nodes/shared/canvas-rich-text-view', () => ({
+  CanvasRichTextView: ({ editable }: { editable: boolean }) => (
+    <div data-testid="canvas-rich-text-blocknote-view" data-editable={String(editable)} />
+  ),
+}))
+
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof TanStackRouter>()
+  return {
+    ...actual,
+    ClientOnly: ({ children }: { children: ReactNode }) => children,
+  }
+})
 
 const resizeObservers: Array<MockResizeObserver> = []
 
@@ -31,14 +47,17 @@ describe('landing demo runtime surfaces', () => {
     expect(screen.getByLabelText('Canvas preview')).toBeInTheDocument()
   })
 
-  it('navigates the editable demo workspace from note to canvas without duplicate BlockNote plugins', async () => {
+  it('navigates the editable demo workspace from note to the shared canvas editor surface', async () => {
     const { DemoWorkspace } = await import('../demo-workspace')
 
     render(<DemoWorkspace />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Harbor Heist Board' }))
 
-    expect(screen.getByLabelText('Canvas surface')).toBeInTheDocument()
+    expect(
+      await screen.findByLabelText('Canvas surface', {}, { timeout: 5_000 }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByTestId('canvas-rich-text-blocknote-view')).toHaveLength(2)
   }, 10_000)
 })
 

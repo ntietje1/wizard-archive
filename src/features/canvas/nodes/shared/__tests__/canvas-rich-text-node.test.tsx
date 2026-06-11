@@ -116,7 +116,10 @@ describe('CanvasRichTextNode', () => {
     })
 
     expect(screen.queryByTestId('connection-handles')).toBeNull()
-    expect(screen.getByRole('group', { name: 'Empty text node' })).toHaveAttribute('tabindex', '-1')
+    expect(screen.getByRole('textbox', { name: 'Empty text node' })).toHaveAttribute(
+      'tabindex',
+      '-1',
+    )
     expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
   })
 
@@ -128,7 +131,7 @@ describe('CanvasRichTextNode', () => {
     })
 
     expect(screen.getByText('Invalid text content')).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Invalid text node' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Invalid text node' })).toBeInTheDocument()
     expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
     expect(screen.queryByText('Empty text node')).toBeNull()
   })
@@ -141,9 +144,31 @@ describe('CanvasRichTextNode', () => {
       />,
     )
 
-    expect(screen.getByRole('group', { name: 'Colored text' })).toHaveStyle({
+    expect(screen.getByRole('textbox', { name: 'Colored text' })).toHaveStyle({
       color: 'var(--t-red)',
     })
+  })
+
+  it('uses a read-only BlockNote presentation while viewing a valid text node', () => {
+    ownedEditorState.editor = createEditor()
+
+    render(
+      <CanvasRichTextNodeHarness
+        content={[
+          {
+            type: 'heading',
+            content: [{ type: 'text', text: 'Displayed heading', styles: { bold: true } }],
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByTestId('canvas-rich-text-view')).toBeInTheDocument()
+    expect(richTextViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        editable: false,
+      }),
+    )
   })
 
   it('passes node textColor to the BlockNote container as the default editor text color while editing', async () => {

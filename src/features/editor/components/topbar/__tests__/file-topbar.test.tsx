@@ -3,6 +3,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { describe, expect, it, vi } from 'vitest'
 import { FileTopbar } from '../file-topbar'
 import { createNote } from '~/test/factories/sidebar-item-factory'
+import { createTestCanvasViewerSource } from '~/test/factories/canvas-viewer-source-factory'
 import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from '../../../workspace/live-note-document-source'
 import type { EditorWorkspaceSource } from '../../../workspace/editor-workspace-source'
 import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
@@ -143,6 +144,9 @@ function createWorkspaceSource(): EditorWorkspaceSource {
       },
     },
     documents: {
+      canvases: {
+        viewer: createTestCanvasViewerSource(),
+      },
       notes: LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS,
     },
   }

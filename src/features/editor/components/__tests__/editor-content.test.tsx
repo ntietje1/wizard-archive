@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
 import { EditorContent } from '../editor-content'
 import { LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS } from '../../workspace/live-note-document-source'
+import { createTestCanvasViewerSource } from '~/test/factories/canvas-viewer-source-factory'
 import type { EditorWorkspaceSource } from '../../workspace/editor-workspace-source'
 
 vi.mock('~/features/context-menu/components/editor-context-menu', () => ({
@@ -139,6 +140,9 @@ function createEmptyWorkspaceSource({
       },
     },
     documents: {
+      canvases: {
+        viewer: createTestCanvasViewerSource(),
+      },
       notes: LIVE_EDITOR_WORKSPACE_NOTE_DOCUMENTS,
     },
   }
