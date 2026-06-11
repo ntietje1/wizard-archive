@@ -51,12 +51,6 @@ describe('createLocalDemoEditorWorkspaceSource', () => {
     )
     expect(container).toBeEmptyDOMElement()
 
-    source.items.creationDraft.setPendingName('Renamed market')
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'renameSelectedItem',
-      title: 'Renamed market',
-    })
-
     void source.items.renameItem(
       source.index.activeItemsById.get('canvas-heist' as Id<'sidebarItems'>)!,
       'Board',

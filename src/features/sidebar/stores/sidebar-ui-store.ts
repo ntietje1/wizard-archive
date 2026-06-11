@@ -28,7 +28,6 @@ interface SidebarUIState {
   campaignStates: Record<string, CampaignState>
   closeAllFoldersModeCampaignIds: Array<string>
   renamingId: Id<'sidebarItems'> | null
-  pendingItemName: string
   selectedSlug: SidebarItemSlug | null
   selectedItemIds: Array<Id<'sidebarItems'>>
   anchorItemId: Id<'sidebarItems'> | null
@@ -47,7 +46,6 @@ interface SidebarUIActions {
   toggleCloseAllFoldersMode: (campaignId: string) => void
   exitCloseAllMode: (campaignId: string) => void
   toggleBookmarksOnlyMode: (campaignId: string) => void
-  setPendingItemName: (name: string) => void
   setSelected: (slug: SidebarItemSlug | null) => void
   setSelectedItemIds: (ids: Array<Id<'sidebarItems'>>, anchorId?: Id<'sidebarItems'> | null) => void
   selectSingleItem: (id: Id<'sidebarItems'>) => void
@@ -157,7 +155,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       campaignStates: {},
       closeAllFoldersModeCampaignIds: [],
       renamingId: null,
-      pendingItemName: '',
       selectedSlug: null,
       selectedItemIds: [],
       anchorItemId: null,
@@ -226,8 +223,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
             bookmarksOnlyMode: !prev.bookmarksOnlyMode,
           }))
         }),
-
-      setPendingItemName: (name) => set({ pendingItemName: name }),
 
       setSelected: (slug) =>
         set((state) => {

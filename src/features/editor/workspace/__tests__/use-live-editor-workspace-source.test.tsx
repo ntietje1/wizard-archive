@@ -83,12 +83,6 @@ vi.mock('~/features/sidebar/hooks/useSidebarItemAvailabilityState', () => ({
       : { status: 'not_found', label: 'Page', message: 'Page not found.' },
 }))
 
-vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
-  useSidebarUIStore: (
-    selector: (state: { pendingItemName: string; setPendingItemName: () => void }) => unknown,
-  ) => selector({ pendingItemName: '', setPendingItemName: vi.fn() }),
-}))
-
 vi.mock('~/features/sharing/hooks/useSidebarItemsShare', () => ({
   useSidebarItemsShare: () => ({
     isPending: false,

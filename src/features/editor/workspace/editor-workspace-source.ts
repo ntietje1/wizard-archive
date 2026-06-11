@@ -98,11 +98,6 @@ export interface EditorWorkspaceItemActionsCapability {
   item: AnySidebarItem | null
 }
 
-interface EditorWorkspaceCreationDraft {
-  pendingName: string
-  setPendingName: (name: string) => void
-}
-
 interface EditorWorkspaceHistory {
   preview: {
     previewingEntryId: Id<'editHistory'> | null
@@ -120,7 +115,6 @@ interface EditorWorkspaceItems {
     input: EditorWorkspaceCreateItemInput,
   ) => Promise<EditorWorkspaceCreateItemResult | null> | EditorWorkspaceCreateItemResult | null
   createMissingRequestedNote: () => void
-  creationDraft: EditorWorkspaceCreationDraft
   emptyWorkspaceDrop: EditorEmptyWorkspaceDropCapability
   isCreatingMissingRequestedNote: boolean
   renameItem: (item: AnySidebarItem, name: string) => Promise<void> | void

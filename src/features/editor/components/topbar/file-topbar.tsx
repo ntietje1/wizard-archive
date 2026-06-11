@@ -1,7 +1,6 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { Trash2 } from 'lucide-react'
-import { EditableBreadcrumb, EditableName, SidebarItemBreadcrumb } from './editable-breadcrumb'
-import type { ValidationResult } from 'shared/sidebar-items/name'
+import { EditableBreadcrumb, SidebarItemBreadcrumb } from './editable-breadcrumb'
 import { EditorTopbarSurface } from './editor-topbar-surface'
 import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'
 import { Button } from '~/features/shadcn/components/button'
@@ -23,33 +22,6 @@ function TrashTopbarTitle({ itemCount }: { itemCount: number }) {
         {`${itemCount} item${itemCount !== 1 ? 's' : ''}`}
       </span>
     </div>
-  )
-}
-
-function EmptyEditorTitle({
-  campaignId,
-  pendingItemName,
-  setPendingItemName,
-  validateName,
-}: {
-  campaignId: Id<'campaigns'> | null | undefined
-  pendingItemName: string
-  setPendingItemName: (name: string) => void
-  validateName: (
-    name: string,
-    parentId: Id<'sidebarItems'> | null,
-    excludeId?: Id<'sidebarItems'>,
-  ) => ValidationResult
-}) {
-  return (
-    <EditableName
-      initialName={pendingItemName}
-      defaultName="Untitled Item"
-      onChange={setPendingItemName}
-      campaignId={campaignId ?? undefined}
-      parentId={null}
-      validateName={validateName}
-    />
   )
 }
 
@@ -98,13 +70,8 @@ type FileTopbarTitleState =
       navigation: EditorWorkspaceSource['navigation']
     }
   | {
-      kind: 'empty'
-      campaignId: Id<'campaigns'> | null | undefined
-      pendingItemName: string
-      setPendingItemName: (name: string) => void
-      items: EditorWorkspaceSource['items']
+      kind: 'none'
     }
-  | { kind: 'none' }
 
 function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
   const isDimmed = title.kind === 'item' && title.isNotShared
@@ -134,14 +101,6 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           validateName={title.items.validateItemName}
         />
       )}
-      {title.kind === 'empty' && (
-        <EmptyEditorTitle
-          campaignId={title.campaignId}
-          pendingItemName={title.pendingItemName}
-          setPendingItemName={title.setPendingItemName}
-          validateName={title.items.validateItemName}
-        />
-      )}
     </div>
   )
 }
@@ -154,7 +113,7 @@ export function FileTopbar({
   source: EditorWorkspaceSource
 }) {
   const { canEdit, campaignActor, viewAsPlayerId } = source.permissions
-  const { item, editorSearch, isLoading, hasRequestedItem } = source.content.currentItem
+  const { item, editorSearch, isLoading } = source.content.currentItem
   const index = source.index
   const permOpts = { actor: campaignActor, allItemsMap: index.activeItemsById }
 
@@ -174,7 +133,6 @@ export function FileTopbar({
   const isNotSharedWithPlayer = Boolean(
     item && viewAsPlayerId && !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
   )
-  const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
   const canOpenHistory =
     !!item && !isPendingItem && effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.EDIT, permOpts)
 
@@ -204,15 +162,6 @@ export function FileTopbar({
         isNotShared: isNotSharedWithPlayer,
         items: source.items,
         navigation: source.navigation,
-      }
-    }
-    if (isEmptyEditor) {
-      return {
-        kind: 'empty',
-        campaignId: source.workspace.campaignId,
-        pendingItemName: source.items.creationDraft.pendingName,
-        setPendingItemName: source.items.creationDraft.setPendingName,
-        items: source.items,
       }
     }
     return { kind: 'none' }

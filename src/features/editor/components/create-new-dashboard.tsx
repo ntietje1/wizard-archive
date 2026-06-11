@@ -12,7 +12,7 @@ interface CreateNewDashboardProps {
 
 export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardProps) {
   const {
-    items: { createItem, creationDraft },
+    items: { createItem },
     navigation: { openItemBySlug },
   } = useEditorWorkspaceSource()
   const [creatingCommandId, setCreatingCommandId] = useState<
@@ -26,8 +26,7 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
 
     setCreatingCommandId(command.id)
     try {
-      const name = creationDraft.pendingName.trim() || undefined
-      const result = await createItem({ type: command.type, parentId, name })
+      const result = await createItem({ type: command.type, parentId })
       if (result) {
         await openItemBySlug(result.slug)
       }

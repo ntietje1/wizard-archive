@@ -177,10 +177,6 @@ export function createLocalDemoEditorWorkspaceSource({
         return { id: id as Id<'sidebarItems'>, slug: assertSidebarItemSlug(id) }
       },
       createMissingRequestedNote: noop,
-      creationDraft: {
-        pendingName: selectedItem?.title ?? '',
-        setPendingName: (title) => dispatch({ type: 'renameSelectedItem', title }),
-      },
       emptyWorkspaceDrop: { status: 'disabled', reason: 'unsupported' },
       isCreatingMissingRequestedNote: false,
       renameItem: (item, name) =>

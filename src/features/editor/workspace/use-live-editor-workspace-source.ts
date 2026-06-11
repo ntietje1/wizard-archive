@@ -12,7 +12,6 @@ import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
@@ -39,8 +38,6 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
   const { navigateToItem } = useEditorNavigation()
   const { setLastSelectedItem } = useLastEditorItem()
   const sidebarValidation = useSidebarValidation()
-  const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
-  const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
   const [isCreatingMissingRequestedNote, startCreateTransition] = useTransition()
   const emptyWorkspaceDrop = useLiveEmptyWorkspaceDropCapability()
   const fileViewerSource = useLiveFileViewerSource(currentItem.contentItem)
@@ -150,10 +147,6 @@ export function useLiveEditorWorkspaceSource(): EditorWorkspaceSource {
       },
       createItem: createWorkspaceItem,
       createMissingRequestedNote,
-      creationDraft: {
-        pendingName: pendingItemName,
-        setPendingName: setPendingItemName,
-      },
       emptyWorkspaceDrop,
       isCreatingMissingRequestedNote,
       renameItem: async (item, name) => {

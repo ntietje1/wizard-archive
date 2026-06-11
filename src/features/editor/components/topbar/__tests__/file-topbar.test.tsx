@@ -19,7 +19,6 @@ const rightSidebarState = vi.hoisted(() => ({
 
 vi.mock('../editable-breadcrumb', () => ({
   EditableBreadcrumb: ({ item }: { item: { name: string } }) => <span>{item.name}</span>,
-  EditableName: () => <input aria-label="Item name" />,
   SidebarItemBreadcrumb: ({ item }: { item: { name: string } }) => <span>{item.name}</span>,
 }))
 
@@ -101,10 +100,6 @@ function createWorkspaceSource(): EditorWorkspaceSource {
       },
       createItem: vi.fn(() => null),
       createMissingRequestedNote: vi.fn(),
-      creationDraft: {
-        pendingName: '',
-        setPendingName: vi.fn(),
-      },
       emptyWorkspaceDrop: {
         status: 'disabled',
         reason: 'unsupported',

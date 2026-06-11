@@ -28,7 +28,7 @@ interface EditableNameProps {
   ) => ValidationResult
 }
 
-export function EditableName({
+function EditableName({
   initialName,
   defaultName = '',
   onRename,

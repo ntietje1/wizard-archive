@@ -83,10 +83,6 @@ function createEmptyWorkspaceSource({
       },
       createItem: vi.fn(() => null),
       createMissingRequestedNote: vi.fn(),
-      creationDraft: {
-        pendingName: '',
-        setPendingName: vi.fn(),
-      },
       emptyWorkspaceDrop:
         dropStatus === 'enabled'
           ? {
