@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { INITIAL_DEMO_WORKSPACE } from '~/features/landing/demo-workspace/demo-workspace-model'
 import CanvasFeatureDemoIsland from '../canvas-feature-demo-island'
 import HeroProductDemoIsland from '../hero-product-demo-island'
+import { CanvasFeatureDemo, HeroProductDemo, WorkspaceFeatureDemo } from '../landing-feature-demos'
 import WorkspaceFeatureDemoIsland from '../workspace-feature-demo-island'
 
 const {
@@ -74,6 +75,29 @@ describe('landing feature demos', () => {
 
   afterAll(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('temporarily renders landing demo wrappers as placeholders inside elevated frames', () => {
+    render(
+      <>
+        <HeroProductDemo />
+        <WorkspaceFeatureDemo />
+        <CanvasFeatureDemo />
+      </>,
+    )
+
+    expect(
+      screen.getByLabelText('Landing campaign workspace preview placeholder'),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Workspace demo placeholder')).toBeInTheDocument()
+    expect(screen.getByLabelText('Production canvas preview placeholder')).toBeInTheDocument()
+    expect(document.querySelectorAll('.demo-elevated-frame')).toHaveLength(3)
+    expect(
+      screen.queryByRole('region', { name: 'Text editor link autocomplete preview' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: 'Landing preview items' }),
+    ).not.toBeInTheDocument()
   })
 
   it('renders the workspace feature as an editor-only link autocomplete preview', () => {
