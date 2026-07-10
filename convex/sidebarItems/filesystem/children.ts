@@ -1,8 +1,9 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { Id } from '../../_generated/dataModel'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
-
-type SidebarChildMapItem = Pick<AnySidebarItem, '_id' | 'type'>
+type SidebarChildMapItem = {
+  _id: Id<'sidebarItems'>
+  type: string
+}
 
 export async function collectSidebarChildrenMap<T extends SidebarChildMapItem>({
   rootFolderIds,
@@ -38,7 +39,7 @@ export async function collectSidebarChildrenMap<T extends SidebarChildMapItem>({
     for (const { folderId, depth, children } of childrenByFolder) {
       childrenMap.set(folderId, children)
       for (const child of children) {
-        if (child.type !== SIDEBAR_ITEM_TYPES.folders || enqueuedFolders.has(child._id)) continue
+        if (child.type !== RESOURCE_TYPES.folders || enqueuedFolders.has(child._id)) continue
         enqueuedFolders.add(child._id)
         pending.push({ folderId: child._id, depth: depth + 1 })
       }

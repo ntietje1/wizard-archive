@@ -5,20 +5,28 @@ import { Loader2, Mail } from 'lucide-react'
 import type { UserProfile } from 'shared/users/types'
 import { logger } from '~/shared/utils/logger'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
-import { Input } from '~/features/shadcn/components/input'
-import { Label } from '~/features/shadcn/components/label'
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Input } from '@wizard-archive/ui/shadcn/components/input'
+import { Label } from '@wizard-archive/ui/shadcn/components/label'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@wizard-archive/ui/shadcn/components/tooltip'
 import {
   Dialog,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '~/features/shadcn/components/dialog'
+} from '@wizard-archive/ui/shadcn/components/dialog'
 import { SettingsSubDialogContent } from '~/features/settings/components/settings-sub-dialog'
 
 function useOAuthProvider() {
-  const query = useQuery({
+  const {
+    data: oauthProvider,
+    isError,
+    isLoading,
+  } = useQuery({
     queryKey: ['auth', 'oauthProvider'],
     queryFn: async (): Promise<string | null> => {
       const { data, error } = await authClient.listAccounts()
@@ -28,8 +36,8 @@ function useOAuthProvider() {
     },
     staleTime: Infinity,
   })
-  if (query.isLoading || query.isError) return undefined
-  return query.data ?? null
+  if (isLoading || isError) return undefined
+  return oauthProvider ?? null
 }
 
 function EmailChangeDialog({ profile, onClose }: { profile: UserProfile; onClose: () => void }) {

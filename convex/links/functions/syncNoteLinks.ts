@@ -1,21 +1,12 @@
-import {
-  MD_LINK_REGEX,
-  WIKI_LINK_REGEX,
-  parseMdLinkTarget,
-  parseWikiLinkText,
-} from '../../../shared/links/parsing'
-import { resolveParsedItemPath } from '../../../shared/links/resolution'
+import { extractLinksFromText, getLinkQuery } from '../../../shared/links/extraction'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { LinkSyntax, ParsedLinkData } from '../../../shared/links/types'
 import type { Block } from '../../blocks/types'
-import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
-import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
-
+import type { AccessibleResourcePathResolver } from '../../sidebarItems/functions/resourcePathResolver'
 type CampaignScopedMutationCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>
 }
-
 interface NoteLinkRow {
   sourceNoteId: Id<'sidebarItems'>
   targetItemId: Id<'sidebarItems'> | null
@@ -39,40 +30,30 @@ export async function syncNoteLinks(
     noteId,
     campaignId,
     blocks,
+    resourcePathResolver,
   }: {
     noteId: Id<'sidebarItems'>
     campaignId: Id<'campaigns'>
     blocks: Array<Block>
+    resourcePathResolver: AccessibleResourcePathResolver
   },
 ): Promise<void> {
   if (campaignId !== ctx.campaign._id) {
     throw new Error('syncNoteLinks campaignId must match the mutation campaign context')
   }
 
-  const [sidebarItems, existingLinks] = await Promise.all([
-    ctx.db
-      .query('sidebarItems')
-      .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
-        q.eq('campaignId', campaignId).eq('status', SIDEBAR_ITEM_STATUS.active),
-      )
-      .collect(),
-    ctx.db
-      .query('noteLinks')
-      .withIndex('by_campaign_source', (q) =>
-        q.eq('campaignId', campaignId).eq('sourceNoteId', noteId),
-      )
-      .collect(),
-  ])
+  const existingLinks = await ctx.db
+    .query('noteLinks')
+    .withIndex('by_campaign_source', (q) =>
+      q.eq('campaignId', campaignId).eq('sourceNoteId', noteId),
+    )
+    .collect()
 
-  const allItems: Array<AnySidebarItemRow> = sidebarItems
-  const itemsMap = new Map(allItems.map((item) => [item._id, item]))
-  const desiredRowsByKey = buildDesiredLinkRows({
+  const desiredRowsByKey = await buildDesiredLinkRows({
     noteId,
     campaignId,
     blocks,
-    allItems,
-    itemsMap,
-    sourceParentId: itemsMap.get(noteId)?.parentId,
+    resourcePathResolver,
   })
   const existingLinksByKey = groupExistingLinksByKey(existingLinks)
   const { inserts, patches, deletions } = diffNoteLinks(desiredRowsByKey, existingLinksByKey)
@@ -84,65 +65,63 @@ export async function syncNoteLinks(
   ])
 }
 
-function buildDesiredLinkRows({
+async function buildDesiredLinkRows({
   noteId,
   campaignId,
   blocks,
-  allItems,
-  itemsMap,
-  sourceParentId,
+  resourcePathResolver,
 }: {
   noteId: Id<'sidebarItems'>
   campaignId: Id<'campaigns'>
   blocks: Array<Block>
-  allItems: Array<AnySidebarItemRow>
-  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItemRow>
-  sourceParentId: Id<'sidebarItems'> | null | undefined
+  resourcePathResolver: AccessibleResourcePathResolver
 }) {
-  const rowsByKey = new Map<string, NoteLinkRow>()
-  for (const block of blocks) {
-    for (const link of extractLinksFromText(block.plainText)) {
-      if (link.isExternal) continue
-      const row = buildNoteLinkRow({
+  const sourceNote = await resourcePathResolver.getAccessibleItem(noteId)
+  const linkEntries = blocks.flatMap((block) =>
+    extractLinksFromText(block.plainText).flatMap((link) =>
+      link.isExternal ? [] : [{ blockId: block._id, link }],
+    ),
+  )
+  const rows = await Promise.all(
+    linkEntries.map(({ blockId, link }) =>
+      buildNoteLinkRow({
         link,
-        blockId: block._id,
+        blockId,
         noteId,
         campaignId,
-        allItems,
-        itemsMap,
-        sourceParentId,
-      })
-      const key = getLinkDedupKey(row)
-      if (!rowsByKey.has(key)) rowsByKey.set(key, row)
-    }
+        resourcePathResolver,
+        sourceParentId: sourceNote?.parentId,
+      }),
+    ),
+  )
+  const rowsByKey = new Map<string, NoteLinkRow>()
+  for (const row of rows) {
+    const key = getLinkDedupKey(row)
+    if (!rowsByKey.has(key)) rowsByKey.set(key, row)
   }
   return rowsByKey
 }
 
-function buildNoteLinkRow({
+async function buildNoteLinkRow({
   link,
   blockId,
   noteId,
   campaignId,
-  allItems,
-  itemsMap,
+  resourcePathResolver,
   sourceParentId,
 }: {
   link: ParsedLinkData
   blockId: Id<'blocks'>
   noteId: Id<'sidebarItems'>
   campaignId: Id<'campaigns'>
-  allItems: Array<AnySidebarItemRow>
-  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItemRow>
+  resourcePathResolver: AccessibleResourcePathResolver
   sourceParentId: Id<'sidebarItems'> | null | undefined
-}): NoteLinkRow {
-  const resolved = resolveParsedItemPath(
-    link.pathKind,
-    link.itemPath,
-    allItems,
-    itemsMap,
+}): Promise<NoteLinkRow> {
+  const resolved = await resourcePathResolver.resolvePath({
+    pathKind: link.pathKind,
+    pathSegments: link.itemPath,
     sourceParentId,
-  )
+  })
   return {
     sourceNoteId: noteId,
     targetItemId: resolved?._id ?? null,
@@ -209,63 +188,10 @@ function changedLinkFields(current: Doc<'noteLinks'>, desired: NoteLinkRow): Par
   return updates
 }
 
-function extractLinksFromText(text: string): Array<ParsedLinkData> {
-  const matches: Array<{ index: number; link: ParsedLinkData }> = []
-
-  const wikiRegex = new RegExp(WIKI_LINK_REGEX.source, 'g')
-  let wikiMatch: RegExpExecArray | null
-  while ((wikiMatch = wikiRegex.exec(text)) !== null) {
-    const innerText = wikiMatch[1]
-    const parsed = parseWikiLinkText(innerText)
-    matches.push({
-      index: wikiMatch.index,
-      link: {
-        syntax: 'wiki',
-        pathKind: parsed.pathKind,
-        itemPath: parsed.itemPath,
-        itemName: parsed.itemName,
-        headingPath: parsed.headingPath,
-        displayName: parsed.displayName,
-        rawTarget: innerText,
-        isExternal: false,
-      },
-    })
-  }
-
-  const mdRegex = new RegExp(MD_LINK_REGEX.source, 'g')
-  let mdMatch: RegExpExecArray | null
-  while ((mdMatch = mdRegex.exec(text)) !== null) {
-    const displayText = mdMatch[1]
-    const target = mdMatch[2]
-    const parsed = parseMdLinkTarget(target)
-    matches.push({
-      index: mdMatch.index,
-      link: {
-        syntax: 'md',
-        pathKind: parsed.pathKind,
-        itemPath: parsed.itemPath,
-        itemName: parsed.itemName,
-        headingPath: parsed.headingPath,
-        displayName: displayText,
-        rawTarget: target,
-        isExternal: parsed.isExternal,
-      },
-    })
-  }
-
-  return matches.sort((a, b) => a.index - b.index).map((match) => match.link)
-}
-
 function getLinkDedupKey(
   row: Pick<Doc<'noteLinks'>, 'blockId' | 'targetItemId' | 'query'>,
 ): string {
   return row.targetItemId === null
     ? `unresolved:${row.blockId}:${row.query}`
     : `resolved:${row.blockId}:${row.targetItemId}:${row.query}`
-}
-
-function getLinkQuery(link: ParsedLinkData): string {
-  const itemPath = link.itemPath.join('/')
-  if (link.headingPath.length === 0) return itemPath
-  return `${itemPath}#${link.headingPath.join('#')}`
 }

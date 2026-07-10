@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote, createSidebarShare } from '../../_test/factories.helper'
-import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
+import {
+  expectNotFound,
+  expectPermissionDenied,
+  expectValidationFailed,
+} from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 
@@ -28,7 +32,7 @@ async function shareWithPlayer(
   campaignMemberId: Id<'campaignMembers'>,
   permissionLevel: 'view' | 'edit' | 'full_access' | 'none' = 'view',
 ) {
-  await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
+  await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
     campaignId,
     sidebarItemIds,
     campaignMemberId,
@@ -36,7 +40,7 @@ async function shareWithPlayer(
   })
 }
 
-describe('setSidebarItemsMemberPermission', () => {
+describe('setResourcesMemberPermission', () => {
   const t = createTestContext()
 
   it('creates a share for one item', async () => {
@@ -121,7 +125,7 @@ describe('setSidebarItemsMemberPermission', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
+      playerAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
         campaignId: ctx.campaignId,
         sidebarItemIds: [noteId],
         campaignMemberId: ctx.player.memberId,
@@ -137,7 +141,7 @@ describe('setSidebarItemsMemberPermission', () => {
     const { noteId } = await createNote(t, otherCtx.campaignId, otherCtx.dm.profile._id)
 
     await expectNotFound(
-      dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
+      dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
         campaignId: ctx.campaignId,
         sidebarItemIds: [noteId],
         campaignMemberId: ctx.player.memberId,
@@ -145,9 +149,41 @@ describe('setSidebarItemsMemberPermission', () => {
       }),
     )
   })
+
+  it('rejects grants to DM, inactive, and cross-campaign members', async () => {
+    const ctx = await setupCampaignContext(t)
+    const otherCtx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    for (const campaignMemberId of [ctx.dm.memberId, otherCtx.player.memberId]) {
+      await expectValidationFailed(
+        dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
+          campaignId: ctx.campaignId,
+          sidebarItemIds: [noteId],
+          campaignMemberId,
+          permissionLevel: 'view',
+        }),
+      )
+    }
+
+    for (const status of ['Pending', 'Rejected', 'Removed'] as const) {
+      await t.run(async (dbCtx) => {
+        await dbCtx.db.patch('campaignMembers', ctx.player.memberId, { status })
+      })
+      await expectValidationFailed(
+        dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
+          campaignId: ctx.campaignId,
+          sidebarItemIds: [noteId],
+          campaignMemberId: ctx.player.memberId,
+          permissionLevel: 'view',
+        }),
+      )
+    }
+  })
 })
 
-describe('clearSidebarItemsMemberPermission', () => {
+describe('clearResourcesMemberPermission', () => {
   const t = createTestContext()
 
   it('removes shares for one or many items', async () => {
@@ -157,7 +193,7 @@ describe('clearSidebarItemsMemberPermission', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await shareWithPlayer(dmAuth, ctx.campaignId, [noteId, folderId], ctx.player.memberId)
-    await dmAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [noteId, folderId],
       campaignMemberId: ctx.player.memberId,
@@ -176,7 +212,7 @@ describe('clearSidebarItemsMemberPermission', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [noteId],
       campaignMemberId: ctx.player.memberId,
@@ -184,6 +220,35 @@ describe('clearSidebarItemsMemberPermission', () => {
 
     const result = await getShareInfo(dmAuth, ctx.campaignId, noteId)
     expect(result.shares).toHaveLength(0)
+  })
+
+  it('clears legacy shares for inactive same-campaign players', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId)
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.patch('campaignMembers', ctx.player.memberId, { status: 'Removed' })
+    })
+
+    await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
+      campaignId: ctx.campaignId,
+      sidebarItemIds: [noteId],
+      campaignMemberId: ctx.player.memberId,
+    })
+
+    const remainingShares = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('sidebarItemShares')
+        .withIndex('by_campaign_item_member', (q) =>
+          q
+            .eq('campaignId', ctx.campaignId)
+            .eq('sidebarItemId', noteId)
+            .eq('campaignMemberId', ctx.player.memberId),
+        )
+        .collect()
+    })
+    expect(remainingShares).toEqual([])
   })
 
   it('logs permission history only for cleared existing shares', async () => {
@@ -195,7 +260,7 @@ describe('clearSidebarItemsMemberPermission', () => {
     })
 
     await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId, 'view')
-    await dmAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [noteId, folderId],
       campaignMemberId: ctx.player.memberId,
@@ -237,7 +302,7 @@ describe('clearSidebarItemsMemberPermission', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
+      playerAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
         campaignId: ctx.campaignId,
         sidebarItemIds: [noteId],
         campaignMemberId: ctx.player.memberId,
@@ -280,6 +345,27 @@ describe('getSidebarItemsWithShares', () => {
     expect(note.memberInheritedPermissions[ctx.player.memberId]).toBe('edit')
   })
 
+  it('omits inactive players from inherited projections while preserving stale rows to clear', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.patch('campaignMembers', ctx.player.memberId, { status: 'Removed' })
+    })
+
+    const result = await getShareInfo(dmAuth, ctx.campaignId, noteId)
+
+    expect(result.shares.map((share) => share.campaignMemberId)).toEqual([ctx.player.memberId])
+    expect(result.memberInheritedPermissions).toEqual({})
+  })
+
   it('rejects share queries for items from another campaign', async () => {
     const ctx = await setupCampaignContext(t)
     const otherCtx = await setupCampaignContext(t)
@@ -295,7 +381,7 @@ describe('getSidebarItemsWithShares', () => {
   })
 })
 
-describe('setAllPlayersPermissionForSidebarItems', () => {
+describe('setResourceAudiencePermissionForSidebarItems', () => {
   const t = createTestContext()
 
   it('sets and clears allPermissionLevel for item batches', async () => {
@@ -304,11 +390,14 @@ describe('setAllPlayersPermissionForSidebarItems', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-      campaignId: ctx.campaignId,
-      sidebarItemIds: [noteId, folderId],
-      permissionLevel: 'view',
-    })
+    await dmAuth.mutation(
+      api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
+      {
+        campaignId: ctx.campaignId,
+        sidebarItemIds: [noteId, folderId],
+        permissionLevel: 'view',
+      },
+    )
 
     let results = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
       campaignId: ctx.campaignId,
@@ -316,11 +405,14 @@ describe('setAllPlayersPermissionForSidebarItems', () => {
     })
     expect(results.map((item) => item.allPermissionLevel)).toEqual(['view', 'view'])
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-      campaignId: ctx.campaignId,
-      sidebarItemIds: [noteId, folderId],
-      permissionLevel: null,
-    })
+    await dmAuth.mutation(
+      api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
+      {
+        campaignId: ctx.campaignId,
+        sidebarItemIds: [noteId, folderId],
+        permissionLevel: null,
+      },
+    )
 
     results = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
       campaignId: ctx.campaignId,
@@ -335,11 +427,14 @@ describe('setAllPlayersPermissionForSidebarItems', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-        campaignId: ctx.campaignId,
-        sidebarItemIds: [noteId],
-        permissionLevel: 'view',
-      }),
+      playerAuth.mutation(
+        api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
+        {
+          campaignId: ctx.campaignId,
+          sidebarItemIds: [noteId],
+          permissionLevel: 'view',
+        },
+      ),
     )
   })
 })
@@ -400,11 +495,14 @@ describe('permission resolution', () => {
       ).myPermissionLevel,
     ).toBe('edit')
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-      campaignId: ctx.campaignId,
-      sidebarItemIds: [noteId],
-      permissionLevel: 'view',
-    })
+    await dmAuth.mutation(
+      api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
+      {
+        campaignId: ctx.campaignId,
+        sidebarItemIds: [noteId],
+        permissionLevel: 'view',
+      },
+    )
 
     expect(
       (

@@ -1,25 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import debounce from 'lodash-es/debounce'
 import { toast } from 'sonner'
-import { api } from 'convex/_generated/api'
 import { Camera, Loader2 } from 'lucide-react'
 import type { UserProfile } from 'shared/users/types'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import {
+  useUpdateNameMutation,
+  useUpdateProfileImageMutation,
+} from '~/shared/hooks/use-user-profile-operations'
 import { handleError } from '~/shared/utils/logger'
-import { useFileUpload } from '~/features/file-upload/hooks/useFileUpload'
-import { UserProfileImage } from '~/shared/components/user-profile-image'
-import { Input } from '~/features/shadcn/components/input'
-import { Label } from '~/features/shadcn/components/label'
+import { useAppFileUpload } from '~/shared/uploads/use-app-file-upload'
+import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
+import { Input } from '@wizard-archive/ui/shadcn/components/input'
+import { Label } from '@wizard-archive/ui/shadcn/components/label'
+import type { Id } from 'convex/_generated/dataModel'
 
 export function AccountRow({ profile }: { profile: UserProfile }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { uploadFile, commitUpload } = useFileUpload()
+  const { discardUpload, uploadFile } = useAppFileUpload()
   const [isUploading, setIsUploading] = useState(false)
   const [name, setName] = useState(profile.name ?? '')
 
-  const updateProfileImage = useAppMutation(api.users.mutations.updateProfileImage)
-
-  const updateNameMutation = useAppMutation(api.users.mutations.updateName)
+  const updateProfileImage = useUpdateProfileImageMutation()
+  const updateNameMutation = useUpdateNameMutation()
 
   const debouncedSaveName = debounce(async (value: string) => {
     const trimmed = value.trim()
@@ -56,14 +58,16 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
     }
 
     setIsUploading(true)
+    let uploadSessionId: Id<'fileStorage'> | null = null
     try {
-      const storageId = await uploadFile.mutateAsync(file)
-      await Promise.all([
-        commitUpload.mutateAsync({ storageId }),
-        updateProfileImage.mutateAsync({ storageId }),
-      ])
+      const { sessionId } = await uploadFile.mutateAsync(file)
+      uploadSessionId = sessionId
+      await updateProfileImage.mutateAsync({ uploadSessionId: sessionId })
       toast.success('Profile picture updated')
     } catch (error) {
+      if (uploadSessionId) {
+        await discardUpload.mutateAsync({ sessionId: uploadSessionId }).catch(() => undefined)
+      }
       handleError(error, 'Failed to update profile image')
     }
     setIsUploading(false)

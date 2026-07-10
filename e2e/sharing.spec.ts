@@ -12,7 +12,7 @@ test.describe.serial('sharing', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -27,7 +27,7 @@ test.describe.serial('sharing', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
@@ -36,11 +36,11 @@ test.describe.serial('sharing', () => {
   })
 
   test('open share menu from topbar', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await page.getByText(noteName).click()
 
-    await page.getByRole('button', { name: /share/i }).click()
+    await page.getByRole('button', { name: 'Share', exact: true }).click()
     const sharePopover = page.locator('[data-slot="popover-content"]')
     await expect(
       sharePopover.getByText(/share|permissions|access|full access/i).first(),
@@ -48,11 +48,11 @@ test.describe.serial('sharing', () => {
   })
 
   test('set all-players permission level', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await page.getByText(noteName).click()
 
-    await page.getByRole('button', { name: /share/i }).click()
+    await page.getByRole('button', { name: 'Share', exact: true }).click()
     const sharePopover = page.locator('[data-slot="popover-content"]')
 
     const noneSelect = sharePopover.getByText('None').first()
@@ -62,7 +62,7 @@ test.describe.serial('sharing', () => {
   })
 
   test('view-as-player dropdown opens', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const viewAsButton = page.getByRole('button', { name: /view as/i })

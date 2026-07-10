@@ -1,13 +1,13 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import type { BlockNoteId } from '../../../shared/editor-blocks/types'
+import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
 import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 
 export const findBlockByBlockNoteId = async (
   ctx: Pick<QueryCtx, 'db'>,
-  { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: BlockNoteId },
+  { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: NoteBlockId },
 ): Promise<Block | null> => {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) {

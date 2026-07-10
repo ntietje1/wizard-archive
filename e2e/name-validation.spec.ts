@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -7,13 +8,19 @@ const campaignName = testName('E2E NameVal')
 const existingNoteName = `Existing Note ${Date.now()}`
 const secondNoteName = `Second Note ${Date.now()}`
 
+function sidebarRenameInput(page: Page) {
+  return page
+    .getByRole('navigation', { name: 'Sidebar' })
+    .getByRole('textbox', { name: 'Item name', exact: true })
+}
+
 test.describe.serial('name validation', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, existingNoteName)
@@ -27,7 +34,7 @@ test.describe.serial('name validation', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -38,16 +45,16 @@ test.describe.serial('name validation', () => {
   })
 
   test('duplicate name shows validation error', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
-    await expect(page.getByRole('link', { name: secondNoteName, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: secondNoteName, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
     await openContextMenu(page, secondNoteName)
     await page.getByRole('menuitem', { name: /rename/i }).click()
 
-    const renameInput = page.getByRole('textbox', { name: /enter a name/i })
+    const renameInput = sidebarRenameInput(page)
     await expect(renameInput).toBeVisible({ timeout: 5000 })
     await renameInput.fill(existingNoteName)
 
@@ -57,36 +64,36 @@ test.describe.serial('name validation', () => {
   })
 
   test('empty name is rejected', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
-    await expect(page.getByRole('link', { name: secondNoteName, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: secondNoteName, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
     await openContextMenu(page, secondNoteName)
     await page.getByRole('menuitem', { name: /rename/i }).click()
 
-    const renameInput = page.getByRole('textbox', { name: /enter a name/i })
+    const renameInput = sidebarRenameInput(page)
     await expect(renameInput).toBeVisible({ timeout: 5000 })
     await renameInput.fill('')
     await renameInput.blur()
 
-    await expect(page.getByRole('link', { name: secondNoteName, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: secondNoteName, exact: true })).toBeVisible({
       timeout: 10000,
     })
   })
 
   test('special characters in name', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
-    await expect(page.getByRole('link', { name: secondNoteName, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: secondNoteName, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
     await openContextMenu(page, secondNoteName)
     await page.getByRole('menuitem', { name: /rename/i }).click()
 
-    const renameInput = page.getByRole('textbox', { name: /enter a name/i })
+    const renameInput = sidebarRenameInput(page)
     await expect(renameInput).toBeVisible({ timeout: 5000 })
 
     const specialName = `Special & ${Date.now()}`
@@ -94,7 +101,7 @@ test.describe.serial('name validation', () => {
     await renameInput.press('Enter')
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    const renamed = sidebar.getByRole('link', {
+    const renamed = sidebar.getByRole('button', {
       name: specialName,
       exact: true,
     })

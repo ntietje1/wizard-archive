@@ -13,7 +13,7 @@ test.describe.serial('error states', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, note1)
@@ -27,7 +27,7 @@ test.describe.serial('error states', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -38,17 +38,17 @@ test.describe.serial('error states', () => {
   })
 
   test('rename to duplicate name shows error', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
-    await expect(page.getByRole('link', { name: note1, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: note1, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
     await openContextMenu(page, note1)
     await page.getByRole('menuitem', { name: /rename/i }).click()
 
-    const renameInput = page.getByRole('textbox', { name: /enter a name/i })
+    const renameInput = page.getByRole('textbox', { name: 'Item name' })
     await expect(renameInput).toBeVisible({ timeout: 5000 })
     await renameInput.fill(note2)
     await renameInput.press('Enter')
@@ -63,7 +63,7 @@ test.describe.serial('error states', () => {
   })
 
   test('campaign slug validation shows error for empty slug', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await page
       .getByRole('heading', { level: 1 })
       .or(page.getByRole('button', { name: /new campaign|create.*campaign/i }).first())

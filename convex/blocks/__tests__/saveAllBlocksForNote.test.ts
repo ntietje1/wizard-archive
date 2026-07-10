@@ -15,7 +15,7 @@ import type { Id } from '../../_generated/dataModel'
 import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { saveAllBlocksForNote } from '../functions/saveAllBlocksForNote'
 import type { CampaignMutationCtx } from '../../functions'
-import type { TableContent } from '../../../shared/editor-blocks/types'
+import type { TableContent } from '@wizard-archive/editor/notes/document-contract'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,
@@ -293,17 +293,14 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
-      documentId: noteId,
-      update: makeYjsUpdateWithBlocks([
-        { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
-        { id: testBlockNoteId('block-b'), type: 'paragraph', props: {}, children: [] },
-      ]),
-    })
-    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
-      documentId: noteId,
+    await t.run(async (dbCtx) => {
+      await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
+        noteId,
+        content: [
+          { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
+          { id: testBlockNoteId('block-b'), type: 'paragraph', props: {}, children: [] },
+        ],
+      })
     })
 
     await t.run(async (dbCtx) => {
@@ -329,7 +326,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
           content: [
             testBlock('self-embed', {
               type: 'embed',
-              props: { targetKind: 'sidebarItem', sidebarItemId: noteId },
+              props: { targetKind: 'resource', resourceId: noteId },
             }),
           ],
         })
@@ -347,7 +344,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
   })
 
-  it('rejects malformed sidebar item embed target ids before database lookup', async () => {
+  it('rejects malformed resource embed target ids before database lookup', async () => {
     const ctx = await setupCampaignContext(t)
     const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Malformed Embed Target Guard',
@@ -360,12 +357,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
           content: [
             testBlock('malformed-embed', {
               type: 'embed',
-              props: { targetKind: 'sidebarItem', sidebarItemId: 'not-a-convex-id' },
+              props: { targetKind: 'resource', resourceId: 'not-a-convex-id' },
             }),
           ],
         })
       }),
-    ).rejects.toThrow(/Invalid embed target sidebarItemId for block/i)
+    ).rejects.toThrow(/Invalid embed target resourceId for block/i)
   })
 
   it('rejects sidebar item embeds that target missing, inactive, or other-campaign items', async () => {
@@ -419,7 +416,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
             content: [
               testBlock(`embed-${sidebarItemId}`, {
                 type: 'embed',
-                props: { targetKind: 'sidebarItem', sidebarItemId },
+                props: { targetKind: 'resource', resourceId: sidebarItemId },
               }),
             ],
           })
@@ -437,7 +434,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         content: [
           testBlock('valid-embed', {
             type: 'embed',
-            props: { targetKind: 'sidebarItem', sidebarItemId: activeCanvasId },
+            props: { targetKind: 'resource', resourceId: activeCanvasId },
           }),
         ],
       })
@@ -445,8 +442,8 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     expect(persistedBlocks).toHaveLength(1)
     expect(persistedBlocks[0].props).toMatchObject({
-      targetKind: 'sidebarItem',
-      sidebarItemId: activeCanvasId,
+      targetKind: 'resource',
+      resourceId: activeCanvasId,
     })
   })
 

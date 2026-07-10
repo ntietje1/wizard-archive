@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
+import { AuthEmailField, AuthFormShell, AuthStatusMessage } from './auth-form-elements'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
-import { Input } from '~/features/shadcn/components/input'
-import { Label } from '~/features/shadcn/components/label'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState('')
@@ -33,45 +32,19 @@ export function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-bold">Check your email</h1>
-          <p className="text-sm text-muted-foreground text-balance">
-            If an account exists for {email}, we sent a password reset link.
-          </p>
-        </div>
-        <Link
-          to="/sign-in"
-          className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
-        >
-          Back to sign in
-        </Link>
-      </div>
+      <AuthStatusMessage title="Check your email" linkTo="/sign-in" linkLabel="Back to sign in">
+        If an account exists for {email}, we sent a password reset link.
+      </AuthStatusMessage>
     )
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold">Forgot password</h1>
-        <p className="text-sm text-muted-foreground text-balance">
-          Enter your email and we'll send you a reset link
-        </p>
-      </div>
+    <AuthFormShell
+      title="Forgot password"
+      description="Enter your email and we'll send you a reset link"
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={isLoading}
-            autoComplete="email"
-          />
-        </div>
+        <AuthEmailField value={email} onValueChange={setEmail} disabled={isLoading} />
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
@@ -93,6 +66,6 @@ export function ForgotPasswordForm() {
           </Link>
         </p>
       </form>
-    </div>
+    </AuthFormShell>
   )
 }

@@ -1,20 +1,26 @@
 import { prepareSidebarItemCreate } from '../validation/orchestration'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
+import {
+  RESOURCE_LOCATION,
+  RESOURCE_STATUS,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import type {
+  ResourceColor,
+  ResourceName,
+  ResourceSlug,
+  ResourceIconName,
+  ResourceKind,
+} from '@wizard-archive/editor/resources/resource-contract'
+import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+
 import { assertSidebarItemLifecycleConsistency } from '../types/status'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { SidebarItemType } from '../../../shared/sidebar-items/types'
-import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
-import type { SidebarItemIconName } from '../../../shared/sidebar-items/icon'
-import type { SidebarItemName } from '../../../shared/sidebar-items/name'
-import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
-
 export type InsertFilesystemSidebarItemArgs = {
-  type: SidebarItemType
-  name: SidebarItemName
+  type: ResourceKind
+  name: ResourceName
   parentId: Id<'sidebarItems'> | null
-  iconName?: SidebarItemIconName
-  color?: SidebarItemColor
+  iconName?: ResourceIconName
+  color?: ResourceColor
   previewStorageId?: Doc<'sidebarItems'>['previewStorageId']
   previewUpdatedAt?: Doc<'sidebarItems'>['previewUpdatedAt']
 }
@@ -30,7 +36,7 @@ export async function insertFilesystemSidebarItem(
     previewStorageId,
     previewUpdatedAt,
   }: InsertFilesystemSidebarItemArgs,
-): Promise<{ itemId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
+): Promise<{ itemId: Id<'sidebarItems'>; slug: ResourceSlug }> {
   const prepared = await prepareSidebarItemCreate(ctx, {
     parentId,
     name,
@@ -39,17 +45,16 @@ export async function insertFilesystemSidebarItem(
   const row = {
     campaignId: ctx.campaign._id,
     name: prepared.name,
+    normalizedName: normalizeResourceNameForComparison(prepared.name),
     slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId,
     allPermissionLevel: null,
     type,
-    location: SIDEBAR_ITEM_LOCATION.sidebar,
-    status: SIDEBAR_ITEM_STATUS.active,
+    location: RESOURCE_LOCATION.sidebar,
+    status: RESOURCE_STATUS.active,
     previewStorageId: previewStorageId ?? null,
-    previewLockedUntil: null,
-    previewClaimToken: null,
     previewUpdatedAt: previewUpdatedAt ?? null,
     deletionTime: null,
     deletedBy: null,

@@ -6,14 +6,15 @@ import { enhanceBase } from '../functions/enhanceBaseSidebarItem'
 import type { PermissionOperation } from '../../../shared/permissions/requirements'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
-import type {
-  AnySidebarItemRow,
-  EnhanceSidebarItem,
-} from '../../../shared/sidebar-items/model-types'
+import type { AnyResourceRow } from '@wizard-archive/editor/resources/resource-contract'
+import type { Doc } from '../../_generated/dataModel'
 
-export type AccessibleSidebarItemRow = EnhanceSidebarItem<AnySidebarItemRow>
+type SidebarItemAccessRow = AnyResourceRow | Doc<'sidebarItems'>
 
-export async function checkSidebarItemRowAccess<T extends AnySidebarItemRow>(
+export type AccessibleSidebarItemRow = Doc<'sidebarItems'> &
+  Awaited<ReturnType<typeof enhanceBase<Doc<'sidebarItems'>>>>
+
+export async function checkSidebarItemRowAccess<T extends SidebarItemAccessRow>(
   ctx: CampaignQueryCtx,
   {
     rawItem,
@@ -27,10 +28,10 @@ export async function checkSidebarItemRowAccess<T extends AnySidebarItemRow>(
   if (rawItem.campaignId !== ctx.campaign._id) return null
   const item = await enhanceBase(ctx, { item: rawItem })
   if (!hasAtLeastPermissionLevel(item.myPermissionLevel, requiredLevel)) return null
-  return item
+  return { ...rawItem, ...item } as AccessibleSidebarItemRow
 }
 
-export async function requireSidebarItemRowAccess<T extends AnySidebarItemRow>(
+export async function requireSidebarItemRowAccess<T extends SidebarItemAccessRow>(
   ctx: CampaignQueryCtx,
   {
     rawItem,
@@ -51,7 +52,7 @@ export async function requireSidebarItemRowAccess<T extends AnySidebarItemRow>(
   return item
 }
 
-export async function requireSidebarItemRowOperationAccess<T extends AnySidebarItemRow>(
+export async function requireSidebarItemRowOperationAccess<T extends SidebarItemAccessRow>(
   ctx: CampaignQueryCtx,
   {
     rawItem,

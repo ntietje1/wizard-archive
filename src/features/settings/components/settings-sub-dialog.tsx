@@ -1,10 +1,13 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog'
 import { XIcon } from 'lucide-react'
-import { cn } from '~/features/shadcn/lib/utils'
-import { Button } from '~/features/shadcn/components/button'
-import { DialogOverlay, DialogPortal } from '~/features/shadcn/components/dialog'
-import { AlertDialogOverlay, AlertDialogPortal } from '~/features/shadcn/components/alert-dialog'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { DialogOverlay, DialogPortal } from '@wizard-archive/ui/shadcn/components/dialog'
+import {
+  AlertDialogOverlay,
+  AlertDialogPortal,
+} from '@wizard-archive/ui/shadcn/components/alert-dialog'
 
 /**
  * Dark backdrop rendered inside the dialog's portal

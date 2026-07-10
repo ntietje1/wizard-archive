@@ -1,49 +1,51 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
-import type { SidebarItemColor } from '../../shared/sidebar-items/color'
-import type { SidebarItemIconName } from '../../shared/sidebar-items/icon'
 import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_STATUS,
-  SIDEBAR_ITEM_TYPES,
-} from '../../shared/sidebar-items/types'
-import { SHARE_STATUS } from '../../shared/editor-blocks/share-status'
+  RESOURCE_LOCATION,
+  RESOURCE_STATUS,
+  RESOURCE_TYPES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import type {
+  ResourceColor,
+  ResourceName,
+  ResourceIconName,
+  ResourceLocation,
+  ResourceStatus,
+  ResourceKind,
+} from '@wizard-archive/editor/resources/resource-contract'
+import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+
+import { SHARE_STATUS } from '../../shared/block-shares/share-status'
 import { slugify } from '../../shared/slugs'
 import { assertCampaignSlug } from '../campaigns/validation'
-import { assertSidebarItemName } from '../sidebarItems/validation/name'
-import { assertSidebarItemSlug } from '../sidebarItems/validation/slug'
+import { assertConvexSidebarItemName } from '../sidebarItems/validation/name'
+import { assertConvexSidebarItemSlug } from '../sidebarItems/validation/slug'
+import { assertSidebarItemLifecycleConsistency } from '../sidebarItems/types/status'
 import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from './yjs.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import { api } from '../_generated/api'
 import type { DataModel, Id } from '../_generated/dataModel'
 import type schema from '../schema'
-import type {
-  SidebarItemLocation,
-  SidebarItemStatus,
-  SidebarItemType,
-} from '../../shared/sidebar-items/types'
 import type { PermissionLevel } from '../../shared/permissions/types'
-import type { ShareStatus } from '../../shared/editor-blocks/share-status'
+import type { ShareStatus } from '../../shared/block-shares/share-status'
 import type {
-  BlockNoteId,
-  BlockType,
-  CustomBlock,
-  CustomPartialBlock,
+  NoteBlockId,
+  NoteBlockType,
+  NoteBlock,
+  PartialNoteBlock,
   InlineContent,
   TableContent,
-} from '../../shared/editor-blocks/types'
+} from '@wizard-archive/editor/notes/document-contract'
 import type { BlockInsert } from '../blocks/types'
-import type { SidebarItemName } from '../../shared/sidebar-items/name'
-import type { FileSystemOperationDecision } from '../../shared/sidebar-items/filesystem/commands'
 import type {
-  FileSystemEvent,
-  FileSystemTransactionReceipt,
-} from '../../shared/sidebar-items/filesystem/receipts'
-
+  ResourceOperationDecision,
+  ResourceEvent,
+  ResourceTransactionReceipt,
+} from '@wizard-archive/editor/resources/transaction-contract'
 type T = TestConvex<typeof schema>
 type AuthedContext = TestConvexForDataModel<DataModel>
-type BlockProps = CustomBlock['props']
-type FileSystemEventType = FileSystemEvent['type']
+type BlockProps = NoteBlock['props']
+type FileSystemEventType = ResourceEvent['type']
 
 export async function executeMoveCommand(
   client: AuthedContext,
@@ -52,9 +54,9 @@ export async function executeMoveCommand(
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
     action?: 'move' | 'restore' | 'trash'
-    decisions?: Array<FileSystemOperationDecision>
+    decisions?: Array<ResourceOperationDecision>
   },
-): Promise<FileSystemTransactionReceipt> {
+): Promise<ResourceTransactionReceipt> {
   const action = args.action ?? 'move'
   const command =
     action === 'trash'
@@ -80,9 +82,9 @@ export async function executeCopyCommand(
     campaignId: Id<'campaigns'>
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
-    decisions?: Array<FileSystemOperationDecision>
+    decisions?: Array<ResourceOperationDecision>
   },
-): Promise<FileSystemTransactionReceipt> {
+): Promise<ResourceTransactionReceipt> {
   return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
     campaignId: args.campaignId,
     command: {
@@ -100,7 +102,7 @@ export async function executeDeleteForeverCommand(
     campaignId: Id<'campaigns'>
     sourceItemIds: Array<Id<'sidebarItems'>>
   },
-): Promise<FileSystemTransactionReceipt> {
+): Promise<ResourceTransactionReceipt> {
   return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
     campaignId: args.campaignId,
     command: {
@@ -115,7 +117,7 @@ export async function executeEmptyTrashCommand(
   args: {
     campaignId: Id<'campaigns'>
   },
-): Promise<FileSystemTransactionReceipt> {
+): Promise<ResourceTransactionReceipt> {
   return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
     campaignId: args.campaignId,
     command: { type: 'emptyTrash' },
@@ -123,33 +125,31 @@ export async function executeEmptyTrashCommand(
 }
 
 export function filesystemEventItemIds(
-  receipt: Pick<FileSystemTransactionReceipt, 'events'>,
+  receipt: Pick<ResourceTransactionReceipt, 'events'>,
   type: FileSystemEventType,
 ) {
   return receipt.events.filter((event) => event.type === type).map((event) => event.itemId)
 }
 
-export function copiedRootItemIds(receipt: Pick<FileSystemTransactionReceipt, 'events'>) {
+export function copiedRootItemIds(receipt: Pick<ResourceTransactionReceipt, 'events'>) {
   return receipt.events
-    .filter(
-      (event): event is Extract<FileSystemEvent, { type: 'copied' }> => event.type === 'copied',
-    )
+    .filter((event): event is Extract<ResourceEvent, { type: 'copied' }> => event.type === 'copied')
     .map((event) => event.itemId)
 }
 
 export function testBlock(
   id: string,
-  overrides?: Partial<Omit<CustomBlock, 'id' | 'children'>> & {
-    children?: Array<CustomBlock>
+  overrides?: Partial<Omit<NoteBlock, 'id' | 'children'>> & {
+    children?: Array<NoteBlock>
   },
-): CustomBlock {
+): NoteBlock {
   return {
     id: testBlockNoteId(id),
     type: 'paragraph',
     props: {},
     content: [],
     ...overrides,
-  } as CustomBlock
+  } as NoteBlock
 }
 
 let counter = 0
@@ -236,6 +236,7 @@ export async function createCampaignWithDm(
     slug: string
     status: 'Active' | 'Inactive'
     currentSessionId: Id<'sessions'> | null
+    defaultFolderInheritShares: boolean
   }>,
 ) {
   const n = nextId()
@@ -247,6 +248,7 @@ export async function createCampaignWithDm(
     slug: assertCampaignSlug(`campaign-${n}`),
     status: 'Active' as const,
     currentSessionId: null,
+    defaultFolderInheritShares: false,
   }
   const campaignData = {
     ...defaults,
@@ -294,34 +296,32 @@ export async function addPlayerToCampaign(
 const sidebarItemBase = (
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  name: SidebarItemName,
+  name: ResourceName,
 ): {
-  name: SidebarItemName
+  name: ResourceName
+  normalizedName: string
   slug: string
   campaignId: Id<'campaigns'>
   iconName: null
   color: null
   parentId: null
   allPermissionLevel: PermissionLevel | null
-  location: SidebarItemLocation
-  status: SidebarItemStatus
+  location: ResourceLocation
+  status: ResourceStatus
   previewStorageId: null
-  previewLockedUntil: null
-  previewClaimToken: null
   previewUpdatedAt: null
 } & ReturnType<typeof commonFields> => ({
   name,
-  slug: assertSidebarItemSlug(slugify(name)),
+  normalizedName: normalizeResourceNameForComparison(name),
+  slug: assertConvexSidebarItemSlug(slugify(name)),
   campaignId,
   iconName: null,
   color: null,
   parentId: null,
   allPermissionLevel: null,
-  location: SIDEBAR_ITEM_LOCATION.sidebar,
-  status: SIDEBAR_ITEM_STATUS.active,
+  location: RESOURCE_LOCATION.sidebar,
+  status: RESOURCE_STATUS.active,
   previewStorageId: null,
-  previewLockedUntil: null,
-  previewClaimToken: null,
   previewUpdatedAt: null,
   ...commonFields(creatorProfileId),
 })
@@ -331,32 +331,30 @@ type CommonSidebarItemOverrides = Partial<{
   slug: string
   parentId: Id<'sidebarItems'> | null
   allPermissionLevel: PermissionLevel | null
-  location: SidebarItemLocation
-  status: SidebarItemStatus
-  iconName: SidebarItemIconName | null
-  color: SidebarItemColor | null
+  location: ResourceLocation
+  status: ResourceStatus
+  iconName: ResourceIconName | null
+  color: ResourceColor | null
   deletionTime: number | null
   deletedBy: Id<'userProfiles'> | null
   previewStorageId: Id<'_storage'> | null
-  previewLockedUntil: number | null
-  previewClaimToken: string | null
   previewUpdatedAt: number | null
 }>
 
 type ExtensionTable = 'notes' | 'folders' | 'gameMaps' | 'files' | 'canvases'
 
-async function insertSidebarItem(
+async function insertResource(
   t: T,
   extensionTable: ExtensionTable,
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
   label: string,
-  type: SidebarItemType,
+  type: ResourceKind,
   extraDefaults: Record<string, unknown>,
   overrides?: CommonSidebarItemOverrides & Record<string, unknown>,
 ) {
   const n = nextId()
-  const name = assertSidebarItemName(overrides?.name ?? `${label} ${n}`)
+  const name = assertConvexSidebarItemName(overrides?.name ?? `${label} ${n}`)
 
   const {
     inheritShares,
@@ -367,21 +365,24 @@ async function insertSidebarItem(
     ...sidebarOverrides
   } = overrides ?? {}
   const validatedSlug =
-    slug !== undefined ? assertSidebarItemSlug(slug) : assertSidebarItemSlug(slugify(name))
+    slug !== undefined
+      ? assertConvexSidebarItemSlug(slug)
+      : assertConvexSidebarItemSlug(slugify(name))
   const requestedStatus =
     sidebarOverrides.status ??
     (sidebarOverrides.deletionTime !== undefined && sidebarOverrides.deletionTime !== null
-      ? SIDEBAR_ITEM_STATUS.trashed
-      : SIDEBAR_ITEM_STATUS.active)
+      ? RESOURCE_STATUS.trashed
+      : RESOURCE_STATUS.active)
 
   const sharedData = {
     ...sidebarItemBase(campaignId, creatorProfileId, name),
     type,
     ...sidebarOverrides,
-    location: sidebarOverrides.location ?? SIDEBAR_ITEM_LOCATION.sidebar,
+    location: sidebarOverrides.location ?? RESOURCE_LOCATION.sidebar,
     status: requestedStatus,
     slug: validatedSlug,
   }
+  assertSidebarItemLifecycleConsistency(sharedData)
 
   const extensionFields: Record<string, unknown> = {}
   if (inheritShares !== undefined) extensionFields.inheritShares = inheritShares
@@ -408,13 +409,13 @@ export async function createNote(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides,
 ) {
-  const { id: noteId, ...data } = await insertSidebarItem(
+  const { id: noteId, ...data } = await insertResource(
     t,
     'notes',
     campaignId,
     creatorProfileId,
     'Note',
-    SIDEBAR_ITEM_TYPES.notes,
+    RESOURCE_TYPES.notes,
     {},
     overrides,
   )
@@ -427,13 +428,13 @@ export async function createFolder(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides & Partial<{ inheritShares: boolean }>,
 ) {
-  const { id: folderId, ...data } = await insertSidebarItem(
+  const { id: folderId, ...data } = await insertResource(
     t,
     'folders',
     campaignId,
     creatorProfileId,
     'Folder',
-    SIDEBAR_ITEM_TYPES.folders,
+    RESOURCE_TYPES.folders,
     { inheritShares: false },
     overrides,
   )
@@ -446,13 +447,13 @@ export async function createFile(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides & Partial<{ storageId: Id<'_storage'> | null }>,
 ) {
-  const { id: fileId, ...data } = await insertSidebarItem(
+  const { id: fileId, ...data } = await insertResource(
     t,
     'files',
     campaignId,
     creatorProfileId,
     'File',
-    SIDEBAR_ITEM_TYPES.files,
+    RESOURCE_TYPES.files,
     { storageId: null },
     overrides,
   )
@@ -465,13 +466,13 @@ export async function createGameMap(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides & Partial<{ imageStorageId: Id<'_storage'> | null }>,
 ) {
-  const { id: mapId, ...data } = await insertSidebarItem(
+  const { id: mapId, ...data } = await insertResource(
     t,
     'gameMaps',
     campaignId,
     creatorProfileId,
     'Map',
-    SIDEBAR_ITEM_TYPES.gameMaps,
+    RESOURCE_TYPES.gameMaps,
     { imageStorageId: null },
     overrides,
   )
@@ -484,13 +485,13 @@ export async function createCanvas(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides,
 ) {
-  const { id: canvasId, ...data } = await insertSidebarItem(
+  const { id: canvasId, ...data } = await insertResource(
     t,
     'canvases',
     campaignId,
     creatorProfileId,
     'Canvas',
-    SIDEBAR_ITEM_TYPES.canvases,
+    RESOURCE_TYPES.canvases,
     {},
     overrides,
   )
@@ -524,11 +525,11 @@ export async function createBlock(
   noteId: Id<'sidebarItems'>,
   campaignId: Id<'campaigns'>,
   overrides?: Partial<{
-    blockNoteId: BlockNoteId
+    blockNoteId: NoteBlockId
     position: number | null
-    parentBlockId: BlockNoteId | null
+    parentBlockId: NoteBlockId | null
     depth: number
-    type: BlockType
+    type: NoteBlockType
     props: BlockProps
     content: InlineContent | TableContent | null
     plainText: string
@@ -566,7 +567,7 @@ export async function createSidebarShare(
   overrides: {
     campaignId: Id<'campaigns'>
     sidebarItemId: Id<'sidebarItems'>
-    sidebarItemType: SidebarItemType
+    sidebarItemType: ResourceKind
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel?: PermissionLevel | null
     sessionId?: Id<'sessions'> | null
@@ -700,7 +701,7 @@ export async function setupFolderTree(
 export async function syncBlocksToYjs(
   t: T,
   noteId: Id<'sidebarItems'>,
-  blocks: Array<CustomPartialBlock>,
+  blocks: Array<PartialNoteBlock>,
 ): Promise<void> {
   const update = makeYjsUpdateWithBlocks(blocks)
   await t.run(async (ctx) => {

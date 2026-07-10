@@ -1,23 +1,23 @@
 import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
+import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
 import { flattenBlocks } from './flattenBlocks'
-import { parseEditorBlocks } from '../parseEditorBlocks'
+import { parseBlockNoteBlocks } from '../parseBlockNoteBlocks'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { CustomBlock } from '../../../shared/editor-blocks/types'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { Block, BlockInsert, PersistedFlatBlock } from '../types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 
 export async function saveAllBlocksForNote(
   ctx: Pick<MutationCtx, 'db'>,
-  { noteId, content }: { noteId: Id<'sidebarItems'>; content: Array<CustomBlock> },
+  { noteId, content }: { noteId: Id<'sidebarItems'>; content: Array<NoteBlock> },
 ): Promise<Array<Block>> {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  if (note.type !== SIDEBAR_ITEM_TYPES.notes) {
+  if (note.type !== RESOURCE_TYPES.notes) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Block projection requires a note item')
   }
   if (!isActiveSidebarItem(note)) return []
@@ -30,9 +30,9 @@ export async function saveAllBlocksForNote(
 
   const existingBlocksMap = new Map(existingBlocks.map((block) => [block.blockNoteId, block]))
 
-  const canonicalContent = parseEditorBlocks(content)
+  const canonicalContent = parseBlockNoteBlocks(content)
   const rawFlatBlocks = flattenBlocks(canonicalContent)
-  await validateSidebarItemEmbedTargets(ctx, {
+  await validateResourceEmbedTargets(ctx, {
     noteId,
     campaignId,
     flatBlocks: rawFlatBlocks,
@@ -129,7 +129,7 @@ function validatePersistedBlockDepth(block: Pick<PersistedFlatBlock, 'depth' | '
   }
 }
 
-async function validateSidebarItemEmbedTargets(
+async function validateResourceEmbedTargets(
   ctx: Pick<MutationCtx, 'db'>,
   {
     noteId,
@@ -143,7 +143,7 @@ async function validateSidebarItemEmbedTargets(
 ) {
   const targetIds = new Set<Id<'sidebarItems'>>()
   for (const block of flatBlocks) {
-    const targetId = getSidebarItemEmbedTargetId(ctx, block)
+    const targetId = getResourceEmbedTargetId(ctx, block)
     if (!targetId) continue
     if (targetId === noteId) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'A note cannot embed itself')
@@ -165,7 +165,7 @@ async function validateSidebarItemEmbedTargets(
   })
 }
 
-function getSidebarItemEmbedTargetId(
+function getResourceEmbedTargetId(
   ctx: Pick<MutationCtx, 'db'>,
   block: PersistedFlatBlock,
 ): Id<'sidebarItems'> | null {
@@ -175,18 +175,18 @@ function getSidebarItemEmbedTargetId(
     props &&
     typeof props === 'object' &&
     'targetKind' in props &&
-    props.targetKind === 'sidebarItem' &&
-    'sidebarItemId' in props &&
-    typeof props.sidebarItemId === 'string'
+    props.targetKind === 'resource' &&
+    'resourceId' in props &&
+    typeof props.resourceId === 'string'
   ) {
-    const sidebarItemId = ctx.db.normalizeId('sidebarItems', props.sidebarItemId)
-    if (!sidebarItemId) {
+    const resourceId = ctx.db.normalizeId('sidebarItems', props.resourceId)
+    if (!resourceId) {
       throwClientError(
         ERROR_CODE.VALIDATION_FAILED,
-        `Invalid embed target sidebarItemId for block ${block.blockNoteId}`,
+        `Invalid embed target resourceId for block ${block.blockNoteId}`,
       )
     }
-    return sidebarItemId
+    return resourceId
   }
   return null
 }

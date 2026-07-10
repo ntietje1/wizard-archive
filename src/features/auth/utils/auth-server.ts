@@ -37,15 +37,9 @@ export const handler = async (request: Request) => {
   try {
     const { convexSiteUrl } = getRequiredAuthEnv()
     const target: ConvexAuthProxyTarget = getConvexAuthProxyTarget(request, convexSiteUrl)
-    const init = {
-      method: request.method,
-      headers: target.headers,
-      redirect: 'manual',
-      body: request.body,
-      duplex: 'half',
-    } satisfies RequestInit & { duplex: 'half' }
+    const body = await getReplayableRequestBody(request)
 
-    return await fetch(target.url, init)
+    return await fetchAuthProxyTarget(target, request.method, body)
   } catch (error) {
     console.error('Auth proxy request failed', error)
     return new Response(JSON.stringify({ error: 'AUTH_PROXY_REQUEST_FAILED' }), {
@@ -55,6 +49,48 @@ export const handler = async (request: Request) => {
       },
     })
   }
+}
+
+async function fetchAuthProxyTarget(
+  target: ConvexAuthProxyTarget,
+  method: string,
+  body: ArrayBuffer | null,
+): Promise<Response> {
+  try {
+    return await fetch(target.url, createProxyRequestInit(method, target.headers, body))
+  } catch (error) {
+    if (!isRetryableFetchError(error)) {
+      throw error
+    }
+    return await fetch(target.url, createProxyRequestInit(method, target.headers, body))
+  }
+}
+
+function createProxyRequestInit(
+  method: string,
+  headers: Headers,
+  body: ArrayBuffer | null,
+): RequestInit {
+  return {
+    method,
+    headers,
+    redirect: 'manual',
+    body: body?.slice(0),
+  }
+}
+
+async function getReplayableRequestBody(request: Request): Promise<ArrayBuffer | null> {
+  if (request.method === 'GET' || request.method === 'HEAD' || request.body === null) {
+    return null
+  }
+
+  return await request.arrayBuffer()
+}
+
+function isRetryableFetchError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'retryable' in error && error.retryable === true
+  )
 }
 
 export const getToken: AuthServer['getToken'] = async () => {

@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ReactNode } from 'react'
 import { UserMenuContent } from '~/features/auth/components/user-menu-content'
 import { authClient } from '~/features/auth/utils/auth-client'

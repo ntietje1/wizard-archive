@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test'
 
 test('open settings from user menu', async ({ page }) => {
-  await page.goto('/campaigns', { waitUntil: 'networkidle' })
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await page.getByRole('button', { name: 'User menu' }).click()
   await page.getByRole('button', { name: /settings/i }).click()
   await expect(page.getByRole('dialog', { name: /settings/i })).toBeVisible()
 })
 
 test('theme toggle changes html class', async ({ page }) => {
-  await page.goto('/campaigns', { waitUntil: 'networkidle' })
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await page.getByRole('button', { name: 'User menu' }).click()
   await page.getByRole('button', { name: /settings/i }).click()
   await page.getByRole('button', { name: /preferences/i }).click()

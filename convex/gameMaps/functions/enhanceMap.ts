@@ -5,29 +5,36 @@ import { enhanceFolder } from '../../folders/functions/enhanceFolder'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
+import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type {
+  AnyResource,
+  AnyResourceRow,
+} from '@wizard-archive/editor/resources/resource-contract'
 import { enhanceNote } from '../../notes/functions/enhanceNote'
 import { assertNever } from '../../common/types'
+import { mapPinRowToDomain } from './mapPinRow'
 import type { CampaignQueryCtx } from '../../functions'
 import type {
-  AnySidebarItem,
-  AnySidebarItemFromDb,
-} from '../../../shared/sidebar-items/model-types'
-import type {
-  GameMap,
-  GameMapFromDb,
-  GameMapWithContent,
-  MapPin,
+  MapItemRow,
+  MapItem,
+  MapItemWithContent,
   MapPinWithItem,
-} from '../../../shared/game-maps/types'
+} from '@wizard-archive/editor/game-maps/item-contract'
+import type { MapPin } from '@wizard-archive/editor/game-maps/document-contract'
+import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemEnhancement } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 
 export const enhanceGameMap = async (
   ctx: CampaignQueryCtx,
-  { gameMap }: { gameMap: GameMapFromDb },
-): Promise<GameMap> => {
+  { gameMap, enhancement }: { gameMap: MapItemRow; enhancement?: SidebarItemEnhancement },
+): Promise<MapItem> => {
+  const imageStorageId = gameMap.imageAssetId as unknown as Id<'_storage'> | null
   const [base, imageUrl] = await Promise.all([
-    enhanceBase(ctx, { item: gameMap }),
-    gameMap.imageStorageId ? ctx.storage.getUrl(gameMap.imageStorageId) : null,
+    enhanceBase(ctx, { item: gameMap, enhancement }),
+    imageStorageId ? ctx.storage.getUrl(imageStorageId) : null,
   ])
 
   return {
@@ -41,30 +48,35 @@ const enhanceMapPin = async (
   { pin }: { pin: MapPin },
 ): Promise<MapPinWithItem | null> => {
   const item = await getSidebarItem(ctx, pin.itemId)
-  if (item) {
-    const enhancedItem = await enhancePinnedItem(ctx, { item })
+  if (!item) return null
+  const permissionLevel = await getSidebarItemPermissionLevel(ctx, { item })
+  if (!hasAtLeastPermissionLevel(permissionLevel, PERMISSION_LEVEL.VIEW)) {
     return {
       ...pin,
-      item: enhancedItem,
+      item: null,
     }
   }
-  return null
+  const enhancedItem = await enhancePinnedItem(ctx, { item })
+  return {
+    ...pin,
+    item: enhancedItem,
+  }
 }
 
 const enhancePinnedItem = async (
   ctx: CampaignQueryCtx,
-  { item }: { item: AnySidebarItemFromDb },
-): Promise<AnySidebarItem> => {
+  { item }: { item: AnyResourceRow },
+): Promise<AnyResource> => {
   switch (item.type) {
-    case SIDEBAR_ITEM_TYPES.files:
+    case RESOURCE_TYPES.files:
       return enhanceFile(ctx, { file: item })
-    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case RESOURCE_TYPES.gameMaps:
       return enhanceGameMap(ctx, { gameMap: item })
-    case SIDEBAR_ITEM_TYPES.folders:
+    case RESOURCE_TYPES.folders:
       return enhanceFolder(ctx, { folder: item })
-    case SIDEBAR_ITEM_TYPES.notes:
+    case RESOURCE_TYPES.notes:
       return enhanceNote(ctx, { note: item })
-    case SIDEBAR_ITEM_TYPES.canvases:
+    case RESOURCE_TYPES.canvases:
       return enhanceCanvas(ctx, { canvas: item })
     default:
       return assertNever(item)
@@ -73,8 +85,8 @@ const enhancePinnedItem = async (
 
 export const enhanceGameMapWithContent = async (
   ctx: CampaignQueryCtx,
-  { gameMap }: { gameMap: GameMap },
-): Promise<GameMapWithContent> => {
+  { gameMap }: { gameMap: MapItem },
+): Promise<MapItemWithContent> => {
   const [ancestors, rawPins] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: gameMap.parentId,
@@ -82,13 +94,13 @@ export const enhanceGameMapWithContent = async (
     }),
     ctx.db
       .query('mapPins')
-      .withIndex('by_map_item', (q) => q.eq('mapId', gameMap._id))
+      .withIndex('by_map_item', (q) => q.eq('mapId', gameMap.id))
       .collect(),
   ])
 
-  const pins = (await asyncMap(rawPins, (pin) => enhanceMapPin(ctx, { pin }))).filter(
-    (pin) => pin !== null,
-  )
+  const pins = (
+    await asyncMap(rawPins.map(mapPinRowToDomain), (pin) => enhanceMapPin(ctx, { pin }))
+  ).filter((pin) => pin !== null)
 
   return {
     ...gameMap,

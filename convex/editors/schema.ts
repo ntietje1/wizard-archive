@@ -1,29 +1,23 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import { convexValidatorFields } from '../common/schema'
-import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../../shared/editor/types'
-
-export const sortOrderValidator = v.union(
-  v.literal(SORT_ORDERS.Alphabetical),
-  v.literal(SORT_ORDERS.DateCreated),
-  v.literal(SORT_ORDERS.DateModified),
-)
-
-export const sortDirectionValidator = v.union(
-  v.literal(SORT_DIRECTIONS.Ascending),
-  v.literal(SORT_DIRECTIONS.Descending),
-)
+import {
+  SORT_DIRECTION_VALUES,
+  SORT_ORDER_VALUES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import { WORKSPACE_MODE } from '../../shared/workspace/workspace-mode'
 
 export const editorModeValidator = v.union(
-  v.literal(EDITOR_MODE.VIEWER),
-  v.literal(EDITOR_MODE.EDITOR),
+  v.literal(WORKSPACE_MODE.VIEWER),
+  v.literal(WORKSPACE_MODE.EDITOR),
 )
 
 const editorTableFields = {
   userId: v.id('userProfiles'),
   campaignId: v.id('campaigns'),
-  sortOrder: sortOrderValidator,
-  sortDirection: sortDirectionValidator,
+  sortOrder: literals(...SORT_ORDER_VALUES),
+  sortDirection: literals(...SORT_DIRECTION_VALUES),
   editorMode: editorModeValidator,
 }
 

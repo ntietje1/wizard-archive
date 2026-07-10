@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { createNote } from './helpers/sidebar-helpers'
+import { createNote, visibleSidebarItemNames } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E Sorting')
@@ -19,7 +19,7 @@ test.describe.serial('sidebar sorting', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteAlpha)
@@ -34,7 +34,7 @@ test.describe.serial('sidebar sorting', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -45,10 +45,8 @@ test.describe.serial('sidebar sorting', () => {
   })
 
   test('sort alphabetical ascending', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
-
-    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
 
     await page.getByRole('button', { name: 'Sort options' }).click()
     await page.getByRole('menuitemradio', { name: 'Alphabetical' }).click()
@@ -56,7 +54,7 @@ test.describe.serial('sidebar sorting', () => {
     await page.keyboard.press('Escape')
 
     await expect(async () => {
-      const texts = await sidebar.getByRole('link').allTextContents()
+      const texts = await visibleSidebarItemNames(page)
       const alphaIdx = texts.findIndex((t) => t.includes('Alpha'))
       const betaIdx = texts.findIndex((t) => t.includes('Beta'))
       const charlieIdx = texts.findIndex((t) => t.includes('Charlie'))
@@ -67,7 +65,7 @@ test.describe.serial('sidebar sorting', () => {
   })
 
   test('sort alphabetical descending', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: 'Sort options' }).click()
@@ -75,10 +73,8 @@ test.describe.serial('sidebar sorting', () => {
     await page.getByRole('menuitemradio', { name: 'Descending' }).click()
     await page.keyboard.press('Escape')
 
-    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-
     await expect(async () => {
-      const texts = await sidebar.getByRole('link').allTextContents()
+      const texts = await visibleSidebarItemNames(page)
       const alphaIdx = texts.findIndex((t) => t.includes('Alpha'))
       const betaIdx = texts.findIndex((t) => t.includes('Beta'))
       const charlieIdx = texts.findIndex((t) => t.includes('Charlie'))
@@ -91,7 +87,7 @@ test.describe.serial('sidebar sorting', () => {
   })
 
   test('sort by date created changes order', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: 'Sort options' }).click()
@@ -99,10 +95,8 @@ test.describe.serial('sidebar sorting', () => {
     await page.getByRole('menuitemradio', { name: 'Ascending' }).click()
     await page.keyboard.press('Escape')
 
-    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-
     await expect(async () => {
-      const texts = await sidebar.getByRole('link').allTextContents()
+      const texts = await visibleSidebarItemNames(page)
       const alphaIdx = texts.findIndex((t) => t.includes('Alpha'))
       const betaIdx = texts.findIndex((t) => t.includes('Beta'))
       const charlieIdx = texts.findIndex((t) => t.includes('Charlie'))

@@ -1,16 +1,22 @@
 import { z } from 'zod'
+import type { SidebarItemId } from '../common/ids'
 
 export const externalEmbedUrlSchema = z.string().refine(isHttpsUrl, {
   message: 'External embed URL must use HTTPS',
 })
 
-export const embedTargetKindSchema = z.enum(['empty', 'sidebarItem', 'externalUrl'])
+export const embedTargetKindSchema = z.enum(['empty', 'resource', 'externalUrl'])
 
 const emptyEmbedTargetSchema = z.strictObject({
   kind: z.literal('empty'),
 })
 
-const sidebarItemEmbedTargetSchema = z.strictObject({
+const resourceEmbedTargetSchema = z.strictObject({
+  kind: z.literal('resource'),
+  resourceId: z.string().min(1),
+})
+
+const legacySidebarItemEmbedTargetSchema = z.strictObject({
   kind: z.literal('sidebarItem'),
   sidebarItemId: z.string().min(1),
 })
@@ -23,11 +29,24 @@ const externalUrlEmbedTargetSchema = z.strictObject({
 
 export const embedTargetSchema = z.discriminatedUnion('kind', [
   emptyEmbedTargetSchema,
-  sidebarItemEmbedTargetSchema,
+  resourceEmbedTargetSchema,
   externalUrlEmbedTargetSchema,
 ])
 
-export type EmbedTarget = z.infer<typeof embedTargetSchema>
+const parseableEmbedTargetSchema = z.discriminatedUnion('kind', [
+  emptyEmbedTargetSchema,
+  resourceEmbedTargetSchema,
+  legacySidebarItemEmbedTargetSchema,
+  externalUrlEmbedTargetSchema,
+])
+
+type EmptyEmbedTarget = z.infer<typeof emptyEmbedTargetSchema>
+type ResourceEmbedTarget = Omit<z.infer<typeof resourceEmbedTargetSchema>, 'resourceId'> & {
+  resourceId: SidebarItemId
+}
+type ExternalUrlEmbedTarget = z.infer<typeof externalUrlEmbedTargetSchema>
+
+export type EmbedTarget = EmptyEmbedTarget | ResourceEmbedTarget | ExternalUrlEmbedTarget
 type ExternalEmbedMediaKind = 'image' | 'video' | 'audio' | 'pdf' | 'unknown'
 
 const MEDIA_EXTENSION_BY_KIND: Record<Exclude<ExternalEmbedMediaKind, 'unknown'>, Set<string>> = {
@@ -38,8 +57,24 @@ const MEDIA_EXTENSION_BY_KIND: Record<Exclude<ExternalEmbedMediaKind, 'unknown'>
 }
 
 export function normalizeEmbedTarget(value: unknown): EmbedTarget {
-  const result = embedTargetSchema.safeParse(value)
-  return result.success ? result.data : { kind: 'empty' }
+  return parseEmbedTarget(value) ?? { kind: 'empty' }
+}
+
+export function parseEmbedTarget(value: unknown): EmbedTarget | null {
+  const result = parseableEmbedTargetSchema.safeParse(value)
+  if (!result.success) return null
+  const target = result.data
+  if (target.kind === 'sidebarItem') {
+    return {
+      kind: 'resource',
+      resourceId: target.sidebarItemId as SidebarItemId,
+    }
+  }
+  if (target.kind !== 'resource') return target
+  return {
+    kind: 'resource',
+    resourceId: target.resourceId as SidebarItemId,
+  }
 }
 
 export function inferExternalEmbedMediaKind(url: string): ExternalEmbedMediaKind {

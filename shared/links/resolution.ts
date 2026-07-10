@@ -1,15 +1,17 @@
 import type { LinkPathKind, LinkResolvableItem } from './types'
+import { parseWikiLinkText } from './parsing'
+import type { ParsedWikiLinkFields } from './parsing'
 
 function getItemPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   item: T,
-  itemsMap: Map<TItemId, T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
 ): Array<string> {
   const path: Array<string> = []
   let current: T | undefined = item
   const seen = new Set<TItemId>()
 
-  while (current && !seen.has(current._id)) {
-    seen.add(current._id)
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id)
     if (!current.name) {
       return []
     }
@@ -20,13 +22,13 @@ function getItemPath<TItemId extends string, T extends LinkResolvableItem<TItemI
   return path
 }
 
-function comparePathSegments(a: Array<string>, b: Array<string>): number {
+function comparePathSegments(a: ReadonlyArray<string>, b: ReadonlyArray<string>): number {
   const joinedA = a.join('/').toLowerCase()
   const joinedB = b.join('/').toLowerCase()
   return joinedA.localeCompare(joinedB)
 }
 
-function normalizePathSegments(pathSegments: Array<string>): Array<string> {
+function normalizePathSegments(pathSegments: ReadonlyArray<string>): Array<string> {
   return pathSegments.map(normalizePathSegment)
 }
 
@@ -37,7 +39,7 @@ function normalizePathSegment(pathSegment: string): string {
 function findChildByName<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   parentId: TItemId | null,
   name: string,
-  allItems: Array<T>,
+  allItems: ReadonlyArray<T>,
 ): T | undefined {
   const normalizedName = normalizePathSegment(name)
 
@@ -47,8 +49,8 @@ function findChildByName<TItemId extends string, T extends LinkResolvableItem<TI
 }
 
 function matchesPathSuffix(
-  normalizedFullPath: Array<string>,
-  normalizedPath: Array<string>,
+  normalizedFullPath: ReadonlyArray<string>,
+  normalizedPath: ReadonlyArray<string>,
 ): boolean {
   if (normalizedFullPath.length < normalizedPath.length) return false
 
@@ -57,9 +59,9 @@ function matchesPathSuffix(
 }
 
 function forEachMatchingItem<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
-  pathSegments: Array<string>,
-  allItems: Array<T>,
-  itemsMap: Map<TItemId, T>,
+  pathSegments: ReadonlyArray<string>,
+  allItems: ReadonlyArray<T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
   onMatch: (item: T) => boolean | void,
 ): void {
   const normalizedPath = normalizePathSegments(pathSegments)
@@ -75,15 +77,15 @@ function forEachMatchingItem<TItemId extends string, T extends LinkResolvableIte
 }
 
 function rankMatches<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
-  matches: Array<T>,
-  itemsMap: Map<TItemId, T>,
+  matches: ReadonlyArray<T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
 ): Array<T> {
   const pathCache = new Map<TItemId, Array<string>>()
   const getPath = (item: T) => {
-    let path = pathCache.get(item._id)
+    let path = pathCache.get(item.id)
     if (!path) {
       path = getItemPath(item, itemsMap)
-      pathCache.set(item._id, path)
+      pathCache.set(item.id, path)
     }
     return path
   }
@@ -100,10 +102,10 @@ function rankMatches<TItemId extends string, T extends LinkResolvableItem<TItemI
   })
 }
 
-export function resolveItemByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
-  pathSegments: Array<string>,
-  allItems: Array<T>,
-  itemsMap: Map<TItemId, T>,
+function resolveItemByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
+  pathSegments: ReadonlyArray<string>,
+  allItems: ReadonlyArray<T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
 ): T | undefined {
   if (pathSegments.length === 0) return undefined
 
@@ -111,9 +113,9 @@ export function resolveItemByPath<TItemId extends string, T extends LinkResolvab
 }
 
 function resolveRelativeItemByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
-  pathSegments: Array<string>,
-  allItems: Array<T>,
-  itemsMap: Map<TItemId, T>,
+  pathSegments: ReadonlyArray<string>,
+  allItems: ReadonlyArray<T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
   sourceParentId: TItemId | null | undefined,
 ): T | undefined {
   if (pathSegments.length === 0 || sourceParentId === undefined) return undefined
@@ -121,37 +123,42 @@ function resolveRelativeItemByPath<TItemId extends string, T extends LinkResolva
   let currentParentId = sourceParentId
 
   for (let i = 0; i < pathSegments.length; i++) {
-    const normalizedSegment = normalizePathSegment(pathSegments[i])
-    if (!normalizedSegment) return undefined
-
-    if (normalizedSegment === '.') {
-      continue
-    }
-
-    if (normalizedSegment === '..') {
-      if (currentParentId === null) {
-        return undefined
-      }
-
-      const currentItem = itemsMap.get(currentParentId)
-      if (!currentItem) {
-        return undefined
-      }
-      currentParentId = currentItem.parentId
-      continue
-    }
-
-    const child = findChildByName(currentParentId, pathSegments[i], allItems)
-    if (!child) return undefined
+    const step = resolveRelativePathStep(pathSegments[i], currentParentId, allItems, itemsMap)
+    if (!step) return undefined
 
     if (i === pathSegments.length - 1) {
-      return child
+      return step.item ?? (step.parentId ? itemsMap.get(step.parentId) : undefined)
     }
 
-    currentParentId = child._id
+    currentParentId = step.parentId
   }
 
   return currentParentId ? itemsMap.get(currentParentId) : undefined
+}
+
+function resolveRelativePathStep<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
+  rawSegment: string,
+  currentParentId: TItemId | null,
+  allItems: ReadonlyArray<T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
+): { item?: T; parentId: TItemId | null } | null {
+  const normalizedSegment = normalizePathSegment(rawSegment)
+  if (!normalizedSegment) return null
+  if (normalizedSegment === '.') return { parentId: currentParentId }
+  if (normalizedSegment === '..') return resolveRelativeParentStep(currentParentId, itemsMap)
+
+  const child = findChildByName(currentParentId, rawSegment, allItems)
+  return child ? { item: child, parentId: child.id } : null
+}
+
+function resolveRelativeParentStep<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
+  currentParentId: TItemId | null,
+  itemsMap: ReadonlyMap<TItemId, T>,
+): { parentId: TItemId | null } | null {
+  if (currentParentId === null) return null
+
+  const currentItem = itemsMap.get(currentParentId)
+  return currentItem ? { parentId: currentItem.parentId } : null
 }
 
 export function resolveParsedItemPath<
@@ -159,9 +166,9 @@ export function resolveParsedItemPath<
   T extends LinkResolvableItem<TItemId>,
 >(
   pathKind: LinkPathKind,
-  pathSegments: Array<string>,
-  allItems: Array<T>,
-  itemsMap: Map<TItemId, T>,
+  pathSegments: ReadonlyArray<string>,
+  allItems: ReadonlyArray<T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
   sourceParentId?: TItemId | null,
 ): T | undefined {
   return pathKind === 'relative'
@@ -169,10 +176,22 @@ export function resolveParsedItemPath<
     : resolveItemByPath(pathSegments, allItems, itemsMap)
 }
 
+export function parseResolvableWikiItemPath(text: string): ParsedWikiLinkFields | null {
+  const parsed = parseWikiLinkText(text)
+  if (
+    parsed.displayName !== null ||
+    parsed.headingPath.length > 0 ||
+    parsed.itemPath.length === 0
+  ) {
+    return null
+  }
+  return parsed
+}
+
 function resolveAllByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
-  pathSegments: Array<string>,
-  allItems: Array<T>,
-  itemsMap: Map<TItemId, T>,
+  pathSegments: ReadonlyArray<string>,
+  allItems: ReadonlyArray<T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
 ): Array<T> {
   if (pathSegments.length === 0) return []
 
@@ -185,9 +204,9 @@ function resolveAllByPath<TItemId extends string, T extends LinkResolvableItem<T
 }
 
 function isPathUnique<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
-  pathSegments: Array<string>,
-  allItems: Array<T>,
-  itemsMap: Map<TItemId, T>,
+  pathSegments: ReadonlyArray<string>,
+  allItems: ReadonlyArray<T>,
+  itemsMap: ReadonlyMap<TItemId, T>,
 ): boolean {
   if (pathSegments.length === 0) return false
 
@@ -203,7 +222,7 @@ function isPathUnique<TItemId extends string, T extends LinkResolvableItem<TItem
 export function getMinDisambiguationPath<
   TItemId extends string,
   T extends LinkResolvableItem<TItemId>,
->(item: T, allItems: Array<T>, itemsMap: Map<TItemId, T>): Array<string> {
+>(item: T, allItems: ReadonlyArray<T>, itemsMap: ReadonlyMap<TItemId, T>): Array<string> {
   const fullPath = getItemPath(item, itemsMap)
   if (fullPath.length === 0) return item.name ? [item.name.trim()] : []
 

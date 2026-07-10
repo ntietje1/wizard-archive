@@ -1,16 +1,18 @@
-import { assertSidebarItemName } from '../../validation/name'
+import { assertConvexSidebarItemName } from '../../validation/name'
 import { requireCreateParentTarget } from '../../validation/parent'
-import { requireOptionalSidebarItemColor } from '../../../../shared/sidebar-items/color'
-import { requireOptionalSidebarItemIconName } from '../../../../shared/sidebar-items/icon'
-import { FILE_SYSTEM_EVENT_TYPE } from '../../../../shared/sidebar-items/filesystem/receipts'
+import { requireOptionalSidebarItemColor, requireOptionalSidebarItemIconName } from '../appearance'
+import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
+import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
 import { createFileSystemWriteSession } from '../deltas'
 import { initializeEmptySidebarItemCompanion } from '../companionInitialization'
 import { resolveCreateCommandParentId } from '../pathParentResolver'
+import { assertSidebarOperationAllowed, operationActorFromRole } from '../capabilities'
+import { evaluateCreateItem } from '@wizard-archive/editor/resources/operation-capabilities'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
-import type { CreateFileSystemCommand } from '../../../../shared/sidebar-items/filesystem/commands'
-import type { FileSystemDelta } from '../../../../shared/sidebar-items/filesystem/receipts'
-import type { FileSystemWriteSession } from '../deltas'
+import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
+
+type CreateFileSystemCommand = Extract<ResourceCommand, { type: 'create' }>
 
 type CreatedItem = {
   itemId: Id<'sidebarItems'>
@@ -22,13 +24,16 @@ async function createSidebarItem(
   session: FileSystemWriteSession,
   command: CreateFileSystemCommand,
 ): Promise<CreatedItem> {
-  const name = assertSidebarItemName(command.name)
+  assertSidebarOperationAllowed(
+    evaluateCreateItem(operationActorFromRole(ctx.membership.role), command.itemType),
+  )
+  const name = assertConvexSidebarItemName(command.name)
   const parentTarget = requireCreateParentTarget(command.parentTarget)
   const iconName = requireOptionalSidebarItemIconName(command.iconName)
   const color = requireOptionalSidebarItemColor(command.color)
   const parentId = await resolveCreateCommandParentId(ctx, session, { parentTarget })
 
-  const { itemId, slug } = await session.insertSidebarItem({
+  const { itemId, slug } = await session.insertResource({
     type: command.itemType,
     name,
     parentId,
@@ -47,12 +52,10 @@ export async function executeCreateCommand(
   }: {
     command: CreateFileSystemCommand
   },
-): Promise<FileSystemDelta> {
+): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
   const created = await createSidebarItem(ctx, session, command)
-  const events = [
-    { type: FILE_SYSTEM_EVENT_TYPE.created, itemId: created.itemId, slug: created.slug },
-  ]
+  const events = [{ type: RESOURCE_EVENT_TYPE.created, itemId: created.itemId, slug: created.slug }]
   return await session.build({
     command,
     events,

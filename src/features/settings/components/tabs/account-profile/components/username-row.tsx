@@ -1,26 +1,27 @@
 import { useReducer, useState } from 'react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { api } from 'convex/_generated/api'
 import { USERNAME_MAX_LENGTH } from 'shared/users/constants'
 import { getClientErrorMessage } from 'shared/errors/client'
 import { normalizeUsernameInput, parseUsername, validateUsername } from 'shared/users/validation'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { SettingsRow } from './settings-row'
 import type { UserProfile } from 'shared/users/types'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { Button } from '~/features/shadcn/components/button'
-import { Input } from '~/features/shadcn/components/input'
-import { Label } from '~/features/shadcn/components/label'
+import {
+  useUpdateUsernameMutation,
+  useUsernameExistsQuery,
+} from '~/shared/hooks/use-user-profile-operations'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Input } from '@wizard-archive/ui/shadcn/components/input'
+import { Label } from '@wizard-archive/ui/shadcn/components/label'
 import {
   Dialog,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '~/features/shadcn/components/dialog'
+} from '@wizard-archive/ui/shadcn/components/dialog'
 import { SettingsSubDialogContent } from '~/features/settings/components/settings-sub-dialog'
-import { useDebouncedValue } from '~/shared/hooks/useDebouncedValue'
+import { useDebouncedValue } from '@wizard-archive/ui/hooks/use-debounced-value'
 
 function useUsernameValidation(raw: string, currentUsername: string) {
   const normalizedUsername = normalizeUsernameInput(raw)
@@ -33,10 +34,7 @@ function useUsernameValidation(raw: string, currentUsername: string) {
   const isWaitingForDebounce = shouldCheckRemote && debouncedUsername !== normalizedUsername
   const parsedDebouncedUsername = debouncedUsername ? parseUsername(debouncedUsername) : null
 
-  const existsQuery = useAuthQuery(
-    api.users.queries.checkUsernameExists,
-    parsedDebouncedUsername ? { username: parsedDebouncedUsername } : 'skip',
-  )
+  const existsQuery = useUsernameExistsQuery(parsedDebouncedUsername)
 
   const isTaken = existsQuery.data === true
   const isChecking = shouldCheckRemote && (isWaitingForDebounce || existsQuery.isLoading)
@@ -65,7 +63,7 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
     isChecking,
   } = useUsernameValidation(state.username, profile.username)
 
-  const updateUsername = useAppMutation(api.users.mutations.updateUsername)
+  const updateUsername = useUpdateUsernameMutation()
 
   const handleSave = async () => {
     if (!canSubmit) return

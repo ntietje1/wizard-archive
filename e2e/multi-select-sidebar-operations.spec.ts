@@ -7,7 +7,7 @@ import {
   dragSidebarItemToSidebarItem,
   openItem,
   selectSidebarItems,
-  sidebarLink,
+  sidebarItem,
 } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -27,7 +27,7 @@ async function sidebarSelectionRow(
   itemName: string,
   timeout = VISIBILITY_TIMEOUT,
 ) {
-  const row = sidebar.getByTestId(`selectable-row-${itemName}`)
+  const row = sidebar.getByRole('button', { name: itemName, exact: true }).locator('..')
   await expect(row).toHaveCount(1, { timeout })
   return row
 }
@@ -38,7 +38,7 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createFolder(page, folderName)
@@ -54,7 +54,7 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -67,11 +67,11 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
   test('duplicates a multi-selection from the context menu using same-parent keep-both names', async ({
     page,
   }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
     await selectSidebarItems(page, [noteA, noteB])
-    await sidebarLink(page, noteB).click({ button: 'right' })
+    await sidebarItem(page, noteB).click({ button: 'right' })
 
     await expect(page.getByRole('menuitem', { name: 'Copy' })).toHaveCount(0)
     await expect(page.getByRole('menuitem', { name: 'Cut' })).toHaveCount(0)
@@ -80,20 +80,20 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
 
     await page.getByRole('menuitem', { name: 'Duplicate' }).click()
 
-    await expect(sidebar.getByRole('link', { name: `${noteA} 1`, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: `${noteA} 1`, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(sidebar.getByRole('link', { name: `${noteB} 1`, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: `${noteB} 1`, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(sidebar.getByRole('link', { name: noteA, exact: true })).toBeVisible()
-    await expect(sidebar.getByRole('link', { name: noteB, exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('button', { name: noteA, exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('button', { name: noteB, exact: true })).toBeVisible()
   })
 
   test('copies a multi-selection with hotkeys and pastes duplicates into folder view', async ({
     page,
   }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     const copyNote = `Hotkey Copy Note ${Date.now()}`
     await createNote(page, copyNote)
@@ -106,16 +106,16 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await folderContents.focus()
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V')
 
-    await expect(folderContents.getByRole('link', { name: noteA, exact: true })).toBeVisible({
+    await expect(folderContents.getByRole('button', { name: noteA, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(folderContents.getByRole('link', { name: copyNote, exact: true })).toBeVisible({
+    await expect(folderContents.getByRole('button', { name: copyNote, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
   })
 
   test('drags a selected group into a sidebar folder', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await createNote(page, dragNoteA)
     await createNote(page, dragNoteB)
@@ -125,10 +125,10 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
 
     await openItem(page, folderName)
     const folderContents = page.getByRole('region', { name: `${folderName} folder contents` })
-    await expect(folderContents.getByRole('link', { name: dragNoteA, exact: true })).toBeVisible({
+    await expect(folderContents.getByRole('button', { name: dragNoteA, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(folderContents.getByRole('link', { name: dragNoteB, exact: true })).toBeVisible({
+    await expect(folderContents.getByRole('button', { name: dragNoteB, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
   })
@@ -136,7 +136,7 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
   test('keeps moved sidebar items selected after confirmed move result settles', async ({
     page,
   }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await createNote(page, selectedMoveNoteA)
     await createNote(page, selectedMoveNoteB)

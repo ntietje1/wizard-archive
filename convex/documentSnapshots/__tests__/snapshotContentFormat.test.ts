@@ -7,10 +7,10 @@ import {
 } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { api } from '../../_generated/api'
-import { SNAPSHOT_TYPE } from '../../../shared/document-snapshots/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { DOCUMENT_SNAPSHOT_TYPE } from '../types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
-import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
+import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 describe('note snapshots capture Y.Doc state directly', () => {
   const t = createTestContext()
@@ -27,7 +27,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
         parentTarget: { kind: 'direct', parentId: null },
       })
 
-      const blocks: Array<CustomPartialBlock> = [
+      const blocks: Array<PartialNoteBlock> = [
         {
           id: 'block-1',
           type: 'paragraph',
@@ -54,7 +54,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
       })
 
       expect(snapshot).not.toBeNull()
-      expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
+      expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
 
       const doc = new Y.Doc()
       Y.applyUpdate(doc, new Uint8Array(snapshot!.data))
@@ -97,8 +97,8 @@ describe('canvas snapshot uses yjs_state format', () => {
           .first()
 
         expect(snapshot).not.toBeNull()
-        expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
-        expect(snapshot!.itemType).toBe(SIDEBAR_ITEM_TYPES.canvases)
+        expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
+        expect(snapshot!.itemType).toBe(RESOURCE_TYPES.canvases)
       })
     } finally {
       vi.useRealTimers()
@@ -135,7 +135,7 @@ describe('Note snapshots use yjs_state format', () => {
           .first()
 
         expect(snapshot).not.toBeNull()
-        expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
+        expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
 
         const doc = new Y.Doc()
         Y.applyUpdate(doc, new Uint8Array(snapshot!.data))

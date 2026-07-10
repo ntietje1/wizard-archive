@@ -1,82 +1,81 @@
 import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
-import { EDIT_HISTORY_ACTION } from '../../../../shared/edit-history/types'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
 import { logEditHistory } from '../../../editHistory/log'
-import { assertSidebarItemName } from '../../validation/name'
-import { deduplicateName } from '../../../../shared/sidebar-items/default-name'
-import { planTransferOperations } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
-import type { TransferOperation } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
+import { assertConvexSidebarItemName } from '../../validation/name'
+import { deduplicateResourceName } from '@wizard-archive/editor/resources/resource-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type {
+  ResourceColor,
+  ResourceName,
+  ResourceIconName,
+} from '@wizard-archive/editor/resources/resource-contract'
+
+import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
+import { evaluateCopy } from '@wizard-archive/editor/resources/operation-capabilities'
+import { planTransferOperations } from '@wizard-archive/editor/resources/operation-contract'
+import { normalizeSelectedRoots } from '@wizard-archive/editor/resources/selection-roots'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import type {
+  ResourceCommand,
+  ResourceEvent,
+  ResourceOperationDecision,
+} from '@wizard-archive/editor/resources/transaction-contract'
+import type {
+  OperationPlannerItem,
+  TransferOperation,
+} from '@wizard-archive/editor/resources/operation-contract'
 import { collectSidebarChildrenMap } from '../children'
-import { normalizeSelectedRoots } from '../../../../shared/sidebar-items/filesystem/selection'
-import { addSidebarItemAncestorsToMap } from '../ancestors'
-import type { OperationPlannerItem } from '../../../../shared/sidebar-items/filesystem/selection'
+import { loadSidebarItemAncestorMap } from '../ancestors'
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
-import { SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
 import { isActiveSidebarItem } from '../../types/status'
-import { evaluateCopy } from '../../../../shared/sidebar-items/filesystem/capabilities'
-import { assertSidebarOperationAllowed } from '../capabilities'
+import { assertSidebarOperationAllowed, operationActorFromRole } from '../capabilities'
 import { checkSidebarItemRowAccess, requireSidebarItemRowOperationAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
-import { toDecisionRecord } from '../../../../shared/sidebar-items/filesystem/conflicts'
-import type { OperationDecision } from '../../../../shared/sidebar-items/filesystem/conflicts'
 import { copyCanvasCompanion } from '../../../canvases/functions/canvasCompanion'
 import { copyFileCompanion } from '../../../files/functions/fileCompanion'
 import { copyFolderCompanion } from '../../../folders/functions/folderCompanion'
 import { copyMapCompanion } from '../../../gameMaps/functions/mapCompanion'
 import { copyNoteCompanion } from '../../../notes/functions/noteCompanion'
 import { createFileSystemWriteSession } from '../deltas'
-import { FILE_SYSTEM_EVENT_TYPE } from '../../../../shared/sidebar-items/filesystem/receipts'
-import { createFileSystemReadModel } from '../../../../shared/sidebar-items/filesystem/read-model'
+import { createSidebarOperationReadModel, toSidebarOperationItems } from '../readModel'
 import { getSidebarItemRow } from '../sidebarItemRows'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
-import type {
-  CopyFileSystemCommand,
-  FileSystemOperationDecision,
-} from '../../../../shared/sidebar-items/filesystem/commands'
-import type { AnySidebarItemRow } from '../../../../shared/sidebar-items/model-types'
-import type { SidebarItemColor } from '../../../../shared/sidebar-items/color'
-import type { SidebarItemIconName } from '../../../../shared/sidebar-items/icon'
-import type { SidebarItemName } from '../../../../shared/sidebar-items/name'
-import type { FileSystemWriteSession } from '../deltas'
-import type {
-  FileSystemDelta,
-  FileSystemEvent,
-} from '../../../../shared/sidebar-items/filesystem/receipts'
-
+import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
 const MAX_COPY_DEPTH = 50
+type CopyFileSystemCommand = Extract<ResourceCommand, { type: 'copy' }>
 type CopyOrReplaceOperation = Extract<TransferOperation, { action: 'place' | 'replace' }>
 
 type CopyCommandContext = {
-  events: Array<FileSystemEvent>
+  events: Array<ResourceEvent>
   session: FileSystemWriteSession
 }
 
 async function copySidebarItemContent(
   ctx: CampaignMutationCtx,
-  source: AnySidebarItemRow,
+  source: AccessibleSidebarItemRow,
   targetItemId: Id<'sidebarItems'>,
 ) {
   switch (source.type) {
-    case SIDEBAR_ITEM_TYPES.notes:
+    case RESOURCE_TYPES.notes:
       await copyNoteCompanion(ctx, source._id, targetItemId)
       return
-    case SIDEBAR_ITEM_TYPES.folders:
+    case RESOURCE_TYPES.folders:
       await copyFolderCompanion(ctx, source._id, targetItemId)
       return
-    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case RESOURCE_TYPES.gameMaps:
       await copyMapCompanion(ctx, source._id, targetItemId)
       return
-    case SIDEBAR_ITEM_TYPES.files:
+    case RESOURCE_TYPES.files:
       await copyFileCompanion(ctx, source._id, targetItemId)
       return
-    case SIDEBAR_ITEM_TYPES.canvases:
+    case RESOURCE_TYPES.canvases:
       await copyCanvasCompanion(ctx, source._id, targetItemId)
       return
     default:
-      source satisfies never
+      source.type satisfies never
   }
 }
 
@@ -84,10 +83,10 @@ async function getUniqueName(
   ctx: CampaignMutationCtx,
   parentId: Id<'sidebarItems'> | null,
   requestedName: string,
-): Promise<SidebarItemName> {
+): Promise<ResourceName> {
   const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
-  return assertSidebarItemName(
-    deduplicateName(
+  return assertConvexSidebarItemName(
+    deduplicateResourceName(
       requestedName,
       siblings.map((sibling) => sibling.name),
     ),
@@ -103,20 +102,20 @@ async function insertCopiedSidebarItem(
     copyContext,
     isRoot = false,
   }: {
-    source: AnySidebarItemRow
+    source: AccessibleSidebarItemRow
     parentId: Id<'sidebarItems'> | null
-    name: SidebarItemName
+    name: ResourceName
     copyContext: CopyCommandContext
     isRoot?: boolean
   },
 ): Promise<Id<'sidebarItems'>> {
   const previewStorageId = source.previewStorageId
-  const { itemId } = await copyContext.session.insertSidebarItem({
+  const { itemId } = await copyContext.session.insertResource({
     type: source.type,
     name,
     parentId,
-    iconName: (source.iconName as SidebarItemIconName | null) ?? undefined,
-    color: (source.color as SidebarItemColor | null) ?? undefined,
+    iconName: (source.iconName as ResourceIconName | null) ?? undefined,
+    color: (source.color as ResourceColor | null) ?? undefined,
     previewStorageId,
     previewUpdatedAt: previewStorageId ? (source.previewUpdatedAt ?? Date.now()) : undefined,
   })
@@ -135,7 +134,7 @@ async function insertCopiedSidebarItem(
 
   if (isRoot) {
     copyContext.events.push({
-      type: FILE_SYSTEM_EVENT_TYPE.copied,
+      type: RESOURCE_EVENT_TYPE.copied,
       itemId,
       sourceItemId: source._id,
     })
@@ -162,18 +161,19 @@ async function copyChildrenIntoFolder(
 
   const children = await getActiveSidebarItemRowsByParent(ctx, { parentId: sourceFolderId })
   for (const child of children) {
-    const name = await getUniqueName(ctx, targetFolderId, child.name)
+    const source = await validateSidebarItemCopyable(ctx, child._id)
+    const name = await getUniqueName(ctx, targetFolderId, source.name)
     const copiedChildId = await insertCopiedSidebarItem(ctx, {
-      source: child,
+      source,
       parentId: targetFolderId,
       name,
       copyContext,
     })
-    if (child.type === SIDEBAR_ITEM_TYPES.folders) {
+    if (source.type === RESOURCE_TYPES.folders) {
       await copyChildrenIntoFolder(
         ctx,
         {
-          sourceFolderId: child._id,
+          sourceFolderId: source._id,
           targetFolderId: copiedChildId,
           copyContext,
         },
@@ -197,39 +197,12 @@ async function collectCopyChildrenMap(
   })
 }
 
-function buildCopyReadModel(
-  items: Array<AccessibleSidebarItemRow | OperationPlannerItem>,
-  childrenMap: ReadonlyMap<Id<'sidebarItems'>, Array<OperationPlannerItem>>,
-) {
-  const rowsById = new Map<
-    Id<'sidebarItems'>,
-    Pick<OperationPlannerItem, '_id' | 'parentId' | 'status'>
-  >()
-  for (const item of items) {
-    rowsById.set(item._id, {
-      _id: item._id,
-      parentId: item.parentId,
-      status: item.status,
-    })
-  }
-  for (const children of childrenMap.values()) {
-    for (const child of children) {
-      rowsById.set(child._id, {
-        _id: child._id,
-        parentId: child.parentId,
-        status: child.status,
-      })
-    }
-  }
-  return createFileSystemReadModel(Array.from(rowsById.values()))
-}
-
 async function executeCopyOperations(
   ctx: CampaignMutationCtx,
   operations: Array<TransferOperation>,
   rootSourceIds: ReadonlySet<Id<'sidebarItems'>>,
   session: FileSystemWriteSession,
-): Promise<Array<FileSystemEvent>> {
+): Promise<Array<ResourceEvent>> {
   const copyContext: CopyCommandContext = {
     events: [],
     session,
@@ -253,7 +226,7 @@ async function executeCopyOperation(
   if (operation.action === 'mergeFolder') {
     const destinationId = await logCopyFolderMerge(ctx, source, operation.destinationItemId)
     copyContext.events.push({
-      type: FILE_SYSTEM_EVENT_TYPE.mergedFolder,
+      type: RESOURCE_EVENT_TYPE.mergedFolder,
       itemId: destinationId,
       sourceItemId: source._id,
     })
@@ -276,13 +249,13 @@ async function executeCopyOperation(
   })
   if (replacementDestinationId) {
     copyContext.events.push({
-      type: FILE_SYSTEM_EVENT_TYPE.replaced,
+      type: RESOURCE_EVENT_TYPE.replaced,
       itemId: replacementDestinationId,
       sourceItemId: source._id,
     })
   }
 
-  if (source.type === SIDEBAR_ITEM_TYPES.folders) {
+  if (source.type === RESOURCE_TYPES.folders) {
     await copyChildrenIntoFolder(ctx, {
       sourceFolderId: source._id,
       targetFolderId: copiedId,
@@ -307,17 +280,34 @@ async function validateSidebarItemCopyable(
   return source
 }
 
+async function assertCopyableDescendants(
+  ctx: CampaignMutationCtx,
+  source: AccessibleSidebarItemRow,
+  depth = 0,
+) {
+  if (source.type !== RESOURCE_TYPES.folders) return
+  if (depth >= MAX_COPY_DEPTH) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max sidebar copy depth exceeded')
+  }
+
+  const children = await getActiveSidebarItemRowsByParent(ctx, { parentId: source._id })
+  for (const child of children) {
+    const copyableChild = await validateSidebarItemCopyable(ctx, child._id)
+    await assertCopyableDescendants(ctx, copyableChild, depth + 1)
+  }
+}
+
 async function logCopyFolderMerge(
   ctx: CampaignMutationCtx,
   source: AccessibleSidebarItemRow,
   destinationItemId: Id<'sidebarItems'> | undefined,
 ): Promise<Id<'sidebarItems'>> {
-  if (source.type !== SIDEBAR_ITEM_TYPES.folders || !destinationItemId) {
+  if (source.type !== RESOURCE_TYPES.folders || !destinationItemId) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only folders can be merged')
   }
 
   const destination = await getSidebarItemRow(ctx, destinationItemId)
-  if (!destination || destination.type !== SIDEBAR_ITEM_TYPES.folders) {
+  if (!destination || destination.type !== RESOURCE_TYPES.folders) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Destination folder not found')
   }
   await requireSidebarItemRowOperationAccess(ctx, {
@@ -345,7 +335,7 @@ async function trashCopyReplacement(
   if (!destination) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Destination item not found')
   }
-  if (destination.type === SIDEBAR_ITEM_TYPES.folders) {
+  if (destination.type === RESOURCE_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders are merged instead of replaced')
   }
   const trashableDestination = await requireSidebarItemRowOperationAccess(ctx, {
@@ -361,9 +351,9 @@ async function resolveCopyName(
   source: AccessibleSidebarItemRow,
   parentId: Id<'sidebarItems'> | null,
 ) {
-  if (operation.name) return assertSidebarItemName(operation.name)
+  if (operation.name) return assertConvexSidebarItemName(operation.name)
   if (operation.action === 'replace') {
-    return assertSidebarItemName(source.name)
+    return assertConvexSidebarItemName(source.name)
   }
   return await getUniqueName(ctx, parentId, source.name)
 }
@@ -407,8 +397,9 @@ async function loadCopyableSources(
   const sourceItems = []
   for (const sourceItemId of sourceItemIds) {
     const source = await validateSidebarItemCopyable(ctx, sourceItemId)
+    await assertCopyableDescendants(ctx, source)
     assertSidebarOperationAllowed(
-      evaluateCopy({ role: ctx.membership.role }, source, {
+      evaluateCopy(operationActorFromRole(ctx.membership.role), source, {
         parentId: targetParentId,
         parent: targetParent,
         ancestorIds: targetAncestorIds,
@@ -430,20 +421,18 @@ function planCopyEffects({
   sourceItems: Array<AccessibleSidebarItemRow>
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
-  decisions?: Array<OperationDecision>
+  decisions?: Array<ResourceOperationDecision>
   childrenMap: ReadonlyMap<Id<'sidebarItems'>, Array<OperationPlannerItem>>
-  itemsById: ReadonlyMap<
-    Id<'sidebarItems'>,
-    Pick<AccessibleSidebarItemRow, '_id' | 'parentId' | 'status'>
-  >
+  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, 'id' | 'parentId'>>
 }) {
+  const sourcePlannerItems = toSidebarOperationItems(sourceItems)
   return planTransferOperations({
     mode: 'copy',
-    items: sourceItems,
+    items: sourcePlannerItems,
     itemsById,
     targetParentId,
     targetItems,
-    decisions: toDecisionRecord(decisions),
+    decisions,
     getChildren: (parentId) => childrenMap.get(parentId) ?? [],
   })
 }
@@ -451,10 +440,10 @@ function planCopyEffects({
 async function collectCopyPlanningChildrenMap(
   ctx: CampaignMutationCtx,
   sourceItems: Array<AccessibleSidebarItemRow>,
-  targetItems: Array<OperationPlannerItem>,
+  targetItems: Array<{ _id: Id<'sidebarItems'>; type: string }>,
 ) {
   const folderIds = [...sourceItems, ...targetItems]
-    .filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
+    .filter((item) => item.type === RESOURCE_TYPES.folders)
     .map((item) => item._id)
   return collectCopyChildrenMap(ctx, folderIds)
 }
@@ -469,32 +458,44 @@ async function executeCopyPlan(
   }: {
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
-    decisions?: Array<OperationDecision>
+    decisions?: Array<ResourceOperationDecision>
     session: FileSystemWriteSession
   },
-): Promise<Array<FileSystemEvent>> {
+): Promise<Array<ResourceEvent>> {
   const targetItems = await getActiveSidebarItemRowsByParent(ctx, { parentId: targetParentId })
   const sourceItems = await loadCopyableSources(ctx, {
     sourceItemIds,
     targetParentId,
   })
   const childrenMap = await collectCopyPlanningChildrenMap(ctx, sourceItems, targetItems)
-  const readModel = buildCopyReadModel([...sourceItems, ...targetItems], childrenMap)
-  await addSidebarItemAncestorsToMap(ctx, {
+  const targetPlannerItems = toSidebarOperationItems(targetItems)
+  const plannerChildrenMap = new Map(
+    Array.from(childrenMap, ([parentId, children]) => [
+      parentId,
+      toSidebarOperationItems(children),
+    ]),
+  )
+  const readModel = createSidebarOperationReadModel({
+    items: [...sourceItems, ...targetItems],
+    childrenMap,
+  })
+  const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
     items: sourceItems,
     itemsById: readModel.itemsById,
     maxDepth: MAX_COPY_DEPTH,
   })
   const rootSourceIds = new Set(
-    normalizeSelectedRoots(sourceItems, readModel.itemsById).map((item) => item._id),
+    normalizeSelectedRoots(toSidebarOperationItems(sourceItems), ancestorItemsById).map(
+      (item) => item.id,
+    ),
   )
   const plan = planCopyEffects({
     sourceItems,
     targetParentId,
-    targetItems,
+    targetItems: targetPlannerItems,
     decisions,
-    childrenMap,
-    itemsById: readModel.itemsById,
+    childrenMap: plannerChildrenMap,
+    itemsById: ancestorItemsById,
   })
 
   if (plan.status === 'needs-decision') {
@@ -504,7 +505,7 @@ async function executeCopyPlan(
   const events = await executeCopyOperations(ctx, plan.operations, rootSourceIds, session)
   for (const sourceItemId of plan.skippedSourceItemIds ?? []) {
     events.push({
-      type: FILE_SYSTEM_EVENT_TYPE.skipped,
+      type: RESOURCE_EVENT_TYPE.skipped,
       itemId: sourceItemId,
       sourceItemId,
     })
@@ -519,9 +520,9 @@ export async function executeCopyCommand(
     decisions,
   }: {
     command: CopyFileSystemCommand
-    decisions?: Array<FileSystemOperationDecision>
+    decisions?: Array<ResourceOperationDecision>
   },
-): Promise<FileSystemDelta> {
+): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
   const events = await executeCopyPlan(ctx, {
     sourceItemIds: command.itemIds,

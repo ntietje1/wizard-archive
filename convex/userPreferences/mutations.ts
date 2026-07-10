@@ -1,8 +1,49 @@
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { authMutation } from '../functions'
+import type { Doc, Id } from '../_generated/dataModel'
+import type { AuthMutationCtx } from '../functions'
 
 const VALID_PANEL_IDS = ['left-sidebar', 'editor-right-sidebar'] as const
+
+type UserPreferencesPatch = Partial<Pick<Doc<'userPreferences'>, 'theme' | 'panelPreferences'>>
+
+async function getUserPreferencesForCurrentUser(ctx: AuthMutationCtx): Promise<{
+  userId: Id<'userProfiles'>
+  existing: Doc<'userPreferences'> | null
+}> {
+  const userId = ctx.user.profile._id
+  const existing = await ctx.db
+    .query('userPreferences')
+    .withIndex('by_user', (q) => q.eq('userId', userId))
+    .unique()
+
+  return { userId, existing }
+}
+
+async function upsertUserPreferences(
+  ctx: AuthMutationCtx,
+  {
+    existing,
+    patch,
+    userId,
+  }: {
+    existing: Doc<'userPreferences'> | null
+    patch: UserPreferencesPatch
+    userId: Id<'userProfiles'>
+  },
+): Promise<Id<'userPreferences'>> {
+  if (!existing) {
+    return await ctx.db.insert('userPreferences', {
+      userId,
+      theme: patch.theme ?? null,
+      panelPreferences: patch.panelPreferences ?? null,
+    })
+  }
+
+  await ctx.db.patch('userPreferences', existing._id, patch)
+  return existing._id
+}
 
 export const setUserPreferences = authMutation({
   args: {
@@ -10,24 +51,8 @@ export const setUserPreferences = authMutation({
   },
   returns: v.id('userPreferences'),
   handler: async (ctx, args) => {
-    const userId = ctx.user.profile._id
-
-    const existing = await ctx.db
-      .query('userPreferences')
-      .withIndex('by_user', (q) => q.eq('userId', userId))
-      .unique()
-
-    if (!existing) {
-      return await ctx.db.insert('userPreferences', {
-        userId,
-        theme: args.theme ?? null,
-        panelPreferences: null,
-      })
-    } else {
-      await ctx.db.patch('userPreferences', existing._id, args)
-
-      return existing._id
-    }
+    const { existing, userId } = await getUserPreferencesForCurrentUser(ctx)
+    return await upsertUserPreferences(ctx, { existing, patch: args, userId })
   },
 })
 
@@ -43,12 +68,7 @@ export const setPanelPreference = authMutation({
       throw new Error(`Invalid panelId: ${args.panelId}`)
     }
 
-    const userId = ctx.user.profile._id
-
-    const existing = await ctx.db
-      .query('userPreferences')
-      .withIndex('by_user', (q) => q.eq('userId', userId))
-      .unique()
+    const { existing, userId } = await getUserPreferencesForCurrentUser(ctx)
 
     const currentPrefs = existing?.panelPreferences ?? {}
 
@@ -67,18 +87,12 @@ export const setPanelPreference = authMutation({
       [args.panelId]: updatedPanel,
     }
 
-    if (!existing) {
-      return await ctx.db.insert('userPreferences', {
-        userId,
-        theme: null,
+    return await upsertUserPreferences(ctx, {
+      existing,
+      userId,
+      patch: {
         panelPreferences: updatedPrefs,
-      })
-    } else {
-      await ctx.db.patch('userPreferences', existing._id, {
-        panelPreferences: updatedPrefs,
-      })
-
-      return existing._id
-    }
+      },
+    })
   },
 })

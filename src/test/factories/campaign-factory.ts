@@ -18,17 +18,23 @@ type CreateCampaignOverrides = Omit<Partial<Campaign>, 'myMembership' | 'slug'> 
 export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
   campaignCounter++
   const dmUser = createUser()
-  const campaignId = overrides?._id ?? testId(`campaign_${campaignCounter}`)
-  const { myMembership: memberOverrides, slug, ...rest } = overrides ?? {}
+  const campaignId = overrides?.id ?? testId(`campaign_${campaignCounter}`)
+  const {
+    defaultFolderInheritShares = false,
+    myMembership: memberOverrides,
+    slug,
+    ...rest
+  } = overrides ?? {}
   const campaign: Campaign = {
-    _id: campaignId,
-    _creationTime: Date.now(),
-    dmUserId: dmUser._id,
+    id: campaignId,
+    createdAt: Date.now(),
+    dmUserId: dmUser.id,
     name: `Test Campaign ${campaignCounter}`,
     description: '',
     slug: assertCampaignSlug(slug ?? `test-campaign-${campaignCounter}`),
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
+    defaultFolderInheritShares,
     dmUserProfile: dmUser,
     myMembership: memberOverrides ? createCampaignMember({ ...memberOverrides, campaignId }) : null,
     acceptedMemberCount: 0,
@@ -45,9 +51,9 @@ export function createCampaignMember(
   memberCounter++
   const user = createUser()
   return {
-    _id: testId(`member_${memberCounter}`),
-    _creationTime: Date.now(),
-    userId: user._id,
+    id: testId(`member_${memberCounter}`),
+    createdAt: Date.now(),
+    userId: user.id,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
     userProfile: user,

@@ -4,8 +4,8 @@ import { ChevronRight, Loader2 } from 'lucide-react'
 import type { DeviceSession } from '~/features/auth/utils/device-sessions'
 import { handleError } from '~/shared/utils/logger'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
-import { UserProfileImage } from '~/shared/components/user-profile-image'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
 
 type AccountPickerProps = {
   sessions: Array<DeviceSession>

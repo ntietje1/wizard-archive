@@ -23,7 +23,7 @@ test.describe.serial('permissions granularity', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createFolder(page, folderName)
@@ -37,7 +37,7 @@ test.describe.serial('permissions granularity', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -48,7 +48,7 @@ test.describe.serial('permissions granularity', () => {
   })
 
   test('open share menu shows permission controls', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
     await openShareMenu(page)
@@ -58,7 +58,7 @@ test.describe.serial('permissions granularity', () => {
   })
 
   test('set all-players permission to View', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
     await openShareMenu(page)
@@ -86,7 +86,7 @@ test.describe.serial('permissions granularity', () => {
   })
 
   test('change all-players permission to Edit', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
     await openShareMenu(page)
@@ -114,7 +114,7 @@ test.describe.serial('permissions granularity', () => {
   })
 
   test('change permission back to None', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
     await openShareMenu(page)
@@ -142,7 +142,7 @@ test.describe.serial('permissions granularity', () => {
   })
 
   test('folder share menu shows permission controls', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, folderName)
     await openShareMenu(page)

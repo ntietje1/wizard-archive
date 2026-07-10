@@ -8,9 +8,11 @@ import {
   enableCanvasRuntime,
   expectCanvasRuntimeSelection,
   getCanvasEdges,
+  getCanvasTextEditors,
   getCanvasNodes,
   getCanvasRuntimeSnapshot,
   getCanvasToolButton,
+  getNewCanvasTextEditor,
   openCanvas,
   seedCanvasEdgeViaRuntime,
   seedCanvasTextNodesViaRuntime,
@@ -30,7 +32,7 @@ test.describe.serial('canvas keyboard shortcuts', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -41,7 +43,7 @@ test.describe.serial('canvas keyboard shortcuts', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -52,7 +54,7 @@ test.describe.serial('canvas keyboard shortcuts', () => {
 
   test.beforeEach(async ({ page }) => {
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await waitForCanvasRuntime(page)
@@ -155,9 +157,10 @@ test.describe.serial('canvas keyboard shortcuts', () => {
   test('suppresses canvas shortcuts while text editing is active', async ({ page }) => {
     await clearCanvasViaRuntime(page)
     await selectCanvasTool(page, 'Text')
+    const textEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 360, y: 260 })
-    const editor = page.locator('[aria-label="Text node content"][contenteditable="true"]')
-    await expect(editor).toHaveCount(1)
+    await expect(getCanvasTextEditors(page)).toHaveCount(1)
+    const editor = await getNewCanvasTextEditor(page, textEditorCount)
     await expect(editor).toBeVisible()
     await editor.fill('Keyboard edit target')
 

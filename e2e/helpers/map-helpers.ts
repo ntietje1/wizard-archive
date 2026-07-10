@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test'
 import fs from 'node:fs'
 import zlib from 'node:zlib'
+import { openItem, sidebarItem, waitForFilesystemIdle } from './sidebar-helpers'
 import type { Page } from '@playwright/test'
 
 export async function createMap(page: Page, name: string) {
@@ -23,23 +24,49 @@ export async function createMap(page: Page, name: string) {
   await textbox.press('Enter')
   await expect(textbox).toHaveAttribute('readonly', '', { timeout: 5000 })
 
-  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-  await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible({
+  await expect(sidebarItem(page, name)).toBeVisible({
     timeout: 10000,
   })
+  await waitForFilesystemIdle(page)
 }
 
 export async function openMap(page: Page, name: string) {
-  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-  await sidebar.getByRole('link', { name, exact: true }).click()
-  await page.waitForLoadState('networkidle')
+  await openItem(page, name)
+  await expect(page.getByRole('button', { name: /^zoom in$/i })).toBeVisible({ timeout: 30000 })
+  if (
+    await mapImage(page, name)
+      .isVisible({ timeout: 1000 })
+      .catch(() => false)
+  ) {
+    await waitForMapIdle(page)
+  }
 }
 
-export async function uploadMapImage(page: Page, imagePath: string) {
+export async function uploadMapImage(page: Page, imagePath: string, mapName: string) {
   const fileInput = page.locator('input[type="file"]').first()
   await fileInput.setInputFiles(imagePath)
-  await expect(page.locator('[aria-label="Map canvas"]')).toBeVisible({
+  await expect(mapImage(page, mapName)).toBeVisible({
     timeout: 15000,
+  })
+  await waitForMapIdle(page)
+}
+
+export function mapImage(page: Page, mapName: string) {
+  return page.getByRole('img', { name: mapName, exact: true })
+}
+
+export function mapPlacementTarget(page: Page) {
+  return page.getByRole('button', { name: 'Map canvas' })
+}
+
+async function waitForMapIdle(page: Page) {
+  await expect(
+    page
+      .getByRole('status')
+      .filter({ hasText: /^Loading$/ })
+      .first(),
+  ).not.toBeVisible({
+    timeout: 30000,
   })
 }
 

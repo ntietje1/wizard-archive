@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { typeInEditor } from './helpers/editor-helpers'
+import { createFolder, createNote } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import {
   closeSearchWithKeyboard,
@@ -28,18 +29,17 @@ async function createItemViaUI(
   type: 'Note' | 'Folder' | 'Map' | 'File' | 'Canvas',
   name: string,
 ) {
-  await page.getByRole('link', { name: 'New' }).click()
-  await page.getByRole('button', { name: new RegExp(`^${type} `) }).click()
-  await expect(page).toHaveURL(/\?item=/, { timeout: 10000 })
+  if (type === 'Note') {
+    await createNote(page, name)
+    return
+  }
 
-  const nameInput = page.getByRole('textbox', { name: 'Item name' })
-  await expect(nameInput).toBeVisible({ timeout: 10000 })
-  await nameInput.click()
-  await nameInput.fill(name)
-  await nameInput.press('Enter')
-  await expect(nameInput).toHaveAttribute('readonly', '', { timeout: 5000 })
+  if (type === 'Folder') {
+    await createFolder(page, name)
+    return
+  }
 
-  await expect(page.getByRole('link', { name, exact: true })).toBeVisible({ timeout: 10000 })
+  throw new Error(`Unsupported search fixture item type: ${type}`)
 }
 
 test.describe.serial('search', () => {
@@ -47,7 +47,7 @@ test.describe.serial('search', () => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
 
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
 
@@ -69,7 +69,7 @@ test.describe.serial('search', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch (e) {
@@ -82,7 +82,7 @@ test.describe.serial('search', () => {
   // --- Dialog Open/Close ---
 
   test('opens search dialog via button click', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -91,7 +91,7 @@ test.describe.serial('search', () => {
   })
 
   test('closes search dialog via close button', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -101,7 +101,7 @@ test.describe.serial('search', () => {
   })
 
   test('opens search dialog via Ctrl+K', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchWithKeyboard(page)
@@ -109,7 +109,7 @@ test.describe.serial('search', () => {
   })
 
   test('closes search dialog via Escape', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchWithKeyboard(page)
@@ -117,7 +117,7 @@ test.describe.serial('search', () => {
   })
 
   test('toggles search dialog with Ctrl+K', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchWithKeyboard(page)
@@ -128,7 +128,7 @@ test.describe.serial('search', () => {
   // --- Empty State ---
 
   test('shows empty state message when no query and no recents', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     // Clear any existing recent items from localStorage
@@ -146,7 +146,7 @@ test.describe.serial('search', () => {
   // --- Title Search ---
 
   test('finds items by exact title match', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -158,7 +158,7 @@ test.describe.serial('search', () => {
   })
 
   test('finds multiple items by partial title match', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -170,7 +170,7 @@ test.describe.serial('search', () => {
   })
 
   test('title search is case insensitive', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -182,7 +182,7 @@ test.describe.serial('search', () => {
   })
 
   test('finds folders by title', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -193,7 +193,7 @@ test.describe.serial('search', () => {
   })
 
   test('shows no results for non-matching query', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -204,7 +204,7 @@ test.describe.serial('search', () => {
   })
 
   test('displays result count in status', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -217,7 +217,7 @@ test.describe.serial('search', () => {
   // --- Body/Content Search ---
 
   test('finds notes by body content', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -228,7 +228,7 @@ test.describe.serial('search', () => {
   })
 
   test('body match shows highlighted text snippet', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -241,7 +241,7 @@ test.describe.serial('search', () => {
   })
 
   test('deduplicates title and body matches', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -261,7 +261,7 @@ test.describe.serial('search', () => {
   })
 
   test('title matches appear before body matches', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -290,7 +290,7 @@ test.describe.serial('search', () => {
   // --- Keyboard Navigation ---
 
   test('arrow keys navigate through results', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -314,7 +314,7 @@ test.describe.serial('search', () => {
   })
 
   test('arrow keys clamp at boundaries', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -340,7 +340,7 @@ test.describe.serial('search', () => {
   })
 
   test('Enter key navigates to selected result', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -359,7 +359,7 @@ test.describe.serial('search', () => {
   // --- Mouse Interaction ---
 
   test('hover changes selection', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -379,7 +379,7 @@ test.describe.serial('search', () => {
   })
 
   test('click navigates to result and closes dialog', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -395,7 +395,7 @@ test.describe.serial('search', () => {
   // --- Preview Panel ---
 
   test('toggles preview panel', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -414,7 +414,7 @@ test.describe.serial('search', () => {
   })
 
   test('preview shows selected note content', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -437,7 +437,7 @@ test.describe.serial('search', () => {
   })
 
   test('open result button navigates from preview', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -458,11 +458,11 @@ test.describe.serial('search', () => {
   // --- Recent Items ---
 
   test('recently opened items appear in search empty state', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     // Navigate to an item via sidebar to register it as recent
-    await page.getByRole('link', { name: noteDragonSlayer, exact: true }).click()
+    await page.getByRole('button', { name: noteDragonSlayer, exact: true }).click()
     await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(noteDragonSlayer, {
       timeout: 10000,
     })
@@ -473,16 +473,16 @@ test.describe.serial('search', () => {
   })
 
   test('most recently opened item appears first in recents', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     // Open Dragon Lore first, then Dragon Slayer
-    await page.getByRole('link', { name: noteDragonLore, exact: true }).click()
+    await page.getByRole('button', { name: noteDragonLore, exact: true }).click()
     await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(noteDragonLore, {
       timeout: 10000,
     })
 
-    await page.getByRole('link', { name: noteDragonSlayer, exact: true }).click()
+    await page.getByRole('button', { name: noteDragonSlayer, exact: true }).click()
     await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(noteDragonSlayer, {
       timeout: 10000,
     })
@@ -497,7 +497,7 @@ test.describe.serial('search', () => {
   // --- Query Lifecycle ---
 
   test('query is cleared when dialog is closed and reopened', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -511,7 +511,7 @@ test.describe.serial('search', () => {
   // --- Edge Cases ---
 
   test('special characters do not crash search', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -522,7 +522,7 @@ test.describe.serial('search', () => {
   })
 
   test('whitespace-only query is treated as empty', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)
@@ -534,7 +534,7 @@ test.describe.serial('search', () => {
   })
 
   test('very long query does not crash', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await openSearchDialog(page)

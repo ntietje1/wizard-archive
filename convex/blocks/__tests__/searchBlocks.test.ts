@@ -4,6 +4,8 @@ import { asDm, asPlayer, setupCampaignContext, setupUser } from '../../_test/ide
 import { createBlock, createNote, testBlockNoteId } from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
 
 describe('searchBlocks', () => {
   const t = createTestContext()
@@ -164,10 +166,13 @@ describe('searchBlocks', () => {
   it('allows a campaign member (player) to search', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      allPermissionLevel: PERMISSION_LEVEL.VIEW,
+    })
 
     await createBlock(t, noteId, ctx.campaignId, {
       plainText: 'player searchable content',
+      shareStatus: SHARE_STATUS.ALL_SHARED,
       type: 'paragraph',
     })
 
@@ -177,6 +182,87 @@ describe('searchBlocks', () => {
     })
 
     expect(result).toHaveLength(1)
+  })
+
+  it('omits blocks from notes the member cannot view', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+    const { noteId: hiddenNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: visibleNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      allPermissionLevel: PERMISSION_LEVEL.VIEW,
+    })
+
+    await createBlock(t, hiddenNoteId, ctx.campaignId, {
+      plainText: 'private sentinel',
+      type: 'paragraph',
+    })
+    await createBlock(t, visibleNoteId, ctx.campaignId, {
+      plainText: 'visible sentinel',
+      shareStatus: SHARE_STATUS.ALL_SHARED,
+      type: 'paragraph',
+    })
+
+    const result = await playerAuth.query(api.blocks.queries.searchBlocks, {
+      campaignId: ctx.campaignId,
+      query: 'sentinel',
+    })
+
+    expect(result).toHaveLength(1)
+    expect(result[0].plainText).toBe('visible sentinel')
+    expect(result[0].noteId).toBe(visibleNoteId)
+  })
+
+  it('omits block text hidden by block visibility', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      allPermissionLevel: PERMISSION_LEVEL.VIEW,
+    })
+
+    await createBlock(t, noteId, ctx.campaignId, {
+      plainText: 'visible clue',
+      shareStatus: SHARE_STATUS.ALL_SHARED,
+      type: 'paragraph',
+    })
+    await createBlock(t, noteId, ctx.campaignId, {
+      plainText: 'hidden clue',
+      shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
+      type: 'paragraph',
+    })
+
+    const result = await playerAuth.query(api.blocks.queries.searchBlocks, {
+      campaignId: ctx.campaignId,
+      query: 'clue',
+    })
+
+    expect(result.map((block) => block.plainText)).toEqual(['visible clue'])
+  })
+
+  it('lets a DM preview block search as a selected player', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      allPermissionLevel: PERMISSION_LEVEL.VIEW,
+    })
+
+    await createBlock(t, noteId, ctx.campaignId, {
+      plainText: 'visible preview clue',
+      shareStatus: SHARE_STATUS.ALL_SHARED,
+      type: 'paragraph',
+    })
+    await createBlock(t, noteId, ctx.campaignId, {
+      plainText: 'hidden preview clue',
+      shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
+      type: 'paragraph',
+    })
+
+    const result = await dmAuth.query(api.blocks.queries.searchBlocksAsMember, {
+      campaignId: ctx.campaignId,
+      campaignMemberId: ctx.player.memberId,
+      query: 'preview clue',
+    })
+
+    expect(result.map((block) => block.plainText)).toEqual(['visible preview clue'])
   })
 
   it('denies access to non-members', async () => {
@@ -189,5 +275,55 @@ describe('searchBlocks', () => {
         query: 'anything',
       }),
     )
+  })
+})
+
+describe('getHeadingsByNote', () => {
+  const t = createTestContext()
+
+  it('returns no headings from notes the member cannot view', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await createBlock(t, noteId, ctx.campaignId, {
+      plainText: 'Private Heading',
+      type: 'heading',
+    })
+
+    const result = await playerAuth.query(api.blocks.queries.getHeadingsByNote, {
+      campaignId: ctx.campaignId,
+      noteId,
+    })
+
+    expect(result).toEqual([])
+  })
+
+  it('omits heading blocks hidden by block visibility', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      allPermissionLevel: PERMISSION_LEVEL.VIEW,
+    })
+
+    await createBlock(t, noteId, ctx.campaignId, {
+      blockNoteId: testBlockNoteId('visible-heading'),
+      plainText: 'Visible Heading',
+      shareStatus: SHARE_STATUS.ALL_SHARED,
+      type: 'heading',
+    })
+    await createBlock(t, noteId, ctx.campaignId, {
+      blockNoteId: testBlockNoteId('hidden-heading'),
+      plainText: 'Hidden Heading',
+      shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
+      type: 'heading',
+    })
+
+    const result = await playerAuth.query(api.blocks.queries.getHeadingsByNote, {
+      campaignId: ctx.campaignId,
+      noteId,
+    })
+
+    expect(result.map((heading) => heading.text)).toEqual(['Visible Heading'])
   })
 })

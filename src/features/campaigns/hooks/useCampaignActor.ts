@@ -2,13 +2,13 @@ import { useEffect } from 'react'
 import { resolveCampaignActor } from 'shared/campaigns/actor'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useCampaignViewAsStore } from '~/features/campaigns/state/campaign-view-as-store'
 
 export function useCampaignActor() {
   const { campaignId, isDm } = useCampaign()
   const membersQuery = useCampaignMembers()
-  const viewAsPlayer = useSidebarUIStore((state) => state.viewAsPlayer)
-  const setViewAsPlayer = useSidebarUIStore((state) => state.setViewAsPlayer)
+  const viewAsPlayer = useCampaignViewAsStore((state) => state.viewAsPlayer)
+  const setViewAsPlayer = useCampaignViewAsStore((state) => state.setViewAsPlayer)
   const actor = resolveCampaignActor({
     campaignId,
     isDm,

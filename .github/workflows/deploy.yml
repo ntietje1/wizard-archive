@@ -28,12 +28,14 @@ jobs:
     name: Prepare Production Candidate
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
     steps:
       - name: Checkout selected ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: ${{ inputs.ref }}
-      - uses: voidzero-dev/setup-vp@v1
+      - uses: voidzero-dev/setup-vp@e3a8f54e503c635126f2f253c84cea5f737d6714
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
@@ -105,11 +107,14 @@ jobs:
             release_message="Production candidate ${release_sha}"
           fi
 
+          vp run check:editor-sdk
           vp check
           vp run lint:convex
           vp run check:no-reexports
           vp run check:import-boundaries
-          vp build --mode production
+          vp test run --config vitest.config.ts --reporter=verbose
+          vp test run --config convex/vitest.config.mts --reporter=verbose
+          vp run build:production
 
           if [[ "${DEPLOY_CONVEX}" == "true" ]]; then
             vp exec convex env set --from-file "$convex_env_file" --force

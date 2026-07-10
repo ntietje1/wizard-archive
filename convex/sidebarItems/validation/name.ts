@@ -1,11 +1,10 @@
-import { assertSidebarItemName as assertSharedSidebarItemName } from '../../../shared/sidebar-items/name'
+import { assertResourceName } from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceName } from '@wizard-archive/editor/resources/resource-contract'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import type { SidebarItemName } from '../../../shared/sidebar-items/name'
-
-export function assertSidebarItemName(name: string): SidebarItemName {
+export function assertConvexSidebarItemName(name: string): ResourceName {
   try {
-    return assertSharedSidebarItemName(name)
+    return assertResourceName(name)
   } catch (error) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,

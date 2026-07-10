@@ -9,7 +9,15 @@ export async function hardDeleteCampaign(
   ctx: CampaignLifecycleCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<Id<'campaigns'>> {
-  const [allItems, sessions, campaignMembers, editors] = await Promise.all([
+  const [
+    allItems,
+    sessions,
+    campaignMembers,
+    editors,
+    editHistory,
+    documentSnapshots,
+    filesystemTransactions,
+  ] = await Promise.all([
     ctx.db
       .query('sidebarItems')
       .withIndex('by_campaign_deletionTime', (q) => q.eq('campaignId', campaignId))
@@ -26,12 +34,31 @@ export async function hardDeleteCampaign(
       .query('editor')
       .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
       .collect(),
+    ctx.db
+      .query('editHistory')
+      .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
+      .collect(),
+    ctx.db
+      .query('documentSnapshots')
+      .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
+      .collect(),
+    ctx.db
+      .query('filesystemTransactions')
+      .withIndex('by_campaign_actor', (q) => q.eq('campaignId', campaignId))
+      .collect(),
   ])
 
-  await asyncMap(allItems, (item) => ctx.db.delete('sidebarItems', item._id))
-  await asyncMap(sessions, (session) => ctx.db.delete('sessions', session._id))
-  await asyncMap(campaignMembers, (member) => ctx.db.delete('campaignMembers', member._id))
-  await asyncMap(editors, (editor) => ctx.db.delete('editor', editor._id))
+  await Promise.all([
+    asyncMap(documentSnapshots, (snapshot) => ctx.db.delete('documentSnapshots', snapshot._id)),
+    asyncMap(editHistory, (entry) => ctx.db.delete('editHistory', entry._id)),
+    asyncMap(filesystemTransactions, (transaction) =>
+      ctx.db.delete('filesystemTransactions', transaction._id),
+    ),
+    asyncMap(allItems, (item) => ctx.db.delete('sidebarItems', item._id)),
+    asyncMap(sessions, (session) => ctx.db.delete('sessions', session._id)),
+    asyncMap(campaignMembers, (member) => ctx.db.delete('campaignMembers', member._id)),
+    asyncMap(editors, (editor) => ctx.db.delete('editor', editor._id)),
+  ])
 
   await ctx.db.delete('campaigns', campaignId)
 
@@ -85,8 +112,10 @@ export async function removeCampaignMemberForDeletedUser(
       .collect(),
   ])
 
-  await asyncMap(sidebarShares, (share) => ctx.db.delete('sidebarItemShares', share._id))
-  await asyncMap(blockShares, (share) => ctx.db.delete('blockShares', share._id))
+  await Promise.all([
+    asyncMap(sidebarShares, (share) => ctx.db.delete('sidebarItemShares', share._id)),
+    asyncMap(blockShares, (share) => ctx.db.delete('blockShares', share._id)),
+  ])
   await ctx.db.patch('campaignMembers', member._id, {
     status: CAMPAIGN_MEMBER_STATUS.Removed,
   })

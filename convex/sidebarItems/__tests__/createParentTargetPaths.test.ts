@@ -4,9 +4,9 @@ import {
   createFolderViaFilesystem,
   createNoteViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
-import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createFolder, createNote } from '../../_test/factories.helper'
-import { expectValidationFailed } from '../../_test/assertions.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createFolder, createNote, createSidebarShare } from '../../_test/factories.helper'
+import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
 describe('create item with parentTarget paths', () => {
@@ -36,7 +36,7 @@ describe('create item with parentTarget paths', () => {
 
     const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
-      parentId: arcOne!._id,
+      parentId: arcOne!.id,
     })
     const arcTwo = arcOneChildren.find((item) => item.name === 'Arc Two')
 
@@ -44,11 +44,49 @@ describe('create item with parentTarget paths', () => {
 
     const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
-      parentId: arcTwo!._id,
+      parentId: arcTwo!.id,
     })
-    const createdNote = arcTwoChildren.find((item) => item._id === result.noteId)
+    const createdNote = arcTwoChildren.find((item) => item.id === result.noteId)
 
     expect(createdNote?.name).toBe('Leaf Note')
+  })
+
+  it('rejects player-created folder resources and missing path folders', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+    const { folderId: sharedFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Shared Folder',
+    })
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: sharedFolderId,
+      sidebarItemType: 'folder',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'full_access',
+    })
+
+    await expectPermissionDenied(
+      playerAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        campaignId: ctx.campaignId,
+        command: {
+          type: 'create',
+          itemType: 'folder',
+          name: 'Restricted Folder',
+          parentTarget: { kind: 'direct', parentId: sharedFolderId },
+        },
+      }),
+    )
+    await expectPermissionDenied(
+      createNoteViaFilesystem(playerAuth, {
+        campaignId: ctx.campaignId,
+        name: 'Restricted Note',
+        parentTarget: {
+          kind: 'path',
+          baseParentId: sharedFolderId,
+          pathSegments: ['Restricted Folder'],
+        },
+      }),
+    )
   })
 
   it('rolls back created parent folders when note creation fails after path resolution', async () => {
@@ -112,11 +150,11 @@ describe('create item with parentTarget paths', () => {
 
     expect(baseChildren.filter((item) => item.name === 'Arc One')).toHaveLength(1)
     expect(arcOne?.type).toBe('folder')
-    expect(baseChildren.some((item) => item._id === result.noteId)).toBe(false)
+    expect(baseChildren.some((item) => item.id === result.noteId)).toBe(false)
 
     const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
-      parentId: arcOne!._id,
+      parentId: arcOne!.id,
     })
     const arcTwo = arcOneChildren.find((item) => item.name === 'Arc Two')
 
@@ -125,9 +163,9 @@ describe('create item with parentTarget paths', () => {
 
     const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
-      parentId: arcTwo!._id,
+      parentId: arcTwo!.id,
     })
-    const createdNote = arcTwoChildren.find((item) => item._id === result.noteId)
+    const createdNote = arcTwoChildren.find((item) => item.id === result.noteId)
 
     expect(createdNote?.name).toBe('Leaf Note')
   })
@@ -170,7 +208,7 @@ describe('create item with parentTarget paths', () => {
 
     const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
-      parentId: arcTwo!._id,
+      parentId: arcTwo!.id,
     })
     expect(arcTwoChildren.some((item) => item.name === 'Leaf Folder')).toBe(true)
   })
@@ -214,7 +252,7 @@ describe('create item with parentTarget paths', () => {
     const arcOne = baseChildren.find((item) => item.name === 'Arc One')
 
     expect(baseChildren.filter((item) => item.name === 'Arc One')).toHaveLength(1)
-    expect(arcOne?._id).toBe(arcOneId)
+    expect(arcOne?.id).toBe(arcOneId)
 
     const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
@@ -227,7 +265,7 @@ describe('create item with parentTarget paths', () => {
 
     const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
-      parentId: arcTwo!._id,
+      parentId: arcTwo!.id,
     })
     expect(arcTwoChildren.some((item) => item.name === 'Leaf Folder')).toBe(true)
   })
@@ -320,9 +358,9 @@ describe('create item with parentTarget paths', () => {
 
     const nestedChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
-      parentId: nestedFolder!._id,
+      parentId: nestedFolder!.id,
     })
-    expect(nestedChildren.some((item) => item._id === result.noteId)).toBe(true)
+    expect(nestedChildren.some((item) => item.id === result.noteId)).toBe(true)
   })
 
   it('supports dotdot traversal in explicit parentTarget paths', async () => {
@@ -357,9 +395,9 @@ describe('create item with parentTarget paths', () => {
 
     const archiveChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
       campaignId: ctx.campaignId,
-      parentId: archiveFolder!._id,
+      parentId: archiveFolder!.id,
     })
-    expect(archiveChildren.some((item) => item._id === result.noteId)).toBe(true)
+    expect(archiveChildren.some((item) => item.id === result.noteId)).toBe(true)
   })
 
   it('rejects explicit parentTarget paths that traverse above root', async () => {

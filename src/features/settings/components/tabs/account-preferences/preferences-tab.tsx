@@ -1,7 +1,7 @@
 import { CheckIcon, Monitor, Moon, Sun } from 'lucide-react'
-import { useTheme } from '~/shared/theme/context'
-import { cn } from '~/features/shadcn/lib/utils'
-import { Separator } from '~/features/shadcn/components/separator'
+import { useTheme } from '@wizard-archive/ui/theme/context'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
+import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
 
 type ThemeOption = {
   value: 'light' | 'dark' | 'system'

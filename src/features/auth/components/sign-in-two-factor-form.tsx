@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '~/features/shadcn/components/input-otp'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '@wizard-archive/ui/shadcn/components/input-otp'
 
 type SignInTwoFactorFormProps = {
   onSuccess: () => void

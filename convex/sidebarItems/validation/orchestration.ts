@@ -11,24 +11,28 @@ import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { getSidebarItem } from '../functions/getSidebarItem'
 import { getActiveSidebarItemRowsByParent } from '../functions/getSidebarItemsByParent'
-import { deduplicateName } from '../../../shared/sidebar-items/default-name'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import {
+  deduplicateResourceName,
+  assertResourceName,
+  checkResourceNameConflict,
+  validateNoCircularResourceParentAsync,
+  RESOURCE_SLUG_MAX_LENGTH,
+  assertResourceSlug,
+} from '@wizard-archive/editor/resources/resource-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type {
+  AnyResource,
+  ResourceName,
+  ResourceValidationResult,
+  ResourceSlug,
+} from '@wizard-archive/editor/resources/resource-contract'
 import { isActiveSidebarItem } from '../types/status'
-import { evaluateMoveToParent } from '../../../shared/sidebar-items/filesystem/capabilities'
-import { assertSidebarOperationAllowed } from '../filesystem/capabilities'
-import type { OperationSidebarItem } from '../../../shared/sidebar-items/filesystem/capabilities'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
+import { evaluateMoveToParent } from '@wizard-archive/editor/resources/operation-capabilities'
+import type { OperationResourceItem } from '@wizard-archive/editor/resources/operation-capabilities'
+import { assertSidebarOperationAllowed, operationActorFromRole } from '../filesystem/capabilities'
 import { checkItemAccess, requireItemAccess } from './access'
-import { assertSidebarItemName } from './name'
-import { checkNameConflict } from '../../../shared/sidebar-items/name'
-import { validateNoCircularParentAsync } from '../../../shared/sidebar-items/parent-target'
-import { SIDEBAR_ITEM_SLUG_MAX_LENGTH } from '../../../shared/sidebar-items/slug'
-import { assertSidebarItemSlug } from './slug'
-import type { SidebarItemName, ValidationResult } from '../../../shared/sidebar-items/name'
-import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
-
 const MAX_SIDEBAR_PARENT_DEPTH = 100
-type NamedOperationSidebarItem = OperationSidebarItem & Pick<AnySidebarItem, 'name'>
+type NamedOperationResourceItem = OperationResourceItem & Pick<AnyResource, 'name'>
 
 export async function checkUniqueNameUnderParent(
   ctx: CampaignQueryCtx,
@@ -41,9 +45,13 @@ export async function checkUniqueNameUnderParent(
     name: string
     excludeId?: Id<'sidebarItems'>
   },
-): Promise<ValidationResult> {
+): Promise<ResourceValidationResult> {
   const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
-  return checkNameConflict(name, siblings, excludeId)
+  return checkResourceNameConflict(
+    name,
+    siblings.map((sibling) => ({ id: sibling._id, name: sibling.name })),
+    excludeId,
+  )
 }
 
 export async function ensureSidebarItemNameAvailable(
@@ -54,12 +62,16 @@ export async function ensureSidebarItemNameAvailable(
     excludeId,
   }: {
     parentId: Id<'sidebarItems'> | null
-    name: SidebarItemName
+    name: ResourceName
     excludeId?: Id<'sidebarItems'>
   },
 ): Promise<void> {
   const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
-  const uniqueResult = checkNameConflict(name, siblings, excludeId)
+  const uniqueResult = checkResourceNameConflict(
+    name,
+    siblings.map((sibling) => ({ id: sibling._id, name: sibling.name })),
+    excludeId,
+  )
   if (!uniqueResult.valid) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, uniqueResult.error)
   }
@@ -71,11 +83,11 @@ export async function validateNoCircularSidebarParentChange(
     item,
     newParentId,
   }: {
-    item: OperationSidebarItem
+    item: OperationResourceItem
     newParentId: Id<'sidebarItems'> | null
   },
 ): Promise<void> {
-  const result = await validateNoCircularParentAsync(item._id, newParentId, (currentId) =>
+  const result = await validateNoCircularResourceParentAsync(item.id, newParentId, (currentId) =>
     ctx.db.get('sidebarItems', currentId).then((parent) => {
       if (!parent || parent.campaignId !== ctx.campaign._id) return null
       return parent
@@ -92,20 +104,20 @@ export async function validateSidebarParentChange(
     item,
     newParentId,
   }: {
-    item: OperationSidebarItem
+    item: OperationResourceItem
     newParentId: Id<'sidebarItems'> | null
   },
 ): Promise<void> {
   await validateNoCircularSidebarParentChange(ctx, { item, newParentId })
-  let parent: AnySidebarItem | null = null
+  let parent: AnyResource | null = null
   if (newParentId) {
-    const parentFromDb = await getSidebarItem(ctx, newParentId)
-    if (!parentFromDb) {
+    const parentRow = await getSidebarItem(ctx, newParentId)
+    if (!parentRow) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
-    // checkItemAccess with PERMISSION_LEVEL.NONE intentionally normalizes parentFromDb for evaluateMoveToParent.
+    // checkItemAccess with PERMISSION_LEVEL.NONE intentionally normalizes parentRow for evaluateMoveToParent.
     parent = await checkItemAccess(ctx, {
-      rawItem: parentFromDb,
+      rawItem: parentRow,
       requiredLevel: PERMISSION_LEVEL.NONE,
     })
   }
@@ -132,7 +144,7 @@ export async function validateSidebarParentChange(
   }
 
   assertSidebarOperationAllowed(
-    evaluateMoveToParent({ role: ctx.membership.role }, item, {
+    evaluateMoveToParent(operationActorFromRole(ctx.membership.role), item, {
       parentId: newParentId,
       parent,
       ancestorIds,
@@ -153,7 +165,7 @@ export async function validateSidebarCreateParent(
     if (!isActiveSidebarItem(parentItem)) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
-    if (parentItem.type !== SIDEBAR_ITEM_TYPES.folders) {
+    if (parentItem.type !== RESOURCE_TYPES.folders) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Parent must be a folder')
     }
     await requireItemAccess(ctx, {
@@ -172,17 +184,17 @@ export async function validateSidebarMove(
     newParentId,
     name,
   }: {
-    item: NamedOperationSidebarItem
+    item: NamedOperationResourceItem
     newParentId: Id<'sidebarItems'> | null
-    name?: SidebarItemName
+    name?: ResourceName
   },
 ): Promise<void> {
   await validateSidebarParentChange(ctx, { item, newParentId })
 
   await ensureSidebarItemNameAvailable(ctx, {
     parentId: newParentId,
-    name: name ?? assertSidebarItemName(item.name),
-    excludeId: item._id,
+    name: name ?? assertResourceName(item.name),
+    excludeId: item.id,
   })
 }
 
@@ -217,17 +229,17 @@ export async function findUniqueSidebarItemSlug(
     itemId?: Id<'sidebarItems'>
     name: string
   },
-): Promise<SidebarItemSlug> {
+): Promise<ResourceSlug> {
   const baseSlug = slugify(name, {
     fallback: 'item',
-    maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
+    maxLength: RESOURCE_SLUG_MAX_LENGTH,
   })
   const conflicts = new Set<string>()
 
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const candidateSlug = deduplicateSlug(baseSlug, conflicts, {
       label: 'Slug',
-      maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
+      maxLength: RESOURCE_SLUG_MAX_LENGTH,
     })
     const conflict = await checkSlugConflict(ctx, {
       campaignId: ctx.campaign._id,
@@ -235,7 +247,7 @@ export async function findUniqueSidebarItemSlug(
       excludeId: itemId,
     })
     if (!conflict) {
-      return assertSidebarItemSlug(candidateSlug)
+      return assertResourceSlug(candidateSlug)
     }
     conflicts.add(candidateSlug)
   }
@@ -250,13 +262,13 @@ export async function prepareSidebarItemCreate(
     name,
   }: {
     parentId: Id<'sidebarItems'> | null
-    name: SidebarItemName
+    name: ResourceName
   },
-): Promise<{ name: SidebarItemName; slug: SidebarItemSlug }> {
+): Promise<{ name: ResourceName; slug: ResourceSlug }> {
   await validateSidebarCreateParent(ctx, { parentId })
   const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
-  const uniqueName = assertSidebarItemName(
-    deduplicateName(
+  const uniqueName = assertResourceName(
+    deduplicateResourceName(
       name,
       siblings.map((sibling) => sibling.name),
     ),
@@ -273,10 +285,10 @@ export async function prepareSidebarItemRename(
     item,
     newName,
   }: {
-    item: NamedOperationSidebarItem
-    newName: SidebarItemName
+    item: NamedOperationResourceItem
+    newName: ResourceName
   },
-): Promise<{ name: SidebarItemName; slug: SidebarItemSlug } | null> {
+): Promise<{ name: ResourceName; slug: ResourceSlug } | null> {
   if (newName === item.name) {
     return null
   }
@@ -284,11 +296,11 @@ export async function prepareSidebarItemRename(
   await ensureSidebarItemNameAvailable(ctx, {
     parentId: item.parentId,
     name: newName,
-    excludeId: item._id,
+    excludeId: item.id,
   })
 
   const slug = await findUniqueSidebarItemSlug(ctx, {
-    itemId: item._id,
+    itemId: item.id,
     name: newName,
   })
 

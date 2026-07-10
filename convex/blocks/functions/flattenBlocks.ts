@@ -1,11 +1,11 @@
 import { extractPlainText } from './extractPlainText'
-import type { BlockNoteId, CustomBlock } from '../../../shared/editor-blocks/types'
+import type { NoteBlockId, NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { PersistedFlatBlock } from '../types'
 
-export function flattenBlocks(blocks: Array<CustomBlock>): Array<PersistedFlatBlock> {
+export function flattenBlocks(blocks: Array<NoteBlock>): Array<PersistedFlatBlock> {
   function makeFlatBlock(
-    block: CustomBlock,
-    parentBlockId: BlockNoteId | null,
+    block: NoteBlock,
+    parentBlockId: NoteBlockId | null,
     depth: number,
     position: number,
   ): PersistedFlatBlock {
@@ -38,8 +38,8 @@ export function flattenBlocks(blocks: Array<CustomBlock>): Array<PersistedFlatBl
   const result: Array<PersistedFlatBlock> = []
 
   function walk(
-    block: CustomBlock,
-    parentBlockId: BlockNoteId | null,
+    block: NoteBlock,
+    parentBlockId: NoteBlockId | null,
     depth: number,
     position: number,
   ) {

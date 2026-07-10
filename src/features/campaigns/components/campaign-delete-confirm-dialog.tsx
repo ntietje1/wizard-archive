@@ -1,8 +1,7 @@
 import { toast } from 'sonner'
-import { api } from 'convex/_generated/api'
 import type { Campaign } from 'shared/campaigns/types'
-import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { ConfirmationDialog } from '@wizard-archive/ui/components/confirmation-dialog'
+import { useDeleteCampaignMutation } from '~/features/campaigns/hooks/use-campaign-operations'
 import { handleError } from '~/shared/utils/logger'
 
 interface CampaignDeleteConfirmDialogProps {
@@ -18,11 +17,11 @@ export function CampaignDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: CampaignDeleteConfirmDialogProps) {
-  const deleteCampaign = useAppMutation(api.campaigns.mutations.deleteCampaign)
+  const deleteCampaign = useDeleteCampaignMutation()
 
   const handleConfirm = async () => {
     await deleteCampaign
-      .mutateAsync({ campaignId: campaign._id })
+      .mutateAsync({ campaignId: campaign.id })
       .then(() => {
         toast.success('Campaign deleted successfully')
       })

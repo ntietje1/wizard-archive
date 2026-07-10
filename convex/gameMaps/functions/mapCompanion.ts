@@ -1,6 +1,6 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
@@ -21,7 +21,7 @@ export async function createMapCompanion(
 
   await logEditHistory(ctx, {
     itemId: mapId,
-    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+    itemType: RESOURCE_TYPES.gameMaps,
     action: EDIT_HISTORY_ACTION.created,
   })
   return gameMapId
@@ -34,7 +34,7 @@ export async function copyMapCompanion(
 ) {
   const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map target item not found')
-  if (targetItem.type !== SIDEBAR_ITEM_TYPES.gameMaps) {
+  if (targetItem.type !== RESOURCE_TYPES.gameMaps) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Map companion requires a map item')
   }
   const existingMap = await ctx.db

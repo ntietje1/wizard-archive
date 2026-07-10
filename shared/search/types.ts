@@ -1,7 +1,9 @@
 import type { SidebarItemId } from '../common/ids'
-import type { BlockNoteId, BlockType } from '../editor-blocks/types'
 
-export interface BlockSearchResult {
+export interface BlockSearchResult<
+  BlockType extends string = string,
+  BlockNoteId extends string = string,
+> {
   blockNoteId: BlockNoteId
   noteId: SidebarItemId
   plainText: string

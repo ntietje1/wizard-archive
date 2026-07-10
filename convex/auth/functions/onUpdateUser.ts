@@ -1,5 +1,5 @@
 import type { MutationCtx } from '../../_generated/server'
-import type { ProfileImage } from '../../../shared/users/types'
+import type { Doc } from '../../_generated/dataModel'
 
 type AuthUserDoc = {
   _id: string
@@ -26,7 +26,7 @@ export async function onUpdateUser(
     name: string | null
     email: string | null
     emailVerified: boolean | null
-    profileImage: ProfileImage | null
+    profileImage: Doc<'userProfiles'>['profileImage']
     twoFactorEnabled: boolean | null
   }> = {}
   if (newUser.name !== oldUser.name) updates.name = newUser.name

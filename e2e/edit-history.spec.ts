@@ -1,7 +1,14 @@
 import { expect, test } from '@playwright/test'
+import { api } from 'convex/_generated/api'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import {
+  createE2EConvexClient,
+  getCampaignIdFromRoute,
+  getCampaignRouteFromUrl,
+  getSidebarItemByName,
+} from './helpers/convex-helpers'
 import {
   clickHistoryEntry,
   exitPreview,
@@ -22,7 +29,7 @@ test.describe.serial('edit history', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
@@ -33,8 +40,10 @@ test.describe.serial('edit history', () => {
     await page.keyboard.type(initialContent)
     await expect(editor).toContainText(initialContent)
 
-    await openHistoryPanel(page)
-    await waitForHistoryEntry(page, /edited content/i)
+    await waitForPersistedHistoryEntry(page, {
+      action: 'content_edited',
+      noteName,
+    })
     await page.close()
     await context.close()
   })
@@ -44,7 +53,7 @@ test.describe.serial('edit history', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch (error) {
@@ -55,7 +64,7 @@ test.describe.serial('edit history', () => {
   })
 
   async function openNoteWithHistory(page: Page) {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -77,7 +86,7 @@ test.describe.serial('edit history', () => {
   })
 
   test('clicking snapshot entry opens preview mode', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -92,7 +101,7 @@ test.describe.serial('edit history', () => {
   })
 
   test('exit button closes preview', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -107,7 +116,7 @@ test.describe.serial('edit history', () => {
   })
 
   test('restore button opens confirmation dialog', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -127,7 +136,7 @@ test.describe.serial('edit history', () => {
   })
 
   test('cancel closes dialog without restoring', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -150,7 +159,7 @@ test.describe.serial('edit history', () => {
   })
 
   test('restoring a version succeeds', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -172,7 +181,7 @@ test.describe.serial('edit history', () => {
   })
 
   test('restore creates new history entry', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -183,3 +192,33 @@ test.describe.serial('edit history', () => {
     await waitForHistoryEntry(page, /restored a previous version/i)
   })
 })
+
+async function waitForPersistedHistoryEntry(
+  page: Page,
+  {
+    action,
+    noteName: targetNoteName,
+  }: {
+    action: string
+    noteName: string
+  },
+) {
+  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const note = await getSidebarItemByName({ campaignId, name: targetNoteName })
+  const client = await createE2EConvexClient()
+
+  await expect
+    .poll(
+      async () => {
+        const history = await client.query(api.editHistory.queries.getItemHistory, {
+          campaignId,
+          itemId: note.id,
+          paginationOpts: { cursor: null, numItems: 20 },
+        })
+        return history.page.some((entry) => entry.action === action)
+      },
+      { timeout: 60000 },
+    )
+    .toBe(true)
+}

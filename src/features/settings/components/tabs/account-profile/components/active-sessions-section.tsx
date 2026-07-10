@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Loader2, Monitor, Smartphone, Tablet } from 'lucide-react'
-import { SettingsSection } from './settings-section'
+import { SettingsSection } from '~/features/settings/components/settings-section'
 import { useActiveSessions } from '~/features/auth/hooks/useAuthSessions'
-import { Button } from '~/features/shadcn/components/button'
-import { Separator } from '~/features/shadcn/components/separator'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
 import {
   Table,
   TableBody,
@@ -11,8 +11,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '~/features/shadcn/components/table'
-import { cn } from '~/features/shadcn/lib/utils'
+} from '@wizard-archive/ui/shadcn/components/table'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 
 const deviceIcons = {
   desktop: Monitor,

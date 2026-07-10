@@ -1,8 +1,9 @@
-import { asyncMap } from 'convex-helpers'
-import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
-import { enhanceSidebarItem } from './enhanceSidebarItem'
-import { getSidebarItem } from './getSidebarItem'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
+import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { enhanceSidebarItemRows } from './enhanceSidebarItemRows'
+import { canAccessResourceAndAncestors, resolveResourceRowsByAccess } from './resourceAccessPolicy'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import { isActiveSidebarItem } from '../types/status'
+import type { AnyResource } from '@wizard-archive/editor/resources/resource-contract'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
 
@@ -15,7 +16,7 @@ export const getActiveSidebarItemRowsByParent = async (
     .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
       q
         .eq('campaignId', ctx.campaign._id)
-        .eq('status', SIDEBAR_ITEM_STATUS.active)
+        .eq('status', RESOURCE_STATUS.active)
         .eq('parentId', parentId),
     )
     .collect()
@@ -24,13 +25,21 @@ export const getActiveSidebarItemRowsByParent = async (
 export const getSidebarItemsByParent = async (
   ctx: CampaignQueryCtx,
   { parentId }: { parentId: Id<'sidebarItems'> | null },
-): Promise<Array<AnySidebarItem>> => {
-  const rawItems = await getActiveSidebarItemRowsByParent(ctx, { parentId })
+): Promise<Array<AnyResource>> => {
+  if (parentId) {
+    const parent = await ctx.db.get('sidebarItems', parentId)
+    if (
+      !parent ||
+      !isActiveSidebarItem(parent) ||
+      !(await canAccessResourceAndAncestors(ctx, parent, PERMISSION_LEVEL.VIEW))
+    ) {
+      return []
+    }
+  }
 
-  return (
-    await asyncMap(rawItems, async (raw) => {
-      const item = await getSidebarItem(ctx, raw._id)
-      return item ? enhanceSidebarItem(ctx, { item }) : null
-    })
-  ).filter((item): item is NonNullable<typeof item> => item !== null)
+  const rawItems = await getActiveSidebarItemRowsByParent(ctx, { parentId })
+  return await enhanceSidebarItemRows(
+    ctx,
+    await resolveResourceRowsByAccess(ctx, rawItems, PERMISSION_LEVEL.VIEW),
+  )
 }

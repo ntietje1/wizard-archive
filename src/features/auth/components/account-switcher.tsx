@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import type { DeviceSession } from '~/features/auth/utils/device-sessions'
 import { logger } from '~/shared/utils/logger'
-import { UserProfileImage } from '~/shared/components/user-profile-image'
+import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
 
 type AccountSwitcherProps = {
   otherAccounts: Array<DeviceSession>

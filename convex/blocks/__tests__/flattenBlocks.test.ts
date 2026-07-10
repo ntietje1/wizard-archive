@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { flattenBlocks } from '../functions/flattenBlocks'
 import { reconstructBlockTree } from '../functions/reconstructBlockTree'
-import { parseEditorBlocks } from '../parseEditorBlocks'
+import { parseBlockNoteBlocks } from '../parseBlockNoteBlocks'
 import { testBlockNoteId } from '../../_test/factories.helper'
-import type { CustomBlock, InlineContent } from '../../../shared/editor-blocks/types'
+import type { NoteBlock, InlineContent } from '@wizard-archive/editor/notes/document-contract'
 import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
 
@@ -12,20 +12,20 @@ type TableContent = {
   columnWidths: Array<number>
   rows: Array<{ cells: Array<{ type: 'tableCell'; content: InlineContent }> }>
 }
-type TestBlockOverrides = Partial<Omit<CustomBlock, 'content' | 'props' | 'children'>> & {
+type TestBlockOverrides = Partial<Omit<NoteBlock, 'content' | 'props' | 'children'>> & {
   content?: unknown
   props?: unknown
-  children?: Array<CustomBlock>
+  children?: Array<NoteBlock>
 }
 
-function makeBlock(label: string, overrides?: TestBlockOverrides): CustomBlock {
+function makeBlock(label: string, overrides?: TestBlockOverrides): NoteBlock {
   return {
     id: testBlockNoteId(label),
     type: 'paragraph',
     props: {},
     content: [],
     ...overrides,
-  } as CustomBlock
+  } as NoteBlock
 }
 
 function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
@@ -55,7 +55,7 @@ describe('flattenBlocks', () => {
   })
 
   it('normalizes legacy embed content and height before flattening', () => {
-    const [embedBlock] = parseEditorBlocks([
+    const [embedBlock] = parseBlockNoteBlocks([
       {
         id: testBlockNoteId('embed'),
         type: 'embed',
@@ -171,7 +171,7 @@ describe('flattenBlocks', () => {
 
   it('rejects malformed value inline content', () => {
     expect(() =>
-      parseEditorBlocks([
+      parseBlockNoteBlocks([
         {
           id: testBlockNoteId('bad-value'),
           type: 'paragraph',
@@ -184,7 +184,7 @@ describe('flattenBlocks', () => {
 
   it('rejects malformed table cell content', () => {
     expect(() =>
-      parseEditorBlocks([
+      parseBlockNoteBlocks([
         {
           id: testBlockNoteId('bad-table'),
           type: 'table',
@@ -405,10 +405,10 @@ describe('flattenBlocks', () => {
 })
 
 /**
- * Normalizes a CustomBlock tree for deep comparison by stripping
+ * Normalizes a NoteBlock tree for deep comparison by stripping
  * undefined children/content to canonical form (undefined → omitted).
  */
-function normalizeTree(blocks: Array<CustomBlock>): Array<Record<string, unknown>> {
+function normalizeTree(blocks: Array<NoteBlock>): Array<Record<string, unknown>> {
   return blocks.map((b) => {
     const normalized: Record<string, unknown> = {
       id: b.id,
@@ -417,13 +417,13 @@ function normalizeTree(blocks: Array<CustomBlock>): Array<Record<string, unknown
     }
     if (b.content !== undefined) normalized.content = b.content
     if (b.children && b.children.length > 0) {
-      normalized.children = normalizeTree(b.children as Array<CustomBlock>)
+      normalized.children = normalizeTree(b.children as Array<NoteBlock>)
     }
     return normalized
   })
 }
 
-function flattenRoundTrip(blocks: Array<CustomBlock>): Array<Record<string, unknown>> {
+function flattenRoundTrip(blocks: Array<NoteBlock>): Array<Record<string, unknown>> {
   const flat = flattenBlocks(blocks)
   const reconstructed = reconstructBlockTree(toFakeBlocks(flat))
   return normalizeTree(reconstructed)
@@ -513,7 +513,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
     ]
 
     const firstPass = flattenRoundTrip(original)
-    const secondPass = flattenRoundTrip(firstPass as unknown as Array<CustomBlock>)
+    const secondPass = flattenRoundTrip(firstPass as unknown as Array<NoteBlock>)
     expect(secondPass).toEqual(firstPass)
   })
 

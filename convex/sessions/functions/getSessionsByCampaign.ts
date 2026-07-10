@@ -1,3 +1,4 @@
+import { toSession } from './getSession'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Session } from '../../../shared/sessions/types'
 
@@ -10,5 +11,5 @@ export async function getSessionsByCampaign(ctx: CampaignQueryCtx): Promise<Arra
     .order('desc')
     .collect()
 
-  return sessions
+  return sessions.map(toSession)
 }

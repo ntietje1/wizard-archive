@@ -1,15 +1,19 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { logEditHistory } from '../../editHistory/log'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getUserProfileById } from '../../users/functions/getUserProfile'
+import {
+  requireAcceptedPlayerMember,
+  requireCampaignMember,
+} from '../../campaigns/functions/acceptedPlayerMember'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
+import type { AnyResource } from '@wizard-archive/editor/resources/resource-contract'
 
 type ExistingShare = Doc<'sidebarItemShares'> | null
 const MAX_SHARE_ITEMS_PER_REQUEST = 100
@@ -26,11 +30,18 @@ function assertShareBatchSize(sidebarItemIds: Array<Id<'sidebarItems'>>) {
 async function getTargetMemberName(
   ctx: CampaignMutationCtx,
   campaignMemberId: Id<'campaignMembers'>,
+  eligibility: 'accepted_player' | 'existing_member',
 ) {
-  const member = await ctx.db.get('campaignMembers', campaignMemberId)
-  if (!member || member.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
-  }
+  const member =
+    eligibility === 'accepted_player'
+      ? await requireAcceptedPlayerMember(ctx, {
+          campaignId: ctx.campaign._id,
+          campaignMemberId,
+        })
+      : await requireCampaignMember(ctx, {
+          campaignId: ctx.campaign._id,
+          campaignMemberId,
+        })
   const profile = await getUserProfileById(ctx, { profileId: member.userId })
   return profile?.name ?? null
 }
@@ -38,7 +49,7 @@ async function getTargetMemberName(
 async function getShareTargetItem(
   ctx: CampaignMutationCtx,
   sidebarItemId: Id<'sidebarItems'>,
-): Promise<AnySidebarItem> {
+): Promise<AnyResource> {
   const rawItem = await getSidebarItem(ctx, sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem,
@@ -56,7 +67,7 @@ async function getExistingMemberShare(
     item,
     campaignMemberId,
   }: {
-    item: AnySidebarItem
+    item: AnyResource
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<ExistingShare> {
@@ -65,7 +76,7 @@ async function getExistingMemberShare(
     .withIndex('by_campaign_item_member', (q) =>
       q
         .eq('campaignId', item.campaignId)
-        .eq('sidebarItemId', item._id)
+        .eq('sidebarItemId', item.id)
         .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
@@ -79,14 +90,14 @@ async function logPermissionChange(
     level,
     previousLevel,
   }: {
-    item: AnySidebarItem
+    item: AnyResource
     memberName: string | null
     level: PermissionLevel | null
     previousLevel: PermissionLevel | null
   },
 ) {
   await logEditHistory(ctx, {
-    itemId: item._id,
+    itemId: item.id,
     itemType: item.type,
     action: EDIT_HISTORY_ACTION.permission_changed,
     metadata: {
@@ -97,7 +108,7 @@ async function logPermissionChange(
   })
 }
 
-export async function setSidebarItemsMemberPermission(
+export async function setResourcesMemberPermission(
   ctx: CampaignMutationCtx,
   {
     sidebarItemIds,
@@ -110,7 +121,7 @@ export async function setSidebarItemsMemberPermission(
   },
 ): Promise<Array<Id<'sidebarItemShares'>>> {
   assertShareBatchSize(sidebarItemIds)
-  const memberName = await getTargetMemberName(ctx, campaignMemberId)
+  const memberName = await getTargetMemberName(ctx, campaignMemberId, 'accepted_player')
   const currentSessionId = ctx.campaign.currentSessionId
   const currentSession = currentSessionId ? await ctx.db.get('sessions', currentSessionId) : null
   const shareIds: Array<Id<'sidebarItemShares'>> = []
@@ -138,7 +149,7 @@ export async function setSidebarItemsMemberPermission(
 
     const shareId = await ctx.db.insert('sidebarItemShares', {
       campaignId: item.campaignId,
-      sidebarItemId: item._id,
+      sidebarItemId: item.id,
       sidebarItemType: item.type,
       campaignMemberId,
       sessionId: currentSession?._id ?? null,
@@ -156,7 +167,7 @@ export async function setSidebarItemsMemberPermission(
   return shareIds
 }
 
-export async function clearSidebarItemsMemberPermission(
+export async function clearResourcesMemberPermission(
   ctx: CampaignMutationCtx,
   {
     sidebarItemIds,
@@ -167,7 +178,7 @@ export async function clearSidebarItemsMemberPermission(
   },
 ): Promise<void> {
   assertShareBatchSize(sidebarItemIds)
-  const memberName = await getTargetMemberName(ctx, campaignMemberId)
+  const memberName = await getTargetMemberName(ctx, campaignMemberId, 'existing_member')
 
   for (const sidebarItemId of sidebarItemIds) {
     const item = await getShareTargetItem(ctx, sidebarItemId)

@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { Card, CardContent } from '~/features/shadcn/components/card'
+import { Card, CardContent } from '@wizard-archive/ui/shadcn/components/card'
 
 interface CreateActionCardProps {
   onClick: () => void

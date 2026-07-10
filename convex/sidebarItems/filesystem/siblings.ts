@@ -1,7 +1,8 @@
-import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
+import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceName } from '@wizard-archive/editor/resources/resource-contract'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { SidebarItemName } from '../../../shared/sidebar-items/name'
+import { getActiveSidebarItemRowsByParent } from '../functions/getSidebarItemsByParent'
 
 export async function findActiveSidebarChildByName(
   ctx: CampaignMutationCtx,
@@ -10,19 +11,14 @@ export async function findActiveSidebarChildByName(
     name,
   }: {
     parentId: Id<'sidebarItems'> | null
-    name: SidebarItemName
+    name: ResourceName
   },
 ): Promise<Doc<'sidebarItems'> | null> {
-  const normalizedName = name.trim().toLowerCase()
-  const siblings = await ctx.db
-    .query('sidebarItems')
-    .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
-      q
-        .eq('campaignId', ctx.campaign._id)
-        .eq('status', SIDEBAR_ITEM_STATUS.active)
-        .eq('parentId', parentId),
-    )
-    .collect()
+  const normalizedName = normalizeResourceNameForComparison(name)
+  const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
 
-  return siblings.find((item) => item.name.trim().toLowerCase() === normalizedName) ?? null
+  return (
+    siblings.find((item) => normalizeResourceNameForComparison(item.name) === normalizedName) ??
+    null
+  )
 }

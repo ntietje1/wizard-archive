@@ -9,7 +9,7 @@ import {
   createNote,
   openItem,
   selectableSidebarRow,
-  sidebarLink,
+  sidebarItem,
   waitForFilesystemIdle,
 } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -17,18 +17,20 @@ import {
   createE2EConvexClient,
   getCampaignIdFromRoute,
   getCampaignRouteFromUrl,
+  getSidebarItemByName,
   getSidebarItemBySlug,
   getSidebarItemIdBySlug,
 } from './helpers/convex-helpers'
 import { makeYjsUpdateWithBlocks } from '../convex/_test/yjs.helper'
 import type { Locator, Page, TestInfo } from '@playwright/test'
-import type { CustomPartialBlock } from '../shared/editor-blocks/types'
+import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 const campaignName = testName('E2E NoteEmbeds')
 const sourceNoteContent = `Embedded source content ${Date.now()}`
 const fixtureDir = path.resolve('test-results/fixtures')
 const imageFileName = 'note-embed-upload.png'
 const imageFilePath = path.join(fixtureDir, imageFileName)
+let campaignEditorPath: string | null = null
 
 test.describe.serial('note embeds', () => {
   test.setTimeout(30_000)
@@ -39,9 +41,10 @@ test.describe.serial('note embeds', () => {
 
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
+    campaignEditorPath = new URL(page.url()).pathname
     await waitForFilesystemIdle(page)
 
     await createNote(page, sourceNoteName())
@@ -56,7 +59,7 @@ test.describe.serial('note embeds', () => {
 
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -178,7 +181,7 @@ test.describe.serial('note embeds', () => {
     const fileChooser = await fileChooserPromise
     await fileChooser.setFiles(imageFilePath)
 
-    await expect(sidebarLink(page, 'Assets')).toBeVisible({ timeout: 15_000 })
+    await expect(sidebarItem(page, 'Assets')).toBeVisible({ timeout: 15_000 })
     await expectFileInAssetsFolder(page)
     await expect(block.getByRole('img', { name: imageFileName })).toBeVisible({ timeout: 15_000 })
   })
@@ -235,6 +238,13 @@ test.describe.serial('note embeds', () => {
       })
     await expect(page.getByTestId('note-embed-resize-outline')).toHaveCount(2)
 
+    await page
+      .getByTestId('note-embed-visual-surface')
+      .last()
+      .click({ button: 'right', position: { x: 8, y: 8 } })
+    await expect(page.getByRole('menuitem', { name: /^(Share|Unshare) 4 Blocks$/ })).toBeVisible()
+    await page.keyboard.press('Escape')
+
     await pressCopy(page)
     await expect
       .poll(() => getRecordedEditorCopy(page), { timeout: 5_000 })
@@ -243,6 +253,7 @@ test.describe.serial('note embeds', () => {
         plainTextIncludesAfter: true,
         plainTextIncludesBefore: true,
       })
+
     await newParagraphAtEnd(page)
     await pressPaste(page)
 
@@ -251,7 +262,7 @@ test.describe.serial('note embeds', () => {
       .toBe(4)
   })
 
-  test('can end a text range selection on an embed block', async ({ page }, testInfo) => {
+  test('can select a text range through an embed block endpoint', async ({ page }, testInfo) => {
     const hostName = uniqueName('Embed Range Endpoint Host', testInfo)
     const beforeText = uniqueName('Before embed endpoint', testInfo)
 
@@ -282,7 +293,7 @@ test.describe.serial('note embeds', () => {
     await expect(page.getByText(beforeText)).toBeVisible({ timeout: 10_000 })
     await expect(page.getByTestId('note-embed-block')).toHaveCount(2)
 
-    await dragTextSelectionOntoLastEmbed(page, beforeText)
+    await dragTextSelectionThroughLastEmbed(page, beforeText)
 
     await expect
       .poll(() => getEmbedEndpointSelectionSnapshot(page, beforeText), { timeout: 5_000 })
@@ -309,8 +320,8 @@ test.describe.serial('note embeds', () => {
         id: 'embedded-note-clipboard-target',
         type: 'embed',
         props: {
-          targetKind: 'sidebarItem',
-          sidebarItemId: sourceNoteId,
+          targetKind: 'resource',
+          resourceId: sourceNoteId,
           previewWidth: 320,
         },
         children: [],
@@ -404,7 +415,9 @@ test.describe.serial('note embeds', () => {
 
     const embedBlocks = page.getByTestId('note-embed-block')
     await expect(embedBlocks).toHaveCount(2)
-    await expect(embedBlocks.first().getByText(embedName)).toBeVisible({ timeout: 10_000 })
+    await expect(embedBlocks.first().getByRole('heading', { name: embedName })).toBeVisible({
+      timeout: 10_000,
+    })
     await expect(embedBlocks.nth(1).getByTestId('embed-empty-state')).toBeVisible()
 
     await dragFirstEmbedSurfaceBelowText(page, afterText)
@@ -422,8 +435,10 @@ test.describe.serial('note embeds', () => {
     const beforeText = uniqueName('Before video surface drag', testInfo)
     const afterText = uniqueName('After video surface drag', testInfo)
     const embedName = 'movable-video.mp4'
+    const videoUrl = 'https://example.com/movable-video.mp4'
 
     await openCampaign(page)
+    await routePendingVideo(page, videoUrl)
     await createNote(page, hostName)
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('video-surface-drag-before', beforeText),
@@ -432,7 +447,7 @@ test.describe.serial('note embeds', () => {
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
-          url: 'https://example.com/movable-video.mp4',
+          url: videoUrl,
           name: embedName,
           previewWidth: 320,
         },
@@ -450,7 +465,9 @@ test.describe.serial('note embeds', () => {
 
     const embedBlocks = page.getByTestId('note-embed-block')
     await expect(embedBlocks).toHaveCount(2)
-    await expect(embedBlocks.first().getByText(embedName)).toBeVisible({ timeout: 10_000 })
+    await expect(embedBlocks.first().getByRole('heading', { name: embedName })).toBeVisible({
+      timeout: 10_000,
+    })
     await expect(embedBlocks.nth(1).getByTestId('embed-empty-state')).toBeVisible()
 
     await dragFirstVideoSurfaceBelowText(page, afterText)
@@ -468,8 +485,10 @@ test.describe.serial('note embeds', () => {
     const beforeText = uniqueName('Before focused video drag', testInfo)
     const afterText = uniqueName('After focused video drag', testInfo)
     const embedName = 'focused-video.mp4'
+    const videoUrl = 'https://example.com/focused-video.mp4'
 
     await openCampaign(page)
+    await routePendingVideo(page, videoUrl)
     await createNote(page, hostName)
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('focused-video-drag-before', beforeText),
@@ -478,7 +497,7 @@ test.describe.serial('note embeds', () => {
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
-          url: 'https://example.com/focused-video.mp4',
+          url: videoUrl,
           name: embedName,
           previewWidth: 320,
         },
@@ -513,9 +532,11 @@ test.describe.serial('note embeds', () => {
     const hostName = uniqueName('Focused Audio Drag Host', testInfo)
     const beforeText = uniqueName('Before focused audio drag', testInfo)
     const afterText = uniqueName('After focused audio drag', testInfo)
-    const embedName = 'focused-audio.mp3'
+    const embedName = 'focused-audio.wav'
+    const audioUrl = 'https://example.com/focused-audio.wav'
 
     await openCampaign(page)
+    await routeSilentAudio(page, audioUrl)
     await createNote(page, hostName)
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('focused-audio-drag-before', beforeText),
@@ -524,7 +545,7 @@ test.describe.serial('note embeds', () => {
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
-          url: 'https://example.com/focused-audio.mp3',
+          url: audioUrl,
           name: embedName,
           previewWidth: 320,
         },
@@ -577,7 +598,20 @@ test.describe.serial('note embeds', () => {
 })
 
 async function openCampaign(page: Page) {
-  await page.goto('/campaigns')
+  if (campaignEditorPath) {
+    await page.goto(campaignEditorPath, { waitUntil: 'commit' })
+    if (
+      await page
+        .getByRole('navigation', { name: 'Sidebar' })
+        .isVisible({ timeout: 30_000 })
+        .catch(() => false)
+    ) {
+      await waitForFilesystemIdle(page)
+      return
+    }
+  }
+
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(page, campaignName)
   await waitForFilesystemIdle(page)
 }
@@ -594,15 +628,15 @@ async function persistSourceNoteContent(page: Page) {
   ])
 }
 
-async function persistNoteBlocks(page: Page, itemName: string, blocks: Array<CustomPartialBlock>) {
-  const noteSlug = await getItemSlugFromSidebarLink(page, itemName)
+async function persistNoteBlocks(page: Page, itemName: string, blocks: Array<PartialNoteBlock>) {
+  const noteSlug = await getItemSlugFromSidebarItem(page, itemName)
   await persistNoteBlocksBySlug(page, noteSlug, blocks)
 }
 
 async function persistNoteBlocksBySlug(
   page: Page,
   noteSlug: string,
-  blocks: Array<CustomPartialBlock>,
+  blocks: Array<PartialNoteBlock>,
 ) {
   const { dmUsername, campaignSlug } = getCampaignRoute(page)
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
@@ -1020,7 +1054,7 @@ async function dragTextSelectionAcrossEmbeds(page: Page, startText: string, endT
   await page.mouse.up()
 }
 
-async function dragTextSelectionOntoLastEmbed(page: Page, startText: string) {
+async function dragTextSelectionThroughLastEmbed(page: Page, startText: string) {
   const start = await page.evaluate((targetStartText) => {
     const editor = document.querySelector('.bn-editor')
     if (!editor) throw new Error('Editor not found')
@@ -1059,6 +1093,7 @@ async function dragTextSelectionOntoLastEmbed(page: Page, startText: string) {
     lastEmbedBox.y + lastEmbedBox.height / 2,
     { steps: 16 },
   )
+  await expect(page.getByTestId('note-embed-resize-outline')).toHaveCount(2)
   await page.mouse.up()
 }
 
@@ -1189,7 +1224,7 @@ async function getEditorBlocksBeforeFirstEmbed(page: Page) {
   })
 }
 
-function paragraphBlock(id: string, text: string): CustomPartialBlock {
+function paragraphBlock(id: string, text: string): PartialNoteBlock {
   return {
     id,
     type: 'paragraph',
@@ -1200,17 +1235,17 @@ function paragraphBlock(id: string, text: string): CustomPartialBlock {
 }
 
 async function expectFileInAssetsFolder(page: Page) {
-  const assetsSlug = await getItemSlugFromSidebarLink(page, 'Assets')
-  const fileSlug = await getItemSlugFromSidebarLink(page, imageFileName)
+  const assetsSlug = await getItemSlugFromSidebarItem(page, 'Assets')
+  const fileSlug = await getItemSlugFromSidebarItem(page, imageFileName)
   const { dmUsername, campaignSlug } = getCampaignRoute(page)
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
   const assets = await getSidebarItemBySlug({ campaignId, slug: assetsSlug })
   const file = await getSidebarItemBySlug({ campaignId, slug: fileSlug })
-  expect(file.parentId).toBe(assets._id)
+  expect(file.parentId).toBe(assets.id)
 }
 
 async function getFirstPersistedEmbedTargetKind(page: Page, itemName: string) {
-  const noteSlug = await getItemSlugFromSidebarLink(page, itemName)
+  const noteSlug = await getItemSlugFromSidebarItem(page, itemName)
   const { dmUsername, campaignSlug } = getCampaignRoute(page)
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
   const noteId = await getSidebarItemIdBySlug({
@@ -1235,13 +1270,11 @@ async function getSourceNoteId(page: Page) {
   })
 }
 
-async function getItemSlugFromSidebarLink(page: Page, itemName: string) {
-  const link = sidebarLink(page, itemName)
-  await expect(link).toBeVisible({ timeout: 15_000 })
-  const href = await link.getAttribute('href')
-  const slug = href ? new URL(href, page.url()).searchParams.get('item') : null
-  if (!slug) throw new Error(`Unable to resolve sidebar item slug for ${itemName}`)
-  return slug
+async function getItemSlugFromSidebarItem(page: Page, itemName: string) {
+  await expect(sidebarItem(page, itemName)).toBeVisible({ timeout: 15_000 })
+  const { dmUsername, campaignSlug } = getCampaignRoute(page)
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  return (await getSidebarItemByName({ campaignId, name: itemName })).slug
 }
 
 function sourceNoteName() {
@@ -1257,4 +1290,40 @@ function createOnePixelPng() {
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mP8z8BQDwAFgwJ/l0S4YwAAAABJRU5ErkJggg==',
     'base64',
   )
+}
+
+async function routeSilentAudio(page: Page, url: string) {
+  await page.route(url, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'audio/wav',
+      body: createSilentWav(),
+    }),
+  )
+}
+
+async function routePendingVideo(page: Page, url: string) {
+  await page.route(url, () => new Promise(() => undefined))
+}
+
+function createSilentWav() {
+  const sampleRate = 8000
+  const samples = sampleRate / 10
+  const bytesPerSample = 2
+  const dataSize = samples * bytesPerSample
+  const buffer = Buffer.alloc(44 + dataSize)
+  buffer.write('RIFF', 0)
+  buffer.writeUInt32LE(36 + dataSize, 4)
+  buffer.write('WAVE', 8)
+  buffer.write('fmt ', 12)
+  buffer.writeUInt32LE(16, 16)
+  buffer.writeUInt16LE(1, 20)
+  buffer.writeUInt16LE(1, 22)
+  buffer.writeUInt32LE(sampleRate, 24)
+  buffer.writeUInt32LE(sampleRate * bytesPerSample, 28)
+  buffer.writeUInt16LE(bytesPerSample, 32)
+  buffer.writeUInt16LE(8 * bytesPerSample, 34)
+  buffer.write('data', 36)
+  buffer.writeUInt32LE(dataSize, 40)
+  return buffer
 }

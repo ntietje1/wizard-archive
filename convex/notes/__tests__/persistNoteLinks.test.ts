@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { createTestContext } from '../../_test/setup.helper'
 import {
   createNoteViaFilesystem,
@@ -10,7 +12,9 @@ import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
+import { createAccessibleResourcePathResolver } from '../../sidebarItems/functions/resourcePathResolver'
 import type { Block } from '../../blocks/types'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,
@@ -46,16 +50,32 @@ async function runSync(
   campaignId: Id<'campaigns'>,
   noteId: Id<'sidebarItems'>,
   blocks: Array<Block>,
+  campaignMemberId?: Id<'campaignMembers'>,
 ) {
   await t.run(async (dbCtx) => {
     const campaign = await dbCtx.db.get('campaigns', campaignId)
     if (!campaign) throw new Error('Campaign not found')
+    const membership = campaignMemberId
+      ? await dbCtx.db.get('campaignMembers', campaignMemberId)
+      : await dbCtx.db
+          .query('campaignMembers')
+          .withIndex('by_campaign_user', (q) =>
+            q.eq('campaignId', campaignId).eq('userId', campaign.dmUserId),
+          )
+          .unique()
+    if (!membership) throw new Error('Campaign membership not found')
+    const resourcePathResolver = createAccessibleResourcePathResolver({
+      ...dbCtx,
+      campaign,
+      membership,
+    })
     await syncNoteLinks(
       { ...dbCtx, campaign },
       {
         noteId,
         campaignId,
         blocks,
+        resourcePathResolver,
       },
     )
   })
@@ -116,6 +136,40 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     expect(links).toHaveLength(2)
     expect(links.every((link) => link.targetItemId === targetId)).toBe(true)
     expect(new Set(links.map((link) => link.blockId)).size).toBe(2)
+  })
+
+  it('resolves indexed paths case-insensitively across ancestors', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId } = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Factions',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'The Guild',
+      parentTarget: { kind: 'direct', parentId: folderId },
+    })
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Source Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+      {
+        id: 'block-a',
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: '[[  factions  /  the guild  ]]', styles: {} }],
+        children: [],
+      },
+    ])
+
+    expect(await listLinksForNote(t, ctx.campaignId, sourceId)).toMatchObject([
+      { targetItemId: targetId },
+    ])
   })
 
   it('deduplicates resolved links in a block by target item id', async () => {
@@ -662,6 +716,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', targetId, {
         name: 'Renamed Target',
+        normalizedName: 'renamed target',
       })
     })
 
@@ -712,5 +767,54 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       query: './Capital',
       syntax: 'wiki',
     })
+  })
+
+  it('does not index a link target the acting member cannot view', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Hidden Target',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Source Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+    await t.run((dbCtx) =>
+      dbCtx.db.patch('sidebarItems', targetId, {
+        allPermissionLevel: PERMISSION_LEVEL.NONE,
+      }),
+    )
+    const block = await createBlock(t, sourceId, ctx.campaignId, {
+      blockNoteId: 'block-a',
+      plainText: '[[Hidden Target]]',
+    })
+
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)], ctx.player.memberId)
+
+    expect(await listLinksForNote(t, ctx.campaignId, sourceId)).toMatchObject([
+      { targetItemId: null, query: 'Hidden Target' },
+    ])
+  })
+
+  it('keeps derived indexing independent of total campaign tree size', () => {
+    const linkSyncSource = readFileSync(
+      path.resolve(process.cwd(), 'convex/links/functions/syncNoteLinks.ts'),
+      'utf8',
+    )
+    const valueSyncSource = readFileSync(
+      path.resolve(process.cwd(), 'convex/noteValues/functions/saveAllNoteValuesForNote.ts'),
+      'utf8',
+    )
+    const resolverSource = readFileSync(
+      path.resolve(process.cwd(), 'convex/sidebarItems/functions/resourcePathResolver.ts'),
+      'utf8',
+    )
+
+    expect(linkSyncSource).not.toContain("query('sidebarItems')")
+    expect(valueSyncSource).not.toContain("query('sidebarItems')")
+    expect(resolverSource).toContain('by_campaign_status_normalizedName_deletionTime')
   })
 })

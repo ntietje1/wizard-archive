@@ -8,7 +8,7 @@ import {
   replaceNoteDocumentAndPersist,
   valueBlockWithGeneratedId,
 } from './helpers.helper'
-import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
+import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 type CampaignContext = Awaited<ReturnType<typeof setupCampaignContext>>
 type DmAuth = ReturnType<typeof asDm>
@@ -31,7 +31,7 @@ describe('note value durable references', () => {
     valueId = 'value-prof-bonus',
     slug = 'prof_bonus',
     expressionSource = '2',
-  } = {}): CustomPartialBlock {
+  } = {}): PartialNoteBlock {
     return valueBlockWithGeneratedId({
       idSeed,
       valueId,
@@ -40,9 +40,7 @@ describe('note value durable references', () => {
     })
   }
 
-  function attackBonusBlock(
-    expressionSource = '3 + [[Source Note.prof_bonus]]',
-  ): CustomPartialBlock {
+  function attackBonusBlock(expressionSource = '3 + [[Source Note.prof_bonus]]'): PartialNoteBlock {
     return valueBlockWithGeneratedId({
       idSeed: 'target-attack-bonus',
       valueId: 'value-attack-bonus',
@@ -55,7 +53,7 @@ describe('note value durable references', () => {
     ctx: CampaignContext,
     dmAuth: DmAuth,
     noteId: Parameters<typeof replaceNoteDocumentAndPersist>[2]['noteId'],
-    blocks: Array<CustomPartialBlock>,
+    blocks: Array<PartialNoteBlock>,
   ) {
     await replaceNoteDocumentAndPersist(t, dmAuth, {
       campaignId: ctx.campaignId,
@@ -123,7 +121,6 @@ describe('note value durable references', () => {
     expect(states[0]).toMatchObject({
       status: 'ok',
       rawValue: 5,
-      errorCode: null,
     })
 
     await renameValueTestNote(dmAuth, {
@@ -150,9 +147,9 @@ describe('note value durable references', () => {
     expect(targetRows).toHaveLength(1)
     expect(targetRows[0]).toMatchObject({
       expressionSource: '3 + [[Source Note.prof_bonus]]',
-      compileStatus: 'ok',
+      compile: { status: 'ok' },
     })
-    expect(targetRows[0].bindings).toEqual([
+    expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
         targetNoteId: sourceNoteId,
@@ -204,7 +201,7 @@ describe('note value durable references', () => {
     })
 
     const targetRows = await getRowsForNote(ctx, targetNoteId)
-    expect(targetRows[0].bindings).toEqual([
+    expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
         targetNoteId: sourceNoteId,
@@ -246,9 +243,9 @@ describe('note value durable references', () => {
     const targetRows = await getRowsForNote(ctx, targetNoteId)
     expect(targetRows[0]).toMatchObject({
       expressionSource: '3 + [[Source Note.prof_bonus]]',
-      compileStatus: 'ok',
+      compile: { status: 'ok' },
     })
-    expect(targetRows[0].bindings).toEqual([
+    expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
         targetNoteId: sourceNoteId,
@@ -287,7 +284,7 @@ describe('note value durable references', () => {
     })
 
     const targetRows = await getRowsForNote(ctx, targetNoteId)
-    expect(targetRows[0].bindings).toEqual([
+    expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
         targetNoteId: sourceNoteId,
@@ -339,7 +336,7 @@ describe('note value durable references', () => {
     })
 
     const targetRows = await getRowsForValue(ctx, noteId, targetValueId)
-    expect(targetRows[0].bindings).toEqual([
+    expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
         targetNoteId: noteId,
@@ -411,7 +408,7 @@ describe('note value durable references', () => {
     })
 
     const targetRows = await getRowsForValue(ctx, targetNoteId, targetValueId)
-    expect(targetRows[0].bindings).toEqual([
+    expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
         targetNoteId: targetNoteId,
@@ -501,7 +498,7 @@ describe('note value durable references', () => {
     })
 
     const rows = await getRowsForValue(ctx, targetNoteId, 'value-total')
-    expect(rows[0].bindings).toEqual([
+    expect(rows[0].compile.status === 'ok' ? rows[0].compile.bindings : []).toEqual([
       { key: 'ref_0', targetNoteId, targetValueId: 'value-base' },
       { key: 'ref_1', targetNoteId: sourceNoteId, targetValueId: 'value-prof-bonus' },
     ])
@@ -556,9 +553,10 @@ describe('note value durable references', () => {
     expect(states).toHaveLength(1)
     expect(states[0]).toMatchObject({
       status: 'error',
-      rawValue: null,
       errorCode: 'missing_target',
     })
-    expect(states[0].formattedValue).toContain('Referenced value could not be found')
+    expect(states[0]?.status === 'error' ? states[0].errorMessage : null).toContain(
+      'Referenced value could not be found',
+    )
   })
 })

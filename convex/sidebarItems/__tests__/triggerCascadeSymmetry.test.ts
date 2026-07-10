@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import {
@@ -17,7 +17,7 @@ import {
 } from '../../_test/factories.helper'
 import { makeYjsUpdate } from '../../_test/yjs.helper'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemType } from '../../../shared/sidebar-items/types'
+import type { ResourceKind } from '@wizard-archive/editor/resources/resource-contract'
 
 describe('trigger cascade symmetry', () => {
   const t = createTestContext()
@@ -181,6 +181,54 @@ describe('trigger cascade symmetry', () => {
       expect(afterDelete[1]).toBeNull()
       expect(afterDelete[2]).toBeNull()
       expect(afterDelete[3]).toBeNull()
+    })
+
+    it('schedules cleanup for history and snapshots owned by a hard-deleted item', async () => {
+      vi.useFakeTimers()
+      try {
+        const ctx = await setupCampaignContext(t)
+        const dmAuth = asDm(ctx)
+        const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+        const { editHistoryId, snapshotId } = await t.run(async (dbCtx) => {
+          const historyId = await dbCtx.db.insert('editHistory', {
+            itemId: noteId,
+            itemType: 'note',
+            campaignId: ctx.campaignId,
+            campaignMemberId: ctx.dm.memberId,
+            action: 'content_edited',
+            metadata: null,
+            hasSnapshot: true,
+          })
+          const createdSnapshotId = await dbCtx.db.insert('documentSnapshots', {
+            itemId: noteId,
+            itemType: 'note',
+            editHistoryId: historyId,
+            campaignId: ctx.campaignId,
+            snapshotType: 'yjs_state',
+            data: new ArrayBuffer(0),
+          })
+          return { editHistoryId: historyId, snapshotId: createdSnapshotId }
+        })
+
+        await executeMoveCommand(dmAuth, {
+          campaignId: ctx.campaignId,
+          sourceItemIds: [noteId],
+          targetParentId: null,
+          action: 'trash',
+        })
+        await executeDeleteForeverCommand(dmAuth, {
+          campaignId: ctx.campaignId,
+          sourceItemIds: [noteId],
+        })
+        await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+        await t.run(async (dbCtx) => {
+          expect(await dbCtx.db.get('editHistory', editHistoryId)).toBeNull()
+          expect(await dbCtx.db.get('documentSnapshots', snapshotId)).toBeNull()
+        })
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 
@@ -490,7 +538,7 @@ describe('trigger cascade symmetry', () => {
 
     async function testShareBookmarkNotTouchedOnTrash(
       createItem: (ctx: CampaignCtx) => Promise<{ itemId: Id<'sidebarItems'> }>,
-      itemType: SidebarItemType,
+      itemType: ResourceKind,
     ) {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
@@ -547,7 +595,7 @@ describe('trigger cascade symmetry', () => {
 
     async function testShareBookmarkHardDelete(
       createItem: (ctx: CampaignCtx) => Promise<{ itemId: Id<'sidebarItems'> }>,
-      itemType: SidebarItemType,
+      itemType: ResourceKind,
     ) {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)

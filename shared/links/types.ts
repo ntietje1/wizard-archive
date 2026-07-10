@@ -13,14 +13,16 @@ export type ParsedLinkData = {
 }
 
 export type ResolvedLink<TItemId = string> = ParsedLinkData & {
-  resolved: boolean
+  status: 'resolved' | 'unresolved' | 'rejected'
+  rejectionReason: 'dangerous_url' | null
   itemId: TItemId | null
+  itemSlug: string | null
   href: string | null
   color: string | null
 }
 
 export type LinkResolvableItem<TItemId = string> = {
-  _id: TItemId
+  id: TItemId
   name: string
   parentId: TItemId | null
 }

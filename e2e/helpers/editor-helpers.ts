@@ -3,13 +3,13 @@ import type { Page } from '@playwright/test'
 
 export async function getEditor(page: Page) {
   const editor = page.locator('[contenteditable="true"]').first()
-  await expect(editor).toBeVisible({ timeout: 10000 })
+  await expect(editor).toBeVisible({ timeout: 30000 })
   return editor
 }
 
 export async function typeInEditor(page: Page, text: string) {
   const editor = await getEditor(page)
-  await editor.click()
+  await editor.focus()
   await page.keyboard.type(text)
 }
 
@@ -35,13 +35,28 @@ export async function selectSlashMenuItem(page: Page, itemName: string | RegExp)
 
 export async function newParagraphAtEnd(page: Page) {
   const editor = await getEditor(page)
-  const initialParagraphCount = await editor.locator('p').count()
+  const paragraphs = editor.locator('p')
+  const initialParagraphCount = await paragraphs.count()
   await editor.click()
   const endShortcut = process.platform === 'darwin' ? 'Meta+ArrowDown' : 'Control+End'
   await page.keyboard.press(endShortcut)
   await page.keyboard.press('ArrowDown')
   await page.keyboard.press('Enter')
   await expect
-    .poll(() => editor.locator('p').count(), { timeout: 5000 })
-    .toBeGreaterThan(initialParagraphCount)
+    .poll(
+      async () => {
+        const paragraphCount = await paragraphs.count()
+        if (paragraphCount > initialParagraphCount) return true
+        if (paragraphCount === 0) return false
+
+        const lastParagraphText = await paragraphs
+          .last()
+          .textContent()
+          .catch(() => null)
+        return lastParagraphText?.trim() === ''
+      },
+      { timeout: 5000 },
+    )
+    .toBe(true)
+  await paragraphs.last().click()
 }

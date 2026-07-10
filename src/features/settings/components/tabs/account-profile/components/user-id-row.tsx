@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { CheckIcon, Copy } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
-import { Button } from '~/features/shadcn/components/button'
-import { cn } from '~/features/shadcn/lib/utils'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 
 export function UserIdRow({ userId }: { userId: Id<'userProfiles'> }) {
   const [copied, setCopied] = useState(false)

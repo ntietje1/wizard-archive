@@ -15,7 +15,7 @@ const VALID_STATUS_TRANSITIONS: Record<
   ],
   [CAMPAIGN_MEMBER_STATUS.Accepted]: [CAMPAIGN_MEMBER_STATUS.Removed],
   [CAMPAIGN_MEMBER_STATUS.Rejected]: [CAMPAIGN_MEMBER_STATUS.Accepted],
-  [CAMPAIGN_MEMBER_STATUS.Removed]: [],
+  [CAMPAIGN_MEMBER_STATUS.Removed]: [CAMPAIGN_MEMBER_STATUS.Accepted],
 }
 
 export async function updateCampaignMemberStatus(

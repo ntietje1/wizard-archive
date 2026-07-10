@@ -13,10 +13,14 @@ import {
   createSidebarShare,
   syncBlocksToYjs,
 } from '../../_test/factories.helper'
-import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
+import {
+  expectNotFound,
+  expectPermissionDenied,
+  expectValidationFailed,
+} from '../../_test/assertions.helper'
 import { getBlockShareInfo } from '../../_test/blockShareQueries.helper'
 import { api } from '../../_generated/api'
-import type { NoteWithContent } from '../../../shared/notes/types'
+import type { NoteItemWithContent } from '@wizard-archive/editor/notes/item-contract'
 
 describe('setBlocksShareStatus', () => {
   const t = createTestContext()
@@ -35,11 +39,35 @@ describe('setBlocksShareStatus', () => {
       permissionLevel: 'view',
     })
 
-    await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
+    const receipt = await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
       blockNoteIds: [blockNoteId],
       status: 'all_shared',
+    })
+
+    expect(receipt).toMatchObject({
+      command: {
+        type: 'setBlocksShareStatus',
+        noteId,
+        blockNoteIds: [blockNoteId],
+        status: 'all_shared',
+      },
+      direction: 'forward',
+      events: [{ type: 'updated', itemId: noteId }],
+      patches: [],
+      summary: { kind: 'shared', affectedCount: 1 },
+      undoable: false,
+    })
+    expect(receipt.transactionId).toEqual(expect.any(String))
+    const transaction = await t.run(async (dbCtx) => {
+      return await dbCtx.db.get('filesystemTransactions', receipt.transactionId!)
+    })
+    expect(transaction).toMatchObject({
+      command: receipt.command,
+      events: receipt.events,
+      changes: [],
+      undoable: false,
     })
 
     const result = await getBlockShareInfo(dmAuth, {
@@ -74,6 +102,61 @@ describe('setBlocksShareStatus', () => {
     })
     expect(result).not.toBeNull()
     expect(result!.shareStatus).toBe('not_shared')
+  })
+
+  it('deduplicates block targets before recording the command', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
+    await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
+
+    const receipt = await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
+      campaignId: ctx.campaignId,
+      noteId,
+      blockNoteIds: [blockNoteId, blockNoteId],
+      status: 'all_shared',
+    })
+
+    expect(receipt.command).toMatchObject({ blockNoteIds: [blockNoteId] })
+    expect(receipt.summary).toMatchObject({ affectedCount: 1 })
+    expect(receipt.events).toHaveLength(1)
+  })
+
+  it('rejects commands with more than 100 unique block targets', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expectValidationFailed(
+      asDm(ctx).action(api.blockShares.actions.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
+        noteId,
+        blockNoteIds: Array.from({ length: 101 }, (_, index) => `block-${index + 1}`),
+        status: 'all_shared',
+      }),
+    )
+  })
+
+  it('authorizes callers before projecting note content', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.insert('yjsUpdates', {
+        documentId: noteId,
+        update: new Uint8Array([1, 2, 3]).buffer,
+        seq: 0,
+        isSnapshot: false,
+      })
+    })
+
+    await expectPermissionDenied(
+      asPlayer(ctx).action(api.blockShares.actions.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
+        noteId,
+        blockNoteIds: ['block-1'],
+        status: 'all_shared',
+      }),
+    )
   })
 
   it('sets share status to individually_shared', async () => {
@@ -242,6 +325,21 @@ describe('shareBlocks', () => {
 
 describe('unshareBlocks', () => {
   const t = createTestContext()
+
+  it('returns a no-op receipt when the requested block does not exist', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    const receipt = await asDm(ctx).action(api.blockShares.actions.unshareBlocks, {
+      campaignId: ctx.campaignId,
+      noteId,
+      blockNoteIds: ['missing-block'],
+      campaignMemberId: ctx.player.memberId,
+    })
+
+    expect(receipt.events).toEqual([])
+    expect(receipt.summary).toMatchObject({ kind: 'noop', affectedCount: 0 })
+  })
 
   it('removes a block share', async () => {
     const ctx = await setupCampaignContext(t)
@@ -413,7 +511,7 @@ describe('block permission resolution', () => {
     const item = (await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignId,
       id: noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(item).toBeTruthy()
     expect(item.blockMeta[blockNoteId]).toBeUndefined()
   })
@@ -432,7 +530,7 @@ describe('block permission resolution', () => {
     const item = (await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignId,
       id: noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(item).toBeTruthy()
     expect(item.blockMeta[blockNoteId]).toBeUndefined()
   })
@@ -481,7 +579,7 @@ describe('block permission resolution', () => {
     const item = (await asPlayer(ctx).query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignId,
       id: noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(item).toBeTruthy()
     expect(item.blockMeta[blockNoteId]).toBeDefined()
     expect(item.blockMeta[blockNoteId].myPermissionLevel).toBe('view')
@@ -495,13 +593,29 @@ describe('block permission resolution', () => {
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
-    await dmAuth.action(api.blockShares.actions.setBlockMemberPermission, {
+    const receipt = await dmAuth.action(api.blockShares.actions.setBlockMemberPermission, {
       campaignId: ctx.campaignId,
       noteId,
       blockNoteIds: [blockNoteId],
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
+
+    expect(receipt).toMatchObject({
+      command: {
+        type: 'setBlockMemberPermission',
+        noteId,
+        blockNoteIds: [blockNoteId],
+        campaignMemberId: ctx.player.memberId,
+        permissionLevel: 'view',
+      },
+      direction: 'forward',
+      events: [{ type: 'updated', itemId: noteId }],
+      patches: [],
+      summary: { kind: 'shared', affectedCount: 1 },
+      undoable: false,
+    })
+    expect(receipt.transactionId).toEqual(expect.any(String))
 
     const dmResult = await getBlockShareInfo(dmAuth, {
       campaignId: ctx.campaignId,
@@ -516,6 +630,63 @@ describe('block permission resolution', () => {
       noteId,
     })
     expect(playerResult).toBeNull()
+  })
+
+  it('rejects block share grants to a DM member', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
+    await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
+
+    await expectValidationFailed(
+      asDm(ctx).action(api.blockShares.actions.setBlockMemberPermission, {
+        campaignId: ctx.campaignId,
+        noteId,
+        blockNoteIds: [blockNoteId],
+        campaignMemberId: ctx.dm.memberId,
+        permissionLevel: 'view',
+      }),
+    )
+  })
+
+  it('rejects block share grants to inactive player members', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
+    await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
+
+    for (const status of ['Pending', 'Rejected', 'Removed'] as const) {
+      await t.run(async (dbCtx) => {
+        await dbCtx.db.patch('campaignMembers', ctx.player.memberId, { status })
+      })
+      await expectValidationFailed(
+        asDm(ctx).action(api.blockShares.actions.setBlockMemberPermission, {
+          campaignId: ctx.campaignId,
+          noteId,
+          blockNoteIds: [blockNoteId],
+          campaignMemberId: ctx.player.memberId,
+          permissionLevel: 'view',
+        }),
+      )
+    }
+  })
+
+  it('rejects block share grants to members of another campaign', async () => {
+    const ctx = await setupCampaignContext(t)
+    const otherCampaign = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
+    await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
+
+    await expectValidationFailed(
+      asDm(ctx).action(api.blockShares.actions.setBlockMemberPermission, {
+        campaignId: ctx.campaignId,
+        noteId,
+        blockNoteIds: [blockNoteId],
+        campaignMemberId: otherCampaign.player.memberId,
+        permissionLevel: 'view',
+      }),
+    )
   })
 
   it('does not log history for empty member permission updates', async () => {
@@ -560,7 +731,7 @@ describe('block permission resolution', () => {
     const dmNote = (await dmAuth.query(api.notes.queries.getNote, {
       campaignId: ctx.campaignId,
       noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(dmNote.blockShareAccessWarnings).toEqual([
       {
         campaignMemberId: ctx.player.memberId,
@@ -578,7 +749,7 @@ describe('block permission resolution', () => {
     const dmNoteWithHiddenAllPlayers = (await dmAuth.query(api.notes.queries.getNote, {
       campaignId: ctx.campaignId,
       noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(dmNoteWithHiddenAllPlayers.blockShareAccessWarnings).toEqual([
       {
         campaignMemberId: ctx.player.memberId,
@@ -608,7 +779,7 @@ describe('block permission resolution', () => {
     const dmNote = (await dmAuth.query(api.notes.queries.getNote, {
       campaignId: ctx.campaignId,
       noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(dmNote.blockShareAccessWarnings).toEqual([])
   })
 
@@ -672,7 +843,7 @@ describe('block permission resolution', () => {
     const playerNote = (await p1.authed.query(api.notes.queries.getNote, {
       campaignId: mCtx.campaignId,
       noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(playerNote.blockMeta[blockNoteId]).toBeDefined()
     expect(playerNote.blockMeta[blockNoteId].sharedWith).toEqual([])
     expect(playerNote.blockMeta[blockNoteId].hiddenFrom).toEqual([])
@@ -715,7 +886,7 @@ describe('block permission resolution', () => {
     const sharedResult = (await sharedPlayer.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: mCtx.campaignId,
       id: noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(sharedResult).toBeTruthy()
     expect(sharedResult.blockMeta[blockNoteId]).toBeDefined()
     expect(sharedResult.blockMeta[blockNoteId].myPermissionLevel).toBe('view')
@@ -723,7 +894,7 @@ describe('block permission resolution', () => {
     const unsharedResult = (await unsharedPlayer.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: mCtx.campaignId,
       id: noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(unsharedResult).toBeTruthy()
     expect(unsharedResult.blockMeta[blockNoteId]).toBeUndefined()
   })
@@ -751,7 +922,7 @@ describe('block permission resolution', () => {
     const playerResult = (await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignId,
       id: noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(playerResult).toBeTruthy()
     expect(playerResult.blockMeta[blockNoteId]).toBeUndefined()
 
@@ -782,7 +953,7 @@ describe('block permission resolution', () => {
     const item = (await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignId,
       id: noteId,
-    })) as NoteWithContent
+    })) as NoteItemWithContent
     expect(item).toBeTruthy()
     expect(item.blockMeta[blockNoteId]).toBeDefined()
     expect(item.blockMeta[blockNoteId].myPermissionLevel).toBe('view')

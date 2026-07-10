@@ -2,7 +2,12 @@ import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
+import {
+  RESOURCE_STATUS,
+  RESOURCE_TYPES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { ResourceStatus } from '@wizard-archive/editor/resources/resource-contract'
+
 import {
   ensureSidebarItemNameAvailable,
   findUniqueSidebarItemSlug,
@@ -10,67 +15,62 @@ import {
   validateNoCircularSidebarParentChange,
 } from '../../validation/orchestration'
 import { logEditHistory } from '../../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../../shared/edit-history/types'
 import { resyncNoteLinksForNotes } from '../../../links/functions/resyncNoteLinksForNotes'
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
-import { planTransferOperations } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
-import type { TransferOperation } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
+import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
+import { evaluateRestore } from '@wizard-archive/editor/resources/operation-capabilities'
+import { planTransferOperations } from '@wizard-archive/editor/resources/operation-contract'
+import { normalizeSelectedRoots } from '@wizard-archive/editor/resources/selection-roots'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import type {
+  ResourceCommand,
+  ResourceEvent,
+  ResourceOperationDecision,
+} from '@wizard-archive/editor/resources/transaction-contract'
+import type { TransferOperation } from '@wizard-archive/editor/resources/operation-contract'
 import { collectSidebarChildrenMap } from '../children'
-import { normalizeSelectedRoots } from '../../../../shared/sidebar-items/filesystem/selection'
-import { addSidebarItemAncestorsToMap } from '../ancestors'
+import { loadSidebarItemAncestorMap } from '../ancestors'
 import { collectDescendants } from '../../functions/collectDescendants'
-import { evaluateRestore } from '../../../../shared/sidebar-items/filesystem/capabilities'
-import { assertSidebarOperationAllowed } from '../capabilities'
-import { toDecisionRecord } from '../../../../shared/sidebar-items/filesystem/conflicts'
-import type { OperationDecision } from '../../../../shared/sidebar-items/filesystem/conflicts'
+import { assertSidebarOperationAllowed, operationActorFromRole } from '../capabilities'
 import { isActiveSidebarItem, isTrashedSidebarItem } from '../../types/status'
 import { createFileSystemWriteSession } from '../deltas'
-import { FILE_SYSTEM_EVENT_TYPE } from '../../../../shared/sidebar-items/filesystem/receipts'
-import { createFileSystemReadModel } from '../../../../shared/sidebar-items/filesystem/read-model'
+import { createSidebarOperationReadModel, toSidebarOperationItems } from '../readModel'
 import { getSidebarItemRow } from '../sidebarItemRows'
 import { checkSidebarItemRowAccess, requireSidebarItemRowOperationAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
-import type { SidebarItemStatus } from '../../../../shared/sidebar-items/types'
-import type { AnySidebarItemRow } from '../../../../shared/sidebar-items/model-types'
 import type { CampaignMutationCtx } from '../../../functions'
-import type { Id } from '../../../_generated/dataModel'
-import { assertSidebarItemName } from '../../validation/name'
-import type { FileSystemWriteSession } from '../deltas'
-import type {
-  FileSystemOperationDecision,
-  MoveFileSystemCommand,
-  RestoreFileSystemCommand,
-  TrashFileSystemCommand,
-} from '../../../../shared/sidebar-items/filesystem/commands'
-import type {
-  FileSystemDelta,
-  FileSystemEvent,
-} from '../../../../shared/sidebar-items/filesystem/receipts'
-
+import type { Doc, Id } from '../../../_generated/dataModel'
+import { assertConvexSidebarItemName } from '../../validation/name'
+import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
 const clearDeletion = { deletionTime: null, deletedBy: null }
+type StoredSidebarItemRow = Doc<'sidebarItems'>
 
 type MoveMergeFolderOperation = Extract<TransferOperation, { action: 'mergeFolder' }>
 type MoveCommandAction = 'move' | 'restore' | 'trash'
 type MoveSelfEventType =
-  | typeof FILE_SYSTEM_EVENT_TYPE.moved
-  | typeof FILE_SYSTEM_EVENT_TYPE.trashed
-  | typeof FILE_SYSTEM_EVENT_TYPE.restored
-  | typeof FILE_SYSTEM_EVENT_TYPE.skipped
-  | typeof FILE_SYSTEM_EVENT_TYPE.replaced
-  | typeof FILE_SYSTEM_EVENT_TYPE.mergedFolder
-  | typeof FILE_SYSTEM_EVENT_TYPE.noop
+  | typeof RESOURCE_EVENT_TYPE.moved
+  | typeof RESOURCE_EVENT_TYPE.trashed
+  | typeof RESOURCE_EVENT_TYPE.restored
+  | typeof RESOURCE_EVENT_TYPE.skipped
+  | typeof RESOURCE_EVENT_TYPE.replaced
+  | typeof RESOURCE_EVENT_TYPE.mergedFolder
+  | typeof RESOURCE_EVENT_TYPE.noop
+
+type MoveFileSystemCommand = Extract<ResourceCommand, { type: 'move' }>
+type RestoreFileSystemCommand = Extract<ResourceCommand, { type: 'restore' }>
+type TrashFileSystemCommand = Extract<ResourceCommand, { type: 'trash' }>
 
 const MAX_SIDEBAR_MOVE_DEPTH = 50
 
 function pushSelfEvent(
-  events: Array<FileSystemEvent>,
+  events: Array<ResourceEvent>,
   type: MoveSelfEventType,
   itemId: Id<'sidebarItems'>,
 ) {
   if (
-    type === FILE_SYSTEM_EVENT_TYPE.skipped ||
-    type === FILE_SYSTEM_EVENT_TYPE.replaced ||
-    type === FILE_SYSTEM_EVENT_TYPE.mergedFolder
+    type === RESOURCE_EVENT_TYPE.skipped ||
+    type === RESOURCE_EVENT_TYPE.replaced ||
+    type === RESOURCE_EVENT_TYPE.mergedFolder
   ) {
     events.push({ type, itemId, sourceItemId: itemId })
     return
@@ -79,8 +79,8 @@ function pushSelfEvent(
 }
 
 function pushPairedEvent(
-  events: Array<FileSystemEvent>,
-  type: typeof FILE_SYSTEM_EVENT_TYPE.replaced | typeof FILE_SYSTEM_EVENT_TYPE.mergedFolder,
+  events: Array<ResourceEvent>,
+  type: typeof RESOURCE_EVENT_TYPE.replaced | typeof RESOURCE_EVENT_TYPE.mergedFolder,
   itemId: Id<'sidebarItems'>,
   sourceItemId: Id<'sidebarItems'>,
 ) {
@@ -93,16 +93,16 @@ async function resyncRelativeLinksForMovedItems(
     item,
     status,
   }: {
-    item: AnySidebarItemRow
-    status: SidebarItemStatus
+    item: StoredSidebarItemRow
+    status: ResourceStatus
   },
 ): Promise<void> {
-  if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+  if (item.type === RESOURCE_TYPES.notes) {
     await resyncNoteLinksForNotes(ctx, { noteIds: [item._id] })
     return
   }
 
-  if (item.type !== SIDEBAR_ITEM_TYPES.folders) {
+  if (item.type !== RESOURCE_TYPES.folders) {
     return
   }
 
@@ -112,16 +112,16 @@ async function resyncRelativeLinksForMovedItems(
     folderId: item._id,
   })
   const descendantNoteIds = descendants
-    .filter((descendant) => descendant.type === SIDEBAR_ITEM_TYPES.notes)
+    .filter((descendant) => descendant.type === RESOURCE_TYPES.notes)
     .map((descendant) => descendant._id)
 
   await resyncNoteLinksForNotes(ctx, { noteIds: descendantNoteIds })
 }
 
 async function loadMovableSource(ctx: CampaignMutationCtx, itemId: Id<'sidebarItems'>) {
-  const itemFromDb = await getSidebarItemRow(ctx, itemId)
+  const itemRow = await getSidebarItemRow(ctx, itemId)
   return await requireSidebarItemRowOperationAccess(ctx, {
-    rawItem: itemFromDb,
+    rawItem: itemRow,
     operation: PERMISSION_OPERATION.MOVE_SIDEBAR_ITEM,
   })
 }
@@ -129,7 +129,7 @@ async function loadMovableSource(ctx: CampaignMutationCtx, itemId: Id<'sidebarIt
 async function resolveRestoreTargetParentId(
   ctx: CampaignMutationCtx,
   parentId: Id<'sidebarItems'> | null | undefined,
-): Promise<{ parentId: Id<'sidebarItems'> | null; parent: AnySidebarItemRow | null }> {
+): Promise<{ parentId: Id<'sidebarItems'> | null; parent: StoredSidebarItemRow | null }> {
   if (!parentId) return { parentId: null, parent: null }
 
   const parent = await getSidebarItemRow(ctx, parentId)
@@ -142,6 +142,33 @@ async function resolveRestoreTargetParentId(
     parentId: normalizedParentId,
     parent: normalizedParentId === null ? null : parent,
   }
+}
+
+async function collectRestoreTargetAncestorIds(
+  ctx: CampaignMutationCtx,
+  parent: StoredSidebarItemRow | null,
+): Promise<Array<Id<'sidebarItems'>>> {
+  const ancestorIds: Array<Id<'sidebarItems'>> = []
+  const visitedParentIds = new Set<Id<'sidebarItems'>>()
+  let currentParentId = parent?._id ?? null
+
+  while (currentParentId) {
+    if (visitedParentIds.has(currentParentId)) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Existing sidebar parent cycle detected')
+    }
+    if (ancestorIds.length >= MAX_SIDEBAR_MOVE_DEPTH) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max sidebar restore target depth exceeded')
+    }
+    visitedParentIds.add(currentParentId)
+    const currentParent = await getSidebarItemRow(ctx, currentParentId)
+    if (!currentParent) {
+      throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
+    }
+    ancestorIds.push(currentParent._id)
+    currentParentId = currentParent.parentId
+  }
+
+  return ancestorIds
 }
 
 async function executeRestore(
@@ -160,7 +187,7 @@ async function executeRestore(
 ) {
   const restoreTarget = await resolveRestoreTargetParentId(ctx, parentId)
   const restoreParentId = restoreTarget.parentId
-  const requestedName = name ? assertSidebarItemName(name) : null
+  const requestedName = name ? assertConvexSidebarItemName(name) : null
   const restoreParent =
     restoreParentId === null
       ? null
@@ -168,10 +195,12 @@ async function executeRestore(
           rawItem: restoreTarget.parent,
           requiredLevel: PERMISSION_LEVEL.NONE,
         })
+  const restoreTargetAncestorIds = await collectRestoreTargetAncestorIds(ctx, restoreTarget.parent)
   assertSidebarOperationAllowed(
-    evaluateRestore({ role: ctx.membership.role }, item, {
+    evaluateRestore(operationActorFromRole(ctx.membership.role), item, {
       parentId: restoreParentId,
       parent: restoreParent,
+      ancestorIds: restoreTargetAncestorIds,
     }),
   )
 
@@ -200,7 +229,7 @@ async function executeRestore(
   await session.restoreSidebarTree(item, {
     ...clearDeletion,
     ...conflictPatch,
-    status: SIDEBAR_ITEM_STATUS.active,
+    status: RESOURCE_STATUS.active,
     parentId: restoreParentId,
   })
 
@@ -212,7 +241,7 @@ async function executeRestore(
 
   await resyncRelativeLinksForMovedItems(ctx, {
     item,
-    status: SIDEBAR_ITEM_STATUS.active,
+    status: RESOURCE_STATUS.active,
   })
 }
 
@@ -230,7 +259,7 @@ async function executeParentMove(
     session: FileSystemWriteSession
   },
 ) {
-  const requestedName = name ? assertSidebarItemName(name) : null
+  const requestedName = name ? assertConvexSidebarItemName(name) : null
   await validateSidebarMove(ctx, {
     item,
     newParentId: parentId,
@@ -250,7 +279,7 @@ async function executeParentMove(
         }
       : {}
 
-  await session.updateSidebarItem(item._id, {
+  await session.updateResource(item._id, {
     parentId,
     ...renamePatch,
     updatedTime: Date.now(),
@@ -294,7 +323,7 @@ async function collectMoveChildrenMap(
         status,
       })
       for (const child of children) {
-        if (child.type === SIDEBAR_ITEM_TYPES.folders) {
+        if (child.type === RESOURCE_TYPES.folders) {
           folderStatuses.set(child._id, child.status)
         }
       }
@@ -313,9 +342,9 @@ async function getSidebarItemRowsByParentStatus(
     status,
   }: {
     parentId: Id<'sidebarItems'>
-    status: SidebarItemStatus
+    status: ResourceStatus
   },
-): Promise<Array<AnySidebarItemRow>> {
+): Promise<Array<StoredSidebarItemRow>> {
   const children = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
@@ -331,8 +360,8 @@ async function executeMoveOperations(
   action: MoveCommandAction,
   rootSourceIds: Array<Id<'sidebarItems'>>,
   session: FileSystemWriteSession,
-): Promise<Array<FileSystemEvent>> {
-  const events: Array<FileSystemEvent> = []
+): Promise<Array<ResourceEvent>> {
+  const events: Array<ResourceEvent> = []
   const operationSourceIds = new Set<Id<'sidebarItems'>>()
 
   for (const operation of operations) {
@@ -341,34 +370,29 @@ async function executeMoveOperations(
     if (!affectedId) continue
 
     if (operation.action === 'replace') {
-      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.moved, affectedId)
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.moved, affectedId)
       if (!operation.destinationItemId) {
         throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Replace requires a destination item')
       }
       pushPairedEvent(
         events,
-        FILE_SYSTEM_EVENT_TYPE.replaced,
+        RESOURCE_EVENT_TYPE.replaced,
         operation.destinationItemId,
         operation.sourceItemId,
       )
       continue
     } else if (operation.action === 'mergeFolder') {
-      pushPairedEvent(
-        events,
-        FILE_SYSTEM_EVENT_TYPE.mergedFolder,
-        affectedId,
-        operation.sourceItemId,
-      )
+      pushPairedEvent(events, RESOURCE_EVENT_TYPE.mergedFolder, affectedId, operation.sourceItemId)
     } else if (action === 'restore') {
-      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.restored, affectedId)
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.restored, affectedId)
     } else {
-      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.moved, affectedId)
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.moved, affectedId)
     }
   }
 
   for (const sourceItemId of rootSourceIds) {
     if (!operationSourceIds.has(sourceItemId)) {
-      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.noop, sourceItemId)
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.noop, sourceItemId)
     }
   }
   return events
@@ -420,7 +444,7 @@ async function executeMergeFolderMove(
   operation: MoveMergeFolderOperation,
   session: FileSystemWriteSession,
 ): Promise<Id<'sidebarItems'>> {
-  if (source.type !== SIDEBAR_ITEM_TYPES.folders || !operation.destinationItemId) {
+  if (source.type !== RESOURCE_TYPES.folders || !operation.destinationItemId) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only folders can be merged')
   }
 
@@ -429,7 +453,7 @@ async function executeMergeFolderMove(
     rawItem: rawDestination,
     operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
-  if (destination.type !== SIDEBAR_ITEM_TYPES.folders) {
+  if (destination.type !== RESOURCE_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Destination folder not found')
   }
 
@@ -455,7 +479,7 @@ async function trashMoveReplacement(
     rawItem: rawDestination,
     operation: PERMISSION_OPERATION.TRASH_SIDEBAR_ITEM,
   })
-  if (destination.type === SIDEBAR_ITEM_TYPES.folders) {
+  if (destination.type === RESOURCE_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders are merged instead of replaced')
   }
 
@@ -475,60 +499,40 @@ async function normalizeOperationRoots(
   ctx: CampaignMutationCtx,
   sourceItems: Array<AccessibleSidebarItemRow>,
 ) {
-  const folders = sourceItems.filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
+  const folders = sourceItems.filter((item) => item.type === RESOURCE_TYPES.folders)
   const childrenMap = await collectMoveChildrenMap(ctx, folders)
-  const itemsById = buildOperationReadModel(sourceItems, childrenMap).itemsById
-  await addSidebarItemAncestorsToMap(ctx, {
+  const itemsById = createSidebarOperationReadModel({
+    items: sourceItems,
+    childrenMap,
+  }).itemsById
+  const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
     items: sourceItems,
     itemsById,
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
   })
-  return normalizeSelectedRoots(sourceItems, itemsById)
-}
-
-function buildOperationReadModel(
-  items: Array<Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status'>>,
-  childrenMap: Map<Id<'sidebarItems'>, Array<AnySidebarItemRow>>,
-) {
-  const rowsById = new Map<
-    Id<'sidebarItems'>,
-    Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status'>
-  >()
-  for (const item of items) {
-    rowsById.set(item._id, {
-      _id: item._id,
-      parentId: item.parentId,
-      status: item.status,
-    })
-  }
-  for (const children of childrenMap.values()) {
-    for (const child of children) {
-      if (rowsById.has(child._id)) continue
-      rowsById.set(child._id, {
-        _id: child._id,
-        parentId: child.parentId,
-        status: child.status,
-      })
-    }
-  }
-  return createFileSystemReadModel(Array.from(rowsById.values()))
+  const rootIds = new Set(
+    normalizeSelectedRoots(toSidebarOperationItems(sourceItems), ancestorItemsById).map(
+      (item) => item.id,
+    ),
+  )
+  return sourceItems.filter((item) => rootIds.has(item.id))
 }
 
 async function trashSidebarItems(
   ctx: CampaignMutationCtx,
   sourceItems: Array<AccessibleSidebarItemRow>,
   session: FileSystemWriteSession,
-): Promise<Array<FileSystemEvent>> {
+): Promise<Array<ResourceEvent>> {
   const rootItems = await normalizeOperationRoots(ctx, sourceItems)
-  const events: Array<FileSystemEvent> = []
+  const events: Array<ResourceEvent> = []
 
   for (const item of rootItems) {
     if (isTrashedSidebarItem(item)) {
-      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.noop, item._id)
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.noop, item._id)
       continue
     }
     await session.trashSidebarTree(item)
-    pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.trashed, item._id)
+    pushSelfEvent(events, RESOURCE_EVENT_TYPE.trashed, item._id)
   }
 
   return events
@@ -572,10 +576,10 @@ async function executeMovePlan(
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
     action?: MoveCommandAction
-    decisions?: Array<OperationDecision>
+    decisions?: Array<ResourceOperationDecision>
     session: FileSystemWriteSession
   },
-): Promise<Array<FileSystemEvent>> {
+): Promise<Array<ResourceEvent>> {
   const sourceItems = await loadMovableSources(ctx, sourceItemIds)
 
   if (action === 'trash') {
@@ -597,23 +601,26 @@ async function executeMovePlan(
     parentId: effectiveTargetParentId,
   })
   const folders = [...sourceItems, ...targetItems].filter(
-    (item) => item.type === SIDEBAR_ITEM_TYPES.folders,
+    (item) => item.type === RESOURCE_TYPES.folders,
   )
   const childrenMap = await collectMoveChildrenMap(ctx, folders)
-  const readModel = buildOperationReadModel([...sourceItems, ...targetItems], childrenMap)
-  await addSidebarItemAncestorsToMap(ctx, {
+  const readModel = createSidebarOperationReadModel({
+    items: [...sourceItems, ...targetItems],
+    childrenMap,
+  })
+  const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
     items: sourceItems,
     itemsById: readModel.itemsById,
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
   })
   const plan = planTransferOperations({
     mode: 'move',
-    items: sourceItems,
-    itemsById: readModel.itemsById,
+    items: toSidebarOperationItems(sourceItems),
+    itemsById: ancestorItemsById,
     targetParentId: effectiveTargetParentId,
-    targetItems,
-    decisions: toDecisionRecord(decisions),
-    getChildren: (parentId) => childrenMap.get(parentId) ?? [],
+    targetItems: toSidebarOperationItems(targetItems),
+    decisions,
+    getChildren: (parentId) => toSidebarOperationItems(childrenMap.get(parentId) ?? []),
   })
 
   if (plan.status === 'needs-decision') {
@@ -626,17 +633,20 @@ async function executeMovePlan(
     )
   }
 
-  const rootSourceItems = normalizeSelectedRoots(sourceItems, readModel.itemsById)
+  const rootSourceItems = normalizeSelectedRoots(
+    toSidebarOperationItems(sourceItems),
+    ancestorItemsById,
+  )
   const events = await executeMoveOperations(
     ctx,
     plan.operations,
     action,
-    rootSourceItems.map((item) => item._id),
+    rootSourceItems.map((item) => item.id),
     session,
   )
   for (const sourceItemId of plan.skippedSourceItemIds ?? []) {
     events.push({
-      type: FILE_SYSTEM_EVENT_TYPE.skipped,
+      type: RESOURCE_EVENT_TYPE.skipped,
       itemId: sourceItemId,
       sourceItemId,
     })
@@ -653,9 +663,9 @@ export async function executeMoveCommand(
   }: {
     command: MoveFileSystemCommand | RestoreFileSystemCommand | TrashFileSystemCommand
     action: MoveCommandAction
-    decisions?: Array<FileSystemOperationDecision>
+    decisions?: Array<ResourceOperationDecision>
   },
-): Promise<FileSystemDelta> {
+): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
   const events = await executeMovePlan(ctx, {
     sourceItemIds: command.itemIds,

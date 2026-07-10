@@ -27,7 +27,7 @@ export const CAMPAIGN_MEMBER_STATUS = {
 export type CampaignMemberStatus =
   (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS]
 
-export type CampaignFromDb = {
+export type CampaignRow = {
   _id: CampaignId
   _creationTime: number
   dmUserId: UserProfileId
@@ -36,15 +36,18 @@ export type CampaignFromDb = {
   slug: CampaignSlug
   status: CampaignStatus
   currentSessionId: SessionId | null
+  defaultFolderInheritShares: boolean
 }
 
-export type Campaign = CampaignFromDb & {
-  dmUserProfile: UserProfile
-  myMembership: CampaignMember | null
+export type Campaign = Omit<CampaignRow, '_id' | '_creationTime'> & {
+  id: CampaignId
+  createdAt: number
+  dmUserProfile: UserProfileSummary
+  myMembership: CampaignMemberSummary | null
   acceptedMemberCount: number
 }
 
-export type CampaignMemberFromDb = {
+export type CampaignMemberRow = {
   _id: CampaignMemberId
   _creationTime: number
   userId: UserProfileId
@@ -53,10 +56,14 @@ export type CampaignMemberFromDb = {
   status: CampaignMemberStatus
 }
 
-export type CampaignMember = CampaignMemberFromDb & {
+export type CampaignMember = Omit<CampaignMemberRow, '_id' | '_creationTime'> & {
+  id: CampaignMemberId
+  createdAt: number
   userProfile: UserProfile
 }
 
-export type CampaignMemberSummary = CampaignMemberFromDb & {
+export type CampaignMemberSummary = Omit<CampaignMemberRow, '_id' | '_creationTime'> & {
+  id: CampaignMemberId
+  createdAt: number
   userProfile: UserProfileSummary
 }

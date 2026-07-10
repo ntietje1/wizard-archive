@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 
 const COOLDOWN_SECONDS = 60
 

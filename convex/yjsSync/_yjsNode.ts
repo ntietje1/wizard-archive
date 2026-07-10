@@ -1,7 +1,7 @@
 'use node'
 
 import * as Y from 'yjs'
-import { uint8ToArrayBuffer } from './functions/uint8ToArrayBuffer'
+import { uint8ToArrayBuffer } from '../../shared/yjs-sync/uint8ToArrayBuffer'
 import type { Doc } from '../_generated/dataModel'
 
 export function compactYjsUpdates(

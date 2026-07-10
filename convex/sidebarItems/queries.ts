@@ -1,44 +1,51 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
-import { SIDEBAR_ITEM_STATUS } from '../../shared/sidebar-items/types'
 import { fetchCampaignSidebarItems } from './functions/fetchCampaignSidebarItems'
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
+import { resolveSidebarItemAccess as resolveSidebarItemAccessFn } from './functions/resolveSidebarItemAccess'
 import { anySidebarItemValidator } from './schema/anySidebarItemValidator'
-import { sidebarItemSlugValidator } from './schema/validators'
 import { anySidebarItemWithContentValidator } from './schema/anySidebarItemWithContentValidator'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
-import { assertSidebarItemSlug } from './validation/slug'
-import { logger } from '../common/logger'
+import { assertConvexSidebarItemSlug } from './validation/slug'
 
-export const getActiveSidebarItems = campaignQuery({
-  args: {},
-  returns: v.array(anySidebarItemValidator),
-  handler: async (ctx) => {
-    return await fetchCampaignSidebarItems(ctx, {
-      status: SIDEBAR_ITEM_STATUS.active,
-    })
-  },
-})
+const sidebarItemAccessLookupValidator = v.union(
+  v.object({
+    kind: v.literal('id'),
+    id: v.id('sidebarItems'),
+  }),
+  v.object({
+    kind: v.literal('slug'),
+    slug: v.string(),
+  }),
+)
 
-export const getTrashedSidebarItems = campaignQuery({
+const sidebarItemAccessResolutionValidator = v.union(
+  v.object({
+    status: v.literal('not_found'),
+  }),
+  v.object({
+    status: v.literal('not_shared'),
+  }),
+  v.object({
+    status: v.literal('trashed'),
+  }),
+  v.object({
+    status: v.literal('available'),
+    item: anySidebarItemWithContentValidator,
+  }),
+)
+
+export const getSidebarItems = campaignQuery({
   args: {},
-  returns: v.array(anySidebarItemValidator),
+  returns: v.object({
+    active: v.array(anySidebarItemValidator),
+    trash: v.array(anySidebarItemValidator),
+  }),
   handler: async (ctx) => {
-    const items = await fetchCampaignSidebarItems(ctx, {
-      status: SIDEBAR_ITEM_STATUS.trashed,
-    })
-    const missingDeletionTime = items.filter((item) => item.deletionTime == null)
-    if (missingDeletionTime.length > 0) {
-      logger.warn('Ignoring trashed sidebar items without deletionTime', {
-        itemIds: missingDeletionTime.map((item) => item._id),
-      })
-    }
-    const sortableItems = items.filter((item) => item.deletionTime != null)
-    sortableItems.sort((a, b) => b.deletionTime! - a.deletionTime!)
-    return sortableItems
+    return await fetchCampaignSidebarItems(ctx)
   },
 })
 
@@ -70,13 +77,27 @@ export const getSidebarItem = campaignQuery({
 
 export const getSidebarItemBySlug = campaignQuery({
   args: {
-    slug: sidebarItemSlugValidator,
+    slug: v.string(),
   },
   returns: v.nullable(anySidebarItemWithContentValidator),
   handler: async (ctx, args) => {
-    const slug = assertSidebarItemSlug(args.slug)
+    const slug = assertConvexSidebarItemSlug(args.slug)
     return await getSidebarItemBySlugFn(ctx, {
       slug,
     })
+  },
+})
+
+export const resolveSidebarItemAccess = campaignQuery({
+  args: {
+    lookup: sidebarItemAccessLookupValidator,
+  },
+  returns: sidebarItemAccessResolutionValidator,
+  handler: async (ctx, args) => {
+    const lookup =
+      args.lookup.kind === 'slug'
+        ? { kind: 'slug' as const, slug: assertConvexSidebarItemSlug(args.lookup.slug) }
+        : args.lookup
+    return await resolveSidebarItemAccessFn(ctx, lookup)
   },
 })

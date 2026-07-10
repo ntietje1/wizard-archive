@@ -16,7 +16,7 @@ test.describe.serial('campaign editing', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
@@ -27,7 +27,7 @@ test.describe.serial('campaign editing', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, updatedName)
     } catch {
@@ -43,7 +43,7 @@ test.describe.serial('campaign editing', () => {
   })
 
   test('edit campaign name and description', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await expect(page.getByText(campaignName)).toBeVisible({ timeout: 10000 })
 
     const card = page.getByRole('article', { name: campaignName })
@@ -69,7 +69,7 @@ test.describe.serial('campaign editing', () => {
   })
 
   test('updated name persists after reload', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await expect(page.getByText(updatedName)).toBeVisible({ timeout: 10000 })
   })
 })

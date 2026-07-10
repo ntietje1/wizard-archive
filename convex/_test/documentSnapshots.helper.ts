@@ -3,7 +3,7 @@ import { api } from '../_generated/api'
 import { createGameMap, createNote } from './factories.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type { DataModel, Doc, Id } from '../_generated/dataModel'
-import type { GameMapSnapshotData } from '../../shared/game-maps/types'
+import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
 import type schema from '../schema'
 
 type T = TestConvex<typeof schema>

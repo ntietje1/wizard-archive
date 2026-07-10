@@ -1,5 +1,5 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { assertUsername } from 'shared/users/validation'
 import { PeopleTab } from '~/features/settings/components/tabs/campaign-people/people-tab'
@@ -66,7 +66,7 @@ describe('PeopleTab', () => {
       campaign: mockAuthQuery(campaign),
       isDm: false,
       isCampaignLoaded: true,
-      campaignId: campaign._id,
+      campaignId: campaign.id,
     })
     vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery(undefined))
 
@@ -110,12 +110,12 @@ describe('PeopleTab', () => {
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
-      campaignId: campaign._id,
+      campaignId: campaign.id,
     })
     vi.mocked(getOrigin).mockReturnValue('https://example.test')
     const readyMembers = [
       createCampaignMember({
-        campaignId: campaign._id,
+        campaignId: campaign.id,
         role: CAMPAIGN_MEMBER_ROLE.DM,
       }),
     ]
@@ -153,7 +153,7 @@ describe('PeopleTab', () => {
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
-      campaignId: campaign._id,
+      campaignId: campaign.id,
     })
     vi.mocked(getOrigin).mockReturnValue('https://example.test')
     vi.mocked(useAuthQuery).mockImplementationOnce(() =>
@@ -186,7 +186,7 @@ describe('PeopleTab', () => {
     const retryRequests = vi.fn()
     const readyMembers = [
       createCampaignMember({
-        campaignId: campaign._id,
+        campaignId: campaign.id,
         role: CAMPAIGN_MEMBER_ROLE.DM,
       }),
     ]
@@ -196,7 +196,7 @@ describe('PeopleTab', () => {
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
-      campaignId: campaign._id,
+      campaignId: campaign.id,
     })
     vi.mocked(getOrigin).mockReturnValue('https://example.test')
     vi.mocked(useAuthQuery).mockImplementationOnce(() => mockAuthQuery(readyMembers))

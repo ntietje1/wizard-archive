@@ -1,3 +1,5 @@
+import { getUserFileStorage } from './getUserFileStorage'
+import { FILE_STORAGE_STATUS } from '../types'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthQueryCtx } from '../../functions'
 
@@ -9,13 +11,8 @@ export async function getStorageMetadata(
   size: number
   originalFileName: string | null
 } | null> {
-  const fileStorage = await ctx.db
-    .query('fileStorage')
-    .withIndex('by_user_storage', (q) =>
-      q.eq('userId', ctx.user.profile._id).eq('storageId', storageId),
-    )
-    .unique()
-  if (!fileStorage) {
+  const fileStorage = await getUserFileStorage(ctx, storageId)
+  if (!fileStorage || fileStorage.status !== FILE_STORAGE_STATUS.Committed) {
     return null
   }
 

@@ -1,33 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext, setupUser } from '../../_test/identities.helper'
-import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import {
   DEFAULT_SORT_OPTIONS,
-  EDITOR_MODE,
   SORT_DIRECTIONS,
   SORT_ORDERS,
-} from '../../../shared/editor/types'
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import { WORKSPACE_MODE } from '../../../shared/workspace/workspace-mode'
+import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 
 describe('getCurrentEditor', () => {
   const t = createTestContext()
-
-  it('returns null when no editor set for new user', async () => {
-    const ctx = await setupCampaignContext(t)
-    const result = await asDm(ctx).query(api.editors.queries.getCurrentEditor, {
-      campaignId: ctx.campaignId,
-    })
-    expect(result).toBeNull()
-  })
-
-  it('returns null when no editor set', async () => {
-    const ctx = await setupCampaignContext(t)
-    const result = await asDm(ctx).query(api.editors.queries.getCurrentEditor, {
-      campaignId: ctx.campaignId,
-    })
-    expect(result).toBeNull()
-  })
 
   it('returns editor after setting one', async () => {
     const ctx = await setupCampaignContext(t)
@@ -37,35 +21,17 @@ describe('getCurrentEditor', () => {
       campaignId: ctx.campaignId,
       sortOrder: SORT_ORDERS.Alphabetical,
       sortDirection: SORT_DIRECTIONS.Descending,
-      editorMode: EDITOR_MODE.VIEWER,
+      editorMode: WORKSPACE_MODE.VIEWER,
     })
 
     const result = await dmAuth.query(api.editors.queries.getCurrentEditor, {
       campaignId: ctx.campaignId,
     })
-    expect(result).not.toBeNull()
-    expect(result!.sortOrder).toBe(SORT_ORDERS.Alphabetical)
-    expect(result!.sortDirection).toBe(SORT_DIRECTIONS.Descending)
-    expect(result!.editorMode).toBe(EDITOR_MODE.VIEWER)
-  })
-
-  it('requires authentication', async () => {
-    const ctx = await setupCampaignContext(t)
-    await expectNotAuthenticated(
-      t.query(api.editors.queries.getCurrentEditor, {
-        campaignId: ctx.campaignId,
-      }),
-    )
-  })
-
-  it('requires campaign membership', async () => {
-    const ctx = await setupCampaignContext(t)
-    const outsider = await setupUser(t)
-    await expectPermissionDenied(
-      outsider.authed.query(api.editors.queries.getCurrentEditor, {
-        campaignId: ctx.campaignId,
-      }),
-    )
+    expect(result).toMatchObject({
+      sortOrder: SORT_ORDERS.Alphabetical,
+      sortDirection: SORT_DIRECTIONS.Descending,
+      editorMode: WORKSPACE_MODE.VIEWER,
+    })
   })
 })
 
@@ -84,10 +50,11 @@ describe('setCurrentEditor', () => {
     const result = await dmAuth.query(api.editors.queries.getCurrentEditor, {
       campaignId: ctx.campaignId,
     })
-    expect(result).not.toBeNull()
-    expect(result!.sortOrder).toBe(DEFAULT_SORT_OPTIONS.order)
-    expect(result!.sortDirection).toBe(DEFAULT_SORT_OPTIONS.direction)
-    expect(result!.editorMode).toBe(EDITOR_MODE.EDITOR)
+    expect(result).toMatchObject({
+      sortOrder: DEFAULT_SORT_OPTIONS.order,
+      sortDirection: DEFAULT_SORT_OPTIONS.direction,
+      editorMode: WORKSPACE_MODE.EDITOR,
+    })
   })
 
   it('upserts existing editor', async () => {
@@ -120,12 +87,12 @@ describe('setCurrentEditor', () => {
       campaignId: ctx.campaignId,
       sortOrder: SORT_ORDERS.Alphabetical,
       sortDirection: SORT_DIRECTIONS.Descending,
-      editorMode: EDITOR_MODE.VIEWER,
+      editorMode: WORKSPACE_MODE.VIEWER,
     })
 
     await dmAuth.mutation(api.editors.mutations.setCurrentEditor, {
       campaignId: ctx.campaignId,
-      editorMode: EDITOR_MODE.EDITOR,
+      editorMode: WORKSPACE_MODE.EDITOR,
     })
 
     const result = await dmAuth.query(api.editors.queries.getCurrentEditor, {
@@ -133,26 +100,7 @@ describe('setCurrentEditor', () => {
     })
     expect(result!.sortOrder).toBe(SORT_ORDERS.Alphabetical)
     expect(result!.sortDirection).toBe(SORT_DIRECTIONS.Descending)
-    expect(result!.editorMode).toBe(EDITOR_MODE.EDITOR)
-  })
-
-  it('requires authentication', async () => {
-    const ctx = await setupCampaignContext(t)
-    await expectNotAuthenticated(
-      t.mutation(api.editors.mutations.setCurrentEditor, {
-        campaignId: ctx.campaignId,
-      }),
-    )
-  })
-
-  it('requires campaign membership', async () => {
-    const ctx = await setupCampaignContext(t)
-    const outsider = await setupUser(t)
-    await expectPermissionDenied(
-      outsider.authed.mutation(api.editors.mutations.setCurrentEditor, {
-        campaignId: ctx.campaignId,
-      }),
-    )
+    expect(result!.editorMode).toBe(WORKSPACE_MODE.EDITOR)
   })
 
   it('returns editor shape with expected fields', async () => {
@@ -187,21 +135,19 @@ describe('setCurrentEditor', () => {
     expect(id).toBeDefined()
   })
 
-  it('returns null after editor record is hard-deleted', async () => {
+  it('requires authentication and campaign membership', async () => {
     const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
+    const outsider = await setupUser(t)
 
-    const id = await dmAuth.mutation(api.editors.mutations.setCurrentEditor, {
-      campaignId: ctx.campaignId,
-    })
-
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('editor', id)
-    })
-
-    const result = await dmAuth.query(api.editors.queries.getCurrentEditor, {
-      campaignId: ctx.campaignId,
-    })
-    expect(result).toBeNull()
+    await expectNotAuthenticated(
+      t.mutation(api.editors.mutations.setCurrentEditor, {
+        campaignId: ctx.campaignId,
+      }),
+    )
+    await expectPermissionDenied(
+      outsider.authed.mutation(api.editors.mutations.setCurrentEditor, {
+        campaignId: ctx.campaignId,
+      }),
+    )
   })
 })

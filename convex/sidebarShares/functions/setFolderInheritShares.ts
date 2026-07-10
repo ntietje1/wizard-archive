@@ -1,8 +1,8 @@
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
@@ -20,7 +20,7 @@ export const setFolderInheritShares = async (
   },
 ): Promise<null> => {
   const rawItem = await getSidebarItem(ctx, folderId)
-  if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.folders)
+  if (!rawItem || rawItem.type !== RESOURCE_TYPES.folders)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   const folder = await requireItemAccess(ctx, {
     rawItem,
@@ -38,7 +38,7 @@ export const setFolderInheritShares = async (
 
   await logEditHistory(ctx, {
     itemId: folderId,
-    itemType: SIDEBAR_ITEM_TYPES.folders,
+    itemType: RESOURCE_TYPES.folders,
     action: EDIT_HISTORY_ACTION.inherit_shares_changed,
     metadata: { inheritShares, previousInheritShares: folder.inheritShares },
   })

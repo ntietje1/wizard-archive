@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
-import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createSidebarShare } from '../../_test/factories.helper'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 
 describe('link panel rows', () => {
   const t = createTestContext()
@@ -92,11 +94,91 @@ describe('link panel rows', () => {
     expect(rows[0]).toMatchObject({
       query: 'Target Note',
       item: {
-        _id: sourceId,
+        id: sourceId,
         name: 'Source Note',
         slug: 'source-note',
         type: 'note',
       },
     })
+  })
+
+  it('does not expose inaccessible outgoing link targets', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const playerAuth = asPlayer(ctx)
+
+    await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Hidden Target',
+    })
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Shared Source',
+      content: [
+        {
+          id: 'block-a',
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'text', text: 'See [[Hidden Target]]', styles: {} }],
+          children: [],
+        },
+      ],
+    })
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: sourceId,
+      sidebarItemType: RESOURCE_TYPES.notes,
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
+
+    const rows = await playerAuth.query(api.links.queries.getOutgoingLinkPanelRows, {
+      campaignId: ctx.campaignId,
+      noteId: sourceId,
+    })
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      query: 'Hidden Target',
+      item: null,
+    })
+  })
+
+  it('omits backlinks from inaccessible source notes', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const playerAuth = asPlayer(ctx)
+
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Shared Target',
+    })
+    await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Hidden Source',
+      content: [
+        {
+          id: 'block-a',
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'text', text: 'See [[Shared Target]]', styles: {} }],
+          children: [],
+        },
+      ],
+    })
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: targetId,
+      sidebarItemType: RESOURCE_TYPES.notes,
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
+
+    const rows = await playerAuth.query(api.links.queries.getBacklinkPanelRows, {
+      campaignId: ctx.campaignId,
+      itemId: targetId,
+    })
+
+    expect(rows).toEqual([])
   })
 })

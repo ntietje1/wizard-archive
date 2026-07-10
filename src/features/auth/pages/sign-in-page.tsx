@@ -4,7 +4,7 @@ import { AuthPageLayout } from '../components/auth-page-layout'
 import { AccountPicker } from '../components/account-picker'
 import { SignInForm } from '../components/sign-in-form'
 import { useDeviceSessions } from '../hooks/useAuthSessions'
-import { Button } from '~/features/shadcn/components/button'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 
 export function SignInPage({ view }: { view?: 'form' | 'picker' }) {
   const navigate = useNavigate()

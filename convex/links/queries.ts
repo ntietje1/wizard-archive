@@ -1,30 +1,31 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
-import { isActiveSidebarItem } from '../../shared/sidebar-items/types'
+import { isActiveResource } from '@wizard-archive/editor/resources/resource-contract'
+import type { AnyResourceRow } from '@wizard-archive/editor/resources/resource-contract'
 import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
+import { PERMISSION_LEVEL } from '../../shared/permissions/types'
+import { getSidebarItem } from '../sidebarItems/functions/getSidebarItem'
+import { checkItemAccess } from '../sidebarItems/validation/access'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { CampaignQueryCtx } from '../functions'
-import type { AnySidebarItemRow } from '../../shared/sidebar-items/model-types'
+type LinkPanelItem = Pick<AnyResourceRow, 'id' | 'name' | 'slug' | 'type'>
 
-type LinkPanelItem = Pick<AnySidebarItemRow, '_id' | 'name' | 'slug' | 'type'>
-
-type LinkPanelRow = Pick<
-  Doc<'noteLinks'>,
-  '_id' | '_creationTime' | 'blockId' | 'query' | 'displayName' | 'syntax'
-> & {
+type LinkPanelRow = Pick<Doc<'noteLinks'>, 'blockId' | 'query' | 'displayName' | 'syntax'> & {
+  id: Id<'noteLinks'>
+  createdAt: number
   item: LinkPanelItem | null
 }
 
 const linkPanelItemValidator = v.object({
-  _id: v.id('sidebarItems'),
+  id: v.id('sidebarItems'),
   name: v.string(),
   slug: v.string(),
   type: sidebarItemTypeValidator,
 })
 
 const linkPanelRowValidator = v.object({
-  _id: v.id('noteLinks'),
-  _creationTime: v.number(),
+  id: v.id('noteLinks'),
+  createdAt: v.number(),
   blockId: v.id('blocks'),
   query: v.string(),
   displayName: v.union(v.string(), v.null()),
@@ -32,13 +33,22 @@ const linkPanelRowValidator = v.object({
   item: v.union(linkPanelItemValidator, v.null()),
 })
 
-function toLinkPanelItem(item: Doc<'sidebarItems'> | null, campaignId: Id<'campaigns'>) {
-  if (!item || item.campaignId !== campaignId || !isActiveSidebarItem(item)) return null
+async function toLinkPanelItem(
+  ctx: CampaignQueryCtx,
+  item: AnyResourceRow | null,
+  campaignId: Id<'campaigns'>,
+): Promise<LinkPanelItem | null> {
+  if (!item || item.campaignId !== campaignId || !isActiveResource(item)) return null
+  const visibleItem = await checkItemAccess(ctx, {
+    rawItem: item,
+    requiredLevel: PERMISSION_LEVEL.VIEW,
+  })
+  if (!visibleItem) return null
   return {
-    _id: item._id,
-    name: item.name,
-    slug: item.slug,
-    type: item.type,
+    id: visibleItem.id,
+    name: visibleItem.name,
+    slug: visibleItem.slug,
+    type: visibleItem.type,
   }
 }
 
@@ -46,13 +56,13 @@ async function getLinkPanelItem(
   ctx: CampaignQueryCtx,
   itemId: Id<'sidebarItems'>,
 ): Promise<LinkPanelItem | null> {
-  return toLinkPanelItem(await ctx.db.get('sidebarItems', itemId), ctx.campaign._id)
+  return toLinkPanelItem(ctx, await getSidebarItem(ctx, itemId), ctx.campaign._id)
 }
 
 function toLinkPanelRow(link: Doc<'noteLinks'>, item: LinkPanelItem | null): LinkPanelRow {
   return {
-    _id: link._id,
-    _creationTime: link._creationTime,
+    id: link._id,
+    createdAt: link._creationTime,
     blockId: link.blockId,
     query: link.query,
     displayName: link.displayName,
@@ -65,6 +75,9 @@ async function getBacklinkPanelRowsFn(
   ctx: CampaignQueryCtx,
   { itemId }: { itemId: Id<'sidebarItems'> },
 ): Promise<Array<LinkPanelRow>> {
+  const target = await getLinkPanelItem(ctx, itemId)
+  if (!target) return []
+
   const links = await ctx.db
     .query('noteLinks')
     .withIndex('by_campaign_target', (q) =>
@@ -85,6 +98,9 @@ async function getOutgoingLinkPanelRowsFn(
   ctx: CampaignQueryCtx,
   { noteId }: { noteId: Id<'sidebarItems'> },
 ): Promise<Array<LinkPanelRow>> {
+  const source = await getLinkPanelItem(ctx, noteId)
+  if (!source) return []
+
   const links = await ctx.db
     .query('noteLinks')
     .withIndex('by_campaign_source', (q) =>

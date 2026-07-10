@@ -3,7 +3,17 @@ import { components, internal } from './_generated/api'
 import type { DataModel } from './_generated/dataModel'
 import { getBlockSharePermissionLevelMigrationPatch } from './blockShares/permissionLevelMigration'
 import { getDeleteBlockInlineContentProjectionFieldPatch } from './blocks/inlineContentMigration'
+import { getCampaignDefaultFolderInheritSharesMigrationPatch } from './campaigns/defaultFolderInheritSharesMigration'
+import { getFolderInheritSharesMigrationPatch } from './folders/inheritSharesMigration'
+import { getEditHistoryBlockShareMemberMigrationPatch } from './editHistory/blockShareMemberMigration'
+import {
+  getLegacyNoteValueCompileFieldsCleanupPatch,
+  getNoteValueCompileStateMigrationPatch,
+} from './noteValues/compileState'
 import { getSidebarItemLifecycleMigrationPatch } from './sidebarItems/lifecycleMigration'
+import { getSidebarItemNormalizedNameMigrationPatch } from './sidebarItems/normalizedNameMigration'
+import { getFileSystemTransactionVocabularyMigrationPatch } from './sidebarItems/filesystem/transactionVocabularyMigration'
+import { getFileSystemSnapshotNormalizedNameMigrationPatch } from './sidebarItems/filesystem/snapshotNormalizedNameMigration'
 
 export const migrations = new Migrations<DataModel>(components.migrations)
 export const run = migrations.runner()
@@ -31,6 +41,66 @@ export const deleteBlockInlineContentProjectionField = migrations.define({
   },
 })
 
+export const backfillFolderInheritShares = migrations.define({
+  table: 'folders',
+  batchSize: 100,
+  migrateOne: (_ctx, folder) => {
+    return getFolderInheritSharesMigrationPatch(folder as { inheritShares?: boolean }) ?? undefined
+  },
+})
+
+export const backfillCampaignDefaultFolderInheritShares = migrations.define({
+  table: 'campaigns',
+  batchSize: 100,
+  migrateOne: (_ctx, campaign) => {
+    return (
+      getCampaignDefaultFolderInheritSharesMigrationPatch(
+        campaign as { defaultFolderInheritShares?: boolean | null },
+      ) ?? undefined
+    )
+  },
+})
+
+export const backfillNoteValueCompileState = migrations.define({
+  table: 'noteValues',
+  batchSize: 100,
+  migrateOne: (_ctx, row) => getNoteValueCompileStateMigrationPatch(row) ?? undefined,
+})
+
+export const migrateEditHistoryBlockShareMember = migrations.define({
+  table: 'editHistory',
+  batchSize: 100,
+  migrateOne: (_ctx, row) =>
+    getEditHistoryBlockShareMemberMigrationPatch(row) as Partial<typeof row> | undefined,
+})
+
+export const migrateFileSystemTransactionVocabulary = migrations.define({
+  table: 'filesystemTransactions',
+  batchSize: 100,
+  migrateOne: (_ctx, row) =>
+    getFileSystemTransactionVocabularyMigrationPatch(row) as Partial<typeof row> | undefined,
+})
+
+export const removeLegacyNoteValueCompileFields = migrations.define({
+  table: 'noteValues',
+  batchSize: 100,
+  migrateOne: (_ctx, row) =>
+    getLegacyNoteValueCompileFieldsCleanupPatch(row) as Partial<typeof row> | undefined,
+})
+
+export const backfillSidebarItemNormalizedName = migrations.define({
+  table: 'sidebarItems',
+  batchSize: 100,
+  migrateOne: (_ctx, item) => getSidebarItemNormalizedNameMigrationPatch(item) ?? undefined,
+})
+
+export const backfillFileSystemSnapshotNormalizedNames = migrations.define({
+  table: 'filesystemTransactions',
+  batchSize: 100,
+  migrateOne: (_ctx, row) =>
+    getFileSystemSnapshotNormalizedNameMigrationPatch(row) as Partial<typeof row> | undefined,
+})
+
 export const runSidebarItemLifecycleStatusMigration = migrations.runner(
   internal.migrations.migrateSidebarItemLifecycleStatus,
 )
@@ -43,8 +113,46 @@ export const runDeleteBlockInlineContentProjectionFieldMigration = migrations.ru
   internal.migrations.deleteBlockInlineContentProjectionField,
 )
 
+export const runBackfillFolderInheritSharesMigration = migrations.runner(
+  internal.migrations.backfillFolderInheritShares,
+)
+
+export const runBackfillCampaignDefaultFolderInheritSharesMigration = migrations.runner(
+  internal.migrations.backfillCampaignDefaultFolderInheritShares,
+)
+
+export const runBackfillNoteValueCompileStateMigration = migrations.runner(
+  internal.migrations.backfillNoteValueCompileState,
+)
+
+export const runEditHistoryBlockShareMemberMigration = migrations.runner(
+  internal.migrations.migrateEditHistoryBlockShareMember,
+)
+
+export const runFileSystemTransactionVocabularyMigration = migrations.runner(
+  internal.migrations.migrateFileSystemTransactionVocabulary,
+)
+
+export const runSidebarItemNormalizedNameMigration = migrations.runner(
+  internal.migrations.backfillSidebarItemNormalizedName,
+)
+
+export const runFileSystemSnapshotNormalizedNameMigration = migrations.runner(
+  internal.migrations.backfillFileSystemSnapshotNormalizedNames,
+)
+
+export const runRemoveLegacyNoteValueCompileFieldsMigration = migrations.runner(
+  internal.migrations.removeLegacyNoteValueCompileFields,
+)
+
 export const runAll = migrations.runner([
   internal.migrations.migrateSidebarItemLifecycleStatus,
   internal.migrations.migrateBlockSharePermissionLevel,
   internal.migrations.deleteBlockInlineContentProjectionField,
+  internal.migrations.backfillCampaignDefaultFolderInheritShares,
+  internal.migrations.backfillFolderInheritShares,
+  internal.migrations.backfillNoteValueCompileState,
+  internal.migrations.migrateEditHistoryBlockShareMember,
+  internal.migrations.migrateFileSystemTransactionVocabulary,
+  internal.migrations.removeLegacyNoteValueCompileFields,
 ])

@@ -20,6 +20,7 @@ import {
   renameOpenedItem,
   restoreTrashItem,
   selectSidebarItems,
+  sidebarItem,
   waitForFilesystemIdle,
 } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -33,7 +34,7 @@ import {
 } from './helpers/keyboard-helpers'
 
 const campaignName = testName('E2E Filesystem')
-const conflictDialogName = 'Resolve File Conflict'
+const conflictDialogName = 'Resolve Name Conflict'
 let uniqueCounter = 0
 
 function uniqueName(prefix: string) {
@@ -100,7 +101,7 @@ test.describe.serial('filesystem command operations', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
@@ -111,7 +112,7 @@ test.describe.serial('filesystem command operations', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -122,7 +123,7 @@ test.describe.serial('filesystem command operations', () => {
   })
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await waitForFilesystemIdle(page)
   })
@@ -255,6 +256,7 @@ test.describe.serial('filesystem command operations', () => {
     await expectSidebarItemVisible(page, duplicatedName)
     await expectSelected(page, duplicatedName)
 
+    await focusNonEditableTarget(page)
     await page.keyboard.press('Delete')
     await expectSidebarItemHidden(page, duplicatedName)
     await expectSidebarItemVisible(page, sourceName)
@@ -500,8 +502,8 @@ test.describe.serial('filesystem command operations', () => {
       modifier: 'ControlOrMeta',
     })
 
-    await expectSidebarItemVisible(page, dragCopyA)
-    await expectSidebarItemVisible(page, dragCopyB)
+    await expect(sidebarItem(page, dragCopyA)).toHaveCount(2)
+    await expect(sidebarItem(page, dragCopyB)).toHaveCount(2)
     await openItem(page, targetFolder)
     await expectFolderItemVisible(page, targetFolder, dragCopyA)
     await expectFolderItemVisible(page, targetFolder, dragCopyB)

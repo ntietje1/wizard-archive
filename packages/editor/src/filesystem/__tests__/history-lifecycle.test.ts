@@ -1,0 +1,169 @@
+import { describe, expect, it, vi } from 'vite-plus/test'
+import type { ResourceTransactionReceipt } from '../transaction-contract'
+import { assertResourceItemName } from '../../workspace/items'
+import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
+import { createNote } from '../../test/sidebar-item-factory'
+import type { SidebarCacheSnapshot } from '../cache-patches'
+import { executeFileSystemHistoryLifecycle } from '../history-lifecycle'
+import { createReadWriteTestCache } from './cache-test-utils'
+import type {
+  CampaignId,
+  FileSystemTransactionId,
+  SidebarItemId,
+} from '../../../../../shared/common/ids'
+import { createFileSystemReceipt } from './receipt-factory'
+
+function createUndoRenameReceipt(): ResourceTransactionReceipt {
+  const itemId = 'renamed_item' as SidebarItemId
+  return createFileSystemReceipt({
+    transactionId: 'transaction_1' as FileSystemTransactionId,
+    direction: 'undo',
+    command: {
+      type: 'rename',
+      itemId,
+      name: assertResourceItemName('New Name'),
+    },
+    events: [
+      {
+        type: 'renamed',
+        itemId,
+        slug: 'new-name',
+        previousSlug: 'old-name',
+      },
+    ],
+    patches: [
+      {
+        type: 'updateResource',
+        itemId,
+        before: { name: assertResourceItemName('New Name') },
+        fields: { name: assertResourceItemName('Old Name') },
+      },
+    ],
+  })
+}
+
+describe('filesystem history lifecycle', () => {
+  it('runs undo through the shared optimistic mutation lifecycle', async () => {
+    const item = createNote({
+      id: 'renamed_item' as SidebarItemId,
+      name: 'New Name',
+      status: RESOURCE_STATUS.active,
+    })
+    const snapshot: SidebarCacheSnapshot = { sidebar: [item], trash: [] }
+    const cacheAdapter = createReadWriteTestCache(snapshot)
+    const receipt = createUndoRenameReceipt()
+    const executeMutation = vi.fn(() => Promise.resolve(receipt))
+    const recordHistorySuccess = vi.fn()
+    const applyReceiptSideEffects = vi.fn()
+    const showProgress = vi.fn(() => 'progress-toast')
+    const dismissProgress = vi.fn()
+    const showReceiptToast = vi.fn()
+
+    const result = await executeFileSystemHistoryLifecycle({
+      direction: 'undo',
+      entry: {
+        workspaceId: 'campaign_1' as CampaignId,
+        transactionId: 'transaction_1' as FileSystemTransactionId,
+      },
+      cacheAdapter,
+      runMutation: (operation) => operation(),
+      executeMutation,
+      recordHistorySuccess,
+      applyReceiptSideEffects,
+      reportError: vi.fn(),
+      showProgress,
+      dismissProgress,
+      showReceiptToast,
+    })
+
+    expect(result).toEqual({ status: 'completed', receipt })
+    expect(executeMutation).toHaveBeenCalledWith('transaction_1')
+    expect(snapshot.sidebar[0]?.name).toBe('Old Name')
+    expect(recordHistorySuccess).toHaveBeenCalledWith({
+      workspaceId: 'campaign_1',
+      transactionId: 'transaction_1',
+    })
+    expect(applyReceiptSideEffects).toHaveBeenCalledWith(receipt)
+    expect(showProgress).toHaveBeenCalledWith('Undoing...')
+    expect(dismissProgress).toHaveBeenCalledWith('progress-toast')
+    expect(showReceiptToast).toHaveBeenCalledWith(receipt)
+  })
+
+  it('keeps completed history receipts successful when receipt feedback fails', async () => {
+    const item = createNote({
+      id: 'renamed_item' as SidebarItemId,
+      name: 'New Name',
+      status: RESOURCE_STATUS.active,
+    })
+    const snapshot: SidebarCacheSnapshot = { sidebar: [item], trash: [] }
+    const cacheAdapter = createReadWriteTestCache(snapshot)
+    const receipt = createUndoRenameReceipt()
+    const executeMutation = vi.fn(() => Promise.resolve(receipt))
+    const recordHistorySuccess = vi.fn()
+    const applyReceiptSideEffects = vi.fn()
+    const reportError = vi.fn()
+    const toastError = new Error('toast failed')
+
+    const result = await executeFileSystemHistoryLifecycle({
+      direction: 'undo',
+      entry: {
+        workspaceId: 'campaign_1' as CampaignId,
+        transactionId: 'transaction_1' as FileSystemTransactionId,
+      },
+      cacheAdapter,
+      runMutation: (operation) => operation(),
+      executeMutation,
+      recordHistorySuccess,
+      applyReceiptSideEffects,
+      reportError,
+      showProgress: vi.fn(() => 'progress-toast'),
+      dismissProgress: vi.fn(),
+      showReceiptToast: vi.fn(() => {
+        throw toastError
+      }),
+    })
+
+    expect(result).toEqual({ status: 'completed', receipt })
+    expect(snapshot.sidebar[0]?.name).toBe('Old Name')
+    expect(recordHistorySuccess).toHaveBeenCalledWith({
+      workspaceId: 'campaign_1',
+      transactionId: 'transaction_1',
+    })
+    expect(reportError).toHaveBeenCalledWith(toastError, 'Failed to show filesystem receipt')
+  })
+
+  it('rejects stale history entries before running the mutation', async () => {
+    const item = createNote({
+      id: 'renamed_item' as SidebarItemId,
+      name: 'New Name',
+      status: RESOURCE_STATUS.active,
+    })
+    const snapshot: SidebarCacheSnapshot = { sidebar: [item], trash: [] }
+    const cacheAdapter = createReadWriteTestCache(snapshot)
+    const executeMutation = vi.fn()
+    const reportError = vi.fn()
+
+    const result = await executeFileSystemHistoryLifecycle({
+      direction: 'undo',
+      entry: {
+        workspaceId: 'campaign_1' as CampaignId,
+        transactionId: 'transaction_1' as FileSystemTransactionId,
+      },
+      cacheAdapter,
+      runMutation: (operation) => operation(),
+      executeMutation,
+      isEntryStale: () => true,
+      recordHistorySuccess: vi.fn(),
+      applyReceiptSideEffects: vi.fn(),
+      reportError,
+      showProgress: vi.fn(() => 'progress-toast'),
+      dismissProgress: vi.fn(),
+      showReceiptToast: vi.fn(),
+    })
+
+    expect(result).toEqual({ status: 'rejected', reason: 'stale-history' })
+    expect(executeMutation).not.toHaveBeenCalled()
+    expect(snapshot.sidebar[0]?.name).toBe('New Name')
+    expect(reportError).not.toHaveBeenCalled()
+  })
+})

@@ -215,7 +215,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     expect(before).not.toBeNull()
     expect(Object.keys(before!.blockMeta)).toContain(block.blockNoteId)
 
-    await dmAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [note.noteId],
       campaignMemberId: ctx.player.memberId,
@@ -245,7 +245,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       })
     }
 
-    await dmAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [first.noteId, second.noteId],
       campaignMemberId: ctx.player.memberId,

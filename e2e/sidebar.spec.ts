@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createCampaign, deleteCampaign } from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createFolder, createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -13,7 +13,7 @@ test.describe.serial('sidebar operations', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
@@ -24,7 +24,7 @@ test.describe.serial('sidebar operations', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -35,37 +35,36 @@ test.describe.serial('sidebar operations', () => {
   })
 
   test('create folder and note', async ({ page }) => {
-    await page.goto('/campaigns')
-    await page.getByText(campaignName).click()
-    await page.waitForURL(/\/campaigns\//)
+    await page.goto('/campaigns', { waitUntil: 'commit' })
+    await navigateToCampaign(page, campaignName)
     await createFolder(page, folderName)
-    await expect(page.getByRole('link', { name: folderName, exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: folderName, exact: true })).toBeVisible()
     await createNote(page, noteName)
-    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: noteName, exact: true })).toBeVisible()
   })
 
   test('context menu shows expected actions', async ({ page }) => {
-    await page.goto('/campaigns')
-    await page.getByText(campaignName).click()
-    await page.waitForURL(/\/campaigns\//)
-    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible()
+    await page.goto('/campaigns', { waitUntil: 'commit' })
+    await navigateToCampaign(page, campaignName)
+    await expect(page.getByRole('button', { name: noteName, exact: true })).toBeVisible()
     await openContextMenu(page, noteName)
     await expect(page.getByRole('menuitem', { name: /rename/i })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: /delete|trash/i })).toBeVisible()
   })
 
   test('rename via context menu', async ({ page }) => {
-    await page.goto('/campaigns')
-    await page.getByText(campaignName).click()
-    await page.waitForURL(/\/campaigns\//)
-    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible()
+    await page.goto('/campaigns', { waitUntil: 'commit' })
+    await navigateToCampaign(page, campaignName)
+    await expect(page.getByRole('button', { name: noteName, exact: true })).toBeVisible()
     await openContextMenu(page, noteName)
     await page.getByText(/rename/i).click()
     const renamedName = `Renamed ${Date.now()}`
-    const renameInput = page.getByRole('textbox', { name: /enter a name/i })
+    const renameInput = page
+      .getByRole('navigation', { name: 'Sidebar' })
+      .getByRole('textbox', { name: 'Item name', exact: true })
     await renameInput.fill(renamedName)
     await renameInput.press('Enter')
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(sidebar.getByRole('link', { name: renamedName, exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('button', { name: renamedName, exact: true })).toBeVisible()
   })
 })

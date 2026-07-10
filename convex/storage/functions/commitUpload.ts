@@ -2,31 +2,29 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { FILE_STORAGE_STATUS } from '../types'
 import { validateFileUpload } from '../../../shared/storage/validation'
+import { getUserUploadSession } from './getUserUploadSession'
 import type { Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { AuthMutationCtx, CampaignMutationCtx } from '../../functions'
+
+type UploadCommitCtx = AuthMutationCtx | CampaignMutationCtx
 
 export async function commitUpload(
-  ctx: AuthMutationCtx,
-  { storageId }: { storageId: Id<'_storage'> },
-): Promise<Id<'fileStorage'>> {
-  const fileStorage = await ctx.db
-    .query('fileStorage')
-    .withIndex('by_user_storage', (q) =>
-      q.eq('userId', ctx.user.profile._id).eq('storageId', storageId),
-    )
-    .unique()
+  ctx: UploadCommitCtx,
+  { sessionId }: { sessionId: Id<'fileStorage'> },
+) {
+  const userId = 'membership' in ctx ? ctx.membership.userId : ctx.user.profile._id
+  const fileStorage = await getUserUploadSession(ctx, sessionId, userId)
   if (!fileStorage) {
-    throwClientError(ERROR_CODE.NOT_FOUND, 'The uploaded file could not be found')
+    throwClientError(ERROR_CODE.NOT_FOUND, 'The upload session could not be found')
   }
 
-  if (fileStorage.status === FILE_STORAGE_STATUS.Committed) {
-    throwClientError(ERROR_CODE.CONFLICT, 'This file has already been committed')
+  if (!fileStorage.storageId) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'The upload session has no file')
   }
 
-  // Validate file before committing
-  const storageMetadata = await ctx.db.system.get('_storage', storageId)
+  const storageMetadata = await ctx.db.system.get('_storage', fileStorage.storageId)
   if (!storageMetadata) {
-    throw new Error('Storage metadata not found')
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'The uploaded file could not be found')
   }
 
   const validation = validateFileUpload(
@@ -38,8 +36,15 @@ export async function commitUpload(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, validation.error)
   }
 
-  await ctx.db.patch('fileStorage', fileStorage._id, {
-    status: FILE_STORAGE_STATUS.Committed,
-  })
-  return fileStorage._id
+  if (fileStorage.status !== FILE_STORAGE_STATUS.Committed) {
+    await ctx.db.patch('fileStorage', fileStorage._id, {
+      status: FILE_STORAGE_STATUS.Committed,
+    })
+  }
+  return {
+    metadata: storageMetadata,
+    originalFileName: fileStorage.originalFileName,
+    sessionId: fileStorage._id,
+    storageId: fileStorage.storageId,
+  }
 }

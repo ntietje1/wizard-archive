@@ -1,7 +1,7 @@
 import { api } from '../_generated/api'
 import type { TestConvexForDataModel } from 'convex-test'
 import type { DataModel, Id } from '../_generated/dataModel'
-import type { BlockNoteId } from '../../shared/editor-blocks/types'
+import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
 
 type AuthedContext = TestConvexForDataModel<DataModel>
 
@@ -14,7 +14,7 @@ export async function getBlockShareInfo(
   }: {
     campaignId: Id<'campaigns'>
     noteId: Id<'sidebarItems'>
-    blockNoteId: BlockNoteId
+    blockNoteId: NoteBlockId
   },
 ) {
   const result = await auth.query(api.blocks.queries.getBlocksWithShares, {

@@ -1,25 +1,23 @@
 import { asyncMap } from 'convex-helpers'
-import { GAME_MAP_SNAPSHOT_TYPE } from '../../../shared/game-maps/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { uint8ToArrayBuffer } from '../../../shared/yjs-sync/uint8ToArrayBuffer'
 import { createSnapshot } from '../../documentSnapshots/functions/createSnapshot'
 import { logger } from '../../common/logger'
-import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
-import type { MutationCtx } from '../../_generated/server'
+import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
+import type { MutationCtx, QueryCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
+import { DOCUMENT_SNAPSHOT_TYPE } from '../../documentSnapshots/types'
 
-export async function captureGameMapSnapshot(
-  ctx: MutationCtx,
+export async function encodeGameMapSnapshot(
+  ctx: QueryCtx,
   {
     mapId,
-    editHistoryId,
     campaignId,
   }: {
     mapId: Id<'sidebarItems'>
-    editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
   },
-): Promise<void> {
+): Promise<ArrayBuffer> {
   const [sidebarItem, map, pins] = await Promise.all([
     ctx.db.get('sidebarItems', mapId),
     ctx.db
@@ -63,7 +61,7 @@ export async function captureGameMapSnapshot(
   }
 
   const snapshotData: GameMapSnapshotData = {
-    imageStorageId: map.imageStorageId,
+    imageAssetId: map.imageStorageId,
     pins: validPins.map(({ pin, item }) => ({
       itemId: pin.itemId,
       x: pin.x,
@@ -76,15 +74,29 @@ export async function captureGameMapSnapshot(
     })),
   }
 
-  const json = JSON.stringify(snapshotData)
-  const data = uint8ToArrayBuffer(new TextEncoder().encode(json))
+  return uint8ToArrayBuffer(new TextEncoder().encode(JSON.stringify(snapshotData)))
+}
+
+export async function captureGameMapSnapshot(
+  ctx: MutationCtx,
+  {
+    mapId,
+    editHistoryId,
+    campaignId,
+  }: {
+    mapId: Id<'sidebarItems'>
+    editHistoryId: Id<'editHistory'>
+    campaignId: Id<'campaigns'>
+  },
+): Promise<void> {
+  const data = await encodeGameMapSnapshot(ctx, { mapId, campaignId })
 
   await createSnapshot(ctx, {
     itemId: mapId,
-    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+    itemType: RESOURCE_TYPES.gameMaps,
     editHistoryId,
     campaignId,
-    snapshotType: GAME_MAP_SNAPSHOT_TYPE,
+    snapshotType: DOCUMENT_SNAPSHOT_TYPE.GameMap,
     data,
   })
 }

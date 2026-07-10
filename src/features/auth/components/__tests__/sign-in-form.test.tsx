@@ -1,11 +1,12 @@
 import { createElement } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { SignInForm } from '~/features/auth/components/sign-in-form'
 
 const mockSignInEmail = vi.fn()
+const mockSignInSocial = vi.fn()
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(),
@@ -21,7 +22,7 @@ vi.mock('~/features/auth/utils/auth-client', () => ({
   authClient: {
     signIn: {
       email: (...args: Array<unknown>) => mockSignInEmail(...args),
-      social: vi.fn(),
+      social: (...args: Array<unknown>) => mockSignInSocial(...args),
     },
   },
 }))
@@ -29,6 +30,7 @@ vi.mock('~/features/auth/utils/auth-client', () => ({
 describe('SignInForm', () => {
   beforeEach(() => {
     mockSignInEmail.mockReset()
+    mockSignInSocial.mockReset()
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -62,6 +64,20 @@ describe('SignInForm', () => {
     render(<SignInForm />)
 
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument()
+  })
+
+  it('starts Google OAuth sign-in with the redirect target', async () => {
+    mockSignInSocial.mockResolvedValue(undefined)
+
+    const user = userEvent.setup()
+    render(<SignInForm redirectTo="/next" />)
+
+    await user.click(screen.getByRole('button', { name: /continue with google/i }))
+
+    expect(mockSignInSocial).toHaveBeenCalledWith({
+      provider: 'google',
+      callbackURL: '/next',
+    })
   })
 
   it('calls authClient.signIn.email on form submit', async () => {

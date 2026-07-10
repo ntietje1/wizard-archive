@@ -1,34 +1,38 @@
 import { api } from '../_generated/api'
-import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
-import { assertSidebarItemName } from '../sidebarItems/validation/name'
-import { assertSidebarItemColor } from '../../shared/sidebar-items/color'
-import { assertSidebarItemIconName } from '../../shared/sidebar-items/icon'
+import {
+  assertResourceItemColor,
+  assertResourceItemIconName,
+} from '@wizard-archive/editor/resources/items'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { CreateParentTarget } from '@wizard-archive/editor/resources/items'
+import type {
+  ResourceColor,
+  ResourceIconName,
+  ResourceKind,
+} from '@wizard-archive/editor/resources/resource-contract'
+
+import { assertConvexSidebarItemName } from '../sidebarItems/validation/name'
 import { makeYjsUpdateWithBlocks } from './yjs.helper'
 import type { DataModel, Id } from '../_generated/dataModel'
 import type { TestConvexForDataModel } from 'convex-test'
-import type { CustomBlock } from '../../shared/editor-blocks/types'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type {
-  FileSystemEvent,
-  FileSystemTransactionReceipt,
-} from '../../shared/sidebar-items/filesystem/receipts'
-import type { CreateParentTarget } from '../../shared/sidebar-items/parent-target'
-import type { SidebarItemColor } from '../../shared/sidebar-items/color'
-import type { SidebarItemIconName } from '../../shared/sidebar-items/icon'
-import type { SidebarItemType } from '../../shared/sidebar-items/types'
-
+  ResourceEvent,
+  ResourceTransactionReceipt,
+} from '@wizard-archive/editor/resources/transaction-contract'
 type AuthedContext = TestConvexForDataModel<DataModel>
 
 type CreateSidebarItemSetupArgs = {
   campaignId: Id<'campaigns'>
   name: string
   parentTarget?: CreateParentTarget
-  iconName?: SidebarItemIconName
-  color?: SidebarItemColor
+  iconName?: ResourceIconName
+  color?: ResourceColor
 }
 
-function createdItemFromReceipt(receipt: FileSystemTransactionReceipt) {
+function createdItemFromReceipt(receipt: ResourceTransactionReceipt) {
   const created = receipt.events.find(
-    (event): event is Extract<FileSystemEvent, { type: 'created' }> => event.type === 'created',
+    (event): event is Extract<ResourceEvent, { type: 'created' }> => event.type === 'created',
   )
   if (!created) {
     throw new Error('Expected filesystem create command to create a sidebar item')
@@ -38,7 +42,7 @@ function createdItemFromReceipt(receipt: FileSystemTransactionReceipt) {
 
 async function createSidebarItemViaFilesystem(
   client: AuthedContext,
-  args: CreateSidebarItemSetupArgs & { itemType: SidebarItemType },
+  args: CreateSidebarItemSetupArgs & { itemType: ResourceKind },
 ) {
   const receipt = await client.mutation(
     api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
@@ -47,11 +51,11 @@ async function createSidebarItemViaFilesystem(
       command: {
         type: 'create',
         itemType: args.itemType,
-        name: assertSidebarItemName(args.name),
+        name: assertConvexSidebarItemName(args.name),
         parentTarget: args.parentTarget ?? { kind: 'direct', parentId: null },
         iconName:
-          args.iconName === undefined ? undefined : assertSidebarItemIconName(args.iconName),
-        color: args.color === undefined ? undefined : assertSidebarItemColor(args.color),
+          args.iconName === undefined ? undefined : assertResourceItemIconName(args.iconName),
+        color: args.color === undefined ? undefined : assertResourceItemColor(args.color),
       },
     },
   )
@@ -61,11 +65,11 @@ async function createSidebarItemViaFilesystem(
 
 export async function createNoteViaFilesystem(
   client: AuthedContext,
-  args: CreateSidebarItemSetupArgs & { content?: Array<CustomBlock> },
+  args: CreateSidebarItemSetupArgs & { content?: Array<NoteBlock> },
 ) {
   const created = await createSidebarItemViaFilesystem(client, {
     ...args,
-    itemType: SIDEBAR_ITEM_TYPES.notes,
+    itemType: RESOURCE_TYPES.notes,
   })
   if (args.content !== undefined) {
     await client.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -87,24 +91,24 @@ export async function createFolderViaFilesystem(
 ) {
   const created = await createSidebarItemViaFilesystem(client, {
     ...args,
-    itemType: SIDEBAR_ITEM_TYPES.folders,
+    itemType: RESOURCE_TYPES.folders,
   })
   return { folderId: created.itemId, slug: created.slug, receipt: created.receipt }
 }
 
 export async function createFileViaFilesystem(
   client: AuthedContext,
-  args: CreateSidebarItemSetupArgs & { storageId?: Id<'_storage'> | null },
+  args: CreateSidebarItemSetupArgs & { uploadSessionId?: Id<'fileStorage'> | null },
 ) {
   const created = await createSidebarItemViaFilesystem(client, {
     ...args,
-    itemType: SIDEBAR_ITEM_TYPES.files,
+    itemType: RESOURCE_TYPES.files,
   })
-  if (args.storageId !== undefined) {
+  if (args.uploadSessionId !== undefined) {
     await client.mutation(api.files.mutations.updateFileStorage, {
       campaignId: args.campaignId,
       fileId: created.itemId,
-      storageId: args.storageId,
+      uploadSessionId: args.uploadSessionId,
     })
   }
   return { fileId: created.itemId, slug: created.slug, receipt: created.receipt }
@@ -112,17 +116,24 @@ export async function createFileViaFilesystem(
 
 export async function createGameMapViaFilesystem(
   client: AuthedContext,
-  args: CreateSidebarItemSetupArgs & { imageStorageId?: Id<'_storage'> | null },
+  args: CreateSidebarItemSetupArgs & { uploadSessionId?: Id<'fileStorage'> | null },
 ) {
   const created = await createSidebarItemViaFilesystem(client, {
     ...args,
-    itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+    itemType: RESOURCE_TYPES.gameMaps,
   })
-  if (args.imageStorageId !== undefined) {
+  if (args.uploadSessionId !== undefined) {
+    const replacementToken = args.uploadSessionId
+      ? await client.mutation(api.gameMaps.mutations.beginMapImageReplacement, {
+          campaignId: args.campaignId,
+          mapId: created.itemId,
+        })
+      : null
     await client.mutation(api.gameMaps.mutations.updateMapImage, {
       campaignId: args.campaignId,
       mapId: created.itemId,
-      imageStorageId: args.imageStorageId,
+      replacementToken,
+      uploadSessionId: args.uploadSessionId,
     })
   }
   return { mapId: created.itemId, slug: created.slug, receipt: created.receipt }
@@ -134,7 +145,7 @@ export async function createCanvasViaFilesystem(
 ) {
   const created = await createSidebarItemViaFilesystem(client, {
     ...args,
-    itemType: SIDEBAR_ITEM_TYPES.canvases,
+    itemType: RESOURCE_TYPES.canvases,
   })
   return { canvasId: created.itemId, slug: created.slug, receipt: created.receipt }
 }

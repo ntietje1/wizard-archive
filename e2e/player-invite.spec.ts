@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { signIn } from './helpers/auth-helpers'
+import { gotoSignIn, signIn } from './helpers/auth-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const E2E_PLAYER_EMAIL = process.env.E2E_PLAYER_EMAIL
@@ -19,7 +19,7 @@ test.describe.serial('player invite flow', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
@@ -30,7 +30,7 @@ test.describe.serial('player invite flow', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -41,7 +41,7 @@ test.describe.serial('player invite flow', () => {
   })
 
   test('DM opens campaign settings and sees invite section', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: 'User menu' }).click()
@@ -58,7 +58,7 @@ test.describe.serial('player invite flow', () => {
 
   test('player navigates to join URL and requests to join', async ({ browser, page }) => {
     // DM navigates to campaign to extract the URL
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const url = page.url()
@@ -69,7 +69,7 @@ test.describe.serial('player invite flow', () => {
     const playerContext = await browser.newContext()
     const playerPage = await playerContext.newPage()
 
-    await playerPage.goto('/sign-in', { waitUntil: 'networkidle' })
+    await gotoSignIn(playerPage)
     await signIn(playerPage, E2E_PLAYER_EMAIL!, E2E_PLAYER_PASSWORD!)
     await playerPage.waitForURL('**/campaigns', { timeout: 30000 })
 
@@ -87,7 +87,7 @@ test.describe.serial('player invite flow', () => {
   })
 
   test('DM sees player in member list', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: 'User menu' }).click()

@@ -3,13 +3,16 @@ import { reconstructBlockTree } from '../../blocks/functions/reconstructBlockTre
 import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import { saveAllNoteValuesForNote } from '../../noteValues/functions/saveAllNoteValuesForNote'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
+import { createAccessibleResourcePathResolver } from '../../sidebarItems/functions/resourcePathResolver'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { CustomBlock } from '../../../shared/editor-blocks/types'
+import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { Block } from '../../blocks/types'
 
 type CampaignScopedMutationCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>
+  membership?: CampaignMemberRow
 }
 
 export async function syncNoteDerivedDataFromPersistedBlocks(
@@ -27,16 +30,19 @@ export async function syncNoteDerivedDataFromPersistedBlocks(
     return
   }
   const content = reconstructBlockTree(blocks)
+  const resourcePathResolver = createAccessibleResourcePathResolver(ctx)
 
   await Promise.all([
     syncNoteLinks(ctx, {
       noteId,
       campaignId: note.campaignId,
       blocks,
+      resourcePathResolver,
     }),
     saveAllNoteValuesForNote(ctx, {
       noteId,
       content,
+      resourcePathResolver,
     }),
   ])
 }
@@ -48,7 +54,7 @@ export async function syncNoteIndexesFromBlocks(
     content,
   }: {
     noteId: Id<'sidebarItems'>
-    content: Array<CustomBlock>
+    content: Array<NoteBlock>
   },
 ): Promise<void> {
   const persistedBlocks = await saveAllBlocksForNote(ctx, { noteId, content })

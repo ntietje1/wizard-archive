@@ -1,6 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { convexValidatorFields } from '../common/schema'
+import { domainValidatorFields } from '../common/schema'
 
 const profileImageValidator = v.nullable(
   v.union(
@@ -31,7 +31,7 @@ export const userTables = {
 // profile with profileImage resolved to a direct URL
 // only includes convex built-in fields and not commonTableFields (since this would be circular)
 const userProfileValidatorFields = {
-  ...convexValidatorFields('userProfiles'),
+  ...domainValidatorFields('userProfiles'),
   authUserId: v.string(),
   username: v.string(),
   email: v.nullable(v.string()),

@@ -10,7 +10,7 @@ let childNote: string
 
 async function setFolderExpansion(page: Page, folderName: string, expand: boolean) {
   const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-  const folderLink = sidebar.getByRole('link', {
+  const folderLink = sidebar.getByRole('button', {
     name: folderName,
     exact: true,
   })
@@ -38,7 +38,7 @@ test.describe.serial('folder nesting and expand/collapse', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createFolder(page, parentFolder)
@@ -51,7 +51,7 @@ test.describe.serial('folder nesting and expand/collapse', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -62,7 +62,7 @@ test.describe.serial('folder nesting and expand/collapse', () => {
   })
 
   test('create child note inside folder via context menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
@@ -71,7 +71,7 @@ test.describe.serial('folder nesting and expand/collapse', () => {
     await page.getByRole('menuitem', { name: 'New...' }).hover()
     await page.getByRole('menuitem', { name: 'Note' }).click()
 
-    const nameInput = page.getByRole('textbox', { name: 'Item name' })
+    const nameInput = sidebar.getByRole('textbox', { name: 'Item name', exact: true })
     await expect(nameInput).toHaveValue(/untitled/i, { timeout: 10000 })
     await nameInput.click()
     await nameInput.fill(childNote)
@@ -79,51 +79,51 @@ test.describe.serial('folder nesting and expand/collapse', () => {
 
     // Expand folder to verify child is inside
     await setFolderExpansion(page, parentFolder, true)
-    await expect(sidebar.getByRole('link', { name: childNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: childNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
   })
 
   test('collapse and expand folder toggles child visibility', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
 
     // Expand folder first
     await setFolderExpansion(page, parentFolder, true)
-    await expect(sidebar.getByRole('link', { name: childNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: childNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
     // Collapse folder — child should hide
     await setFolderExpansion(page, parentFolder, false)
-    await expect(sidebar.getByRole('link', { name: childNote, exact: true })).not.toBeVisible({
+    await expect(sidebar.getByRole('button', { name: childNote, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
 
     // Expand folder again — child should reappear
     await setFolderExpansion(page, parentFolder, true)
-    await expect(sidebar.getByRole('link', { name: childNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: childNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
   })
 
   test('close all folders hides child', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
 
     // Expand folder first so child is visible
     await setFolderExpansion(page, parentFolder, true)
-    await expect(sidebar.getByRole('link', { name: childNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: childNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
     await page.getByRole('button', { name: /close-all-folders mode/i }).click()
 
-    await expect(sidebar.getByRole('link', { name: childNote, exact: true })).not.toBeVisible({
+    await expect(sidebar.getByRole('button', { name: childNote, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
   })

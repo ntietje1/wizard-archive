@@ -7,22 +7,25 @@ import { typeInEditor } from './helpers/editor-helpers'
 const campaignName = testName('E2E EdBasics')
 let noteName: string
 let secondNoteName: string
+let slashNoteName: string
 
 test.describe.serial('editor basics', () => {
   test.beforeAll(async ({ browser }) => {
     const id = Date.now()
     noteName = `Editor Note ${id}`
     secondNoteName = `Nav Note ${id}`
+    slashNoteName = `Slash Menu Note ${id}`
 
     const context = await browser.newContext({
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
     await createNote(page, secondNoteName)
+    await createNote(page, slashNoteName)
     await page.close()
     await context.close()
   })
@@ -32,7 +35,7 @@ test.describe.serial('editor basics', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -43,9 +46,9 @@ test.describe.serial('editor basics', () => {
   })
 
   test('type text into editor', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
-    await openItem(page, noteName)
+    await openItem(page, slashNoteName)
 
     const editor = page.locator('[contenteditable]').first()
     await expect(editor).toBeVisible({ timeout: 10000 })
@@ -55,7 +58,7 @@ test.describe.serial('editor basics', () => {
   })
 
   test('editor owns the top and bottom whitespace of the note viewport', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -127,7 +130,7 @@ test.describe.serial('editor basics', () => {
   })
 
   test('slash menu creates heading', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -146,8 +149,8 @@ test.describe.serial('editor basics', () => {
     await expect(editor).toContainText('My Heading')
   })
 
-  test('editor text context menu shows clipboard placeholders', async ({ page }) => {
-    await page.goto('/campaigns')
+  test('editor text context menu opens note block actions', async ({ page }) => {
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -157,23 +160,15 @@ test.describe.serial('editor basics', () => {
     await expect(text).toBeVisible({ timeout: 10000 })
 
     await text.click({ button: 'right' })
-    await expect(page.getByRole('menuitem', { name: 'Paste' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /^(Share|Unshare) 1 Block$/ })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Test Editor' })).not.toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Paste' })).not.toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Cut' })).not.toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Copy' })).not.toBeVisible()
-    await page.getByRole('menuitem', { name: 'Paste' }).click()
-    await expect(page.getByText('Coming soon')).toBeVisible()
-
-    await selectEditorText(page, clipboardText)
-    await text.click({ button: 'right' })
-    await expect(page.getByRole('menuitem', { name: 'Cut' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Copy' })).toBeVisible()
-    await page.getByRole('menuitem', { name: 'Copy' }).click()
-    await expect(page.getByText('Coming soon')).toBeVisible()
   })
 
   test('bold text with Ctrl+B', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -193,7 +188,7 @@ test.describe.serial('editor basics', () => {
   })
 
   test('content persists after navigation', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -220,28 +215,3 @@ test.describe.serial('editor basics', () => {
     })
   })
 })
-
-async function selectEditorText(page: Parameters<typeof typeInEditor>[0], text: string) {
-  await page.evaluate((targetText) => {
-    const editor = document.querySelector('.bn-editor')
-    if (!editor) throw new Error('Editor not found')
-
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT)
-    let node = walker.nextNode()
-    while (node) {
-      const index = node.textContent?.indexOf(targetText) ?? -1
-      if (index >= 0) {
-        const range = document.createRange()
-        range.setStart(node, index)
-        range.setEnd(node, index + targetText.length)
-        const selection = window.getSelection()
-        selection?.removeAllRanges()
-        selection?.addRange(range)
-        return
-      }
-      node = walker.nextNode()
-    }
-
-    throw new Error(`Text not found: ${targetText}`)
-  }, text)
-}

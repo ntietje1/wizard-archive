@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { createTestContext } from '../../_test/setup.helper'
-import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import {
   executeMoveCommand,
   executeCopyCommand,
@@ -14,7 +14,7 @@ import {
   createBlock,
   filesystemEventItemIds,
 } from '../../_test/factories.helper'
-import { expectValidationFailed } from '../../_test/assertions.helper'
+import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
 import type { Id } from '../../_generated/dataModel'
 
 describe('executeCopyCommand', () => {
@@ -169,13 +169,61 @@ describe('executeCopyCommand', () => {
     expect(rows.copiedNote?.parentId).toBe(copiedRootItemIds(result)[0])
     expect(rows.copiedBlocks.map((block) => block.plainText)).toEqual(['Hidden archers'])
     const copiedFromIds = rows.history
-      .filter((entry) => entry.action === 'copied')
-      .map((entry) => entry.metadata?.copiedFromItemId)
+      .flatMap((entry) =>
+        entry.action === 'copied' && entry.metadata && 'copiedFromItemId' in entry.metadata
+          ? [entry.metadata.copiedFromItemId]
+          : [],
+      )
       .filter((copiedFromItemId) => copiedFromItemId === folderId || copiedFromItemId === noteId)
       .sort((a, b) => String(a).localeCompare(String(b)))
     expect(copiedFromIds).toEqual(
       [folderId, noteId].sort((a, b) => String(a).localeCompare(String(b))),
     )
+  })
+
+  it('rejects folder copy when a descendant is inaccessible to the actor', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Shared Folder',
+      allPermissionLevel: 'full_access',
+    })
+    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Hidden Note',
+      parentId: folderId,
+    })
+    const { folderId: destinationFolderId } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Destination',
+        allPermissionLevel: 'full_access',
+      },
+    )
+
+    await expectPermissionDenied(
+      executeCopyCommand(playerAuth, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folderId],
+        targetParentId: destinationFolderId,
+      }),
+    )
+
+    const copiedRows = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('sidebarItems')
+        .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
+          q
+            .eq('campaignId', ctx.campaignId)
+            .eq('status', 'active')
+            .eq('parentId', destinationFolderId)
+            .eq('name', 'Shared Folder 1'),
+        )
+        .collect()
+    })
+    expect(copiedRows).toEqual([])
   })
 
   it('replaces a conflicting item by moving the destination to trash before copying', async () => {
@@ -302,7 +350,7 @@ describe('executeCopyCommand', () => {
     expect(filesystemEventItemIds(result, 'skipped')).toEqual(sourceIds.slice(1))
   })
 
-  it('propagates folder replace decisions through descendant duplicate conflicts', async () => {
+  it('propagates folder merge decisions through descendant duplicate conflicts', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { folderId: sourceFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -333,7 +381,7 @@ describe('executeCopyCommand', () => {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceFolderId],
       targetParentId: targetFolderId,
-      decisions: [{ sourceItemId: sourceFolderId, action: 'replace' }],
+      decisions: [{ sourceItemId: sourceFolderId, action: 'mergeFolder' }],
     })
 
     expect(copiedRootItemIds(result)).toEqual([])
@@ -370,7 +418,7 @@ describe('executeCopyCommand', () => {
       {
         campaignId: ctx.campaignId,
         command: { type: 'copy', itemIds: [sourceFolderId], targetParentId: targetFolderId },
-        decisions: [{ sourceItemId: sourceFolderId, action: 'replace' }],
+        decisions: [{ sourceItemId: sourceFolderId, action: 'mergeFolder' }],
       },
     )
 

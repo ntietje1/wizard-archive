@@ -6,7 +6,7 @@ import type { Id } from '../_generated/dataModel'
 export const updateFileStorage = campaignMutation({
   args: {
     fileId: v.id('sidebarItems'),
-    storageId: v.nullable(v.id('_storage')),
+    uploadSessionId: v.nullable(v.id('fileStorage')),
   },
   returns: v.object({
     fileId: v.id('sidebarItems'),
@@ -14,7 +14,7 @@ export const updateFileStorage = campaignMutation({
   handler: async (ctx, args): Promise<{ fileId: Id<'sidebarItems'> }> => {
     return await updateFileStorageFn(ctx, {
       fileId: args.fileId,
-      storageId: args.storageId,
+      uploadSessionId: args.uploadSessionId,
     })
   },
 })

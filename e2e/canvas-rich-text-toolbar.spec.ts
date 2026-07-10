@@ -7,7 +7,10 @@ import {
   DEFAULT_CANVAS_NAME,
   enableCanvasRuntime,
   getCanvasPane,
+  getCanvasTextEditorInNode,
+  getCanvasTextEditors,
   getCanvasNodesByType,
+  getNewCanvasTextEditor,
   openCanvas,
   selectCanvasTool,
   waitForCanvasRuntime,
@@ -18,7 +21,6 @@ import type { Page } from '@playwright/test'
 
 const campaignName = testName('CnvRichText')
 const canvasName = DEFAULT_CANVAS_NAME
-const editorSelector = '[aria-label="Text node content"][contenteditable="true"]'
 
 test.describe.serial('canvas rich text toolbar workflows', () => {
   test.setTimeout(60_000)
@@ -26,7 +28,7 @@ test.describe.serial('canvas rich text toolbar workflows', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -37,7 +39,7 @@ test.describe.serial('canvas rich text toolbar workflows', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -48,7 +50,7 @@ test.describe.serial('canvas rich text toolbar workflows', () => {
 
   test.beforeEach(async ({ page }) => {
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await waitForCanvasRuntime(page)
@@ -68,7 +70,7 @@ test.describe.serial('canvas rich text toolbar workflows', () => {
     await toolbar.getByRole('button', { name: 'Block type' }).click({ force: true })
     await page.getByRole('menuitemradio', { name: 'Heading 2' }).click()
     await toolbar.getByRole('button', { name: 'Text color' }).click({ force: true })
-    await page.getByRole('menuitemradio', { name: 'Select Red text color' }).click()
+    await page.getByRole('button', { name: 'Select Red text color' }).click()
 
     await page.reload()
     await waitForCanvasRuntime(page)
@@ -76,8 +78,9 @@ test.describe.serial('canvas rich text toolbar workflows', () => {
       timeout: 10_000,
     })
 
-    await getCanvasNodesByType(page, 'text').first().dblclick()
-    const reopenedEditor = page.locator(editorSelector).last()
+    const textNode = getCanvasNodesByType(page, 'text').first()
+    await textNode.dblclick()
+    const reopenedEditor = getCanvasTextEditorInNode(textNode)
     await selectAllEditorText(page, reopenedEditor)
     const reopenedToolbar = page.getByRole('toolbar', { name: 'Canvas formatting toolbar' })
     await expect(reopenedToolbar).toBeVisible()
@@ -97,7 +100,7 @@ test.describe.serial('canvas rich text toolbar workflows', () => {
 
     const toolbar = page.getByRole('toolbar', { name: 'Canvas formatting toolbar' })
     await toolbar.getByRole('button', { name: 'Text color' }).click()
-    await expect(page.getByRole('menuitemradio', { name: 'Select Blue text color' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Select Blue text color' })).toBeVisible()
     await pressSelectAll(page)
     await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(beforeCount)
   })
@@ -107,11 +110,12 @@ async function createEditableTextNode(page: Page, text: string) {
   await selectCanvasTool(page, 'Text')
   const paneBox = await getCanvasPane(page).boundingBox()
   if (!paneBox) throw new Error('Canvas pane is not visible')
+  const textEditorCount = await getCanvasTextEditors(page).count()
   await clickCanvasAt(page, {
     x: Math.round(paneBox.width * 0.55),
     y: Math.round(paneBox.height * 0.55),
   })
-  const editor = page.locator(editorSelector).last()
+  const editor = await getNewCanvasTextEditor(page, textEditorCount)
   await expect(editor).toBeVisible()
   await editor.fill(text)
   return editor

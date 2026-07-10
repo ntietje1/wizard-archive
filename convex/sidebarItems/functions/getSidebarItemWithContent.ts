@@ -2,41 +2,44 @@ import { getSidebarItem } from './getSidebarItem'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { checkItemAccess } from '../validation/access'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type {
-  AnySidebarItem,
-  AnySidebarItemWithContent,
-  WithContentBySidebarItemType,
-} from '../../../shared/sidebar-items/model-types'
-import type { SidebarItemType } from '../../../shared/sidebar-items/types'
+  AnyResource,
+  AnyResourceWithContent,
+  ResourceByKind,
+  ResourceWithContentByKind,
+  ResourceKind,
+} from '@wizard-archive/editor/resources/resource-contract'
 
-function isSidebarItemOfType<T extends SidebarItemType>(
-  item: AnySidebarItem,
+function isSidebarItemOfType<T extends ResourceKind>(
+  item: AnyResource,
   expectedType: T,
-): item is Extract<AnySidebarItem, { type: T }> {
+): item is ResourceByKind<T> {
   return item.type === expectedType
 }
 
 export async function getSidebarItemWithContent(
   ctx: CampaignQueryCtx,
   id: Id<'sidebarItems'>,
-): Promise<AnySidebarItemWithContent | null>
-export async function getSidebarItemWithContent<T extends SidebarItemType>(
+): Promise<AnyResourceWithContent | null>
+export async function getSidebarItemWithContent<T extends ResourceKind>(
   ctx: CampaignQueryCtx,
   id: Id<'sidebarItems'>,
   expectedType: T,
-): Promise<WithContentBySidebarItemType<T> | null>
-export async function getSidebarItemWithContent<T extends SidebarItemType>(
+): Promise<ResourceWithContentByKind<T> | null>
+export async function getSidebarItemWithContent<T extends ResourceKind>(
   ctx: CampaignQueryCtx,
   id: Id<'sidebarItems'>,
   expectedType?: T,
-): Promise<AnySidebarItemWithContent | null> {
+): Promise<AnyResourceWithContent | null> {
   const item = await getSidebarItem(ctx, id)
   if (!item) return null
   const enhanced = await checkItemAccess(ctx, {
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.VIEW,
+    requiredStatus: RESOURCE_STATUS.active,
   })
   if (!enhanced) return null
 

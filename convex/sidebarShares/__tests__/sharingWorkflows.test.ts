@@ -27,7 +27,7 @@ describe('sharing workflows', () => {
       }),
     )
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [noteId],
       campaignMemberId: ctx.player.memberId,
@@ -40,7 +40,7 @@ describe('sharing workflows', () => {
     })
     expect(noteAfterShare.myPermissionLevel).toBe('view')
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [noteId],
       campaignMemberId: ctx.player.memberId,
@@ -53,7 +53,7 @@ describe('sharing workflows', () => {
     })
     expect(noteAfterUpgrade.myPermissionLevel).toBe('edit')
 
-    await dmAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [noteId],
       campaignMemberId: ctx.player.memberId,
@@ -76,37 +76,44 @@ describe('sharing workflows', () => {
     const { noteId: note2Id } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-      campaignId: ctx.campaignId,
-      sidebarItemIds: [note1Id],
-      permissionLevel: 'view',
-    })
+    await dmAuth.mutation(
+      api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
+      {
+        campaignId: ctx.campaignId,
+        sidebarItemIds: [note1Id],
+        permissionLevel: 'view',
+      },
+    )
 
-    const itemsAfterFirst = await playerAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
-      campaignId: ctx.campaignId,
-    })
+    const { active: itemsAfterFirst } = await playerAuth.query(
+      api.sidebarItems.queries.getSidebarItems,
+      { campaignId: ctx.campaignId },
+    )
     const visibleAfterFirst = itemsAfterFirst.filter((item) => item.myPermissionLevel !== 'none')
     expect(visibleAfterFirst).toHaveLength(1)
-    expect(visibleAfterFirst[0]._id).toBe(note1Id)
+    expect(visibleAfterFirst[0].id).toBe(note1Id)
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-      campaignId: ctx.campaignId,
-      sidebarItemIds: [note2Id],
-      permissionLevel: 'view',
-    })
+    await dmAuth.mutation(
+      api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
+      {
+        campaignId: ctx.campaignId,
+        sidebarItemIds: [note2Id],
+        permissionLevel: 'view',
+      },
+    )
 
-    const itemsAfterSecond = await playerAuth.query(
-      api.sidebarItems.queries.getActiveSidebarItems,
+    const { active: itemsAfterSecond } = await playerAuth.query(
+      api.sidebarItems.queries.getSidebarItems,
       { campaignId: ctx.campaignId },
     )
     const visibleAfterSecond = itemsAfterSecond.filter((item) => item.myPermissionLevel !== 'none')
     expect(visibleAfterSecond).toHaveLength(2)
-    const visibleIds = visibleAfterSecond.map((item) => item._id)
+    const visibleIds = visibleAfterSecond.map((item) => item.id)
     expect(visibleIds).toContain(note1Id)
     expect(visibleIds).toContain(note2Id)
   })
 
-  it('folder inheritance chain: share, ignored inherit flag, allPermissionLevel override', async () => {
+  it('folder inheritance chain: source folder toggle gates its own selected permissions', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
@@ -118,7 +125,7 @@ describe('sharing workflows', () => {
     })
     const [folderA, folderB] = folders
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
       campaignId: ctx.campaignId,
       sidebarItemIds: [folderA],
       campaignMemberId: ctx.player.memberId,
@@ -137,17 +144,21 @@ describe('sharing workflows', () => {
       inheritShares: false,
     })
 
-    const noteAfterDisablingFlag = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
-      id: leaf,
-    })
-    expect(noteAfterDisablingFlag.myPermissionLevel).toBe('view')
+    await expectNotFound(
+      playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
+        id: leaf,
+      }),
+    )
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-      campaignId: ctx.campaignId,
-      sidebarItemIds: [folderB],
-      permissionLevel: 'edit',
-    })
+    await dmAuth.mutation(
+      api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
+      {
+        campaignId: ctx.campaignId,
+        sidebarItemIds: [folderB],
+        permissionLevel: 'edit',
+      },
+    )
 
     const noteAfterFolderBEdit = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignId,
@@ -164,13 +175,16 @@ describe('sharing workflows', () => {
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
-      campaignId: campaignId,
-      sidebarItemIds: [noteId],
-      permissionLevel: 'view',
-    })
+    await dmAuth.mutation(
+      api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
+      {
+        campaignId: campaignId,
+        sidebarItemIds: [noteId],
+        permissionLevel: 'view',
+      },
+    )
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
       campaignId: campaignId,
       sidebarItemIds: [noteId],
       campaignMemberId: p1.memberId,

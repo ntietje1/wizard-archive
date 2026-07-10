@@ -4,48 +4,128 @@ import { internal } from '../_generated/api'
 import { yjsDocumentIdValidator } from './schema'
 import { checkYjsReadAccess, checkYjsWriteAccess } from './functions/checkYjsAccess'
 import { shouldCompact, SNAPSHOT_IDLE_MS } from './constants'
+import { editorBlockInputValidator } from '../blocks/schema'
+import { parseBlockNoteBlocks } from '../blocks/parseBlockNoteBlocks'
+import { syncNoteIndexesFromBlocks } from '../notes/functions/syncNoteDerivedData'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
+import type { CampaignMutationCtx } from '../functions'
+import type { Doc, Id } from '../_generated/dataModel'
+import { getYjsDocumentRevision } from './functions/documentRevision'
+import { awarenessLeaseResultValidator, awarenessReleaseResultValidator } from './awareness'
+import { AWARENESS_REJECTION_REASON, AWARENESS_TTL_MS } from '../../shared/yjs-sync/awareness'
+import type { AwarenessLeaseResult, AwarenessReleaseResult } from '../../shared/yjs-sync/awareness'
+
+const pushUpdateResultValidator = v.union(
+  v.object({ status: v.literal('accepted'), seq: v.number() }),
+  v.object({ status: v.literal('rejected'), reason: v.literal('revision_mismatch') }),
+)
+
+async function insertYjsUpdate(
+  ctx: CampaignMutationCtx,
+  {
+    documentId,
+    revision,
+    update,
+  }: {
+    documentId: Id<'sidebarItems'>
+    revision: number | undefined
+    update: ArrayBuffer
+  },
+) {
+  const currentRevision = await getYjsDocumentRevision(ctx, documentId)
+  if ((revision ?? 0) !== currentRevision) {
+    return { status: 'rejected' as const, reason: 'revision_mismatch' as const }
+  }
+
+  const latest = await ctx.db
+    .query('yjsUpdates')
+    .withIndex('by_document_seq', (q) => q.eq('documentId', documentId))
+    .order('desc')
+    .first()
+
+  const seq = (latest?.seq ?? -1) + 1
+
+  await ctx.db.insert('yjsUpdates', {
+    documentId: documentId,
+    update,
+    seq,
+    isSnapshot: false,
+  })
+
+  if (shouldCompact(seq)) {
+    await ctx.scheduler.runAfter(0, internal.yjsSync.internalActions.compact, { documentId })
+  }
+
+  await ctx.scheduler.runAfter(
+    SNAPSHOT_IDLE_MS,
+    internal.yjsSync.internalMutations.maybeCreateSnapshot,
+    {
+      documentId,
+      triggerSeq: seq,
+      campaignId: ctx.campaign._id,
+      campaignMemberId: ctx.membership._id,
+      userId: ctx.membership.userId,
+    },
+  )
+
+  return { status: 'accepted' as const, seq }
+}
+
+async function checkImportedTextNoteTarget(
+  ctx: CampaignMutationCtx,
+  documentId: Id<'sidebarItems'>,
+) {
+  const item = await ctx.db.get('sidebarItems', documentId)
+  if (!item || item.campaignId !== ctx.campaign._id || item.type !== RESOURCE_TYPES.notes) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Imported text target must be a note')
+  }
+}
+
+async function getYjsAwarenessForClient(
+  ctx: CampaignMutationCtx,
+  documentId: Id<'sidebarItems'>,
+  clientId: number,
+): Promise<Doc<'yjsAwareness'> | null> {
+  return await ctx.db
+    .query('yjsAwareness')
+    .withIndex('by_document_client', (q) => q.eq('documentId', documentId).eq('clientId', clientId))
+    .first()
+}
 
 export const pushUpdate = campaignMutation({
   args: {
     documentId: yjsDocumentIdValidator,
+    revision: v.optional(v.number()),
     update: v.bytes(),
   },
-  returns: v.object({ seq: v.number() }),
-  handler: async (ctx, { documentId, update }) => {
+  returns: pushUpdateResultValidator,
+  handler: async (ctx, { documentId, revision, update }) => {
     await checkYjsWriteAccess(ctx, documentId)
+    return await insertYjsUpdate(ctx, { documentId, revision, update })
+  },
+})
 
-    const latest = await ctx.db
-      .query('yjsUpdates')
-      .withIndex('by_document_seq', (q) => q.eq('documentId', documentId))
-      .order('desc')
-      .first()
-
-    const seq = (latest?.seq ?? -1) + 1
-
-    await ctx.db.insert('yjsUpdates', {
-      documentId: documentId,
-      update,
-      seq,
-      isSnapshot: false,
+export const pushImportedTextNoteUpdate = campaignMutation({
+  args: {
+    documentId: yjsDocumentIdValidator,
+    revision: v.optional(v.number()),
+    update: v.bytes(),
+    content: v.array(editorBlockInputValidator),
+  },
+  returns: pushUpdateResultValidator,
+  handler: async (ctx, { content, documentId, revision, update }) => {
+    await checkYjsWriteAccess(ctx, documentId)
+    await checkImportedTextNoteTarget(ctx, documentId)
+    const parsedContent = parseBlockNoteBlocks(content)
+    const result = await insertYjsUpdate(ctx, { documentId, revision, update })
+    if (result.status === 'rejected') return result
+    await syncNoteIndexesFromBlocks(ctx, {
+      noteId: documentId,
+      content: parsedContent,
     })
-
-    if (shouldCompact(seq)) {
-      await ctx.scheduler.runAfter(0, internal.yjsSync.internalActions.compact, { documentId })
-    }
-
-    await ctx.scheduler.runAfter(
-      SNAPSHOT_IDLE_MS,
-      internal.yjsSync.internalMutations.maybeCreateSnapshot,
-      {
-        documentId,
-        triggerSeq: seq,
-        campaignId: ctx.campaign._id,
-        campaignMemberId: ctx.membership._id,
-        userId: ctx.membership.userId,
-      },
-    )
-
-    return { seq }
+    return result
   },
 })
 
@@ -53,35 +133,41 @@ export const pushAwareness = campaignMutation({
   args: {
     documentId: yjsDocumentIdValidator,
     clientId: v.number(),
+    sessionId: v.optional(v.string()),
     state: v.bytes(),
   },
-  returns: v.null(),
-  handler: async (ctx, { documentId, clientId, state }) => {
+  returns: awarenessLeaseResultValidator,
+  handler: async (ctx, { documentId, clientId, sessionId, state }) => {
     await checkYjsReadAccess(ctx, documentId)
+    if (!sessionId) return rejectedAwarenessLease(AWARENESS_REJECTION_REASON.sessionRequired)
 
-    const existing = await ctx.db
-      .query('yjsAwareness')
-      .withIndex('by_document_client', (q) =>
-        q.eq('documentId', documentId).eq('clientId', clientId),
-      )
-      .first()
+    const existing = await getYjsAwarenessForClient(ctx, documentId, clientId)
+    if (
+      existing &&
+      (existing.userId !== ctx.membership.userId || existing.sessionId !== sessionId)
+    ) {
+      return rejectedAwarenessLease(AWARENESS_REJECTION_REASON.sessionConflict)
+    }
+
+    const updatedAt = Date.now()
 
     if (existing) {
       await ctx.db.patch('yjsAwareness', existing._id, {
         state,
-        updatedAt: Date.now(),
+        updatedAt,
       })
     } else {
       await ctx.db.insert('yjsAwareness', {
         documentId: documentId,
         clientId,
         userId: ctx.membership.userId,
+        sessionId,
         state,
-        updatedAt: Date.now(),
+        updatedAt,
       })
     }
 
-    return null
+    return { status: 'active' as const, expiresAt: updatedAt + AWARENESS_TTL_MS }
   },
 })
 
@@ -89,22 +175,33 @@ export const removeAwareness = campaignMutation({
   args: {
     documentId: yjsDocumentIdValidator,
     clientId: v.number(),
+    sessionId: v.optional(v.string()),
   },
-  returns: v.null(),
-  handler: async (ctx, { documentId, clientId }) => {
+  returns: awarenessReleaseResultValidator,
+  handler: async (ctx, { documentId, clientId, sessionId }) => {
     await checkYjsReadAccess(ctx, documentId)
+    if (!sessionId) return rejectedAwarenessRelease(AWARENESS_REJECTION_REASON.sessionRequired)
 
-    const existing = await ctx.db
-      .query('yjsAwareness')
-      .withIndex('by_document_client', (q) =>
-        q.eq('documentId', documentId).eq('clientId', clientId),
-      )
-      .first()
-
-    if (existing) {
-      await ctx.db.delete('yjsAwareness', existing._id)
+    const existing = await getYjsAwarenessForClient(ctx, documentId, clientId)
+    if (!existing) return { status: 'unavailable' as const }
+    if (existing.userId !== ctx.membership.userId || existing.sessionId !== sessionId) {
+      return rejectedAwarenessRelease(AWARENESS_REJECTION_REASON.sessionConflict)
     }
 
-    return null
+    await ctx.db.delete('yjsAwareness', existing._id)
+
+    return { status: 'released' as const }
   },
 })
+
+function rejectedAwarenessLease(
+  reason: (typeof AWARENESS_REJECTION_REASON)[keyof typeof AWARENESS_REJECTION_REASON],
+): AwarenessLeaseResult {
+  return { status: 'rejected', reason }
+}
+
+function rejectedAwarenessRelease(
+  reason: (typeof AWARENESS_REJECTION_REASON)[keyof typeof AWARENESS_REJECTION_REASON],
+): AwarenessReleaseResult {
+  return { status: 'rejected', reason }
+}

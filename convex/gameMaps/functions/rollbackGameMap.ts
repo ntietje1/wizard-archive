@@ -5,8 +5,8 @@ import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { logger } from '../../common/logger'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
@@ -56,27 +56,27 @@ export async function rollbackGameMap(
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  if (map.type !== SIDEBAR_ITEM_TYPES.gameMaps) {
+  if (map.type !== RESOURCE_TYPES.gameMaps) {
     throw new Error(`rollbackMap: expected a map but got ${String(map.type)}`)
   }
 
   const ext = await ctx.db
     .query('gameMaps')
-    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map._id))
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map.id))
     .unique()
   if (ext) {
     await ctx.db.patch('gameMaps', ext._id, {
-      imageStorageId: parsed.imageStorageId as Id<'_storage'> | null,
+      imageStorageId: parsed.imageAssetId as unknown as Id<'_storage'> | null,
     })
   }
 
-  await ctx.db.patch('sidebarItems', map._id, {
+  await ctx.db.patch('sidebarItems', map.id, {
     previewStorageId: null,
   })
 
   const existingPins = await ctx.db
     .query('mapPins')
-    .withIndex('by_map_item', (q) => q.eq('mapId', map._id))
+    .withIndex('by_map_item', (q) => q.eq('mapId', map.id))
     .collect()
 
   await asyncMap(existingPins, (pin) => ctx.db.delete('mapPins', pin._id))
@@ -100,7 +100,7 @@ export async function rollbackGameMap(
 
   await asyncMap(validPins, (pin) =>
     ctx.db.insert('mapPins', {
-      mapId: map._id,
+      mapId: map.id,
       itemId: pin.itemId,
       x: pin.x,
       y: pin.y,

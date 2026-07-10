@@ -3,22 +3,22 @@ import { throwClientError } from '../../errors'
 import { getSidebarItemRow } from './sidebarItemRows'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
+import type { AnyResource } from '@wizard-archive/editor/resources/resource-contract'
 
-export async function addSidebarItemAncestorsToMap<
-  T extends Pick<AnySidebarItem, '_id' | 'parentId'>,
->(
+export async function loadSidebarItemAncestorMap<T extends Pick<AnyResource, 'id' | 'parentId'>>(
   ctx: CampaignQueryCtx,
   {
     items,
     itemsById,
     maxDepth,
   }: {
-    items: Array<T>
-    itemsById: Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>
+    items: ReadonlyArray<T>
+    itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<AnyResource, 'id' | 'parentId'>>
     maxDepth: number
   },
-): Promise<void> {
+): Promise<Map<Id<'sidebarItems'>, Pick<AnyResource, 'id' | 'parentId'>>> {
+  const ancestorItemsById = new Map(itemsById)
+
   for (const item of items) {
     let parentId = item.parentId
     let depth = 0
@@ -26,7 +26,7 @@ export async function addSidebarItemAncestorsToMap<
       if (depth >= maxDepth) {
         throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max sidebar ancestor depth exceeded')
       }
-      const existingParent = itemsById.get(parentId)
+      const existingParent = ancestorItemsById.get(parentId)
       if (existingParent) {
         parentId = existingParent.parentId
         depth += 1
@@ -36,9 +36,11 @@ export async function addSidebarItemAncestorsToMap<
       if (!parent) {
         throwClientError(ERROR_CODE.NOT_FOUND, 'Sidebar item ancestor not found')
       }
-      itemsById.set(parent._id, parent)
+      ancestorItemsById.set(parent._id, { id: parent._id, parentId: parent.parentId })
       parentId = parent.parentId
       depth += 1
     }
   }
+
+  return ancestorItemsById
 }

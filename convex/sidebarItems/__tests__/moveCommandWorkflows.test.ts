@@ -211,7 +211,7 @@ describe('executeMoveCommand', () => {
       sourceItemIds: [sourceFolder],
       targetParentId: null,
       decisions: [
-        { sourceItemId: sourceFolder, action: 'replace' },
+        { sourceItemId: sourceFolder, action: 'mergeFolder' },
         { sourceItemId: skippedChild, action: 'skip' },
       ],
     })
@@ -247,7 +247,7 @@ describe('executeMoveCommand', () => {
       {
         campaignId: ctx.campaignId,
         command: { type: 'move', itemIds: [sourceFolder], targetParentId: null },
-        decisions: [{ sourceItemId: sourceFolder, action: 'replace' }],
+        decisions: [{ sourceItemId: sourceFolder, action: 'mergeFolder' }],
       },
     )
 
@@ -283,7 +283,7 @@ describe('executeMoveCommand', () => {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceFolder],
       targetParentId: null,
-      decisions: [{ sourceItemId: sourceFolder, action: 'replace' }],
+      decisions: [{ sourceItemId: sourceFolder, action: 'mergeFolder' }],
     })
 
     const rows = await t.run(async (dbCtx) => ({
@@ -310,10 +310,10 @@ describe('executeMoveCommand', () => {
       action: 'trash',
     })
 
-    const trashItems = await dmAuth.query(api.sidebarItems.queries.getTrashedSidebarItems, {
+    const { trash: trashItems } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
-    expect(trashItems.some((i) => i._id === noteId)).toBe(true)
+    expect(trashItems.some((i) => i.id === noteId)).toBe(true)
   })
 
   it('restores item from trash', async () => {
@@ -336,10 +336,10 @@ describe('executeMoveCommand', () => {
       action: 'restore',
     })
 
-    const sidebarItems = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+    const { active: sidebarItems } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
-    expect(sidebarItems.some((i) => i._id === noteId)).toBe(true)
+    expect(sidebarItems.some((i) => i.id === noteId)).toBe(true)
   })
 
   it('rejects circular parent reference', async () => {

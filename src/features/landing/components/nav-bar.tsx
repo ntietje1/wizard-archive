@@ -3,8 +3,8 @@ import { Menu, X } from 'lucide-react'
 import { useState, useSyncExternalStore } from 'react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
 import { publicSite } from '~/features/landing/content/public-site'
-import { buttonVariants } from '~/features/shadcn/components/button'
-import { cn } from '~/features/shadcn/lib/utils'
+import { buttonVariants } from '@wizard-archive/ui/shadcn/components/button-variants'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import { WizardArchiveLogo } from '~/shared/components/wizard-archive-logo'
 
 function subscribeToScroll(callback: () => void) {

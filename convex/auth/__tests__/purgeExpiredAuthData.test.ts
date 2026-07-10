@@ -15,6 +15,6 @@ describe('purgeExpiredAuthData cron', () => {
 
     const profileAfter = await user.authed.query(api.users.queries.getUserProfile, {})
     expect(profileAfter).not.toBeNull()
-    expect(profileAfter!._id).toBe(profileBefore!._id)
+    expect(profileAfter!.id).toBe(profileBefore!.id)
   })
 })

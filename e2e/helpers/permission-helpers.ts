@@ -4,13 +4,13 @@ import type { PermissionLevel } from 'shared/permissions/types'
 import type { Browser, Locator, Page } from '@playwright/test'
 
 export async function openShareMenu(page: Page) {
-  await page.getByRole('button', { name: /private|shared/i }).click()
+  await page.getByRole('button', { name: /^(private|shared)$/i }).click()
   await expect(page.getByTestId('share-all-players-row')).toBeVisible({
     timeout: 5000,
   })
 }
 
-export async function setAllPlayersPermission(page: Page, permissionLevel: PermissionLevel) {
+export async function setResourceAudiencePermission(page: Page, permissionLevel: PermissionLevel) {
   await openShareMenu(page)
 
   const row = page.getByTestId('share-all-players-row')
@@ -85,25 +85,29 @@ export async function requestToJoinCampaignAsPlayer({
   const playerContext = await browser.newContext()
   const playerPage = await playerContext.newPage()
   try {
-    await playerPage.goto('/sign-in', { waitUntil: 'load' })
-    await expect(playerPage.getByLabel('Email', { exact: true })).toBeVisible({ timeout: 30000 })
     await signInByApi(playerPage, email, password)
-    await playerPage.waitForURL('**/campaigns', { timeout: 30000 })
     if (storageStatePath) {
       await playerContext.storageState({ path: storageStatePath })
     }
-    await playerPage.goto(`/join/${dmUsername}/${campaignSlug}`)
-    const joinButton = playerPage.getByRole('button', { name: /join/i })
-    const hasJoinButton = await joinButton
-      .waitFor({ state: 'visible', timeout: 30000 })
-      .then(() => true)
-      .catch(() => false)
-    if (hasJoinButton) {
-      await joinButton.click()
+    let joined = false
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await playerPage.goto(`/join/${dmUsername}/${campaignSlug}`)
+      const joinButton = playerPage.getByRole('button', { name: /join/i })
+      const hasJoinButton = await joinButton
+        .waitFor({ state: 'visible', timeout: 30000 })
+        .then(() => true)
+        .catch(() => false)
+      if (hasJoinButton) {
+        await joinButton.click()
+      }
+      joined = await playerPage
+        .getByText(/Request Sent|You're In!/i)
+        .waitFor({ state: 'visible', timeout: 30000 })
+        .then(() => true)
+        .catch(() => false)
+      if (joined) break
     }
-    await expect(playerPage.getByText(/Request Sent|You're In!/i)).toBeVisible({
-      timeout: 30000,
-    })
+    expect(joined).toBe(true)
   } finally {
     await playerPage.close()
     await playerContext.close()
@@ -193,6 +197,25 @@ export async function clickBlockDragHandle(page: Page, blockText: string) {
   await dragHandle.click()
 }
 
+export async function openBlockDragHandleMenu(page: Page, blockText: string) {
+  const menu = page.getByTestId('block-drag-handle-menu')
+  let dragHandle = await getVisibleBlockDragHandle(page, blockText)
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    dragHandle = await getVisibleBlockDragHandle(page, blockText)
+    const box = await dragHandle.boundingBox()
+    if (!box) continue
+
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+    if (await menu.isVisible({ timeout: 1500 }).catch(() => false)) {
+      return { dragHandle, menu }
+    }
+  }
+
+  await expect(menu).toBeVisible({ timeout: 5000 })
+  return { dragHandle, menu }
+}
+
 export async function openEditorContextMenuFromBlockDragHandle(page: Page, blockText: string) {
   const dragHandle = await getVisibleBlockDragHandle(page, blockText)
 
@@ -221,11 +244,12 @@ export async function getVisibleBlockDragHandle(page: Page, blockText: string) {
 }
 
 export async function shareBlockFromEditorContextMenu(page: Page, blockText: string) {
-  const block = getBlockTextLocator(page, blockText)
+  const box = await getBlockTextBox(page, blockText)
 
-  await block.click({ button: 'right' })
-  await page.getByRole('menuitem', { name: /^share block$/i }).click()
-  await expect(page.getByRole('menuitem', { name: /^unshare block$/i })).toBeVisible({
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' })
+  await expectEditorBlockShareMenuItem(page)
+  await page.getByRole('menuitem', { name: /^share (?:\d+ )?block$/i }).click()
+  await expect(page.getByRole('menuitem', { name: /^unshare (?:\d+ )?block$/i })).toBeVisible({
     timeout: 5000,
   })
 }
@@ -263,8 +287,11 @@ function permissionLevelLabel(permissionLevel: PermissionLevel) {
   return permissionLevel.replaceAll('_', ' ')
 }
 
-function getBlockTextLocator(page: Page, blockText: string) {
-  return page.getByText(blockText, { exact: true })
+export function getBlockTextLocator(page: Page, blockText: string) {
+  return page
+    .locator('.bn-editor')
+    .getByText(new RegExp(escapeRegExp(blockText)))
+    .first()
 }
 
 async function getBlockTextBox(page: Page, blockText: string) {
@@ -284,7 +311,7 @@ async function expectBlockShareMenuOpen(menu: Locator, title: RegExp) {
 }
 
 async function expectEditorBlockShareMenuItem(page: Page) {
-  await expect(page.getByRole('menuitem', { name: /^(share|unshare) block$/i })).toBeVisible({
-    timeout: 5000,
-  })
+  await expect(
+    page.getByRole('menuitem', { name: /^(share|unshare) (?:\d+ )?block$/i }),
+  ).toBeVisible({ timeout: 5000 })
 }

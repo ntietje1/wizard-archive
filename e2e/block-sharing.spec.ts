@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { api } from 'convex/_generated/api'
-import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
+import { SHARE_STATUS } from '../shared/block-shares/share-status'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
@@ -10,6 +10,7 @@ import {
   blockShareAllPlayersRow,
   blockSharePlayerRow,
   getCampaignRouteParts,
+  getBlockTextLocator,
   getVisibleBlockDragHandle,
   getVisibleBlockShareButton,
   openBlockShareMenu,
@@ -29,9 +30,10 @@ import {
   getSidebarItemIdBySlug,
 } from './helpers/convex-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { signInByApi } from './helpers/auth-helpers'
 import type { Browser } from '@playwright/test'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ShareStatus } from 'shared/editor-blocks/share-status'
+import type { ShareStatus } from '../shared/block-shares/share-status'
 import type { PermissionLevel } from 'shared/permissions/types'
 
 const E2E_PLAYER_EMAIL = process.env.E2E_PLAYER_EMAIL
@@ -68,7 +70,7 @@ test.describe('block sharing', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     ;({ dmUsername, campaignSlug } = getCampaignRouteParts(page))
@@ -85,7 +87,7 @@ test.describe('block sharing', () => {
     await typeInEditor(page, visibleBlockText)
     await page.keyboard.press('Enter')
     await page.keyboard.type(conditionalBlockText)
-    await expect(page.getByText(conditionalBlockText, { exact: true })).toBeVisible({
+    await expect(getBlockTextLocator(page, conditionalBlockText)).toBeVisible({
       timeout: 10000,
     })
     visibleBlockNoteId = await waitForPersistedBlockText(visibleBlockText)
@@ -107,7 +109,7 @@ test.describe('block sharing', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const dmPage = await dmContext.newPage()
-    await dmPage.goto('/campaigns')
+    await dmPage.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(dmPage, campaignName)
     await approvePlayerRequest(dmPage, E2E_PLAYER_EMAIL!)
     await dmPage.close()
@@ -121,7 +123,7 @@ test.describe('block sharing', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -179,6 +181,7 @@ test.describe('block sharing', () => {
     await openCampaignNote(page)
 
     await shareBlockFromEditorContextMenu(page, visibleBlockText)
+    await expectBlockAllPlayersStatus(visibleBlockNoteId, SHARE_STATUS.ALL_SHARED)
     await page.keyboard.press('Escape')
 
     const menu = await openBlockShareMenu(page, visibleBlockText)
@@ -192,11 +195,11 @@ test.describe('block sharing', () => {
 
     await rightMouseDownOnBlockText(page, visibleBlockText)
 
-    await expect(page.getByRole('menuitem', { name: /^share block$/i })).not.toBeVisible()
+    await expect(page.getByRole('menuitem', { name: /^share (?:\d+ )?block$/i })).not.toBeVisible()
 
     await page.mouse.up({ button: 'right' })
 
-    await expect(page.getByRole('menuitem', { name: /^share block$/i })).toBeVisible({
+    await expect(page.getByRole('menuitem', { name: /^share (?:\d+ )?block$/i })).toBeVisible({
       timeout: 5000,
     })
   })
@@ -214,19 +217,16 @@ test.describe('block sharing', () => {
     await setPlayerNotePermission(PERMISSION_LEVEL.VIEW)
     await openCampaignNote(page)
 
-    const dragHandle = await getVisibleBlockDragHandle(page, visibleBlockText)
-    const dragHandleBox = await dragHandle.boundingBox()
-    if (!dragHandleBox) throw new Error('Expected drag handle to have a bounding box')
-
-    await page.mouse.move(
-      dragHandleBox.x + dragHandleBox.width / 2,
-      dragHandleBox.y + dragHandleBox.height / 2,
-    )
-    await page.mouse.down()
-    await expect(page.getByTestId('block-drag-handle-menu')).not.toBeVisible()
-    await page.mouse.up()
-
     const menu = page.getByTestId('block-drag-handle-menu')
+    await expect(menu).not.toBeVisible()
+    const shareButton = await getVisibleBlockShareButton(page, visibleBlockText)
+    const dragHandle = await getVisibleBlockDragHandle(page, visibleBlockText)
+    const handleBox = await dragHandle.boundingBox()
+    if (!handleBox) throw new Error('Expected drag handle to have a bounding box')
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2)
+    await page.mouse.down()
+    await expect(menu).not.toBeVisible()
+    await page.mouse.up()
     await expect(menu).toBeVisible()
     await expect(menu.getByRole('menuitem', { name: /^turn into$/i })).toBeVisible()
     await expect(menu.getByRole('menuitem', { name: /^color$/i })).toBeVisible()
@@ -234,8 +234,12 @@ test.describe('block sharing', () => {
     await expect(menu.getByRole('menuitem', { name: /^duplicate$/i })).toBeVisible()
     await expect(menu.getByRole('menuitem', { name: /^delete$/i })).toBeVisible()
     await expect(menu.getByRole('menuitem', { name: /^comment$/i })).toBeVisible()
+    await expect(dragHandle).toHaveAttribute('aria-expanded', 'true')
+    await expect(page.getByText(/drag\s+to move/i)).not.toBeVisible()
+    await expect(page.getByText(/click\s+to open menu/i)).not.toBeVisible()
+    await expect(page.getByText(/click\s+to open share menu/i)).not.toBeVisible()
+    await expect(page.getByText(/shift click\s+to share to all/i)).not.toBeVisible()
 
-    const handleBox = await dragHandle.boundingBox()
     const menuBox = await menu.boundingBox()
     expect(handleBox && menuBox ? menuBox.x + menuBox.width <= handleBox.x + 1 : false).toBe(true)
     expect(
@@ -246,6 +250,21 @@ test.describe('block sharing', () => {
 
     if (!menuBox) throw new Error('Expected drag handle menu to have a bounding box')
     await page.mouse.move(menuBox.x + menuBox.width / 2, menuBox.y + menuBox.height / 2)
+    await expect(menu).toBeVisible()
+
+    await dragHandle.hover()
+    await expect(page.getByText(/drag\s+to move/i)).not.toBeVisible()
+    await expect(page.getByText(/click\s+to open menu/i)).not.toBeVisible()
+    await expect(menu).toBeVisible()
+
+    const shareButtonBox = await shareButton.boundingBox()
+    if (!shareButtonBox) throw new Error('Expected share button to have a bounding box')
+    await page.mouse.move(
+      shareButtonBox.x + shareButtonBox.width / 2,
+      shareButtonBox.y + shareButtonBox.height / 2,
+    )
+    await expect(page.getByText(/click\s+to open share menu/i)).not.toBeVisible()
+    await expect(page.getByText(/shift click\s+to share to all/i)).not.toBeVisible()
     await expect(menu).toBeVisible()
   })
 
@@ -406,10 +425,10 @@ test.describe('block sharing', () => {
 })
 
 async function openCampaignNote(page: Parameters<typeof openItem>[0]) {
-  await page.goto('/campaigns')
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(page, campaignName)
   await openItem(page, noteName)
-  await expect(page.getByText(visibleBlockText, { exact: true })).toBeVisible({ timeout: 10000 })
+  await expect(getBlockTextLocator(page, visibleBlockText)).toBeVisible({ timeout: 10000 })
 }
 
 async function expectBlocksAsActualPlayer(
@@ -424,17 +443,49 @@ async function expectBlocksAsActualPlayer(
 ) {
   const context = await browser.newContext({ storageState: PLAYER_AUTH_STORAGE_PATH })
   const page = await context.newPage()
-  await page.goto(`/campaigns/${dmUsername}/${campaignSlug}/editor?item=${noteSlug}`)
+  try {
+    await openPlayerNote(page)
 
-  for (const blockText of visible) {
-    await expect(page.getByText(blockText, { exact: true })).toBeVisible({ timeout: 10000 })
+    for (const blockText of visible) {
+      await expect(getBlockTextLocator(page, blockText)).toBeVisible({ timeout: 30000 })
+    }
+    for (const blockText of hidden) {
+      await expect(getBlockTextLocator(page, blockText)).not.toBeVisible({ timeout: 10000 })
+    }
+  } finally {
+    await page.close()
+    await context.close()
   }
-  for (const blockText of hidden) {
-    await expect(page.getByText(blockText, { exact: true })).not.toBeVisible({ timeout: 10000 })
+}
+
+async function openPlayerNote(page: Parameters<typeof typeInEditor>[0]) {
+  const playerNoteUrl = `/campaigns/${dmUsername}/${campaignSlug}/editor?item=${noteSlug}`
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.goto(playerNoteUrl, { waitUntil: 'commit' })
+    if (
+      await page
+        .getByRole('button', { name: /^sign in$/i })
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await signInByApi(page, E2E_PLAYER_EMAIL!, E2E_PLAYER_PASSWORD!)
+      continue
+    }
+
+    if (
+      await page
+        .getByRole('region', { name: 'Editor workspace' })
+        .isVisible({ timeout: 30000 })
+        .catch(() => false)
+    ) {
+      return
+    }
   }
 
-  await page.close()
-  await context.close()
+  await expect(page.getByRole('region', { name: 'Editor workspace' })).toBeVisible({
+    timeout: 30000,
+  })
 }
 
 async function getPlayerMemberId() {
@@ -443,7 +494,7 @@ async function getPlayerMemberId() {
 
 async function setPlayerNotePermission(permissionLevel: PermissionLevel) {
   const client = getConvexClient()
-  await client.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
+  await client.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
     campaignId,
     sidebarItemIds: [noteId],
     campaignMemberId: playerMemberId,
@@ -459,6 +510,23 @@ async function setBlockAllPlayersStatus(blockNoteId: string, status: ShareStatus
     blockNoteIds: [blockNoteId],
     status,
   })
+}
+
+async function expectBlockAllPlayersStatus(blockNoteId: string, status: ShareStatus) {
+  const client = getConvexClient()
+  await expect
+    .poll(
+      async () => {
+        const result = await client.query(api.blocks.queries.getBlocksWithShares, {
+          campaignId,
+          noteId,
+          blockNoteIds: [blockNoteId],
+        })
+        return result.blocks[0]?.shareStatus ?? null
+      },
+      { timeout: 10000 },
+    )
+    .toBe(status)
 }
 
 async function setBlockMemberPermission(

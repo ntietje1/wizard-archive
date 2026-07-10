@@ -1,16 +1,18 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
-import { BLOCK_REGISTRY, BLOCK_TYPES } from '../../shared/editor-blocks/blockRegistry'
-import { SHARE_STATUS_VALUES } from '../../shared/editor-blocks/share-status'
+import {
+  NOTE_BLOCK_REGISTRY,
+  NOTE_BLOCK_TYPE_VALUES,
+} from '@wizard-archive/editor/notes/document-contract'
+import { SHARE_STATUS_VALUES } from '../../shared/block-shares/share-status'
 import { convexValidatorFields } from '../common/schema'
-import type { BlockRegistryEntry } from '../../shared/editor-blocks/blockRegistry'
 
 export const blockNoteIdValidator = v.string()
 
 export const blockShareStatusValidator = literals(...SHARE_STATUS_VALUES)
 
-export const blockTypeValidator = literals(...BLOCK_TYPES)
+export const blockTypeValidator = literals(...NOTE_BLOCK_TYPE_VALUES)
 
 export const editorBlockInputValidator = v.any()
 
@@ -133,6 +135,11 @@ const embedPropsValidator = v.union(
     ...embedSharedPropsValidator,
   }),
   v.object({
+    targetKind: v.literal('resource'),
+    resourceId: v.string(),
+    ...embedSharedPropsValidator,
+  }),
+  v.object({
     targetKind: v.literal('sidebarItem'),
     sidebarItemId: v.string(),
     ...embedSharedPropsValidator,
@@ -183,7 +190,7 @@ const persistedContentFields = {
   },
 } as const
 
-function blockTableVariant(entry: BlockRegistryEntry) {
+function blockTableVariant(entry: (typeof NOTE_BLOCK_REGISTRY)[number]) {
   return v.object({
     ...blockCommonTableFields,
     type: v.literal(entry.type),
@@ -192,7 +199,7 @@ function blockTableVariant(entry: BlockRegistryEntry) {
   })
 }
 
-const blockTableVariants = BLOCK_REGISTRY.map(blockTableVariant) as unknown as [
+const blockTableVariants = NOTE_BLOCK_REGISTRY.map(blockTableVariant) as unknown as [
   ReturnType<typeof blockTableVariant>,
   ReturnType<typeof blockTableVariant>,
   ...Array<ReturnType<typeof blockTableVariant>>,
@@ -212,7 +219,7 @@ export const blocksTables = {
 
 const blockSystemFields = convexValidatorFields('blocks')
 
-function blockVariant(entry: BlockRegistryEntry) {
+function blockVariant(entry: (typeof NOTE_BLOCK_REGISTRY)[number]) {
   return v.object({
     ...blockSystemFields,
     ...blockCommonTableFields,
@@ -222,7 +229,7 @@ function blockVariant(entry: BlockRegistryEntry) {
   })
 }
 
-const blockVariants = BLOCK_REGISTRY.map(blockVariant) as unknown as [
+const blockVariants = NOTE_BLOCK_REGISTRY.map(blockVariant) as unknown as [
   ReturnType<typeof blockVariant>,
   ReturnType<typeof blockVariant>,
   ...Array<ReturnType<typeof blockVariant>>,

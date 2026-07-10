@@ -1,21 +1,20 @@
 import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
-import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
+import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
 import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
 import { checkItemAccess } from '../../sidebarItems/validation/access'
 import { getBlockSharePlayers } from './getBlockSharePlayers'
 import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
+import type { ShareStatus } from '../../../shared/block-shares/share-status'
 import type { DmQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMemberSummary } from '../../../shared/campaigns/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { BlockNoteId } from '../../../shared/editor-blocks/types'
-import type { BlockShareInfo } from '../types'
+import type { NoteBlockId, BlockShareInfo } from '@wizard-archive/editor/notes/document-contract'
 
 function normalizeBlockMemberPermission(
   permissionLevel: PermissionLevel | null | undefined,
@@ -32,15 +31,15 @@ export const getBlocksWithShares = async (
     blockNoteIds,
   }: {
     noteId: Id<'sidebarItems'>
-    blockNoteIds: Array<BlockNoteId>
+    blockNoteIds: Array<NoteBlockId>
   },
 ): Promise<{
-  blocks: Array<BlockShareInfo>
+  blocks: Array<BlockShareInfo<Id<'campaignMembers'>>>
   playerMembers: Array<CampaignMemberSummary>
   notePermissionsByMemberId: Record<Id<'campaignMembers'>, PermissionLevel>
 }> => {
-  const note = await getSidebarItem<'notes'>(ctx, noteId)
-  if (!note || note.type !== SIDEBAR_ITEM_TYPES.notes) {
+  const note = await getSidebarItem(ctx, noteId)
+  if (!note || note.type !== RESOURCE_TYPES.notes) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   }
   await checkItemAccess(ctx, {
@@ -71,26 +70,29 @@ export const getBlocksWithShares = async (
     sharePlayers.notePermissionByMemberId,
   ) as Record<Id<'campaignMembers'>, PermissionLevel>
 
-  const blocks = await asyncMap(blockNoteIds, async (blockNoteId): Promise<BlockShareInfo> => {
-    const block = await findBlockByBlockNoteId(ctx, { noteId, blockNoteId })
+  const blocks = await asyncMap(
+    blockNoteIds,
+    async (blockNoteId): Promise<BlockShareInfo<Id<'campaignMembers'>>> => {
+      const block = await findBlockByBlockNoteId(ctx, { noteId, blockNoteId })
 
-    if (!block) {
-      return {
-        blockNoteId,
-        shareStatus: SHARE_STATUS.NOT_SHARED,
-        memberPermissions: {},
+      if (!block) {
+        return {
+          noteBlockId: blockNoteId,
+          shareStatus: SHARE_STATUS.NOT_SHARED,
+          memberPermissions: {},
+        }
       }
-    }
 
-    const shareStatus: ShareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
-    const memberPermissions = sharesByBlockId.get(block._id) ?? {}
+      const shareStatus: ShareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
+      const memberPermissions = sharesByBlockId.get(block._id) ?? {}
 
-    return {
-      blockNoteId,
-      shareStatus,
-      memberPermissions,
-    }
-  })
+      return {
+        noteBlockId: blockNoteId,
+        shareStatus,
+        memberPermissions,
+      }
+    },
+  )
 
   return {
     blocks,

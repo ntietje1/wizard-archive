@@ -1,23 +1,24 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it } from 'vitest'
 import {
   resolveParsedItemPath,
-  resolveItemByPath,
   getMinDisambiguationPath,
+  parseResolvableWikiItemPath,
 } from '../../../shared/links/resolution'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
+import type { AnyItem } from '@wizard-archive/editor/resources/items'
 import type { Id } from '../../_generated/dataModel'
-import { assertSidebarItemName } from '../../sidebarItems/validation/name'
-import { assertSidebarItemSlug } from '../../sidebarItems/validation/slug'
+import { assertConvexSidebarItemName } from '../../sidebarItems/validation/name'
+import { assertConvexSidebarItemSlug } from '../../sidebarItems/validation/slug'
 
-function makeItem(id: string, name: string, parentId: string | null = null): AnySidebarItem {
+function makeItem(id: string, name: string, parentId: string | null = null): AnyItem {
   const rawSlug = name.toLowerCase().replace(/\s+/g, '-')
   const slug = rawSlug.length >= 3 ? rawSlug : rawSlug.padEnd(3, '0')
 
   return {
+    id: id as Id<'sidebarItems'>,
     _id: id as Id<'sidebarItems'>,
     _creationTime: 0,
-    name: name ? assertSidebarItemName(name) : ('' as AnySidebarItem['name']),
-    slug: name ? assertSidebarItemSlug(slug) : ('invalid' as AnySidebarItem['slug']),
+    name: name ? assertConvexSidebarItemName(name) : ('' as AnyItem['name']),
+    slug: name ? assertConvexSidebarItemSlug(slug) : ('invalid' as AnyItem['slug']),
     parentId: parentId as Id<'sidebarItems'> | null,
     campaignId: 'campaign1' as Id<'campaigns'>,
     type: 'notes',
@@ -33,18 +34,26 @@ function makeItem(id: string, name: string, parentId: string | null = null): Any
     createdBy: 'user1' as Id<'userProfiles'>,
     deletionTime: null,
     deletedBy: null,
-  } as unknown as AnySidebarItem
+  } as unknown as AnyItem
 }
 
-function buildMap(items: Array<AnySidebarItem>) {
-  return new Map(items.map((i) => [i._id, i]))
+function buildMap(items: Array<AnyItem>) {
+  return new Map(items.map((i) => [i.id, i]))
 }
 
 function sidebarId(id: string): Id<'sidebarItems'> {
   return id as Id<'sidebarItems'>
 }
 
-describe('resolveItemByPath', () => {
+function resolveGlobalItemByPath(
+  pathSegments: Array<string>,
+  items: Array<AnyItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnyItem>,
+) {
+  return resolveParsedItemPath('global', pathSegments, items, itemsMap)
+}
+
+describe('resolveParsedItemPath global resolution', () => {
   const items = [
     makeItem('a', 'Factions'),
     makeItem('b', 'The Guild', 'a'),
@@ -55,28 +64,28 @@ describe('resolveItemByPath', () => {
   const map = buildMap(items)
 
   it('resolves by name alone', () => {
-    expect(resolveItemByPath(['The Guild'], items, map)?._id).toBe('b')
+    expect(resolveGlobalItemByPath(['The Guild'], items, map)?.id).toBe('b')
   })
 
   it('resolves by full path', () => {
-    expect(resolveItemByPath(['Factions', 'The Guild'], items, map)?._id).toBe('b')
+    expect(resolveGlobalItemByPath(['Factions', 'The Guild'], items, map)?.id).toBe('b')
   })
 
   it('returns undefined for non-existent path', () => {
-    expect(resolveItemByPath(['Nonexistent'], items, map)).toBeUndefined()
+    expect(resolveGlobalItemByPath(['Nonexistent'], items, map)).toBeUndefined()
   })
 
   it('is case-insensitive', () => {
-    expect(resolveItemByPath(['the guild'], items, map)?._id).toBe('b')
+    expect(resolveGlobalItemByPath(['the guild'], items, map)?.id).toBe('b')
   })
 
   it('ignores surrounding whitespace in path segments', () => {
-    expect(resolveItemByPath(['  factions  ', '  the guild  '], items, map)?._id).toBe('b')
+    expect(resolveGlobalItemByPath(['  factions  ', '  the guild  '], items, map)?.id).toBe('b')
   })
 
   it('prefers the alphabetically earlier full path for ambiguous names', () => {
-    const result = resolveItemByPath(['Design'], items, map)
-    expect(result?._id).toBe('e')
+    const result = resolveGlobalItemByPath(['Design'], items, map)
+    expect(result?.id).toBe('e')
   })
 
   it('prefers the item highest in the sidebar hierarchy for ambiguous paths', () => {
@@ -88,7 +97,7 @@ describe('resolveItemByPath', () => {
     ]
     const nestedMap = buildMap(nestedItems)
 
-    expect(resolveItemByPath(['Tavern'], nestedItems, nestedMap)?._id).toBe('c')
+    expect(resolveGlobalItemByPath(['Tavern'], nestedItems, nestedMap)?.id).toBe('c')
   })
 
   it('breaks ties alphabetically by full path', () => {
@@ -100,7 +109,7 @@ describe('resolveItemByPath', () => {
     ]
     const tiedMap = buildMap(tiedItems)
 
-    expect(resolveItemByPath(['Guild'], tiedItems, tiedMap)?._id).toBe('d')
+    expect(resolveGlobalItemByPath(['Guild'], tiedItems, tiedMap)?.id).toBe('d')
   })
 
   it('does not match collapsed paths through unnamed ancestors', () => {
@@ -112,7 +121,9 @@ describe('resolveItemByPath', () => {
     ]
     const unnamedAncestorMap = buildMap(unnamedAncestorItems)
 
-    expect(resolveItemByPath(['A', 'C'], unnamedAncestorItems, unnamedAncestorMap)?._id).toBe('d')
+    expect(resolveGlobalItemByPath(['A', 'C'], unnamedAncestorItems, unnamedAncestorMap)?.id).toBe(
+      'd',
+    )
   })
 })
 
@@ -126,14 +137,26 @@ describe('resolveParsedItemPath', () => {
   const map = buildMap(items)
 
   it('uses global resolution for bare paths', () => {
-    expect(resolveParsedItemPath('global', ['Atlas'], items, map)?._id).toBe('atlas')
+    expect(resolveParsedItemPath('global', ['Atlas'], items, map)?.id).toBe('atlas')
   })
 
   it('uses relative resolution when requested', () => {
     expect(
       resolveParsedItemPath('relative', ['..', 'North', 'Atlas'], items, map, sidebarId('north'))
-        ?._id,
+        ?.id,
     ).toBe('atlas')
+  })
+})
+
+describe('parseResolvableWikiItemPath', () => {
+  it('accepts plain item paths and rejects display names, headings, and empty paths', () => {
+    expect(parseResolvableWikiItemPath('World/Atlas')).toMatchObject({
+      pathKind: 'global',
+      itemPath: ['World', 'Atlas'],
+    })
+    expect(parseResolvableWikiItemPath('World/Atlas|Atlas')).toBeNull()
+    expect(parseResolvableWikiItemPath('World/Atlas#Intro')).toBeNull()
+    expect(parseResolvableWikiItemPath('')).toBeNull()
   })
 })
 

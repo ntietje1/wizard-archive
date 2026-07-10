@@ -6,7 +6,9 @@ import {
   DEFAULT_CANVAS_NAME,
   enableCanvasRuntime,
   expectCanvasEdgeModel,
+  flushCanvasUpdates,
   getCanvasNodeById,
+  getCanvasNodeSurface,
   getCommittedSelectedCanvasNodes,
   openCanvas,
   seedCanvasEdgeViaRuntime,
@@ -21,8 +23,6 @@ import type { Locator, Page } from '@playwright/test'
 
 const campaignName = testName('CnvProps')
 const canvasName = DEFAULT_CANVAS_NAME
-const BLUE_COLOR = 'rgb(54, 73, 84)'
-const RED_COLOR = 'rgb(255, 115, 105)'
 
 test.describe.serial('canvas property toolbar workflows', () => {
   test.setTimeout(60_000)
@@ -30,7 +30,7 @@ test.describe.serial('canvas property toolbar workflows', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -41,7 +41,7 @@ test.describe.serial('canvas property toolbar workflows', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -52,7 +52,7 @@ test.describe.serial('canvas property toolbar workflows', () => {
 
   test.beforeEach(async ({ page }) => {
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await waitForCanvasRuntime(page)
@@ -73,22 +73,19 @@ test.describe.serial('canvas property toolbar workflows', () => {
     await node.click()
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
 
-    await propertySection(page, 'Fill').getByRole('button', { name: 'Select Blue color' }).click()
-    await propertySection(page, 'Stroke').getByRole('button', { name: 'Select Red color' }).click()
+    const fillColor = await selectColorAndReadSwatchColor(page, 'Fill', 'Blue')
+    const strokeColor = await selectColorAndReadSwatchColor(page, 'Stroke', 'Red')
     await page.getByRole('textbox', { name: 'Stroke size input' }).fill('7')
     await page.getByRole('textbox', { name: 'Stroke size input' }).press('Enter')
 
     await expect
       .poll(() => readNodeSurfaceStyle(node))
       .toMatchObject({
-        backgroundColor: BLUE_COLOR,
-        borderColor: RED_COLOR,
+        backgroundColor: fillColor,
+        borderColor: strokeColor,
         borderWidth: '7px',
       })
 
-    await expect
-      .poll(() => readNodeSurfaceStyle(node))
-      .toMatchObject({ backgroundColor: BLUE_COLOR, borderColor: RED_COLOR, borderWidth: '7px' })
     await page.reload()
     await expect(getCanvasNodeById(page, 'perf-node-0')).toBeVisible({ timeout: 10_000 })
     await getCanvasNodeById(page, 'perf-node-0').click()
@@ -96,8 +93,8 @@ test.describe.serial('canvas property toolbar workflows', () => {
     await expect
       .poll(() => readNodeSurfaceStyle(getCanvasNodeById(page, 'perf-node-0')))
       .toMatchObject({
-        backgroundColor: BLUE_COLOR,
-        borderColor: RED_COLOR,
+        backgroundColor: fillColor,
+        borderColor: strokeColor,
         borderWidth: '7px',
       })
   })
@@ -169,6 +166,7 @@ test.describe.serial('canvas property toolbar workflows', () => {
       },
     })
 
+    await flushCanvasUpdates(page)
     await page.reload()
     await waitForCanvasRuntime(page)
     await expectCanvasEdgeModel(page, 'prop-edge', {
@@ -182,22 +180,34 @@ test.describe.serial('canvas property toolbar workflows', () => {
 
 function propertySection(page: Page, label: 'Fill' | 'Stroke'): Locator {
   const toolbar = page.getByRole('toolbar', { name: 'Canvas conditional toolbar' })
-  return toolbar
-    .locator('div')
-    .filter({ has: page.getByText(label, { exact: true }) })
-    .first()
+  return toolbar.getByRole('group', { name: label, exact: true })
+}
+
+async function selectColorAndReadSwatchColor(
+  page: Page,
+  sectionLabel: 'Fill' | 'Stroke',
+  colorLabel: string,
+) {
+  const button = propertySection(page, sectionLabel).getByRole('button', {
+    name: `Select ${colorLabel} color`,
+  })
+  const swatchColor = await button
+    .locator('span')
+    .last()
+    .evaluate((element) => {
+      return getComputedStyle(element).backgroundColor
+    })
+  await button.click()
+  return swatchColor
 }
 
 async function readNodeSurfaceStyle(node: Locator) {
-  return node
-    .getByRole('group')
-    .first()
-    .evaluate((element) => {
-      const style = getComputedStyle(element)
-      return {
-        backgroundColor: style.backgroundColor,
-        borderColor: style.borderColor,
-        borderWidth: style.borderWidth,
-      }
-    })
+  return getCanvasNodeSurface(node).evaluate((element) => {
+    const style = getComputedStyle(element)
+    return {
+      backgroundColor: style.backgroundColor,
+      borderColor: style.borderColor,
+      borderWidth: style.borderWidth,
+    }
+  })
 }

@@ -67,7 +67,7 @@ describe('non-undoable filesystem transactions', () => {
         command: { type: 'emptyTrash' },
       }),
     ).rejects.toThrow('Empty Trash can delete at most 100 items at once')
-    const remainingTrash = await dmAuth.query(api.sidebarItems.queries.getTrashedSidebarItems, {
+    const { trash: remainingTrash } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
     expect(remainingTrash).toHaveLength(101)

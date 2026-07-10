@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Separator } from '~/features/shadcn/components/separator'
+import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
 
 export function StubTab({
   category,

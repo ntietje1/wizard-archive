@@ -1,9 +1,12 @@
 import { expect } from '@playwright/test'
 import { navigateToCampaign } from './campaign-helpers'
 import { getBrowserPrimaryModifier } from './keyboard-helpers'
-import { openItem } from './sidebar-helpers'
+import { openItem, sidebarItem, waitForFilesystemIdle } from './sidebar-helpers'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentEdge } from '../../src/features/canvas/domain/canvas-document'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '@wizard-archive/editor/canvas/document-contract'
 import type { Locator, Page } from '@playwright/test'
 
 export interface CanvasPoint {
@@ -16,25 +19,8 @@ export interface CanvasViewportState extends CanvasPoint {
 }
 
 export interface CanvasRuntimeSnapshot {
-  nodes: Array<{
-    id: string
-    type: string
-    position: CanvasPoint
-    width?: number
-    height?: number
-    data?: Record<string, unknown> | null
-    zIndex?: number
-  }>
-  edges: Array<{
-    id: string
-    source: string
-    target: string
-    sourceHandle?: string
-    targetHandle?: string
-    type?: string
-    style?: Record<string, unknown>
-    zIndex?: number
-  }>
+  nodes: Array<CanvasDocumentNode>
+  edges: Array<CanvasDocumentEdge>
   selection: { nodeIds: Array<string>; edgeIds: Array<string> }
   viewport: CanvasViewportState
 }
@@ -82,15 +68,19 @@ const VIEWPORT_CONTROL_PATTERNS = {
   redo: /^Redo$/i,
 }
 
+const CANVAS_READY_TIMEOUT = 45_000
+const CANVAS_TEXT_EDITOR_SELECTOR = '[aria-label="Text node content"][contenteditable="true"]'
+const VITE_DYNAMIC_IMPORT_ERROR = /Failed to fetch dynamically imported module:/i
+
 export async function createCanvas(page: Page, name: string = DEFAULT_CANVAS_NAME) {
   const prevUrl = page.url()
   await page.getByRole('button', { name: /canvas.*whiteboard/i }).click()
 
   const textbox = page.getByRole('textbox', { name: 'Item name' })
-  await expect(page).not.toHaveURL(prevUrl, { timeout: 10000 })
-  await expect(textbox).toBeVisible({ timeout: 10000 })
+  await expect(page).not.toHaveURL(prevUrl, { timeout: CANVAS_READY_TIMEOUT })
+  await expect(textbox).toBeVisible({ timeout: CANVAS_READY_TIMEOUT })
   if (name === DEFAULT_CANVAS_NAME) {
-    await expect(textbox).toHaveValue(name, { timeout: 10000 })
+    await expect(textbox).toHaveValue(name, { timeout: CANVAS_READY_TIMEOUT })
   } else {
     await textbox.click()
     await textbox.fill(name)
@@ -98,16 +88,16 @@ export async function createCanvas(page: Page, name: string = DEFAULT_CANVAS_NAM
     await expect(textbox).toHaveValue(name, { timeout: 10000 })
   }
 
-  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-  await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible({
+  await expect(sidebarItem(page, name)).toBeVisible({
     timeout: 10000,
   })
-  await expect(getCanvasSurface(page)).toBeVisible({ timeout: 10000 })
+  await waitForCanvasSurface(page)
+  await waitForFilesystemIdle(page)
 }
 
 export async function openCanvas(page: Page, name: string) {
   await openItem(page, name)
-  await expect(getCanvasSurface(page)).toBeVisible({ timeout: 10000 })
+  await waitForCanvasSurface(page)
 }
 
 export function getCanvasSurface(page: Page) {
@@ -176,12 +166,32 @@ export function getCanvasNodesByType(page: Page, nodeType: string) {
   return page.locator(`[data-testid="canvas-node"][data-node-type="${nodeType}"]`)
 }
 
+export function getCanvasTextEditors(page: Page) {
+  return page.locator(CANVAS_TEXT_EDITOR_SELECTOR)
+}
+
+export async function getNewCanvasTextEditor(page: Page, previousCount: number) {
+  await expect
+    .poll(() => getCanvasTextEditors(page).count(), { timeout: 10_000 })
+    .toBeGreaterThan(previousCount)
+
+  return getCanvasTextEditors(page).last()
+}
+
+export function getCanvasTextEditorInNode(node: Locator) {
+  return node.locator(CANVAS_TEXT_EDITOR_SELECTOR)
+}
+
 export function getCanvasPendingPreviewActiveNodes(page: Page) {
   return page.locator('[data-testid="canvas-node"][data-node-pending-preview-active="true"]')
 }
 
 export function getCanvasNodeById(page: Page, nodeId: string) {
   return page.locator(`[data-testid="canvas-node"][data-node-id="${nodeId}"]`)
+}
+
+export function getCanvasNodeSurface(node: Locator) {
+  return node.locator(':scope > *').first()
 }
 
 export function getCanvasNodeHandle(node: Locator, side: 'top' | 'right' | 'bottom' | 'left') {
@@ -228,6 +238,7 @@ export function getViewportControls(page: Page) {
 export async function selectCanvasTool(page: Page, label: keyof typeof TOOL_NAME_PATTERNS) {
   const button = getCanvasToolButton(page, label)
   await button.click()
+  await expect(button).toHaveAttribute('aria-pressed', 'true')
 }
 
 export async function enableCanvasRuntime(page: Page) {
@@ -237,9 +248,49 @@ export async function enableCanvasRuntime(page: Page) {
 }
 
 export async function waitForCanvasRuntime(page: Page) {
+  try {
+    await waitForCanvasRuntimeReady(page)
+    return
+  } catch (error) {
+    if (!(await recoverFromViteDynamicImportError(page))) {
+      throw error
+    }
+  }
+
+  await waitForCanvasRuntimeReady(page)
+}
+
+export async function waitForCanvasSurface(page: Page) {
+  try {
+    await expect(getCanvasSurface(page)).toBeVisible({ timeout: CANVAS_READY_TIMEOUT })
+    return
+  } catch (error) {
+    if (!(await recoverFromViteDynamicImportError(page))) {
+      throw error
+    }
+  }
+
+  await expect(getCanvasSurface(page)).toBeVisible({ timeout: CANVAS_READY_TIMEOUT })
+}
+
+async function waitForCanvasRuntimeReady(page: Page) {
   await page.waitForFunction(() => Boolean(window.__WA_CANVAS_PERF_RUNTIME__), null, {
-    timeout: 10_000,
+    timeout: CANVAS_READY_TIMEOUT,
   })
+}
+
+async function recoverFromViteDynamicImportError(page: Page) {
+  const dynamicImportError = page.getByText(VITE_DYNAMIC_IMPORT_ERROR)
+  const isDynamicImportErrorVisible = await dynamicImportError
+    .isVisible({ timeout: 1_000 })
+    .catch(() => false)
+
+  if (!isDynamicImportErrorVisible) {
+    return false
+  }
+
+  await page.reload({ waitUntil: 'commit' })
+  return true
 }
 
 export async function createFreshCanvasForTest(
@@ -247,7 +298,7 @@ export async function createFreshCanvasForTest(
   campaignName: string,
   canvasName: string,
 ) {
-  await page.goto('/campaigns')
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(page, campaignName)
   await createCanvas(page, canvasName)
   await waitForCanvasRuntime(page)
@@ -278,6 +329,13 @@ export async function getCanvasRuntimeSnapshot(page: Page): Promise<CanvasRuntim
     throw new Error('Missing canvas runtime snapshot')
   }
   return snapshot as CanvasRuntimeSnapshot
+}
+
+export async function flushCanvasUpdates(page: Page) {
+  await waitForCanvasRuntime(page)
+  await page.evaluate(async () => {
+    await window.__WA_CANVAS_PERF_RUNTIME__?.flushUpdates()
+  })
 }
 
 export async function expectCanvasRuntimeSelection(
@@ -545,7 +603,7 @@ export async function getCanvasRuntimeMetrics(page: Page) {
 
 export async function canvasToScreenPoint(page: Page, point: CanvasPoint) {
   const pane = getCanvasPane(page)
-  await expect(pane).toBeVisible({ timeout: 10000 })
+  await expect(pane).toBeVisible({ timeout: CANVAS_READY_TIMEOUT })
   const [box, viewport] = await Promise.all([pane.boundingBox(), getCanvasViewportViaRuntime(page)])
   if (!box) {
     throw new Error('Canvas pane is not visible')
@@ -721,6 +779,37 @@ export async function clickCanvasNode(
   }
 }
 
+export async function openCanvasNodeContextMenu(
+  page: Page,
+  locator: Locator,
+  options: { positionRatio?: CanvasNodePositionRatio } = {},
+) {
+  const box = await locator.boundingBox()
+  if (!box) {
+    throw new Error('Canvas node is not visible')
+  }
+
+  const positionRatio = options.positionRatio ?? { xRatio: 0.5, yRatio: 0.5 }
+  const point = {
+    x: box.x + box.width * positionRatio.xRatio,
+    y: box.y + box.height * positionRatio.yRatio,
+  }
+
+  await locator.evaluate((element, position) => {
+    element.dispatchEvent(
+      new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+        buttons: 2,
+        clientX: position.x,
+        clientY: position.y,
+      }),
+    )
+  }, point)
+  await expect(page.getByRole('menu').first()).toBeVisible()
+}
+
 export async function dragCanvasNode(
   page: Page,
   locator: Locator,
@@ -812,7 +901,7 @@ function getResizeHandleLabel(handlePosition: ResizeHandlePosition) {
 
 async function resolveCanvasPoint(page: Page, point: CanvasPoint) {
   const pane = getCanvasPane(page)
-  await expect(pane).toBeVisible({ timeout: 10000 })
+  await expect(pane).toBeVisible({ timeout: CANVAS_READY_TIMEOUT })
   const box = await pane.boundingBox()
   if (!box) {
     throw new Error('Canvas pane is not visible')

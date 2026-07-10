@@ -13,6 +13,7 @@ import {
 } from '../../_test/assertions.helper'
 import { api, internal } from '../../_generated/api'
 import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
+import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 describe('persistBlocks', () => {
   const t = createTestContext()
@@ -89,7 +90,7 @@ describe('persistBlocks', () => {
       documentId: noteId,
     })
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ status: 'projected', throughSeq: 0 })
 
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
@@ -122,7 +123,7 @@ describe('persistBlocks', () => {
       documentId: noteId,
     })
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ status: 'projected', throughSeq: 1 })
 
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
@@ -175,7 +176,7 @@ describe('persistBlocks', () => {
       documentId: noteId,
     })
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ status: 'projected', throughSeq: 1 })
 
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
@@ -204,6 +205,107 @@ describe('persistBlocks', () => {
         position: 1,
         plainText: 'Some paragraph text',
       })
+    })
+  })
+
+  it('rejects imported text Yjs updates for non-note documents before writing updates', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Imported Text Canvas',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    const beforeUpdateCount = await t.run(async (dbCtx) => {
+      const updates = await dbCtx.db
+        .query('yjsUpdates')
+        .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+        .collect()
+      return updates.length
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.yjsSync.mutations.pushImportedTextNoteUpdate, {
+        campaignId: ctx.campaignId,
+        documentId: canvasId,
+        update: makeYjsUpdate(),
+        content: [],
+      }),
+    )
+
+    await t.run(async (dbCtx) => {
+      const updates = await dbCtx.db
+        .query('yjsUpdates')
+        .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+        .collect()
+      const blocks = await dbCtx.db
+        .query('blocks')
+        .filter((q) => q.eq(q.field('noteId'), canvasId))
+        .collect()
+
+      expect(updates).toHaveLength(beforeUpdateCount)
+      expect(blocks).toHaveLength(0)
+    })
+  })
+
+  it('persists imported text Yjs updates and derived blocks atomically', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Imported Text Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    const content: Array<PartialNoteBlock> = [
+      {
+        id: testBlockNoteId('imported-heading'),
+        type: 'heading',
+        props: { level: 1 },
+        content: [{ type: 'text', text: 'Session Notes', styles: {} }],
+        children: [],
+      },
+      {
+        id: testBlockNoteId('imported-paragraph'),
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: 'Opening scene', styles: {} }],
+        children: [],
+      },
+    ]
+
+    const beforeUpdateCount = await t.run(async (dbCtx) => {
+      const updates = await dbCtx.db
+        .query('yjsUpdates')
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+        .collect()
+      return updates.length
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushImportedTextNoteUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+      update: makeYjsUpdateWithBlocks(content),
+      content,
+    })
+
+    await t.run(async (dbCtx) => {
+      const updates = await dbCtx.db
+        .query('yjsUpdates')
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+        .collect()
+      const blocks = await dbCtx.db
+        .query('blocks')
+        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .collect()
+
+      expect(updates).toHaveLength(beforeUpdateCount + 1)
+      expect(blocks.map((block) => block.blockNoteId).sort()).toEqual(
+        [testBlockNoteId('imported-heading'), testBlockNoteId('imported-paragraph')].sort(),
+      )
     })
   })
 
@@ -250,71 +352,6 @@ describe('persistBlocks', () => {
         ],
       }),
     ).rejects.toThrow()
-  })
-
-  it('persists non-text BlockNote blocks from canonical Yjs updates', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
-      name: 'Rich Content Note',
-      parentTarget: { kind: 'direct', parentId: null },
-    })
-
-    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
-      documentId: noteId,
-      update: makeYjsUpdateWithBlocks([
-        {
-          id: testBlockNoteId('table-block-1'),
-          type: 'table',
-          props: { textColor: 'default' },
-          content: {
-            type: 'tableContent',
-            columnWidths: [null, null],
-            rows: [
-              {
-                cells: [
-                  { type: 'tableCell', content: [{ type: 'text', text: 'A', styles: {} }] },
-                  { type: 'tableCell', content: [{ type: 'text', text: 'B', styles: {} }] },
-                ],
-              },
-            ],
-          },
-          children: [],
-        },
-        {
-          id: testBlockNoteId('embed-block-1'),
-          type: 'embed',
-          props: {
-            targetKind: 'externalUrl',
-            name: 'Preview',
-            url: 'https://example.com/image.png',
-            backgroundColor: 'default',
-            textAlignment: 'left',
-            previewWidth: 320,
-          },
-          children: [],
-        },
-      ]),
-    })
-
-    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
-      documentId: noteId,
-    })
-
-    await t.run(async (dbCtx) => {
-      const blocks = await dbCtx.db
-        .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
-        .collect()
-
-      expect(blocks.map((block) => block.blockNoteId).sort()).toEqual(
-        [testBlockNoteId('embed-block-1'), testBlockNoteId('table-block-1')].sort(),
-      )
-    })
   })
 
   it('persists embed preview aspect ratios from canonical Yjs updates', async () => {

@@ -1,8 +1,8 @@
 import type {
-  FlatBlockContent,
+  NoteBlockContent,
   InlineContent,
   TableContent,
-} from '../../../shared/editor-blocks/types'
+} from '@wizard-archive/editor/notes/document-contract'
 
 function collectTexts(items: Array<string>): string {
   return items.join(' ')
@@ -28,7 +28,7 @@ function collectTableTexts(rows: TableContent['rows']): Array<string> {
   return texts
 }
 
-export function extractPlainText(block: FlatBlockContent): string {
+export function extractPlainText(block: NoteBlockContent): string {
   const content = block.content
   if (!content) return ''
 

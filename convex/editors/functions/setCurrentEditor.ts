@@ -1,7 +1,12 @@
-import { DEFAULT_SORT_OPTIONS, EDITOR_MODE } from '../../../shared/editor/types'
+import { DEFAULT_SORT_OPTIONS } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type {
+  SortDirection,
+  SortOrder,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import { WORKSPACE_MODE } from '../../../shared/workspace/workspace-mode'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { EditorMode, SortDirection, SortOrder } from '../../../shared/editor/types'
+import type { WorkspaceMode } from '../../../shared/workspace/workspace-mode'
 
 export async function setCurrentEditor(
   ctx: CampaignMutationCtx,
@@ -12,7 +17,7 @@ export async function setCurrentEditor(
   }: {
     sortOrder?: SortOrder
     sortDirection?: SortDirection
-    editorMode?: EditorMode
+    editorMode?: WorkspaceMode
   },
 ): Promise<Id<'editor'>> {
   const campaignId = ctx.campaign._id
@@ -28,7 +33,7 @@ export async function setCurrentEditor(
       campaignId,
       sortOrder: sortOrder ?? DEFAULT_SORT_OPTIONS.order,
       sortDirection: sortDirection ?? DEFAULT_SORT_OPTIONS.direction,
-      editorMode: editorMode ?? EDITOR_MODE.EDITOR,
+      editorMode: editorMode ?? WORKSPACE_MODE.EDITOR,
     })
   }
 

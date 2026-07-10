@@ -1,11 +1,10 @@
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
-import { api } from 'convex/_generated/api'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { SettingsSubAlertDialogContent } from '~/features/settings/components/settings-sub-dialog'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useUpdateCampaignMemberStatusMutation } from '~/features/campaigns/hooks/use-campaign-operations'
 import { handleError } from '~/shared/utils/logger'
 import {
   AlertDialog,
@@ -15,7 +14,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '~/features/shadcn/components/alert-dialog'
+} from '@wizard-archive/ui/shadcn/components/alert-dialog'
 
 export function RemovePlayerDialog({
   player,
@@ -28,7 +27,7 @@ export function RemovePlayerDialog({
   isOpen: boolean
   onClose: () => void
 }) {
-  const updateMemberStatus = useAppMutation(api.campaigns.mutations.updateCampaignMemberStatus)
+  const updateMemberStatus = useUpdateCampaignMemberStatusMutation()
 
   const playerName = player?.userProfile.name ?? 'this player'
 
@@ -37,7 +36,7 @@ export function RemovePlayerDialog({
     try {
       await updateMemberStatus.mutateAsync({
         campaignId,
-        memberId: player._id,
+        memberId: player.id,
         status: CAMPAIGN_MEMBER_STATUS.Removed,
       })
       toast.success('Player removed successfully')

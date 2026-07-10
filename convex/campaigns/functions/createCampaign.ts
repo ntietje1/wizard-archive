@@ -44,6 +44,7 @@ export async function createCampaign(
     slug,
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
+    defaultFolderInheritShares: false,
   })
 
   await ctx.db.insert('campaignMembers', {

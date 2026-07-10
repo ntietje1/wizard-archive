@@ -3,16 +3,16 @@ import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
-import type { FileSystemCommand } from '../../../shared/sidebar-items/filesystem/commands'
+import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
 import type { Id } from '../../_generated/dataModel'
-import { assertSidebarItemName } from '../validation/name'
+import { assertConvexSidebarItemName } from '../validation/name'
 
 describe('filesystem command lifecycle boundaries', () => {
   const t = createTestContext()
   const executeCommand = (
     dmAuth: ReturnType<typeof asDm>,
     campaignId: Id<'campaigns'>,
-    command: FileSystemCommand,
+    command: ResourceCommand,
   ) =>
     dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
       campaignId,
@@ -60,12 +60,12 @@ describe('filesystem command lifecycle boundaries', () => {
       status: 'undoHidden',
     })
 
-    const commandCases: Array<{ command: FileSystemCommand; message: string }> = [
+    const commandCases: Array<{ command: ResourceCommand; message: string }> = [
       {
         command: {
           type: 'rename',
           itemId: hiddenNoteId,
-          name: assertSidebarItemName('Renamed Hidden Note'),
+          name: assertConvexSidebarItemName('Renamed Hidden Note'),
         },
         message: 'Only active items can be renamed',
       },

@@ -1,4 +1,4 @@
-import { Button } from '~/features/shadcn/components/button'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 
 export function SettingsRow({
   label,

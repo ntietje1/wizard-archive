@@ -9,7 +9,7 @@ import {
   getBlockSharePlayerNoteAccess,
 } from '../../blockShares/functions/noteBlockShareEligibility'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
-import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
+import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
 import { hasPermissionForRequirement } from '../../../shared/permissions/requirements'
@@ -18,29 +18,30 @@ import type { CampaignQueryCtx } from '../../functions'
 import type {
   BlockMeta,
   BlockShareAccessWarning,
-  Note,
-  NoteFromDb,
-  NoteWithContent,
-} from '../../../shared/notes/types'
+  NoteItem,
+  NoteItemRow,
+  NoteItemWithContent,
+} from '@wizard-archive/editor/notes/item-contract'
 import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemEnhancement } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 
 export const enhanceNote = async (
   ctx: CampaignQueryCtx,
-  { note }: { note: NoteFromDb },
-): Promise<Note> => {
-  return enhanceBase(ctx, { item: note })
+  { note, enhancement }: { note: NoteItemRow; enhancement?: SidebarItemEnhancement },
+): Promise<NoteItem> => {
+  return enhanceBase(ctx, { item: note, enhancement })
 }
 
 export const enhanceNoteWithContent = async (
   ctx: CampaignQueryCtx,
-  { note }: { note: Note },
-): Promise<NoteWithContent> => {
-  const [ancestors = [], allBlocks = []] = await Promise.all([
+  { note }: { note: NoteItem },
+): Promise<NoteItemWithContent> => {
+  const [ancestors, allBlocks] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: note.parentId,
       isTrashed: note.isTrashed,
     }),
-    getAllBlocksByNote(ctx, { noteId: note._id }),
+    getAllBlocksByNote(ctx, { noteId: note.id }),
   ])
 
   const isDm = ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM
@@ -108,7 +109,7 @@ export const enhanceNoteWithContent = async (
 
 async function getBlockShareAccessWarnings(
   ctx: CampaignQueryCtx,
-  note: Note,
+  note: NoteItem,
   blockCountsByMemberId: Map<Id<'campaignMembers'>, number>,
 ): Promise<Array<BlockShareAccessWarning>> {
   const memberIds = [...blockCountsByMemberId.keys()]

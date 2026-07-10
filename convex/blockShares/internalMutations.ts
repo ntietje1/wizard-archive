@@ -1,29 +1,46 @@
 import { v } from 'convex/values'
 import { internalMutation } from '../_generated/server'
+import { editorBlockInputValidator } from '../blocks/schema'
 import {
-  blockNoteIdValidator,
-  blockShareStatusValidator,
-  editorBlockInputValidator,
-} from '../blocks/schema'
+  RESOURCE_COMMAND_TYPE,
+  RESOURCE_EVENT_TYPE,
+} from '@wizard-archive/editor/resources/transaction-contract'
+import { blockShareCommandValidator } from './commandValidators'
+import {
+  fileSystemRequestFingerprint,
+  recordFilesystemTransaction,
+} from '../sidebarItems/filesystem/transactions'
+import { fileSystemTransactionReceiptValidator } from '../sidebarItems/filesystem/validators'
 import { setBlocksShareStatus as setBlocksShareStatusFn } from './functions/setBlocksShareStatus'
-import { shareBlocks as shareBlocksFn } from './functions/shareBlocks'
 import { setBlockMemberPermission as setBlockMemberPermissionFn } from './functions/setBlockMemberPermission'
-import { unshareBlocks as unshareBlocksFn } from './functions/unshareBlocks'
-import { blockVisibilityPermissionLevelValidator } from './schema'
-import { parseEditorBlocks } from '../blocks/parseEditorBlocks'
+import { parseBlockNoteBlocks } from '../blocks/parseBlockNoteBlocks'
 import { authenticate, checkDmMembership } from '../functions'
 import { syncNoteIndexesFromBlocks } from '../notes/functions/syncNoteDerivedData'
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
-import type { CustomBlock } from '../../shared/editor-blocks/types'
-import type { CampaignFromDb } from '../../shared/campaigns/types'
+import { normalizeBlockShareTargetIds } from './blockShareCommand'
+import type { NoteBlock, NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+import type {
+  ResourceCommand,
+  ResourceTransactionReceipt,
+} from '@wizard-archive/editor/resources/transaction-contract'
+import type { CampaignMemberRow, CampaignRow } from '../../shared/campaigns/types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
+
+type BlockShareCommand = Extract<
+  ResourceCommand,
+  {
+    type:
+      | typeof RESOURCE_COMMAND_TYPE.setBlocksShareStatus
+      | typeof RESOURCE_COMMAND_TYPE.setBlockMemberPermission
+  }
+>
 
 type ProjectedNoteArgs = {
   campaignId: Id<'campaigns'>
   noteId: Id<'sidebarItems'>
-  content: Array<CustomBlock>
+  content: Array<NoteBlock>
 }
 
 async function authorizeBlockShareMutation(
@@ -42,7 +59,10 @@ async function authorizeBlockShareMutation(
 async function getBlockShareCtx(ctx: MutationCtx, args: ProjectedNoteArgs) {
   const user = await authenticate(ctx)
   const { campaign, membership } = await checkDmMembership({ ...ctx, user }, args.campaignId)
-  await syncProjectedNote({ ...ctx, campaign }, { noteId: args.noteId, content: args.content })
+  await syncProjectedNote(
+    { ...ctx, campaign, membership },
+    { noteId: args.noteId, content: args.content },
+  )
   return {
     ...ctx,
     campaign,
@@ -51,7 +71,10 @@ async function getBlockShareCtx(ctx: MutationCtx, args: ProjectedNoteArgs) {
 }
 
 async function syncProjectedNote(
-  ctx: MutationCtx & { campaign: CampaignFromDb },
+  ctx: MutationCtx & {
+    campaign: CampaignRow
+    membership: CampaignMemberRow
+  },
   args: Pick<ProjectedNoteArgs, 'noteId' | 'content'>,
 ) {
   const note = await ctx.db.get('sidebarItems', args.noteId)
@@ -60,6 +83,60 @@ async function syncProjectedNote(
     throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
   }
   await syncNoteIndexesFromBlocks(ctx, args)
+}
+
+async function executeProjectedBlockShareCommand(
+  ctx: MutationCtx,
+  args: {
+    campaignId: Id<'campaigns'>
+    command: BlockShareCommand
+    content: Array<NoteBlock>
+    historyStatus?: 'shared' | 'unshared'
+  },
+): Promise<ResourceTransactionReceipt> {
+  const command = {
+    ...args.command,
+    blockNoteIds: normalizeBlockShareTargetIds(args.command.blockNoteIds),
+  } as BlockShareCommand
+  const blockShareCtx = await getBlockShareCtx(ctx, {
+    campaignId: args.campaignId,
+    noteId: command.noteId,
+    content: args.content,
+  })
+
+  let changedBlockNoteIds: Array<NoteBlockId>
+  switch (command.type) {
+    case RESOURCE_COMMAND_TYPE.setBlocksShareStatus:
+      changedBlockNoteIds = await setBlocksShareStatusFn(blockShareCtx, {
+        noteId: command.noteId,
+        blockNoteIds: command.blockNoteIds as Array<NoteBlockId>,
+        status: command.status,
+      })
+      break
+    case RESOURCE_COMMAND_TYPE.setBlockMemberPermission:
+      changedBlockNoteIds = await setBlockMemberPermissionFn(blockShareCtx, {
+        noteId: command.noteId,
+        blockNoteIds: command.blockNoteIds as Array<NoteBlockId>,
+        campaignMemberId: command.campaignMemberId,
+        permissionLevel: command.permissionLevel,
+        historyStatus: args.historyStatus,
+      })
+      break
+  }
+
+  const events =
+    changedBlockNoteIds.length === 0
+      ? []
+      : [{ type: RESOURCE_EVENT_TYPE.updated, itemId: command.noteId }]
+  return await recordFilesystemTransaction(blockShareCtx, {
+    delta: {
+      command,
+      events,
+      changes: [],
+      undoable: false,
+    },
+    requestFingerprint: fileSystemRequestFingerprint({ command }),
+  })
 }
 
 export const authorizeBlockShareAction = internalMutation({
@@ -74,67 +151,21 @@ export const authorizeBlockShareAction = internalMutation({
   },
 })
 
-export const setBlocksShareStatus = internalMutation({
+export const executeBlockShareCommand = internalMutation({
   args: {
     campaignId: v.id('campaigns'),
-    noteId: v.id('sidebarItems'),
-    blockNoteIds: v.array(blockNoteIdValidator),
-    status: blockShareStatusValidator,
+    command: blockShareCommandValidator,
     content: v.array(editorBlockInputValidator),
+    historyStatus: v.optional(v.union(v.literal('shared'), v.literal('unshared'))),
   },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const content = parseEditorBlocks(args.content)
-    await setBlocksShareStatusFn(await getBlockShareCtx(ctx, { ...args, content }), args)
-    return null
-  },
-})
-
-export const shareBlocks = internalMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-    noteId: v.id('sidebarItems'),
-    blockNoteIds: v.array(blockNoteIdValidator),
-    campaignMemberId: v.id('campaignMembers'),
-    content: v.array(editorBlockInputValidator),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const content = parseEditorBlocks(args.content)
-    await shareBlocksFn(await getBlockShareCtx(ctx, { ...args, content }), args)
-    return null
-  },
-})
-
-export const unshareBlocks = internalMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-    noteId: v.id('sidebarItems'),
-    blockNoteIds: v.array(blockNoteIdValidator),
-    campaignMemberId: v.id('campaignMembers'),
-    content: v.array(editorBlockInputValidator),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const content = parseEditorBlocks(args.content)
-    await unshareBlocksFn(await getBlockShareCtx(ctx, { ...args, content }), args)
-    return null
-  },
-})
-
-export const setBlockMemberPermission = internalMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-    noteId: v.id('sidebarItems'),
-    blockNoteIds: v.array(blockNoteIdValidator),
-    campaignMemberId: v.id('campaignMembers'),
-    permissionLevel: v.nullable(blockVisibilityPermissionLevelValidator),
-    content: v.array(editorBlockInputValidator),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const content = parseEditorBlocks(args.content)
-    await setBlockMemberPermissionFn(await getBlockShareCtx(ctx, { ...args, content }), args)
-    return null
+  returns: fileSystemTransactionReceiptValidator,
+  handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
+    const content = parseBlockNoteBlocks(args.content)
+    return await executeProjectedBlockShareCommand(ctx, {
+      campaignId: args.campaignId,
+      command: args.command as BlockShareCommand,
+      content,
+      historyStatus: args.historyStatus,
+    })
   },
 })

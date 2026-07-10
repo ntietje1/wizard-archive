@@ -1,12 +1,15 @@
 import { useState, useSyncExternalStore } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
-import { Avatar, AvatarFallback } from '~/features/shadcn/components/avatar'
-import { UserProfileImage } from '~/shared/components/user-profile-image'
-import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
-import { buttonVariants } from '~/features/shadcn/components/button'
-import { cn } from '~/features/shadcn/lib/utils'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { Avatar, AvatarFallback } from '@wizard-archive/ui/shadcn/components/avatar'
+import { UserProfileImage } from '@wizard-archive/ui/components/user-profile-image'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@wizard-archive/ui/shadcn/components/popover'
+import { buttonVariants } from '@wizard-archive/ui/shadcn/components/button-variants'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
+import { useUserProfileQuery } from '~/shared/hooks/use-user-profile-operations'
 import { UserMenuContent } from '~/features/auth/components/user-menu-content'
 
 const avatarButtonClassName = cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'rounded-full')
@@ -23,7 +26,7 @@ function AvatarPlaceholder() {
 
 function UserMenuBase() {
   const [open, setOpen] = useState(false)
-  const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
+  const profileQuery = useUserProfileQuery()
   const profile = profileQuery.data
 
   if (!profile) {

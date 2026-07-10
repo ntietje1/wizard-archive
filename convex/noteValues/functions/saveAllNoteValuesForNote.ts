@@ -1,18 +1,19 @@
 import { asyncMap } from 'convex-helpers'
-import { parseWikiLinkText } from '../../../shared/links/parsing'
-import { resolveParsedItemPath } from '../../../shared/links/resolution'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { parseResolvableWikiItemPath } from '../../../shared/links/resolution'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 import {
   collectFormulaReferences,
   compileNoteValueDefinitions,
-} from '../../../shared/note-values/formula'
+  extractNoteValueDefinitions,
+} from '@wizard-archive/editor/notes/values-contract'
 import { noteValueRowToDefinition } from './noteValueRows'
-import { extractNoteValueDefinitions } from '../../../shared/note-values/extract-definitions'
-import type { Id } from '../../_generated/dataModel'
+import { requireValidNoteValueCompileState } from '../compileState'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { CustomBlock } from '../../../shared/editor-blocks/types'
-import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
+import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import type { AccessibleResourcePathResolver } from '../../sidebarItems/functions/resourcePathResolver'
 import type {
   FormulaReferenceToken,
   NoteValueAuthoringDefinition,
@@ -20,10 +21,10 @@ import type {
   NoteValueCompiledFormula,
   NoteValueDefinition,
   NoteValueResolution,
-} from '../../../shared/note-values/types'
+} from '@wizard-archive/editor/notes/values-contract'
 
 type ExternalFormulaReferenceToken = Extract<FormulaReferenceToken, { kind: 'external' }>
-type ParsedNotePath = ReturnType<typeof parseWikiLinkText>
+type ParsedNotePath = NonNullable<ReturnType<typeof parseResolvableWikiItemPath>>
 
 function resolvePersistedValue<TNoteId>(
   matches: Array<string> | undefined,
@@ -51,50 +52,8 @@ function resolvePersistedValue<TNoteId>(
   }
 }
 
-function resolveExternalNoteId({
-  notePathRaw,
-  allItems,
-  itemsMap,
-  sourceParentId,
-}: {
-  notePathRaw: string
-  allItems: Array<AnySidebarItemRow>
-  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItemRow>
-  sourceParentId: Id<'sidebarItems'> | null
-}): Id<'sidebarItems'> | null {
-  const parsed = parseWikiLinkText(notePathRaw)
-  if (
-    parsed.displayName !== null ||
-    parsed.headingPath.length > 0 ||
-    parsed.itemPath.length === 0
-  ) {
-    return null
-  }
-
-  const resolvedItem = resolveParsedItemPath(
-    parsed.pathKind,
-    parsed.itemPath,
-    allItems,
-    itemsMap,
-    sourceParentId,
-  )
-  if (!resolvedItem || resolvedItem.type !== SIDEBAR_ITEM_TYPES.notes) {
-    return null
-  }
-
-  return resolvedItem._id
-}
-
 function parseNotePath(notePathRaw: string): ParsedNotePath | null {
-  const parsed = parseWikiLinkText(notePathRaw)
-  if (
-    parsed.displayName !== null ||
-    parsed.headingPath.length > 0 ||
-    parsed.itemPath.length === 0
-  ) {
-    return null
-  }
-  return parsed
+  return parseResolvableWikiItemPath(notePathRaw)
 }
 
 function resolveDurableExternalBinding(
@@ -140,27 +99,6 @@ function resolveLocalSlug({
   }
 }
 
-function resolveParsedItem({
-  parsed,
-  sidebarItems,
-  itemsMap,
-  sourceParentId,
-}: {
-  parsed: ParsedNotePath
-  sidebarItems: Array<AnySidebarItemRow>
-  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItemRow>
-  sourceParentId: Id<'sidebarItems'> | null
-}): AnySidebarItemRow | null {
-  const resolvedItem = resolveParsedItemPath(
-    parsed.pathKind,
-    parsed.itemPath,
-    sidebarItems,
-    itemsMap,
-    sourceParentId,
-  )
-  return resolvedItem?.type === SIDEBAR_ITEM_TYPES.notes ? resolvedItem : null
-}
-
 function resolvePersistedForItem({
   persistedLookup,
   resolvedItem,
@@ -168,7 +106,7 @@ function resolvePersistedForItem({
   notePathRaw,
 }: {
   persistedLookup: Map<Id<'sidebarItems'>, Map<string, Array<string>>>
-  resolvedItem: AnySidebarItemRow
+  resolvedItem: Doc<'sidebarItems'>
   slug: string
   notePathRaw: string
 }): NoteValueResolution<Id<'sidebarItems'>> {
@@ -187,9 +125,11 @@ function resolvePersistedForItem({
 }
 
 function createDurableExternalBindingResolver<TNoteId>({
+  accessibleExternalNoteIds,
   currentNoteId,
   previousDefinitionsByValueId,
 }: {
+  accessibleExternalNoteIds: Set<TNoteId>
   currentNoteId: TNoteId
   previousDefinitionsByValueId: Map<string, NoteValueDefinition<TNoteId>>
 }) {
@@ -223,20 +163,24 @@ function createDurableExternalBindingResolver<TNoteId>({
   const buildExternalBindingQueue = (
     previousDefinition: NoteValueDefinition<TNoteId>,
   ): Array<NoteValueBinding<TNoteId> | null> => {
-    if (!previousDefinition.compiledFormula) return []
+    if (previousDefinition.compile.status !== 'ok') return []
 
     const references = collectFormulaReferences(previousDefinition.expressionSource)
     const bindingKeys: Array<string> = []
-    collectCompiledBindingKeys(previousDefinition.compiledFormula, bindingKeys)
+    collectCompiledBindingKeys(previousDefinition.compile.formula, bindingKeys)
     const bindingsByKey = new Map(
-      previousDefinition.bindings.map((binding) => [binding.key, binding]),
+      previousDefinition.compile.bindings.map((binding) => [binding.key, binding]),
     )
 
     const queue: Array<NoteValueBinding<TNoteId> | null> = []
     references.forEach((reference, index) => {
       if (reference.kind !== 'external') return
       const binding = bindingsByKey.get(bindingKeys[index])
-      if (binding && binding.targetNoteId !== currentNoteId) {
+      if (
+        binding &&
+        binding.targetNoteId !== currentNoteId &&
+        accessibleExternalNoteIds.has(binding.targetNoteId)
+      ) {
         queue.push(binding)
       } else {
         queue.push(null)
@@ -248,8 +192,7 @@ function createDurableExternalBindingResolver<TNoteId>({
   return (definition: { valueId: string; expressionSource: string }) => {
     const previousDefinition = previousDefinitionsByValueId.get(definition.valueId)
     if (
-      previousDefinition?.compileStatus !== 'ok' ||
-      previousDefinition.compiledFormula === null ||
+      previousDefinition?.compile.status !== 'ok' ||
       previousDefinition.expressionSource !== definition.expressionSource
     ) {
       return null
@@ -265,33 +208,46 @@ function createDurableExternalBindingResolver<TNoteId>({
   }
 }
 
-async function buildReferencedExternalValueLookup({
+async function buildExternalReferenceIndex({
   ctx,
   campaignId,
   currentNoteId,
   externalReferences,
-  sidebarItems,
-  itemsMap,
+  resourcePathResolver,
   sourceParentId,
 }: {
   ctx: Pick<MutationCtx, 'db'>
   campaignId: Id<'campaigns'>
   currentNoteId: Id<'sidebarItems'>
   externalReferences: Array<ExternalFormulaReferenceToken>
-  sidebarItems: Array<AnySidebarItemRow>
-  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItemRow>
+  resourcePathResolver: AccessibleResourcePathResolver
   sourceParentId: Id<'sidebarItems'> | null
-}): Promise<Map<Id<'sidebarItems'>, Map<string, Array<string>>>> {
+}) {
+  const resolvedItemsByPath = new Map<string, Doc<'sidebarItems'> | null>()
+  await Promise.all(
+    [...new Set(externalReferences.map((reference) => reference.notePathRaw))].map(
+      async (notePathRaw) => {
+        const parsed = parseNotePath(notePathRaw)
+        const resolvedItem = parsed
+          ? await resourcePathResolver.resolvePath({
+              pathKind: parsed.pathKind,
+              pathSegments: parsed.itemPath,
+              sourceParentId,
+            })
+          : null
+        resolvedItemsByPath.set(
+          notePathRaw,
+          resolvedItem?.type === RESOURCE_TYPES.notes ? resolvedItem : null,
+        )
+      },
+    ),
+  )
+
   const lookup = new Map<Id<'sidebarItems'>, Map<string, Array<string>>>()
   const queriedTargets = new Set<string>()
-
+  const targets: Array<{ noteId: Id<'sidebarItems'>; slug: string }> = []
   for (const reference of externalReferences) {
-    const targetNoteId = resolveExternalNoteId({
-      notePathRaw: reference.notePathRaw,
-      allItems: sidebarItems,
-      itemsMap,
-      sourceParentId,
-    })
+    const targetNoteId = resolvedItemsByPath.get(reference.notePathRaw)?._id ?? null
     if (!targetNoteId || targetNoteId === currentNoteId) {
       continue
     }
@@ -301,36 +257,41 @@ async function buildReferencedExternalValueLookup({
       continue
     }
     queriedTargets.add(targetKey)
-
-    const rows = await ctx.db
-      .query('noteValues')
-      .withIndex('by_campaign_note_slug', (q) =>
-        q.eq('campaignId', campaignId).eq('noteId', targetNoteId).eq('slug', reference.slug),
-      )
-      .collect()
-
-    let valuesBySlug = lookup.get(targetNoteId)
-    if (!valuesBySlug) {
-      valuesBySlug = new Map()
-      lookup.set(targetNoteId, valuesBySlug)
-    }
-    valuesBySlug.set(
-      reference.slug,
-      rows.map((row) => row.valueId),
-    )
+    targets.push({ noteId: targetNoteId, slug: reference.slug })
   }
+  await Promise.all(
+    targets.map(async ({ noteId, slug }) => {
+      const rows = await ctx.db
+        .query('noteValues')
+        .withIndex('by_campaign_note_slug', (q) =>
+          q.eq('campaignId', campaignId).eq('noteId', noteId).eq('slug', slug),
+        )
+        .collect()
+      let valuesBySlug = lookup.get(noteId)
+      if (!valuesBySlug) {
+        valuesBySlug = new Map()
+        lookup.set(noteId, valuesBySlug)
+      }
+      valuesBySlug.set(
+        slug,
+        rows.map((row) => row.valueId),
+      )
+    }),
+  )
 
-  return lookup
+  return { lookup, resolvedItemsByPath }
 }
 
 export async function saveAllNoteValuesForNote(
-  ctx: Pick<MutationCtx, 'db'>,
+  ctx: Pick<MutationCtx, 'db'> & { membership?: CampaignMemberRow },
   {
     noteId,
     content,
+    resourcePathResolver,
   }: {
     noteId: Id<'sidebarItems'>
-    content: Array<CustomBlock>
+    content: Array<NoteBlock>
+    resourcePathResolver: AccessibleResourcePathResolver
   },
 ): Promise<Array<NoteValueDefinition<Id<'sidebarItems'>>>> {
   const note = await ctx.db.get('sidebarItems', noteId)
@@ -350,35 +311,47 @@ export async function saveAllNoteValuesForNote(
     .filter(
       (reference): reference is ExternalFormulaReferenceToken => reference.kind === 'external',
     )
-
-  let sidebarItems: Array<AnySidebarItemRow> = []
-  let itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItemRow>()
-  if (externalReferences.length > 0) {
-    sidebarItems = await ctx.db
-      .query('sidebarItems')
-      .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
-        q.eq('campaignId', note.campaignId).eq('status', SIDEBAR_ITEM_STATUS.active),
-      )
-      .collect()
-    itemsMap = new Map(sidebarItems.map((item) => [item._id, item]))
-  }
-
-  const persistedLookup =
+  const existingDefinitionsByValueId = new Map(
+    existingRows.map((row) => [row.valueId, noteValueRowToDefinition(row)]),
+  )
+  const externalReferenceIndex =
     externalReferences.length > 0
-      ? await buildReferencedExternalValueLookup({
+      ? await buildExternalReferenceIndex({
           ctx,
           campaignId: note.campaignId,
           currentNoteId: noteId,
           externalReferences,
-          sidebarItems,
-          itemsMap,
+          resourcePathResolver,
           sourceParentId: note.parentId,
         })
-      : new Map<Id<'sidebarItems'>, Map<string, Array<string>>>()
-  const existingDefinitionsByValueId = new Map(
-    existingRows.map((row) => [row.valueId, noteValueRowToDefinition(row)]),
+      : {
+          lookup: new Map<Id<'sidebarItems'>, Map<string, Array<string>>>(),
+          resolvedItemsByPath: new Map<string, Doc<'sidebarItems'> | null>(),
+        }
+  const durableTargetIds = new Set(
+    [...existingDefinitionsByValueId.values()].flatMap((definition) =>
+      definition.compile.status === 'ok'
+        ? definition.compile.bindings.flatMap((binding) =>
+            binding.targetNoteId === noteId ? [] : [binding.targetNoteId],
+          )
+        : [],
+    ),
   )
+  const accessibleDurableItems = await Promise.all(
+    [...durableTargetIds].map((targetNoteId) =>
+      resourcePathResolver.getAccessibleItem(targetNoteId),
+    ),
+  )
+  const accessibleExternalNoteIds = new Set([
+    ...[...externalReferenceIndex.resolvedItemsByPath.values()].flatMap((item) =>
+      item && item._id !== noteId ? [item._id] : [],
+    ),
+    ...accessibleDurableItems.flatMap((item) =>
+      item?.type === RESOURCE_TYPES.notes && item._id !== noteId ? [item._id] : [],
+    ),
+  ])
   const takeDurableExternalBinding = createDurableExternalBindingResolver({
+    accessibleExternalNoteIds,
     currentNoteId: noteId,
     previousDefinitionsByValueId: existingDefinitionsByValueId,
   })
@@ -407,12 +380,7 @@ export async function saveAllNoteValuesForNote(
           return durableResolution
         }
 
-        const resolvedItem = resolveParsedItem({
-          parsed,
-          sidebarItems,
-          itemsMap,
-          sourceParentId: note.parentId,
-        })
+        const resolvedItem = externalReferenceIndex.resolvedItemsByPath.get(notePathRaw) ?? null
         if (!resolvedItem) {
           return {
             ok: false,
@@ -430,7 +398,7 @@ export async function saveAllNoteValuesForNote(
         }
 
         return resolvePersistedForItem({
-          persistedLookup,
+          persistedLookup: externalReferenceIndex.lookup,
           resolvedItem,
           slug,
           notePathRaw,
@@ -438,30 +406,29 @@ export async function saveAllNoteValuesForNote(
       },
     })
 
-  const getDefinitionRowKey = (definition: { blockNoteId: string; valueId: string }) =>
-    `${definition.blockNoteId}:${definition.valueId}`
+  const getDefinitionRowKey = (definition: { noteBlockId: string; valueId: string }) =>
+    `${definition.noteBlockId}:${definition.valueId}`
+  const getRowKey = (row: { blockNoteId: string; valueId: string }) =>
+    `${row.blockNoteId}:${row.valueId}`
   const compiledRowKeys = new Set(compiledDefinitions.map(getDefinitionRowKey))
   await asyncMap(existingRows, async (row) => {
-    if (!compiledRowKeys.has(getDefinitionRowKey(row))) {
+    if (!compiledRowKeys.has(getRowKey(row))) {
       await ctx.db.delete('noteValues', row._id)
     }
   })
 
-  const existingRowsByKey = new Map(existingRows.map((row) => [getDefinitionRowKey(row), row]))
+  const existingRowsByKey = new Map(existingRows.map((row) => [getRowKey(row), row]))
   await asyncMap(compiledDefinitions, async (definition) => {
     const row = existingRowsByKey.get(getDefinitionRowKey(definition))
+    const compile = requireValidNoteValueCompileState(definition.compile)
     const fields = {
       campaignId: note.campaignId,
       noteId,
-      blockNoteId: definition.blockNoteId,
+      blockNoteId: definition.noteBlockId,
       valueId: definition.valueId,
       slug: definition.slug,
       expressionSource: definition.expressionSource,
-      compiledFormula: definition.compiledFormula,
-      bindings: definition.bindings,
-      compileStatus: definition.compileStatus,
-      errorCode: definition.errorCode,
-      errorMessage: definition.errorMessage,
+      compile,
     }
     if (row) {
       await ctx.db.patch('noteValues', row._id, fields)

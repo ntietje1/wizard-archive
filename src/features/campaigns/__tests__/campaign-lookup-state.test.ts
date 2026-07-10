@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { ERROR_CODE } from 'shared/errors/client'
 import { createCampaign } from '~/test/factories/campaign-factory'
 import { clientError } from '~/test/factories/error-factory'

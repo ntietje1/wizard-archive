@@ -1,6 +1,6 @@
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import { requirePinAccess } from './requirePinAccess'
 import type { CampaignMutationCtx } from '../../functions'
@@ -14,7 +14,7 @@ export async function removeItemPin(
 
   await ctx.db.delete('mapPins', mapPinId)
 
-  await ctx.db.patch('sidebarItems', map._id, {
+  await ctx.db.patch('sidebarItems', map.id, {
     updatedTime: Date.now(),
     updatedBy: ctx.membership.userId,
   })
@@ -24,8 +24,8 @@ export async function removeItemPin(
   const editHistoryId = await logEditHistory(
     ctx,
     {
-      itemId: map._id,
-      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      itemId: map.id,
+      itemType: RESOURCE_TYPES.gameMaps,
       action: EDIT_HISTORY_ACTION.map_pin_removed,
       metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
     },
@@ -33,7 +33,7 @@ export async function removeItemPin(
   )
 
   await captureGameMapSnapshot(ctx, {
-    mapId: map._id,
+    mapId: map.id,
     editHistoryId,
     campaignId: map.campaignId,
   })

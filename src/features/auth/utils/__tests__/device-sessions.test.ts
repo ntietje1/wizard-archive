@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { fetchDeviceSessions } from '~/features/auth/utils/device-sessions'
 
 const mockListDeviceSessions = vi.fn()

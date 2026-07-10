@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ReactNode } from 'react'
 import { SignInPage } from '~/features/auth/pages/sign-in-page'
 

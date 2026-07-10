@@ -1,4 +1,7 @@
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from '../../shared/sidebar-items/types'
+import {
+  RESOURCE_LOCATION,
+  RESOURCE_STATUS,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
 
 const LEGACY_TRASH_LOCATION = 'trash'
 
@@ -10,26 +13,24 @@ type SidebarItemLifecycleMigrationInput = {
 export function getSidebarItemLifecycleMigrationPatch(item: SidebarItemLifecycleMigrationInput) {
   const status = getMigratedSidebarItemStatus(item)
 
-  if (item.location === SIDEBAR_ITEM_LOCATION.sidebar && item.status === status) {
+  if (item.location === RESOURCE_LOCATION.sidebar && item.status === status) {
     return null
   }
 
   return {
-    location: SIDEBAR_ITEM_LOCATION.sidebar,
+    location: RESOURCE_LOCATION.sidebar,
     status,
   }
 }
 
 function getMigratedSidebarItemStatus(item: SidebarItemLifecycleMigrationInput) {
   if (
-    item.status === SIDEBAR_ITEM_STATUS.active ||
-    item.status === SIDEBAR_ITEM_STATUS.trashed ||
-    item.status === SIDEBAR_ITEM_STATUS.undoHidden
+    item.status === RESOURCE_STATUS.active ||
+    item.status === RESOURCE_STATUS.trashed ||
+    item.status === RESOURCE_STATUS.undoHidden
   ) {
     return item.status
   }
 
-  return item.location === LEGACY_TRASH_LOCATION
-    ? SIDEBAR_ITEM_STATUS.trashed
-    : SIDEBAR_ITEM_STATUS.active
+  return item.location === LEGACY_TRASH_LOCATION ? RESOURCE_STATUS.trashed : RESOURCE_STATUS.active
 }

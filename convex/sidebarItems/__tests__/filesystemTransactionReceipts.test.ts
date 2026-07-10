@@ -153,8 +153,8 @@ describe('filesystem transaction receipts', () => {
     )
 
     expect(receipt.patches).toHaveLength(1)
-    expect(receipt.patches[0]).toMatchObject({ type: 'updateSidebarItem', itemId: noteId })
-    if (receipt.patches[0]?.type !== 'updateSidebarItem') {
+    expect(receipt.patches[0]).toMatchObject({ type: 'updateResource', itemId: noteId })
+    if (receipt.patches[0]?.type !== 'updateResource') {
       throw new Error('Expected update patch')
     }
     expect(Object.keys(receipt.patches[0].fields).sort()).toEqual([
@@ -205,12 +205,13 @@ describe('filesystem transaction receipts', () => {
       affectedCount: 1,
       createdCount: 1,
     })
-    expect(receipt.patches.filter((patch) => patch.type === 'upsertSidebarItem')).toHaveLength(3)
+    expect(receipt.patches.filter((patch) => patch.type === 'upsertResource')).toHaveLength(3)
 
-    const activeAfterCreate = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
-      campaignId: ctx.campaignId,
-    })
-    const createdIds = activeAfterCreate.map((item) => item._id).sort()
+    const { active: activeAfterCreate } = await dmAuth.query(
+      api.sidebarItems.queries.getSidebarItems,
+      { campaignId: ctx.campaignId },
+    )
+    const createdIds = activeAfterCreate.map((item) => item.id).sort()
     expect(activeAfterCreate.map((item) => item.name).sort()).toEqual([
       'Act One',
       'Adventures',
@@ -224,10 +225,11 @@ describe('filesystem transaction receipts', () => {
         transactionId: receipt.transactionId!,
       },
     )
-    expect(undoReceipt.patches.every((patch) => patch.type === 'updateSidebarItem')).toBe(true)
-    const activeAfterUndo = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
-      campaignId: ctx.campaignId,
-    })
+    expect(undoReceipt.patches.every((patch) => patch.type === 'updateResource')).toBe(true)
+    const { active: activeAfterUndo } = await dmAuth.query(
+      api.sidebarItems.queries.getSidebarItems,
+      { campaignId: ctx.campaignId },
+    )
     expect(activeAfterUndo).toHaveLength(0)
 
     const hiddenAfterUndo = await t.run(async (dbCtx) => {
@@ -248,13 +250,21 @@ describe('filesystem transaction receipts', () => {
         transactionId: receipt.transactionId!,
       },
     )
-    expect(redoReceipt.patches.filter((patch) => patch.type === 'upsertSidebarItem')).toHaveLength(
-      3,
+    expect(redoReceipt.patches).toHaveLength(3)
+    expect(redoReceipt.patches.every((patch) => patch.type === 'updateResource')).toBe(true)
+    expect(redoReceipt.patches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'updateResource',
+          fields: expect.objectContaining({ status: 'active' }),
+        }),
+      ]),
     )
-    const activeAfterRedo = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
-      campaignId: ctx.campaignId,
-    })
-    expect(activeAfterRedo.map((item) => item._id).sort()).toEqual(createdIds)
+    const { active: activeAfterRedo } = await dmAuth.query(
+      api.sidebarItems.queries.getSidebarItems,
+      { campaignId: ctx.campaignId },
+    )
+    expect(activeAfterRedo.map((item) => item.id).sort()).toEqual(createdIds)
     expect(activeAfterRedo.map((item) => item.name).sort()).toEqual([
       'Act One',
       'Adventures',

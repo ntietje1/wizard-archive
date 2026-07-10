@@ -4,15 +4,15 @@ import { Loader2 } from 'lucide-react'
 import { SettingsRow } from './settings-row'
 import type { UserProfile } from 'shared/users/types'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
-import { Input } from '~/features/shadcn/components/input'
-import { Label } from '~/features/shadcn/components/label'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Input } from '@wizard-archive/ui/shadcn/components/input'
+import { Label } from '@wizard-archive/ui/shadcn/components/label'
 import {
   Dialog,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '~/features/shadcn/components/dialog'
+} from '@wizard-archive/ui/shadcn/components/dialog'
 import { SettingsSubDialogContent } from '~/features/settings/components/settings-sub-dialog'
 
 function DisableTwoFactorDialog({ onClose }: { onClose: () => void }) {

@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
 import { setupCampaignContext } from '../../_test/identities.helper'
 import { createNote } from '../../_test/factories.helper'
 import { internal } from '../../_generated/api'
-import { AWARENESS_TTL_MS } from '../constants'
+import { AWARENESS_TTL_MS } from '../../../shared/yjs-sync/awareness'
 import { makeYjsUpdate } from '../../_test/yjs.helper'
+
+afterEach(() => vi.useRealTimers())
 
 describe('compact', () => {
   const t = createTestContext()
@@ -172,6 +174,7 @@ describe('cleanupStaleAwareness', () => {
         documentId: noteId,
         clientId: 1,
         userId: ctx.dm.profile._id,
+        sessionId: 'stale-session',
         state: new ArrayBuffer(4),
         updatedAt: Date.now() - (AWARENESS_TTL_MS + 1000),
       })
@@ -197,6 +200,7 @@ describe('cleanupStaleAwareness', () => {
         documentId: noteId,
         clientId: 1,
         userId: ctx.dm.profile._id,
+        sessionId: 'recent-session',
         state: new ArrayBuffer(4),
         updatedAt: Date.now() - Math.floor(AWARENESS_TTL_MS / 2),
       })
@@ -222,6 +226,7 @@ describe('cleanupStaleAwareness', () => {
         documentId: noteId,
         clientId: 1,
         userId: ctx.dm.profile._id,
+        sessionId: 'stale-session',
         state: new ArrayBuffer(4),
         updatedAt: Date.now() - (AWARENESS_TTL_MS + 1000),
       })
@@ -232,6 +237,7 @@ describe('cleanupStaleAwareness', () => {
         documentId: noteId,
         clientId: 2,
         userId: ctx.dm.profile._id,
+        sessionId: 'fresh-session',
         state: new ArrayBuffer(4),
         updatedAt: Date.now() - Math.floor(AWARENESS_TTL_MS / 2),
       })
@@ -254,5 +260,46 @@ describe('cleanupStaleAwareness', () => {
     await expect(
       t.mutation(internal.yjsSync.internalMutations.cleanupStaleAwareness, {}),
     ).resolves.not.toThrow()
+  })
+
+  it('deletes at most one fixed batch and schedules the remainder', async () => {
+    vi.useFakeTimers()
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await t.run(async (dbCtx) => {
+      for (let clientId = 0; clientId < 125; clientId += 1) {
+        await dbCtx.db.insert('yjsAwareness', {
+          documentId: noteId,
+          clientId,
+          userId: ctx.dm.profile._id,
+          sessionId: `stale-session-${clientId}`,
+          state: new ArrayBuffer(4),
+          updatedAt: Date.now() - (AWARENESS_TTL_MS + 1000),
+        })
+      }
+    })
+
+    await expect(
+      t.mutation(internal.yjsSync.internalMutations.cleanupStaleAwareness, {}),
+    ).resolves.toEqual({ deletedCount: 100, hasMore: true })
+    await t.run(async (dbCtx) => {
+      expect(
+        await dbCtx.db
+          .query('yjsAwareness')
+          .withIndex('by_document', (q) => q.eq('documentId', noteId))
+          .collect(),
+      ).toHaveLength(25)
+    })
+
+    await t.finishAllScheduledFunctions(vi.runAllTimers)
+    await t.run(async (dbCtx) => {
+      expect(
+        await dbCtx.db
+          .query('yjsAwareness')
+          .withIndex('by_document', (q) => q.eq('documentId', noteId))
+          .collect(),
+      ).toHaveLength(0)
+    })
   })
 })

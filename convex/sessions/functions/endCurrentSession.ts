@@ -15,12 +15,12 @@ export async function endCurrentSession(ctx: DmMutationCtx): Promise<Id<'session
   const now = Date.now()
 
   await Promise.all([
-    ctx.db.patch('sessions', currentSession._id, {
+    ctx.db.patch('sessions', currentSession.id, {
       endedAt: now,
     }),
     ctx.db.patch('campaigns', campaignId, {
       currentSessionId: null,
     }),
   ])
-  return currentSession._id
+  return currentSession.id
 }

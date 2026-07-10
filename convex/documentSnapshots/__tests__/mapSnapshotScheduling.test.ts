@@ -28,7 +28,8 @@ describe('cross-action debounce independence on game maps', () => {
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
         campaignId: ctx.campaignId,
         mapId: result.mapId,
-        imageStorageId: null,
+        replacementToken: null,
+        uploadSessionId: null,
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 

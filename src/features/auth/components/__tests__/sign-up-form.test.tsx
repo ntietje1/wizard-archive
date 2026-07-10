@@ -1,5 +1,5 @@
 import { createElement } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
@@ -85,6 +85,20 @@ describe('SignUpForm', () => {
           onError: expect.any(Function),
         }),
       )
+    })
+  })
+
+  it('starts Google OAuth sign-in with the redirect target', async () => {
+    mockSignInSocial.mockResolvedValue(undefined)
+
+    const user = userEvent.setup()
+    render(<SignUpForm redirectTo="/welcome" />)
+
+    await user.click(screen.getByRole('button', { name: /continue with google/i }))
+
+    expect(mockSignInSocial).toHaveBeenCalledWith({
+      provider: 'google',
+      callbackURL: '/welcome',
     })
   })
 })

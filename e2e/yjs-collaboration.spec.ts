@@ -18,7 +18,7 @@ async function withDualEditorContexts(
     storageState: AUTH_STORAGE_PATH,
   })
   const setupPage = await setupCtx.newPage()
-  await setupPage.goto('/campaigns')
+  await setupPage.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(setupPage, campaign)
   await createNote(setupPage, noteName)
   await setupPage.close()
@@ -34,11 +34,11 @@ async function withDualEditorContexts(
   const page2 = await context2.newPage()
 
   try {
-    await page1.goto('/campaigns')
+    await page1.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page1, campaign)
     await openItem(page1, noteName)
 
-    await page2.goto('/campaigns')
+    await page2.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page2, campaign)
     await openItem(page2, noteName)
 
@@ -71,7 +71,7 @@ async function withControllableSecondEditor(
     storageState: AUTH_STORAGE_PATH,
   })
   const setupPage = await setupCtx.newPage()
-  await setupPage.goto('/campaigns')
+  await setupPage.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(setupPage, campaign)
   await createNote(setupPage, noteName)
   await setupPage.close()
@@ -87,7 +87,7 @@ async function withControllableSecondEditor(
   const page2 = await context2.newPage()
 
   try {
-    await page1.goto('/campaigns')
+    await page1.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page1, campaign)
     await openItem(page1, noteName)
 
@@ -96,7 +96,7 @@ async function withControllableSecondEditor(
     let cachedEditor2: Locator | null = null
     const getEditor2 = async () => {
       if (cachedEditor2) return cachedEditor2
-      await page2.goto('/campaigns')
+      await page2.goto('/campaigns', { waitUntil: 'commit' })
       await navigateToCampaign(page2, campaign)
       await openItem(page2, noteName)
       cachedEditor2 = await getEditor(page2)
@@ -118,7 +118,7 @@ test.describe.serial('yjs collaboration', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
@@ -129,7 +129,7 @@ test.describe.serial('yjs collaboration', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {

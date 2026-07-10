@@ -1,5 +1,5 @@
 import { createElement } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { render, screen } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import type { ReactNode } from 'react'

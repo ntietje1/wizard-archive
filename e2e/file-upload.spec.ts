@@ -20,7 +20,7 @@ test.describe.serial('file upload', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
@@ -34,7 +34,7 @@ test.describe.serial('file upload', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch (e) {
@@ -45,7 +45,7 @@ test.describe.serial('file upload', () => {
   })
 
   test('upload file via dialog appears in sidebar', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const uploadButton = page.getByRole('button', {
@@ -63,14 +63,16 @@ test.describe.serial('file upload', () => {
       await submitButton.click()
     }
 
-    await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /untitled file/i })).toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('click uploaded file loads viewer', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
-    const fileItem = page.getByRole('link', { name: /untitled file/i })
+    const fileItem = page.getByRole('button', { name: /untitled file/i })
     await expect(fileItem).toBeVisible({ timeout: 5000 })
     await fileItem.click()
     await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(/untitled file/i, {

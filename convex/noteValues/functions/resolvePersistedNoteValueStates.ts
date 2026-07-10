@@ -1,36 +1,18 @@
-import { evaluateNoteValueDefinitions } from '../../../shared/note-values/formula'
+import { evaluateNoteValueDefinitions } from '@wizard-archive/editor/notes/values-contract'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
 import { getAllBlocksByNote } from '../../blocks/functions/getAllBlocksByNote'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 import { checkItemAccess } from '../../sidebarItems/validation/access'
+import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { noteValueRowToDefinition } from './noteValueRows'
-import type { NoteValueDefinition, NoteValueRuntimeState } from '../../../shared/note-values/types'
+import type {
+  NoteValueDefinition,
+  NoteValueRuntimeState,
+} from '@wizard-archive/editor/notes/values-contract'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { NoteFromDb } from '../../../shared/notes/types'
-
-interface ResolvedNoteStates {
-  states: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
-  stateMap: Map<string, NoteValueRuntimeState<Id<'sidebarItems'>>>
-}
-
-function makeCyclicState(
-  definition: NoteValueDefinition<Id<'sidebarItems'>>,
-): NoteValueRuntimeState<Id<'sidebarItems'>> {
-  return {
-    noteId: definition.noteId,
-    blockNoteId: definition.blockNoteId,
-    valueId: definition.valueId,
-    slug: definition.slug,
-    status: 'error',
-    rawValue: null,
-    formattedValue: 'Cyclic dependency detected',
-    errorCode: 'cyclic_dependency',
-    errorMessage: 'Cyclic dependency detected',
-  }
-}
 
 async function loadDefinitionsForNote(
   ctx: CampaignQueryCtx,
@@ -48,12 +30,17 @@ async function loadDefinitionsForNote(
     rowsByNoteId.set(noteId, [])
     return []
   }
-  if (note.type !== SIDEBAR_ITEM_TYPES.notes) {
+  if (note.type !== RESOURCE_TYPES.notes) {
+    rowsByNoteId.set(noteId, [])
+    return []
+  }
+  const noteItem = await getSidebarItem(ctx, noteId)
+  if (!noteItem || noteItem.type !== RESOURCE_TYPES.notes) {
     rowsByNoteId.set(noteId, [])
     return []
   }
   const accessibleNote = await checkItemAccess(ctx, {
-    rawItem: note as NoteFromDb,
+    rawItem: noteItem,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
   if (!accessibleNote) {
@@ -86,74 +73,39 @@ async function loadDefinitionsForNote(
   return definitions
 }
 
-async function resolveNoteStates(
+async function loadReachableDefinitions(
   ctx: CampaignQueryCtx,
   campaignId: Id<'campaigns'>,
-  noteId: Id<'sidebarItems'>,
-  rowsByNoteId: Map<Id<'sidebarItems'>, Array<NoteValueDefinition<Id<'sidebarItems'>>>>,
-  statesByNoteId: Map<Id<'sidebarItems'>, ResolvedNoteStates>,
-  resolvingNotes: Set<Id<'sidebarItems'>>,
-): Promise<ResolvedNoteStates> {
-  const cached = statesByNoteId.get(noteId)
-  if (cached) {
-    return cached
-  }
+  rootNoteId: Id<'sidebarItems'>,
+): Promise<Array<NoteValueDefinition<Id<'sidebarItems'>>>> {
+  const definitionsByNoteId = new Map<
+    Id<'sidebarItems'>,
+    Array<NoteValueDefinition<Id<'sidebarItems'>>>
+  >()
+  const pendingNoteIds = [rootNoteId]
+  const loadedNoteIds = new Set<Id<'sidebarItems'>>()
 
-  const definitions = await loadDefinitionsForNote(ctx, campaignId, noteId, rowsByNoteId)
-  if (resolvingNotes.has(noteId)) {
-    const states = definitions.map(makeCyclicState)
-    return { states, stateMap: new Map(states.map((state) => [state.valueId, state])) }
-  }
-
-  resolvingNotes.add(noteId)
-  try {
-    const externalNoteIds = new Set<Id<'sidebarItems'>>()
-    for (const definition of definitions) {
-      for (const binding of definition.bindings) {
-        if (binding.targetNoteId !== noteId) {
-          externalNoteIds.add(binding.targetNoteId)
-        }
-      }
+  while (pendingNoteIds.length > 0) {
+    const noteId = pendingNoteIds.pop()!
+    if (loadedNoteIds.has(noteId)) continue
+    loadedNoteIds.add(noteId)
+    const definitions = await loadDefinitionsForNote(ctx, campaignId, noteId, definitionsByNoteId)
+    for (const targetNoteId of getReferencedNoteIds(definitions)) {
+      if (!loadedNoteIds.has(targetNoteId)) pendingNoteIds.push(targetNoteId)
     }
-
-    const externalStateMaps = new Map<
-      Id<'sidebarItems'>,
-      Map<string, NoteValueRuntimeState<Id<'sidebarItems'>>>
-    >()
-
-    for (const externalNoteId of externalNoteIds) {
-      externalStateMaps.set(
-        externalNoteId,
-        (
-          await resolveNoteStates(
-            ctx,
-            campaignId,
-            externalNoteId,
-            rowsByNoteId,
-            statesByNoteId,
-            resolvingNotes,
-          )
-        ).stateMap,
-      )
-    }
-
-    const states = evaluateNoteValueDefinitions(
-      definitions,
-      (dependencyNoteId, dependencyValueId) => {
-        if (dependencyNoteId === noteId) {
-          return null
-        }
-        return externalStateMaps.get(dependencyNoteId)?.get(dependencyValueId) ?? null
-      },
-    )
-
-    const stateMap = new Map(states.map((state) => [state.valueId, state]))
-    const result = { states, stateMap }
-    statesByNoteId.set(noteId, result)
-    return result
-  } finally {
-    resolvingNotes.delete(noteId)
   }
+
+  return Array.from(definitionsByNoteId.values()).flat()
+}
+
+function getReferencedNoteIds(
+  definitions: Array<NoteValueDefinition<Id<'sidebarItems'>>>,
+): Array<Id<'sidebarItems'>> {
+  return definitions.flatMap((definition) =>
+    definition.compile.status === 'ok'
+      ? definition.compile.bindings.map((binding) => binding.targetNoteId)
+      : [],
+  )
 }
 
 export async function getPersistedNoteValueStates(
@@ -166,15 +118,8 @@ export async function getPersistedNoteValueStates(
     noteId: Id<'sidebarItems'>
   },
 ): Promise<Array<NoteValueRuntimeState<Id<'sidebarItems'>>>> {
-  const rowsByNoteId = new Map<Id<'sidebarItems'>, Array<NoteValueDefinition<Id<'sidebarItems'>>>>()
-  const statesByNoteId = new Map<Id<'sidebarItems'>, ResolvedNoteStates>()
-  const { states } = await resolveNoteStates(
-    ctx,
-    campaignId,
-    noteId,
-    rowsByNoteId,
-    statesByNoteId,
-    new Set(),
+  const definitions = await loadReachableDefinitions(ctx, campaignId, noteId)
+  return evaluateNoteValueDefinitions(definitions, () => null).filter(
+    (state) => state.noteId === noteId,
   )
-  return states
 }

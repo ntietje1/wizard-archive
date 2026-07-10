@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Button } from '~/features/shadcn/components/button'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 
 interface EmptyStateProps {
   icon: LucideIcon

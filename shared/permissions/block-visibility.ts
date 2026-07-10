@@ -1,7 +1,7 @@
-import { SHARE_STATUS } from '../editor-blocks/share-status'
+import { SHARE_STATUS } from '../block-shares/share-status'
 import { hasPermissionForRequirement } from './requirements'
 import { PERMISSION_LEVEL } from './types'
-import type { ShareStatus } from '../editor-blocks/share-status'
+import type { ShareStatus } from '../block-shares/share-status'
 import type { PermissionLevel } from './types'
 
 type BlockVisibilityPermissionInput = {

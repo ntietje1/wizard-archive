@@ -280,6 +280,40 @@ describe('trash workflows', () => {
       expect(restoredNote!.parentId).toBeNull()
     })
 
+    it('restores a trashed folder to an active folder target', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const sourceFolder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'Source Folder',
+      })
+      const targetFolder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'Target Folder',
+      })
+
+      await executeMoveCommand(dmAuth, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [sourceFolder.folderId],
+        targetParentId: null,
+        action: 'trash',
+      })
+
+      const movedIds = await executeMoveCommand(dmAuth, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [sourceFolder.folderId],
+        targetParentId: targetFolder.folderId,
+        action: 'restore',
+      })
+
+      const restoredFolder = await t.run((dbCtx) =>
+        dbCtx.db.get('sidebarItems', sourceFolder.folderId),
+      )
+
+      expect(filesystemEventItemIds(movedIds, 'restored')).toEqual([sourceFolder.folderId])
+      expect(restoredFolder!.location).toBe('sidebar')
+      expect(restoredFolder!.parentId).toBe(targetFolder.folderId)
+    })
+
     it('bulk trash uses the batch move path and ignores redundant nested descendants', async () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)

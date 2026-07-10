@@ -1,17 +1,29 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
+import {
+  createCanvasViaFilesystem,
+  createNoteViaFilesystem,
+} from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createNote, createSidebarShare } from '../../_test/factories.helper'
+import {
+  createFile,
+  createFolder,
+  createGameMap,
+  createNote,
+  createSidebarShare,
+  executeMoveCommand,
+} from '../../_test/factories.helper'
 import {
   expectNotAuthenticated,
   expectNotFound,
   expectPermissionDenied,
+  expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdate as makeEmptyYjsUpdate } from '../../_test/yjs.helper'
 
 const COMPACTION_SEQ = 20
+const AWARENESS_SESSION_ID = 'awareness-session-1'
 
 function makeAwarenessState(): ArrayBuffer {
   return new Uint8Array([1, 2, 3, 4]).buffer
@@ -63,7 +75,7 @@ describe('pushUpdate', () => {
       update: makeEmptyYjsUpdate(),
     })
 
-    expect(result).toEqual({ seq: 1 })
+    expect(result).toEqual({ status: 'accepted', seq: 1 })
   })
 
   it('increments seq correctly across multiple pushes', async () => {
@@ -92,9 +104,9 @@ describe('pushUpdate', () => {
       update: makeEmptyYjsUpdate(),
     })
 
-    expect(r1).toEqual({ seq: 1 })
-    expect(r2).toEqual({ seq: 2 })
-    expect(r3).toEqual({ seq: 3 })
+    expect(r1).toEqual({ status: 'accepted', seq: 1 })
+    expect(r2).toEqual({ status: 'accepted', seq: 2 })
+    expect(r3).toEqual({ status: 'accepted', seq: 3 })
   })
 
   it('player with edit share can push update', async () => {
@@ -122,7 +134,7 @@ describe('pushUpdate', () => {
       update: makeEmptyYjsUpdate(),
     })
 
-    expect(result).toEqual({ seq: 1 })
+    expect(result).toEqual({ status: 'accepted', seq: 1 })
   })
 
   it('player with view-only share is denied', async () => {
@@ -169,6 +181,66 @@ describe('pushUpdate', () => {
         update: makeEmptyYjsUpdate(),
       }),
     )
+  })
+
+  it('rejects non-Yjs sidebar item types', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+
+    for (const documentId of [folderId, fileId, mapId]) {
+      await expectValidationFailed(
+        dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+          campaignId: ctx.campaignId,
+          documentId,
+          update: makeEmptyYjsUpdate(),
+        }),
+      )
+    }
+  })
+
+  it('rejects updates while a note is trashed and accepts them after restore', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Lifecycle Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await executeMoveCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
+        documentId: noteId,
+        update: makeEmptyYjsUpdate(),
+      }),
+    )
+
+    await executeMoveCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'restore',
+    })
+
+    const result = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+      update: makeEmptyYjsUpdate(),
+    })
+
+    expect(result).toEqual({ status: 'accepted', seq: 1 })
   })
 
   it('defers compaction while a content snapshot is pending', async () => {
@@ -247,6 +319,7 @@ describe('pushAwareness', () => {
         campaignId: ctx.campaignId,
         documentId: noteId,
         clientId: 1,
+        sessionId: AWARENESS_SESSION_ID,
         state: makeAwarenessState(),
       }),
     )
@@ -262,9 +335,31 @@ describe('pushAwareness', () => {
         campaignId: ctx.campaignId,
         documentId: noteId,
         clientId: 1,
+        sessionId: AWARENESS_SESSION_ID,
         state: makeAwarenessState(),
       }),
     )
+  })
+
+  it('rejects awareness for non-Yjs sidebar item types', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+
+    for (const documentId of [folderId, fileId, mapId]) {
+      await expectValidationFailed(
+        dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+          campaignId: ctx.campaignId,
+          documentId,
+          clientId: 1,
+          sessionId: AWARENESS_SESSION_ID,
+          state: makeAwarenessState(),
+        }),
+      )
+    }
   })
 
   it('DM can push awareness state', async () => {
@@ -283,6 +378,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 42,
+      sessionId: AWARENESS_SESSION_ID,
       state,
     })
 
@@ -296,6 +392,58 @@ describe('pushAwareness', () => {
       expect(rows[0].documentId).toBe(noteId)
       expect(rows[0].clientId).toBe(42)
       expect(rows[0].userId).toBe(ctx.dm.profile._id)
+    })
+  })
+
+  it('rejects awareness while a canvas is trashed and accepts it after restore', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Lifecycle Canvas',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await executeMoveCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [canvasId],
+      targetParentId: null,
+      action: 'trash',
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+        campaignId: ctx.campaignId,
+        documentId: canvasId,
+        clientId: 7,
+        sessionId: AWARENESS_SESSION_ID,
+        state: makeAwarenessState(),
+      }),
+    )
+
+    await executeMoveCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [canvasId],
+      targetParentId: null,
+      action: 'restore',
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
+      documentId: canvasId,
+      clientId: 7,
+      sessionId: AWARENESS_SESSION_ID,
+      state: makeAwarenessState(),
+    })
+
+    await t.run(async (dbCtx) => {
+      const rows = await dbCtx.db
+        .query('yjsAwareness')
+        .withIndex('by_document_client', (q) => q.eq('documentId', canvasId).eq('clientId', 7))
+        .collect()
+
+      expect(rows).toHaveLength(1)
     })
   })
 
@@ -313,6 +461,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 10,
+      sessionId: AWARENESS_SESSION_ID,
       state: makeAwarenessState(),
     })
 
@@ -321,6 +470,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 10,
+      sessionId: AWARENESS_SESSION_ID,
       state: newState,
     })
 
@@ -348,6 +498,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 1,
+      sessionId: AWARENESS_SESSION_ID,
       state: makeAwarenessState(),
     })
 
@@ -355,6 +506,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 2,
+      sessionId: `${AWARENESS_SESSION_ID}-2`,
       state: makeAwarenessState(),
     })
 
@@ -391,6 +543,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 99,
+      sessionId: AWARENESS_SESSION_ID,
       state: makeAwarenessState(),
     })
 
@@ -403,6 +556,67 @@ describe('pushAwareness', () => {
       expect(rows).toHaveLength(1)
       expect(rows[0].userId).toBe(ctx.player.profile._id)
     })
+  })
+
+  it('rejects a different user or session taking over an existing client id', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const playerAuth = asPlayer(ctx)
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Owned Awareness Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
+    const originalState = makeAwarenessState()
+    await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+      clientId: 50,
+      sessionId: AWARENESS_SESSION_ID,
+      state: originalState,
+    })
+
+    await expect(
+      playerAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+        campaignId: ctx.campaignId,
+        documentId: noteId,
+        clientId: 50,
+        sessionId: 'attacker-session',
+        state: new Uint8Array([9]).buffer,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'session_conflict' })
+
+    await t.run(async (dbCtx) => {
+      const row = await dbCtx.db
+        .query('yjsAwareness')
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 50))
+        .unique()
+      expect(row?.userId).toBe(ctx.dm.profile._id)
+      expect(row?.sessionId).toBe(AWARENESS_SESSION_ID)
+      expect(row?.state).toEqual(originalState)
+    })
+  })
+
+  it('rejects awareness writes without session ownership', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expect(
+      dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+        campaignId: ctx.campaignId,
+        documentId: noteId,
+        clientId: 51,
+        state: makeAwarenessState(),
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'session_required' })
   })
 })
 
@@ -418,6 +632,7 @@ describe('removeAwareness', () => {
         campaignId: ctx.campaignId,
         documentId: noteId,
         clientId: 1,
+        sessionId: AWARENESS_SESSION_ID,
       }),
     )
   })
@@ -436,6 +651,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 5,
+      sessionId: AWARENESS_SESSION_ID,
       state: makeAwarenessState(),
     })
 
@@ -443,6 +659,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 5,
+      sessionId: AWARENESS_SESSION_ID,
     })
 
     await t.run(async (dbCtx) => {
@@ -469,9 +686,10 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 999,
+      sessionId: AWARENESS_SESSION_ID,
     })
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ status: 'unavailable' })
   })
 
   it('only removes matching clientId', async () => {
@@ -488,6 +706,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 1,
+      sessionId: AWARENESS_SESSION_ID,
       state: makeAwarenessState(),
     })
 
@@ -495,6 +714,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 2,
+      sessionId: `${AWARENESS_SESSION_ID}-2`,
       state: makeAwarenessState(),
     })
 
@@ -502,6 +722,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 1,
+      sessionId: AWARENESS_SESSION_ID,
     })
 
     await t.run(async (dbCtx) => {
@@ -512,6 +733,40 @@ describe('removeAwareness', () => {
 
       expect(rows).toHaveLength(1)
       expect(rows[0].clientId).toBe(2)
+    })
+  })
+
+  it('rejects release from a different awareness session', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Session Release Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+    await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+      clientId: 52,
+      sessionId: AWARENESS_SESSION_ID,
+      state: makeAwarenessState(),
+    })
+
+    await expect(
+      dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
+        campaignId: ctx.campaignId,
+        documentId: noteId,
+        clientId: 52,
+        sessionId: 'different-session',
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'session_conflict' })
+
+    await t.run(async (dbCtx) => {
+      const row = await dbCtx.db
+        .query('yjsAwareness')
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 52))
+        .unique()
+      expect(row).not.toBeNull()
     })
   })
 })

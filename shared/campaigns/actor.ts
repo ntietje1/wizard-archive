@@ -36,7 +36,7 @@ export function resolveCampaignActor({
 
   const selectedMember = members?.find(
     (member) =>
-      member._id === viewAsPlayer.memberId &&
+      member.id === viewAsPlayer.memberId &&
       member.campaignId === campaignId &&
       member.role === CAMPAIGN_MEMBER_ROLE.Player &&
       member.status === CAMPAIGN_MEMBER_STATUS.Accepted,
@@ -46,5 +46,5 @@ export function resolveCampaignActor({
     return { kind: 'dm', campaignId }
   }
 
-  return { kind: 'dm_view_as', campaignId, memberId: selectedMember._id }
+  return { kind: 'dm_view_as', campaignId, memberId: selectedMember.id }
 }

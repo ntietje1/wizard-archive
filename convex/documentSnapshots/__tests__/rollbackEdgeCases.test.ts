@@ -7,11 +7,12 @@ import {
 } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote, createSidebarShare } from '../../_test/factories.helper'
-import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
+import { expectPermissionDenied } from '../../_test/assertions.helper'
+import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
-import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
-import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
+import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
+import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 describe('rollback permission checks', () => {
   const t = createTestContext()
@@ -52,7 +53,7 @@ describe('rollback permission checks', () => {
       })
 
       await expectPermissionDenied(
-        playerAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        playerAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
           campaignId: ctx.campaignId,
           editHistoryId: historyEntry!._id,
         }),
@@ -90,7 +91,7 @@ describe('rollback permission checks', () => {
       })
 
       await expectPermissionDenied(
-        playerAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        playerAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
           campaignId: ctx.campaignId,
           editHistoryId: historyEntry!._id,
         }),
@@ -104,7 +105,7 @@ describe('rollback permission checks', () => {
 describe('rollback error handling', () => {
   const t = createTestContext()
 
-  it('throws NOT_FOUND for nonexistent history entry', async () => {
+  it('rejects a nonexistent history entry explicitly', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -124,15 +125,14 @@ describe('rollback error handling', () => {
       return id
     })
 
-    await expectNotFound(
-      dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
-        editHistoryId: fakeId,
-      }),
-    )
+    const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
+      campaignId: ctx.campaignId,
+      editHistoryId: fakeId,
+    })
+    expect(result).toEqual({ status: 'rejected', reason: 'history_entry_unavailable' })
   })
 
-  it('throws NOT_FOUND when history entry has no snapshot', async () => {
+  it('rejects a history entry without a snapshot explicitly', async () => {
     vi.useFakeTimers()
     try {
       const ctx = await setupCampaignContext(t)
@@ -154,12 +154,11 @@ describe('rollback error handling', () => {
       expect(historyEntry).not.toBeNull()
       expect(historyEntry!.hasSnapshot).toBe(false)
 
-      await expectNotFound(
-        dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
-          campaignId: ctx.campaignId,
-          editHistoryId: historyEntry!._id,
-        }),
-      )
+      const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
+        editHistoryId: historyEntry!._id,
+      })
+      expect(result).toEqual({ status: 'rejected', reason: 'snapshot_unavailable' })
     } finally {
       vi.useRealTimers()
     }
@@ -181,7 +180,7 @@ describe('note rollback data integrity', () => {
         parentTarget: { kind: 'direct', parentId: null },
       })
 
-      const originalBlocks: Array<CustomPartialBlock> = [
+      const originalBlocks: Array<PartialNoteBlock> = [
         {
           id: 'block-1',
           type: 'paragraph',
@@ -209,7 +208,7 @@ describe('note rollback data integrity', () => {
 
       vi.advanceTimersByTime(5 * 60 * 1000 + 1)
 
-      const modifiedBlocks: Array<CustomPartialBlock> = [
+      const modifiedBlocks: Array<PartialNoteBlock> = [
         {
           id: 'block-1',
           type: 'paragraph',
@@ -227,10 +226,28 @@ describe('note rollback data integrity', () => {
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      const lastSeqBeforeRollback = await t.run(async (dbCtx) => {
+        const latest = await dbCtx.db
+          .query('yjsUpdates')
+          .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+          .order('desc')
+          .first()
+        return latest?.seq ?? -1
+      })
+      const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: snapshotEntry!._id,
       })
+      expect(result.status).toBe('restored')
+
+      await expect(
+        dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+          campaignId: ctx.campaignId,
+          documentId: noteId,
+          revision: 0,
+          update: modifiedUpdate,
+        }),
+      ).resolves.toEqual({ status: 'rejected', reason: 'revision_mismatch' })
 
       await t.run(async (dbCtx) => {
         const updates = await dbCtx.db
@@ -240,7 +257,24 @@ describe('note rollback data integrity', () => {
 
         expect(updates).toHaveLength(1)
         expect(updates[0].isSnapshot).toBe(true)
-        expect(updates[0].seq).toBe(0)
+        expect(updates[0].seq).toBeGreaterThan(lastSeqBeforeRollback)
+
+        const state = await dbCtx.db
+          .query('yjsDocumentStates')
+          .withIndex('by_document', (q) => q.eq('documentId', noteId))
+          .unique()
+        expect(state?.revision).toBe(1)
+
+        if (result.status !== 'restored') throw new Error('Expected rollback receipt')
+        const preservedSnapshot = await dbCtx.db
+          .query('documentSnapshots')
+          .withIndex('by_editHistory', (q) => q.eq('editHistoryId', result.preservedHistoryEntryId))
+          .unique()
+        const preservedDoc = new Y.Doc()
+        Y.applyUpdate(preservedDoc, new Uint8Array(preservedSnapshot!.data))
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        expect(preservedDoc.getXmlFragment('document').toString()).toContain('Modified content')
+        preservedDoc.destroy()
 
         const doc = new Y.Doc()
         Y.applyUpdate(doc, new Uint8Array(updates[0].update))
@@ -302,7 +336,7 @@ describe('canvas rollback data integrity', () => {
 
       vi.advanceTimersByTime(5 * 60 * 1000 + 1)
 
-      const modifiedBlocks: Array<CustomPartialBlock> = [
+      const modifiedBlocks: Array<PartialNoteBlock> = [
         {
           id: 'block-1',
           type: 'paragraph',
@@ -318,7 +352,15 @@ describe('canvas rollback data integrity', () => {
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      const lastSeqBeforeRollback = await t.run(async (dbCtx) => {
+        const latest = await dbCtx.db
+          .query('yjsUpdates')
+          .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+          .order('desc')
+          .first()
+        return latest?.seq ?? -1
+      })
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: snapshotEntry!._id,
       })
@@ -331,7 +373,7 @@ describe('canvas rollback data integrity', () => {
 
         expect(updates).toHaveLength(1)
         expect(updates[0].isSnapshot).toBe(true)
-        expect(updates[0].seq).toBe(0)
+        expect(updates[0].seq).toBeGreaterThan(lastSeqBeforeRollback)
 
         const restoredDoc = new Y.Doc()
         Y.applyUpdate(restoredDoc, new Uint8Array(updates[0].update))
@@ -374,7 +416,7 @@ describe('rollback metadata integrity', () => {
           .first()
       })
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: sourceEntry!._id,
       })
@@ -386,7 +428,7 @@ describe('rollback metadata integrity', () => {
           .first()
 
         expect(rollbackEntry).not.toBeNull()
-        expect(rollbackEntry!.hasSnapshot).toBe(false)
+        expect(rollbackEntry!.hasSnapshot).toBe(true)
         expect(rollbackEntry!.metadata).toEqual({
           restoredFromHistoryEntryId: sourceEntry!._id,
         })
@@ -428,7 +470,7 @@ describe('rollback metadata integrity', () => {
 
       vi.advanceTimersByTime(1000)
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: historyEntry!._id,
       })
@@ -484,7 +526,7 @@ describe('map rollback with deleted pin targets', () => {
         await dbCtx.db.delete('sidebarItems', n1)
       })
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: secondPinEntry._id,
       })
@@ -547,7 +589,7 @@ describe('sequential rollbacks', () => {
         return entries[0]
       })
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: secondEntry._id,
       })
@@ -560,7 +602,7 @@ describe('sequential rollbacks', () => {
         expect(pins).toHaveLength(2)
       })
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: firstEntry!._id,
       })
@@ -603,11 +645,11 @@ describe('sequential rollbacks', () => {
           .first()
       })
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: entry!._id,
       })
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: entry!._id,
       })
@@ -666,14 +708,22 @@ describe('map rollback restores image state', () => {
 
       const snapshotData: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
 
-      const newStorageId = await t.run(async (dbCtx) => {
-        return await dbCtx.storage.store(new Blob(['different-image']))
-      })
+      const { sessionId: newUploadSessionId } = await storeCommittedTestUploadSession(
+        t,
+        ctx.dm.profile._id,
+        new Blob(['different-image'], { type: 'image/png' }),
+        'map.png',
+      )
 
+      const replacementToken = await dmAuth.mutation(
+        api.gameMaps.mutations.beginMapImageReplacement,
+        { campaignId: ctx.campaignId, mapId },
+      )
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
         campaignId: ctx.campaignId,
         mapId,
-        imageStorageId: newStorageId,
+        replacementToken,
+        uploadSessionId: newUploadSessionId,
       })
 
       await t.run(async (dbCtx) => {
@@ -681,10 +731,10 @@ describe('map rollback restores image state', () => {
           .query('gameMaps')
           .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
           .first()
-        expect(ext!.imageStorageId).not.toBe(snapshotData.imageStorageId ?? null)
+        expect(ext!.imageStorageId).not.toBe(snapshotData.imageAssetId ?? null)
       })
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: snapshotEntry!._id,
       })
@@ -694,7 +744,7 @@ describe('map rollback restores image state', () => {
           .query('gameMaps')
           .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
           .first()
-        expect(ext!.imageStorageId).toBe(snapshotData.imageStorageId ?? null)
+        expect(ext!.imageStorageId).toBe(snapshotData.imageAssetId ?? null)
       })
     } finally {
       vi.useRealTimers()

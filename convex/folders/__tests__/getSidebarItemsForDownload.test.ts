@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
-import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { expectPermissionDenied } from '../../_test/assertions.helper'
 import {
   createBlock,
   createCanvas,
@@ -10,8 +12,11 @@ import {
   createNote,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import type { CustomBlock } from '../../../shared/editor-blocks/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'
+import { uint8ToArrayBuffer } from '../../../shared/yjs-sync/uint8ToArrayBuffer'
+import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 /** Extract the text of the first inline content entry from a block's content */
 function hasInlineTextContent(block: unknown): block is { content?: Array<{ text?: string }> } {
@@ -22,7 +27,7 @@ function hasInlineTextContent(block: unknown): block is { content?: Array<{ text
   )
 }
 
-function getFirstInlineText(block: CustomBlock): string | undefined {
+function getFirstInlineText(block: NoteBlock): string | undefined {
   const unknownBlock: unknown = block
   return hasInlineTextContent(unknownBlock) ? unknownBlock.content?.[0]?.text : undefined
 }
@@ -70,10 +75,10 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
 
     expect(result.items.length).toBe(1)
     const item = result.items[0]
-    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.notes)
+    expect(item.type).toBe(RESOURCE_TYPES.notes)
     expect(item.name).toBe('Session Log.md')
     expect(item.path).toBe('Session Log.md')
-    if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+    if (item.type === RESOURCE_TYPES.notes) {
       expect(item.content.length).toBe(1)
     }
   })
@@ -109,14 +114,14 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
 
     expect(result.items.length).toBe(1)
     const item = result.items[0]
-    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.notes)
-    if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+    expect(item.type).toBe(RESOURCE_TYPES.notes)
+    if (item.type === RESOURCE_TYPES.notes) {
       expect(item.content.length).toBe(1)
       const parentBlock = item.content[0]
       expect(getFirstInlineText(parentBlock)).toBe('Parent')
       expect(parentBlock.children).toBeDefined()
       expect(parentBlock.children!.length).toBe(1)
-      expect(getFirstInlineText(parentBlock.children![0] as CustomBlock)).toBe('Child')
+      expect(getFirstInlineText(parentBlock.children![0] as NoteBlock)).toBe('Child')
     }
   })
 
@@ -139,10 +144,10 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
 
     expect(result.items.length).toBe(1)
     const item = result.items[0]
-    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.files)
+    expect(item.type).toBe(RESOURCE_TYPES.files)
     expect(item.name).toBe('report.pdf')
     expect(item.path).toBe('report.pdf')
-    if (item.type === SIDEBAR_ITEM_TYPES.files) {
+    if (item.type === RESOURCE_TYPES.files) {
       // No storage attached in test — downloadUrl is null
       expect(item.downloadUrl).toBeNull()
     }
@@ -167,7 +172,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
 
     expect(result.items.length).toBe(1)
     const item = result.items[0]
-    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.gameMaps)
+    expect(item.type).toBe(RESOURCE_TYPES.gameMaps)
     expect(item.name).toBe('Dungeon')
     expect(item.path).toBe('Dungeon')
   })
@@ -231,16 +236,16 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     expect(result.items.length).toBe(4)
-    const types = result.items.map((i) => i.type).sort()
+    const types = result.items.map((item: DownloadItem) => item.type).sort()
     expect(types).toEqual(
       [
-        SIDEBAR_ITEM_TYPES.files,
-        SIDEBAR_ITEM_TYPES.gameMaps,
-        SIDEBAR_ITEM_TYPES.notes,
-        SIDEBAR_ITEM_TYPES.notes,
+        RESOURCE_TYPES.files,
+        RESOURCE_TYPES.gameMaps,
+        RESOURCE_TYPES.notes,
+        RESOURCE_TYPES.notes,
       ].sort(),
     )
-    expect(result.items.find((i) => i.path === 'Sub/Sub Note.md')).toBeDefined()
+    expect(result.items.find((item: DownloadItem) => item.path === 'Sub/Sub Note.md')).toBeDefined()
   })
 
   it('note name already ending in .md does not get double extension', async () => {
@@ -293,30 +298,67 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     expect(result.items[0].path).toBe('Lvl1/Lvl2/deep.png')
   })
 
-  it('canvases are skipped — not included in output', async () => {
+  it('downloads canvas documents as JSON artifacts', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'WithCanvas',
-    })
-    await createCanvas(t, ctx.campaignId, ctx.dm.profile._id, {
-      parentId: folderId,
+    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'My Canvas',
     })
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      parentId: folderId,
-      name: 'Visible Note',
+    const doc = createCanvasDocumentDoc({
+      edges: [
+        {
+          id: 'edge-1',
+          source: 'node-1',
+          target: 'node-1',
+          type: 'bezier',
+        },
+      ],
+      nodes: [
+        {
+          id: 'node-1',
+          type: 'text',
+          position: { x: 10, y: 20 },
+          data: {},
+        },
+      ],
+    })
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: canvasId,
+      update: uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc)),
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      sourceItemIds: [folderId],
+      sourceItemIds: [canvasId],
     })
 
-    expect(result.items.length).toBe(1)
-    expect(result.items[0].name).toBe('Visible Note.md')
-    expect(result.items.find((i) => i.name === 'My Canvas')).toBeUndefined()
+    expect(result.items).toEqual([
+      {
+        type: RESOURCE_TYPES.canvases,
+        name: 'My Canvas',
+        path: 'My Canvas.canvas.json',
+        content: {
+          edges: [
+            {
+              id: 'edge-1',
+              source: 'node-1',
+              target: 'node-1',
+              type: 'bezier',
+            },
+          ],
+          nodes: [
+            {
+              id: 'node-1',
+              type: 'text',
+              position: { x: 10, y: 20 },
+              data: {},
+            },
+          ],
+        },
+      },
+    ])
   })
 
   it('block content is ordered by position', async () => {
@@ -349,10 +391,10 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
 
     expect(result.items.length).toBe(1)
     const item = result.items[0]
-    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.notes)
-    if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+    expect(item.type).toBe(RESOURCE_TYPES.notes)
+    if (item.type === RESOURCE_TYPES.notes) {
       expect(item.content.length).toBe(2)
-      const texts = item.content.map((c) => getFirstInlineText(c))
+      const texts = item.content.map((block: NoteBlock) => getFirstInlineText(block))
       expect(texts).toEqual(['First', 'Second'])
     }
   })
@@ -401,17 +443,17 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
 
     expect(result.items.length).toBe(1)
     const item = result.items[0]
-    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.notes)
-    if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+    expect(item.type).toBe(RESOURCE_TYPES.notes)
+    if (item.type === RESOURCE_TYPES.notes) {
       expect(item.content.length).toBe(2)
       expect(getFirstInlineText(item.content[0])).toBe('Parent')
       expect(getFirstInlineText(item.content[1])).toBe('Parent 2')
       expect(item.content[0].children).toBeDefined()
       expect(item.content[0].children!.length).toBe(1)
-      expect(getFirstInlineText(item.content[0].children![0] as CustomBlock)).toBe('Nested child')
+      expect(getFirstInlineText(item.content[0].children![0] as NoteBlock)).toBe('Nested child')
       expect(item.content[1].children).toBeDefined()
       expect(item.content[1].children!.length).toBe(1)
-      expect(getFirstInlineText(item.content[1].children![0] as CustomBlock)).toBe('Nested child 2')
+      expect(getFirstInlineText(item.content[1].children![0] as NoteBlock)).toBe('Nested child 2')
     }
   })
 
@@ -433,8 +475,8 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     expect(result.items.length).toBe(1)
-    expect(result.items[0].type).toBe(SIDEBAR_ITEM_TYPES.notes)
-    if (result.items[0].type === SIDEBAR_ITEM_TYPES.notes) {
+    expect(result.items[0].type).toBe(RESOURCE_TYPES.notes)
+    if (result.items[0].type === RESOURCE_TYPES.notes) {
       expect(result.items[0].content).toEqual([])
     }
   })
@@ -455,7 +497,7 @@ describe('getRootContentsForDownload — collectItemsRecursively at root', () =>
       campaignId: ctx.campaignId,
     })
 
-    const names = result.items.map((i) => i.name)
+    const names = result.items.map((item: DownloadItem) => item.name)
     expect(names).toContain('RootNote.md')
     expect(names).toContain('RootFile.pdf')
     expect(names).toContain('RootMap')
@@ -471,10 +513,23 @@ describe('getRootContentsForDownload — collectItemsRecursively at root', () =>
       campaignId: ctx.campaignId,
     })
 
-    const note = result.items.find((i) => i.name === 'PathTest.md')
+    const note = result.items.find((item: DownloadItem) => item.name === 'PathTest.md')
     expect(note).toBeDefined()
     expect(note?.path).toBe('PathTest.md')
     expect(note?.path?.startsWith('/')).toBe(false)
+  })
+
+  it('rejects accepted players downloading the root contents', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'RootNote' })
+
+    await expectPermissionDenied(
+      playerAuth.query(api.folders.queries.getRootContentsForDownload, {
+        campaignId: ctx.campaignId,
+      }),
+    )
   })
 })
 
@@ -522,7 +577,7 @@ describe('getSidebarItemsForDownload', () => {
       sourceItemIds: [folderId, noteId, fileId],
     })
 
-    expect(result.items.map((item) => item.path).sort()).toEqual(
+    expect(result.items.map((item: DownloadItem) => item.path).sort()).toEqual(
       ['Folder/Nested.md', 'Root.pdf'].sort(),
     )
   })
@@ -550,7 +605,7 @@ describe('getSidebarItemsForDownload', () => {
       sourceItemIds: [firstNoteId, secondNoteId],
     })
 
-    expect(result.items.map((item) => item.path).sort()).toEqual(
+    expect(result.items.map((item: DownloadItem) => item.path).sort()).toEqual(
       ['Shared Name.md', 'Shared Name 1.md'].sort(),
     )
   })

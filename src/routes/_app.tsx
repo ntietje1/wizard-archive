@@ -1,20 +1,11 @@
-import { Outlet, createFileRoute, useRouteContext } from '@tanstack/react-router'
-import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { LazyMotion, domAnimation } from 'motion/react'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import type { PanelPreference } from 'shared/user-preferences/types'
-import type { Theme } from '~/shared/theme/types'
-import { NavigationProgress } from '~/shared/components/navigation-progress'
-import { PreviewBanner } from '~/shared/components/preview-banner'
-import { isPreview } from '~/shared/utils/preview'
-import { ThemeProvider } from '~/shared/components/theme-provider'
-import { prefetchUserPreferences } from '~/shared/user-preferences/user-preferences-query'
-import { authClient } from '~/features/auth/utils/auth-client'
+import type { Theme } from '@wizard-archive/ui/theme/types'
+import { prefetchUserPreferences } from '~/features/settings/hooks/user-preferences-query'
 import { getToken } from '~/features/auth/utils/auth-server'
 import { logger } from '~/shared/utils/logger'
-import { Toaster } from '~/features/shadcn/components/sonner'
+import { AppLayout } from './-app-layout'
 
 const fetchAuthToken = createServerFn({ method: 'GET' }).handler(async () => {
   return await getToken()
@@ -59,26 +50,3 @@ export const Route = createFileRoute('/_app')({
   },
   component: AppLayout,
 })
-
-function AppLayout() {
-  const context = useRouteContext({ from: Route.id })
-
-  return (
-    <ConvexBetterAuthProvider
-      client={context.convexClient}
-      authClient={authClient}
-      initialToken={context.token}
-    >
-      <ThemeProvider initialTheme={context.initialTheme}>
-        <LazyMotion features={domAnimation}>
-          <NavigationProgress />
-          {isPreview && <PreviewBanner />}
-          <Outlet />
-          <Toaster />
-          <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
-          <TanStackRouterDevtools position="bottom-right" />
-        </LazyMotion>
-      </ThemeProvider>
-    </ConvexBetterAuthProvider>
-  )
-}

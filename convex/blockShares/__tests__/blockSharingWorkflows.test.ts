@@ -123,14 +123,14 @@ describe('block sharing workflows', () => {
         blockNoteIds: [block1.blockNoteId, block2.blockNoteId],
       })
 
-      const b1Info = dmResult.blocks.find((b) => b.blockNoteId === block1.blockNoteId)
+      const b1Info = dmResult.blocks.find((b) => b.noteBlockId === block1.blockNoteId)
       expect(b1Info).toBeDefined()
       expect(b1Info!.shareStatus).toBe('individually_shared')
       expect(b1Info!.memberPermissions).toEqual({
         [p1.memberId]: 'view',
       })
 
-      const b2Info = dmResult.blocks.find((b) => b.blockNoteId === block2.blockNoteId)
+      const b2Info = dmResult.blocks.find((b) => b.noteBlockId === block2.blockNoteId)
       expect(b2Info).toBeDefined()
       expect(b2Info!.shareStatus).toBe('individually_shared')
       expect(b2Info!.memberPermissions).toEqual({})
@@ -166,7 +166,7 @@ describe('block sharing workflows', () => {
       for (const b of notSharedResult.blocks) {
         expect(b.shareStatus).toBe('not_shared')
         expect(b.memberPermissions).toEqual(
-          b.blockNoteId === block1.blockNoteId ? { [p1.memberId]: 'view' } : {},
+          b.noteBlockId === block1.blockNoteId ? { [p1.memberId]: 'view' } : {},
         )
       }
     })
@@ -349,7 +349,7 @@ describe('block sharing workflows', () => {
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
       })
-      const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockNoteId)
+      const blockInfo = result.blocks.find((b) => b.noteBlockId === block.blockNoteId)
       expect(blockInfo).toBeDefined()
       expect(blockInfo!.memberPermissions[p1.memberId]).toBe('view')
     })
@@ -384,9 +384,9 @@ describe('block sharing workflows', () => {
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
       })
-      const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockNoteId)
+      const blockInfo = result.blocks.find((b) => b.noteBlockId === block.blockNoteId)
       expect(blockInfo).toBeDefined()
-      expect(result.playerMembers.map((m) => m._id)).toContain(p1.memberId)
+      expect(result.playerMembers.map((m) => m.id)).toContain(p1.memberId)
       expect(result.notePermissionsByMemberId[p1.memberId]).toBe('none')
       expect(blockInfo!.memberPermissions[p1.memberId]).toBe('view')
     })

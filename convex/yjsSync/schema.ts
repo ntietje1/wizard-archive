@@ -14,10 +14,16 @@ const yjsUpdateFields = {
 export const yjsSyncTables = {
   yjsUpdates: defineTable(yjsUpdateFields).index('by_document_seq', ['documentId', 'seq']),
 
+  yjsDocumentStates: defineTable({
+    documentId: yjsDocumentIdValidator,
+    revision: v.number(),
+  }).index('by_document', ['documentId']),
+
   yjsAwareness: defineTable({
     documentId: yjsDocumentIdValidator,
     clientId: v.number(),
     userId: v.id('userProfiles'),
+    sessionId: v.string(),
     state: v.bytes(),
     updatedAt: v.number(),
   })

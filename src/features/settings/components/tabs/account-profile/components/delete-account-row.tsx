@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Loader2, Mail } from 'lucide-react'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +10,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '~/features/shadcn/components/alert-dialog'
+} from '@wizard-archive/ui/shadcn/components/alert-dialog'
 import { SettingsSubAlertDialogContent } from '~/features/settings/components/settings-sub-dialog'
 
 function DeleteAccountDialogContent({ onDeletionEmailSent }: { onDeletionEmailSent: () => void }) {

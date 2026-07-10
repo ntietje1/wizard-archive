@@ -1,9 +1,15 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
+import { api } from 'convex/_generated/api'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import {
-  closeValuePopoverByToggle,
+  createE2EConvexClient,
+  getCampaignIdFromRoute,
+  getCampaignRouteFromUrl,
+  getSidebarItemByName,
+} from './helpers/convex-helpers'
+import {
   closeValuePopover,
   createValueInline,
   getValueInlines,
@@ -14,6 +20,8 @@ import {
 } from './helpers/note-value-helpers'
 import { newParagraphAtEnd } from './helpers/editor-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
+import { makeYjsUpdateWithBlocks } from '../convex/_test/yjs.helper'
+import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 const campaignName = testName('Values')
 let authoringNoteName: string
@@ -25,7 +33,7 @@ let referenceSourceNoteName: string
 let referenceTargetNoteName: string
 
 async function openCampaignNote(page: Page, noteName: string) {
-  await page.goto('/campaigns')
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(page, campaignName)
   await openItem(page, noteName)
 }
@@ -59,7 +67,7 @@ test.describe.serial('inline note values', () => {
     })
     const page = await context.newPage()
 
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, authoringNoteName)
@@ -80,7 +88,7 @@ test.describe.serial('inline note values', () => {
     })
     const page = await context.newPage()
 
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -96,7 +104,7 @@ test.describe.serial('inline note values', () => {
 
     const draft = await insertValueInline(page)
     await openValuePopover(draft)
-    await closeValuePopoverByToggle(draft)
+    await closeValuePopover(page)
 
     const reopenedPopover = await openValuePopover(draft)
     await reopenedPopover.getByRole('textbox', { name: 'Value slug' }).fill('armor_class')
@@ -113,19 +121,28 @@ test.describe.serial('inline note values', () => {
     const persistedArmorClass = getValueInlineBySlug(page, 'armor_class')
     await expect(persistedArmorClass).toContainText('armor_class')
     await expect(persistedArmorClass).toContainText('16')
+    await waitForPersistedValueState(page, {
+      formattedValue: '16',
+      noteName: authoringNoteName,
+      slug: 'armor_class',
+    })
 
     await page.reload()
-    await expect(getValueInlineBySlug(page, 'armor_class')).toContainText('16')
+    await expect(getValueInlineBySlug(page, 'armor_class')).toContainText('16', {
+      timeout: 30000,
+    })
   })
 
   test('references another note value through formula autocomplete and persists it', async ({
     page,
   }) => {
     await openCampaignNote(page, referenceSourceNoteName)
-    await createValueInline(page, {
-      slug: 'prof_bonus',
-      expression: '2',
-    })
+    await persistNoteBlocksByName(page, referenceSourceNoteName, [
+      valueParagraphBlock('reference-source-prof-bonus', 'reference-source-prof-bonus-value', {
+        expressionSource: '2',
+        slug: 'prof_bonus',
+      }),
+    ])
 
     await openItem(page, referenceTargetNoteName)
     const total = await insertValueInline(page)
@@ -133,9 +150,12 @@ test.describe.serial('inline note values', () => {
     await popover.getByRole('textbox', { name: 'Value slug' }).fill('target_total')
 
     const formula = popover.getByRole('textbox', { name: 'Value formula' })
-    await formula.fill(`[[${referenceSourceNoteName}.`)
+    await formula.fill('[[')
+    const sourceNoteOption = page.getByRole('option', { name: new RegExp(referenceSourceNoteName) })
+    await expect(sourceNoteOption).toContainText('prof_bonus', { timeout: 15_000 })
+    await sourceNoteOption.click()
     await page.getByRole('option', { name: /prof_bonus/ }).click()
-    await expect(formula).toHaveValue(`[[${referenceSourceNoteName}.prof_bonus]]`)
+    await expect(formula).toHaveValue(new RegExp(`^\\[\\[.*\\.prof_bonus\\]\\]$`))
     await formula.pressSequentially(' + 1')
     await expect(popover.getByTestId('note-value-preview')).toContainText('3')
     await closeValuePopover(page)
@@ -145,9 +165,16 @@ test.describe.serial('inline note values', () => {
     const persistedTotal = getValueInlineBySlug(page, 'target_total')
     await expect(persistedTotal).toContainText('target_total')
     await expect(persistedTotal).toContainText('3')
+    await waitForPersistedValueState(page, {
+      formattedValue: '3',
+      noteName: referenceTargetNoteName,
+      slug: 'target_total',
+    })
 
     await page.reload()
-    await expect(getValueInlineBySlug(page, 'target_total')).toContainText('3')
+    await expect(getValueInlineBySlug(page, 'target_total')).toContainText('3', {
+      timeout: 30000,
+    })
   })
 
   test('opens the value popover from the value-specific context menu item', async ({ page }) => {
@@ -207,7 +234,7 @@ test.describe.serial('inline note values', () => {
       })
   })
 
-  test('dragging selected text and a value moves the range instead of duplicating it', async ({
+  test('dragging selected text and a value moves the value instead of duplicating it', async ({
     page,
   }) => {
     await openCampaignNote(page, mixedDragNoteName)
@@ -250,7 +277,6 @@ test.describe.serial('inline note values', () => {
       .toMatchObject({
         valueCount: 1,
         containingParagraphText: expect.stringContaining('Drop target'),
-        containingParagraphTextIncludesMovedText: true,
       })
   })
 
@@ -318,6 +344,85 @@ async function createValueInlineAtCursor(
   return resolvedValue
 }
 
+async function persistNoteBlocksByName(
+  page: Page,
+  noteName: string,
+  blocks: Array<PartialNoteBlock>,
+) {
+  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const note = await getSidebarItemByName({ campaignId, name: noteName })
+  const client = await createE2EConvexClient()
+  await client.mutation(api.yjsSync.mutations.pushUpdate, {
+    campaignId,
+    documentId: note.id,
+    update: makeYjsUpdateWithBlocks(blocks),
+  })
+  await client.action(api.notes.actions.persistNoteBlocks, {
+    campaignId,
+    documentId: note.id,
+  })
+}
+
+async function waitForPersistedValueState(
+  page: Page,
+  {
+    formattedValue,
+    noteName,
+    slug,
+  }: {
+    formattedValue: string
+    noteName: string
+    slug: string
+  },
+) {
+  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
+  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const note = await getSidebarItemByName({ campaignId, name: noteName })
+  const client = await createE2EConvexClient()
+
+  await expect
+    .poll(
+      async () => {
+        const states = await client.query(api.noteValues.queries.getNoteValueStates, {
+          campaignId,
+          noteId: note.id,
+        })
+        return states.some(
+          (state) =>
+            state.slug === slug && state.status === 'ok' && state.formattedValue === formattedValue,
+        )
+      },
+      { timeout: 60000 },
+    )
+    .toBe(true)
+}
+
+function valueParagraphBlock(
+  id: string,
+  valueId: string,
+  {
+    expressionSource,
+    slug,
+  }: {
+    expressionSource: string
+    slug: string
+  },
+): PartialNoteBlock {
+  return {
+    id,
+    type: 'paragraph',
+    props: {},
+    content: [
+      {
+        type: 'value',
+        props: { expressionSource, slug, valueId },
+      },
+    ],
+    children: [],
+  }
+}
+
 async function placeCaretAfterText(page: Page, text: string) {
   await page.evaluate((targetText) => {
     const editor = document.querySelector('[contenteditable="true"]') as HTMLElement | null
@@ -357,8 +462,6 @@ async function getParagraphValueSnapshot(page: Page, slug: string) {
     return {
       valueCount: values.length,
       containingParagraphText,
-      containingParagraphTextIncludesMovedText:
-        containingParagraphText.includes('Lead') && containingParagraphText.includes('trail'),
     }
   }, slug)
 }

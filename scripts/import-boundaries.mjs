@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import ts from 'typescript'
 
@@ -24,7 +24,8 @@ const ignoredSegments = new Set([
 const ignoredFiles = new Set(['src/routeTree.gen.ts'])
 const ignoredPathPrefixes = ['convex/_generated/']
 const packageConvexModules = new Set(['convex/react', 'convex/server', 'convex/values'])
-const generatedConvexPrefixes = ['convex/_generated/']
+const generatedConvexDataModel = 'convex/_generated/dataModel'
+const generatedConvexApi = 'convex/_generated/api'
 const blockedP01ContractPrefixes = [
   'convex/errors',
   'convex/storage/validation',
@@ -36,6 +37,27 @@ const blockedP01ContractPrefixes = [
   'convex/sidebarItems/validation/parent',
   'convex/sidebarItems/functions/defaultItemName',
 ]
+const editorPackageName = '@wizard-archive/editor'
+const uiPackageName = '@wizard-archive/ui'
+const editorPackageJson = JSON.parse(
+  readFileSync(path.join(process.cwd(), 'packages/editor/package.json'), 'utf8'),
+)
+const backendSafeEditorPackageSpecifiers = new Set(
+  editorPackageJson.wizardArchive.backendSafeSubpaths.map(
+    (subpath) => `${editorPackageName}${subpath.slice(1)}`,
+  ),
+)
+const editorAdapterImportBaseline = {
+  issue: 'WIZ-18',
+  recordedAtHead: '6d18a46ac6462ae96a43f1129326912228f541ea',
+  allowedSpecifiers: new Set([
+    '@wizard-archive/editor',
+    '@wizard-archive/editor/adapter',
+    '@wizard-archive/editor/collaboration/yjs-provider',
+    '@wizard-archive/editor/resources/items',
+    '@wizard-archive/editor/sharing',
+  ]),
+}
 
 function normalizedRelativePath(root, filePath) {
   return path.relative(root, filePath).split(path.sep).join('/')
@@ -64,8 +86,9 @@ function collectWorkspaceFiles(root) {
     }
   }
 
-  for (const topLevelDir of ['shared', 'convex', 'src']) {
+  for (const topLevelDir of ['shared', 'convex', 'src', 'packages']) {
     const dir = path.join(root, topLevelDir)
+    if (!existsSync(dir)) continue
     collect(dir)
   }
 
@@ -82,58 +105,287 @@ function isBlockedP01Contract(specifier) {
   )
 }
 
-function isAllowedSrcConvexImport(specifier) {
+function isGeneratedApiDataBoundary(filePath) {
+  return (
+    filePath.startsWith('src/editor-adapters/') ||
+    filePath.includes('/hooks/') ||
+    filePath.includes('/runtime/') ||
+    /(?:^|\/)use-[^/]+\.[cm]?[jt]sx?$/.test(filePath) ||
+    filePath.includes('/__tests__/')
+  )
+}
+
+function isAllowedSrcConvexImport(filePath, specifier) {
   if (!specifier.startsWith('convex/')) return true
   if (packageConvexModules.has(specifier)) return true
-  if (generatedConvexPrefixes.some((prefix) => specifier.startsWith(prefix))) return true
+  if (specifier === generatedConvexDataModel) return true
+  if (specifier === generatedConvexApi) return isGeneratedApiDataBoundary(filePath)
   if (isBlockedP01Contract(specifier)) return false
   return false
 }
 
-function resolveBoundaryZone(filePath, specifier) {
-  if (specifier.startsWith('~/')) return 'src'
-  if (specifier.startsWith('src/')) return 'src'
-  if (specifier.startsWith('shared/')) return 'shared'
-  if (specifier.startsWith('convex/')) return 'convex'
+function resolveWorkspaceSpecifierPath(filePath, specifier) {
+  if (specifier.startsWith('~/')) {
+    return path.posix.normalize(path.posix.join('src', specifier.slice(2)))
+  }
+  if (
+    specifier.startsWith('src/') ||
+    specifier.startsWith('shared/') ||
+    specifier.startsWith('convex/') ||
+    specifier.startsWith('packages/')
+  ) {
+    return path.posix.normalize(specifier)
+  }
   if (specifier.startsWith('./') || specifier.startsWith('../')) {
-    return path.posix
-      .normalize(path.posix.join(path.posix.dirname(filePath), specifier))
-      .split('/')[0]
+    return path.posix.normalize(path.posix.join(path.posix.dirname(filePath), specifier))
   }
   return null
+}
+
+function resolveBoundaryZone(filePath, specifier) {
+  const resolvedPath = resolveWorkspaceSpecifierPath(filePath, specifier)
+  if (resolvedPath) return resolveFileBoundaryZone(resolvedPath)
+
+  if (specifier === editorPackageName || specifier.startsWith(`${editorPackageName}/`)) {
+    return 'editor-package'
+  }
+  if (specifier === uiPackageName || specifier.startsWith(`${uiPackageName}/`)) {
+    return 'ui-package'
+  }
+  return null
+}
+
+function resolveFileBoundaryZone(filePath) {
+  if (filePath.startsWith('packages/editor/')) return 'editor-package'
+  if (filePath.startsWith('packages/ui/')) return 'ui-package'
+  return filePath.split('/')[0]
 }
 
 function importViolation(filePath, source, index, message) {
   return `${filePath}:${lineNumber(source, index)} ${message}`
 }
 
+function resolveRawPackageSourcePath(filePath, specifier, packagePath, packageName) {
+  if (!specifier) return null
+  if (specifier === packageName || specifier.startsWith(`${packageName}/`)) return null
+
+  const resolvedPath = resolveWorkspaceSpecifierPath(filePath, specifier) ?? specifier
+
+  const rawSourcePath = `${packagePath}/src`
+  if (resolvedPath === rawSourcePath || resolvedPath.startsWith(`${rawSourcePath}/`)) {
+    return resolvedPath
+  }
+  return null
+}
+
+function rawPackageSourceBoundaryViolation(
+  filePath,
+  source,
+  index,
+  specifier,
+  kind,
+  packagePath,
+  packageLabel,
+  packageName,
+) {
+  if (filePath.startsWith(`${packagePath}/`)) return null
+  if (!resolveRawPackageSourcePath(filePath, specifier, packagePath, packageName)) return null
+  const sourceZone = resolveFileBoundaryZone(filePath)
+  return importViolation(
+    filePath,
+    source,
+    index,
+    `${sourceZone} may not import ${kind} from raw ${packageLabel} package source ${specifier}; use ${packageName} package exports`,
+  )
+}
+
 function srcConvexImportViolation(filePath, source, index, specifier, kind) {
+  if (specifier === generatedConvexApi) {
+    return `${filePath}:${lineNumber(source, index)} src may import generated Convex API ${kind}s only from explicit data-boundary modules`
+  }
   return `${filePath}:${lineNumber(source, index)} src may not import ${kind} from local Convex module ${specifier}`
 }
 
+function sharedBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) {
+  if (sourceZone !== 'shared') return null
+  if (!['convex', 'src', 'editor-package', 'ui-package'].includes(targetZone)) return null
+  return importViolation(
+    filePath,
+    source,
+    index,
+    `shared may not import ${kind} from ${targetZone} boundary module ${specifier}`,
+  )
+}
+
+function convexBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) {
+  if (sourceZone !== 'convex') return null
+  if (targetZone === 'src' || targetZone === 'ui-package') {
+    return importViolation(
+      filePath,
+      source,
+      index,
+      `convex may not import ${kind} from ${targetZone} boundary module ${specifier}`,
+    )
+  }
+  return null
+}
+
+function isProductionConvexFile(filePath) {
+  if (!filePath.startsWith('convex/')) return false
+  if (filePath.startsWith('convex/_test/')) return false
+  if (filePath.includes('/__tests__/')) return false
+  return true
+}
+
+function convexEditorPackageBoundaryViolation(filePath, source, index, specifier, kind) {
+  if (!isProductionConvexFile(filePath)) return null
+  if (specifier !== editorPackageName && !specifier.startsWith(`${editorPackageName}/`)) {
+    return null
+  }
+  if (backendSafeEditorPackageSpecifiers.has(specifier)) return null
+
+  return importViolation(
+    filePath,
+    source,
+    index,
+    `convex may not import ${kind} from backend-unsafe editor package subpath ${specifier}`,
+  )
+}
+
+function editorPackageBoundaryViolation(
+  filePath,
+  source,
+  index,
+  specifier,
+  kind,
+  sourceZone,
+  targetZone,
+) {
+  if (sourceZone !== 'editor-package') return null
+  if (targetZone === 'convex' || targetZone === 'src') {
+    return importViolation(
+      filePath,
+      source,
+      index,
+      `packages/editor may not import ${kind} from ${targetZone} boundary module ${specifier}`,
+    )
+  }
+  return null
+}
+
+function editorAdapterBoundaryViolation(filePath, source, index, specifier, kind) {
+  if (!filePath.startsWith('src/editor-adapters/')) return null
+  if (specifier !== editorPackageName && !specifier.startsWith(`${editorPackageName}/`)) return null
+  if (editorAdapterImportBaseline.allowedSpecifiers.has(specifier)) return null
+
+  return importViolation(
+    filePath,
+    source,
+    index,
+    `src/editor-adapters may not import ${kind} from unapproved editor package subpath ${specifier}`,
+  )
+}
+
+function uiPackageBoundaryViolation(
+  filePath,
+  source,
+  index,
+  specifier,
+  kind,
+  sourceZone,
+  targetZone,
+) {
+  if (sourceZone !== 'ui-package') return null
+  if (targetZone === 'convex' || targetZone === 'src') {
+    return importViolation(
+      filePath,
+      source,
+      index,
+      `packages/ui may not import ${kind} from ${targetZone} boundary module ${specifier}`,
+    )
+  }
+  if (targetZone === 'editor-package') {
+    return importViolation(
+      filePath,
+      source,
+      index,
+      `packages/ui may not import ${kind} from editor-package boundary module ${specifier}`,
+    )
+  }
+  return null
+}
+
+function localPackageBoundaryViolation(
+  filePath,
+  source,
+  index,
+  specifier,
+  kind,
+  sourceZone,
+  targetZone,
+) {
+  if (
+    (sourceZone === 'editor-package' || sourceZone === 'ui-package') &&
+    targetZone === 'packages'
+  ) {
+    return importViolation(
+      filePath,
+      source,
+      index,
+      `${sourceZone} may not import ${kind} from another local package through ${specifier}`,
+    )
+  }
+  return null
+}
+
 function boundaryViolation(filePath, source, index, specifier, kind) {
-  const sourceZone = filePath.split('/')[0]
+  const sourceZone = resolveFileBoundaryZone(filePath)
+  const resolvedSpecifierPath = resolveWorkspaceSpecifierPath(filePath, specifier)
   const targetZone = resolveBoundaryZone(filePath, specifier)
 
-  if (sourceZone === 'shared' && (targetZone === 'convex' || targetZone === 'src')) {
-    return importViolation(
+  const violation =
+    rawPackageSourceBoundaryViolation(
       filePath,
       source,
       index,
-      `shared may not import ${kind} from ${targetZone} boundary module ${specifier}`,
-    )
-  }
-
-  if (sourceZone === 'convex' && targetZone === 'src') {
-    return importViolation(
+      specifier,
+      kind,
+      'packages/editor',
+      'editor',
+      editorPackageName,
+    ) ??
+    rawPackageSourceBoundaryViolation(
       filePath,
       source,
       index,
-      `convex may not import ${kind} from src boundary module ${specifier}`,
-    )
-  }
+      specifier,
+      kind,
+      'packages/ui',
+      'ui',
+      uiPackageName,
+    ) ??
+    editorAdapterBoundaryViolation(filePath, source, index, specifier, kind) ??
+    convexEditorPackageBoundaryViolation(filePath, source, index, specifier, kind) ??
+    sharedBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) ??
+    convexBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) ??
+    editorPackageBoundaryViolation(
+      filePath,
+      source,
+      index,
+      specifier,
+      kind,
+      sourceZone,
+      targetZone,
+    ) ??
+    uiPackageBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) ??
+    localPackageBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone)
 
-  if (sourceZone === 'src' && !isAllowedSrcConvexImport(specifier)) {
+  if (violation) return violation
+
+  if (
+    sourceZone === 'src' &&
+    !isAllowedSrcConvexImport(filePath, resolvedSpecifierPath ?? specifier)
+  ) {
     return srcConvexImportViolation(filePath, source, index, specifier, kind)
   }
 
@@ -141,11 +393,18 @@ function boundaryViolation(filePath, source, index, specifier, kind) {
 }
 
 function sourceFileKind(filePath) {
-  const extension = path.extname(filePath)
-  if (extension === '.jsx') return ts.ScriptKind.JSX
-  if (extension === '.tsx') return ts.ScriptKind.TSX
-  if (extension === '.js' || extension === '.mjs' || extension === '.cjs') return ts.ScriptKind.JS
-  return ts.ScriptKind.TS
+  switch (path.extname(filePath)) {
+    case '.jsx':
+      return ts.ScriptKind.JSX
+    case '.tsx':
+      return ts.ScriptKind.TSX
+    case '.js':
+    case '.mjs':
+    case '.cjs':
+      return ts.ScriptKind.JS
+    default:
+      return ts.ScriptKind.TS
+  }
 }
 
 function stringLiteralText(node) {
@@ -178,6 +437,15 @@ function collectImports(filePath, source) {
         node.getStart(ast),
         stringLiteralText(node.moduleSpecifier),
         node.importClause?.isTypeOnly ? 'type' : 'value',
+      )
+    } else if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference)
+    ) {
+      addImport(
+        node.getStart(ast),
+        stringLiteralText(node.moduleReference.expression),
+        node.isTypeOnly ? 'type' : 'value',
       )
     } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
       addImport(node.getStart(ast), stringLiteralText(node.arguments[0]), 'value')

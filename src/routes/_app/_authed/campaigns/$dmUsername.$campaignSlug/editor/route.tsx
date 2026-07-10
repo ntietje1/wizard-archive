@@ -1,9 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import '@blocknote/shadcn/style.css'
-import { validateSearch } from '~/features/sidebar/utils/validate-search'
-import { EditorPage } from '~/features/editor/pages/editor-page'
+import { validateSearch } from '~/editor-adapters/workspace-route-search'
+import { LiveWorkspacePage } from '~/editor-adapters/live/live-workspace-page'
 
 export const Route = createFileRoute('/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor')({
-  component: EditorPage,
+  component: LiveWorkspacePage,
   validateSearch,
 })

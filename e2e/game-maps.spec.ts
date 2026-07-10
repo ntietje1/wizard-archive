@@ -4,7 +4,14 @@ import fs from 'node:fs'
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote } from './helpers/sidebar-helpers'
-import { createMap, openMap, uploadMapImage, writeTestMapImage } from './helpers/map-helpers'
+import {
+  createMap,
+  mapImage,
+  mapPlacementTarget,
+  openMap,
+  uploadMapImage,
+  writeTestMapImage,
+} from './helpers/map-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E Maps')
@@ -26,7 +33,7 @@ test.describe.serial('game maps', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
@@ -42,7 +49,7 @@ test.describe.serial('game maps', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -53,65 +60,64 @@ test.describe.serial('game maps', () => {
   })
 
   test('create map appears in sidebar', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await createMap(page, mapName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(sidebar.getByRole('link', { name: mapName, exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('button', { name: mapName, exact: true })).toBeVisible()
   })
 
   test('upload map image and view with zoom controls', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openMap(page, mapName)
-    await uploadMapImage(page, testImagePath)
+    await uploadMapImage(page, testImagePath, mapName)
 
-    // Verify zoom controls are present
-    await expect(page.locator('[title="Zoom In"]')).toBeVisible()
-    await expect(page.locator('[title="Zoom Out"]')).toBeVisible()
-    await expect(page.locator('[title="Reset View"]')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^zoom in$/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^zoom out$/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^reset view$/i })).toBeVisible()
 
-    await page.locator('[title="Zoom In"]').click()
-    await page.locator('[title="Reset View"]').click()
+    await page.getByRole('button', { name: /^zoom in$/i }).click()
+    await page.getByRole('button', { name: /^reset view$/i }).click()
   })
 
   test('pin a sidebar item to the map', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openMap(page, mapName)
 
     // Right-click the note in sidebar to pin it
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await sidebar.getByRole('link', { name: noteName, exact: true }).click({ button: 'right' })
+    await sidebar.getByRole('button', { name: noteName, exact: true }).click({ button: 'right' })
     await expect(page.getByRole('menu')).toBeVisible({ timeout: 5000 })
 
     const pinMenuItem = page.getByRole('menuitem', { name: /pin to map/i })
     await expect(pinMenuItem).toBeVisible({ timeout: 3000 })
     await pinMenuItem.click()
 
-    const canvas = page.locator('[aria-label="Map canvas"]')
+    const canvas = mapPlacementTarget(page)
     await expect(canvas).toBeVisible()
 
-    const mapImage = canvas.locator('img').first()
-    await mapImage.waitFor({ state: 'visible', timeout: 10000 })
+    const image = mapImage(page, mapName)
+    await image.waitFor({ state: 'visible', timeout: 10000 })
     await page.waitForFunction(
       (el) => {
-        const img = el?.querySelector('img')
+        const img = el as HTMLImageElement | null
         return img != null && img.complete && img.naturalWidth > 0
       },
-      await canvas.elementHandle(),
+      await image.elementHandle(),
       { timeout: 10000 },
     )
 
-    await mapImage.click({ force: true })
+    await canvas.click({ force: true })
     await expect(page.locator('[data-pin-id]').first()).toBeVisible({
       timeout: 10000,
     })
   })
 
   test('pin context menu shows actions', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openMap(page, mapName)
 
@@ -128,7 +134,7 @@ test.describe.serial('game maps', () => {
   })
 
   test('toggle pin visibility', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openMap(page, mapName)
 
@@ -159,7 +165,7 @@ test.describe.serial('game maps', () => {
   })
 
   test('remove pin from map', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openMap(page, mapName)
 

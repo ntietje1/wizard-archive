@@ -1,15 +1,17 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { syncNoteLinks } from './syncNoteLinks'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Block } from '../../blocks/types'
 import type { Id } from '../../_generated/dataModel'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
+import { createAccessibleResourcePathResolver } from '../../sidebarItems/functions/resourcePathResolver'
 
 export async function resyncNoteLinksForNotes(
   ctx: CampaignMutationCtx,
   { noteIds }: { noteIds: Array<Id<'sidebarItems'>> },
 ): Promise<void> {
   const uniqueNoteIds = [...new Set(noteIds)]
+  const resourcePathResolver = createAccessibleResourcePathResolver(ctx)
 
   await Promise.all(
     uniqueNoteIds.map(async (noteId) => {
@@ -17,7 +19,7 @@ export async function resyncNoteLinksForNotes(
       if (
         !note ||
         note.campaignId !== ctx.campaign._id ||
-        note.type !== SIDEBAR_ITEM_TYPES.notes ||
+        note.type !== RESOURCE_TYPES.notes ||
         !isActiveSidebarItem(note)
       ) {
         return
@@ -34,6 +36,7 @@ export async function resyncNoteLinksForNotes(
         noteId,
         campaignId: note.campaignId,
         blocks,
+        resourcePathResolver,
       })
     }),
   )

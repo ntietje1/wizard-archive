@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Button } from '~/features/shadcn/components/button'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 
 export default function NotFoundPage() {
   return (

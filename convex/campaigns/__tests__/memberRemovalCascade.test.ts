@@ -9,7 +9,7 @@ import {
   createSidebarShare,
   testBlockNoteId,
 } from '../../_test/factories.helper'
-import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
+import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
 describe('multi-player share + membership removal cascade', () => {
@@ -83,7 +83,7 @@ describe('multi-player share + membership removal cascade', () => {
     expect(bookmark).not.toBeNull()
   })
 
-  it('Removed status cannot transition to Accepted', async () => {
+  it('restores a removed player to accepted membership', async () => {
     const { dm, players, campaignId } = await setupMultiPlayerContext(t, 1)
     const dmAuth = dm.authed
     const p1 = players[0]
@@ -94,13 +94,14 @@ describe('multi-player share + membership removal cascade', () => {
       status: 'Removed',
     })
 
-    await expectValidationFailed(
-      dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-        campaignId,
-        memberId: p1.memberId,
-        status: 'Accepted',
-      }),
-    )
+    await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
+      memberId: p1.memberId,
+      status: 'Accepted',
+    })
+
+    const campaigns = await p1.authed.query(api.campaigns.queries.getUserCampaigns, {})
+    expect(campaigns.map((campaign) => campaign.id)).toContain(campaignId)
   })
 
   it('block shares for removed player still exist but player cannot access note', async () => {
@@ -155,10 +156,10 @@ describe('multi-player share + membership removal cascade', () => {
       status: 'Removed',
     })
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+    const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId,
     })
-    const noteItem = items.find((i) => i._id === noteId)
+    const noteItem = items.find((i) => i.id === noteId)
     expect(noteItem).toBeDefined()
   })
 })

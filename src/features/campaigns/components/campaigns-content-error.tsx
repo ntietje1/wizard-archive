@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react'
-import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
+import { ContentGrid } from '@wizard-archive/ui/components/content-grid'
 import { EmptyState } from '~/features/campaigns/components/content-grid/empty-state'
 
 export const CampaignsContentError = () => {

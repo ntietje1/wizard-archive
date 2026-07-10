@@ -3,7 +3,6 @@ import { createTestContext } from '../../_test/setup.helper'
 import {
   createNoteViaFilesystem,
   createFolderViaFilesystem,
-  createFileViaFilesystem,
   createGameMapViaFilesystem,
   createCanvasViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
@@ -11,22 +10,19 @@ import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { testId } from '../../_test/test-id.helper'
-import { coerceSidebarItemColorForInput } from '../../../shared/sidebar-items/color'
-import { coerceSidebarItemIconNameForInput } from '../../../shared/sidebar-items/icon'
 import {
   checkNameConflict,
   validateItemName,
-  validateSidebarItemNameWithSiblings,
-} from '../../../shared/sidebar-items/name'
-import {
-  validateCreateParentTarget,
-  validateNoCircularParent,
+  validateResourceItemNameWithSiblings,
   validateNoCircularParentAsync,
-} from '../../../shared/sidebar-items/parent-target'
-import { parseSidebarItemSlug } from '../../../shared/sidebar-items/slug'
+  parseResourceItemSlug,
+} from '@wizard-archive/editor/resources/items'
+import {
+  RESOURCE_STATUS,
+  RESOURCE_TYPES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { Id } from '../../_generated/dataModel'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
+import { requireCreateParentTarget } from '../validation/parent'
 
 describe('validateItemName', () => {
   it('accepts a valid name', () => {
@@ -118,85 +114,81 @@ describe('validateItemName', () => {
   })
 })
 
+describe('sidebar item lifecycle schema invariants', () => {
+  const t = createTestContext()
+
+  it('rejects lifecycle patches that omit required trash metadata', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expect(
+      t.run(async (dbCtx) =>
+        dbCtx.db.patch('sidebarItems', noteId, { status: RESOURCE_STATUS.trashed } as never),
+      ),
+    ).rejects.toThrow('Validator error')
+
+    await t.run(async (dbCtx) => {
+      await expect(dbCtx.db.get('sidebarItems', noteId)).resolves.toMatchObject({
+        status: RESOURCE_STATUS.active,
+        deletionTime: null,
+        deletedBy: null,
+      })
+    })
+  })
+})
+
 describe('validateSidebarItemSlug', () => {
   it('accepts a valid slug', () => {
-    expect(parseSidebarItemSlug('my-note')).toBe('my-note')
+    expect(parseResourceItemSlug('my-note')).toBe('my-note')
   })
 
   it('rejects empty string', () => {
-    expect(parseSidebarItemSlug('')).toBeNull()
+    expect(parseResourceItemSlug('')).toBeNull()
   })
 
   it('accepts single-character slugs', () => {
-    expect(parseSidebarItemSlug('a')).toBe('a')
+    expect(parseResourceItemSlug('a')).toBe('a')
   })
 
   it('rejects uppercase letters', () => {
-    expect(parseSidebarItemSlug('My-Note')).toBeNull()
+    expect(parseResourceItemSlug('My-Note')).toBeNull()
   })
 
   it('rejects spaces', () => {
-    expect(parseSidebarItemSlug('my note')).toBeNull()
+    expect(parseResourceItemSlug('my note')).toBeNull()
   })
 
   it('accepts underscores', () => {
-    expect(parseSidebarItemSlug('my_note')).toBe('my_note')
+    expect(parseResourceItemSlug('my_note')).toBe('my_note')
   })
 
   it('rejects consecutive separators', () => {
-    expect(parseSidebarItemSlug('my--note')).toBeNull()
-    expect(parseSidebarItemSlug('my-_note')).toBeNull()
+    expect(parseResourceItemSlug('my--note')).toBeNull()
+    expect(parseResourceItemSlug('my-_note')).toBeNull()
   })
 
   it('rejects leading or trailing separators', () => {
-    expect(parseSidebarItemSlug('-note')).toBeNull()
-    expect(parseSidebarItemSlug('note-')).toBeNull()
-    expect(parseSidebarItemSlug('_note')).toBeNull()
-    expect(parseSidebarItemSlug('note_')).toBeNull()
+    expect(parseResourceItemSlug('-note')).toBeNull()
+    expect(parseResourceItemSlug('note-')).toBeNull()
+    expect(parseResourceItemSlug('_note')).toBeNull()
+    expect(parseResourceItemSlug('note_')).toBeNull()
   })
 
   it('accepts exactly 255 characters', () => {
     const slug = 'a'.repeat(255)
-    expect(parseSidebarItemSlug(slug)).toBe(slug)
+    expect(parseResourceItemSlug(slug)).toBe(slug)
   })
 
   it('rejects 256 characters', () => {
     const slug = 'a'.repeat(256)
-    expect(parseSidebarItemSlug(slug)).toBeNull()
-  })
-})
-
-describe('sidebar item color validation', () => {
-  it('coerces valid colors and normalizes them to lowercase', () => {
-    expect(coerceSidebarItemColorForInput('#ABCDEF')).toBe('#abcdef')
-    expect(coerceSidebarItemColorForInput('#ABCDEF80')).toBe('#abcdef80')
-  })
-
-  it('rejects invalid colors', () => {
-    expect(() => coerceSidebarItemColorForInput('abcdef')).toThrow(
-      'Color must be a 6- or 8-digit hex value',
-    )
-    expect(() => coerceSidebarItemColorForInput('#FFF')).toThrow(
-      'Color must be a 6- or 8-digit hex value',
-    )
-  })
-})
-
-describe('sidebar item icon validation', () => {
-  it('accepts supported icon names', () => {
-    expect(coerceSidebarItemIconNameForInput('Shield')).toBe('Shield')
-    expect(coerceSidebarItemIconNameForInput('Grid2x2Plus')).toBe('Grid2x2Plus')
-  })
-
-  it('rejects unsupported icon names', () => {
-    expect(() => coerceSidebarItemIconNameForInput('Nope')).toThrow('Icon is not supported')
+    expect(parseResourceItemSlug(slug)).toBeNull()
   })
 })
 
 describe('checkNameConflict', () => {
   const siblings = [
-    { _id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
-    { _id: testId<'sidebarItems'>('id2'), name: 'Beta' },
+    { id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
+    { id: testId<'sidebarItems'>('id2'), name: 'Beta' },
   ]
 
   it('returns valid when no conflict', () => {
@@ -214,24 +206,24 @@ describe('checkNameConflict', () => {
   })
 })
 
-describe('validateSidebarItemNameWithSiblings', () => {
+describe('validateResourceItemNameWithSiblings', () => {
   const siblings = [
-    { _id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
-    { _id: testId<'sidebarItems'>('id2'), name: 'Beta' },
+    { id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
+    { id: testId<'sidebarItems'>('id2'), name: 'Beta' },
   ]
 
   it('validates format-only names when no siblings are provided', () => {
-    expect(validateSidebarItemNameWithSiblings('Gamma')).toEqual({ valid: true })
+    expect(validateResourceItemNameWithSiblings('Gamma')).toEqual({ valid: true })
   })
 
   it('checks sibling conflicts after trimming', () => {
-    const result = validateSidebarItemNameWithSiblings(' alpha ', siblings)
+    const result = validateResourceItemNameWithSiblings(' alpha ', siblings)
     expect(result.valid).toBe(false)
   })
 
   it('ignores the excluded item when checking conflicts', () => {
     expect(
-      validateSidebarItemNameWithSiblings('Alpha', siblings, testId<'sidebarItems'>('id1')),
+      validateResourceItemNameWithSiblings('Alpha', siblings, testId<'sidebarItems'>('id1')),
     ).toEqual({ valid: true })
   })
 })
@@ -241,13 +233,17 @@ describe('validateNoCircularParent', () => {
     parentId: parentId ? testId<'sidebarItems'>(parentId) : null,
   })
 
-  it('returns valid for null parent', () => {
-    const result = validateNoCircularParent(testId<'sidebarItems'>('f1'), null, () => undefined)
+  it('returns valid for null parent', async () => {
+    const result = await validateNoCircularParentAsync(
+      testId<'sidebarItems'>('f1'),
+      null,
+      () => undefined,
+    )
     expect(result).toEqual({ valid: true })
   })
 
-  it('rejects item as its own parent', () => {
-    const result = validateNoCircularParent(
+  it('rejects item as its own parent', async () => {
+    const result = await validateNoCircularParentAsync(
       testId<'sidebarItems'>('f1'),
       testId<'sidebarItems'>('f1'),
       () => undefined,
@@ -255,12 +251,12 @@ describe('validateNoCircularParent', () => {
     expect(result.valid).toBe(false)
   })
 
-  it('detects ancestor cycle', () => {
+  it('detects ancestor cycle', async () => {
     const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
       f2: folder('f3'),
       f3: folder('f1'),
     }
-    const result = validateNoCircularParent(
+    const result = await validateNoCircularParentAsync(
       testId<'sidebarItems'>('f1'),
       testId<'sidebarItems'>('f2'),
       (id) => tree[id],
@@ -268,13 +264,13 @@ describe('validateNoCircularParent', () => {
     expect(result.valid).toBe(false)
   })
 
-  it('allows deep chain with no cycle', () => {
+  it('allows deep chain with no cycle', async () => {
     const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
       f2: folder('f3'),
       f3: folder('f4'),
       f4: folder(null),
     }
-    const result = validateNoCircularParent(
+    const result = await validateNoCircularParentAsync(
       testId<'sidebarItems'>('f1'),
       testId<'sidebarItems'>('f2'),
       (id) => tree[id],
@@ -282,17 +278,20 @@ describe('validateNoCircularParent', () => {
     expect(result).toEqual({ valid: true })
   })
 
-  it('breaks on circular data via seen set', () => {
+  it('rejects circular source data through the seen set', async () => {
     const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
       f2: folder('f3'),
       f3: folder('f2'),
     }
-    const result = validateNoCircularParent(
+    const result = await validateNoCircularParentAsync(
       testId<'sidebarItems'>('f1'),
       testId<'sidebarItems'>('f2'),
       (id) => tree[id],
     )
-    expect(result).toEqual({ valid: true })
+    expect(result).toEqual({
+      valid: false,
+      error: 'This move would create a circular reference',
+    })
   })
 
   it('supports async parent lookups with the same behavior', async () => {
@@ -309,116 +308,28 @@ describe('validateNoCircularParent', () => {
   })
 })
 
-describe('validateCreateParentTarget', () => {
-  function createValidationItem(
-    id: string,
-    type: AnySidebarItem['type'],
-    parentId: Id<'sidebarItems'> | null = null,
-  ): AnySidebarItem {
-    return {
-      _id: testId<'sidebarItems'>(id),
-      type,
+describe('requireCreateParentTarget', () => {
+  it('preserves direct parent targets for command execution', () => {
+    const parentId = testId<'sidebarItems'>('direct-parent')
+
+    expect(requireCreateParentTarget({ kind: 'direct', parentId })).toEqual({
+      kind: 'direct',
       parentId,
-      name: id,
-    } as unknown as AnySidebarItem
-  }
-
-  it('rejects path targets whose base parent is not a folder', () => {
-    const noteId = testId<'sidebarItems'>('note-parent')
-    const noteParent = {
-      _id: noteId,
-      type: SIDEBAR_ITEM_TYPES.notes,
-      parentId: null,
-      name: 'Leaf Note',
-    } as unknown as AnySidebarItem
-
-    const result = validateCreateParentTarget(
-      {
-        kind: 'path',
-        baseParentId: noteId,
-        pathSegments: [],
-      },
-      new Map([[noteId, noteParent]]),
-      new Map([[null, [noteParent]]]),
-    )
-
-    expect(result).toEqual({
-      valid: false,
-      error: 'Parent is not a folder',
     })
   })
 
-  it('accepts a path target whose base parent is a folder', () => {
-    const folder = createValidationItem('folder-parent', SIDEBAR_ITEM_TYPES.folders)
-    const child = createValidationItem('folder-child', SIDEBAR_ITEM_TYPES.notes, folder._id)
-
-    const result = validateCreateParentTarget(
-      {
-        kind: 'path',
-        baseParentId: folder._id,
-        pathSegments: [],
-      },
-      new Map([[folder._id, folder]]),
-      new Map([[folder._id, [child]]]),
-    )
-
-    expect(result).toEqual({
-      valid: true,
-      parentId: folder._id,
-      siblings: [child],
-    })
-  })
-
-  it('uses root siblings when a root path target has no segments', () => {
-    const first = createValidationItem('first-root-child', SIDEBAR_ITEM_TYPES.notes)
-    const second = createValidationItem('second-root-child', SIDEBAR_ITEM_TYPES.folders)
-
-    const result = validateCreateParentTarget(
-      {
+  it('normalizes path segments to backend-safe parent path tokens', () => {
+    expect(
+      requireCreateParentTarget({
         kind: 'path',
         baseParentId: null,
-        pathSegments: [],
-      },
-      new Map([
-        [first._id, first],
-        [second._id, second],
-      ]),
-      new Map([[null, [first, second]]]),
-    )
-
-    expect(result).toEqual({
-      valid: true,
-      parentId: null,
-      siblings: [first, second],
+        pathSegments: ['.', '  Lore  ', '..'],
+      }),
+    ).toEqual({
+      kind: 'path',
+      baseParentId: null,
+      pathSegments: ['.', 'Lore', '..'],
     })
-  })
-
-  it('rejects missing base parents', () => {
-    expect(
-      validateCreateParentTarget(
-        {
-          kind: 'path',
-          baseParentId: testId<'sidebarItems'>('missing-parent'),
-          pathSegments: [],
-        },
-        new Map(),
-        new Map(),
-      ),
-    ).toEqual({ valid: false, error: 'Parent not found' })
-  })
-
-  it('rejects empty path segments', () => {
-    expect(
-      validateCreateParentTarget(
-        {
-          kind: 'path',
-          baseParentId: null,
-          pathSegments: [''],
-        },
-        new Map(),
-        new Map(),
-      ),
-    ).toEqual({ valid: false, error: 'Path segments cannot be empty' })
   })
 })
 
@@ -544,8 +455,8 @@ describe('cross-table slug uniqueness', () => {
       content: [],
     })
 
-    expect(parseSidebarItemSlug(first.slug)).toBe(first.slug)
-    expect(parseSidebarItemSlug(second.slug)).toBe(second.slug)
+    expect(parseResourceItemSlug(first.slug)).toBe(first.slug)
+    expect(parseResourceItemSlug(second.slug)).toBe(second.slug)
     expect(first.slug.length).toBeLessThanOrEqual(255)
     expect(second.slug.length).toBeLessThanOrEqual(255)
   })
@@ -559,7 +470,7 @@ describe('cross-table slug uniqueness', () => {
         campaignId: ctx.campaignId,
         command: {
           type: 'create',
-          itemType: SIDEBAR_ITEM_TYPES.notes,
+          itemType: RESOURCE_TYPES.notes,
           name: 'bad-color-note',
           parentTarget: { kind: 'direct', parentId: null },
           color: 'red' as never,
@@ -594,17 +505,28 @@ describe('cross-table slug uniqueness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const result = await createFileViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
-      name: 'file-with-color',
-      parentTarget: { kind: 'direct', parentId: null },
-      iconName: 'Shield',
-      color: coerceSidebarItemColorForInput('#ABCDEF'),
-    })
+    const receipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+      {
+        campaignId: ctx.campaignId,
+        command: {
+          type: 'create',
+          itemType: RESOURCE_TYPES.files,
+          name: 'file-with-color',
+          parentTarget: { kind: 'direct', parentId: null },
+          iconName: 'Shield',
+          color: '#ABCDEF',
+        },
+      },
+    )
+    const created = receipt.events.find((event) => event.type === 'created')
+    if (!created || created.type !== 'created') {
+      throw new Error('Expected file create command to create a sidebar item')
+    }
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
       campaignId: ctx.campaignId,
-      slug: result.slug,
+      slug: created.slug,
     })
 
     expect(item?.iconName).toBe('Shield')
@@ -663,18 +585,78 @@ describe('cross-table slug uniqueness', () => {
   })
 })
 
-describe('input coercion helpers', () => {
-  it('coerces valid icon and color inputs', () => {
-    expect(coerceSidebarItemIconNameForInput('Shield')).toBe('Shield')
-    expect(coerceSidebarItemColorForInput('#ABCDEF')).toBe('#abcdef')
-    expect(coerceSidebarItemIconNameForInput(null)).toBeNull()
-    expect(coerceSidebarItemColorForInput(undefined)).toBeUndefined()
+describe('folder share inheritance defaults', () => {
+  const t = createTestContext()
+
+  async function getFolderInheritShares(
+    client: ReturnType<typeof asDm>,
+    campaignId: Id<'campaigns'>,
+    folderId: Id<'sidebarItems'>,
+  ) {
+    const item = await client.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId,
+      id: folderId,
+    })
+    expect(item.type).toBe(RESOURCE_TYPES.folders)
+    if (item.type !== RESOURCE_TYPES.folders) throw new Error('Expected folder')
+    return item.inheritShares
+  }
+
+  it('creates folders with inheritance disabled by default', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const folder = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'default-off',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expect(getFolderInheritShares(dmAuth, ctx.campaignId, folder.folderId)).resolves.toBe(
+      false,
+    )
   })
 
-  it('throws the same validation errors for invalid icon and color inputs', () => {
-    expect(() => coerceSidebarItemIconNameForInput('Nope')).toThrow('Icon is not supported')
-    expect(() => coerceSidebarItemColorForInput('#FFF')).toThrow(
-      'Color must be a 6- or 8-digit hex value',
+  it('uses the campaign folder inheritance default only for future folders', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const before = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'before-setting-change',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
+      campaignId: ctx.campaignId,
+      defaultFolderInheritShares: true,
+    })
+
+    const afterEnabled = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'after-setting-enabled',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
+      campaignId: ctx.campaignId,
+      defaultFolderInheritShares: false,
+    })
+
+    const afterDisabled = await createFolderViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'after-setting-disabled',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expect(getFolderInheritShares(dmAuth, ctx.campaignId, before.folderId)).resolves.toBe(
+      false,
     )
+    await expect(
+      getFolderInheritShares(dmAuth, ctx.campaignId, afterEnabled.folderId),
+    ).resolves.toBe(true)
+    await expect(
+      getFolderInheritShares(dmAuth, ctx.campaignId, afterDisabled.folderId),
+    ).resolves.toBe(false)
   })
 })

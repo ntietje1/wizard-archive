@@ -150,7 +150,7 @@ describe('getUserCampaigns', () => {
     const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
 
     expect(campaigns).toHaveLength(1)
-    expect(campaigns[0]._id).toBe(campaignId)
+    expect(campaigns[0].id).toBe(campaignId)
   })
 
   it('excludes Pending memberships', async () => {
@@ -209,10 +209,38 @@ describe('getUserCampaigns', () => {
     expect(campaigns).toHaveLength(1)
     const campaign = campaigns[0]
     expect(campaign.dmUserProfile).toBeDefined()
-    expect(campaign.dmUserProfile._id).toBe(ctx.dm.profile._id)
+    expect(campaign.dmUserId).toBe(ctx.dm.profile._id)
     expect(typeof campaign.acceptedMemberCount).toBe('number')
     expect(campaign.myMembership).toBeDefined()
-    expect(campaign.myMembership!._id).toBe(ctx.dm.memberId)
+    expect(campaign.myMembership!.id).toBe(ctx.dm.memberId)
+  })
+
+  it('returns public campaign profiles without private account fields', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    const campaigns = await playerAuth.query(api.campaigns.queries.getUserCampaigns, {})
+
+    expect(campaigns).toHaveLength(1)
+    const campaign = campaigns[0]
+    expect(campaign.dmUserProfile).toEqual({
+      name: ctx.dm.profile.name,
+      username: ctx.dm.profile.username,
+      imageUrl: null,
+    })
+    expect(campaign.dmUserProfile).not.toHaveProperty('authUserId')
+    expect(campaign.dmUserProfile).not.toHaveProperty('email')
+    expect(campaign.dmUserProfile).not.toHaveProperty('emailVerified')
+    expect(campaign.dmUserProfile).not.toHaveProperty('twoFactorEnabled')
+    expect(campaign.myMembership?.userProfile).toEqual({
+      name: ctx.player.profile.name,
+      username: ctx.player.profile.username,
+      imageUrl: null,
+    })
+    expect(campaign.myMembership?.userProfile).not.toHaveProperty('authUserId')
+    expect(campaign.myMembership?.userProfile).not.toHaveProperty('email')
+    expect(campaign.myMembership?.userProfile).not.toHaveProperty('emailVerified')
+    expect(campaign.myMembership?.userProfile).not.toHaveProperty('twoFactorEnabled')
   })
 
   it('reports accepted campaign members, including the DM membership', async () => {
@@ -220,7 +248,7 @@ describe('getUserCampaigns', () => {
     const { campaignId } = await createCampaignWithDm(t, dm.profile)
 
     let campaigns = await dm.authed.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.find((campaign) => campaign._id === campaignId)).toMatchObject({
+    expect(campaigns.find((campaign) => campaign.id === campaignId)).toMatchObject({
       acceptedMemberCount: 1,
     })
 
@@ -228,7 +256,7 @@ describe('getUserCampaigns', () => {
     await addPlayerToCampaign(t, campaignId, player.profile)
 
     campaigns = await dm.authed.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.find((campaign) => campaign._id === campaignId)).toMatchObject({
+    expect(campaigns.find((campaign) => campaign.id === campaignId)).toMatchObject({
       acceptedMemberCount: 2,
     })
   })
@@ -256,8 +284,43 @@ describe('getCampaignBySlug', () => {
       slug,
     })
 
-    expect(campaign._id).toBe(ctx.campaignId)
+    expect(campaign.id).toBe(ctx.campaignId)
     expect(campaign.dmUserProfile).toBeDefined()
+  })
+
+  it('returns public DM and membership profiles without private account fields', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    let slug = ''
+    await t.run(async (dbCtx) => {
+      const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
+      slug = campaign!.slug
+    })
+
+    const campaign = await playerAuth.query(api.campaigns.queries.getCampaignBySlug, {
+      dmUsername: ctx.dm.profile.username,
+      slug,
+    })
+
+    expect(campaign.dmUserProfile).toEqual({
+      name: ctx.dm.profile.name,
+      username: ctx.dm.profile.username,
+      imageUrl: null,
+    })
+    expect(campaign.dmUserProfile).not.toHaveProperty('authUserId')
+    expect(campaign.dmUserProfile).not.toHaveProperty('email')
+    expect(campaign.dmUserProfile).not.toHaveProperty('emailVerified')
+    expect(campaign.dmUserProfile).not.toHaveProperty('twoFactorEnabled')
+    expect(campaign.myMembership?.userProfile).toEqual({
+      name: ctx.player.profile.name,
+      username: ctx.player.profile.username,
+      imageUrl: null,
+    })
+    expect(campaign.myMembership?.userProfile).not.toHaveProperty('authUserId')
+    expect(campaign.myMembership?.userProfile).not.toHaveProperty('email')
+    expect(campaign.myMembership?.userProfile).not.toHaveProperty('emailVerified')
+    expect(campaign.myMembership?.userProfile).not.toHaveProperty('twoFactorEnabled')
   })
 
   it('returns NOT_FOUND for nonexistent slug', async () => {
@@ -678,7 +741,7 @@ describe('updateCampaignMemberStatus', () => {
     })
   })
 
-  it('rejects Removed to any status', async () => {
+  it('transitions Removed to Accepted', async () => {
     const dm = await setupUser(t)
     const { campaignId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
@@ -686,13 +749,14 @@ describe('updateCampaignMemberStatus', () => {
       status: 'Removed',
     })
 
-    await expectValidationFailed(
-      dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-        campaignId,
-        memberId,
-        status: 'Accepted',
-      }),
-    )
+    await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
+      memberId,
+      status: 'Accepted',
+    })
+
+    const member = await t.run(async (ctx) => await ctx.db.get('campaignMembers', memberId))
+    expect(member?.status).toBe('Accepted')
   })
 
   it('rejects Accepted to Accepted', async () => {
@@ -820,6 +884,29 @@ describe('updateCampaign', () => {
       const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       expect(campaign!.description).toBe('New description')
     })
+  })
+
+  it('normalizes nullable folder inheritance defaults for existing campaigns', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.patch('campaigns', ctx.campaignId, { defaultFolderInheritShares: null })
+    })
+
+    const campaigns = await dmAuth.query(api.campaigns.queries.getUserCampaigns, {})
+    expect(campaigns.find((campaign) => campaign.id === ctx.campaignId)).toMatchObject({
+      defaultFolderInheritShares: false,
+    })
+
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+    const folder = await t.run(async (dbCtx) =>
+      dbCtx.db
+        .query('folders')
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderId))
+        .unique(),
+    )
+    expect(folder?.inheritShares).toBe(false)
   })
 
   it('updates slug', async () => {

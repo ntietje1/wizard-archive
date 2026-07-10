@@ -1,13 +1,12 @@
-import { EDIT_HISTORY_ACTION } from '../../shared/edit-history/types'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import type {
-  EditHistoryAction,
   EditHistoryChange,
   EditHistoryMetadataMap,
   LogEditHistoryArgs,
-} from '../../shared/edit-history/types'
-import type { SidebarItemType } from '../../shared/sidebar-items/types'
+} from '@wizard-archive/editor/resources/history-contract'
+import type { ResourceKind } from '@wizard-archive/editor/resources/resource-contract'
 
 type EditHistoryCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>
@@ -16,7 +15,7 @@ type EditHistoryCtx = Pick<MutationCtx, 'db'> & {
 
 type LogEditHistoryBase = {
   itemId: Id<'sidebarItems'>
-  itemType: SidebarItemType
+  itemType: ResourceKind
 }
 
 async function insertEditHistory(
@@ -35,7 +34,7 @@ async function insertEditHistory(
   })
 }
 
-function toLogEditHistoryArgs<T extends EditHistoryAction>(
+function toLogEditHistoryArgs<T extends LogEditHistoryArgs['action']>(
   base: LogEditHistoryBase,
   action: T,
   metadata: EditHistoryMetadataMap[T],

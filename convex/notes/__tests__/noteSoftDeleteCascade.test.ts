@@ -139,7 +139,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     })
   })
 
-  it('persist is a no-op when note is soft-deleted', async () => {
+  it('rejects Yjs writes when note is soft-deleted', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
@@ -167,17 +167,15 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
-      documentId: noteId,
-      update: makeYjsUpdateWithBlocks([
-        { id: testBlockNoteId('block-b'), type: 'heading', props: { level: 1 }, children: [] },
-      ]),
-    })
-    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
-      documentId: noteId,
-    })
+    await expect(
+      dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
+        documentId: noteId,
+        update: makeYjsUpdateWithBlocks([
+          { id: testBlockNoteId('block-b'), type: 'heading', props: { level: 1 }, children: [] },
+        ]),
+      }),
+    ).rejects.toThrow('Document is not active')
 
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db

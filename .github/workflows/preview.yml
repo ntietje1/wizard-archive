@@ -3,27 +3,33 @@ name: Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to deploy after review
+        required: true
+        type: number
 
 concurrency:
-  group: preview-${{ github.event.pull_request.number }}
+  group: preview-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
   cancel-in-progress: true
 
 env:
   NODE_VERSION: 22
-  WORKER_NAME: wizard-archive-pr-${{ github.event.pull_request.number }}
-  PREVIEW_URL: https://preview-${{ github.event.pull_request.number }}.wizardarchive.com
+  PREVIEW_PR_NUMBER: ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
+  WORKER_NAME: wizard-archive-pr-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
+  PREVIEW_URL: https://preview-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}.wizardarchive.com
 
 jobs:
-  deploy-preview:
-    name: Deploy Preview
-    if: github.event.action != 'closed'
+  validate-preview:
+    name: Validate Preview Candidate
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
-    environment: preview
     permissions:
-      pull-requests: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: voidzero-dev/setup-vp@v1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: voidzero-dev/setup-vp@e3a8f54e503c635126f2f253c84cea5f737d6714
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
@@ -31,25 +37,72 @@ jobs:
 
       - name: Validate Preview Candidate
         run: |
+          vp run check:editor-sdk
           vp check
           vp run lint:convex
           vp run check:no-reexports
           vp run check:import-boundaries
-          vp build --mode production
+          vp run build:production
         env:
           VITE_SITE_URL: ${{ env.PREVIEW_URL }}
+
+  deploy-preview:
+    name: Deploy Preview
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: preview
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout trusted deploy scripts
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          path: trusted
+
+      - name: Checkout reviewed preview candidate
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/merge
+          path: candidate
+
+      - uses: voidzero-dev/setup-vp@e3a8f54e503c635126f2f253c84cea5f737d6714
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: true
+
+      - name: Install Candidate Dependencies
+        run: vp install --frozen-lockfile
+        working-directory: candidate
+
+      - name: Validate Preview Candidate
+        run: |
+          vp run check:editor-sdk
+          vp check
+          vp run lint:convex
+          vp run check:no-reexports
+          vp run check:import-boundaries
+          vp run build:production
+        working-directory: candidate
+        env:
+          VITE_SITE_URL: ${{ env.PREVIEW_URL }}
+
+      - name: Install Trusted Deploy Dependencies
+        run: vp install --frozen-lockfile
+        working-directory: trusted
 
       - name: Deploy Convex Preview
         run: |
           vp exec convex deploy \
-            --preview-create "pr-${{ github.event.pull_request.number }}" \
+            --preview-create "pr-${{ env.PREVIEW_PR_NUMBER }}" \
             --cmd 'case "$VITE_CONVEX_URL" in https://*.convex.cloud) export VITE_CONVEX_SITE_URL="${VITE_CONVEX_URL%.convex.cloud}.convex.site" ;; *) echo "Expected VITE_CONVEX_URL to be a https://*.convex.cloud URL" >&2; exit 1 ;; esac && printf "VITE_CONVEX_URL=%s\nVITE_CONVEX_SITE_URL=%s\n" "$VITE_CONVEX_URL" "$VITE_CONVEX_SITE_URL" >> "$GITHUB_ENV" && vp build' \
             --cmd-url-env-var-name VITE_CONVEX_URL
+        working-directory: candidate
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
           VITE_SITE_URL: ${{ env.PREVIEW_URL }}
           VITE_IS_PREVIEW: 'true'
-          VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VITE_PR_NUMBER: ${{ env.PREVIEW_PR_NUMBER }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Configure Preview Backends And Worker
@@ -69,32 +122,34 @@ jobs:
 
           export BETTER_AUTH_ALLOWED_HOSTS="${preview_host},${convex_site_host}"
 
-          bash scripts/write-worker-env.sh "$worker_env_file"
-          bash scripts/write-convex-env.sh "$convex_env_file"
+          bash "$GITHUB_WORKSPACE/trusted/scripts/write-worker-env.sh" "$worker_env_file"
+          bash "$GITHUB_WORKSPACE/trusted/scripts/write-convex-env.sh" "$convex_env_file"
 
           vp exec convex env set --from-file "$convex_env_file" --force \
-            --preview-name "pr-${{ github.event.pull_request.number }}"
+            --preview-name "pr-${{ env.PREVIEW_PR_NUMBER }}"
           vp exec wrangler deploy \
-            --config dist/server/wrangler.json \
+            --config "$GITHUB_WORKSPACE/candidate/dist/server/wrangler.json" \
             --keep-vars \
             --secrets-file "$worker_env_file" \
             --name "${{ env.WORKER_NAME }}" \
-            --domain "preview-${{ github.event.pull_request.number }}.wizardarchive.com"
+            --domain "preview-${{ env.PREVIEW_PR_NUMBER }}.wizardarchive.com"
           curl --fail --show-error --silent --retry 10 --retry-delay 12 --retry-all-errors --output /dev/null "${{ env.PREVIEW_URL }}/"
+        working-directory: trusted
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           VITE_SITE_URL: ${{ env.PREVIEW_URL }}
           VITE_IS_PREVIEW: 'true'
-          VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VITE_PR_NUMBER: ${{ env.PREVIEW_PR_NUMBER }}
           VITE_GITHUB_REPOSITORY: ${{ github.repository }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
 
       - name: Comment Preview URL
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405
         with:
           header: preview-url
+          number: ${{ env.PREVIEW_PR_NUMBER }}
           message: |
             ### Preview Deployment
 
@@ -104,12 +159,16 @@ jobs:
 
   cleanup-preview:
     name: Cleanup Preview
-    if: github.event.action == 'closed'
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     environment: preview
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: voidzero-dev/setup-vp@v1
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+      - uses: voidzero-dev/setup-vp@e3a8f54e503c635126f2f253c84cea5f737d6714
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: true

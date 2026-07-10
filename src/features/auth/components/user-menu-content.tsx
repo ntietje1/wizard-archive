@@ -1,11 +1,10 @@
 import { LogOut, Settings } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { api } from 'convex/_generated/api'
 import { authClient } from '~/features/auth/utils/auth-client'
 import { fetchDeviceSessions } from '~/features/auth/utils/device-sessions'
 import { handleError } from '~/shared/utils/logger'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useUserProfileQuery } from '~/shared/hooks/use-user-profile-operations'
 import { useSettingsStore } from '~/features/settings/hooks/settings-store'
 import { AccountRow, AccountSwitcher } from '~/features/auth/components/account-switcher'
 import { useDeviceSessions } from '~/features/auth/hooks/useAuthSessions'
@@ -14,7 +13,7 @@ const menuItemClass =
   'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-muted/70'
 
 export function UserMenuContent({ onClose }: { onClose: () => void }) {
-  const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
+  const profileQuery = useUserProfileQuery()
   const profile = profileQuery.data
   const openSettings = useSettingsStore((s) => s.open)
   const navigate = useNavigate()

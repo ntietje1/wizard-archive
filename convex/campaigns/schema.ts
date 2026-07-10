@@ -1,7 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
-import { convexValidatorFields } from '../common/schema'
+import { domainValidatorFields } from '../common/schema'
 import { userProfileSummaryValidator, userProfileValidator } from '../users/schema'
 
 export const campaignStatusValidator = literals('Active', 'Inactive', 'Deleted')
@@ -17,6 +17,8 @@ const campaignTableFields = {
   slug: v.string(),
   status: campaignStatusValidator,
   currentSessionId: v.nullable(v.id('sessions')),
+  // Temporary widen-migrate-narrow shape; read paths normalize missing/null to false.
+  defaultFolderInheritShares: v.optional(v.union(v.boolean(), v.null())),
 }
 
 const campaignMemberTableFields = {
@@ -39,7 +41,7 @@ export const campaignTables = {
 }
 
 const campaignMemberValidatorFields = {
-  ...convexValidatorFields('campaignMembers'),
+  ...domainValidatorFields('campaignMembers'),
   ...campaignMemberTableFields,
 }
 
@@ -54,9 +56,9 @@ export const campaignMemberSummaryValidator = v.object({
 })
 
 const campaignValidatorFields = {
-  ...convexValidatorFields('campaigns'),
-  dmUserProfile: userProfileValidator,
-  myMembership: v.nullable(campaignMemberValidator),
+  ...domainValidatorFields('campaigns'),
+  dmUserProfile: userProfileSummaryValidator,
+  myMembership: v.nullable(campaignMemberSummaryValidator),
   acceptedMemberCount: v.number(),
   ...campaignTableFields,
 }

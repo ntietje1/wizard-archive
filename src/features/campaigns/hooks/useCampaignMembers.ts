@@ -1,12 +1,8 @@
-import { api } from 'convex/_generated/api'
 import { useCampaign } from './useCampaign'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignMembersQuery } from '~/features/campaigns/hooks/use-campaign-operations'
 
 export function useCampaignMembers() {
   const { campaignId } = useCampaign()
 
-  return useAuthQuery(
-    api.campaigns.queries.getMembersByCampaign,
-    campaignId ? { campaignId } : 'skip',
-  )
+  return useCampaignMembersQuery(campaignId)
 }

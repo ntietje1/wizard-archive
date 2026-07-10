@@ -1,10 +1,10 @@
-import type { BlockNoteId, CustomBlock } from '../../../shared/editor-blocks/types'
+import type { NoteBlockId, NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { Block } from '../types'
 
-type ChildrenByParent = Map<BlockNoteId | null, Array<Block>>
+type ChildrenByParent = Map<NoteBlockId | null, Array<Block>>
 
 function getChildrenByParent(flatBlocks: Array<Block>): ChildrenByParent {
-  const childrenMap = new Map<BlockNoteId | null, Array<Block>>()
+  const childrenMap = new Map<NoteBlockId | null, Array<Block>>()
 
   for (const block of flatBlocks) {
     const key = block.parentBlockId
@@ -22,7 +22,7 @@ function getChildrenByParent(flatBlocks: Array<Block>): ChildrenByParent {
 
 function warnForMissingParents(flatBlocks: Array<Block>) {
   const allBlockIds = new Set(flatBlocks.map((b) => b.blockNoteId))
-  const orphanedBlocks: Array<{ blockNoteId: BlockNoteId; missingParent: BlockNoteId }> = []
+  const orphanedBlocks: Array<{ blockNoteId: NoteBlockId; missingParent: NoteBlockId }> = []
 
   for (const block of flatBlocks) {
     if (block.parentBlockId !== null && !allBlockIds.has(block.parentBlockId)) {
@@ -39,9 +39,9 @@ function warnForMissingParents(flatBlocks: Array<Block>) {
 
 function buildBlockTree(
   childrenMap: ChildrenByParent,
-  parentBlockId: BlockNoteId | null,
-  visited: Set<BlockNoteId>,
-): Array<CustomBlock> {
+  parentBlockId: NoteBlockId | null,
+  visited: Set<NoteBlockId>,
+): Array<NoteBlock> {
   const children = childrenMap.get(parentBlockId) ?? []
 
   return children.flatMap((block) => {
@@ -62,17 +62,17 @@ function buildBlockTree(
       props: isEmbed ? stripLegacyEmbedProps(block.props) : block.props,
       content: content ?? undefined,
       children: childBlocks.length > 0 ? childBlocks : undefined,
-    }) as CustomBlock
+    }) as NoteBlock
   })
 }
 
 function hasUnvisitedCycle(
-  blockNoteId: BlockNoteId,
-  parentMap: Map<BlockNoteId, BlockNoteId | null>,
-  visited: Set<BlockNoteId>,
+  blockNoteId: NoteBlockId,
+  parentMap: Map<NoteBlockId, NoteBlockId | null>,
+  visited: Set<NoteBlockId>,
 ) {
-  const seen = new Set<BlockNoteId>()
-  let current: BlockNoteId | null = blockNoteId
+  const seen = new Set<NoteBlockId>()
+  let current: NoteBlockId | null = blockNoteId
 
   while (current !== null) {
     if (visited.has(current)) return false
@@ -84,13 +84,13 @@ function hasUnvisitedCycle(
   return false
 }
 
-function warnForUnreachedBlocks(flatBlocks: Array<Block>, visited: Set<BlockNoteId>) {
+function warnForUnreachedBlocks(flatBlocks: Array<Block>, visited: Set<NoteBlockId>) {
   const unreached = flatBlocks.filter((b) => !visited.has(b.blockNoteId))
   if (unreached.length === 0) return
 
   const parentMap = new Map(flatBlocks.map((b) => [b.blockNoteId, b.parentBlockId]))
-  const cyclic: Array<BlockNoteId> = []
-  const orphaned: Array<BlockNoteId> = []
+  const cyclic: Array<NoteBlockId> = []
+  const orphaned: Array<NoteBlockId> = []
 
   for (const block of unreached) {
     if (hasUnvisitedCycle(block.blockNoteId, parentMap, visited)) cyclic.push(block.blockNoteId)
@@ -109,11 +109,11 @@ function warnForUnreachedBlocks(flatBlocks: Array<Block>, visited: Set<BlockNote
   }
 }
 
-export function reconstructBlockTree(flatBlocks: Array<Block>): Array<CustomBlock> {
+export function reconstructBlockTree(flatBlocks: Array<Block>): Array<NoteBlock> {
   const childrenMap = getChildrenByParent(flatBlocks)
   warnForMissingParents(flatBlocks)
 
-  const visited = new Set<BlockNoteId>()
+  const visited = new Set<NoteBlockId>()
   const result = buildBlockTree(childrenMap, null, visited)
   warnForUnreachedBlocks(flatBlocks, visited)
 
@@ -122,7 +122,17 @@ export function reconstructBlockTree(flatBlocks: Array<Block>): Array<CustomBloc
 
 function stripLegacyEmbedProps(props: unknown): unknown {
   if (!props || typeof props !== 'object' || Array.isArray(props)) return props
-  return Object.fromEntries(Object.entries(props).filter(([key]) => key !== 'previewHeight'))
+  const next = Object.fromEntries(Object.entries(props).filter(([key]) => key !== 'previewHeight'))
+  if (next.targetKind !== 'sidebarItem') return next
+
+  const { sidebarItemId, ...rest } = next
+  return {
+    ...rest,
+    targetKind: 'resource',
+    ...(typeof sidebarItemId === 'string' && sidebarItemId.length > 0
+      ? { resourceId: sidebarItemId }
+      : {}),
+  }
 }
 
 function stripUndefined<T extends Record<string, unknown>>(value: T): T {

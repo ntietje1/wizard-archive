@@ -9,6 +9,33 @@
       "react-hooks-js/refs",
       "react-hooks-js/static-components"
     ],
-    "files": ["src/features/shadcn/**"]
+    "files": ["packages/ui/src/shadcn/**"],
+    "overrides": [
+      {
+        "files": [
+          "packages/editor/src/filesystem/catalog.ts",
+          "packages/editor/src/filesystem/operation-adapter.ts",
+          "packages/editor/src/filesystem/patch-contract.ts",
+          "packages/editor/src/filesystem/transaction-contract.ts",
+          "packages/editor/src/game-maps/document-contract.ts",
+          "packages/editor/src/notes/document/model.ts",
+          "packages/editor/src/notes/values-contract.ts",
+          "packages/editor/src/workspace/items-persistence-contract.ts",
+          "packages/editor/src/workspace/items.ts",
+          "packages/editor/src/workspace/resource-contract.ts",
+          "src/filesystem/catalog.ts",
+          "src/filesystem/operation-adapter.ts",
+          "src/filesystem/patch-contract.ts",
+          "src/filesystem/transaction-contract.ts",
+          "src/game-maps/document-contract.ts",
+          "src/notes/document/model.ts",
+          "src/notes/values-contract.ts",
+          "src/workspace/items-persistence-contract.ts",
+          "src/workspace/items.ts",
+          "src/workspace/resource-contract.ts"
+        ],
+        "rules": ["deslop/unused-export", "deslop/unused-file"]
+      }
+    ]
   }
 }

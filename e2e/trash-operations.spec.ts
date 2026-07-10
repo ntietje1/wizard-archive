@@ -26,7 +26,7 @@ test.describe.serial('trash: empty & permanent delete', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, note1)
@@ -41,7 +41,7 @@ test.describe.serial('trash: empty & permanent delete', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -52,28 +52,28 @@ test.describe.serial('trash: empty & permanent delete', () => {
   })
 
   test('move note to trash via context menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(sidebar.getByRole('link', { name: note1, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: note1, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
     await openContextMenu(page, note1)
     await page.getByRole('menuitem', { name: /move to trash/i }).click()
 
-    await expect(sidebar.getByRole('link', { name: note1, exact: true })).not.toBeVisible({
+    await expect(sidebar.getByRole('button', { name: note1, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
     await waitForFilesystemIdle(page)
   })
 
   test('permanently delete one item from trash', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    const activeNote = sidebar.getByRole('link', { name: note1, exact: true })
+    const activeNote = sidebar.getByRole('button', { name: note1, exact: true })
     const isActiveNoteVisible = await activeNote
       .waitFor({ state: 'visible', timeout: 1000 })
       .then(() => true)
@@ -93,7 +93,7 @@ test.describe.serial('trash: empty & permanent delete', () => {
   })
 
   test('empty trash removes all trashed items', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     const emptyNoteA = `Empty Trash A ${Date.now()}`
     const emptyNoteB = `Empty Trash B ${Date.now()}`
@@ -103,14 +103,14 @@ test.describe.serial('trash: empty & permanent delete', () => {
     // Move remaining notes to trash
     await openContextMenu(page, emptyNoteA)
     await page.getByRole('menuitem', { name: /move to trash/i }).click()
-    await expect(page.getByRole('link', { name: emptyNoteA, exact: true })).not.toBeVisible({
+    await expect(page.getByRole('button', { name: emptyNoteA, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
     await waitForFilesystemIdle(page)
 
     await openContextMenu(page, emptyNoteB)
     await page.getByRole('menuitem', { name: /move to trash/i }).click()
-    await expect(page.getByRole('link', { name: emptyNoteB, exact: true })).not.toBeVisible({
+    await expect(page.getByRole('button', { name: emptyNoteB, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
     await waitForFilesystemIdle(page)
@@ -118,11 +118,11 @@ test.describe.serial('trash: empty & permanent delete', () => {
     await openTrashPopover(page)
     await expectTrashItemVisible(page, emptyNoteA)
 
-    await page.getByRole('button', { name: /empty trash/i }).click()
+    await page.getByRole('button', { name: 'Empty Trash', exact: true }).click()
 
     // Confirm
     const dialog = page.getByRole('dialog', { name: /empty trash/i })
-    await dialog.getByRole('button', { name: /empty trash/i }).click()
+    await dialog.getByRole('button', { name: 'Empty Trash', exact: true }).click()
 
     await waitForFilesystemIdle(page)
     await openTrashPopover(page)

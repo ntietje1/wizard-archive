@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizePickerColor } from '~/shared/utils/color'
+import { normalizePickerColor } from '@wizard-archive/ui/utils/color'
 
 describe('normalizePickerColor', () => {
   it('resolves CSS variable colors for the detailed picker', () => {

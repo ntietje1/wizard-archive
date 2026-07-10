@@ -1,13 +1,11 @@
 import { v } from 'convex/values'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
-import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 
-const folderValidatorFields = {
+export const folderValidatorFields = {
   ...sidebarItemValidatorFields,
-  type: v.literal(SIDEBAR_ITEM_TYPES.folders),
+  type: v.literal(RESOURCE_TYPES.folders),
   inheritShares: v.boolean(),
 }
 
 export const folderValidator = v.object(folderValidatorFields)
-
-export { folderValidatorFields }

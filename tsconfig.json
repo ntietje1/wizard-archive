@@ -21,6 +21,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
+      "@wizard-archive/ui/*": ["./packages/ui/src/*"],
       "~/*": ["./src/*"],
       "convex/*": ["./convex/*"],
       "shared/*": ["./shared/*"]

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it } from 'vitest'
 import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 

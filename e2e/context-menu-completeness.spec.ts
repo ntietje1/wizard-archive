@@ -23,17 +23,22 @@ test.describe.serial('context menu completeness', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
     await createFolder(page, folderName)
 
-    await page.getByRole('link', { name: 'New' }).click()
+    await page
+      .getByRole('navigation', { name: 'Sidebar' })
+      .getByRole('button', { name: 'New', exact: true })
+      .click()
     await page.getByRole('button', { name: /^File/ }).click()
     const fileInput = uploadFileInput(page)
     await fileInput.setInputFiles(testFilePath)
-    await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /untitled file/i })).toBeVisible({
+      timeout: 10000,
+    })
 
     await page.close()
     await context.close()
@@ -47,7 +52,7 @@ test.describe.serial('context menu completeness', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -58,9 +63,9 @@ test.describe.serial('context menu completeness', () => {
   })
 
   test('note context menu has expected items', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
-    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: noteName, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
@@ -68,16 +73,16 @@ test.describe.serial('context menu completeness', () => {
 
     const expectedItems = ['Open', 'Bookmark', 'Download', 'Rename', 'Edit Note', 'Move to Trash']
     for (const item of expectedItems) {
-      await expect(page.getByRole('menuitem', { name: item })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: item, exact: true })).toBeVisible()
     }
 
     await page.keyboard.press('Escape')
   })
 
   test('folder context menu has expected items', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
-    await expect(page.getByRole('link', { name: folderName, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: folderName, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
@@ -93,33 +98,33 @@ test.describe.serial('context menu completeness', () => {
       'Move to Trash',
     ]
     for (const item of expectedItems) {
-      await expect(page.getByRole('menuitem', { name: item })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: item, exact: true })).toBeVisible()
     }
 
     await page.keyboard.press('Escape')
   })
 
   test('file context menu has expected items', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
-    const fileLink = page.getByRole('link', { name: /untitled file/i })
+    const fileLink = page.getByRole('button', { name: /untitled file/i })
     await expect(fileLink).toBeVisible({ timeout: 10000 })
 
     await fileLink.click({ button: 'right' })
 
     const expectedItems = ['Open', 'Bookmark', 'Download', 'Rename', 'Edit File', 'Move to Trash']
     for (const item of expectedItems) {
-      await expect(page.getByRole('menuitem', { name: item })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: item, exact: true })).toBeVisible()
     }
 
     await page.keyboard.press('Escape')
   })
 
   test('move to trash from context menu works', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
-    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: noteName, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
@@ -127,21 +132,21 @@ test.describe.serial('context menu completeness', () => {
     await page.getByRole('menuitem', { name: 'Move to Trash' }).click()
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(sidebar.getByRole('link', { name: noteName, exact: true })).not.toBeVisible({
+    await expect(sidebar.getByRole('button', { name: noteName, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
   })
 
   test('download menuitem is clickable for file', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
-    const fileLink = page.getByRole('link', { name: /untitled file/i })
+    const fileLink = page.getByRole('button', { name: /untitled file/i })
     await expect(fileLink).toBeVisible({ timeout: 10000 })
 
     await fileLink.click({ button: 'right' })
 
-    const downloadItem = page.getByRole('menuitem', { name: 'Download' })
+    const downloadItem = page.getByRole('menuitem', { name: 'Download', exact: true })
     await expect(downloadItem).toBeVisible()
     await expect(downloadItem).toBeEnabled()
     await page.keyboard.press('Escape')

@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { extractPlainText } from '../functions/extractPlainText'
-import type { FlatBlockContent } from '../../../shared/editor-blocks/types'
+import type { NoteBlockContent } from '@wizard-archive/editor/notes/document-contract'
 
 describe('extractPlainText', () => {
   it('returns empty string for blocks with no content', () => {
-    const block: FlatBlockContent = { type: 'divider', props: {} }
+    const block: NoteBlockContent = { type: 'divider', props: {} }
     expect(extractPlainText(block)).toBe('')
   })
 
   it('returns empty string for blocks with empty content array', () => {
-    const block: FlatBlockContent = { type: 'paragraph', props: {}, content: [] }
+    const block: NoteBlockContent = { type: 'paragraph', props: {}, content: [] }
     expect(extractPlainText(block)).toBe('')
   })
 
   it('space-separates text from inline content', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'paragraph',
       props: {},
       content: [
@@ -26,7 +26,7 @@ describe('extractPlainText', () => {
   })
 
   it('extracts text from table content', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'table',
       props: {},
       content: {
@@ -46,7 +46,7 @@ describe('extractPlainText', () => {
   })
 
   it('extracts text from multi-row table', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'table',
       props: {},
       content: {
@@ -66,7 +66,7 @@ describe('extractPlainText', () => {
   })
 
   it('handles tables with empty cells', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'table',
       props: {},
       content: {
@@ -86,7 +86,7 @@ describe('extractPlainText', () => {
   })
 
   it('returns empty string for table with no text', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'table',
       props: {},
       content: {
@@ -99,7 +99,7 @@ describe('extractPlainText', () => {
   })
 
   it('extracts text from heading block', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'heading',
       props: { level: 1 },
       content: [{ type: 'text', text: 'My Heading', styles: {} }],
@@ -108,7 +108,7 @@ describe('extractPlainText', () => {
   })
 
   it('extracts text from bulletListItem block', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'bulletListItem',
       props: {},
       content: [{ type: 'text', text: 'List item', styles: {} }],
@@ -117,7 +117,7 @@ describe('extractPlainText', () => {
   })
 
   it('extracts text from quote block', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'quote',
       props: {},
       content: [{ type: 'text', text: 'A quote', styles: {} }],
@@ -126,7 +126,7 @@ describe('extractPlainText', () => {
   })
 
   it('extracts text from numberedListItem block', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'numberedListItem',
       props: {},
       content: [{ type: 'text', text: 'Numbered item', styles: {} }],
@@ -135,7 +135,7 @@ describe('extractPlainText', () => {
   })
 
   it('extracts text from codeBlock block', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'codeBlock',
       props: {},
       content: [{ type: 'text', text: 'const x = 1', styles: {} }],
@@ -144,7 +144,7 @@ describe('extractPlainText', () => {
   })
 
   it('extracts text from checkListItem block', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'checkListItem',
       props: {},
       content: [{ type: 'text', text: 'Todo item', styles: {} }],
@@ -153,7 +153,7 @@ describe('extractPlainText', () => {
   })
 
   it('returns empty string for text node with empty string', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'paragraph',
       props: {},
       content: [{ type: 'text', text: '', styles: {} }],
@@ -162,7 +162,7 @@ describe('extractPlainText', () => {
   })
 
   it('returns empty string for empty heading content', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'heading',
       props: { level: 2 },
       content: [],
@@ -171,7 +171,7 @@ describe('extractPlainText', () => {
   })
 
   it('space-separates text with mixed styles', () => {
-    const block: FlatBlockContent = {
+    const block: NoteBlockContent = {
       type: 'paragraph',
       props: {},
       content: [

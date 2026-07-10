@@ -1,11 +1,26 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { isPermissionRejectionCode } from '../../../shared/sidebar-items/filesystem/capabilities'
-import type { SidebarOperationCapability } from '../../../shared/sidebar-items/filesystem/capabilities'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
+import type {
+  OperationActorSnapshot,
+  ResourceOperationCapability,
+} from '@wizard-archive/editor/resources/operation-capabilities'
+import { isResourceOperationPermissionRejection } from '@wizard-archive/editor/resources/operation-capabilities'
+import type { CampaignMemberRole } from '../../../shared/campaigns/types'
 
-export function assertSidebarOperationAllowed(result: SidebarOperationCapability): void {
+export function operationActorFromRole(
+  role: CampaignMemberRole | null | undefined,
+): OperationActorSnapshot {
+  const isDm = role === CAMPAIGN_MEMBER_ROLE.DM
+  return {
+    canCreateRootItems: isDm,
+    canManageFolders: isDm,
+  }
+}
+
+export function assertSidebarOperationAllowed(result: ResourceOperationCapability): void {
   if (result.ok) return
-  if (isPermissionRejectionCode(result.code)) {
+  if (isResourceOperationPermissionRejection(result.code)) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, result.message)
   }
   throwClientError(ERROR_CODE.VALIDATION_FAILED, result.message)

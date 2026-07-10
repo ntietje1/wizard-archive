@@ -3,26 +3,19 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { validatePinDropTarget, validatePinTarget } from '../../../shared/game-maps/drop-validation'
+import { assertPinCoordinate } from './pinCoordinates'
+import {
+  validatePinDropTarget,
+  validatePinTarget,
+} from '@wizard-archive/editor/game-maps/document-contract'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 const MAX_ITEM_PINS_PER_REQUEST = 100
-const MIN_PIN_COORDINATE = 0
-const MAX_PIN_COORDINATE = 100
-
-function assertPinCoordinate(value: number, axis: 'x' | 'y') {
-  if (!Number.isFinite(value) || value < MIN_PIN_COORDINATE || value > MAX_PIN_COORDINATE) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      `Pin ${axis} coordinate must be between ${MIN_PIN_COORDINATE} and ${MAX_PIN_COORDINATE}`,
-    )
-  }
-}
 
 export async function createItemPins(
   ctx: CampaignMutationCtx,
@@ -89,9 +82,9 @@ export async function createItemPins(
   for (const item of items) {
     const dropValidationError = validatePinDropTarget({
       mapId,
-      item,
+      item: { ...item, id: item._id, workspaceId: item.campaignId },
       existingPinItemIds: nextPinItemIds,
-      campaignId: rawItem.campaignId,
+      workspaceId: rawItem.campaignId,
     })
     if (dropValidationError === 'trashed_item') {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Restore the item before pinning it to a map')
@@ -126,7 +119,7 @@ export async function createItemPins(
     ctx,
     {
       itemId: mapId,
-      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      itemType: RESOURCE_TYPES.gameMaps,
       action: EDIT_HISTORY_ACTION.map_pin_added,
       metadata: { pinItemName: items.length === 1 ? items[0].name : `${items.length} items` },
     },

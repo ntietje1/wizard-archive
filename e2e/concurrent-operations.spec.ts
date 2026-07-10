@@ -11,7 +11,7 @@ test.describe.serial('concurrent operations', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
@@ -22,7 +22,7 @@ test.describe.serial('concurrent operations', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -43,8 +43,8 @@ test.describe.serial('concurrent operations', () => {
     const page2 = await context2.newPage()
 
     try {
-      await page1.goto('/campaigns')
-      await page2.goto('/campaigns')
+      await page1.goto('/campaigns', { waitUntil: 'commit' })
+      await page2.goto('/campaigns', { waitUntil: 'commit' })
       await navigateToCampaign(page1, campaignName)
       await navigateToCampaign(page2, campaignName)
 
@@ -52,7 +52,7 @@ test.describe.serial('concurrent operations', () => {
       await createNote(page1, noteName)
 
       const sidebar2 = page2.getByRole('navigation', { name: 'Sidebar' })
-      await expect(sidebar2.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+      await expect(sidebar2.getByRole('button', { name: noteName, exact: true })).toBeVisible({
         timeout: 15000,
       })
     } finally {

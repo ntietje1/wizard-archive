@@ -1,31 +1,30 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import { Edit, Plus, Sword, Trash2, User, Users } from 'lucide-react'
 import { CampaignsContentError } from './campaigns-content-error'
 import type { Campaign } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { CampaignDialog } from '~/features/campaigns/components/campaign-dialog'
-import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
+import { ContentGrid } from '@wizard-archive/ui/components/content-grid'
 import { EmptyState } from '~/features/campaigns/components/content-grid/empty-state'
 import { CreateActionCard } from '~/features/campaigns/components/content-grid/create-action-card'
 import { ContentCard } from '~/features/campaigns/components/content-grid/content-card'
 import { CampaignDeleteConfirmDialog } from '~/features/campaigns/components/campaign-delete-confirm-dialog'
 import { CardGridSkeleton } from '~/features/campaigns/components/content-grid/card-grid-skeleton'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useUserCampaignsQuery } from '~/features/campaigns/hooks/use-campaign-operations'
 
 export function CampaignsContent() {
   const [creatingCampaign, setCreatingCampaign] = useState(false)
   const [editingCampaignId, setEditingCampaignId] = useState<Id<'campaigns'> | null>(null)
   const [deletingCampaignId, setDeletingCampaignId] = useState<Id<'campaigns'> | null>(null)
 
-  const campaigns = useAuthQuery(api.campaigns.queries.getUserCampaigns, {})
+  const campaigns = useUserCampaignsQuery()
 
   const currentlyEditingCampaign = campaigns.data?.find(
-    (campaign: Campaign) => campaign._id === editingCampaignId,
+    (campaign: Campaign) => campaign.id === editingCampaignId,
   )
   const currentlyDeletingCampaign = campaigns.data?.find(
-    (campaign: Campaign) => campaign._id === deletingCampaignId,
+    (campaign: Campaign) => campaign.id === deletingCampaignId,
   )
 
   if (campaigns.status === 'pending' && !campaigns.data) {
@@ -69,11 +68,11 @@ export function CampaignsContent() {
               minHeight="h-64"
             />
             {Array.from(campaigns.data ?? [])
-              .sort((a, b) => b._creationTime - a._creationTime)
+              .sort((a, b) => b.createdAt - a.createdAt)
               .map((campaign: Campaign) => {
                 return (
                   <ContentCard
-                    key={campaign._id}
+                    key={campaign.id}
                     title={campaign.name}
                     description={campaign.description}
                     className="block h-64 w-full"
@@ -96,7 +95,7 @@ export function CampaignsContent() {
                               icon: Edit,
                               onClick: (e: React.MouseEvent) => {
                                 e.stopPropagation()
-                                setEditingCampaignId(campaign._id)
+                                setEditingCampaignId(campaign.id)
                               },
                               'aria-label': 'Edit campaign',
                             },
@@ -104,7 +103,7 @@ export function CampaignsContent() {
                               icon: Trash2,
                               onClick: (e: React.MouseEvent) => {
                                 e.stopPropagation()
-                                setDeletingCampaignId(campaign._id)
+                                setDeletingCampaignId(campaign.id)
                               },
                               'aria-label': 'Delete campaign',
                               variant: 'destructive',

@@ -1,10 +1,5 @@
 import { expect } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
-import {
-  NOTE_VALUE_DEFAULT_SLUG,
-  NOTE_VALUE_SLUG_OPTIONS,
-} from '../../shared/note-values/constants'
-import { parseSlug, slugify } from '../../shared/slugs'
 import { openSlashMenu } from './editor-helpers'
 
 type CreateValueInlineOptions = {
@@ -42,14 +37,6 @@ export async function openValuePopover(value: Locator) {
   return popover
 }
 
-export async function closeValuePopoverByToggle(value: Locator) {
-  const page = value.page()
-  const popover = page.getByTestId('note-value-popover')
-  await expect(popover).toBeVisible()
-  await value.click()
-  await expect(popover).toHaveCount(0)
-}
-
 export async function openValuePopoverFromContextMenu(value: Locator) {
   const page = value.page()
   const popover = page.getByTestId('note-value-popover')
@@ -84,14 +71,11 @@ export async function createValueInline(
 
   await closeValuePopover(page)
 
-  const fallbackSlug = slugify(options.slug ?? NOTE_VALUE_DEFAULT_SLUG, {
-    fallback: NOTE_VALUE_DEFAULT_SLUG,
-    maxLength: NOTE_VALUE_SLUG_OPTIONS.maxLength,
-  })
-  const resolvedSlug =
-    (await value.getAttribute('data-note-value-slug')) ??
-    parseSlug(options.slug ?? '', NOTE_VALUE_SLUG_OPTIONS) ??
-    fallbackSlug
+  await expect(value).toHaveAttribute('data-note-value-slug', /.+/)
+  const resolvedSlug = await value.getAttribute('data-note-value-slug')
+  if (resolvedSlug === null) {
+    throw new Error('Created value inline did not expose a resolved slug')
+  }
   const resolvedValue = getValueInlineBySlug(page, resolvedSlug)
   await expect(resolvedValue).toBeVisible()
   return resolvedValue

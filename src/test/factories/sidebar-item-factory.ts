@@ -1,75 +1,52 @@
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_STATUS,
-  SIDEBAR_ITEM_TYPES,
-} from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { SidebarItemColor } from 'shared/sidebar-items/color'
-import type { SidebarItemIconName } from 'shared/sidebar-items/icon'
-import { assertSidebarItemName } from 'shared/sidebar-items/name'
-import type { SidebarItemName } from 'shared/sidebar-items/name'
-import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
-import type { Note } from 'shared/notes/types'
-import type { Folder } from 'shared/folders/types'
-import type { GameMap } from 'shared/game-maps/types'
-import type { SidebarFile } from 'shared/files/types'
-import type { Id } from 'convex/_generated/dataModel'
-import type { PermissionLevel } from 'shared/permissions/types'
-import type { SidebarItemShare } from 'shared/sidebar-shares/types'
-import type { SidebarItemLocation, SidebarItemStatus } from 'shared/sidebar-items/types'
-import { testId } from '~/test/helpers/test-id'
+import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
+import type { WizardEditorFolderItem, WizardEditorItem } from '@wizard-archive/editor/adapter'
+import type { CampaignId, SidebarItemId, UserProfileId } from 'shared/common/ids'
 
 let itemCounter = 0
 
-interface BaseFields {
-  _creationTime: number
-  name: SidebarItemName
-  iconName: SidebarItemIconName | null
-  color: SidebarItemColor | null
-  slug: Note['slug']
-  campaignId: Id<'campaigns'>
-  parentId: Id<'sidebarItems'> | null
-  allPermissionLevel: PermissionLevel | null
-  location: SidebarItemLocation
-  status: SidebarItemStatus
-  previewUrl: string | null
-  previewStorageId: Id<'_storage'> | null
-  previewLockedUntil: number | null
-  previewClaimToken: string | null
-  previewUpdatedAt: number | null
-  updatedTime: number | null
-  updatedBy: Id<'userProfiles'> | null
-  createdBy: Id<'userProfiles'>
-  deletionTime: number | null
-  deletedBy: Id<'userProfiles'> | null
-  shares: Array<SidebarItemShare>
-  isBookmarked: boolean
-  myPermissionLevel: PermissionLevel
-  isActive: boolean
-  isTrashed: boolean
+const TEST_ITEM_LOCATION = 'sidebar'
+const TEST_ITEM_STATUS = {
+  active: 'active',
+  trashed: 'trashed',
+} as const
+const TEST_ITEM_TYPES = {
+  notes: 'note',
+  folders: 'folder',
+  gameMaps: 'gameMap',
+  files: 'file',
+} as const
+type NoteItem = Extract<WizardEditorItem, { type: (typeof TEST_ITEM_TYPES)['notes'] }>
+type MapItem = Extract<WizardEditorItem, { type: (typeof TEST_ITEM_TYPES)['gameMaps'] }>
+type FileItem = Extract<WizardEditorItem, { type: (typeof TEST_ITEM_TYPES)['files'] }>
+
+type SidebarItemOverrides<T extends { slug: unknown; name: unknown }> = Omit<
+  Partial<T>,
+  'slug' | 'name'
+> & {
+  name?: string
+  slug?: string
 }
 
-function baseFields(): BaseFields {
+function baseFields() {
   itemCounter++
   return {
-    _creationTime: Date.now(),
-    name: assertSidebarItemName(`Test Item ${itemCounter}`),
+    createdAt: itemCounter,
+    name: testResourceName(`Test Item ${itemCounter}`),
     iconName: null,
     color: null,
-    slug: assertSidebarItemSlug(`test-item-${itemCounter}`),
-    campaignId: testId('campaign_1'),
+    slug: testResourceSlug(`test-item-${itemCounter}`),
+    campaignId: `campaign_${itemCounter}` as CampaignId,
     parentId: null,
     allPermissionLevel: null,
-    location: SIDEBAR_ITEM_LOCATION.sidebar,
-    status: SIDEBAR_ITEM_STATUS.active,
+    location: TEST_ITEM_LOCATION as 'sidebar',
+    status: TEST_ITEM_STATUS.active as 'active',
     previewUrl: null,
-    previewStorageId: null,
-    previewLockedUntil: null,
-    previewClaimToken: null,
+    previewAssetId: null,
     previewUpdatedAt: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: testId('user_1'),
+    createdBy: `user_${itemCounter}` as UserProfileId,
     deletionTime: null,
     deletedBy: null,
     shares: [],
@@ -80,77 +57,85 @@ function baseFields(): BaseFields {
   }
 }
 
-type SidebarItemOverrides<T extends { slug: unknown; name: unknown }> = Omit<
-  Partial<T>,
-  'slug' | 'name'
-> & {
-  name?: string
-  slug?: string
-}
-
-function withLifecycleFacts<T extends BaseFields>(item: T): T {
-  const isTrashed = item.status === SIDEBAR_ITEM_STATUS.trashed
+function withLifecycleFacts<T extends { status: string; isActive: boolean; isTrashed: boolean }>(
+  item: T,
+): T {
+  const isTrashed = item.status === TEST_ITEM_STATUS.trashed
   return {
     ...item,
-    isActive: item.status === SIDEBAR_ITEM_STATUS.active,
+    isActive: item.status === TEST_ITEM_STATUS.active,
     isTrashed,
   }
 }
 
-export function createNote(overrides?: SidebarItemOverrides<Note>): Note {
+export function createNote(overrides?: SidebarItemOverrides<NoteItem>): NoteItem {
   const base = baseFields()
   const { slug, name, ...rest } = overrides ?? {}
   return withLifecycleFacts({
     ...base,
-    _id: testId<'sidebarItems'>(`note_${itemCounter}`),
-    type: SIDEBAR_ITEM_TYPES.notes,
-    ...(name !== undefined ? { name: assertSidebarItemName(name) } : {}),
-    ...(slug !== undefined ? { slug: assertSidebarItemSlug(slug) } : {}),
+    id: `note_${itemCounter}` as SidebarItemId,
+    type: TEST_ITEM_TYPES.notes,
+    ...(name !== undefined ? { name: testResourceName(name) } : {}),
+    ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),
     ...rest,
   })
 }
 
-export function createFolder(overrides?: SidebarItemOverrides<Folder>): Folder {
+export function createFolder(
+  overrides?: SidebarItemOverrides<WizardEditorFolderItem>,
+): WizardEditorFolderItem {
   const base = baseFields()
   const { slug, name, ...rest } = overrides ?? {}
   return withLifecycleFacts({
     ...base,
-    _id: testId<'sidebarItems'>(`folder_${itemCounter}`),
-    type: SIDEBAR_ITEM_TYPES.folders,
+    id: `folder_${itemCounter}` as WizardEditorFolderItem['id'],
+    type: TEST_ITEM_TYPES.folders,
     inheritShares: true,
-    ...(name !== undefined ? { name: assertSidebarItemName(name) } : {}),
-    ...(slug !== undefined ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...(name !== undefined ? { name: testResourceName(name) } : {}),
+    ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),
     ...rest,
   })
 }
 
-export function createGameMap(overrides?: SidebarItemOverrides<GameMap>): GameMap {
+export function createGameMap(overrides?: SidebarItemOverrides<MapItem>): MapItem {
   const base = baseFields()
   const { slug, name, ...rest } = overrides ?? {}
   return withLifecycleFacts({
     ...base,
-    _id: testId<'sidebarItems'>(`map_${itemCounter}`),
-    type: SIDEBAR_ITEM_TYPES.gameMaps,
-    imageStorageId: null,
+    id: `map_${itemCounter}` as MapItem['id'],
+    type: TEST_ITEM_TYPES.gameMaps,
+    imageAssetId: null,
     imageUrl: null,
-    ...(name !== undefined ? { name: assertSidebarItemName(name) } : {}),
-    ...(slug !== undefined ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...(name !== undefined ? { name: testResourceName(name) } : {}),
+    ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),
     ...rest,
   })
 }
 
-export function createFile(overrides?: SidebarItemOverrides<SidebarFile>): SidebarFile {
+export function createFile(overrides?: SidebarItemOverrides<FileItem>): FileItem {
   const base = baseFields()
   const { slug, name, ...rest } = overrides ?? {}
   return withLifecycleFacts({
     ...base,
-    _id: testId<'sidebarItems'>(`file_${itemCounter}`),
-    type: SIDEBAR_ITEM_TYPES.files,
-    storageId: null,
+    id: `file_${itemCounter}` as FileItem['id'],
+    type: TEST_ITEM_TYPES.files,
+    assetId: null,
     downloadUrl: null,
     contentType: null,
-    ...(name !== undefined ? { name: assertSidebarItemName(name) } : {}),
-    ...(slug !== undefined ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...(name !== undefined ? { name: testResourceName(name) } : {}),
+    ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),
     ...rest,
   })
+}
+
+function testResourceName(name: string): WizardEditorItem['name'] {
+  return name as WizardEditorItem['name']
+}
+
+function testResourceSlug(slug: string): WizardEditorItem['slug'] {
+  const parsed = parseWizardEditorResourceSlug(slug)
+  if (!parsed) {
+    throw new Error(`Invalid test resource slug: ${slug}`)
+  }
+  return parsed as WizardEditorItem['slug']
 }

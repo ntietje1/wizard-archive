@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
-import { campaignQuery } from '../functions'
+import { campaignQuery, dmQuery } from '../functions'
 import { editorBlockInputValidator } from '../blocks/schema'
-import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import {
   getRootContentsForDownload as getRootContentsForDownloadFn,
   getSidebarItemsForDownload as getSidebarItemsForDownloadFn,
@@ -9,26 +9,35 @@ import {
 
 const downloadItemValidator = v.union(
   v.object({
-    type: v.literal(SIDEBAR_ITEM_TYPES.files),
+    type: v.literal(RESOURCE_TYPES.files),
     name: v.string(),
     path: v.string(),
     downloadUrl: v.union(v.null(), v.string()),
   }),
   v.object({
-    type: v.literal(SIDEBAR_ITEM_TYPES.notes),
+    type: v.literal(RESOURCE_TYPES.notes),
     name: v.string(),
     path: v.string(),
     content: v.array(editorBlockInputValidator),
   }),
   v.object({
-    type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
+    type: v.literal(RESOURCE_TYPES.gameMaps),
     name: v.string(),
     path: v.string(),
     downloadUrl: v.union(v.null(), v.string()),
   }),
+  v.object({
+    type: v.literal(RESOURCE_TYPES.canvases),
+    name: v.string(),
+    path: v.string(),
+    content: v.object({
+      edges: v.array(v.any()),
+      nodes: v.array(v.any()),
+    }),
+  }),
 )
 
-export const getRootContentsForDownload = campaignQuery({
+export const getRootContentsForDownload = dmQuery({
   args: {},
   returns: v.object({
     items: v.array(downloadItemValidator),

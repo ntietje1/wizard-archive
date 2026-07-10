@@ -34,7 +34,7 @@ test.describe.serial('canvas selection under viewport transforms', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -45,7 +45,7 @@ test.describe.serial('canvas selection under viewport transforms', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -56,7 +56,7 @@ test.describe.serial('canvas selection under viewport transforms', () => {
 
   test.beforeEach(async ({ page }) => {
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await waitForCanvasRuntime(page)

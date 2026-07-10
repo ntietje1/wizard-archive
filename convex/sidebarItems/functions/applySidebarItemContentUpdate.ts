@@ -4,12 +4,11 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { getSidebarItem } from './getSidebarItem'
 import { requireItemAccess } from '../validation/access'
-import type { EditHistoryChange } from '../../../shared/edit-history/types'
+import type { EditHistoryChange } from '@wizard-archive/editor/resources/history-contract'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { SidebarItemType } from '../../../shared/sidebar-items/types'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
+import type { AnyResource, ResourceKind } from '@wizard-archive/editor/resources/resource-contract'
 
 export async function applySidebarItemContentUpdate({
   ctx,
@@ -20,9 +19,9 @@ export async function applySidebarItemContentUpdate({
 }: {
   ctx: CampaignMutationCtx
   itemId: Id<'sidebarItems'>
-  itemType: SidebarItemType
+  itemType: ResourceKind
   notFoundMessage: string
-  apply: (item: AnySidebarItem) => Promise<{
+  apply: (item: AnyResource) => Promise<{
     sidebarUpdates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>>
     changes: Array<EditHistoryChange>
   }>
@@ -34,11 +33,11 @@ export async function applySidebarItemContentUpdate({
 
   const item = await requireItemAccess(ctx, {
     rawItem,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    requiredLevel: PERMISSION_LEVEL.EDIT,
   })
   const { sidebarUpdates, changes } = await apply(item)
 
-  if (changes.length === 0) return { itemId: item._id }
+  if (changes.length === 0) return { itemId: item.id }
 
   await ctx.db.patch('sidebarItems', itemId, {
     ...sidebarUpdates,
@@ -47,10 +46,10 @@ export async function applySidebarItemContentUpdate({
   })
 
   await logEditHistory(ctx, {
-    itemId: item._id,
+    itemId: item.id,
     itemType,
     changes,
   })
 
-  return { itemId: item._id }
+  return { itemId: item.id }
 }

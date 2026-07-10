@@ -1,6 +1,5 @@
 import { createContext, useContext } from 'react'
 import { useMatch } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import type { UseQueryResult } from '@tanstack/react-query'
 import { parseCampaignSlug } from 'shared/campaigns/validation'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
@@ -9,7 +8,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { parseUsername } from 'shared/users/validation'
 import type { CampaignSlug } from 'shared/campaigns/validation'
 import type { Username } from 'shared/users/validation'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignBySlugQuery } from '~/features/campaigns/hooks/use-campaign-operations'
 
 type CampaignRouteIdentity = {
   dmUsername: Username
@@ -34,7 +33,7 @@ export function buildCampaignContextValue(
     campaign,
     isCampaignLoaded: campaign.data !== undefined,
     isDm: campaign.data ? campaign.data.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM : undefined,
-    campaignId: campaign.data?._id,
+    campaignId: campaign.data?.id,
   }
 }
 
@@ -66,15 +65,7 @@ export function useOptionalCampaignRoute(): CampaignRouteIdentity | null {
 export function useOptionalCampaign(): CampaignContextType | null {
   const context = useContext(CampaignContext)
   const identity = useOptionalCampaignRoute()
-  const campaign = useAuthQuery(
-    api.campaigns.queries.getCampaignBySlug,
-    context || !identity
-      ? 'skip'
-      : {
-          dmUsername: identity.dmUsername,
-          slug: identity.campaignSlug,
-        },
-  )
+  const campaign = useCampaignBySlugQuery(context ? null : identity)
 
   if (context) return context
   if (!identity) return null

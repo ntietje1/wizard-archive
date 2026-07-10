@@ -12,6 +12,8 @@ import {
   getCanvasEdgeById,
   getCanvasEdges,
   getCanvasNodesByType,
+  getCanvasTextEditors,
+  getNewCanvasTextEditor,
   getViewportControls,
   openCanvas,
   seedCanvasEdgeViaRuntime,
@@ -25,7 +27,6 @@ import type { Locator, Page } from '@playwright/test'
 
 const campaignName = testName('CnvEdges')
 const canvasName = DEFAULT_CANVAS_NAME
-const textInputSelector = '[aria-label="Text node content"][contenteditable="true"]'
 
 test.describe.serial('canvas edge workflows', () => {
   test.setTimeout(60_000)
@@ -34,7 +35,7 @@ test.describe.serial('canvas edge workflows', () => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
     try {
-      await page.goto('/campaigns')
+      await page.goto('/campaigns', { waitUntil: 'commit' })
       await createCampaign(page, campaignName)
       await navigateToCampaign(page, campaignName)
       await createCanvas(page, canvasName)
@@ -48,7 +49,7 @@ test.describe.serial('canvas edge workflows', () => {
     test.setTimeout(60_000)
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -59,7 +60,7 @@ test.describe.serial('canvas edge workflows', () => {
 
   test.beforeEach(async ({ page }) => {
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await waitForCanvasRuntime(page)
@@ -193,15 +194,17 @@ async function createEdgeFixture(
   // These are pane-relative points used by selectCanvasTool + clickCanvasAt. Callers can pass
   // alternate positions if a viewport or layout change would place the text nodes off-screen.
   await selectCanvasTool(page, 'Text')
+  const sourceEditorCount = await getCanvasTextEditors(page).count()
   await clickCanvasAt(page, sourcePos)
-  const sourceInput = page.locator(textInputSelector).last()
+  const sourceInput = await getNewCanvasTextEditor(page, sourceEditorCount)
   await sourceInput.fill('Edge source')
   await sourceInput.press('Escape')
   await clickCanvasAt(page, clickAwayPos)
 
   await selectCanvasTool(page, 'Text')
+  const targetEditorCount = await getCanvasTextEditors(page).count()
   await clickCanvasAt(page, targetPos)
-  const targetInput = page.locator(textInputSelector).last()
+  const targetInput = await getNewCanvasTextEditor(page, targetEditorCount)
   await targetInput.fill('Edge target')
   await targetInput.press('Escape')
   await clickCanvasAt(page, clickAwayPos)

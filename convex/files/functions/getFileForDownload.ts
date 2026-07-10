@@ -1,25 +1,27 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { FileItem } from '@wizard-archive/editor/files/item-contract'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
+import type { Id } from '../../_generated/dataModel'
 import { logger } from '../../common/logger'
 
 export async function getFileForDownload(
   ctx: CampaignQueryCtx,
-  item: Extract<AnySidebarItem, { type: typeof SIDEBAR_ITEM_TYPES.files }>,
+  item: FileItem,
   path: string,
 ): Promise<DownloadItem> {
   let downloadUrl: string | null = null
-  if (item.storageId) {
+  const storageId = item.assetId as unknown as Id<'_storage'> | null
+  if (storageId) {
     try {
-      downloadUrl = await ctx.storage.getUrl(item.storageId)
+      downloadUrl = await ctx.storage.getUrl(storageId)
     } catch (error) {
-      logger.warn(`getFileForDownload: failed to create URL for file ${item._id}`, error)
+      logger.warn(`getFileForDownload: failed to create URL for file ${item.id}`, error)
     }
   }
 
   return {
-    type: SIDEBAR_ITEM_TYPES.files,
+    type: RESOURCE_TYPES.files,
     name: item.name,
     path,
     downloadUrl,

@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
 import { SignInForm } from '../components/sign-in-form'
-import { Card, CardContent } from '~/features/shadcn/components/card'
+import { Card, CardContent } from '@wizard-archive/ui/shadcn/components/card'
 import { SettingsDialog } from '~/features/settings/components/settings-dialog'
 
 export function AuthedLayout() {

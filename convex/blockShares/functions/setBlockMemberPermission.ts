@@ -1,14 +1,18 @@
-import { asyncMap } from 'convex-helpers'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import { setBlockMemberPermissionHelper } from './blockShareMutations'
-import { assertValidBlockSharePlayer } from './noteBlockShareEligibility'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { setBlocksMemberPermissionHelper } from './blockShareMutations'
+import {
+  requireAcceptedPlayerMember,
+  requireCampaignMember,
+} from '../../campaigns/functions/acceptedPlayerMember'
 import { getBlockShareNote } from './getBlockShareNote'
 import type { BlockShareMutationCtx } from './blockShareMutations'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { BlockNoteId } from '../../../shared/editor-blocks/types'
+import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+
+type BlockMemberPermissionHistoryStatus = 'shared' | 'unshared'
 
 export const setBlockMemberPermission = async (
   ctx: BlockShareMutationCtx,
@@ -17,39 +21,42 @@ export const setBlockMemberPermission = async (
     blockNoteIds,
     campaignMemberId,
     permissionLevel,
+    historyStatus,
   }: {
     noteId: Id<'sidebarItems'>
-    blockNoteIds: Array<BlockNoteId>
+    blockNoteIds: Array<NoteBlockId>
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel: Extract<PermissionLevel, 'none' | 'view'> | null
+    historyStatus?: BlockMemberPermissionHistoryStatus
   },
-): Promise<null> => {
-  if (blockNoteIds.length === 0) return null
+): Promise<Array<NoteBlockId>> => {
+  if (blockNoteIds.length === 0) return []
 
   const note = await getBlockShareNote(ctx, noteId)
-  if (permissionLevel !== null) {
-    await assertValidBlockSharePlayer(ctx, { note, campaignMemberId })
-  }
+  const memberArgs = { campaignId: note.campaignId, campaignMemberId }
+  await (permissionLevel === null
+    ? requireCampaignMember(ctx, memberArgs)
+    : requireAcceptedPlayerMember(ctx, memberArgs))
 
-  await asyncMap(blockNoteIds, (blockNoteId) =>
-    setBlockMemberPermissionHelper(ctx, {
-      note,
-      blockNoteId,
-      campaignMemberId,
-      permissionLevel,
-    }),
-  )
-
-  await logEditHistory(ctx, {
-    itemId: noteId,
-    itemType: SIDEBAR_ITEM_TYPES.notes,
-    action: EDIT_HISTORY_ACTION.block_share_changed,
-    metadata: {
-      status: permissionLevel ?? 'default',
-      campaignMemberId,
-      blockCount: blockNoteIds.length,
-    },
+  const changedBlockNoteIds = await setBlocksMemberPermissionHelper(ctx, {
+    note,
+    blockNoteIds,
+    campaignMemberId,
+    permissionLevel,
   })
 
-  return null
+  if (changedBlockNoteIds.length > 0) {
+    await logEditHistory(ctx, {
+      itemId: noteId,
+      itemType: RESOURCE_TYPES.notes,
+      action: EDIT_HISTORY_ACTION.block_share_changed,
+      metadata: {
+        status: historyStatus ?? permissionLevel ?? 'default',
+        memberId: campaignMemberId,
+        blockCount: changedBlockNoteIds.length,
+      },
+    })
+  }
+
+  return changedBlockNoteIds
 }

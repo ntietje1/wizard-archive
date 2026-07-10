@@ -1,16 +1,16 @@
 import { Link } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
-import { AssetPlaceholder } from '~/features/landing/components/asset-placeholder'
+import type { ReactNode } from 'react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { buttonVariants } from '~/features/shadcn/components/button'
-import { cn } from '~/features/shadcn/lib/utils'
+import { buttonVariants } from '@wizard-archive/ui/shadcn/components/button-variants'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 
 type StaticFeatureSectionProps = {
   id?: string
   title: string
   items: Array<string>
   cta: string
-  visualDescription: string
+  visual: ReactNode
   reverse?: boolean
   className?: string
 }
@@ -20,7 +20,7 @@ export function StaticFeatureSection({
   title,
   items,
   cta,
-  visualDescription,
+  visual,
   reverse = false,
   className,
 }: StaticFeatureSectionProps) {
@@ -42,8 +42,8 @@ export function StaticFeatureSection({
       </Link>
     </div>
   )
-
-  const visual = <AssetPlaceholder label={visualDescription} />
+  const copyPanel = reverse ? <div className="order-1 lg:order-2">{copy}</div> : copy
+  const visualPanel = <div className={cn(reverse && 'order-2 lg:order-1')}>{visual}</div>
 
   return (
     <section id={id} className={cn('py-24', className)}>
@@ -51,13 +51,13 @@ export function StaticFeatureSection({
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           {reverse ? (
             <>
-              <div className="order-2 lg:order-1">{visual}</div>
-              <div className="order-1 lg:order-2">{copy}</div>
+              {visualPanel}
+              {copyPanel}
             </>
           ) : (
             <>
-              {copy}
-              {visual}
+              {copyPanel}
+              {visualPanel}
             </>
           )}
         </div>

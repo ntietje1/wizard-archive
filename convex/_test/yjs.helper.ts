@@ -1,9 +1,9 @@
 import * as Y from 'yjs'
-import { blocksToYDoc } from '../../shared/editor-blocks/blocknote-yjs'
-import type { CustomPartialBlock } from '../../shared/editor-blocks/types'
+import { noteBlocksToYDoc } from '@wizard-archive/editor/notes/document-yjs'
+import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 type TestInlineContentArray = Extract<
-  NonNullable<CustomPartialBlock['content']>,
+  NonNullable<PartialNoteBlock['content']>,
   ReadonlyArray<unknown>
 >
 export type TestInlineContent = TestInlineContentArray[number]
@@ -22,8 +22,8 @@ export function makeYjsUpdate(): ArrayBuffer {
   return update
 }
 
-export function makeYjsUpdateWithBlocks(blocks: Array<CustomPartialBlock>): ArrayBuffer {
-  const doc = blocksToYDoc(blocks, 'document')
+export function makeYjsUpdateWithBlocks(blocks: Array<PartialNoteBlock>): ArrayBuffer {
+  const doc = noteBlocksToYDoc(blocks, 'document')
   try {
     return toArrayBuffer(Y.encodeStateAsUpdate(doc))
   } finally {

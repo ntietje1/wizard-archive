@@ -1,9 +1,8 @@
-import { ERROR_CODE } from '../../../shared/errors/client'
-import { throwClientError } from '../../errors'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { applySidebarItemContentUpdate } from '../../sidebarItems/functions/applySidebarItemContentUpdate'
-import type { EditHistoryChange } from '../../../shared/edit-history/types'
+import { commitUpload } from '../../storage/functions/commitUpload'
+import type { EditHistoryChange } from '@wizard-archive/editor/resources/history-contract'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -12,15 +11,16 @@ export async function applyFileStorageUpdate(
   ctx: CampaignMutationCtx,
   {
     fileId,
-    storageId,
+    upload,
   }: {
     fileId: Id<'sidebarItems'>
-    storageId: Id<'_storage'> | null
+    upload: Awaited<ReturnType<typeof commitUpload>> | null
   },
 ): Promise<{
   sidebarUpdates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>>
   changes: Array<EditHistoryChange>
 }> {
+  const storageId = upload?.storageId ?? null
   const ext = await ctx.db
     .query('files')
     .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
@@ -29,12 +29,8 @@ export async function applyFileStorageUpdate(
     await ctx.db.patch('files', ext._id, { storageId })
   }
 
-  if (storageId) {
-    const metadata = await ctx.db.system.get('_storage', storageId)
-    if (!metadata) {
-      throwClientError(ERROR_CODE.NOT_FOUND, `Storage object ${storageId} not found`)
-    }
-    const isImage = metadata.contentType?.startsWith('image/') ?? false
+  if (upload) {
+    const isImage = upload.metadata.contentType?.startsWith('image/') ?? false
     return {
       sidebarUpdates: {
         previewStorageId: isImage ? storageId : null,
@@ -57,18 +53,23 @@ export async function updateFileStorage(
   ctx: CampaignMutationCtx,
   {
     fileId,
-    storageId,
+    uploadSessionId,
   }: {
     fileId: Id<'sidebarItems'>
-    storageId: Id<'_storage'> | null
+    uploadSessionId: Id<'fileStorage'> | null
   },
 ): Promise<{ fileId: Id<'sidebarItems'> }> {
   const result = await applySidebarItemContentUpdate({
     ctx,
     itemId: fileId,
-    itemType: SIDEBAR_ITEM_TYPES.files,
+    itemType: RESOURCE_TYPES.files,
     notFoundMessage: 'File not found',
-    apply: () => applyFileStorageUpdate(ctx, { fileId, storageId }),
+    apply: async () => {
+      const upload = uploadSessionId
+        ? await commitUpload(ctx, { sessionId: uploadSessionId })
+        : null
+      return await applyFileStorageUpdate(ctx, { fileId, upload })
+    },
   })
   return { fileId: result.itemId }
 }

@@ -1,3 +1,4 @@
+import { CanvasFeatureDemo } from '~/features/landing/components/landing-feature-demos'
 import { StaticFeatureSection } from '~/features/landing/components/static-feature-section'
 
 const canvasFeatures = [
@@ -13,7 +14,7 @@ export function FeatureCanvases() {
       title="Organize your thoughts on a canvas"
       items={canvasFeatures}
       cta="Start planning"
-      visualDescription="Canvas preview: a planning board with embedded notes, maps, files, and folders arranged as cards. The mockup should show connectors between items, freehand drawing and writing, and examples like a family tree or timeline."
+      visual={<CanvasFeatureDemo />}
     />
   )
 }

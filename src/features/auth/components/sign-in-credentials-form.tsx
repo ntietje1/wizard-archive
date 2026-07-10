@@ -2,14 +2,15 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import type { DeviceSession } from '~/features/auth/utils/device-sessions'
+import {
+  AuthEmailField,
+  AuthFormShell,
+  AuthGoogleButton,
+  AuthPasswordField,
+} from './auth-form-elements'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
-import { Input } from '~/features/shadcn/components/input'
-import { Label } from '~/features/shadcn/components/label'
-import { Separator } from '~/features/shadcn/components/separator'
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
-import { GoogleIcon } from '~/features/auth/utils/custom-icons'
-import { isPreview } from '~/shared/utils/preview'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
 
 type SignInCredentialsFormProps = {
   redirectTo: string
@@ -93,33 +94,13 @@ export function SignInCredentialsForm({
   const isDisabled = isLoading || !!socialLoading
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold">Welcome back</h1>
-        <p className="text-sm text-muted-foreground text-balance">Sign in to your account</p>
-      </div>
+    <AuthFormShell title="Welcome back" description="Sign in to your account">
       <div className="flex flex-col gap-4">
-        {/* Social login buttons */}
-        <Tooltip>
-          <TooltipTrigger render={<span className="w-full" />} disabled={!isPreview}>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleSocialSignIn('google')}
-              disabled={isDisabled || isPreview}
-            >
-              {socialLoading === 'google' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <GoogleIcon />
-              )}
-              Continue with Google
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            OAuth is unavailable on preview deployments. Use email and password instead.
-          </TooltipContent>
-        </Tooltip>
+        <AuthGoogleButton
+          loading={socialLoading === 'google'}
+          disabled={isDisabled}
+          onClick={() => handleSocialSignIn('google')}
+        />
 
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
@@ -127,42 +108,25 @@ export function SignInCredentialsForm({
           <Separator className="flex-1" />
         </div>
 
-        {/* Email/password form */}
         <form onSubmit={handleEmailSignIn} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => onEmailChange(e.target.value)}
-              required
-              disabled={isDisabled}
-              autoComplete="email"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+          <AuthEmailField value={email} onValueChange={onEmailChange} disabled={isDisabled} />
+          <AuthPasswordField
+            id="password"
+            label="Password"
+            placeholder="Enter your password"
+            value={password}
+            onValueChange={onPasswordChange}
+            disabled={isDisabled}
+            autoComplete="current-password"
+            labelAction={
               <Link
                 to="/forgot-password"
                 className="text-xs text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
               >
                 Forgot password?
               </Link>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => onPasswordChange(e.target.value)}
-              required
-              disabled={isDisabled}
-              autoComplete="current-password"
-            />
-          </div>
+            }
+          />
 
           {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
@@ -188,6 +152,6 @@ export function SignInCredentialsForm({
           </Button>
         </p>
       </div>
-    </div>
+    </AuthFormShell>
   )
 }

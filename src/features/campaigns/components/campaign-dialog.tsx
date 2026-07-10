@@ -1,20 +1,22 @@
 import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { validateCampaignName, validateCampaignSlug } from 'shared/campaigns/validation'
 import { Link, Sword } from 'lucide-react'
 import type { RefObject } from 'react'
 import type { Campaign } from 'shared/campaigns/types'
 import { UrlPreview } from '~/features/campaigns/components/url-preview'
-import { Input } from '~/features/shadcn/components/input'
-import { Label } from '~/features/shadcn/components/label'
-import { Textarea } from '~/features/shadcn/components/textarea'
-import { Button } from '~/features/shadcn/components/button'
-import { FormDialog } from '~/shared/components/form-dialog'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { useSlugFieldFeedback } from '~/shared/hooks/useSlugFieldFeedback'
+import { Input } from '@wizard-archive/ui/shadcn/components/input'
+import { Label } from '@wizard-archive/ui/shadcn/components/label'
+import { Textarea } from '@wizard-archive/ui/shadcn/components/textarea'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { FormDialog } from '@wizard-archive/ui/components/form-dialog'
+import {
+  useCreateCampaignMutation,
+  useUpdateCampaignMutation,
+} from '~/features/campaigns/hooks/use-campaign-operations'
+import { useUserProfileQuery } from '~/shared/hooks/use-user-profile-operations'
+import { useSlugFieldFeedback } from '@wizard-archive/ui/hooks/use-slug-field-feedback'
 import { handleError } from '~/shared/utils/logger'
 
 interface CampaignDialogProps {
@@ -52,9 +54,9 @@ export function CampaignDialog({
 }
 
 function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialogProps, 'isOpen'>) {
-  const userProfile = useAuthQuery(api.users.queries.getUserProfile, {})
-  const createCampaign = useAppMutation(api.campaigns.mutations.createCampaign)
-  const updateCampaign = useAppMutation(api.campaigns.mutations.updateCampaign)
+  const userProfile = useUserProfileQuery()
+  const createCampaign = useCreateCampaignMutation()
+  const updateCampaign = useUpdateCampaignMutation()
 
   const campaignsRef: RefObject<Array<Campaign>> = useRef(campaigns)
   campaignsRef.current = campaigns
@@ -92,7 +94,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
           onClose()
         } else if (campaign) {
           await updateCampaign.mutateAsync({
-            campaignId: campaign._id,
+            campaignId: campaign.id,
             name: value.name.trim(),
             description: value.description.trim() || undefined,
             slug: value.slug.trim(),
@@ -118,8 +120,8 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
   const validateSlug = (value: string): string | null => {
     const syncError = validateCampaignSlug(value)
     if (syncError) return syncError
-    const excludeId = mode === 'edit' ? campaign?._id : undefined
-    const slugTaken = campaignsRef.current.some((c) => c.slug === value && c._id !== excludeId)
+    const excludeId = mode === 'edit' ? campaign?.id : undefined
+    const slugTaken = campaignsRef.current.some((c) => c.slug === value && c.id !== excludeId)
     return slugTaken ? 'This link is already taken.' : null
   }
 

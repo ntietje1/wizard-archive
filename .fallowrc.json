@@ -1,7 +1,23 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": ["src/routes/**/*.{ts,tsx}", "convex/**/*.ts", "e2e/**/*.ts"],
-  "ignorePatterns": ["src/features/shadcn/**", "convex/_generated/**", "convex/_test/**"],
+  "ignorePatterns": ["packages/ui/src/shadcn/**", "convex/_generated/**", "convex/_test/**"],
+  "usedClassMembers": [
+    {
+      "extends": "ObservableV2",
+      "members": [
+        "destroy",
+        "lastAppliedSeq",
+        "setWritable",
+        "updateUser",
+        "isApplyingRemoteUpdate",
+        "applyRemoteUpdates",
+        "applyRemoteAwareness",
+        "flushPendingUpdates",
+        "flushUpdates"
+      ]
+    }
+  ],
   "ignoreDependencies": [
     "@eslint/js",
     "@typescript-eslint/eslint-plugin",
@@ -11,6 +27,7 @@
     "autoprefixer",
     "lint-staged",
     "cmdk",
+    "@base-ui/react",
     "class-variance-authority",
     "clsx",
     "color",
@@ -18,6 +35,10 @@
     "input-otp",
     "react-day-picker",
     "react-resizable-panels",
+    "lucide-react",
+    "motion",
+    "react",
+    "sonner",
     "recharts",
     "tailwind-merge",
     "vaul",

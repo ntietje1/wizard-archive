@@ -13,7 +13,7 @@ test.describe.serial('realtime collaboration', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
@@ -26,7 +26,7 @@ test.describe.serial('realtime collaboration', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -48,11 +48,11 @@ test.describe.serial('realtime collaboration', () => {
 
     try {
       // Both navigate to the same note
-      await page1.goto('/campaigns')
+      await page1.goto('/campaigns', { waitUntil: 'commit' })
       await navigateToCampaign(page1, campaignName)
       await openItem(page1, noteName)
 
-      await page2.goto('/campaigns')
+      await page2.goto('/campaigns', { waitUntil: 'commit' })
       await navigateToCampaign(page2, campaignName)
       await openItem(page2, noteName)
 
@@ -85,15 +85,15 @@ test.describe.serial('realtime collaboration', () => {
     const page2 = await context2.newPage()
 
     try {
-      await page1.goto('/campaigns')
+      await page1.goto('/campaigns', { waitUntil: 'commit' })
       await navigateToCampaign(page1, campaignName)
 
-      await page2.goto('/campaigns')
+      await page2.goto('/campaigns', { waitUntil: 'commit' })
       await navigateToCampaign(page2, campaignName)
 
       // Tab 2 should see the note in sidebar
       const sidebar2 = page2.getByRole('navigation', { name: 'Sidebar' })
-      await expect(sidebar2.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+      await expect(sidebar2.getByRole('button', { name: noteName, exact: true })).toBeVisible({
         timeout: 10000,
       })
 
@@ -107,7 +107,7 @@ test.describe.serial('realtime collaboration', () => {
       await nameInput.press('Enter')
 
       // Tab 2 should see the renamed item
-      await expect(sidebar2.getByRole('link', { name: newName, exact: true })).toBeVisible({
+      await expect(sidebar2.getByRole('button', { name: newName, exact: true })).toBeVisible({
         timeout: 15000,
       })
 
@@ -135,13 +135,13 @@ test.describe.serial('realtime collaboration', () => {
 
     try {
       // Create a disposable note
-      await page1.goto('/campaigns')
+      await page1.goto('/campaigns', { waitUntil: 'commit' })
       await navigateToCampaign(page1, campaignName)
       const disposableNote = `Disposable ${Date.now()}`
       await createNote(page1, disposableNote)
 
       // Tab 2 opens the note
-      await page2.goto('/campaigns')
+      await page2.goto('/campaigns', { waitUntil: 'commit' })
       await navigateToCampaign(page2, campaignName)
       await openItem(page2, disposableNote)
       await expect(page2.locator('[contenteditable="true"]').first()).toBeVisible({
@@ -151,14 +151,14 @@ test.describe.serial('realtime collaboration', () => {
       // Tab 1 deletes the note via context menu
       const sidebar1 = page1.getByRole('navigation', { name: 'Sidebar' })
       await sidebar1
-        .getByRole('link', { name: disposableNote, exact: true })
+        .getByRole('button', { name: disposableNote, exact: true })
         .click({ button: 'right' })
       await page1.getByRole('menuitem', { name: /delete|trash/i }).click()
 
       // Tab 2 should no longer show the note in sidebar
       const sidebar2 = page2.getByRole('navigation', { name: 'Sidebar' })
       await expect(
-        sidebar2.getByRole('link', { name: disposableNote, exact: true }),
+        sidebar2.getByRole('button', { name: disposableNote, exact: true }),
       ).not.toBeVisible({ timeout: 15000 })
     } finally {
       await page1.close()

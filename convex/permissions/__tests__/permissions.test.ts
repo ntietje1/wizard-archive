@@ -8,7 +8,7 @@ import {
   getBlockAllPlayersPermissionLevel,
   getEffectiveBlockVisibilityPermissionLevel,
 } from '../../../shared/permissions/block-visibility'
-import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
+import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
 import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 

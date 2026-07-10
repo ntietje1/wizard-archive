@@ -10,8 +10,8 @@ import {
   executeCopyCommand,
 } from '../../_test/factories.helper'
 import { api, internal } from '../../_generated/api'
-import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import {
   hardDeleteValueTestNote,
@@ -73,7 +73,7 @@ describe('note value lifecycle', () => {
       noteId: copiedId,
       slug: 'strength',
       expressionSource: '16',
-      compileStatus: 'ok',
+      compile: { status: 'ok' },
     })
     expect(rows[0].blockNoteId).toBe(sourceRows[0].blockNoteId)
   })
@@ -110,7 +110,7 @@ describe('note value lifecycle', () => {
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
-      sidebarItemType: SIDEBAR_ITEM_TYPES.notes,
+      sidebarItemType: RESOURCE_TYPES.notes,
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -263,9 +263,10 @@ describe('note value lifecycle', () => {
         noteId,
       })
       expect(states.map((state) => state.slug).sort()).toEqual(['strength', 'strength_mod'])
-      expect(states.find((state) => state.slug === 'strength')?.rawValue).toBe(18)
+      const strength = states.find((state) => state.slug === 'strength')
+      expect(strength).toMatchObject({ status: 'ok', rawValue: 18 })
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: snapshotEntry!._id,
       })
@@ -296,7 +297,7 @@ describe('note value lifecycle', () => {
         expect(rows[0]).toMatchObject({
           slug: 'strength',
           expressionSource: '15',
-          compileStatus: 'ok',
+          compile: { status: 'ok' },
         })
 
         const updates = await dbCtx.db
@@ -525,9 +526,7 @@ describe('note value lifecycle', () => {
           valueId: row.valueId,
           slug: row.slug,
           expressionSource: row.expressionSource,
-          compiledFormula: row.compiledFormula,
-          bindings: row.bindings,
-          compileStatus: row.compileStatus,
+          compile: row.compile,
         }))
         .sort((a, b) => a.blockNoteId.localeCompare(b.blockNoteId))
     })
@@ -551,9 +550,7 @@ describe('note value lifecycle', () => {
           valueId: row.valueId,
           slug: row.slug,
           expressionSource: row.expressionSource,
-          compiledFormula: row.compiledFormula,
-          bindings: row.bindings,
-          compileStatus: row.compileStatus,
+          compile: row.compile,
         }))
         .sort((a, b) => a.blockNoteId.localeCompare(b.blockNoteId))
     })
@@ -564,7 +561,11 @@ describe('note value lifecycle', () => {
       campaignId: ctx.campaignId,
       noteId,
     })
-    const bySlug = new Map(states.map((state) => [state.slug, state.rawValue]))
+    const bySlug = new Map(
+      states.flatMap((state) =>
+        state.status === 'ok' ? ([[state.slug, state.rawValue]] as const) : [],
+      ),
+    )
     expect(bySlug.get('strength')).toBe(15)
     expect(bySlug.get('strength_mod')).toBe(2)
   })

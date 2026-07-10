@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createNote } from '../../_test/factories.helper'
+import { createFile, createNote } from '../../_test/factories.helper'
 import { shouldCompact } from '../constants'
-import { uint8ToArrayBuffer } from '../functions/uint8ToArrayBuffer'
+import { uint8ToArrayBuffer } from '../../../shared/yjs-sync/uint8ToArrayBuffer'
 import { createYjsDocument } from '../functions/createYjsDocument'
 import { deleteYjsDocument } from '../functions/deleteYjsDocument'
 import { makeYjsUpdate } from '../../_test/yjs.helper'
@@ -109,6 +109,17 @@ describe('createYjsDocument', () => {
       expect(rows).toHaveLength(1)
     })
   })
+
+  it('rejects non-Yjs sidebar item types', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await t.run(async (dbCtx) => {
+      await expect(createYjsDocument(dbCtx, { documentId: fileId })).rejects.toThrow(
+        'is not a Yjs document',
+      )
+    })
+  })
 })
 
 describe('deleteYjsDocument', () => {
@@ -136,6 +147,7 @@ describe('deleteYjsDocument', () => {
         documentId: noteId,
         clientId: 1,
         userId: ctx.dm.profile._id,
+        sessionId: 'session-a',
         state: new ArrayBuffer(4),
         updatedAt: Date.now(),
       })
@@ -182,6 +194,7 @@ describe('deleteYjsDocument', () => {
         documentId: noteA,
         clientId: 1,
         userId: ctx.dm.profile._id,
+        sessionId: 'session-a',
         state: new ArrayBuffer(4),
         updatedAt: Date.now(),
       })
@@ -189,6 +202,7 @@ describe('deleteYjsDocument', () => {
         documentId: noteB,
         clientId: 2,
         userId: ctx.dm.profile._id,
+        sessionId: 'session-b',
         state: new ArrayBuffer(4),
         updatedAt: Date.now(),
       })

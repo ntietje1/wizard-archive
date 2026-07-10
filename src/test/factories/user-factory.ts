@@ -12,8 +12,8 @@ export function createUser(overrides?: CreateUserOverrides): UserProfile {
   userCounter++
   const { username, ...rest } = overrides ?? {}
   return {
-    _id: testId(`user_${userCounter}`),
-    _creationTime: 1700000000000,
+    id: testId(`user_${userCounter}`),
+    createdAt: 1700000000000,
     authUserId: `auth_${userCounter}`,
     username: assertUsername(username ?? `testuser${userCounter}`),
     email: `testuser${userCounter}@example.com`,

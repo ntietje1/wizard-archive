@@ -21,7 +21,7 @@ test.describe.serial('file download', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
 
@@ -30,7 +30,9 @@ test.describe.serial('file download', () => {
     const fileInput = uploadFileInput(page)
     await fileInput.setInputFiles(testFilePath)
 
-    await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: /untitled file/i })).toBeVisible({
+      timeout: 10000,
+    })
 
     await page.close()
     await context.close()
@@ -44,7 +46,7 @@ test.describe.serial('file download', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -55,11 +57,11 @@ test.describe.serial('file download', () => {
   })
 
   test('download file via context menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(sidebar.getByRole('link', { name: /untitled file/i })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: /untitled file/i })).toBeVisible({
       timeout: 10000,
     })
 

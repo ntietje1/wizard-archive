@@ -1,20 +1,22 @@
-import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
+import os from 'node:os'
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { uploadFileInput } from './helpers/file-upload-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E FileTypes')
-const testDir = path.dirname(fileURLToPath(import.meta.url))
 
 test.describe.serial('file type handling', () => {
+  let testDir = ''
   let pngPath = ''
   let pdfPath = ''
   let oversizedPath = ''
 
   test.beforeAll(async ({ browser }) => {
+    testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wizard-archive-e2e-file-types-'))
+
     // Create test PNG (minimal valid 1x1 PNG)
     const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     const ihdr = Buffer.from([
@@ -58,21 +60,22 @@ startxref
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
   })
 
   test.afterAll(async ({ browser }) => {
-    for (const p of [pngPath, pdfPath, oversizedPath]) {
-      if (p && fs.existsSync(p)) fs.unlinkSync(p)
+    if (testDir && fs.existsSync(testDir)) {
+      fs.rmSync(testDir, { recursive: true, force: true })
     }
+
     const context = await browser.newContext({
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -83,16 +86,18 @@ startxref
   })
 
   test('upload image file shows preview', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: /^file upload/i }).click()
     await uploadFileInput(page).setInputFiles(pngPath)
 
-    await expect(page.getByRole('link', { name: /untitled file/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('button', { name: /untitled file/i })).toBeVisible({
+      timeout: 15000,
+    })
 
     await page
-      .getByRole('link', { name: /untitled file/i })
+      .getByRole('button', { name: /untitled file/i })
       .first()
       .click()
 
@@ -102,7 +107,7 @@ startxref
   })
 
   test('upload PDF file', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: /^file upload/i }).click()
@@ -112,20 +117,22 @@ startxref
     await uploadFileInput(page).setInputFiles(pdfPath)
 
     // Second file upload creates "Untitled File 1"
-    await expect(page.getByRole('link', { name: /untitled file 1/i })).toBeVisible({
+    await expect(page.getByRole('button', { name: /untitled file 1/i })).toBeVisible({
       timeout: 15000,
     })
   })
 
   test('oversized file shows error', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await page.getByRole('button', { name: /^file upload/i }).click()
     await uploadFileInput(page).setInputFiles(oversizedPath)
 
-    await expect(page.getByText(/file must be less than|too large|size limit/i)).toBeVisible({
-      timeout: 10000,
-    })
+    await expect(
+      page
+        .getByRole('region', { name: 'Upload File drop zone' })
+        .getByText(/file must be less than|too large|size limit/i),
+    ).toBeVisible({ timeout: 10000 })
   })
 })

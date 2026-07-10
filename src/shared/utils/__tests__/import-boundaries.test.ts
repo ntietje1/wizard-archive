@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it } from 'vitest'
 
 const boundaryModule = await import('../../../../scripts/import-boundaries.mjs')
 
@@ -9,7 +9,7 @@ const {
 } = boundaryModule
 
 describe('import boundary checks', () => {
-  it('allows generated Convex API imports from src', () => {
+  it('allows generated Convex contracts only at explicit frontend data boundaries', () => {
     expect(
       analyzeImportBoundaries([
         {
@@ -19,8 +19,14 @@ describe('import boundary checks', () => {
             "import type { Id } from 'convex/_generated/dataModel'",
           ].join('\n'),
         },
+        {
+          filePath: 'src/features/example/hooks/use-example.ts',
+          source: "import { api } from 'convex/_generated/api'",
+        },
       ]),
-    ).toEqual([])
+    ).toEqual([
+      'src/example.ts:1 src may import generated Convex API values only from explicit data-boundary modules',
+    ])
   })
 
   it('blocks legacy Convex DTO type imports from src', () => {
@@ -29,8 +35,8 @@ describe('import boundary checks', () => {
         {
           filePath: 'src/example.ts',
           source: [
-            "import type { AnySidebarItem } from 'convex/sidebarItems/types/types'",
-            "import type { GameMap } from 'convex/gameMaps/types'",
+            "import type { AnyItem } from 'convex/sidebarItems/types/types'",
+            "import type { MapItem } from 'convex/gameMaps/types'",
           ].join('\n'),
         },
       ]),
@@ -50,6 +56,19 @@ describe('import boundary checks', () => {
       ]),
     ).toEqual([
       'src/example.ts:1 src may not import value from local Convex module convex/gameMaps/validation',
+    ])
+  })
+
+  it('blocks tilde alias traversal into local Convex modules', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/example.ts',
+          source: "import { validatePinDropTarget } from '~/../convex/gameMaps/validation'",
+        },
+      ]),
+    ).toEqual([
+      'src/example.ts:1 src may not import value from local Convex module ~/../convex/gameMaps/validation',
     ])
   })
 
@@ -92,12 +111,25 @@ describe('import boundary checks', () => {
     ])
   })
 
+  it('blocks TypeScript import assignments from local Convex modules', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/example.cts',
+          source: "import validation = require('convex/gameMaps/validation')",
+        },
+      ]),
+    ).toEqual([
+      'src/example.cts:1 src may not import value from local Convex module convex/gameMaps/validation',
+    ])
+  })
+
   it('blocks type import expressions from local Convex modules', () => {
     expect(
       analyzeImportBoundaries([
         {
           filePath: 'src/example.ts',
-          source: "type GameMap = import('convex/gameMaps/types').GameMap",
+          source: "type MapItem = import('convex/gameMaps/types').MapItem",
         },
       ]),
     ).toEqual([
@@ -113,7 +145,7 @@ describe('import boundary checks', () => {
           source: [
             "import type { ClientError } from 'convex/errors'",
             "import { MAX_FILE_SIZE } from 'convex/storage/validation'",
-            "import type { FileSystemCommand } from 'convex/sidebarItems/filesystem/commands'",
+            "import type { ResourceCommand } from 'convex/sidebarItems/filesystem/commands'",
           ].join('\n'),
         },
       ]),
@@ -131,13 +163,26 @@ describe('import boundary checks', () => {
           filePath: 'shared/example.ts',
           source: [
             "import { api } from 'convex/_generated/api'",
-            "import { useEditor } from '../src/features/editor/useEditor'",
+            "import { useLiveWorkspaceRuntime } from '../src/editor-adapters/live/use-live-workspace-runtime'",
           ].join('\n'),
         },
       ]),
     ).toEqual([
       'shared/example.ts:1 shared may not import value from convex boundary module convex/_generated/api',
-      'shared/example.ts:2 shared may not import value from src boundary module ../src/features/editor/useEditor',
+      'shared/example.ts:2 shared may not import value from src boundary module ../src/editor-adapters/live/use-live-workspace-runtime',
+    ])
+  })
+
+  it('blocks shared from importing ui package modules', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'shared/example.ts',
+          source: "import { Button } from '@wizard-archive/ui/shadcn/components/button'",
+        },
+      ]),
+    ).toEqual([
+      'shared/example.ts:1 shared may not import value from ui-package boundary module @wizard-archive/ui/shadcn/components/button',
     ])
   })
 
@@ -146,23 +191,58 @@ describe('import boundary checks', () => {
       analyzeImportBoundaries([
         {
           filePath: 'convex/_test/yjs.helper.ts',
-          source: "import { blocksToYDoc } from '../../src/features/editor/blocknote-yjs'",
+          source:
+            "import { useLiveWorkspaceRuntime } from '../../src/editor-adapters/live/use-live-workspace-runtime'",
         },
       ]),
     ).toEqual([
-      'convex/_test/yjs.helper.ts:1 convex may not import value from src boundary module ../../src/features/editor/blocknote-yjs',
+      'convex/_test/yjs.helper.ts:1 convex may not import value from src boundary module ../../src/editor-adapters/live/use-live-workspace-runtime',
     ])
   })
 
-  it('allows convex to import shared contracts', () => {
+  it('blocks convex from importing ui package modules', () => {
     expect(
       analyzeImportBoundaries([
         {
-          filePath: 'convex/example.ts',
-          source: "import { SIDEBAR_ITEM_STATUS } from '../shared/sidebar-items/types'",
+          filePath: 'convex/functions.ts',
+          source: "import { Button } from '@wizard-archive/ui/shadcn/components/button'",
         },
       ]),
-    ).toEqual([])
+    ).toEqual([
+      'convex/functions.ts:1 convex may not import value from ui-package boundary module @wizard-archive/ui/shadcn/components/button',
+    ])
+  })
+
+  it('blocks production convex from backend-unsafe editor package subpaths', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'convex/gameMaps/functions/createItemPins.ts',
+          source: "import { planMapPinCreations } from '@wizard-archive/editor/game-maps'",
+        },
+        {
+          filePath: 'convex/canvases/functions/enhanceCanvas.ts',
+          source: "import type { CanvasItem } from '@wizard-archive/editor/canvas/item-contract'",
+        },
+        {
+          filePath: 'convex/canvases/functions/createCanvas.ts',
+          source:
+            "import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'",
+        },
+        {
+          filePath: 'convex/notes/functions/enhanceNote.ts',
+          source: "import type { NoteItem } from '@wizard-archive/editor/notes'",
+        },
+        {
+          filePath: 'convex/notes/functions/importText.ts',
+          source:
+            "import { createImportedTextNotePayload } from '@wizard-archive/editor/notes/imported-text'",
+        },
+      ]),
+    ).toEqual([
+      'convex/gameMaps/functions/createItemPins.ts:1 convex may not import value from backend-unsafe editor package subpath @wizard-archive/editor/game-maps',
+      'convex/notes/functions/enhanceNote.ts:1 convex may not import type from backend-unsafe editor package subpath @wizard-archive/editor/notes',
+    ])
   })
 
   it('reports disallowed src imports with file and line details', () => {
@@ -172,14 +252,140 @@ describe('import boundary checks', () => {
           filePath: 'src/example.ts',
           source: [
             "import { api } from 'convex/_generated/api'",
-            "import type { AnySidebarItem } from 'shared/sidebar-items/model-types'",
+            "import type { AnyItem } from '@wizard-archive/editor/resources/items'",
             "import { validatePinDropTarget } from 'convex/gameMaps/validation'",
           ].join('\n'),
         },
       ]),
     ).toEqual([
+      'src/example.ts:1 src may import generated Convex API values only from explicit data-boundary modules',
       'src/example.ts:3 src may not import value from local Convex module convex/gameMaps/validation',
     ])
+  })
+
+  it('allows baselined editor adapter package imports', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/editor-adapters/live/example.ts',
+          source: [
+            "import { WizardEditor } from '@wizard-archive/editor'",
+            "import { createWizardEditorRuntime } from '@wizard-archive/editor/adapter'",
+            "import type { WizardEditorMapSession } from '@wizard-archive/editor/adapter'",
+          ].join('\n'),
+        },
+      ]),
+    ).toEqual([])
+  })
+
+  it('blocks editor adapter imports from editor subpaths outside the baseline', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/editor-adapters/live/example.ts',
+          source: [
+            "import { createExperimentalRuntime } from '@wizard-archive/editor/experimental/runtime'",
+            "import { WorkspaceRuntimeHost } from '@wizard-archive/editor/workspace/runtime-host'",
+            "import type { WorkspaceRuntime } from '@wizard-archive/editor/workspace/runtime'",
+            "import { planMapPinCreations } from '@wizard-archive/editor/game-maps'",
+            "import type { NoteSession } from '@wizard-archive/editor/notes'",
+            "import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'",
+            "import type { HistorySnapshot } from '@wizard-archive/editor/resources/history-contract'",
+          ].join('\n'),
+        },
+      ]),
+    ).toEqual([
+      'src/editor-adapters/live/example.ts:1 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/experimental/runtime',
+      'src/editor-adapters/live/example.ts:2 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/workspace/runtime-host',
+      'src/editor-adapters/live/example.ts:3 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/workspace/runtime',
+      'src/editor-adapters/live/example.ts:4 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/game-maps',
+      'src/editor-adapters/live/example.ts:5 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/notes',
+      'src/editor-adapters/live/example.ts:6 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/canvas/document-contract',
+      'src/editor-adapters/live/example.ts:7 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/resources/history-contract',
+    ])
+  })
+
+  it('allows editor adapter imports from the resource read model contract', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/editor-adapters/live/example.ts',
+          source: [
+            "import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'",
+            "import type { AnyItem } from '@wizard-archive/editor/resources/items'",
+            "import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'",
+          ].join('\n'),
+        },
+      ]),
+    ).toEqual([
+      'src/editor-adapters/live/example.ts:3 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/resources/items-persistence-contract',
+    ])
+  })
+
+  it('blocks app code from bypassing editor package exports through raw source imports', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/editor-adapters/live/example.ts',
+          source:
+            "import { createWorkspaceRuntime } from '../../../packages/editor/src/workspace/runtime'",
+        },
+        {
+          filePath: 'src/example.ts',
+          source: "import { createWorkspaceRuntime } from 'packages/editor/src/workspace/runtime'",
+        },
+      ]),
+    ).toEqual([
+      'src/editor-adapters/live/example.ts:1 src may not import value from raw editor package source ../../../packages/editor/src/workspace/runtime; use @wizard-archive/editor package exports',
+      'src/example.ts:1 src may not import value from raw editor package source packages/editor/src/workspace/runtime; use @wizard-archive/editor package exports',
+    ])
+  })
+
+  it('blocks tilde alias traversal into raw editor package source', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/example.ts',
+          source:
+            "import { createWorkspaceRuntime } from '~/../packages/editor/src/workspace/runtime'",
+        },
+      ]),
+    ).toEqual([
+      'src/example.ts:1 src may not import value from raw editor package source ~/../packages/editor/src/workspace/runtime; use @wizard-archive/editor package exports',
+    ])
+  })
+
+  it('blocks external code from bypassing ui package exports through raw source imports', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/example.ts',
+          source: "import { Button } from '../packages/ui/src/button'",
+        },
+        {
+          filePath: 'packages/editor/src/example.ts',
+          source: "import { Button } from '../../ui/src/button'",
+        },
+      ]),
+    ).toEqual([
+      'src/example.ts:1 src may not import value from raw ui package source ../packages/ui/src/button; use @wizard-archive/ui package exports',
+      'packages/editor/src/example.ts:1 editor-package may not import value from raw ui package source ../../ui/src/button; use @wizard-archive/ui package exports',
+    ])
+  })
+
+  it('allows same-package raw source imports', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'packages/editor/src/workspace/example.ts',
+          source: "import { createRuntime } from '../runtime'",
+        },
+        {
+          filePath: 'packages/ui/src/example.ts',
+          source: "import { Button } from './button'",
+        },
+      ]),
+    ).toEqual([])
   })
 
   it('does not treat import-like strings as import declarations', () => {

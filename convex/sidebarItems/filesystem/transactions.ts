@@ -1,36 +1,43 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
+import { PERMISSION_OPERATION } from '../../../shared/permissions/requirements'
 import {
   assertUndoablePatch,
   receiptPatchesFromChangeSet,
   redoPatchesFromChangeSet,
+  storedSidebarItemPatchFields,
   undoPatchesFromChangeSet,
 } from './deltas'
-import { hasMismatchedPrecondition } from '../../../shared/sidebar-items/filesystem/patches'
-import { summarizeFileSystemReceipt } from '../../../shared/sidebar-items/filesystem/receipts'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import type { StoredResourceDelta } from './deltas'
+import { summarizeResourceReceipt } from '@wizard-archive/editor/resources/transaction-contract'
+import { hasMismatchedPrecondition } from '@wizard-archive/editor/resources/patch-contract'
+import type {
+  ResourceTransactionReceipt,
+  ResourceCommand,
+  ResourceOperationDecision,
+} from '@wizard-archive/editor/resources/transaction-contract'
+import type { ResourcePatch } from '@wizard-archive/editor/resources/patch-contract'
+import {
+  RESOURCE_STATUS,
+  RESOURCE_TYPES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
 import { collectDescendants } from '../functions/collectDescendants'
+import { getActiveSidebarItemRowsByParent } from '../functions/getSidebarItemsByParent'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
 import { hardDeleteTree } from './treeWrites'
-import { normalizedName } from '../../../shared/sidebar-items/filesystem/conflicts'
-import type { Id } from '../../_generated/dataModel'
+import { getSidebarItemShareRow } from './shareRows'
+import { requireSidebarItemRowOperationAccess } from './access'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type {
-  FileSystemDelta,
-  FileSystemPatch,
-  FileSystemTransactionDirection,
-  FileSystemTransactionReceipt,
-} from '../../../shared/sidebar-items/filesystem/receipts'
-import type {
-  FileSystemCommand,
-  FileSystemOperationDecision,
-} from '../../../shared/sidebar-items/filesystem/commands'
-import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
-
+import { toSidebarItemDocument, toSidebarItemReplacement } from '../types/status'
 const MAX_FILESYSTEM_UNDO_HISTORY = 50
 const MAX_FILESYSTEM_NON_UNDOABLE_HISTORY = 50
 const MAX_FILESYSTEM_TRANSACTION_EVENTS = 1_000
 const MAX_FILESYSTEM_TRANSACTION_PATCHES = 4_000
+
+type FileSystemTransactionDirection = ResourceTransactionReceipt['direction']
 
 type FingerprintValue =
   | null
@@ -62,8 +69,8 @@ export function fileSystemRequestFingerprint({
   command,
   decisions,
 }: {
-  command: FileSystemCommand
-  decisions?: Array<FileSystemOperationDecision>
+  command: ResourceCommand
+  decisions?: Array<ResourceOperationDecision>
 }) {
   return stableSerialize({ command, decisions: decisions ?? [] })
 }
@@ -84,7 +91,7 @@ async function getExistingClientTransaction(
     .first()
 }
 
-function assertTransactionPayloadSize(delta: FileSystemDelta) {
+function assertTransactionPayloadSize(delta: StoredResourceDelta) {
   if (delta.events.length > MAX_FILESYSTEM_TRANSACTION_EVENTS) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,
@@ -106,11 +113,12 @@ function assertTransactionPayloadSize(delta: FileSystemDelta) {
 }
 
 function receiptPatchesForDirection(
-  changes: FileSystemDelta['changes'],
+  changes: StoredResourceDelta['changes'],
   direction: FileSystemTransactionDirection,
   undoable: boolean,
 ) {
   if (direction === 'undo') return undoable ? undoPatchesFromChangeSet(changes) : []
+  if (direction === 'redo') return undoable ? redoPatchesFromChangeSet(changes) : []
   return receiptPatchesFromChangeSet(changes)
 }
 
@@ -118,18 +126,18 @@ export async function loadTransactionReceipt(
   ctx: CampaignMutationCtx,
   transactionId: Id<'filesystemTransactions'>,
   direction: FileSystemTransactionDirection,
-): Promise<FileSystemTransactionReceipt> {
+): Promise<ResourceTransactionReceipt> {
   const transaction = await ctx.db.get('filesystemTransactions', transactionId)
   if (!transaction) throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem transaction not found')
-  const command = transaction.command as FileSystemCommand
-  const changes = transaction.changes as FileSystemDelta['changes']
+  const command = transaction.command as ResourceCommand
+  const changes = transaction.changes as StoredResourceDelta['changes']
   return {
     transactionId,
     direction,
     command,
     events: transaction.events,
     patches: receiptPatchesForDirection(changes, direction, transaction.undoable),
-    summary: summarizeFileSystemReceipt(command, transaction.events),
+    summary: summarizeResourceReceipt(command, transaction.events),
     undoable: transaction.undoable,
   }
 }
@@ -138,7 +146,7 @@ export async function loadIdempotentFilesystemReceipt(
   ctx: CampaignMutationCtx,
   clientOperationId: string | undefined,
   requestFingerprint: string,
-): Promise<FileSystemTransactionReceipt | null> {
+): Promise<ResourceTransactionReceipt | null> {
   const transaction = await getExistingClientTransaction(ctx, clientOperationId)
   if (!transaction) return null
   if (transaction.requestFingerprint !== requestFingerprint) {
@@ -157,11 +165,11 @@ export async function recordFilesystemTransaction(
     clientOperationId,
     requestFingerprint,
   }: {
-    delta: FileSystemDelta
+    delta: StoredResourceDelta
     clientOperationId?: string
     requestFingerprint: string
   },
-): Promise<FileSystemTransactionReceipt> {
+): Promise<ResourceTransactionReceipt> {
   assertTransactionPayloadSize(delta)
   const receiptPatches = receiptPatchesFromChangeSet(delta.changes)
   const transactionId = await ctx.db.insert('filesystemTransactions', {
@@ -171,7 +179,7 @@ export async function recordFilesystemTransaction(
     requestFingerprint,
     command: delta.command,
     events: delta.events,
-    changes: delta.changes,
+    changes: delta.changes as Doc<'filesystemTransactions'>['changes'],
     undoable: delta.undoable,
   })
 
@@ -183,51 +191,338 @@ export async function recordFilesystemTransaction(
     direction: 'forward',
     command: delta.command,
     patches: receiptPatches,
-    summary: summarizeFileSystemReceipt(delta.command, delta.events),
+    summary: summarizeResourceReceipt(delta.command, delta.events),
     undoable: delta.undoable,
   }
 }
 
-async function applyPatch(ctx: CampaignMutationCtx, patch: FileSystemPatch) {
+async function applyPatch(ctx: CampaignMutationCtx, patch: ResourcePatch) {
   assertUndoablePatch(patch)
+  switch (patch.type) {
+    case 'updateResource':
+      await applySidebarItemPatch(ctx, patch)
+      return
+    case 'updateResourceShare':
+      await applySidebarItemSharePatch(ctx, patch)
+      return
+    case 'removeResourceShare':
+      await applySidebarItemShareRemoval(ctx, patch)
+      return
+    case 'upsertResourceShare':
+      await applySidebarItemShareUpsert(ctx, patch)
+      return
+    case 'updateFolderShare':
+      await applyFolderSharePatch(ctx, patch)
+      return
+    case 'setResourceBookmarkState':
+      await applyBookmarkStatePatch(ctx, patch)
+      return
+    default:
+      return unhandledFileSystemPatch(patch)
+  }
+}
+
+function unhandledFileSystemPatch(patch: never): never {
+  throw new Error(`Unhandled filesystem patch type: ${String((patch as ResourcePatch).type)}`)
+}
+
+async function applySidebarItemPatch(
+  ctx: CampaignMutationCtx,
+  patch: Extract<ResourcePatch, { type: 'updateResource' }>,
+) {
   const item = await ctx.db.get('sidebarItems', patch.itemId)
   if (!item || item.campaignId !== ctx.campaign._id) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
   }
-  if (hasMismatchedPrecondition(item, patch.before)) {
+  await requireSidebarItemPatchAuthority(ctx, item, patch)
+  if (hasMismatchedPrecondition(item, storedSidebarItemPatchFields(patch.before))) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,
       'Filesystem transaction can no longer be applied cleanly',
     )
   }
-  await ctx.db.patch('sidebarItems', patch.itemId, patch.fields)
+  const after = toSidebarItemDocument({
+    ...item,
+    ...storedSidebarItemPatchFields(patch.fields),
+  })
+  await ctx.db.replace('sidebarItems', patch.itemId, toSidebarItemReplacement(after))
+}
+
+function requireDmShareReplay(ctx: CampaignMutationCtx) {
+  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can perform this action')
+  }
+}
+
+function sidebarItemPatchOperation(patch: Extract<ResourcePatch, { type: 'updateResource' }>) {
+  if (patch.fields.status === RESOURCE_STATUS.trashed) {
+    return PERMISSION_OPERATION.TRASH_SIDEBAR_ITEM
+  }
+  if (patch.fields.status === RESOURCE_STATUS.active) {
+    return PERMISSION_OPERATION.RESTORE_SIDEBAR_ITEM
+  }
+  if (patch.fields.status === RESOURCE_STATUS.undoHidden) {
+    return PERMISSION_OPERATION.DELETE_SIDEBAR_ITEM_FOREVER
+  }
+  if (patch.fields.parentId !== undefined) {
+    return PERMISSION_OPERATION.MOVE_SIDEBAR_ITEM
+  }
+  if (
+    patch.fields.name !== undefined ||
+    patch.fields.slug !== undefined ||
+    patch.fields.iconName !== undefined ||
+    patch.fields.color !== undefined
+  ) {
+    return PERMISSION_OPERATION.RENAME_SIDEBAR_ITEM
+  }
+  return PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM
+}
+
+async function requireSidebarParentPatchAuthority(
+  ctx: CampaignMutationCtx,
+  parentId: Id<'sidebarItems'> | null | undefined,
+) {
+  if (parentId === undefined) return
+  if (parentId === null) {
+    if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+      throwClientError(
+        ERROR_CODE.PERMISSION_DENIED,
+        'Only the DM can create items at the root level',
+      )
+    }
+    return
+  }
+
+  const parent = await requireTransactionTargetItem(ctx, parentId)
+  await requireSidebarItemRowOperationAccess(ctx, {
+    rawItem: parent,
+    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
+  })
+}
+
+async function requireSidebarItemPatchAuthority(
+  ctx: CampaignMutationCtx,
+  item: Doc<'sidebarItems'>,
+  patch: Extract<ResourcePatch, { type: 'updateResource' }>,
+) {
+  if (patch.fields.allPermissionLevel !== undefined) {
+    requireDmShareReplay(ctx)
+    return
+  }
+
+  await requireSidebarParentPatchAuthority(ctx, patch.fields.parentId)
+  await requireSidebarItemRowOperationAccess(ctx, {
+    rawItem: item,
+    operation: sidebarItemPatchOperation(patch),
+  })
+}
+
+async function applySidebarItemSharePatch(
+  ctx: CampaignMutationCtx,
+  patch: Extract<ResourcePatch, { type: 'updateResourceShare' }>,
+) {
+  requireDmShareReplay(ctx)
+  await requireTransactionItemOperation(ctx, {
+    itemId: patch.resourceId,
+    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
+  })
+  const share = await getSidebarItemShareRow(ctx, {
+    sidebarItemId: patch.resourceId,
+    campaignMemberId: patch.memberId as Id<'campaignMembers'>,
+  })
+  if (!share) throwClientError(ERROR_CODE.NOT_FOUND, 'Sidebar item share no longer exists')
+  if (hasMismatchedPrecondition(share, patch.before)) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  await ctx.db.patch('sidebarItemShares', share._id, patch.fields)
+}
+
+async function requireTransactionTargetItem(ctx: CampaignMutationCtx, itemId: Id<'sidebarItems'>) {
+  const item = await ctx.db.get('sidebarItems', itemId)
+  if (!item || item.campaignId !== ctx.campaign._id) {
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
+  }
+  return item
+}
+
+async function requireTransactionItemOperation(
+  ctx: CampaignMutationCtx,
+  {
+    itemId,
+    operation,
+  }: {
+    itemId: Id<'sidebarItems'>
+    operation: (typeof PERMISSION_OPERATION)[keyof typeof PERMISSION_OPERATION]
+  },
+) {
+  const item = await requireTransactionTargetItem(ctx, itemId)
+  await requireSidebarItemRowOperationAccess(ctx, { rawItem: item, operation })
+}
+
+async function assertTransactionTargetMember(
+  ctx: CampaignMutationCtx,
+  memberId: Id<'campaignMembers'>,
+) {
+  const member = await ctx.db.get('campaignMembers', memberId)
+  if (!member || member.campaignId !== ctx.campaign._id) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+}
+
+async function applySidebarItemShareRemoval(
+  ctx: CampaignMutationCtx,
+  patch: Extract<ResourcePatch, { type: 'removeResourceShare' }>,
+) {
+  requireDmShareReplay(ctx)
+  await requireTransactionItemOperation(ctx, {
+    itemId: patch.share.resourceId,
+    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
+  })
+  const share = await getSidebarItemShareRow(ctx, {
+    sidebarItemId: patch.share.resourceId,
+    campaignMemberId: patch.share.memberId as Id<'campaignMembers'>,
+  })
+  if (!share) return
+  if (hasMismatchedPrecondition(share, { permissionLevel: patch.share.permissionLevel })) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  await ctx.db.delete('sidebarItemShares', share._id)
+}
+
+async function applySidebarItemShareUpsert(
+  ctx: CampaignMutationCtx,
+  patch: Extract<ResourcePatch, { type: 'upsertResourceShare' }>,
+) {
+  requireDmShareReplay(ctx)
+  await requireTransactionItemOperation(ctx, {
+    itemId: patch.share.resourceId,
+    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
+  })
+  await assertTransactionTargetMember(ctx, patch.share.memberId as Id<'campaignMembers'>)
+  const existing = await getSidebarItemShareRow(ctx, {
+    sidebarItemId: patch.share.resourceId,
+    campaignMemberId: patch.share.memberId as Id<'campaignMembers'>,
+  })
+  if (existing) {
+    if (existing.permissionLevel !== patch.share.permissionLevel) {
+      throwClientError(
+        ERROR_CODE.VALIDATION_FAILED,
+        'Filesystem transaction can no longer be applied cleanly',
+      )
+    }
+    return
+  }
+  await ctx.db.insert('sidebarItemShares', {
+    campaignId: ctx.campaign._id,
+    sidebarItemId: patch.share.resourceId,
+    sidebarItemType: patch.share.sidebarItemType,
+    campaignMemberId: patch.share.memberId as Id<'campaignMembers'>,
+    sessionId: patch.share.sessionId,
+    permissionLevel: patch.share.permissionLevel,
+  })
+}
+
+async function applyFolderSharePatch(
+  ctx: CampaignMutationCtx,
+  patch: Extract<ResourcePatch, { type: 'updateFolderShare' }>,
+) {
+  requireDmShareReplay(ctx)
+  await requireTransactionItemOperation(ctx, {
+    itemId: patch.folderId,
+    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
+  })
+  const folder = await ctx.db
+    .query('folders')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', patch.folderId))
+    .unique()
+  if (!folder) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder no longer exists')
+  if (hasMismatchedPrecondition(folder, patch.before)) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  await ctx.db.patch('folders', folder._id, patch.fields)
+}
+
+async function getBookmarkRow(
+  ctx: CampaignMutationCtx,
+  {
+    campaignMemberId,
+    sidebarItemId,
+  }: {
+    campaignMemberId: Id<'campaignMembers'>
+    sidebarItemId: Id<'sidebarItems'>
+  },
+) {
+  return await ctx.db
+    .query('bookmarks')
+    .withIndex('by_campaign_member_item', (q) =>
+      q
+        .eq('campaignId', ctx.campaign._id)
+        .eq('campaignMemberId', campaignMemberId)
+        .eq('sidebarItemId', sidebarItemId),
+    )
+    .unique()
+}
+
+async function applyBookmarkStatePatch(
+  ctx: CampaignMutationCtx,
+  patch: Extract<ResourcePatch, { type: 'setResourceBookmarkState' }>,
+) {
+  await requireTransactionItemOperation(ctx, {
+    itemId: patch.itemId,
+    operation: PERMISSION_OPERATION.READ_SIDEBAR_ITEM,
+  })
+  const campaignMemberId = ctx.membership._id
+  await assertTransactionTargetMember(ctx, campaignMemberId)
+  const existing = await getBookmarkRow(ctx, {
+    campaignMemberId,
+    sidebarItemId: patch.itemId,
+  })
+  if (!patch.isBookmarked) {
+    if (existing) await ctx.db.delete('bookmarks', existing._id)
+    return
+  }
+  if (existing) return
+  await ctx.db.insert('bookmarks', {
+    campaignId: ctx.campaign._id,
+    sidebarItemId: patch.itemId,
+    campaignMemberId,
+  })
 }
 
 function patchRestoresActiveItem(
-  patch: FileSystemPatch,
-): patch is Extract<FileSystemPatch, { type: 'updateSidebarItem' }> {
+  patch: ResourcePatch,
+): patch is Extract<ResourcePatch, { type: 'updateResource' }> {
   return (
-    patch.type === 'updateSidebarItem' &&
-    patch.before.status === SIDEBAR_ITEM_STATUS.undoHidden &&
-    patch.fields.status === SIDEBAR_ITEM_STATUS.active
+    patch.type === 'updateResource' &&
+    patch.before.status === RESOURCE_STATUS.undoHidden &&
+    patch.fields.status === RESOURCE_STATUS.active
   )
 }
 
 function patchClearsActiveName(
-  patch: FileSystemPatch,
-): patch is Extract<FileSystemPatch, { type: 'updateSidebarItem' }> {
+  patch: ResourcePatch,
+): patch is Extract<ResourcePatch, { type: 'updateResource' }> {
   return (
-    patch.type === 'updateSidebarItem' &&
-    patch.before.status === SIDEBAR_ITEM_STATUS.active &&
+    patch.type === 'updateResource' &&
+    patch.before.status === RESOURCE_STATUS.active &&
     (patch.fields.status !== undefined || patch.fields.parentId !== undefined)
   )
 }
 
-async function collectRedoNameCheckInputs(
-  ctx: CampaignMutationCtx,
-  patches: Array<FileSystemPatch>,
-) {
-  const restoredItems: Array<AnySidebarItemRow> = []
+async function collectRedoNameCheckInputs(ctx: CampaignMutationCtx, patches: Array<ResourcePatch>) {
+  const restoredItems: Array<Doc<'sidebarItems'>> = []
   const clearedActiveItemIds = new Set<Id<'sidebarItems'>>()
   for (const patch of patches) {
     if (patchClearsActiveName(patch)) {
@@ -238,17 +533,19 @@ async function collectRedoNameCheckInputs(
     if (!item || item.campaignId !== ctx.campaign._id) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
     }
-    restoredItems.push({ ...item, ...patch.fields })
+    restoredItems.push(
+      toSidebarItemDocument({ ...item, ...storedSidebarItemPatchFields(patch.fields) }),
+    )
   }
   return { restoredItems, clearedActiveItemIds }
 }
 
-function assertNoDuplicateRestoredNames(restoredItems: Array<AnySidebarItemRow>) {
+function assertNoDuplicateRestoredNames(restoredItems: Array<Doc<'sidebarItems'>>) {
   const plannedNamesByParent = new Map<string, Set<string>>()
   for (const item of restoredItems) {
     const parentKey = item.parentId ?? '__root__'
     const plannedNames = plannedNamesByParent.get(parentKey) ?? new Set<string>()
-    const name = normalizedName(item.name)
+    const name = normalizeResourceNameForComparison(item.name)
     if (plannedNames.has(name)) {
       throwClientError(
         ERROR_CODE.VALIDATION_FAILED,
@@ -262,27 +559,19 @@ function assertNoDuplicateRestoredNames(restoredItems: Array<AnySidebarItemRow>)
 
 async function assertNoActiveSiblingNameConflicts(
   ctx: CampaignMutationCtx,
-  restoredItems: Array<AnySidebarItemRow>,
+  restoredItems: Array<Doc<'sidebarItems'>>,
   clearedActiveItemIds: Set<Id<'sidebarItems'>>,
 ) {
   const restoredItemIds = new Set(restoredItems.map((item) => item._id))
   for (const item of restoredItems) {
-    const restoredName = normalizedName(item.name)
-    const siblings = await ctx.db
-      .query('sidebarItems')
-      .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
-        q
-          .eq('campaignId', ctx.campaign._id)
-          .eq('status', SIDEBAR_ITEM_STATUS.active)
-          .eq('parentId', item.parentId),
-      )
-      .collect()
+    const restoredName = normalizeResourceNameForComparison(item.name)
+    const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId: item.parentId })
     if (
       siblings.some(
         (sibling) =>
           !restoredItemIds.has(sibling._id) &&
           !clearedActiveItemIds.has(sibling._id) &&
-          normalizedName(sibling.name) === restoredName,
+          normalizeResourceNameForComparison(sibling.name) === restoredName,
       )
     ) {
       throwClientError(
@@ -295,7 +584,7 @@ async function assertNoActiveSiblingNameConflicts(
 
 async function assertActiveRedoNamesAreAvailable(
   ctx: CampaignMutationCtx,
-  patches: Array<FileSystemPatch>,
+  patches: Array<ResourcePatch>,
 ) {
   const { restoredItems, clearedActiveItemIds } = await collectRedoNameCheckInputs(ctx, patches)
   assertNoDuplicateRestoredNames(restoredItems)
@@ -304,7 +593,7 @@ async function assertActiveRedoNamesAreAvailable(
 
 async function applyPatches(
   ctx: CampaignMutationCtx,
-  patches: Array<FileSystemPatch>,
+  patches: Array<ResourcePatch>,
   direction?: 'undo' | 'redo',
 ) {
   if (direction === 'redo') {
@@ -317,17 +606,17 @@ async function applyPatches(
 }
 
 function patchChangesPathOrVisibility(
-  patch: FileSystemPatch,
-): patch is Extract<FileSystemPatch, { type: 'updateSidebarItem' }> {
+  patch: ResourcePatch,
+): patch is Extract<ResourcePatch, { type: 'updateResource' }> {
   return (
-    patch.type === 'updateSidebarItem' &&
+    patch.type === 'updateResource' &&
     (patch.fields.parentId !== undefined || patch.fields.status !== undefined)
   )
 }
 
 async function resyncRelativeLinksForTransactionPatches(
   ctx: CampaignMutationCtx,
-  patches: Array<FileSystemPatch>,
+  patches: Array<ResourcePatch>,
 ) {
   const noteIds = new Set<Id<'sidebarItems'>>()
 
@@ -342,13 +631,13 @@ async function resyncRelativeLinksForTransactionPatches(
 
 async function noteIdsAffectedByPathPatch(
   ctx: CampaignMutationCtx,
-  patch: FileSystemPatch,
+  patch: ResourcePatch,
 ): Promise<Array<Id<'sidebarItems'>>> {
   if (!patchChangesPathOrVisibility(patch)) return []
   const item = await ctx.db.get('sidebarItems', patch.itemId)
   if (!item || item.campaignId !== ctx.campaign._id) return []
-  if (item.type === SIDEBAR_ITEM_TYPES.notes) return [item._id]
-  if (item.type !== SIDEBAR_ITEM_TYPES.folders || item.status === SIDEBAR_ITEM_STATUS.undoHidden) {
+  if (item.type === RESOURCE_TYPES.notes) return [item._id]
+  if (item.type !== RESOURCE_TYPES.folders || item.status === RESOURCE_STATUS.undoHidden) {
     return []
   }
   const descendants = await collectDescendants(ctx, {
@@ -357,26 +646,20 @@ async function noteIdsAffectedByPathPatch(
     folderId: item._id,
   })
   return descendants
-    .filter((descendant) => descendant.type === SIDEBAR_ITEM_TYPES.notes)
+    .filter((descendant) => descendant.type === RESOURCE_TYPES.notes)
     .map((descendant) => descendant._id)
 }
 
 async function pruneOldFilesystemTransactions(ctx: CampaignMutationCtx) {
-  const transactions = await ctx.db
-    .query('filesystemTransactions')
-    .withIndex('by_campaign_actor_undoable', (q) =>
-      q
-        .eq('campaignId', ctx.campaign._id)
-        .eq('actorMemberId', ctx.membership._id)
-        .eq('undoable', true),
-    )
-    .order('desc')
-    .take(MAX_FILESYSTEM_UNDO_HISTORY + 1)
+  const transactions = await getFilesystemTransactionsPastLimit(ctx, {
+    limit: MAX_FILESYSTEM_UNDO_HISTORY,
+    undoable: true,
+  })
 
   for (const transaction of transactions.slice(MAX_FILESYSTEM_UNDO_HISTORY)) {
     await hardDeleteUndoHiddenCreatedRows(
       ctx,
-      undoPatchesFromChangeSet(transaction.changes as FileSystemDelta['changes']),
+      undoPatchesFromChangeSet(transaction.changes as StoredResourceDelta['changes']),
     )
     await ctx.db.delete('filesystemTransactions', transaction._id)
   }
@@ -385,41 +668,54 @@ async function pruneOldFilesystemTransactions(ctx: CampaignMutationCtx) {
 }
 
 async function pruneOldNonUndoableFilesystemTransactions(ctx: CampaignMutationCtx) {
-  const transactions = await ctx.db
-    .query('filesystemTransactions')
-    .withIndex('by_campaign_actor_undoable', (q) =>
-      q
-        .eq('campaignId', ctx.campaign._id)
-        .eq('actorMemberId', ctx.membership._id)
-        .eq('undoable', false),
-    )
-    .order('desc')
-    .take(MAX_FILESYSTEM_NON_UNDOABLE_HISTORY + 1)
+  const transactions = await getFilesystemTransactionsPastLimit(ctx, {
+    limit: MAX_FILESYSTEM_NON_UNDOABLE_HISTORY,
+    undoable: false,
+  })
 
   for (const transaction of transactions.slice(MAX_FILESYSTEM_NON_UNDOABLE_HISTORY)) {
     await ctx.db.delete('filesystemTransactions', transaction._id)
   }
 }
 
+async function getFilesystemTransactionsPastLimit(
+  ctx: CampaignMutationCtx,
+  {
+    limit,
+    undoable,
+  }: {
+    limit: number
+    undoable: boolean
+  },
+) {
+  return await ctx.db
+    .query('filesystemTransactions')
+    .withIndex('by_campaign_actor_undoable', (q) =>
+      q
+        .eq('campaignId', ctx.campaign._id)
+        .eq('actorMemberId', ctx.membership._id)
+        .eq('undoable', undoable),
+    )
+    .order('desc')
+    .take(limit + 1)
+}
+
 async function hardDeleteUndoHiddenCreatedRows(
   ctx: CampaignMutationCtx,
-  inversePatches: Array<FileSystemPatch>,
+  inversePatches: Array<ResourcePatch>,
 ) {
   const hiddenItemIds = new Set<Id<'sidebarItems'>>()
   for (const patch of inversePatches) {
-    if (
-      patch.type === 'updateSidebarItem' &&
-      patch.fields.status === SIDEBAR_ITEM_STATUS.undoHidden
-    ) {
+    if (patch.type === 'updateResource' && patch.fields.status === RESOURCE_STATUS.undoHidden) {
       hiddenItemIds.add(patch.itemId)
     }
   }
   if (hiddenItemIds.size === 0) return
 
-  const hiddenItems: Array<AnySidebarItemRow> = []
+  const hiddenItems: Array<Doc<'sidebarItems'>> = []
   for (const itemId of hiddenItemIds) {
     const item = await ctx.db.get('sidebarItems', itemId)
-    if (item?.campaignId === ctx.campaign._id && item.status === SIDEBAR_ITEM_STATUS.undoHidden) {
+    if (item?.campaignId === ctx.campaign._id && item.status === RESOURCE_STATUS.undoHidden) {
       hiddenItems.push(item)
     }
   }
@@ -439,7 +735,7 @@ export async function applyFilesystemTransactionDirection(
     transactionId: Id<'filesystemTransactions'>
     direction: 'undo' | 'redo'
   },
-): Promise<FileSystemTransactionReceipt> {
+): Promise<ResourceTransactionReceipt> {
   const source = await ctx.db.get('filesystemTransactions', transactionId)
   if (!source) throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem transaction not found')
   if (source.campaignId !== ctx.campaign._id || source.actorMemberId !== ctx.membership._id) {
@@ -449,8 +745,8 @@ export async function applyFilesystemTransactionDirection(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Filesystem transaction is not undoable')
   }
 
-  const command = source.command as FileSystemCommand
-  const changes = source.changes as FileSystemDelta['changes']
+  const command = source.command as ResourceCommand
+  const changes = source.changes as StoredResourceDelta['changes']
   const databasePatches =
     direction === 'undo' ? undoPatchesFromChangeSet(changes) : redoPatchesFromChangeSet(changes)
   await applyPatches(ctx, databasePatches, direction)
@@ -461,7 +757,7 @@ export async function applyFilesystemTransactionDirection(
     direction,
     command,
     patches: receiptPatchesForDirection(changes, direction, source.undoable),
-    summary: summarizeFileSystemReceipt(command, source.events),
+    summary: summarizeResourceReceipt(command, source.events),
     undoable: true,
   }
 }

@@ -6,9 +6,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '~/features/shadcn/components/card'
-import { Button } from '~/features/shadcn/components/button'
-import { Badge } from '~/features/shadcn/components/badge'
+} from '@wizard-archive/ui/shadcn/components/card'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Badge } from '@wizard-archive/ui/shadcn/components/badge'
 
 interface BaseContentCardProps {
   title: string
@@ -104,11 +104,7 @@ export function ContentCard({
   const wrappedCard = linkWrapper ? linkWrapper(cardContent) : cardContent
 
   return (
-    <div
-      role="article"
-      aria-label={title}
-      className={`relative group ${linkWrapper ? className : ''}`}
-    >
+    <article aria-label={title} className={`relative group ${linkWrapper ? className : ''}`}>
       {wrappedCard}
       {actionButtons && (
         <div className="absolute top-4 right-4 flex gap-1 z-10">
@@ -129,6 +125,6 @@ export function ContentCard({
           )}
         </div>
       )}
-    </div>
+    </article>
   )
 }

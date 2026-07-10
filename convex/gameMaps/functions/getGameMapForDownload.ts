@@ -1,17 +1,20 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { MapItem } from '@wizard-archive/editor/game-maps/item-contract'
+import { resolveMapImage } from '@wizard-archive/editor/game-maps/image-resolution'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
+import type { Id } from '../../_generated/dataModel'
 
 export async function getGameMapForDownload(
   ctx: CampaignQueryCtx,
-  item: Extract<AnySidebarItem, { type: typeof SIDEBAR_ITEM_TYPES.gameMaps }>,
+  item: MapItem,
   path: string,
 ): Promise<DownloadItem> {
+  const imageStorageId = resolveMapImage(item).imageAssetId as unknown as Id<'_storage'> | null
   return {
-    type: SIDEBAR_ITEM_TYPES.gameMaps,
+    type: RESOURCE_TYPES.gameMaps,
     name: item.name,
     path,
-    downloadUrl: item.imageStorageId ? await ctx.storage.getUrl(item.imageStorageId) : null,
+    downloadUrl: imageStorageId ? await ctx.storage.getUrl(imageStorageId) : null,
   }
 }

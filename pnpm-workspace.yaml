@@ -1,0 +1,39 @@
+packages:
+  - packages/*
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+onlyBuiltDependencies:
+  - esbuild
+  - '@tailwindcss/oxide'
+  - sharp
+overrides:
+  vite: 'catalog:'
+  vitest: 'catalog:'
+  miniflare>undici: ^8.0.3
+  prosemirror-model: 1.25.4
+  prosemirror-state: 1.4.4
+  prosemirror-transform: 1.11.0
+  prosemirror-view: 1.41.5
+peerDependencyRules:
+  allowAny:
+    - vite
+    - vitest
+  allowedVersions:
+    vite: '*'
+    vitest: '*'
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@0.2.2
+  vitest: 4.1.9
+  vite-plus: 0.2.2
+  '@vitest/coverage-v8': 4.1.9
+minimumReleaseAgeExclude:
+  - vite-plus
+  - '@voidzero-dev/*'
+  - oxlint
+  - '@oxlint/*'
+  - oxlint-tsgolint
+  - '@oxlint-tsgolint/*'
+  - oxfmt
+  - '@oxfmt/*'
+  - vitest
+  - '@vitest/*'

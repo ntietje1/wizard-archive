@@ -1,16 +1,18 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { validateSidebarCreateParent } from '../validation/orchestration'
-import { CREATE_PARENT_TARGET_KIND } from '../../../shared/sidebar-items/parent-target'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_PARENT_TARGET_KIND } from '@wizard-archive/editor/resources/resource-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { ResourceName } from '@wizard-archive/editor/resources/resource-contract'
 import { assertSidebarItemLifecycleConsistency, isActiveSidebarItem } from '../types/status'
+import type { ParsedCreateParentTarget } from '../validation/parent'
 import { initializeEmptySidebarItemCompanion } from './companionInitialization'
 import { findActiveSidebarChildByName } from './siblings'
 import { getSidebarItemRow } from './sidebarItemRows'
+import { assertSidebarOperationAllowed, operationActorFromRole } from './capabilities'
+import { evaluateCreateItem } from '@wizard-archive/editor/resources/operation-capabilities'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { ParsedCreateParentTarget } from '../../../shared/sidebar-items/parent-target'
-import type { SidebarItemName } from '../../../shared/sidebar-items/name'
 import type { FileSystemWriteSession } from './deltas'
 
 async function getParentFolderId(
@@ -34,7 +36,7 @@ async function resolveOrCreateChildFolder(
     segment,
   }: {
     parentId: Id<'sidebarItems'> | null
-    segment: SidebarItemName
+    segment: ResourceName
   },
 ): Promise<Id<'sidebarItems'>> {
   const existing = await findActiveSidebarChildByName(ctx, {
@@ -43,19 +45,22 @@ async function resolveOrCreateChildFolder(
   })
 
   if (!existing) {
-    const { itemId } = await session.insertSidebarItem({
-      type: SIDEBAR_ITEM_TYPES.folders,
+    assertSidebarOperationAllowed(
+      evaluateCreateItem(operationActorFromRole(ctx.membership.role), RESOURCE_TYPES.folders),
+    )
+    const { itemId } = await session.insertResource({
+      type: RESOURCE_TYPES.folders,
       name: segment,
       parentId,
     })
     await initializeEmptySidebarItemCompanion(ctx, {
       itemId,
-      itemType: SIDEBAR_ITEM_TYPES.folders,
+      itemType: RESOURCE_TYPES.folders,
     })
     return itemId
   }
 
-  if (existing.type !== SIDEBAR_ITEM_TYPES.folders) {
+  if (existing.type !== RESOURCE_TYPES.folders) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,
       `"${segment}" already exists here and is not a folder`,
@@ -75,7 +80,7 @@ export async function resolveCreateCommandParentId(
     parentTarget: ParsedCreateParentTarget
   },
 ): Promise<Id<'sidebarItems'> | null> {
-  if (parentTarget.kind === CREATE_PARENT_TARGET_KIND.direct) {
+  if (parentTarget.kind === RESOURCE_PARENT_TARGET_KIND.direct) {
     return parentTarget.parentId
   }
 

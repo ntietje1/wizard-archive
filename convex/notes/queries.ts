@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
 import { noteWithContentValidator } from './schema'
 import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
-import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 
 export const getNote = campaignQuery({
   args: {
@@ -10,6 +10,6 @@ export const getNote = campaignQuery({
   },
   returns: v.nullable(noteWithContentValidator),
   handler: async (ctx, args) => {
-    return await getSidebarItemWithContent(ctx, args.noteId, SIDEBAR_ITEM_TYPES.notes)
+    return await getSidebarItemWithContent(ctx, args.noteId, RESOURCE_TYPES.notes)
   },
 })

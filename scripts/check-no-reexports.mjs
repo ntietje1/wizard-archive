@@ -79,6 +79,10 @@ function exportedLocalName(element) {
   return (element.propertyName ?? element.name).text
 }
 
+function hasExportModifier(node) {
+  return ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+}
+
 function createAst(filePath, source) {
   return ts.createSourceFile(
     filePath,
@@ -116,6 +120,20 @@ function exportedImportedBindingViolation(filePath, source, ast, statement, impo
   return `${filePath}:${lineNumber(source, statement.getStart(ast))} exported imported binding: ${exportedImportedBindings.join(', ')}`
 }
 
+function exportedImportedAliasBindingViolation(filePath, source, ast, statement, importedAliases) {
+  if (!ts.isExportDeclaration(statement)) return null
+  if (!statement.exportClause || !ts.isNamedExports(statement.exportClause)) return null
+
+  const exportedImportedAliases = statement.exportClause.elements.flatMap((element) => {
+    const localName = exportedLocalName(element)
+    const aliasText = importedAliases.get(localName)
+    return aliasText ? [`${localName} = ${aliasText}`] : []
+  })
+  if (exportedImportedAliases.length === 0) return null
+
+  return `${filePath}:${lineNumber(source, statement.getStart(ast))} exported imported alias: ${exportedImportedAliases.join(', ')}`
+}
+
 function defaultExportedImportedBindingViolation(
   filePath,
   source,
@@ -130,17 +148,152 @@ function defaultExportedImportedBindingViolation(
   return `${filePath}:${lineNumber(source, statement.getStart(ast))} default-exported imported binding: ${statement.expression.text}`
 }
 
+function defaultExportedImportedAliasViolation(filePath, source, ast, statement, importedAliases) {
+  if (!ts.isExportAssignment(statement)) return null
+  if (!ts.isIdentifier(statement.expression)) return null
+  const aliasText = importedAliases.get(statement.expression.text)
+  if (!aliasText) return null
+
+  return `${filePath}:${lineNumber(source, statement.getStart(ast))} default-exported imported alias: ${statement.expression.text} = ${aliasText}`
+}
+
+function importedAliasText(node, importedBindings) {
+  if (ts.isIdentifier(node)) {
+    return importedBindings.has(node.text) ? node.text : null
+  }
+
+  if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) {
+    return importedBindings.has(node.expression.text) ? node.getText() : null
+  }
+
+  return null
+}
+
+function importedTypeAliasText(node, importedBindings) {
+  if (!ts.isTypeReferenceNode(node)) return null
+  if (node.typeArguments && node.typeArguments.length > 0) return null
+  const { typeName } = node
+
+  if (ts.isIdentifier(typeName)) {
+    return importedBindings.has(typeName.text) ? typeName.text : null
+  }
+
+  if (ts.isQualifiedName(typeName) && ts.isIdentifier(typeName.left)) {
+    return importedBindings.has(typeName.left.text) ? typeName.getText() : null
+  }
+
+  return null
+}
+
+function importedValueAliasEntries(statement, importedBindings) {
+  if (!ts.isVariableStatement(statement)) return []
+
+  return statement.declarationList.declarations.flatMap((declaration) => {
+    if (!ts.isIdentifier(declaration.name) || !declaration.initializer) return []
+    const aliasText = importedAliasText(declaration.initializer, importedBindings)
+    return aliasText ? [[declaration.name.text, aliasText]] : []
+  })
+}
+
+function importedTypeAliasEntry(statement, importedBindings) {
+  if (!ts.isTypeAliasDeclaration(statement)) return null
+
+  const aliasText = importedTypeAliasText(statement.type, importedBindings)
+  return aliasText ? [statement.name.text, aliasText] : null
+}
+
+function collectImportedAliases(ast, importedBindings) {
+  const importedAliases = new Map()
+  for (const statement of ast.statements) {
+    for (const [name, aliasText] of importedValueAliasEntries(statement, importedBindings)) {
+      importedAliases.set(name, aliasText)
+    }
+    const typeAlias = importedTypeAliasEntry(statement, importedBindings)
+    if (typeAlias) importedAliases.set(typeAlias[0], typeAlias[1])
+  }
+  return importedAliases
+}
+
+function exportedImportedValueAliases(statement, importedBindings) {
+  if (!ts.isVariableStatement(statement) || !hasExportModifier(statement)) return []
+
+  return importedValueAliasEntries(statement, importedBindings).map(
+    ([name, aliasText]) => `${name} = ${aliasText}`,
+  )
+}
+
+function exportedImportedTypeAlias(statement, importedBindings) {
+  if (!ts.isTypeAliasDeclaration(statement) || !hasExportModifier(statement)) return null
+
+  const typeAlias = importedTypeAliasEntry(statement, importedBindings)
+  return typeAlias ? `${typeAlias[0]} = ${typeAlias[1]}` : null
+}
+
+function exportedImportedAliasViolation(filePath, source, ast, statement, importedBindings) {
+  const valueAliases = exportedImportedValueAliases(statement, importedBindings)
+  if (valueAliases.length > 0) {
+    return `${filePath}:${lineNumber(source, statement.getStart(ast))} exported imported alias: ${valueAliases.join(', ')}`
+  }
+
+  const typeAlias = exportedImportedTypeAlias(statement, importedBindings)
+  if (!typeAlias) return null
+
+  return `${filePath}:${lineNumber(source, statement.getStart(ast))} exported imported alias: ${typeAlias}`
+}
+
+function importedHeritageAliasText(type, importedBindings) {
+  return importedAliasText(type.expression, importedBindings)
+}
+
+function exportedImportedInterfaceProjectionViolation(
+  filePath,
+  source,
+  ast,
+  statement,
+  importedBindings,
+) {
+  if (!ts.isInterfaceDeclaration(statement) || !hasExportModifier(statement)) return null
+  if (statement.members.length > 0) return null
+
+  const importedProjections = (statement.heritageClauses ?? []).flatMap((clause) =>
+    clause.types.flatMap((type) => {
+      const aliasText = importedHeritageAliasText(type, importedBindings)
+      return aliasText ? [`${statement.name.text} = ${aliasText}`] : []
+    }),
+  )
+  if (importedProjections.length === 0) return null
+
+  return `${filePath}:${lineNumber(source, statement.getStart(ast))} exported imported interface projection: ${importedProjections.join(', ')}`
+}
+
 export function analyzeNoReexports(files) {
   const violations = []
   for (const { filePath, source } of files) {
     const ast = createAst(filePath, source)
     const importedBindings = collectImportedBindings(ast)
+    const importedAliases = collectImportedAliases(ast, importedBindings)
 
     for (const statement of ast.statements) {
       const violation =
         reexportViolation(filePath, source, ast, statement) ??
         exportedImportedBindingViolation(filePath, source, ast, statement, importedBindings) ??
-        defaultExportedImportedBindingViolation(filePath, source, ast, statement, importedBindings)
+        exportedImportedAliasBindingViolation(filePath, source, ast, statement, importedAliases) ??
+        defaultExportedImportedBindingViolation(
+          filePath,
+          source,
+          ast,
+          statement,
+          importedBindings,
+        ) ??
+        defaultExportedImportedAliasViolation(filePath, source, ast, statement, importedAliases) ??
+        exportedImportedAliasViolation(filePath, source, ast, statement, importedBindings) ??
+        exportedImportedInterfaceProjectionViolation(
+          filePath,
+          source,
+          ast,
+          statement,
+          importedBindings,
+        )
       if (violation) violations.push(violation)
     }
   }

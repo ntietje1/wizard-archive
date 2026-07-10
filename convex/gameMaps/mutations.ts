@@ -1,16 +1,30 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { updateMapImage as updateMapImageFn } from './functions/updateMap'
+import {
+  beginMapImageReplacement as beginMapImageReplacementFn,
+  updateMapImage as updateMapImageFn,
+} from './functions/updateMap'
 import { createItemPins as createItemPinsFn } from './functions/createItemPins'
 import { updateItemPin as updateItemPinFn } from './functions/updateItemPin'
 import { updatePinVisibility as updatePinVisibilityFn } from './functions/updatePinVisibility'
 import { removeItemPin as removeItemPinFn } from './functions/removeItemPin'
 import type { Id } from '../_generated/dataModel'
 
+export const beginMapImageReplacement = campaignMutation({
+  args: {
+    mapId: v.id('sidebarItems'),
+  },
+  returns: v.string(),
+  handler: async (ctx, args): Promise<string> => {
+    return await beginMapImageReplacementFn(ctx, { mapId: args.mapId })
+  },
+})
+
 export const updateMapImage = campaignMutation({
   args: {
     mapId: v.id('sidebarItems'),
-    imageStorageId: v.nullable(v.id('_storage')),
+    replacementToken: v.nullable(v.string()),
+    uploadSessionId: v.nullable(v.id('fileStorage')),
   },
   returns: v.object({
     mapId: v.id('sidebarItems'),
@@ -18,7 +32,8 @@ export const updateMapImage = campaignMutation({
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'> }> => {
     return await updateMapImageFn(ctx, {
       mapId: args.mapId,
-      imageStorageId: args.imageStorageId,
+      replacementToken: args.replacementToken,
+      uploadSessionId: args.uploadSessionId,
     })
   },
 })

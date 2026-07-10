@@ -1,0 +1,379 @@
+import { normalizeCanvasNode } from '../../nodes/canvas-node-normalization'
+import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-bounds'
+import {
+  getAbsoluteStrokePointsForNode,
+  getStrokeEndpointConnectionPosition,
+  getStrokeEndpointPoint,
+} from '../../nodes/stroke/stroke-node-model'
+import {
+  boundsFromPoints,
+  pointInPolygon,
+  rectIntersectsBounds,
+  segmentsIntersect,
+} from '../../utils/canvas-geometry-utils'
+import { CANVAS_HANDLE_POSITION } from '../../types/canvas-domain-types'
+import type { Point2D } from '../../utils/canvas-awareness-types'
+import type { Bounds } from '../../utils/canvas-geometry-utils'
+import type { CanvasHandlePosition } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../document-contract'
+const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
+const NODE_EDGE_ANCHOR_OUTSET_PX = 0
+const POINT_EPSILON = 1e-6
+
+type CanvasEdgeEndpoints = {
+  sourceX: number
+  sourceY: number
+  targetX: number
+  targetY: number
+  sourcePosition: CanvasHandlePosition
+  targetPosition: CanvasHandlePosition
+}
+
+type CanvasEdgeEndpointNodes = {
+  sourceNode: CanvasDocumentNode
+  targetNode: CanvasDocumentNode
+}
+
+export type CanvasEdgeGeometry = {
+  path: string
+  labelX: number
+  labelY: number
+  hitPoints: ReadonlyArray<Point2D>
+}
+
+function handleIdToPosition(
+  handleId: string | null | undefined,
+  fallback: CanvasHandlePosition,
+): CanvasHandlePosition {
+  switch (handleId) {
+    case 'top':
+      return CANVAS_HANDLE_POSITION.Top
+    case 'right':
+      return CANVAS_HANDLE_POSITION.Right
+    case 'bottom':
+      return CANVAS_HANDLE_POSITION.Bottom
+    case 'left':
+      return CANVAS_HANDLE_POSITION.Left
+    default:
+      return fallback
+  }
+}
+
+function resolveCanvasEdgeEndpoint(
+  node: CanvasDocumentNode,
+  handleId: string | null | undefined,
+  fallbackPosition: CanvasHandlePosition,
+): { point: Point2D; position: CanvasHandlePosition } | null {
+  const parsedNode = normalizeCanvasNode(node)
+
+  if (parsedNode?.type === 'stroke' && (handleId === 'start' || handleId === 'end')) {
+    const absolutePoints = getAbsoluteStrokePointsForNode(parsedNode)
+    const point = getStrokeEndpointPoint(parsedNode, handleId, absolutePoints)
+    if (!point) {
+      return null
+    }
+
+    return {
+      point,
+      position: getStrokeEndpointConnectionPosition(parsedNode, handleId, absolutePoints),
+    }
+  }
+
+  const position = handleIdToPosition(handleId, fallbackPosition)
+  const point = getCanvasEdgeAnchorPoint(node, position)
+  if (!point) {
+    return null
+  }
+
+  return { point, position }
+}
+
+function getBoundsCenter(node: CanvasDocumentNode) {
+  const bounds = getCanvasNodeBounds(node)
+  if (!bounds) return null
+
+  return {
+    bounds,
+    center: {
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2,
+    },
+  }
+}
+
+function inferCanvasEdgePositions(sourceNode: CanvasDocumentNode, targetNode: CanvasDocumentNode) {
+  const source = getBoundsCenter(sourceNode)
+  const target = getBoundsCenter(targetNode)
+  if (!source || !target) {
+    return {
+      sourcePosition: CANVAS_HANDLE_POSITION.Right,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
+    }
+  }
+
+  const dx = target.center.x - source.center.x
+  const dy = target.center.y - source.center.y
+
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0
+      ? {
+          sourcePosition: CANVAS_HANDLE_POSITION.Right,
+          targetPosition: CANVAS_HANDLE_POSITION.Left,
+        }
+      : {
+          sourcePosition: CANVAS_HANDLE_POSITION.Left,
+          targetPosition: CANVAS_HANDLE_POSITION.Right,
+        }
+  }
+
+  return dy >= 0
+    ? { sourcePosition: CANVAS_HANDLE_POSITION.Bottom, targetPosition: CANVAS_HANDLE_POSITION.Top }
+    : { sourcePosition: CANVAS_HANDLE_POSITION.Top, targetPosition: CANVAS_HANDLE_POSITION.Bottom }
+}
+
+function getCanvasEdgeAnchorPoint(
+  node: CanvasDocumentNode,
+  position: CanvasHandlePosition,
+): Point2D | null {
+  const bounds = getCanvasNodeBounds(node)
+  if (!bounds) return null
+
+  switch (position) {
+    case CANVAS_HANDLE_POSITION.Top:
+      return { x: bounds.x + bounds.width / 2, y: bounds.y - NODE_EDGE_ANCHOR_OUTSET_PX }
+    case CANVAS_HANDLE_POSITION.Right:
+      return {
+        x: bounds.x + bounds.width + NODE_EDGE_ANCHOR_OUTSET_PX,
+        y: bounds.y + bounds.height / 2,
+      }
+    case CANVAS_HANDLE_POSITION.Bottom:
+      return {
+        x: bounds.x + bounds.width / 2,
+        y: bounds.y + bounds.height + NODE_EDGE_ANCHOR_OUTSET_PX,
+      }
+    case CANVAS_HANDLE_POSITION.Left:
+      return { x: bounds.x - NODE_EDGE_ANCHOR_OUTSET_PX, y: bounds.y + bounds.height / 2 }
+    default:
+      return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
+  }
+}
+
+export function getCanvasEdgeInteractionWidth(): number {
+  return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH
+}
+
+export function canvasEdgeGeometryIntersectsRectangle(
+  geometry: CanvasEdgeGeometry,
+  rect: Bounds,
+): boolean {
+  const bounds = boundsFromPoints(geometry.hitPoints)
+  if (bounds && !boundsIntersectOrTouch(bounds, rect)) {
+    return false
+  }
+
+  return polylineIntersectsRect(geometry.hitPoints, rect)
+}
+
+export function canvasEdgeGeometryIntersectsPolygon(
+  geometry: CanvasEdgeGeometry,
+  polygon: ReadonlyArray<Point2D>,
+): boolean {
+  return polylineIntersectsPolygon(geometry.hitPoints, polygon)
+}
+
+function getCanvasEdgeEndpoints(
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
+): CanvasEdgeEndpoints | null {
+  const sourceNode = nodesById.get(edge.source)
+  const targetNode = nodesById.get(edge.target)
+  if (!sourceNode || !targetNode) return null
+
+  const inferredPositions = inferCanvasEdgePositions(sourceNode, targetNode)
+  const sourceEndpoint = resolveCanvasEdgeEndpoint(
+    sourceNode,
+    edge.sourceHandle,
+    inferredPositions.sourcePosition,
+  )
+  const targetEndpoint = resolveCanvasEdgeEndpoint(
+    targetNode,
+    edge.targetHandle,
+    inferredPositions.targetPosition,
+  )
+  if (!sourceEndpoint || !targetEndpoint) return null
+
+  return {
+    sourceX: sourceEndpoint.point.x,
+    sourceY: sourceEndpoint.point.y,
+    targetX: targetEndpoint.point.x,
+    targetY: targetEndpoint.point.y,
+    sourcePosition: sourceEndpoint.position,
+    targetPosition: targetEndpoint.position,
+  }
+}
+
+export function buildCanvasEdgeGeometryFromResolvedEndpoints(
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
+  buildGeometry: (
+    endpoints: CanvasEdgeEndpoints,
+    nodes: CanvasEdgeEndpointNodes,
+  ) => CanvasEdgeGeometry,
+): CanvasEdgeGeometry | null {
+  const sourceNode = nodesById.get(edge.source)
+  const targetNode = nodesById.get(edge.target)
+  const endpoints = getCanvasEdgeEndpoints(edge, nodesById)
+  if (!endpoints || !sourceNode || !targetNode) return null
+
+  return buildGeometry(endpoints, { sourceNode, targetNode })
+}
+
+export function compactPolylinePoints(points: ReadonlyArray<Point2D>): Array<Point2D> {
+  return points.filter((point, index) => {
+    if (index === 0) return true
+
+    const previous = points[index - 1]
+    return (
+      Math.abs(previous.x - point.x) > POINT_EPSILON ||
+      Math.abs(previous.y - point.y) > POINT_EPSILON
+    )
+  })
+}
+
+export function buildPolylinePath(points: ReadonlyArray<Point2D>): string {
+  if (points.length === 0) return ''
+
+  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x},${point.y}`).join(' ')
+}
+
+export function getPolylineMidpoint(points: ReadonlyArray<Point2D>): Point2D {
+  if (points.length === 0) {
+    return { x: 0, y: 0 }
+  }
+
+  let totalLength = 0
+  const segmentLengths: Array<number> = []
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const dx = points[index + 1].x - points[index].x
+    const dy = points[index + 1].y - points[index].y
+    const segmentLength = Math.hypot(dx, dy)
+    segmentLengths.push(segmentLength)
+    totalLength += segmentLength
+  }
+
+  if (totalLength <= POINT_EPSILON) {
+    return points[0]
+  }
+
+  const midpointDistance = totalLength / 2
+  let traversedLength = 0
+
+  for (let index = 0; index < segmentLengths.length; index += 1) {
+    const segmentLength = segmentLengths[index]
+    if (traversedLength + segmentLength >= midpointDistance) {
+      if (segmentLength <= POINT_EPSILON) {
+        return points[index + 1]
+      }
+
+      const ratio = (midpointDistance - traversedLength) / segmentLength
+      return {
+        x: points[index].x + (points[index + 1].x - points[index].x) * ratio,
+        y: points[index].y + (points[index + 1].y - points[index].y) * ratio,
+      }
+    }
+
+    traversedLength += segmentLength
+  }
+
+  return points[points.length - 1]
+}
+
+function pointInRect(point: Point2D, rect: Bounds): boolean {
+  return (
+    point.x >= rect.x &&
+    point.x <= rect.x + rect.width &&
+    point.y >= rect.y &&
+    point.y <= rect.y + rect.height
+  )
+}
+
+function boundsIntersectOrTouch(left: Bounds, right: Bounds): boolean {
+  return (
+    left.x <= right.x + right.width &&
+    left.x + left.width >= right.x &&
+    left.y <= right.y + right.height &&
+    left.y + left.height >= right.y
+  )
+}
+
+function polylineIntersectsRect(points: ReadonlyArray<Point2D>, rect: Bounds): boolean {
+  if (points.some((point) => pointInRect(point, rect))) {
+    return true
+  }
+
+  const rectEdges: Array<[number, number, number, number]> = [
+    [rect.x, rect.y, rect.x + rect.width, rect.y],
+    [rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height],
+    [rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height],
+    [rect.x, rect.y + rect.height, rect.x, rect.y],
+  ]
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    for (const [ax, ay, bx, by] of rectEdges) {
+      if (
+        segmentsIntersect(
+          points[index].x,
+          points[index].y,
+          points[index + 1].x,
+          points[index + 1].y,
+          ax,
+          ay,
+          bx,
+          by,
+        )
+      ) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+function polylineIntersectsPolygon(
+  points: ReadonlyArray<Point2D>,
+  polygon: ReadonlyArray<Point2D>,
+): boolean {
+  const polygonBounds = boundsFromPoints(polygon)
+  const polylineBounds = boundsFromPoints(points)
+  if (polygonBounds && polylineBounds && !rectIntersectsBounds(polylineBounds, polygonBounds)) {
+    return false
+  }
+
+  if (points.some((point) => pointInPolygon(point.x, point.y, polygon))) {
+    return true
+  }
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    for (let polygonIndex = 0; polygonIndex < polygon.length; polygonIndex += 1) {
+      const nextPolygonIndex = (polygonIndex + 1) % polygon.length
+      if (
+        segmentsIntersect(
+          points[index].x,
+          points[index].y,
+          points[index + 1].x,
+          points[index + 1].y,
+          polygon[polygonIndex].x,
+          polygon[polygonIndex].y,
+          polygon[nextPolygonIndex].x,
+          polygon[nextPolygonIndex].y,
+        )
+      ) {
+        return true
+      }
+    }
+  }
+
+  return false
+}

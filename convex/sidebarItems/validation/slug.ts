@@ -1,11 +1,10 @@
-import { assertSidebarItemSlug as assertSharedSidebarItemSlug } from '../../../shared/sidebar-items/slug'
+import { assertResourceSlug } from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceSlug } from '@wizard-archive/editor/resources/resource-contract'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
-
-export function assertSidebarItemSlug(value: string): SidebarItemSlug {
+export function assertConvexSidebarItemSlug(value: string): ResourceSlug {
   try {
-    return assertSharedSidebarItemSlug(value)
+    return assertResourceSlug(value)
   } catch (error) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,

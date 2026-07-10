@@ -5,6 +5,8 @@ import {
   createBlock,
   createBlockShare,
   createCampaignWithDm,
+  createFile,
+  createGameMap,
   createNote,
   createSidebarShare,
   createUserProfile,
@@ -14,6 +16,7 @@ import { setupUser, testAuthIdentity, testAuthIdentityForKey } from '../../_test
 import { expectNotAuthenticated } from '../../_test/assertions.helper'
 import { onCreateUser } from '../functions/onCreateUser'
 import { onDeleteUser } from '../functions/onDeleteUser'
+import { storeCommittedTestUpload } from '../../_test/storage.helper'
 import { api } from '../../_generated/api'
 
 async function getProfileByAuthUserId(t: ReturnType<typeof createTestContext>, authUserId: string) {
@@ -302,5 +305,69 @@ describe('onDeleteUser', () => {
     expect(result.sidebarShare).toBeNull()
     expect(result.blockShare).toBeNull()
     expect(result.editors).toHaveLength(0)
+  })
+
+  it('keeps committed campaign storage when deleting the uploader account', async () => {
+    const dm = await setupUser(t)
+    const player = await setupUser(t)
+    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+    await addPlayerToCampaign(t, campaignId, player.profile)
+
+    const [fileStorageId, mapStorageId, previewStorageId] = await Promise.all([
+      storeCommittedTestUpload(t, player.profile._id, new Blob(['file']), 'file.txt'),
+      storeCommittedTestUpload(t, player.profile._id, new Blob(['map']), 'map.png'),
+      storeCommittedTestUpload(t, player.profile._id, new Blob(['preview']), 'preview.png'),
+    ])
+
+    const { fileId } = await createFile(t, campaignId, dm.profile._id, {
+      storageId: fileStorageId,
+    })
+    const { mapId } = await createGameMap(t, campaignId, dm.profile._id, {
+      imageStorageId: mapStorageId,
+    })
+    const { noteId } = await createNote(t, campaignId, dm.profile._id, {
+      previewStorageId,
+    })
+
+    await t.run(async (ctx) => {
+      await onDeleteUser(ctx, {
+        _id: player.profile.authUserId,
+        _creationTime: Date.now(),
+      })
+    })
+
+    const result = await t.run(async (ctx) => {
+      const remainingUploadRows = await ctx.db
+        .query('fileStorage')
+        .withIndex('by_user_storage', (q) => q.eq('userId', player.profile._id))
+        .collect()
+      const file = await ctx.db
+        .query('files')
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .unique()
+      const map = await ctx.db
+        .query('gameMaps')
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .unique()
+      const note = await ctx.db.get('sidebarItems', noteId)
+
+      return {
+        file,
+        fileUrl: await ctx.storage.getUrl(fileStorageId),
+        map,
+        mapUrl: await ctx.storage.getUrl(mapStorageId),
+        note,
+        previewUrl: await ctx.storage.getUrl(previewStorageId),
+        remainingUploadRows,
+      }
+    })
+
+    expect(result.remainingUploadRows).toHaveLength(0)
+    expect(result.file?.storageId).toBe(fileStorageId)
+    expect(result.map?.imageStorageId).toBe(mapStorageId)
+    expect(result.note?.previewStorageId).toBe(previewStorageId)
+    expect(result.fileUrl).not.toBeNull()
+    expect(result.mapUrl).not.toBeNull()
+    expect(result.previewUrl).not.toBeNull()
   })
 })

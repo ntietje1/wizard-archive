@@ -1,5 +1,14 @@
-import type { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import type { CustomBlock } from '../../../shared/editor-blocks/types'
+import type { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '@wizard-archive/editor/canvas/document-contract'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+
+export interface CanvasDownloadContent {
+  edges: Array<CanvasDocumentEdge>
+  nodes: Array<CanvasDocumentNode>
+}
 
 /**
  * A downloadable sidebar artifact. `downloadUrl` is nullable for binary-backed
@@ -8,14 +17,20 @@ import type { CustomBlock } from '../../../shared/editor-blocks/types'
  */
 export type DownloadItem =
   | {
-      type: typeof SIDEBAR_ITEM_TYPES.files | typeof SIDEBAR_ITEM_TYPES.gameMaps
+      type: typeof RESOURCE_TYPES.files | typeof RESOURCE_TYPES.gameMaps
       name: string
       path: string
       downloadUrl: string | null
     }
   | {
-      type: typeof SIDEBAR_ITEM_TYPES.notes
+      type: typeof RESOURCE_TYPES.notes
       name: string
       path: string
-      content: Array<CustomBlock>
+      content: Array<NoteBlock>
+    }
+  | {
+      type: typeof RESOURCE_TYPES.canvases
+      name: string
+      path: string
+      content: CanvasDownloadContent
     }

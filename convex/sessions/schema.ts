@@ -1,6 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { convexValidatorFields } from '../common/schema'
+import { domainValidatorFields } from '../common/schema'
 
 const sessionTableFields = {
   campaignId: v.id('campaigns'),
@@ -16,7 +16,7 @@ export const sessionTables = {
 }
 
 const sessionValidatorFields = {
-  ...convexValidatorFields('sessions'),
+  ...domainValidatorFields('sessions'),
   ...sessionTableFields,
 }
 

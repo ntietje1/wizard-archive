@@ -28,7 +28,7 @@ describe('bulk trash operations', () => {
     const dmAuth = asDm(ctx)
 
     const receipt = await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignId })
-    const trashedItems = await dmAuth.query(api.sidebarItems.queries.getTrashedSidebarItems, {
+    const { trash: trashedItems } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
 

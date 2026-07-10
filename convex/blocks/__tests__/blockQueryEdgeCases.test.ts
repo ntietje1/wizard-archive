@@ -98,9 +98,9 @@ describe('block query edge cases', () => {
       blockNoteIds: [testBlockNoteId('agg-1'), testBlockNoteId('agg-2'), testBlockNoteId('agg-3')],
     })
 
-    const block1 = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('agg-1'))
-    const block2 = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('agg-2'))
-    const block3 = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('agg-3'))
+    const block1 = result.blocks.find((b) => b.noteBlockId === testBlockNoteId('agg-1'))
+    const block2 = result.blocks.find((b) => b.noteBlockId === testBlockNoteId('agg-2'))
+    const block3 = result.blocks.find((b) => b.noteBlockId === testBlockNoteId('agg-3'))
 
     expect(block1!.memberPermissions).toEqual({
       [p1.memberId]: 'view',
@@ -132,7 +132,7 @@ describe('block query edge cases', () => {
       blockNoteIds: [testBlockNoteId('no-shares')],
     })
 
-    const blockResult = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('no-shares'))
+    const blockResult = result.blocks.find((b) => b.noteBlockId === testBlockNoteId('no-shares'))
     expect(blockResult!.memberPermissions).toEqual({})
   })
 
@@ -198,7 +198,7 @@ describe('block query edge cases', () => {
       blockNoteIds: [testBlockNoteId('single-stale-share')],
     })
 
-    expect(result.playerMembers.map((member: { _id: string }) => member._id)).toEqual([
+    expect(result.playerMembers.map((member) => member.id)).toEqual([
       eligiblePlayer.memberId,
       ineligiblePlayer.memberId,
     ])
@@ -235,7 +235,7 @@ describe('block query edge cases', () => {
     })
 
     expect(result.playerMembers).toHaveLength(3)
-    const memberIds = result.playerMembers.map((m) => m._id)
+    const memberIds = result.playerMembers.map((m) => m.id)
     expect(memberIds).toContain(players[0].memberId)
     expect(memberIds).toContain(players[1].memberId)
     expect(memberIds).toContain(players[2].memberId)
@@ -258,7 +258,7 @@ describe('block query edge cases', () => {
       blockNoteIds: [],
     })
 
-    expect(result.playerMembers.map((m) => m._id)).toEqual(
+    expect(result.playerMembers.map((m) => m.id)).toEqual(
       expect.arrayContaining(players.map((p) => p.memberId)),
     )
   })
@@ -297,7 +297,7 @@ describe('block query edge cases', () => {
       blockNoteIds: [testBlockNoteId('direct-none')],
     })
 
-    expect(result.playerMembers.map((m) => m._id)).toEqual([
+    expect(result.playerMembers.map((m) => m.id)).toEqual([
       deniedPlayer.memberId,
       eligiblePlayer.memberId,
     ])
@@ -337,7 +337,7 @@ describe('block query edge cases', () => {
       blockNoteIds: [testBlockNoteId('all-none')],
     })
 
-    expect(result.playerMembers.map((m) => m._id)).toEqual([player.memberId])
+    expect(result.playerMembers.map((m) => m.id)).toEqual([player.memberId])
     expect(result.notePermissionsByMemberId[player.memberId]).toBe('none')
     expect(result.blocks[0]?.memberPermissions).toEqual({
       [player.memberId]: 'view',
@@ -381,7 +381,7 @@ describe('block query edge cases', () => {
       blockNoteIds: [testBlockNoteId('stale-share')],
     })
 
-    expect(result.playerMembers.map((m) => m._id)).toEqual([
+    expect(result.playerMembers.map((m) => m.id)).toEqual([
       eligiblePlayer.memberId,
       ineligiblePlayer.memberId,
     ])

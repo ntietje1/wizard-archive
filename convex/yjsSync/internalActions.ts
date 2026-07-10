@@ -1,12 +1,14 @@
 'use node'
 
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import { internalAction } from '../_generated/server'
 import { internal } from '../_generated/api'
-import { snapshotTypeValidator } from '../documentSnapshots/schema'
-import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
 import { yjsDocumentIdValidator } from './schema'
 import { compactYjsUpdates, encodeYjsSnapshot } from './_yjsNode'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { snapshotCaptureResultValidator } from './snapshotCapture'
+import type { SnapshotCaptureResult } from './snapshotCapture'
 
 export const compact = internalAction({
   args: {
@@ -33,14 +35,14 @@ export const compact = internalAction({
 export const captureSnapshot = internalAction({
   args: {
     documentId: yjsDocumentIdValidator,
-    itemType: sidebarItemTypeValidator,
-    snapshotType: snapshotTypeValidator,
+    itemType: literals(RESOURCE_TYPES.notes, RESOURCE_TYPES.canvases),
     editHistoryId: v.id('editHistory'),
     campaignId: v.id('campaigns'),
+    expectedRevision: v.number(),
     maxSeq: v.number(),
   },
-  returns: v.null(),
-  handler: async (ctx, args) => {
+  returns: snapshotCaptureResultValidator,
+  handler: async (ctx, args): Promise<SnapshotCaptureResult> => {
     const updates = await ctx.runQuery(
       internal.yjsSync.internalQueries.listUpdatesForDocumentThroughSeq,
       {
@@ -50,14 +52,13 @@ export const captureSnapshot = internalAction({
     )
     const data = encodeYjsSnapshot(updates)
 
-    await ctx.runMutation(internal.yjsSync.internalMutations.createSnapshotFromYjsState, {
+    return await ctx.runMutation(internal.yjsSync.internalMutations.commitYjsSnapshotCapture, {
       itemId: args.documentId,
       itemType: args.itemType,
-      snapshotType: args.snapshotType,
       editHistoryId: args.editHistoryId,
       campaignId: args.campaignId,
+      expectedRevision: args.expectedRevision,
       data,
     })
-    return null
   },
 })

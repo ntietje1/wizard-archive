@@ -1,13 +1,13 @@
 import { v } from 'convex/values'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
-import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { blockShareStatusValidator, editorBlockInputValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'
 
 const noteValidatorFields = {
   ...sidebarItemValidatorFields,
-  type: v.literal(SIDEBAR_ITEM_TYPES.notes),
+  type: v.literal(RESOURCE_TYPES.notes),
 }
 
 export const noteValidator = v.object(noteValidatorFields)

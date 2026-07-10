@@ -13,7 +13,7 @@ test.describe.serial('bookmarks', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, bookmarkedNote)
@@ -27,7 +27,7 @@ test.describe.serial('bookmarks', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -38,7 +38,7 @@ test.describe.serial('bookmarks', () => {
   })
 
   test('bookmark note and filter by bookmarks', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
@@ -48,29 +48,29 @@ test.describe.serial('bookmarks', () => {
 
     await page.getByRole('button', { name: 'Show bookmarks' }).click()
 
-    await expect(sidebar.getByRole('link', { name: bookmarkedNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: bookmarkedNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
-    await expect(sidebar.getByRole('link', { name: regularNote, exact: true })).not.toBeVisible()
+    await expect(sidebar.getByRole('button', { name: regularNote, exact: true })).not.toBeVisible()
   })
 
   test('exit bookmarks filter shows all notes', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
 
     // Enter bookmarks mode
     await page.getByRole('button', { name: 'Show bookmarks' }).click()
-    await expect(sidebar.getByRole('link', { name: regularNote, exact: true })).not.toBeVisible()
+    await expect(sidebar.getByRole('button', { name: regularNote, exact: true })).not.toBeVisible()
 
     // Exit bookmarks mode
     await page.getByRole('button', { name: 'Exit bookmarks' }).click()
 
-    await expect(sidebar.getByRole('link', { name: bookmarkedNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: bookmarkedNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
-    await expect(sidebar.getByRole('link', { name: regularNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: regularNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
   })

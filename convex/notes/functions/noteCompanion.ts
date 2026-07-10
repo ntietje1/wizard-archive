@@ -1,11 +1,11 @@
 import { internal } from '../../_generated/api'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { copyYjsUpdates } from '../../yjsSync/functions/copyYjsUpdates'
 import { syncNoteDerivedDataFromPersistedBlocks } from './syncNoteDerivedData'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
@@ -28,7 +28,7 @@ export async function createNoteCompanion(
 
   await logEditHistory(ctx, {
     itemId: noteId,
-    itemType: SIDEBAR_ITEM_TYPES.notes,
+    itemType: RESOURCE_TYPES.notes,
     action: EDIT_HISTORY_ACTION.created,
   })
 }
@@ -85,7 +85,7 @@ export async function copyNoteCompanion(
 ) {
   const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note target item not found')
-  if (targetItem.type !== SIDEBAR_ITEM_TYPES.notes) {
+  if (targetItem.type !== RESOURCE_TYPES.notes) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Note companion requires a note item')
   }
   const existingNote = await ctx.db
@@ -104,5 +104,6 @@ export async function copyNoteCompanion(
   })
   await ctx.scheduler.runAfter(0, internal.notes.internalActions.persistNoteBlocksFromYjs, {
     documentId: targetItemId,
+    campaignMemberId: ctx.membership._id,
   })
 }

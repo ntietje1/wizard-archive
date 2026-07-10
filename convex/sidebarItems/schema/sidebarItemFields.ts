@@ -1,29 +1,26 @@
 import { v } from 'convex/values'
 import {
-  sidebarItemColorValidator,
-  sidebarItemIconNameValidator,
   permissionLevelValidator,
+  sidebarItemIconNameValidator,
   sidebarItemLocationValidator,
-  sidebarItemNameValidator,
-  sidebarItemSlugValidator,
   sidebarItemStatusValidator,
   sidebarItemTypeValidator,
 } from './validators'
+import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
 
 export const sidebarItemTableFields = {
-  name: sidebarItemNameValidator,
-  slug: sidebarItemSlugValidator,
+  name: v.string(),
+  normalizedName: v.string(),
+  slug: v.string(),
   campaignId: v.id('campaigns'),
   iconName: v.nullable(sidebarItemIconNameValidator),
-  color: v.nullable(sidebarItemColorValidator),
+  color: v.nullable(v.string()),
   type: sidebarItemTypeValidator,
   parentId: v.nullable(v.id('sidebarItems')),
   allPermissionLevel: v.nullable(permissionLevelValidator),
   location: sidebarItemLocationValidator,
   status: sidebarItemStatusValidator,
   previewStorageId: v.nullable(v.id('_storage')),
-  previewLockedUntil: v.nullable(v.number()),
-  previewClaimToken: v.nullable(v.string()),
   previewUpdatedAt: v.nullable(v.number()),
   updatedTime: v.nullable(v.number()),
   updatedBy: v.nullable(v.id('userProfiles')),
@@ -31,3 +28,31 @@ export const sidebarItemTableFields = {
   deletionTime: v.nullable(v.number()),
   deletedBy: v.nullable(v.id('userProfiles')),
 }
+
+const {
+  status: _status,
+  deletionTime: _deletionTime,
+  deletedBy: _deletedBy,
+  ...sidebarItemCommonTableFields
+} = sidebarItemTableFields
+
+export const sidebarItemTableValidator = v.union(
+  v.object({
+    ...sidebarItemCommonTableFields,
+    status: v.literal(RESOURCE_STATUS.active),
+    deletionTime: v.null(),
+    deletedBy: v.null(),
+  }),
+  v.object({
+    ...sidebarItemCommonTableFields,
+    status: v.literal(RESOURCE_STATUS.undoHidden),
+    deletionTime: v.null(),
+    deletedBy: v.null(),
+  }),
+  v.object({
+    ...sidebarItemCommonTableFields,
+    status: v.literal(RESOURCE_STATUS.trashed),
+    deletionTime: v.number(),
+    deletedBy: v.id('userProfiles'),
+  }),
+)

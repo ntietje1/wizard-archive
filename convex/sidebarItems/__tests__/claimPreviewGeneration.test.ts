@@ -3,6 +3,7 @@ import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import {
   createCanvas,
+  createFile,
   createFolder,
   createNote,
   createSidebarShare,
@@ -13,7 +14,11 @@ import {
   expectPermissionDenied,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import { COOLDOWN_MS } from '../functions/claimPreviewGeneration'
+import {
+  PREVIEW_CLAIM_UNAVAILABLE_REASON,
+  PREVIEW_GENERATION_COOLDOWN_MS,
+} from '../previewGeneration'
+import { getPreviewLease } from '../previewLease'
 
 describe('claimPreviewGeneration', () => {
   const t = createTestContext()
@@ -29,15 +34,17 @@ describe('claimPreviewGeneration', () => {
       itemId: noteId,
     })
 
-    expect(result.claimed).toBe(true)
-    expect(typeof result.claimToken).toBe('string')
+    expect(result.status).toBe('claimed')
+    if (result.status !== 'claimed') throw new Error('Expected preview claim')
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
       const note = await dbCtx.db.get('sidebarItems', noteId)
-      expect(note!.previewLockedUntil).not.toBeNull()
-      expect(note!.previewLockedUntil).toBeGreaterThan(now)
-      expect(note!.previewClaimToken).toBe(result.claimToken)
+      const lease = await getPreviewLease(dbCtx, noteId)
+      expect(note).not.toHaveProperty('previewLockedUntil')
+      expect(note).not.toHaveProperty('previewClaimToken')
+      expect(lease!.lockedUntil).toBeGreaterThan(now)
+      expect(lease!.claimToken).toBe(result.claimToken)
     })
   })
 
@@ -52,8 +59,10 @@ describe('claimPreviewGeneration', () => {
       itemId: folderId,
     })
 
-    expect(result.claimed).toBe(false)
-    expect(result.claimToken).toBeNull()
+    expect(result).toEqual({
+      status: 'unavailable',
+      reason: PREVIEW_CLAIM_UNAVAILABLE_REASON.unsupported,
+    })
   })
 
   it('player with edit share can claim', async () => {
@@ -75,8 +84,29 @@ describe('claimPreviewGeneration', () => {
       itemId: noteId,
     })
 
-    expect(result.claimed).toBe(true)
-    expect(typeof result.claimToken).toBe('string')
+    expect(result.status).toBe('claimed')
+  })
+
+  it('player with edit share can claim a file preview', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: fileId,
+      sidebarItemType: 'file',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'edit',
+    })
+
+    const result = await playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
+      itemId: fileId,
+    })
+
+    expect(result.status).toBe('claimed')
   })
 
   it('player with view share is denied', async () => {
@@ -142,14 +172,16 @@ describe('claimPreviewGeneration', () => {
       campaignId: ctx.campaignId,
       itemId: noteId,
     })
-    expect(first.claimed).toBe(true)
+    expect(first.status).toBe('claimed')
 
     const second = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
       campaignId: ctx.campaignId,
       itemId: noteId,
     })
-    expect(second.claimed).toBe(false)
-    expect(second.claimToken).toBeNull()
+    expect(second).toEqual({
+      status: 'unavailable',
+      reason: PREVIEW_CLAIM_UNAVAILABLE_REASON.generationInProgress,
+    })
   })
 
   it('returns true when lock has expired', async () => {
@@ -158,17 +190,22 @@ describe('claimPreviewGeneration', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
+    const first = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
+      itemId: noteId,
+    })
+    expect(first.status).toBe('claimed')
+
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', noteId, {
-        previewLockedUntil: Date.now() - 1,
-      })
+      const lease = await getPreviewLease(dbCtx, noteId)
+      await dbCtx.db.patch('sidebarItemPreviewLeases', lease!._id, { lockedUntil: Date.now() - 1 })
     })
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
       campaignId: ctx.campaignId,
       itemId: noteId,
     })
-    expect(result.claimed).toBe(true)
+    expect(result.status).toBe('claimed')
   })
 
   it('returns false during cooldown period', async () => {
@@ -178,8 +215,10 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
+      const previewUpdatedAt = Date.now() - PREVIEW_GENERATION_COOLDOWN_MS / 2
       await dbCtx.db.patch('sidebarItems', noteId, {
-        previewUpdatedAt: Date.now() - COOLDOWN_MS / 2,
+        previewUpdatedAt,
+        updatedTime: previewUpdatedAt - 1,
       })
     })
 
@@ -187,8 +226,61 @@ describe('claimPreviewGeneration', () => {
       campaignId: ctx.campaignId,
       itemId: noteId,
     })
-    expect(result.claimed).toBe(false)
-    expect(result.claimToken).toBeNull()
+    expect(result).toEqual({
+      status: 'unavailable',
+      reason: PREVIEW_CLAIM_UNAVAILABLE_REASON.current,
+    })
+  })
+
+  it('allows a fresh claim during cooldown when content changed after the preview', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const now = Date.now()
+
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.patch('sidebarItems', noteId, {
+        previewUpdatedAt: now - 1_000,
+        updatedTime: now - 500,
+      })
+    })
+
+    const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
+      itemId: noteId,
+    })
+
+    expect(result.status).toBe('claimed')
+  })
+
+  it('supersedes an active claim after the content version changes', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    const first = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
+      itemId: noteId,
+    })
+    expect(first.status).toBe('claimed')
+
+    await t.run(async (dbCtx) => {
+      const note = await dbCtx.db.get('sidebarItems', noteId)
+      await dbCtx.db.patch('sidebarItems', noteId, {
+        updatedTime: (note?.updatedTime ?? note?._creationTime ?? Date.now()) + 1,
+      })
+    })
+
+    const second = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
+      campaignId: ctx.campaignId,
+      itemId: noteId,
+    })
+
+    expect(second.status).toBe('claimed')
+    if (first.status !== 'claimed' || second.status !== 'claimed') {
+      throw new Error('Expected both preview claims')
+    }
+    expect(second.claimToken).not.toBe(first.claimToken)
   })
 
   it('returns true after cooldown expires', async () => {
@@ -199,7 +291,7 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', noteId, {
-        previewUpdatedAt: Date.now() - (COOLDOWN_MS + 1),
+        previewUpdatedAt: Date.now() - (PREVIEW_GENERATION_COOLDOWN_MS + 1),
       })
     })
 
@@ -207,7 +299,7 @@ describe('claimPreviewGeneration', () => {
       campaignId: ctx.campaignId,
       itemId: noteId,
     })
-    expect(result.claimed).toBe(true)
+    expect(result.status).toBe('claimed')
   })
 
   it('DM can claim for a canvas', async () => {
@@ -221,15 +313,17 @@ describe('claimPreviewGeneration', () => {
       itemId: canvasId,
     })
 
-    expect(result.claimed).toBe(true)
-    expect(typeof result.claimToken).toBe('string')
+    expect(result.status).toBe('claimed')
+    if (result.status !== 'claimed') throw new Error('Expected preview claim')
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
       const canvas = await dbCtx.db.get('sidebarItems', canvasId)
-      expect(canvas!.previewLockedUntil).not.toBeNull()
-      expect(canvas!.previewLockedUntil).toBeGreaterThan(now)
-      expect(canvas!.previewClaimToken).toBe(result.claimToken)
+      const lease = await getPreviewLease(dbCtx, canvasId)
+      expect(canvas).not.toHaveProperty('previewLockedUntil')
+      expect(canvas).not.toHaveProperty('previewClaimToken')
+      expect(lease!.lockedUntil).toBeGreaterThan(now)
+      expect(lease!.claimToken).toBe(result.claimToken)
     })
   })
 
@@ -252,7 +346,7 @@ describe('claimPreviewGeneration', () => {
       itemId: canvasId,
     })
 
-    expect(result.claimed).toBe(true)
+    expect(result.status).toBe('claimed')
   })
 
   it('player with view share is denied for canvas', async () => {

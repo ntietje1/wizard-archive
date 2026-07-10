@@ -1,15 +1,19 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
-import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { SidebarItemShare } from '../../../shared/sidebar-shares/types'
+
+type SidebarItemShare = Omit<Doc<'sidebarItemShares'>, '_id' | '_creationTime'> & {
+  id: Id<'sidebarItemShares'>
+  createdAt: number
+}
 
 export interface SidebarItemWithShares {
   sidebarItemId: Id<'sidebarItems'>
@@ -22,26 +26,28 @@ export interface SidebarItemWithShares {
   memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
 }
 
+function toSidebarItemShare(share: Doc<'sidebarItemShares'>): SidebarItemShare {
+  const { _id, _creationTime, ...fields } = share
+  return {
+    ...fields,
+    id: _id,
+    createdAt: _creationTime,
+  }
+}
+
 async function getShareInfoForSidebarItem(
   ctx: CampaignQueryCtx,
   sidebarItemId: Id<'sidebarItems'>,
+  playerMemberIds: Array<Id<'campaignMembers'>>,
 ): Promise<SidebarItemWithShares> {
-  const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
-  if (itemFromDb && itemFromDb.campaignId !== ctx.campaign._id) {
+  const itemRow = await getSidebarItem(ctx, sidebarItemId)
+  if (itemRow && itemRow.campaignId !== ctx.campaign._id) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Item does not belong to this campaign')
   }
   const item = await requireItemAccess(ctx, {
-    rawItem: itemFromDb,
+    rawItem: itemRow,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
-
-  const members = await ctx.db
-    .query('campaignMembers')
-    .withIndex('by_campaign_user', (q) => q.eq('campaignId', item.campaignId))
-    .collect()
-  const playerMemberIds = members
-    .filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
-    .map((m) => m._id)
 
   const shares = await ctx.db
     .query('sidebarItemShares')
@@ -69,8 +75,8 @@ async function getShareInfoForSidebarItem(
   return {
     sidebarItemId,
     allPermissionLevel: item.allPermissionLevel,
-    inheritShares: item.type === SIDEBAR_ITEM_TYPES.folders ? item.inheritShares : null,
-    shares,
+    inheritShares: item.type === RESOURCE_TYPES.folders ? item.inheritShares : null,
+    shares: shares.map(toSidebarItemShare),
     inheritedAllPermissionLevel: inherited.allPlayers.level,
     inheritedFromFolderName: inherited.allPlayers.folderName,
     memberInheritedPermissions,
@@ -82,7 +88,21 @@ export async function getSidebarItemsWithShares(
   ctx: CampaignQueryCtx,
   { sidebarItemIds }: { sidebarItemIds: Array<Id<'sidebarItems'>> },
 ): Promise<Array<SidebarItemWithShares>> {
+  const members = await ctx.db
+    .query('campaignMembers')
+    .withIndex('by_campaign_user', (q) => q.eq('campaignId', ctx.campaign._id))
+    .collect()
+  const playerMemberIds = members
+    .filter(
+      (member) =>
+        member.role === CAMPAIGN_MEMBER_ROLE.Player &&
+        member.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+    )
+    .map((member) => member._id)
+
   return await Promise.all(
-    sidebarItemIds.map((sidebarItemId) => getShareInfoForSidebarItem(ctx, sidebarItemId)),
+    [...new Set(sidebarItemIds)].map((sidebarItemId) =>
+      getShareInfoForSidebarItem(ctx, sidebarItemId, playerMemberIds),
+    ),
   )
 }

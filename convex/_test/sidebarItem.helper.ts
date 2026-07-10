@@ -1,43 +1,45 @@
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_STATUS,
-  SIDEBAR_ITEM_TYPES,
-} from '../../shared/sidebar-items/types'
+  RESOURCE_LOCATION,
+  RESOURCE_STATUS,
+  RESOURCE_TYPES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { CanvasItem } from '@wizard-archive/editor/canvas/item-contract'
+import type { FileItem } from '@wizard-archive/editor/files/item-contract'
+import type { MapItem } from '@wizard-archive/editor/game-maps/item-contract'
+import type { NoteItem } from '@wizard-archive/editor/notes/item-contract'
+import type { AnyItem, FolderItem } from '@wizard-archive/editor/resources/items'
 import { slugify } from '../../shared/slugs'
-import type { AnySidebarItem } from '../../shared/sidebar-items/model-types'
 import type { Id } from '../_generated/dataModel'
 
 function assertNeverSidebarItemType(type: never): never {
   throw new Error(`Unhandled sidebar item type: ${String(type)}`)
 }
 
-function testSidebarSlug(name: string): AnySidebarItem['slug'] {
+function testSidebarSlug(name: string): AnyItem['slug'] {
   const slug = slugify(name)
-  return (slug.length >= 3 ? slug : `${slug || 'item'}-item`) as AnySidebarItem['slug']
+  return (slug.length >= 3 ? slug : `${slug || 'item'}-item`) as AnyItem['slug']
 }
 
 export function createSidebarItem(
   id: string,
   name: string,
-  type: AnySidebarItem['type'] = SIDEBAR_ITEM_TYPES.notes,
-  overrides: Partial<Omit<AnySidebarItem, 'type' | 'location'>> = {},
-): AnySidebarItem {
+  type: AnyItem['type'] = RESOURCE_TYPES.notes,
+  overrides: Partial<Omit<AnyItem, 'type' | 'location'>> = {},
+): AnyItem {
   const common = {
-    _id: id as Id<'sidebarItems'>,
-    _creationTime: 1,
-    name: name as AnySidebarItem['name'],
+    id: id as Id<'sidebarItems'>,
+    createdAt: 1,
+    name: name as AnyItem['name'],
     slug: testSidebarSlug(name),
     campaignId: 'campaign' as Id<'campaigns'>,
     iconName: null,
     color: null,
     parentId: null,
     allPermissionLevel: null,
-    location: SIDEBAR_ITEM_LOCATION.sidebar,
-    status: SIDEBAR_ITEM_STATUS.active,
-    previewStorageId: null,
-    previewLockedUntil: null,
-    previewClaimToken: null,
+    location: RESOURCE_LOCATION.sidebar,
+    status: RESOURCE_STATUS.active,
+    previewAssetId: null,
     previewUpdatedAt: null,
     updatedTime: null,
     updatedBy: null,
@@ -53,44 +55,35 @@ export function createSidebarItem(
   }
 
   switch (type) {
-    case SIDEBAR_ITEM_TYPES.notes: {
-      const item = { ...common, type } satisfies Extract<
-        AnySidebarItem,
-        { type: typeof SIDEBAR_ITEM_TYPES.notes }
-      >
+    case RESOURCE_TYPES.notes: {
+      const item = { ...common, type } satisfies NoteItem
       return Object.assign(item, overrides)
     }
-    case SIDEBAR_ITEM_TYPES.folders: {
-      const item = { ...common, inheritShares: false, type } satisfies Extract<
-        AnySidebarItem,
-        { type: typeof SIDEBAR_ITEM_TYPES.folders }
-      >
+    case RESOURCE_TYPES.folders: {
+      const item = { ...common, inheritShares: false, type } satisfies FolderItem
       return Object.assign(item, overrides)
     }
-    case SIDEBAR_ITEM_TYPES.gameMaps: {
+    case RESOURCE_TYPES.gameMaps: {
       const item = {
         ...common,
-        imageStorageId: null,
+        imageAssetId: null,
         imageUrl: null,
         type,
-      } satisfies Extract<AnySidebarItem, { type: typeof SIDEBAR_ITEM_TYPES.gameMaps }>
+      } satisfies MapItem
       return Object.assign(item, overrides)
     }
-    case SIDEBAR_ITEM_TYPES.files: {
+    case RESOURCE_TYPES.files: {
       const item = {
         ...common,
-        storageId: null,
+        assetId: null,
         downloadUrl: null,
         contentType: null,
         type,
-      } satisfies Extract<AnySidebarItem, { type: typeof SIDEBAR_ITEM_TYPES.files }>
+      } satisfies FileItem
       return Object.assign(item, overrides)
     }
-    case SIDEBAR_ITEM_TYPES.canvases: {
-      const item = { ...common, type } satisfies Extract<
-        AnySidebarItem,
-        { type: typeof SIDEBAR_ITEM_TYPES.canvases }
-      >
+    case RESOURCE_TYPES.canvases: {
+      const item = { ...common, type } satisfies CanvasItem
       return Object.assign(item, overrides)
     }
     default:

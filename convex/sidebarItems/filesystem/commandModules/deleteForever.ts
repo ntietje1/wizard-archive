@@ -3,30 +3,31 @@ import { throwClientError } from '../../../errors'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { hasAtLeastPermissionLevel } from '../../../../shared/permissions/hasAtLeastPermissionLevel'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
-import { isTrashedSidebarItem } from '../../types/status'
-import { evaluatePermanentDelete } from '../../../../shared/sidebar-items/filesystem/capabilities'
-import { assertSidebarOperationAllowed } from '../capabilities'
-import { collectSidebarChildrenMap } from '../children'
-import { normalizeSelectedRoots } from '../../../../shared/sidebar-items/filesystem/selection'
-import { addSidebarItemAncestorsToMap } from '../ancestors'
-import { createFileSystemWriteSession } from '../deltas'
 import {
-  FILE_SYSTEM_EVENT_TYPE,
-  fileSystemSelfEvents,
-} from '../../../../shared/sidebar-items/filesystem/receipts'
+  RESOURCE_STATUS,
+  RESOURCE_TYPES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import { isTrashedSidebarItem } from '../../types/status'
+import { evaluatePermanentDelete } from '@wizard-archive/editor/resources/operation-capabilities'
+import { normalizeSelectedRoots } from '@wizard-archive/editor/resources/selection-roots'
+import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
+import { assertSidebarOperationAllowed, operationActorFromRole } from '../capabilities'
+import { collectSidebarChildrenMap } from '../children'
+import { loadSidebarItemAncestorMap } from '../ancestors'
+import { buildPermanentDeleteDelta } from './permanentDelete'
 import { getSidebarItemRow } from '../sidebarItemRows'
+import { toSidebarOperationItem, toSidebarOperationItems } from '../readModel'
 import type { CampaignMutationCtx } from '../../../functions'
-import type { DeleteForeverFileSystemCommand } from '../../../../shared/sidebar-items/filesystem/commands'
-import type { FileSystemDelta } from '../../../../shared/sidebar-items/filesystem/receipts'
-import type { Id } from '../../../_generated/dataModel'
+import type { Doc, Id } from '../../../_generated/dataModel'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
-import type { AnySidebarItemRow } from '../../../../shared/sidebar-items/model-types'
-
+import type { StoredResourceDelta } from '../deltas'
 const MAX_PERMANENT_DELETE_DEPTH = 50
 const MAX_PERMANENT_DELETE_BATCH_SIZE = 100
+type StoredSidebarItemRow = Doc<'sidebarItems'>
 
-type PermanentDeleteSource = AnySidebarItemRow & { myPermissionLevel: PermissionLevel }
+type DeleteForeverFileSystemCommand = Extract<ResourceCommand, { type: 'deleteForever' }>
+
+type PermanentDeleteSource = StoredSidebarItemRow & { myPermissionLevel: PermissionLevel }
 
 async function loadPermanentDeleteSource(
   ctx: CampaignMutationCtx,
@@ -45,7 +46,7 @@ async function loadPermanentDeleteSource(
   let permissionLevel: PermissionLevel = PERMISSION_LEVEL.FULL_ACCESS
 
   if (membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
-    if (rawItem.type === SIDEBAR_ITEM_TYPES.folders) {
+    if (rawItem.type === RESOURCE_TYPES.folders) {
       throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can permanently delete folders')
     }
 
@@ -69,20 +70,25 @@ async function loadPermanentDeleteSource(
   }
 
   const item: PermanentDeleteSource = { ...rawItem, myPermissionLevel: permissionLevel }
-  assertSidebarOperationAllowed(evaluatePermanentDelete({ role: membership.role }, item))
+  assertSidebarOperationAllowed(
+    evaluatePermanentDelete(operationActorFromRole(membership.role), {
+      ...toSidebarOperationItem(item),
+      myPermissionLevel: permissionLevel,
+    }),
+  )
   return item
 }
 
 async function getTrashChildren(
   ctx: CampaignMutationCtx,
   parentId: Id<'sidebarItems'>,
-): Promise<Array<AnySidebarItemRow>> {
+): Promise<Array<StoredSidebarItemRow>> {
   return await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
       q
         .eq('campaignId', ctx.campaign._id)
-        .eq('status', SIDEBAR_ITEM_STATUS.trashed)
+        .eq('status', RESOURCE_STATUS.trashed)
         .eq('parentId', parentId),
     )
     .collect()
@@ -92,8 +98,8 @@ async function normalizePermanentDeleteRoots(
   ctx: CampaignMutationCtx,
   sourceItems: Array<PermanentDeleteSource>,
 ): Promise<{ rootItems: Array<PermanentDeleteSource>; affectedItemCount: number }> {
-  const folders = sourceItems.filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
-  const childrenMap = await collectSidebarChildrenMap<AnySidebarItemRow>({
+  const folders = sourceItems.filter((item) => item.type === RESOURCE_TYPES.folders)
+  const childrenMap = await collectSidebarChildrenMap<StoredSidebarItemRow>({
     rootFolderIds: folders.map((folder) => folder._id),
     maxDepth: MAX_PERMANENT_DELETE_DEPTH,
     getChildren: (parentId) => getTrashChildren(ctx, parentId),
@@ -101,25 +107,30 @@ async function normalizePermanentDeleteRoots(
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max permanent delete planning depth exceeded')
     },
   })
-  const itemsById = new Map<Id<'sidebarItems'>, Pick<AnySidebarItemRow, '_id' | 'parentId'>>()
+  const itemsById = new Map<Id<'sidebarItems'>, ReturnType<typeof toSidebarOperationItem>>()
   const affectedItemIds = new Set<Id<'sidebarItems'>>()
   for (const item of sourceItems) {
-    itemsById.set(item._id, item)
+    itemsById.set(item._id, toSidebarOperationItem(item))
     affectedItemIds.add(item._id)
   }
   for (const children of childrenMap.values()) {
     for (const child of children) {
-      itemsById.set(child._id, child)
+      itemsById.set(child._id, toSidebarOperationItem(child))
       affectedItemIds.add(child._id)
     }
   }
-  await addSidebarItemAncestorsToMap(ctx, {
-    items: sourceItems,
+  const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
+    items: toSidebarOperationItems(sourceItems),
     itemsById,
     maxDepth: MAX_PERMANENT_DELETE_DEPTH,
   })
+  const rootsById = new Set(
+    normalizeSelectedRoots(toSidebarOperationItems(sourceItems), ancestorItemsById).map(
+      (item) => item.id,
+    ),
+  )
   return {
-    rootItems: normalizeSelectedRoots(sourceItems, itemsById),
+    rootItems: sourceItems.filter((item) => rootsById.has(item._id)),
     affectedItemCount: affectedItemIds.size,
   }
 }
@@ -131,15 +142,9 @@ export async function executeDeleteForeverCommand(
   }: {
     command: DeleteForeverFileSystemCommand
   },
-): Promise<FileSystemDelta> {
-  const session = createFileSystemWriteSession(ctx)
-
+): Promise<StoredResourceDelta> {
   if (command.itemIds.length === 0) {
-    return await session.build({
-      command,
-      events: [],
-      undoable: false,
-    })
+    return await buildPermanentDeleteDelta(ctx, command, [])
   }
 
   const sourceItems = await Promise.all(
@@ -153,18 +158,5 @@ export async function executeDeleteForeverCommand(
     )
   }
 
-  for (const item of rootItems) {
-    await session.deleteSidebarTree(item)
-  }
-
-  const events = fileSystemSelfEvents(
-    FILE_SYSTEM_EVENT_TYPE.deletedForever,
-    rootItems.map((item) => item._id),
-  )
-
-  return await session.build({
-    command,
-    events,
-    undoable: false,
-  })
+  return await buildPermanentDeleteDelta(ctx, command, rootItems)
 }

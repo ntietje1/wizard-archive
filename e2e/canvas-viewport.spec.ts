@@ -32,7 +32,7 @@ test.describe.serial('canvas viewport interactions', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -43,7 +43,7 @@ test.describe.serial('canvas viewport interactions', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -66,7 +66,12 @@ test.describe.serial('canvas viewport interactions', () => {
     const before = await getCanvasRuntimeNodePosition(page, 'perf-embed-0')
 
     await selectCanvasTool(page, 'Pointer')
-    await dragCanvasNode(page, node, { x: 80, y: 40 })
+    await dragCanvasNode(
+      page,
+      node,
+      { x: 80, y: 40 },
+      { positionRatio: { xRatio: 0.1, yRatio: 0.1 } },
+    )
 
     await expect
       .poll(async () => {
@@ -249,7 +254,7 @@ test.describe.serial('canvas viewport interactions', () => {
 })
 
 async function openViewportCanvas(page: Parameters<typeof openCanvas>[0]) {
-  await page.goto('/campaigns')
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(page, campaignName)
   await openCanvas(page, canvasName)
   await waitForCanvasRuntime(page)

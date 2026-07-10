@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Locator } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import {
   clickCanvasAt,
@@ -12,14 +13,17 @@ import {
   dragOnCanvas,
   getCanvasNodesByType,
   getCanvasSurface,
+  getCanvasTextEditors,
   getCanvasToolButton,
   getCommittedSelectedCanvasNodes,
+  getNewCanvasTextEditor,
   getViewportControls,
+  waitForCanvasSurface,
   openCanvas,
+  openCanvasNodeContextMenu,
   selectCanvasTool,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
-import type { Page } from '@playwright/test'
 
 const campaignName = testName('Canvas Basics')
 const canvasName = DEFAULT_CANVAS_NAME
@@ -37,7 +41,7 @@ test.describe.serial('canvas basics', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
@@ -48,7 +52,7 @@ test.describe.serial('canvas basics', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch (error) {
@@ -62,7 +66,7 @@ test.describe.serial('canvas basics', () => {
   })
 
   test('create and reopen a canvas with toolbar and viewport chrome', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
 
@@ -78,44 +82,48 @@ test.describe.serial('canvas basics', () => {
     await expect(viewport.undo).toBeVisible()
     await expect(viewport.redo).toBeVisible()
 
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(canvasName)
-    await expect(getCanvasSurface(page)).toBeVisible()
+    await expect(getCanvasSurface(page)).toBeVisible({ timeout: 45_000 })
   })
 
   test('place and edit click-created and drag-created text nodes', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
 
     await selectCanvasTool(page, 'Text')
+    const textEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 120, y: 120 })
-    const textInput = getActiveTextNodeInput(page)
+    const textInput = await getNewCanvasTextEditor(page, textEditorCount)
     await expect(textInput).toBeVisible()
-    await textInput.fill('Canvas text')
+    await fillCanvasTextEditor(textInput, 'Canvas text')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Text')
+    const secondTextEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 320, y: 120 })
-    const secondTextInput = getActiveTextNodeInput(page)
+    const secondTextInput = await getNewCanvasTextEditor(page, secondTextEditorCount)
     await expect(secondTextInput).toBeVisible()
-    await secondTextInput.fill('Second text')
+    await fillCanvasTextEditor(secondTextInput, 'Second text')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Text')
+    const draggedTextEditorCount = await getCanvasTextEditors(page).count()
     await dragOnCanvas(page, { x: 120, y: 260 }, { x: 280, y: 360 })
-    const draggedTextInput = getActiveTextNodeInput(page)
+    const draggedTextInput = await getNewCanvasTextEditor(page, draggedTextEditorCount)
     await expect(draggedTextInput).toBeVisible()
-    await draggedTextInput.fill('Dragged text')
+    await fillCanvasTextEditor(draggedTextInput, 'Dragged text')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Text')
+    const secondDraggedTextEditorCount = await getCanvasTextEditors(page).count()
     await dragOnCanvas(page, { x: 340, y: 260 }, { x: 500, y: 420 })
-    const secondDraggedTextInput = getActiveTextNodeInput(page)
+    const secondDraggedTextInput = await getNewCanvasTextEditor(page, secondDraggedTextEditorCount)
     await expect(secondDraggedTextInput).toBeVisible()
-    await secondDraggedTextInput.fill('Dragged second text')
+    await fillCanvasTextEditor(secondDraggedTextInput, 'Dragged second text')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(4)
@@ -125,7 +133,7 @@ test.describe.serial('canvas basics', () => {
     await expect(page.getByText('Dragged second text', { exact: true })).toBeVisible()
 
     await page.reload()
-    await expect(getCanvasSurface(page)).toBeVisible()
+    await waitForCanvasSurface(page)
     await expect(page.getByText('Canvas text', { exact: true })).toBeVisible()
     await expect(page.getByText('Second text', { exact: true })).toBeVisible()
     await expect(page.getByText('Dragged text', { exact: true })).toBeVisible()
@@ -134,7 +142,7 @@ test.describe.serial('canvas basics', () => {
   })
 
   test('draw, select, clear, delete, and undo or redo', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
 
@@ -143,7 +151,7 @@ test.describe.serial('canvas basics', () => {
     await expect.poll(() => getCanvasNodesByType(page, 'stroke').count()).toBe(1)
 
     await page.reload()
-    await expect(getCanvasSurface(page)).toBeVisible()
+    await waitForCanvasSurface(page)
     await selectCanvasTool(page, 'Pointer')
     const firstTextNode = getCanvasNodesByType(page, 'text').first()
     await clickCanvasNode(page, firstTextNode)
@@ -172,21 +180,23 @@ test.describe.serial('canvas basics', () => {
   })
 
   test('create an edge from one node handle to another', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
 
     await selectCanvasTool(page, 'Text')
+    const textEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 120, y: 420 })
-    const textInput = getActiveTextNodeInput(page)
+    const textInput = await getNewCanvasTextEditor(page, textEditorCount)
     await expect(textInput).toBeVisible()
     await textInput.fill('Edge source')
     await textInput.press('Escape')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Text')
+    const targetTextEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 620, y: 420 })
-    const targetTextInput = getActiveTextNodeInput(page)
+    const targetTextInput = await getNewCanvasTextEditor(page, targetTextEditorCount)
     await expect(targetTextInput).toBeVisible()
     await targetTextInput.fill('Edge target')
     await targetTextInput.press('Escape')
@@ -225,13 +235,14 @@ test.describe.serial('canvas basics', () => {
   test('closing the canvas context menu on left mouse down allows a node drag', async ({
     page,
   }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
 
     await selectCanvasTool(page, 'Text')
+    const textEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 520, y: 420 })
-    const textInput = getActiveTextNodeInput(page)
+    const textInput = await getNewCanvasTextEditor(page, textEditorCount)
     await expect(textInput).toBeVisible()
     await textInput.fill('Drag after context menu')
     await textInput.press('Escape')
@@ -254,10 +265,9 @@ test.describe.serial('canvas basics', () => {
       y: before.y + 24,
     }
 
-    await page.mouse.click(dragStartPoint.x, dragStartPoint.y, {
-      button: 'right',
+    await openCanvasNodeContextMenu(page, textNode, {
+      positionRatio: { xRatio: 0.15, yRatio: 0.15 },
     })
-    await expect(page.getByRole('menu')).toBeVisible()
 
     await page.mouse.click(dragStartPoint.x, dragStartPoint.y)
     await expect(page.getByRole('menu')).not.toBeVisible()
@@ -282,7 +292,7 @@ test.describe.serial('canvas basics', () => {
   })
 
   test('canvas context menu stays open while hovering pane and reorder items', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
 
@@ -317,8 +327,9 @@ test.describe.serial('canvas basics', () => {
     await page.mouse.click(paneBox.x + 240, paneBox.y + 240)
 
     await selectCanvasTool(page, 'Text')
+    const textEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 640, y: 180 })
-    const textInput = getActiveTextNodeInput(page)
+    const textInput = await getNewCanvasTextEditor(page, textEditorCount)
     await expect(textInput).toBeVisible()
     await textInput.fill('Context menu reorder hover')
     await clickCanvasAt(page, { x: 40, y: 40 })
@@ -349,6 +360,12 @@ test.describe.serial('canvas basics', () => {
   })
 })
 
-function getActiveTextNodeInput(page: Page) {
-  return page.locator('[aria-label="Text node content"][contenteditable="true"]')
+async function fillCanvasTextEditor(textInput: Locator, text: string) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await textInput.fill(text)
+    const lastText = (await textInput.textContent({ timeout: 1000 }).catch(() => '')) ?? ''
+    if (lastText.includes(text)) return
+  }
+
+  await expect(textInput).toContainText(text, { timeout: 5000 })
 }

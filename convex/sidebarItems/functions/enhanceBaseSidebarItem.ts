@@ -1,64 +1,115 @@
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
-import { assertSidebarItemColor } from '../../../shared/sidebar-items/color'
-import { assertSidebarItemIconName } from '../../../shared/sidebar-items/icon'
-import { assertSidebarItemName } from '../validation/name'
-import { assertSidebarItemSlug } from '../validation/slug'
 import {
-  isActiveSidebarItem,
-  isTrashedSidebarItem,
-  normalizeSidebarItemLifecycle,
-} from '../types/status'
+  assertResourceColor,
+  assertResourceIconName,
+} from '@wizard-archive/editor/resources/resource-contract'
 import type {
-  AnySidebarItemRow,
-  EnhanceSidebarItem,
-  NormalizeSidebarItem,
-} from '../../../shared/sidebar-items/model-types'
+  AnyResourceRow,
+  ResourceShare,
+} from '@wizard-archive/editor/resources/resource-contract'
+import { assertConvexSidebarItemName } from '../validation/name'
+import { assertConvexSidebarItemSlug } from '../validation/slug'
+import { isActiveSidebarItem, isTrashedSidebarItem } from '../types/status'
 import type { CampaignQueryCtx } from '../../functions'
+import type { Doc, Id } from '../../_generated/dataModel'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 
-function normalizeSidebarItemFields<T extends AnySidebarItemRow>(item: T): NormalizeSidebarItem<T> {
+type SidebarItemEnhancementRow = AnyResourceRow | (Doc<'sidebarItems'> & { previewAssetId?: never })
+
+export type SidebarItemEnhancement = {
+  shares: Array<ResourceShare>
+  isBookmarked: boolean
+  myPermissionLevel: PermissionLevel
+}
+
+function storageIdFromAssetId(assetId: unknown): Id<'_storage'> {
+  return assetId as Id<'_storage'>
+}
+
+function normalizeSidebarItemFields<T extends SidebarItemEnhancementRow>(item: T) {
+  const normalizedId = 'id' in item ? item.id : item._id
+  const normalizedCreatedAt = 'createdAt' in item ? item.createdAt : item._creationTime
+  const {
+    _id: _rawId,
+    _creationTime: _rawCreationTime,
+    normalizedName: _normalizedName,
+    previewStorageId,
+    previewUpdatedAt: _previewUpdatedAt,
+    ...publicFields
+  } = item as T & {
+    _id?: Id<'sidebarItems'>
+    _creationTime?: number
+    normalizedName?: string
+    previewStorageId?: Id<'_storage'> | null
+    previewUpdatedAt?: number | null
+  }
+  const previewAssetId = item.previewAssetId ?? previewStorageId ?? null
   return {
-    ...normalizeSidebarItemLifecycle(item),
-    name: assertSidebarItemName(item.name),
-    iconName: item.iconName === null ? null : assertSidebarItemIconName(item.iconName),
-    color: item.color === null ? null : assertSidebarItemColor(item.color),
-    slug: assertSidebarItemSlug(item.slug),
+    ...publicFields,
+    id: normalizedId,
+    createdAt: normalizedCreatedAt,
+    name: assertConvexSidebarItemName(item.name),
+    iconName: item.iconName === null ? null : assertResourceIconName(item.iconName),
+    color: item.color === null ? null : assertResourceColor(item.color),
+    slug: assertConvexSidebarItemSlug(item.slug),
+    previewAssetId,
   }
 }
 
-export async function enhanceBase<T extends AnySidebarItemRow>(
+export async function enhanceBase<T extends SidebarItemEnhancementRow>(
   ctx: CampaignQueryCtx,
-  { item }: { item: T },
-): Promise<EnhanceSidebarItem<T>> {
+  { item, enhancement }: { item: T; enhancement?: SidebarItemEnhancement },
+) {
   const { membership } = ctx
   const normalizedItem = normalizeSidebarItemFields(item)
 
-  const [shares, bookmark, myPermissionLevel, previewUrl] = await Promise.all([
-    ctx.db
-      .query('sidebarItemShares')
-      .withIndex('by_campaign_item_member', (q) =>
-        q.eq('campaignId', normalizedItem.campaignId).eq('sidebarItemId', normalizedItem._id),
-      )
-      .collect(),
-    ctx.db
-      .query('bookmarks')
-      .withIndex('by_campaign_member_item', (q) =>
-        q
-          .eq('campaignId', normalizedItem.campaignId)
-          .eq('campaignMemberId', membership._id)
-          .eq('sidebarItemId', normalizedItem._id),
-      )
-      .unique(),
-    getSidebarItemPermissionLevel(ctx, { item: normalizedItem }),
-    normalizedItem.previewStorageId ? ctx.storage.getUrl(normalizedItem.previewStorageId) : null,
+  const [shares, isBookmarked, myPermissionLevel, previewUrl] = await Promise.all([
+    enhancement
+      ? enhancement.shares
+      : membership.role === CAMPAIGN_MEMBER_ROLE.DM
+        ? ctx.db
+            .query('sidebarItemShares')
+            .withIndex('by_campaign_item_member', (q) =>
+              q.eq('campaignId', normalizedItem.campaignId).eq('sidebarItemId', normalizedItem.id),
+            )
+            .collect()
+            .then((rows) => rows.map(toResourceShare))
+        : [],
+    enhancement
+      ? enhancement.isBookmarked
+      : ctx.db
+          .query('bookmarks')
+          .withIndex('by_campaign_member_item', (q) =>
+            q
+              .eq('campaignId', normalizedItem.campaignId)
+              .eq('campaignMemberId', membership._id)
+              .eq('sidebarItemId', normalizedItem.id),
+          )
+          .unique()
+          .then((bookmark) => bookmark !== null),
+    enhancement?.myPermissionLevel ?? getSidebarItemPermissionLevel(ctx, { item: normalizedItem }),
+    normalizedItem.previewAssetId
+      ? ctx.storage.getUrl(storageIdFromAssetId(normalizedItem.previewAssetId))
+      : null,
   ])
 
   return {
     ...normalizedItem,
     shares,
-    isBookmarked: bookmark !== null,
+    isBookmarked,
     myPermissionLevel,
     previewUrl,
     isActive: isActiveSidebarItem(normalizedItem),
     isTrashed: isTrashedSidebarItem(normalizedItem),
+  }
+}
+
+export function toResourceShare(share: Doc<'sidebarItemShares'>): ResourceShare {
+  const { _id, _creationTime, ...fields } = share
+  return {
+    ...fields,
+    id: _id,
+    createdAt: _creationTime,
   }
 }

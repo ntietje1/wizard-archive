@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { buttonVariants } from '~/features/shadcn/components/button'
+import { buttonVariants } from '@wizard-archive/ui/shadcn/components/button-variants'
 import { LandingContainer } from '~/features/landing/components/landing-container'
 import { publicSite } from '~/features/landing/content/public-site'
 

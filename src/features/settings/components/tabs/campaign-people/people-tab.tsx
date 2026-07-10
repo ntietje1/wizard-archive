@@ -1,15 +1,17 @@
 import { Loader2 } from 'lucide-react'
-import { api } from 'convex/_generated/api'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { InviteLinkSection } from './components/invite-link-section'
 import { MembersSection } from './components/members-section'
 import { PendingRequestsSection } from './components/pending-requests-section'
 import { RejectedRemovedSection } from './components/rejected-removed-section'
 import { useOptionalCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import {
+  useCampaignMembersQuery,
+  useCampaignRequestsQuery,
+} from '~/features/campaigns/hooks/use-campaign-operations'
 import { getOrigin } from '~/shared/utils/origin'
-import { Button } from '~/features/shadcn/components/button'
-import { SettingsSection } from '~/features/settings/components/tabs/account-profile/components/settings-section'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { SettingsSection } from '~/features/settings/components/settings-section'
 
 export function PeopleTab() {
   const campaignContext = useOptionalCampaign()
@@ -49,7 +51,7 @@ export function PeopleTab() {
 
       {campaignData && (
         <PeopleReadySections
-          campaignId={campaignData._id}
+          campaignId={campaignData.id}
           isDm={isDm === true}
           joinUrl={joinUrl}
           memberState={memberState}
@@ -64,25 +66,14 @@ export function PeopleTab() {
 function usePeopleTabData(campaignContext: ReturnType<typeof useOptionalCampaign>) {
   const campaignData = campaignContext?.campaign.data
   const isDm = campaignContext?.isDm
-  const members = useAuthQuery(
-    api.campaigns.queries.getMembersByCampaign,
-    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-  )
-
-  const requests = useAuthQuery(
-    api.campaigns.queries.getCampaignRequests,
-    campaignData?._id && isDm ? { campaignId: campaignData._id } : 'skip',
-  )
+  const members = useCampaignMembersQuery(campaignData?.id)
+  const requests = useCampaignRequestsQuery(campaignData?.id, isDm === true)
 
   return { campaignData, isDm, members, requests }
 }
 
-type PeopleMembersQuery = ReturnType<
-  typeof useAuthQuery<typeof api.campaigns.queries.getMembersByCampaign>
->
-type PeopleRequestsQuery = ReturnType<
-  typeof useAuthQuery<typeof api.campaigns.queries.getCampaignRequests>
->
+type PeopleMembersQuery = ReturnType<typeof useCampaignMembersQuery>
+type PeopleRequestsQuery = ReturnType<typeof useCampaignRequestsQuery>
 
 type PeopleSectionState<T> =
   | { status: 'loading' }
@@ -90,6 +81,8 @@ type PeopleSectionState<T> =
   | { status: 'ready'; data: T }
 
 type PeopleLists = ReturnType<typeof getPeopleLists>
+type PeopleCampaignData = NonNullable<ReturnType<typeof usePeopleTabData>['campaignData']>
+type PeopleCampaignId = PeopleCampaignData['id']
 
 function getPeopleSectionState<T>(query: {
   data: T | undefined
@@ -155,7 +148,7 @@ function PeopleReadySections({
   requestState,
   peopleLists,
 }: {
-  campaignId: NonNullable<ReturnType<typeof usePeopleTabData>['campaignData']>['_id']
+  campaignId: PeopleCampaignId
   isDm: boolean
   joinUrl: string | null
   memberState: PeopleSectionState<NonNullable<PeopleMembersQuery['data']>>
@@ -188,7 +181,7 @@ function MembersStateSection({
   memberState,
   peopleLists,
 }: {
-  campaignId: NonNullable<ReturnType<typeof usePeopleTabData>['campaignData']>['_id']
+  campaignId: PeopleCampaignId
   isDm: boolean
   memberState: PeopleSectionState<NonNullable<PeopleMembersQuery['data']>>
   peopleLists: PeopleLists
@@ -221,7 +214,7 @@ function RequestsStateSections({
   requestState,
   peopleLists,
 }: {
-  campaignId: NonNullable<ReturnType<typeof usePeopleTabData>['campaignData']>['_id']
+  campaignId: PeopleCampaignId
   requestState: PeopleSectionState<NonNullable<PeopleRequestsQuery['data']>>
   peopleLists: PeopleLists
 }) {

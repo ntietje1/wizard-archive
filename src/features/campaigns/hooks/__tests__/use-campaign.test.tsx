@@ -1,5 +1,5 @@
 import { createElement } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { renderHook } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { assertUsername } from 'shared/users/validation'
@@ -52,7 +52,7 @@ describe('useCampaign', () => {
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
-      campaignId: campaign._id,
+      campaignId: campaign.id,
     }
 
     const { result } = renderHook(() => useCampaign(), {
@@ -60,7 +60,7 @@ describe('useCampaign', () => {
     })
     expect(result.current.dmUsername).toBe('testdm')
     expect(result.current.isDm).toBe(true)
-    expect(result.current.campaignId).toBe(campaign._id)
+    expect(result.current.campaignId).toBe(campaign.id)
   })
 
   it('returns isDm true from context', () => {
@@ -73,7 +73,7 @@ describe('useCampaign', () => {
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
-      campaignId: campaign._id,
+      campaignId: campaign.id,
     }
 
     const { result } = renderHook(() => useCampaign(), {
@@ -92,7 +92,7 @@ describe('useCampaign', () => {
       campaign: mockAuthQuery(campaign),
       isDm: false,
       isCampaignLoaded: true,
-      campaignId: campaign._id,
+      campaignId: campaign.id,
     }
 
     const { result } = renderHook(() => useCampaign(), {
@@ -140,7 +140,7 @@ describe('useOptionalCampaign', () => {
     }
     expect(campaignContext.dmUsername).toBe('testdm')
     expect(campaignContext.campaignSlug).toBe(campaign.slug)
-    expect(campaignContext.campaignId).toBe(campaign._id)
+    expect(campaignContext.campaignId).toBe(campaign.id)
     expect(campaignContext.isDm).toBe(true)
   })
 })

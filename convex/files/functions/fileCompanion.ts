@@ -1,6 +1,6 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
@@ -21,7 +21,7 @@ export async function createFileCompanion(
 
   await logEditHistory(ctx, {
     itemId: fileId,
-    itemType: SIDEBAR_ITEM_TYPES.files,
+    itemType: RESOURCE_TYPES.files,
     action: EDIT_HISTORY_ACTION.created,
   })
 }
@@ -33,7 +33,7 @@ export async function copyFileCompanion(
 ) {
   const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'File target item not found')
-  if (targetItem.type !== SIDEBAR_ITEM_TYPES.files) {
+  if (targetItem.type !== RESOURCE_TYPES.files) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'File companion requires a file item')
   }
   const existingFile = await ctx.db

@@ -3,6 +3,7 @@ import { authMutation } from '../functions'
 import { assertUsername, usernameValidator } from './validation'
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
+import { commitUpload } from '../storage/functions/commitUpload'
 
 export const updateUsername = authMutation({
   args: {
@@ -32,17 +33,14 @@ export const updateUsername = authMutation({
 
 export const updateProfileImage = authMutation({
   args: {
-    storageId: v.id('_storage'),
+    uploadSessionId: v.id('fileStorage'),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const url = await ctx.storage.getUrl(args.storageId)
-    if (!url) {
-      throwClientError(ERROR_CODE.NOT_FOUND, 'The uploaded file could not be found')
-    }
+    const upload = await commitUpload(ctx, { sessionId: args.uploadSessionId })
 
     await ctx.db.patch('userProfiles', ctx.user.profile._id, {
-      profileImage: { type: 'storage', storageId: args.storageId },
+      profileImage: { type: 'storage', storageId: upload.storageId },
     })
     return null
   },

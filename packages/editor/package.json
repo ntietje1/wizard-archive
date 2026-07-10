@@ -1,0 +1,172 @@
+{
+  "name": "@wizard-archive/editor",
+  "version": "0.0.0",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./adapter": {
+      "types": "./dist/adapter.d.mts",
+      "default": "./dist/adapter.mjs"
+    },
+    "./canvas/document-contract": {
+      "types": "./dist/canvas/document-contract.d.mts",
+      "default": "./dist/canvas/document-contract.mjs"
+    },
+    "./canvas/item-contract": {
+      "types": "./dist/canvas/item-contract.d.mts",
+      "default": "./dist/canvas/item-contract.mjs"
+    },
+    "./collaboration/yjs-provider": {
+      "types": "./dist/collaboration/yjs-provider.d.mts",
+      "default": "./dist/collaboration/yjs-provider.mjs"
+    },
+    "./files/import-contract": {
+      "types": "./dist/files/import-contract.d.mts",
+      "default": "./dist/files/import-contract.mjs"
+    },
+    "./files/item-contract": {
+      "types": "./dist/files/item-contract.d.mts",
+      "default": "./dist/files/item-contract.mjs"
+    },
+    "./resources/history-contract": {
+      "types": "./dist/filesystem/history-contract.d.mts",
+      "default": "./dist/filesystem/history-contract.mjs"
+    },
+    "./resources/patch-contract": {
+      "types": "./dist/filesystem/patch-contract.d.mts",
+      "default": "./dist/filesystem/patch-contract.mjs"
+    },
+    "./resources/operation-contract": {
+      "types": "./dist/filesystem/operation-contract.d.mts",
+      "default": "./dist/filesystem/operation-contract.mjs"
+    },
+    "./resources/operation-capabilities": {
+      "types": "./dist/filesystem/domain/operation-capabilities.d.mts",
+      "default": "./dist/filesystem/domain/operation-capabilities.mjs"
+    },
+    "./resources/selection-roots": {
+      "types": "./dist/filesystem/domain/selection-roots.d.mts",
+      "default": "./dist/filesystem/domain/selection-roots.mjs"
+    },
+    "./resources/transaction-contract": {
+      "types": "./dist/filesystem/transaction-contract.d.mts",
+      "default": "./dist/filesystem/transaction-contract.mjs"
+    },
+    "./game-maps/document-contract": {
+      "types": "./dist/game-maps/document-contract.d.mts",
+      "default": "./dist/game-maps/document-contract.mjs"
+    },
+    "./game-maps/item-contract": {
+      "types": "./dist/game-maps/item-contract.d.mts",
+      "default": "./dist/game-maps/item-contract.mjs"
+    },
+    "./game-maps/image-resolution": {
+      "types": "./dist/game-maps/image-resolution.d.mts",
+      "default": "./dist/game-maps/image-resolution.mjs"
+    },
+    "./notes/item-contract": {
+      "types": "./dist/notes/item-contract.d.mts",
+      "default": "./dist/notes/item-contract.mjs"
+    },
+    "./notes/document-contract": {
+      "types": "./dist/notes/document/model.d.mts",
+      "default": "./dist/notes/document/model.mjs"
+    },
+    "./notes/document-yjs": {
+      "types": "./dist/notes/document/headless-yjs.d.mts",
+      "default": "./dist/notes/document/headless-yjs.mjs"
+    },
+    "./notes/values-contract": {
+      "types": "./dist/notes/values-contract.d.mts",
+      "default": "./dist/notes/values-contract.mjs"
+    },
+    "./notes/imported-text": {
+      "types": "./dist/notes/imported-text.d.mts",
+      "default": "./dist/notes/imported-text.mjs"
+    },
+    "./sharing": {
+      "types": "./dist/sharing/contracts.d.mts",
+      "default": "./dist/sharing/contracts.mjs"
+    },
+    "./resources/items": {
+      "types": "./dist/workspace/items.d.mts",
+      "default": "./dist/workspace/items.mjs"
+    },
+    "./resources/items-persistence-contract": {
+      "types": "./dist/workspace/items-persistence-contract.d.mts",
+      "default": "./dist/workspace/items-persistence-contract.mjs"
+    },
+    "./resources/resource-contract": {
+      "types": "./dist/workspace/resource-contract.d.mts",
+      "default": "./dist/workspace/resource-contract.mjs"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "dependencies": {
+    "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
+    "@base-ui/react": "^1.6.0",
+    "@blocknote/core": "^0.46.2",
+    "@blocknote/react": "^0.46.2",
+    "@blocknote/shadcn": "^0.46.2",
+    "@tiptap/pm": "^3.18.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "color": "^5.0.2",
+    "escape-html": "^1.0.3",
+    "html-to-image": "^1.11.13",
+    "jszip": "^3.10.1",
+    "lib0": "^0.2.117",
+    "lodash-es": "^4.17.21",
+    "lucide-react": "^0.541.0",
+    "motion": "^12.24.12",
+    "pdfjs-dist": "5.4.296",
+    "perfect-freehand": "^1.2.3",
+    "react-pdf": "^10.4.1",
+    "react-zoom-pan-pinch": "^3.7.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.3.1",
+    "y-prosemirror": "1.3.7",
+    "y-protocols": "^1.0.6",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.8"
+  },
+  "peerDependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "yjs": "^13.6.29"
+  },
+  "wizardArchive": {
+    "backendSafeSubpaths": [
+      "./canvas/document-contract",
+      "./canvas/item-contract",
+      "./files/import-contract",
+      "./files/item-contract",
+      "./resources/history-contract",
+      "./resources/operation-capabilities",
+      "./resources/operation-contract",
+      "./resources/patch-contract",
+      "./resources/selection-roots",
+      "./resources/transaction-contract",
+      "./game-maps/document-contract",
+      "./game-maps/image-resolution",
+      "./game-maps/item-contract",
+      "./notes/document-contract",
+      "./notes/document-yjs",
+      "./notes/imported-text",
+      "./notes/item-contract",
+      "./notes/values-contract",
+      "./resources/items",
+      "./resources/items-persistence-contract",
+      "./resources/resource-contract"
+    ]
+  }
+}

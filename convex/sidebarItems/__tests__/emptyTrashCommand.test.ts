@@ -27,7 +27,7 @@ describe('emptyTrash filesystem command', () => {
       command: { type: 'emptyTrash' },
     })
 
-    const trashItems = await dmAuth.query(api.sidebarItems.queries.getTrashedSidebarItems, {
+    const { trash: trashItems } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
     expect(trashItems.length).toBe(0)

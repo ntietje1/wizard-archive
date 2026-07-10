@@ -3,7 +3,7 @@ import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
-import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
+import type { ResourceColor } from '@wizard-archive/editor/resources/resource-contract'
 
 const CONTENT_UPDATED_TIMESTAMP = 9_999_999_999
 
@@ -51,7 +51,7 @@ describe('filesystem transaction semantics', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scene',
-      color: '#14b8a6' as SidebarItemColor,
+      color: '#14b8a6' as ResourceColor,
     })
 
     const receipt = await dmAuth.mutation(
@@ -61,12 +61,12 @@ describe('filesystem transaction semantics', () => {
         command: {
           type: 'rename',
           itemId: noteId,
-          color: '#ff0000' as SidebarItemColor,
+          color: '#ff0000' as ResourceColor,
         },
       },
     )
 
-    expect(receipt.summary.kind).toBe('renamed')
+    expect(receipt.summary.kind).toBe('updated')
     expect(receipt.events).toEqual([{ type: 'updated', itemId: noteId }])
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {

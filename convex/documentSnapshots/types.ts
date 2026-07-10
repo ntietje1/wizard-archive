@@ -1,14 +1,4 @@
-import type { Id } from '../_generated/dataModel'
-import type { SidebarItemType } from '../../shared/sidebar-items/types'
-import type { SnapshotType } from '../../shared/document-snapshots/types'
-
-export type DocumentSnapshot = {
-  _id: Id<'documentSnapshots'>
-  _creationTime: number
-  itemId: Id<'sidebarItems'>
-  itemType: SidebarItemType
-  editHistoryId: Id<'editHistory'>
-  campaignId: Id<'campaigns'>
-  snapshotType: SnapshotType
-  data: ArrayBuffer
-}
+export const DOCUMENT_SNAPSHOT_TYPE = {
+  YjsState: 'yjs_state',
+  GameMap: 'game_map',
+} as const

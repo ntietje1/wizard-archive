@@ -1,4 +1,3 @@
-import { api } from 'convex/_generated/api'
 import type { CampaignContextType } from '~/features/campaigns/hooks/useCampaign'
 import {
   buildCampaignContextValue,
@@ -7,8 +6,8 @@ import {
 } from '~/features/campaigns/hooks/useCampaign'
 import { resolveCampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
 import { CampaignNotFound } from '~/features/campaigns/components/campaign-not-found'
-import { Button } from '~/features/shadcn/components/button'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { useCampaignBySlugQuery } from '~/features/campaigns/hooks/use-campaign-operations'
 
 function CampaignLookupFailed({ onRetry }: { onRetry: () => unknown }) {
   return (
@@ -26,15 +25,7 @@ function CampaignLookupFailed({ onRetry }: { onRetry: () => unknown }) {
 
 export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const identity = useOptionalCampaignRoute()
-  const campaign = useAuthQuery(
-    api.campaigns.queries.getCampaignBySlug,
-    identity
-      ? {
-          dmUsername: identity.dmUsername,
-          slug: identity.campaignSlug,
-        }
-      : 'skip',
-  )
+  const campaign = useCampaignBySlugQuery(identity)
 
   if (!identity) {
     return <CampaignNotFound />

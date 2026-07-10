@@ -1,7 +1,7 @@
 import { HeadContent, Scripts, useMatches } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { getThemeCookie, resolveTheme } from '~/shared/theme/dom'
-import type { Theme } from '~/shared/theme/types'
+import type { Theme } from '@wizard-archive/ui/theme/types'
 
 export function RootDocument({ children }: { children: ReactNode }) {
   const matches = useMatches()

@@ -1,31 +1,20 @@
 import { v } from 'convex/values'
+import { literals } from 'convex-helpers/validators'
 import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_STATUS,
-  SIDEBAR_ITEM_TYPES,
-} from '../../../shared/sidebar-items/types'
+  RESOURCE_ICON_NAMES,
+  RESOURCE_LOCATION,
+  RESOURCE_STATUS_VALUES,
+  RESOURCE_TYPE_VALUES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 
-export const sidebarItemSlugValidator = v.string()
-export const sidebarItemNameValidator = v.string()
-export const sidebarItemColorValidator = v.string()
-export const sidebarItemIconNameValidator = v.string()
+export const sidebarItemLocationValidator = v.literal(RESOURCE_LOCATION.sidebar)
 
-export const sidebarItemLocationValidator = v.literal(SIDEBAR_ITEM_LOCATION.sidebar)
+export const sidebarItemStatusValidator = literals(...RESOURCE_STATUS_VALUES)
 
-export const sidebarItemStatusValidator = v.union(
-  v.literal(SIDEBAR_ITEM_STATUS.active),
-  v.literal(SIDEBAR_ITEM_STATUS.trashed),
-  v.literal(SIDEBAR_ITEM_STATUS.undoHidden),
-)
+export const sidebarItemTypeValidator = literals(...RESOURCE_TYPE_VALUES)
 
-export const sidebarItemTypeValidator = v.union(
-  v.literal(SIDEBAR_ITEM_TYPES.notes),
-  v.literal(SIDEBAR_ITEM_TYPES.folders),
-  v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
-  v.literal(SIDEBAR_ITEM_TYPES.files),
-  v.literal(SIDEBAR_ITEM_TYPES.canvases),
-)
+export const sidebarItemIconNameValidator = literals(...RESOURCE_ICON_NAMES)
 
 export const permissionLevelValidator = v.union(
   v.literal(PERMISSION_LEVEL.NONE),

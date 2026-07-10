@@ -1,7 +1,7 @@
 import { toast } from 'sonner'
-import { Button } from '~/features/shadcn/components/button'
-import { ButtonGroup } from '~/features/shadcn/components/button-group'
-import { Input } from '~/features/shadcn/components/input'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { ButtonGroup } from '@wizard-archive/ui/shadcn/components/button-group'
+import { Input } from '@wizard-archive/ui/shadcn/components/input'
 
 export function InviteLinkSection({ joinUrl }: { joinUrl: string }) {
   return (

@@ -6,10 +6,13 @@ import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { blockNoteIdValidator, blockShareStatusValidator, blockTypeValidator } from './schema'
 import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlocksWithShares'
 import { getHeadingsByNote as getHeadingsByNoteFn } from './functions/getHeadingsByNote'
-import { searchBlocks as searchBlocksFn } from './functions/searchBlocks'
+import {
+  searchBlocks as searchBlocksFn,
+  searchBlocksAsMember as searchBlocksAsMemberFn,
+} from './functions/searchBlocks'
 
 const blockShareInfoValidator = v.object({
-  blockNoteId: blockNoteIdValidator,
+  noteBlockId: blockNoteIdValidator,
   shareStatus: blockShareStatusValidator,
   memberPermissions: v.record(v.id('campaignMembers'), blockVisibilityPermissionLevelValidator),
 })
@@ -33,7 +36,7 @@ export const getBlocksWithShares = dmQuery({
 })
 
 const headingResultValidator = v.object({
-  blockNoteId: blockNoteIdValidator,
+  noteBlockId: blockNoteIdValidator,
   text: v.string(),
   level: v.number(),
   normalizedText: v.string(),
@@ -63,5 +66,19 @@ export const searchBlocks = campaignQuery({
   returns: v.array(blockSearchResultValidator),
   handler: async (ctx, args) => {
     return await searchBlocksFn(ctx, { query: args.query })
+  },
+})
+
+export const searchBlocksAsMember = dmQuery({
+  args: {
+    campaignMemberId: v.id('campaignMembers'),
+    query: v.string(),
+  },
+  returns: v.array(blockSearchResultValidator),
+  handler: async (ctx, args) => {
+    return await searchBlocksAsMemberFn(ctx, {
+      campaignMemberId: args.campaignMemberId,
+      query: args.query,
+    })
   },
 })

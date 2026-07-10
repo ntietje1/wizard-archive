@@ -1,25 +1,200 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
-import { EDIT_HISTORY_ACTION } from '../../shared/edit-history/types'
+import { convexValidatorFields } from '../common/schema'
 
-const actions = Object.values(EDIT_HISTORY_ACTION).map((a) => v.literal(a))
-if (actions.length === 0) {
-  throw new Error('EDIT_HISTORY_ACTION must have at least one value to build validator')
+const editHistoryCommonFields = {
+  itemId: v.id('sidebarItems'),
+  itemType: sidebarItemTypeValidator,
+  campaignId: v.id('campaigns'),
+  campaignMemberId: v.id('campaignMembers'),
+  hasSnapshot: v.boolean(),
 }
-const editHistoryActionValidator =
-  actions.length === 1 ? actions[0] : v.union(actions[0], actions[1], ...actions.slice(2))
+
+const nullMetadataActions = [
+  EDIT_HISTORY_ACTION.created,
+  EDIT_HISTORY_ACTION.trashed,
+  EDIT_HISTORY_ACTION.restored,
+  EDIT_HISTORY_ACTION.content_edited,
+  EDIT_HISTORY_ACTION.map_image_changed,
+  EDIT_HISTORY_ACTION.map_image_removed,
+  EDIT_HISTORY_ACTION.file_replaced,
+  EDIT_HISTORY_ACTION.file_removed,
+] as const
+
+const copiedMetadataValidator = v.object({
+  copiedFromItemId: v.id('sidebarItems'),
+  copiedFromName: v.string(),
+})
+const renamedMetadataValidator = v.object({ from: v.string(), to: v.string() })
+const movedMetadataValidator = v.object({
+  from: v.nullable(v.string()),
+  to: v.nullable(v.string()),
+})
+const optionalStringChangeMetadataValidator = v.object({
+  from: v.nullable(v.string()),
+  to: v.nullable(v.string()),
+})
+const rolledBackMetadataValidator = v.object({
+  restoredFromHistoryEntryId: v.id('editHistory'),
+})
+const permissionChangedMetadataValidator = v.object({
+  memberName: v.nullable(v.string()),
+  level: v.nullable(v.string()),
+  previousLevel: v.nullable(v.string()),
+})
+const blockShareChangedMetadataValidator = v.object({
+  status: v.string(),
+  memberId: v.optional(v.id('campaignMembers')),
+  blockCount: v.optional(v.number()),
+})
+const inheritSharesChangedMetadataValidator = v.object({
+  inheritShares: v.boolean(),
+  previousInheritShares: v.boolean(),
+})
+const pinItemMetadataValidator = v.object({ pinItemName: v.string() })
+const pinVisibilityMetadataValidator = v.object({
+  pinItemName: v.string(),
+  visible: v.boolean(),
+})
+
+const editHistoryChangeValidator = v.union(
+  ...nullMetadataActions.map((action) =>
+    v.object({ action: v.literal(action), metadata: v.null() }),
+  ),
+  v.object({ action: v.literal(EDIT_HISTORY_ACTION.copied), metadata: copiedMetadataValidator }),
+  v.object({ action: v.literal(EDIT_HISTORY_ACTION.renamed), metadata: renamedMetadataValidator }),
+  v.object({ action: v.literal(EDIT_HISTORY_ACTION.moved), metadata: movedMetadataValidator }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.icon_changed),
+    metadata: optionalStringChangeMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.color_changed),
+    metadata: optionalStringChangeMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.rolled_back),
+    metadata: rolledBackMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.permission_changed),
+    metadata: permissionChangedMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.block_share_changed),
+    metadata: blockShareChangedMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.inherit_shares_changed),
+    metadata: inheritSharesChangedMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.map_pin_added),
+    metadata: pinItemMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.map_pin_moved),
+    metadata: pinItemMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.map_pin_removed),
+    metadata: pinItemMetadataValidator,
+  }),
+  v.object({
+    action: v.literal(EDIT_HISTORY_ACTION.map_pin_visibility_changed),
+    metadata: pinVisibilityMetadataValidator,
+  }),
+)
+
+const editHistoryVariants = [
+  ...nullMetadataActions.map((action) => ({
+    ...editHistoryCommonFields,
+    action: v.literal(action),
+    metadata: v.null(),
+  })),
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.copied),
+    metadata: copiedMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.renamed),
+    metadata: renamedMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.moved),
+    metadata: movedMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.icon_changed),
+    metadata: optionalStringChangeMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.color_changed),
+    metadata: optionalStringChangeMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.rolled_back),
+    metadata: rolledBackMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.updated),
+    metadata: v.object({ changes: v.array(editHistoryChangeValidator) }),
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.permission_changed),
+    metadata: permissionChangedMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.block_share_changed),
+    metadata: blockShareChangedMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.inherit_shares_changed),
+    metadata: inheritSharesChangedMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.map_pin_added),
+    metadata: pinItemMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.map_pin_moved),
+    metadata: pinItemMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.map_pin_removed),
+    metadata: pinItemMetadataValidator,
+  },
+  {
+    ...editHistoryCommonFields,
+    action: v.literal(EDIT_HISTORY_ACTION.map_pin_visibility_changed),
+    metadata: pinVisibilityMetadataValidator,
+  },
+] as const
+
+const editHistorySystemFields = convexValidatorFields('editHistory')
+
+export const editHistoryValidator = v.union(
+  ...editHistoryVariants.map((fields) => v.object({ ...editHistorySystemFields, ...fields })),
+)
 
 export const editHistoryTables = {
-  editHistory: defineTable({
-    itemId: v.id('sidebarItems'),
-    itemType: sidebarItemTypeValidator,
-    campaignId: v.id('campaigns'),
-    campaignMemberId: v.id('campaignMembers'),
-    action: editHistoryActionValidator,
-    metadata: v.union(v.record(v.string(), v.any()), v.null()),
-    hasSnapshot: v.boolean(),
-  })
+  editHistory: defineTable(v.union(...editHistoryVariants.map((fields) => v.object(fields))))
+    .index('by_campaign', ['campaignId'])
     .index('by_item', ['itemId'])
     .index('by_item_action', ['itemId', 'action']),
 }

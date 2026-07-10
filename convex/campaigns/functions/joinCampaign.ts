@@ -24,9 +24,7 @@ export async function joinCampaign(
 
   const existingMember = await ctx.db
     .query('campaignMembers')
-    .withIndex('by_campaign_user', (q) =>
-      q.eq('campaignId', campaign._id).eq('userId', profile._id),
-    )
+    .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaign.id).eq('userId', profile._id))
     .unique()
 
   if (existingMember) {
@@ -35,7 +33,7 @@ export async function joinCampaign(
 
   await ctx.db.insert('campaignMembers', {
     userId: profile._id,
-    campaignId: campaign._id,
+    campaignId: campaign.id,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Pending,
   })

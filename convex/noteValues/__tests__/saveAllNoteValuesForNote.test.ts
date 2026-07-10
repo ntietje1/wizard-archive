@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createNote } from '../../_test/factories.helper'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createNote, createSidebarShare } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import {
   paragraphWithGeneratedId,
@@ -88,10 +88,11 @@ describe('saveAllNoteValuesForNote', () => {
       expect(rows[0]).toMatchObject({
         slug: 'invalid_function',
         expressionSource: 'foo(1)',
-        compileStatus: 'error',
-        compiledFormula: null,
-        errorCode: 'invalid_function_usage',
-        errorMessage: 'Unknown function "foo"',
+        compile: {
+          status: 'error',
+          errorCode: 'invalid_function_usage',
+          errorMessage: 'Unknown function "foo"',
+        },
       })
     })
   })
@@ -186,5 +187,79 @@ describe('saveAllNoteValuesForNote', () => {
         expect.objectContaining({ noteId: secondNoteId, valueId: 'value-second', rawValue: 2 }),
       ]),
     )
+  })
+
+  it('does not persist bindings or distinguish references to notes hidden from the editor', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const playerAuth = asPlayer(ctx)
+    const { noteId: hiddenNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Hidden Values',
+    })
+    const { noteId: editableNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Player Formula',
+    })
+    const formulaBlock = valueBlockWithGeneratedId({
+      idSeed: 'hidden-reference',
+      valueId: 'value-hidden-reference',
+      slug: 'hidden_reference',
+      expressionSource: '[[Hidden Values.secret]] + 1',
+    })
+
+    await replaceNoteDocumentAndPersist(t, dmAuth, {
+      campaignId: ctx.campaignId,
+      noteId: hiddenNoteId,
+      blocks: [
+        valueBlockWithGeneratedId({
+          idSeed: 'hidden-value',
+          valueId: 'value-secret',
+          slug: 'secret',
+          expressionSource: '41',
+        }),
+      ],
+    })
+    await replaceNoteDocumentAndPersist(t, dmAuth, {
+      campaignId: ctx.campaignId,
+      noteId: editableNoteId,
+      blocks: [formulaBlock],
+    })
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: editableNoteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'edit',
+    })
+
+    await replaceNoteDocumentAndPersist(t, playerAuth, {
+      campaignId: ctx.campaignId,
+      noteId: editableNoteId,
+      blocks: [formulaBlock],
+    })
+
+    await t.run(async (dbCtx) => {
+      const row = await dbCtx.db
+        .query('noteValues')
+        .withIndex('by_campaign_note', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('noteId', editableNoteId),
+        )
+        .unique()
+      expect(row).toMatchObject({
+        compile: {
+          status: 'error',
+          errorCode: 'unknown_reference',
+        },
+      })
+      expect(JSON.stringify(row)).not.toContain(hiddenNoteId)
+    })
+
+    const states = await playerAuth.query(api.noteValues.queries.getNoteValueStates, {
+      campaignId: ctx.campaignId,
+      noteId: editableNoteId,
+    })
+    expect(states[0]).toMatchObject({
+      status: 'error',
+      errorCode: 'unknown_reference',
+    })
   })
 })

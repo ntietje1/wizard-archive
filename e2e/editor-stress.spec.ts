@@ -11,7 +11,7 @@ const campaignName = testName('E2E EdStress')
 async function setupCampaignWithNotes(browser: Browser, noteNames: Array<string>) {
   const ctx = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
   const page = await ctx.newPage()
-  await page.goto('/campaigns')
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await createCampaign(page, campaignName)
   await navigateToCampaign(page, campaignName)
   for (const name of noteNames) {
@@ -22,7 +22,7 @@ async function setupCampaignWithNotes(browser: Browser, noteNames: Array<string>
 }
 
 async function navigateToNote(page: Page, noteName: string) {
-  await page.goto('/campaigns')
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(page, campaignName)
   await openItem(page, noteName)
   return await getEditor(page)
@@ -50,11 +50,11 @@ async function withDualEditors(
   const page2 = await context2.newPage()
 
   try {
-    await page1.goto('/campaigns')
+    await page1.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page1, campaignName)
     await openItem(page1, noteName)
 
-    await page2.goto('/campaigns')
+    await page2.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page2, campaignName)
     await openItem(page2, noteName)
 
@@ -92,7 +92,7 @@ test.describe.serial('editor stress tests', () => {
   test.afterAll(async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await ctx.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch (err) {
@@ -172,20 +172,20 @@ test.describe.serial('editor stress tests', () => {
     await expect(editor).toContainText(deepNested)
   })
 
-  test('content persists through hard reload', async ({ page }) => {
-    const editor = await navigateToNote(page, notes.reload)
-    await editor.click()
+  test('content persists through hard reload', async ({ browser }) => {
+    await withDualEditors(browser, notes.reload, async ({ page1, editor1, editor2 }) => {
+      await editor1.click()
 
-    const text = `Persist-Reload-${Date.now()}`
-    await page.keyboard.type(text)
-    await expect(editor).toContainText(text)
+      const text = `Persist-Reload-${Date.now()}`
+      await page1.keyboard.type(text)
+      await expect(editor1).toContainText(text)
+      await expect(editor2).toContainText(text, { timeout: 20000 })
 
-    await page.waitForLoadState('networkidle')
+      await page1.reload({ waitUntil: 'networkidle' })
 
-    await page.reload({ waitUntil: 'networkidle' })
-
-    const editorAfter = await getEditor(page)
-    await expect(editorAfter).toContainText(text, { timeout: 15000 })
+      const editorAfter = await getEditor(page1)
+      await expect(editorAfter).toContainText(text, { timeout: 15000 })
+    })
   })
 
   test('select all and delete clears document and syncs', async ({ browser }) => {

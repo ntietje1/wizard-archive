@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it } from 'vitest'
 import { ConvexError } from 'convex/values'
 import { ERROR_CODE, getClientErrorMessage, isClientError } from 'shared/errors/client'
 

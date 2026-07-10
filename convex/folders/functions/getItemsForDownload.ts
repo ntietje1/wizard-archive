@@ -6,24 +6,29 @@ import { getNoteForDownload } from '../../notes/functions/getNoteForDownload'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebarItemsByParent'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { deduplicateResourceName } from '@wizard-archive/editor/resources/resource-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type {
+  AnyResource,
+  FolderResource,
+} from '@wizard-archive/editor/resources/resource-contract'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { normalizeSelectedRoots } from '../../../shared/sidebar-items/filesystem/selection'
-import { addSidebarItemAncestorsToMap } from '../../sidebarItems/filesystem/ancestors'
+import { normalizeSelectedRoots } from '@wizard-archive/editor/resources/selection-roots'
+import { loadSidebarItemAncestorMap } from '../../sidebarItems/filesystem/ancestors'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { assertNever } from '../../common/types'
-import { deduplicateName } from '../../../shared/sidebar-items/default-name'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
 
 type DownloadBuildContext = {
   reservedPaths: Set<string>
 }
+
+type DownloadableSidebarItem = Exclude<AnyResource, FolderResource>
 
 const MAX_DEDUP_ATTEMPTS = 100
 const MAX_DOWNLOAD_ANCESTOR_DEPTH = 50
@@ -34,20 +39,18 @@ function buildPath(currentPath: string, name: string) {
 
 async function buildDownloadItemForSidebarItem(
   ctx: CampaignQueryCtx,
-  item: AnySidebarItem,
+  item: DownloadableSidebarItem,
   path: string,
-): Promise<DownloadItem | null> {
+): Promise<DownloadItem> {
   switch (item.type) {
-    case SIDEBAR_ITEM_TYPES.files:
+    case RESOURCE_TYPES.files:
       return await getFileForDownload(ctx, item, path)
-    case SIDEBAR_ITEM_TYPES.notes:
+    case RESOURCE_TYPES.notes:
       return await getNoteForDownload(ctx, item, path)
-    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case RESOURCE_TYPES.gameMaps:
       return await getGameMapForDownload(ctx, item, path)
-    case SIDEBAR_ITEM_TYPES.canvases:
-      return getCanvasForDownload(item, path)
-    case SIDEBAR_ITEM_TYPES.folders:
-      return null
+    case RESOURCE_TYPES.canvases:
+      return await getCanvasForDownload(ctx, item, path)
     default:
       assertNever(item)
   }
@@ -70,7 +73,7 @@ async function collectNonFolderDownloadItem(
     currentPath,
     downloadContext,
   }: {
-    item: AnySidebarItem
+    item: DownloadableSidebarItem
     currentPath: string
     downloadContext: DownloadBuildContext
   },
@@ -78,13 +81,12 @@ async function collectNonFolderDownloadItem(
   const triedNames: Array<string> = []
 
   for (let attempt = 0; attempt < MAX_DEDUP_ATTEMPTS; attempt += 1) {
-    const candidateName = deduplicateName(item.name, triedNames)
+    const candidateName = deduplicateResourceName(item.name, triedNames)
     const downloadItem = await buildDownloadItemForSidebarItem(
       ctx,
       item,
       buildPath(currentPath, candidateName),
     )
-    if (!downloadItem) return []
     if (!downloadContext.reservedPaths.has(downloadItem.path)) {
       downloadContext.reservedPaths.add(downloadItem.path)
       return [downloadItem]
@@ -102,7 +104,7 @@ async function collectFolderDownloadItems(
     includeFolderName,
     downloadContext,
   }: {
-    item: Extract<AnySidebarItem, { type: typeof SIDEBAR_ITEM_TYPES.folders }>
+    item: FolderResource
     currentPath: string
     includeFolderName: boolean
     downloadContext: DownloadBuildContext
@@ -110,7 +112,7 @@ async function collectFolderDownloadItems(
 ): Promise<Array<DownloadItem>> {
   if (!includeFolderName) {
     return await collectItemsRecursively(ctx, {
-      parentId: item._id,
+      parentId: item.id,
       currentPath,
       downloadContext,
     })
@@ -118,9 +120,9 @@ async function collectFolderDownloadItems(
 
   const triedNames: Array<string> = []
   for (let attempt = 0; attempt < MAX_DEDUP_ATTEMPTS; attempt += 1) {
-    const candidateName = deduplicateName(item.name, triedNames)
+    const candidateName = deduplicateResourceName(item.name, triedNames)
     const items = await collectItemsRecursively(ctx, {
-      parentId: item._id,
+      parentId: item.id,
       currentPath: buildPath(currentPath, candidateName),
       downloadContext: { reservedPaths: new Set(downloadContext.reservedPaths) },
     })
@@ -156,7 +158,7 @@ async function collectItemsRecursively(
     const level = permissionLevels[i]
     if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)) continue
 
-    if (child.type === SIDEBAR_ITEM_TYPES.folders) {
+    if (child.type === RESOURCE_TYPES.folders) {
       items.push(
         ...(await collectFolderDownloadItems(ctx, {
           item: child,
@@ -195,8 +197,8 @@ async function getDownloadSourceItems(
   ctx: CampaignQueryCtx,
   sourceItemIds: Array<Id<'sidebarItems'>>,
 ): Promise<{
-  sourceItems: Array<AnySidebarItem>
-  allItemsMap: Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>
+  sourceItems: Array<AnyResource>
+  allItemsMap: Map<Id<'sidebarItems'>, Pick<AnyResource, 'id' | 'parentId'>>
 }> {
   const sourceItems = await Promise.all(
     sourceItemIds.map(async (sourceItemId) => {
@@ -208,9 +210,9 @@ async function getDownloadSourceItems(
       })
     }),
   )
-  const allItemsMap = new Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>()
+  const allItemsMap = new Map<Id<'sidebarItems'>, Pick<AnyResource, 'id' | 'parentId'>>()
   for (const item of sourceItems) {
-    allItemsMap.set(item._id, item)
+    allItemsMap.set(item.id, item)
   }
 
   return { sourceItems, allItemsMap }
@@ -223,12 +225,12 @@ async function collectDownloadItemsForSource(
     includeFolderName,
     downloadContext,
   }: {
-    item: AnySidebarItem
+    item: AnyResource
     includeFolderName: boolean
     downloadContext: DownloadBuildContext
   },
 ): Promise<Array<DownloadItem>> {
-  if (item.type === SIDEBAR_ITEM_TYPES.folders) {
+  if (item.type === RESOURCE_TYPES.folders) {
     return await collectFolderDownloadItems(ctx, {
       item,
       currentPath: '',
@@ -251,12 +253,12 @@ export async function getSidebarItemsForDownload(
   if (sourceItemIds.length === 0) return { items: [] }
 
   const { sourceItems, allItemsMap } = await getDownloadSourceItems(ctx, sourceItemIds)
-  await addSidebarItemAncestorsToMap(ctx, {
+  const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
     items: sourceItems,
     itemsById: allItemsMap,
     maxDepth: MAX_DOWNLOAD_ANCESTOR_DEPTH,
   })
-  const normalizedItems = normalizeSelectedRoots(sourceItems, allItemsMap)
+  const normalizedItems = normalizeSelectedRoots(sourceItems, ancestorItemsById)
   const items: Array<DownloadItem> = []
   const downloadContext: DownloadBuildContext = { reservedPaths: new Set() }
 

@@ -1,8 +1,9 @@
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { logger } from '../../common/logger'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
+import { assertPinCoordinate } from './pinCoordinates'
 import { requirePinAccess } from './requirePinAccess'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -20,6 +21,8 @@ export async function updateItemPin(
   },
 ): Promise<Id<'mapPins'>> {
   const { pin, map } = await requirePinAccess(ctx, { mapPinId })
+  assertPinCoordinate(x, 'x')
+  assertPinCoordinate(y, 'y')
 
   await ctx.db.patch('mapPins', mapPinId, {
     x,
@@ -34,8 +37,8 @@ export async function updateItemPin(
   const editHistoryId = await logEditHistory(
     ctx,
     {
-      itemId: map._id,
-      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      itemId: map.id,
+      itemType: RESOURCE_TYPES.gameMaps,
       action: EDIT_HISTORY_ACTION.map_pin_moved,
       metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
     },
@@ -43,7 +46,7 @@ export async function updateItemPin(
   )
 
   await captureGameMapSnapshot(ctx, {
-    mapId: map._id,
+    mapId: map.id,
     editHistoryId,
     campaignId: map.campaignId,
   })

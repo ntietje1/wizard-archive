@@ -1,10 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { CampaignSelectionPage } from '~/features/campaigns/pages/campaign-selection-page'
+import { CampaignSelectionRouteComponent } from './-campaign-selection-route'
 
 export const Route = createFileRoute('/_app/_authed/campaigns/')({
-  component: RouteComponent,
+  component: CampaignSelectionRouteComponent,
 })
-
-function RouteComponent() {
-  return <CampaignSelectionPage />
-}

@@ -1,16 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
 import { setupCampaignContext } from '../../_test/identities.helper'
 import { createCanvas, createGameMap, createMapPin, createNote } from '../../_test/factories.helper'
-import { SNAPSHOT_TYPE } from '../../../shared/document-snapshots/types'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { DOCUMENT_SNAPSHOT_TYPE } from '../types'
+import type { LogEditHistoryArgs } from '@wizard-archive/editor/resources/history-contract'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { makeYjsUpdate } from '../../_test/yjs.helper'
 import { captureGameMapSnapshot } from '../../gameMaps/functions/captureGameMapSnapshot'
 import { internal } from '../../_generated/api'
-import type { LogEditHistoryArgs } from '../../../shared/edit-history/types'
 import type { Id } from '../../_generated/dataModel'
-import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
+import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
 
 function createEditHistoryEntry(
   t: ReturnType<typeof createTestContext>,
@@ -33,6 +33,36 @@ function createEditHistoryEntry(
   })
 }
 
+describe('document snapshot schema invariants', () => {
+  const t = createTestContext()
+
+  it('rejects incompatible item and snapshot variants', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const editHistoryId = await createEditHistoryEntry(t, {
+      itemId: noteId,
+      itemType: RESOURCE_TYPES.notes,
+      campaignId: ctx.campaignId,
+      campaignMemberId: ctx.dm.memberId,
+      action: 'content_edited',
+      hasSnapshot: false,
+    })
+
+    await expect(
+      t.run(async (dbCtx) =>
+        dbCtx.db.insert('documentSnapshots', {
+          itemId: noteId,
+          itemType: RESOURCE_TYPES.notes,
+          editHistoryId,
+          campaignId: ctx.campaignId,
+          snapshotType: DOCUMENT_SNAPSHOT_TYPE.GameMap,
+          data: new ArrayBuffer(0),
+        } as never),
+      ),
+    ).rejects.toThrow('Validator error')
+  })
+})
+
 describe('captureCanvasSnapshot', () => {
   const t = createTestContext()
 
@@ -52,21 +82,30 @@ describe('captureCanvasSnapshot', () => {
 
     const editHistoryId = await createEditHistoryEntry(t, {
       itemId: canvasId,
-      itemType: SIDEBAR_ITEM_TYPES.canvases,
+      itemType: RESOURCE_TYPES.canvases,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
       action: 'content_edited',
-      hasSnapshot: true,
+      hasSnapshot: false,
     })
 
-    await t.action(internal.yjsSync.internalActions.captureSnapshot, {
+    const captureArgs = {
       documentId: canvasId,
-      itemType: SIDEBAR_ITEM_TYPES.canvases,
-      snapshotType: SNAPSHOT_TYPE.yjs_state,
+      itemType: RESOURCE_TYPES.canvases,
       editHistoryId,
       campaignId: ctx.campaignId,
+      expectedRevision: 0,
       maxSeq: 0,
-    })
+    } as const
+    const firstCapture = await t.action(
+      internal.yjsSync.internalActions.captureSnapshot,
+      captureArgs,
+    )
+    const repeatedCapture = await t.action(
+      internal.yjsSync.internalActions.captureSnapshot,
+      captureArgs,
+    )
+    expect(repeatedCapture).toEqual(firstCapture)
 
     await t.run(async (dbCtx) => {
       const snapshot = await dbCtx.db
@@ -75,9 +114,9 @@ describe('captureCanvasSnapshot', () => {
         .first()
 
       expect(snapshot).not.toBeNull()
-      expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
+      expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
       expect(snapshot!.itemId).toBe(canvasId)
-      expect(snapshot!.itemType).toBe(SIDEBAR_ITEM_TYPES.canvases)
+      expect(snapshot!.itemType).toBe(RESOURCE_TYPES.canvases)
 
       const expectedDoc = new Y.Doc()
       Y.applyUpdate(expectedDoc, new Uint8Array(yjsUpdate))
@@ -132,19 +171,19 @@ describe('captureCanvasSnapshot', () => {
 
     const editHistoryId = await createEditHistoryEntry(t, {
       itemId: canvasId,
-      itemType: SIDEBAR_ITEM_TYPES.canvases,
+      itemType: RESOURCE_TYPES.canvases,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
       action: 'content_edited',
-      hasSnapshot: true,
+      hasSnapshot: false,
     })
 
     await t.action(internal.yjsSync.internalActions.captureSnapshot, {
       documentId: canvasId,
-      itemType: SIDEBAR_ITEM_TYPES.canvases,
-      snapshotType: SNAPSHOT_TYPE.yjs_state,
+      itemType: RESOURCE_TYPES.canvases,
       editHistoryId,
       campaignId: ctx.campaignId,
+      expectedRevision: 0,
       maxSeq: 1,
     })
 
@@ -183,19 +222,19 @@ describe('captureNoteSnapshot', () => {
 
     const editHistoryId = await createEditHistoryEntry(t, {
       itemId: noteId,
-      itemType: SIDEBAR_ITEM_TYPES.notes,
+      itemType: RESOURCE_TYPES.notes,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
       action: 'content_edited',
-      hasSnapshot: true,
+      hasSnapshot: false,
     })
 
     await t.action(internal.yjsSync.internalActions.captureSnapshot, {
       documentId: noteId,
-      itemType: SIDEBAR_ITEM_TYPES.notes,
-      snapshotType: SNAPSHOT_TYPE.yjs_state,
+      itemType: RESOURCE_TYPES.notes,
       editHistoryId,
       campaignId: ctx.campaignId,
+      expectedRevision: 0,
       maxSeq: 0,
     })
 
@@ -206,9 +245,9 @@ describe('captureNoteSnapshot', () => {
         .first()
 
       expect(snapshot).not.toBeNull()
-      expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
+      expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
       expect(snapshot!.itemId).toBe(noteId)
-      expect(snapshot!.itemType).toBe(SIDEBAR_ITEM_TYPES.notes)
+      expect(snapshot!.itemType).toBe(RESOURCE_TYPES.notes)
 
       const expectedDoc = new Y.Doc()
       Y.applyUpdate(expectedDoc, new Uint8Array(yjsUpdate))
@@ -221,6 +260,110 @@ describe('captureNoteSnapshot', () => {
       expect(sv).toEqual(expectedSV)
       doc.destroy()
     })
+  })
+})
+
+describe('scheduled Yjs snapshot ownership', () => {
+  const t = createTestContext()
+
+  it('rejects final capture after its item is hard-deleted', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.insert('yjsUpdates', {
+        documentId: noteId,
+        update: makeYjsUpdate(),
+        seq: 0,
+        isSnapshot: true,
+      })
+    })
+    const editHistoryId = await createEditHistoryEntry(t, {
+      itemId: noteId,
+      itemType: RESOURCE_TYPES.notes,
+      campaignId: ctx.campaignId,
+      campaignMemberId: ctx.dm.memberId,
+      action: 'content_edited',
+      hasSnapshot: false,
+    })
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.delete('sidebarItems', noteId)
+    })
+
+    await expect(
+      t.action(internal.yjsSync.internalActions.captureSnapshot, {
+        documentId: noteId,
+        itemType: RESOURCE_TYPES.notes,
+        editHistoryId,
+        campaignId: ctx.campaignId,
+        expectedRevision: 0,
+        maxSeq: 0,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'item_unavailable' })
+    await t.run(async (dbCtx) => {
+      const snapshots = await dbCtx.db
+        .query('documentSnapshots')
+        .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
+        .collect()
+      expect(snapshots).toEqual([])
+      expect(await dbCtx.db.get('editHistory', editHistoryId)).toBeNull()
+    })
+  })
+
+  it('deletes item history and snapshots in fixed-size scheduled batches', async () => {
+    vi.useFakeTimers()
+    try {
+      const ctx = await setupCampaignContext(t)
+      const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+      await t.run(async (dbCtx) => {
+        for (let index = 0; index < 125; index++) {
+          const editHistoryId = await dbCtx.db.insert('editHistory', {
+            itemId: noteId,
+            itemType: RESOURCE_TYPES.notes,
+            campaignId: ctx.campaignId,
+            campaignMemberId: ctx.dm.memberId,
+            action: 'content_edited',
+            metadata: null,
+            hasSnapshot: true,
+          })
+          await dbCtx.db.insert('documentSnapshots', {
+            itemId: noteId,
+            itemType: RESOURCE_TYPES.notes,
+            editHistoryId,
+            campaignId: ctx.campaignId,
+            snapshotType: DOCUMENT_SNAPSHOT_TYPE.YjsState,
+            data: new ArrayBuffer(0),
+          })
+        }
+      })
+
+      const firstBatch = await t.mutation(
+        internal.documentSnapshots.internalMutations.cleanupItemHistoryBatch,
+        { itemId: noteId },
+      )
+      expect(firstBatch).toEqual({
+        deletedHistoryCount: 100,
+        deletedSnapshotCount: 100,
+        hasMore: true,
+      })
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+      await t.run(async (dbCtx) => {
+        expect(
+          await dbCtx.db
+            .query('editHistory')
+            .withIndex('by_item', (q) => q.eq('itemId', noteId))
+            .collect(),
+        ).toEqual([])
+        expect(
+          await dbCtx.db
+            .query('documentSnapshots')
+            .withIndex('by_item', (q) => q.eq('itemId', noteId))
+            .collect(),
+        ).toEqual([])
+      })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
@@ -242,7 +385,7 @@ describe('captureGameMapSnapshot', () => {
 
     const editHistoryId = await createEditHistoryEntry(t, {
       itemId: mapId,
-      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
       action: 'map_pin_added',
@@ -265,11 +408,11 @@ describe('captureGameMapSnapshot', () => {
         .first()
 
       expect(snapshot).not.toBeNull()
-      expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.game_map)
+      expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.GameMap)
       expect(snapshot!.itemId).toBe(mapId)
 
       const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
-      expect(parsed.imageStorageId).toBeNull()
+      expect(parsed.imageAssetId).toBeNull()
       expect(parsed.pins).toHaveLength(1)
       expect(parsed.pins[0].x).toBe(10)
       expect(parsed.pins[0].y).toBe(20)
@@ -307,7 +450,7 @@ describe('captureGameMapSnapshot', () => {
 
     const editHistoryId = await createEditHistoryEntry(t, {
       itemId: mapId,
-      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
       action: 'map_pin_removed',
@@ -345,7 +488,7 @@ describe('captureGameMapSnapshot', () => {
 
     const editHistoryId = await createEditHistoryEntry(t, {
       itemId: mapId,
-      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
       action: 'map_pin_added',
@@ -374,7 +517,7 @@ describe('captureGameMapSnapshot', () => {
 
     const editHistoryId = await createEditHistoryEntry(t, {
       itemId: mapId,
-      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
       action: 'map_image_changed',
@@ -428,7 +571,7 @@ describe('captureGameMapSnapshot', () => {
 
     const editHistoryId = await createEditHistoryEntry(t, {
       itemId: mapId,
-      itemType: SIDEBAR_ITEM_TYPES.gameMaps,
+      itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
       action: 'map_pin_added',

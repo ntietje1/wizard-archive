@@ -18,18 +18,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Setup Vite+
-        uses: voidzero-dev/setup-vp@v1
+        uses: voidzero-dev/setup-vp@e3a8f54e503c635126f2f253c84cea5f737d6714
         with:
           cache: true
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@fb84f6228fd846d3c392887f22b18ce2d9139495
         with:
           languages: javascript-typescript
           queries: security-extended,security-and-quality
 
       - name: Analyze
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@fb84f6228fd846d3c392887f22b18ce2d9139495

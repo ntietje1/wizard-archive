@@ -1,27 +1,24 @@
 import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
 import { logEditHistory } from '../../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../../shared/edit-history/types'
 import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
-import { assertSidebarItemName } from '../../validation/name'
-import { requireOptionalSidebarItemColor } from '../../../../shared/sidebar-items/color'
-import { requireOptionalSidebarItemIconName } from '../../../../shared/sidebar-items/icon'
+import { assertConvexSidebarItemName } from '../../validation/name'
+import { requireOptionalSidebarItemColor, requireOptionalSidebarItemIconName } from '../appearance'
 import { prepareSidebarItemRename } from '../../validation/orchestration'
-import { FILE_SYSTEM_EVENT_TYPE } from '../../../../shared/sidebar-items/filesystem/receipts'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
+import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
+import type { EditHistoryChange } from '@wizard-archive/editor/resources/history-contract'
+import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
+import type { ResourcePatch } from '@wizard-archive/editor/resources/patch-contract'
 import { createFileSystemWriteSession } from '../deltas'
 import { getSidebarItemRow } from '../sidebarItemRows'
 import { requireSidebarItemRowOperationAccess } from '../access'
 import { isActiveSidebarItem } from '../../types/status'
 import type { AccessibleSidebarItemRow } from '../access'
 import type { CampaignMutationCtx } from '../../../functions'
-import type { EditHistoryChange } from '../../../../shared/edit-history/types'
-import type { RenameFileSystemCommand } from '../../../../shared/sidebar-items/filesystem/commands'
-import type {
-  FileSystemDelta,
-  SidebarItemFieldPatch,
-} from '../../../../shared/sidebar-items/filesystem/receipts'
-
-type SidebarItemUpdates = SidebarItemFieldPatch
+import type { StoredResourceDelta } from '../deltas'
+type RenameFileSystemCommand = Extract<ResourceCommand, { type: 'rename' }>
+type SidebarItemUpdates = Extract<ResourcePatch, { type: 'updateResource' }>['fields']
 
 type RenameChangeSet = {
   updates: SidebarItemUpdates
@@ -35,7 +32,7 @@ export async function executeRenameCommand(
   }: {
     command: RenameFileSystemCommand
   },
-): Promise<FileSystemDelta> {
+): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
   const rawItem = await getSidebarItemRow(ctx, command.itemId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
@@ -50,14 +47,14 @@ export async function executeRenameCommand(
   const { updates, changes } = await collectRenameChanges(ctx, item, command)
 
   if (changes.length === 0) {
-    const events = [{ type: FILE_SYSTEM_EVENT_TYPE.noop, itemId: item._id }]
+    const events = [{ type: RESOURCE_EVENT_TYPE.noop, itemId: item._id }]
     return await session.build({
       command,
       events,
     })
   }
 
-  await session.updateSidebarItem(item._id, {
+  await session.updateResource(item._id, {
     ...updates,
     updatedTime: Date.now(),
     updatedBy: ctx.membership.userId,
@@ -93,7 +90,7 @@ async function collectSidebarMetadataChanges(
   command: RenameFileSystemCommand,
   changeSet: RenameChangeSet,
 ): Promise<void> {
-  const name = command.name === undefined ? undefined : assertSidebarItemName(command.name)
+  const name = command.name === undefined ? undefined : assertConvexSidebarItemName(command.name)
   const iconName = requireOptionalSidebarItemIconName(command.iconName)
   const color = requireOptionalSidebarItemColor(command.color)
 
@@ -128,11 +125,11 @@ async function collectSidebarMetadataChanges(
 
 function buildRenameEvents(item: AccessibleSidebarItemRow, updates: SidebarItemUpdates) {
   if (typeof updates.slug !== 'string') {
-    return [{ type: FILE_SYSTEM_EVENT_TYPE.updated, itemId: item._id }]
+    return [{ type: RESOURCE_EVENT_TYPE.updated, itemId: item._id }]
   }
   return [
     {
-      type: FILE_SYSTEM_EVENT_TYPE.renamed,
+      type: RESOURCE_EVENT_TYPE.renamed,
       itemId: item._id,
       slug: updates.slug,
       previousSlug: item.slug,

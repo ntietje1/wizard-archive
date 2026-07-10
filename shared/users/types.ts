@@ -1,11 +1,9 @@
-import type { StorageId, UserProfileId } from '../common/ids'
+import type { AssetId, UserProfileId } from '../common/ids'
 import type { Username } from './validation'
 
-export type ProfileImage =
-  | { type: 'external'; url: string }
-  | { type: 'storage'; storageId: StorageId }
+type ProfileImage = { type: 'external'; url: string } | { type: 'asset'; assetId: AssetId }
 
-export type UserProfileFromDb = {
+export type UserProfileRow = {
   _id: UserProfileId
   _creationTime: number
   authUserId: string
@@ -17,7 +15,9 @@ export type UserProfileFromDb = {
   twoFactorEnabled: boolean | null
 }
 
-export type UserProfile = Omit<UserProfileFromDb, 'profileImage'> & {
+export type UserProfile = Omit<UserProfileRow, '_id' | '_creationTime' | 'profileImage'> & {
+  id: UserProfileId
+  createdAt: number
   imageUrl: string | null
 }
 

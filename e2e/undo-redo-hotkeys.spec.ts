@@ -7,6 +7,8 @@ import {
   enableCanvasRuntime,
   getCanvasNodeById,
   getCanvasNodes,
+  getCanvasTextEditors,
+  getNewCanvasTextEditor,
   seedCanvasEmbedNodeViaRuntime,
   selectCanvasTool,
 } from './helpers/canvas-helpers'
@@ -26,14 +28,14 @@ test.describe.serial('editor surface hotkey routing', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await page.close()
     await context.close()
   })
 
   test('routes undo to the active note editor', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     const noteName = `Undo Note ${Date.now()}`
@@ -54,7 +56,7 @@ test.describe.serial('editor surface hotkey routing', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -66,13 +68,15 @@ test.describe.serial('editor surface hotkey routing', () => {
   test('routes undo and redo to the active canvas text node editor', async ({ page }) => {
     await openFreshRuntimeCanvas(page, `Undo Text Canvas ${Date.now()}`)
     await selectCanvasTool(page, 'Text')
+    const textEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 360, y: 260 })
 
-    const editor = page.locator('[aria-label="Text node content"][contenteditable="true"]')
-    await expect(editor).toHaveCount(1)
+    await expect(getCanvasTextEditors(page)).toHaveCount(1)
+    const editor = await getNewCanvasTextEditor(page, textEditorCount)
     await expect(editor).toBeVisible()
 
     const text = 'T'
+    await editor.click()
     await page.keyboard.type(text)
     await expect(editor).toContainText(text)
 
@@ -88,7 +92,7 @@ test.describe.serial('editor surface hotkey routing', () => {
   test('routes undo to the active embedded note editor without deleting the canvas node', async ({
     page,
   }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     const noteName = `Undo Embed Note ${Date.now()}`
     await createNote(page, noteName)
@@ -103,13 +107,14 @@ test.describe.serial('editor surface hotkey routing', () => {
       height: 280,
     })
 
+    const embeddedWrapper = page.getByTestId('embed-note-content-wrapper')
+    await expect(embeddedWrapper).toBeVisible({ timeout: 15_000 })
     await getCanvasNodeById(page, 'embedded-note-undo').dblclick()
-    await expect(page.getByTestId('embed-note-content-wrapper')).toBeVisible({ timeout: 15_000 })
+    await expect(embeddedWrapper).toHaveAttribute('data-embedded-note-mode', 'editable', {
+      timeout: 15_000,
+    })
 
-    const embeddedEditor = page
-      .getByTestId('embed-note-content-wrapper')
-      .locator('[contenteditable="true"]')
-      .first()
+    const embeddedEditor = embeddedWrapper.locator('[contenteditable="true"]').first()
     await expect(embeddedEditor).toBeVisible({ timeout: 15_000 })
 
     const text = 'Embedded undo redo text'

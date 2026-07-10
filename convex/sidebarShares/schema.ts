@@ -1,6 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { convexValidatorFields } from '../common/schema'
+import { domainValidatorFields } from '../common/schema'
 import {
   permissionLevelValidator,
   sidebarItemTypeValidator,
@@ -24,7 +24,7 @@ export const sidebarShareTables = {
 }
 
 const sidebarItemShareValidatorFields = {
-  ...convexValidatorFields('sidebarItemShares'),
+  ...domainValidatorFields('sidebarItemShares'),
   ...sidebarItemShareTableFields,
 }
 

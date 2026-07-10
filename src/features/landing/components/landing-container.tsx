@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react'
-import { cn } from '~/features/shadcn/lib/utils'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 
 export function LandingContainer({ className, children, ...props }: ComponentProps<'div'>) {
   return (

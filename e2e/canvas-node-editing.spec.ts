@@ -10,8 +10,11 @@ import {
   getCanvasNodeById,
   getCanvasNodesByType,
   getCanvasRuntimeNodePosition,
+  getCanvasTextEditorInNode,
+  getCanvasTextEditors,
   getCommittedSelectedCanvasNodes,
   expectCanvasNodeModel,
+  getNewCanvasTextEditor,
   openCanvas,
   resizeCanvasNode,
   seedCanvasCoordinateProbeNodeViaRuntime,
@@ -26,7 +29,6 @@ import { pressUndo } from './helpers/keyboard-helpers'
 
 const campaignName = testName('CnvNodeEdit')
 const canvasName = DEFAULT_CANVAS_NAME
-const textInputSelector = '[aria-label="Text node content"][contenteditable="true"]'
 
 test.describe.serial('canvas node editing workflows', () => {
   test.setTimeout(60_000)
@@ -34,7 +36,7 @@ test.describe.serial('canvas node editing workflows', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -45,7 +47,7 @@ test.describe.serial('canvas node editing workflows', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -56,7 +58,7 @@ test.describe.serial('canvas node editing workflows', () => {
 
   test.beforeEach(async ({ page }) => {
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await waitForCanvasRuntime(page)
@@ -65,18 +67,21 @@ test.describe.serial('canvas node editing workflows', () => {
 
   test('creates, edits, reopens, and continues editing a text node', async ({ page }) => {
     await selectCanvasTool(page, 'Text')
+    const textEditorCount = await getCanvasTextEditors(page).count()
     await clickCanvasAt(page, { x: 520, y: 380 })
-    const editor = page.locator(textInputSelector).last()
+    const editor = await getNewCanvasTextEditor(page, textEditorCount)
     await expect(editor).toBeVisible()
     await editor.fill('Editable text')
     await editor.press('Escape')
     await expect(page.getByText('Editable text', { exact: true })).toBeVisible()
 
     await selectCanvasTool(page, 'Pointer')
-    await getCanvasNodesByType(page, 'text').first().dblclick()
-    await expect(editor).toBeVisible()
-    await editor.fill('Edited again')
-    await editor.press('Escape')
+    const textNode = getCanvasNodesByType(page, 'text').first()
+    await textNode.dblclick()
+    const reopenedEditor = getCanvasTextEditorInNode(textNode)
+    await expect(reopenedEditor).toBeVisible()
+    await reopenedEditor.fill('Edited again')
+    await reopenedEditor.press('Escape')
     await expect(page.getByText('Edited again', { exact: true })).toBeVisible()
 
     await page.reload()

@@ -21,11 +21,11 @@ describe('enhanceBase previewUrl resolution', () => {
       await dbCtx.db.patch('sidebarItems', noteId, { previewStorageId: storageId })
     })
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+    const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
 
-    const note = items.find((i) => i._id === noteId)
+    const note = items.find((i) => i.id === noteId)
     expect(note).toBeDefined()
     expect(note!.previewUrl).not.toBeNull()
     expect(typeof note!.previewUrl).toBe('string')
@@ -45,11 +45,11 @@ describe('enhanceBase previewUrl resolution', () => {
       await dbCtx.db.patch('sidebarItems', canvasId, { previewStorageId: storageId })
     })
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+    const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
 
-    const canvas = items.find((i) => i._id === canvasId)
+    const canvas = items.find((i) => i.id === canvasId)
     expect(canvas).toBeDefined()
     expect(canvas!.previewUrl).not.toBeNull()
     expect(typeof canvas!.previewUrl).toBe('string')
@@ -61,11 +61,11 @@ describe('enhanceBase previewUrl resolution', () => {
 
     const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+    const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
 
-    const canvas = items.find((i) => i._id === canvasId)
+    const canvas = items.find((i) => i.id === canvasId)
     expect(canvas).toBeDefined()
     expect(canvas!.previewUrl).toBeNull()
   })
@@ -76,11 +76,11 @@ describe('enhanceBase previewUrl resolution', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+    const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
 
-    const note = items.find((i) => i._id === noteId)
+    const note = items.find((i) => i.id === noteId)
     expect(note).toBeDefined()
     expect(note!.previewUrl).toBeNull()
   })

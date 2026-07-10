@@ -1,7 +1,4 @@
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { convexQuery } from '@convex-dev/react-query'
-import { api } from 'convex/_generated/api'
 import { parseCampaignSlug } from 'shared/campaigns/validation'
 import { useConvexAuth } from 'convex/react'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
@@ -15,18 +12,16 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '~/features/shadcn/components/card'
-import { Button } from '~/features/shadcn/components/button'
+} from '@wizard-archive/ui/shadcn/components/card'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import { Header } from '~/shared/components/header'
 import { SignInForm } from '~/features/auth/components/sign-in-form'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useJoinCampaignMutation } from '~/features/campaigns/hooks/use-campaign-operations'
+import { useJoinCampaignQuery } from '~/features/campaigns/hooks/use-join-campaign-query'
 import { StatusIcon } from '~/features/campaigns/components/status-icon'
 import { resolveCampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
-import type { Campaign, CampaignMember } from 'shared/campaigns/types'
+import type { Campaign, CampaignMemberSummary } from 'shared/campaigns/types'
 import type { CampaignLookupState } from '~/features/campaigns/campaign-lookup-state'
-
-const PLACEHOLDER_USERNAME = parseUsername('placeholder')!
-const PLACEHOLDER_SLUG = parseCampaignSlug('placeholder')!
 
 type JoinCampaignCardContent = {
   title: string
@@ -38,7 +33,7 @@ type JoinCampaignCardContent = {
 
 type JoinCampaignCardContentOptions = {
   campaignLookupState: CampaignLookupState
-  campaignMember: CampaignMember | null | undefined
+  campaignMember: CampaignMemberSummary | null | undefined
   isAuthLoading: boolean
   isAuthenticated: boolean
   joinCampaignStatus: string
@@ -238,7 +233,7 @@ function GoToCampaignButton({ onClick }: { onClick: () => void }) {
 
 function memberStatusCardContent(
   campaign: Campaign,
-  campaignMember: CampaignMember | null | undefined,
+  campaignMember: CampaignMemberSummary | null | undefined,
   onGoCampaignHome: () => void,
   onGoHome: () => void,
 ): JoinCampaignCardContent | null {
@@ -410,8 +405,6 @@ export function JoinCampaignPage() {
   })
   const dmUsername = parseUsername(rawDmUsername)
   const campaignSlug = parseCampaignSlug(rawCampaignSlug)
-  const queryDmUsername = dmUsername ?? PLACEHOLDER_USERNAME
-  const queryCampaignSlug = campaignSlug ?? PLACEHOLDER_SLUG
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const [showSignIn, setShowSignIn] = useState(false)
 
@@ -421,19 +414,22 @@ export function JoinCampaignPage() {
     }
   }, [isAuthLoading, isAuthenticated])
 
-  const campaignQuery = useQuery({
-    ...convexQuery(api.campaigns.queries.getCampaignBySlug, {
-      dmUsername: queryDmUsername,
-      slug: queryCampaignSlug,
-    }),
-    enabled: dmUsername !== null && campaignSlug !== null,
+  const {
+    data: campaign,
+    error: campaignError,
+    refetch: refetchCampaign,
+    status: campaignQueryStatus,
+  } = useJoinCampaignQuery(dmUsername, campaignSlug)
+
+  const campaignMember = campaign?.myMembership
+  const campaignLookupState = resolveCampaignLookupState({
+    data: campaign,
+    error: campaignError,
+    refetch: refetchCampaign,
+    status: campaignQueryStatus,
   })
 
-  const campaign = campaignQuery.data
-  const campaignMember = campaign?.myMembership
-  const campaignLookupState = resolveCampaignLookupState(campaignQuery)
-
-  const joinCampaign = useAppMutation(api.campaigns.mutations.joinCampaign)
+  const joinCampaign = useJoinCampaignMutation()
 
   const handleJoinCampaign = async () => {
     if (!campaign || !dmUsername || !campaignSlug) return

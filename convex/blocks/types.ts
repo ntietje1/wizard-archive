@@ -1,37 +1,34 @@
 import type { WithoutSystemFields } from 'convex/server'
-import type { Doc, Id } from '../_generated/dataModel'
+import type { Doc } from '../_generated/dataModel'
 import type {
-  BlockNoteId,
-  BlockShareInfo as SharedBlockShareInfo,
-  BlockType,
-  FlatBlockContent,
+  NoteBlockId,
+  NoteBlockType,
+  NoteBlockContent,
   InlineContent,
   TableContent,
-} from '../../shared/editor-blocks/types'
-
-export type BlockShareInfo = SharedBlockShareInfo<Id<'campaignMembers'>>
+} from '@wizard-archive/editor/notes/document-contract'
 
 type PersistedBlockCommon = {
-  blockNoteId: BlockNoteId
+  blockNoteId: NoteBlockId
   position: number | null
-  parentBlockId: BlockNoteId | null
+  parentBlockId: NoteBlockId | null
   depth: number
   plainText: string
 }
 
-type InlineBlockType = Exclude<BlockType, 'table'>
+type InlineBlockType = Exclude<NoteBlockType, 'table'>
 
 type PersistedInlineBlock = {
   [Type in InlineBlockType]: {
     type: Type
-    props: Extract<FlatBlockContent, { type: Type }>['props']
+    props: Extract<NoteBlockContent, { type: Type }>['props']
     content: InlineContent | null
   }
 }[InlineBlockType]
 
 type PersistedTableBlock = {
   type: 'table'
-  props: Extract<FlatBlockContent, { type: 'table' }>['props']
+  props: Extract<NoteBlockContent, { type: 'table' }>['props']
   content: TableContent | null
 }
 

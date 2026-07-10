@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createGameMapViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 import { api } from '../../_generated/api'
 
 describe('updateMap creates correct number of history entries', () => {
@@ -11,15 +12,18 @@ describe('updateMap creates correct number of history entries', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const storageId = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['test']))
-    })
+    const { sessionId } = await storeCommittedTestUploadSession(
+      t,
+      ctx.dm.profile._id,
+      new Blob(['test'], { type: 'image/png' }),
+      'map.png',
+    )
 
     const result = await createGameMapViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Single Entry Map',
       parentTarget: { kind: 'direct', parentId: null },
-      imageStorageId: storageId,
+      uploadSessionId: sessionId,
     })
 
     // Count history entries before
@@ -35,7 +39,8 @@ describe('updateMap creates correct number of history entries', () => {
     await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
       campaignId: ctx.campaignId,
       mapId: result.mapId,
-      imageStorageId: null,
+      replacementToken: null,
+      uploadSessionId: null,
     })
 
     const afterEntries = await t.run(async (dbCtx) => {
@@ -57,15 +62,18 @@ describe('updateMap creates correct number of history entries', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const storageId = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['test']))
-    })
+    const { sessionId } = await storeCommittedTestUploadSession(
+      t,
+      ctx.dm.profile._id,
+      new Blob(['test'], { type: 'image/png' }),
+      'map.png',
+    )
 
     const result = await createGameMapViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Multi Update Map',
       parentTarget: { kind: 'direct', parentId: null },
-      imageStorageId: storageId,
+      uploadSessionId: sessionId,
     })
 
     const beforeCount = await t.run(async (dbCtx) => {
@@ -88,7 +96,8 @@ describe('updateMap creates correct number of history entries', () => {
     await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
       campaignId: ctx.campaignId,
       mapId: result.mapId,
-      imageStorageId: null,
+      replacementToken: null,
+      uploadSessionId: null,
     })
 
     const afterEntries = await t.run(async (dbCtx) => {

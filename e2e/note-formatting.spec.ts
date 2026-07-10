@@ -13,7 +13,7 @@ test.describe.serial('note formatting', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
@@ -26,7 +26,7 @@ test.describe.serial('note formatting', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -37,7 +37,7 @@ test.describe.serial('note formatting', () => {
   })
 
   test('italic text with Ctrl+I', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -56,7 +56,7 @@ test.describe.serial('note formatting', () => {
   })
 
   test('underline text with Ctrl+U', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -75,7 +75,7 @@ test.describe.serial('note formatting', () => {
   })
 
   test('strikethrough text', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -96,7 +96,7 @@ test.describe.serial('note formatting', () => {
   })
 
   test('bullet list via slash menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -112,7 +112,7 @@ test.describe.serial('note formatting', () => {
   })
 
   test('numbered list via slash menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -128,7 +128,7 @@ test.describe.serial('note formatting', () => {
   })
 
   test('quote block via slash menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -144,7 +144,7 @@ test.describe.serial('note formatting', () => {
   })
 
   test('code block via slash menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -160,7 +160,7 @@ test.describe.serial('note formatting', () => {
   })
 
   test('table via slash menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 

@@ -72,6 +72,64 @@ describe('persisted note value graphs', () => {
     })
   })
 
+  it('allows a cross-note path to revisit a different literal value in the root note', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId: noteAId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Revisited A',
+    })
+    const { noteId: noteBId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Revisited B',
+    })
+
+    const base = valueBlockWithGeneratedId({
+      idSeed: 'revisited-a-base',
+      valueId: 'value-a-base',
+      slug: 'base',
+      expressionSource: '2',
+    })
+    await replaceNoteDocumentAndPersist(t, dmAuth, {
+      campaignId: ctx.campaignId,
+      noteId: noteAId,
+      blocks: [base],
+    })
+    await replaceNoteDocumentAndPersist(t, dmAuth, {
+      campaignId: ctx.campaignId,
+      noteId: noteBId,
+      blocks: [
+        valueBlockWithGeneratedId({
+          idSeed: 'revisited-b-bonus',
+          valueId: 'value-b-bonus',
+          slug: 'bonus',
+          expressionSource: '[[Revisited A.base]] + 3',
+        }),
+      ],
+    })
+    await replaceNoteDocumentAndPersist(t, dmAuth, {
+      campaignId: ctx.campaignId,
+      noteId: noteAId,
+      blocks: [
+        base,
+        valueBlockWithGeneratedId({
+          idSeed: 'revisited-a-total',
+          valueId: 'value-a-total',
+          slug: 'total',
+          expressionSource: '[[Revisited B.bonus]] + 1',
+        }),
+      ],
+    })
+
+    const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
+      campaignId: ctx.campaignId,
+      noteId: noteAId,
+    })
+    const bySlug = new Map(states.map((state) => [state.slug, state]))
+
+    expect(bySlug.get('base')).toMatchObject({ status: 'ok', rawValue: 2 })
+    expect(bySlug.get('total')).toMatchObject({ status: 'ok', rawValue: 6 })
+  })
+
   it('surfaces cyclic dependency errors across notes', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
@@ -131,12 +189,10 @@ describe('persisted note value graphs', () => {
 
     expect(aStates[0]).toMatchObject({
       status: 'error',
-      rawValue: null,
       errorCode: 'cyclic_dependency',
     })
     expect(bStates[0]).toMatchObject({
       status: 'error',
-      rawValue: null,
       errorCode: 'cyclic_dependency',
     })
   })
@@ -203,12 +259,10 @@ describe('persisted note value graphs', () => {
 
     expect(bStates[0]).toMatchObject({
       status: 'error',
-      rawValue: null,
       errorCode: 'dependency_error',
     })
     expect(aStates[0]).toMatchObject({
       status: 'error',
-      rawValue: null,
       errorCode: 'dependency_error',
     })
   })
@@ -352,7 +406,7 @@ describe('persisted note value graphs', () => {
         .collect()
     })
 
-    expect(rows[0].bindings).toEqual([
+    expect(rows[0].compile.status === 'ok' ? rows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
         targetNoteId: referencedNoteId,
@@ -417,7 +471,6 @@ describe('persisted note value graphs', () => {
 
     expect(states[0]).toMatchObject({
       status: 'error',
-      rawValue: null,
       errorCode: 'missing_target',
     })
   })

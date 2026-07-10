@@ -1,11 +1,66 @@
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { defineConfig } from 'vite-plus'
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { codecovVitePlugin } from '@codecov/vite-plugin'
+import editorPackage from './packages/editor/package.json'
 
-export default defineConfig({
+const editorDevelopmentAliases = [
+  {
+    find: /^@wizard-archive\/editor$/,
+    replacement: editorSourcePath('index.ts'),
+  },
+  {
+    find: /^@wizard-archive\/editor\/adapter$/,
+    replacement: editorSourcePath('adapter.ts'),
+  },
+  {
+    find: /^@wizard-archive\/editor\/collaboration\/yjs-provider$/,
+    replacement: editorSourcePath('collaboration/yjs-provider.ts'),
+  },
+  {
+    find: /^@wizard-archive\/editor\/resources\/items$/,
+    replacement: editorSourcePath('workspace/items.ts'),
+  },
+  {
+    find: /^@wizard-archive\/editor\/sharing$/,
+    replacement: editorSourcePath('sharing/contracts.ts'),
+  },
+]
+
+const editorPackEntries = Object.entries(editorPackage.exports).flatMap(([subpath, target]) => {
+  if (typeof target === 'string') return []
+
+  const outputPath = target.default
+  if (!outputPath.startsWith('./dist/') || !outputPath.endsWith('.mjs')) {
+    throw new Error(`No built JavaScript target found for editor export ${subpath}`)
+  }
+  const sourceStem = outputPath.slice('./dist/'.length).replace(/\.mjs$/, '')
+  const sourceEntry = [`${sourceStem}.ts`, `${sourceStem}.tsx`].find((candidate) =>
+    existsSync(editorSourcePath(candidate)),
+  )
+  if (!sourceEntry) {
+    throw new Error(`No package-owned source entry found for editor export ${subpath}`)
+  }
+  return [`packages/editor/src/${sourceEntry}`]
+})
+
+function editorSourcePath(sourcePath: string) {
+  return fileURLToPath(new URL(`packages/editor/src/${sourcePath}`, import.meta.url))
+}
+
+export default defineConfig(({ command }) => ({
+  pack: {
+    entry: editorPackEntries,
+    dts: true,
+    deps: {
+      alwaysBundle: ['@wizard-archive/ui/**'],
+    },
+    outDir: 'packages/editor/dist',
+  },
   lint: {
     plugins: ['oxc', 'typescript', 'unicorn', 'react', 'import'],
     categories: {
@@ -21,7 +76,6 @@ export default defineConfig({
       '.nitro/**',
       'convex/_generated/**',
       'src/routeTree.gen.ts',
-      'src/features/shadcn/**',
       '**/build/**',
       '**/coverage/**',
       '**/dist/**',
@@ -93,9 +147,13 @@ export default defineConfig({
   ],
   resolve: {
     tsconfigPaths: true,
-    alias: {
-      yjs: new URL('node_modules/yjs/dist/yjs.mjs', import.meta.url).pathname,
-    },
+    alias: [
+      ...(command === 'serve' ? editorDevelopmentAliases : []),
+      {
+        find: 'yjs',
+        replacement: new URL('node_modules/yjs/dist/yjs.mjs', import.meta.url).pathname,
+      },
+    ],
     dedupe: ['yjs'],
   },
   optimizeDeps: {
@@ -103,7 +161,8 @@ export default defineConfig({
     exclude: ['@tanstack/router-devtools-core'],
   },
   ssr: {
-    noExternal: ['@convex-dev/better-auth'],
+    resolve: {},
+    noExternal: ['@convex-dev/better-auth', '@wizard-archive/editor'],
   },
   envPrefix: ['VITE_'],
-})
+}))

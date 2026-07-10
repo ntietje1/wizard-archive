@@ -30,6 +30,13 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       parentId: folderId,
       name: 'Shared Note',
     })
+    await createSidebarShare(t, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: folderId,
+      sidebarItemType: 'folder',
+      campaignMemberId: ctx.player.memberId,
+      permissionLevel: 'view',
+    })
     const { shareId } = await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,

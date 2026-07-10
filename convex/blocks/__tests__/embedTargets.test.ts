@@ -7,11 +7,11 @@ import {
 } from '../../../shared/embeds/embedTargets'
 
 describe('embed targets', () => {
-  it('accepts empty, sidebar item, and external URL targets', () => {
+  it('accepts empty, resource, and external URL targets', () => {
     expect(embedTargetSchema.safeParse({ kind: 'empty' }).success).toBe(true)
-    expect(
-      embedTargetSchema.safeParse({ kind: 'sidebarItem', sidebarItemId: 'item-id' }).success,
-    ).toBe(true)
+    expect(embedTargetSchema.safeParse({ kind: 'resource', resourceId: 'item-id' }).success).toBe(
+      true,
+    )
     expect(
       embedTargetSchema.safeParse({
         kind: 'externalUrl',
@@ -39,6 +39,13 @@ describe('embed targets', () => {
   it('normalizes missing targets to empty', () => {
     expect(normalizeEmbedTarget(undefined)).toEqual({ kind: 'empty' })
     expect(normalizeEmbedTarget({ kind: 'empty' })).toEqual({ kind: 'empty' })
+  })
+
+  it('normalizes legacy sidebar item targets to resource targets', () => {
+    expect(normalizeEmbedTarget({ kind: 'sidebarItem', sidebarItemId: 'item-id' })).toEqual({
+      kind: 'resource',
+      resourceId: 'item-id',
+    })
   })
 
   it('derives a stable display name from an external URL', () => {

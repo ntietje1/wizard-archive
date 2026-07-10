@@ -5,6 +5,7 @@ import {
   createBlock,
   createBlockShare,
   createBookmark,
+  executeMoveCommand,
   createFile,
   createFolder,
   createGameMap,
@@ -77,6 +78,12 @@ describe('campaign deletion cascade', () => {
     })
 
     const { sessionId } = await createSession(t, ctx.campaignId)
+    const moveReceipt = await executeMoveCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [fileId],
+      targetParentId: folderId,
+    })
+    expect(moveReceipt.transactionId).not.toBeNull()
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
       campaignId: ctx.campaignId,
@@ -97,6 +104,7 @@ describe('campaign deletion cascade', () => {
         bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
         pin: await dbCtx.db.get('mapPins', pinId),
         session: await dbCtx.db.get('sessions', sessionId),
+        transaction: await dbCtx.db.get('filesystemTransactions', moveReceipt.transactionId!),
       }
     })
 
@@ -112,6 +120,7 @@ describe('campaign deletion cascade', () => {
     expect(results.bookmark).toBeNull()
     expect(results.pin).toBeNull()
     expect(results.session).toBeNull()
+    expect(results.transaction).toBeNull()
 
     const remainingMembers = await t.run(async (dbCtx) => {
       return await dbCtx.db
@@ -120,6 +129,14 @@ describe('campaign deletion cascade', () => {
         .collect()
     })
     expect(remainingMembers).toHaveLength(0)
+
+    const remainingTransactions = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('filesystemTransactions')
+        .withIndex('by_campaign_actor', (q) => q.eq('campaignId', cId))
+        .collect()
+    })
+    expect(remainingTransactions).toHaveLength(0)
   })
 
   it('deletes trashed items as well as active items', async () => {

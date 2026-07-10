@@ -1,14 +1,14 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
-import { documentSnapshotValidator } from './schema'
-import { getSnapshotForHistoryEntry as getSnapshotFn } from './functions/getSnapshot'
+import { getHistoryPreview as getHistoryPreviewFn } from './functions/getHistoryPreview'
+import { historyPreviewValidator } from './historyPreview'
 
-export const getSnapshotForHistoryEntry = campaignQuery({
+export const getHistoryPreview = campaignQuery({
   args: {
     editHistoryId: v.id('editHistory'),
   },
-  returns: v.nullable(documentSnapshotValidator),
+  returns: v.nullable(historyPreviewValidator),
   handler: async (ctx, { editHistoryId }) => {
-    return await getSnapshotFn(ctx, { editHistoryId })
+    return await getHistoryPreviewFn(ctx, { editHistoryId })
   },
 })

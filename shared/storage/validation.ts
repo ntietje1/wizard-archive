@@ -3,6 +3,24 @@ type FileValidationResult = { valid: true } | { valid: false; error: string }
 export const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 
 const ALLOWED_MIME_TYPES = ['application/pdf'] as const
+const MEDIA_EXTENSIONS = [
+  '.aac',
+  '.avi',
+  '.flac',
+  '.gif',
+  '.jpeg',
+  '.jpg',
+  '.m4a',
+  '.mov',
+  '.mp3',
+  '.mp4',
+  '.ogg',
+  '.pdf',
+  '.png',
+  '.wav',
+  '.webm',
+  '.webp',
+] as const
 const TEXT_EXTENSIONS = ['.txt', '.md'] as const
 
 export const FILE_UPLOAD_ACCEPT_PATTERN = [
@@ -11,18 +29,24 @@ export const FILE_UPLOAD_ACCEPT_PATTERN = [
   'audio/*',
   'text/*',
   ...ALLOWED_MIME_TYPES,
+  ...MEDIA_EXTENSIONS,
   ...TEXT_EXTENSIONS,
 ].join(',')
 
-export function isMediaFile(contentType: string | null): boolean {
-  if (!contentType) return false
-  const lowerType = contentType.toLowerCase()
-  return (
-    lowerType.startsWith('image/') ||
-    lowerType.startsWith('video/') ||
-    lowerType.startsWith('audio/') ||
-    lowerType === 'application/pdf'
-  )
+export function isMediaFile(contentType: string | null, fileName?: string | null): boolean {
+  const lowerType = contentType?.toLowerCase()
+  if (
+    lowerType &&
+    (lowerType.startsWith('image/') ||
+      lowerType.startsWith('video/') ||
+      lowerType.startsWith('audio/') ||
+      lowerType === 'application/pdf')
+  ) {
+    return true
+  }
+  if (!fileName) return false
+  const lowerName = fileName.toLowerCase()
+  return MEDIA_EXTENSIONS.some((ext) => lowerName.endsWith(ext))
 }
 
 export function isTextFile(contentType: string | null, fileName?: string | null): boolean {
@@ -51,7 +75,7 @@ function validateFileType(
   contentType: string | null,
   fileName?: string | null,
 ): FileValidationResult {
-  const isMedia = isMediaFile(contentType)
+  const isMedia = isMediaFile(contentType, fileName)
   const isText = isTextFile(contentType, fileName)
 
   if (!isMedia && !isText) {

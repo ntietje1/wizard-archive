@@ -3,26 +3,33 @@ import type { Locator, Page } from '@playwright/test'
 import { getBrowserPrimaryModifier } from './keyboard-helpers'
 
 export const SIDEBAR_WAIT_TIMEOUT = 15000
+const ITEM_READY_TIMEOUT = 45000
 const MAX_UNTITLED_TRASH_ATTEMPTS = 5
 
 export function sidebarNavigation(page: Page) {
   return page.getByRole('navigation', { name: 'Sidebar' })
 }
 
-export function sidebarLink(page: Page, name: string) {
-  return sidebarNavigation(page).getByRole('link', { name, exact: true })
+export function sidebarItem(page: Page, name: string | RegExp) {
+  return sidebarNavigation(page).getByRole('button', { name, exact: typeof name === 'string' })
 }
 
 export function selectableSidebarRow(page: Page, name: string) {
-  return sidebarNavigation(page).getByTestId(`selectable-row-${name}`).first()
+  return sidebarItem(page, name).locator('..')
 }
 
 export function folderContents(page: Page, folderName: string) {
   return page.getByRole('region', { name: `${folderName} folder contents` })
 }
 
-export function folderItemLink(page: Page, folderName: string, itemName: string) {
-  return folderContents(page, folderName).getByRole('link', { name: itemName, exact: true })
+export function folderItem(page: Page, folderName: string, itemName: string) {
+  return folderContents(page, folderName).getByRole('button', { name: itemName, exact: true })
+}
+
+export async function visibleSidebarItemNames(page: Page) {
+  return await sidebarNavigation(page)
+    .locator('[data-item-selection-target="true"] > button')
+    .allTextContents()
 }
 
 async function expectNameEditSettled(textbox: Locator) {
@@ -36,7 +43,26 @@ async function expectNameEditSettled(textbox: Locator) {
 
 async function startNameEdit(textbox: Locator) {
   await expect(textbox).toBeEnabled({ timeout: 10000 })
-  await textbox.click()
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await textbox.click({ timeout: 5000 }).catch(async () => {
+      await textbox.click({ force: true, timeout: 1000 }).catch(() => undefined)
+    })
+
+    if (
+      await textbox
+        .evaluate((element) => {
+          const input = element as HTMLInputElement
+          return !input.readOnly && !input.disabled
+        })
+        .catch(() => false)
+    ) {
+      return
+    }
+
+    await textbox.page().waitForTimeout(250 * (attempt + 1))
+  }
+
   await expect
     .poll(
       async () =>
@@ -51,23 +77,38 @@ async function startNameEdit(textbox: Locator) {
 
 export async function renameCurrentItem(page: Page, name: string) {
   const textbox = page.getByRole('textbox', { name: 'Item name' })
-  await expect(textbox).toHaveValue(/untitled/i, { timeout: 10000 })
-  await startNameEdit(textbox)
-  await textbox.fill(name)
-  await expect(textbox).toHaveValue(name)
-  await textbox.press('Enter')
+  await expect(textbox).toHaveValue(/untitled/i, { timeout: ITEM_READY_TIMEOUT })
+  await fillNameEdit(textbox, name)
+  await textbox.press('Enter', { timeout: 5000 })
   await expectNameEditSettled(textbox)
 }
 
 export async function renameOpenedItem(page: Page, name: string) {
   const textbox = page.getByRole('textbox', { name: 'Item name' })
-  await expect(textbox).toBeVisible({ timeout: 10000 })
-  await startNameEdit(textbox)
-  await textbox.fill(name)
-  await expect(textbox).toHaveValue(name)
-  await textbox.press('Enter')
+  await expect(textbox).toBeVisible({ timeout: ITEM_READY_TIMEOUT })
+  await fillNameEdit(textbox, name)
+  await textbox.press('Enter', { timeout: 5000 })
   await expectNameEditSettled(textbox)
-  await expect(sidebarLink(page, name)).toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
+  await expect(sidebarItem(page, name)).toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
+}
+
+async function fillNameEdit(textbox: Locator, name: string) {
+  let lastError: unknown
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await startNameEdit(textbox)
+      await expect(textbox).toBeEditable({ timeout: 5000 })
+      await textbox.fill(name, { timeout: 5000 })
+      await expect(textbox).toHaveValue(name, { timeout: 5000 })
+      return
+    } catch (error) {
+      lastError = error
+      await textbox.page().waitForTimeout(250 * (attempt + 1))
+    }
+  }
+
+  throw lastError
 }
 
 export async function createNote(page: Page, name: string) {
@@ -85,12 +126,12 @@ export async function createNote(page: Page, name: string) {
         .catch(() => false)
     ) {
       await renameCurrentItem(page, name)
-      await expect(sidebarLink(page, name)).toBeVisible({
+      await expect(sidebarItem(page, name)).toBeVisible({
         timeout: SIDEBAR_WAIT_TIMEOUT,
       })
       return
     }
-    const noteCard = page.getByRole('button', { name: /^Note / })
+    const noteCard = page.getByRole('button', { name: 'Note Write and organize your thoughts' })
     if (await noteCard.isVisible().catch(() => false)) {
       await noteCard.click()
       await expect(page).not.toHaveURL(prevUrl, { timeout: 10000 })
@@ -102,7 +143,7 @@ export async function createNote(page: Page, name: string) {
     }
   }
   await renameCurrentItem(page, name)
-  await expect(sidebarLink(page, name)).toBeVisible({
+  await expect(sidebarItem(page, name)).toBeVisible({
     timeout: SIDEBAR_WAIT_TIMEOUT,
   })
   await waitForFilesystemIdle(page)
@@ -110,12 +151,12 @@ export async function createNote(page: Page, name: string) {
 
 export async function createFolder(page: Page, name: string) {
   const sidebar = sidebarNavigation(page)
-  await sidebar.getByRole('link', { name: 'New' }).click()
+  await sidebar.getByRole('button', { name: 'New', exact: true }).click()
   const prevUrl = page.url()
-  await page.getByRole('button', { name: /^Folder / }).click()
+  await page.getByRole('button', { name: 'Folder Group related items together' }).click()
   await expect(page).not.toHaveURL(prevUrl, { timeout: 10000 })
   await renameCurrentItem(page, name)
-  await expect(sidebarLink(page, name)).toBeVisible({
+  await expect(sidebarItem(page, name)).toBeVisible({
     timeout: SIDEBAR_WAIT_TIMEOUT,
   })
   await waitForFilesystemIdle(page)
@@ -130,13 +171,20 @@ export async function openItem(page: Page, name: string) {
     return
 
   const itemName = page.getByRole('textbox', { name: 'Item name' })
-  if ((await itemName.inputValue().catch(() => null)) === name) return
+  if ((await itemName.inputValue({ timeout: 250 }).catch(() => null)) === name) return
 
-  await sidebarLink(page, name).click({ timeout: 5000 })
+  const targetItem = sidebarItem(page, name)
+  await expect(targetItem).toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
+  await targetItem.click({ timeout: SIDEBAR_WAIT_TIMEOUT })
+  const editorLoading = page
+    .getByRole('status')
+    .filter({ hasText: /Loading/ })
+    .first()
   await expect
     .poll(
       async () =>
         (await itemName.inputValue().catch(() => null)) === name ||
+        (await editorLoading.isVisible().catch(() => false)) ||
         (await folderContents(page, name)
           .isVisible()
           .catch(() => false)),
@@ -146,12 +194,20 @@ export async function openItem(page: Page, name: string) {
 }
 
 export async function openContextMenu(page: Page, itemName: string) {
-  await sidebarLink(page, itemName).click({ button: 'right', timeout: 5000 })
-  await expect(page.getByRole('menu')).toBeVisible({ timeout: 5000 })
+  const item = sidebarItem(page, itemName)
+  await expect(item).toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
+  const row = selectableSidebarRow(page, itemName)
+  await row.hover()
+  await row.getByRole('button', { name: 'More options' }).click({ timeout: SIDEBAR_WAIT_TIMEOUT })
+  await expect(page.getByRole('menuitem', { name: 'Move to Trash' })).toBeVisible({
+    timeout: 5000,
+  })
 }
 
 export async function openFolderContextMenu(page: Page, folderName: string, itemName: string) {
-  await folderItemLink(page, folderName, itemName).click({ button: 'right' })
+  const row = folderItem(page, folderName, itemName).locator('..')
+  await row.hover()
+  await row.getByRole('button', { name: 'More options' }).click({ timeout: SIDEBAR_WAIT_TIMEOUT })
   await expect(page.getByRole('menu')).toBeVisible({ timeout: 5000 })
 }
 
@@ -194,21 +250,21 @@ async function clickSidebarSelectionTarget(
 ) {
   try {
     if (attempt === 0) {
-      await sidebarLink(page, name).click(options)
+      await sidebarItem(page, name).click(options)
       return
     }
-    await clickSidebarLinkByCoordinates(page, name, options?.modifiers ?? [])
+    await clicksidebarItemByCoordinates(page, name, options?.modifiers ?? [])
   } catch {
     if (attempt >= 2) throw new Error(`Unable to click sidebar item "${name}"`)
   }
 }
 
-async function clickSidebarLinkByCoordinates(
+async function clicksidebarItemByCoordinates(
   page: Page,
   name: string,
   modifiers: NonNullable<Parameters<Locator['click']>[0]>['modifiers'],
 ) {
-  const box = await sidebarLink(page, name).boundingBox()
+  const box = await sidebarItem(page, name).boundingBox()
   if (!box) throw new Error(`Unable to resolve sidebar link bounds for "${name}"`)
   for (const modifier of modifiers ?? []) await page.keyboard.down(modifier)
   try {
@@ -253,35 +309,34 @@ export async function dragSidebarItemToSidebarItem(
 }
 
 export async function trashUntitledNotes(page: Page) {
-  const untitledLinks = sidebarNavigation(page).getByRole('link', { name: /^Untitled Note/ })
-  const untitledRows = sidebarNavigation(page).getByRole('option', { name: /^Untitled Note/ })
+  const untitledItems = sidebarNavigation(page).getByRole('button', { name: /^Untitled Note/ })
   for (let index = 0; index < MAX_UNTITLED_TRASH_ATTEMPTS; index += 1) {
-    const count = await untitledLinks.count()
+    const count = await untitledItems.count()
     if (count === 0) return
-    const row = untitledRows.first()
+    const row = untitledItems.first().locator('..')
     await row.hover()
     await row.getByRole('button', { name: 'More options' }).click()
     await page.getByRole('menuitem', { name: 'Move to Trash' }).click()
-    await expect.poll(async () => await untitledLinks.count()).toBeLessThan(count)
+    await expect.poll(async () => await untitledItems.count()).toBeLessThan(count)
   }
 }
 
 export async function expectSidebarItemVisible(page: Page, name: string) {
-  await expect(sidebarLink(page, name)).toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
+  await expect(sidebarItem(page, name)).toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
 }
 
 export async function expectSidebarItemHidden(page: Page, name: string) {
-  await expect(sidebarLink(page, name)).not.toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
+  await expect(sidebarItem(page, name)).not.toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
 }
 
 export async function expectFolderItemVisible(page: Page, folderName: string, itemName: string) {
-  await expect(folderItemLink(page, folderName, itemName)).toBeVisible({
+  await expect(folderItem(page, folderName, itemName)).toBeVisible({
     timeout: SIDEBAR_WAIT_TIMEOUT,
   })
 }
 
 export async function expectFolderItemHidden(page: Page, folderName: string, itemName: string) {
-  await expect(folderItemLink(page, folderName, itemName)).not.toBeVisible({
+  await expect(folderItem(page, folderName, itemName)).not.toBeVisible({
     timeout: SIDEBAR_WAIT_TIMEOUT,
   })
 }
@@ -307,11 +362,13 @@ export async function waitForFilesystemIdle(page: Page) {
 }
 
 export async function openTrashPopover(page: Page) {
-  await page.getByRole('button', { name: /^trash/i }).click()
+  await sidebarNavigation(page)
+    .getByRole('button', { name: /^trash(?:\s+\d+)?$/i })
+    .click()
 }
 
 export function trashItem(page: Page, name: string): Locator {
-  return page.getByTestId(`trash-item-${name}`)
+  return page.locator('[data-testid^="trash-item-"]').filter({ hasText: name })
 }
 
 export async function expectTrashItemVisible(page: Page, name: string) {
@@ -326,7 +383,7 @@ export async function restoreTrashItem(page: Page, name: string) {
   const item = trashItem(page, name)
   await expect(item).toBeVisible({ timeout: SIDEBAR_WAIT_TIMEOUT })
   await item.hover()
-  await item.getByRole('button', { name: /restore/i }).click()
+  await item.getByRole('button', { name: 'Restore', exact: true }).click()
 }
 
 export async function permanentlyDeleteTrashItem(page: Page, name: string) {

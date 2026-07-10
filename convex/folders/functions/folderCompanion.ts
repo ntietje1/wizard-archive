@@ -1,6 +1,6 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
@@ -12,12 +12,12 @@ export async function createFolderCompanion(
 ): Promise<void> {
   await ctx.db.insert('folders', {
     sidebarItemId: folderId,
-    inheritShares: false,
+    inheritShares: ctx.campaign.defaultFolderInheritShares,
   })
 
   await logEditHistory(ctx, {
     itemId: folderId,
-    itemType: SIDEBAR_ITEM_TYPES.folders,
+    itemType: RESOURCE_TYPES.folders,
     action: EDIT_HISTORY_ACTION.created,
   })
 }
@@ -29,7 +29,7 @@ export async function copyFolderCompanion(
 ) {
   const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder target item not found')
-  if (targetItem.type !== SIDEBAR_ITEM_TYPES.folders) {
+  if (targetItem.type !== RESOURCE_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folder companion requires a folder item')
   }
   const existingFolder = await ctx.db

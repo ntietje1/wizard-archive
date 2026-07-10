@@ -1,5 +1,5 @@
 import type { ComponentPropsWithoutRef, CSSProperties } from 'react'
-import { cn } from '~/features/shadcn/lib/utils'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 
 const logoMaskStyle = {
   maskImage: 'url("/logo.svg")',

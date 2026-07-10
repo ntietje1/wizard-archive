@@ -6,14 +6,15 @@ import {
   createCanvasViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 import { createGameMap, createNote } from '../../_test/factories.helper'
 import { createMapWithTwoSnapshotPins } from '../../_test/documentSnapshots.helper'
 import { api } from '../../_generated/api'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import { SNAPSHOT_TYPE } from '../../../shared/document-snapshots/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { DOCUMENT_SNAPSHOT_TYPE } from '../types'
 import { makeYjsUpdate } from '../../_test/yjs.helper'
 import { SNAPSHOT_IDLE_MS, SNAPSHOT_MIN_INTERVAL_MS } from '../../yjsSync/constants'
-import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
+import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
 
 describe('pushUpdate trailing-edge snapshot scheduling', () => {
   const t = createTestContext()
@@ -45,8 +46,8 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
           .collect()
 
         expect(snapshots).toHaveLength(1)
-        expect(snapshots[0].snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
-        expect(snapshots[0].itemType).toBe(SIDEBAR_ITEM_TYPES.notes)
+        expect(snapshots[0].snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
+        expect(snapshots[0].itemType).toBe(RESOURCE_TYPES.notes)
       })
     } finally {
       vi.useRealTimers()
@@ -314,8 +315,8 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
           .collect()
 
         expect(snapshots).toHaveLength(1)
-        expect(snapshots[0].snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
-        expect(snapshots[0].itemType).toBe(SIDEBAR_ITEM_TYPES.canvases)
+        expect(snapshots[0].snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
+        expect(snapshots[0].itemType).toBe(RESOURCE_TYPES.canvases)
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
@@ -405,7 +406,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
           .collect()
 
         expect(snapshots).toHaveLength(1)
-        expect(snapshots[0].snapshotType).toBe(SNAPSHOT_TYPE.game_map)
+        expect(snapshots[0].snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.GameMap)
 
         const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshots[0].data))
         expect(parsed.pins).toHaveLength(1)
@@ -602,21 +603,25 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const storageId = await t.run(async (dbCtx) => {
-        return await dbCtx.storage.store(new Blob(['test']))
-      })
+      const { sessionId } = await storeCommittedTestUploadSession(
+        t,
+        ctx.dm.profile._id,
+        new Blob(['test'], { type: 'image/png' }),
+        'map.png',
+      )
 
       const result = await createGameMapViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Test Map',
         parentTarget: { kind: 'direct', parentId: null },
-        imageStorageId: storageId,
+        uploadSessionId: sessionId,
       })
 
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
         campaignId: ctx.campaignId,
         mapId: result.mapId,
-        imageStorageId: null,
+        replacementToken: null,
+        uploadSessionId: null,
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -685,7 +690,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
 describe('rollbackToSnapshot', () => {
   const t = createTestContext()
 
-  it('rollback creates history entry without snapshot', async () => {
+  it('rollback preserves both the previous and restored states', async () => {
     vi.useFakeTimers()
     try {
       const ctx = await setupCampaignContext(t)
@@ -709,7 +714,7 @@ describe('rollbackToSnapshot', () => {
       })
       expect(historyEntry).not.toBeNull()
 
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: historyEntry!._id,
       })
@@ -720,14 +725,14 @@ describe('rollbackToSnapshot', () => {
           .withIndex('by_item', (q) => q.eq('itemId', mapId))
           .collect()
 
-        expect(allSnapshots).toHaveLength(1)
+        expect(allSnapshots).toHaveLength(3)
 
         const rolledBackHistory = await dbCtx.db
           .query('editHistory')
           .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'rolled_back'))
           .first()
         expect(rolledBackHistory).not.toBeNull()
-        expect(rolledBackHistory!.hasSnapshot).toBe(false)
+        expect(rolledBackHistory!.hasSnapshot).toBe(true)
 
         const activePins = await dbCtx.db
           .query('mapPins')

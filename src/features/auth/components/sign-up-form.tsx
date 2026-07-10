@@ -1,14 +1,16 @@
 import { useReducer } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
+import {
+  AuthEmailField,
+  AuthFormShell,
+  AuthGoogleButton,
+  AuthPasswordField,
+  AuthStatusMessage,
+} from './auth-form-elements'
 import { authClient } from '~/features/auth/utils/auth-client'
-import { Button } from '~/features/shadcn/components/button'
-import { Input } from '~/features/shadcn/components/input'
-import { Label } from '~/features/shadcn/components/label'
-import { Separator } from '~/features/shadcn/components/separator'
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
-import { GoogleIcon } from '~/features/auth/utils/custom-icons'
-import { isPreview } from '~/shared/utils/preview'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
 import { publicSite } from '~/features/landing/content/public-site'
 
 type SignUpFormProps = {
@@ -137,54 +139,21 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
 
   if (emailSent) {
     return (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-bold">Check your email</h1>
-          <p className="text-sm text-muted-foreground text-balance">
-            We sent a verification link to <strong>{email}</strong>. Click the link to verify your
-            account.
-          </p>
-        </div>
-        <Link
-          to="/sign-in"
-          className="text-sm text-primary underline-offset-4 hover:underline font-medium flex justify-center"
-        >
-          Back to sign in
-        </Link>
-      </div>
+      <AuthStatusMessage title="Check your email" linkTo="/sign-in" linkLabel="Back to sign in">
+        We sent a verification link to <strong>{email}</strong>. Click the link to verify your
+        account.
+      </AuthStatusMessage>
     )
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-bold">Create an account</h1>
-        <p className="text-sm text-muted-foreground text-balance">
-          Get started with your adventure
-        </p>
-      </div>
+    <AuthFormShell title="Create an account" description="Get started with your adventure">
       <div className="flex flex-col gap-4">
-        {/* Social login buttons */}
-        <Tooltip>
-          <TooltipTrigger render={<span className="w-full" />} disabled={!isPreview}>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleSocialSignIn('google')}
-              disabled={isAuthDisabled || isPreview}
-            >
-              {socialLoading === 'google' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <GoogleIcon />
-              )}
-              Continue with Google
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            OAuth is unavailable on preview deployments. Use email and password instead.
-          </TooltipContent>
-        </Tooltip>
+        <AuthGoogleButton
+          loading={socialLoading === 'google'}
+          disabled={isAuthDisabled}
+          onClick={() => handleSocialSignIn('google')}
+        />
 
         <p className="text-center text-xs leading-5 text-muted-foreground">
           By continuing with Google, you agree to the{' '}
@@ -210,48 +179,35 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
           <Separator className="flex-1" />
         </div>
 
-        {/* Email/password form */}
         <form onSubmit={handleEmailSignUp} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) =>
-                dispatch({
-                  type: 'SET_FIELD',
-                  field: 'email',
-                  value: e.target.value,
-                })
-              }
-              required
-              disabled={isAuthDisabled}
-              autoComplete="email"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Create a password"
-              value={password}
-              onChange={(e) =>
-                dispatch({
-                  type: 'SET_FIELD',
-                  field: 'password',
-                  value: e.target.value,
-                })
-              }
-              required
-              minLength={8}
-              disabled={isAuthDisabled}
-              autoComplete="new-password"
-            />
-            <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
-          </div>
+          <AuthEmailField
+            value={email}
+            onValueChange={(value) =>
+              dispatch({
+                type: 'SET_FIELD',
+                field: 'email',
+                value,
+              })
+            }
+            disabled={isAuthDisabled}
+          />
+          <AuthPasswordField
+            id="password"
+            label="Password"
+            placeholder="Create a password"
+            value={password}
+            onValueChange={(value) =>
+              dispatch({
+                type: 'SET_FIELD',
+                field: 'password',
+                value,
+              })
+            }
+            disabled={isAuthDisabled}
+            minLength={8}
+            autoComplete="new-password"
+            helper={<p className="text-xs text-muted-foreground">Must be at least 8 characters</p>}
+          />
 
           <label className="flex items-start gap-3 text-xs leading-5 text-muted-foreground">
             <input
@@ -298,6 +254,6 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
           </Link>
         </p>
       </div>
-    </div>
+    </AuthFormShell>
   )
 }

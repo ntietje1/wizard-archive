@@ -51,7 +51,7 @@ test.describe.serial('canvas performance probe', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch (error) {
@@ -71,7 +71,7 @@ test.describe.serial('canvas performance probe', () => {
     })
 
     await context.tracing.start({ screenshots: true, snapshots: true })
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)

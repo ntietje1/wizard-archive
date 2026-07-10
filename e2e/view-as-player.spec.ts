@@ -9,7 +9,7 @@ import {
   approvePlayerRequest,
   getCampaignRouteParts,
   requestToJoinCampaignAsPlayer,
-  setAllPlayersPermission,
+  setResourceAudiencePermission,
 } from './helpers/permission-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import {
@@ -24,7 +24,14 @@ import {
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { ensureAcceptedPlayerMember, getCampaignIdFromRoute } from './helpers/convex-helpers'
-import { createMap, openMap, uploadMapImage, writeTestMapImage } from './helpers/map-helpers'
+import {
+  createMap,
+  mapImage,
+  mapPlacementTarget,
+  openMap,
+  uploadMapImage,
+  writeTestMapImage,
+} from './helpers/map-helpers'
 import type { Page } from '@playwright/test'
 
 const E2E_PLAYER_EMAIL = process.env.E2E_PLAYER_EMAIL
@@ -65,7 +72,7 @@ test.describe('view-as-player', () => {
     })
     const page = await context.newPage()
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, sharedNote)
@@ -83,7 +90,7 @@ test.describe('view-as-player', () => {
     })
     await openNewDashboard(page)
     await createMap(page, actorMap)
-    await uploadMapImage(page, testImagePath)
+    await uploadMapImage(page, testImagePath, actorMap)
     await pinSidebarItemToOpenMap(page, mapPinTarget)
     const { dmUsername, campaignSlug } = getCampaignRouteParts(page)
     const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
@@ -103,7 +110,7 @@ test.describe('view-as-player', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const dmPage = await dmContext.newPage()
-    await dmPage.goto('/campaigns')
+    await dmPage.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(dmPage, campaignName)
     await approvePlayerRequest(dmPage, E2E_PLAYER_EMAIL!)
     await ensureAcceptedPlayerMember({ campaignId })
@@ -120,7 +127,7 @@ test.describe('view-as-player', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -131,11 +138,11 @@ test.describe('view-as-player', () => {
   })
 
   test('share one note with all players', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, sharedNote)
 
-    const shareButton = page.getByRole('button', { name: /^private|^shared/i })
+    const shareButton = page.getByRole('button', { name: /^(private|shared)$/i })
     await shareButton.click()
 
     const shareDialog = page.getByRole('dialog').filter({ hasText: 'Share' })
@@ -156,7 +163,7 @@ test.describe('view-as-player', () => {
   test('DM view-as is read-only across canvas, folder, and map actor surfaces', async ({
     page,
   }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await enterViewAsPlayer(page)
 
@@ -187,26 +194,25 @@ test.describe('view-as-player', () => {
     await expect(page.getByRole('menuitem', { name: /hide pin|show pin/i })).not.toBeVisible()
     await page.keyboard.press('Escape')
 
-    const mapCanvas = page.locator('[aria-label="Map canvas"]')
-    await mapCanvas.click({ button: 'right' })
+    await mapImage(page, actorMap).click({ button: 'right', force: true })
     await expect(page.getByRole('menuitem', { name: 'Create Pin Here' })).not.toBeVisible()
   })
 
   test('view-as player shows only shared note', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     await enterViewAsPlayer(page)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(sidebar.getByRole('link', { name: sharedNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: sharedNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
-    await expect(sidebar.getByRole('link', { name: unsharedNote, exact: true })).not.toBeVisible()
+    await expect(sidebar.getByRole('button', { name: unsharedNote, exact: true })).not.toBeVisible()
   })
 
   test('switching back to DM view shows both notes', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
     // May already be in view-as mode from previous test or need to toggle
@@ -224,10 +230,10 @@ test.describe('view-as-player', () => {
     }
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    await expect(sidebar.getByRole('link', { name: sharedNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: sharedNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
-    await expect(sidebar.getByRole('link', { name: unsharedNote, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('button', { name: unsharedNote, exact: true })).toBeVisible({
       timeout: 10000,
     })
   })
@@ -235,16 +241,16 @@ test.describe('view-as-player', () => {
 
 async function shareActorFixtures(page: Page) {
   await openItem(page, actorFolder)
-  await setAllPlayersPermission(page, PERMISSION_LEVEL.EDIT)
+  await setResourceAudiencePermission(page, PERMISSION_LEVEL.EDIT)
 
   await openItem(page, mapPinTarget)
-  await setAllPlayersPermission(page, PERMISSION_LEVEL.VIEW)
+  await setResourceAudiencePermission(page, PERMISSION_LEVEL.VIEW)
 
   await openCanvas(page, actorCanvas)
-  await setAllPlayersPermission(page, PERMISSION_LEVEL.EDIT)
+  await setResourceAudiencePermission(page, PERMISSION_LEVEL.EDIT)
 
   await openMap(page, actorMap)
-  await setAllPlayersPermission(page, PERMISSION_LEVEL.EDIT)
+  await setResourceAudiencePermission(page, PERMISSION_LEVEL.EDIT)
 }
 
 async function enterViewAsPlayer(page: Page) {
@@ -257,7 +263,9 @@ async function enterViewAsPlayer(page: Page) {
     name: new RegExp(escapeRegExp(playerUsername), 'i'),
   })
   await expect(playerItem).toBeVisible({ timeout: 5000 })
-  await playerItem.click()
+  await playerItem.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByText(/^Viewing as /)).toBeVisible({ timeout: 10_000 })
   await page.keyboard.press('Escape')
   await expect(playerItem).not.toBeVisible({ timeout: 5000 })
 }
@@ -268,22 +276,33 @@ function escapeRegExp(value: string) {
 
 async function pinSidebarItemToOpenMap(page: Page, itemName: string) {
   const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-  await sidebar.getByRole('link', { name: itemName, exact: true }).click({ button: 'right' })
+  await sidebar.getByRole('button', { name: itemName, exact: true }).click({ button: 'right' })
   await expect(page.getByRole('menu')).toBeVisible({ timeout: 5000 })
 
   await page.getByRole('menuitem', { name: /pin to map/i }).click()
 
-  const mapCanvas = page.locator('[aria-label="Map canvas"]')
-  await expect(mapCanvas).toBeVisible()
-  const mapImage = mapCanvas.locator('img').first()
-  await mapImage.waitFor({ state: 'visible', timeout: 10000 })
-  await mapImage.click({ force: true })
+  const canvas = mapPlacementTarget(page)
+  await expect(canvas).toBeVisible()
+  const image = mapImage(page, actorMap)
+  await image.waitFor({ state: 'visible', timeout: 10000 })
+  await page.waitForFunction(
+    (el) => {
+      const img = el as HTMLImageElement | null
+      return img != null && img.complete && img.naturalWidth > 0
+    },
+    await image.elementHandle(),
+    { timeout: 10000 },
+  )
+  await canvas.click({ force: true })
   await expect(page.locator('[data-pin-id]').first()).toBeVisible({
     timeout: 10000,
   })
 }
 
 async function openNewDashboard(page: Page) {
-  await page.getByRole('navigation', { name: 'Sidebar' }).getByRole('link', { name: 'New' }).click()
+  await page
+    .getByRole('navigation', { name: 'Sidebar' })
+    .getByRole('button', { name: 'New', exact: true })
+    .click()
   await expect(page.getByRole('heading', { name: 'Create New' })).toBeVisible({ timeout: 10000 })
 }

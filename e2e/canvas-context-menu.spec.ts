@@ -11,6 +11,7 @@ import {
   getCanvasEdgeById,
   getCommittedSelectedCanvasNodes,
   openCanvas,
+  openCanvasNodeContextMenu,
   seedCanvasEdgeViaRuntime,
   seedCanvasTextNodesViaRuntime,
   selectCanvasTool,
@@ -30,7 +31,7 @@ test.describe.serial('canvas context menu workflows', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -41,7 +42,7 @@ test.describe.serial('canvas context menu workflows', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -52,7 +53,7 @@ test.describe.serial('canvas context menu workflows', () => {
 
   test.beforeEach(async ({ page }) => {
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await waitForCanvasRuntime(page)
@@ -83,6 +84,9 @@ test.describe.serial('canvas context menu workflows', () => {
     await expect.poll(() => getCanvasNodes(page).count()).toBe(4)
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
 
+    await getCanvasPane(page).evaluate((pane) => {
+      pane.focus()
+    })
     await page.keyboard.press('Delete')
 
     await expect.poll(() => getCanvasNodes(page).count()).toBe(3)
@@ -138,11 +142,7 @@ test.describe.serial('canvas context menu workflows', () => {
 })
 
 async function rightClickNode(page: Page, node: Locator) {
-  const box = await node.boundingBox()
-  if (!box) throw new Error('Canvas node is not visible')
-
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' })
-  await expect(page.getByRole('menu')).toBeVisible()
+  await openCanvasNodeContextMenu(page, node)
 }
 
 async function rightClickEmptyPane(page: Page) {

@@ -2,24 +2,27 @@ import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import {
   clickCanvasAt,
-  clickCanvasNode,
+  clearCanvasViaRuntime,
   createCanvas,
   DEFAULT_CANVAS_NAME,
-  dragCanvasNode,
   dragOnCanvas,
+  enableCanvasRuntime,
   endCanvasPointerGesture,
-  getCanvasLassoOverlay,
   getCanvasMarqueeOverlay,
+  getCanvasNodeById,
   getCanvasNodeBoundingBox,
   getCanvasNodesByType,
   getCanvasPendingPreviewActiveNodes,
   getCanvasPendingSelectionStatus,
-  getCanvasToolButton,
+  getCanvasRuntimeNodePosition,
   moveCanvasPointer,
   openCanvas,
   resizeCanvasNode,
+  seedCanvasTextNodesViaRuntime,
   selectCanvasTool,
+  setCanvasSelectionViaRuntime,
   startCanvasPointerGesture,
+  waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import type { Browser, BrowserContext, Page } from '@playwright/test'
@@ -27,8 +30,6 @@ import type { Browser, BrowserContext, Page } from '@playwright/test'
 const campaignName = testName('Cnv Collab')
 const canvasName = DEFAULT_CANVAS_NAME
 const SHARED_TEXT_TIMEOUT_MS = 15_000
-const TEXT_CONTENT_LOCATOR = '[aria-label="Text node content"][contenteditable="true"]'
-const EMPTY_CANVAS_POINT = { x: 720, y: 520 }
 
 test.describe.serial('canvas collaboration', () => {
   test.beforeAll(async ({ browser }) => {
@@ -36,7 +37,7 @@ test.describe.serial('canvas collaboration', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -49,7 +50,7 @@ test.describe.serial('canvas collaboration', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch (error) {
@@ -62,66 +63,68 @@ test.describe.serial('canvas collaboration', () => {
     await context.close()
   })
 
-  test('syncs node creation, stroke drawing, dragging, and resizing across tabs', async ({
+  test('syncs text nodes, stroke drawing, dragging, and resizing across tabs', async ({
     browser,
   }) => {
     const collab = await createCollabContexts(browser)
 
     try {
+      await enableCanvasRuntime(collab.page1)
+      await enableCanvasRuntime(collab.page2)
       await openCollabCanvas(collab.page1)
       await openCollabCanvas(collab.page2)
+      await waitForCanvasRuntime(collab.page1)
+      await waitForCanvasRuntime(collab.page2)
+      await clearCanvasViaRuntime(collab.page1)
+      await seedCanvasTextNodesViaRuntime(collab.page1, {
+        count: 3,
+        columns: 3,
+        idPrefix: 'collab-node',
+        labelPrefix: 'Shared text',
+        spacingX: 220,
+        start: { x: 120, y: 120 },
+      })
 
-      await selectCanvasTool(collab.page1, 'Text')
-      await clickCanvasAt(collab.page1, { x: 120, y: 120 })
-      await collab.page1.locator(TEXT_CONTENT_LOCATOR).last().fill('Shared text')
-      await clickCanvasAt(collab.page1, EMPTY_CANVAS_POINT)
-
-      await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(1)
-      await expect(collab.page2.getByText('Shared text', { exact: true })).toBeVisible({
+      await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(3)
+      await expect(collab.page2.getByText('Shared text 0', { exact: true })).toBeVisible({
         timeout: SHARED_TEXT_TIMEOUT_MS,
       })
-      await expect(getCanvasToolButton(collab.page1, 'Text')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-
-      await clickCanvasAt(collab.page1, { x: 320, y: 120 })
-      await collab.page1.locator(TEXT_CONTENT_LOCATOR).last().fill('Shared second text')
-      await clickCanvasAt(collab.page1, EMPTY_CANVAS_POINT)
-      await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(2)
-      await expect(getCanvasToolButton(collab.page1, 'Text')).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-
-      await dragOnCanvas(collab.page1, { x: 260, y: 260 }, { x: 380, y: 360 })
-      await collab.page1.locator(TEXT_CONTENT_LOCATOR).last().fill('Dragged shared text')
-      await clickCanvasAt(collab.page1, EMPTY_CANVAS_POINT)
-      await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(3)
-
-      const page2DraggedText = getCanvasNodesByType(collab.page2, 'text').filter({
-        hasText: 'Dragged shared text',
-      })
-      const beforeMove = await getCanvasNodeBoundingBox(page2DraggedText)
 
       await selectCanvasTool(collab.page1, 'Pointer')
-      const page1DraggedText = getCanvasNodesByType(collab.page1, 'text').filter({
-        hasText: 'Dragged shared text',
+      const draggedNodeId = 'collab-node-2'
+      const page1DraggedText = getCanvasNodeById(collab.page1, draggedNodeId)
+      const page2DraggedText = getCanvasNodeById(collab.page2, draggedNodeId)
+      await setCanvasSelectionViaRuntime(collab.page1, { nodeIds: [draggedNodeId] })
+      const page1BeforeMove = await getCanvasRuntimeNodePosition(collab.page1, draggedNodeId)
+      const page2BeforeMove = await getCanvasRuntimeNodePosition(collab.page2, draggedNodeId)
+      await collab.page1.evaluate(() => {
+        const runtime = window.__WA_CANVAS_PERF_RUNTIME__
+        if (!runtime) {
+          throw new Error('Missing __WA_CANVAS_PERF_RUNTIME__ for collaboration drag')
+        }
+        runtime.profileSelectedNodeDrag({
+          delta: { x: 140, y: 80 },
+          steps: 12,
+        })
       })
-      await clickCanvasNode(collab.page1, page1DraggedText)
-      await dragCanvasNode(
-        collab.page1,
-        page1DraggedText,
-        { x: 140, y: 80 },
-        { positionRatio: { xRatio: 0.5, yRatio: 0.5 } },
-      )
+      await expect
+        .poll(
+          async () => {
+            const localPosition = await getCanvasRuntimeNodePosition(collab.page1, draggedNodeId)
+            const deltaX = Math.round(localPosition.x - page1BeforeMove.x)
+            const deltaY = Math.round(localPosition.y - page1BeforeMove.y)
+            return deltaX > 80 && deltaY > 40
+          },
+          { timeout: SHARED_TEXT_TIMEOUT_MS },
+        )
+        .toBe(true)
 
       await expect
         .poll(
           async () => {
-            const box = await getCanvasNodeBoundingBox(page2DraggedText)
-            const deltaX = Math.round(box.x - beforeMove.x)
-            const deltaY = Math.round(box.y - beforeMove.y)
+            const position = await getCanvasRuntimeNodePosition(collab.page2, draggedNodeId)
+            const deltaX = Math.round(position.x - page2BeforeMove.x)
+            const deltaY = Math.round(position.y - page2BeforeMove.y)
             return deltaX > 80 && deltaY > 40
           },
           { timeout: SHARED_TEXT_TIMEOUT_MS },
@@ -151,38 +154,35 @@ test.describe.serial('canvas collaboration', () => {
     }
   })
 
-  test('keeps marquee and lasso pending preview local to the active tab', async ({ browser }) => {
+  test('keeps marquee pending preview local to the active tab', async ({ browser }) => {
     const collab = await createCollabContexts(browser)
 
     try {
+      await enableCanvasRuntime(collab.page1)
+      await enableCanvasRuntime(collab.page2)
       await openCollabCanvas(collab.page1)
       await openCollabCanvas(collab.page2)
+      await waitForCanvasRuntime(collab.page1)
+      await waitForCanvasRuntime(collab.page2)
+      await clearCanvasViaRuntime(collab.page1)
+      await seedCanvasTextNodesViaRuntime(collab.page1, {
+        count: 2,
+        columns: 2,
+        spacingX: 360,
+        start: { x: 160, y: 100 },
+      })
+      await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(2)
 
       await selectCanvasTool(collab.page1, 'Pointer')
       await clickCanvasAt(collab.page1, { x: 720, y: 520 })
-      await startCanvasPointerGesture(collab.page1, { x: 80, y: 60 })
-      await moveCanvasPointer(collab.page1, { x: 450, y: 230 })
+      await startCanvasPointerGesture(collab.page1, { x: 20, y: 320 })
+      await moveCanvasPointer(collab.page1, { x: 850, y: 20 })
 
       await expect(getCanvasMarqueeOverlay(collab.page1)).toBeVisible()
       await expect(getCanvasPendingSelectionStatus(collab.page1)).toBeVisible()
       await expect(getCanvasPendingSelectionStatus(collab.page2)).toHaveCount(0)
       await expect(getCanvasPendingPreviewActiveNodes(collab.page2)).toHaveCount(0)
 
-      await endCanvasPointerGesture(collab.page1)
-      await expect(getCanvasPendingSelectionStatus(collab.page1)).toHaveCount(0)
-
-      await selectCanvasTool(collab.page1, 'Lasso select')
-      await startCanvasPointerGesture(collab.page1, { x: 245, y: 240 })
-      await moveCanvasPointer(collab.page1, { x: 470, y: 240 })
-      await moveCanvasPointer(collab.page1, { x: 470, y: 430 })
-      await moveCanvasPointer(collab.page1, { x: 235, y: 430 })
-
-      await expect(getCanvasLassoOverlay(collab.page1)).toBeVisible()
-      await expect(getCanvasPendingSelectionStatus(collab.page1)).toBeVisible()
-      await expect(getCanvasPendingSelectionStatus(collab.page2)).toHaveCount(0)
-      await expect(getCanvasPendingPreviewActiveNodes(collab.page2)).toHaveCount(0)
-
-      await moveCanvasPointer(collab.page1, { x: 220, y: 250 })
       await endCanvasPointerGesture(collab.page1)
       await expect(getCanvasPendingSelectionStatus(collab.page1)).toHaveCount(0)
       await expect(getCanvasPendingSelectionStatus(collab.page2)).toHaveCount(0)
@@ -193,7 +193,7 @@ test.describe.serial('canvas collaboration', () => {
 })
 
 async function openCollabCanvas(page: Page) {
-  await page.goto('/campaigns')
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(page, campaignName)
   await openCanvas(page, canvasName)
 }

@@ -1,27 +1,28 @@
-import { asyncMap } from 'convex-helpers'
 import { CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { logger } from '../../common/logger'
-import { getUserProfileById } from '../../users/functions/getUserProfile'
+import { getCampaignMemberRows, loadProfilesByMemberUserId } from './campaignMemberProfiles'
 import type { DmQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
 import type { UserProfile } from '../../../shared/users/types'
-import type { CampaignMember } from '../../../shared/campaigns/types'
+import type { CampaignMember, CampaignMemberRow } from '../../../shared/campaigns/types'
+
+function toCampaignMember(member: CampaignMemberRow, userProfile: UserProfile): CampaignMember {
+  const { _id, _creationTime, ...fields } = member
+  return {
+    ...fields,
+    id: _id,
+    createdAt: _creationTime,
+    userProfile,
+  }
+}
 
 export async function getCampaignRequests(ctx: DmQueryCtx): Promise<Array<CampaignMember>> {
-  const campaignId = ctx.campaign._id
-
-  const members = await ctx.db
-    .query('campaignMembers')
-    .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
-    .collect()
-
+  const members = await getCampaignMemberRows(ctx)
   const nonAcceptedMembers = members.filter((m) => m.status !== CAMPAIGN_MEMBER_STATUS.Accepted)
-
-  const profilesByUserId = new Map<Id<'userProfiles'>, UserProfile>()
-  await asyncMap(nonAcceptedMembers, async (member) => {
-    const profile = await getUserProfileById(ctx, { profileId: member.userId })
-    if (profile) profilesByUserId.set(member.userId, profile)
-  })
+  const profilesByUserId = await loadProfilesByMemberUserId(
+    ctx,
+    nonAcceptedMembers,
+    (profile) => profile,
+  )
 
   return nonAcceptedMembers.flatMap((member) => {
     const profile = profilesByUserId.get(member.userId)
@@ -29,6 +30,6 @@ export async function getCampaignRequests(ctx: DmQueryCtx): Promise<Array<Campai
       logger.error(`User profile not found for userId: ${member.userId}`)
       return []
     }
-    return [{ ...member, userProfile: profile }]
+    return [toCampaignMember(member, profile)]
   })
 }

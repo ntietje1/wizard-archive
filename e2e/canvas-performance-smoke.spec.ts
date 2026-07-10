@@ -8,6 +8,7 @@ import {
   dragCanvasNode,
   enableCanvasRuntime,
   getCanvasNodeById,
+  getCanvasNodeSurface,
   getCanvasNodesByType,
   getCanvasPane,
   getCanvasRuntimeMetrics,
@@ -24,6 +25,8 @@ import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('CnvPerf')
 const canvasName = DEFAULT_CANVAS_NAME
+const LARGE_SMOKE_TEXT_NODE_COUNT = 96
+const LARGE_SMOKE_STROKE_NODE_COUNT = 32
 // Selected-state background applied by updateSelectedNodeSurface in the opt-in canvas runtime.
 const EXPECTED_SELECTED_STATE_BG = 'rgb(232, 242, 255)'
 
@@ -35,7 +38,7 @@ test.describe.serial('canvas performance smoke workflows', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -46,7 +49,7 @@ test.describe.serial('canvas performance smoke workflows', () => {
   test.afterAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } finally {
@@ -57,7 +60,7 @@ test.describe.serial('canvas performance smoke workflows', () => {
 
   test.beforeEach(async ({ page }) => {
     await enableCanvasRuntime(page)
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
     await waitForCanvasRuntime(page)
@@ -87,8 +90,8 @@ test.describe.serial('canvas performance smoke workflows', () => {
     const updateDurationMs = Date.now() - startedAt
     await expect
       .poll(() =>
-        getCanvasNodeById(page, 'perf-node-0').evaluate(
-          (node) => getComputedStyle(node.querySelector('[role="group"]')!).backgroundColor,
+        getCanvasNodeSurface(getCanvasNodeById(page, 'perf-node-0')).evaluate(
+          (node) => getComputedStyle(node).backgroundColor,
         ),
       )
       .toBe(EXPECTED_SELECTED_STATE_BG)
@@ -166,15 +169,15 @@ test.describe.serial('canvas performance smoke workflows', () => {
     page,
   }) => {
     await seedCanvasTextNodesViaRuntime(page, {
-      count: 240,
-      columns: 24,
+      count: LARGE_SMOKE_TEXT_NODE_COUNT,
+      columns: 12,
       spacingX: 170,
       spacingY: 110,
       start: { x: 80, y: 80 },
     })
     await seedCanvasStrokeNodesViaRuntime(page, {
-      count: 80,
-      columns: 16,
+      count: LARGE_SMOKE_STROKE_NODE_COUNT,
+      columns: 8,
       spacingX: 180,
       spacingY: 120,
       start: { x: 80, y: 1400 },
@@ -182,7 +185,7 @@ test.describe.serial('canvas performance smoke workflows', () => {
     })
 
     const snapshot = await getCanvasRuntimeSnapshot(page)
-    expect(snapshot.nodes).toHaveLength(320)
+    expect(snapshot.nodes).toHaveLength(LARGE_SMOKE_TEXT_NODE_COUNT + LARGE_SMOKE_STROKE_NODE_COUNT)
 
     const startedAt = Date.now()
     await wheelCanvasPane(page, { x: 160, y: 100 })

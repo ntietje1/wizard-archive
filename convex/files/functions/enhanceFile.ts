@@ -1,16 +1,23 @@
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
-import type { FileFromDb, FileWithContent, SidebarFile } from '../../../shared/files/types'
+import type {
+  FileItemWithContent,
+  FileItem,
+  FileItemRow,
+} from '@wizard-archive/editor/files/item-contract'
+import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemEnhancement } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 
 export const enhanceFile = async (
   ctx: CampaignQueryCtx,
-  { file }: { file: FileFromDb },
-): Promise<SidebarFile> => {
+  { file, enhancement }: { file: FileItemRow; enhancement?: SidebarItemEnhancement },
+): Promise<FileItem> => {
+  const storageId = file.assetId as unknown as Id<'_storage'> | null
   const [base, downloadUrl, storageMetadata] = await Promise.all([
-    enhanceBase(ctx, { item: file }),
-    file.storageId ? ctx.storage.getUrl(file.storageId) : null,
-    file.storageId ? ctx.db.system.get('_storage', file.storageId) : null,
+    enhanceBase(ctx, { item: file, enhancement }),
+    storageId ? ctx.storage.getUrl(storageId) : null,
+    storageId ? ctx.db.system.get('_storage', storageId) : null,
   ])
 
   return {
@@ -22,8 +29,8 @@ export const enhanceFile = async (
 
 export const enhanceFileWithContent = async (
   ctx: CampaignQueryCtx,
-  { file }: { file: SidebarFile },
-): Promise<FileWithContent> => {
+  { file }: { file: FileItem },
+): Promise<FileItemWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {
     initialParentId: file.parentId,
     isTrashed: file.isTrashed,

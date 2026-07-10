@@ -1,0 +1,55 @@
+import throttle from 'lodash-es/throttle'
+import { useEffect, useRef } from 'react'
+import type { CanvasCoreAwarenessWriter } from '../../tools/canvas-tool-types'
+import type { CanvasPosition } from '../../types/canvas-domain-types'
+import type { MouseEvent as ReactMouseEvent } from 'react'
+
+const CURSOR_UPDATE_THROTTLE_MS = 75
+
+interface UseCanvasCursorPresenceOptions {
+  screenToCanvasPosition: (position: CanvasPosition) => CanvasPosition
+  awareness: CanvasCoreAwarenessWriter
+}
+
+export function useCanvasCursorPresence({
+  screenToCanvasPosition,
+  awareness,
+}: UseCanvasCursorPresenceOptions) {
+  const awarenessRef = useRef(awareness)
+  awarenessRef.current = awareness
+
+  const screenToCanvasPositionRef = useRef(screenToCanvasPosition)
+  screenToCanvasPositionRef.current = screenToCanvasPosition
+
+  const throttledSetCursorRef = useRef<ReturnType<typeof throttle> | null>(null)
+  throttledSetCursorRef.current ??= throttle((clientX: number, clientY: number) => {
+    awarenessRef.current.setLocalCursor(
+      screenToCanvasPositionRef.current({
+        x: clientX,
+        y: clientY,
+      }),
+    )
+  }, CURSOR_UPDATE_THROTTLE_MS)
+
+  useEffect(
+    () => () => {
+      throttledSetCursorRef.current?.cancel()
+      awarenessRef.current.setLocalCursor(null)
+    },
+    [],
+  )
+
+  const onMouseMove = (event: ReactMouseEvent) => {
+    throttledSetCursorRef.current?.(event.clientX, event.clientY)
+  }
+
+  const onMouseLeave = () => {
+    throttledSetCursorRef.current?.cancel()
+    awarenessRef.current.setLocalCursor(null)
+  }
+
+  return {
+    onMouseMove,
+    onMouseLeave,
+  }
+}

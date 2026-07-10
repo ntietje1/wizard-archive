@@ -10,7 +10,7 @@ import {
   parseGameMapSnapshotData,
 } from '../../_test/documentSnapshots.helper'
 import { api } from '../../_generated/api'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { SNAPSHOT_MIN_INTERVAL_MS } from '../../yjsSync/constants'
 
 describe('game map operations are rollbackable after every operation', () => {
@@ -240,7 +240,7 @@ describe('rollback data integrity', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       // Rollback to the pin add snapshot
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: addEntry!._id,
       })
@@ -278,8 +278,9 @@ describe('rollback of game map pin with non-note itemId', () => {
         const id = await dbCtx.db.insert('sidebarItems', {
           campaignId: ctx.campaignId,
           name: 'Pinned Folder',
+          normalizedName: 'pinned folder',
           slug: 'pinned-folder',
-          type: SIDEBAR_ITEM_TYPES.folders,
+          type: RESOURCE_TYPES.folders,
           parentId: null,
           iconName: null,
           color: null,
@@ -287,8 +288,6 @@ describe('rollback of game map pin with non-note itemId', () => {
           location: 'sidebar',
           status: 'active',
           previewStorageId: null,
-          previewLockedUntil: null,
-          previewClaimToken: null,
           previewUpdatedAt: null,
           createdBy: ctx.dm.profile._id,
           updatedTime: null,
@@ -331,7 +330,7 @@ describe('rollback of game map pin with non-note itemId', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       // Rollback to the state with the folder pin
-      await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+      await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: addEntry!._id,
       })

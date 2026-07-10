@@ -1,22 +1,22 @@
-import { api } from 'convex/_generated/api'
 import { Cable, CreditCard, Import, Paintbrush, Settings, Smile, Users } from 'lucide-react'
 import { useMatch } from '@tanstack/react-router'
 import { useSettingsStore } from '../hooks/settings-store'
 import { ProfileTab } from './tabs/account-profile/profile-tab'
 import { PreferencesTab } from './tabs/account-preferences/preferences-tab'
+import { CampaignGeneralTab } from './tabs/campaign-general/campaign-general-tab'
 import { PeopleTab } from './tabs/campaign-people/people-tab'
 import { StubTab } from './tabs/stub-tab'
 import type { SettingsTab } from '../hooks/settings-store'
 import type { LucideIcon } from 'lucide-react'
-import { getInitials } from '~/shared/utils/get-initials'
-import { Avatar, AvatarFallback, AvatarImage } from '~/features/shadcn/components/avatar'
-import { Dialog, DialogContent, DialogTitle } from '~/features/shadcn/components/dialog'
-import { Button } from '~/features/shadcn/components/button'
-import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import { cn } from '~/features/shadcn/lib/utils'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { ErrorBoundary } from '~/shared/components/error-boundary'
-import { ErrorFallback } from '~/shared/components/error-fallback'
+import { getInitials } from '@wizard-archive/ui/utils/get-initials'
+import { Avatar, AvatarFallback, AvatarImage } from '@wizard-archive/ui/shadcn/components/avatar'
+import { Dialog, DialogContent, DialogTitle } from '@wizard-archive/ui/shadcn/components/dialog'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
+import { useUserProfileQuery } from '~/shared/hooks/use-user-profile-operations'
+import { ErrorBoundary } from '@wizard-archive/ui/components/error-boundary'
+import { ErrorFallback } from '@wizard-archive/ui/components/error-fallback'
 
 type TabDefinition = {
   id: SettingsTab
@@ -65,14 +65,7 @@ const tabContent: Record<SettingsTab, React.ReactNode> = {
       icon={CreditCard}
     />
   ),
-  'campaign-general': (
-    <StubTab
-      category="Campaign"
-      title="General"
-      description="Configure your campaign's basic settings and preferences"
-      icon={Settings}
-    />
-  ),
+  'campaign-general': <CampaignGeneralTab />,
   'campaign-people': <PeopleTab />,
   'campaign-import': (
     <StubTab
@@ -102,7 +95,7 @@ const tabContent: Record<SettingsTab, React.ReactNode> = {
 
 export function SettingsDialog() {
   const { isOpen, close, activeTab, setActiveTab } = useSettingsStore()
-  const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
+  const profileQuery = useUserProfileQuery()
   const campaignMatch = useMatch({
     from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug',
     shouldThrow: false,

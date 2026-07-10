@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { Button } from '~/features/shadcn/components/button'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import { logger } from '~/shared/utils/logger'
 
 export default function ErrorPage({

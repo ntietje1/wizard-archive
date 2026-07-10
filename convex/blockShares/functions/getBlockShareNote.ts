@@ -1,17 +1,17 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { NoteFromDb } from '../../../shared/notes/types'
+import type { NoteItemRow } from '@wizard-archive/editor/notes/item-contract'
 import type { BlockShareMutationCtx } from './blockShareMutations'
 import type { Id } from '../../_generated/dataModel'
 
 export async function getBlockShareNote(
   ctx: BlockShareMutationCtx,
   noteId: Id<'sidebarItems'>,
-): Promise<NoteFromDb> {
-  const rawItem = await getSidebarItem<'notes'>(ctx, noteId)
-  if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.notes) {
+): Promise<NoteItemRow> {
+  const rawItem = await getSidebarItem(ctx, noteId)
+  if (!rawItem || rawItem.type !== RESOURCE_TYPES.notes) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   }
   if (rawItem.campaignId !== ctx.campaign._id) {

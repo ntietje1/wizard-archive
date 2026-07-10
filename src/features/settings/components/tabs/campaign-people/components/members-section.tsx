@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { Crown, Ellipsis, Trash2 } from 'lucide-react'
-import { SettingsSection } from '../../account-profile/components/settings-section'
+import { SettingsSection } from '~/features/settings/components/settings-section'
 import { MemberRow } from './member-row'
 import { RemovePlayerDialog } from './remove-player-dialog'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { Badge } from '~/features/shadcn/components/badge'
-import { Button } from '~/features/shadcn/components/button'
-import { Separator } from '~/features/shadcn/components/separator'
+import { Badge } from '@wizard-archive/ui/shadcn/components/badge'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '~/features/shadcn/components/dropdown-menu'
+} from '@wizard-archive/ui/shadcn/components/dropdown-menu'
 
 export function MembersSection({
   dmMember,
@@ -28,7 +28,7 @@ export function MembersSection({
 }) {
   const [deletingMemberId, setDeletingMemberId] = useState<Id<'campaignMembers'> | null>(null)
 
-  const deletingPlayer = acceptedPlayers.find((p) => p._id === deletingMemberId)
+  const deletingPlayer = acceptedPlayers.find((p) => p.id === deletingMemberId)
 
   return (
     <SettingsSection title="Members">
@@ -50,7 +50,7 @@ export function MembersSection({
         <p className="text-sm text-muted-foreground text-center py-2">No members yet</p>
       ) : (
         acceptedPlayers.map((player, index) => (
-          <div key={player._id}>
+          <div key={player.id}>
             {index > 0 && <Separator />}
             <MemberRow
               member={player}
@@ -71,7 +71,7 @@ export function MembersSection({
                     <DropdownMenuContent>
                       <DropdownMenuItem
                         variant="destructive"
-                        onClick={() => setDeletingMemberId(player._id)}
+                        onClick={() => setDeletingMemberId(player.id)}
                       >
                         <Trash2 />
                         Remove

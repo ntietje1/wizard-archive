@@ -1,13 +1,13 @@
 import { v } from 'convex/values'
 import { defineTable } from 'convex/server'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
-import { convexValidatorFields } from '../common/schema'
-import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import { domainValidatorFields } from '../common/schema'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 
 const mapValidatorFields = {
   ...sidebarItemValidatorFields,
-  imageStorageId: v.nullable(v.id('_storage')),
-  type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
+  imageAssetId: v.nullable(v.id('_storage')),
+  type: v.literal(RESOURCE_TYPES.gameMaps),
   imageUrl: v.nullable(v.string()),
 }
 
@@ -22,7 +22,7 @@ const mapPinTableFields = {
 }
 
 export const mapPinValidatorFields = {
-  ...convexValidatorFields('mapPins'),
+  ...domainValidatorFields('mapPins'),
   ...mapPinTableFields,
 }
 

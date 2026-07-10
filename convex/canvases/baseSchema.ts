@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
-import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 
 export const canvasValidatorFields = {
   ...sidebarItemValidatorFields,
-  type: v.literal(SIDEBAR_ITEM_TYPES.canvases),
+  type: v.literal(RESOURCE_TYPES.canvases),
 }
 
 export const canvasValidator = v.object(canvasValidatorFields)

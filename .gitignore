@@ -16,6 +16,7 @@ yarn.lock
 .tanstack
 
 /dist/
+/packages/editor/dist/
 /build/
 /api/
 /server/build

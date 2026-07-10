@@ -1,18 +1,26 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { permissionLevelValidator } from './validators'
-import { sidebarItemTableFields } from './sidebarItemFields'
+import { sidebarItemTableFields, sidebarItemTableValidator } from './sidebarItemFields'
 import {
   fileSystemChangeValidator,
   fileSystemCommandValidator,
   fileSystemEventValidator,
 } from '../filesystem/validators'
 import { sidebarItemShareValidator } from '../../sidebarShares/schema'
-import { convexValidatorFields } from '../../common/schema'
+import { domainValidatorFields } from '../../common/schema'
+
+const {
+  normalizedName: _normalizedName,
+  previewStorageId: _previewStorageId,
+  previewUpdatedAt: _previewUpdatedAt,
+  ...publicSidebarItemFields
+} = sidebarItemTableFields
 
 export const sidebarItemValidatorFields = {
-  ...convexValidatorFields('sidebarItems'),
-  ...sidebarItemTableFields,
+  ...domainValidatorFields('sidebarItems'),
+  ...publicSidebarItemFields,
+  previewAssetId: v.nullable(v.id('_storage')),
   shares: v.array(sidebarItemShareValidator),
   isBookmarked: v.boolean(),
   myPermissionLevel: permissionLevelValidator,
@@ -26,7 +34,13 @@ const extensionBaseFields = {
 }
 
 export const sidebarItemsTables = {
-  sidebarItems: defineTable(sidebarItemTableFields)
+  sidebarItems: defineTable(sidebarItemTableValidator)
+    .index('by_campaign_status_normalizedName_deletionTime', [
+      'campaignId',
+      'status',
+      'normalizedName',
+      'deletionTime',
+    ])
     .index('by_campaign_status_parent_name_deletionTime', [
       'campaignId',
       'status',
@@ -38,6 +52,12 @@ export const sidebarItemsTables = {
     .index('by_campaign_slug', ['campaignId', 'slug', 'deletionTime'])
     .index('by_campaign_deletionTime', ['campaignId', 'deletionTime'])
     .index('by_previewStorageId', ['previewStorageId']),
+
+  sidebarItemPreviewLeases: defineTable({
+    sidebarItemId: v.id('sidebarItems'),
+    claimToken: v.string(),
+    lockedUntil: v.number(),
+  }).index('by_sidebarItemId', ['sidebarItemId']),
 
   notes: defineTable({
     ...extensionBaseFields,
@@ -51,6 +71,7 @@ export const sidebarItemsTables = {
   gameMaps: defineTable({
     ...extensionBaseFields,
     imageStorageId: v.nullable(v.id('_storage')),
+    imageReplacementToken: v.optional(v.string()),
   })
     .index('by_sidebarItemId', ['sidebarItemId'])
     .index('by_imageStorageId', ['imageStorageId']),

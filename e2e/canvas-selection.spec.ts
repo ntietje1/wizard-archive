@@ -11,7 +11,9 @@ import {
   getCanvasNodesByType,
   getCanvasPendingSelectionNodeIds,
   getCanvasPendingSelectionStatus,
+  getCanvasTextEditors,
   getCommittedSelectedCanvasNodes,
+  getNewCanvasTextEditor,
   getVisuallySelectedCanvasNodes,
   lassoOnCanvas,
   moveCanvasPointer,
@@ -25,7 +27,6 @@ import type { Page } from '@playwright/test'
 const campaignName = testName('Cnv Select')
 const canvasName = DEFAULT_CANVAS_NAME
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
-const TEXT_CONTENT_LOCATOR = '[aria-label="Text node content"][contenteditable="true"]'
 
 test.describe.serial('canvas selection', () => {
   test.beforeAll(async ({ browser }) => {
@@ -34,7 +35,7 @@ test.describe.serial('canvas selection', () => {
     })
     const page = await context.newPage()
 
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createCanvas(page, canvasName)
@@ -52,7 +53,7 @@ test.describe.serial('canvas selection', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch (error) {
@@ -181,21 +182,23 @@ test.describe.serial('canvas selection', () => {
 })
 
 async function openSelectionCanvas(page: Page) {
-  await page.goto('/campaigns')
+  await page.goto('/campaigns', { waitUntil: 'commit' })
   await navigateToCampaign(page, campaignName)
   await openCanvas(page, canvasName)
 }
 
 async function seedSelectionCanvas(page: Page) {
   await selectCanvasTool(page, 'Text')
+  const alphaEditorCount = await getCanvasTextEditors(page).count()
   await clickCanvasAt(page, { x: 120, y: 120 })
-  await page.locator(TEXT_CONTENT_LOCATOR).last().fill('Alpha')
+  await (await getNewCanvasTextEditor(page, alphaEditorCount)).fill('Alpha')
   await clickCanvasAt(page, { x: 720, y: 520 })
   await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(1)
 
   await selectCanvasTool(page, 'Text')
+  const betaEditorCount = await getCanvasTextEditors(page).count()
   await clickCanvasAt(page, { x: 620, y: 130 })
-  await page.locator(TEXT_CONTENT_LOCATOR).last().fill('Beta')
+  await (await getNewCanvasTextEditor(page, betaEditorCount)).fill('Beta')
   await clickCanvasAt(page, { x: 720, y: 520 })
   await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(2)
 }

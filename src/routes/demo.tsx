@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { DemoRouteContent } from '~/features/landing/components/demo-route-content'
 import { publicPageHead } from '~/features/landing/content/public-site'
+import { LocalDemoRouteContent } from './-demo-content'
 
 export const Route = createFileRoute('/demo')({
   head: () =>
@@ -8,5 +8,5 @@ export const Route = createFileRoute('/demo')({
       title: 'Demo',
       description: "Demo project preview for The Wizard's Archive.",
     }),
-  component: DemoRouteContent,
+  component: LocalDemoRouteContent,
 })

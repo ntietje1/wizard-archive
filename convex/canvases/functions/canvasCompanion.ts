@@ -1,8 +1,8 @@
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { copyYjsUpdates } from '../../yjsSync/functions/copyYjsUpdates'
 import { logEditHistory } from '../../editHistory/log'
-import { EDIT_HISTORY_ACTION } from '../../../shared/edit-history/types'
+import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
@@ -20,7 +20,7 @@ export async function createCanvasCompanion(
 
   await logEditHistory(ctx, {
     itemId: canvasId,
-    itemType: SIDEBAR_ITEM_TYPES.canvases,
+    itemType: RESOURCE_TYPES.canvases,
     action: EDIT_HISTORY_ACTION.created,
   })
 }
@@ -32,7 +32,7 @@ export async function copyCanvasCompanion(
 ) {
   const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas target item not found')
-  if (targetItem.type !== SIDEBAR_ITEM_TYPES.canvases) {
+  if (targetItem.type !== RESOURCE_TYPES.canvases) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Canvas companion requires a canvas item')
   }
   const existingCanvas = await ctx.db

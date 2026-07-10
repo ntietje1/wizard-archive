@@ -25,7 +25,7 @@ describe('startSession', () => {
       campaignId: ctx.campaignId,
     })
     expect(current).not.toBeNull()
-    expect(current!._id).toBe(sessionId)
+    expect(current!.id).toBe(sessionId)
   })
 
   it('auto-ends previous session when starting new one', async () => {
@@ -46,8 +46,8 @@ describe('startSession', () => {
       campaignId: ctx.campaignId,
     })
 
-    const first = sessions.find((s) => s._id === firstId)
-    const second = sessions.find((s) => s._id === secondId)
+    const first = sessions.find((s) => s.id === firstId)
+    const second = sessions.find((s) => s.id === secondId)
 
     expect(first).toBeDefined()
     expect(second).toBeDefined()
@@ -57,7 +57,7 @@ describe('startSession', () => {
     const current = await dmAuth.query(api.sessions.queries.getCurrentSession, {
       campaignId: ctx.campaignId,
     })
-    expect(current!._id).toBe(secondId)
+    expect(current!.id).toBe(secondId)
   })
 
   it('requires DM role', async () => {
@@ -149,7 +149,7 @@ describe('setCurrentSession', () => {
       campaignId: ctx.campaignId,
     })
     expect(current).not.toBeNull()
-    expect(current!._id).toBe(sessionId)
+    expect(current!.id).toBe(sessionId)
     expect(current!.endedAt).toBeNull()
   })
 
@@ -220,7 +220,7 @@ describe('updateSession', () => {
     const sessions = await dmAuth.query(api.sessions.queries.getSessionsByCampaign, {
       campaignId: ctx.campaignId,
     })
-    const updated = sessions.find((s) => s._id === sessionId)
+    const updated = sessions.find((s) => s.id === sessionId)
     expect(updated).toBeDefined()
     expect(updated!.name).toBe('Updated')
   })
@@ -330,7 +330,7 @@ describe('getSessionsByCampaign', () => {
     })
 
     expect(sessions.length).toBeGreaterThan(0)
-    expect(sessions[0]).toHaveProperty('_id')
+    expect(sessions[0]).toHaveProperty('id')
     expect(sessions[0]).toHaveProperty('campaignId')
     expect(sessions[0]).toHaveProperty('name')
     expect(sessions[0]).toHaveProperty('startedAt')

@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
-import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
+import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
 import {
   getBlockAllPlayersPermissionLevel,
   getEffectiveBlockVisibilityPermissionLevel,
@@ -10,15 +10,20 @@ import type { CampaignQueryCtx } from '../../functions'
 import type { Block } from '../../blocks/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { Id } from '../../_generated/dataModel'
+import type { CampaignMemberRow } from '../../../shared/campaigns/types'
 
 async function getBlockPermissionLevel(
   ctx: CampaignQueryCtx,
   {
     block,
+    membership,
     notePermissionLevel,
-  }: { block: Block; notePermissionLevel: PermissionLevel | null | undefined },
+  }: {
+    block: Block
+    membership: CampaignMemberRow
+    notePermissionLevel: PermissionLevel | null | undefined
+  },
 ): Promise<PermissionLevel> {
-  const { membership } = ctx
   const shareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
   if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
@@ -52,7 +57,30 @@ export async function enforceBlockSharePermissionsOrNull(
     notePermissionLevel,
   }: { block: Block; notePermissionLevel: PermissionLevel | null | undefined },
 ): Promise<{ block: Block; permissionLevel: PermissionLevel } | null> {
-  const permissionLevel = await getBlockPermissionLevel(ctx, { block, notePermissionLevel })
+  return await enforceBlockSharePermissionsForMembershipOrNull(ctx, {
+    block,
+    membership: ctx.membership,
+    notePermissionLevel,
+  })
+}
+
+export async function enforceBlockSharePermissionsForMembershipOrNull(
+  ctx: CampaignQueryCtx,
+  {
+    block,
+    membership,
+    notePermissionLevel,
+  }: {
+    block: Block
+    membership: CampaignMemberRow
+    notePermissionLevel: PermissionLevel | null | undefined
+  },
+): Promise<{ block: Block; permissionLevel: PermissionLevel } | null> {
+  const permissionLevel = await getBlockPermissionLevel(ctx, {
+    block,
+    membership,
+    notePermissionLevel,
+  })
   if (permissionLevel === PERMISSION_LEVEL.NONE) {
     return null
   }

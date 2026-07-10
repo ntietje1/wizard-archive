@@ -1,66 +1,77 @@
 'use node'
 
-import * as Y from 'yjs'
-import { BlockNoteEditor } from '@blocknote/core'
-import { yDocToBlocks as blockNoteYDocToBlocks } from '@blocknote/core/yjs'
-import { headlessLegacyMediaDecodeEditorSchema } from '../../shared/editor-blocks/editor-blocknote-schema'
-import { migrateLegacyMediaBlocks } from '../../shared/editor-blocks/legacyMediaBlocks'
-import { parseEditorBlocks } from '../blocks/parseEditorBlocks'
+import { decodeNoteYjsUpdatesToBlocks } from '@wizard-archive/editor/notes/document-yjs'
+import { parseBlockNoteBlocks } from '../blocks/parseBlockNoteBlocks'
+import { ERROR_CODE, getClientErrorMessage } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 import type { Doc } from '../_generated/dataModel'
-import type { CustomBlock } from '../../shared/editor-blocks/types'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 const DOCUMENT_FRAGMENT_NAME = 'document'
 
-function createHeadlessEditor() {
-  return BlockNoteEditor.create({ schema: headlessLegacyMediaDecodeEditorSchema, _headless: true })
-}
-
-function destroyHeadlessEditor(editor: ReturnType<typeof createHeadlessEditor>): void {
-  const tiptapEditor = editor._tiptapEditor
-  if (tiptapEditor && typeof tiptapEditor.destroy === 'function') {
-    tiptapEditor.destroy()
-  }
-}
-
 export function yjsUpdatesToBlocks(
   updates: Array<Pick<Doc<'yjsUpdates'>, 'update'>>,
-): Array<CustomBlock> {
-  const doc = new Y.Doc()
-  const editor = createHeadlessEditor()
+): Array<NoteBlock> {
+  let rawBlocks: unknown
+  try {
+    rawBlocks = normalizeForConvex(decodeNoteYjsUpdatesToBlocks(updates, DOCUMENT_FRAGMENT_NAME))
+  } catch (error) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Failed to decode BlockNote Yjs updates for fragment "${DOCUMENT_FRAGMENT_NAME}": ${formatError(error)}`,
+    )
+  }
 
   try {
-    for (const row of updates) {
-      Y.applyUpdate(doc, new Uint8Array(row.update))
-    }
-    const rawBlocks = normalizeForConvex(
-      migrateLegacyMediaBlocks(
-        blockNoteYDocToBlocks(editor, doc, DOCUMENT_FRAGMENT_NAME) as Array<
-          Record<string, unknown>
-        >,
-      ),
+    return parseBlockNoteBlocks(rawBlocks)
+  } catch (error) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Invalid BlockNote output for fragment "${DOCUMENT_FRAGMENT_NAME}" (${formatBlockNoteOutputSummary(rawBlocks)}): ${formatError(error)}`,
     )
-    try {
-      return parseEditorBlocks(rawBlocks)
-    } catch (error) {
-      throw new Error(
-        `Invalid BlockNote output for fragment "${DOCUMENT_FRAGMENT_NAME}": ${formatInvalidBlockNoteOutput(rawBlocks)}; ${formatError(error)}`,
-      )
-    }
-  } finally {
-    destroyHeadlessEditor(editor)
-    doc.destroy()
   }
 }
 
-function formatInvalidBlockNoteOutput(value: unknown): string {
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return String(value)
+function formatBlockNoteOutputSummary(value: unknown): string {
+  if (Array.isArray(value)) {
+    const counts = countArrayItemShapes(value)
+    return `array(length=${value.length}, objects=${counts.objects}, arrays=${counts.arrays}, strings=${counts.strings}, numbers=${counts.numbers}, booleans=${counts.booleans}, nulls=${counts.nulls}, other=${counts.other})`
   }
+  if (value === null) return 'null'
+  if (typeof value === 'string') return `string(length=${value.length})`
+  if (typeof value === 'number') return 'number'
+  if (typeof value === 'boolean') return 'boolean'
+  if (typeof value === 'object') return `object(keys=${Object.keys(value).length})`
+  return typeof value
+}
+
+function countArrayItemShapes(values: Array<unknown>) {
+  const counts = {
+    objects: 0,
+    arrays: 0,
+    strings: 0,
+    numbers: 0,
+    booleans: 0,
+    nulls: 0,
+    other: 0,
+  }
+
+  for (const value of values) {
+    if (value === null) counts.nulls += 1
+    else if (Array.isArray(value)) counts.arrays += 1
+    else if (typeof value === 'object') counts.objects += 1
+    else if (typeof value === 'string') counts.strings += 1
+    else if (typeof value === 'number') counts.numbers += 1
+    else if (typeof value === 'boolean') counts.booleans += 1
+    else counts.other += 1
+  }
+
+  return counts
 }
 
 function formatError(error: unknown): string {
+  const clientMessage = getClientErrorMessage(error)
+  if (clientMessage) return clientMessage
   return error instanceof Error ? error.message : String(error)
 }
 

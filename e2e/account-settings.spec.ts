@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe.serial('account settings', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
 
     const userMenuButton = page.getByRole('button', { name: 'User menu' })
     await expect(userMenuButton).toBeVisible({ timeout: 10000 })

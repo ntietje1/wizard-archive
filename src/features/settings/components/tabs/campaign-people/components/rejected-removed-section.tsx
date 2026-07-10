@@ -1,17 +1,14 @@
 import { useState } from 'react'
 import { ChevronDown, RefreshCw } from 'lucide-react'
-import { toast } from 'sonner'
 import { CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
-import { api } from 'convex/_generated/api'
 import { MemberRow } from './member-row'
+import { useCampaignMemberStatusUpdate } from './use-campaign-member-status-update'
 import type { CampaignMember } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { handleError } from '~/shared/utils/logger'
-import { Badge } from '~/features/shadcn/components/badge'
-import { Button } from '~/features/shadcn/components/button'
-import { Separator } from '~/features/shadcn/components/separator'
-import { cn } from '~/features/shadcn/lib/utils'
+import { Badge } from '@wizard-archive/ui/shadcn/components/badge'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
+import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 
 export function RejectedRemovedSection({
   players,
@@ -21,23 +18,7 @@ export function RejectedRemovedSection({
   campaignId: Id<'campaigns'>
 }) {
   const [showRejected, setShowRejected] = useState(false)
-  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(null)
-
-  const updateStatus = useAppMutation(api.campaigns.mutations.updateCampaignMemberStatus)
-
-  const handleStatusUpdate = async (
-    memberId: Id<'campaignMembers'>,
-    status: (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS],
-  ) => {
-    try {
-      setUpdatingId(memberId)
-      await updateStatus.mutateAsync({ campaignId, memberId, status })
-      toast.success('Player status updated')
-    } catch (error) {
-      handleError(error, 'Failed to update status')
-    }
-    setUpdatingId(null)
-  }
+  const { isMemberStatusPending, updateMemberStatus } = useCampaignMemberStatusUpdate(campaignId)
 
   if (players.length === 0) return null
 
@@ -54,7 +35,7 @@ export function RejectedRemovedSection({
       {showRejected && (
         <div className="rounded-lg border border-border bg-card p-4 flex flex-col gap-4">
           {players.map((player, index) => (
-            <div key={player._id}>
+            <div key={player.id}>
               {index > 0 && <Separator />}
               <MemberRow
                 member={player}
@@ -76,20 +57,13 @@ export function RejectedRemovedSection({
                     size="sm"
                     variant="outline"
                     className="shrink-0"
-                    disabled={updatingId === player._id}
-                    onClick={() =>
-                      handleStatusUpdate(
-                        player._id,
-                        player.status === CAMPAIGN_MEMBER_STATUS.Rejected
-                          ? CAMPAIGN_MEMBER_STATUS.Pending
-                          : CAMPAIGN_MEMBER_STATUS.Accepted,
-                      )
-                    }
+                    disabled={isMemberStatusPending(player.id)}
+                    onClick={() => updateMemberStatus(player.id, CAMPAIGN_MEMBER_STATUS.Accepted)}
                   >
                     <RefreshCw className="size-4" />
                     {player.status === CAMPAIGN_MEMBER_STATUS.Rejected
-                      ? 'Undo Reject'
-                      : 'Undo Removal'}
+                      ? 'Accept request'
+                      : 'Restore player'}
                   </Button>
                 }
               />

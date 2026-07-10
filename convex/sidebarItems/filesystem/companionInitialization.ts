@@ -4,10 +4,10 @@ import { createFileCompanion } from '../../files/functions/fileCompanion'
 import { createFolderCompanion } from '../../folders/functions/folderCompanion'
 import { createMapCompanion } from '../../gameMaps/functions/mapCompanion'
 import { createNoteCompanion } from '../../notes/functions/noteCompanion'
-import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { SidebarItemType } from '../../../shared/sidebar-items/types'
+import type { ResourceKind } from '@wizard-archive/editor/resources/resource-contract'
 
 export async function initializeEmptySidebarItemCompanion(
   ctx: CampaignMutationCtx,
@@ -16,23 +16,23 @@ export async function initializeEmptySidebarItemCompanion(
     itemType,
   }: {
     itemId: Id<'sidebarItems'>
-    itemType: SidebarItemType
+    itemType: ResourceKind
   },
 ) {
   switch (itemType) {
-    case SIDEBAR_ITEM_TYPES.notes:
+    case RESOURCE_TYPES.notes:
       await createNoteCompanion(ctx, { noteId: itemId })
       return
-    case SIDEBAR_ITEM_TYPES.folders:
+    case RESOURCE_TYPES.folders:
       await createFolderCompanion(ctx, { folderId: itemId })
       return
-    case SIDEBAR_ITEM_TYPES.gameMaps:
+    case RESOURCE_TYPES.gameMaps:
       await createMapCompanion(ctx, { mapId: itemId })
       return
-    case SIDEBAR_ITEM_TYPES.files:
+    case RESOURCE_TYPES.files:
       await createFileCompanion(ctx, { fileId: itemId })
       return
-    case SIDEBAR_ITEM_TYPES.canvases:
+    case RESOURCE_TYPES.canvases:
       await createCanvasCompanion(ctx, { canvasId: itemId })
       return
     default:

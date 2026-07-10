@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it } from 'vitest'
 import {
+  FILE_UPLOAD_ACCEPT_PATTERN,
   MAX_FILE_SIZE,
   isMediaFile,
   isTextFile,
@@ -21,6 +22,17 @@ describe('isMediaFile', () => {
 
   it('returns false for null', () => {
     expect(isMediaFile(null)).toBe(false)
+  })
+
+  it('detects media file extensions when content type is missing', () => {
+    expect(isMediaFile('', 'portrait.png')).toBe(true)
+    expect(isMediaFile(null, 'map.webp')).toBe(true)
+    expect(isMediaFile(null, 'archive.zip')).toBe(false)
+  })
+
+  it('uses media file extensions when a generic content type is present', () => {
+    expect(isMediaFile('application/octet-stream', 'battle-map.webp')).toBe(true)
+    expect(isMediaFile('application/octet-stream', 'archive.zip')).toBe(false)
   })
 })
 
@@ -51,6 +63,11 @@ describe('isTextFile', () => {
 })
 
 describe('validateFileUpload', () => {
+  it('offers media extension fallbacks to file pickers', () => {
+    expect(FILE_UPLOAD_ACCEPT_PATTERN).toContain('.png')
+    expect(FILE_UPLOAD_ACCEPT_PATTERN).toContain('.webp')
+  })
+
   it('accepts valid file', () => {
     expect(validateFileUpload('image/png', 1024)).toEqual({ valid: true })
   })

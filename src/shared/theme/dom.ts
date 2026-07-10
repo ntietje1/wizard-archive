@@ -1,4 +1,4 @@
-import type { Theme } from '~/shared/theme/types'
+import type { Theme } from '@wizard-archive/ui/theme/types'
 import { getAppThemeColor } from '~/shared/theme/browser-chrome'
 
 export function resolveTheme(theme: Theme): 'dark' | 'light' {

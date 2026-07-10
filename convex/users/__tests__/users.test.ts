@@ -5,9 +5,14 @@ import { testAuthIdentity, testAuthIdentityForKey } from '../../_test/identities
 import {
   expectConflict,
   expectNotAuthenticated,
+  expectNotFound,
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import {
+  storeCommittedTestUploadSession,
+  storeUncommittedTestUploadSession,
+} from '../../_test/storage.helper'
 
 async function setupAuthedUser(t: ReturnType<typeof createTestContext>) {
   const profile = await createUserProfile(t)
@@ -24,7 +29,7 @@ describe('getUserProfile', () => {
     const result = await authed.query(api.users.queries.getUserProfile, {})
 
     expect(result).not.toBeNull()
-    expect(result!._id).toBe(profile._id)
+    expect(result!.id).toBe(profile._id)
     expect(result!.username).toBe(profile.username)
     expect(result!.email).toBe(profile.email)
     expect(result!.name).toBe(profile.name)
@@ -46,8 +51,8 @@ describe('getUserProfile', () => {
 
     const result = await authed.query(api.users.queries.getUserProfile, {})
 
-    expect(result).toHaveProperty('_id')
-    expect(result).toHaveProperty('_creationTime')
+    expect(result).toHaveProperty('id')
+    expect(result).toHaveProperty('createdAt')
     expect(result).toHaveProperty('authUserId')
     expect(result).toHaveProperty('username')
     expect(result).toHaveProperty('email')
@@ -282,22 +287,57 @@ describe('updateProfileImage', () => {
   const t = createTestContext()
 
   it('throws NOT_AUTHENTICATED when unauthenticated', async () => {
-    const storageId = await t.run(async (ctx) => {
-      return await ctx.storage.store(new Blob(['test']))
-    })
+    const { profile } = await setupAuthedUser(t)
+    const upload = await storeCommittedTestUploadSession(
+      t,
+      profile._id,
+      new Blob(['test']),
+      'profile.png',
+    )
 
-    await expectNotAuthenticated(t.mutation(api.users.mutations.updateProfileImage, { storageId }))
+    await expectNotAuthenticated(
+      t.mutation(api.users.mutations.updateProfileImage, {
+        uploadSessionId: upload.sessionId,
+      }),
+    )
   })
 
   it('updates profile image when authenticated', async () => {
-    const { authed } = await setupAuthedUser(t)
-    const storageId = await t.run(async (ctx) => {
-      return await ctx.storage.store(new Blob(['test']))
-    })
+    const { authed, profile } = await setupAuthedUser(t)
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      profile._id,
+      new Blob(['test']),
+      'profile.png',
+    )
 
-    await authed.mutation(api.users.mutations.updateProfileImage, { storageId })
+    await authed.mutation(api.users.mutations.updateProfileImage, {
+      uploadSessionId: upload.sessionId,
+    })
 
     const updated = await authed.query(api.users.queries.getUserProfile, {})
     expect(updated!.imageUrl).toEqual(expect.any(String))
+    await t.run(async (ctx) => {
+      await expect(ctx.db.get('fileStorage', upload.sessionId)).resolves.toMatchObject({
+        status: 'committed',
+      })
+    })
+  })
+
+  it("rejects another actor's upload session", async () => {
+    const { authed } = await setupAuthedUser(t)
+    const other = await setupAuthedUser(t)
+    const upload = await storeUncommittedTestUploadSession(
+      t,
+      other.profile._id,
+      new Blob(['test']),
+      'profile.png',
+    )
+
+    await expectNotFound(
+      authed.mutation(api.users.mutations.updateProfileImage, {
+        uploadSessionId: upload.sessionId,
+      }),
+    )
   })
 })

@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it } from 'vitest'
 import {
-  parseWikiLinkText,
-  parseMdLinkTarget,
-  isDangerousUrl,
-  WIKI_LINK_REGEX,
   MD_LINK_REGEX,
+  WIKI_LINK_REGEX,
+  isDangerousUrl,
+  parseMdLinkTarget,
+  parseWikiLinkText,
 } from '../../../shared/links/parsing'
+import { extractLinksFromText, getLinkQuery } from '../../../shared/links/extraction'
 
 describe('parseWikiLinkText', () => {
   it('parses a simple name', () => {
@@ -311,5 +312,39 @@ describe('MD_LINK_REGEX', () => {
   it('does not match image links', () => {
     const matches = [...'![alt](img.png)'.matchAll(MD_LINK_REGEX)]
     expect(matches).toHaveLength(0)
+  })
+})
+
+describe('extractLinksFromText', () => {
+  it('returns wiki and markdown links in source order', () => {
+    expect(
+      extractLinksFromText('See [[Factions/The Guild|Guild]] and [Map](Maps/City#Gate)'),
+    ).toEqual([
+      expect.objectContaining({
+        syntax: 'wiki',
+        itemPath: ['Factions', 'The Guild'],
+        displayName: 'Guild',
+        rawTarget: 'Factions/The Guild|Guild',
+      }),
+      expect.objectContaining({
+        syntax: 'md',
+        itemPath: ['Maps', 'City'],
+        headingPath: ['Gate'],
+        displayName: 'Map',
+        rawTarget: 'Maps/City#Gate',
+      }),
+    ])
+  })
+
+  it('preserves external markdown targets as link queries', () => {
+    const [link] = extractLinksFromText('See [Portal](https://example.com/path?x=1)')
+
+    expect(link).toEqual(
+      expect.objectContaining({
+        isExternal: true,
+        rawTarget: 'https://example.com/path?x=1',
+      }),
+    )
+    expect(getLinkQuery(link)).toBe('https://example.com/path?x=1')
   })
 })

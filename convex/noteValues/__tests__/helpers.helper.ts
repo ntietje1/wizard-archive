@@ -3,7 +3,7 @@ import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { executeMoveCommand, testBlockNoteId } from '../../_test/factories.helper'
 import type { Id, DataModel } from '../../_generated/dataModel'
 import type { TestInlineContent } from '../../_test/yjs.helper'
-import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
+import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type schema from '../../schema'
 
@@ -17,7 +17,7 @@ export function valueBlock({
   valueId: string
   slug: string
   expressionSource: string
-}): CustomPartialBlock {
+}): PartialNoteBlock {
   return {
     id,
     type: 'paragraph',
@@ -31,7 +31,7 @@ export function valueBlockWithGeneratedId(args: {
   valueId: string
   slug: string
   expressionSource: string
-}): CustomPartialBlock {
+}): PartialNoteBlock {
   return valueBlock({
     ...args,
     id: testBlockNoteId(args.idSeed),
@@ -63,7 +63,7 @@ export function paragraphWithGeneratedId({
 }: {
   idSeed: string
   content: Array<TestInlineContent>
-}): CustomPartialBlock {
+}): PartialNoteBlock {
   return {
     id: testBlockNoteId(idSeed),
     type: 'paragraph',
@@ -123,7 +123,7 @@ export async function replaceNoteDocumentAndPersist(
   }: {
     campaignId: Id<'campaigns'>
     noteId: Id<'sidebarItems'>
-    blocks: Array<CustomPartialBlock>
+    blocks: Array<PartialNoteBlock>
   },
 ) {
   const snapshot = makeYjsUpdateWithBlocks(blocks)

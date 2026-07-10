@@ -1,16 +1,12 @@
-import { useState } from 'react'
 import { Check, X } from 'lucide-react'
-import { toast } from 'sonner'
 import { CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
-import { api } from 'convex/_generated/api'
-import { SettingsSection } from '../../account-profile/components/settings-section'
+import { SettingsSection } from '~/features/settings/components/settings-section'
 import { MemberRow } from './member-row'
+import { useCampaignMemberStatusUpdate } from './use-campaign-member-status-update'
 import type { CampaignMember } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { handleError } from '~/shared/utils/logger'
-import { Button } from '~/features/shadcn/components/button'
-import { Separator } from '~/features/shadcn/components/separator'
+import { Button } from '@wizard-archive/ui/shadcn/components/button'
+import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
 
 export function PendingRequestsSection({
   pendingPlayers,
@@ -19,23 +15,7 @@ export function PendingRequestsSection({
   pendingPlayers: Array<CampaignMember>
   campaignId: Id<'campaigns'>
 }) {
-  const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(null)
-
-  const updateStatus = useAppMutation(api.campaigns.mutations.updateCampaignMemberStatus)
-
-  const handleStatusUpdate = async (
-    memberId: Id<'campaignMembers'>,
-    status: (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS],
-  ) => {
-    try {
-      setUpdatingId(memberId)
-      await updateStatus.mutateAsync({ campaignId, memberId, status })
-      toast.success('Player status updated')
-    } catch (error) {
-      handleError(error, 'Failed to update status')
-    }
-    setUpdatingId(null)
-  }
+  const { isMemberStatusPending, updateMemberStatus } = useCampaignMemberStatusUpdate(campaignId)
 
   return (
     <SettingsSection title={`Pending requests (${pendingPlayers.length})`}>
@@ -43,7 +23,7 @@ export function PendingRequestsSection({
         <p className="text-sm text-muted-foreground text-center py-2">No pending requests</p>
       ) : (
         pendingPlayers.map((player, index) => (
-          <div key={player._id}>
+          <div key={player.id}>
             {index > 0 && <Separator />}
             <MemberRow
               member={player}
@@ -52,16 +32,16 @@ export function PendingRequestsSection({
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={updatingId === player._id}
-                    onClick={() => handleStatusUpdate(player._id, CAMPAIGN_MEMBER_STATUS.Rejected)}
+                    disabled={isMemberStatusPending(player.id)}
+                    onClick={() => updateMemberStatus(player.id, CAMPAIGN_MEMBER_STATUS.Rejected)}
                   >
                     <X className="size-4" />
                     Reject
                   </Button>
                   <Button
                     size="sm"
-                    disabled={updatingId === player._id}
-                    onClick={() => handleStatusUpdate(player._id, CAMPAIGN_MEMBER_STATUS.Accepted)}
+                    disabled={isMemberStatusPending(player.id)}
+                    onClick={() => updateMemberStatus(player.id, CAMPAIGN_MEMBER_STATUS.Accepted)}
                   >
                     <Check className="size-4" />
                     Accept

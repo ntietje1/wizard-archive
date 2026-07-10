@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { createFolder, createNote, openContextMenu, openItem } from './helpers/sidebar-helpers'
+import {
+  createFolder,
+  createNote,
+  openContextMenu,
+  openItem,
+  sidebarItem,
+} from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E Keyboard')
@@ -13,7 +19,7 @@ test.describe.serial('keyboard navigation', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
@@ -27,7 +33,7 @@ test.describe.serial('keyboard navigation', () => {
       storageState: AUTH_STORAGE_PATH,
     })
     const page = await context.newPage()
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     try {
       await deleteCampaign(page, campaignName)
     } catch {
@@ -37,25 +43,23 @@ test.describe.serial('keyboard navigation', () => {
     await context.close()
   })
 
-  test('tab through sidebar items moves focus to links', async ({ page }) => {
-    await page.goto('/campaigns')
+  test('tab through sidebar items moves focus to controls', async ({ page }) => {
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
-    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    const firstLink = sidebar.getByRole('link').first()
-    await firstLink.focus()
+    await sidebarItem(page, noteName).focus()
 
     await page.keyboard.press('Tab')
     const focused = page.locator(':focus')
     const tagName = await focused.evaluate((el) => el.tagName.toLowerCase())
-    expect(['a', 'button']).toContain(tagName)
+    expect(tagName).toBe('button')
   })
 
   test('escape closes context menu', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
-    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+    await expect(page.getByRole('button', { name: noteName, exact: true })).toBeVisible({
       timeout: 10000,
     })
 
@@ -68,7 +72,7 @@ test.describe.serial('keyboard navigation', () => {
   })
 
   test('slash menu opens and navigates with arrow keys', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await openItem(page, noteName)
 
@@ -91,7 +95,7 @@ test.describe.serial('keyboard navigation', () => {
   })
 
   test('escape closes dialogs', async ({ page }) => {
-    await page.goto('/campaigns')
+    await page.goto('/campaigns', { waitUntil: 'commit' })
 
     const userMenuButton = page.getByRole('button', { name: 'User menu' })
     await expect(userMenuButton).toBeVisible({ timeout: 10000 })

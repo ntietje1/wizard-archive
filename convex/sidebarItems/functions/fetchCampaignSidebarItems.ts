@@ -1,16 +1,19 @@
-import { asyncMap } from 'convex-helpers'
-import { enhanceSidebarItem } from './enhanceSidebarItem'
-import { getSidebarItem } from './getSidebarItem'
+import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import { enhanceSidebarItemRows } from './enhanceSidebarItemRows'
+import { resolveResourceRowsByAccess } from './resourceAccessPolicy'
+import type { AnyResource } from '@wizard-archive/editor/resources/resource-contract'
 import type { Doc } from '../../_generated/dataModel'
-import type { SIDEBAR_ITEM_STATUS, SidebarItemStatus } from '../../../shared/sidebar-items/types'
-import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { CampaignQueryCtx } from '../../functions'
 
-type VisibleSidebarItemStatus = Exclude<SidebarItemStatus, typeof SIDEBAR_ITEM_STATUS.undoHidden>
+export type CampaignSidebarItems = {
+  active: Array<AnyResource>
+  trash: Array<AnyResource>
+}
 
 async function collectRawItemsByStatus(
   ctx: CampaignQueryCtx,
-  status: VisibleSidebarItemStatus,
+  status: typeof RESOURCE_STATUS.active | typeof RESOURCE_STATUS.trashed,
 ): Promise<Array<Doc<'sidebarItems'>>> {
   return await ctx.db
     .query('sidebarItems')
@@ -20,16 +23,26 @@ async function collectRawItemsByStatus(
     .collect()
 }
 
-export const fetchCampaignSidebarItems = async (
+export async function fetchCampaignSidebarItems(
   ctx: CampaignQueryCtx,
-  { status }: { status: VisibleSidebarItemStatus },
-): Promise<Array<AnySidebarItem>> => {
-  const rawItems = await collectRawItemsByStatus(ctx, status)
-
-  return (
-    await asyncMap(rawItems, async (raw) => {
-      const item = await getSidebarItem(ctx, raw._id)
-      return item ? enhanceSidebarItem(ctx, { item }) : null
-    })
-  ).filter((item): item is NonNullable<typeof item> => item !== null)
+): Promise<CampaignSidebarItems> {
+  const [activeRows, trashedRows] = await Promise.all([
+    collectRawItemsByStatus(ctx, RESOURCE_STATUS.active),
+    collectRawItemsByStatus(ctx, RESOURCE_STATUS.trashed),
+  ])
+  const items = await enhanceSidebarItemRows(
+    ctx,
+    await resolveResourceRowsByAccess(ctx, [...activeRows, ...trashedRows], PERMISSION_LEVEL.VIEW),
+  )
+  const active: Array<AnyResource> = []
+  const trash: Array<AnyResource> = []
+  for (const item of items) {
+    if (item.isActive) {
+      active.push(item)
+    } else if (item.deletionTime !== null) {
+      trash.push(item)
+    }
+  }
+  trash.sort((a, b) => b.deletionTime! - a.deletionTime!)
+  return { active, trash }
 }

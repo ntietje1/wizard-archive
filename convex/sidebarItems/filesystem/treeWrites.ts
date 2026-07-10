@@ -1,25 +1,33 @@
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import {
+  RESOURCE_STATUS,
+  RESOURCE_TYPES,
+} from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { ResourceName } from '@wizard-archive/editor/resources/resource-contract'
 import { findUniqueSidebarItemSlug } from '../validation/orchestration'
 import { collectDescendants } from '../functions/collectDescendants'
-import { assertSidebarItemLifecycleConsistency, isTrashedSidebarItem } from '../types/status'
+import {
+  isTrashedSidebarItem,
+  toSidebarItemDocument,
+  toSidebarItemReplacement,
+} from '../types/status'
 import type { CampaignMutationCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
-import type { SidebarItemName } from '../../../shared/sidebar-items/name'
-import type { SidebarItemFieldPatch } from '../../../shared/sidebar-items/filesystem/receipts'
+import type { ResourcePatch } from '@wizard-archive/editor/resources/patch-contract'
 
-type ItemOperation = (ctx: MutationCtx, item: AnySidebarItemRow) => Promise<void>
+type StoredSidebarItemRow = Doc<'sidebarItems'>
+type ItemOperation = (ctx: MutationCtx, item: StoredSidebarItemRow) => Promise<void>
+type SidebarItemFieldPatch = Extract<ResourcePatch, { type: 'updateResource' }>['fields']
 export type TrashTreePatch = Required<
   Pick<SidebarItemFieldPatch, 'status' | 'deletionTime' | 'deletedBy' | 'parentId'>
 >
 
 async function applyToTree(
   ctx: MutationCtx,
-  item: AnySidebarItemRow,
+  item: StoredSidebarItemRow,
   operation: ItemOperation,
 ): Promise<number> {
-  if (item.type === SIDEBAR_ITEM_TYPES.folders) {
+  if (item.type === RESOURCE_TYPES.folders) {
     const descendants = await collectDescendants(ctx, {
       campaignId: item.campaignId,
       status: item.status,
@@ -40,31 +48,31 @@ async function applyToTree(
 
 export async function trashTree(
   ctx: MutationCtx,
-  item: AnySidebarItemRow,
+  item: StoredSidebarItemRow,
   deletion: { deletionTime: number; deletedBy: Id<'userProfiles'> },
 ): Promise<number> {
   return applyToTree(ctx, item, async (_, i) => {
     const patch: TrashTreePatch = {
-      status: SIDEBAR_ITEM_STATUS.trashed,
+      status: RESOURCE_STATUS.trashed,
       deletionTime: deletion.deletionTime,
       deletedBy: deletion.deletedBy,
       parentId: i._id === item._id ? null : i.parentId,
     }
-    assertSidebarItemLifecycleConsistency({ ...i, ...patch })
-    await ctx.db.patch('sidebarItems', i._id, patch)
+    const trashed = toSidebarItemDocument({ ...i, ...patch })
+    await ctx.db.replace('sidebarItems', i._id, toSidebarItemReplacement(trashed))
   })
 }
 
 export async function restoreTreeDescendants(
   ctx: CampaignMutationCtx,
-  item: AnySidebarItemRow,
-): Promise<Array<AnySidebarItemRow>> {
-  const restored: Array<AnySidebarItemRow> = []
+  item: StoredSidebarItemRow,
+): Promise<Array<StoredSidebarItemRow>> {
+  const restored: Array<StoredSidebarItemRow> = []
   await applyToTree(ctx, item, async (_, i) => {
     if (i._id === item._id) return
     if (!isTrashedSidebarItem(i)) return
 
-    const name = i.name as SidebarItemName
+    const name = i.name as ResourceName
     const slug = await findUniqueSidebarItemSlug(ctx, {
       itemId: i._id,
       name,
@@ -72,17 +80,19 @@ export async function restoreTreeDescendants(
     const patch = {
       deletionTime: null,
       deletedBy: null,
-      status: SIDEBAR_ITEM_STATUS.active,
+      status: RESOURCE_STATUS.active,
       slug,
     }
-    assertSidebarItemLifecycleConsistency({ ...i, ...patch })
-    await ctx.db.patch('sidebarItems', i._id, patch)
-    const restoredItem = await ctx.db.get('sidebarItems', i._id)
-    if (restoredItem) restored.push(restoredItem)
+    const restoredItem = toSidebarItemDocument({ ...i, ...patch })
+    await ctx.db.replace('sidebarItems', i._id, toSidebarItemReplacement(restoredItem))
+    restored.push(restoredItem)
   })
   return restored
 }
 
-export async function hardDeleteTree(ctx: MutationCtx, item: AnySidebarItemRow): Promise<number> {
+export async function hardDeleteTree(
+  ctx: MutationCtx,
+  item: StoredSidebarItemRow,
+): Promise<number> {
   return applyToTree(ctx, item, (_, i) => ctx.db.delete('sidebarItems', i._id))
 }

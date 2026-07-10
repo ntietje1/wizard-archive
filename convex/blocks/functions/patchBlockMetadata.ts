@@ -1,13 +1,13 @@
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import { SHARE_STATUS_VALUES } from '../../../shared/editor-blocks/share-status'
-import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
-import type { BlockNoteId } from '../../../shared/editor-blocks/types'
+import { SHARE_STATUS_VALUES } from '../../../shared/block-shares/share-status'
+import type { ShareStatus } from '../../../shared/block-shares/share-status'
+import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
 
 type BlockMetadataPatch = {
   blockDbId: Id<'blocks'>
-  parentBlockId?: BlockNoteId | null
+  parentBlockId?: NoteBlockId | null
   depth?: number
   position?: number | null
   plainText?: string
