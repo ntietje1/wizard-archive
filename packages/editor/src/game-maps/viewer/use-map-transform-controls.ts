@@ -46,6 +46,9 @@ export function useMapTransformControls({
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const [savedTransform, setSavedTransform] = usePersistedMapTransformState(mapId, transformStore)
   const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastTransformRef = useRef<MapTransformState | null>(null)
+  const pendingTransformMapIdRef = useRef<SidebarItemId | null>(null)
+  const previousMapIdRef = useRef(mapId)
   const currentMapIdRef = useRef(mapId)
   currentMapIdRef.current = mapId
 
@@ -57,8 +60,14 @@ export function useMapTransformControls({
   }, [])
 
   useEffect(() => {
+    if (pendingTransformMapIdRef.current === previousMapIdRef.current && lastTransformRef.current) {
+      transformStore.saveMapTransform(previousMapIdRef.current, lastTransformRef.current)
+    }
     clearPendingTransformSave(transformDebounceRef)
-  }, [mapId])
+    previousMapIdRef.current = mapId
+    pendingTransformMapIdRef.current = null
+    lastTransformRef.current = null
+  }, [mapId, transformStore])
 
   const handleTransformChange = (
     _: unknown,
@@ -70,6 +79,12 @@ export function useMapTransformControls({
 
     clearPendingTransformSave(transformDebounceRef)
     const targetMapId = mapId
+    lastTransformRef.current = {
+      scale: state.scale,
+      positionX: state.positionX,
+      positionY: state.positionY,
+    }
+    pendingTransformMapIdRef.current = targetMapId
     transformDebounceRef.current = setTimeout(() => {
       if (currentMapIdRef.current !== targetMapId) return
       setSavedTransform({

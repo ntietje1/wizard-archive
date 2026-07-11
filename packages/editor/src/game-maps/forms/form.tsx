@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ResourceColor, ResourceIconName } from '../../workspace/resource-contract'
 
 import { toast } from 'sonner'
@@ -44,7 +44,18 @@ export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }:
   const { updateItemMetadata, updateMapImage, validateItemName } = source
   const map = mapState.item
   const [values, setValues] = useState(() => getMapFormDefaultValues(map))
+  const loadedMapIdRef = useRef<SidebarItemId | null>(map?.id ?? null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!map) {
+      loadedMapIdRef.current = null
+      return
+    }
+    if (loadedMapIdRef.current === map.id) return
+    loadedMapIdRef.current = map.id
+    setValues(getMapFormDefaultValues(map))
+  }, [map])
 
   const dropUploadTargetProps = useDocumentDropUploadTarget(upload.handleFileSelect)
 

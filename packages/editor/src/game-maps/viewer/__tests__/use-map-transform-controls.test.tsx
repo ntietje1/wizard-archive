@@ -58,7 +58,7 @@ describe('useMapTransformControls', () => {
     expect(transformStore.loadMapTransform(mapId)).toEqual(DEFAULT_MAP_TRANSFORM)
   })
 
-  it('does not apply a debounced transform after switching maps', () => {
+  it('flushes the latest transform before switching maps', () => {
     vi.useFakeTimers()
     const transformStore = createMemoryMapTransformStore()
     const mapA = 'map-a' as SidebarItemId
@@ -83,6 +83,10 @@ describe('useMapTransformControls', () => {
     })
 
     expect(result.current.savedTransform).toEqual({ scale: 1.25, positionX: 8, positionY: 4 })
-    expect(transformStore.loadMapTransform(mapA)).toEqual(DEFAULT_MAP_TRANSFORM)
+    expect(transformStore.loadMapTransform(mapA)).toEqual({
+      scale: 2,
+      positionX: 40,
+      positionY: 10,
+    })
   })
 })
