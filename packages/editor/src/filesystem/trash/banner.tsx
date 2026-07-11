@@ -1,4 +1,5 @@
 import { RotateCcw, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { TRASH_RETENTION_DAYS } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
 import { handleError } from '../../errors/handle-error'
@@ -35,6 +36,7 @@ export function TrashBanner({ item, source }: TrashBannerProps) {
 }
 
 function ItemTrashBanner({ item, source }: { item: AnyItem; source: TrashBannerSource }) {
+  const [isRestoring, setIsRestoring] = useState(false)
   const isDeleted = item.isTrashed
   if (!isDeleted) return null
 
@@ -65,11 +67,15 @@ function ItemTrashBanner({ item, source }: { item: AnyItem; source: TrashBannerS
   })()
 
   const handleRestore = async () => {
+    if (isRestoring) return
+    setIsRestoring(true)
     try {
       const result = await source.restoreItems([item.id], null)
       reportResourceCommandFailure(result, 'Failed to restore item')
     } catch (error) {
       handleError(error, 'Failed to restore item')
+    } finally {
+      setIsRestoring(false)
     }
   }
 
@@ -85,7 +91,7 @@ function ItemTrashBanner({ item, source }: { item: AnyItem; source: TrashBannerS
     canRestore || canDeleteForever ? (
       <>
         {canRestore && (
-          <BannerButton variant="on-destructive" onClick={handleRestore}>
+          <BannerButton variant="on-destructive" onClick={handleRestore} disabled={isRestoring}>
             <RotateCcw className="size-3 mr-0.5" />
             Restore
           </BannerButton>

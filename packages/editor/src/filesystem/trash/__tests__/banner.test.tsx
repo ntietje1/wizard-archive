@@ -42,6 +42,34 @@ describe('TrashBanner', () => {
     expect(restoreItems).toHaveBeenCalledWith([item.id], null)
   })
 
+  it('prevents duplicate restore requests while restore is pending', async () => {
+    const user = userEvent.setup()
+    const item = createNote({
+      name: 'Trashed Note',
+      slug: 'trashed-note',
+      status: RESOURCE_STATUS.trashed,
+    })
+    let resolveRestore!: (result: { status: 'completed' }) => void
+    const restoreItems = vi.fn(
+      () => new Promise<{ status: 'completed' }>((resolve) => (resolveRestore = resolve)),
+    )
+    const source = createTrashBannerSource({
+      canEmptyTrash: true,
+      restoreItems: restoreItems as unknown as TrashBannerSource['restoreItems'],
+    })
+
+    render(<TrashBanner item={item} source={source} />)
+
+    const restoreButton = screen.getByRole('button', { name: 'Restore' })
+    await user.click(restoreButton)
+    await user.click(restoreButton)
+
+    expect(restoreItems).toHaveBeenCalledOnce()
+    expect(restoreButton).toBeDisabled()
+
+    resolveRestore({ status: 'completed' })
+  })
+
   it('requests permanent-delete confirmation from item trash permissions', async () => {
     const user = userEvent.setup()
     const item = createNote({
