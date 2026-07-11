@@ -4,7 +4,7 @@ import type { LinkStatus, LinkType } from './decoration'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 import type { ResourceSlug } from '../../workspace/resource-contract'
 
-export interface ParsedLinkElement {
+interface ParsedLinkElement {
   element: Element
   exists: boolean
   pathKind: LinkPathKind

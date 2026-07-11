@@ -10,7 +10,7 @@ export interface LinkPluginEditor {
   ) => void
 }
 
-export interface RegisterPluginsOptions {
+interface RegisterPluginsOptions {
   tiptapEditor: LinkPluginEditor
   pluginKey: PluginKey
   stabilizerKey: PluginKey
