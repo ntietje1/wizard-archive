@@ -858,7 +858,10 @@ function isBlockedBrowserMediaHost(hostname: string) {
 }
 
 function normalizeBrowserMediaHost(hostname: string) {
-  return hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  return hostname
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.$/, '')
 }
 
 function isPrivateIpv4Host(hostname: string) {

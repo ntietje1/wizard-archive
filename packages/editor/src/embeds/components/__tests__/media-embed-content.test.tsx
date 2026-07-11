@@ -394,6 +394,13 @@ describe('ExternalUrlEmbedContent', () => {
     )
   })
 
+  it('blocks trailing-dot localhost media hosts', () => {
+    render(<ExternalUrlEmbedContent url="https://localhost./a.png" name="local.png" />)
+
+    expect(screen.getByText('local.png')).toBeInTheDocument()
+    expect(screen.queryByRole('img')).toBeNull()
+  })
+
   it('renders IPv4-mapped and compatible IPv6 media hosts as file cards', () => {
     const { rerender } = render(
       <ExternalUrlEmbedContent url="https://[::ffff:127.0.0.1]/a.png" name="mapped.png" />,
