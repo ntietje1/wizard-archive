@@ -4,11 +4,11 @@ import type { MapPinsCreateResult } from '../session-contract'
 import { reportMapActionError } from './map-action-errors'
 import { reportMapPinCreationResult } from './map-pin-creation-feedback'
 import { buildMapPinPlacementInputs } from './map-pin-placement'
-import type { PinPosition } from './map-pin-placement'
+import type { MapPinPlacementInput, PinPosition } from './map-pin-placement'
 
 type CreateMapPins = (input: {
   mapId: SidebarItemId
-  pins: Array<{ itemId: SidebarItemId; x: number; y: number }>
+  pins: Array<MapPinPlacementInput>
 }) => MaybePromise<MapPinsCreateResult>
 
 export async function createMapPinsAtPosition({

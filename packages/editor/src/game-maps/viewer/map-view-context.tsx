@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import type { MapPinId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { MapPinId } from '../../../../../shared/common/ids'
 import type { MapItemWithContent, MapPinWithItem } from '../../game-maps/item-contract'
-import type { MapPinOperations } from './map-pin-operations'
+import type { MapPinInteractionRequests, MapPinOperations } from './map-pin-operations'
 import { MapViewContext } from './map-view-context-value'
 
 export function MapViewProvider({
@@ -19,10 +19,8 @@ export function MapViewProvider({
   map: MapItemWithContent | null
   pins: Array<MapPinWithItem>
   pinOperations: MapPinOperations
-  requestPinMove: (input: { pinId: MapPinId }) => void
-  requestPinPlacement: (input: { itemIds: Array<SidebarItemId> }) => void
   children: React.ReactNode
-}) {
+} & MapPinInteractionRequests) {
   const [activePinId, setActivePinIdValue] = useState<MapPinId | null>(null)
   const activePin = map ? (pins.find((pin) => pin.id === activePinId) ?? null) : null
   const pinsRef = useRef(pins)
