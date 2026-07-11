@@ -267,5 +267,9 @@ function buildDroppedItemWikiLink(item: AnyItem, dndContext: Pick<DndValue, 'get
     .map((part) => part.trim())
     .filter(Boolean)
     .join('/')
-  return `[[${path || item.name}]]`
+  return `[[${escapeWikiLinkText(path || item.name)}]]`
+}
+
+function escapeWikiLinkText(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/\[/g, '\\[').replace(/]/g, '\\]')
 }
