@@ -43,13 +43,6 @@ export function useResourceReplacementController({
   const [isReplacing, setIsReplacing] = useState(false)
   const isReplacingRef = useRef(false)
   const activeSelectionRef = useRef<symbol | null>(null)
-  const pendingSelectionIdsRef = useRef(new Set<symbol>())
-
-  const syncPendingState = () => {
-    const hasPendingReplacements = pendingSelectionIdsRef.current.size > 0
-    isReplacingRef.current = hasPendingReplacements
-    setIsReplacing(hasPendingReplacements)
-  }
 
   const rejectReplacement = (message: string) => {
     setReplacementError(message)
@@ -71,7 +64,8 @@ export function useResourceReplacementController({
     const validation = validateFile(file)
     if (!validation.valid) {
       activeSelectionRef.current = null
-      syncPendingState()
+      isReplacingRef.current = false
+      setIsReplacing(false)
       rejectReplacement(validation.error)
       return validation
     }
@@ -81,13 +75,13 @@ export function useResourceReplacementController({
       if (activeSelectionRef.current === selectionId) {
         activeSelectionRef.current = null
       }
-      syncPendingState()
+      isReplacingRef.current = false
+      setIsReplacing(false)
       rejectReplacement(accepted.error)
       return accepted
     }
 
     setReplacementError('')
-    pendingSelectionIdsRef.current.add(selectionId)
     isReplacingRef.current = true
     setIsReplacing(true)
 
@@ -114,8 +108,9 @@ export function useResourceReplacementController({
         })
       })
       .finally(() => {
-        pendingSelectionIdsRef.current.delete(selectionId)
-        syncPendingState()
+        if (activeSelectionRef.current !== selectionId) return
+        isReplacingRef.current = false
+        setIsReplacing(false)
       })
 
     return validation

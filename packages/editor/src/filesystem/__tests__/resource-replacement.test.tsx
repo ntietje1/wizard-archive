@@ -4,7 +4,7 @@ import { completedResourceOperation } from '../transaction-contract'
 import { useResourceReplacementController } from '../resource-replacement'
 
 describe('useResourceReplacementController', () => {
-  it('keeps replacement pending until all concurrent selections settle', async () => {
+  it('keeps the latest selection pending while older callbacks settle', async () => {
     let resolveFirst!: () => void
     let resolveSecond!: () => void
     const first = new Promise<void>((resolve) => {
