@@ -107,18 +107,36 @@ export function useLiveGameMapSessionSource(): LiveGameMapSessionSource {
             return {
               status: 'staged',
               image: { ...upload, replacementToken },
-              cancel: (staged) =>
-                storageUploadMutations.discardUpload.mutateAsync({
+              cancel: async (staged) => {
+                await storageUploadMutations.discardUpload.mutateAsync({
                   sessionId: staged.image.sessionId,
-                }),
+                })
+                return {
+                  status: 'completed' as const,
+                  receipt: {
+                    kind: 'mapImageUpdated' as const,
+                    itemId: input.mapId,
+                    affectedCount: 1,
+                  },
+                }
+              },
             }
           },
-          commitImage: (staged) =>
-            updateMapImageMutation.mutateAsync({
+          commitImage: async (staged) => {
+            await updateMapImageMutation.mutateAsync({
               mapId: staged.mapId,
               replacementToken: staged.image.replacementToken,
               uploadSessionId: staged.image.sessionId,
-            }),
+            })
+            return {
+              status: 'completed' as const,
+              receipt: {
+                kind: 'mapImageUpdated' as const,
+                itemId: staged.mapId,
+                affectedCount: 1,
+              },
+            }
+          },
         })
       },
     },

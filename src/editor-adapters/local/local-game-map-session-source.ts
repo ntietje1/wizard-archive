@@ -145,7 +145,18 @@ export function createLocalGameMapSessionSource({
           if (latestMapImageRequestByMapId.get(mapKey) !== requestId) {
             return { status: 'unavailable', reason: 'stale_map_image' }
           }
-          return { status: 'staged', image }
+          return {
+            status: 'staged',
+            image,
+            cancel: () => ({
+              status: 'completed' as const,
+              receipt: {
+                kind: 'mapImageUpdated' as const,
+                itemId: input.mapId,
+                affectedCount: 1,
+              },
+            }),
+          }
         },
         commitImage: (staged) => {
           dispatch({
@@ -153,6 +164,14 @@ export function createLocalGameMapSessionSource({
             mapId: String(staged.mapId),
             imageUrl: staged.image,
           })
+          return {
+            status: 'completed' as const,
+            receipt: {
+              kind: 'mapImageUpdated' as const,
+              itemId: staged.mapId,
+              affectedCount: 1,
+            },
+          }
         },
       })
     },
