@@ -1,7 +1,7 @@
 import { ArrowUpLeft, ArrowUpRight, History, List } from 'lucide-react'
 import { RIGHT_SIDEBAR_CONTENT } from './content'
 import type { RightSidebarContentId } from './content'
-import { getRightSidebarContentItemTypes, resolveRightSidebarContent } from './model'
+import { getRightSidebarContentItemTypes } from './model'
 import type { LucideIcon } from 'lucide-react'
 import type { RightSidebarAvailablePanels } from './source'
 import type { ResourceKind } from '../resource-contract'
@@ -55,10 +55,10 @@ export function resolveAvailableRightSidebarContentForItemType(
   itemType: ResourceKind | null | undefined,
   contentId: RightSidebarContentId | null | undefined,
   availablePanels: RightSidebarAvailablePanels,
-) {
-  if (!itemType) return resolveRightSidebarContent(itemType, contentId)
+): RightSidebarContentId | null {
+  if (!itemType) return null
 
   const panels = getAvailableRightSidebarPanelsForItemType(itemType, availablePanels)
   const requestedPanel = panels.find((panel) => panel.id === contentId)
-  return requestedPanel?.id ?? panels[0]?.id ?? resolveRightSidebarContent(itemType, contentId)
+  return requestedPanel?.id ?? panels[0]?.id ?? null
 }

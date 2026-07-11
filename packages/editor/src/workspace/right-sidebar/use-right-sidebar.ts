@@ -28,6 +28,7 @@ export function useRightSidebar(
   useEffect(() => {
     if (!itemType) return
     if (!storedContentId) return
+    if (!controls.activeContentId) return
     if (storedContentId === controls.activeContentId) return
 
     setActiveContentForItemType(itemType, controls.activeContentId)

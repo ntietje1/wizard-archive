@@ -40,16 +40,13 @@ export function createRightSidebarPanelMenuService(
       if (!context.item || !isRightSidebarContentId(panelId)) return
       if (!availablePanels[panelId]) return
       if (!canShowRightSidebarContent(context.item.type, panelId)) return
-      useRightSidebarStateStore
-        .getState()
-        .setActiveContent(
-          context.item.type,
-          resolveAvailableRightSidebarContentForItemType(
-            context.item.type,
-            panelId,
-            availablePanels,
-          ),
-        )
+      const resolvedContentId = resolveAvailableRightSidebarContentForItemType(
+        context.item.type,
+        panelId,
+        availablePanels,
+      )
+      if (!resolvedContentId) return
+      useRightSidebarStateStore.getState().setActiveContent(context.item.type, resolvedContentId)
       panelPreferences.getState().setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
     },
   }

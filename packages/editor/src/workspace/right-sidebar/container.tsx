@@ -16,7 +16,7 @@ import { RightSidebarPanel } from './panels'
 import type { RightSidebarSource } from './source'
 
 export interface RightSidebarState {
-  activeContentId: RightSidebarContentId
+  activeContentId: RightSidebarContentId | null
   close: () => void
   isLoaded: boolean
   open: (contentId: RightSidebarContentId) => void
