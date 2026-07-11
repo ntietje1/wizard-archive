@@ -79,7 +79,9 @@ export async function generatePdfPreview(
   const data = source instanceof ArrayBuffer ? { data: new Uint8Array(source) } : source
   const loadingTask = pdfjsLib.getDocument(data)
   const abortLoading = () => {
-    void loadingTask.destroy()
+    void Promise.resolve()
+      .then(() => loadingTask.destroy())
+      .catch(() => undefined)
   }
   options.signal?.addEventListener('abort', abortLoading, { once: true })
 
@@ -115,6 +117,11 @@ export async function generatePdfPreview(
     return blobFromCanvas(canvas, options.signal)
   } finally {
     options.signal?.removeEventListener('abort', abortLoading)
-    if (pdf) void pdf.destroy()
+    if (pdf) {
+      const loadedPdf = pdf
+      void Promise.resolve()
+        .then(() => loadedPdf.destroy())
+        .catch(() => undefined)
+    }
   }
 }

@@ -3,7 +3,7 @@ import type { SidebarItemId } from '../../../../shared/common/ids'
 import { generatePdfPreview } from '../previews/generate'
 import type { PreviewUpload } from './preview-upload-contract'
 
-const MAX_PDF_PREVIEW_SIZE = 50 * 1024 * 1024
+export const MAX_PDF_PREVIEW_SIZE = 50 * 1024 * 1024
 
 type PdfPreviewGenerationResult =
   | { status: 'unsupported' }
