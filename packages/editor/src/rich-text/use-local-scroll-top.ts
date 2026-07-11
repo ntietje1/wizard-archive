@@ -8,6 +8,7 @@ export function useLocalScrollTop(viewportRef: RefObject<HTMLElement | null>) {
   useEffect(() => {
     if (!viewport) return
 
+    scrollTopRef.current = viewport.scrollTop
     const onScroll = () => {
       scrollTopRef.current = viewport.scrollTop
     }

@@ -1,15 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type BlockNoteDomElementSource = {
   domElement?: HTMLElement | null
 }
 
-const MAX_DOM_ELEMENT_POLL_FRAMES = 10
+const MAX_DOM_ELEMENT_RETRY_FRAMES = 10
 
 export function useEditorDomElement(
   editor: BlockNoteDomElementSource | undefined,
 ): HTMLElement | null {
   const [domElement, setDomElement] = useState<HTMLElement | null>(() => editor?.domElement ?? null)
+  const currentEditorRef = useRef(editor)
+  if (currentEditorRef.current !== editor) {
+    currentEditorRef.current = editor
+  }
 
   useEffect(() => {
     if (!editor) {
@@ -29,8 +33,12 @@ export function useEditorDomElement(
       const domEl = editor.domElement
       if (domEl) {
         setDomElement(domEl)
-      } else if (attempts < MAX_DOM_ELEMENT_POLL_FRAMES) {
+      } else if (attempts < MAX_DOM_ELEMENT_RETRY_FRAMES) {
         attempts += 1
+        if (attempts === MAX_DOM_ELEMENT_RETRY_FRAMES) {
+          setDomElement(null)
+          return
+        }
         rafId = requestAnimationFrame(poll)
       } else {
         setDomElement(null)
@@ -41,5 +49,5 @@ export function useEditorDomElement(
     return () => cancelAnimationFrame(rafId)
   }, [editor])
 
-  return domElement
+  return currentEditorRef.current === editor ? domElement : null
 }

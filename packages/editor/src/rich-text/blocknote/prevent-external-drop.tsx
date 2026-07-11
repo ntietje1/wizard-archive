@@ -21,7 +21,7 @@ export function PreventExternalDrop() {
 
       removeProseMirrorDropCursors(domElement)
       e.preventDefault()
-      e.stopPropagation()
+      e.stopImmediatePropagation()
     }
 
     domElement.addEventListener('drop', stopDrop, true)

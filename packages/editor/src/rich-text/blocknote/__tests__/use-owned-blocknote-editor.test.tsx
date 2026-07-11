@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { useOwnedBlockNoteEditor } from '../use-owned-blocknote-editor'
 
 describe('useOwnedBlockNoteEditor', () => {
@@ -47,7 +47,7 @@ describe('useOwnedBlockNoteEditor', () => {
     const destroyEditor = vi.fn()
     const onEditorChange = vi.fn()
 
-    const { result, rerender } = renderHook(
+    const { result, rerender, unmount } = renderHook(
       ({ identity }: { identity: string }) =>
         useOwnedBlockNoteEditor({
           createEditor,
@@ -66,6 +66,11 @@ describe('useOwnedBlockNoteEditor', () => {
     expect(onEditorChange).toHaveBeenNthCalledWith(1, firstEditor)
     expect(onEditorChange).toHaveBeenNthCalledWith(2, null)
     expect(onEditorChange).toHaveBeenNthCalledWith(3, secondEditor)
+
+    unmount()
+
+    expect(destroyEditor).toHaveBeenLastCalledWith(secondEditor)
+    expect(onEditorChange).toHaveBeenLastCalledWith(null)
   })
 
   it('clears the owned editor when replacement construction returns null', () => {

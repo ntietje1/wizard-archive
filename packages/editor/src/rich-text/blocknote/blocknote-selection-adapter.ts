@@ -42,7 +42,11 @@ export function restoreBlockNoteSelection(
 ) {
   const view = getBlockNoteEditorView(editor)
   if (!view) {
-    editor.focus()
+    try {
+      editor.focus()
+    } catch {
+      return
+    }
     return
   }
 
@@ -56,7 +60,11 @@ export function restoreBlockNoteSelection(
     }
   }
 
-  view.focus()
+  try {
+    view.focus()
+  } catch {
+    return
+  }
 }
 
 export function blockNoteSelectionSnapshotCollapsedPosition(
