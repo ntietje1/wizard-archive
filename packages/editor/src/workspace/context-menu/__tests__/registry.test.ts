@@ -438,7 +438,7 @@ describe('buildMenu', () => {
 
     const shareItem = sidebarMenu.flatItems.find((item) => item.id === 'share-items')
     const viewAsItem = topbarMenu.flatItems.find((item) => item.id === 'view-as-player')
-    const playerItem = viewAsItem?.children?.find((item) => item.id === 'view-as-player-0')
+    const playerItem = viewAsItem?.children?.find((item) => item.id === 'view-as-player-player-1')
 
     expect(shareItem?.submenuContent).toBe('share-panel')
     expect(renderPanel).toHaveBeenCalledWith([note])
@@ -888,7 +888,9 @@ describe('buildMenu', () => {
     })
 
     const viewAsItem = topbarMenu.flatItems.find((menuItem) => menuItem.id === 'view-as-player')
-    const playerItem = viewAsItem?.children?.find((menuItem) => menuItem.id === 'view-as-player-0')
+    const playerItem = viewAsItem?.children?.find(
+      (menuItem) => menuItem.id === 'view-as-player-player-1',
+    )
     const topbarItemIds = topbarMenu.flatItems.map((menuItem) => menuItem.id)
 
     expect(viewAsItem).toMatchObject({
@@ -926,7 +928,9 @@ describe('buildMenu', () => {
     })
 
     const viewAsItem = menu.flatItems.find((menuItem) => menuItem.id === 'view-as-player')
-    const playerItem = viewAsItem?.children?.find((menuItem) => menuItem.id === 'view-as-player-0')
+    const playerItem = viewAsItem?.children?.find(
+      (menuItem) => menuItem.id === 'view-as-player-player-1',
+    )
 
     expect(viewAsItem).toMatchObject({
       label: 'View as Player...',
