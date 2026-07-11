@@ -91,7 +91,10 @@ export function HistoryDocumentPreview({ snapshot }: { snapshot: HistoryPreviewS
       />
     )
   }
-  return <HistoryPreviewFallback reason="unsupportedSnapshot" />
+  if (snapshot.kind === 'unsupported') {
+    return <HistoryPreviewFallback reason="unsupportedSnapshot" />
+  }
+  return assertNeverHistoryPreviewSnapshot(snapshot)
 }
 
 function NoteYjsSnapshotPreview({ data, noteId }: { data: ArrayBuffer; noteId: SidebarItemId }) {
@@ -194,6 +197,10 @@ function GameMapImagePreview({
 
 function assertNeverHistoryPreviewImageUrlState(state: never): never {
   throw new Error(`Unhandled history preview image state: ${JSON.stringify(state)}`)
+}
+
+function assertNeverHistoryPreviewSnapshot(snapshot: never): never {
+  throw new Error(`Unhandled history preview snapshot: ${JSON.stringify(snapshot)}`)
 }
 
 function HistoryPreviewFallback({
