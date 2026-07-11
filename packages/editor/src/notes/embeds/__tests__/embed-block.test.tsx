@@ -494,6 +494,16 @@ describe('NoteEmbedBlockView', () => {
     expect(
       screen.getByRole('button', { name: 'Resize bottom-right selection corner' }),
     ).toBeInTheDocument()
+    const rightResizeHandle = screen.getByRole('button', {
+      name: 'Resize right selection edge',
+    })
+    expect(rightResizeHandle).not.toHaveAttribute('tabindex', '-1')
+
+    fireEvent.keyDown(rightResizeHandle, { key: 'ArrowRight' })
+
+    expect(editor.updateBlock).toHaveBeenCalledWith(block, {
+      props: { previewWidth: 316 },
+    })
   })
 
   it('highlights an embed while the native text range continues beyond it', () => {

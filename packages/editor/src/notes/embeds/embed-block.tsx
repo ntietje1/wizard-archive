@@ -12,6 +12,7 @@ import type {
   MouseEvent as ReactMouseEvent,
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   RefObject,
   ReactNode,
 } from 'react'
@@ -359,6 +360,54 @@ function NoteEmbedSelectionControls({
           },
         })
       }}
+      onResizeKeyboard={(event, handle) => {
+        const horizontalDelta =
+          handle === 'left'
+            ? event.key === 'ArrowLeft'
+              ? 16
+              : event.key === 'ArrowRight'
+                ? -16
+                : null
+            : handle === 'right'
+              ? event.key === 'ArrowRight'
+                ? 16
+                : event.key === 'ArrowLeft'
+                  ? -16
+                  : null
+              : null
+        const verticalDelta =
+          handle === 'top'
+            ? event.key === 'ArrowUp'
+              ? 16
+              : event.key === 'ArrowDown'
+                ? -16
+                : null
+            : handle === 'bottom'
+              ? event.key === 'ArrowDown'
+                ? 16
+                : event.key === 'ArrowUp'
+                  ? -16
+                  : null
+              : null
+
+        const isActivationKey = event.key === 'Enter' || event.key === ' '
+        const effectiveHorizontalDelta =
+          horizontalDelta ??
+          (isActivationKey && (handle === 'left' || handle === 'right') ? 16 : null)
+        const effectiveVerticalDelta =
+          verticalDelta ??
+          (isActivationKey && (handle === 'top' || handle === 'bottom') ? 16 : null)
+        if (effectiveHorizontalDelta === null && effectiveVerticalDelta === null) return
+        event.preventDefault()
+        const nextWidth = Math.max(64, (layout.width ?? 64) + (effectiveHorizontalDelta ?? 0))
+        const nextHeight = Math.max(144, (layout.height ?? 144) + (effectiveVerticalDelta ?? 0))
+        editor.updateBlock(block, {
+          props: stripUndefined({
+            previewWidth: nextWidth,
+            previewHeight: layout.usesFreeformHeight ? nextHeight : undefined,
+          }),
+        })
+      }}
     />
   )
 }
@@ -457,6 +506,7 @@ function useNoteEmbedSurfaceDrag(block: NoteEmbedBlockViewProps['block']) {
 
   useEffect(
     () => () => {
+      dragCleanupRef.current?.()
       suppressionCleanupRef.current?.()
     },
     [],
@@ -1026,10 +1076,15 @@ const NOTE_EMBED_SELECTION_CHROME_STROKE_WIDTH_PX = 1.5
 function NoteEmbedResizeWrapper({
   mediaLayout,
   onResizeStart,
+  onResizeKeyboard,
   resizeEnabled,
 }: {
   mediaLayout: EmbedMediaLayout | null
   onResizeStart: (event: ReactPointerEvent<HTMLElement>, handle: ResizeHandlePosition) => void
+  onResizeKeyboard: (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    handle: ResizeHandlePosition,
+  ) => void
   resizeEnabled: boolean
 }) {
   return (
@@ -1041,7 +1096,11 @@ function NoteEmbedResizeWrapper({
     >
       <NoteEmbedSelectionChrome />
       {resizeEnabled ? (
-        <NoteEmbedResizeHandles mediaLayout={mediaLayout} onResizeStart={onResizeStart} />
+        <NoteEmbedResizeHandles
+          mediaLayout={mediaLayout}
+          onResizeKeyboard={onResizeKeyboard}
+          onResizeStart={onResizeStart}
+        />
       ) : null}
     </div>
   )
@@ -1070,9 +1129,14 @@ function NoteEmbedSelectionChrome() {
 
 function NoteEmbedResizeHandles({
   mediaLayout,
+  onResizeKeyboard,
   onResizeStart,
 }: {
   mediaLayout: EmbedMediaLayout | null
+  onResizeKeyboard: (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    handle: ResizeHandlePosition,
+  ) => void
   onResizeStart: (event: ReactPointerEvent<HTMLElement>, handle: ResizeHandlePosition) => void
 }) {
   return (
@@ -1081,7 +1145,6 @@ function NoteEmbedResizeHandles({
         <button
           key={position}
           type="button"
-          tabIndex={-1}
           draggable={false}
           aria-label={getResizeHandleLabel(position)}
           data-testid={`note-embed-resize-zone-${position}`}
@@ -1093,6 +1156,7 @@ function NoteEmbedResizeHandles({
           )}
           style={getNoteEmbedResizeZoneStyle(position, mediaLayout)}
           onPointerDown={(event) => onResizeStart(event, position)}
+          onKeyDown={(event) => onResizeKeyboard(event, position)}
         />
       ))}
     </>

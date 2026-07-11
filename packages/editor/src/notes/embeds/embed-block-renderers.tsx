@@ -89,9 +89,11 @@ function mapEmbedRenderProps(props: EmbedBlockRenderProps): NoteEmbedBlockBasePr
 }
 
 function getExternalEmbedLabel(props: NoteEmbedBlockProps) {
-  if (props.name) return props.name
-  if (props.url) return props.url
-  if (props.resourceId) return 'Embedded item'
+  if (props.targetKind === 'externalUrl') {
+    if (props.name) return props.name
+    if (props.url) return props.url
+  }
+  if (props.targetKind === 'resource' && props.resourceId) return 'Embedded item'
   return 'Empty embed'
 }
 
