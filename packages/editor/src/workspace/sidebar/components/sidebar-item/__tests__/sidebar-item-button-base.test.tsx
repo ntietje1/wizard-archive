@@ -1,15 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { Folder } from 'lucide-react'
 import { describe, expect, it, vi } from 'vite-plus/test'
+import type { SidebarItemId } from '../../../../../../../../shared/common/ids'
 import { assertResourceItemName } from '../../../../items'
 import { SidebarItemButtonBase } from '../sidebar-item-button-base'
+
+const questFolderId = 'quest-folder' as SidebarItemId
+const creatingQuestId = 'creating-quest' as SidebarItemId
+const questNoteId = 'quest-note' as SidebarItemId
 
 describe('SidebarItemButtonBase', () => {
   it('renders supplied name content while renaming', () => {
     render(
       <SidebarItemButtonBase
         icon={Folder}
-        itemId="quest-folder"
+        itemId={questFolderId}
         name={assertResourceItemName('Quests')}
         nameContent={<input aria-label="Rename item" aria-invalid="true" defaultValue="Quests" />}
         presentation={{
@@ -31,7 +36,7 @@ describe('SidebarItemButtonBase', () => {
     render(
       <SidebarItemButtonBase
         icon={Folder}
-        itemId="quest-folder"
+        itemId={questFolderId}
         name={assertResourceItemName('Quests')}
         nameContent={<input aria-label="Rename item" defaultValue="Quests" />}
         presentation={{
@@ -52,7 +57,7 @@ describe('SidebarItemButtonBase', () => {
     render(
       <SidebarItemButtonBase
         icon={Folder}
-        itemId="creating-quest"
+        itemId={creatingQuestId}
         name={assertResourceItemName('Creating Quest')}
         presentation={{
           visualState: { isSelected: true, isViewing: true, isMultiSelected: false },
@@ -71,7 +76,7 @@ describe('SidebarItemButtonBase', () => {
     render(
       <SidebarItemButtonBase
         icon={Folder}
-        itemId="quest-note"
+        itemId={questNoteId}
         name={assertResourceItemName('Quest Note')}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
@@ -90,7 +95,7 @@ describe('SidebarItemButtonBase', () => {
     render(
       <SidebarItemButtonBase
         icon={Folder}
-        itemId="quest-folder"
+        itemId={questFolderId}
         name={assertResourceItemName('Quests')}
         presentation={{
           visualState: { isSelected: true, isViewing: true, isMultiSelected: false },
@@ -109,7 +114,7 @@ describe('SidebarItemButtonBase', () => {
     render(
       <SidebarItemButtonBase
         icon={Folder}
-        itemId="quest-folder"
+        itemId={questFolderId}
         name={assertResourceItemName('Quests')}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
@@ -129,7 +134,7 @@ describe('SidebarItemButtonBase', () => {
     render(
       <SidebarItemButtonBase
         icon={Folder}
-        itemId="quest-folder"
+        itemId={questFolderId}
         name={assertResourceItemName('Quests')}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
@@ -151,7 +156,7 @@ describe('SidebarItemButtonBase', () => {
     render(
       <SidebarItemButtonBase
         icon={Folder}
-        itemId="quest-folder"
+        itemId={questFolderId}
         name={assertResourceItemName('Quests')}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
