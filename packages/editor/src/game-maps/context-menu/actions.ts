@@ -1,5 +1,4 @@
 import { toast } from 'sonner'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { getClientErrorMessage } from '../../../../../shared/errors/client'
 import type { WorkspaceMapPinMenuService } from './service'
 import type { WorkspaceMenuContext } from '../../workspace/menu-context'
@@ -8,8 +7,6 @@ import { isCompletedResourceOperation } from '../viewer/map-action-errors'
 
 export interface WorkspaceMapPinContextMenuActions {
   pinToMap: (context: WorkspaceMenuContext) => void | Promise<void>
-  goToMapPin: (context: WorkspaceMenuContext) => void | Promise<void>
-  createMapPin: (context: WorkspaceMenuContext) => void | Promise<void>
   removeMapPin: (context: WorkspaceMenuContext) => void | Promise<void>
   moveMapPin: (context: WorkspaceMenuContext) => void | Promise<void>
   togglePinVisibility: (context: WorkspaceMenuContext) => void | Promise<void>
@@ -24,10 +21,8 @@ function reportMapPinActionError(error: unknown, fallbackMessage: string) {
 
 export function createMapPinActions({
   mapPins,
-  openItem,
 }: {
   mapPins: WorkspaceMapPinMenuService
-  openItem: (itemId: SidebarItemId, options?: { replace?: boolean }) => void | Promise<void>
 }): WorkspaceMapPinContextMenuActions {
   return {
     pinToMap: (ctx: WorkspaceMenuContext) => {
@@ -40,30 +35,6 @@ export function createMapPinActions({
       }
 
       mapPins.requestPinPlacement({ itemIds })
-    },
-
-    goToMapPin: async (ctx: WorkspaceMenuContext) => {
-      const activeMap = mapPins.getActiveMap()
-      if (!ctx.item || !activeMap) return
-
-      if (!activeMap.pinnedItemIds.has(ctx.item.id)) {
-        toast.error('Item is not pinned on this map')
-        return
-      }
-
-      try {
-        await openItem(activeMap.id)
-        toast.info('Highlighting map pin... (coming soon)')
-      } catch (error) {
-        reportMapPinActionError(error, 'Failed to navigate to map pin')
-      }
-    },
-
-    createMapPin: (ctx: WorkspaceMenuContext) => {
-      if (!mapPins.canEditActiveMap()) return
-      if (!ctx.item || !mapPins.getActiveMap()) return
-
-      toast.info('Create Pin Here... (coming soon)')
     },
 
     removeMapPin: async () => {

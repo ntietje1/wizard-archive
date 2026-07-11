@@ -25,8 +25,6 @@ import type { WorkspaceSidebarItemContextMenuServices } from '../../../workspace
 function createStubMapPinActions(): WorkspaceMapPinContextMenuServices['actions']['mapPins'] {
   return {
     pinToMap: vi.fn(),
-    goToMapPin: vi.fn(),
-    createMapPin: vi.fn(),
     removeMapPin: vi.fn(),
     moveMapPin: vi.fn(),
     togglePinVisibility: vi.fn(),
@@ -102,7 +100,7 @@ describe('map pin context menu', () => {
         requestPinPlacement,
       },
     })
-    const actions = createMapPinActions({ mapPins, openItem: vi.fn() })
+    const actions = createMapPinActions({ mapPins })
 
     await actions.pinToMap(
       sidebarContext({
@@ -141,7 +139,7 @@ describe('map pin context menu', () => {
         requestPinPlacement: vi.fn(),
       },
     })
-    const actions = createMapPinActions({ mapPins, openItem: vi.fn() })
+    const actions = createMapPinActions({ mapPins })
 
     await actions.moveMapPin(sidebarContext({ item }))
 
@@ -173,26 +171,6 @@ describe('map pin context menu', () => {
     })
 
     expect(menu.flatItems.map((item) => item.id)).toContain('pin-to-map')
-  })
-
-  it('navigates from pinned sidebar items to the active map pin', () => {
-    const item = createNote()
-    const services = createServices({
-      mapPins: {
-        isPinnedOnActiveMap: (candidate) => candidate?.id === item.id,
-        isActiveMapItem: () => false,
-      },
-    })
-
-    const menu = buildMenu({
-      context: sidebarContext({ item }),
-      services,
-      contributors: mapPinContextMenuContributors,
-      commands: mapPinContextMenuCommands,
-      groupConfig: workspaceContextMenuGroupConfig,
-    })
-
-    expect(menu.flatItems.map((menuItem) => menuItem.id)).toContain('go-to-map-pin')
   })
 
   it('uses generic sidebar item commands for pinned item contexts', async () => {

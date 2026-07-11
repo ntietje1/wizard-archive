@@ -44,7 +44,6 @@ describe('createMapPinActions', () => {
     )
     const actions = createMapPinActions({
       mapPins: createMapPinMenuService({ removeMapPin, updateMapPinVisibility }),
-      openItem: vi.fn(),
     })
 
     await actions.removeMapPin(createContext())
@@ -65,7 +64,6 @@ describe('createMapPinActions', () => {
     const updateMapPinVisibility = vi.fn().mockRejectedValue(new Error('visibility failed'))
     const actions = createMapPinActions({
       mapPins: createMapPinMenuService({ removeMapPin, updateMapPinVisibility }),
-      openItem: vi.fn(),
     })
 
     await actions.removeMapPin(createContext())
@@ -87,7 +85,6 @@ describe('createMapPinActions', () => {
         requestPinMove,
         updateMapPinVisibility,
       }),
-      openItem: vi.fn(),
     })
 
     await actions.removeMapPin(createContext())
