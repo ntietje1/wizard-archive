@@ -27,7 +27,11 @@ export function NewNoteButton({ source }: { source: CreateItemSource }) {
         type: CREATE_NOTE_OPTION.type,
         parentId: null,
       })
-      if (created.status === 'completed') await source.openItem(created.id)
+      if (created.status === 'completed') {
+        await source.openItem(created.id)
+      } else {
+        toast.error(`Unable to create ${NEW_NOTE_LABEL_LOWER}`)
+      }
     } catch {
       toast.error(`Unable to create or open ${NEW_NOTE_LABEL_LOWER}`)
     } finally {
