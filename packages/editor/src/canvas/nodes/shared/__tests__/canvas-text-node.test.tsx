@@ -127,7 +127,7 @@ describe('CanvasTextNode', () => {
     await settleCanvasTextNodeEffects()
 
     expect(screen.queryByTestId('connection-handles')).toBeNull()
-    expect(screen.getByRole('article', { name: 'Empty text node' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Empty text node')).toBeInTheDocument()
     expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
   })
 
@@ -144,7 +144,7 @@ describe('CanvasTextNode', () => {
 
     await settleCanvasTextNodeEffects()
 
-    expect(screen.getByRole('article', { name: 'Empty text node' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Empty text node')).toBeInTheDocument()
     expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
     expect(onPendingEditNodeIdChange).toHaveBeenCalledWith(null)
     expect(onPendingEditNodePointChange).toHaveBeenCalledWith(null)
@@ -239,7 +239,7 @@ describe('CanvasTextNode', () => {
     await settleCanvasTextNodeEffects()
 
     expect(screen.getByText('Invalid text content')).toBeInTheDocument()
-    expect(screen.getByRole('article', { name: 'Invalid text node' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Invalid text node')).toBeInTheDocument()
     expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
     expect(screen.queryByText('Empty text node')).toBeNull()
     expect(onPendingEditNodeIdChange).toHaveBeenCalledWith(null)
@@ -279,7 +279,7 @@ describe('CanvasTextNode', () => {
 
     await settleEditModeChange()
 
-    const readOnlySurface = screen.getByRole('article', { name: 'Empty text node' })
+    const readOnlySurface = screen.getByLabelText('Empty text node')
     expect(registerNodeSurfaceElementSpy).toHaveBeenCalledWith('text-1', readOnlySurface)
 
     rerender(<CanvasTextNodeHarness canEdit />)

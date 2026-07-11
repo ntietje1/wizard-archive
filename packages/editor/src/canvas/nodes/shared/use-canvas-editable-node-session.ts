@@ -154,7 +154,7 @@ export function useCanvasEditableNodeSession({
   }, [editSession, id])
 
   return {
-    editable: editing && isExclusivelySelected,
+    editable: canEdit && editing && isExclusivelySelected,
     editing,
     hasPendingAutoEdit,
     isExclusivelySelected,

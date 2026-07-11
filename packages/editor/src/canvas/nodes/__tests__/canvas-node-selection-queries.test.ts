@@ -52,6 +52,21 @@ describe('canvas node selection queries', () => {
     ).toEqual(new Set(['text-1']))
   })
 
+  it('uses persisted fallback bounds when node dimensions are missing', () => {
+    const nodes: Array<Node> = [
+      {
+        id: 'text-with-fallback-bounds',
+        type: 'text',
+        position: { x: 10, y: 10 },
+        data: { bounds: { x: 10, y: 10, width: 80, height: 80 } },
+      },
+    ]
+
+    expect(
+      getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 30, height: 30 }, { zoom: 1 }),
+    ).toEqual(new Set(['text-with-fallback-bounds']))
+  })
+
   it('uses bespoke stroke selection behavior and safely ignores unknown node types', () => {
     const nodes: Array<Node> = [
       {

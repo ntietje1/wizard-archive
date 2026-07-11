@@ -25,6 +25,7 @@ import type { CanvasNodeCreateArgs, CanvasNodeDataByType } from './canvas-node-t
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { CanvasPosition } from '../types/canvas-domain-types'
 import { normalizeCanvasNode } from './canvas-node-normalization'
+import { getCanvasNodeBounds } from './shared/canvas-node-bounds'
 import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
 import { parseCanvasDocumentNode } from '../document-contract'
 import type {
@@ -173,7 +174,8 @@ function bindCanvasNodeSurfaceBorderWidthProperty<
   return bindCanvasStrokeSizeProperty(
     strokeSizeCanvasProperty,
     () => node.data.borderWidth,
-    (borderWidth) => patchNodeData(node.id, { borderWidth } as Partial<TData>),
+    (borderWidth) =>
+      patchNodeData(node.id, { borderWidth: clampStrokeNodeSize(borderWidth) } as Partial<TData>),
   )
 }
 
@@ -380,8 +382,10 @@ export function matchesCanvasNodeRectangleSelection(
 ): boolean {
   switch (node.type) {
     case 'embed':
-    case 'text':
-      return rectIntersectsBounds(rect, getNormalizedCanvasNodeBounds(node))
+    case 'text': {
+      const bounds = getNormalizedCanvasNodeBounds(node)
+      return bounds ? rectIntersectsBounds(rect, bounds) : false
+    }
     case 'stroke':
       return strokeNodeIntersectsRect(node, rect, context.zoom)
     default:
@@ -396,8 +400,10 @@ export function matchesCanvasNodeLassoSelection(
 ): boolean {
   switch (node.type) {
     case 'embed':
-    case 'text':
-      return polygonIntersectsBounds(polygon, getNormalizedCanvasNodeBounds(node))
+    case 'text': {
+      const bounds = getNormalizedCanvasNodeBounds(node)
+      return bounds ? polygonIntersectsBounds(polygon, bounds) : false
+    }
     case 'stroke':
       return strokeNodeIntersectsPolygon(node, polygon, context.zoom)
     default:
@@ -408,16 +414,7 @@ export function matchesCanvasNodeLassoSelection(
 function getNormalizedCanvasNodeBounds(
   node: Extract<AnyNormalizedCanvasNode, { type: 'embed' | 'text' }>,
 ) {
-  if (typeof node.width !== 'number' || typeof node.height !== 'number') {
-    throw new Error(`Missing bounds for canvas node "${node.id}"`)
-  }
-
-  return {
-    x: node.position.x,
-    y: node.position.y,
-    width: node.width,
-    height: node.height,
-  }
+  return getCanvasNodeBounds(node)
 }
 
 function normalizeCanvasNodeCreateData(
