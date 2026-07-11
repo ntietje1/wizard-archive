@@ -58,7 +58,13 @@ const ACTION_FORMATTERS: Record<string, (metadata: Record<string, unknown> | nul
 }
 
 function formatSingleAction(action: string, metadata: Record<string, unknown> | null): string {
-  return SIMPLE_ACTION_DESCRIPTIONS[action] ?? ACTION_FORMATTERS[action]?.(metadata) ?? action
+  const simpleDescription = Object.prototype.hasOwnProperty.call(SIMPLE_ACTION_DESCRIPTIONS, action)
+    ? SIMPLE_ACTION_DESCRIPTIONS[action]
+    : undefined
+  const formatter = Object.prototype.hasOwnProperty.call(ACTION_FORMATTERS, action)
+    ? ACTION_FORMATTERS[action]
+    : undefined
+  return simpleDescription ?? formatter?.(metadata) ?? action
 }
 
 function isMetadataRecord(metadata: unknown): metadata is Record<string, unknown> {

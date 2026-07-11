@@ -151,6 +151,16 @@ function createRightSidebarOutlineSource({
     getOutlineState: (itemId) => {
       const state = getResourceContentState(itemId)
       if (state.status === 'loading') return { status: 'pending' }
+      if (state.status === 'not_found') {
+        return {
+          status: 'unavailable',
+          availabilityState: {
+            status: 'not_found',
+            label: state.label,
+            message: `${state.label} was not found.`,
+          },
+        }
+      }
       if (state.status === 'unavailable')
         return createUnavailableOutlineState(state.availabilityState)
       if (state.status !== 'ready') return { status: 'error' }

@@ -1,8 +1,10 @@
 import { RIGHT_SIDEBAR_PANEL_ID } from './constants'
 import { RIGHT_SIDEBAR_CONTENT } from './content'
 import type { RightSidebarContentId } from './content'
-import { canShowRightSidebarContent } from './model'
-import { resolveAvailableRightSidebarContentForItemType, RIGHT_SIDEBAR_PANELS } from './registry'
+import {
+  resolveAvailableRightSidebarContentForItemType,
+  getAvailableRightSidebarPanelsForItemType,
+} from './registry'
 import { useRightSidebarStateStore } from './state-store'
 import type { WorkspacePanelContextMenuServices } from '../context-menu/panel-menu'
 import type { PanelPreferenceStoreApi } from '@wizard-archive/ui/panel-preferences/store'
@@ -16,9 +18,7 @@ export function createRightSidebarPanelMenuService(
     getPanelItems: (context) => {
       if (!context.item) return []
       const itemType = context.item.type
-      return RIGHT_SIDEBAR_PANELS.filter(
-        (panel) => availablePanels[panel.id] && canShowRightSidebarContent(itemType, panel.id),
-      ).map((panel) => ({
+      return getAvailableRightSidebarPanelsForItemType(itemType, availablePanels).map((panel) => ({
         id: panel.id,
         label: panel.id === RIGHT_SIDEBAR_CONTENT.history ? 'Edit History' : panel.label,
         icon: panel.icon,
@@ -27,7 +27,11 @@ export function createRightSidebarPanelMenuService(
     isPanelActive: (context, panelId) => {
       if (!context.item || !isRightSidebarContentId(panelId)) return false
       if (!availablePanels[panelId]) return false
-      if (!canShowRightSidebarContent(context.item.type, panelId)) return false
+      if (
+        !resolveAvailableRightSidebarContentForItemType(context.item.type, panelId, availablePanels)
+      ) {
+        return false
+      }
       const panel = panelPreferences.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
       const activeContentId = resolveAvailableRightSidebarContentForItemType(
         context.item.type,
@@ -39,7 +43,6 @@ export function createRightSidebarPanelMenuService(
     activatePanel: (context, panelId) => {
       if (!context.item || !isRightSidebarContentId(panelId)) return
       if (!availablePanels[panelId]) return
-      if (!canShowRightSidebarContent(context.item.type, panelId)) return
       const resolvedContentId = resolveAvailableRightSidebarContentForItemType(
         context.item.type,
         panelId,
