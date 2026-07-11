@@ -87,6 +87,15 @@ describe('generatePdfPreview', () => {
     expect(pdf.destroy).toHaveBeenCalledOnce()
   })
 
+  it('passes string sources directly to pdfjs', async () => {
+    const { generatePdfPreview } = await loadGenerateModule()
+    createPdfDocument()
+
+    await generatePdfPreview('https://example.test/file.pdf')
+
+    expect(pdfjs.getDocument).toHaveBeenCalledExactlyOnceWith('https://example.test/file.pdf')
+  })
+
   it('rejects already aborted PDF preview generation', async () => {
     const { generatePdfPreview } = await loadGenerateModule()
     const controller = new AbortController()
