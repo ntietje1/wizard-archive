@@ -1,8 +1,8 @@
 import { RIGHT_SIDEBAR_PANEL_ID } from './constants'
 import { RIGHT_SIDEBAR_CONTENT } from './content'
 import type { RightSidebarContentId } from './content'
-import { canShowRightSidebarContent, resolveRightSidebarContent } from './model'
-import { RIGHT_SIDEBAR_PANELS } from './registry'
+import { canShowRightSidebarContent } from './model'
+import { resolveAvailableRightSidebarContentForItemType, RIGHT_SIDEBAR_PANELS } from './registry'
 import { useRightSidebarStateStore } from './state-store'
 import type { WorkspacePanelContextMenuServices } from '../context-menu/panel-menu'
 import type { PanelPreferenceStoreApi } from '@wizard-archive/ui/panel-preferences/store'
@@ -29,9 +29,10 @@ export function createRightSidebarPanelMenuService(
       if (!availablePanels[panelId]) return false
       if (!canShowRightSidebarContent(context.item.type, panelId)) return false
       const panel = panelPreferences.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
-      const activeContentId = resolveRightSidebarContent(
+      const activeContentId = resolveAvailableRightSidebarContentForItemType(
         context.item.type,
         useRightSidebarStateStore.getState().activeContentByItemType[context.item.type],
+        availablePanels,
       )
       return panel?.visible === true && activeContentId === panelId
     },
@@ -39,7 +40,16 @@ export function createRightSidebarPanelMenuService(
       if (!context.item || !isRightSidebarContentId(panelId)) return
       if (!availablePanels[panelId]) return
       if (!canShowRightSidebarContent(context.item.type, panelId)) return
-      useRightSidebarStateStore.getState().setActiveContent(context.item.type, panelId)
+      useRightSidebarStateStore
+        .getState()
+        .setActiveContent(
+          context.item.type,
+          resolveAvailableRightSidebarContentForItemType(
+            context.item.type,
+            panelId,
+            availablePanels,
+          ),
+        )
       panelPreferences.getState().setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
     },
   }

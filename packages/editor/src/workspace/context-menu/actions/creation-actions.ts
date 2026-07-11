@@ -40,7 +40,10 @@ export function createCreationActions({
         type: command.type,
         parentTarget: { kind: CREATE_PARENT_TARGET_KIND.direct, parentId },
       })
-      if (created.status !== 'completed') return
+      if (created.status !== 'completed') {
+        handleError(new Error(`Creation failed: ${created.status}`), command.failureMessage)
+        return
+      }
       await openItem(createWorkspaceResource(created.id))
       setRenamingItemId(created.id)
     } catch (error) {

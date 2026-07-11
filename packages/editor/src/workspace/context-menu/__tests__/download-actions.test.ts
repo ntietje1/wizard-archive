@@ -75,8 +75,8 @@ describe('createDownloadActions', () => {
 
     await runDownloadAll(actions.downloadAll)
 
-    expect(toastInfo).toHaveBeenCalledWith('Downloaded 1 item(s); 1 failed')
-    expect(toastDismiss).toHaveBeenCalledWith('toast-1')
+    expect(toastInfo).toHaveBeenCalledWith('Downloaded 1 item(s); 1 failed', { id: 'toast-1' })
+    expect(toastDismiss).not.toHaveBeenCalled()
   })
 
   it('reports all archive item failures as a failed download', async () => {
@@ -92,8 +92,8 @@ describe('createDownloadActions', () => {
 
     await runDownloadAll(actions.downloadAll)
 
-    expect(toastError).toHaveBeenCalledWith('Failed to download 1 item(s)')
-    expect(toastDismiss).toHaveBeenCalledWith('toast-1')
+    expect(toastError).toHaveBeenCalledWith('Failed to download 1 item(s)', { id: 'toast-1' })
+    expect(toastDismiss).not.toHaveBeenCalled()
   })
 
   it('fetches archive file blobs concurrently and writes ZIP entries in source order', async () => {

@@ -107,16 +107,10 @@ export function WorkspaceRuntimeHost({
   sidebarSort,
   viewStateStores,
   workspaceName,
-}: {
-  ariaLabel: string
-  noteHeadingRequest?: WorkspaceRuntimeHostNoteHeadingRequest
+}: Omit<WorkspaceRuntimeHostBaseProps, 'panelPreferences' | 'sidebar'> & {
   panelPreferences?: WorkspaceRuntimeHostPanelPreferencesSource
-  runtime: WorkspaceRuntime
   sidebar?: WorkspaceRuntimeHostSidebarMode
-  sidebarSlots?: WorkspaceRuntimeHostSidebarSlots
   sidebarSort?: SidebarWorkspaceSort
-  viewStateStores: WorkspaceViewStateStores
-  workspaceName: string | null
 }) {
   const resolvedPanelPreferences = panelPreferences ?? DEFAULT_PANEL_PREFERENCES_SOURCE
   const baseProps = {
@@ -132,29 +126,15 @@ export function WorkspaceRuntimeHost({
 
   if (sidebarSort) {
     return (
-      <WorkspaceRuntimeHostPanelPreferencesBoundary source={resolvedPanelPreferences}>
+      <WorkspacePanelPreferencesController source={resolvedPanelPreferences}>
         <WorkspaceRuntimeHostWithSourceSort {...baseProps} sidebarSort={sidebarSort} />
-      </WorkspaceRuntimeHostPanelPreferencesBoundary>
+      </WorkspacePanelPreferencesController>
     )
   }
 
   return (
-    <WorkspaceRuntimeHostPanelPreferencesBoundary source={resolvedPanelPreferences}>
+    <WorkspacePanelPreferencesController source={resolvedPanelPreferences}>
       <WorkspaceRuntimeHostWithDefaultSidebarState {...baseProps} />
-    </WorkspaceRuntimeHostPanelPreferencesBoundary>
-  )
-}
-
-function WorkspaceRuntimeHostPanelPreferencesBoundary({
-  children,
-  source,
-}: {
-  children: ReactNode
-  source: WorkspaceRuntimeHostPanelPreferencesSource
-}) {
-  return (
-    <WorkspacePanelPreferencesController source={source}>
-      {children}
     </WorkspacePanelPreferencesController>
   )
 }
