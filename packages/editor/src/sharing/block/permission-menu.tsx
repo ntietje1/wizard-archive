@@ -1,5 +1,6 @@
 import { Lock } from 'lucide-react'
 import { useState } from 'react'
+import { handleError } from '../../errors/handle-error'
 import type { BlocksShareState, EditorShareParticipant } from '../contracts'
 import {
   Select,
@@ -24,6 +25,10 @@ type AggregateBlockVisibilitySelectValue = ReadyBlocksShareState['defaultPermiss
 type BlockAllPlayersPermissionValue = Parameters<ReadyBlocksShareState['setDefaultPermission']>[0]
 type BlockShareItemPermissionValue = BlockShareItem['permissionLevel']
 type BlockVisibilitySelectValue = Parameters<ReadyBlocksShareState['setParticipantPermission']>[1]
+
+function reportPermissionMutationError(error: unknown) {
+  handleError(error, 'Failed to update block visibility')
+}
 
 function visibilityLabel(value: BlockShareItemPermissionValue): string {
   switch (value) {
@@ -169,7 +174,9 @@ function AllPlayersRow({
         <Select
           value={value}
           onValueChange={(nextValue) => {
-            if (nextValue === 'hidden' || nextValue === 'visible') void onChange(nextValue)
+            if (nextValue === 'hidden' || nextValue === 'visible') {
+              void onChange(nextValue).catch(reportPermissionMutationError)
+            }
           }}
           disabled={disabled}
         >
@@ -239,7 +246,7 @@ function PlayerRow({
         value={selectValue}
         onValueChange={(value) => {
           if (value === 'default' || value === 'hidden' || value === 'visible') {
-            void onChange(value)
+            void onChange(value).catch(reportPermissionMutationError)
           }
         }}
         disabled={disabled}
