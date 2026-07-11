@@ -4,6 +4,9 @@ export function reportMapPinCreationResult(pinIds: unknown, requestedCount: numb
   if (!Array.isArray(pinIds)) {
     throw new Error('Map pin creation returned an invalid result')
   }
+  if (pinIds.length > requestedCount) {
+    throw new Error('Map pin creation returned too many pins')
+  }
   if (pinIds.length === 0) {
     toast.error(requestedCount === 1 ? 'Pin was not placed' : 'No pins were placed')
     return false

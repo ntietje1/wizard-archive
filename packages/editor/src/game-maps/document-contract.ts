@@ -1,5 +1,5 @@
 import type { MapPinId, AssetId } from '../../../../shared/common/ids'
-import { RESOURCE_STATUS } from '../workspace/items-persistence-contract'
+import { RESOURCE_STATUS, RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { ResourceId, ResourceStatus, ResourceKind } from '../workspace/resource-contract'
 
 export type PinDropValidationCode =
@@ -98,7 +98,9 @@ function isGameMapSnapshotPinData(value: unknown) {
     (typeof value.name === 'string' || value.name === null) &&
     (typeof value.color === 'string' || value.color === null) &&
     (typeof value.iconName === 'string' || value.iconName === null) &&
-    (typeof value.itemType === 'string' || value.itemType === null)
+    (value.itemType === null ||
+      (typeof value.itemType === 'string' &&
+        Object.values(RESOURCE_TYPES).includes(value.itemType as ResourceKind)))
   )
 }
 
@@ -136,7 +138,7 @@ export function validatePinDropTarget<TItemId extends string, TWorkspaceId exten
   const pinTargetError = validateUniquePinTarget(mapId, item.id, existingPinItemIds)
   if (pinTargetError) return pinTargetError
   if (item.status === RESOURCE_STATUS.trashed) return 'trashed_item'
-  if (workspaceId && item.workspaceId !== workspaceId) return 'wrong_workspace'
+  if (workspaceId !== null && item.workspaceId !== workspaceId) return 'wrong_workspace'
   return null
 }
 

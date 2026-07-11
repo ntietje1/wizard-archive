@@ -11,9 +11,8 @@ import type { MaybePromise } from '../../../../../shared/common/async'
 import type { MapPinId, SidebarItemId } from '../../../../../shared/common/ids'
 import type { MapItemWithContent, MapPinWithItem } from '../../game-maps/item-contract'
 import type { MapSession } from '../../game-maps/session-contract'
-import type { ResourceOperationResult } from '../../filesystem/transaction-contract'
 import type { AnyItem } from '../../workspace/items'
-import { reportMapActionError } from './map-action-errors'
+import { isCompletedResourceOperation, reportMapActionError } from './map-action-errors'
 import { createMapPinsAtPosition } from './map-pin-creation'
 import { getImagePinPosition } from './map-pin-placement'
 import type { PinPosition } from './map-pin-placement'
@@ -323,12 +322,12 @@ function useDraggedPinSession({
             x: draggedPinPosition.x,
             y: draggedPinPosition.y,
           })
-          if (!isCompletedMapOperation(result)) {
+          if (!isCompletedResourceOperation(result)) {
             restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
             reportMapActionError(result, 'Failed to move pin')
-            return
+          } else {
+            toast.success('Pin moved')
           }
-          toast.success('Pin moved')
         } catch (error) {
           restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
           reportMapActionError(error, 'Failed to move pin')
@@ -463,7 +462,7 @@ function useMapPinPositionActions({
         x: position.x,
         y: position.y,
       })
-      if (!isCompletedMapOperation(result)) {
+      if (!isCompletedResourceOperation(result)) {
         reportMapActionError(result, 'Failed to move pin')
         return
       }
@@ -474,10 +473,6 @@ function useMapPinPositionActions({
   }
 
   return { handleMovePin, handlePlacePin }
-}
-
-function isCompletedMapOperation(result: ResourceOperationResult) {
-  return result.status === 'completed'
 }
 
 function useMapPinActionEventHandlers({

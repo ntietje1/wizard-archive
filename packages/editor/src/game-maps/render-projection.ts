@@ -9,7 +9,9 @@ export function filterMapPinsForLayer<TPin extends LayeredMapPin>(
   activeLayerId: string | null,
   layers: ReadonlyArray<MapLayer>,
 ): Array<TPin> {
-  if (!activeLayerId) return pins
+  if (layers.length === 0) return pins
   const defaultLayerId = layers[0]?.id ?? null
-  return pins.filter((pin) => (pin.layerId ?? defaultLayerId) === activeLayerId)
+  const effectiveLayerId = activeLayerId ?? defaultLayerId
+  if (effectiveLayerId === null) return pins
+  return pins.filter((pin) => (pin.layerId ?? defaultLayerId) === effectiveLayerId)
 }

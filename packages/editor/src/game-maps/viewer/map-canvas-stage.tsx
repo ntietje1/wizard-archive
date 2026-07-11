@@ -92,6 +92,7 @@ export function MapCanvasStage({
   const mapContent = (
     <div className="relative" onContextMenu={hasPinAction ? undefined : onMapCanvasContextMenu}>
       <img
+        key={map.imageUrl ?? 'no-image'}
         ref={imageRef}
         src={map.imageUrl ?? undefined}
         alt={imageAlt}
