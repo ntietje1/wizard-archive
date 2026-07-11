@@ -26,12 +26,14 @@ export function CreateNewDashboard({ parentId, folderPath, source }: CreateNewDa
         type: option.type,
         parentId,
       })
-      if (result.status === 'completed') {
-        try {
-          await source.openItem(result.id)
-        } catch (error) {
-          handleError(error, 'Created item, but failed to open it')
-        }
+      if (result.status !== 'completed') {
+        handleError(new Error(`Create item returned ${result.status}`), 'Failed to create item')
+        return
+      }
+      try {
+        await source.openItem(result.id)
+      } catch (error) {
+        handleError(error, 'Created item, but failed to open it')
       }
     } catch (error) {
       handleError(error, 'Failed to create item')

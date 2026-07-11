@@ -229,10 +229,13 @@ export function applyFileSystemPatchesToSidebarCache(
     [...snapshot.sidebar, ...snapshot.trash, ...hidden].map((item) => [item.id, item]),
   )
   const cacheItemIds = new Set(originalItemsById.keys())
-  const applicablePatches = patches.filter((patch) => {
-    if (patchIsAlreadyReconciledByVisibleQueries(patch, snapshot)) return false
-    return patchCanApplyToSidebarCache(patch, cacheItemIds)
-  })
+  const applicablePatches: Array<ResourcePatch> = []
+  for (const patch of patches) {
+    if (patchIsAlreadyReconciledByVisibleQueries(patch, snapshot)) continue
+    if (!patchCanApplyToSidebarCache(patch, cacheItemIds)) continue
+    applicablePatches.push(patch)
+    if (patch.type === 'upsertResource') cacheItemIds.add(patch.item.id)
+  }
   const { items } = applyPatchesToItemSnapshot(
     { items: [...snapshot.sidebar, ...snapshot.trash, ...hidden] },
     applicablePatches,
