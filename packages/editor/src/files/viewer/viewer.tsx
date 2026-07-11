@@ -24,6 +24,8 @@ type FileViewerProps = {
   source: FileViewerSource
 }
 
+type AvailableResolvedFile = Extract<ResolvedFile, { status: 'available' }>
+
 export function FileViewer({ item: file, source }: FileViewerProps) {
   const resolvedFile = source.resolveFile(file)
   const canReplaceFile = source.canReplaceFile(file)
@@ -241,7 +243,7 @@ function FileViewerHeader({
   file: FileItemWithContent
   maxUploadBytes?: number
   replaceFile: FileViewerSource['replaceFile']
-  resolvedFile: ResolvedFile
+  resolvedFile: AvailableResolvedFile
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { attemptFileReplacement, isReplacing, replacementError } = useFileReplacement({

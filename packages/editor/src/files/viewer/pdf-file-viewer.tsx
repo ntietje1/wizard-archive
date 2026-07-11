@@ -6,6 +6,7 @@ import 'react-pdf/dist/Page/TextLayer.css'
 // eslint-disable-next-line import/default
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PdfToolbar } from './pdf-toolbar'
+import { PdfFailureMessage } from './pdf-failure-message'
 import { isValidFileUrl } from './file-url-validation'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
@@ -236,7 +237,7 @@ function PdfFileViewerContent({
         viewportRef={setScrollViewport}
       >
         {documentState.status === 'failed' ? (
-          <PdfLoadFailure />
+          <PdfFailureMessage />
         ) : (
           <PdfDocumentPages
             currentPage={currentPage}
@@ -264,14 +265,6 @@ function PdfLoadingOverlay() {
     >
       <LoadingSpinner size="lg" aria-label="Loading PDF indicator" />
     </output>
-  )
-}
-
-function PdfLoadFailure() {
-  return (
-    <div className="flex items-center justify-center py-20" role="alert">
-      <p className="text-muted-foreground">Failed to load PDF</p>
-    </div>
   )
 }
 
