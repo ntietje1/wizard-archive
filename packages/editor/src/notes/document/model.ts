@@ -447,7 +447,8 @@ function getLegacyMediaEmbedProps(props: Record<string, unknown>): EmbedProps {
   if (!externalTarget.success || externalTarget.data.kind !== 'externalUrl') {
     return {
       ...baseProps,
-      targetKind: 'empty',
+      targetKind: url ? 'externalUrl' : 'empty',
+      ...(url ? { url, ...(name ? { name } : {}) } : {}),
     }
   }
 
@@ -491,10 +492,9 @@ function getCanonicalEmbedTargetProps(props: Record<string, unknown>): Record<st
   const { sidebarItemId, ...rest } = props
   return {
     ...rest,
-    targetKind: 'resource',
     ...(typeof sidebarItemId === 'string' && sidebarItemId.length > 0
-      ? { resourceId: sidebarItemId }
-      : {}),
+      ? { targetKind: 'resource', resourceId: sidebarItemId }
+      : { targetKind: 'empty' }),
   }
 }
 

@@ -59,7 +59,7 @@ export function startNoteEmbedResizeSession({
     positiveNumber(aspectRatio) ??
     (useMeasuredAspectRatioFallback ? getAspectRatio(startWidth, startHeight) : undefined)
   const minWidth = getMinimumWidthForAspectRatio(
-    aspectRatio,
+    activeAspectRatio ?? null,
     getBodyWidthInset({ root, rootWidth: startWidth }),
   )
   const startX = event.clientX
@@ -138,7 +138,11 @@ function clampWidth(
 
 function clampHeight(height: number, maxHeight: number | undefined) {
   const clampedHeight = Math.max(height, MIN_BODY_HEIGHT)
-  return Math.round(maxHeight ? Math.min(clampedHeight, maxHeight) : clampedHeight)
+  const effectiveMaxHeight =
+    maxHeight === undefined ? undefined : Math.max(maxHeight, MIN_BODY_HEIGHT)
+  return Math.round(
+    effectiveMaxHeight === undefined ? clampedHeight : Math.min(clampedHeight, effectiveMaxHeight),
+  )
 }
 
 function getMinimumWidthForAspectRatio(aspectRatio: number | null, widthInset: number) {
