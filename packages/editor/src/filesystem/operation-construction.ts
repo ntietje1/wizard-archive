@@ -479,8 +479,8 @@ function createWorkspaceUpdateItemMetadataOperation({
         iconName: metadataUpdate.iconName,
         color: metadataUpdate.color,
       })
-    } catch {
-      throw new Error('Failed to update item metadata')
+    } catch (error) {
+      throw new Error('Failed to update item metadata', { cause: error })
     }
     const slug = update.slug ?? item.slug
     onItemSlugChange?.(item.id, slug)
