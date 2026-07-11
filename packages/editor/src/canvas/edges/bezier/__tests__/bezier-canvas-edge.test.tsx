@@ -238,8 +238,8 @@ describe('BezierCanvasEdge', () => {
 
 function createEdgeProps(
   { selected }: { selected: boolean },
-  overrides: Partial<CanvasEdgeRendererProps> = {},
-): CanvasEdgeRendererProps {
+  overrides: Partial<CanvasEdgeRendererProps<'bezier'>> = {},
+): CanvasEdgeRendererProps<'bezier'> {
   return {
     id: 'edge-1',
     type: 'bezier',

@@ -8,7 +8,7 @@ import {
 import { normalizeCanvasEdgeStyle } from './shared/canvas-edge-style'
 import { getCanvasStrokeEdgeProperties } from './shared/canvas-edge-properties'
 import { createCanvasNodesById } from './shared/canvas-node-map'
-import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
+import { boundsFromPoints } from '../utils/canvas-geometry-utils'
 import { EMPTY_CANVAS_INSPECTABLE_PROPERTIES } from '../properties/canvas-property-types'
 import type {
   CanvasEdgePatch,
@@ -37,15 +37,7 @@ function createCanvasEdgeSelectionContext(
 }
 
 export function normalizeCanvasEdge(edge: CanvasDocumentEdge): CanvasRuntimeEdge | null {
-  const parsedEdge = parseCanvasDocumentEdge({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    type: edge.type,
-    sourceHandle: edge.sourceHandle,
-    targetHandle: edge.targetHandle,
-    style: edge.style,
-  })
+  const parsedEdge = parseCanvasDocumentEdge(edge)
   if (!parsedEdge) {
     return null
   }
@@ -125,7 +117,13 @@ function isCanvasEdgeSelectionCandidate(
   }
 
   const bounds = boundsFromPoints(geometry.hitPoints)
-  return !bounds || rectIntersectsBounds(candidateBounds, bounds)
+  return (
+    !bounds ||
+    (bounds.x <= candidateBounds.x + candidateBounds.width &&
+      bounds.x + bounds.width >= candidateBounds.x &&
+      bounds.y <= candidateBounds.y + candidateBounds.height &&
+      bounds.y + bounds.height >= candidateBounds.y)
+  )
 }
 
 function collectCanvasEdgeIdsMatchingGeometry(
