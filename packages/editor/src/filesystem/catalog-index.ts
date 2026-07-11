@@ -38,10 +38,11 @@ export function createFileSystemCatalogIndex({
     (item) => knownActiveItemsById.get(item.id) ?? snapshotCatalogItem(item),
   )
   const rawVisibleItemsById = new Map(rawVisibleItems.map((item) => [item.id, item] as const))
-  const visibleItems = rawVisibleItems.map((item) => {
+  const visibleItemsWithMissingParentsNormalized = rawVisibleItems.map((item) => {
     if (!item.parentId || rawVisibleItemsById.has(item.parentId)) return item
     return snapshotCatalogItem({ ...item, parentId: null } as AnyItem)
   })
+  const visibleItems = normalizeVisibleItemsWithCycles(visibleItemsWithMissingParentsNormalized)
   const visibleItemsById = new Map(visibleItems.map((item) => [item.id, item] as const))
   const trashedItems = trashItems.map(snapshotCatalogItem)
   const visibleRoots = visibleItems.filter(
@@ -78,6 +79,32 @@ export function createFileSystemCatalogIndex({
     getVisibleAncestors: (itemId) => getVisibleAncestors(itemId, visibleItemsById),
     queryVisibleItems: (input) => queryVisibleItems(visibleItems, input),
   }
+}
+
+function normalizeVisibleItemsWithCycles(items: Array<AnyItem>) {
+  const itemsById = new Map(items.map((item) => [item.id, item] as const))
+  const cycleItemIds = new Set<SidebarItemId>()
+
+  for (const item of items) {
+    const path = new Map<SidebarItemId, number>()
+    let current: AnyItem | undefined = item
+    while (current?.parentId) {
+      const pathIndex = path.get(current.id)
+      if (pathIndex !== undefined) {
+        for (const cycleItem of [...path.keys()].slice(pathIndex)) {
+          cycleItemIds.add(cycleItem)
+        }
+        break
+      }
+      path.set(current.id, path.size)
+      current = itemsById.get(current.parentId)
+    }
+  }
+
+  if (cycleItemIds.size === 0) return items
+  return items.map((item) =>
+    cycleItemIds.has(item.id) ? snapshotCatalogItem({ ...item, parentId: null } as AnyItem) : item,
+  )
 }
 
 function snapshotCatalogItem(item: AnyItem): AnyItem {

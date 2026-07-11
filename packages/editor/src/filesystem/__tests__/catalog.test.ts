@@ -321,6 +321,25 @@ describe('createResourceCatalogModel', () => {
     ).toBe(visibleRootFolder.id)
   })
 
+  it('re-roots visible items that participate in a parent cycle', () => {
+    const first = createFolder({
+      id: createFolderId('visible-cycle-first'),
+      parentId: createFolderId('visible-cycle-second'),
+    })
+    const second = createFolder({
+      id: createFolderId('visible-cycle-second'),
+      parentId: first.id,
+    })
+    const { catalog } = createResourceCatalogModel({
+      activeItems: [first, second],
+      visibleActiveItems: [first, second],
+      trashItems: [],
+    })
+
+    expect(catalog.getVisibleRoots().map((item) => item.id)).toEqual([first.id, second.id])
+    expect(catalog.getVisibleChildren(null).map((item) => item.id)).toEqual([first.id, second.id])
+  })
+
   it('fails closed when a known ancestor chain contains a cycle', () => {
     const first = createFolder({
       id: createFolderId('cycle-first'),
