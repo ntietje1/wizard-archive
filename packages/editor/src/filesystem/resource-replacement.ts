@@ -43,6 +43,13 @@ export function useResourceReplacementController({
   const [isReplacing, setIsReplacing] = useState(false)
   const isReplacingRef = useRef(false)
   const activeSelectionRef = useRef<symbol | null>(null)
+  const pendingSelectionIdsRef = useRef(new Set<symbol>())
+
+  const syncPendingState = () => {
+    const hasPendingReplacements = pendingSelectionIdsRef.current.size > 0
+    isReplacingRef.current = hasPendingReplacements
+    setIsReplacing(hasPendingReplacements)
+  }
 
   const rejectReplacement = (message: string) => {
     setReplacementError(message)
@@ -64,8 +71,7 @@ export function useResourceReplacementController({
     const validation = validateFile(file)
     if (!validation.valid) {
       activeSelectionRef.current = null
-      isReplacingRef.current = false
-      setIsReplacing(false)
+      syncPendingState()
       rejectReplacement(validation.error)
       return validation
     }
@@ -75,13 +81,13 @@ export function useResourceReplacementController({
       if (activeSelectionRef.current === selectionId) {
         activeSelectionRef.current = null
       }
-      isReplacingRef.current = false
-      setIsReplacing(false)
+      syncPendingState()
       rejectReplacement(accepted.error)
       return accepted
     }
 
     setReplacementError('')
+    pendingSelectionIdsRef.current.add(selectionId)
     isReplacingRef.current = true
     setIsReplacing(true)
 
@@ -90,27 +96,26 @@ export function useResourceReplacementController({
       timeoutMessage,
     })
       .then((result) => {
-        if (activeSelectionRef.current !== selectionId) return
         if (isCompletedResourceOperation(result)) {
           toast.success(successMessage)
           return
         }
         reportResourceReplacementError(result, failureMessage, (message) => {
+          if (activeSelectionRef.current !== selectionId) return
           setReplacementError(message)
           onReplacementError?.(message)
         })
       })
       .catch((error: unknown) => {
-        if (activeSelectionRef.current !== selectionId) return
         reportResourceReplacementError(error, failureMessage, (message) => {
+          if (activeSelectionRef.current !== selectionId) return
           setReplacementError(message)
           onReplacementError?.(message)
         })
       })
       .finally(() => {
-        if (activeSelectionRef.current !== selectionId) return
-        isReplacingRef.current = false
-        setIsReplacing(false)
+        pendingSelectionIdsRef.current.delete(selectionId)
+        syncPendingState()
       })
 
     return validation
