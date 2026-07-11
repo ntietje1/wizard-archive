@@ -783,7 +783,7 @@ export type WizardEditorMapImageReplacementStageResult<TImage, TMapId extends st
   | {
       status: 'staged'
       image: TImage
-      cancel?: (input: { image: TImage; mapId: TMapId }) => MaybePromise<unknown>
+      cancel: (input: { image: TImage; mapId: TMapId }) => MaybePromise<ResourceOperationResult>
     }
   | Exclude<ResourceOperationResult, { status: 'completed' }>
 
@@ -794,7 +794,7 @@ export interface WizardEditorMapImageReplacementInput<TImage, TMapId extends str
     file: ResourceImportFile
     mapId: TMapId
   }) => MaybePromise<WizardEditorMapImageReplacementStageResult<TImage, TMapId>>
-  commitImage: (input: { image: TImage; mapId: TMapId }) => MaybePromise<unknown>
+  commitImage: (input: { image: TImage; mapId: TMapId }) => MaybePromise<ResourceOperationResult>
 }
 export interface WizardEditorMapImageLayer {
   id: string
@@ -1988,10 +1988,8 @@ export function replaceWizardEditorMapImage<TImage, TMapId extends string = stri
 
       return {
         ...staged,
-        cancel: staged.cancel
-          ? ({ image, mapId: stagedMapId }) =>
-              staged.cancel?.({ image: image as TImage, mapId: stagedMapId as unknown as TMapId })
-          : undefined,
+        cancel: ({ image, mapId: stagedMapId }) =>
+          staged.cancel({ image: image as TImage, mapId: stagedMapId as unknown as TMapId }),
       }
     },
     commitImage: ({ image, mapId }) =>

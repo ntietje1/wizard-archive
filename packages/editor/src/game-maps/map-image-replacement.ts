@@ -7,7 +7,7 @@ import type { ResourceOperationResult } from '../filesystem/transaction-contract
 type StagedMapImageReplacement<TImage> = {
   status: 'staged'
   image: TImage
-  cancel?: (input: MapImageReplacementImageInput<TImage>) => MaybePromise<unknown>
+  cancel: (input: MapImageReplacementImageInput<TImage>) => MaybePromise<ResourceOperationResult>
 }
 
 type MapImageReplacementStageResult<TImage> =
@@ -20,7 +20,9 @@ type MapImageReplacementInput<TImage> = {
   stageImage: (
     input: MapImageReplacementFileInput,
   ) => MaybePromise<MapImageReplacementStageResult<TImage>>
-  commitImage: (input: MapImageReplacementImageInput<TImage>) => MaybePromise<unknown>
+  commitImage: (
+    input: MapImageReplacementImageInput<TImage>,
+  ) => MaybePromise<ResourceOperationResult>
 }
 
 type MapImageReplacementFileInput = {
@@ -43,15 +45,17 @@ export async function replaceMapImage<TImage>({
     const staged = await stageImage({ file, mapId })
     if (staged.status !== 'staged') return staged
 
+    let commitResult: ResourceOperationResult
     try {
-      await commitImage({ image: staged.image, mapId })
+      commitResult = await commitImage({ image: staged.image, mapId })
     } catch (error) {
-      try {
-        await staged.cancel?.({ image: staged.image, mapId })
-      } catch (cancelError) {
-        throw new MapImageReplacementCleanupError(error, cancelError)
-      }
+      await cancelStagedImage(staged, mapId, error)
       throw error
+    }
+
+    if (!isCompletedResourceOperation(commitResult)) {
+      await cancelStagedImage(staged, mapId, commitResult)
+      return commitResult
     }
 
     return completedResourceOperation({
@@ -62,6 +66,28 @@ export async function replaceMapImage<TImage>({
   } catch (error) {
     return { status: 'error', error }
   }
+}
+
+async function cancelStagedImage<TImage>(
+  staged: StagedMapImageReplacement<TImage>,
+  mapId: SidebarItemId,
+  commitError: unknown,
+) {
+  try {
+    const cancelResult = await staged.cancel({ image: staged.image, mapId })
+    if (!isCompletedResourceOperation(cancelResult)) {
+      throw new MapImageReplacementCleanupError(commitError, cancelResult)
+    }
+  } catch (cancelError) {
+    if (cancelError instanceof MapImageReplacementCleanupError) throw cancelError
+    throw new MapImageReplacementCleanupError(commitError, cancelError)
+  }
+}
+
+function isCompletedResourceOperation(
+  result: ResourceOperationResult,
+): result is Extract<ResourceOperationResult, { status: 'completed' }> {
+  return result.status === 'completed'
 }
 
 class MapImageReplacementCleanupError extends Error {
