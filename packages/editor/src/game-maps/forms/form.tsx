@@ -73,7 +73,7 @@ export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }:
   }
 
   async function updateExistingMap() {
-    if (!mapId || !map) return
+    if (!map) throw new Error('Map data failed to load')
 
     const { slug } = await updateItemMetadata({
       item: map,
@@ -105,7 +105,7 @@ export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }:
         return
       }
 
-      if (mapId && !map) {
+      if (!map) {
         toast.error('Map data failed to load. Please try again.')
         return
       }
@@ -124,8 +124,8 @@ export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }:
     selectedImage: upload.file,
   })
 
-  const isLoadingMap = isMapLoading(mapId, map, mapState.isPending)
-  const isMissingMap = mapId !== undefined && !isLoadingMap && !map
+  const isLoadingMap = isMapLoading(map, mapState.isPending)
+  const isMissingMap = !isLoadingMap && !map
 
   const isDisabled = isMapFormDisabled({
     isLoadingMap,
@@ -235,8 +235,8 @@ function hasSelectedOrStoredMapImage({
   return selectedImage !== null || imageAssetId !== null
 }
 
-function isMapLoading(mapId: SidebarItemId, map: MapItem | null, isPending: boolean) {
-  return !!mapId && map === null && isPending
+function isMapLoading(map: MapItem | null, isPending: boolean) {
+  return map === null && isPending
 }
 
 function isMapFormDisabled({
