@@ -44,7 +44,7 @@ function CanvasSelectionResizeZones({
           key={position}
           type="button"
           aria-label={getResizeHandleLabel(position)}
-          tabIndex={-1}
+          tabIndex={0}
           data-testid={`canvas-selection-resize-zone-${position}`}
           data-resize-zone-position={position}
           className={`canvas-selection-resize-zone nodrag nopan pointer-events-auto absolute border-none bg-transparent p-0 touch-none z-[2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-canvas-selection-focus-ring focus-visible:ring-offset-0 ${cursorClassName}`}

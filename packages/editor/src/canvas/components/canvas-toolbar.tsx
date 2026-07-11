@@ -1,4 +1,5 @@
 import { Maximize2, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useStore } from 'zustand'
 import { canvasToolbarTools } from '../tools/canvas-tool-modules'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
@@ -122,7 +123,7 @@ function ToolGroupButton({
   showDivider,
 }: {
   active: boolean
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
   onClick: () => void
   shortcut: number
