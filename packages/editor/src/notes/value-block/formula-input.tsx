@@ -91,6 +91,24 @@ function duplicateLocalSlugDependency(slug: string): FormulaDependency {
   }
 }
 
+function unresolvedExternalDependency({
+  notePathRaw,
+  slug,
+}: {
+  notePathRaw: string
+  slug: string
+}): FormulaDependency {
+  const reference = `[[${notePathRaw}.${slug}]]`
+  return {
+    key: `unresolved:${notePathRaw}:${slug}`,
+    slug,
+    valueId: `unresolved:${notePathRaw}:${slug}`,
+    displayedValue: `Unknown reference "${reference}"`,
+    hasError: true,
+    state: 'error',
+  }
+}
+
 function addDependency(
   dependencies: Array<FormulaDependency>,
   seen: Set<string>,
@@ -187,6 +205,13 @@ function getReferenceDependency({
     }) ?? undefined
   if (externalNoteId === noteId) {
     return getLocalDependency(localValuesBySlug.get(reference.slug), stateByValueId)
+  }
+
+  if (!externalNoteId) {
+    return unresolvedExternalDependency({
+      notePathRaw: reference.notePathRaw,
+      slug: reference.slug,
+    })
   }
 
   return getExternalDependency(

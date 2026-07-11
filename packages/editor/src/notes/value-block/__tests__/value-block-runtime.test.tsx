@@ -1026,6 +1026,23 @@ describe('inline value chip runtime', () => {
     expect(dependencyChip).toHaveTextContent('2')
   })
 
+  it('shows an error dependency for an unresolved external note path', async () => {
+    const user = userEvent.setup()
+    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
+    renderInlineValue({ sidebarItems: [currentNote], valueStatesForNotes: [] })
+
+    await user.click(screen.getByTestId('note-value-inline'))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Value formula' }), {
+      target: { value: '[[Missing Note.prof_bonus]] + 2' },
+    })
+
+    const dependency = screen
+      .getByLabelText('Formula dependencies')
+      .querySelector('[data-testid="note-value-inline"]')
+    expect(dependency).toHaveAttribute('data-note-value-state', 'error')
+    expect(dependency).toHaveAttribute('title', 'Unknown reference "[[Missing Note.prof_bonus]]"')
+  })
+
   it.each([
     ['pending', 'Loading value'],
     ['error', 'Failed to load value'],
