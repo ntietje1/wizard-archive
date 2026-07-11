@@ -59,8 +59,11 @@ function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
   })
   const mapStageRef = useMergedRef(mapContainerRef, mapDropTargetRef)
   const renderPinState = source.resolveRenderPins(map)
-  const pins = filterMapPinsForLayer(renderPinState.pins, activeLayerId, mapLayers)
-  const { isPinGhost } = renderPinState
+  const pins =
+    renderPinState.status === 'available'
+      ? filterMapPinsForLayer(renderPinState.pins, activeLayerId, mapLayers)
+      : []
+  const isPinGhost = renderPinState.status === 'available' ? renderPinState.isPinGhost : () => false
 
   const {
     handleResetTransform,

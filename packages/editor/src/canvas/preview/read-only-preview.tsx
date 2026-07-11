@@ -91,8 +91,6 @@ const unavailableEmbeddedCanvasStateSource: EmbeddedCanvasStateSource = {
 const unavailableEmbeddedMapStateSource: EmbeddedMapStateSource = {
   resolveEmbeddedMapState: () => ({
     status: 'unavailable',
-    pins: [],
-    isPinGhost: () => false,
   }),
 }
 

@@ -13,13 +13,15 @@ export type SurfaceDropCommandEffects = {
 export function createSurfaceDropCommandUiEffects(): SurfaceDropCommandEffects {
   return {
     reportError: (error, fallbackMessage) => {
-      toast.error(getClientErrorMessage(error) ?? fallbackMessage)
-      console.error(error)
+      const message = getClientErrorMessage(error) ?? fallbackMessage
+      toast.error(message)
+      console.error(message)
     },
     reportRejection: (reason) => {
       toast.error(rejectionReasonMessage(reason))
     },
     reportRejections: (reasons) => {
+      if (reasons.length === 0) return
       const messages = new Set(reasons.map((reason) => rejectionReasonMessage(reason)))
       toast.error([...messages].join('; '))
     },

@@ -233,10 +233,13 @@ function normalizeEmbedNodeDataPatch(
   existingData: CanvasEmbedDocumentNode['data'],
   patch: CanvasNodeDataPatch<'embed'>,
 ): CanvasEmbedDocumentNode['data'] {
-  const { sidebarItemId: _legacySidebarItemId, ...nextData } = {
+  const nextData = {
     ...existingData,
     ...patch,
   } as CanvasEmbedDocumentNode['data'] & { sidebarItemId?: unknown }
+  if (patch.target) {
+    delete nextData.sidebarItemId
+  }
   // lockedAspectRatio uses null as an explicit unset sentinel; undefined leaves it unchanged.
   if (patch.lockedAspectRatio === null) {
     delete nextData.lockedAspectRatio

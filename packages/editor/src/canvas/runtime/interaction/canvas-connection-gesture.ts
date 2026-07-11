@@ -225,8 +225,9 @@ function resolveConnectionSnapTarget({
   paneRef: RefObject<HTMLDivElement | null>
   source: CanvasConnectionDraftEndpoint
 }): CanvasConnectionDraftEndpoint | null {
-  const root = paneRef.current ?? document
-  const handles = root.querySelectorAll('[data-canvas-node-handle="true"]')
+  const pane = paneRef.current
+  if (!pane) return null
+  const handles = pane.querySelectorAll('[data-canvas-node-handle="true"]')
   let closest: CanvasConnectionDraftEndpoint | null = null
   let closestDistance = Number.POSITIVE_INFINITY
 

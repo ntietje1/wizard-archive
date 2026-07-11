@@ -104,23 +104,15 @@ async function readDirectoryRecursively(
   for (const entry of entries) {
     if (entry.isFile) {
       const fileEntry = entry as FileSystemFileEntry
-      try {
-        const file = await fileEntryToFile(fileEntry)
-        folder.files.push({
-          file,
-          relativePath: `${relativePath}/${entry.name}`,
-        })
-      } catch {
-        continue
-      }
+      const file = await fileEntryToFile(fileEntry)
+      folder.files.push({
+        file,
+        relativePath: `${relativePath}/${entry.name}`,
+      })
     } else if (entry.isDirectory) {
-      try {
-        folder.subfolders.push(
-          await readDirectoryRecursively(entry as FileSystemDirectoryEntry, relativePath),
-        )
-      } catch {
-        continue
-      }
+      folder.subfolders.push(
+        await readDirectoryRecursively(entry as FileSystemDirectoryEntry, relativePath),
+      )
     }
   }
 
@@ -172,24 +164,16 @@ async function appendFileSystemEntry(result: DropResult, entry: FileSystemEntry)
 }
 
 async function appendFileEntry(result: DropResult, entry: FileSystemFileEntry) {
-  try {
-    const file = await fileEntryToFile(entry)
-    result.files.push({
-      file,
-      relativePath: entry.name,
-    })
-  } catch {
-    return
-  }
+  const file = await fileEntryToFile(entry)
+  result.files.push({
+    file,
+    relativePath: entry.name,
+  })
 }
 
 async function appendDirectoryEntry(result: DropResult, entry: FileSystemDirectoryEntry) {
-  try {
-    const folder = await readDirectoryRecursively(entry)
-    result.rootFolders.push(folder)
-  } catch {
-    return
-  }
+  const folder = await readDirectoryRecursively(entry)
+  result.rootFolders.push(folder)
 }
 
 function countFilesInFolderStructure(folder: FolderStructure): number {

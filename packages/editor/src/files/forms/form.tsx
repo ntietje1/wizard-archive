@@ -200,6 +200,7 @@ interface SaveFileFormOptions {
 
 async function saveFileForm(options: SaveFileFormOptions) {
   const { file, fileId, hasFile, setIsSubmitting } = options
+  let submissionStarted = false
   try {
     if (fileId) {
       if (!file) {
@@ -213,6 +214,7 @@ async function saveFileForm(options: SaveFileFormOptions) {
       }
 
       setIsSubmitting(true)
+      submissionStarted = true
       await updateExistingFile({ ...options, file, fileId })
       return
     }
@@ -229,11 +231,12 @@ async function saveFileForm(options: SaveFileFormOptions) {
     }
 
     setIsSubmitting(true)
+    submissionStarted = true
     await createNewFile({ ...options, selectedFile })
   } catch (error) {
     handleError(error, 'Failed to save file')
   } finally {
-    setIsSubmitting(false)
+    if (submissionStarted) setIsSubmitting(false)
   }
 }
 

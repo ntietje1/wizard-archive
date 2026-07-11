@@ -35,7 +35,14 @@ export function FileViewer({ item: file, source }: FileViewerProps) {
   }
 
   if (resolvedFile.status === 'unavailable') {
-    return <UnavailableFileViewer file={file} canReplaceFile={canReplaceFile} source={source} />
+    return (
+      <UnavailableFileViewer
+        key={file.id}
+        file={file}
+        canReplaceFile={canReplaceFile}
+        source={source}
+      />
+    )
   }
 
   return (
