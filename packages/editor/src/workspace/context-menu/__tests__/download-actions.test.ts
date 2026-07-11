@@ -90,10 +90,11 @@ describe('createDownloadActions', () => {
       }),
     })
 
-    await runDownloadAll(actions.downloadAll)
+    const result = await runDownloadAll(actions.downloadAll)
 
     expect(toastError).toHaveBeenCalledWith('Failed to download 1 item(s)', { id: 'toast-1' })
     expect(toastDismiss).not.toHaveBeenCalled()
+    expect(result).toEqual({ status: 'error', error: expect.any(Error) })
   })
 
   it('fetches archive file blobs concurrently and writes ZIP entries in source order', async () => {

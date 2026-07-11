@@ -58,7 +58,14 @@ export function createWorkspaceFilesystemContextMenuTarget(
         const command = resolveGlobalFileSystemDropCommand(group.items, target, actor, {
           copy: true,
         })
-        if (command.status === 'ready') await operations.executeDropCommand(command.plan.command)
+        if (command.status !== 'ready') {
+          throw new Error(
+            command.status === 'blocked'
+              ? `Unable to duplicate items: ${command.reason}`
+              : 'Unable to duplicate items',
+          )
+        }
+        await operations.executeDropCommand(command.plan.command)
       }
     },
     pasteIntoTarget: (input) => operations.pasteIntoTarget(input),
