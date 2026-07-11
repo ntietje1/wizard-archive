@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { RefObject } from 'react'
+import type { KeyboardEvent, RefObject } from 'react'
 import type { MaybePromise } from '../../../../shared/common/async'
 import type { SidebarItemId } from '../../../../shared/common/ids'
 import type { ResourceKind } from '../workspace/resource-contract'
@@ -35,7 +35,7 @@ export interface SearchDialogController {
   close: () => void
   displayItems: Array<SearchDisplayItem>
   emptyStateMessage?: string
-  handleKeyDown: (e: React.KeyboardEvent) => void
+  handleKeyDown: (e: KeyboardEvent) => void
   handleOpenChange: (newOpen: boolean) => void
   hasQuery: boolean
   inlineStatusMessage?: string
@@ -133,7 +133,11 @@ export function useSearchDialogController({
           type: command.type,
           parentId: null,
         })
-        if (result.status === 'completed') close()
+        if (result.status === 'completed') {
+          close()
+        } else {
+          handleError(new Error(`Search create returned ${result.status}`), command.failureMessage)
+        }
       } catch (error) {
         handleError(error, command.failureMessage)
       } finally {
@@ -142,7 +146,7 @@ export function useSearchDialogController({
     })()
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: KeyboardEvent) => {
     if (displayItems.length === 0) return
     const maxIndex = displayItems.length - 1
     if (e.key === 'ArrowDown') {

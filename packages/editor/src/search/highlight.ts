@@ -8,7 +8,20 @@ export function getHighlightRanges(text: string, query: string): Array<Highlight
   if (terms.length === 0) return []
 
   const ranges: Array<HighlightRange> = []
-  const lowerText = text.toLowerCase()
+  const lowerTextParts: Array<string> = []
+  const lowerOffsetMap: Array<{ start: number; end: number }> = []
+  for (let index = 0; index < text.length; ) {
+    const codePoint = text.codePointAt(index)
+    const codePointLength = codePoint && codePoint > 0xffff ? 2 : 1
+    const originalEnd = index + codePointLength
+    const lowerPart = text.slice(index, originalEnd).toLowerCase()
+    lowerTextParts.push(lowerPart)
+    for (const _character of lowerPart) {
+      lowerOffsetMap.push({ start: index, end: originalEnd })
+    }
+    index = originalEnd
+  }
+  const lowerText = lowerTextParts.join('')
 
   for (const term of terms) {
     const lowerTerm = term.toLowerCase()
@@ -16,7 +29,12 @@ export function getHighlightRanges(text: string, query: string): Array<Highlight
     while (start < lowerText.length) {
       const idx = lowerText.indexOf(lowerTerm, start)
       if (idx === -1) break
-      ranges.push({ start: idx, end: idx + lowerTerm.length })
+      const matchEnd = idx + lowerTerm.length - 1
+      const startOffset = lowerOffsetMap[idx]
+      const endOffset = lowerOffsetMap[matchEnd]
+      if (startOffset && endOffset) {
+        ranges.push({ start: startOffset.start, end: endOffset.end })
+      }
       start = idx + 1
     }
   }

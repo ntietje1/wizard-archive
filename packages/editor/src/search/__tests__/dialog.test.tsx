@@ -113,7 +113,11 @@ describe('SearchDialog', () => {
 
     renderSearchDialog()
 
-    expect(screen.getByRole('button', { name: /New Note/i })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /New Note/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByRole('listbox', { name: 'Search results' })).toBeInTheDocument()
     expect(screen.getAllByText('Create at top level')).toHaveLength(2)
   })
 
@@ -155,7 +159,7 @@ describe('SearchDialog', () => {
     renderSearchDialog()
 
     await user.keyboard('{Enter}{Enter}')
-    await user.click(screen.getByRole('button', { name: /New Note/i }))
+    await user.click(screen.getByRole('option', { name: /New Note/i }))
 
     expect(searchDataState.createSidebarItem).toHaveBeenCalledTimes(1)
   })
@@ -228,7 +232,7 @@ describe('SearchDialog', () => {
 
     renderSearchDialog()
 
-    expect(screen.getByRole('button', { name: /New Note/i })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /New Note/i })).toBeInTheDocument()
     expect(screen.getByText('Body search failed')).toBeInTheDocument()
   })
 
@@ -274,7 +278,7 @@ describe('SearchDialog', () => {
     const { rerender } = renderSearchDialog()
 
     await user.keyboard('{ArrowDown}')
-    expect(screen.getByRole('textbox', { name: 'Search' })).toHaveAttribute(
+    expect(screen.getByRole('combobox', { name: 'Search' })).toHaveAttribute(
       'aria-activedescendant',
       'search-result-1',
     )
@@ -283,7 +287,7 @@ describe('SearchDialog', () => {
     rerender(<TestSearchDialog menu={emptyContextMenu} />)
 
     await waitFor(() =>
-      expect(screen.getByRole('textbox', { name: 'Search' })).toHaveAttribute(
+      expect(screen.getByRole('combobox', { name: 'Search' })).toHaveAttribute(
         'aria-activedescendant',
         'search-result-0',
       ),

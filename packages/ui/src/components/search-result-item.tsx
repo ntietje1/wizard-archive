@@ -9,6 +9,7 @@ interface SearchResultItemProps {
   badge?: string
   detail?: ReactNode
   isSelected: boolean
+  role?: 'option'
   onClick: () => void
   onMouseEnter: () => void
 }
@@ -23,12 +24,15 @@ export function SearchResultItem({
   isSelected,
   onClick,
   onMouseEnter,
+  role,
 }: SearchResultItemProps) {
   return (
     <button
       type="button"
       id={id}
-      aria-current={isSelected ? 'true' : undefined}
+      role={role}
+      aria-current={role ? undefined : isSelected ? 'true' : undefined}
+      aria-selected={role ? isSelected : undefined}
       className={`flex w-full cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-left select-none ${
         isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
       }`}

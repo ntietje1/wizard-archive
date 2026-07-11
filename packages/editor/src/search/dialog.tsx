@@ -61,7 +61,7 @@ function SearchResultsPanel({
         {status}
       </output>
       <ScrollArea className="flex-1">
-        <div id="search-results-list" aria-label="Search results" className="p-1">
+        <div id="search-results-list" role="listbox" aria-label="Search results" className="p-1">
           {emptyStateMessage && (
             <div className="px-3 py-8 text-center text-sm text-muted-foreground">
               {emptyStateMessage}
@@ -86,6 +86,7 @@ function SearchResultsPanel({
                   title={`New ${displayItem.command.label}`}
                   subtitle="Create at top level"
                   badge="Command"
+                  role="option"
                   isSelected={index === selectedIndex}
                   onClick={() => onSelect(displayItem)}
                   onMouseEnter={() => onHover(index)}
@@ -111,6 +112,7 @@ function SearchResultsPanel({
                       ) : undefined
                     }
                     isSelected={index === selectedIndex}
+                    role="option"
                     onClick={() => onSelect(displayItem)}
                     onMouseEnter={() => onHover(index)}
                   />
@@ -267,6 +269,8 @@ export function SearchDialog({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search…"
             aria-label="Search"
+            role="combobox"
+            aria-expanded={displayItems.length > 0}
             aria-controls="search-results-list"
             aria-activedescendant={
               displayItems.length > 0 ? `search-result-${selectedIndex}` : undefined
