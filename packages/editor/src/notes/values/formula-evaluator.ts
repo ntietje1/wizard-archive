@@ -1,12 +1,7 @@
 import { NOTE_VALUE_FUNCTION_BY_NAME } from './constants'
 import { FormulaError } from './formula-errors'
 import type { NoteValueCompiledFormula, NoteValueErrorCode } from './model'
-
-interface FormulaBinding<TNoteId = string> {
-  key: string
-  targetNoteId: TNoteId
-  targetValueId: string
-}
+import type { NoteValueBinding } from './state-contract'
 
 type FormulaDependencyState =
   | { status: 'ok'; rawValue: number }
@@ -38,7 +33,7 @@ export function validateFormulaFunctionCall(name: string, argCount: number): voi
 
 export function evaluateCompiledFormula<TNoteId>(
   formula: NoteValueCompiledFormula,
-  bindings: Array<FormulaBinding<TNoteId>>,
+  bindings: Array<NoteValueBinding<TNoteId>>,
   getDependencyState: FormulaDependency<TNoteId>,
 ): number {
   return evaluateCompiledNode(
@@ -71,7 +66,7 @@ function evaluateFunction(name: string, args: Array<number>): number {
 
 function evaluateCompiledNode<TNoteId>(
   node: NoteValueCompiledFormula,
-  bindingMap: Map<string, FormulaBinding<TNoteId>>,
+  bindingMap: Map<string, NoteValueBinding<TNoteId>>,
   getDependencyState: FormulaDependency<TNoteId>,
 ): number {
   switch (node.kind) {
@@ -95,7 +90,7 @@ function evaluateCompiledNode<TNoteId>(
 
 function evaluateCompiledBinding<TNoteId>(
   key: string,
-  bindingMap: Map<string, FormulaBinding<TNoteId>>,
+  bindingMap: Map<string, NoteValueBinding<TNoteId>>,
   getDependencyState: FormulaDependency<TNoteId>,
 ): number {
   const binding = bindingMap.get(key)
@@ -106,7 +101,7 @@ function evaluateCompiledBinding<TNoteId>(
 }
 
 function evaluateBindingDependency<TNoteId>(
-  binding: FormulaBinding<TNoteId>,
+  binding: NoteValueBinding<TNoteId>,
   getDependencyState: FormulaDependency<TNoteId>,
 ): number {
   const dependencyState = getDependencyState(binding.targetNoteId, binding.targetValueId)
@@ -124,7 +119,7 @@ function evaluateBindingDependency<TNoteId>(
 
 function evaluateCompiledBinary<TNoteId>(
   node: Extract<NoteValueCompiledFormula, { kind: 'binary' }>,
-  bindingMap: Map<string, FormulaBinding<TNoteId>>,
+  bindingMap: Map<string, NoteValueBinding<TNoteId>>,
   getDependencyState: FormulaDependency<TNoteId>,
 ): number {
   const left = evaluateCompiledNode(node.left, bindingMap, getDependencyState)
