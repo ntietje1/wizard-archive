@@ -11,6 +11,7 @@ export const campaignMemberRoleValidator = literals('DM', 'Player')
 export const campaignMemberStatusValidator = literals('Pending', 'Accepted', 'Rejected', 'Removed')
 
 const campaignTableFields = {
+  campaignUuid: v.string(),
   name: v.string(),
   description: v.string(),
   dmUserId: v.id('userProfiles'),
@@ -22,6 +23,7 @@ const campaignTableFields = {
 }
 
 const campaignMemberTableFields = {
+  campaignMemberUuid: v.string(),
   userId: v.id('userProfiles'),
   campaignId: v.id('campaigns'),
   role: campaignMemberRoleValidator,
@@ -31,11 +33,14 @@ const campaignMemberTableFields = {
 export const campaignTables = {
   campaigns: defineTable({
     ...campaignTableFields,
-  }).index('by_slug_dm', ['slug', 'dmUserId']),
+  })
+    .index('by_campaignUuid', ['campaignUuid'])
+    .index('by_slug_dm', ['slug', 'dmUserId']),
 
   campaignMembers: defineTable({
     ...campaignMemberTableFields,
   })
+    .index('by_campaignMemberUuid', ['campaignMemberUuid'])
     .index('by_campaign_user', ['campaignId', 'userId'])
     .index('by_user', ['userId']),
 }

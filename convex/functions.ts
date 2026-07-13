@@ -19,6 +19,11 @@ import type { Doc, Id } from './_generated/dataModel'
 import type { AuthUser } from './users/authTypes'
 import type { CampaignRow, CampaignMemberRow } from '../shared/campaigns/types'
 import type { AssetId } from '../shared/common/ids'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId as DomainCampaignId,
+  CampaignMemberId as DomainCampaignMemberId,
+} from '@wizard-archive/editor/resources/domain-id'
 
 // --- Context enrichment ---
 
@@ -194,6 +199,48 @@ export const dmMutation = customMutation(authMutation, {
   input: dmScopeInput,
 })
 
+const resourceCampaignArgs = { campaignId: v.string() } as const
+type ResourceCampaignScopeInputArgs = { campaignId: string }
+type ResourceCampaignScopeInputResult = {
+  ctx: {
+    campaign: CampaignRow
+    membership: CampaignMemberRow
+    resourceScope: {
+      campaignId: DomainCampaignId
+      actorId: DomainCampaignMemberId
+    }
+  }
+  args: {}
+}
+
+async function resourceCampaignScopeInput(
+  ctx: object,
+  { campaignId: campaignIdValue }: ResourceCampaignScopeInputArgs,
+): Promise<ResourceCampaignScopeInputResult> {
+  assertAuthenticatedCtx(ctx)
+  const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, campaignIdValue)
+  const campaignDoc = await ctx.db
+    .query('campaigns')
+    .withIndex('by_campaignUuid', (indexQuery) => indexQuery.eq('campaignUuid', campaignId))
+    .unique()
+  if (!campaignDoc) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
+  }
+  const { campaign, membership } = await checkMembership(ctx, campaignDoc._id)
+  const actorId = assertDomainId(DOMAIN_ID_KIND.campaignMember, membership.campaignMemberUuid)
+  return { ctx: { campaign, membership, resourceScope: { campaignId, actorId } }, args: {} }
+}
+
+export const resourceCampaignQuery = customQuery(authQuery, {
+  args: resourceCampaignArgs,
+  input: resourceCampaignScopeInput,
+})
+
+export const resourceCampaignMutation = customMutation(authMutation, {
+  args: resourceCampaignArgs,
+  input: resourceCampaignScopeInput,
+})
+
 // --- Context types ---
 
 export type AuthQueryCtx = CustomCtx<typeof authQuery>
@@ -205,3 +252,5 @@ export type CampaignInternalMutationCtx = CustomCtx<typeof campaignInternalMutat
 export type DmQueryCtx = CustomCtx<typeof dmQuery>
 export type DmMutationCtx = CustomCtx<typeof dmMutation>
 export type DmInternalQueryCtx = CustomCtx<typeof dmInternalQuery>
+export type ResourceCampaignQueryCtx = CustomCtx<typeof resourceCampaignQuery>
+export type ResourceCampaignMutationCtx = CustomCtx<typeof resourceCampaignMutation>

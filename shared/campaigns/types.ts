@@ -28,6 +28,7 @@ export type CampaignMemberStatus =
   (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS]
 
 export type CampaignRow = {
+  campaignUuid: string
   _id: CampaignId
   _creationTime: number
   dmUserId: UserProfileId
@@ -48,6 +49,7 @@ export type Campaign = Omit<CampaignRow, '_id' | '_creationTime'> & {
 }
 
 export type CampaignMemberRow = {
+  campaignMemberUuid: string
   _id: CampaignMemberId
   _creationTime: number
   userId: UserProfileId

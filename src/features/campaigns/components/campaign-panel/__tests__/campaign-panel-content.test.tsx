@@ -152,6 +152,7 @@ function createSessionActions(): CampaignPanelSource['sessionActions'] {
 function createSession(overrides: Partial<Session> = {}): Session {
   return {
     id: 'session-1' as SessionId,
+    sessionUuid: '0198e000-0000-7000-8000-000000000001',
     createdAt: 1,
     campaignId: 'campaign-1' as CampaignId,
     name: 'Previous Session',

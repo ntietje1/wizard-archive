@@ -1,3 +1,4 @@
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { Id } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
 
@@ -22,6 +23,7 @@ export async function startSession(
 
   const insertNew = () =>
     ctx.db.insert('sessions', {
+      sessionUuid: generateDomainId(DOMAIN_ID_KIND.session),
       campaignId,
       name: name ?? null,
       startedAt: now,

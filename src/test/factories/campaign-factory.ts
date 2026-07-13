@@ -27,6 +27,7 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
   } = overrides ?? {}
   const campaign: Campaign = {
     id: campaignId,
+    campaignUuid: `0198a000-0000-7000-8000-${campaignCounter.toString().padStart(12, '0')}`,
     createdAt: Date.now(),
     dmUserId: dmUser.id,
     name: `Test Campaign ${campaignCounter}`,
@@ -52,6 +53,7 @@ export function createCampaignMember(
   const user = createUser()
   return {
     id: testId(`member_${memberCounter}`),
+    campaignMemberUuid: `0198b000-0000-7000-8000-${memberCounter.toString().padStart(12, '0')}`,
     createdAt: Date.now(),
     userId: user.id,
     role: CAMPAIGN_MEMBER_ROLE.Player,

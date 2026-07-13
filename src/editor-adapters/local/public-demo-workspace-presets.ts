@@ -41,6 +41,7 @@ const PUBLIC_DEMO_PLAYER_USER_ID = 'demo-user-mira' as UserProfileId
 const PUBLIC_DEMO_PLAYER_MEMBERS: Array<CampaignMemberSummary> = [
   {
     id: PUBLIC_DEMO_PLAYER_MEMBER_ID,
+    campaignMemberUuid: '0198c000-0000-7000-8000-000000000001',
     createdAt: 1,
     campaignId: SAMPLE_LOCAL_WORKSPACE.workspaceId as PublicDemoMemberWorkspaceRecordId,
     role: CAMPAIGN_MEMBER_ROLE.Player,

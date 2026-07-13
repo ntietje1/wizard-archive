@@ -367,6 +367,7 @@ describe('live workspace permission hooks', () => {
 function campaignMember(): CampaignMemberSummary {
   return {
     id: playerMemberId,
+    campaignMemberUuid: '0198d000-0000-7000-8000-000000000001',
     createdAt: 1,
     userId: 'user_1' as CampaignMemberSummary['userId'],
     campaignId,

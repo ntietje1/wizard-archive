@@ -16,6 +16,7 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 
 describe('createCampaign', () => {
   const t = createTestContext()
@@ -37,6 +38,7 @@ describe('createCampaign', () => {
       expect(campaign!.slug).toBe('my-campaign')
       expect(campaign!.dmUserId).toBe(profile._id)
       expect(campaign!.status).toBe('Active')
+      expect(isUuidV7(campaign!.campaignUuid)).toBe(true)
 
       const members = await ctx.db
         .query('campaignMembers')
@@ -46,6 +48,7 @@ describe('createCampaign', () => {
       expect(members[0].role).toBe('DM')
       expect(members[0].status).toBe('Accepted')
       expect(members[0].userId).toBe(profile._id)
+      expect(isUuidV7(members[0].campaignMemberUuid)).toBe(true)
     })
   })
 
@@ -546,6 +549,7 @@ describe('joinCampaign', () => {
       expect(member).not.toBeNull()
       expect(member!.role).toBe('Player')
       expect(member!.status).toBe('Pending')
+      expect(isUuidV7(member!.campaignMemberUuid)).toBe(true)
     })
   })
 

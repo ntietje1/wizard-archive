@@ -1,4 +1,5 @@
 import type { CampaignSlug } from '../../../shared/campaigns/validation'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import {
@@ -27,6 +28,7 @@ export async function createCampaign(
   const preparedDescription = prepareCampaignDescription(description)
 
   const profile = ctx.user.profile
+  const campaignUuid = generateDomainId(DOMAIN_ID_KIND.campaign)
 
   const conflict = await ctx.db
     .query('campaigns')
@@ -38,6 +40,7 @@ export async function createCampaign(
   }
 
   const campaignId = await ctx.db.insert('campaigns', {
+    campaignUuid,
     name: preparedName,
     description: preparedDescription ?? '',
     dmUserId: profile._id,
@@ -48,6 +51,7 @@ export async function createCampaign(
   })
 
   await ctx.db.insert('campaignMembers', {
+    campaignMemberUuid: generateDomainId(DOMAIN_ID_KIND.campaignMember),
     userId: profile._id,
     campaignId,
     role: CAMPAIGN_MEMBER_ROLE.DM,

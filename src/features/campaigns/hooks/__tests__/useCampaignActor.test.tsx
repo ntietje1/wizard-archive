@@ -71,6 +71,7 @@ function campaignMember(
   const { id, campaignId: memberCampaignId, ...rest } = overrides
   return {
     id,
+    campaignMemberUuid: '0198f000-0000-7000-8000-000000000001',
     createdAt: 1,
     userId: testId<'userProfiles'>('user_1'),
     campaignId: memberCampaignId,

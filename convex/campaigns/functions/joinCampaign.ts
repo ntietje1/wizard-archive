@@ -1,4 +1,5 @@
 import type { CampaignSlug } from '../../../shared/campaigns/validation'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { Username } from '../../../shared/users/validation'
 import {
   CAMPAIGN_MEMBER_ROLE,
@@ -32,6 +33,7 @@ export async function joinCampaign(
   }
 
   await ctx.db.insert('campaignMembers', {
+    campaignMemberUuid: generateDomainId(DOMAIN_ID_KIND.campaignMember),
     userId: profile._id,
     campaignId: campaign.id,
     role: CAMPAIGN_MEMBER_ROLE.Player,

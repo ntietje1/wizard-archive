@@ -1,4 +1,5 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -242,6 +243,7 @@ export async function createCampaignWithDm(
   const n = nextId()
   const { slug, ...rest } = overrides ?? {}
   const defaults = {
+    campaignUuid: generateDomainId(DOMAIN_ID_KIND.campaign),
     name: `Campaign ${n}`,
     description: '',
     dmUserId: dmProfile._id,
@@ -262,6 +264,7 @@ export async function createCampaignWithDm(
 
   const memberId = await t.run(async (ctx) => {
     return await ctx.db.insert('campaignMembers', {
+      campaignMemberUuid: generateDomainId(DOMAIN_ID_KIND.campaignMember),
       userId: dmProfile._id,
       campaignId,
       role: CAMPAIGN_MEMBER_ROLE.DM,
@@ -281,6 +284,7 @@ export async function addPlayerToCampaign(
   }>,
 ) {
   const defaults = {
+    campaignMemberUuid: generateDomainId(DOMAIN_ID_KIND.campaignMember),
     userId: playerProfile._id,
     campaignId,
     role: CAMPAIGN_MEMBER_ROLE.Player,
@@ -508,6 +512,7 @@ export async function createSession(
   }>,
 ) {
   const defaults = {
+    sessionUuid: generateDomainId(DOMAIN_ID_KIND.session),
     campaignId,
     name: null,
     startedAt: Date.now(),

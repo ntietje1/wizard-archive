@@ -7,6 +7,7 @@ import {
   expectPermissionDenied,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 
 describe('startSession', () => {
   const t = createTestContext()
@@ -26,6 +27,7 @@ describe('startSession', () => {
     })
     expect(current).not.toBeNull()
     expect(current!.id).toBe(sessionId)
+    expect(isUuidV7(current!.sessionUuid)).toBe(true)
   })
 
   it('auto-ends previous session when starting new one', async () => {
