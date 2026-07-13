@@ -1,8 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { EmbedTarget } from '../../../../../../shared/embeds/embedTargets'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import type { SidebarItemId } from 'shared/common/ids'
+import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import {
   EditableEmbedLinkDraftForm,
   EditableEmbedUploadStatus,

@@ -103,41 +103,29 @@ function mapSkippedImportToEmbedUploadResult(
 ): EmbedTargetUploadFileResult {
   return {
     status: 'skipped',
-    reason: mapSkippedImportReasonToEmbedUploadReason(result.reason),
+    reason: skippedImportDetails[result.reason].reason,
     ...(result.error === undefined ? {} : { error: result.error }),
   }
 }
 
-function mapSkippedImportReasonToEmbedUploadReason(
-  reason: Extract<
-    Awaited<ReturnType<FileSystemItemImportOperations['importFile']>>,
-    { status: 'skipped' }
-  >['reason'],
-): Extract<EmbedTargetUploadFileResult, { status: 'skipped' }>['reason'] {
-  switch (reason) {
-    case 'failed':
-      return 'failed'
-    case 'unavailable':
-      return 'unavailable'
-    case 'invalid':
-    case 'unsupported':
-      return 'unsupported'
-  }
-}
+type SkippedImportReason = Extract<
+  Awaited<ReturnType<FileSystemItemImportOperations['importFile']>>,
+  { status: 'skipped' }
+>['reason']
 
-function getSkippedImportFallbackMessage(
-  reason: Extract<
-    Awaited<ReturnType<FileSystemItemImportOperations['importFile']>>,
-    { status: 'skipped' }
-  >['reason'],
-) {
-  switch (reason) {
-    case 'failed':
-      return 'Upload failed'
-    case 'unavailable':
-      return 'Destination unavailable'
-    case 'invalid':
-    case 'unsupported':
-      return 'Unsupported file type'
+const skippedImportDetails = {
+  failed: { reason: 'failed', fallbackMessage: 'Upload failed' },
+  unavailable: { reason: 'unavailable', fallbackMessage: 'Destination unavailable' },
+  invalid: { reason: 'unsupported', fallbackMessage: 'Unsupported file type' },
+  unsupported: { reason: 'unsupported', fallbackMessage: 'Unsupported file type' },
+} as const satisfies Record<
+  SkippedImportReason,
+  {
+    reason: Extract<EmbedTargetUploadFileResult, { status: 'skipped' }>['reason']
+    fallbackMessage: string
   }
+>
+
+function getSkippedImportFallbackMessage(reason: SkippedImportReason) {
+  return skippedImportDetails[reason].fallbackMessage
 }

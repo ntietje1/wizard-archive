@@ -89,7 +89,7 @@ export function useEditableEmbedTargetControls({
     linkError,
     closeLinkDraft,
     openFilePicker: () => {
-      if (isUploading) return
+      if (isUploading || !uploadFile) return
       fileInputRef.current?.click()
     },
     openLinkDraft: () => {

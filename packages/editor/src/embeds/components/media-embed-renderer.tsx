@@ -861,7 +861,7 @@ function normalizeBrowserMediaHost(hostname: string) {
   return hostname
     .toLowerCase()
     .replace(/^\[|\]$/g, '')
-    .replace(/\.$/, '')
+    .replace(/\.+$/, '')
 }
 
 function isPrivateIpv4Host(hostname: string) {
@@ -873,14 +873,21 @@ function isPrivateIpv4Host(hostname: string) {
   ) {
     return false
   }
-  const [first = 0, second = 0] = octets
+  const [first = 0, second = 0, third = 0] = octets
   return (
     first === 10 ||
     first === 0 ||
     first === 127 ||
     (first === 172 && second >= 16 && second <= 31) ||
     (first === 192 && second === 168) ||
-    (first === 169 && second === 254)
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 192 && second === 0) ||
+    (first === 192 && second === 0 && third === 2) ||
+    (first === 198 && (second === 18 || second === 19)) ||
+    (first === 198 && second === 51 && third === 100) ||
+    (first === 203 && second === 0 && third === 113) ||
+    first >= 224
   )
 }
 
@@ -895,6 +902,8 @@ function isPrivateIpv6Host(hostname: string) {
     hostname.startsWith('fe9') ||
     hostname.startsWith('fea') ||
     hostname.startsWith('feb') ||
+    hostname.startsWith('ff') ||
+    hostname.startsWith('2001:db8:') ||
     isPrivateEmbeddedIpv4Host(hostname)
   )
 }

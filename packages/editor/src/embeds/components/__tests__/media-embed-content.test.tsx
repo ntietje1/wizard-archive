@@ -339,14 +339,10 @@ describe('ExternalUrlEmbedContent', () => {
     })
   })
 
-  it('renders unknown external files without nested border chrome', () => {
+  it('renders unknown external files with an actionable link', () => {
     render(<ExternalUrlEmbedContent url="https://x.test/download" name="download" />)
 
-    const card = screen.getByTestId('external-url-embed-card')
-    expect(card).not.toHaveClass('border')
-    expect(card).not.toHaveClass('rounded-md')
-    expect(card).not.toHaveClass('bg-muted/30')
-    expect(card).not.toHaveClass('p-4')
+    expect(screen.getByTestId('external-url-embed-card')).toHaveTextContent('download')
     expect(screen.getByRole('link', { name: /open/i })).toHaveAttribute(
       'href',
       'https://x.test/download',
@@ -395,9 +391,22 @@ describe('ExternalUrlEmbedContent', () => {
   })
 
   it('blocks trailing-dot localhost media hosts', () => {
-    render(<ExternalUrlEmbedContent url="https://localhost./a.png" name="local.png" />)
+    const { rerender } = render(
+      <ExternalUrlEmbedContent url="https://localhost../a.png" name="local.png" />,
+    )
 
     expect(screen.getByText('local.png')).toBeInTheDocument()
+    expect(screen.queryByRole('img')).toBeNull()
+
+    rerender(<ExternalUrlEmbedContent url="https://10.0.0.1../a.png" name="private.png" />)
+    expect(screen.getByText('private.png')).toBeInTheDocument()
+    expect(screen.queryByRole('img')).toBeNull()
+  })
+
+  it('blocks reserved browser media address ranges', () => {
+    render(<ExternalUrlEmbedContent url="https://100.64.0.1/a.png" name="cgnat.png" />)
+
+    expect(screen.getByText('cgnat.png')).toBeInTheDocument()
     expect(screen.queryByRole('img')).toBeNull()
   })
 

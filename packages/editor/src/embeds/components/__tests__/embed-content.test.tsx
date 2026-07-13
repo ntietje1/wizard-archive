@@ -265,16 +265,15 @@ describe('EmbedContent', () => {
   })
 
   it('does not remount sidebar item content when the package-owned surface rerenders', () => {
+    const unmountSpy = vi.fn()
     sidebarItemPreviewSurface.mockImplementation(({ item }: { item: AnyItemWithContent }) => (
-      <MountProbe label={item.name} onUnmount={mountProbeUnmountSpy} />
+      <MountProbe label={item.name} onUnmount={unmountSpy} />
     ))
     const item = {
       id: 'canvas-a',
       type: RESOURCE_TYPES.canvases,
       name: 'Canvas A',
     }
-    const unmountSpy = vi.fn()
-    mountProbeUnmountSpy = unmountSpy
 
     const { rerender } = render(
       <ResolvedEmbedContent
@@ -392,8 +391,6 @@ describe('EmbedContent', () => {
     expect(screen.queryByText('recursive child')).not.toBeInTheDocument()
   })
 })
-
-let mountProbeUnmountSpy = () => {}
 
 function RecursiveSameTargetSurface() {
   return (

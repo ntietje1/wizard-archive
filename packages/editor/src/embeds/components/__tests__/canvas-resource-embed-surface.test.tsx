@@ -165,31 +165,7 @@ describe('CanvasResourceEmbedSurface', () => {
       type: RESOURCE_TYPES.notes,
     })
 
-    render(
-      <CanvasResourceEmbedSurface
-        item={folder}
-        folderChildren={[child]}
-        isEditing={false}
-        isExclusivelySelected={true}
-        interactiveRenderMode={true}
-        noteDocumentSource={{} as NoteDocumentContentSource}
-        noteEmbeddedNoteContentSource={{} as EmbeddedNoteContentSource}
-        noteEmbedTargetSource={{} as NoteEmbedTargetContentSource}
-        noteLinkCreationSource={null as NoteLinkCreationSource | null}
-        noteLinkNavigationSource={null as NoteLinkNavigationSource | null}
-        noteLinkResolutionSource={{} as NoteLinkResolutionSource}
-        notePlaybackSource={{} as NotePlaybackContentSource}
-        notePermissionSource={{} as NotePermissionContentSource}
-        noteSharingSource={{} as NoteSharingContentSource}
-        noteValueReferences={{} as NoteValueReferences}
-        noteValueStateSource={{} as NoteValueRuntimeStateSource}
-        noteWikiLinkSource={{} as NoteWikiLinkContentSource}
-        onActivated={vi.fn()}
-        onEditorChange={vi.fn()}
-        pendingActivationRef={{ current: null }}
-        textColor={null}
-      />,
-    )
+    renderCanvasResourceEmbedSurface(folder, { folderChildren: [child] })
 
     expect(screen.getByTestId('folder-preview')).toBeInTheDocument()
     expect(screen.getByTestId('folder-preview')).toHaveTextContent('Note')
