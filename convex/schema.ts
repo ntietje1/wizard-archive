@@ -16,6 +16,7 @@ import { sidebarItemsTables } from './sidebarItems/schema/sidebarItemsTable'
 import { blocksTables } from './blocks/schema'
 import { noteLinksTables } from './links/schema'
 import { noteValuesTables } from './noteValues/schema'
+import { resourceTables } from './resources/schema'
 
 export default defineSchema({
   ...blocksTables,
@@ -35,4 +36,5 @@ export default defineSchema({
   ...editHistoryTables,
   ...documentSnapshotsTables,
   ...sidebarItemsTables,
+  ...resourceTables,
 })
