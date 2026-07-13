@@ -222,7 +222,7 @@ describe('executePlannedDropCommand', () => {
     }
   })
 
-  it('fails missing surface URL executors without generic fallback', async () => {
+  it('reports missing surface URL executors through UI effects', async () => {
     const ctx = createExecutionContext()
 
     await expect(
@@ -241,12 +241,16 @@ describe('executePlannedDropCommand', () => {
         { clientX: 0, clientY: 0 },
         ctx,
       ),
-    ).rejects.toThrow('Missing surface URL drop executor')
+    ).resolves.toBeUndefined()
 
+    expect(ctx.surfaceEffects.reportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'Cannot add this link here',
+    )
     expect(ctx.handleDropFiles).not.toHaveBeenCalled()
   })
 
-  it('fails missing surface file import executors without generic fallback', async () => {
+  it('reports missing surface file import executors through UI effects', async () => {
     const ctx = createExecutionContext()
     const dropResult = createDropResult()
 
@@ -262,12 +266,17 @@ describe('executePlannedDropCommand', () => {
         { clientX: 0, clientY: 0 },
         ctx,
       ),
-    ).rejects.toThrow('Missing surface file import executor')
+    ).resolves.toBeUndefined()
 
+    expect(ctx.surfaceEffects.reportError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'Cannot import files here',
+    )
     expect(ctx.handleDropFiles).not.toHaveBeenCalled()
   })
 
   it('executes explicit sequences through each interaction side effect', async () => {
+    const executionOrder: Array<string> = []
     const surfaceDropResult = createDropResult()
     const folderDropResult: DropResult = {
       files: [],
@@ -277,10 +286,16 @@ describe('executePlannedDropCommand', () => {
     const dispose = registerSurfaceFileImportExecutor({
       commandId: 'surface-file-import.canvas',
       target,
-      execute: vi.fn().mockResolvedValue({ uploaded: 1 }),
+      execute: vi.fn(() => {
+        executionOrder.push('surface')
+        return Promise.resolve({ uploaded: 1 })
+      }),
     })
     const ctx = createExecutionContext()
-    ctx.handleDropFiles.mockResolvedValue({ status: 'completed', receipt: { imported: 1 } })
+    ctx.handleDropFiles.mockImplementation(() => {
+      executionOrder.push('filesystem')
+      return Promise.resolve({ status: 'completed', receipt: { imported: 1 } })
+    })
 
     try {
       await expect(
@@ -307,6 +322,7 @@ describe('executePlannedDropCommand', () => {
           ctx,
         ),
       ).resolves.toBeUndefined()
+      expect(executionOrder).toEqual(['surface', 'filesystem'])
     } finally {
       dispose()
     }

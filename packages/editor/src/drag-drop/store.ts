@@ -56,8 +56,7 @@ export function createDndStore(): DndStore {
       set((state) =>
         sameItemIds(state.dragPreviewItemIds, ids) ? state : { dragPreviewItemIds: ids },
       ),
-    setDragOutcome: (outcome) =>
-      set((state) => (state.dragOutcome === outcome ? state : { dragOutcome: outcome })),
+    setDragOutcome: (outcome) => set({ dragOutcome: outcome }),
     setExternalFileDropTargetKey: (key) =>
       set((state) =>
         state.externalFileDropTargetKey === key ? state : { externalFileDropTargetKey: key },
@@ -70,12 +69,13 @@ export function createDndStore(): DndStore {
       set((state) =>
         state.isDraggingElement === isDragging ? state : { isDraggingElement: isDragging },
       ),
-    setBatchDecision: (decision) =>
-      set((state) => (state.batchDecision === decision ? state : { batchDecision: decision })),
+    setBatchDecision: (decision) => set({ batchDecision: decision }),
   }))
 }
 
 const defaultDndStore = createDndStore()
+// fallow-ignore-next-line unused-exports
+export const defaultDndStoreApi = defaultDndStore
 
 export const DndStoreContext = createContext<DndStore | null>(null)
 
@@ -85,8 +85,6 @@ export function useDndStoreApi(): DndStore {
   return use(DndStoreContext) ?? defaultDndStore
 }
 
-export const useDndStore = Object.assign(function useDndStore<T>(
-  selector: (state: DndStoreState) => T,
-): T {
+export function useDndStore<T>(selector: (state: DndStoreState) => T): T {
   return useStore(useDndStoreApi(), selector)
-}, defaultDndStore)
+}

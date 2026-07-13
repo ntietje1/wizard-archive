@@ -7,7 +7,7 @@ import {
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
 } from '../drop-target-data'
-import { useDndStore } from '../store'
+import { defaultDndStoreApi as useDndStore } from '../store'
 import { createGameMap, createNote } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
 

@@ -10,6 +10,7 @@ import type { DropPlanningContext } from './planning-context'
 import type { SidebarDropData } from './drop-target-data'
 import {
   CANVAS_DROP_ZONE_TYPE,
+  EMPTY_EDITOR_DROP_TYPE,
   EMPTY_EMBED_DROP_TYPE,
   NOTE_EDITOR_DROP_TYPE,
 } from './drop-target-data'
@@ -81,7 +82,7 @@ function resolveResourceDropCommand(
 ): PlannedDropCommand {
   if (items.length === 0) return { kind: 'noop' }
   if (!target) return { kind: 'blocked', reason: 'missing_data' }
-  if (target.type === 'empty-editor') {
+  if (target.type === EMPTY_EDITOR_DROP_TYPE) {
     return {
       kind: 'openResource',
       item: items[0],

@@ -1,4 +1,4 @@
-import { useId, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useId, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { DndExternalFileDropCapability, DndExternalFileDropContext } from './file-drop'
 import type { DndExecutionContext, ElementDragMonitorContext } from './monitor-context'
 import type { DndValue } from './context'
@@ -64,37 +64,35 @@ export function DndRuntimeProvider({
     runtimeId,
   }
 
-  const dispatchDropPayload: DndValue['dispatchDropPayload'] = async ({
-    dropInput,
-    payload,
-    rawTarget,
-  }) => {
-    const ctx = ctxRef.current
-    const target = rawTarget
-      ? resolveDropTarget(rawTarget, ctx.catalog, { runtimeId: ctx.runtimeId ?? null })
-      : null
+  const dispatchDropPayload: DndValue['dispatchDropPayload'] = useCallback(
+    async ({ dropInput, payload, rawTarget }) => {
+      const ctx = ctxRef.current
+      const target = rawTarget
+        ? resolveDropTarget(rawTarget, ctx.catalog, { runtimeId: ctx.runtimeId ?? null })
+        : null
 
-    await executePlannedDropCommand(
-      resolveDropCommand({
-        payload,
-        target,
-        ctx: ctx.dropPlanningContext,
-      }),
-      dropInput,
-      {
-        ...ctx.dndContext,
-        handleDropFiles: ctx.handleDropFiles,
-        setBatchDecision: dndStore.getState().setBatchDecision,
-      },
-    )
-  }
+      await executePlannedDropCommand(
+        resolveDropCommand({ payload, target, ctx: ctx.dropPlanningContext }),
+        dropInput,
+        {
+          ...ctx.dndContext,
+          handleDropFiles: ctx.handleDropFiles,
+          setBatchDecision: dndStore.getState().setBatchDecision,
+        },
+      )
+    },
+    [dndStore],
+  )
 
-  const value: DndValue = {
-    canAcceptExternalFiles,
-    dispatchDropPayload,
-    getItemLinkPath: paths.getVisibleItemLinkPath,
-    runtimeId,
-  }
+  const value: DndValue = useMemo(
+    () => ({
+      canAcceptExternalFiles,
+      dispatchDropPayload,
+      getItemLinkPath: paths.getVisibleItemLinkPath,
+      runtimeId,
+    }),
+    [canAcceptExternalFiles, dispatchDropPayload, paths.getVisibleItemLinkPath, runtimeId],
+  )
 
   return (
     <DndStoreContext.Provider value={dndStore}>

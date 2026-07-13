@@ -30,7 +30,7 @@ describe('useExternalUrlDropTarget', () => {
         rawTarget: null,
         dropInput: { clientX: 0, clientY: 0 },
       }),
-    ).rejects.toThrow('DndRuntimeProvider is required for native URL drops')
+    ).rejects.toThrow('DndRuntimeProvider is required to dispatch drops')
   })
 
   it('reports dispatcher failures through the shared error handler', async () => {

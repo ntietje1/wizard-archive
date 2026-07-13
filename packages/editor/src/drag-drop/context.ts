@@ -27,7 +27,7 @@ export function useCanAcceptExternalFiles() {
 export function useDndDropPayloadDispatcher(): DndDropPayloadDispatcher {
   const context = use(DndProviderContext)
   if (!context) {
-    return () => Promise.reject(new Error('DndRuntimeProvider is required for native URL drops'))
+    return () => Promise.reject(new Error('DndRuntimeProvider is required to dispatch drops'))
   }
   return context.dispatchDropPayload
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
 import { testId } from '../../test/id'
-import { useDndStore } from '../store'
+import { defaultDndStoreApi as useDndStore } from '../store'
 import { resetDndStore } from './store-test-utils'
 
 describe('drag-drop store', () => {
@@ -57,7 +57,7 @@ describe('drag-drop store', () => {
     expect(useDndStore.getState()).toBe(state)
   })
 
-  it('does not publish a new state when scalar drag state is unchanged', () => {
+  it('publishes explicit drag outcomes even when the object is reused', () => {
     const outcome = { type: 'operation' as const, action: 'move' as const, label: 'Move item' }
     useDndStore.getState().setDragOutcome(outcome)
     useDndStore.getState().setExternalFileDropTargetKey('root')
@@ -70,6 +70,6 @@ describe('drag-drop store', () => {
     useDndStore.getState().setIsDraggingFiles(true)
     useDndStore.getState().setIsDraggingElement(true)
 
-    expect(useDndStore.getState()).toBe(state)
+    expect(useDndStore.getState()).not.toBe(state)
   })
 })

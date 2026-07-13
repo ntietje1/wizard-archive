@@ -13,6 +13,9 @@ import {
 } from './element-drag-feedback'
 import { executeElementDrop } from './element-drop-execution'
 import { installNativeDragGuards } from './native-drag-guards'
+import { createSurfaceDropCommandUiEffects } from './surface-command-effects'
+
+const surfaceDropCommandEffects = createSurfaceDropCommandUiEffects()
 
 function resetElementDragState({
   overlayRef,
@@ -40,31 +43,10 @@ function resetElementDragState({
   setIsDraggingElement(false)
 }
 
-type ElementDragUpdateArgs = {
-  source: { data: Record<string, unknown> }
-  location: {
-    current: {
-      input: {
-        clientX: number
-        clientY: number
-        ctrlKey?: boolean
-        shiftKey?: boolean
-      }
-      dropTargets: Array<{ data: Record<string, unknown> }>
-    }
-  }
-}
-type ElementDragStartArgs = {
-  source: { data: Record<string, unknown> }
-  location: {
-    current: {
-      input: {
-        clientX: number
-        clientY: number
-      }
-    }
-  }
-}
+type ElementMonitor = Parameters<typeof monitorForElements>[0]
+type ElementDragUpdateArgs = Parameters<NonNullable<ElementMonitor['onDrag']>>[0]
+type ElementDragStartArgs = Parameters<NonNullable<ElementMonitor['onDragStart']>>[0]
+type ElementDropArgs = Parameters<NonNullable<ElementMonitor['onDrop']>>[0]
 
 function updateOverlayPosition(
   overlayRef: React.RefObject<HTMLDivElement | null>,
@@ -87,9 +69,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<ElementDragMonitor
   const isElementDragRef = useRef(false)
   const handleDragUpdateRef = useRef<(args: ElementDragUpdateArgs) => void>(() => {})
   const handleDragStartRef = useRef<(args: ElementDragStartArgs) => void>(() => {})
-  const handleElementDropRef = useRef<(args: ElementDragUpdateArgs) => Promise<void>>(
-    async () => {},
-  )
+  const handleElementDropRef = useRef<(args: ElementDropArgs) => Promise<void>>(async () => {})
 
   handleDragUpdateRef.current = ({ location, source }) => {
     updateOverlayPosition(overlayRef, location.current.input)
@@ -158,14 +138,18 @@ export function useElementDragMonitor(ctxRef: React.RefObject<ElementDragMonitor
 
     const ctx = ctxRef.current
     if (ctx) {
-      await executeElementDrop({
-        ctx,
-        sourceData: source.data,
-        targetData: topTarget.data,
-        input: location.current.input,
-        options: globalDropOptionsFromInput(location.current.input),
-        setBatchDecision,
-      })
+      try {
+        await executeElementDrop({
+          ctx,
+          sourceData: source.data,
+          targetData: topTarget.data,
+          input: location.current.input,
+          options: globalDropOptionsFromInput(location.current.input),
+          setBatchDecision,
+        })
+      } catch (error) {
+        surfaceDropCommandEffects.reportError(error, 'Cannot complete this drop')
+      }
     }
   }
 

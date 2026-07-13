@@ -4,7 +4,7 @@ import type { SidebarItemId } from '../../../../../shared/common/ids'
 import type { AnyItem } from '../../workspace/items'
 import type { ElementDragMonitorContext } from '../monitor-context'
 import { useElementDragMonitor } from '../use-element-drag-monitor'
-import { useDndStore } from '../store'
+import { defaultDndStoreApi as useDndStore } from '../store'
 import { resetDndStore } from './store-test-utils'
 import {
   EMPTY_EMBED_DROP_TYPE,

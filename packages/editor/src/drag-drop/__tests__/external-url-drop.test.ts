@@ -154,6 +154,15 @@ describe('external URL drop helpers', () => {
       reason: 'unsupported_target',
     })
   })
+
+  it.each(['javascript:alert(1)', 'data:text/plain,hello', 'file:///tmp/map.png', 'http://['])(
+    'rejects unsafe or malformed URL payload %s',
+    (url) => {
+      expect(
+        classifyExternalUrlDrop(createDataTransfer({ 'text/plain': url }), { readData: true }),
+      ).toEqual({ kind: 'rejected', reason: 'unsupported_target' })
+    },
+  )
 })
 
 function createDataTransfer(data: Record<string, string>): DataTransfer {

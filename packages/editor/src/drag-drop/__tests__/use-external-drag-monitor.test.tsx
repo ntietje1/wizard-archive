@@ -8,7 +8,7 @@ import {
   SIDEBAR_ROOT_DROP_TYPE,
 } from '../drop-target-data'
 import { registerSurfaceFileImportExecutor } from '../drop-command-execution'
-import { useDndStore } from '../store'
+import { defaultDndStoreApi as useDndStore } from '../store'
 import { resetDndStore } from './store-test-utils'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'

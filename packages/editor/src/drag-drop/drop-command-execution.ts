@@ -94,9 +94,9 @@ async function executeDropInteractionCommand(
     case 'fileImport':
       return executeFileImportCommand(command, ctx)
     case 'surfaceFileImport':
-      return executeSurfaceFileImportCommand(command, input)
+      return executeSurfaceFileImportCommand(command, input, effects)
     case 'surfaceExternalUrl':
-      return executeSurfaceExternalUrlDropCommand(command, input)
+      return executeSurfaceExternalUrlDropCommand(command, input, effects)
     case 'sequence':
       return executeDropCommandSequence(command.commands, input, ctx)
   }
@@ -136,10 +136,15 @@ async function executeFileImportCommand(
 async function executeSurfaceFileImportCommand(
   command: SurfaceFileImportCommand,
   input: DropInput,
+  effects: SurfaceDropCommandEffects,
 ): Promise<void> {
   const executor = surfaceFileImportExecutors.get(command.commandId, command.target)
   if (!executor) {
-    throw new Error(`Missing surface file import executor for ${command.commandId}`)
+    effects.reportError(
+      new Error(`Missing surface file import executor for ${command.commandId}`),
+      'Cannot import files here',
+    )
+    return
   }
 
   await executor(command, input)
@@ -148,10 +153,15 @@ async function executeSurfaceFileImportCommand(
 async function executeSurfaceExternalUrlDropCommand(
   command: SurfaceExternalUrlDropCommand,
   input: DropInput,
+  effects: SurfaceDropCommandEffects,
 ): Promise<void> {
   const executor = surfaceExternalUrlDropExecutors.get(command.commandId, command.target)
   if (!executor) {
-    throw new Error(`Missing surface URL drop executor for ${command.commandId}`)
+    effects.reportError(
+      new Error(`Missing surface URL drop executor for ${command.commandId}`),
+      'Cannot add this link here',
+    )
+    return
   }
 
   await executor(command, input)

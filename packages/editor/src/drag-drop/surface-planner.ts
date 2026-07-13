@@ -59,28 +59,22 @@ type DropRejectedItem = {
   reason: DropRejectionReason
 }
 
-export type SurfaceBatchDropCommand =
-  | ({ status: 'ready' } & SurfaceBatchDropBase<'pin', MapDropZoneData>)
-  | ({ status: 'partial' } & SurfaceBatchDropBase<'pin', MapDropZoneData>)
-  | ({ status: 'ready' } & SurfaceBatchDropBase<'link', NoteEditorDropZoneData>)
-  | ({ status: 'partial' } & SurfaceBatchDropBase<'link', NoteEditorDropZoneData>)
-  | ({ status: 'ready' } & SurfaceBatchDropBase<'embed', CanvasDropZoneData>)
-  | ({ status: 'partial' } & SurfaceBatchDropBase<'embed', CanvasDropZoneData>)
-  | ({ status: 'ready' } & SurfaceBatchDropBase<'noteEmbed', NoteEmbedDropTarget>)
-  | ({ status: 'partial' } & SurfaceBatchDropBase<'noteEmbed', NoteEmbedDropTarget>)
-  | ({ status: 'failed'; items: [] } & Omit<SurfaceBatchDropBase<'pin', MapDropZoneData>, 'items'>)
-  | ({ status: 'failed'; items: [] } & Omit<
-      SurfaceBatchDropBase<'link', NoteEditorDropZoneData>,
-      'items'
-    >)
-  | ({ status: 'failed'; items: [] } & Omit<
-      SurfaceBatchDropBase<'embed', CanvasDropZoneData>,
-      'items'
-    >)
-  | ({ status: 'failed'; items: [] } & Omit<
-      SurfaceBatchDropBase<'noteEmbed', NoteEmbedDropTarget>,
-      'items'
-    >)
+type SurfaceBatchDropCommandFor<TBatchTarget extends BatchDropTarget> =
+  TBatchTarget extends BatchDropTarget
+    ?
+        | {
+            [TStatus in 'ready' | 'partial']: { status: TStatus } & SurfaceBatchDropBase<
+              TBatchTarget['action'],
+              TBatchTarget['target']
+            >
+          }['ready' | 'partial']
+        | ({ status: 'failed'; items: [] } & Omit<
+            SurfaceBatchDropBase<TBatchTarget['action'], TBatchTarget['target']>,
+            'items'
+          >)
+    : never
+
+export type SurfaceBatchDropCommand = SurfaceBatchDropCommandFor<BatchDropTarget>
 
 export type SurfaceDropCommand =
   | { status: 'noop' }
@@ -176,6 +170,7 @@ function attachBatchTarget(
       },
   batchTarget: BatchDropTarget,
 ): SurfaceBatchDropCommand {
+  // TypeScript cannot distribute a spread over BatchDropTarget, so each branch preserves its pair.
   switch (batchTarget.action) {
     case 'pin':
       return {
@@ -249,30 +244,31 @@ function validateSurfaceDropItem(
   batchTarget: BatchDropTarget,
   ctx: SurfaceDropPlanningContext,
 ): DropRejectionReason | null {
+  const workspaceScopedItem = { ...item, workspaceId: item.campaignId }
   switch (batchTarget.action) {
     case 'pin':
       return validatePinDropTarget({
         mapId: batchTarget.target.mapId,
-        item: { ...item, workspaceId: item.campaignId },
+        item: workspaceScopedItem,
         existingPinItemIds: batchTarget.target.pinnedItemIds ?? [],
         workspaceId: ctx.workspaceId,
       })
     case 'link':
       return validateNoteLinkDropTarget({
         noteId: batchTarget.target.noteId,
-        item: { ...item, workspaceId: item.campaignId },
+        item: workspaceScopedItem,
         workspaceId: ctx.workspaceId,
       })
     case 'embed':
       return validateEmbedDropTarget({
         targetId: batchTarget.target.canvasId,
-        item: { ...item, workspaceId: item.campaignId },
+        item: workspaceScopedItem,
         workspaceId: ctx.workspaceId,
       })
     case 'noteEmbed':
       return validateEmbedDropTarget({
         targetId: getNoteEmbedTargetId(batchTarget.target),
-        item: { ...item, workspaceId: item.campaignId },
+        item: workspaceScopedItem,
         workspaceId: ctx.workspaceId,
       })
     default:
