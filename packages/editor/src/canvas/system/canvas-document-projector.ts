@@ -29,15 +29,7 @@ export function projectCanvasDocumentSnapshot({
   const nextEdges = edges ?? snapshot.edges
   const nodeIds = nodes ? nextNodes.map((node) => node.id) : snapshot.nodeIds
   const edgeIds = edges ? nextEdges.map((edge) => edge.id) : snapshot.edgeIds
-  const selection = {
-    ...snapshot.selection,
-    nodeIds: nodes
-      ? retainExistingIds(snapshot.selection.nodeIds, nodeIds)
-      : snapshot.selection.nodeIds,
-    edgeIds: edges
-      ? retainExistingIds(snapshot.selection.edgeIds, edgeIds)
-      : snapshot.selection.edgeIds,
-  }
+  const selection = normalizeSelection(snapshot.selection, nodeIds, edgeIds)
   const nodeLookup = nodes
     ? preserveDraggingNodeLookup(
         createNodeLookup(nextNodes, selection.nodeIds, draggingNodeIds),
@@ -58,8 +50,36 @@ export function projectCanvasDocumentSnapshot({
     edgeLookup,
     edgeIdsByNodeId,
     selection,
+    selectedNodeIds: selection.nodeIds,
+    selectedEdgeIds: selection.edgeIds,
     dirtyNodeIds: nodes ? new Set(nextNodes.map((node) => node.id)) : EMPTY_SET,
     dirtyEdgeIds: edges ? new Set(nextEdges.map((edge) => edge.id)) : EMPTY_SET,
+  }
+}
+
+function normalizeSelection(
+  selection: CanvasEngineSnapshot['selection'],
+  nodeIds: ReadonlyArray<string>,
+  edgeIds: ReadonlyArray<string>,
+): CanvasEngineSnapshot['selection'] {
+  const retainSnapshot = (snapshot: {
+    nodeIds: ReadonlySet<string>
+    edgeIds: ReadonlySet<string>
+  }) => ({
+    nodeIds: retainExistingIds(snapshot.nodeIds, nodeIds),
+    edgeIds: retainExistingIds(snapshot.edgeIds, edgeIds),
+  })
+
+  return {
+    ...selection,
+    ...retainSnapshot(selection),
+    pendingPreview:
+      selection.pendingPreview.kind === 'active'
+        ? { kind: 'active', ...retainSnapshot(selection.pendingPreview) }
+        : selection.pendingPreview,
+    gestureStartSelection: selection.gestureStartSelection
+      ? retainSnapshot(selection.gestureStartSelection)
+      : null,
   }
 }
 
@@ -148,6 +168,7 @@ export function createNodeLookup(
   nodes: ReadonlyArray<CanvasDocumentNode>,
   selectedNodeIds: ReadonlySet<string>,
   draggingNodeIds: ReadonlySet<string>,
+  previousLookup: ReadonlyMap<string, CanvasInternalNode> = EMPTY_NODE_LOOKUP,
 ): ReadonlyMap<string, CanvasInternalNode> {
   const lookup = new Map<string, CanvasInternalNode>()
 
@@ -157,8 +178,8 @@ export function createNodeLookup(
       node,
       positionAbsolute: node.position,
       measured: {
-        width: node.width,
-        height: node.height,
+        width: node.width ?? previousLookup.get(node.id)?.measured.width,
+        height: node.height ?? previousLookup.get(node.id)?.measured.height,
       },
       selected: selectedNodeIds.has(node.id),
       dragging: draggingNodeIds.has(node.id),

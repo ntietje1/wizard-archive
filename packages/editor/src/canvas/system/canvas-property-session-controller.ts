@@ -25,6 +25,9 @@ export function createCanvasPropertySessionController(): CanvasPropertySessionCo
 
   return {
     startPropertySession: (options) => {
+      if (activeSession && latestPreview) {
+        activeSession.revertPatches(latestPreview)
+      }
       activeSession = options
       latestPreview = null
     },

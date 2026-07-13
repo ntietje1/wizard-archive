@@ -76,11 +76,13 @@ export function getCanvasPendingSelectionPreviewSummary(preview: CanvasPendingSe
 export function getCanvasVisualSelectionState({
   selected,
   pendingPreview,
+  gestureMode = null,
   id,
   kind,
 }: {
   selected: boolean
   pendingPreview: CanvasPendingSelectionPreview
+  gestureMode?: CanvasSelectionCommitMode | null
   id: string
   kind: 'node' | 'edge'
 }): CanvasVisualSelectionState {
@@ -93,7 +95,12 @@ export function getCanvasVisualSelectionState({
     selected,
     pendingPreviewActive,
     pendingSelected,
-    visuallySelected: pendingPreviewActive ? pendingSelected : selected,
+    visuallySelected:
+      pendingPreviewActive && gestureMode === 'add'
+        ? selected || pendingSelected
+        : pendingPreviewActive
+          ? pendingSelected
+          : selected,
   }
 }
 

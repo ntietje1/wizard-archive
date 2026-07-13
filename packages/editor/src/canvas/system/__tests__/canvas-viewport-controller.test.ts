@@ -66,6 +66,37 @@ describe('createCanvasViewportController', () => {
     engine.destroy()
   })
 
+  it('defers a pending wheel commit until an engine-owned pan ends', () => {
+    const { controller, engine, viewportListener, surface } = createViewportTestHarness()
+    surface.setPointerCapture = vi.fn()
+    surface.hasPointerCapture = vi.fn(() => true)
+    surface.releasePointerCapture = vi.fn()
+
+    controller.handleWheel(new WheelEvent('wheel', { deltaX: 10, cancelable: true }))
+    controller.handlePanPointerDown(
+      createPointerEvent('pointerdown', {
+        clientX: 100,
+        clientY: 100,
+        currentTarget: surface,
+        target: surface,
+        pointerId: 7,
+      }),
+    )
+    vi.advanceTimersByTime(VIEWPORT_COMMIT_IDLE_MS)
+
+    expect(viewportListener).not.toHaveBeenCalled()
+
+    window.dispatchEvent(
+      createPointerEvent('pointerup', { clientX: 100, clientY: 100, pointerId: 7 }),
+    )
+
+    expect(viewportListener).toHaveBeenCalledOnce()
+    expect(viewportListener).toHaveBeenCalledWith(engine.getSnapshot().viewport)
+
+    controller.destroy()
+    engine.destroy()
+  })
+
   it('commits an in-flight wheel viewport before destroy clears its idle timer', () => {
     const { controller, domRuntime, engine, listener, viewportListener } =
       createViewportTestHarness()

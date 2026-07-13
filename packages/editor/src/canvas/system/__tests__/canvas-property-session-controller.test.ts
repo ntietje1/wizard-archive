@@ -86,6 +86,31 @@ describe('createCanvasPropertySessionController', () => {
     expect(commitPatches).not.toHaveBeenCalled()
     expect(revertPatches).toHaveBeenCalledWith(patches)
   })
+
+  it('reverts an active preview before starting another session', () => {
+    const controller = createCanvasPropertySessionController()
+    const firstPatch = createPatchSet('node-1', { borderWidth: 2 })
+    const firstRevertPatches = vi.fn()
+    const secondRevertPatches = vi.fn()
+
+    controller.startPropertySession({
+      collectPatches: () => firstPatch,
+      previewPatches: () => undefined,
+      revertPatches: firstRevertPatches,
+      commitPatches: () => undefined,
+    })
+    controller.updatePropertyPreview(() => undefined)
+    controller.startPropertySession({
+      collectPatches: () => createPatchSet('node-2', { borderWidth: 4 }),
+      previewPatches: () => undefined,
+      revertPatches: secondRevertPatches,
+      commitPatches: () => undefined,
+    })
+
+    expect(firstRevertPatches).toHaveBeenCalledOnce()
+    expect(firstRevertPatches).toHaveBeenCalledWith(firstPatch)
+    expect(secondRevertPatches).not.toHaveBeenCalled()
+  })
 })
 
 function createPatchSet(nodeId: string, data: Record<string, unknown>): CanvasPropertyPatchSet {

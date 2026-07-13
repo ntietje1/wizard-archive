@@ -354,7 +354,7 @@ function resolveDragPositions({
   }
 
   let guides: ReadonlyArray<CanvasDragGuide> = []
-  if (getPrimaryPressed() && session.targetBounds.length > 0) {
+  if (getPrimaryPressed() && !getShiftPressed() && session.targetBounds.length > 0) {
     const draggedBounds = Array.from(resolvedPositions).flatMap(([nodeId, position]) => {
       const bounds = session.nodeBounds.get(nodeId)
       return bounds ? [withBoundsPosition(bounds, position)] : []

@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from 'vite-plus/test'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createCanvasDomRegistry } from '../canvas-dom-registry'
 
 describe('createCanvasDomRegistry', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('reads initial viewport surface bounds from untransformed local element size', () => {
     const registry = createCanvasDomRegistry()
     const surface = document.createElement('div')
@@ -54,6 +58,44 @@ describe('createCanvasDomRegistry', () => {
     registry.registerViewport(viewport)
 
     expect(registry.getViewportSurfaceBounds()).toEqual({ width: 320, height: 240 })
+  })
+
+  it('notifies subscribers when observed viewport surface bounds change', () => {
+    let resizeCallback: ResizeObserverCallback | null = null
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallback = callback
+        }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    )
+    const registry = createCanvasDomRegistry()
+    const surface = document.createElement('div')
+    const viewport = document.createElement('div')
+    surface.append(viewport)
+    const listener = vi.fn()
+    registry.subscribeViewportSurfaceBounds(listener)
+    registry.registerViewport(viewport)
+    listener.mockClear()
+
+    const callback = resizeCallback as ResizeObserverCallback | null
+    expect(callback).not.toBeNull()
+    callback?.(
+      [
+        {
+          borderBoxSize: [{ inlineSize: 640, blockSize: 480 }],
+          target: surface,
+        } as unknown as ResizeObserverEntry,
+      ],
+      {} as ResizeObserver,
+    )
+
+    expect(registry.getViewportSurfaceBounds()).toEqual({ width: 640, height: 480 })
+    expect(listener).toHaveBeenCalledOnce()
   })
 
   it('preserves zero surface dimensions when the registered viewport is appended', () => {
