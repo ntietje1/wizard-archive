@@ -1,7 +1,21 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { resolveRichTextSelectionTextColor } from '../rich-text-selection-colors'
 
 describe('resolveRichTextSelectionTextColor', () => {
+  it('uses the default color when selected blocks contain no text', () => {
+    expect(
+      resolveRichTextSelectionTextColor({
+        activeTextColor: 'var(--t-red)',
+        defaultTextColor: 'var(--foreground)',
+        hasTextSelection: true,
+        selectedBlocks: [{ content: [] }],
+      }),
+    ).toEqual({
+      kind: 'value',
+      value: { color: 'var(--foreground)', opacity: 100 },
+    })
+  })
+
   it('uses the active cursor color when there is no selected text', () => {
     expect(
       resolveRichTextSelectionTextColor({

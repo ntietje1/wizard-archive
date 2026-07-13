@@ -1,6 +1,6 @@
 import { Selection, TextSelection } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { focusEditorViewAtEnd, focusEditorViewAtNearestPoint } from '../blocknote-editor-focus'
 
 afterEach(() => {

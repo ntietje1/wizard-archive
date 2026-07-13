@@ -64,7 +64,7 @@ export function resolveRichTextSelectionTextColor({
   return {
     kind: 'value',
     value: {
-      color: selectedColor ?? activeTextColor ?? defaultTextColor,
+      color: selectedColor ?? defaultTextColor,
       opacity: FULL_OPACITY,
     },
   }

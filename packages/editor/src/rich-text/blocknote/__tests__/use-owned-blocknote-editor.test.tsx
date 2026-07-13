@@ -102,19 +102,21 @@ describe('useOwnedBlockNoteEditor', () => {
   it('keeps cleanup local when editor destruction throws', () => {
     const createdEditor = { id: 'editor-1' }
     const destroyError = new Error('destroy failed')
+    const destroyEditor = vi.fn(() => {
+      throw destroyError
+    })
     const onEditorChange = vi.fn()
 
     const { unmount } = renderHook(() =>
       useOwnedBlockNoteEditor({
         createEditor: () => createdEditor,
-        destroyEditor: () => {
-          throw destroyError
-        },
+        destroyEditor,
         onEditorChange,
       }),
     )
 
     expect(() => unmount()).not.toThrow()
+    expect(destroyEditor).toHaveBeenCalledExactlyOnceWith(createdEditor)
     expect(onEditorChange).toHaveBeenNthCalledWith(1, createdEditor)
     expect(onEditorChange).toHaveBeenNthCalledWith(2, null)
   })
