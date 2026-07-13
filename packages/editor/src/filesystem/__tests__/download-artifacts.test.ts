@@ -116,9 +116,16 @@ describe('download artifacts', () => {
 function createDownloadIo(): FileSystemDownloadIo {
   return {
     clearTimeout: clearTimeout,
-    fetch: vi.fn((url: string) => Promise.resolve(new Response(new Blob([url]), { status: 200 }))),
+    fetch: vi.fn((url: string) => Promise.resolve(blobResponse(url))),
     setTimeout: setTimeout,
   }
+}
+
+function blobResponse(content: string): Response {
+  return {
+    ok: true,
+    blob: () => Promise.resolve(new Blob([content])),
+  } as Response
 }
 
 function downloadFileItem({
