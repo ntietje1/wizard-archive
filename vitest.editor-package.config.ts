@@ -7,6 +7,7 @@ export default defineConfig({
     include: [
       'packages/editor/src/__tests__/editor-sdk-portability.test.ts',
       'packages/editor/src/__tests__/public-api-shape.test.ts',
+      'packages/editor/src/resources/__tests__/*.test.ts',
     ],
   },
 })

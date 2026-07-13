@@ -109,6 +109,62 @@
       "types": "./dist/workspace/resource-contract.d.mts",
       "default": "./dist/workspace/resource-contract.mjs"
     },
+    "./resources/domain-id": {
+      "types": "./dist/resources/domain-id.d.mts",
+      "default": "./dist/resources/domain-id.mjs"
+    },
+    "./resources/component-version": {
+      "types": "./dist/resources/component-version.d.mts",
+      "default": "./dist/resources/component-version.mjs"
+    },
+    "./resources/resource-record": {
+      "types": "./dist/resources/resource-contract.d.mts",
+      "default": "./dist/resources/resource-contract.mjs"
+    },
+    "./resources/resource-metadata-version": {
+      "types": "./dist/resources/resource-metadata-version.d.mts",
+      "default": "./dist/resources/resource-metadata-version.mjs"
+    },
+    "./resources/catalog-contract": {
+      "types": "./dist/resources/resource-catalog-contract.d.mts",
+      "default": "./dist/resources/resource-catalog-contract.mjs"
+    },
+    "./resources/index-contract": {
+      "types": "./dist/resources/resource-index-contract.d.mts",
+      "default": "./dist/resources/resource-index-contract.mjs"
+    },
+    "./resources/command-contract": {
+      "types": "./dist/resources/resource-command-contract.d.mts",
+      "default": "./dist/resources/resource-command-contract.mjs"
+    },
+    "./resources/content-session-contract": {
+      "types": "./dist/resources/content-session-contract.d.mts",
+      "default": "./dist/resources/content-session-contract.mjs"
+    },
+    "./resources/content-copy-contract": {
+      "types": "./dist/resources/content-copy-contract.d.mts",
+      "default": "./dist/resources/content-copy-contract.mjs"
+    },
+    "./resources/optimism-contract": {
+      "types": "./dist/resources/resource-optimism-contract.d.mts",
+      "default": "./dist/resources/resource-optimism-contract.mjs"
+    },
+    "./resources/authored-destination-contract": {
+      "types": "./dist/resources/authored-destination-contract.d.mts",
+      "default": "./dist/resources/authored-destination-contract.mjs"
+    },
+    "./resources/portable-path-contract": {
+      "types": "./dist/resources/portable-path-contract.d.mts",
+      "default": "./dist/resources/portable-path-contract.mjs"
+    },
+    "./resources/wizard-archive-contract": {
+      "types": "./dist/resources/wizard-archive-contract.d.mts",
+      "default": "./dist/resources/wizard-archive-contract.mjs"
+    },
+    "./resources/editor-runtime-contract": {
+      "types": "./dist/resources/editor-runtime-contract.d.mts",
+      "default": "./dist/resources/editor-runtime-contract.mjs"
+    },
     "./style.css": "./dist/style.css"
   },
   "dependencies": {
@@ -166,7 +222,21 @@
       "./notes/values-contract",
       "./resources/items",
       "./resources/items-persistence-contract",
-      "./resources/resource-contract"
+      "./resources/resource-contract",
+      "./resources/domain-id",
+      "./resources/component-version",
+      "./resources/resource-record",
+      "./resources/resource-metadata-version",
+      "./resources/catalog-contract",
+      "./resources/index-contract",
+      "./resources/command-contract",
+      "./resources/content-session-contract",
+      "./resources/content-copy-contract",
+      "./resources/optimism-contract",
+      "./resources/authored-destination-contract",
+      "./resources/portable-path-contract",
+      "./resources/wizard-archive-contract",
+      "./resources/editor-runtime-contract"
     ]
   }
 }
