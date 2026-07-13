@@ -121,6 +121,12 @@ function BlockShareFloatingMenu({
 
   const position = getMenuPosition(menuState.position, menuMetrics)
 
+  useEffect(() => {
+    if (blockShareState?.status === 'ready') {
+      menuRef.current?.focus()
+    }
+  }, [blockShareState?.status, menuRef])
+
   if (!blockShareState || blockShareState.status !== 'ready') return null
 
   const {
@@ -134,6 +140,9 @@ function BlockShareFloatingMenu({
   return (
     <div
       ref={menuRef}
+      aria-label={menuState.title ?? 'Share'}
+      role="dialog"
+      tabIndex={-1}
       className={`fixed z-[9999] max-h-[calc(100vh-16px)] overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 ${SHARE_MENU_WIDTH_CLASS}`}
       style={{
         left: position.x,
