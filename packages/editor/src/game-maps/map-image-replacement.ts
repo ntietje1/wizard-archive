@@ -16,6 +16,7 @@ type MapImageReplacementStageResult<TImage> =
 
 type MapImageReplacementInput<TImage> = {
   file: ResourceImportFile
+  layerId?: string | null
   mapId: SidebarItemId
   stageImage: (
     input: MapImageReplacementFileInput,
@@ -27,34 +28,38 @@ type MapImageReplacementInput<TImage> = {
 
 type MapImageReplacementFileInput = {
   file: ResourceImportFile
+  layerId: string | null
   mapId: SidebarItemId
 }
 
 type MapImageReplacementImageInput<TImage> = {
   image: TImage
+  layerId: string | null
   mapId: SidebarItemId
 }
 
 export async function replaceMapImage<TImage>({
   commitImage,
   file,
+  layerId,
   mapId,
   stageImage,
 }: MapImageReplacementInput<TImage>): Promise<ResourceOperationResult> {
   try {
-    const staged = await stageImage({ file, mapId })
+    const normalizedLayerId = layerId ?? null
+    const staged = await stageImage({ file, layerId: normalizedLayerId, mapId })
     if (staged.status !== 'staged') return staged
 
     let commitResult: ResourceOperationResult
     try {
-      commitResult = await commitImage({ image: staged.image, mapId })
+      commitResult = await commitImage({ image: staged.image, layerId: normalizedLayerId, mapId })
     } catch (error) {
-      await cancelStagedImage(staged, mapId, error)
+      await cancelStagedImage(staged, normalizedLayerId, mapId, error)
       throw error
     }
 
     if (!isCompletedResourceOperation(commitResult)) {
-      await cancelStagedImage(staged, mapId, commitResult)
+      await cancelStagedImage(staged, normalizedLayerId, mapId, commitResult)
       return commitResult
     }
 
@@ -70,11 +75,12 @@ export async function replaceMapImage<TImage>({
 
 async function cancelStagedImage<TImage>(
   staged: StagedMapImageReplacement<TImage>,
+  layerId: string | null,
   mapId: SidebarItemId,
   commitError: unknown,
 ) {
   try {
-    const cancelResult = await staged.cancel({ image: staged.image, mapId })
+    const cancelResult = await staged.cancel({ image: staged.image, layerId, mapId })
     if (!isCompletedResourceOperation(cancelResult)) {
       throw new MapImageReplacementCleanupError(commitError, cancelResult)
     }

@@ -3,7 +3,7 @@ import { WorkspaceContextMenu } from '../../workspace/context-menu/context-menu'
 import { useMapView } from './use-map-view'
 import type { MapPinWithItem } from '../../game-maps/item-contract'
 import type { ContextMenuHostRef } from '../../context-menu/components/host'
-import type { PinPosition } from './map-pin-placement'
+import type { ScreenPosition } from './map-pin-placement'
 
 export function MapPinContextMenuWrapper({
   pin,
@@ -11,7 +11,7 @@ export function MapPinContextMenuWrapper({
   onClose,
 }: {
   pin: MapPinWithItem
-  position: PinPosition
+  position: ScreenPosition
   onClose: () => void
 }) {
   const contextMenuRef = useRef<ContextMenuHostRef>(null)

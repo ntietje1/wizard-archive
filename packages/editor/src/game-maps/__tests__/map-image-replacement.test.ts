@@ -38,10 +38,12 @@ describe('replaceMapImage', () => {
 
     expect(stageImage).toHaveBeenCalledExactlyOnceWith({
       file,
+      layerId: null,
       mapId: 'map-1',
     })
     expect(commitImage).toHaveBeenCalledExactlyOnceWith({
       image: 'storage-1',
+      layerId: null,
       mapId: 'map-1',
     })
   })
@@ -86,6 +88,7 @@ describe('replaceMapImage', () => {
 
     expect(cancelImage).toHaveBeenCalledExactlyOnceWith({
       image: 'storage-1',
+      layerId: null,
       mapId: 'map-1',
     })
   })
@@ -111,6 +114,7 @@ describe('replaceMapImage', () => {
 
     expect(cancelImage).toHaveBeenCalledExactlyOnceWith({
       image: 'storage-1',
+      layerId: null,
       mapId: 'map-1',
     })
   })

@@ -211,7 +211,7 @@ export type LocalWorkspaceAction =
     }
   | { type: 'replaceFile'; itemId: string; payload: LocalFilePayload }
   | { type: 'removeMapPin'; mapPinId: string }
-  | { type: 'updateMapImage'; mapId: string; imageUrl: string | null }
+  | { type: 'updateMapImage'; layerId: string | null; mapId: string; imageUrl: string | null }
   | { type: 'updateMapPin'; mapPinId: string; x: number; y: number }
   | { type: 'updateMapPinVisibility'; mapPinId: string; isVisible: boolean }
 
@@ -249,7 +249,8 @@ const localWorkspaceReducers = {
   toggleBookmarks: (state, action) => toggleBookmarks(state, action.itemIds),
   updateItemMetadata,
   removeMapPin: (state, action) => removeMapPin(state, action.mapPinId),
-  updateMapImage: (state, action) => updateMapImage(state, action.mapId, action.imageUrl),
+  updateMapImage: (state, action) =>
+    updateMapImage(state, action.mapId, action.layerId, action.imageUrl),
   updateMapPin: (state, action) => updateMapPin(state, action.mapPinId, action.x, action.y),
   updateMapPinVisibility: (state, action) =>
     updateMapPinVisibility(state, action.mapPinId, action.isVisible),
@@ -486,19 +487,26 @@ function removeMapPin(state: LocalWorkspaceState, mapPinId: string): LocalWorksp
 function updateMapImage(
   state: LocalWorkspaceState,
   mapId: string,
+  layerId: string | null,
   imageUrl: string | null,
 ): LocalWorkspaceState {
   const map = state.mapsById[mapId]
   if (!map) return state
-  if (map.imageUrl === imageUrl && (!map.layers?.length || map.layers[0]?.imageUrl === imageUrl)) {
+  const layerIndex = layerId === null ? 0 : map.layers?.findIndex((layer) => layer.id === layerId)
+  if (layerId !== null && (layerIndex === undefined || layerIndex < 0)) return state
+  if (
+    layerId === null &&
+    map.imageUrl === imageUrl &&
+    (!map.layers?.length || map.layers[0]?.imageUrl === imageUrl)
+  ) {
     return state
   }
   const layers = map.layers?.length
-    ? map.layers.map((layer, index) => (index === 0 ? { ...layer, imageUrl } : layer))
+    ? map.layers.map((layer, index) => (index === layerIndex ? { ...layer, imageUrl } : layer))
     : map.layers
   return withUpdatedLocalMap(state, mapId, {
     ...state.mapsById,
-    [mapId]: { ...map, imageUrl, layers },
+    [mapId]: { ...map, imageUrl: layerId === null ? imageUrl : map.imageUrl, layers },
   })
 }
 

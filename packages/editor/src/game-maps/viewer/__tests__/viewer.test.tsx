@@ -7,6 +7,7 @@ import type { MapViewerSource } from '../source'
 import type { MapCanvasStage } from '../map-canvas-stage'
 import { MapViewer } from '../viewer'
 import { completedResourceOperation } from '../../../filesystem/transaction-contract'
+import { createGameMapFixture } from './test-fixtures'
 
 vi.mock('@wizard-archive/ui/components/client-only', () => ({
   ClientOnly: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -95,14 +96,16 @@ describe('MapViewer', () => {
   })
 })
 
-const source = {
+const source: MapViewerSource = {
   canEditMap: () => true,
   canViewItem: () => true,
   createMapPins: vi.fn(),
+  openItem: vi.fn(),
+  removeMapPin: vi.fn(),
   resolveRenderPins: () => ({ status: 'available', pins: [], isPinGhost: () => false }),
   transformStore: {
-    load: () => null,
-    save: vi.fn(),
+    loadMapTransform: () => ({ scale: 1, positionX: 0, positionY: 0 }),
+    saveMapTransform: vi.fn(),
   },
   updateMapImage: vi.fn(() =>
     completedResourceOperation({
@@ -111,14 +114,14 @@ const source = {
     }),
   ),
   updateMapPin: vi.fn(),
-} as unknown as MapViewerSource
+  updateMapPinVisibility: vi.fn(),
+}
 
 function createMap(id: string, name: string): MapItemWithContent {
-  return {
-    id: id,
-    name: `${name} Map`,
-    imageAssetId: null,
+  return createGameMapFixture({
+    id: id as MapItemWithContent['id'],
     imageUrl: `${id}.png`,
+    name: `${name} Map`,
     layers: [
       {
         id: `${id}-layer-1`,
@@ -133,6 +136,5 @@ function createMap(id: string, name: string): MapItemWithContent {
         imageUrl: `${id}-layer-2.png`,
       },
     ],
-    pins: [],
-  } as unknown as MapItemWithContent
+  })
 }

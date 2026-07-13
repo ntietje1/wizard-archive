@@ -158,6 +158,7 @@ describe('useLiveGameMapSessionSource', () => {
     })
     expect(beginMapImageReplacement).toHaveBeenCalledWith({ mapId: 'map-1' })
     expect(updateMapImage).toHaveBeenCalledWith({
+      layerId: null,
       mapId: 'map-1',
       replacementToken: 'replacement-1',
       uploadSessionId: 'upload-session-1',
@@ -251,6 +252,7 @@ describe('useLiveGameMapSessionSource', () => {
       receipt: { kind: 'mapImageUpdated' },
     })
     expect(updateMapImage).toHaveBeenCalledExactlyOnceWith({
+      layerId: null,
       mapId: 'map-1',
       replacementToken: 'replacement-2',
       uploadSessionId: 'upload-session-2',

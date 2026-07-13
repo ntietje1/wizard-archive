@@ -189,7 +189,11 @@ function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
               canEditMap ? (
                 <MapImageUpload
                   onUpload={(file) =>
-                    source.updateMapImage({ mapId: map.id, file: createBrowserImportFile(file) })
+                    source.updateMapImage({
+                      file: createBrowserImportFile(file),
+                      layerId: activeLayerId,
+                      mapId: map.id,
+                    })
                   }
                 />
               ) : (

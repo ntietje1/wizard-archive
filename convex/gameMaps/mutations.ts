@@ -22,6 +22,7 @@ export const beginMapImageReplacement = campaignMutation({
 
 export const updateMapImage = campaignMutation({
   args: {
+    layerId: v.optional(v.nullable(v.string())),
     mapId: v.id('sidebarItems'),
     replacementToken: v.nullable(v.string()),
     uploadSessionId: v.nullable(v.id('fileStorage')),
@@ -32,6 +33,7 @@ export const updateMapImage = campaignMutation({
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'> }> => {
     return await updateMapImageFn(ctx, {
       mapId: args.mapId,
+      layerId: args.layerId ?? null,
       replacementToken: args.replacementToken,
       uploadSessionId: args.uploadSessionId,
     })

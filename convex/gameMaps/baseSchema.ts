@@ -4,11 +4,19 @@ import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsT
 import { domainValidatorFields } from '../common/schema'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 
-const mapValidatorFields = {
+export const mapLayerValidator = v.object({
+  id: v.string(),
+  imageAssetId: v.nullable(v.id('_storage')),
+  imageUrl: v.nullable(v.string()),
+  name: v.string(),
+})
+
+export const mapValidatorFields = {
   ...sidebarItemValidatorFields,
   imageAssetId: v.nullable(v.id('_storage')),
   type: v.literal(RESOURCE_TYPES.gameMaps),
   imageUrl: v.nullable(v.string()),
+  layers: v.optional(v.array(mapLayerValidator)),
 }
 
 export const mapValidator = v.object(mapValidatorFields)

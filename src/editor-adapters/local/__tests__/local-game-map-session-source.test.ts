@@ -225,6 +225,7 @@ describe('createLocalGameMapSessionSource', () => {
     })
     expect(dispatch).toHaveBeenCalledExactlyOnceWith({
       type: 'updateMapImage',
+      layerId: null,
       mapId: 'map-docks',
       imageUrl: `data:image/svg+xml;base64,${btoa('<svg>second</svg>')}`,
     })

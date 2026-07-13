@@ -5,6 +5,11 @@ export interface PinPosition {
   y: number
 }
 
+export interface ScreenPosition {
+  x: number
+  y: number
+}
+
 export interface MapPinPlacementInput extends PinPosition {
   itemId: SidebarItemId
   layerId?: string | null

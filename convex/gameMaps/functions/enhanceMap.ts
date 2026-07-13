@@ -32,13 +32,24 @@ export const enhanceGameMap = async (
   { gameMap, enhancement }: { gameMap: MapItemRow; enhancement?: SidebarItemEnhancement },
 ): Promise<MapItem> => {
   const imageStorageId = gameMap.imageAssetId as unknown as Id<'_storage'> | null
-  const [base, imageUrl] = await Promise.all([
+  const [base, imageUrl, layers] = await Promise.all([
     enhanceBase(ctx, { item: gameMap, enhancement }),
     imageStorageId ? ctx.storage.getUrl(imageStorageId) : null,
+    gameMap.layers
+      ? asyncMap(gameMap.layers, async (layer) => ({
+          id: layer.id,
+          imageAssetId: layer.imageAssetId,
+          imageUrl: layer.imageAssetId ? await ctx.storage.getUrl(layer.imageAssetId) : null,
+          name: layer.name,
+        }))
+      : undefined,
   ])
 
+  const { layers: _baseLayers, ...baseFields } = base
+
   return {
-    ...base,
+    ...baseFields,
+    ...(layers ? { layers } : {}),
     imageUrl,
   }
 }

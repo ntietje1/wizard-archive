@@ -80,7 +80,7 @@ export function useLiveGameMapSessionSource(): LiveGameMapSessionSource {
           }
         },
       },
-      updateMapImage: async ({ file, mapId }) => {
+      updateMapImage: async ({ file, layerId, mapId }) => {
         const mapKey = String(mapId)
         const requestId = ++nextMapImageRequestIdRef.current
         latestMapImageRequestByMapIdRef.current.set(mapKey, requestId)
@@ -89,6 +89,7 @@ export function useLiveGameMapSessionSource(): LiveGameMapSessionSource {
           typeof mapId
         >({
           file,
+          layerId,
           mapId,
           stageImage: async (input) => {
             const replacementToken = await beginMapImageReplacementMutation.mutateAsync({
@@ -124,6 +125,7 @@ export function useLiveGameMapSessionSource(): LiveGameMapSessionSource {
           },
           commitImage: async (staged) => {
             await updateMapImageMutation.mutateAsync({
+              layerId: staged.layerId,
               mapId: staged.mapId,
               replacementToken: staged.image.replacementToken,
               uploadSessionId: staged.image.sessionId,

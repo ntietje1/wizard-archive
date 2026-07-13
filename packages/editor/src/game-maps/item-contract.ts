@@ -24,7 +24,14 @@ export type MapPinWithItem<TItem = MapPinItem> = MapPin & {
   item: TItem | null
 }
 
-export type MapItemRow = BaseResourceRow<typeof RESOURCE_TYPES.gameMaps> & MapImageAssetFields
+export type MapItemRow = BaseResourceRow<typeof RESOURCE_TYPES.gameMaps> &
+  MapImageAssetFields & {
+    layers?: Array<{
+      id: string
+      imageAssetId: AssetId | null
+      name: string
+    }>
+  }
 
 export type MapItem = BaseResource<typeof RESOURCE_TYPES.gameMaps> & MapImageViewFields
 

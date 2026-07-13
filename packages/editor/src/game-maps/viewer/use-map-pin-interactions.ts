@@ -15,7 +15,7 @@ import type { AnyItem } from '../../workspace/items'
 import { isCompletedResourceOperation, reportMapActionError } from './map-action-errors'
 import { createMapPinsAtPosition } from './map-pin-creation'
 import { getImagePinPosition } from './map-pin-placement'
-import type { PinPosition } from './map-pin-placement'
+import type { PinPosition, ScreenPosition } from './map-pin-placement'
 
 type MapPinSession = MapSession['pins']
 
@@ -46,7 +46,7 @@ type PendingPinMove = { mapId: SidebarItemId; pinId: MapPinId }
 type DraggingPin = { pin: MapPinWithItem; pointerId: number }
 type PinContextMenuState = {
   pinId: MapPinId
-  position: PinPosition
+  position: ScreenPosition
 }
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>
@@ -145,14 +145,18 @@ export function useMapPinInteractions({
     draggedPinPositionRef,
     justFinishedDraggingRef,
     pendingPinMove,
+    setPendingPinItems,
     setDraggingPin,
     setPendingPinMove,
     setPinContextMenu,
     source,
   })
 
-  const mapCursor =
-    pendingPinItems || pendingPinMove ? 'crosshair' : draggingPin ? 'grabbing' : 'default'
+  const mapCursor = draggingPin
+    ? 'grabbing'
+    : pendingPinItems || pendingPinMove
+      ? 'crosshair'
+      : 'default'
   const shouldDisablePanning = !!pendingPinItems || !!pendingPinMove || !!draggingPin
 
   return {
@@ -576,6 +580,7 @@ function useRenderedPinHandlers({
   draggedPinPositionRef,
   justFinishedDraggingRef,
   pendingPinMove,
+  setPendingPinItems,
   setDraggingPin,
   setPendingPinMove,
   setPinContextMenu,
@@ -585,6 +590,7 @@ function useRenderedPinHandlers({
   draggedPinPositionRef: { current: PinPosition | null }
   justFinishedDraggingRef: { current: MapPinId | null }
   pendingPinMove: PendingPinMove | null
+  setPendingPinItems: StateSetter<PendingPinItems | null>
   setDraggingPin: StateSetter<DraggingPin | null>
   setPendingPinMove: StateSetter<PendingPinMove | null>
   setPinContextMenu: StateSetter<PinContextMenuState | null>
@@ -631,6 +637,7 @@ function useRenderedPinHandlers({
     if (pendingPinMove?.pinId === pin.id) {
       setPendingPinMove(null)
     }
+    setPendingPinItems(null)
     setDraggingPin({ pin, pointerId: event.pointerId })
     draggedPinPositionRef.current = null
   }
@@ -638,7 +645,7 @@ function useRenderedPinHandlers({
   return { handlePinClick, handlePinContextMenu, handlePinDragStart }
 }
 
-function getPinMenuPosition(e: ReactMouseEvent | ReactKeyboardEvent) {
+function getPinMenuPosition(e: ReactMouseEvent | ReactKeyboardEvent): ScreenPosition {
   if ('clientX' in e && 'clientY' in e && (e.clientX !== 0 || e.clientY !== 0)) {
     return { x: e.clientX, y: e.clientY }
   }

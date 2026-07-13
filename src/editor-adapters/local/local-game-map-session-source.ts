@@ -129,9 +129,10 @@ export function createLocalGameMapSessionSource({
         }
       },
     },
-    updateMapImage: async ({ mapId, file }) => {
+    updateMapImage: async ({ layerId, mapId, file }) => {
       return replaceWizardEditorMapImage({
         file,
+        layerId,
         mapId,
         stageImage: async (input) => {
           assertLocalCanMutate(canEdit)
@@ -162,6 +163,7 @@ export function createLocalGameMapSessionSource({
         commitImage: (staged) => {
           dispatch({
             type: 'updateMapImage',
+            layerId: staged.layerId,
             mapId: String(staged.mapId),
             imageUrl: staged.image,
           })

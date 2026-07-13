@@ -8,6 +8,7 @@ import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { completedResourceOperation } from '../../../filesystem/transaction-contract'
 import type { ResourceOperationResult } from '../../../filesystem/transaction-contract'
 import type { MapItem, MapItemWithContent, MapPinWithItem } from '../../../game-maps/item-contract'
+import type { MapLayer } from '../../../game-maps/document-contract'
 import type { MapPinsCreateResult } from '../../../game-maps/session-contract'
 import type { NoteItem } from '../../../notes/item-contract'
 import type { AnyItem } from '../../../workspace/items'
@@ -31,11 +32,13 @@ export function testId<Id extends string>(id: string): Id {
 export function createGameMapFixture({
   id = testId('map-1'),
   imageUrl = null,
+  layers,
   name = 'Map',
   pins = [],
 }: {
   id?: SidebarItemId
   imageUrl?: string | null
+  layers?: Array<MapLayer>
   name?: string
   pins?: Array<MapPinWithItem<AnyItem>>
 } = {}): MapItemWithContent<AnyItem> {
@@ -43,6 +46,7 @@ export function createGameMapFixture({
     ...createMapItemFixture({ id, imageUrl, name }),
     ancestors: [],
     pins,
+    ...(layers ? { layers } : {}),
   }
 }
 

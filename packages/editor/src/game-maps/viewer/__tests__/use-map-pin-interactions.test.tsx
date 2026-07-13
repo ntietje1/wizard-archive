@@ -74,6 +74,25 @@ describe('useMapPinInteractions', () => {
     })
   })
 
+  it('exits placement mode when dragging a pin starts', () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture(map)
+    const createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate(map.id, []))
+
+    render(<MapPinInteractionHarness map={map} pin={pin} createMapPins={createMapPins} />)
+    setImageBounds()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Place note' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Note' }), { pointerId: 1 })
+    expect(screen.getByTestId('map-cursor')).toHaveAttribute('data-cursor', 'grabbing')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Map canvas' }), {
+      clientX: 100,
+      clientY: 25,
+    })
+    expect(createMapPins).not.toHaveBeenCalled()
+  })
+
   it('uses the latest requested pin action for the next map activation', () => {
     const map = createGameMapFixture()
     const pin = createMapPinFixture(map)
@@ -347,7 +366,7 @@ function MapPinInteractionHarness({
 }: {
   createMapPins?: (input: {
     mapId: MapItemWithContent['id']
-    pins: Array<{ itemId: SidebarItemId; x: number; y: number }>
+    pins: Array<{ itemId: SidebarItemId; layerId?: string | null; x: number; y: number }>
   }) => Promise<MapPinsCreateResult>
   map: MapItemWithContent
   openItem?: (itemId: SidebarItemId) => Promise<void>
@@ -390,6 +409,8 @@ function MapPinInteractionHarness({
       <button
         type="button"
         aria-label="Map canvas"
+        data-testid="map-cursor"
+        data-cursor={interactions.mapCursor}
         onClick={(event) => interactions.handleMapClick(event)}
       />
       <div ref={pinsContainerRef}>

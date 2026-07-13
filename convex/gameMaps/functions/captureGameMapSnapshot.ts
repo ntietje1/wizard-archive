@@ -62,6 +62,15 @@ export async function encodeGameMapSnapshot(
 
   const snapshotData: GameMapSnapshotData = {
     imageAssetId: map.imageStorageId,
+    ...(map.layers
+      ? {
+          layers: map.layers.map((layer) => ({
+            id: layer.id,
+            imageAssetId: layer.imageStorageId,
+            name: layer.name,
+          })),
+        }
+      : {}),
     pins: validPins.map(({ pin, item }) => ({
       itemId: pin.itemId,
       layerId: pin.layerId ?? null,

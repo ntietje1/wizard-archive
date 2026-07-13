@@ -67,6 +67,15 @@ export async function rollbackGameMap(
   if (ext) {
     await ctx.db.patch('gameMaps', ext._id, {
       imageStorageId: parsed.imageAssetId as unknown as Id<'_storage'> | null,
+      ...(parsed.layers
+        ? {
+            layers: parsed.layers.map((layer) => ({
+              id: layer.id,
+              imageStorageId: layer.imageAssetId as unknown as Id<'_storage'> | null,
+              name: layer.name,
+            })),
+          }
+        : { layers: undefined }),
     })
   }
 

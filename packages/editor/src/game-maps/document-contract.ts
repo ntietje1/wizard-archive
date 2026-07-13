@@ -64,6 +64,7 @@ type GameMapSnapshotPinData = {
 
 export type GameMapSnapshotData = {
   imageAssetId: string | null
+  layers?: Array<{ id: string; imageAssetId: string | null; name: string }>
   pins: Array<GameMapSnapshotPinData>
 }
 
@@ -83,6 +84,19 @@ export function readGameMapSnapshot(data: ArrayBuffer): GameMapSnapshotData | nu
 function isGameMapSnapshotData(value: unknown): value is GameMapSnapshotData {
   if (!isRecord(value)) return false
   if (!(typeof value.imageAssetId === 'string' || value.imageAssetId === null)) return false
+  if (
+    value.layers !== undefined &&
+    (!Array.isArray(value.layers) ||
+      !value.layers.every(
+        (layer) =>
+          isRecord(layer) &&
+          typeof layer.id === 'string' &&
+          typeof layer.name === 'string' &&
+          (typeof layer.imageAssetId === 'string' || layer.imageAssetId === null),
+      ))
+  ) {
+    return false
+  }
   if (!Array.isArray(value.pins)) return false
 
   return value.pins.every(isGameMapSnapshotPinData)
