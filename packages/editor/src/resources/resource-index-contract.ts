@@ -148,3 +148,35 @@ export function normalizeResourceCollectionQuery(
         }),
   }
 }
+
+export function sameResourceProjectionScope(
+  left: ResourceProjectionScope,
+  right: ResourceProjectionScope,
+): boolean {
+  return (
+    left.campaignId === right.campaignId &&
+    left.actorId === right.actorId &&
+    left.projection === right.projection &&
+    left.schema === right.schema
+  )
+}
+
+export function resourceCollectionQueryKey(query: ResourceCollectionQuery): string {
+  const normalized = normalizeResourceCollectionQuery(query)
+  return JSON.stringify({
+    parentId: normalized.parentId,
+    lifecycle: normalized.lifecycle,
+    kinds: normalized.kinds ?? null,
+  })
+}
+
+export function resourceMatchesCollectionQuery(
+  resource: AuthorizedResourceSummary,
+  query: ResourceCollectionQuery,
+): boolean {
+  return (
+    resource.displayParentId === query.parentId &&
+    resource.lifecycle === query.lifecycle &&
+    (query.kinds === undefined || query.kinds.includes(resource.kind))
+  )
+}

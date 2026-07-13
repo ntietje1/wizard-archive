@@ -18,11 +18,13 @@ export type OptimisticResourceCommand =
 export type ResourceOptimisticOverlay =
   | Readonly<{
       status: 'pending'
+      ordinal: number
       operationId: OperationId
       command: OptimisticResourceCommand
     }>
   | Readonly<{
       status: 'confirmed'
+      ordinal: number
       operationId: OperationId
       command: OptimisticResourceCommand
       postconditions: ReadonlyArray<ResourcePostcondition>

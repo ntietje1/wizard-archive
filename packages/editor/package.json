@@ -165,6 +165,10 @@
       "types": "./dist/resources/resource-optimism-contract.d.mts",
       "default": "./dist/resources/resource-optimism-contract.mjs"
     },
+    "./resources/optimistic-index": {
+      "types": "./dist/resources/resource-optimistic-index.d.mts",
+      "default": "./dist/resources/resource-optimistic-index.mjs"
+    },
     "./resources/authored-destination-contract": {
       "types": "./dist/resources/authored-destination-contract.d.mts",
       "default": "./dist/resources/authored-destination-contract.mjs"
@@ -253,6 +257,7 @@
       "./resources/content-session-contract",
       "./resources/content-copy-contract",
       "./resources/optimism-contract",
+      "./resources/optimistic-index",
       "./resources/authored-destination-contract",
       "./resources/portable-path-contract",
       "./resources/wizard-archive-contract",

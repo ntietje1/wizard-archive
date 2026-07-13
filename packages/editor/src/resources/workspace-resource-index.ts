@@ -17,7 +17,12 @@ import type {
   WorkspaceResourceIndexController,
   WorkspaceResourceIndexSnapshot,
 } from './resource-index-contract'
-import { normalizeResourceCollectionQuery } from './resource-index-contract'
+import {
+  normalizeResourceCollectionQuery,
+  resourceCollectionQueryKey,
+  resourceMatchesCollectionQuery,
+  sameResourceProjectionScope,
+} from './resource-index-contract'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-contract'
 import type { ResourceKind } from './resource-contract'
 
@@ -51,35 +56,6 @@ const emptyState = (): IndexState => ({
 })
 
 const resourceKinds = new Set<ResourceKind>(Object.values(RESOURCE_KIND))
-
-function sameScope(left: ResourceProjectionScope, right: ResourceProjectionScope): boolean {
-  return (
-    left.campaignId === right.campaignId &&
-    left.actorId === right.actorId &&
-    left.projection === right.projection &&
-    left.schema === right.schema
-  )
-}
-
-function queryKey(query: ResourceCollectionQuery): string {
-  const normalized = normalizeResourceCollectionQuery(query)
-  return JSON.stringify({
-    parentId: normalized.parentId,
-    lifecycle: normalized.lifecycle,
-    kinds: normalized.kinds ?? null,
-  })
-}
-
-function matchesQuery(
-  resource: AuthorizedResourceSummary,
-  query: ResourceCollectionQuery,
-): boolean {
-  return (
-    resource.displayParentId === query.parentId &&
-    resource.lifecycle === query.lifecycle &&
-    (!query.kinds || query.kinds.includes(resource.kind))
-  )
-}
 
 function fixedSummary(resource: AuthorizedResourceSummary): object {
   return {
@@ -217,14 +193,18 @@ function createStoredCollection(
   } catch {
     return null
   }
-  const resourceIds = Array.from(new Set(collection.resourceIds)).sort()
-  if (resourceIds.length !== collection.resourceIds.length) return null
+  const resourceIdSet = new Set(collection.resourceIds)
+  if (resourceIdSet.size !== collection.resourceIds.length) return null
+  const resourceIds = Array.from(resourceIdSet).sort()
   const items = resourceIds.map((resourceId) => resources.get(resourceId))
-  if (items.some((resource) => !resource || !matchesQuery(resource, query))) return null
+  if (items.some((resource) => !resource || !resourceMatchesCollectionQuery(resource, query))) {
+    return null
+  }
   if (
     collection.complete &&
     Array.from(resources.values()).some(
-      (resource) => matchesQuery(resource, query) && !resourceIds.includes(resource.id),
+      (resource) =>
+        resourceMatchesCollectionQuery(resource, query) && !resourceIdSet.has(resource.id),
     )
   ) {
     return null
@@ -240,7 +220,7 @@ function createCollectionMap(
   for (const source of snapshot.collections) {
     const collection = createStoredCollection(source, resources)
     if (!collection) return null
-    const key = queryKey(collection.query)
+    const key = resourceCollectionQueryKey(collection.query)
     if (collections.has(key)) return null
     collections.set(key, collection)
   }
@@ -284,7 +264,7 @@ function reconcileCollections(
 ): void {
   for (const [key, collection] of collections) {
     const resourceIds = collection.resourceIds.filter((candidate) => candidate !== resourceId)
-    if (resource && matchesQuery(resource, collection.query)) {
+    if (resource && resourceMatchesCollectionQuery(resource, collection.query)) {
       resourceIds.push(resourceId)
       resourceIds.sort()
     }
@@ -345,7 +325,7 @@ function list(
   state: IndexState,
   query: ResourceCollectionQuery,
 ): CollectionKnowledge<AuthorizedResourceSummary> {
-  const collection = state.collections.get(queryKey(query))
+  const collection = state.collections.get(resourceCollectionQueryKey(query))
   if (!collection) return { state: 'unknown' }
   return {
     state: 'known',
@@ -401,7 +381,7 @@ export class MutableWorkspaceResourceIndex implements WorkspaceResourceIndexCont
   }
 
   replaceScope(scope: ResourceProjectionScope, revision: IndexRevision): void {
-    if (sameScope(this.#scope, scope) && this.#revision === revision) return
+    if (sameResourceProjectionScope(this.#scope, scope) && this.#revision === revision) return
     this.#scope = scope
     this.#revision = revision
     this.#state = emptyState()
@@ -411,7 +391,7 @@ export class MutableWorkspaceResourceIndex implements WorkspaceResourceIndexCont
   }
 
   replaceSnapshot(snapshot: AuthorizedResourceSnapshot): ResourceIndexApplyResult {
-    if (!sameScope(this.#scope, snapshot.scope)) {
+    if (!sameResourceProjectionScope(this.#scope, snapshot.scope)) {
       return { status: 'replacement_required', reason: 'wrong_scope' }
     }
     const state = createState(snapshot)
@@ -430,7 +410,7 @@ export class MutableWorkspaceResourceIndex implements WorkspaceResourceIndexCont
   }
 
   applyChangeSet(changeSet: AuthorizedResourceChangeSet): ResourceIndexApplyResult {
-    if (!sameScope(this.#scope, changeSet.scope)) {
+    if (!sameResourceProjectionScope(this.#scope, changeSet.scope)) {
       return { status: 'replacement_required', reason: 'wrong_scope' }
     }
     const signature = changeSetSignature(changeSet)
@@ -509,7 +489,9 @@ async function loadIndexKnowledge(
   } catch {
     return providerFailure()
   }
-  if (!sameScope(scope, index.getSnapshot().scope)) return { status: 'scope_changed' }
+  if (!sameResourceProjectionScope(scope, index.getSnapshot().scope)) {
+    return { status: 'scope_changed' }
+  }
   if (!validLoadResult(result)) return invalidLoadResult()
   if (result.status !== 'completed') return result
   return isKnown() ? result : invalidLoadResult()
