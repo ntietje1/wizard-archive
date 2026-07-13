@@ -38,7 +38,7 @@ describe('importWorkspaceFile', () => {
         id: testId<'sidebarItems'>(`note-${name}`),
         slug: `note-${name}` as ResourceSlug,
       }
-      await initialize?.(created)
+      await initialize?.(created, createItem)
       return created
     })
     const text = createImportFile(['hello'], 'notes.txt', { type: 'text/plain' })
@@ -84,7 +84,7 @@ describe('importWorkspaceFile', () => {
         id: testId<'sidebarItems'>(`file-${name}`),
         slug: `file-${name}` as ResourceSlug,
       }
-      await initialize?.(created)
+      await initialize?.(created, createItem)
       return created
     })
     const onProgress = vi.fn()
@@ -170,7 +170,7 @@ describe('importWorkspaceFile', () => {
         slug: `file-${name}` as ResourceSlug,
       }
       try {
-        await initialize?.(created)
+        await initialize?.(created, createItem)
       } catch (error) {
         return { status: 'failed', reason: 'create_failed', error }
       }
