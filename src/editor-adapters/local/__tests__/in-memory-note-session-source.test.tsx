@@ -9,6 +9,7 @@ import type {
 } from '@wizard-archive/editor/adapter'
 import { createNote } from '../../../test/factories/sidebar-item-factory'
 import { useInMemoryNoteSessionSource } from '../in-memory-note-session-source'
+import { testNoteBlockId } from 'shared/test/note-block-id'
 
 type TestNoteItemWithContent = WizardEditorNoteCollaborationSessionRequest['note']
 
@@ -159,7 +160,7 @@ function createContentNote(id: string): TestNoteItemWithContent {
     blockShareAccessWarnings: [],
     content: [
       {
-        id: 'block-1',
+        id: testNoteBlockId('block-1'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: 'Hello', styles: {} }],

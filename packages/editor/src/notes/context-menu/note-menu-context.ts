@@ -1,5 +1,6 @@
 import { use } from 'react'
-import type { NoteBlockId, NoteBlock } from '../document/model'
+import type { NoteBlock } from '../document/model'
+import type { NoteBlockId } from '../../resources/domain-id'
 import type { NoteItemWithContent } from '../../notes/item-contract'
 import type { WorkspaceMenuContext } from '../../workspace/menu-context'
 import type { CustomBlockNoteEditor } from '../editor-schema'

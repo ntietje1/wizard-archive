@@ -12,6 +12,7 @@ import {
   createNote,
   createSidebarShare,
   syncBlocksToYjs,
+  testBlockNoteId,
 } from '../../_test/factories.helper'
 import {
   expectNotFound,
@@ -137,6 +138,20 @@ describe('setBlocksShareStatus', () => {
     )
   })
 
+  it('rejects non-UUIDv7 block targets', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expectValidationFailed(
+      asDm(ctx).action(api.blockShares.actions.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
+        noteId,
+        blockNoteIds: ['block-1'],
+        status: 'all_shared',
+      }),
+    )
+  })
+
   it('authorizes callers before projecting note content', async () => {
     const ctx = await setupCampaignContext(t)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
@@ -198,7 +213,7 @@ describe('setBlocksShareStatus', () => {
       dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId,
-        blockNoteIds: ['nonexistent-block'],
+        blockNoteIds: [testBlockNoteId('nonexistent-block')],
         status: 'all_shared',
       }),
     )
@@ -301,7 +316,7 @@ describe('shareBlocks', () => {
       dmAuth.action(api.blockShares.actions.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId,
-        blockNoteIds: ['nonexistent-block'],
+        blockNoteIds: [testBlockNoteId('nonexistent-block')],
         campaignMemberId: ctx.player.memberId,
       }),
     )
@@ -333,7 +348,7 @@ describe('unshareBlocks', () => {
     const receipt = await asDm(ctx).action(api.blockShares.actions.unshareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blockNoteIds: ['missing-block'],
+      blockNoteIds: [testBlockNoteId('missing-block')],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -424,7 +439,7 @@ describe('unshareBlocks', () => {
     await dmAuth.action(api.blockShares.actions.unshareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blockNoteIds: ['nonexistent-block'],
+      blockNoteIds: [testBlockNoteId('nonexistent-block')],
       campaignMemberId: ctx.player.memberId,
     })
 

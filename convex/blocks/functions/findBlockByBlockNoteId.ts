@@ -1,6 +1,6 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'

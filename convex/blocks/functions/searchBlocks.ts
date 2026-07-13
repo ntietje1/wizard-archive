@@ -1,6 +1,7 @@
 import type { CampaignQueryCtx, DmQueryCtx } from '../../functions'
 import type { BlockSearchResult } from '../../../shared/search/types'
-import type { NoteBlockId, NoteBlockType } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockType } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 import { asyncMap } from 'convex-helpers'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'

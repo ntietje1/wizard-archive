@@ -1,5 +1,7 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
+import { deterministicUuidV7 } from '../../shared/test/deterministic-uuid-v7'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -30,7 +32,6 @@ import type schema from '../schema'
 import type { PermissionLevel } from '../../shared/permissions/types'
 import type { ShareStatus } from '../../shared/block-shares/share-status'
 import type {
-  NoteBlockId,
   NoteBlockType,
   NoteBlock,
   PartialNoteBlock,
@@ -159,28 +160,8 @@ function nextId() {
   return ++counter
 }
 
-export function testBlockNoteId(label: string): string {
-  const hex = deterministicHex(label)
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
-}
-
-function deterministicHex(input: string): string {
-  let stateA = 0x811c9dc5
-  let stateB = 0x9e3779b9
-  let stateC = 0x85ebca6b
-  let stateD = 0xc2b2ae35
-
-  for (let index = 0; index < input.length; index += 1) {
-    const code = input.charCodeAt(index)
-    stateA = Math.imul(stateA ^ code, 0x01000193) >>> 0
-    stateB = Math.imul(stateB ^ (code + index), 0x27d4eb2d) >>> 0
-    stateC = Math.imul(stateC ^ (code * 17 + index), 0x165667b1) >>> 0
-    stateD = Math.imul(stateD ^ (code * 31 + index), 0x85ebca77) >>> 0
-  }
-
-  return [stateA, stateB, stateC, stateD]
-    .map((value) => value.toString(16).padStart(8, '0'))
-    .join('')
+export function testBlockNoteId(label: string): NoteBlockId {
+  return deterministicUuidV7(label) as NoteBlockId
 }
 
 const commonFields = (creatorId: Id<'userProfiles'>) => ({

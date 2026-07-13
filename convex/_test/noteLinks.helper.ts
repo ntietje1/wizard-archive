@@ -2,7 +2,7 @@ import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import { api } from '../_generated/api'
 import type { DataModel, Id } from '../_generated/dataModel'
 import type schema from '../schema'
-import { createFolder, createNote } from './factories.helper'
+import { createFolder, createNote, testBlockNoteId } from './factories.helper'
 import { makeYjsUpdateWithBlocks } from './yjs.helper'
 
 type T = TestConvex<typeof schema>
@@ -36,7 +36,7 @@ export async function setupSiblingRelativeNoteLink(
     documentId: sourceId,
     update: makeYjsUpdateWithBlocks([
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: '[[./Target]]', styles: {} }],

@@ -3,7 +3,7 @@ import { api } from '../../_generated/api'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createSidebarShare } from '../../_test/factories.helper'
+import { createSidebarShare, testBlockNoteId } from '../../_test/factories.helper'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 
 describe('link panel rows', () => {
@@ -22,7 +22,7 @@ describe('link panel rows', () => {
       name: 'Source Note',
       content: [
         {
-          id: 'block-a',
+          id: testBlockNoteId('block-a'),
           type: 'paragraph',
           props: {},
           content: [
@@ -76,7 +76,7 @@ describe('link panel rows', () => {
       name: 'Source Note',
       content: [
         {
-          id: 'block-a',
+          id: testBlockNoteId('block-a'),
           type: 'paragraph',
           props: {},
           content: [{ type: 'text', text: 'See [[Target Note]]', styles: {} }],
@@ -116,7 +116,7 @@ describe('link panel rows', () => {
       name: 'Shared Source',
       content: [
         {
-          id: 'block-a',
+          id: testBlockNoteId('block-a'),
           type: 'paragraph',
           props: {},
           content: [{ type: 'text', text: 'See [[Hidden Target]]', styles: {} }],
@@ -158,7 +158,7 @@ describe('link panel rows', () => {
       name: 'Hidden Source',
       content: [
         {
-          id: 'block-a',
+          id: testBlockNoteId('block-a'),
           type: 'paragraph',
           props: {},
           content: [{ type: 'text', text: 'See [[Shared Target]]', styles: {} }],

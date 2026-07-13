@@ -22,6 +22,7 @@ import { newParagraphAtEnd } from './helpers/editor-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import { makeYjsUpdateWithBlocks } from '../convex/_test/yjs.helper'
 import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import { testNoteBlockId } from 'shared/test/note-block-id'
 
 const campaignName = testName('Values')
 let authoringNoteName: string
@@ -410,7 +411,7 @@ function valueParagraphBlock(
   },
 ): PartialNoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {},
     content: [

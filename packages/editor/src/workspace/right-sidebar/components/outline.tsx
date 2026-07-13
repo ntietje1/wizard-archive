@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronRight, List } from 'lucide-react'
-import type { NoteBlockId, Heading, HeadingLevel } from '../../../notes/document/model'
+import type { Heading, HeadingLevel } from '../../../notes/document/model'
+import type { NoteBlockId } from '../../../resources/domain-id'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import type { RightSidebarOutlineState } from '../source'

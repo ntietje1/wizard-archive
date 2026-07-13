@@ -1,6 +1,7 @@
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { AnyItemWithContent } from '../../workspace/items'
-import type { NoteBlockId, Heading } from '../document/model'
+import type { Heading } from '../document/model'
+import type { NoteBlockId } from '../../resources/domain-id'
 import type { NoteItemWithContent } from '../../notes/item-contract'
 import { extractHeadingsFromContent } from '../headings/heading-utils'
 import type { useNoteEditorStore } from '../editor-store'

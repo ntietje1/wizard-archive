@@ -7,6 +7,7 @@ import { createNoteYDocFromContent } from '../../../notes/imported-text'
 import type * as ImportedTextModule from '../../../notes/imported-text'
 import { createCanvasDocumentDoc } from '../../../canvas/document-contract'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
+import { testNoteBlockId } from '../../../test/blocknote-id'
 
 const { canvasReadOnlyPreviewMock, readNoteYDocContentMock, staticNoteContentMock } = vi.hoisted(
   () => ({
@@ -70,7 +71,7 @@ describe('HistoryPreviewViewer', () => {
     const noteId = 'note-1' as SidebarItemId
     const doc = createNoteYDocFromContent([
       {
-        id: 'block-1',
+        id: testNoteBlockId('block-1'),
         type: 'paragraph',
         props: {},
         content: [],
@@ -105,7 +106,7 @@ describe('HistoryPreviewViewer', () => {
     const noteId = 'note-1' as SidebarItemId
     const doc = createNoteYDocFromContent([
       {
-        id: 'block-1',
+        id: testNoteBlockId('block-1'),
         type: 'paragraph',
         props: {},
         content: [],

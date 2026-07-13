@@ -14,7 +14,8 @@ import type { DmQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMemberSummary } from '../../../shared/campaigns/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { NoteBlockId, BlockShareInfo } from '@wizard-archive/editor/notes/document-contract'
+import type { BlockShareInfo } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 function normalizeBlockMemberPermission(
   permissionLevel: PermissionLevel | null | undefined,

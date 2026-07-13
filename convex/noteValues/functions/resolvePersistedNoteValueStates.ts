@@ -63,7 +63,7 @@ async function loadDefinitionsForNote(
       }),
     ),
   )
-  const visibleBlockNoteIds = new Set(
+  const visibleBlockNoteIds = new Set<string>(
     visibleBlocks.flatMap((result) => (result ? [result.block.blockNoteId] : [])),
   )
   const definitions = rows

@@ -17,6 +17,7 @@ import type { NoteItemWithContent } from '../../notes/item-contract'
 import type { CustomBlockNoteEditor } from '../editor-schema'
 import type { EmbeddedNotePreviewRenderer } from '../embeds/embedded-note-preview-renderer'
 import type { ReactNode } from 'react'
+import { testNoteBlockId } from '../../test/blocknote-id'
 
 const { blockNoteCreateMock } = vi.hoisted(() => ({
   blockNoteCreateMock: vi.fn((options: { initialContent?: Array<unknown> }) => ({
@@ -258,7 +259,7 @@ describe('StaticNoteContent', () => {
 
 function createParagraphBlock(id: string, text: string): NoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {},
     content: [
@@ -269,5 +270,5 @@ function createParagraphBlock(id: string, text: string): NoteBlock {
       },
     ],
     children: [],
-  } as NoteBlock
+  }
 }

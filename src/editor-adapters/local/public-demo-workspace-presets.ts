@@ -11,12 +11,17 @@ import { SHARE_STATUS } from 'shared/block-shares/share-status'
 import { assertUsername } from 'shared/users/validation'
 import type { CampaignMemberId, SidebarItemId, UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 const PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID = 'note-market'
 type PublicDemoAdditionalBlock = LocalWorkspaceState['noteAdditionalBlocksById'][string][number]
 type PublicDemoMemberWorkspaceRecordId = CampaignMemberSummary['campaignId']
 const PUBLIC_DEMO_SESSION_NOTE_ID = 'note-session'
-const PUBLIC_DEMO_SESSION_REVEAL_EMBED_BLOCK_ID = 'session-revealed-prep-embed'
+const PUBLIC_DEMO_SESSION_REVEAL_EMBED_BLOCK_ID = assertDomainId(
+  DOMAIN_ID_KIND.noteBlock,
+  '01980c1a-5e70-7000-8000-000000000001',
+)
 const PUBLIC_DEMO_LAYERED_MAP_ID = 'map-docks'
 const PUBLIC_DEMO_MAP_LAYER_1_ID = 'map-docks-layer-1'
 const PUBLIC_DEMO_MAP_LAYER_2_ID = 'map-docks-layer-2'
@@ -418,7 +423,7 @@ function createSidebarItemEmbedBlock({
   blockId,
   sidebarItemId,
 }: {
-  blockId: string
+  blockId: NoteBlockId
   sidebarItemId: string
 }): PublicDemoAdditionalBlock {
   return {

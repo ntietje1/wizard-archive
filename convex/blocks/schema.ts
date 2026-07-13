@@ -1,5 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import type { Validator } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import {
   NOTE_BLOCK_REGISTRY,
@@ -7,8 +8,10 @@ import {
 } from '@wizard-archive/editor/notes/document-contract'
 import { SHARE_STATUS_VALUES } from '../../shared/block-shares/share-status'
 import { convexValidatorFields } from '../common/schema'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 export const blockNoteIdValidator = v.string()
+const persistedBlockNoteIdValidator = v.string() as Validator<NoteBlockId>
 
 export const blockShareStatusValidator = literals(...SHARE_STATUS_VALUES)
 
@@ -169,9 +172,9 @@ const blockPropValidators = {
 
 const blockCommonTableFields = {
   noteId: v.id('sidebarItems'),
-  blockNoteId: blockNoteIdValidator,
+  blockNoteId: persistedBlockNoteIdValidator,
   position: v.nullable(v.number()),
-  parentBlockId: v.nullable(blockNoteIdValidator),
+  parentBlockId: v.nullable(persistedBlockNoteIdValidator),
   depth: v.number(),
   plainText: v.string(),
   campaignId: v.id('campaigns'),

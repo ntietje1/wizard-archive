@@ -3,7 +3,7 @@ import { useComponentsContext, useExtension, useExtensionState } from '@blocknot
 import { Copy, Files, GripVertical, MessageSquare, Palette, Trash2, Type } from 'lucide-react'
 import { use, useLayoutEffect } from 'react'
 import { toast } from 'sonner'
-import type { NoteBlockId } from '../../document/model'
+import type { NoteBlockId } from '../../../resources/domain-id'
 import type { NoteItemWithContent } from '../../../notes/item-contract'
 import {
   clearInternalNativeDrag,

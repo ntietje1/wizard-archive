@@ -12,6 +12,7 @@ import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import type { InlineContent, NoteBlock } from '../../notes/document/model'
 import type { NoteItemWithContent } from '../../notes/item-contract'
 import type { AnyItemWithContent } from '../../workspace/items'
+import { testNoteBlockId } from '../../test/blocknote-id'
 
 describe('resource content source', () => {
   it('reuses the current content item without loading it', () => {
@@ -252,8 +253,8 @@ describe('resource content source', () => {
       name: 'Projected note',
       content: [visibleBlock, hiddenBlock],
       blockMeta: {
-        visible: visibleBlockMeta(),
-        hidden: { ...visibleBlockMeta(), hiddenFrom: [playerId] },
+        [visibleBlock.id]: visibleBlockMeta(),
+        [hiddenBlock.id]: { ...visibleBlockMeta(), hiddenFrom: [playerId] },
       },
     })
     const { catalog } = createResourceCatalogModel({
@@ -275,7 +276,7 @@ describe('resource content source', () => {
     if (state.status !== 'ready') throw new Error(`Expected ready state, received ${state.status}`)
     const projectedNote = state.item as NoteItemWithContent
 
-    expect(projectedNote.content.map((block) => block.id)).toEqual(['visible'])
+    expect(projectedNote.content.map((block) => block.id)).toEqual([visibleBlock.id])
   })
 
   it('returns unavailable before rendering non-note content hidden in view-as mode', () => {
@@ -353,12 +354,12 @@ function visibleBlockMeta() {
 
 function paragraph(id: string, text: string): NoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {},
     content: [{ type: 'text', text, styles: {} }] satisfies InlineContent,
     children: [],
-  } as NoteBlock
+  }
 }
 
 function flattenTestBlocks(blocks: Array<NoteBlock>): Array<NoteBlock> {

@@ -10,6 +10,7 @@ import { api } from '../../_generated/api'
 import { DOCUMENT_SNAPSHOT_TYPE } from '../types'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
+import { testBlockNoteId } from '../../_test/factories.helper'
 import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 describe('note snapshots capture Y.Doc state directly', () => {
@@ -29,7 +30,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
 
       const blocks: Array<PartialNoteBlock> = [
         {
-          id: 'block-1',
+          id: testBlockNoteId('block-1'),
           type: 'paragraph',
           content: [{ type: 'text', text: 'Hello world' }],
           props: {},

@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 import type { AnyItem } from '../../workspace/items'
-import type { NoteBlockId } from '../document/model'
+import type { NoteBlockId } from '../../resources/domain-id'
 import type { NoteItemWithContent } from '../../notes/item-contract'
 import type { CustomBlockNoteEditor } from '../editor-schema'
 

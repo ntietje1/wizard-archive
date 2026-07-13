@@ -1,12 +1,12 @@
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc } from '../_generated/dataModel'
 import type {
-  NoteBlockId,
   NoteBlockType,
   NoteBlockContent,
   InlineContent,
   TableContent,
 } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 type PersistedBlockCommon = {
   blockNoteId: NoteBlockId

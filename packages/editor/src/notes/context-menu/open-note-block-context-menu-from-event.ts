@@ -1,5 +1,5 @@
 import type { MouseEvent } from 'react'
-import type { NoteBlockId } from '../document/model'
+import type { NoteBlockId } from '../../resources/domain-id'
 import type { NoteItemWithContent } from '../../notes/item-contract'
 import type { BlockNoteContextMenuContextType } from './blocknote-context-menu'
 

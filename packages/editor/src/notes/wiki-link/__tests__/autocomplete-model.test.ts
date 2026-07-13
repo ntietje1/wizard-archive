@@ -23,6 +23,7 @@ import type { AnyItem } from '../../../workspace/items'
 import type { CampaignId, SidebarItemId, UserProfileId } from '../../../../../../shared/common/ids'
 import { createResourceCatalogModel } from '../../../filesystem/catalog'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
+import { testNoteBlockId } from '../../../test/blocknote-id'
 function modelFor(
   query: string,
   sidebarItems: Array<AnyItem>,
@@ -124,7 +125,7 @@ function createTestAutocompleteItemSource(
 
 function heading(text: string, level: Heading['level']): Heading {
   return {
-    noteBlockId: `00000000-0000-4000-8000-${text.toLowerCase().replace(/\W/g, '').padEnd(12, '0').slice(0, 12)}`,
+    noteBlockId: testNoteBlockId(text),
     text,
     level,
     normalizedText: text.toLowerCase(),

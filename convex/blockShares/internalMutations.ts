@@ -19,7 +19,8 @@ import { syncNoteIndexesFromBlocks } from '../notes/functions/syncNoteDerivedDat
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
 import { normalizeBlockShareTargetIds } from './blockShareCommand'
-import type { NoteBlock, NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   ResourceCommand,
   ResourceTransactionReceipt,
@@ -94,9 +95,10 @@ async function executeProjectedBlockShareCommand(
     historyStatus?: 'shared' | 'unshared'
   },
 ): Promise<ResourceTransactionReceipt> {
+  const blockNoteIds = normalizeBlockShareTargetIds(args.command.blockNoteIds)
   const command = {
     ...args.command,
-    blockNoteIds: normalizeBlockShareTargetIds(args.command.blockNoteIds),
+    blockNoteIds,
   } as BlockShareCommand
   const blockShareCtx = await getBlockShareCtx(ctx, {
     campaignId: args.campaignId,
@@ -109,14 +111,14 @@ async function executeProjectedBlockShareCommand(
     case RESOURCE_COMMAND_TYPE.setBlocksShareStatus:
       changedBlockNoteIds = await setBlocksShareStatusFn(blockShareCtx, {
         noteId: command.noteId,
-        blockNoteIds: command.blockNoteIds as Array<NoteBlockId>,
+        blockNoteIds,
         status: command.status,
       })
       break
     case RESOURCE_COMMAND_TYPE.setBlockMemberPermission:
       changedBlockNoteIds = await setBlockMemberPermissionFn(blockShareCtx, {
         noteId: command.noteId,
-        blockNoteIds: command.blockNoteIds as Array<NoteBlockId>,
+        blockNoteIds,
         campaignMemberId: command.campaignMemberId,
         permissionLevel: command.permissionLevel,
         historyStatus: args.historyStatus,

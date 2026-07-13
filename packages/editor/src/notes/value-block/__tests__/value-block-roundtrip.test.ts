@@ -7,6 +7,7 @@ import { reactValueInlineSpec } from '../value-block-react-spec'
 import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../../document/headless-yjs'
 import type { PartialNoteBlock } from '../../document/model'
 import type { CustomBlockNoteEditor } from '../../editor-schema'
+import { testNoteBlockId } from '../../../test/blocknote-id'
 
 const { value: _value, ...inlineContentSpecsWithoutValue } = noteInlineContentSpecs
 
@@ -34,7 +35,7 @@ describe('inline value schema round-trip', () => {
   it('round-trips inline values from the frontend schema into the backend schema', () => {
     const editor = createTestEditor([
       {
-        id: 'paragraph-block-1',
+        id: testNoteBlockId('paragraph-block-1'),
         type: 'paragraph',
         content: [
           { type: 'text', text: 'Bonus ', styles: {} },
@@ -56,7 +57,7 @@ describe('inline value schema round-trip', () => {
       const blocks = noteYDocToBlocks(doc, NOTE_YJS_FRAGMENT)
       expect(blocks).toHaveLength(1)
       expect(blocks[0]).toMatchObject({
-        id: 'paragraph-block-1',
+        id: testNoteBlockId('paragraph-block-1'),
         type: 'paragraph',
         content: [
           { type: 'text', text: 'Bonus ' },

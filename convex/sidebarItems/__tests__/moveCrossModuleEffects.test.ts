@@ -6,6 +6,7 @@ import {
   createFolder,
   createNote,
   createSidebarShare,
+  testBlockNoteId,
 } from '../../_test/factories.helper'
 import {
   expectNotFound,
@@ -270,7 +271,7 @@ describe('executeMoveCommand cross-module effects', () => {
       documentId: sourceId,
       update: makeYjsUpdateWithBlocks([
         {
-          id: 'block-a',
+          id: testBlockNoteId('block-a'),
           type: 'paragraph',
           props: {},
           content: [{ type: 'text', text: '[[../Target]]', styles: {} }],

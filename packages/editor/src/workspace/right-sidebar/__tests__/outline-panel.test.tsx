@@ -8,6 +8,7 @@ import { useActiveNoteHeadingNavigation } from '../../../notes/outline/note-outl
 import { createNote } from '../../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
 import { testId } from '../../../test/id'
+import { testNoteBlockId } from '../../../test/blocknote-id'
 import { OutlinePanel } from '../components/outline'
 import { RightSidebarPanel } from '../panels'
 
@@ -28,7 +29,7 @@ vi.mock('../../../notes/editor-store', () => ({
 
 function heading(id: string, text: string, level: Heading['level']): Heading {
   return {
-    noteBlockId: id,
+    noteBlockId: testNoteBlockId(id),
     level,
     normalizedText: text.toLowerCase(),
     text,
@@ -105,7 +106,7 @@ describe('OutlinePanel', () => {
       'aria-expanded',
       'true',
     )
-    expect(onNavigate).toHaveBeenCalledWith('details')
+    expect(onNavigate).toHaveBeenCalledWith(testNoteBlockId('details'))
   })
 
   it('expands and collapses nested headings', () => {
@@ -157,7 +158,7 @@ describe('WorkspaceRuntimeOutlinePanel', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Intro' }))
 
-    expect(navigateToHeading).toHaveBeenCalledWith('intro')
+    expect(navigateToHeading).toHaveBeenCalledWith(testNoteBlockId('intro'))
   })
 
   it('scrolls headings through the active note editor', () => {
@@ -165,11 +166,11 @@ describe('WorkspaceRuntimeOutlinePanel', () => {
     const outsideScrollIntoView = vi.fn()
     const activeScrollIntoView = vi.fn()
     const outsideBlock = document.createElement('div')
-    outsideBlock.dataset.id = 'intro'
+    outsideBlock.dataset.id = testNoteBlockId('intro')
     outsideBlock.scrollIntoView = outsideScrollIntoView
     const editorRoot = document.createElement('div')
     const activeBlock = document.createElement('div')
-    activeBlock.dataset.id = 'intro'
+    activeBlock.dataset.id = testNoteBlockId('intro')
     activeBlock.scrollIntoView = activeScrollIntoView
     editorRoot.append(activeBlock)
     editorMock._tiptapEditor.view.dom = editorRoot
@@ -186,7 +187,7 @@ describe('WorkspaceRuntimeOutlinePanel', () => {
       })
       expect(outsideScrollIntoView).not.toHaveBeenCalled()
       expect(editorMock.focus).toHaveBeenCalled()
-      expect(editorMock.setTextCursorPosition).toHaveBeenCalledWith('intro', 'end')
+      expect(editorMock.setTextCursorPosition).toHaveBeenCalledWith(testNoteBlockId('intro'), 'end')
     } finally {
       outsideBlock.remove()
       editorRoot.remove()
@@ -198,7 +199,7 @@ describe('WorkspaceRuntimeOutlinePanel', () => {
 function createOutlineNote(): NoteItemWithContent {
   const content: Array<NoteBlock> = [
     {
-      id: 'intro',
+      id: testNoteBlockId('intro'),
       type: 'heading',
       props: { level: 1 },
       content: [{ type: 'text', text: 'Intro', styles: {} }],

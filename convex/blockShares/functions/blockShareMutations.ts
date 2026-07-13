@@ -9,7 +9,7 @@ import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { ShareStatus } from '../../../shared/block-shares/share-status'
-import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 export type BlockShareMutationCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id' | 'currentSessionId'>

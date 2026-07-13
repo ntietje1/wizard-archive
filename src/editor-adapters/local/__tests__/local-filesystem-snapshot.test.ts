@@ -14,6 +14,7 @@ import {
 } from '../public-demo-workspace-presets'
 import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { LOCAL_WORKSPACE_INITIAL_TIMESTAMP } from '../local-workspace-model'
+import { testNoteBlockId } from 'shared/test/note-block-id'
 
 type LocalMapItemWithContent = Extract<WizardEditorItemWithContent, { type: 'gameMap' }>
 type LocalNoteItemWithContent = Extract<WizardEditorItemWithContent, { type: 'note' }>
@@ -231,11 +232,11 @@ describe('local filesystem snapshot', () => {
       'note-market' as SidebarItemId,
     ) as LocalNoteItemWithContent | null
 
-    expect(note?.blockMeta['shared-clue-1']).toMatchObject({
+    expect(note?.blockMeta[testNoteBlockId('shared-clue-1')]).toMatchObject({
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
       shareStatus: SHARE_STATUS.ALL_SHARED,
     })
-    expect(note?.blockMeta['shared-clue-2']).toMatchObject({
+    expect(note?.blockMeta[testNoteBlockId('shared-clue-2')]).toMatchObject({
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
       shareStatus: SHARE_STATUS.ALL_SHARED,
     })
@@ -244,7 +245,7 @@ describe('local filesystem snapshot', () => {
 
 function createParagraphBlock(id: string, text: string): LocalNoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {
       textAlignment: 'left',

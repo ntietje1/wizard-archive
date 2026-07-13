@@ -10,6 +10,7 @@ import {
   searchBlocks as searchBlocksFn,
   searchBlocksAsMember as searchBlocksAsMemberFn,
 } from './functions/searchBlocks'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 const blockShareInfoValidator = v.object({
   noteBlockId: blockNoteIdValidator,
@@ -30,7 +31,7 @@ export const getBlocksWithShares = dmQuery({
   handler: async (ctx, args) => {
     return await getBlocksWithSharesFn(ctx, {
       noteId: args.noteId,
-      blockNoteIds: args.blockNoteIds,
+      blockNoteIds: args.blockNoteIds.map((id) => assertDomainId(DOMAIN_ID_KIND.noteBlock, id)),
     })
   },
 })

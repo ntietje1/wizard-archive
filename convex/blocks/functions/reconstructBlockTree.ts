@@ -1,4 +1,5 @@
-import type { NoteBlockId, NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 import type { Block } from '../types'
 
 type ChildrenByParent = Map<NoteBlockId | null, Array<Block>>

@@ -13,6 +13,7 @@ import { createNoteYDocFromContent, readNoteYDocContent } from '../imported-text
 import type { PartialNoteBlock } from '../document/model'
 import type { CustomBlockNoteEditor } from '../editor-schema'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { testNoteBlockId } from '../../test/blocknote-id'
 
 const TestBlockNoteView = BlockNoteView as React.ComponentType<{
   editor: CustomBlockNoteEditor
@@ -59,7 +60,7 @@ describe('inline value collaboration round-trip', () => {
   it('converts valid blocks to a Yjs document', () => {
     const doc = createNoteYDocFromContent([
       {
-        id: 'paragraph-block-1',
+        id: testNoteBlockId('paragraph-block-1'),
         type: 'paragraph',
         content: [{ type: 'text', text: 'Hello', styles: {} }],
       },
@@ -75,7 +76,7 @@ describe('inline value collaboration round-trip', () => {
   it('mounts an editor containing an inline value with a stable ProseMirror plugin set', () => {
     const doc = createInitialDoc([
       {
-        id: 'paragraph-block-1',
+        id: testNoteBlockId('paragraph-block-1'),
         type: 'paragraph',
         content: [
           { type: 'text', text: 'Bonus ', styles: {} },

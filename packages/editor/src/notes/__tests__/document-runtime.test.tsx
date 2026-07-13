@@ -16,6 +16,7 @@ import type { CustomBlockNoteEditor } from '../editor-schema'
 import type { NoteValueRuntimeState } from '../values/state-contract'
 import type { NoteBlock } from '../document/model'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { testNoteBlockId } from '../../test/blocknote-id'
 
 describe('NoteDocumentRuntime', () => {
   it('keeps document-runtime helpers on feature-owned note sources', () => {
@@ -230,7 +231,7 @@ function createEditor(expressionSource: string): CustomBlockNoteEditor {
   return {
     document: [
       {
-        id: 'block-1',
+        id: testNoteBlockId('block-1'),
         type: 'paragraph',
         props: {},
         content: [
@@ -258,7 +259,7 @@ function createRuntimeState(
 ): NoteValueRuntimeState<SidebarItemId> {
   return {
     noteId: testId('note-id'),
-    noteBlockId: 'block-1',
+    noteBlockId: testNoteBlockId('block-1'),
     valueId: 'value-1',
     slug: 'draft_value',
     status: 'ok',

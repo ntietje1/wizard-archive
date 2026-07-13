@@ -5,6 +5,7 @@ import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
 import type { NoteItemWithContent } from '../../notes/item-contract'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
+import { testNoteBlockId } from '../../test/blocknote-id'
 import { createResourceCatalogModel } from '../catalog'
 
 describe('createResourceCatalogModel', () => {
@@ -174,7 +175,7 @@ describe('createResourceCatalogModel', () => {
     const note: NoteItemWithContent = {
       ...createNote({ name: 'Child', slug: 'child' }),
       ancestors: [],
-      content: [{ id: 'block-1', type: 'paragraph', props: {}, content: [] }],
+      content: [{ id: testNoteBlockId('block-1'), type: 'paragraph', props: {}, content: [] }],
       blockMeta: {
         'block-1': {
           myPermissionLevel: PERMISSION_LEVEL.VIEW,
@@ -189,14 +190,24 @@ describe('createResourceCatalogModel', () => {
       trashItems: [],
     }).catalog
 
-    note.content.push({ id: 'block-2', type: 'paragraph', props: {}, content: [] })
+    note.content.push({
+      id: testNoteBlockId('block-2'),
+      type: 'paragraph',
+      props: {},
+      content: [],
+    })
     note.blockMeta['block-1'].sharedWith.push('member-1' as never)
 
     const catalogNote = catalog.getVisibleItemById(note.id) as NoteItemWithContent
     expect(catalogNote.content).toHaveLength(1)
     expect(catalogNote.blockMeta['block-1'].sharedWith).toEqual([])
     expect(() => {
-      catalogNote.content.push({ id: 'block-3', type: 'paragraph', props: {}, content: [] })
+      catalogNote.content.push({
+        id: testNoteBlockId('block-3'),
+        type: 'paragraph',
+        props: {},
+        content: [],
+      })
     }).toThrow(TypeError)
   })
 

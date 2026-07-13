@@ -1,5 +1,6 @@
 import { getProjectedNoteOutlineHeadings } from '../../notes/outline/note-outline'
-import type { Heading, NoteBlockId } from '../../notes/document/model'
+import type { Heading } from '../../notes/document/model'
+import type { NoteBlockId } from '../../resources/domain-id'
 import * as rightSidebarSource from './source'
 import type { CurrentItemState, WorkspaceNavigation } from '../runtime'
 import type { CampaignMemberId, SidebarItemId } from '../../../../../shared/common/ids'

@@ -6,7 +6,12 @@ import {
   createCanvasViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createGameMap, createNote, createSidebarShare } from '../../_test/factories.helper'
+import {
+  createGameMap,
+  createNote,
+  createSidebarShare,
+  testBlockNoteId,
+} from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 import { api } from '../../_generated/api'
@@ -182,7 +187,7 @@ describe('note rollback data integrity', () => {
 
       const originalBlocks: Array<PartialNoteBlock> = [
         {
-          id: 'block-1',
+          id: testBlockNoteId('block-1'),
           type: 'paragraph',
           content: [{ type: 'text', text: 'Original content' }],
           props: {},
@@ -210,7 +215,7 @@ describe('note rollback data integrity', () => {
 
       const modifiedBlocks: Array<PartialNoteBlock> = [
         {
-          id: 'block-1',
+          id: testBlockNoteId('block-1'),
           type: 'paragraph',
           content: [{ type: 'text', text: 'Modified content' }],
           props: {},
@@ -338,7 +343,7 @@ describe('canvas rollback data integrity', () => {
 
       const modifiedBlocks: Array<PartialNoteBlock> = [
         {
-          id: 'block-1',
+          id: testBlockNoteId('block-1'),
           type: 'paragraph',
           content: [{ type: 'text', text: 'Modified canvas content' }],
           props: {},

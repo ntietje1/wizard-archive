@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { createNote } from '../../../test/sidebar-item-factory'
 import type { NoteBlock } from '../../document/model'
 import { StaticNotePreviewContent } from '../static-note-preview-content'
+import { testNoteBlockId } from '../../../test/blocknote-id'
 
 vi.mock('@wizard-archive/ui/shadcn/components/scroll-area', () => ({
   ScrollArea: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -64,7 +65,7 @@ describe('StaticNotePreviewContent', () => {
 
 function createParagraphBlock(id: string, text: string): NoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {},
     content: [
@@ -75,5 +76,5 @@ function createParagraphBlock(id: string, text: string): NoteBlock {
       },
     ],
     children: [],
-  } as NoteBlock
+  }
 }

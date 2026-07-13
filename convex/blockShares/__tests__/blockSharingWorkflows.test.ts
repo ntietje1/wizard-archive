@@ -7,11 +7,13 @@ import {
   createNote,
   createSidebarShare,
   syncBlocksToYjs,
+  testBlockNoteId,
 } from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { getBlockShareInfo } from '../../_test/blockShareQueries.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 async function getBlockDbId(
   t: ReturnType<typeof createTestContext>,
@@ -19,7 +21,7 @@ async function getBlockDbId(
     campaignId,
     noteId,
     blockNoteId,
-  }: { campaignId: Id<'campaigns'>; noteId: Id<'sidebarItems'>; blockNoteId: string },
+  }: { campaignId: Id<'campaigns'>; noteId: Id<'sidebarItems'>; blockNoteId: NoteBlockId },
 ) {
   const block = await t.run(async (dbCtx) => {
     return await dbCtx.db
@@ -50,7 +52,11 @@ describe('block sharing workflows', () => {
         permissionLevel: 'edit',
       })
       await syncBlocksToYjs(t, note.noteId, [
-        { id: 'pending-block', type: 'paragraph', content: [{ type: 'text', text: 'Draft' }] },
+        {
+          id: testBlockNoteId('pending-block'),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Draft' }],
+        },
       ])
 
       await expectPermissionDenied(
@@ -69,7 +75,7 @@ describe('block sharing workflows', () => {
             q
               .eq('campaignId', ctx.campaignId)
               .eq('noteId', note.noteId)
-              .eq('blockNoteId', 'pending-block'),
+              .eq('blockNoteId', testBlockNoteId('pending-block')),
           )
           .unique()
       })

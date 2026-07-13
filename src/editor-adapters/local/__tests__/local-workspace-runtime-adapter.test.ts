@@ -12,6 +12,7 @@ import {
 } from '../public-demo-workspace-presets'
 import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { createLocalWorkspaceRuntime as createLocalWorkspaceRuntimeBase } from '../local-workspace-runtime-adapter'
+import { testNoteBlockId } from 'shared/test/note-block-id'
 import {
   createLocalFileSystemSnapshot,
   createLocalWorkspaceInitialNavigation,
@@ -2500,7 +2501,7 @@ function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
 
 function createLocalTestNoteEmbedBlock(blockId: string, sidebarItemId: string): LocalNoteBlock {
   return {
-    id: blockId,
+    id: testNoteBlockId(blockId),
     type: 'embed',
     props: {
       targetKind: 'resource',

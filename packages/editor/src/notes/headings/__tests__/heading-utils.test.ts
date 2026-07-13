@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { NoteBlock, HeadingLevel } from '../../document/model'
 import { extractHeadingsFromContent, resolveHeadingPath } from '../heading-utils'
+import { testNoteBlockId } from '../../../test/blocknote-id'
 
 function heading(
   id: string,
@@ -9,7 +10,7 @@ function heading(
   children: Array<NoteBlock> = [],
 ): NoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'heading',
     props: { level },
     content: [{ type: 'text', text, styles: {} }],
@@ -19,7 +20,7 @@ function heading(
 
 function paragraph(id: string, text: string, children: Array<NoteBlock> = []): NoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {},
     content: [{ type: 'text', text, styles: {} }],
@@ -84,19 +85,19 @@ describe('extractHeadingsFromContent', () => {
 describe('resolveHeadingPath', () => {
   const headings = [
     {
-      noteBlockId: 'b1',
+      noteBlockId: testNoteBlockId('b1'),
       text: 'Chapter 1',
       level: 1 as const,
       normalizedText: 'chapter 1',
     },
     {
-      noteBlockId: 'b2',
+      noteBlockId: testNoteBlockId('b2'),
       text: 'Section A',
       level: 2 as const,
       normalizedText: 'section a',
     },
     {
-      noteBlockId: 'b3',
+      noteBlockId: testNoteBlockId('b3'),
       text: 'Section B',
       level: 2 as const,
       normalizedText: 'section b',
@@ -104,35 +105,37 @@ describe('resolveHeadingPath', () => {
   ]
 
   it('resolves single path segment', () => {
-    expect(resolveHeadingPath(headings, ['Chapter 1'])?.noteBlockId).toBe('b1')
+    expect(resolveHeadingPath(headings, ['Chapter 1'])?.noteBlockId).toBe(testNoteBlockId('b1'))
   })
 
   it('resolves chained path', () => {
-    expect(resolveHeadingPath(headings, ['Chapter 1', 'Section B'])?.noteBlockId).toBe('b3')
+    expect(resolveHeadingPath(headings, ['Chapter 1', 'Section B'])?.noteBlockId).toBe(
+      testNoteBlockId('b3'),
+    )
   })
 
   it('keeps chained path matching inside the matched heading subtree', () => {
     const nestedHeadings = [
       {
-        noteBlockId: 'chapter-1',
+        noteBlockId: testNoteBlockId('chapter-1'),
         text: 'Chapter',
         level: 1 as const,
         normalizedText: 'chapter',
       },
       {
-        noteBlockId: 'chapter-1-scene',
+        noteBlockId: testNoteBlockId('chapter-1-scene'),
         text: 'Scene',
         level: 2 as const,
         normalizedText: 'scene',
       },
       {
-        noteBlockId: 'chapter-2',
+        noteBlockId: testNoteBlockId('chapter-2'),
         text: 'Chapter',
         level: 1 as const,
         normalizedText: 'chapter',
       },
       {
-        noteBlockId: 'chapter-2-secret',
+        noteBlockId: testNoteBlockId('chapter-2-secret'),
         text: 'Secret',
         level: 2 as const,
         normalizedText: 'secret',
@@ -145,18 +148,20 @@ describe('resolveHeadingPath', () => {
   it('resolves to first match when duplicates exist', () => {
     const duplicateHeadings = [
       {
-        noteBlockId: 'b1',
+        noteBlockId: testNoteBlockId('b1'),
         text: 'Overview',
         level: 1 as const,
         normalizedText: 'overview',
       },
       {
-        noteBlockId: 'b2',
+        noteBlockId: testNoteBlockId('b2'),
         text: 'Overview',
         level: 2 as const,
         normalizedText: 'overview',
       },
     ]
-    expect(resolveHeadingPath(duplicateHeadings, ['Overview'])?.noteBlockId).toBe('b1')
+    expect(resolveHeadingPath(duplicateHeadings, ['Overview'])?.noteBlockId).toBe(
+      testNoteBlockId('b1'),
+    )
   })
 })

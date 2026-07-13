@@ -19,7 +19,7 @@ export function valueBlock({
   expressionSource: string
 }): PartialNoteBlock {
   return {
-    id,
+    id: testBlockNoteId(id),
     type: 'paragraph',
     props: {},
     content: [valueInline({ valueId, slug, expressionSource })],

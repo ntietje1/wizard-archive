@@ -48,14 +48,14 @@ async function executeProjectedBlockShareCommand(
     historyStatus?: 'shared' | 'unshared'
   },
 ): Promise<ResourceTransactionReceipt> {
+  await ctx.runMutation(internal.blockShares.internalMutations.authorizeBlockShareAction, {
+    campaignId: args.campaignId,
+    noteId: args.command.noteId,
+  })
   const command = {
     ...args.command,
     blockNoteIds: normalizeBlockShareTargetIds(args.command.blockNoteIds),
   } as BlockShareActionCommand
-  await ctx.runMutation(internal.blockShares.internalMutations.authorizeBlockShareAction, {
-    campaignId: args.campaignId,
-    noteId: command.noteId,
-  })
   const content = await readProjectedBlocks(ctx, command.noteId)
   const receipt: ResourceTransactionReceipt = await ctx.runMutation(
     internal.blockShares.internalMutations.executeBlockShareCommand,

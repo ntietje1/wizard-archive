@@ -7,7 +7,7 @@ import {
   createFolderViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createBlock } from '../../_test/factories.helper'
+import { createBlock, testBlockNoteId } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
@@ -116,14 +116,14 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: 'First [[Target Note]]', styles: {} }],
         children: [],
       },
       {
-        id: 'block-b',
+        id: testBlockNoteId('block-b'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: 'Second [label](Target Note)', styles: {} }],
@@ -159,7 +159,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: '[[  factions  /  the guild  ]]', styles: {} }],
@@ -189,7 +189,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [
@@ -233,7 +233,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [
@@ -273,7 +273,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [
@@ -313,7 +313,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: 'Visit [docs](https://example.com)', styles: {} }],
@@ -344,7 +344,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: 'See [[Missing Note#Section|Alias]]', styles: {} }],
@@ -386,7 +386,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     const blocks = [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: '[[Target Note]]', styles: {} }],
@@ -437,7 +437,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const originalBlock = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[[Target Note|Old Alias]]',
     })
 
@@ -495,11 +495,11 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const blockA = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[[Target Note]]',
     })
     const blockB = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-b',
+      blockNoteId: testBlockNoteId('block-b'),
       plainText: '[[Target Note]]',
     })
 
@@ -551,7 +551,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[[Target Note]]',
     })
 
@@ -601,7 +601,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[First Label](Target Note) then [[Target Note|Second Label]]',
     })
 
@@ -628,7 +628,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[First Label](Missing Note#Lore) then [[Missing Note#Lore|Second Label]]',
     })
 
@@ -655,7 +655,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[[Future Target#Section|Alias]]',
     })
 
@@ -704,7 +704,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[[Target Note#Section|Alias]]',
     })
 
@@ -754,7 +754,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[[./Capital]]',
     })
 
@@ -788,7 +788,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       }),
     )
     const block = await createBlock(t, sourceId, ctx.campaignId, {
-      blockNoteId: 'block-a',
+      blockNoteId: testBlockNoteId('block-a'),
       plainText: '[[Hidden Target]]',
     })
 

@@ -1,4 +1,5 @@
-import type { NoteBlockId, NoteBlock } from '../document/model'
+import type { NoteBlock } from '../document/model'
+import type { NoteBlockId } from '../../resources/domain-id'
 import type { CustomBlockNoteEditor } from '../editor-schema'
 
 export function getBlockShareTargetBlocks(

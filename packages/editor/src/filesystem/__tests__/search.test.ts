@@ -16,6 +16,7 @@ import type { NoteItemWithContent } from '../../notes/item-contract'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import { SHARE_STATUS } from '../../../../../shared/block-shares/share-status'
+import { testNoteBlockId } from '../../test/blocknote-id'
 
 describe('filesystem search', () => {
   it('projects catalog items, body matches, breadcrumbs, and recent items into search state', () => {
@@ -214,16 +215,18 @@ describe('static catalog filesystem search', () => {
   })
 
   it('omits hidden note blocks from static body search and links', () => {
+    const visibleBlock = paragraph(
+      'visible-body',
+      'Visible glass clue points at [[Visible Target]].',
+    )
+    const hiddenBlock = paragraph('hidden-body', 'Hidden glass clue points at [[Hidden Target]].')
     const sourceNote = createContentNote({
       id: sidebarItemId('note-source'),
       name: 'Source Note',
-      content: [
-        paragraph('visible-body', 'Visible glass clue points at [[Visible Target]].'),
-        paragraph('hidden-body', 'Hidden glass clue points at [[Hidden Target]].'),
-      ],
+      content: [visibleBlock, hiddenBlock],
       blockMeta: {
-        'visible-body': visibleBlockMeta(),
-        'hidden-body': hiddenBlockMeta(),
+        [visibleBlock.id]: visibleBlockMeta(),
+        [hiddenBlock.id]: hiddenBlockMeta(),
       },
     })
     const visibleTarget = createContentNote({
@@ -502,12 +505,12 @@ function hiddenBlockMeta() {
 
 function paragraph(id: string, text: string): NoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {},
     content: [{ type: 'text', text, styles: {} }] satisfies InlineContent,
     children: [],
-  } as NoteBlock
+  }
 }
 
 function table(id: string, text: string): NoteBlock {
@@ -527,7 +530,7 @@ function table(id: string, text: string): NoteBlock {
   } satisfies TableContent
 
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'table',
     props: {},
     content,

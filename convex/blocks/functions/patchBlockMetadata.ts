@@ -3,7 +3,7 @@ import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import { SHARE_STATUS_VALUES } from '../../../shared/block-shares/share-status'
 import type { ShareStatus } from '../../../shared/block-shares/share-status'
-import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 type BlockMetadataPatch = {
   blockDbId: Id<'blocks'>

@@ -1,7 +1,7 @@
 import { api } from '../_generated/api'
 import type { TestConvexForDataModel } from 'convex-test'
 import type { DataModel, Id } from '../_generated/dataModel'
-import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 type AuthedContext = TestConvexForDataModel<DataModel>
 

@@ -14,7 +14,8 @@ import { SHARE_STATUS } from '../../../../../../shared/block-shares/share-status
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { CampaignMemberId } from '../../../../../../shared/common/ids'
 import type { BlockMeta, NoteItemWithContent } from '../../../notes/item-contract'
-import type { NoteBlock, NoteBlockId } from '../../../notes/document/model'
+import type { NoteBlock } from '../../../notes/document/model'
+import type { NoteBlockId } from '../../../resources/domain-id'
 
 class IntersectionObserverStub {
   observe = vi.fn()

@@ -4,6 +4,7 @@ import * as Y from 'yjs'
 import { expect, test } from '@playwright/test'
 import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'
 import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import { testNoteBlockId } from 'shared/test/note-block-id'
 import { api } from 'convex/_generated/api'
 import { makeYjsUpdateWithBlocks } from '../convex/_test/yjs.helper'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
@@ -453,7 +454,7 @@ function uniqueCanvasName(prefix: string, testInfo: TestInfo) {
 
 function paragraphBlock(id: string, text: string): PartialNoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {},
     content: [{ type: 'text', text, styles: {} }],

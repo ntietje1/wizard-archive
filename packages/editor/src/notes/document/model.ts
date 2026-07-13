@@ -9,6 +9,8 @@ import {
 } from '../../../../../shared/embeds/embedTargets'
 import type { PermissionLevel } from '../../../../../shared/permissions/types'
 import { noteValuePropsSchema } from '../values/schema'
+import { isUuidV7 } from '../../resources/domain-id'
+import type { NoteBlockId } from '../../resources/domain-id'
 
 export const NOTE_BLOCK_REGISTRY = [
   { type: 'paragraph', props: 'defaultText', content: 'inline' },
@@ -278,14 +280,16 @@ const allFlatBlockContentSchemas = NOTE_BLOCK_REGISTRY.map((entry) => {
 export const noteBlockContentSchema = zod.discriminatedUnion('type', allFlatBlockContentSchemas)
 
 export type NoteBlockContent = z.infer<typeof noteBlockContentSchema>
-export type NoteBlockId = z.infer<typeof noteBlockIdSchema>
 type InlineContentItem = z.infer<typeof inlineContentSchema>
 export type InlineContent = Array<InlineContentItem>
 export type TableContent = z.infer<typeof tableContentSchema>
 export type NoteBlock = z.infer<typeof noteBlockSchema>
 export type PartialNoteBlock = z.infer<typeof partialBlockNoteBlockSchema>
 
-const noteBlockIdSchema = zod.string().min(1)
+const noteBlockIdSchema = zod.custom<NoteBlockId>(
+  (value) => typeof value === 'string' && isUuidV7(value),
+  'Expected a lowercase UUIDv7 note block id',
+)
 
 type NoteBlockNode = NoteBlockContent & {
   id: z.infer<typeof noteBlockIdSchema>

@@ -1,5 +1,5 @@
 import { getNearestBlockPos } from '@blocknote/core'
-import type { NoteBlockId } from '../document/model'
+import type { NoteBlockId } from '../../resources/domain-id'
 import type { CustomBlockNoteEditor } from '../editor-schema'
 
 type ContextMenuPosition = {

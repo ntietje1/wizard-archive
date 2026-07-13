@@ -24,6 +24,7 @@ import {
 import { makeYjsUpdateWithBlocks } from '../convex/_test/yjs.helper'
 import type { Locator, Page, TestInfo } from '@playwright/test'
 import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import { testNoteBlockId } from 'shared/test/note-block-id'
 
 const campaignName = testName('E2E NoteEmbeds')
 const sourceNoteContent = `Embedded source content ${Date.now()}`
@@ -199,13 +200,13 @@ test.describe.serial('note embeds', () => {
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('embed-selection-before', beforeText),
       {
-        id: 'embed-selection-empty',
+        id: testNoteBlockId('embed-selection-empty'),
         type: 'embed',
         props: { targetKind: 'empty' },
         children: [],
       },
       {
-        id: 'embed-selection-external',
+        id: testNoteBlockId('embed-selection-external'),
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
@@ -271,13 +272,13 @@ test.describe.serial('note embeds', () => {
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('embed-endpoint-before', beforeText),
       {
-        id: 'embed-endpoint-empty',
+        id: testNoteBlockId('embed-endpoint-empty'),
         type: 'embed',
         props: { targetKind: 'empty' },
         children: [],
       },
       {
-        id: 'embed-endpoint-external',
+        id: testNoteBlockId('embed-endpoint-external'),
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
@@ -317,7 +318,7 @@ test.describe.serial('note embeds', () => {
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('embedded-note-clipboard-before', beforeText),
       {
-        id: 'embedded-note-clipboard-target',
+        id: testNoteBlockId('embedded-note-clipboard-target'),
         type: 'embed',
         props: {
           targetKind: 'resource',
@@ -393,7 +394,7 @@ test.describe.serial('note embeds', () => {
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('internal-media-drag-before', beforeText),
       {
-        id: 'internal-media-drag-source',
+        id: testNoteBlockId('internal-media-drag-source'),
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
@@ -404,7 +405,7 @@ test.describe.serial('note embeds', () => {
         children: [],
       },
       {
-        id: 'internal-media-drag-empty-target',
+        id: testNoteBlockId('internal-media-drag-empty-target'),
         type: 'embed',
         props: { targetKind: 'empty' },
         children: [],
@@ -443,7 +444,7 @@ test.describe.serial('note embeds', () => {
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('video-surface-drag-before', beforeText),
       {
-        id: 'video-surface-drag-source',
+        id: testNoteBlockId('video-surface-drag-source'),
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
@@ -454,7 +455,7 @@ test.describe.serial('note embeds', () => {
         children: [],
       },
       {
-        id: 'video-surface-drag-empty-target',
+        id: testNoteBlockId('video-surface-drag-empty-target'),
         type: 'embed',
         props: { targetKind: 'empty' },
         children: [],
@@ -493,7 +494,7 @@ test.describe.serial('note embeds', () => {
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('focused-video-drag-before', beforeText),
       {
-        id: 'focused-video-drag-source',
+        id: testNoteBlockId('focused-video-drag-source'),
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
@@ -504,7 +505,7 @@ test.describe.serial('note embeds', () => {
         children: [],
       },
       {
-        id: 'focused-video-drag-empty-target',
+        id: testNoteBlockId('focused-video-drag-empty-target'),
         type: 'embed',
         props: { targetKind: 'empty' },
         children: [],
@@ -541,7 +542,7 @@ test.describe.serial('note embeds', () => {
     await persistNoteBlocks(page, hostName, [
       paragraphBlock('focused-audio-drag-before', beforeText),
       {
-        id: 'focused-audio-drag-source',
+        id: testNoteBlockId('focused-audio-drag-source'),
         type: 'embed',
         props: {
           targetKind: 'externalUrl',
@@ -552,7 +553,7 @@ test.describe.serial('note embeds', () => {
         children: [],
       },
       {
-        id: 'focused-audio-drag-empty-target',
+        id: testNoteBlockId('focused-audio-drag-empty-target'),
         type: 'embed',
         props: { targetKind: 'empty' },
         children: [],
@@ -619,7 +620,7 @@ async function openCampaign(page: Page) {
 async function persistSourceNoteContent(page: Page) {
   await persistNoteBlocksBySlug(page, 'embeddable-source-note', [
     {
-      id: 'source-paragraph',
+      id: testNoteBlockId('source-paragraph'),
       type: 'paragraph',
       props: {},
       content: [{ type: 'text', text: sourceNoteContent, styles: {} }],
@@ -1226,7 +1227,7 @@ async function getEditorBlocksBeforeFirstEmbed(page: Page) {
 
 function paragraphBlock(id: string, text: string): PartialNoteBlock {
   return {
-    id,
+    id: testNoteBlockId(id),
     type: 'paragraph',
     props: {},
     content: [{ type: 'text', text, styles: {} }],

@@ -10,7 +10,7 @@ import { getBlockShareNote } from './getBlockShareNote'
 import type { BlockShareMutationCtx } from './blockShareMutations'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 type BlockMemberPermissionHistoryStatus = 'shared' | 'unshared'
 

@@ -7,7 +7,7 @@ import { getBlockShareNote } from './getBlockShareNote'
 import type { BlockShareMutationCtx } from './blockShareMutations'
 import type { Id } from '../../_generated/dataModel'
 import type { ShareStatus } from '../../../shared/block-shares/share-status'
-import type { NoteBlockId } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 export const setBlocksShareStatus = async (
   ctx: BlockShareMutationCtx,

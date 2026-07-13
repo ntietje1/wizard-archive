@@ -1,5 +1,6 @@
 import { extractPlainText } from './extractPlainText'
-import type { NoteBlockId, NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 import type { PersistedFlatBlock } from '../types'
 
 export function flattenBlocks(blocks: Array<NoteBlock>): Array<PersistedFlatBlock> {

@@ -1,4 +1,4 @@
-import type { NoteBlockId } from '../document/model'
+import type { NoteBlockId } from '../../resources/domain-id'
 import type { useNoteEditorStore } from '../editor-store'
 
 type ActiveNoteEditor = ReturnType<typeof useNoteEditorStore.getState>['editor']
