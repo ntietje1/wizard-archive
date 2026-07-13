@@ -86,8 +86,6 @@ type OptimisticCreatedItems = {
   >
 }
 
-type ActiveCreateScopes = Array<Set<SidebarItemId>>
-
 function createOptimisticCreatedItems(): OptimisticCreatedItems {
   return {
     folderIds: new Set(),
@@ -183,10 +181,8 @@ function createWorkspaceCreateItemOperation({
   optimisticCreatedItems: OptimisticCreatedItems
   reportCreateItemError: WorkspaceFileSystemOperationsInput['reportCreateItemError']
 }): FileSystemCreateItem {
-  const activeCreateScopes: ActiveCreateScopes = []
   return (input, initialize) =>
     createWorkspaceItemWithScope({
-      activeCreateScopes,
       canCreateItems,
       canManageFolders,
       catalog,
@@ -195,6 +191,7 @@ function createWorkspaceCreateItemOperation({
       input,
       onItemSlugChange,
       optimisticCreatedItems,
+      ownerScope: null,
       reportCreateItemError,
     })
 }
@@ -205,13 +202,12 @@ type WorkspaceCreateItemResult = ReturnType<FileSystemCreateItem>
 type CreatedRuntimeItem = Awaited<ReturnType<ResourceOperationDriver['createItem']>>
 
 type CreateItemScope = {
-  activate: () => void
-  deactivate: () => void
   discard: () => void
+  forget: (itemId: SidebarItemId) => void
+  record: (itemId: SidebarItemId) => void
 }
 
 function createWorkspaceItemWithScope({
-  activeCreateScopes,
   canCreateItems,
   canManageFolders,
   catalog,
@@ -220,9 +216,9 @@ function createWorkspaceItemWithScope({
   input,
   onItemSlugChange,
   optimisticCreatedItems,
+  ownerScope,
   reportCreateItemError,
 }: {
-  activeCreateScopes: ActiveCreateScopes
   canCreateItems: boolean
   canManageFolders: boolean
   catalog: ResourceCatalog
@@ -231,30 +227,45 @@ function createWorkspaceItemWithScope({
   input: WorkspaceCreateItemInput
   onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange']
   optimisticCreatedItems: OptimisticCreatedItems
+  ownerScope: CreateItemScope | null
   reportCreateItemError: WorkspaceFileSystemOperationsInput['reportCreateItemError']
 }): WorkspaceCreateItemResult {
   if (!canCreateItems) return { status: 'unavailable', reason: 'create_items_unsupported' }
 
-  const scope = createItemScope(activeCreateScopes, optimisticCreatedItems, onItemSlugChange)
-  scope.activate()
+  const scope = createItemScope(optimisticCreatedItems, onItemSlugChange, ownerScope)
   try {
     const request = createWorkspaceItemRequest({ catalog, input, optimisticCreatedItems })
     if (!canCreatePlannedItem(input.type, request.parentPlan, canManageFolders)) {
-      scope.deactivate()
       return { status: 'unavailable', reason: 'manage_folders_unsupported' }
     }
     const recordCreatedItem = createCreatedItemRecorder({
-      activeCreateScopes,
       name: request.name,
       onItemSlugChange,
       optimisticCreatedItems,
       parentKey: request.parentKey,
+      scope,
       type: input.type,
     })
     const created = initialize
       ? filesystem.createItem(request.commandInput, (createdItem) => {
           recordCreatedItem(createdItem)
-          return initialize({ status: 'completed', id: createdItem.id, slug: createdItem.slug })
+          const createNestedItem: FileSystemCreateItem = (nestedInput, nestedInitialize) =>
+            createWorkspaceItemWithScope({
+              canCreateItems,
+              canManageFolders,
+              catalog,
+              filesystem,
+              initialize: nestedInitialize,
+              input: nestedInput,
+              onItemSlugChange,
+              optimisticCreatedItems,
+              ownerScope: scope,
+              reportCreateItemError,
+            })
+          return initialize(
+            { status: 'completed', id: createdItem.id, slug: createdItem.slug },
+            createNestedItem,
+          )
         })
       : filesystem.createItem(request.commandInput)
 
@@ -265,7 +276,6 @@ function createWorkspaceItemWithScope({
     })
   } catch (error) {
     scope.discard()
-    scope.deactivate()
     reportCreateItemError(error, 'Failed to create item')
     return { status: 'failed', reason: 'create_failed', error }
   }
@@ -284,27 +294,25 @@ function canCreatePlannedItem(
 }
 
 function createItemScope(
-  activeCreateScopes: ActiveCreateScopes,
   optimisticCreatedItems: OptimisticCreatedItems,
   onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange'],
+  ownerScope: CreateItemScope | null,
 ): CreateItemScope {
   const createScope = new Set<SidebarItemId>()
-  let scopeIsActive = false
   return {
-    activate: () => {
-      activeCreateScopes.push(createScope)
-      scopeIsActive = true
+    record: (itemId) => {
+      createScope.add(itemId)
+      ownerScope?.record(itemId)
     },
-    deactivate: () => {
-      if (!scopeIsActive) return
-      const index = activeCreateScopes.lastIndexOf(createScope)
-      if (index >= 0) activeCreateScopes.splice(index, 1)
-      scopeIsActive = false
+    forget: (itemId) => {
+      createScope.delete(itemId)
+      ownerScope?.forget(itemId)
     },
     discard: () => {
       for (const createdItemId of [...createScope].reverse()) {
         removeOptimisticCreatedItem(optimisticCreatedItems, { createdItemId })
         onItemSlugChange?.(createdItemId, null)
+        ownerScope?.forget(createdItemId)
       }
       createScope.clear()
     },
@@ -344,26 +352,24 @@ function createWorkspaceItemRequest({
 }
 
 function createCreatedItemRecorder({
-  activeCreateScopes,
   name,
   onItemSlugChange,
   optimisticCreatedItems,
   parentKey,
+  scope,
   type,
 }: {
-  activeCreateScopes: ActiveCreateScopes
   name: ResourceName
   onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange']
   optimisticCreatedItems: OptimisticCreatedItems
   parentKey: string
+  scope: CreateItemScope
   type: ResourceKind
 }) {
   let recordedResult: FileSystemCreateItemCompletedResult | null = null
   return (createdItem: CreatedRuntimeItem): FileSystemCreateItemCompletedResult => {
     if (recordedResult) return recordedResult
-    for (const scope of activeCreateScopes) {
-      scope.add(createdItem.id)
-    }
+    scope.record(createdItem.id)
     recordOptimisticCreatedItem(optimisticCreatedItems, {
       createdItemId: createdItem.id,
       name,
@@ -390,26 +396,14 @@ function completeWorkspaceItemCreate(
 ): WorkspaceCreateItemResult {
   if (!isPromiseLike(created)) {
     const result = recordCreatedItem(created)
-    scope.deactivate()
     return result
   }
 
-  return created
-    .then(recordCreatedItem, (error: unknown) => {
-      scope.discard()
-      reportCreateItemError(error, 'Failed to create item')
-      return { status: 'failed' as const, reason: 'create_failed' as const, error }
-    })
-    .then(
-      (result) => {
-        scope.deactivate()
-        return result
-      },
-      (error: unknown) => {
-        scope.deactivate()
-        throw error
-      },
-    )
+  return created.then(recordCreatedItem, (error: unknown) => {
+    scope.discard()
+    reportCreateItemError(error, 'Failed to create item')
+    return { status: 'failed' as const, reason: 'create_failed' as const, error }
+  })
 }
 
 function recordOptimisticCreatedItem(

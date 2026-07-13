@@ -51,6 +51,7 @@ export type FileSystemCreateItemResult =
 
 type FileSystemCreateItemInitializer = (
   created: FileSystemCreateItemCompletedResult,
+  createItem: FileSystemCreateItem,
 ) => MaybePromise<void>
 
 export type FileSystemCreateItem = (

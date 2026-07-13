@@ -10,7 +10,7 @@ import {
 } from './receipt-selectors'
 import type { ReceiptRemovedItemSnapshot } from './receipt-selectors'
 
-type ReceiptEffectItem = Pick<AnyItem, 'id' | 'parentId' | 'slug'>
+type ReceiptEffectItem = Pick<AnyItem, 'id' | 'parentId'>
 
 function isItemOrDescendantOfRoot(
   item: ReceiptEffectItem,

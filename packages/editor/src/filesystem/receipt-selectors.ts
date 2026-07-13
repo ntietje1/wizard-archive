@@ -1,7 +1,5 @@
 import type { SidebarItemId } from '../../../../shared/common/ids'
-import { assertResourceItemSlug } from '../workspace/items'
 import { RESOURCE_STATUS } from '../workspace/items-persistence-contract'
-import type { ResourceSlug } from '../workspace/resource-contract'
 import type { ResourceEvent, ResourceTransactionReceipt } from './transaction-contract'
 
 type ResourceEventByType<TType extends ResourceEvent['type']> = Extract<
@@ -42,7 +40,6 @@ export function getReceiptRemovedRootIds(
 export type ReceiptRemovedItemSnapshot = {
   id: SidebarItemId
   parentId: SidebarItemId | null
-  slug: ResourceSlug
 }
 
 export function getReceiptRemovedItemSnapshots(
@@ -54,7 +51,6 @@ export function getReceiptRemovedItemSnapshots(
         {
           id: patch.snapshot.id,
           parentId: patch.snapshot.parentId,
-          slug: assertResourceItemSlug(patch.snapshot.slug),
         },
       ]
     }
@@ -65,12 +61,10 @@ export function getReceiptRemovedItemSnapshots(
     ) {
       return []
     }
-    if (typeof patch.before.slug !== 'string' || !('parentId' in patch.before)) return []
     return [
       {
         id: patch.itemId,
-        parentId: patch.before.parentId ?? null,
-        slug: assertResourceItemSlug(patch.before.slug),
+        parentId: 'parentId' in patch.before ? (patch.before.parentId ?? null) : null,
       },
     ]
   })

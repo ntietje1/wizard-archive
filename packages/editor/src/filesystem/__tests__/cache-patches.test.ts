@@ -165,6 +165,20 @@ describe('filesystem cache patches', () => {
     expect(updated.sidebar).toEqual([])
   })
 
+  it('does not overwrite concurrent state when a patch precondition is stale', () => {
+    const note = createNote({ name: 'Concurrent name' })
+    const updated = applyFileSystemPatchesToSidebarCache({ sidebar: [note], trash: [] }, [
+      {
+        type: 'updateResource',
+        itemId: note.id,
+        before: { name: 'Optimistic name' },
+        fields: { name: 'Original name' },
+      },
+    ])
+
+    expect(updated.sidebar[0]?.name).toBe('Concurrent name')
+  })
+
   it('keeps undo-hidden created rows available for redo receipt updates', () => {
     const created = createNote({ name: 'Created' })
 
