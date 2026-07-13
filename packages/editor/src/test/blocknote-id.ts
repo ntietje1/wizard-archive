@@ -1,6 +1,8 @@
-export function testNoteBlockId(label: string): string {
+import type { NoteBlockId } from '../resources/domain-id'
+
+export function testNoteBlockId(label: string): NoteBlockId {
   const hex = deterministicHex(label)
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-7${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}` as NoteBlockId
 }
 
 function deterministicHex(input: string): string {

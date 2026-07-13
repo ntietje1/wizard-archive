@@ -76,6 +76,10 @@ export function assertDomainId<TKind extends DomainIdKind>(
 }
 
 export function generateDomainId<TKind extends DomainIdKind>(kind: TKind): DomainIdByKind[TKind] {
+  return assertDomainId(kind, generateUuidV7())
+}
+
+export function generateUuidV7(): UuidV7 {
   const bytes = crypto.getRandomValues(new Uint8Array(16))
   let timestamp = BigInt(Date.now())
 
@@ -87,5 +91,5 @@ export function generateDomainId<TKind extends DomainIdKind>(kind: TKind): Domai
   bytes[6] = (bytes[6]! & 0x0f) | 0x70
   bytes[8] = (bytes[8]! & 0x3f) | 0x80
 
-  return assertDomainId(kind, formatUuid(bytes))
+  return formatUuid(bytes) as UuidV7
 }

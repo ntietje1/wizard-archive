@@ -8,6 +8,7 @@ import {
   restoreBlockNoteSelection,
 } from '../../rich-text/blocknote/blocknote-selection-adapter'
 import type { BlockNoteSelectionSnapshot } from '../../rich-text/blocknote/blocknote-selection-adapter'
+import { configureBlockNoteUuidV7 } from '../../rich-text/blocknote/uuidv7'
 
 export function createCanvasTextBlockNoteEditor({
   ariaLabel,
@@ -16,6 +17,7 @@ export function createCanvasTextBlockNoteEditor({
   ariaLabel: string
   content: CanvasTextContent
 }): CanvasTextEditor {
+  configureBlockNoteUuidV7()
   return BlockNoteEditor.create({
     schema: canvasTextEditorSchema,
     disableExtensions: ['link'],
