@@ -32,7 +32,7 @@ export function useCanvasEditableNodeSession({
   const pendingActivationRef: PendingRichEmbedActivationRef =
     useRef<RichEmbedActivationTarget | null>(null)
   const editFrameRef = useRef<number | null>(null)
-  const hasPendingAutoEdit = editSession.pendingEditNodeId === id
+  const hasPendingAutoEdit = editSession.pendingEdit?.nodeId === id
 
   const scheduleEditingChange = useCallback(
     (nextEditing: boolean, onCommit?: () => void) => {
@@ -73,8 +73,7 @@ export function useCanvasEditableNodeSession({
       return
     }
 
-    editSession.setPendingEditNodeId(null)
-    editSession.setPendingEditNodePoint(null)
+    editSession.setPendingEdit(null)
     pendingActivationRef.current = null
 
     if (editing) {
@@ -100,13 +99,13 @@ export function useCanvasEditableNodeSession({
       return
     }
 
-    pendingActivationRef.current = editSession.pendingEditNodePoint
-      ? { kind: 'point', payload: { point: editSession.pendingEditNodePoint } }
+    pendingActivationRef.current = editSession.pendingEdit
+      ? { kind: 'point', payload: { point: editSession.pendingEdit.point } }
       : { kind: 'end' }
     scheduleEditingChange(true)
   }, [
     canEdit,
-    editSession.pendingEditNodePoint,
+    editSession.pendingEdit,
     editing,
     hasPendingAutoEdit,
     id,
@@ -145,12 +144,11 @@ export function useCanvasEditableNodeSession({
   )
 
   const handleActivated = useCallback(() => {
-    if (editSession.pendingEditNodeId !== id) {
+    if (editSession.pendingEdit?.nodeId !== id) {
       return
     }
 
-    editSession.setPendingEditNodeId(null)
-    editSession.setPendingEditNodePoint(null)
+    editSession.setPendingEdit(null)
   }, [editSession, id])
 
   return {

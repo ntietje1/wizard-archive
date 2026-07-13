@@ -170,10 +170,8 @@ function createSelectEnvironment({
     editSession: {
       editingEmbedId: null,
       setEditingEmbedId: () => undefined,
-      pendingEditNodeId: null,
-      pendingEditNodePoint: null,
-      setPendingEditNodeId: () => undefined,
-      setPendingEditNodePoint: () => undefined,
+      pendingEdit: null,
+      setPendingEdit: () => undefined,
     },
     toolState: {
       getSettings: () => ({

@@ -122,7 +122,7 @@ function createBaseToolState() {
   return {
     getSettings: () => ({
       strokeColor: '#000',
-      strokeOpacity: 1,
+      strokeOpacity: 100,
       strokeSize: 2,
       edgeType: 'bezier' as CanvasEdgeType,
     }),
@@ -174,8 +174,7 @@ function createToolRuntime(): CanvasToolRuntime {
     editSession: {
       ...runtime.editSession,
       setEditingEmbedId: vi.fn(),
-      setPendingEditNodeId: vi.fn(),
-      setPendingEditNodePoint: vi.fn(),
+      setPendingEdit: vi.fn(),
     },
     toolState: {
       ...runtime.toolState,

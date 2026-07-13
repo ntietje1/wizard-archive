@@ -32,10 +32,7 @@ function getCanvasRemoteSessionState(remoteUsers: Array<RemoteUser>) {
 
 export function useCanvasSessionState({ provider }: UseCanvasSessionStateOptions) {
   const [editingEmbedId, setEditingEmbedId] = useState<string | null>(null)
-  const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>(null)
-  const [pendingEditNodePoint, setPendingEditNodePoint] = useState<{ x: number; y: number } | null>(
-    null,
-  )
+  const [pendingEdit, setPendingEdit] = useState<CanvasEditSessionState['pendingEdit']>(null)
   const awareness = useCanvasAwareness(provider)
   const remoteUsers = awareness.remoteUsers
   const { remoteResizeDimensions, remoteNodeHighlights, remoteEdgeHighlights } = useMemo(
@@ -48,12 +45,10 @@ export function useCanvasSessionState({ provider }: UseCanvasSessionStateOptions
       ({
         editingEmbedId,
         setEditingEmbedId,
-        pendingEditNodeId,
-        pendingEditNodePoint,
-        setPendingEditNodeId,
-        setPendingEditNodePoint,
+        pendingEdit,
+        setPendingEdit,
       }) satisfies CanvasEditSessionState,
-    [editingEmbedId, pendingEditNodeId, pendingEditNodePoint],
+    [editingEmbedId, pendingEdit],
   )
 
   return useMemo(

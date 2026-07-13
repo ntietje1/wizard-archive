@@ -8,8 +8,7 @@ import {
 describe('textToolSpec', () => {
   it('creates a default-sized text node on click and requests editing at the click point', () => {
     const createdNodes: Array<CanvasDocumentNode> = []
-    const setPendingEditNodeId = vi.fn()
-    const setPendingEditNodePoint = vi.fn()
+    const setPendingEdit = vi.fn()
     const setActiveTool = vi.fn()
     const replaceSelection = vi.fn()
     const controller = textToolSpec.createHandlers(
@@ -19,8 +18,7 @@ describe('textToolSpec', () => {
           createdNodes.push(node)
         },
         replaceSelection,
-        setPendingEditNodeId,
-        setPendingEditNodePoint,
+        setPendingEdit,
         setActiveTool,
       }),
     )
@@ -39,8 +37,10 @@ describe('textToolSpec', () => {
       nodeIds: new Set([createdNodes[0].id]),
       edgeIds: new Set<string>(),
     })
-    expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
-    expect(setPendingEditNodePoint).toHaveBeenCalledWith({ x: 100, y: 200 })
+    expect(setPendingEdit).toHaveBeenCalledWith({
+      nodeId: createdNodes[0].id,
+      point: { x: 100, y: 200 },
+    })
     expect(setActiveTool).toHaveBeenCalledWith('select')
   })
 
@@ -54,8 +54,7 @@ describe('textToolSpec', () => {
           createdNodes.push(node)
         },
         replaceSelection: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         setActiveTool,
       }),
     )
@@ -83,8 +82,7 @@ describe('textToolSpec', () => {
           createdNodes.push(node)
         },
         replaceSelection: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         setActiveTool: vi.fn(),
       }),
     )
@@ -114,8 +112,7 @@ describe('textToolSpec', () => {
           createdNodes.push(node)
         },
         replaceSelection: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         setActiveTool: vi.fn(),
       }),
     )

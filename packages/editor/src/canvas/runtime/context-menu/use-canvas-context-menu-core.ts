@@ -29,8 +29,7 @@ interface UseCanvasContextMenuCoreOptions {
   getTargetContributors?: (
     target: CanvasContextMenuTarget,
   ) => ReadonlyArray<CanvasContextMenuContributor>
-  setPendingEditNodeId: (nodeId: string | null) => void
-  setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
+  setPendingEdit: (pendingEdit: { nodeId: string; point: CanvasContextMenuPoint } | null) => void
   screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   selection: Pick<CanvasSelectionController, 'clearSelection' | 'getSnapshot' | 'setSelection'>
   commands: CanvasContextMenuCommands
@@ -58,8 +57,7 @@ export function useCanvasContextMenuCore({
   createItems = [],
   createNode,
   getTargetContributors,
-  setPendingEditNodeId,
-  setPendingEditNodePoint,
+  setPendingEdit,
   screenToCanvasPosition,
   selection,
   commands,
@@ -104,8 +102,7 @@ export function useCanvasContextMenuCore({
         screenToCanvasPosition,
         createNode,
         setSelection: selection.setSelection,
-        setPendingEditNodeId,
-        setPendingEditNodePoint,
+        setPendingEdit,
       })
     },
   } satisfies CanvasContextMenuServices

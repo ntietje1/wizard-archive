@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { useState } from 'react'
+import { useReducer } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasTextNode } from '../canvas-text-node'
 import { normalizeCanvasTextNodeRenderData } from '../../../text/node-data'
@@ -359,11 +359,14 @@ function CanvasTextNodeHarness({
   textColor?: string
 }) {
   const defaultSelection = createCanvasRuntime().selection
-  const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>(
-    initialPendingEditNodeId,
-  )
-  const [pendingEditNodePoint, setPendingEditNodePoint] = useState<{ x: number; y: number } | null>(
-    initialPendingEditNodePoint,
+  const [pendingEdit, updatePendingEdit] = useReducer(
+    (
+      _current: { nodeId: string; point: { x: number; y: number } } | null,
+      next: { nodeId: string; point: { x: number; y: number } } | null,
+    ) => next,
+    initialPendingEditNodeId && initialPendingEditNodePoint
+      ? { nodeId: initialPendingEditNodeId, point: initialPendingEditNodePoint }
+      : null,
   )
   const nodeProps = {
     id: 'text-1',
@@ -394,15 +397,11 @@ function CanvasTextNodeHarness({
             editSession: {
               editingEmbedId: null,
               setEditingEmbedId: () => undefined,
-              pendingEditNodeId,
-              pendingEditNodePoint,
-              setPendingEditNodeId: (nextId) => {
-                setPendingEditNodeId(nextId)
-                onPendingEditNodeIdChange?.(nextId)
-              },
-              setPendingEditNodePoint: (nextPoint) => {
-                setPendingEditNodePoint(nextPoint)
-                onPendingEditNodePointChange?.(nextPoint)
+              pendingEdit,
+              setPendingEdit: (nextPendingEdit) => {
+                updatePendingEdit(nextPendingEdit)
+                onPendingEditNodeIdChange?.(nextPendingEdit?.nodeId ?? null)
+                onPendingEditNodePointChange?.(nextPendingEdit?.point ?? null)
               },
             },
             selection: {

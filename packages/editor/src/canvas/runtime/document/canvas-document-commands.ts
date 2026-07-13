@@ -534,15 +534,13 @@ export function createAndSelectTextCanvasNode({
   screenToCanvasPosition,
   createNode,
   setSelection,
-  setPendingEditNodeId,
-  setPendingEditNodePoint,
+  setPendingEdit,
 }: {
   pointerPosition: CanvasContextMenuPoint
   screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   createNode: (node: CanvasDocumentNode) => void
   setSelection: (selection: CanvasSelectionSnapshot) => void
-  setPendingEditNodeId: (nodeId: string | null) => void
-  setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
+  setPendingEdit: (pendingEdit: { nodeId: string; point: CanvasContextMenuPoint } | null) => void
 }) {
   const placement = createCanvasNodePlacement('text', {
     position: screenToCanvasPosition(pointerPosition),
@@ -552,8 +550,7 @@ export function createAndSelectTextCanvasNode({
   const nextSelection = { nodeIds: new Set([placement.node.id]), edgeIds: new Set<string>() }
   setSelection(nextSelection)
   if (placement.startEditing) {
-    setPendingEditNodePoint(pointerPosition)
-    setPendingEditNodeId(placement.node.id)
+    setPendingEdit({ nodeId: placement.node.id, point: pointerPosition })
   }
   return nextSelection
 }
