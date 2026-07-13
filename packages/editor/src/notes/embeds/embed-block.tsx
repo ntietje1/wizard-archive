@@ -31,6 +31,7 @@ import {
 import type { ResizeHandlePosition } from '../../../../../shared/resize/resizeHandleDescriptors'
 import { useEmbedDropTarget } from '../../embeds/hooks/use-drop-target'
 import { usePendingEmbedUpload } from '../../embeds/pending-upload'
+import { getPositiveFiniteNumber } from './numbers'
 import type { EmbedMediaLayout } from '../../embeds/utils/media'
 import { areEmbedMediaLayoutsEqual, getEmbedMediaAspectRatio } from '../../embeds/utils/media'
 import type { EmbeddedNotePreviewRenderer } from './embedded-note-preview-renderer'
@@ -1199,7 +1200,7 @@ function getNextNoteEmbedBlockProps(
 ): NoteEmbedBlockProps {
   return {
     ...getSharedEmbedBlockProps(currentProps),
-    ...(nextTarget.kind !== 'empty' && !positiveNumber(currentProps.previewWidth)
+    ...(nextTarget.kind !== 'empty' && !getPositiveFiniteNumber(currentProps.previewWidth)
       ? { previewWidth: DEFAULT_NOTE_EMBED_PREVIEW_WIDTH }
       : {}),
     ...blockPropsFromEmbedTarget(nextTarget),
@@ -1208,7 +1209,7 @@ function getNextNoteEmbedBlockProps(
 
 function getNoteEmbedPreviewWidth(blockProps: NoteEmbedBlockProps, target: EmbedTarget) {
   return (
-    positiveNumber(blockProps.previewWidth) ??
+    getPositiveFiniteNumber(blockProps.previewWidth) ??
     (target.kind !== 'empty' ? DEFAULT_NOTE_EMBED_PREVIEW_WIDTH : undefined)
   )
 }
@@ -1227,7 +1228,7 @@ function getNoteEmbedPreviewHeight({
   width: number | undefined
 }) {
   return clampNoteEmbedPreviewHeight(
-    (usesFreeformHeight ? positiveNumber(blockProps.previewHeight) : undefined) ??
+    (usesFreeformHeight ? getPositiveFiniteNumber(blockProps.previewHeight) : undefined) ??
       getDefaultNoteEmbedPreviewHeight({
         aspectRatio: documentAspectRatio,
         usesFreeformHeight,
@@ -1250,7 +1251,7 @@ function getNoteEmbedResizeSessionState(layout: ReturnType<typeof useNoteEmbedBl
 
 function getInitialNoteEmbedMediaLayout(props: NoteEmbedBlockProps): EmbedMediaLayout | null {
   const aspectRatio =
-    positiveNumber(props.previewAspectRatio) ??
+    getPositiveFiniteNumber(props.previewAspectRatio) ??
     getDocumentEmbedAspectRatioForTarget(embedTargetFromBlockProps(props))
   return aspectRatio ? { kind: 'intrinsicAspectRatio', aspectRatio } : null
 }
@@ -1324,10 +1325,6 @@ function getNoteEmbedResizeZoneClassName(handle: ResizeHandlePosition) {
 function getTargetTitle(target: EmbedTarget) {
   if (target.kind === 'externalUrl') return target.name ?? target.url
   return null
-}
-
-function positiveNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
 }
 
 function getSharedEmbedBlockProps(props: NoteEmbedBlockProps): NoteEmbedBlockProps {

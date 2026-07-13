@@ -66,5 +66,5 @@ function serializeValueInlineExternalAttributes(valueProps: NoteValueProps): str
 }
 
 function escapeHtmlAttribute(value: string): string {
-  return escapeHtml(value).replace(/"/g, '&quot;')
+  return escapeHtml(value)
 }

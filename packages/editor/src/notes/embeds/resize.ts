@@ -1,6 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { ResizeHandlePosition } from '../../../../../shared/resize/resizeHandleDescriptors'
 import { getResizeHandleCursor } from '../../../../../shared/resize/resizeHandleDescriptors'
+import { getPositiveFiniteNumber } from './numbers'
 
 type ResizeSessionOptions = {
   aspectRatio: number | null
@@ -48,15 +49,16 @@ export function startNoteEmbedResizeSession({
   const rootRect = root.getBoundingClientRect()
   const body = getBodyElement(root)
   const bodyRect = body?.getBoundingClientRect()
-  const startWidth = positiveNumber(width) ?? positiveNumber(rootRect.width) ?? root.clientWidth
+  const startWidth =
+    getPositiveFiniteNumber(width) ?? getPositiveFiniteNumber(rootRect.width) ?? root.clientWidth
   const startHeight =
-    positiveNumber(height) ??
-    positiveNumber(bodyRect?.height) ??
-    positiveNumber(rootRect.height) ??
-    positiveNumber(root.clientHeight) ??
+    getPositiveFiniteNumber(height) ??
+    getPositiveFiniteNumber(bodyRect?.height) ??
+    getPositiveFiniteNumber(rootRect.height) ??
+    getPositiveFiniteNumber(root.clientHeight) ??
     MIN_BODY_HEIGHT
   const activeAspectRatio =
-    positiveNumber(aspectRatio) ??
+    getPositiveFiniteNumber(aspectRatio) ??
     (useMeasuredAspectRatioFallback ? getAspectRatio(startWidth, startHeight) : undefined)
   const minWidth = getMinimumWidthForAspectRatio(
     activeAspectRatio ?? null,
@@ -146,14 +148,14 @@ function clampHeight(height: number, maxHeight: number | undefined) {
 }
 
 function getMinimumWidthForAspectRatio(aspectRatio: number | null, widthInset: number) {
-  const ratio = positiveNumber(aspectRatio)
+  const ratio = getPositiveFiniteNumber(aspectRatio)
   if (!ratio) return MIN_WIDTH
   return Math.max(MIN_WIDTH, Math.ceil(ratio * MIN_BODY_HEIGHT + widthInset))
 }
 
 function getBodyWidthInset({ root, rootWidth }: { root: HTMLElement; rootWidth: number }) {
   const body = getBodyElement(root)
-  const bodyWidth = positiveNumber(body?.clientWidth)
+  const bodyWidth = getPositiveFiniteNumber(body?.clientWidth)
   if (!bodyWidth) return 0
   return Math.max(0, rootWidth - bodyWidth)
 }
@@ -260,16 +262,12 @@ function getVerticalHeight({
   return startHeight + (handle.includes('top') ? startY - pointerY : pointerY - startY)
 }
 
-function positiveNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
-}
-
 function getAspectRatio(width: number, height: number) {
   return height > 0 ? width / height : undefined
 }
 
 function getMaxHeight(width: number, aspectRatio: number | null) {
-  const ratio = positiveNumber(aspectRatio)
+  const ratio = getPositiveFiniteNumber(aspectRatio)
   return ratio ? width / ratio : undefined
 }
 
