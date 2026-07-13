@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CampaignPanelContent } from '../campaign-panel-content'
 import type { CampaignPanelSource } from '../campaign-panel-source'
 import type { Session } from 'shared/sessions/types'
-import type { CampaignId, SessionId } from 'shared/common/ids'
+import type { CampaignId } from 'shared/common/ids'
+import { testSessionId } from 'shared/test/session-id'
 
 const settingsStoreMocks = vi.hoisted(() => ({
   open: vi.fn(),
@@ -75,7 +76,7 @@ describe('CampaignPanelContent session actions', () => {
 
   it('keeps resume choices open when setting the current session fails', async () => {
     const error = new Error('session rejected')
-    const previousSession = createSession({ id: 'session-previous' as SessionId })
+    const previousSession = createSession({ id: testSessionId('session-previous') })
     const setCurrentSession = vi.fn().mockRejectedValue(error)
     const source = createPanelSource({
       sessions: [previousSession],
@@ -97,7 +98,7 @@ describe('CampaignPanelContent session actions', () => {
   })
 
   it('closes resume choices after setting the current session succeeds', async () => {
-    const previousSession = createSession({ id: 'session-previous' as SessionId })
+    const previousSession = createSession({ id: testSessionId('session-previous') })
     const setCurrentSession = vi.fn().mockResolvedValue(previousSession.id)
     const source = createPanelSource({
       sessions: [previousSession],
@@ -151,8 +152,7 @@ function createSessionActions(): CampaignPanelSource['sessionActions'] {
 
 function createSession(overrides: Partial<Session> = {}): Session {
   return {
-    id: 'session-1' as SessionId,
-    sessionUuid: '0198e000-0000-7000-8000-000000000001',
+    id: testSessionId('session-1'),
     createdAt: 1,
     campaignId: 'campaign-1' as CampaignId,
     name: 'Previous Session',

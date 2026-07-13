@@ -22,11 +22,21 @@ describe('session workflows', () => {
         name: 'Session 2',
       })
 
-      const s1 = await t.run(async (dbCtx) => dbCtx.db.get('sessions', s1Id))
+      const s1 = await t.run(async (dbCtx) =>
+        dbCtx.db
+          .query('sessions')
+          .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', s1Id))
+          .unique(),
+      )
       expect(s1).not.toBeNull()
       expect(s1!.endedAt).not.toBeNull()
 
-      const s2 = await t.run(async (dbCtx) => dbCtx.db.get('sessions', s2Id))
+      const s2 = await t.run(async (dbCtx) =>
+        dbCtx.db
+          .query('sessions')
+          .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', s2Id))
+          .unique(),
+      )
       expect(s2).not.toBeNull()
       expect(s2!.endedAt).toBeNull()
     })
@@ -49,7 +59,12 @@ describe('session workflows', () => {
         campaignId: ctx.campaignId,
       })
 
-      const s2Ended = await t.run(async (dbCtx) => dbCtx.db.get('sessions', s2Id))
+      const s2Ended = await t.run(async (dbCtx) =>
+        dbCtx.db
+          .query('sessions')
+          .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', s2Id))
+          .unique(),
+      )
       expect(s2Ended!.endedAt).not.toBeNull()
 
       await dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
@@ -57,7 +72,12 @@ describe('session workflows', () => {
         sessionId: s2Id,
       })
 
-      const s2Resumed = await t.run(async (dbCtx) => dbCtx.db.get('sessions', s2Id))
+      const s2Resumed = await t.run(async (dbCtx) =>
+        dbCtx.db
+          .query('sessions')
+          .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', s2Id))
+          .unique(),
+      )
       expect(s2Resumed!.endedAt).toBeNull()
 
       await expectConflict(

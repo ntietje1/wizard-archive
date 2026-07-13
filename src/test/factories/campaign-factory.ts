@@ -34,7 +34,6 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
     description: '',
     slug: assertCampaignSlug(slug ?? `test-campaign-${campaignCounter}`),
     status: CAMPAIGN_STATUS.Active,
-    currentSessionId: null,
     defaultFolderInheritShares,
     dmUserProfile: dmUser,
     myMembership: memberOverrides ? createCampaignMember({ ...memberOverrides, campaignId }) : null,

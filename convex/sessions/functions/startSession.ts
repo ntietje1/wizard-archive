@@ -1,11 +1,11 @@
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { Id } from '../../_generated/dataModel'
+import type { SessionId } from '@wizard-archive/editor/resources/domain-id'
 import type { DmMutationCtx } from '../../functions'
 
 export async function startSession(
   ctx: DmMutationCtx,
   { name }: { name?: string },
-): Promise<Id<'sessions'>> {
+): Promise<SessionId> {
   const campaign = ctx.campaign
   const campaignId = campaign._id
   const now = Date.now()
@@ -21,19 +21,20 @@ export async function startSession(
     }
   }
 
+  const sessionId = generateDomainId(DOMAIN_ID_KIND.session)
   const insertNew = () =>
     ctx.db.insert('sessions', {
-      sessionUuid: generateDomainId(DOMAIN_ID_KIND.session),
+      sessionUuid: sessionId,
       campaignId,
       name: name ?? null,
       startedAt: now,
       endedAt: null,
     })
 
-  const [, sessionId] = await Promise.all([endPrevious(), insertNew()])
+  const [, sessionRowId] = await Promise.all([endPrevious(), insertNew()])
 
   await ctx.db.patch('campaigns', campaignId, {
-    currentSessionId: sessionId,
+    currentSessionId: sessionRowId,
   })
 
   return sessionId

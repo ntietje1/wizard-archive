@@ -2,7 +2,7 @@ import { isPromiseLike } from '../../../../shared/common/async'
 import type { MaybePromise } from '../../../../shared/common/async'
 import type {
   CampaignMemberId,
-  SessionId,
+  SessionRowId,
   AssetId,
   UserProfileId,
 } from '../../../../shared/common/ids'
@@ -346,7 +346,7 @@ export type ResourceShare = {
   sidebarItemId: ResourceId
   sidebarItemType: ResourceKind
   campaignMemberId: CampaignMemberId
-  sessionId: SessionId | null
+  sessionId: SessionRowId | null
   permissionLevel: PermissionLevel | null
 }
 

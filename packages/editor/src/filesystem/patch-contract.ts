@@ -1,5 +1,5 @@
 import type {
-  SessionId,
+  SessionRowId,
   AssetId,
   UserProfileId,
   WorkspaceId,
@@ -92,7 +92,7 @@ type ResourceSharePatchRow = {
   resourceId: ResourceId
   sidebarItemType: ResourceKind
   memberId: WorkspaceMemberId
-  sessionId: SessionId | null
+  sessionId: SessionRowId | null
   permissionLevel: PermissionLevel | null
 }
 

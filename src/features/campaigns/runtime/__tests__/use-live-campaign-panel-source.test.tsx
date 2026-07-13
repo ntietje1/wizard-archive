@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useLiveCampaignPanelSource } from '../use-live-campaign-panel-source'
-import type { SessionId } from 'shared/common/ids'
+import { testSessionId } from 'shared/test/session-id'
 
 const campaignMocks = vi.hoisted(() => ({
   useCampaign: vi.fn(),
@@ -68,18 +68,19 @@ beforeEach(() => {
 describe('useLiveCampaignPanelSource', () => {
   it('returns awaitable session mutation outcomes', async () => {
     const { result } = renderHook(() => useLiveCampaignPanelSource())
+    const sessionId = testSessionId('session-1')
 
     await expect(result.current.sessionActions.startSession()).resolves.toBe('started-session')
     await expect(result.current.sessionActions.endCurrentSession()).resolves.toBe('ended-session')
-    await expect(
-      result.current.sessionActions.setCurrentSession('session-1' as SessionId),
-    ).resolves.toBe('selected-session')
+    await expect(result.current.sessionActions.setCurrentSession(sessionId)).resolves.toBe(
+      'selected-session',
+    )
 
     expect(sessionMocks.startSessionMutate).not.toHaveBeenCalled()
     expect(sessionMocks.endCurrentSessionMutate).not.toHaveBeenCalled()
     expect(sessionMocks.setCurrentSessionMutate).not.toHaveBeenCalled()
     expect(sessionMocks.setCurrentSessionMutateAsync).toHaveBeenCalledWith({
-      sessionId: 'session-1',
+      sessionId,
     })
   })
 

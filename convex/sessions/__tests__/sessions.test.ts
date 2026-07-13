@@ -5,9 +5,11 @@ import {
   expectConflict,
   expectNotFound,
   expectPermissionDenied,
+  expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
+import type { SessionId } from '@wizard-archive/editor/resources/domain-id'
 
 describe('startSession', () => {
   const t = createTestContext()
@@ -27,7 +29,7 @@ describe('startSession', () => {
     })
     expect(current).not.toBeNull()
     expect(current!.id).toBe(sessionId)
-    expect(isUuidV7(current!.sessionUuid)).toBe(true)
+    expect(isUuidV7(current!.id)).toBe(true)
   })
 
   it('auto-ends previous session when starting new one', async () => {
@@ -196,6 +198,18 @@ describe('setCurrentSession', () => {
       playerAuth.mutation(api.sessions.mutations.setCurrentSession, {
         campaignId: ctx.campaignId,
         sessionId,
+      }),
+    )
+  })
+
+  it('rejects provider-shaped session IDs', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
+        campaignId: ctx.campaignId,
+        sessionId: 'session-row-id' as SessionId,
       }),
     )
   })

@@ -1,22 +1,15 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { getCurrentSession } from './getCurrentSession'
-import { getSession } from './getSession'
-import type { Id } from '../../_generated/dataModel'
+import { getCampaignSessionRow } from './getSession'
+import type { SessionId } from '@wizard-archive/editor/resources/domain-id'
 import type { DmMutationCtx } from '../../functions'
 
 export async function setCurrentSession(
   ctx: DmMutationCtx,
-  { sessionId }: { sessionId: Id<'sessions'> },
-): Promise<Id<'sessions'>> {
-  const session = await getSession(ctx, { sessionId })
-  if (!session) {
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Session not found')
-  }
-
-  if (session.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Session does not belong to this campaign')
-  }
+  { sessionId }: { sessionId: SessionId },
+): Promise<SessionId> {
+  const sessionRow = await getCampaignSessionRow(ctx, { sessionId })
 
   const currentSession = await getCurrentSession(ctx)
   if (currentSession) {
@@ -24,11 +17,11 @@ export async function setCurrentSession(
   }
 
   await Promise.all([
-    ctx.db.patch('sessions', sessionId, {
+    ctx.db.patch('sessions', sessionRow._id, {
       endedAt: null,
     }),
     ctx.db.patch('campaigns', ctx.campaign._id, {
-      currentSessionId: sessionId,
+      currentSessionId: sessionRow._id,
     }),
   ])
   return sessionId

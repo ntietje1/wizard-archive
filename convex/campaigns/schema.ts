@@ -10,16 +10,20 @@ export const campaignMemberRoleValidator = literals('DM', 'Player')
 
 export const campaignMemberStatusValidator = literals('Pending', 'Accepted', 'Rejected', 'Removed')
 
-const campaignTableFields = {
+const campaignFields = {
   campaignUuid: v.string(),
   name: v.string(),
   description: v.string(),
   dmUserId: v.id('userProfiles'),
   slug: v.string(),
   status: campaignStatusValidator,
-  currentSessionId: v.nullable(v.id('sessions')),
   // Temporary widen-migrate-narrow shape; read paths normalize missing/null to false.
   defaultFolderInheritShares: v.optional(v.union(v.boolean(), v.null())),
+}
+
+const campaignTableFields = {
+  ...campaignFields,
+  currentSessionId: v.nullable(v.id('sessions')),
 }
 
 const campaignMemberTableFields = {
@@ -62,10 +66,10 @@ export const campaignMemberSummaryValidator = v.object({
 
 const campaignValidatorFields = {
   ...domainValidatorFields('campaigns'),
+  ...campaignFields,
   dmUserProfile: userProfileSummaryValidator,
   myMembership: v.nullable(campaignMemberSummaryValidator),
   acceptedMemberCount: v.number(),
-  ...campaignTableFields,
 }
 
 export const campaignValidator = v.object(campaignValidatorFields)

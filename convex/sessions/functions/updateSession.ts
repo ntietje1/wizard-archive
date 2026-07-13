@@ -1,20 +1,13 @@
-import { ERROR_CODE } from '../../../shared/errors/client'
-import { throwClientError } from '../../errors'
-import type { Doc, Id } from '../../_generated/dataModel'
+import { getCampaignSessionRow } from './getSession'
+import type { Doc } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
+import type { SessionId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function updateSession(
   ctx: DmMutationCtx,
-  { sessionId, name }: { sessionId: Id<'sessions'>; name?: string },
+  { sessionId, name }: { sessionId: SessionId; name?: string },
 ): Promise<null> {
-  const session = await ctx.db.get('sessions', sessionId)
-  if (!session) {
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Session not found')
-  }
-
-  if (session.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Session does not belong to this campaign')
-  }
+  const sessionRow = await getCampaignSessionRow(ctx, { sessionId })
 
   const updates: Partial<Doc<'sessions'>> = {}
   if (name !== undefined) {
@@ -22,7 +15,7 @@ export async function updateSession(
   }
 
   if (Object.keys(updates).length > 0) {
-    await ctx.db.patch('sessions', sessionId, updates)
+    await ctx.db.patch('sessions', sessionRow._id, updates)
   }
 
   return null

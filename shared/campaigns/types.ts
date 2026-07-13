@@ -1,4 +1,4 @@
-import type { CampaignId, CampaignMemberId, SessionId, UserProfileId } from '../common/ids'
+import type { CampaignId, CampaignMemberId, SessionRowId, UserProfileId } from '../common/ids'
 import type { CampaignSlug } from './validation'
 import type { UserProfile, UserProfileSummary } from '../users/types'
 
@@ -36,11 +36,11 @@ export type CampaignRow = {
   description: string
   slug: CampaignSlug
   status: CampaignStatus
-  currentSessionId: SessionId | null
+  currentSessionId: SessionRowId | null
   defaultFolderInheritShares: boolean
 }
 
-export type Campaign = Omit<CampaignRow, '_id' | '_creationTime'> & {
+export type Campaign = Omit<CampaignRow, '_id' | '_creationTime' | 'currentSessionId'> & {
   id: CampaignId
   createdAt: number
   dmUserProfile: UserProfileSummary

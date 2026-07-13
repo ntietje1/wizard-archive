@@ -32,7 +32,7 @@ function toCampaignRow(campaign: Doc<'campaigns'>): CampaignRow {
 function toCampaign(
   campaign: CampaignRow,
 ): Omit<Campaign, 'dmUserProfile' | 'myMembership' | 'acceptedMemberCount'> {
-  const { _id, _creationTime, ...rest } = campaign
+  const { _id, _creationTime, currentSessionId: _currentSessionId, ...rest } = campaign
   return { ...rest, id: _id, createdAt: _creationTime }
 }
 

@@ -14,10 +14,14 @@ describe('session + editor state interaction', () => {
       campaignId: ctx.campaignId,
     })
 
-    const campaignAfterStart = await t.run(async (dbCtx) =>
-      dbCtx.db.get('campaigns', ctx.campaignId),
-    )
-    expect(campaignAfterStart!.currentSessionId).toBe(sessionId)
+    const [campaignAfterStart, sessionAfterStart] = await t.run(async (dbCtx) => [
+      await dbCtx.db.get('campaigns', ctx.campaignId),
+      await dbCtx.db
+        .query('sessions')
+        .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', sessionId))
+        .unique(),
+    ])
+    expect(campaignAfterStart!.currentSessionId).toBe(sessionAfterStart!._id)
 
     await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
       campaignId: ctx.campaignId,
@@ -26,7 +30,12 @@ describe('session + editor state interaction', () => {
     const campaignAfterEnd = await t.run(async (dbCtx) => dbCtx.db.get('campaigns', ctx.campaignId))
     expect(campaignAfterEnd!.currentSessionId).toBeNull()
 
-    const session = await t.run(async (dbCtx) => dbCtx.db.get('sessions', sessionId))
+    const session = await t.run(async (dbCtx) =>
+      dbCtx.db
+        .query('sessions')
+        .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', sessionId))
+        .unique(),
+    )
     expect(session!.endedAt).not.toBeNull()
   })
 
@@ -84,18 +93,23 @@ describe('session + editor state interaction', () => {
       campaignId: ctx.campaignId,
     })
 
-    const [session1, session2, session3] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get('sessions', s1),
-      await dbCtx.db.get('sessions', s2),
-      await dbCtx.db.get('sessions', s3),
-    ])
+    const [session1, session2, session3] = await t.run(async (dbCtx) =>
+      Promise.all(
+        [s1, s2, s3].map((sessionId) =>
+          dbCtx.db
+            .query('sessions')
+            .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', sessionId))
+            .unique(),
+        ),
+      ),
+    )
 
     expect(session1!.endedAt).not.toBeNull()
     expect(session2!.endedAt).not.toBeNull()
     expect(session3!.endedAt).toBeNull()
 
     const campaign = await t.run(async (dbCtx) => dbCtx.db.get('campaigns', ctx.campaignId))
-    expect(campaign!.currentSessionId).toBe(s3)
+    expect(campaign!.currentSessionId).toBe(session3!._id)
   })
 
   it('campaign deletion also deletes all sessions', async () => {
@@ -119,11 +133,16 @@ describe('session + editor state interaction', () => {
       campaignId: ctx.campaignId,
     })
 
-    const [r1, r2, r3] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get('sessions', s1),
-      await dbCtx.db.get('sessions', s2),
-      await dbCtx.db.get('sessions', s3),
-    ])
+    const [r1, r2, r3] = await t.run(async (dbCtx) =>
+      Promise.all(
+        [s1, s2, s3].map((sessionId) =>
+          dbCtx.db
+            .query('sessions')
+            .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', sessionId))
+            .unique(),
+        ),
+      ),
+    )
     expect(r1).toBeNull()
     expect(r2).toBeNull()
     expect(r3).toBeNull()
