@@ -24,7 +24,6 @@ import { useMapPinInteractions } from './use-map-pin-interactions'
 import { useMapTransformControls } from './use-map-transform-controls'
 import { resolveMapImage, withResolvedMapImage } from '../image-resolution'
 import { filterMapPinsForLayer } from '../render-projection'
-import { MapPinMenuStatePublisher } from '../context-menu/use-service-state'
 
 type MapViewerProps = {
   item: MapItemWithContent
@@ -130,7 +129,6 @@ export function MapViewer({ item: map, source }: MapViewerProps) {
         requestPinMove={requestPinMove}
         requestPinPlacement={requestPinPlacement}
       >
-        <MapPinMenuStatePublisher />
         <div
           role="presentation"
           className="relative w-full h-full min-h-0 bg-background overflow-hidden flex flex-col"

@@ -451,7 +451,7 @@ describe('NoteEmbedBlockView', () => {
   })
 
   it('selects embed blocks on click and renders canvas-style resize chrome', () => {
-    const editor = createEditor()
+    const editor = { ...createEditor(), domElement: createEditorElement(308) }
     const block = {
       id: 'block-1',
       props: {
@@ -502,8 +502,21 @@ describe('NoteEmbedBlockView', () => {
     fireEvent.keyDown(rightResizeHandle, { key: 'ArrowRight' })
 
     expect(editor.updateBlock).toHaveBeenCalledWith(block, {
-      props: { previewWidth: 316 },
+      props: { previewWidth: 308 },
     })
+
+    editor.updateBlock.mockClear()
+    const cornerResizeHandle = screen.getByRole('button', {
+      name: 'Resize bottom-right selection corner',
+    })
+    fireEvent.keyDown(cornerResizeHandle, { key: 'ArrowRight' })
+    expect(editor.updateBlock).toHaveBeenCalledWith(block, {
+      props: { previewWidth: 308 },
+    })
+
+    editor.updateBlock.mockClear()
+    fireEvent.keyDown(cornerResizeHandle, { key: 'Enter' })
+    expect(editor.updateBlock).not.toHaveBeenCalled()
   })
 
   it('highlights an embed while the native text range continues beyond it', () => {
@@ -1145,6 +1158,14 @@ function createEditor() {
     setTextCursorPosition: vi.fn(),
     updateBlock: vi.fn(),
   }
+}
+
+function createEditorElement(contentWidth: number) {
+  const editorElement = document.createElement('div')
+  const contentElement = document.createElement('div')
+  Object.defineProperty(contentElement, 'clientWidth', { value: contentWidth })
+  editorElement.appendChild(contentElement)
+  return editorElement
 }
 
 function sidebarDragData(sidebarItemId: string) {

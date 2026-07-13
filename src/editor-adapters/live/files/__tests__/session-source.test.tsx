@@ -220,7 +220,10 @@ describe('useLiveFileSessionAdapter', () => {
         file,
         fileId: 'file-4' as Id<'sidebarItems'>,
       }),
-    ).rejects.toThrow('This workspace is read-only')
+    ).resolves.toMatchObject({
+      status: 'error',
+      error: { message: 'This workspace is read-only' },
+    })
 
     expect(uploadFileToUrl).not.toHaveBeenCalled()
     expect(updateFileStorageMock).not.toHaveBeenCalled()

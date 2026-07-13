@@ -12,17 +12,16 @@ import {
 } from '../../../workspace/items-persistence-contract'
 import { MapViewProvider } from '../../viewer/map-view-context'
 import { useMapView } from '../../viewer/use-map-view'
-import { MapPinMenuStatePublisher, useMapPinMenuServiceState } from '../use-service-state'
-import { MapPinMenuStateProvider } from '../state-context'
+import { useMapPinMenuServiceState } from '../use-service-state'
 
 describe('useMapPinMenuServiceState', () => {
-  it('returns null outside a map view instead of reading published viewer state', () => {
+  it('returns null outside a map view', () => {
     const { result } = renderHook(() => useMapPinMenuServiceState())
 
     expect(result.current).toBeNull()
   })
 
-  it('keeps projected map view service state stable when map view inputs do not change', () => {
+  it('projects map view service state', () => {
     const map = createGameMapFixture('map-1' as SidebarItemId, 'Map')
     const pin = createMapPin(map, 'map-pin-1' as MapPinId, 'note-1', 'Note')
     map.pins = [pin]
@@ -35,59 +34,48 @@ describe('useMapPinMenuServiceState', () => {
     const requestPinPlacement = vi.fn()
     const canViewPinItem = () => true
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <MapPinMenuStateProvider>
-        <MapViewProvider
-          canEditMap
-          canViewPinItem={canViewPinItem}
-          map={map}
-          pins={pins}
-          pinOperations={pinOperations}
-          requestPinMove={requestPinMove}
-          requestPinPlacement={requestPinPlacement}
-        >
-          <MapPinMenuStatePublisher />
-          {children}
-        </MapViewProvider>
-      </MapPinMenuStateProvider>
+      <MapViewProvider
+        canEditMap
+        canViewPinItem={canViewPinItem}
+        map={map}
+        pins={pins}
+        pinOperations={pinOperations}
+        requestPinMove={requestPinMove}
+        requestPinPlacement={requestPinPlacement}
+      >
+        {children}
+      </MapViewProvider>
     )
 
-    const { result, rerender } = renderHook(() => useMapPinMenuServiceState(), { wrapper })
-    const serviceState = result.current
-    const activeMap = result.current?.activeMap
-    const pinnedItemIds = result.current?.activeMap.pinnedItemIds
+    const { result } = renderHook(() => useMapPinMenuServiceState(), { wrapper })
 
-    rerender()
-
-    expect(result.current).toBe(serviceState)
-    expect(result.current?.activeMap).toBe(activeMap)
-    expect(result.current?.activeMap.pinnedItemIds).toBe(pinnedItemIds)
+    expect(result.current?.activeMap.id).toBe(map.id)
     expect(result.current?.activeMap.pinnedItemIds.has(pin.itemId)).toBe(true)
+    expect(result.current?.pinOperations).toBe(pinOperations)
+    expect(result.current?.pinRequests).toEqual({ requestPinMove, requestPinPlacement })
   })
 
   it.each([
     { canView: true, publishesItem: true },
     { canView: false, publishesItem: false },
   ])(
-    'publishes only permitted active pin item data when canViewPinItem returns $canView',
+    'projects only permitted active pin item data when canViewPinItem returns $canView',
     ({ canView, publishesItem }) => {
       const map = createGameMapFixture('map-1' as SidebarItemId, 'Map')
       const pin = createMapPin(map, 'map-pin-1' as MapPinId, 'note-1', 'Note')
       map.pins = [pin]
       const wrapper = ({ children }: { children: ReactNode }) => (
-        <MapPinMenuStateProvider>
-          <MapViewProvider
-            canEditMap
-            canViewPinItem={() => canView}
-            map={map}
-            pins={[pin]}
-            pinOperations={{ removeMapPin: vi.fn(), updateMapPinVisibility: vi.fn() }}
-            requestPinMove={vi.fn()}
-            requestPinPlacement={vi.fn()}
-          >
-            <MapPinMenuStatePublisher />
-            {children}
-          </MapViewProvider>
-        </MapPinMenuStateProvider>
+        <MapViewProvider
+          canEditMap
+          canViewPinItem={() => canView}
+          map={map}
+          pins={[pin]}
+          pinOperations={{ removeMapPin: vi.fn(), updateMapPinVisibility: vi.fn() }}
+          requestPinMove={vi.fn()}
+          requestPinPlacement={vi.fn()}
+        >
+          {children}
+        </MapViewProvider>
       )
       const { result } = renderHook(
         () => ({ mapView: useMapView(), serviceState: useMapPinMenuServiceState() }),

@@ -4,24 +4,19 @@ import { completedResourceOperation } from '../transaction-contract'
 import { useResourceReplacementController } from '../resource-replacement'
 
 describe('useResourceReplacementController', () => {
-  it('keeps the latest selection pending while older callbacks settle', async () => {
-    let resolveFirst!: () => void
-    let resolveSecond!: () => void
-    const first = new Promise<void>((resolve) => {
-      resolveFirst = resolve
+  it('rejects another replacement while one is pending', async () => {
+    let resolveReplacement!: () => void
+    const replacement = new Promise<void>((resolve) => {
+      resolveReplacement = resolve
     })
-    const second = new Promise<void>((resolve) => {
-      resolveSecond = resolve
-    })
-    const replace = vi.fn((file: File) =>
-      (file.name === 'first.txt' ? first : second).then(() =>
+    const replace = vi.fn(() =>
+      replacement.then(() =>
         completedResourceOperation({ kind: 'fileReplaced', affectedCount: 1 }),
       ),
     )
 
     const { result } = renderHook(() =>
       useResourceReplacementController({
-        allowSelectionWhilePending: true,
         disabledMessage: 'Disabled',
         enabled: true,
         failureMessage: 'Failed',
@@ -33,28 +28,24 @@ describe('useResourceReplacementController', () => {
       }),
     )
 
+    let secondResult: ReturnType<typeof result.current.attemptReplacement>
     act(() => {
       result.current.attemptReplacement(new File(['first'], 'first.txt'))
-      result.current.attemptReplacement(new File(['second'], 'second.txt'))
+      secondResult = result.current.attemptReplacement(new File(['second'], 'second.txt'))
     })
 
-    expect(replace).toHaveBeenCalledTimes(2)
+    expect(secondResult!).toEqual({ valid: false, error: 'In progress' })
+    expect(replace).toHaveBeenCalledOnce()
     expect(result.current.isReplacing).toBe(true)
 
     await act(async () => {
-      resolveFirst()
-      await first
-    })
-    expect(result.current.isReplacing).toBe(true)
-
-    await act(async () => {
-      resolveSecond()
-      await second
+      resolveReplacement()
+      await replacement
     })
     expect(result.current.isReplacing).toBe(false)
   })
 
-  it('keeps an active replacement pending when a newer selection is rejected', async () => {
+  it('keeps the active replacement while another attempt is rejected', async () => {
     let resolveReplacement!: () => void
     const replacement = new Promise<void>((resolve) => {
       resolveReplacement = resolve
@@ -66,7 +57,6 @@ describe('useResourceReplacementController', () => {
     )
     const { result } = renderHook(() =>
       useResourceReplacementController({
-        allowSelectionWhilePending: true,
         disabledMessage: 'Disabled',
         enabled: true,
         failureMessage: 'Failed',
@@ -81,7 +71,10 @@ describe('useResourceReplacementController', () => {
 
     act(() => {
       result.current.attemptReplacement(new File(['valid'], 'valid.txt'))
-      result.current.attemptReplacement(new File(['invalid'], 'invalid.txt'))
+      expect(result.current.attemptReplacement(new File(['invalid'], 'invalid.txt'))).toEqual({
+        valid: false,
+        error: 'In progress',
+      })
     })
 
     expect(result.current.isReplacing).toBe(true)

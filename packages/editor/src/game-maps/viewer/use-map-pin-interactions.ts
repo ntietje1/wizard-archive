@@ -136,6 +136,7 @@ export function useMapPinInteractions({
   })
 
   useDraggedPinSession({
+    canEditMap,
     draggedPinPositionRef,
     draggingPin,
     imageRef,
@@ -288,19 +289,14 @@ function usePinActionCancellation({
   useEffect(() => {
     if (canEditMap) return
     if (pendingPinItems || pendingPinMove || draggingPin) {
-      const timeout = setTimeout(
-        () =>
-          resetPinActions({
-            draggedPinPositionRef,
-            draggingPin,
-            pinsContainerRef,
-            setDraggingPin,
-            setPendingPinItems,
-            setPendingPinMove,
-          }),
-        0,
-      )
-      return () => clearTimeout(timeout)
+      resetPinActions({
+        draggedPinPositionRef,
+        draggingPin,
+        pinsContainerRef,
+        setDraggingPin,
+        setPendingPinItems,
+        setPendingPinMove,
+      })
     }
   }, [
     canEditMap,
@@ -316,6 +312,7 @@ function usePinActionCancellation({
 }
 
 function useDraggedPinSession({
+  canEditMap,
   draggedPinPositionRef,
   draggingPin,
   imageRef,
@@ -324,6 +321,7 @@ function useDraggedPinSession({
   setDraggingPin,
   source,
 }: {
+  canEditMap: boolean
   draggedPinPositionRef: { current: PinPosition | null }
   draggingPin: DraggingPin | null
   imageRef: ImageElementRef
@@ -333,7 +331,7 @@ function useDraggedPinSession({
   source: Pick<MapPinInteractionSource, 'updateMapPin'>
 }) {
   useEffect(() => {
-    if (!draggingPin) return
+    if (!canEditMap || !draggingPin) return
 
     const pinEl = pinsContainerRef.current?.querySelector(
       `[data-pin-id="${draggingPin.pin.id}"]`,
@@ -405,6 +403,7 @@ function useDraggedPinSession({
       }
     }
   }, [
+    canEditMap,
     draggedPinPositionRef,
     draggingPin,
     imageRef,

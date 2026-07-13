@@ -201,6 +201,92 @@ describe('useMapPinInteractions', () => {
     expect(updateMapPin).not.toHaveBeenCalled()
   })
 
+  it('cancels pin interactions when edit permission is lost', () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture(map)
+    const createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate(map.id, []))
+    const updateMapPin = vi.fn().mockResolvedValue(completedMapPinUpdate())
+    const view = render(
+      <MapPinInteractionHarness
+        map={map}
+        pin={pin}
+        createMapPins={createMapPins}
+        updateMapPin={updateMapPin}
+      />,
+    )
+    setImageBounds()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Place note' }))
+    view.rerender(
+      <MapPinInteractionHarness
+        canEditMap={false}
+        map={map}
+        pin={pin}
+        createMapPins={createMapPins}
+        updateMapPin={updateMapPin}
+      />,
+    )
+    view.rerender(
+      <MapPinInteractionHarness
+        map={map}
+        pin={pin}
+        createMapPins={createMapPins}
+        updateMapPin={updateMapPin}
+      />,
+    )
+    setImageBounds()
+    fireEvent.click(screen.getByRole('button', { name: 'Map canvas' }), {
+      clientX: 100,
+      clientY: 25,
+    })
+
+    expect(createMapPins).not.toHaveBeenCalled()
+    expect(updateMapPin).not.toHaveBeenCalled()
+    expect(screen.getByTestId('map-cursor')).toHaveAttribute('data-cursor', 'default')
+  })
+
+  it('does not commit an active drag after edit permission is lost', () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture(map)
+    const updateMapPin = vi.fn().mockResolvedValue(completedMapPinUpdate())
+    const view = render(
+      <MapPinInteractionHarness map={map} pin={pin} updateMapPin={updateMapPin} />,
+    )
+    setImageBounds()
+    const pinButton = screen.getByRole('button', { name: 'Note' })
+
+    fireEvent.pointerDown(pinButton, { button: 0, pointerId: 17 })
+    act(() => {
+      window.dispatchEvent(
+        createPointerEvent('pointermove', {
+          clientX: 100,
+          clientY: 25,
+          pointerId: 17,
+        }),
+      )
+    })
+    view.rerender(
+      <MapPinInteractionHarness
+        canEditMap={false}
+        map={map}
+        pin={pin}
+        updateMapPin={updateMapPin}
+      />,
+    )
+    act(() => {
+      window.dispatchEvent(
+        createPointerEvent('pointerup', {
+          clientX: 100,
+          clientY: 25,
+          pointerId: 17,
+        }),
+      )
+    })
+
+    expect(updateMapPin).not.toHaveBeenCalled()
+    expect(pinButton).toHaveStyle({ left: '25%', top: '50%' })
+  })
+
   it('reports move-specific feedback when map position cannot be resolved', () => {
     const map = createGameMapFixture()
     const pin = createMapPinFixture(map)
@@ -401,12 +487,14 @@ describe('useMapPinInteractions', () => {
 })
 
 function MapPinInteractionHarness({
+  canEditMap = true,
   createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate('map-1' as SidebarItemId, [])),
   map,
   openItem = vi.fn().mockResolvedValue(undefined),
   pin,
   updateMapPin = vi.fn().mockResolvedValue(completedMapPinUpdate()),
 }: {
+  canEditMap?: boolean
   createMapPins?: (input: {
     mapId: MapItemWithContent['id']
     pins: Array<{ itemId: SidebarItemId; layerId?: string | null; x: number; y: number }>
@@ -423,7 +511,7 @@ function MapPinInteractionHarness({
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const interactions = useMapPinInteractions({
-    canEditMap: true,
+    canEditMap,
     imageError: false,
     imageRef,
     map,

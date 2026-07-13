@@ -338,7 +338,7 @@ describe('useCanvasDropTarget', () => {
             setBatchDecision: vi.fn(),
           },
         ),
-      ).rejects.toThrow('Missing surface file import executor')
+      ).resolves.toBeUndefined()
     })
 
     expect(uploadEmbedFile).not.toHaveBeenCalled()
@@ -383,7 +383,7 @@ describe('useCanvasDropTarget', () => {
             setBatchDecision: vi.fn(),
           },
         ),
-      ).rejects.toThrow('Missing surface file import executor')
+      ).resolves.toBeUndefined()
     })
 
     expect(uploadEmbedFile).not.toHaveBeenCalled()

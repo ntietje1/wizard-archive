@@ -53,8 +53,9 @@ describe('MapImageUpload', () => {
     })
   })
 
-  it('clears the selected map image when validation rejects the next file', async () => {
-    const onUpload = vi.fn(() => new Promise<ResourceOperationResult>(() => undefined))
+  it('keeps the active map image while another upload is pending', async () => {
+    const upload = createDeferred<ResourceOperationResult>()
+    const onUpload = vi.fn(() => upload.promise)
     render(<MapImageUpload onUpload={onUpload} />)
 
     act(() => {
@@ -72,88 +73,16 @@ describe('MapImageUpload', () => {
       )
     })
 
-    await waitFor(() => {
-      expect(lastFileUploadProps().fileUpload).toMatchObject({
-        file: null,
-        fileMetadata: null,
-        preview: '',
-        uploadError: 'Only image files are allowed for maps',
-      })
-    })
-  })
-
-  it('keeps the latest selected map image state when older upload callbacks settle later', async () => {
-    const firstUpload = createDeferred<ResourceOperationResult>()
-    const secondUpload = createDeferred<ResourceOperationResult>()
-    const onUpload = vi.fn((file: File) =>
-      file.name === 'first.png' ? firstUpload.promise : secondUpload.promise,
-    )
-    render(<MapImageUpload onUpload={onUpload} />)
-
-    act(() => {
-      lastFileUploadProps().fileUpload.handleFileSelect(
-        new File(['first'], 'first.png', { type: 'image/png' }),
-      )
-      lastFileUploadProps().fileUpload.handleFileSelect(
-        new File(['second'], 'second.png', { type: 'image/png' }),
-      )
-    })
-
-    await act(async () => {
-      secondUpload.resolve(completedMapImageUpdate())
-      await secondUpload.promise
-    })
-    await waitFor(() => {
-      expect(lastFileUploadProps().fileUpload).toMatchObject({
-        preview: 'blob:second.png',
-        uploadError: '',
-        isUploading: false,
-      })
-    })
-
-    await act(async () => {
-      firstUpload.reject(new Error('old upload failed'))
-      await firstUpload.promise.catch(() => undefined)
-    })
-
     expect(lastFileUploadProps().fileUpload).toMatchObject({
-      preview: 'blob:second.png',
+      preview: 'blob:map.png',
       uploadError: '',
-      isUploading: false,
+      isUploading: true,
     })
-    expect(objectUrls.revokeObjectURL).toHaveBeenCalledWith('blob:first.png')
-  })
-
-  it('keeps the latest selected map image when an older upload resolves later', async () => {
-    const firstUpload = createDeferred<ResourceOperationResult>()
-    const secondUpload = createDeferred<ResourceOperationResult>()
-    const onUpload = vi.fn((file: File) =>
-      file.name === 'first.png' ? firstUpload.promise : secondUpload.promise,
-    )
-    render(<MapImageUpload onUpload={onUpload} />)
-
-    act(() => {
-      lastFileUploadProps().fileUpload.handleFileSelect(
-        new File(['first'], 'first.png', { type: 'image/png' }),
-      )
-      lastFileUploadProps().fileUpload.handleFileSelect(
-        new File(['second'], 'second.png', { type: 'image/png' }),
-      )
-    })
+    expect(onUpload).toHaveBeenCalledOnce()
 
     await act(async () => {
-      secondUpload.resolve(completedMapImageUpdate())
-      await secondUpload.promise
-    })
-    await act(async () => {
-      firstUpload.resolve(completedMapImageUpdate())
-      await firstUpload.promise
-    })
-
-    expect(lastFileUploadProps().fileUpload).toMatchObject({
-      preview: 'blob:second.png',
-      uploadError: '',
-      isUploading: false,
+      upload.resolve(completedMapImageUpdate())
+      await upload.promise
     })
   })
 

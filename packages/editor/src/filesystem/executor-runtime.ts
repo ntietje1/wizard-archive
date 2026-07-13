@@ -53,7 +53,6 @@ export type FileSystemPendingConflict = {
   conflicts: Array<ItemOperationConflict>
   replayFingerprint: string
   workspaceId: string
-  cacheAdapter: FileSystemCacheAdapter
   onSuccess?: () => void
 }
 
@@ -215,7 +214,6 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
           conflicts: result.conflicts,
           replayFingerprint: fingerprintFileSystemSnapshot(operationArgs.cacheAdapter),
           workspaceId: operationArgs.workspaceId,
-          cacheAdapter: operationArgs.cacheAdapter,
           onSuccess,
         },
       })
@@ -315,7 +313,6 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
     updateSnapshot({ pendingConflict: null })
     if (
       pendingConflict.workspaceId !== args.workspaceId ||
-      pendingConflict.cacheAdapter !== args.cacheAdapter ||
       pendingConflict.replayFingerprint !== fingerprintFileSystemSnapshot(args.cacheAdapter)
     ) {
       return {

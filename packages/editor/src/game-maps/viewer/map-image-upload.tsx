@@ -56,7 +56,6 @@ function useMapImageUploadControl({
     rejectReplacement,
     replacementError: uploadError,
   } = useResourceReplacementController({
-    allowSelectionWhilePending: true,
     disabledMessage: 'Map image uploads are disabled',
     enabled: true,
     failureMessage: 'Failed to update map',

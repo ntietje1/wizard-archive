@@ -46,7 +46,11 @@ import {
   blockPropsFromEmbedTarget,
   embedTargetFromBlockProps,
 } from './block-targets'
-import { getNoteEmbedResizeCursor, startNoteEmbedResizeSession } from './resize'
+import {
+  getNoteEmbedKeyboardResize,
+  getNoteEmbedResizeCursor,
+  startNoteEmbedResizeSession,
+} from './resize'
 import type { NoteEmbedBlockProps } from './block-targets'
 import { useNoteEmbedSurface } from './surface-context-value'
 import {
@@ -362,50 +366,19 @@ function NoteEmbedSelectionControls({
         })
       }}
       onResizeKeyboard={(event, handle) => {
-        const horizontalDelta =
-          handle === 'left'
-            ? event.key === 'ArrowLeft'
-              ? 16
-              : event.key === 'ArrowRight'
-                ? -16
-                : null
-            : handle === 'right'
-              ? event.key === 'ArrowRight'
-                ? 16
-                : event.key === 'ArrowLeft'
-                  ? -16
-                  : null
-              : null
-        const verticalDelta =
-          handle === 'top'
-            ? event.key === 'ArrowUp'
-              ? 16
-              : event.key === 'ArrowDown'
-                ? -16
-                : null
-            : handle === 'bottom'
-              ? event.key === 'ArrowDown'
-                ? 16
-                : event.key === 'ArrowUp'
-                  ? -16
-                  : null
-              : null
-
-        const isActivationKey = event.key === 'Enter' || event.key === ' '
-        const effectiveHorizontalDelta =
-          horizontalDelta ??
-          (isActivationKey && (handle === 'left' || handle === 'right') ? 16 : null)
-        const effectiveVerticalDelta =
-          verticalDelta ??
-          (isActivationKey && (handle === 'top' || handle === 'bottom') ? 16 : null)
-        if (effectiveHorizontalDelta === null && effectiveVerticalDelta === null) return
+        const nextSize = getNoteEmbedKeyboardResize({
+          ...getNoteEmbedResizeSessionState(layout),
+          editorElement: editor.domElement,
+          handle,
+          key: event.key,
+          root: rootRef.current,
+        })
+        if (!nextSize) return
         event.preventDefault()
-        const nextWidth = Math.max(64, (layout.width ?? 64) + (effectiveHorizontalDelta ?? 0))
-        const nextHeight = Math.max(144, (layout.height ?? 144) + (effectiveVerticalDelta ?? 0))
         editor.updateBlock(block, {
           props: stripUndefined({
-            previewWidth: nextWidth,
-            previewHeight: layout.usesFreeformHeight ? nextHeight : undefined,
+            previewWidth: nextSize.width,
+            previewHeight: nextSize.height,
           }),
         })
       }}

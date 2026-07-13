@@ -478,7 +478,7 @@ describe('WizardEditor adapter contract', () => {
 
     await expect(
       readOnlySource.session.replaceFile({ file: importFile, fileId: fileItem.id }),
-    ).rejects.toThrow('read only')
+    ).resolves.toMatchObject({ status: 'error', error: { message: 'read only' } })
 
     const writeError = new Error('write failed')
     const failingSource = createWizardEditorFileContentSource({
