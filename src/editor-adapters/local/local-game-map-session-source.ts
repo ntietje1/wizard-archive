@@ -43,6 +43,7 @@ export function createLocalGameMapSessionSource({
             catalog,
             dispatch,
             mapId,
+            layerId: pins[0]?.layerId ?? null,
             nextLocalMapPinIndex,
             pins,
             sessionPinnedItemIdsByMapId,
@@ -128,9 +129,10 @@ export function createLocalGameMapSessionSource({
         }
       },
     },
-    updateMapImage: async ({ mapId, file }) => {
+    updateMapImage: async ({ layerId, mapId, file }) => {
       return replaceWizardEditorMapImage({
         file,
+        layerId,
         mapId,
         stageImage: async (input) => {
           assertLocalCanMutate(canEdit)
@@ -145,14 +147,34 @@ export function createLocalGameMapSessionSource({
           if (latestMapImageRequestByMapId.get(mapKey) !== requestId) {
             return { status: 'unavailable', reason: 'stale_map_image' }
           }
-          return { status: 'staged', image }
+          return {
+            status: 'staged',
+            image,
+            cancel: () => ({
+              status: 'completed' as const,
+              receipt: {
+                kind: 'mapImageUpdated' as const,
+                itemId: input.mapId,
+                affectedCount: 1,
+              },
+            }),
+          }
         },
         commitImage: (staged) => {
           dispatch({
             type: 'updateMapImage',
+            layerId: staged.layerId,
             mapId: String(staged.mapId),
             imageUrl: staged.image,
           })
+          return {
+            status: 'completed' as const,
+            receipt: {
+              kind: 'mapImageUpdated' as const,
+              itemId: staged.mapId,
+              affectedCount: 1,
+            },
+          }
         },
       })
     },
@@ -184,6 +206,7 @@ function createLocalMapPins({
   catalog,
   dispatch,
   mapId,
+  layerId,
   nextLocalMapPinIndex,
   pins,
   sessionPinnedItemIdsByMapId,
@@ -192,6 +215,7 @@ function createLocalMapPins({
   catalog: WizardEditorResourceCatalog
   dispatch: Dispatch<LocalWorkspaceAction>
   mapId: SidebarItemId
+  layerId: string | null
   nextLocalMapPinIndex: number
   pins: Parameters<WizardEditorMapSession['pins']['create']>[0]['pins']
   sessionPinnedItemIdsByMapId: Map<string, Set<SidebarItemId>>
@@ -222,6 +246,7 @@ function createLocalMapPins({
       const created = createLocalMapPin({
         index: nextIndex,
         itemId: String(pin.itemId),
+        layerId,
         x: pin.x,
         y: pin.y,
       })
@@ -253,18 +278,20 @@ function createLocalMapPins({
 function createLocalMapPin({
   index,
   itemId,
+  layerId,
   x,
   y,
 }: {
   index: number
   itemId: string
+  layerId: string | null
   x: number
   y: number
 }): CreatedLocalMapPin {
   return {
     id: `local-map-pin-${index}`,
     itemId,
-    layerId: null,
+    layerId,
     x,
     y,
     visible: true,

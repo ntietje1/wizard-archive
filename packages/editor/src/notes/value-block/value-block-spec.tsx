@@ -341,8 +341,8 @@ function useValuePopoverDialog({
 
     dialog.addEventListener('close', handleClose)
 
-    if (typeof dialog.showModal === 'function') {
-      if (!dialog.open) dialog.showModal()
+    if (typeof dialog.show === 'function') {
+      if (!dialog.open) dialog.show()
     } else {
       dialog.setAttribute('open', '')
     }

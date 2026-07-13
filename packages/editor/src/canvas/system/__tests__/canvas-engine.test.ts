@@ -241,6 +241,74 @@ describe('createCanvasEngine', () => {
     expect(engine.getSnapshot().selection.gestureKind).toBeNull()
   })
 
+  it('prunes every selection snapshot when document nodes disappear during a gesture', () => {
+    const engine = createCanvasEngine()
+    const nodeA = createNode('a', 0)
+    const nodeB = createNode('b', 1)
+    engine.setDocumentSnapshot({ nodes: [nodeA, nodeB] })
+    engine.setSelection({ nodeIds: new Set(['a']), edgeIds: new Set() })
+    engine.beginSelectionGesture('lasso', 'add')
+    engine.setSelectionGesturePreview({ nodeIds: new Set(['b']), edgeIds: new Set() })
+
+    engine.setDocumentSnapshot({ nodes: [nodeB] })
+
+    const selection = engine.getSnapshot().selection
+    expect(selection.nodeIds).toEqual(new Set())
+    expect(selection.gestureStartSelection?.nodeIds).toEqual(new Set())
+    expect(selection.pendingPreview).toEqual({
+      kind: 'active',
+      nodeIds: new Set(['b']),
+      edgeIds: new Set(),
+    })
+    expect(engine.getSnapshot().selectedNodeIds).toEqual(new Set())
+
+    engine.commitSelectionGesture()
+    expect(engine.getSnapshot().selection.nodeIds).toEqual(new Set(['b']))
+
+    engine.destroy()
+  })
+
+  it('preserves auto-sized measurements when drag state is rebuilt', () => {
+    const engine = createCanvasEngine()
+    engine.setDocumentSnapshot({ nodes: [createNode('auto-sized', 0)] })
+    engine.measureNode('auto-sized', { width: 120, height: 80 })
+
+    engine.startDrag(new Set(['auto-sized']))
+
+    expect(engine.getSnapshot().nodeLookup.get('auto-sized')?.measured).toEqual({
+      width: 120,
+      height: 80,
+    })
+
+    engine.destroy()
+  })
+
+  it('refreshes connected edge paths after document node patches', () => {
+    const { domRuntime, engine } = createEngineWithDomRuntime()
+    const edgePath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    const unregister = domRuntime.registerEdgePaths('edge-1', { path: edgePath })
+    engine.setDocumentSnapshot({
+      nodes: [
+        { ...createNode('source', 0), width: 100, height: 50 },
+        {
+          ...createNode('target', 1),
+          position: { x: 200, y: 0 },
+          width: 100,
+          height: 50,
+        },
+      ],
+      edges: [createEdge('edge-1', 'source', 'target')],
+    })
+
+    engine.patchNodes(new Map([['source', { position: { x: 40, y: 20 } }]]))
+    domRuntime.flush()
+
+    expect(edgePath.getAttribute('d')).toBeTruthy()
+
+    unregister()
+    engine.destroy()
+  })
+
   it('marks only dragged nodes dirty during drag sessions', () => {
     const engine = createCanvasEngine()
     engine.setDocumentSnapshot({ nodes: [createNode('a', 0), createNode('b', 1)] })
@@ -672,12 +740,12 @@ describe('createCanvasEngine', () => {
     })
     engine.subscribe(listener)
 
-    engine.measureNode('dimensioned', { width: 20, height: 20 })
+    engine.measureNode('dimensioned', { width: 30, height: 40 })
 
     expect(listener).not.toHaveBeenCalled()
     expect(engine.getSnapshot().nodeLookup.get('dimensioned')?.measured).toEqual({
-      width: 20,
-      height: 20,
+      width: 30,
+      height: 40,
     })
 
     engine.destroy()

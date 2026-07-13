@@ -12,7 +12,7 @@ export function openNoteBlockContextMenuFromEvent({
   event: MouseEvent<HTMLElement>
   note: NoteItemWithContent
   noteBlockId?: NoteBlockId
-  openMenu: BlockNoteContextMenuContextType['openMenu']
+  openMenu: BlockNoteContextMenuContextType['openMenu'] | undefined
 }) {
   event.preventDefault()
   event.stopPropagation()

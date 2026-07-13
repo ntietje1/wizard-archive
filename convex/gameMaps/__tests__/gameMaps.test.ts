@@ -180,7 +180,7 @@ describe('game map APIs', () => {
       mapId: map.mapId,
       pins: [
         { itemId: north.noteId, x: 0, y: 100 },
-        { itemId: south.noteId, x: 100, y: 0 },
+        { itemId: south.noteId, layerId: 'upper', x: 100, y: 0 },
       ],
     })
 
@@ -194,7 +194,13 @@ describe('game map APIs', () => {
       name: 'World Map',
       pins: [
         { itemId: north.noteId, x: 0, y: 100, item: { id: north.noteId, name: 'North' } },
-        { itemId: south.noteId, x: 100, y: 0, item: { id: south.noteId, name: 'South' } },
+        {
+          itemId: south.noteId,
+          layerId: 'upper',
+          x: 100,
+          y: 0,
+          item: { id: south.noteId, name: 'South' },
+        },
       ],
     })
   })

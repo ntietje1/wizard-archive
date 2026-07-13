@@ -143,6 +143,7 @@ function enhancePatchRowForSidebarCache(item: CacheableSidebarItem, existing?: A
   }
 
   return {
+    ...existing,
     ...sidebarItemFields,
     shares: cacheFields.shares,
     isBookmarked: cacheFields.isBookmarked,
@@ -193,15 +194,11 @@ function materializeHiddenView({
 
 function patchIsAlreadyReconciledByVisibleQueries(
   patch: ResourcePatch,
-  snapshot: SidebarCacheSnapshot,
+  cacheItemIds: ReadonlySet<SidebarItemId>,
 ) {
   if (patch.type !== 'updateResource') return false
   if (patch.fields.status !== RESOURCE_STATUS.undoHidden) return false
-
-  return (
-    !snapshot.sidebar.some((item) => item.id === patch.itemId) &&
-    !snapshot.trash.some((item) => item.id === patch.itemId)
-  )
+  return !cacheItemIds.has(patch.itemId)
 }
 
 function patchCanApplyToSidebarCache(
@@ -229,10 +226,14 @@ export function applyFileSystemPatchesToSidebarCache(
     [...snapshot.sidebar, ...snapshot.trash, ...hidden].map((item) => [item.id, item]),
   )
   const cacheItemIds = new Set(originalItemsById.keys())
-  const applicablePatches = patches.filter((patch) => {
-    if (patchIsAlreadyReconciledByVisibleQueries(patch, snapshot)) return false
-    return patchCanApplyToSidebarCache(patch, cacheItemIds)
-  })
+  const applicablePatches: Array<ResourcePatch> = []
+  for (const patch of patches) {
+    if (patchIsAlreadyReconciledByVisibleQueries(patch, cacheItemIds)) continue
+    if (!patchCanApplyToSidebarCache(patch, cacheItemIds)) continue
+    applicablePatches.push(patch)
+    if (patch.type === 'upsertResource') cacheItemIds.add(patch.item.id)
+    if (patch.type === 'removeResource') cacheItemIds.delete(patch.itemId)
+  }
   const { items } = applyPatchesToItemSnapshot(
     { items: [...snapshot.sidebar, ...snapshot.trash, ...hidden] },
     applicablePatches,

@@ -33,10 +33,13 @@ type YjsUpdateSyncControllerState = {
 
 const UPDATE_DEBOUNCE_MS = 50
 const UPDATE_MAX_BATCH_MS = 200
+const UPDATE_RETRY_INITIAL_MS = 100
+const UPDATE_RETRY_MAX_MS = 5_000
 
 export class YjsUpdateSyncController {
   private lastAppliedSeqValue = -1
   private revisionValue: number | null = null
+  private retryDelayMs = 0
   private state: YjsUpdateSyncControllerState = {
     destroyed: false,
     writable: false,
@@ -150,15 +153,25 @@ export class YjsUpdateSyncController {
           this.requestReset()
           return
         }
-        if (result.seq > this.lastAppliedSeqValue) this.lastAppliedSeqValue = result.seq
+        this.retryDelayMs = 0
       })
       .catch((err: unknown) => {
         this.input.transport.reportError(`Yjs update push failed for ${this.input.documentId}`, err)
         this.state.pendingUpdates.unshift(merged)
+        this.retryDelayMs = Math.min(
+          this.retryDelayMs === 0 ? UPDATE_RETRY_INITIAL_MS : this.retryDelayMs * 2,
+          UPDATE_RETRY_MAX_MS,
+        )
       })
       .finally(() => {
         this.state.pushInFlight = false
-        if (this.state.pendingUpdates.length > 0) this.scheduleFlush()
+        if (this.state.pendingUpdates.length > 0) {
+          if (this.retryDelayMs > 0) {
+            this.scheduleRetry()
+          } else {
+            this.scheduleFlush()
+          }
+        }
       })
     return this.state.pushInFlightPromise
   }
@@ -201,6 +214,14 @@ export class YjsUpdateSyncController {
         void this.flushUpdates()
       }, UPDATE_MAX_BATCH_MS)
     }
+  }
+
+  private scheduleRetry() {
+    if (this.state.destroyed || !this.state.writable || this.state.debounceTimer) return
+
+    this.state.debounceTimer = setTimeout(() => {
+      void this.flushUpdates()
+    }, this.retryDelayMs)
   }
 
   private flushAllUpdates(): Promise<boolean> {

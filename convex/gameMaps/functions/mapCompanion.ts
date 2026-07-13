@@ -57,5 +57,6 @@ export async function copyMapCompanion(
   await ctx.db.insert('gameMaps', {
     sidebarItemId: targetItemId,
     imageStorageId: sourceMap.imageStorageId,
+    ...(sourceMap.layers ? { layers: sourceMap.layers } : {}),
   })
 }

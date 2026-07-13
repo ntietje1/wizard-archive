@@ -27,15 +27,13 @@ export function createPlacementEnvironment({
   activeTool,
   createNode,
   replaceSelection,
-  setPendingEditNodeId,
-  setPendingEditNodePoint = () => undefined,
+  setPendingEdit,
   setActiveTool,
 }: {
   activeTool: CanvasToolId
   createNode: (node: CanvasDocumentNode) => void
   replaceSelection: (selection: CanvasSelectionSnapshot) => void
-  setPendingEditNodeId: (nodeId: string | null) => void
-  setPendingEditNodePoint?: (point: { x: number; y: number } | null) => void
+  setPendingEdit: (pendingEdit: { nodeId: string; point: { x: number; y: number } } | null) => void
   setActiveTool: (tool: CanvasToolId) => void
 }): CanvasToolRuntime {
   const runtime = createMockCanvasToolRuntime({ activeTool })
@@ -52,8 +50,7 @@ export function createPlacementEnvironment({
     },
     editSession: {
       ...runtime.editSession,
-      setPendingEditNodeId,
-      setPendingEditNodePoint,
+      setPendingEdit,
     },
     toolState: {
       ...runtime.toolState,

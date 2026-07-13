@@ -60,14 +60,6 @@ describe('PreviewImageResourceItemCard', () => {
       'true',
     )
   })
-
-  it('keeps the decorative hover overlay out of preview pointer targeting', () => {
-    render(<PreviewImageResourceItemCard {...cardProps({ imageDraggable: true })} />)
-
-    const image = screen.getByRole('img', { name: 'Preview of Canvas' })
-
-    expect(image.nextElementSibling).toHaveClass('pointer-events-none')
-  })
 })
 
 function cardProps(

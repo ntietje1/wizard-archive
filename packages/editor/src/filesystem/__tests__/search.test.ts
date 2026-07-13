@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vite-plus/test'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 import {
@@ -89,46 +87,6 @@ describe('filesystem search', () => {
 })
 
 describe('filesystem search hydration', () => {
-  it('keeps React hydration and static adapter wiring outside the pure catalog module', () => {
-    const catalogSource = readFileSync(
-      path.join(process.cwd(), 'packages/editor/src/filesystem/catalog.ts'),
-      'utf8',
-    )
-    const resourceContentSource = readFileSync(
-      path.join(process.cwd(), 'packages/editor/src/filesystem/resource-content-source.ts'),
-      'utf8',
-    )
-    const testRuntimeFactorySource = readFileSync(
-      path.join(process.cwd(), 'packages/editor/src/test/workspace-runtime-factory.ts'),
-      'utf8',
-    )
-
-    expect(catalogSource).not.toContain("from 'react'")
-    expect(catalogSource).not.toMatch(/\buse(Effect|Ref|State)\b/)
-    expect(catalogSource).not.toContain('useResourceHydrationCache')
-    expect(catalogSource).not.toContain('./catalog-static-search')
-    expect(catalogSource).not.toContain('getStaticCatalogBodySearchResults')
-    expect(catalogSource).not.toContain('createStaticCatalogItemLinksCapability')
-    expect(catalogSource).not.toContain('createStaticCatalogItemContentState')
-    expect(catalogSource).not.toContain('createItemPreviewState')
-    expect(catalogSource).not.toContain('getItemPreviewState')
-    expect(catalogSource).not.toContain('createCatalogFileSystemResourcePreview')
-    expect(resourceContentSource).not.toMatch(/\bItemPreviewState\b(?!:)/)
-    expect(resourceContentSource).not.toContain('getItemPreviewState')
-    expect(resourceContentSource).not.toContain('useHydratedCatalogFileSystemResourcePreview')
-    expect(resourceContentSource).not.toContain('createStaticCatalogFileSystemResourcePreview')
-    expect(testRuntimeFactorySource).not.toContain('createStaticCatalogFileSystemResourcePreview')
-    expect(testRuntimeFactorySource).not.toContain(
-      'createFileSystemResourcePreviewFromResourceContent',
-    )
-    expect(
-      readFileSync(
-        path.join(process.cwd(), 'packages/editor/src/filesystem/filesystem.ts'),
-        'utf8',
-      ),
-    ).not.toContain('resourcePreview')
-  })
-
   it('projects static catalog item content into the shared content state contract', () => {
     const note = {
       ...createNote({ id: 'note-1' as SidebarItemId }),

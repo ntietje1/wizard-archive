@@ -1,6 +1,6 @@
 import type { SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import { diffResourceFields } from '../patch-contract'
+import { diffResourceFields, hasMismatchedPrecondition } from '../patch-contract'
 import type { ResourcePatch, ResourcePatchRow } from '../patch-contract'
 import type { TransferOperation } from '../operation-contract'
 import { collectDescendantIdsFromItems } from './tree'
@@ -222,6 +222,7 @@ export function projectMoveOperations<T extends ResourcePatchRow>({
 
   for (const operation of operations) {
     const patchStart = patches.forwardPatches.length
+    const inversePatchStart = patches.inversePatches.length
     const current = splitProjectedItems(projectedItems)
     const activeItemsById = new Map(current.activeItems.map((item) => [item.id, item]))
     const trashItemsById = new Map(current.trashItems.map((item) => [item.id, item]))
@@ -252,6 +253,9 @@ export function projectMoveOperations<T extends ResourcePatchRow>({
         operation,
       })
     }
+
+    const operationInversePatches = patches.inversePatches.splice(inversePatchStart)
+    patches.inversePatches.unshift(...operationInversePatches)
 
     if (patches.forwardPatches.length > patchStart) {
       projectedItems = applyFileSystemPatchesToSnapshot(
@@ -297,6 +301,14 @@ export function applyFileSystemPatchesToSnapshot<T extends { id: SidebarItemId }
     const existing = itemsById.get(patch.itemId)
     if (!existing) {
       throw new Error(`Cannot apply filesystem patch for missing sidebar item ${patch.itemId}`)
+    }
+    if (
+      hasMismatchedPrecondition(
+        existing as Record<string, unknown>,
+        patch.before as Record<string, unknown>,
+      )
+    ) {
+      continue
     }
     itemsById.set(patch.itemId, { ...existing, ...patch.fields })
     removedIds.delete(patch.itemId)

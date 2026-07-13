@@ -43,6 +43,7 @@ export function useFileSystemDialogs({
   )
   const [pendingEmptyTrash, setPendingEmptyTrash] = useState(false)
   const [pendingTrashFolder, setPendingTrashFolder] = useState<FolderItem | null>(null)
+  const [activeTrashCommand, setActiveTrashCommand] = useState<'delete' | 'empty' | null>(null)
 
   const requestTrashFolder = (folder: FolderItem) => {
     setPendingTrashFolder(folder)
@@ -70,10 +71,21 @@ export function useFileSystemDialogs({
       items={pendingDeleteForeverItems}
       trashState={trashState}
       onClose={() => setPendingDeleteForeverItems(null)}
-      onConfirm={() => {
+      onConfirm={async () => {
+        if (activeTrashCommand) return
         const itemIds = pendingDeleteForeverItems.map((item) => item.id)
-        setPendingDeleteForeverItems(null)
-        void deleteForever(itemIds)
+        setActiveTrashCommand('delete')
+        try {
+          const result = await deleteForever(itemIds)
+          if (result?.status === 'completed') setPendingDeleteForeverItems(null)
+          else if (result) {
+            reportResourceCommandFailure(result, 'Failed to permanently delete items')
+          }
+        } catch (error) {
+          handleError(error, 'Failed to permanently delete items')
+        } finally {
+          setActiveTrashCommand(null)
+        }
       }}
     />
   ) : null
@@ -82,9 +94,18 @@ export function useFileSystemDialogs({
     <FileSystemEmptyTrashDialog
       trashState={trashState}
       onClose={() => setPendingEmptyTrash(false)}
-      onConfirm={() => {
-        setPendingEmptyTrash(false)
-        void emptyTrash()
+      onConfirm={async () => {
+        if (activeTrashCommand) return
+        setActiveTrashCommand('empty')
+        try {
+          const result = await emptyTrash()
+          if (result?.status === 'completed') setPendingEmptyTrash(false)
+          else if (result) reportResourceCommandFailure(result, 'Failed to empty trash')
+        } catch (error) {
+          handleError(error, 'Failed to empty trash')
+        } finally {
+          setActiveTrashCommand(null)
+        }
       }}
     />
   ) : null
@@ -100,8 +121,21 @@ export function useFileSystemDialogs({
         isDeleting={true}
         onTrash={async () => {
           const itemId = pendingTrashFolder.id
-          await trashItems([itemId])
-          setPendingTrashFolder(null)
+          try {
+            const result = await trashItems([itemId])
+            if (result.status === 'completed') {
+              setPendingTrashFolder(null)
+            } else if (result.status === 'pending' || result.status === 'noop') {
+              handleError(
+                new Error(`Trash items returned ${result.status}`),
+                'Failed to trash folder',
+              )
+            } else {
+              reportResourceCommandFailure(result, 'Failed to trash folder')
+            }
+          } catch (error) {
+            handleError(error, 'Failed to trash folder')
+          }
         }}
         onClose={() => setPendingTrashFolder(null)}
       />

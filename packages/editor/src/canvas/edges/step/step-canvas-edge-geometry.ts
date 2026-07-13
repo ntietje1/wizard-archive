@@ -28,13 +28,6 @@ function isHorizontalPosition(position: CanvasHandlePosition): boolean {
   return position === CANVAS_HANDLE_POSITION.Left || position === CANVAS_HANDLE_POSITION.Right
 }
 
-function getPositionCoordinate(
-  position: CanvasHandlePosition,
-  point: Pick<Point2D, 'x' | 'y'>,
-): number {
-  return isHorizontalPosition(position) ? point.x : point.y
-}
-
 function getPositionDirection(position: CanvasHandlePosition): Point2D {
   switch (position) {
     case CANVAS_HANDLE_POSITION.Left:
@@ -57,18 +50,6 @@ function buildStepStubPoint(point: Point2D, position: CanvasHandlePosition): Poi
     x: point.x + direction.x * STEP_EDGE_STUB_LENGTH,
     y: point.y + direction.y * STEP_EDGE_STUB_LENGTH,
   }
-}
-
-function respectsPositionDirection(
-  position: CanvasHandlePosition,
-  startCoordinate: number,
-  nextCoordinate: number,
-): boolean {
-  const direction = isHorizontalPosition(position)
-    ? getPositionDirection(position).x
-    : getPositionDirection(position).y
-
-  return (nextCoordinate - startCoordinate) * direction >= 0
 }
 
 function buildHorizontalRunStepPoints({
@@ -115,28 +96,6 @@ function buildVerticalRunStepPoints({
     targetStub,
     end,
   ])
-}
-
-function endpointStubsFaceWrongDirection(
-  props: StepGeometryProps,
-  sourceStub: Point2D,
-  targetStub: Point2D,
-): boolean {
-  const source = { x: props.sourceX, y: props.sourceY }
-  const target = { x: props.targetX, y: props.targetY }
-
-  return (
-    !respectsPositionDirection(
-      props.targetPosition,
-      getPositionCoordinate(props.targetPosition, target),
-      getPositionCoordinate(props.targetPosition, targetStub),
-    ) ||
-    !respectsPositionDirection(
-      props.sourcePosition,
-      getPositionCoordinate(props.sourcePosition, source),
-      getPositionCoordinate(props.sourcePosition, sourceStub),
-    )
-  )
 }
 
 function areHorizontalHandlesFacing(
@@ -371,23 +330,11 @@ function buildVerticalHandlesStepPoints(
 }
 
 function buildMixedSourceHorizontalStepPoints(
-  props: StepGeometryProps,
-  splitCoordinates: StepSplitCoordinates,
   start: Point2D,
   end: Point2D,
   sourceStub: Point2D,
   targetStub: Point2D,
 ): Array<Point2D> {
-  if (endpointStubsFaceWrongDirection(props, sourceStub, targetStub)) {
-    return buildHorizontalRunStepPoints({
-      start,
-      end,
-      sourceStub,
-      targetStub,
-      y: splitCoordinates.splitY ?? (props.sourceY + props.targetY) / 2,
-    })
-  }
-
   return compactPolylinePoints([
     start,
     sourceStub,
@@ -398,23 +345,11 @@ function buildMixedSourceHorizontalStepPoints(
 }
 
 function buildMixedSourceVerticalStepPoints(
-  props: StepGeometryProps,
-  splitCoordinates: StepSplitCoordinates,
   start: Point2D,
   end: Point2D,
   sourceStub: Point2D,
   targetStub: Point2D,
 ): Array<Point2D> {
-  if (endpointStubsFaceWrongDirection(props, sourceStub, targetStub)) {
-    return buildVerticalRunStepPoints({
-      start,
-      end,
-      sourceStub,
-      targetStub,
-      x: splitCoordinates.splitX ?? (props.sourceX + props.targetX) / 2,
-    })
-  }
-
   return compactPolylinePoints([
     start,
     sourceStub,
@@ -458,24 +393,10 @@ function buildStepPoints(
   }
 
   if (sourceHorizontal) {
-    return buildMixedSourceHorizontalStepPoints(
-      props,
-      splitCoordinates,
-      start,
-      end,
-      sourceStub,
-      targetStub,
-    )
+    return buildMixedSourceHorizontalStepPoints(start, end, sourceStub, targetStub)
   }
 
-  return buildMixedSourceVerticalStepPoints(
-    props,
-    splitCoordinates,
-    start,
-    end,
-    sourceStub,
-    targetStub,
-  )
+  return buildMixedSourceVerticalStepPoints(start, end, sourceStub, targetStub)
 }
 
 export function buildStepCanvasEdgeGeometryFromRenderProps(

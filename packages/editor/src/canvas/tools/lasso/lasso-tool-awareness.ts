@@ -1,7 +1,7 @@
 import { parseCanvasLassoAwarenessState } from '../../awareness'
 import type { CanvasAwarenessPresenceWriter } from '../canvas-tool-types'
 import type { RemoteUser, SelectingState } from '../../utils/canvas-awareness-types'
-import { canvasDevLogger } from '../../internal/dev-logger'
+import { writeValidatedPresence } from '../shared/tool-module-utils'
 
 const LASSO_TOOL_AWARENESS_NAMESPACE = 'tool.lasso'
 
@@ -16,16 +16,11 @@ export function setLassoToolAwareness(
   writer: CanvasAwarenessPresenceWriter,
   selecting: LassoSelectingState | null,
 ) {
-  if (selecting === null) {
-    writer.setPresence(LASSO_TOOL_AWARENESS_NAMESPACE, null)
-    return
-  }
-
-  const parsedSelecting = parseCanvasLassoAwarenessState(selecting)
-  if (!parsedSelecting) {
-    canvasDevLogger.error('setLassoToolAwareness: invalid lasso awareness payload', selecting)
-    return
-  }
-
-  writer.setPresence(LASSO_TOOL_AWARENESS_NAMESPACE, parsedSelecting)
+  writeValidatedPresence({
+    writer,
+    namespace: LASSO_TOOL_AWARENESS_NAMESPACE,
+    value: selecting,
+    parse: parseCanvasLassoAwarenessState,
+    invalidMessage: 'setLassoToolAwareness: invalid lasso awareness payload',
+  })
 }

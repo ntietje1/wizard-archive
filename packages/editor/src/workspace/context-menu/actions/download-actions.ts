@@ -41,28 +41,34 @@ async function downloadZip({
   items,
   fileName,
   emptyMessage,
+  toastId,
 }: {
   browserIo: FileSystemDownloadIo
   items: Extract<FileSystemDownloadResult, { status: 'completed' }>['items']
   fileName: string
   emptyMessage: string
-}) {
+  toastId: string | number
+}): Promise<WorkspaceDownloadActionResult> {
   const archive = await prepareFileSystemDownloadArchive({ io: browserIo, items })
   if (archive.status === 'empty') {
-    toast.info(emptyMessage)
-    return
+    toast.info(emptyMessage, { id: toastId })
+    return { status: 'unavailable', reason: 'download_archive_empty' }
   }
   if (archive.status === 'failed') {
-    toast.error(`Failed to download ${archive.failureCount} item(s)`)
-    return
+    const error = new Error(`Failed to download ${archive.failureCount} item(s)`)
+    toast.error(error.message, { id: toastId })
+    return { status: 'error', error }
   }
 
   downloadPayload(archive.payload, fileName)
   if (archive.failureCount > 0) {
-    toast.info(`Downloaded ${archive.successCount} item(s); ${archive.failureCount} failed`)
+    toast.info(`Downloaded ${archive.successCount} item(s); ${archive.failureCount} failed`, {
+      id: toastId,
+    })
   } else {
-    toast.success(`Downloaded ${archive.successCount} item(s)`)
+    toast.success(`Downloaded ${archive.successCount} item(s)`, { id: toastId })
   }
+  return { status: 'completed' }
 }
 
 function downloadPayload(payload: FileSystemDownloadPayload, fileName: string) {
@@ -92,22 +98,21 @@ async function downloadSingleItem({
     )
     const [downloadItem] = result.items
     if (!downloadItem) {
-      toast.error(missingItemMessage)
+      toast.error(missingItemMessage, { id: toastId })
       return { status: 'unavailable', reason: 'download_item_unavailable' }
     }
     const preparedDownload = prepareSingleFileSystemDownload(downloadItem)
     if (preparedDownload.status !== 'completed') {
-      toast.error(missingItemMessage)
+      toast.error(missingItemMessage, { id: toastId })
       return { status: 'unavailable', reason: preparedDownload.reason }
     }
     downloadPayload(preparedDownload.payload, preparedDownload.fileName)
-    toast.success('Download started')
+    toast.success('Download started', { id: toastId })
     return { status: 'completed' }
   } catch (error) {
+    toast.dismiss(toastId)
     handleError(error, 'Failed to download')
     return { status: 'error', error }
-  } finally {
-    toast.dismiss(toastId)
   }
 }
 
@@ -129,7 +134,7 @@ async function downloadItemsArchive({
       }),
     )
     toast.loading('Downloading items...', { id: toastId })
-    await downloadZip({
+    return await downloadZip({
       browserIo,
       items: result.items,
       fileName:
@@ -137,13 +142,12 @@ async function downloadItemsArchive({
           ? sanitizeDownloadFileName(`${items[0].name}.zip`, 'selected-item.zip')
           : 'selected-items.zip',
       emptyMessage: 'No items to download',
+      toastId,
     })
-    return { status: 'completed' }
   } catch (error) {
+    toast.dismiss(toastId)
     handleError(error, 'Failed to download')
     return { status: 'error', error }
-  } finally {
-    toast.dismiss(toastId)
   }
 }
 
@@ -205,18 +209,17 @@ export function createDownloadActions({
       try {
         const { items } = await loadCompletedDownloadItems(dataSource.loadRootItemsForDownload())
         toast.loading('Downloading items...', { id: toastId })
-        await downloadZip({
+        return await downloadZip({
           browserIo,
           items,
           fileName: 'workspace-export.zip',
           emptyMessage: 'No items to download',
+          toastId,
         })
-        return { status: 'completed' }
       } catch (error) {
+        toast.dismiss(toastId)
         handleError(error, 'Failed to download')
         return { status: 'error', error }
-      } finally {
-        toast.dismiss(toastId)
       }
     },
   }

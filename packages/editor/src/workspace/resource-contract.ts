@@ -19,6 +19,7 @@ import type {
 } from '../game-maps/item-contract'
 import type { NoteItem, NoteItemRow, NoteItemWithContent } from '../notes/item-contract'
 import { deduplicateNumericSuffix } from './items/deduplicate-numeric-suffix'
+import { isOptimisticSidebarItemId } from './items/optimistic'
 import { RESOURCE_ICON_NAMES, RESOURCE_STATUS } from './items-persistence-contract'
 import type { RESOURCE_TYPES } from './items-persistence-contract'
 
@@ -43,7 +44,11 @@ export function isActiveResource(resource: { status: ResourceStatus }): boolean 
 }
 
 export function isPersistedResourceId(resourceId: string | null | undefined): resourceId is string {
-  return typeof resourceId === 'string' && !resourceId.startsWith('optimistic-')
+  return (
+    typeof resourceId === 'string' &&
+    resourceId.length > 0 &&
+    !isOptimisticSidebarItemId(resourceId)
+  )
 }
 
 type ResourceReadModelResource = {

@@ -1,5 +1,5 @@
 import { Schema } from '@tiptap/pm/model'
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 
 type TestBlock = {
   children?: Array<TestBlock>

@@ -97,9 +97,9 @@ export function createTrashedSidebarItem(
   overrides: Partial<Omit<AnyItem, 'type' | 'location'>> = {},
 ): AnyItem {
   return createSidebarItem(id, name, type, {
+    ...overrides,
     status: RESOURCE_STATUS.trashed,
     isActive: false,
     isTrashed: true,
-    ...overrides,
   })
 }

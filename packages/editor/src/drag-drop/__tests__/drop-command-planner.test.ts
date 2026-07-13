@@ -1,6 +1,4 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, expectTypeOf, it } from 'vite-plus/test'
 import '../drop-command'
 import type { DropPayload, PlannedDropCommand } from '../drop-command'
 import { resolveDropCommand } from '../drop-command-planner'
@@ -111,36 +109,11 @@ describe('drop command model', () => {
     expect(command.kind).toBe('surfaceExternalUrl')
   })
 
-  it('keeps filesystem command results out of drop receipts', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'packages/editor/src/drag-drop/drop-command.ts'),
-      'utf8',
-    )
-    expect(source).not.toContain("| { kind: 'filesystem'; result:")
-  })
+  it('models filesystem commands as plans rather than completed results', () => {
+    type FileSystemCommand = Extract<PlannedDropCommand, { kind: 'filesystem' }>
 
-  it('does not expose a drop-specific alias around command execution results', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'packages/editor/src/drag-drop/drop-command.ts'),
-      'utf8',
-    )
-    expect(source).not.toContain('DropCommandExecutionResult')
-  })
-
-  it('does not expose drop-specific receipt variants for interaction side effects', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'packages/editor/src/drag-drop/drop-command.ts'),
-      'utf8',
-    )
-    expect(source).not.toContain('DropReceipt')
-  })
-
-  it('does not expose a drop-specific execution result union for interaction side effects', () => {
-    const source = readFileSync(
-      resolve(process.cwd(), 'packages/editor/src/drag-drop/drop-command.ts'),
-      'utf8',
-    )
-    expect(source).not.toContain('DropExecutionResult')
+    expectTypeOf<FileSystemCommand>().toHaveProperty('plan')
+    expectTypeOf<FileSystemCommand>().not.toHaveProperty('result')
   })
 })
 

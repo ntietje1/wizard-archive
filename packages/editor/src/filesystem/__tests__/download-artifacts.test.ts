@@ -49,6 +49,55 @@ describe('download artifacts', () => {
     })
   })
 
+  it('reports archive entries that collapse to the same sanitized path as failures', async () => {
+    const archive = await prepareFileSystemDownloadArchive({
+      io: createDownloadIo(),
+      items: [
+        downloadNoteItem({ path: 'notes/Session.md' }),
+        downloadNoteItem({ path: 'notes/./Session.md' }),
+      ],
+    })
+
+    expect(archive).toMatchObject({ status: 'completed', successCount: 1, failureCount: 1 })
+    if (archive.status !== 'completed') throw new Error('Expected completed archive')
+    const zip = await JSZip.loadAsync(archive.payload.blob)
+    expect(getArchiveFilePaths(zip)).toEqual(['notes/Session.md'])
+  })
+
+  it('keeps the fetch timeout active while reading the response body', async () => {
+    vi.useFakeTimers()
+    const io: FileSystemDownloadIo = {
+      clearTimeout,
+      fetch: vi.fn((_url: string, { signal }: RequestInit = {}) =>
+        Promise.resolve({
+          ok: true,
+          blob: () =>
+            new Promise<Blob>((_resolve, reject) => {
+              signal?.addEventListener('abort', () =>
+                reject(new DOMException('Download timed out', 'AbortError')),
+              )
+            }),
+        } as Response),
+      ),
+      setTimeout,
+    }
+
+    try {
+      const archivePromise = prepareFileSystemDownloadArchive({
+        io,
+        items: [downloadFileItem({ downloadUrl: 'https://example.com/slow', path: 'slow' })],
+      })
+      await vi.runAllTimersAsync()
+
+      await expect(archivePromise).resolves.toMatchObject({
+        status: 'failed',
+        failureCount: 1,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('prepares single note downloads as markdown blobs', async () => {
     const download = prepareSingleFileSystemDownload(downloadNoteItem({ name: 'Scene', path: '' }))
 
@@ -67,9 +116,16 @@ describe('download artifacts', () => {
 function createDownloadIo(): FileSystemDownloadIo {
   return {
     clearTimeout: clearTimeout,
-    fetch: vi.fn((url: string) => Promise.resolve(new Response(new Blob([url]), { status: 200 }))),
+    fetch: vi.fn((url: string) => Promise.resolve(blobResponse(url))),
     setTimeout: setTimeout,
   }
+}
+
+function blobResponse(content: string): Response {
+  return {
+    ok: true,
+    blob: () => Promise.resolve(new Blob([content])),
+  } as Response
 }
 
 function downloadFileItem({

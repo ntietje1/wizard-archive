@@ -13,13 +13,7 @@ export function isBlockedExternalDropEvent(
       return true
     }
   }
-
-  const target = event.target
-  const targetElement =
-    target instanceof Element ? target : target instanceof Node ? target.parentElement : null
-  return targetElement
-    ? isBlockedDescendant(dropTarget, targetElement, blockedTargetSelector)
-    : false
+  return false
 }
 
 export function isBlockedExternalDropInput(

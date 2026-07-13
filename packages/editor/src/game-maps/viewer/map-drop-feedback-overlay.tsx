@@ -23,12 +23,12 @@ export function MapDropFeedbackOverlay({ outcome }: { outcome: DropOutcome | nul
             : 'bg-destructive text-destructive-foreground',
         )}
       >
-        <p className="text-sm font-medium flex items-center gap-1.5">
+        <span className="text-sm font-medium flex items-center gap-1.5">
           {outcome.type === 'rejection' && <Ban className="size-4 shrink-0" />}
           {outcome.type === 'operation'
             ? 'Release to place pin here'
             : rejectionReasonMessage(outcome.reason)}
-        </p>
+        </span>
       </output>
     </>
   )

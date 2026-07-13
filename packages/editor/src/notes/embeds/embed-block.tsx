@@ -12,6 +12,7 @@ import type {
   MouseEvent as ReactMouseEvent,
   MutableRefObject,
   PointerEvent as ReactPointerEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   RefObject,
   ReactNode,
 } from 'react'
@@ -30,6 +31,7 @@ import {
 import type { ResizeHandlePosition } from '../../../../../shared/resize/resizeHandleDescriptors'
 import { useEmbedDropTarget } from '../../embeds/hooks/use-drop-target'
 import { usePendingEmbedUpload } from '../../embeds/pending-upload'
+import { getPositiveFiniteNumber } from './numbers'
 import type { EmbedMediaLayout } from '../../embeds/utils/media'
 import { areEmbedMediaLayoutsEqual, getEmbedMediaAspectRatio } from '../../embeds/utils/media'
 import type { EmbeddedNotePreviewRenderer } from './embedded-note-preview-renderer'
@@ -44,7 +46,11 @@ import {
   blockPropsFromEmbedTarget,
   embedTargetFromBlockProps,
 } from './block-targets'
-import { getNoteEmbedResizeCursor, startNoteEmbedResizeSession } from './resize'
+import {
+  getNoteEmbedKeyboardResize,
+  getNoteEmbedResizeCursor,
+  startNoteEmbedResizeSession,
+} from './resize'
 import type { NoteEmbedBlockProps } from './block-targets'
 import { useNoteEmbedSurface } from './surface-context-value'
 import {
@@ -359,6 +365,23 @@ function NoteEmbedSelectionControls({
           },
         })
       }}
+      onResizeKeyboard={(event, handle) => {
+        const nextSize = getNoteEmbedKeyboardResize({
+          ...getNoteEmbedResizeSessionState(layout),
+          editorElement: editor.domElement,
+          handle,
+          key: event.key,
+          root: rootRef.current,
+        })
+        if (!nextSize) return
+        event.preventDefault()
+        editor.updateBlock(block, {
+          props: stripUndefined({
+            previewWidth: nextSize.width,
+            previewHeight: nextSize.height,
+          }),
+        })
+      }}
     />
   )
 }
@@ -457,6 +480,7 @@ function useNoteEmbedSurfaceDrag(block: NoteEmbedBlockViewProps['block']) {
 
   useEffect(
     () => () => {
+      dragCleanupRef.current?.()
       suppressionCleanupRef.current?.()
     },
     [],
@@ -1026,10 +1050,15 @@ const NOTE_EMBED_SELECTION_CHROME_STROKE_WIDTH_PX = 1.5
 function NoteEmbedResizeWrapper({
   mediaLayout,
   onResizeStart,
+  onResizeKeyboard,
   resizeEnabled,
 }: {
   mediaLayout: EmbedMediaLayout | null
   onResizeStart: (event: ReactPointerEvent<HTMLElement>, handle: ResizeHandlePosition) => void
+  onResizeKeyboard: (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    handle: ResizeHandlePosition,
+  ) => void
   resizeEnabled: boolean
 }) {
   return (
@@ -1041,7 +1070,11 @@ function NoteEmbedResizeWrapper({
     >
       <NoteEmbedSelectionChrome />
       {resizeEnabled ? (
-        <NoteEmbedResizeHandles mediaLayout={mediaLayout} onResizeStart={onResizeStart} />
+        <NoteEmbedResizeHandles
+          mediaLayout={mediaLayout}
+          onResizeKeyboard={onResizeKeyboard}
+          onResizeStart={onResizeStart}
+        />
       ) : null}
     </div>
   )
@@ -1070,9 +1103,14 @@ function NoteEmbedSelectionChrome() {
 
 function NoteEmbedResizeHandles({
   mediaLayout,
+  onResizeKeyboard,
   onResizeStart,
 }: {
   mediaLayout: EmbedMediaLayout | null
+  onResizeKeyboard: (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    handle: ResizeHandlePosition,
+  ) => void
   onResizeStart: (event: ReactPointerEvent<HTMLElement>, handle: ResizeHandlePosition) => void
 }) {
   return (
@@ -1081,7 +1119,6 @@ function NoteEmbedResizeHandles({
         <button
           key={position}
           type="button"
-          tabIndex={-1}
           draggable={false}
           aria-label={getResizeHandleLabel(position)}
           data-testid={`note-embed-resize-zone-${position}`}
@@ -1093,6 +1130,7 @@ function NoteEmbedResizeHandles({
           )}
           style={getNoteEmbedResizeZoneStyle(position, mediaLayout)}
           onPointerDown={(event) => onResizeStart(event, position)}
+          onKeyDown={(event) => onResizeKeyboard(event, position)}
         />
       ))}
     </>
@@ -1135,7 +1173,7 @@ function getNextNoteEmbedBlockProps(
 ): NoteEmbedBlockProps {
   return {
     ...getSharedEmbedBlockProps(currentProps),
-    ...(nextTarget.kind !== 'empty' && !positiveNumber(currentProps.previewWidth)
+    ...(nextTarget.kind !== 'empty' && !getPositiveFiniteNumber(currentProps.previewWidth)
       ? { previewWidth: DEFAULT_NOTE_EMBED_PREVIEW_WIDTH }
       : {}),
     ...blockPropsFromEmbedTarget(nextTarget),
@@ -1144,7 +1182,7 @@ function getNextNoteEmbedBlockProps(
 
 function getNoteEmbedPreviewWidth(blockProps: NoteEmbedBlockProps, target: EmbedTarget) {
   return (
-    positiveNumber(blockProps.previewWidth) ??
+    getPositiveFiniteNumber(blockProps.previewWidth) ??
     (target.kind !== 'empty' ? DEFAULT_NOTE_EMBED_PREVIEW_WIDTH : undefined)
   )
 }
@@ -1163,7 +1201,7 @@ function getNoteEmbedPreviewHeight({
   width: number | undefined
 }) {
   return clampNoteEmbedPreviewHeight(
-    (usesFreeformHeight ? positiveNumber(blockProps.previewHeight) : undefined) ??
+    (usesFreeformHeight ? getPositiveFiniteNumber(blockProps.previewHeight) : undefined) ??
       getDefaultNoteEmbedPreviewHeight({
         aspectRatio: documentAspectRatio,
         usesFreeformHeight,
@@ -1186,7 +1224,7 @@ function getNoteEmbedResizeSessionState(layout: ReturnType<typeof useNoteEmbedBl
 
 function getInitialNoteEmbedMediaLayout(props: NoteEmbedBlockProps): EmbedMediaLayout | null {
   const aspectRatio =
-    positiveNumber(props.previewAspectRatio) ??
+    getPositiveFiniteNumber(props.previewAspectRatio) ??
     getDocumentEmbedAspectRatioForTarget(embedTargetFromBlockProps(props))
   return aspectRatio ? { kind: 'intrinsicAspectRatio', aspectRatio } : null
 }
@@ -1260,10 +1298,6 @@ function getNoteEmbedResizeZoneClassName(handle: ResizeHandlePosition) {
 function getTargetTitle(target: EmbedTarget) {
   if (target.kind === 'externalUrl') return target.name ?? target.url
   return null
-}
-
-function positiveNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
 }
 
 function getSharedEmbedBlockProps(props: NoteEmbedBlockProps): NoteEmbedBlockProps {

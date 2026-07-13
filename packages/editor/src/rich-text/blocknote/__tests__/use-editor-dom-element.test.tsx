@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useEditorDomElement } from '../use-editor-dom-element'
 
 type EditorDomElementSource = { domElement?: HTMLElement | null }
@@ -59,6 +59,20 @@ describe('useEditorDomElement', () => {
     })
 
     expect(queuedFrames.filter(Boolean)).toHaveLength(0)
+    expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(10)
+  })
+
+  it('does not expose the previous editor element during an editor swap', () => {
+    const firstElement = document.createElement('div')
+    const secondEditor = { domElement: null as HTMLElement | null }
+    const { result, rerender } = renderHook(
+      ({ editor }: { editor: EditorDomElementSource }) => useEditorDomElement(editor),
+      { initialProps: { editor: { domElement: firstElement } as EditorDomElementSource } },
+    )
+
+    rerender({ editor: secondEditor })
+
+    expect(result.current).toBeNull()
   })
 
   it('cancels polling when the editor disappears', () => {

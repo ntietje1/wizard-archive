@@ -20,6 +20,7 @@ export function useCanvasNodeVisualSelection(id: string) {
         ? getCanvasVisualSelectionState({
             selected: state.selection.nodeIds.has(id),
             pendingPreview: state.selection.pendingPreview,
+            gestureMode: state.selection.gestureMode,
             id,
             kind: 'node',
           })

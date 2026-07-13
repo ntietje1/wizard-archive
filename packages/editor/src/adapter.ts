@@ -783,18 +783,28 @@ export type WizardEditorMapImageReplacementStageResult<TImage, TMapId extends st
   | {
       status: 'staged'
       image: TImage
-      cancel?: (input: { image: TImage; mapId: TMapId }) => MaybePromise<unknown>
+      cancel: (input: {
+        image: TImage
+        layerId: string | null
+        mapId: TMapId
+      }) => MaybePromise<ResourceOperationResult>
     }
   | Exclude<ResourceOperationResult, { status: 'completed' }>
 
 export interface WizardEditorMapImageReplacementInput<TImage, TMapId extends string = string> {
   file: ResourceImportFile
+  layerId?: string | null
   mapId: TMapId
   stageImage: (input: {
     file: ResourceImportFile
+    layerId: string | null
     mapId: TMapId
   }) => MaybePromise<WizardEditorMapImageReplacementStageResult<TImage, TMapId>>
-  commitImage: (input: { image: TImage; mapId: TMapId }) => MaybePromise<unknown>
+  commitImage: (input: {
+    image: TImage
+    layerId: string | null
+    mapId: TMapId
+  }) => MaybePromise<ResourceOperationResult>
 }
 export interface WizardEditorMapImageLayer {
   id: string
@@ -1009,11 +1019,13 @@ export interface WizardEditorResourceSource extends WizardEditorRuntimeResourceS
 
 interface WizardEditorMapSessionUpdateImageInput {
   file: ResourceImportFile
+  layerId?: string | null
   mapId: InternalResourceItemId
 }
 
 export type WizardEditorMapPinCreationRequest = {
   itemId: InternalResourceItemId
+  layerId?: string | null
   x: number
   y: number
 }
@@ -1981,21 +1993,32 @@ export function replaceWizardEditorMapImage<TImage, TMapId extends string = stri
 ): Promise<ResourceOperationResult> {
   return replaceMapImage({
     file: input.file,
+    layerId: input.layerId,
     mapId: input.mapId as unknown as InternalResourceItemId,
-    stageImage: async ({ file, mapId }) => {
-      const staged = await input.stageImage({ file, mapId: mapId as unknown as TMapId })
+    stageImage: async ({ file, layerId, mapId }) => {
+      const staged = await input.stageImage({
+        file,
+        layerId,
+        mapId: mapId as unknown as TMapId,
+      })
       if (staged.status !== 'staged') return staged
 
       return {
         ...staged,
-        cancel: staged.cancel
-          ? ({ image, mapId: stagedMapId }) =>
-              staged.cancel?.({ image: image as TImage, mapId: stagedMapId as unknown as TMapId })
-          : undefined,
+        cancel: ({ image, layerId: stagedLayerId, mapId: stagedMapId }) =>
+          staged.cancel({
+            image: image as TImage,
+            layerId: stagedLayerId,
+            mapId: stagedMapId as unknown as TMapId,
+          }),
       }
     },
-    commitImage: ({ image, mapId }) =>
-      input.commitImage({ image: image as TImage, mapId: mapId as unknown as TMapId }),
+    commitImage: ({ image, layerId, mapId }) =>
+      input.commitImage({
+        image: image as TImage,
+        layerId,
+        mapId: mapId as unknown as TMapId,
+      }),
   })
 }
 

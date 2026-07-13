@@ -1,5 +1,5 @@
 import type { MapPinId, AssetId } from '../../../../shared/common/ids'
-import { RESOURCE_STATUS } from '../workspace/items-persistence-contract'
+import { RESOURCE_STATUS, RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { ResourceId, ResourceStatus, ResourceKind } from '../workspace/resource-contract'
 
 export type PinDropValidationCode =
@@ -52,6 +52,7 @@ export type MapPin = {
 
 type GameMapSnapshotPinData = {
   itemId: ResourceId
+  layerId?: string | null
   x: number
   y: number
   visible: boolean
@@ -63,6 +64,7 @@ type GameMapSnapshotPinData = {
 
 export type GameMapSnapshotData = {
   imageAssetId: string | null
+  layers?: Array<{ id: string; imageAssetId: string | null; name: string }>
   pins: Array<GameMapSnapshotPinData>
 }
 
@@ -82,6 +84,19 @@ export function readGameMapSnapshot(data: ArrayBuffer): GameMapSnapshotData | nu
 function isGameMapSnapshotData(value: unknown): value is GameMapSnapshotData {
   if (!isRecord(value)) return false
   if (!(typeof value.imageAssetId === 'string' || value.imageAssetId === null)) return false
+  if (
+    value.layers !== undefined &&
+    (!Array.isArray(value.layers) ||
+      !value.layers.every(
+        (layer) =>
+          isRecord(layer) &&
+          typeof layer.id === 'string' &&
+          typeof layer.name === 'string' &&
+          (typeof layer.imageAssetId === 'string' || layer.imageAssetId === null),
+      ))
+  ) {
+    return false
+  }
   if (!Array.isArray(value.pins)) return false
 
   return value.pins.every(isGameMapSnapshotPinData)
@@ -92,13 +107,16 @@ function isGameMapSnapshotPinData(value: unknown) {
 
   return (
     typeof value.itemId === 'string' &&
+    (value.layerId === undefined || value.layerId === null || typeof value.layerId === 'string') &&
     typeof value.x === 'number' &&
     typeof value.y === 'number' &&
     typeof value.visible === 'boolean' &&
     (typeof value.name === 'string' || value.name === null) &&
     (typeof value.color === 'string' || value.color === null) &&
     (typeof value.iconName === 'string' || value.iconName === null) &&
-    (typeof value.itemType === 'string' || value.itemType === null)
+    (value.itemType === null ||
+      (typeof value.itemType === 'string' &&
+        Object.values(RESOURCE_TYPES).includes(value.itemType as ResourceKind)))
   )
 }
 
@@ -136,7 +154,7 @@ export function validatePinDropTarget<TItemId extends string, TWorkspaceId exten
   const pinTargetError = validateUniquePinTarget(mapId, item.id, existingPinItemIds)
   if (pinTargetError) return pinTargetError
   if (item.status === RESOURCE_STATUS.trashed) return 'trashed_item'
-  if (workspaceId && item.workspaceId !== workspaceId) return 'wrong_workspace'
+  if (workspaceId !== null && item.workspaceId !== workspaceId) return 'wrong_workspace'
   return null
 }
 

@@ -70,8 +70,27 @@ describe('useMapPinInteractions', () => {
 
     expect(createMapPins).toHaveBeenCalledExactlyOnceWith({
       mapId: map.id,
-      pins: [{ itemId: pin.itemId, x: 50, y: 25 }],
+      pins: [{ itemId: pin.itemId, layerId: null, x: 50, y: 25 }],
     })
+  })
+
+  it('exits placement mode when dragging a pin starts', () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture(map)
+    const createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate(map.id, []))
+
+    render(<MapPinInteractionHarness map={map} pin={pin} createMapPins={createMapPins} />)
+    setImageBounds()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Place note' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Note' }), { pointerId: 1 })
+    expect(screen.getByTestId('map-cursor')).toHaveAttribute('data-cursor', 'grabbing')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Map canvas' }), {
+      clientX: 100,
+      clientY: 25,
+    })
+    expect(createMapPins).not.toHaveBeenCalled()
   })
 
   it('uses the latest requested pin action for the next map activation', () => {
@@ -180,6 +199,92 @@ describe('useMapPinInteractions', () => {
     })
 
     expect(updateMapPin).not.toHaveBeenCalled()
+  })
+
+  it('cancels pin interactions when edit permission is lost', () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture(map)
+    const createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate(map.id, []))
+    const updateMapPin = vi.fn().mockResolvedValue(completedMapPinUpdate())
+    const view = render(
+      <MapPinInteractionHarness
+        map={map}
+        pin={pin}
+        createMapPins={createMapPins}
+        updateMapPin={updateMapPin}
+      />,
+    )
+    setImageBounds()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Place note' }))
+    view.rerender(
+      <MapPinInteractionHarness
+        canEditMap={false}
+        map={map}
+        pin={pin}
+        createMapPins={createMapPins}
+        updateMapPin={updateMapPin}
+      />,
+    )
+    view.rerender(
+      <MapPinInteractionHarness
+        map={map}
+        pin={pin}
+        createMapPins={createMapPins}
+        updateMapPin={updateMapPin}
+      />,
+    )
+    setImageBounds()
+    fireEvent.click(screen.getByRole('button', { name: 'Map canvas' }), {
+      clientX: 100,
+      clientY: 25,
+    })
+
+    expect(createMapPins).not.toHaveBeenCalled()
+    expect(updateMapPin).not.toHaveBeenCalled()
+    expect(screen.getByTestId('map-cursor')).toHaveAttribute('data-cursor', 'default')
+  })
+
+  it('does not commit an active drag after edit permission is lost', () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture(map)
+    const updateMapPin = vi.fn().mockResolvedValue(completedMapPinUpdate())
+    const view = render(
+      <MapPinInteractionHarness map={map} pin={pin} updateMapPin={updateMapPin} />,
+    )
+    setImageBounds()
+    const pinButton = screen.getByRole('button', { name: 'Note' })
+
+    fireEvent.pointerDown(pinButton, { button: 0, pointerId: 17 })
+    act(() => {
+      window.dispatchEvent(
+        createPointerEvent('pointermove', {
+          clientX: 100,
+          clientY: 25,
+          pointerId: 17,
+        }),
+      )
+    })
+    view.rerender(
+      <MapPinInteractionHarness
+        canEditMap={false}
+        map={map}
+        pin={pin}
+        updateMapPin={updateMapPin}
+      />,
+    )
+    act(() => {
+      window.dispatchEvent(
+        createPointerEvent('pointerup', {
+          clientX: 100,
+          clientY: 25,
+          pointerId: 17,
+        }),
+      )
+    })
+
+    expect(updateMapPin).not.toHaveBeenCalled()
+    expect(pinButton).toHaveStyle({ left: '25%', top: '50%' })
   })
 
   it('reports move-specific feedback when map position cannot be resolved', () => {
@@ -336,18 +441,63 @@ describe('useMapPinInteractions', () => {
     })
     expect(pinButton).toHaveStyle({ left: '25%', top: '50%' })
   })
+
+  it('clears dragging state when a resolved pin update is not completed', async () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture(map)
+    const updateMapPin = vi.fn().mockResolvedValue({
+      status: 'error',
+      error: new Error('save failed'),
+    })
+
+    render(<MapPinInteractionHarness map={map} pin={pin} updateMapPin={updateMapPin} />)
+    setImageBounds()
+    const pinButton = screen.getByRole('button', { name: 'Note' })
+
+    fireEvent.pointerDown(pinButton, {
+      button: 0,
+      pointerId: 17,
+      pointerType: 'touch',
+    })
+    act(() => {
+      window.dispatchEvent(
+        createPointerEvent('pointermove', {
+          clientX: 100,
+          clientY: 25,
+          pointerId: 17,
+          pointerType: 'touch',
+        }),
+      )
+      window.dispatchEvent(
+        createPointerEvent('pointerup', {
+          clientX: 100,
+          clientY: 25,
+          pointerId: 17,
+          pointerType: 'touch',
+        }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(updateMapPin).toHaveBeenCalledOnce()
+      expect(screen.getByTestId('map-cursor')).toHaveAttribute('data-cursor', 'default')
+    })
+    expect(pinButton).toHaveStyle({ left: '25%', top: '50%' })
+  })
 })
 
 function MapPinInteractionHarness({
+  canEditMap = true,
   createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate('map-1' as SidebarItemId, [])),
   map,
   openItem = vi.fn().mockResolvedValue(undefined),
   pin,
   updateMapPin = vi.fn().mockResolvedValue(completedMapPinUpdate()),
 }: {
+  canEditMap?: boolean
   createMapPins?: (input: {
     mapId: MapItemWithContent['id']
-    pins: Array<{ itemId: SidebarItemId; x: number; y: number }>
+    pins: Array<{ itemId: SidebarItemId; layerId?: string | null; x: number; y: number }>
   }) => Promise<MapPinsCreateResult>
   map: MapItemWithContent
   openItem?: (itemId: SidebarItemId) => Promise<void>
@@ -361,7 +511,7 @@ function MapPinInteractionHarness({
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const interactions = useMapPinInteractions({
-    canEditMap: true,
+    canEditMap,
     imageError: false,
     imageRef,
     map,
@@ -390,6 +540,8 @@ function MapPinInteractionHarness({
       <button
         type="button"
         aria-label="Map canvas"
+        data-testid="map-cursor"
+        data-cursor={interactions.mapCursor}
         onClick={(event) => interactions.handleMapClick(event)}
       />
       <div ref={pinsContainerRef}>

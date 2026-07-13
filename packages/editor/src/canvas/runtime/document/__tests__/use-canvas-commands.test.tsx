@@ -297,11 +297,7 @@ describe('useCanvasDocumentCommands', () => {
       ]),
     })
     expect(selection.setSelection).toHaveBeenCalledWith(duplicateSelection)
-    expect(useCanvasClipboardStore.getState().clipboard).toMatchObject({
-      nodes: [{ id: 'node-1' }, { id: 'node-2' }],
-      edges: [{ id: 'edge-1' }],
-      pasteCount: 1,
-    })
+    expect(useCanvasClipboardStore.getState().clipboard).toBeNull()
 
     randomUuidSpy.mockRestore()
     unmount()

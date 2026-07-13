@@ -8,6 +8,25 @@ const fileId = 'file-1' as SidebarItemId
 type PreviewUploadResult = Awaited<ReturnType<PreviewUpload>>
 
 describe('runPdfPreviewGeneration', () => {
+  it('accepts the File MIME type when content metadata conflicts', async () => {
+    const renderPdfPreview = vi.fn(() => Promise.resolve(new Blob()))
+
+    await runPdfPreviewGeneration({
+      file: createPreviewFile({
+        name: 'handout.bin',
+        contentType: 'application/octet-stream',
+        type: 'application/pdf',
+      }),
+      fileId,
+      claimAndUpload: vi.fn<PreviewUpload>(async (_itemId, generate) => {
+        await generate()
+        return { status: 'success' }
+      }),
+      renderPdfPreview,
+    })
+
+    expect(renderPdfPreview).toHaveBeenCalledOnce()
+  })
   it('skips unsupported files before claiming preview upload work', async () => {
     const claimAndUpload = vi.fn<PreviewUpload>()
 
@@ -111,14 +130,17 @@ function createPreviewFile({
   contentType,
   name,
   size = 1024,
+  type,
 }: {
-  contentType: string
+  contentType?: string
   name: string
   size?: number
+  type?: string
 }) {
   return {
     name,
     contentType,
+    type,
     size,
     arrayBuffer: vi.fn(() => Promise.resolve(new ArrayBuffer(8))),
   }

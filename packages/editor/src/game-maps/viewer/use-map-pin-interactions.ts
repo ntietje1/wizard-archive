@@ -11,12 +11,11 @@ import type { MaybePromise } from '../../../../../shared/common/async'
 import type { MapPinId, SidebarItemId } from '../../../../../shared/common/ids'
 import type { MapItemWithContent, MapPinWithItem } from '../../game-maps/item-contract'
 import type { MapSession } from '../../game-maps/session-contract'
-import type { ResourceOperationResult } from '../../filesystem/transaction-contract'
 import type { AnyItem } from '../../workspace/items'
-import { reportMapActionError } from './map-action-errors'
+import { isCompletedResourceOperation, reportMapActionError } from './map-action-errors'
 import { createMapPinsAtPosition } from './map-pin-creation'
 import { getImagePinPosition } from './map-pin-placement'
-import type { PinPosition } from './map-pin-placement'
+import type { PinPosition, ScreenPosition } from './map-pin-placement'
 
 type MapPinSession = MapSession['pins']
 
@@ -38,12 +37,17 @@ type MapPinInteractionSource = {
   updateMapPin: MapPinSession['update']
 }
 
-type PendingPinItems = { itemIds: Array<SidebarItemId>; mapId: SidebarItemId }
+type PendingPinItems = {
+  itemIds: Array<SidebarItemId>
+  layerId: string | null
+  mapId: SidebarItemId
+}
 type PendingPinMove = { mapId: SidebarItemId; pinId: MapPinId }
 type DraggingPin = { pin: MapPinWithItem; pointerId: number }
 type PinContextMenuState = {
+  layerId: string | null
   pinId: MapPinId
-  position: PinPosition
+  position: ScreenPosition
 }
 
 type StateSetter<T> = Dispatch<SetStateAction<T>>
@@ -69,7 +73,31 @@ function restoreDraggedPinElement(
   draggedPinPositionRef.current = null
 }
 
+function resetPinActions({
+  draggedPinPositionRef,
+  draggingPin,
+  pinsContainerRef,
+  setDraggingPin,
+  setPendingPinItems,
+  setPendingPinMove,
+}: {
+  draggedPinPositionRef: { current: PinPosition | null }
+  draggingPin: DraggingPin | null
+  pinsContainerRef: PinElementContainerRef
+  setDraggingPin: StateSetter<DraggingPin | null>
+  setPendingPinItems: StateSetter<PendingPinItems | null>
+  setPendingPinMove: StateSetter<PendingPinMove | null>
+}) {
+  if (draggingPin) {
+    restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
+  }
+  setPendingPinItems(null)
+  setPendingPinMove(null)
+  setDraggingPin(null)
+}
+
 export function useMapPinInteractions({
+  activeLayerId,
   canEditMap,
   imageError,
   imageRef,
@@ -77,6 +105,7 @@ export function useMapPinInteractions({
   pinsContainerRef,
   source,
 }: {
+  activeLayerId?: string | null
   canEditMap: boolean
   imageError: boolean
   imageRef: ImageElementRef
@@ -84,7 +113,9 @@ export function useMapPinInteractions({
   pinsContainerRef: PinElementContainerRef
   source: MapPinInteractionSource
 }) {
-  const [pinContextMenu, setPinContextMenu] = useState<PinContextMenuState | null>(null)
+  const [pinContextMenuState, setPinContextMenu] = useState<PinContextMenuState | null>(null)
+  const pinContextMenu =
+    pinContextMenuState?.layerId === (activeLayerId ?? null) ? pinContextMenuState : null
   const [pendingPinItems, setPendingPinItems] = useState<PendingPinItems | null>(null)
   const [pendingPinMove, setPendingPinMove] = useState<PendingPinMove | null>(null)
   const [draggingPin, setDraggingPin] = useState<DraggingPin | null>(null)
@@ -105,6 +136,7 @@ export function useMapPinInteractions({
   })
 
   useDraggedPinSession({
+    canEditMap,
     draggedPinPositionRef,
     draggingPin,
     imageRef,
@@ -117,6 +149,7 @@ export function useMapPinInteractions({
   const { requestPinMove, requestPinPlacement } = usePinPlacementRequests({
     canEditMap,
     imageError,
+    layerId: activeLayerId ?? null,
     mapId: map.id,
     setPendingPinItems,
     setPendingPinMove,
@@ -135,18 +168,23 @@ export function useMapPinInteractions({
     })
 
   const { handlePinClick, handlePinContextMenu, handlePinDragStart } = useRenderedPinHandlers({
+    activeLayerId: activeLayerId ?? null,
     canEditMap,
     draggedPinPositionRef,
     justFinishedDraggingRef,
     pendingPinMove,
+    setPendingPinItems,
     setDraggingPin,
     setPendingPinMove,
     setPinContextMenu,
     source,
   })
 
-  const mapCursor =
-    pendingPinItems || pendingPinMove ? 'crosshair' : draggingPin ? 'grabbing' : 'default'
+  const mapCursor = draggingPin
+    ? 'grabbing'
+    : pendingPinItems || pendingPinMove
+      ? 'crosshair'
+      : 'default'
   const shouldDisablePanning = !!pendingPinItems || !!pendingPinMove || !!draggingPin
 
   return {
@@ -224,12 +262,14 @@ function usePinActionCancellation({
         if (pendingPinMove) {
           toast.info('Pin move cancelled')
         }
-        if (draggingPin) {
-          restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
-        }
-        setPendingPinItems(null)
-        setPendingPinMove(null)
-        setDraggingPin(null)
+        resetPinActions({
+          draggedPinPositionRef,
+          draggingPin,
+          pinsContainerRef,
+          setDraggingPin,
+          setPendingPinItems,
+          setPendingPinMove,
+        })
       }
     }
 
@@ -249,12 +289,14 @@ function usePinActionCancellation({
   useEffect(() => {
     if (canEditMap) return
     if (pendingPinItems || pendingPinMove || draggingPin) {
-      if (draggingPin) {
-        restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
-      }
-      setPendingPinItems(null)
-      setPendingPinMove(null)
-      setDraggingPin(null)
+      resetPinActions({
+        draggedPinPositionRef,
+        draggingPin,
+        pinsContainerRef,
+        setDraggingPin,
+        setPendingPinItems,
+        setPendingPinMove,
+      })
     }
   }, [
     canEditMap,
@@ -270,6 +312,7 @@ function usePinActionCancellation({
 }
 
 function useDraggedPinSession({
+  canEditMap,
   draggedPinPositionRef,
   draggingPin,
   imageRef,
@@ -278,6 +321,7 @@ function useDraggedPinSession({
   setDraggingPin,
   source,
 }: {
+  canEditMap: boolean
   draggedPinPositionRef: { current: PinPosition | null }
   draggingPin: DraggingPin | null
   imageRef: ImageElementRef
@@ -287,7 +331,7 @@ function useDraggedPinSession({
   source: Pick<MapPinInteractionSource, 'updateMapPin'>
 }) {
   useEffect(() => {
-    if (!draggingPin) return
+    if (!canEditMap || !draggingPin) return
 
     const pinEl = pinsContainerRef.current?.querySelector(
       `[data-pin-id="${draggingPin.pin.id}"]`,
@@ -323,12 +367,12 @@ function useDraggedPinSession({
             x: draggedPinPosition.x,
             y: draggedPinPosition.y,
           })
-          if (!isCompletedMapOperation(result)) {
+          if (!isCompletedResourceOperation(result)) {
             restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
             reportMapActionError(result, 'Failed to move pin')
-            return
+          } else {
+            toast.success('Pin moved')
           }
-          toast.success('Pin moved')
         } catch (error) {
           restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
           reportMapActionError(error, 'Failed to move pin')
@@ -359,6 +403,7 @@ function useDraggedPinSession({
       }
     }
   }, [
+    canEditMap,
     draggedPinPositionRef,
     draggingPin,
     imageRef,
@@ -372,12 +417,14 @@ function useDraggedPinSession({
 function usePinPlacementRequests({
   canEditMap,
   imageError,
+  layerId,
   mapId,
   setPendingPinItems,
   setPendingPinMove,
 }: {
   canEditMap: boolean
   imageError: boolean
+  layerId: string | null
   mapId: SidebarItemId
   setPendingPinItems: StateSetter<PendingPinItems | null>
   setPendingPinMove: StateSetter<PendingPinMove | null>
@@ -390,7 +437,7 @@ function usePinPlacementRequests({
     }
     if (input.itemIds.length === 0) return
     setPendingPinMove(null)
-    setPendingPinItems({ itemIds: [...input.itemIds], mapId })
+    setPendingPinItems({ itemIds: [...input.itemIds], layerId, mapId })
     toast.info(
       input.itemIds.length === 1
         ? 'Click on the map to place the pin'
@@ -441,6 +488,7 @@ function useMapPinPositionActions({
     await createMapPinsAtPosition({
       createMapPins: source.createMapPins,
       itemIds,
+      layerId: pendingPinItems.layerId,
       mapId: map.id,
       position,
     })
@@ -463,7 +511,7 @@ function useMapPinPositionActions({
         x: position.x,
         y: position.y,
       })
-      if (!isCompletedMapOperation(result)) {
+      if (!isCompletedResourceOperation(result)) {
         reportMapActionError(result, 'Failed to move pin')
         return
       }
@@ -474,10 +522,6 @@ function useMapPinPositionActions({
   }
 
   return { handleMovePin, handlePlacePin }
-}
-
-function isCompletedMapOperation(result: ResourceOperationResult) {
-  return result.status === 'completed'
 }
 
 function useMapPinActionEventHandlers({
@@ -567,19 +611,23 @@ function useMapPinActionEventHandlers({
 }
 
 function useRenderedPinHandlers({
+  activeLayerId,
   canEditMap,
   draggedPinPositionRef,
   justFinishedDraggingRef,
   pendingPinMove,
+  setPendingPinItems,
   setDraggingPin,
   setPendingPinMove,
   setPinContextMenu,
   source,
 }: {
+  activeLayerId: string | null
   canEditMap: boolean
   draggedPinPositionRef: { current: PinPosition | null }
   justFinishedDraggingRef: { current: MapPinId | null }
   pendingPinMove: PendingPinMove | null
+  setPendingPinItems: StateSetter<PendingPinItems | null>
   setDraggingPin: StateSetter<DraggingPin | null>
   setPendingPinMove: StateSetter<PendingPinMove | null>
   setPinContextMenu: StateSetter<PinContextMenuState | null>
@@ -616,6 +664,7 @@ function useRenderedPinHandlers({
     const position = getPinMenuPosition(e)
 
     setPinContextMenu({
+      layerId: activeLayerId,
       pinId: pin.id,
       position,
     })
@@ -626,6 +675,7 @@ function useRenderedPinHandlers({
     if (pendingPinMove?.pinId === pin.id) {
       setPendingPinMove(null)
     }
+    setPendingPinItems(null)
     setDraggingPin({ pin, pointerId: event.pointerId })
     draggedPinPositionRef.current = null
   }
@@ -633,7 +683,7 @@ function useRenderedPinHandlers({
   return { handlePinClick, handlePinContextMenu, handlePinDragStart }
 }
 
-function getPinMenuPosition(e: ReactMouseEvent | ReactKeyboardEvent) {
+function getPinMenuPosition(e: ReactMouseEvent | ReactKeyboardEvent): ScreenPosition {
   if ('clientX' in e && 'clientY' in e && (e.clientX !== 0 || e.clientY !== 0)) {
     return { x: e.clientX, y: e.clientY }
   }

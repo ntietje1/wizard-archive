@@ -92,6 +92,15 @@ describe('canvas edge specs', () => {
         { zoom: 1 },
       ),
     ).toEqual(new Set())
+
+    expect(
+      getCanvasEdgesMatchingRectangle(
+        nodes,
+        [createBezierEdge()],
+        { x: 80, y: 15, width: 40, height: 5 },
+        { zoom: 1 },
+      ),
+    ).toEqual(new Set(['edge-1']))
   })
 
   it('selects only intersecting edges through lasso hit testing', () => {

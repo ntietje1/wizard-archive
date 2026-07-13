@@ -1,8 +1,9 @@
 import { toast } from 'sonner'
+import type { MapPinId } from '../../../../../shared/common/ids'
 
-export function reportMapPinCreationResult(pinIds: unknown, requestedCount: number) {
-  if (!Array.isArray(pinIds)) {
-    throw new Error('Map pin creation returned an invalid result')
+export function reportMapPinCreationResult(pinIds: Array<MapPinId>, requestedCount: number) {
+  if (pinIds.length > requestedCount) {
+    throw new Error('Map pin creation returned too many pins')
   }
   if (pinIds.length === 0) {
     toast.error(requestedCount === 1 ? 'Pin was not placed' : 'No pins were placed')

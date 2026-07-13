@@ -184,12 +184,12 @@ function createResourceRollbackState({
     return { status: 'closed', isRestoring: false }
   }
 
-  if (historyEntryError) {
-    return { status: 'error', isRestoring }
-  }
-
   if (historyEntryLoading) {
     return { status: 'loading', isRestoring }
+  }
+
+  if (historyEntryError) {
+    return { status: 'error', isRestoring }
   }
 
   if (entryTime === undefined) {

@@ -79,19 +79,43 @@ describe('createCanvasDragController', () => {
     controller.destroy()
     engine.destroy()
   })
+
+  it('does not let snapping move the locked axis during shift drag', () => {
+    const engine = createCanvasEngine()
+    engine.setDocumentSnapshot({
+      nodes: [createNode('dragged'), { ...createNode('target'), position: { x: 112, y: 0 } }],
+    })
+    const onEnd = vi.fn()
+    const controller = createController(
+      engine,
+      { onEnd },
+      { primaryPressed: true, shiftPressed: true },
+    )
+
+    controller.begin('dragged', createMouseEvent('mousedown', 0, 0))
+    controller.update(createMouseEvent('mousemove', 10, 2))
+    controller.commit(createMouseEvent('mouseup', 10, 2))
+
+    expect(onEnd.mock.calls[0]?.[0].resolvedPositions.get('dragged')).toEqual({ x: 10, y: 0 })
+    expect(onEnd.mock.calls[0]?.[0].guides).toEqual([])
+
+    controller.destroy()
+    engine.destroy()
+  })
 })
 
 function createController(
   engine: ReturnType<typeof createCanvasEngine>,
   callbacks: Parameters<typeof createCanvasDragController>[0]['callbacks'] = {},
+  options: { primaryPressed?: boolean; shiftPressed?: boolean } = {},
 ) {
   return createCanvasDragController({
     callbacks,
     canvasEngine: engine,
     getCanvasPosition: (point) => point,
-    getPrimaryPressed: () => false,
+    getPrimaryPressed: () => options.primaryPressed ?? false,
     getSelectedNodeIds: () => new Set(),
-    getShiftPressed: () => false,
+    getShiftPressed: () => options.shiftPressed ?? false,
     getZoom: () => 1,
   })
 }

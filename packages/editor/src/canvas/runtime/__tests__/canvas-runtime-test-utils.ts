@@ -313,10 +313,8 @@ export function createCanvasRuntime(
   const editSession = {
     editingEmbedId: null,
     setEditingEmbedId: () => undefined,
-    pendingEditNodeId: null,
-    pendingEditNodePoint: null,
-    setPendingEditNodeId: () => undefined,
-    setPendingEditNodePoint: () => undefined,
+    pendingEdit: null,
+    setPendingEdit: () => undefined,
     ...editSessionOverrides,
   }
   const nodeActions = {

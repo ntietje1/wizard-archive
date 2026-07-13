@@ -39,32 +39,36 @@ describe('useMapTransformControls', () => {
     const transformStore = createMemoryMapTransformStore()
     const mapId = 'map-1' as SidebarItemId
     const resetTransform = vi.fn()
-    const { result } = renderHook(() =>
+    const { result, unmount } = renderHook(() =>
       useMapTransformControls({
         mapId,
         pinsContainerRef: { current: null },
         transformStore,
       }),
     )
-    result.current.transformWrapperRef.current = { resetTransform } as never
+    try {
+      result.current.transformWrapperRef.current = { resetTransform } as never
 
-    act(() => {
-      result.current.handleTransformChange(null, { scale: 2, positionX: 40, positionY: 10 })
-      result.current.handleResetTransform()
-      vi.advanceTimersByTime(300)
-    })
+      act(() => {
+        result.current.handleTransformChange(null, { scale: 2, positionX: 40, positionY: 10 })
+        result.current.handleResetTransform()
+        vi.advanceTimersByTime(300)
+      })
 
-    expect(resetTransform).toHaveBeenCalledOnce()
-    expect(transformStore.loadMapTransform(mapId)).toEqual(DEFAULT_MAP_TRANSFORM)
+      expect(resetTransform).toHaveBeenCalledOnce()
+      expect(transformStore.loadMapTransform(mapId)).toEqual(DEFAULT_MAP_TRANSFORM)
+    } finally {
+      unmount()
+    }
   })
 
-  it('does not apply a debounced transform after switching maps', () => {
+  it('flushes the latest transform before switching maps', () => {
     vi.useFakeTimers()
     const transformStore = createMemoryMapTransformStore()
     const mapA = 'map-a' as SidebarItemId
     const mapB = 'map-b' as SidebarItemId
     transformStore.saveMapTransform(mapB, { scale: 1.25, positionX: 8, positionY: 4 })
-    const { result, rerender } = renderHook(
+    const { result, rerender, unmount } = renderHook(
       ({ mapId }) =>
         useMapTransformControls({
           mapId,
@@ -74,15 +78,23 @@ describe('useMapTransformControls', () => {
       { initialProps: { mapId: mapA } },
     )
 
-    act(() => {
-      result.current.handleTransformChange(null, { scale: 2, positionX: 40, positionY: 10 })
-    })
-    rerender({ mapId: mapB })
-    act(() => {
-      vi.advanceTimersByTime(300)
-    })
+    try {
+      act(() => {
+        result.current.handleTransformChange(null, { scale: 2, positionX: 40, positionY: 10 })
+      })
+      rerender({ mapId: mapB })
+      act(() => {
+        vi.advanceTimersByTime(300)
+      })
 
-    expect(result.current.savedTransform).toEqual({ scale: 1.25, positionX: 8, positionY: 4 })
-    expect(transformStore.loadMapTransform(mapA)).toEqual(DEFAULT_MAP_TRANSFORM)
+      expect(result.current.savedTransform).toEqual({ scale: 1.25, positionX: 8, positionY: 4 })
+      expect(transformStore.loadMapTransform(mapA)).toEqual({
+        scale: 2,
+        positionX: 40,
+        positionY: 10,
+      })
+    } finally {
+      unmount()
+    }
   })
 })

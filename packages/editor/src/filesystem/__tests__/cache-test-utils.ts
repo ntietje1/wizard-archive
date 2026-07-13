@@ -6,8 +6,10 @@ export function createReadWriteTestCache(snapshot: SidebarCacheSnapshot) {
     getSnapshot: () => snapshot,
     replaceSnapshot: (updater) => {
       const next = updater(snapshot)
-      snapshot.sidebar = next.sidebar
-      snapshot.trash = next.trash
+      for (const key of Object.keys(snapshot) as Array<keyof SidebarCacheSnapshot>) {
+        delete snapshot[key]
+      }
+      Object.assign(snapshot, next)
     },
   })
 }

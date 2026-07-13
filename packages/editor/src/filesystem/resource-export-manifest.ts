@@ -2,7 +2,7 @@ import type { CanvasDocumentContent } from '../canvas/document-contract'
 import type { CanvasItemWithContent } from '../canvas/item-contract'
 import type { FileItemWithContent } from '../files/item-contract'
 import type { MapItemWithContent } from '../game-maps/item-contract'
-import { deduplicateName } from '../workspace/items'
+import { deduplicateName, isResourceItemWithContent } from '../workspace/items'
 import type { AnyItem, AnyItemWithContent } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { SidebarItemId } from '../../../../shared/common/ids'
@@ -154,7 +154,7 @@ function appendFolderExportEntries({
     triedNames.push(candidateName)
   }
 
-  throw new Error('Could not generate a unique folder download path')
+  manifest.skippedItems.push(createPathConflictSkippedItem(item, currentPath))
 }
 
 function appendChildExportEntries({
@@ -216,7 +216,20 @@ function appendNonFolderExportEntry({
     triedNames.push(candidateName)
   }
 
-  throw new Error('Could not generate a unique download path')
+  manifest.skippedItems.push(createPathConflictSkippedItem(item, currentPath))
+}
+
+function createPathConflictSkippedItem(
+  item: AnyItem,
+  currentPath: string,
+): FileSystemDownloadSkippedItem {
+  return {
+    itemId: item.id,
+    type: item.type,
+    name: item.name,
+    path: buildExportPath(currentPath, item.name),
+    reason: 'path_conflict',
+  }
 }
 
 function createResourceExportEntry({
@@ -320,5 +333,5 @@ function ensureCanvasJsonPath(path: string) {
 }
 
 function isDownloadableItemWithContent(item: AnyItem): item is AnyItemWithContent {
-  return 'ancestors' in item && Array.isArray(item.ancestors)
+  return isResourceItemWithContent(item)
 }

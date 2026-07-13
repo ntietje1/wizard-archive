@@ -193,8 +193,6 @@ function CanvasTextNodeSurface({
   setSurfaceElement: (element: HTMLElement | null) => void
   variant: CanvasTextNodeVariant
 }) {
-  const SurfaceElement = canActivateNode ? 'div' : 'article'
-
   return (
     <ResizableNodeWrapper
       id={id}
@@ -215,7 +213,7 @@ function CanvasTextNodeSurface({
         </>
       }
     >
-      <SurfaceElement
+      <div
         ref={setSurfaceElement}
         className={cn('h-full w-full overflow-hidden', variant.containerClassName)}
         style={getContainerStyle(data)}
@@ -269,7 +267,7 @@ function CanvasTextNodeSurface({
             )}
           </ScrollArea>
         </div>
-      </SurfaceElement>
+      </div>
     </ResizableNodeWrapper>
   )
 }

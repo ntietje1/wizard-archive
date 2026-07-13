@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
 import type { MapPinId } from '../../../../../../shared/common/ids'
 import { createMapPinActions } from '../actions'
@@ -7,6 +7,7 @@ import type { MapPinOperations } from '../../viewer/map-pin-operations'
 import type { WorkspaceMenuContext } from '../../../workspace/menu-context'
 import { VIEW_CONTEXT } from '../../../workspace/view-context'
 import { completedResourceOperation } from '../../../filesystem/transaction-contract'
+import type { ResourceOperationResult } from '../../../filesystem/transaction-contract'
 
 vi.mock('sonner', () => ({
   toast: {
@@ -44,7 +45,6 @@ describe('createMapPinActions', () => {
     )
     const actions = createMapPinActions({
       mapPins: createMapPinMenuService({ removeMapPin, updateMapPinVisibility }),
-      openItem: vi.fn(),
     })
 
     await actions.removeMapPin(createContext())
@@ -65,7 +65,6 @@ describe('createMapPinActions', () => {
     const updateMapPinVisibility = vi.fn().mockRejectedValue(new Error('visibility failed'))
     const actions = createMapPinActions({
       mapPins: createMapPinMenuService({ removeMapPin, updateMapPinVisibility }),
-      openItem: vi.fn(),
     })
 
     await actions.removeMapPin(createContext())
@@ -75,6 +74,26 @@ describe('createMapPinActions', () => {
     expect(toast.error).toHaveBeenCalledWith('Failed to toggle pin visibility')
     expect(consoleErrorSpy).toHaveBeenCalledTimes(2)
   })
+
+  it.each(['error', 'unsupported', 'unavailable'] as const)(
+    'reports resolved %s mutation failures without success feedback',
+    async (status) => {
+      const failure = operationFailure(status)
+      const removeMapPin = vi.fn().mockResolvedValue(failure)
+      const updateMapPinVisibility = vi.fn().mockResolvedValue(failure)
+      const actions = createMapPinActions({
+        mapPins: createMapPinMenuService({ removeMapPin, updateMapPinVisibility }),
+      })
+
+      await actions.removeMapPin(createContext())
+      await actions.togglePinVisibility(createContext())
+
+      expect(toast.error).toHaveBeenNthCalledWith(1, 'Failed to remove pin')
+      expect(toast.error).toHaveBeenNthCalledWith(2, 'Failed to toggle pin visibility')
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it('does not run pin edit mutations when the active map cannot be edited', async () => {
     const removeMapPin = vi.fn()
@@ -87,7 +106,6 @@ describe('createMapPinActions', () => {
         requestPinMove,
         updateMapPinVisibility,
       }),
-      openItem: vi.fn(),
     })
 
     await actions.removeMapPin(createContext())
@@ -141,4 +159,12 @@ function createContext() {
     selectedItems: [],
     surface: VIEW_CONTEXT.MAP_VIEW,
   } satisfies WorkspaceMenuContext
+}
+
+function operationFailure(
+  status: 'error' | 'unsupported' | 'unavailable',
+): Exclude<ResourceOperationResult, { status: 'completed' }> {
+  return status === 'error'
+    ? { status, error: new Error('write failed') }
+    : { status, reason: status }
 }

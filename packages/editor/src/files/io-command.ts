@@ -44,7 +44,10 @@ export async function executeFileIoCommand(
     }
 
     if (!executor.canReplaceFile(item)) {
-      throw new Error(executor.readOnlyErrorMessage ?? 'This workspace is read-only')
+      return {
+        status: 'error',
+        error: new Error(executor.readOnlyErrorMessage ?? 'This workspace is read-only'),
+      }
     }
   }
 

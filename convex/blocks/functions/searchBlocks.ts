@@ -40,7 +40,7 @@ export async function searchBlocksAsMember(
   ctx: DmQueryCtx,
   { campaignMemberId, query }: { campaignMemberId: Id<'campaignMembers'>; query: string },
 ): Promise<Array<BlockSearchResult<NoteBlockType, NoteBlockId>>> {
-  const membership = await ctx.db.get(campaignMemberId)
+  const membership = await ctx.db.get('campaignMembers', campaignMemberId)
   if (
     !membership ||
     membership.campaignId !== ctx.campaign._id ||

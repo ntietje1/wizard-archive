@@ -146,6 +146,9 @@ describe('createCanvasSelectionGestureController', () => {
     })
     const startInput = createInput('start')
     const initialState = strategy.createInitialState(startInput)
+    const tinyInput = createInput('preview')
+    tinyInput.canvasPoint.x = 0.5
+    expect(strategy.updateState(initialState, tinyInput)).toBe(initialState)
     startInput.canvasPoint.x = 99
     const previewInput = createInput('preview')
     const nextState = strategy.updateState(initialState, previewInput)

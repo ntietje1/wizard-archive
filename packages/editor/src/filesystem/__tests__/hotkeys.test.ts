@@ -330,6 +330,56 @@ describe('filesystem undo/redo hotkeys', () => {
     surface.remove()
   })
 
+  it('prevents recognized history shortcuts while an operation is in flight', async () => {
+    let resolveUndo: (() => void) | undefined
+    const undo = vi.fn().mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveUndo = resolve
+        }),
+    )
+    const surface = document.createElement('div')
+    surface.dataset.itemSurfaceHotkeyTarget = 'true'
+    surface.tabIndex = 0
+    document.body.append(surface)
+    surface.focus()
+
+    renderHook(() =>
+      useFileSystemUndoHotkeys({
+        canUndo: true,
+        canRedo: false,
+        undo,
+        redo: vi.fn().mockResolvedValue(undefined),
+        reportError: vi.fn(),
+      }),
+    )
+
+    const firstEvent = new KeyboardEvent('keydown', {
+      key: 'z',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    const secondEvent = new KeyboardEvent('keydown', {
+      key: 'z',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    await act(async () => {
+      surface.dispatchEvent(firstEvent)
+      await Promise.resolve()
+      surface.dispatchEvent(secondEvent)
+    })
+
+    expect(firstEvent.defaultPrevented).toBe(true)
+    expect(secondEvent.defaultPrevented).toBe(true)
+    expect(undo).toHaveBeenCalledTimes(1)
+
+    resolveUndo?.()
+    surface.remove()
+  })
+
   it.each([
     [
       'undo',

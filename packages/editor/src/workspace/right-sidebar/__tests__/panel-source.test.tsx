@@ -263,7 +263,7 @@ describe('right-sidebar panel source', () => {
       />,
     )
 
-    expect(screen.getByText('Failed to load outline')).toBeInTheDocument()
+    expect(screen.getByText('Page was not found.')).toBeInTheDocument()
   })
 })
 

@@ -46,7 +46,7 @@ describe('createDownloadActions', () => {
     })
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => Promise.resolve(new Response(new Blob(['file contents']), { status: 200 }))),
+      vi.fn(() => Promise.resolve(blobResponse('file contents'))),
     )
     vi.stubGlobal('URL', {
       createObjectURL: vi.fn(() => 'blob:download'),
@@ -75,8 +75,8 @@ describe('createDownloadActions', () => {
 
     await runDownloadAll(actions.downloadAll)
 
-    expect(toastInfo).toHaveBeenCalledWith('Downloaded 1 item(s); 1 failed')
-    expect(toastDismiss).toHaveBeenCalledWith('toast-1')
+    expect(toastInfo).toHaveBeenCalledWith('Downloaded 1 item(s); 1 failed', { id: 'toast-1' })
+    expect(toastDismiss).not.toHaveBeenCalled()
   })
 
   it('reports all archive item failures as a failed download', async () => {
@@ -90,10 +90,11 @@ describe('createDownloadActions', () => {
       }),
     })
 
-    await runDownloadAll(actions.downloadAll)
+    const result = await runDownloadAll(actions.downloadAll)
 
-    expect(toastError).toHaveBeenCalledWith('Failed to download 1 item(s)')
-    expect(toastDismiss).toHaveBeenCalledWith('toast-1')
+    expect(toastError).toHaveBeenCalledWith('Failed to download 1 item(s)', { id: 'toast-1' })
+    expect(toastDismiss).not.toHaveBeenCalled()
+    expect(result).toEqual({ status: 'error', error: expect.any(Error) })
   })
 
   it('fetches archive file blobs concurrently and writes ZIP entries in source order', async () => {
@@ -122,7 +123,7 @@ describe('createDownloadActions', () => {
         if (url.includes('second')) {
           resolveSecondFetchFinished()
         }
-        return new Response(new Blob([url]), { status: 200 })
+        return blobResponse(url)
       }),
     )
     const actions = createDownloadActions({
@@ -351,6 +352,13 @@ function readFetchUrl(input: RequestInfo | URL) {
   if (typeof input === 'string') return input
   if (input instanceof URL) return input.href
   return input.url
+}
+
+function blobResponse(content: string): Response {
+  return {
+    ok: true,
+    blob: () => Promise.resolve(new Blob([content])),
+  } as Response
 }
 
 async function readDownloadedArchive() {

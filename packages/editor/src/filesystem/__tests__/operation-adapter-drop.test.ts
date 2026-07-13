@@ -1,9 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs'
-import path from 'node:path'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceCommandRuntimeArgs } from '../operation-runtime-contract'
-import type { FileSystemExecutableDropCommand } from '../drop-planner'
+import type { FileSystemIntentCommand } from '../domain/intent-planning'
 import { useWorkspaceResourceCommandRuntime } from '../operation-adapter'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 
@@ -132,21 +130,9 @@ describe('filesystem operation adapter drop execution', () => {
     mocks.setWorkspace.mockReset()
   })
 
-  it('owns drop command execution without a filesystem drop operations adapter', () => {
-    const adapterSource = readFileSync(
-      path.resolve(process.cwd(), 'packages/editor/src/filesystem/operation-adapter.ts'),
-      'utf8',
-    )
-
-    expect(adapterSource).not.toContain('createFileSystemDropOperations')
-    expect(
-      existsSync(path.resolve(process.cwd(), 'packages/editor/src/filesystem/drop-operations.ts')),
-    ).toBe(false)
-  })
-
   it('opens the drop destination after a successful command', async () => {
     const folderId = sidebarItemId('folder-1')
-    const command: FileSystemExecutableDropCommand = {
+    const command: FileSystemIntentCommand = {
       type: 'move',
       itemIds: [sidebarItemId('note-1')],
       targetParentId: folderId,

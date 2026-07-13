@@ -96,6 +96,30 @@ describe('filesystem item command operations', () => {
     expect(discardCreatedItem).toHaveBeenCalledWith(receipt.transactionId)
   })
 
+  it('discards a created item only once when synchronous finalization fails', async () => {
+    const created = createNote({ name: 'Scene', slug: 'scene' })
+    const receipt = createCreatedItemReceipt(created)
+    const finalizeError = new Error('finalize failed')
+    const discardCreatedItem = vi.fn()
+    const operations = createFileSystemItemCommandOperations({
+      discardCreatedItem,
+      executeCommand: vi.fn().mockResolvedValue({ status: 'completed', receipt }),
+      finalizeCreatedItem: vi.fn(() => {
+        throw finalizeError
+      }),
+    })
+
+    await expect(
+      operations.createItem({
+        itemType: RESOURCE_TYPES.notes,
+        name: created.name,
+        parentTarget: { kind: 'direct', parentId: null },
+      }),
+    ).rejects.toBe(finalizeError)
+
+    expect(discardCreatedItem).toHaveBeenCalledExactlyOnceWith(receipt.transactionId)
+  })
+
   it('requests folder trash confirmation for non-empty folders', async () => {
     const folder = createFolder({ name: 'Scenes' })
     const child = createNote({ parentId: folder.id })
@@ -122,6 +146,30 @@ describe('filesystem item command operations', () => {
 
     expect(dialogs.requestTrashFolder).toHaveBeenCalledWith(folder)
     expect(snapshot.sidebar).toEqual([folder, child])
+  })
+
+  it('requests folder confirmation when a mixed selection contains a non-empty folder', async () => {
+    const folder = createFolder({ name: 'Scenes' })
+    const child = createNote({ parentId: folder.id })
+    const unrelated = createNote({ name: 'Unrelated' })
+    const dialogs = {
+      requestDeleteForever: vi.fn(),
+      requestEmptyTrash: vi.fn(),
+      requestTrashFolder: vi.fn(),
+    }
+    const trashItems = vi.fn()
+    const operations = createFileSystemTrashDialogOperations({
+      cacheAdapter: createTestCache({ sidebar: [folder, child, unrelated], trash: [] }),
+      dialogs,
+      trashItems,
+    })
+
+    await expect(operations.requestTrashItems([folder.id, unrelated.id])).resolves.toEqual({
+      status: 'pending',
+      reason: 'folder_confirmation_required',
+    })
+    expect(dialogs.requestTrashFolder).toHaveBeenCalledWith(folder)
+    expect(trashItems).not.toHaveBeenCalled()
   })
 
   it('returns an explicit no-op trash result when no operation items resolve', async () => {

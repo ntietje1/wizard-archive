@@ -233,10 +233,13 @@ function normalizeEmbedNodeDataPatch(
   existingData: CanvasEmbedDocumentNode['data'],
   patch: CanvasNodeDataPatch<'embed'>,
 ): CanvasEmbedDocumentNode['data'] {
-  const { sidebarItemId: _legacySidebarItemId, ...nextData } = {
+  const nextData = {
     ...existingData,
     ...patch,
   } as CanvasEmbedDocumentNode['data'] & { sidebarItemId?: unknown }
+  if (patch.target) {
+    delete nextData.sidebarItemId
+  }
   // lockedAspectRatio uses null as an explicit unset sentinel; undefined leaves it unchanged.
   if (patch.lockedAspectRatio === null) {
     delete nextData.lockedAspectRatio
@@ -531,15 +534,13 @@ export function createAndSelectTextCanvasNode({
   screenToCanvasPosition,
   createNode,
   setSelection,
-  setPendingEditNodeId,
-  setPendingEditNodePoint,
+  setPendingEdit,
 }: {
   pointerPosition: CanvasContextMenuPoint
   screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   createNode: (node: CanvasDocumentNode) => void
   setSelection: (selection: CanvasSelectionSnapshot) => void
-  setPendingEditNodeId: (nodeId: string | null) => void
-  setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
+  setPendingEdit: (pendingEdit: { nodeId: string; point: CanvasContextMenuPoint } | null) => void
 }) {
   const placement = createCanvasNodePlacement('text', {
     position: screenToCanvasPosition(pointerPosition),
@@ -549,8 +550,7 @@ export function createAndSelectTextCanvasNode({
   const nextSelection = { nodeIds: new Set([placement.node.id]), edgeIds: new Set<string>() }
   setSelection(nextSelection)
   if (placement.startEditing) {
-    setPendingEditNodePoint(pointerPosition)
-    setPendingEditNodeId(placement.node.id)
+    setPendingEdit({ nodeId: placement.node.id, point: pointerPosition })
   }
   return nextSelection
 }

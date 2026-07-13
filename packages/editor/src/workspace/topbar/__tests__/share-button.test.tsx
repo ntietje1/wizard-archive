@@ -116,6 +116,32 @@ describe('ShareButton', () => {
 
     expect(screen.getByRole('button', { name: /Unavailable/ })).toBeDisabled()
   })
+
+  it('does not reopen after sharing becomes unavailable and ready again', async () => {
+    const user = userEvent.setup()
+    const item = createNote({ name: 'Session Notes' })
+    let state = createShareState()
+    const share = {
+      status: 'available' as const,
+      renderItemsShareState: (
+        _items: Array<AnyItem>,
+        renderState: (value: ResourceShareState) => ReactNode,
+      ) => renderState(state),
+      setDefaultPermission: vi.fn(),
+      setParticipantPermission: vi.fn(),
+    }
+    const view = render(<ShareButton share={share} item={item} isLoading={false} />)
+
+    await user.click(screen.getByRole('button', { name: /Private/ }))
+    expect(screen.getByTestId('topbar-share-panel')).toBeInTheDocument()
+
+    state = createShareState({ isMutating: true })
+    view.rerender(<ShareButton share={share} item={item} isLoading={false} />)
+    state = createShareState()
+    view.rerender(<ShareButton share={share} item={item} isLoading={false} />)
+
+    expect(screen.queryByTestId('topbar-share-panel')).not.toBeInTheDocument()
+  })
 })
 
 function createShareState(

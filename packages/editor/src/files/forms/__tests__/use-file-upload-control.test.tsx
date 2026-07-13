@@ -53,7 +53,7 @@ describe('useFileUploadControl', () => {
       result.current.handleFileSelect(oversizedFile)
     })
 
-    expect(result.current.uploadError).toBe('File must be less than 1MB')
+    expect(result.current.uploadError).toBe('File must be at most 1MB')
     expect(validator).not.toHaveBeenCalled()
   })
 
@@ -83,14 +83,14 @@ describe('useFileUploadControl', () => {
 
     expect(selectionResult).toEqual({
       valid: false,
-      error: 'File must be less than 0.0000038MB',
+      error: 'File must be at most 0.0000038MB',
     })
     expect(result.current).toEqual(
       expect.objectContaining({
         file: null,
         fileMetadata: null,
         preview: '',
-        uploadError: 'File must be less than 0.0000038MB',
+        uploadError: 'File must be at most 0.0000038MB',
       }),
     )
   })

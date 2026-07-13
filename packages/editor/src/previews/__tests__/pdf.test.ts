@@ -1,9 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
-import { runPdfPreviewGeneration } from '../../files/pdf-preview-generation'
+import { describe, expect, it, vi } from 'vite-plus/test'
+import { MAX_PDF_PREVIEW_SIZE, runPdfPreviewGeneration } from '../../files/pdf-preview-generation'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 const fileId = 'file-id' as SidebarItemId
-const maxPdfPreviewSize = 50 * 1024 * 1024
 
 function pdfFile(name = 'file.pdf') {
   return new File(['%PDF-1.4'], name, { type: 'application/pdf' })
@@ -22,13 +21,13 @@ describe('runPdfPreviewGeneration', () => {
 
   it('skips PDFs over the preview size limit', async () => {
     const file = pdfFile()
-    Object.defineProperty(file, 'size', { value: maxPdfPreviewSize + 1 })
+    Object.defineProperty(file, 'size', { value: MAX_PDF_PREVIEW_SIZE + 1 })
     const result = await runPdfPreviewGeneration({ file, fileId, claimAndUpload: vi.fn() })
 
     expect(result).toEqual({
       status: 'skipped-too-large',
-      size: maxPdfPreviewSize + 1,
-      maxSize: maxPdfPreviewSize,
+      size: MAX_PDF_PREVIEW_SIZE + 1,
+      maxSize: MAX_PDF_PREVIEW_SIZE,
     })
   })
 

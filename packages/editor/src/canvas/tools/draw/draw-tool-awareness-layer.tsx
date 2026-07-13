@@ -5,10 +5,8 @@ import {
 } from '../../components/canvas-screen-space-overlay-utils'
 import { pointsToPathD } from '../../nodes/stroke/stroke-node-model'
 import type { RemoteUser } from '../../utils/canvas-awareness-types'
-import { resolveCanvasScreenMinimumStrokeWidth } from '../../screen-stroke-width'
+import { resolveScreenSpaceStrokeWidth } from '../../screen-stroke-width'
 import { readRemoteDrawState } from './draw-tool-awareness'
-
-const MIN_REMOTE_STROKE_WIDTH_PX = 1
 
 export function DrawAwarenessLayer({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
   const viewport = useCanvasScreenSpaceViewport()
@@ -20,10 +18,7 @@ export function DrawAwarenessLayer({ remoteUsers }: { remoteUsers: Array<RemoteU
         if (!drawing || drawing.points.length < 2) return null
         const d = pointsToPathD(
           canvasStrokePointsToScreenPoints(drawing.points, viewport),
-          resolveCanvasScreenMinimumStrokeWidth(
-            drawing.size * viewport.zoom,
-            MIN_REMOTE_STROKE_WIDTH_PX,
-          ),
+          resolveScreenSpaceStrokeWidth(drawing.size, viewport.zoom),
         )
         if (!d) return null
         return (

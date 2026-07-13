@@ -201,6 +201,37 @@ describe('createCatalogFileSystemDownload', () => {
     })
   })
 
+  it('does not let supplied trashed projections bypass active catalog filtering', async () => {
+    const activeNote = withContent(createNote({ name: 'Active' }), {
+      content: [],
+      blockMeta: {},
+      blockShareAccessWarnings: [],
+    }) satisfies NoteItemWithContent
+    const suppliedTrashedNote = {
+      ...activeNote,
+      status: RESOURCE_STATUS.trashed,
+    } satisfies NoteItemWithContent
+    const { catalog, operationItems } = createResourceCatalogModel({
+      activeItems: [activeNote],
+      trashItems: [],
+    })
+    const download = createCatalogFileSystemDownload({
+      catalog,
+      operationItems,
+      resolveCanvasDownloadContent: () => ({ edges: [], nodes: [] }),
+      resolveFileDownloadUrl: (item) => item.downloadUrl,
+      resolveMapDownloadUrl: (item) => item.imageUrl,
+    })
+
+    if (download.status !== 'available') throw new Error('Expected available download source')
+    await expect(
+      download.loadItemsForDownload({ itemIds: [activeNote.id], items: [suppliedTrashedNote] }),
+    ).resolves.toMatchObject({
+      status: 'completed',
+      items: [expect.objectContaining({ name: 'Active' })],
+    })
+  })
+
   it('records unavailable selected items in the export manifest instead of silently dropping them', async () => {
     const missingContentFile = createFile({ name: 'Missing PDF' })
     const { catalog, operationItems } = createResourceCatalogModel({
@@ -333,7 +364,7 @@ describe('createCatalogFileSystemDownload', () => {
     )
   })
 
-  it('returns a rejected promise when building selected downloads throws', async () => {
+  it('returns an error result when building selected downloads throws', async () => {
     const map = withContent(createGameMap({ name: 'Broken' }), {
       imageAssetId: null,
       imageUrl: 'broken-map',
@@ -361,7 +392,7 @@ describe('createCatalogFileSystemDownload', () => {
         itemIds: [map.id],
         items: [map],
       }),
-    ).rejects.toThrow('unexpected map')
+    ).resolves.toEqual({ status: 'error', error: expect.any(Error), items: [] })
   })
 })
 

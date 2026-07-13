@@ -1,4 +1,3 @@
-import { createWorkspaceResource } from '../runtime'
 import type { WorkspaceNavigation, WorkspaceRuntime } from '../runtime'
 import { createElement, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -143,7 +142,7 @@ export function useWorkspaceRuntimeContextMenuModel(
             ),
         }
       : { status: 'unsupported' as const, reason: sidebarItemSharing.reason }
-  const mapPinContextMenu = useRuntimeMapPinContextMenu(runtime)
+  const mapPinContextMenu = useRuntimeMapPinContextMenu()
   const noteMenuContext = useNoteWorkspaceMenuContextFields()
   const base = useWorkspaceContextMenuBase({
     itemSource: {
@@ -448,20 +447,13 @@ interface RuntimeMapPinContextMenu {
   service: WorkspaceMapPinContextMenuServices['mapPins']
 }
 
-function useRuntimeMapPinContextMenu(runtime: {
-  navigation: Pick<WorkspaceNavigation, 'openItem'>
-}): RuntimeMapPinContextMenu | null {
+function useRuntimeMapPinContextMenu(): RuntimeMapPinContextMenu | null {
   const mapPinState = useMapPinMenuServiceState()
   if (!mapPinState) return null
 
   const mapPins = createMapPinMenuService(mapPinState)
   return {
-    actions: createMapPinActions({
-      mapPins,
-      openItem: async (itemId, navigationOptions) => {
-        await runtime.navigation.openItem(createWorkspaceResource(itemId), navigationOptions)
-      },
-    }),
+    actions: createMapPinActions({ mapPins }),
     service: mapPins,
   }
 }

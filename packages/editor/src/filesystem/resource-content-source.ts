@@ -485,7 +485,7 @@ function getContentStateLabel({
   itemId: SidebarItemId | null | undefined
 }) {
   if (!itemId) return fallbackLabel ?? 'Page'
-  return catalog.getKnownItemById(itemId)?.name ?? fallbackLabel ?? 'Page'
+  return catalog.getVisibleItemById(itemId)?.name ?? fallbackLabel ?? 'Page'
 }
 
 function isUnavailableResourceAvailabilityState(

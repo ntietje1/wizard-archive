@@ -53,6 +53,7 @@ function FileCardInner({ item: file, ...props }: ResourceItemCardProps<FileItem>
             <img
               src={safePreviewUrl}
               alt={file.name}
+              referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
               onError={() => setErroredUrl(safePreviewUrl)}
               draggable={false}

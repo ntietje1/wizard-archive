@@ -9,7 +9,6 @@ type ResourceReplacementValidation = { valid: true } | { valid: false; error: st
 const RESOURCE_REPLACEMENT_TIMEOUT_MS = 30_000
 
 interface ResourceReplacementControllerOptions {
-  allowSelectionWhilePending?: boolean
   disabledMessage: string
   enabled: boolean
   failureMessage: string
@@ -25,7 +24,6 @@ interface ResourceReplacementControllerOptions {
 }
 
 export function useResourceReplacementController({
-  allowSelectionWhilePending = false,
   disabledMessage,
   enabled,
   failureMessage,
@@ -42,7 +40,6 @@ export function useResourceReplacementController({
   const [replacementError, setReplacementError] = useState('')
   const [isReplacing, setIsReplacing] = useState(false)
   const isReplacingRef = useRef(false)
-  const activeSelectionRef = useRef<symbol | null>(null)
 
   const rejectReplacement = (message: string) => {
     setReplacementError(message)
@@ -54,29 +51,18 @@ export function useResourceReplacementController({
 
   const attemptReplacement = (file: File) => {
     if (!enabled) return { valid: false, error: disabledMessage }
-    if (isReplacingRef.current && !allowSelectionWhilePending) {
+    if (isReplacingRef.current) {
       return { valid: false, error: inProgressMessage }
     }
 
-    const selectionId = Symbol(file.name)
-    activeSelectionRef.current = selectionId
-
     const validation = validateFile(file)
     if (!validation.valid) {
-      activeSelectionRef.current = null
-      isReplacingRef.current = false
-      setIsReplacing(false)
       rejectReplacement(validation.error)
       return validation
     }
 
     const accepted = onAcceptedFile?.(file)
     if (accepted && !accepted.valid) {
-      if (activeSelectionRef.current === selectionId) {
-        activeSelectionRef.current = null
-      }
-      isReplacingRef.current = false
-      setIsReplacing(false)
       rejectReplacement(accepted.error)
       return accepted
     }
@@ -90,7 +76,6 @@ export function useResourceReplacementController({
       timeoutMessage,
     })
       .then((result) => {
-        if (activeSelectionRef.current !== selectionId) return
         if (isCompletedResourceOperation(result)) {
           toast.success(successMessage)
           return
@@ -101,14 +86,12 @@ export function useResourceReplacementController({
         })
       })
       .catch((error: unknown) => {
-        if (activeSelectionRef.current !== selectionId) return
         reportResourceReplacementError(error, failureMessage, (message) => {
           setReplacementError(message)
           onReplacementError?.(message)
         })
       })
       .finally(() => {
-        if (activeSelectionRef.current !== selectionId) return
         isReplacingRef.current = false
         setIsReplacing(false)
       })
@@ -172,10 +155,11 @@ function reportResourceReplacementError(
 
 function resolveResourceOperationError(error: unknown) {
   if (error instanceof ResourceReplacementTimeoutError) {
-    return { data: { kind: 'client', code: 'VALIDATION_FAILED', message: error.message } }
+    return { data: { kind: 'client', code: 'CONFLICT', message: error.message } }
   }
-  if (isResourceOperationFailure(error) && error.status === 'error') {
-    return error.error
+  if (isResourceOperationFailure(error)) {
+    if (error.status === 'error') return error.error
+    return { data: { kind: 'client', code: 'CONFLICT', message: error.reason } }
   }
   return error
 }

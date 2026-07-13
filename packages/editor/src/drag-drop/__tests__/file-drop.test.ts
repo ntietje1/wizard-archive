@@ -255,20 +255,19 @@ describe('processDataTransferItems', () => {
     ])
   })
 
-  it('skips unreadable filesystem entries while keeping the rest of the drop', async () => {
+  it('surfaces unreadable filesystem entries', async () => {
     const goodFile = new File(['good'], 'good.txt', { type: 'text/plain' })
     const badFile = new File(['bad'], 'bad.txt', { type: 'text/plain' })
     const unreadableFolder = makeDirectoryEntry('unreadable', [], { rejectReads: true })
 
-    const result = await processDataTransferItems([
-      makeDataTransferFileItem(badFile, () => makeFileEntry('bad.txt', badFile, { reject: true })),
-      makeDataTransferFileItem(new File([], 'ignored'), () => unreadableFolder),
-      makeDataTransferFileItem(goodFile, () => makeFileEntry('good.txt', goodFile)),
-    ])
-
-    expect(result).toEqual({
-      files: [{ file: goodFile, relativePath: 'good.txt' }],
-      rootFolders: [],
-    })
+    await expect(
+      processDataTransferItems([
+        makeDataTransferFileItem(badFile, () =>
+          makeFileEntry('bad.txt', badFile, { reject: true }),
+        ),
+        makeDataTransferFileItem(new File([], 'ignored'), () => unreadableFolder),
+        makeDataTransferFileItem(goodFile, () => makeFileEntry('good.txt', goodFile)),
+      ]),
+    ).rejects.toThrow('Cannot read file')
   })
 })

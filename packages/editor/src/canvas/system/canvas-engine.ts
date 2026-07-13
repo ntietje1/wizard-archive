@@ -44,6 +44,8 @@ export function createCanvasEngine(config: { domRuntime?: CanvasDomRuntime } = {
       domRuntime.scheduleCullingDiff(diff)
     }
   }
+  const unsubscribeViewportSurfaceBounds =
+    domRuntime.subscribeViewportSurfaceBounds(reconcileCulling)
 
   const commit = (next: Omit<CanvasEngineSnapshot, 'version'>) => {
     store.setSnapshot(next, { incrementVersion: true })
@@ -91,6 +93,9 @@ export function createCanvasEngine(config: { domRuntime?: CanvasDomRuntime } = {
 
     setDocumentSnapshot({ nodes: nextNodes })
     domRuntime.scheduleNodeLayoutPatches(updates)
+    domRuntime.scheduleEdgePaths(
+      geometryIndex.getConnectedEdgePaths(store.getSnapshot(), new Set(updates.keys())),
+    )
   }
 
   const patchEdges: CanvasEngine['patchEdges'] = (updates) => {
@@ -162,7 +167,12 @@ export function createCanvasEngine(config: { domRuntime?: CanvasDomRuntime } = {
     const snapshot = store.getSnapshot()
     commit({
       ...snapshot,
-      nodeLookup: createNodeLookup(snapshot.nodes, snapshot.selection.nodeIds, draggingNodeIds),
+      nodeLookup: createNodeLookup(
+        snapshot.nodes,
+        snapshot.selection.nodeIds,
+        draggingNodeIds,
+        snapshot.nodeLookup,
+      ),
       dirtyNodeIds: new Set(nodeIds),
       dirtyEdgeIds: EMPTY_SET,
     })
@@ -268,6 +278,7 @@ export function createCanvasEngine(config: { domRuntime?: CanvasDomRuntime } = {
     measureNode,
     refreshCulling: reconcileCulling,
     destroy: () => {
+      unsubscribeViewportSurfaceBounds()
       store.destroy()
       draggingNodeIds = new Set()
       viewportManager.reset()

@@ -72,6 +72,15 @@ export const sidebarItemsTables = {
     ...extensionBaseFields,
     imageStorageId: v.nullable(v.id('_storage')),
     imageReplacementToken: v.optional(v.string()),
+    layers: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          imageStorageId: v.nullable(v.id('_storage')),
+          name: v.string(),
+        }),
+      ),
+    ),
   })
     .index('by_sidebarItemId', ['sidebarItemId'])
     .index('by_imageStorageId', ['imageStorageId']),

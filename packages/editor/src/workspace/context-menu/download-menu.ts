@@ -4,6 +4,7 @@ import * as selection from './selection'
 import { createActionCommand } from '../../context-menu/create-action-command'
 import type { ContextMenuContributor } from '../../context-menu/types'
 import type { WorkspaceMenuContext } from '../menu-context'
+import { VIEW_CONTEXT } from '../view-context'
 
 type WorkspaceDownloadActionResult =
   | { status: 'completed' }
@@ -41,7 +42,12 @@ export const downloadContextMenuCommands = {
 export const downloadContextMenuContributors = [
   {
     id: 'editor-download',
-    surfaces: ['sidebar', 'folder-view', 'topbar', 'map-view'],
+    surfaces: [
+      VIEW_CONTEXT.SIDEBAR,
+      VIEW_CONTEXT.FOLDER_VIEW,
+      VIEW_CONTEXT.TOPBAR,
+      VIEW_CONTEXT.MAP_VIEW,
+    ],
     getItems: () => [
       {
         id: 'download-items',

@@ -6,6 +6,8 @@ import type { ResourceContentSource } from '../../../filesystem/resource-content
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import { WorkspaceContextMenu } from '../../context-menu/context-menu'
+import { toast } from 'sonner'
+import { handleError } from '../../../errors/handle-error'
 
 type NavigateToItem = WorkspaceNavigation['openItem']
 type ItemLinksState = ReturnType<
@@ -85,7 +87,18 @@ function LinkListRow({
         'flex w-full items-start gap-2.5 px-3 py-2 text-left',
         'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
       )}
-      onClick={() => onNavigate(createWorkspaceResource(item.id))}
+      onClick={() => {
+        void (async () => {
+          try {
+            const result = await onNavigate(createWorkspaceResource(item.id))
+            if (result.status === 'unavailable') {
+              toast.error('Unable to open linked item')
+            }
+          } catch (error) {
+            handleError(error, 'Unable to open linked item')
+          }
+        })()
+      }}
     >
       <Link2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       <div className="min-w-0 flex-1">

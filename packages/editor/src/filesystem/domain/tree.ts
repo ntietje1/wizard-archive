@@ -51,7 +51,7 @@ export function collectDescendantIdsFromItems(
   if (!Number.isInteger(maxDepth) || maxDepth < 1) {
     throw new Error('maxDepth must be an integer greater than or equal to 1')
   }
-  if (!items.some((item) => item.id === folderId)) {
+  if (!items.some((item) => item.id === folderId && item.type === RESOURCE_TYPES.folders)) {
     throw new Error(`Folder ${folderId} was not found while collecting descendants`)
   }
 

@@ -78,18 +78,18 @@ export function useNoteYjsPersistenceLifecycle<Provider>({
         return
       }
 
-      if (
-        !(await adapterRef.current.flushProvider(provider, `cleanup persist for ${cleanupNoteId}`))
-      ) {
-        return
-      }
-
       if (lifecycle?.flush.status === 'flushing') {
         try {
           await lifecycle.flush.promise
         } catch {
           // The active flush reports failures through the supplied adapter.
         }
+      }
+
+      if (
+        !(await adapterRef.current.flushProvider(provider, `cleanup persist for ${cleanupNoteId}`))
+      ) {
+        return
       }
 
       try {

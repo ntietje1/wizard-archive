@@ -69,7 +69,7 @@ function createViewAsPlayerItems(
   viewAsPlayer: AvailableViewAsPlayerMenuService,
 ): Array<WorkspaceSharingContextMenuItem> {
   return viewAsPlayer.playerMembers.map((member, index) => ({
-    id: `view-as-player-${index}`,
+    id: `view-as-player-${member.id}`,
     commandId: 'setViewAsPlayer',
     payload: member.id,
     label: member.displayName,

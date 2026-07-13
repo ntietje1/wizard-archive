@@ -120,6 +120,59 @@ describe('useNoteYjsPersistenceLifecycle', () => {
     expect(events).toEqual(['flush-start', 'flush-end', 'persist'])
   })
 
+  it('waits for an in-flight projection before the final provider flush', async () => {
+    const doc = new Y.Doc()
+    const provider = createProvider()
+    const events: Array<string> = []
+    let resolveProjection!: (result: NoteProjectionResult) => void
+    const projection = new Promise<NoteProjectionResult>((resolve) => {
+      resolveProjection = resolve
+    })
+    const adapter = createAdapter({
+      flushProvider: () => {
+        events.push('flush')
+        return true
+      },
+      persistNote: vi
+        .fn()
+        .mockImplementationOnce(() => {
+          events.push('persist-start')
+          return projection
+        })
+        .mockImplementation(() => {
+          events.push('persist-cleanup')
+          return { status: 'projected', throughSeq: 0 }
+        }),
+    })
+
+    const { result } = renderHook(() =>
+      useNoteYjsPersistenceLifecycle({
+        noteId: NOTE_ID,
+        sourceId: SOURCE_ID,
+        canEdit: true,
+        session: { doc, provider, isLoading: false },
+        adapter,
+      }),
+    )
+
+    doc.getMap('content').set('value', 'changed')
+    await vi.advanceTimersByTimeAsync(NOTE_YJS_PERSIST_DEBOUNCE_MS)
+    expect(events).toEqual(['flush', 'persist-start'])
+
+    const cleanup = result.current.handleBeforeDestroy({
+      noteId: NOTE_ID,
+      sourceId: SOURCE_ID,
+      provider,
+    })
+    await Promise.resolve()
+    expect(events).toEqual(['flush', 'persist-start'])
+
+    resolveProjection({ status: 'projected', throughSeq: 0 })
+    await cleanup
+
+    expect(events).toEqual(['flush', 'persist-start', 'flush', 'persist-cleanup'])
+  })
+
   it('continues interval persistence after provider-backed persists complete', async () => {
     const doc = new Y.Doc()
     const provider = createProvider()

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { Plus } from 'lucide-react'
 import type { SidebarItemId } from '../../../../shared/common/ids'
 import { Card } from '@wizard-archive/ui/shadcn/components/card'
@@ -9,8 +10,8 @@ import {
   ContextMenuTrigger,
 } from '@wizard-archive/ui/shadcn/components/context-menu'
 import type { ContextMenuRef } from '@wizard-archive/ui/shadcn/components/context-menu'
-import type { CreateItemOption } from './create-item-options'
-import { CREATE_ITEM_OPTIONS } from './create-item-options'
+import type { SidebarItemCreationCommand } from '../workspace/sidebar/creation-catalog'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '../workspace/sidebar/creation-catalog'
 import type { FolderViewerSource } from './cards/source'
 import { getClientErrorMessage } from '../../../../shared/errors/client'
 import { toast } from 'sonner'
@@ -33,12 +34,12 @@ export function NewItemCard({ parentId, source }: NewItemCardProps) {
     setIsOpen(true)
   }
 
-  const openCreateMenu = (e: React.MouseEvent) => {
+  const openCreateMenu = (e: MouseEvent) => {
     e.preventDefault()
     openMenuAt(e.clientX, e.clientY)
   }
 
-  const handleCreate = async (option: CreateItemOption) => {
+  const handleCreate = async (option: SidebarItemCreationCommand) => {
     if (isCreating) return
     setIsCreating(true)
     try {
@@ -77,7 +78,7 @@ export function NewItemCard({ parentId, source }: NewItemCardProps) {
         }
       />
       <ContextMenuContent className="w-48">
-        {CREATE_ITEM_OPTIONS.map((option) => {
+        {SIDEBAR_ITEM_CREATION_COMMANDS.map((option) => {
           const Icon = option.icon
           return (
             <ContextMenuItem

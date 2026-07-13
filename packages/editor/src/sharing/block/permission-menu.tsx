@@ -1,5 +1,7 @@
 import { Lock } from 'lucide-react'
 import { useState } from 'react'
+import type { ReactNode } from 'react'
+import { handleError } from '../../errors/handle-error'
 import type { BlocksShareState, EditorShareParticipant } from '../contracts'
 import {
   Select,
@@ -24,6 +26,10 @@ type AggregateBlockVisibilitySelectValue = ReadyBlocksShareState['defaultPermiss
 type BlockAllPlayersPermissionValue = Parameters<ReadyBlocksShareState['setDefaultPermission']>[0]
 type BlockShareItemPermissionValue = BlockShareItem['permissionLevel']
 type BlockVisibilitySelectValue = Parameters<ReadyBlocksShareState['setParticipantPermission']>[1]
+
+function reportPermissionMutationError(error: unknown) {
+  handleError(error, 'Failed to update block visibility')
+}
 
 function visibilityLabel(value: BlockShareItemPermissionValue): string {
   switch (value) {
@@ -166,37 +172,27 @@ function AllPlayersRow({
       testId="block-share-all-players-row"
       onToggleExpand={onToggleExpand}
       select={
-        <Select
+        <VisibilitySelect
           value={value}
-          onValueChange={(nextValue) => {
-            if (nextValue === 'hidden' || nextValue === 'visible') void onChange(nextValue)
-          }}
+          label={visibilityLabel(value)}
           disabled={disabled}
+          onValueChange={(nextValue) => {
+            if (nextValue === 'hidden' || nextValue === 'visible') {
+              void onChange(nextValue).catch(reportPermissionMutationError)
+            }
+          }}
         >
-          <SelectTrigger size="sm" className="h-7 min-w-[110px] text-xs">
-            <SelectValue>{visibilityLabel(value)}</SelectValue>
-          </SelectTrigger>
-          <SelectContent
-            className="p-1"
-            align="end"
-            alignItemWithTrigger={false}
-            data-block-share-menu-overlay="true"
-            data-item-surface-floating-command="true"
-            onPointerDown={(event) => event.stopPropagation()}
-            positionerClassName={SHARE_MENU_OVERLAY_Z_INDEX}
-          >
-            {value === 'mixed' && (
-              <>
-                <SelectItem value="mixed" disabled>
-                  Mixed
-                </SelectItem>
-                <SelectSeparator />
-              </>
-            )}
-            <SelectItem value="hidden">Hidden</SelectItem>
-            <SelectItem value="visible">Visible</SelectItem>
-          </SelectContent>
-        </Select>
+          {value === 'mixed' && (
+            <>
+              <SelectItem value="mixed" disabled>
+                Mixed
+              </SelectItem>
+              <SelectSeparator />
+            </>
+          )}
+          <SelectItem value="hidden">Hidden</SelectItem>
+          <SelectItem value="visible">Visible</SelectItem>
+        </VisibilitySelect>
       }
     />
   )
@@ -235,52 +231,79 @@ function PlayerRow({
       testId="block-share-player-row"
     >
       <ShareMenuPlayerIdentity member={participant} />
-      <Select
+      <VisibilitySelect
         value={selectValue}
+        label={visibilityLabel(selectLabel)}
+        disabled={disabled}
         onValueChange={(value) => {
           if (value === 'default' || value === 'hidden' || value === 'visible') {
-            void onChange(value)
+            void onChange(value).catch(reportPermissionMutationError)
           }
         }}
-        disabled={disabled}
       >
-        <SelectTrigger size="sm" className="h-7 min-w-[110px] text-xs">
-          <SelectValue>{visibilityLabel(selectLabel)}</SelectValue>
-        </SelectTrigger>
-        <SelectContent
-          className="p-1"
-          align="end"
-          alignItemWithTrigger={false}
-          data-block-share-menu-overlay="true"
-          data-item-surface-floating-command="true"
-          onPointerDown={(event) => event.stopPropagation()}
-          positionerClassName={SHARE_MENU_OVERLAY_Z_INDEX}
-        >
-          {selectValue === 'mixed' && (
-            <>
-              <SelectItem value="mixed" disabled>
-                Mixed
-              </SelectItem>
-              <SelectSeparator />
-            </>
-          )}
-          {!hasExplicitShare && (
-            <SelectItem value="default">Default ({visibilityLabel(defaultValue)})</SelectItem>
-          )}
-          <SelectItem value="hidden">Hidden</SelectItem>
-          <SelectItem value="visible">Visible</SelectItem>
-          {hasExplicitShare && (
-            <>
-              <SelectSeparator />
-              <SelectItem value="default" className="text-destructive">
-                Remove
-              </SelectItem>
-            </>
-          )}
-        </SelectContent>
-      </Select>
+        {selectValue === 'mixed' && (
+          <>
+            <SelectItem value="mixed" disabled>
+              Mixed
+            </SelectItem>
+            <SelectSeparator />
+          </>
+        )}
+        {!hasExplicitShare && (
+          <SelectItem value="default">Default ({visibilityLabel(defaultValue)})</SelectItem>
+        )}
+        <SelectItem value="hidden">Hidden</SelectItem>
+        <SelectItem value="visible">Visible</SelectItem>
+        {hasExplicitShare && (
+          <>
+            <SelectSeparator />
+            <SelectItem value="default" className="text-destructive">
+              Remove
+            </SelectItem>
+          </>
+        )}
+      </VisibilitySelect>
       {participant.username && <span className="sr-only">@{participant.username}</span>}
     </ShareMenuRowTooltip>
+  )
+}
+
+function VisibilitySelect({
+  children,
+  disabled,
+  label,
+  onValueChange,
+  value,
+}: {
+  children: ReactNode
+  disabled: boolean
+  label: string
+  onValueChange: (value: string) => void
+  value: string
+}) {
+  return (
+    <Select
+      value={value}
+      onValueChange={(nextValue) => {
+        if (nextValue !== null) onValueChange(nextValue)
+      }}
+      disabled={disabled}
+    >
+      <SelectTrigger size="sm" className="h-7 min-w-[110px] text-xs">
+        <SelectValue>{label}</SelectValue>
+      </SelectTrigger>
+      <SelectContent
+        className="p-1"
+        align="end"
+        alignItemWithTrigger={false}
+        data-block-share-menu-overlay="true"
+        data-item-surface-floating-command="true"
+        onPointerDown={(event) => event.stopPropagation()}
+        positionerClassName={SHARE_MENU_OVERLAY_Z_INDEX}
+      >
+        {children}
+      </SelectContent>
+    </Select>
   )
 }
 

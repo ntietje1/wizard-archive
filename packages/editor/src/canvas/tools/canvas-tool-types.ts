@@ -41,10 +41,8 @@ export interface CanvasHistoryController {
 export interface CanvasEditSessionState {
   editingEmbedId: string | null
   setEditingEmbedId: (id: string | null) => void
-  pendingEditNodeId: string | null
-  pendingEditNodePoint: Point2D | null
-  setPendingEditNodeId: (id: string | null) => void
-  setPendingEditNodePoint: (point: Point2D | null) => void
+  pendingEdit: { nodeId: string; point: Point2D } | null
+  setPendingEdit: (pendingEdit: { nodeId: string; point: Point2D } | null) => void
 }
 
 /**

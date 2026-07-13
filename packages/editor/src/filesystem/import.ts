@@ -36,10 +36,12 @@ export async function importWorkspaceFile({
   input: ImportFileInput
   maxUploadBytes?: number
 }): Promise<ImportFileResult> {
-  const fileName = deduplicateName(
-    input.file.name,
-    catalog.getVisibleChildren(input.parentId).map((sibling) => sibling.name),
-  )
+  const fileName =
+    input.name ??
+    deduplicateName(
+      input.file.name,
+      catalog.getVisibleChildren(input.parentId).map((sibling) => sibling.name),
+    )
   const validation = validateFileIoInput(input.file, maxUploadBytes)
   if (validation.status === 'invalid') {
     return { status: 'skipped', fileName, reason: 'invalid', error: validation.error }
@@ -194,10 +196,12 @@ async function importDroppedFolder({
   parentId: SidebarItemId | null
   state: ReturnType<typeof createImportDropState>
 }): Promise<void> {
-  const folderName = deduplicateName(
-    folder.name,
-    getImportDropSiblingNames({ catalog, parentId, state }),
-  )
+  const folderName = reserveImportDropSiblingName({
+    catalog,
+    parentId,
+    state,
+    name: folder.name,
+  })
   let result: Awaited<ReturnType<FileSystemItemCreateOperations['createItem']>>
   try {
     result = await operations.createItem({
@@ -228,7 +232,6 @@ async function importDroppedFolder({
     return
   }
 
-  reserveImportDropSiblingName({ parentId, state, name: folderName })
   state.lastFolderId = result.id
   state.progress.processedFolders++
   notifyProgress(input, state.progress)
@@ -264,14 +267,19 @@ async function importDroppedFile({
   parentId: SidebarItemId | null
   state: ReturnType<typeof createImportDropState>
 }) {
-  let fileName = file.file.name
+  const fileName = reserveImportDropSiblingName({
+    catalog,
+    parentId,
+    state,
+    name: file.file.name,
+  })
   try {
     const result = await operations.importFile({
       file: file.file,
+      name: fileName,
       parentId,
       onProgress: (event) => input.onFileProgress?.(event),
     })
-    fileName = result.fileName
     if (result.status === 'skipped') {
       skipImportEntry({
         error: result.error,
@@ -283,8 +291,6 @@ async function importDroppedFile({
       return
     }
     state.progress.processedFiles++
-    getImportDropSiblingNames({ catalog, parentId, state })
-    reserveImportDropSiblingName({ parentId, state, name: result.fileName })
     notifyProgress(input, state.progress)
   } catch (error) {
     skipImportEntry({ error, fileName, input, reason: 'failed', state })
@@ -308,20 +314,20 @@ function getImportDropSiblingNames({
 }
 
 function reserveImportDropSiblingName({
+  catalog,
   name,
   parentId,
   state,
 }: {
+  catalog: Pick<ResourceCatalog, 'getVisibleChildren'>
   name: string
   parentId: SidebarItemId | null
   state: ReturnType<typeof createImportDropState>
 }) {
-  const names = state.siblingNamesByParent.get(parentId)
-  if (names) {
-    names.push(name)
-    return
-  }
-  state.siblingNamesByParent.set(parentId, [name])
+  const names = getImportDropSiblingNames({ catalog, parentId, state })
+  const reservedName = deduplicateName(name, names)
+  names.push(reservedName)
+  return reservedName
 }
 
 function countImportFolderItems(folder: ImportFolderEntry): number {

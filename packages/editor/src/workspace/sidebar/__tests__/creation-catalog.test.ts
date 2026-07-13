@@ -16,13 +16,13 @@ describe('SIDEBAR_ITEM_CREATION_COMMANDS', () => {
     expect(SIDEBAR_ITEM_CREATION_COMMANDS.map((command) => command.type)).toEqual([
       RESOURCE_TYPES.notes,
       RESOURCE_TYPES.folders,
-      RESOURCE_TYPES.canvases,
+      RESOURCE_TYPES.gameMaps,
       RESOURCE_TYPES.canvases,
       RESOURCE_TYPES.files,
     ])
     expect(SIDEBAR_ITEM_CREATION_COMMAND_BY_ID['create.map']).toMatchObject({
       label: 'Map',
-      type: RESOURCE_TYPES.canvases,
+      type: RESOURCE_TYPES.gameMaps,
       defaultName: 'Untitled Map',
     })
     expect(Object.values(SIDEBAR_ITEM_CREATION_COMMAND_BY_ID)).toEqual(

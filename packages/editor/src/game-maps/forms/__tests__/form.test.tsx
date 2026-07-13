@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import { MapForm } from '../form'
 import type { FileUploadControl } from '@wizard-archive/ui/file-upload/control'

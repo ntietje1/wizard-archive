@@ -4,7 +4,7 @@ import { NewItemCard } from '../../filesystem/new-item-card'
 import { DroppableFolderZone } from './droppable-folder-zone'
 import type { FolderItemWithContent } from '../../workspace/items'
 import { CreateNewDashboardSurface } from '../../filesystem/create-new-dashboard-surface'
-import type { CreateItemOption } from '../../filesystem/create-item-options'
+import type { SidebarItemCreationCommand } from '../../workspace/sidebar/creation-catalog'
 import { ContentGrid } from '@wizard-archive/ui/components/content-grid'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
@@ -31,7 +31,7 @@ export function FolderViewer({ item: folder, source }: FolderViewerProps) {
     })
 
   const canCreateInFolder = source.canCreateInFolder(folder)
-  const [creatingKey, setCreatingKey] = useState<CreateItemOption['key'] | null>(null)
+  const [creatingKey, setCreatingKey] = useState<SidebarItemCreationCommand['key'] | null>(null)
   const createInFlightRef = useRef(false)
   const mountedRef = useRef(true)
   const isCreateDisabled = creatingKey !== null
@@ -43,7 +43,7 @@ export function FolderViewer({ item: folder, source }: FolderViewerProps) {
   }, [])
 
   const folderPath = [...folder.ancestors.map((a) => a.name), folder.name].join(' / ')
-  const handleCreate = async (option: CreateItemOption) => {
+  const handleCreate = async (option: SidebarItemCreationCommand) => {
     if (createInFlightRef.current) return
 
     createInFlightRef.current = true

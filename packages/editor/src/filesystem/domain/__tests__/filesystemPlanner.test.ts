@@ -28,6 +28,7 @@ describe('copy transfer planning', () => {
     })
 
     expect(result.status).toBe('needs-decision')
+    expect(result.operations).toEqual([])
     expect(result.conflicts).toMatchObject([
       {
         sourceItemId: 'note-1',

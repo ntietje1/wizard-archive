@@ -13,7 +13,7 @@ import type {
 } from './operation-capabilities'
 import { isTrashedSidebarItem } from '../../workspace/items/status'
 
-type FileSystemIntentCommand = Extract<
+export type FileSystemIntentCommand = Extract<
   ResourceCommand,
   { type: 'move' | 'copy' | 'restore' | 'trash' }
 >
@@ -32,9 +32,9 @@ export type FileSystemIntentRejectionReason =
   | Extract<ResourceOperationCapability, { ok: false }>['code']
   | 'mixed_actions'
 
-export type FileSystemDropParentTarget = Parameters<typeof evaluateMoveToParent>[2]
+type FileSystemDropParentTarget = Parameters<typeof evaluateMoveToParent>[2]
 
-type FileSystemDropTargetIntent =
+export type FileSystemDropTargetIntent =
   | { type: 'trash'; label: string }
   | { type: 'parent'; target: FileSystemDropParentTarget; label: string }
 

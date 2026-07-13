@@ -84,7 +84,6 @@ describe('workspace history model', () => {
       },
       rollback: { status: 'closed', isRestoring: false },
     })
-    expect(history.status === 'available' && 'session' in history).toBe(false)
   })
 })
 

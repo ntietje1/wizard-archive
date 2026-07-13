@@ -52,18 +52,21 @@ describe('useCanvasSessionState', () => {
       name: 'Remote',
     })
     expect(result.current.editSession.editingEmbedId).toBeNull()
-    expect(result.current.editSession.pendingEditNodeId).toBeNull()
-    expect(result.current.editSession.pendingEditNodePoint).toBeNull()
+    expect(result.current.editSession.pendingEdit).toBeNull()
 
     act(() => {
       result.current.editSession.setEditingEmbedId('embed-node-1')
-      result.current.editSession.setPendingEditNodeId('text-node-1')
-      result.current.editSession.setPendingEditNodePoint({ x: 12, y: 34 })
+      result.current.editSession.setPendingEdit({
+        nodeId: 'text-node-1',
+        point: { x: 12, y: 34 },
+      })
     })
 
     expect(result.current.editSession.editingEmbedId).toBe('embed-node-1')
-    expect(result.current.editSession.pendingEditNodeId).toBe('text-node-1')
-    expect(result.current.editSession.pendingEditNodePoint).toEqual({ x: 12, y: 34 })
+    expect(result.current.editSession.pendingEdit).toEqual({
+      nodeId: 'text-node-1',
+      point: { x: 12, y: 34 },
+    })
   })
 
   it('keeps derived session objects stable when inputs do not change', () => {

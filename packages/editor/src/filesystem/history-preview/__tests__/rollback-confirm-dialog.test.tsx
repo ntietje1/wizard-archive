@@ -31,9 +31,10 @@ describe('RollbackConfirmDialog', () => {
     const onRestore = vi.fn()
 
     function ControlledDialog() {
+      const entryTime = Date.UTC(2026, 0, 1)
       const [state, setState] = useState<RollbackState>({
         status: 'ready',
-        entryTime: Date.UTC(2026, 0, 1),
+        entryTime,
         isRestoring: false,
       })
       return (
@@ -42,7 +43,10 @@ describe('RollbackConfirmDialog', () => {
           onOpenChange={(open) => {
             if (!open) setState({ status: 'closed', isRestoring: false })
           }}
-          onRestore={onRestore}
+          onRestore={() => {
+            setState({ status: 'ready', entryTime, isRestoring: true })
+            onRestore()
+          }}
         />
       )
     }
@@ -52,6 +56,7 @@ describe('RollbackConfirmDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Restore' }))
 
     expect(screen.getByText('Restore this version?')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Restoring/ })).toBeDisabled()
     expect(onRestore).toHaveBeenCalledOnce()
   })
 

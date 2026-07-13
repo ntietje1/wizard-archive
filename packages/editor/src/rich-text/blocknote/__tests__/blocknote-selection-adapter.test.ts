@@ -1,5 +1,5 @@
 import { Selection } from '@tiptap/pm/state'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
   blockNoteSelectionSnapshotCollapsedPosition,
   captureBlockNoteSelection,

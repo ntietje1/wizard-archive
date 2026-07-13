@@ -42,11 +42,9 @@ export const eraseToolSpec: CanvasToolSpec<'erase'> = {
 
     const absoluteStrokeBounds = (node: ReturnType<typeof services.query.getNodes>[number]) => {
       if (!isStrokeNode(node)) return null
-      const offsetX = node.position.x - node.data.bounds.x
-      const offsetY = node.position.y - node.data.bounds.y
       return {
-        x: node.data.bounds.x + offsetX,
-        y: node.data.bounds.y + offsetY,
+        x: node.position.x,
+        y: node.position.y,
         width: node.data.bounds.width,
         height: node.data.bounds.height,
       } satisfies Bounds

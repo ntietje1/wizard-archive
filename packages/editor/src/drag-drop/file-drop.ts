@@ -104,23 +104,15 @@ async function readDirectoryRecursively(
   for (const entry of entries) {
     if (entry.isFile) {
       const fileEntry = entry as FileSystemFileEntry
-      try {
-        const file = await fileEntryToFile(fileEntry)
-        folder.files.push({
-          file,
-          relativePath: `${relativePath}/${entry.name}`,
-        })
-      } catch {
-        continue
-      }
+      const file = await fileEntryToFile(fileEntry)
+      folder.files.push({
+        file,
+        relativePath: `${relativePath}/${entry.name}`,
+      })
     } else if (entry.isDirectory) {
-      try {
-        folder.subfolders.push(
-          await readDirectoryRecursively(entry as FileSystemDirectoryEntry, relativePath),
-        )
-      } catch {
-        continue
-      }
+      folder.subfolders.push(
+        await readDirectoryRecursively(entry as FileSystemDirectoryEntry, relativePath),
+      )
     }
   }
 
@@ -135,7 +127,7 @@ export async function processDataTransferItems(
     rootFolders: [],
   }
 
-  const itemSnapshot = Array.from(items)
+  const itemSnapshot = Array.from(items).flatMap(snapshotDataTransferItem)
 
   for (const item of itemSnapshot) {
     await appendDataTransferItem(result, item)
@@ -144,21 +136,26 @@ export async function processDataTransferItems(
   return result
 }
 
-async function appendDataTransferItem(result: DropResult, item: DataTransferItem) {
-  if (item.kind !== 'file') return
+type DataTransferItemSnapshot = { entry: FileSystemEntry } | { file: File }
+
+function snapshotDataTransferItem(item: DataTransferItem): Array<DataTransferItemSnapshot> {
+  if (item.kind !== 'file') return []
   const entry = typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null
-  if (entry) {
-    await appendFileSystemEntry(result, entry)
+  if (entry) return [{ entry }]
+  const file = item.getAsFile()
+  return file ? [{ file }] : []
+}
+
+async function appendDataTransferItem(result: DropResult, item: DataTransferItemSnapshot) {
+  if ('entry' in item) {
+    await appendFileSystemEntry(result, item.entry)
     return
   }
 
-  const file = item.getAsFile()
-  if (file) {
-    result.files.push({
-      file,
-      relativePath: file.name,
-    })
-  }
+  result.files.push({
+    file: item.file,
+    relativePath: item.file.name,
+  })
 }
 
 async function appendFileSystemEntry(result: DropResult, entry: FileSystemEntry) {
@@ -172,24 +169,16 @@ async function appendFileSystemEntry(result: DropResult, entry: FileSystemEntry)
 }
 
 async function appendFileEntry(result: DropResult, entry: FileSystemFileEntry) {
-  try {
-    const file = await fileEntryToFile(entry)
-    result.files.push({
-      file,
-      relativePath: entry.name,
-    })
-  } catch {
-    return
-  }
+  const file = await fileEntryToFile(entry)
+  result.files.push({
+    file,
+    relativePath: entry.name,
+  })
 }
 
 async function appendDirectoryEntry(result: DropResult, entry: FileSystemDirectoryEntry) {
-  try {
-    const folder = await readDirectoryRecursively(entry)
-    result.rootFolders.push(folder)
-  } catch {
-    return
-  }
+  const folder = await readDirectoryRecursively(entry)
+  result.rootFolders.push(folder)
 }
 
 function countFilesInFolderStructure(folder: FolderStructure): number {

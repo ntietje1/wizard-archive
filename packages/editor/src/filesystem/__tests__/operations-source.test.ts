@@ -447,8 +447,8 @@ describe('filesystem operations source', () => {
         parentTarget: { kind: 'direct', parentId: null },
         name: 'Assets',
       },
-      async (folder) => {
-        await source.createItem({
+      async (folder, createNestedItem) => {
+        await createNestedItem({
           type: RESOURCE_TYPES.notes,
           parentTarget: { kind: 'direct', parentId: folder.id },
           name: 'Scene',
@@ -561,8 +561,8 @@ describe('filesystem operations source', () => {
         parentTarget: { kind: 'direct', parentId: null },
         name: 'Assets',
       },
-      async (folder) => {
-        await source.createItem({
+      async (folder, createNestedItem) => {
+        await createNestedItem({
           type: RESOURCE_TYPES.folders,
           parentTarget: { kind: 'direct', parentId: folder.id },
           name: 'Nested',

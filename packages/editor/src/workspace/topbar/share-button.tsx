@@ -25,11 +25,11 @@ export function ShareButton({
 
   const shareItems = item && item.isTrashed !== true ? [item] : []
   return share.renderItemsShareState(shareItems, (state) => (
-    <AvailableShareButton isLoading={isLoading} shareItems={shareItems} shareState={state} />
+    <ShareButtonState isLoading={isLoading} shareItems={shareItems} shareState={state} />
   ))
 }
 
-function AvailableShareButton({
+function ShareButtonState({
   isLoading,
   shareItems,
   shareState,
@@ -38,23 +38,50 @@ function AvailableShareButton({
   shareItems: Array<AnyItem>
   shareState: ResourceShareState
 }) {
-  const [open, setOpen] = useState(false)
-
   const hasItems = shareItems.length > 0
   const canOpen = hasItems && !isLoading && shareState.status === 'ready' && !shareState.isMutating
-  const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(canOpen && nextOpen)
-  }
-  const Chevron = open ? ChevronUp : ChevronDown
   const isShared = shareState.status === 'ready' && shareState.aggregateShareStatus !== 'not_shared'
   const StatusIcon = isShared ? Users : Lock
   const label = getShareButtonLabel(shareState, isShared)
 
+  if (canOpen) {
+    return (
+      <OpenableShareButton
+        label={label}
+        shareItems={shareItems}
+        shareState={shareState}
+        StatusIcon={StatusIcon}
+      />
+    )
+  }
+
   return (
-    <Popover open={canOpen && open} onOpenChange={handleOpenChange}>
+    <Button variant="outline" size="sm" className="gap-1.5" disabled>
+      <StatusIcon className="size-3.5" />
+      <span className="text-xs">{label}</span>
+      <ChevronDown className="size-3 text-muted-foreground" />
+    </Button>
+  )
+}
+
+function OpenableShareButton({
+  label,
+  shareItems,
+  shareState,
+  StatusIcon,
+}: {
+  label: string
+  shareItems: Array<AnyItem>
+  shareState: Extract<ResourceShareState, { status: 'ready' }>
+  StatusIcon: typeof Users
+}) {
+  const [open, setOpen] = useState(false)
+  const Chevron = open ? ChevronUp : ChevronDown
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         nativeButton
-        disabled={!canOpen}
         render={
           <Button variant="outline" size="sm" className="gap-1.5">
             <StatusIcon className="size-3.5" />
@@ -63,11 +90,9 @@ function AvailableShareButton({
           </Button>
         }
       />
-      {hasItems && (
-        <PopoverContent align="start" side="bottom" sideOffset={4} className="w-auto p-2">
-          <SidebarItemsSharePanel items={shareItems} state={shareState} />
-        </PopoverContent>
-      )}
+      <PopoverContent align="start" side="bottom" sideOffset={4} className="w-auto p-2">
+        <SidebarItemsSharePanel items={shareItems} state={shareState} />
+      </PopoverContent>
     </Popover>
   )
 }

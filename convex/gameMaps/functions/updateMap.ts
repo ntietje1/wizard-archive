@@ -15,9 +15,11 @@ import type { Doc, Id } from '../../_generated/dataModel'
 export async function applyMapImageUpdate(
   ctx: CampaignMutationCtx,
   {
+    layerId,
     mapId,
     upload,
   }: {
+    layerId?: string | null
     mapId: Id<'sidebarItems'>
     upload: Awaited<ReturnType<typeof commitUpload>> | null
   },
@@ -33,14 +35,29 @@ export async function applyMapImageUpdate(
     .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
     .unique()
   if (ext) {
-    await ctx.db.patch('gameMaps', ext._id, {
-      imageReplacementToken: undefined,
-      imageStorageId,
-    })
+    if (layerId === null || layerId === undefined) {
+      await ctx.db.patch('gameMaps', ext._id, {
+        imageReplacementToken: undefined,
+        imageStorageId,
+      })
+    } else {
+      const existingLayers = ext.layers ?? []
+      const hasLayer = existingLayers.some((layer) => layer.id === layerId)
+      const layers = hasLayer
+        ? existingLayers.map((layer) =>
+            layer.id === layerId ? { ...layer, imageStorageId } : layer,
+          )
+        : [...existingLayers, { id: layerId, imageStorageId, name: layerId }]
+      await ctx.db.patch('gameMaps', ext._id, {
+        imageReplacementToken: undefined,
+        layers,
+      })
+    }
   }
 
   return {
-    sidebarUpdates: { previewStorageId: imageStorageId },
+    sidebarUpdates:
+      layerId === null || layerId === undefined ? { previewStorageId: imageStorageId } : {},
     changes: [
       {
         action:
@@ -70,10 +87,12 @@ function isMapImageFile(contentType: string | null, fileName: string | null) {
 export async function updateMapImage(
   ctx: CampaignMutationCtx,
   {
+    layerId,
     mapId,
     replacementToken,
     uploadSessionId,
   }: {
+    layerId?: string | null
     mapId: Id<'sidebarItems'>
     replacementToken: string | null
     uploadSessionId: Id<'fileStorage'> | null
@@ -86,14 +105,14 @@ export async function updateMapImage(
     notFoundMessage: 'Map not found',
     apply: async () => {
       if (!uploadSessionId) {
-        return await applyMapImageUpdate(ctx, { mapId, upload: null })
+        return await applyMapImageUpdate(ctx, { layerId, mapId, upload: null })
       }
       const extension = await getMapExtension(ctx, mapId)
       if (!replacementToken || extension.imageReplacementToken !== replacementToken) {
         throwClientError(ERROR_CODE.CONFLICT, 'Stale map image replacement')
       }
       const upload = await commitUpload(ctx, { sessionId: uploadSessionId })
-      return await applyMapImageUpdate(ctx, { mapId, upload })
+      return await applyMapImageUpdate(ctx, { layerId, mapId, upload })
     },
   })
   return { mapId: result.itemId }

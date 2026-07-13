@@ -40,8 +40,13 @@ export function runYjsHistoryCommand(view: EditorView, direction: 'undo' | 'redo
   const undoManager = yUndoPlugin?.getState(view.state)?.undoManager
   if (!undoManager) return
 
-  const selectionBookmark = createRelativeSelectionBookmark(view)
+  let selectionBookmark: RelativeSelectionBookmark | null = null
   try {
+    try {
+      selectionBookmark = createRelativeSelectionBookmark(view)
+    } catch (error) {
+      console.error('[runYjsHistoryCommand] Failed to preserve selection', error)
+    }
     if (direction === 'redo') {
       undoManager.redo()
     } else {
@@ -51,8 +56,9 @@ export function runYjsHistoryCommand(view: EditorView, direction: 'undo' | 'redo
     console.error(`[runYjsHistoryCommand] Failed to ${direction}`, error)
   } finally {
     if (selectionBookmark) {
-      restoreSelectionBookmarkBestEffort(view, selectionBookmark)
-      setTimeout(() => restoreSelectionBookmarkBestEffort(view, selectionBookmark), 0)
+      const bookmark = selectionBookmark
+      restoreSelectionBookmarkBestEffort(view, bookmark)
+      setTimeout(() => restoreSelectionBookmarkBestEffort(view, bookmark), 0)
     }
   }
 }
@@ -258,8 +264,9 @@ export function patchYSyncAfterTypeChanged(view: EditorView) {
           }
           binding.__typeChangedPatched = true
 
-          const origTypeChanged = binding._typeChanged.bind(binding)
-          binding._typeChanged = (events: Array<unknown>, transaction: Record<string, any>) => {
+          const registeredTypeChanged = binding._typeChanged
+          const origTypeChanged = registeredTypeChanged.bind(binding)
+          const patchedTypeChanged = (events: Array<unknown>, transaction: Record<string, any>) => {
             origTypeChanged(events, transaction)
             const prosemirrorView = binding.prosemirrorView as EditorView | null
             if (prosemirrorView) {
@@ -272,6 +279,14 @@ export function patchYSyncAfterTypeChanged(view: EditorView) {
                 binding.beforeTransactionSelection = beforeTransactionSelection
               }
             }
+          }
+          binding._typeChanged = patchedTypeChanged
+          if (
+            typeof binding.type?.unobserveDeep === 'function' &&
+            typeof binding.type?.observeDeep === 'function'
+          ) {
+            binding.type.unobserveDeep(registeredTypeChanged)
+            binding.type.observeDeep(patchedTypeChanged)
           }
 
           break

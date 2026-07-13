@@ -3,11 +3,12 @@ import type { RefObject } from 'react'
 
 export function useLocalScrollTop(viewportRef: RefObject<HTMLElement | null>) {
   const scrollTopRef = useRef(0)
+  const viewport = viewportRef.current
 
   useEffect(() => {
-    const viewport = viewportRef.current
     if (!viewport) return
 
+    scrollTopRef.current = viewport.scrollTop
     const onScroll = () => {
       scrollTopRef.current = viewport.scrollTop
     }
@@ -16,7 +17,7 @@ export function useLocalScrollTop(viewportRef: RefObject<HTMLElement | null>) {
     return () => {
       viewport.removeEventListener('scroll', onScroll)
     }
-  }, [viewportRef])
+  }, [viewport])
 
   return scrollTopRef
 }

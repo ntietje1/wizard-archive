@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { getHighlightRanges } from '../highlight'
 
 describe('getHighlightRanges', () => {
@@ -85,5 +85,13 @@ describe('getHighlightRanges', () => {
 
   it('handles unicode characters', () => {
     expect(getHighlightRanges('café latte', 'é')).toEqual([{ start: 3, end: 4 }])
+  })
+
+  it('preserves original offsets after case-folding expands a character', () => {
+    expect(getHighlightRanges('İstanbul', 'stan')).toEqual([{ start: 1, end: 5 }])
+  })
+
+  it('preserves original offsets after astral characters', () => {
+    expect(getHighlightRanges('😀Hello', 'hello')).toEqual([{ start: 2, end: 7 }])
   })
 })

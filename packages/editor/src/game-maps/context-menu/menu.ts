@@ -1,4 +1,4 @@
-import { Eye, EyeOff, MapPin, Move, Navigation, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, MapPin, Move, Trash2 } from 'lucide-react'
 import * as p from '../../workspace/context-menu/predicates'
 import * as selection from '../../workspace/context-menu/selection'
 import { createActionCommand } from '../../context-menu/create-action-command'
@@ -24,14 +24,6 @@ export const mapPinContextMenuCommands = {
     WorkspaceMenuContext,
     { mapPins: WorkspaceMapPinContextMenuActions }
   >('pinToMap', (actions, context) => actions.mapPins.pinToMap(context)),
-  goToMapPin: createActionCommand<
-    WorkspaceMenuContext,
-    { mapPins: WorkspaceMapPinContextMenuActions }
-  >('goToMapPin', (actions, context) => actions.mapPins.goToMapPin(context)),
-  createMapPin: createActionCommand<
-    WorkspaceMenuContext,
-    { mapPins: WorkspaceMapPinContextMenuActions }
-  >('createMapPin', (actions, context) => actions.mapPins.createMapPin(context)),
   removeMapPin: createActionCommand<
     WorkspaceMenuContext,
     { mapPins: WorkspaceMapPinContextMenuActions }
@@ -67,19 +59,6 @@ export const mapPinContextMenuContributors = [
           p.isSidebarItem(context) &&
           services.mapPins.canEditActiveMap() &&
           services.mapPins.getUnpinnedMapItems(context).length > 0 &&
-          !services.mapPins.isActiveMapItem(context.item),
-      },
-      {
-        id: 'go-to-map-pin',
-        commandId: 'goToMapPin',
-        label: 'Go to Map Pin',
-        icon: Navigation,
-        group: 'primary',
-        priority: 2,
-        applies: (context, services) =>
-          p.inSidebar(context) &&
-          p.isSidebarItem(context) &&
-          services.mapPins.isPinnedOnActiveMap(context.item) &&
           !services.mapPins.isActiveMapItem(context.item),
       },
       {
@@ -132,18 +111,6 @@ export const mapPinContextMenuContributors = [
           p.inView('map-view')(context) &&
           services.mapPins.canEditActiveMap() &&
           services.mapPins.hasPinContext(),
-      },
-      {
-        id: 'create-map-pin',
-        commandId: 'createMapPin',
-        label: 'Create Pin Here',
-        icon: MapPin,
-        group: 'pin-actions',
-        priority: 52,
-        applies: (context, services) =>
-          services.mapPins.canEditActiveMap() &&
-          services.mapPins.isActiveMapItem(context.item) &&
-          p.inView('map-view')(context),
       },
     ],
   },

@@ -78,12 +78,19 @@ export function createEditFileSystemItem({
 }: EditFileSystemItemSource): EditFileSystemItemFn {
   return async (args: EditItemBase & { item: AnyItem }): Promise<EditItemResult> => {
     const { item } = args
+    const canEditItem = permissions.canMutateItem(item, PERMISSION_LEVEL.EDIT)
+    const requestsMetadataChange =
+      (args.name !== undefined && args.name.trim() !== item.name) ||
+      (args.iconName !== undefined && args.iconName !== item.iconName) ||
+      (args.color !== undefined && args.color !== item.color)
+    if (requestsMetadataChange && !canEditItem) {
+      throw new Error('Sidebar item editing is not supported')
+    }
     const metadataUpdate = normalizeSidebarMetadataUpdate(
       args,
       catalog.getVisibleChildren(item.parentId),
     )
     const hasMetadataChange = hasSidebarMetadataChange(item, metadataUpdate)
-    const canEditItem = permissions.canMutateItem(item, PERMISSION_LEVEL.EDIT)
     if (hasMetadataChange && !canEditItem) {
       throw new Error('Sidebar item editing is not supported')
     }

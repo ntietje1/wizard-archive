@@ -5,6 +5,7 @@ import type { ResourceOperationResult } from '../filesystem/transaction-contract
 
 interface MapSessionUpdateImageInput {
   file: ResourceImportFile
+  layerId?: string | null
   mapId: SidebarItemId
 }
 
@@ -12,6 +13,7 @@ interface MapSessionCreatePinsInput {
   mapId: SidebarItemId
   pins: Array<{
     itemId: SidebarItemId
+    layerId?: string | null
     x: number
     y: number
   }>

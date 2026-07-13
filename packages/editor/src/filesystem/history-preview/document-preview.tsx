@@ -1,5 +1,4 @@
 import * as Y from 'yjs'
-import { useRef } from 'react'
 import { Loader2 } from 'lucide-react'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
@@ -21,59 +20,43 @@ import {
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { PinMarker } from '../../game-maps/viewer/pin-marker'
 import { resolvePinIcon } from '../../game-maps/viewer/pin-utils'
-import { readNoteYDocContent } from '../../notes/imported-text'
 import type { PreviewFallbackReason } from '../../previews/fallback-policy'
 import { getPreviewFallbackCopy } from '../../previews/fallback-policy'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../canvas/document-contract'
+import { readNoteYDocContent } from '../../notes/imported-text'
 import { readCanvasDocumentContent } from '../../canvas/document-contract'
-import type { NoteBlock } from '../../notes/document/model'
 
 type SnapshotReadResult<T> = { status: 'ready'; value: T } | { status: 'corrupted' }
-type SnapshotReadCache<T> = {
-  data: ArrayBuffer
-  result: SnapshotReadResult<T>
-}
+const noteSnapshotCache = new WeakMap<
+  ArrayBuffer,
+  SnapshotReadResult<ReturnType<typeof readNoteYDocContent>>
+>()
+const canvasSnapshotCache = new WeakMap<
+  ArrayBuffer,
+  SnapshotReadResult<ReturnType<typeof readCanvasDocumentContent>>
+>()
 
-function readNoteYjsSnapshot(data: ArrayBuffer): SnapshotReadResult<Array<NoteBlock>> {
+function readYjsSnapshot<T>(data: ArrayBuffer, read: (doc: Y.Doc) => T): SnapshotReadResult<T> {
   const doc = new Y.Doc()
   try {
     Y.applyUpdate(doc, new Uint8Array(data))
-    return { status: 'ready', value: readNoteYDocContent(doc) }
-  } catch (error) {
-    console.error('Failed to parse note snapshot:', error)
+    return { status: 'ready', value: read(doc) }
+  } catch {
     return { status: 'corrupted' }
   } finally {
     doc.destroy()
   }
 }
 
-function readCanvasSnapshot(data: ArrayBuffer): SnapshotReadResult<{
-  nodes: Array<CanvasDocumentNode>
-  edges: Array<CanvasDocumentEdge>
-}> {
-  const doc = new Y.Doc()
-  try {
-    Y.applyUpdate(doc, new Uint8Array(data))
-    return { status: 'ready', value: readCanvasDocumentContent(doc) }
-  } catch (error) {
-    console.error('Failed to parse canvas snapshot:', error)
-    return { status: 'corrupted' }
-  } finally {
-    doc.destroy()
-  }
-}
-
-function useSnapshotReadResult<T>(
+function readCachedYjsSnapshot<T>(
   data: ArrayBuffer,
-  readSnapshot: (data: ArrayBuffer) => SnapshotReadResult<T>,
+  cache: WeakMap<ArrayBuffer, SnapshotReadResult<T>>,
+  read: (doc: Y.Doc) => T,
 ): SnapshotReadResult<T> {
-  const cacheRef = useRef<SnapshotReadCache<T> | null>(null)
-
-  if (cacheRef.current?.data !== data) {
-    cacheRef.current = { data, result: readSnapshot(data) }
-  }
-
-  return cacheRef.current.result
+  const cached = cache.get(data)
+  if (cached) return cached
+  const result = readYjsSnapshot(data, read)
+  cache.set(data, result)
+  return result
 }
 
 export function HistoryDocumentPreview({ snapshot }: { snapshot: HistoryPreviewSnapshot }) {
@@ -91,11 +74,14 @@ export function HistoryDocumentPreview({ snapshot }: { snapshot: HistoryPreviewS
       />
     )
   }
-  return <HistoryPreviewFallback reason="unsupportedSnapshot" />
+  if (snapshot.kind === 'unsupported') {
+    return <HistoryPreviewFallback reason="unsupportedSnapshot" />
+  }
+  return assertNeverHistoryPreviewSnapshot(snapshot)
 }
 
 function NoteYjsSnapshotPreview({ data, noteId }: { data: ArrayBuffer; noteId: SidebarItemId }) {
-  const result = useSnapshotReadResult(data, readNoteYjsSnapshot)
+  const result = readCachedYjsSnapshot(data, noteSnapshotCache, readNoteYDocContent)
 
   if (result.status === 'corrupted') {
     return <CorruptedSnapshotState />
@@ -119,7 +105,7 @@ function NoteYjsSnapshotPreview({ data, noteId }: { data: ArrayBuffer; noteId: S
 }
 
 function CanvasSnapshotPreview({ canvasId, data }: { canvasId: SidebarItemId; data: ArrayBuffer }) {
-  const result = useSnapshotReadResult(data, readCanvasSnapshot)
+  const result = readCachedYjsSnapshot(data, canvasSnapshotCache, readCanvasDocumentContent)
 
   if (result.status === 'corrupted') {
     return <CorruptedSnapshotState />
@@ -194,6 +180,10 @@ function GameMapImagePreview({
 
 function assertNeverHistoryPreviewImageUrlState(state: never): never {
   throw new Error(`Unhandled history preview image state: ${JSON.stringify(state)}`)
+}
+
+function assertNeverHistoryPreviewSnapshot(snapshot: never): never {
+  throw new Error(`Unhandled history preview snapshot: ${JSON.stringify(snapshot)}`)
 }
 
 function HistoryPreviewFallback({

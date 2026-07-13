@@ -52,6 +52,7 @@ export type FileSystemPendingConflict = {
   createParentPlan?: ResourceCommandExecutionOptions['createParentPlan']
   conflicts: Array<ItemOperationConflict>
   replayFingerprint: string
+  workspaceId: string
   onSuccess?: () => void
 }
 
@@ -135,40 +136,43 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
   }
 
   const applyReceiptSideEffects = async (
+    operationArgs: FileSystemExecutorRuntimeArgs,
     receipt: ResourceTransactionReceipt,
-    currentResourceId = args.navigation.getCurrentResourceId(),
+    currentResourceId = operationArgs.navigation.getCurrentResourceId(),
   ) => {
     await applyFileSystemReceiptEffects({
       receipt,
-      readModel: args.cacheAdapter.getReadModel(),
+      readModel: operationArgs.cacheAdapter.getReadModel(),
       currentResourceId,
-      getSelectedItemIds: () => args.selectionCommands.getSelectionSnapshot().selectedItemIds,
-      setSelectedItemIds: args.selectionCommands.setSelectedItemIds,
-      clearWorkspaceContent: args.navigation.clearWorkspaceContent,
-      openResource: args.navigation.openResource,
-      reportEffectError: args.effects.reportReceiptEffectError,
+      getSelectedItemIds: () =>
+        operationArgs.selectionCommands.getSelectionSnapshot().selectedItemIds,
+      setSelectedItemIds: operationArgs.selectionCommands.setSelectedItemIds,
+      clearWorkspaceContent: operationArgs.navigation.clearWorkspaceContent,
+      openResource: operationArgs.navigation.openResource,
+      reportEffectError: operationArgs.effects.reportReceiptEffectError,
     })
   }
 
   const applyLifecycleIntents = (
+    operationArgs: FileSystemExecutorRuntimeArgs,
     intents: Array<FileSystemLifecycleIntent>,
     previousResourceId: SidebarItemId | null,
   ) =>
     applyFileSystemLifecycleIntents({
       intents,
       previousResourceId,
-      readModel: args.cacheAdapter.getReadModel(),
+      readModel: operationArgs.cacheAdapter.getReadModel(),
       adapters: {
         setFolderState: (_workspaceId, folderId, isOpen) =>
-          args.uiCommands.setFolderState(folderId, isOpen),
-        setSelectedItemIds: args.selectionCommands.setSelectedItemIds,
+          operationArgs.uiCommands.setFolderState(folderId, isOpen),
+        setSelectedItemIds: operationArgs.selectionCommands.setSelectedItemIds,
         getSelectionState: () => ({
-          ...args.selectionCommands.getSelectionSnapshot(),
-          clearItemSelection: args.selectionCommands.clearItemSelection,
+          ...operationArgs.selectionCommands.getSelectionSnapshot(),
+          clearItemSelection: operationArgs.selectionCommands.clearItemSelection,
         }),
-        getCurrentResourceId: args.navigation.getCurrentResourceId,
-        openResource: args.navigation.openResource,
-        clearWorkspaceContent: args.navigation.clearWorkspaceContent,
+        getCurrentResourceId: operationArgs.navigation.getCurrentResourceId,
+        openResource: operationArgs.navigation.openResource,
+        clearWorkspaceContent: operationArgs.navigation.clearWorkspaceContent,
       },
     })
 
@@ -176,29 +180,31 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
     command: ResourceCommand,
     { createParentPlan, decisions, onSuccess }: ResourceCommandExecutionOptions = {},
   ): Promise<ResourceCommandResult<ItemOperationConflict>> => {
+    const operationArgs = args
     const result = await executeFileSystemCommandLifecycle({
       command,
       createParentPlan,
       decisions,
-      workspaceId: args.workspaceId,
-      currentUserId: args.currentUserId,
-      activeItemSurface: args.activeItemSurface,
-      cacheAdapter: args.cacheAdapter,
+      workspaceId: operationArgs.workspaceId,
+      currentUserId: operationArgs.currentUserId,
+      activeItemSurface: operationArgs.activeItemSurface,
+      cacheAdapter: operationArgs.cacheAdapter,
       createClientOperationId,
-      getCurrentResourceId: args.navigation.getCurrentResourceId,
+      getCurrentResourceId: operationArgs.navigation.getCurrentResourceId,
       runMutation: (operation) => withPendingOperation(() => runQueuedMutation(operation)),
-      executeMutation: args.executeMutation,
-      applyLifecycleIntents,
-      applyReceiptSideEffects,
+      executeMutation: operationArgs.executeMutation,
+      applyLifecycleIntents: (intents, previousResourceId) =>
+        applyLifecycleIntents(operationArgs, intents, previousResourceId),
+      applyReceiptSideEffects: (receipt) => applyReceiptSideEffects(operationArgs, receipt),
       recordUndoReceipt: (receipt) =>
-        args.undoStore.getState().pushUndo(args.workspaceId, receipt, {
-          replayFingerprint: fingerprintFileSystemSnapshot(args.cacheAdapter),
+        operationArgs.undoStore.getState().pushUndo(operationArgs.workspaceId, receipt, {
+          replayFingerprint: fingerprintFileSystemSnapshot(operationArgs.cacheAdapter),
         }),
       onSuccess,
-      reportError: args.effects.reportError,
-      showProgress: args.effects.showProgress,
-      dismissProgress: args.effects.dismissProgress,
-      showReceiptToast: args.effects.showReceiptToast,
+      reportError: operationArgs.effects.reportError,
+      showProgress: operationArgs.effects.showProgress,
+      dismissProgress: operationArgs.effects.dismissProgress,
+      showReceiptToast: operationArgs.effects.showReceiptToast,
     })
     if (result.status === 'needsDecision') {
       updateSnapshot({
@@ -206,7 +212,8 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
           command,
           createParentPlan,
           conflicts: result.conflicts,
-          replayFingerprint: fingerprintFileSystemSnapshot(args.cacheAdapter),
+          replayFingerprint: fingerprintFileSystemSnapshot(operationArgs.cacheAdapter),
+          workspaceId: operationArgs.workspaceId,
           onSuccess,
         },
       })
@@ -215,22 +222,25 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
   }
 
   const discardCreatedItem = async (transactionId: FileSystemTransactionId) => {
+    const operationArgs = args
     await withPendingOperation(() =>
       runQueuedMutation(() =>
         runFileSystemOptimisticMutation({
-          cacheAdapter: args.cacheAdapter,
+          cacheAdapter: operationArgs.cacheAdapter,
           apply: [],
           rollback: [],
-          mutate: () => args.undoMutation(transactionId),
+          mutate: () => operationArgs.undoMutation(transactionId),
           onSuccess: async (receipt) => {
-            args.undoStore.getState().removeUndoTransaction(args.workspaceId, transactionId)
-            await applyReceiptSideEffects(receipt)
+            operationArgs.undoStore
+              .getState()
+              .removeUndoTransaction(operationArgs.workspaceId, transactionId)
+            await applyReceiptSideEffects(operationArgs, receipt)
           },
           errorMessage: 'Failed to discard incomplete item',
           progressMessage: 'Discarding item...',
-          reportError: args.effects.reportError,
-          showProgress: args.effects.showProgress,
-          dismissProgress: args.effects.dismissProgress,
+          reportError: operationArgs.effects.reportError,
+          showProgress: operationArgs.effects.showProgress,
+          dismissProgress: operationArgs.effects.dismissProgress,
         }),
       ),
     )
@@ -243,7 +253,8 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
         reason: 'operation-pending',
       } satisfies ResourceCommandResult
     }
-    const historyStore = args.undoStore.getState()
+    const operationArgs = args
+    const historyStore = operationArgs.undoStore.getState()
     const entry = direction === 'undo' ? historyStore.peekUndo() : historyStore.peekRedo()
     if (!entry) {
       return {
@@ -252,22 +263,24 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
       } satisfies ResourceCommandResult
     }
 
-    const currentResourceId = args.navigation.getCurrentResourceId()
+    const currentResourceId = operationArgs.navigation.getCurrentResourceId()
     return await withPendingOperation(() =>
       executeFileSystemHistoryLifecycle({
         direction,
         entry,
-        cacheAdapter: args.cacheAdapter,
+        cacheAdapter: operationArgs.cacheAdapter,
         runMutation: (operation) => runQueuedMutation(operation),
-        executeMutation: direction === 'undo' ? args.undoMutation : args.redoMutation,
+        executeMutation:
+          direction === 'undo' ? operationArgs.undoMutation : operationArgs.redoMutation,
         isEntryStale: (historyEntry) =>
-          !args.undoStore.getState().isCurrentEntry(historyEntry) ||
-          historyEntry.replayFingerprint !== fingerprintFileSystemSnapshot(args.cacheAdapter),
+          !operationArgs.undoStore.getState().isCurrentEntry(historyEntry) ||
+          historyEntry.replayFingerprint !==
+            fingerprintFileSystemSnapshot(operationArgs.cacheAdapter),
         recordHistorySuccess: (historyEntry) => {
-          const store = args.undoStore.getState()
+          const store = operationArgs.undoStore.getState()
           const nextEntry = withFileSystemHistoryReplayFingerprint(
             historyEntry,
-            fingerprintFileSystemSnapshot(args.cacheAdapter),
+            fingerprintFileSystemSnapshot(operationArgs.cacheAdapter),
           )
           if (direction === 'undo') {
             store.removeUndo()
@@ -277,11 +290,12 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
             store.pushUndoEntry(nextEntry, { preserveRedo: true })
           }
         },
-        applyReceiptSideEffects: (receipt) => applyReceiptSideEffects(receipt, currentResourceId),
-        reportError: args.effects.reportError,
-        showProgress: args.effects.showProgress,
-        dismissProgress: args.effects.dismissProgress,
-        showReceiptToast: args.effects.showReceiptToast,
+        applyReceiptSideEffects: (receipt) =>
+          applyReceiptSideEffects(operationArgs, receipt, currentResourceId),
+        reportError: operationArgs.effects.reportError,
+        showProgress: operationArgs.effects.showProgress,
+        dismissProgress: operationArgs.effects.dismissProgress,
+        showReceiptToast: operationArgs.effects.showReceiptToast,
       }),
     )
   }
@@ -297,7 +311,10 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
     const command = pendingConflict.command
     const onSuccess = pendingConflict.onSuccess
     updateSnapshot({ pendingConflict: null })
-    if (pendingConflict.replayFingerprint !== fingerprintFileSystemSnapshot(args.cacheAdapter)) {
+    if (
+      pendingConflict.workspaceId !== args.workspaceId ||
+      pendingConflict.replayFingerprint !== fingerprintFileSystemSnapshot(args.cacheAdapter)
+    ) {
       return {
         status: 'rejected',
         reason: 'stale-conflict',

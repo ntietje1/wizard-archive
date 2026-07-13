@@ -56,6 +56,15 @@ export async function getSidebarItemFromRaw(
       return {
         ...toEditorResourceRow(raw),
         imageAssetId: ext.imageStorageId as AssetId | null,
+        ...(ext.layers
+          ? {
+              layers: ext.layers.map((layer) => ({
+                id: layer.id,
+                imageAssetId: layer.imageStorageId as AssetId | null,
+                name: layer.name,
+              })),
+            }
+          : {}),
       } as AnyResourceRow
     }
     case RESOURCE_TYPES.files: {

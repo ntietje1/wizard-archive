@@ -60,7 +60,13 @@ async function applyReceiptIntent({
     case 'selectItem':
     case 'restorePreviousLocation':
       return
+    default:
+      return assertNever(intent)
   }
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled filesystem receipt intent: ${JSON.stringify(value)}`)
 }
 
 export async function applyFileSystemReceiptEffects({

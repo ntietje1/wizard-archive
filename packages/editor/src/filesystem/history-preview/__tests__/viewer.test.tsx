@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { HistoryPreviewViewer } from '../viewer'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
@@ -66,7 +66,7 @@ describe('HistoryPreviewViewer', () => {
     expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
   })
 
-  it('passes the snapshot note id into static note previews', () => {
+  it('passes the snapshot note id into static note previews', async () => {
     const noteId = 'note-1' as SidebarItemId
     const doc = createNoteYDocFromContent([
       {
@@ -93,7 +93,7 @@ describe('HistoryPreviewViewer', () => {
       />,
     )
 
-    expect(screen.getByTestId('static-note-content')).toBeInTheDocument()
+    expect(await screen.findByTestId('static-note-content')).toBeInTheDocument()
     expect(staticNoteContentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         noteId,
@@ -101,7 +101,7 @@ describe('HistoryPreviewViewer', () => {
     )
   })
 
-  it('reuses decoded note snapshots while the snapshot data is stable', () => {
+  it('reuses decoded note snapshots while the snapshot data is stable', async () => {
     const noteId = 'note-1' as SidebarItemId
     const doc = createNoteYDocFromContent([
       {
@@ -124,6 +124,7 @@ describe('HistoryPreviewViewer', () => {
     const view = render(
       <HistoryPreviewViewer canEdit onExit={vi.fn()} onRestore={vi.fn()} state={state} />,
     )
+    await waitFor(() => expect(readNoteYDocContentMock).toHaveBeenCalledTimes(1))
     view.rerender(
       <HistoryPreviewViewer canEdit onExit={vi.fn()} onRestore={vi.fn()} state={state} />,
     )
@@ -131,7 +132,7 @@ describe('HistoryPreviewViewer', () => {
     expect(readNoteYDocContentMock).toHaveBeenCalledTimes(1)
   })
 
-  it('passes sidebar-backed canvas nodes into canvas snapshot previews', () => {
+  it('passes sidebar-backed canvas nodes into canvas snapshot previews', async () => {
     const canvasId = 'canvas-1' as SidebarItemId
     const noteId = 'note-1' as SidebarItemId
     const doc = createCanvasDocumentDoc({
@@ -161,7 +162,7 @@ describe('HistoryPreviewViewer', () => {
       />,
     )
 
-    expect(screen.getByTestId('canvas-preview')).toBeInTheDocument()
+    expect(await screen.findByTestId('canvas-preview')).toBeInTheDocument()
     expect(canvasReadOnlyPreviewMock).toHaveBeenCalledWith(
       expect.objectContaining({
         interactive: true,

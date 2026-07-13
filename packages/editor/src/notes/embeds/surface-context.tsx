@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { EmbedTargetOperations } from '../../embeds/target-operations'
 import { NoteEmbedSurfaceContext } from './surface-context-value'
 import type { NoteEmbedSurfaceContextValue } from './surface-context-value'
 
@@ -8,17 +10,36 @@ export function NoteEmbedSurfaceProvider({
   embedTargetOperations,
   renderEmbeddedNotePreview,
   sourceNoteId,
-}: NoteEmbedSurfaceContextValue & { children: ReactNode }) {
-  return (
-    <NoteEmbedSurfaceContext.Provider
-      value={{
+}: {
+  children: ReactNode
+  editable: boolean
+  embedTargetOperations?: EmbedTargetOperations
+  renderEmbeddedNotePreview?: NoteEmbedSurfaceContextValue['renderEmbeddedNotePreview']
+  sourceNoteId: SidebarItemId | null
+}) {
+  const value: NoteEmbedSurfaceContextValue = editable
+    ? {
+        state: 'editable',
         sourceNoteId,
-        editable,
+        editable: true,
         embedTargetOperations,
         renderEmbeddedNotePreview,
-      }}
-    >
-      {children}
-    </NoteEmbedSurfaceContext.Provider>
+      }
+    : sourceNoteId === null
+      ? {
+          state: 'unavailable',
+          sourceNoteId: null,
+          editable: false,
+          renderEmbeddedNotePreview,
+        }
+      : {
+          state: 'readonly',
+          sourceNoteId,
+          editable: false,
+          renderEmbeddedNotePreview,
+        }
+
+  return (
+    <NoteEmbedSurfaceContext.Provider value={value}>{children}</NoteEmbedSurfaceContext.Provider>
   )
 }

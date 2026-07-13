@@ -45,11 +45,3 @@ export function getDefaultRightSidebarContent(itemType: ResourceKind | null | un
     ) ?? RIGHT_SIDEBAR_CONTENT.history
   )
 }
-
-export function resolveRightSidebarContent(
-  itemType: ResourceKind | null | undefined,
-  contentId: RightSidebarContentId | null | undefined,
-) {
-  if (contentId && canShowRightSidebarContent(itemType, contentId)) return contentId
-  return getDefaultRightSidebarContent(itemType)
-}

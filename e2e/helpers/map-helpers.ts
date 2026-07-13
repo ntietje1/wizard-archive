@@ -5,7 +5,9 @@ import { openItem, sidebarItem, waitForFilesystemIdle } from './sidebar-helpers'
 import type { Page } from '@playwright/test'
 
 export async function createMap(page: Page, name: string) {
-  const mapButton = page.getByRole('button', { name: /map.*upload an image/i })
+  const mapButton = page.getByRole('button', {
+    name: /map.*create a canvas for maps, pins, and references/i,
+  })
   await expect(mapButton).toBeVisible({ timeout: 10000 })
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {

@@ -80,6 +80,24 @@ describe('executeFileIoCommand', () => {
     ).resolves.toEqual({ status: 'unavailable', reason: 'file_not_found' })
     expect(writeFile).not.toHaveBeenCalled()
   })
+
+  it('returns a structured error when replacement is read-only', async () => {
+    const fileItem = createFile({ id: 'file-handout' as SidebarItemId })
+    const writeFile = vi.fn()
+
+    await expect(
+      executeFileIoCommand(
+        { type: 'replaceFile', file: createImportFile('replacement.png'), fileId: fileItem.id },
+        {
+          canReplaceFile: () => false,
+          getFileTargetById: () => fileItem,
+          readOnlyErrorMessage: 'Read only',
+          writeFile,
+        },
+      ),
+    ).resolves.toMatchObject({ status: 'error', error: new Error('Read only') })
+    expect(writeFile).not.toHaveBeenCalled()
+  })
 })
 
 function createImportFile(name: string, overrides: Partial<ResourceImportFile> = {}) {

@@ -2,12 +2,23 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 import type { ResourceImportFile } from '../../files/import-contract'
 import { replaceMapImage } from '../map-image-replacement'
+import { completedResourceOperation } from '../../filesystem/transaction-contract'
 
 describe('replaceMapImage', () => {
   it('stages and commits a replacement image with a completed receipt', async () => {
     const file = createImportFile()
-    const stageImage = vi.fn().mockResolvedValue({ status: 'staged', image: 'storage-1' })
-    const commitImage = vi.fn().mockResolvedValue(undefined)
+    const stageImage = vi.fn().mockResolvedValue({
+      status: 'staged',
+      image: 'storage-1',
+      cancel: vi
+        .fn()
+        .mockResolvedValue(
+          completedResourceOperation({ kind: 'mapImageUpdated', affectedCount: 1 }),
+        ),
+    })
+    const commitImage = vi
+      .fn()
+      .mockResolvedValue(completedResourceOperation({ kind: 'mapImageUpdated', affectedCount: 1 }))
 
     await expect(
       replaceMapImage({
@@ -27,10 +38,12 @@ describe('replaceMapImage', () => {
 
     expect(stageImage).toHaveBeenCalledExactlyOnceWith({
       file,
+      layerId: null,
       mapId: 'map-1',
     })
     expect(commitImage).toHaveBeenCalledExactlyOnceWith({
       image: 'storage-1',
+      layerId: null,
       mapId: 'map-1',
     })
   })
@@ -54,9 +67,37 @@ describe('replaceMapImage', () => {
     expect(commitImage).not.toHaveBeenCalled()
   })
 
+  it('cancels staged images when commit returns a non-completed result', async () => {
+    const cancelImage = vi
+      .fn()
+      .mockResolvedValue(completedResourceOperation({ kind: 'mapImageUpdated', affectedCount: 1 }))
+    const commitResult = { status: 'unavailable' as const, reason: 'map_not_found' }
+
+    await expect(
+      replaceMapImage({
+        commitImage: vi.fn().mockResolvedValue(commitResult),
+        file: createImportFile(),
+        mapId: 'map-1' as SidebarItemId,
+        stageImage: vi.fn().mockResolvedValue({
+          status: 'staged',
+          image: 'storage-1',
+          cancel: cancelImage,
+        }),
+      }),
+    ).resolves.toEqual(commitResult)
+
+    expect(cancelImage).toHaveBeenCalledExactlyOnceWith({
+      image: 'storage-1',
+      layerId: null,
+      mapId: 'map-1',
+    })
+  })
+
   it('cancels the staged image and returns the commit error when commit fails', async () => {
     const commitError = new Error('commit failed')
-    const cancelImage = vi.fn().mockResolvedValue(undefined)
+    const cancelImage = vi
+      .fn()
+      .mockResolvedValue(completedResourceOperation({ kind: 'mapImageUpdated', affectedCount: 1 }))
 
     await expect(
       replaceMapImage({
@@ -73,6 +114,7 @@ describe('replaceMapImage', () => {
 
     expect(cancelImage).toHaveBeenCalledExactlyOnceWith({
       image: 'storage-1',
+      layerId: null,
       mapId: 'map-1',
     })
   })

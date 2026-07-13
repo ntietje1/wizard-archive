@@ -24,6 +24,8 @@ type FileViewerProps = {
   source: FileViewerSource
 }
 
+type AvailableResolvedFile = Extract<ResolvedFile, { status: 'available' }>
+
 export function FileViewer({ item: file, source }: FileViewerProps) {
   const resolvedFile = source.resolveFile(file)
   const canReplaceFile = source.canReplaceFile(file)
@@ -35,7 +37,14 @@ export function FileViewer({ item: file, source }: FileViewerProps) {
   }
 
   if (resolvedFile.status === 'unavailable') {
-    return <UnavailableFileViewer file={file} canReplaceFile={canReplaceFile} source={source} />
+    return (
+      <UnavailableFileViewer
+        key={file.id}
+        file={file}
+        canReplaceFile={canReplaceFile}
+        source={source}
+      />
+    )
   }
 
   return (
@@ -81,12 +90,8 @@ function UnavailableFileViewer({
     successMessage: 'File replaced',
   })
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.currentTarget.files?.[0]
-    event.currentTarget.value = ''
-    if (!selectedFile) return
-    attemptFileReplacement(selectedFile)
-  }
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) =>
+    handleFileReplacementInputChange(event, attemptFileReplacement)
 
   return (
     <div className="flex h-full w-full items-center justify-center p-8 text-center">
@@ -234,7 +239,7 @@ function FileViewerHeader({
   file: FileItemWithContent
   maxUploadBytes?: number
   replaceFile: FileViewerSource['replaceFile']
-  resolvedFile: ResolvedFile
+  resolvedFile: AvailableResolvedFile
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { attemptFileReplacement, isReplacing, replacementError } = useFileReplacement({
@@ -254,13 +259,8 @@ function FileViewerHeader({
       ? resolvedFile.downloadUrl
       : null
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.currentTarget.files?.[0]
-    event.currentTarget.value = ''
-    if (!selectedFile) return
-
-    attemptFileReplacement(selectedFile)
-  }
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) =>
+    handleFileReplacementInputChange(event, attemptFileReplacement)
 
   return (
     <header className="flex min-h-12 shrink-0 flex-col gap-2 border-b bg-background px-3 py-2">
@@ -382,6 +382,15 @@ function FileReplaceButton({
 function fileMetadataLabel(contentType: string | null, size: number | null) {
   const type = contentType ?? 'Unknown type'
   return size === null ? type : `${type} · ${formatFileSize(size)}`
+}
+
+function handleFileReplacementInputChange(
+  event: ChangeEvent<HTMLInputElement>,
+  replaceFile: (file: File) => void,
+) {
+  const selectedFile = event.currentTarget.files?.[0]
+  event.currentTarget.value = ''
+  if (selectedFile) replaceFile(selectedFile)
 }
 
 function formatFileSize(size: number) {

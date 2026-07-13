@@ -5,6 +5,7 @@ import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
 import type { MapPinId } from '../../../../../shared/common/ids'
 import type { MapItemWithContent, MapPinWithItem } from '../../game-maps/item-contract'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
+import type { ReactNode, SyntheticEvent } from 'react'
 import type { DropOutcome } from '../../drag-drop/outcome'
 import type { MapTransformState } from './transform-state'
 
@@ -60,8 +61,8 @@ export function MapCanvasStage({
     ref: unknown,
     state: { scale: number; positionX: number; positionY: number },
   ) => void
-  onImageLoad: () => void
-  onImageError: () => void
+  onImageLoad: (event: SyntheticEvent<HTMLImageElement>) => void
+  onImageError: (event: SyntheticEvent<HTMLImageElement>) => void
   onMapClick: (event: React.MouseEvent) => void
   onMapKeyboardAction: () => void
   onMapCanvasContextMenu: (event: React.MouseEvent) => void
@@ -69,7 +70,7 @@ export function MapCanvasStage({
   onPinClick: (event: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => void
   onPinContextMenu: (event: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => void
   onPinDragStart: (event: React.PointerEvent, pin: MapPinWithItem) => void
-  emptyImageContent: React.ReactNode
+  emptyImageContent: ReactNode
   imageAlt?: string
 }) {
   const mapPinsLayer = imageLoaded ? (
@@ -92,6 +93,7 @@ export function MapCanvasStage({
   const mapContent = (
     <div className="relative" onContextMenu={hasPinAction ? undefined : onMapCanvasContextMenu}>
       <img
+        key={map.imageUrl ?? 'no-image'}
         ref={imageRef}
         src={map.imageUrl ?? undefined}
         alt={imageAlt}
@@ -99,10 +101,7 @@ export function MapCanvasStage({
         draggable={false}
         onLoad={onImageLoad}
         onError={onImageError}
-        style={{
-          cursor: mapCursor,
-          display: 'block',
-        }}
+        style={{ cursor: mapCursor, display: 'block' }}
       />
 
       {hasPinAction && (

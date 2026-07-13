@@ -61,6 +61,16 @@ describe('createEditFileSystemItem', () => {
     expect(sourceMocks.editItem).not.toHaveBeenCalled()
   })
 
+  it('checks permission before normalizing a requested metadata change', async () => {
+    const editItem = createEditFileSystemItem(createSource({ canMutate: false }))
+
+    await expect(editItem({ item, name: '   ' })).rejects.toThrow(
+      'Sidebar item editing is not supported',
+    )
+
+    expect(sourceMocks.editItem).not.toHaveBeenCalled()
+  })
+
   it('allows item metadata changes when the item can be mutated independently of current item state', async () => {
     sourceMocks.editItem.mockResolvedValue({ slug: 'new-name' as ResourceSlug })
     const editItem = createEditFileSystemItem(createSource({ canMutate: true }))

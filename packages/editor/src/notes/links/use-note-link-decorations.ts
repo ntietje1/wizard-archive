@@ -195,14 +195,16 @@ function createPluginState(
   selFrom: number,
   selTo: number,
 ): PluginState {
+  const wikiMatches = findWikiLinks(doc, resolver)
+  const mdMatches = findMdLinks(doc, resolver)
   const decorations = [
-    ...findWikiLinks(doc, resolver).flatMap((match) =>
+    ...wikiMatches.flatMap((match) =>
       buildWikiLinkDecorationEntries(match, {
         isViewerMode,
         isActive: !isViewerMode && selectionOverlapsLink(selFrom, selTo, match),
       }),
     ),
-    ...findMdLinks(doc, resolver).flatMap((match) =>
+    ...mdMatches.flatMap((match) =>
       buildMdLinkDecorationEntries(match, {
         isViewerMode,
         isActive: !isViewerMode && selectionOverlapsLink(selFrom, selTo, match),
@@ -212,7 +214,7 @@ function createPluginState(
 
   return {
     decorations: DecorationSet.create(doc, decorations),
-    linkRanges: findLinkRanges(doc),
+    linkRanges: [...wikiMatches, ...mdMatches].map(({ from, to }) => ({ from, to })),
     selFrom,
     selTo,
   }
@@ -224,18 +226,6 @@ function selectionOverlapsLink(selFrom: number, selTo: number, range: LinkRange)
   }
 
   return selFrom < range.to && selTo > range.from
-}
-
-function findLinkRanges(doc: ProseMirrorNode): Array<LinkRange> {
-  return [...findWikiLinkRanges(doc), ...findMdLinkRanges(doc)]
-}
-
-function findWikiLinkRanges(doc: ProseMirrorNode): Array<LinkRange> {
-  return findWikiLinkTextMatches(doc).map(({ from, to }) => ({ from, to }))
-}
-
-function findMdLinkRanges(doc: ProseMirrorNode): Array<LinkRange> {
-  return findMdLinkTextMatches(doc).map(({ from, to }) => ({ from, to }))
 }
 
 function findWikiLinks(

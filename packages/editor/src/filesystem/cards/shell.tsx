@@ -17,6 +17,7 @@ import { useItemSelectionInteractions } from '../../workspace/sidebar/use-item-s
 import { useSidebarDragData } from '../../drag-drop/sidebar-drag-data'
 import { useDndStore } from '../../drag-drop/store'
 import { resourceItemCardBackgroundClass, resourceItemCardOutlineClass } from './visual-state'
+import { handleError } from '../../errors/handle-error'
 
 type ResourceItemCardSource = Pick<
   ItemCardProps<AnyItem>['source'],
@@ -55,13 +56,14 @@ export function ResourceItemCardShell<TItem extends AnyItem>({
       event.preventDefault()
       return
     }
-    if (onClick) {
-      event.preventDefault()
-      handleItemClick(event)
-      onClick()
-      return
-    }
-    handleItemClick(event, () => void source.openItem(item.id))
+    handleItemClick(
+      event,
+      onClick ??
+        (() =>
+          Promise.resolve(source.openItem(item.id)).catch((error) => {
+            handleError(error, 'Failed to open item')
+          })),
+    )
   }
 
   return (

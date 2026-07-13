@@ -7,20 +7,55 @@ export function getHighlightRanges(text: string, query: string): Array<Highlight
   const terms = query.split(/\s+/).filter(Boolean)
   if (terms.length === 0) return []
 
+  const normalized = normalizeTextWithOffsets(text)
+  const ranges = findHighlightRanges(normalized, terms)
+  return mergeHighlightRanges(ranges)
+}
+
+function normalizeTextWithOffsets(text: string) {
+  const lowerTextParts: Array<string> = []
+  const lowerOffsetMap: Array<{ start: number; end: number }> = []
+  for (let index = 0; index < text.length; ) {
+    const codePoint = text.codePointAt(index)
+    const codePointLength = codePoint && codePoint > 0xffff ? 2 : 1
+    const originalEnd = index + codePointLength
+    const lowerPart = text.slice(index, originalEnd).toLowerCase()
+    lowerTextParts.push(lowerPart)
+    for (const _codeUnit of lowerPart.split('')) {
+      lowerOffsetMap.push({ start: index, end: originalEnd })
+    }
+    index = originalEnd
+  }
+
+  return { text: lowerTextParts.join(''), offsets: lowerOffsetMap }
+}
+
+function findHighlightRanges(
+  normalized: ReturnType<typeof normalizeTextWithOffsets>,
+  terms: Array<string>,
+) {
   const ranges: Array<HighlightRange> = []
-  const lowerText = text.toLowerCase()
 
   for (const term of terms) {
     const lowerTerm = term.toLowerCase()
     let start = 0
-    while (start < lowerText.length) {
-      const idx = lowerText.indexOf(lowerTerm, start)
+    while (start < normalized.text.length) {
+      const idx = normalized.text.indexOf(lowerTerm, start)
       if (idx === -1) break
-      ranges.push({ start: idx, end: idx + lowerTerm.length })
+      const matchEnd = idx + lowerTerm.length - 1
+      const startOffset = normalized.offsets[idx]
+      const endOffset = normalized.offsets[matchEnd]
+      if (startOffset && endOffset) {
+        ranges.push({ start: startOffset.start, end: endOffset.end })
+      }
       start = idx + 1
     }
   }
 
+  return ranges
+}
+
+function mergeHighlightRanges(ranges: Array<HighlightRange>) {
   if (ranges.length === 0) return []
 
   ranges.sort((a, b) => a.start - b.start || a.end - b.end)

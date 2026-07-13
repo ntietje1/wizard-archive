@@ -52,4 +52,24 @@ describe('RenderExternalEmbedBlock', () => {
     expect(section).toHaveAttribute('data-resource-id', 'note_1')
     expect(section).toHaveAttribute('data-preview-width', '360')
   })
+
+  it('does not use fields from a different embed target kind for its label', () => {
+    render(
+      <RenderExternalEmbedBlock
+        {...({
+          block: {
+            props: {
+              name: 'Wrong name',
+              resourceId: 'note_1',
+              targetKind: 'resource',
+              url: 'https://example.com/wrong',
+            },
+          },
+        } as RenderExternalEmbedBlockProps)}
+      />,
+    )
+
+    expect(screen.getByText('Embedded item')).toBeInTheDocument()
+    expect(screen.queryByText('Wrong name')).toBeNull()
+  })
 })

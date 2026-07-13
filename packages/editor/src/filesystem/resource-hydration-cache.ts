@@ -22,7 +22,7 @@ export function useResourceHydrationCache<
 >({ load }: { load: (key: ResourceKey) => Promise<Value> }) {
   const mountedRef = useRef(true)
   const requestIdsRef = useRef(new Map<string, number>())
-  const [state, setState] = useState<ResourceHydrationState<SourceId, ResourceKey, Value>>({})
+  const [, setState] = useState<ResourceHydrationState<SourceId, ResourceKey, Value>>({})
   const stateRef = useRef<ResourceHydrationState<SourceId, ResourceKey, Value>>({})
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function useResourceHydrationCache<
 
   const getEntry = ({ key, sourceId }: ResourceHydrationRequest<SourceId, ResourceKey>) => {
     if (!sourceId || !key) return undefined
-    return state[createResourceHydrationKey(sourceId, key)]
+    return stateRef.current[createResourceHydrationKey(sourceId, key)]
   }
 
   const ensure = ({ key, sourceId }: ResourceHydrationRequest<SourceId, ResourceKey>) => {
@@ -98,5 +98,5 @@ export function useResourceHydrationCache<
 }
 
 function createResourceHydrationKey(sourceId: string, key: string) {
-  return `${sourceId}:${key}`
+  return JSON.stringify([sourceId, key])
 }

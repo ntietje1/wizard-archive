@@ -2,7 +2,7 @@ import { useImperativeHandle, useRef } from 'react'
 import type { Ref } from 'react'
 import { WorkspaceContextMenu } from '../../workspace/context-menu/context-menu'
 import { useMapView } from './use-map-view'
-import type { MapItemWithContent } from '../../game-maps/item-contract'
+import type { MapItemWithContent } from '../item-contract'
 import type { ContextMenuHostRef } from '../../context-menu/components/host'
 
 export function MapImageContextMenuWrapper({

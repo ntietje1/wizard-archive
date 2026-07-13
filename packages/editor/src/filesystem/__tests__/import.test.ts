@@ -38,7 +38,7 @@ describe('importWorkspaceFile', () => {
         id: testId<'sidebarItems'>(`note-${name}`),
         slug: `note-${name}` as ResourceSlug,
       }
-      await initialize?.(created)
+      await initialize?.(created, createItem)
       return created
     })
     const text = createImportFile(['hello'], 'notes.txt', { type: 'text/plain' })
@@ -84,7 +84,7 @@ describe('importWorkspaceFile', () => {
         id: testId<'sidebarItems'>(`file-${name}`),
         slug: `file-${name}` as ResourceSlug,
       }
-      await initialize?.(created)
+      await initialize?.(created, createItem)
       return created
     })
     const onProgress = vi.fn()
@@ -170,7 +170,7 @@ describe('importWorkspaceFile', () => {
         slug: `file-${name}` as ResourceSlug,
       }
       try {
-        await initialize?.(created)
+        await initialize?.(created, createItem)
       } catch (error) {
         return { status: 'failed', reason: 'create_failed', error }
       }
@@ -305,6 +305,7 @@ describe('importWorkspaceFileDrop', () => {
 
     expect(importFile).toHaveBeenCalledWith({
       file: text,
+      name: 'notes.txt',
       parentId,
       onProgress: expect.any(Function),
     })
@@ -315,6 +316,7 @@ describe('importWorkspaceFileDrop', () => {
     })
     expect(importFile).toHaveBeenCalledWith({
       file: image,
+      name: 'portrait.png',
       parentId: testId<'sidebarItems'>('created-Assets'),
       onProgress: expect.any(Function),
     })
@@ -325,6 +327,7 @@ describe('importWorkspaceFileDrop', () => {
     })
     expect(importFile).toHaveBeenCalledWith({
       file: nestedText,
+      name: 'nested.txt',
       parentId: testId<'sidebarItems'>('created-Nested'),
       onProgress: expect.any(Function),
     })
@@ -365,6 +368,7 @@ describe('importWorkspaceFileDrop', () => {
 
     expect(importFile).toHaveBeenCalledWith({
       file: invalid,
+      name: 'archive.unknown',
       parentId: null,
       onProgress: expect.any(Function),
     })
@@ -437,6 +441,7 @@ describe('importWorkspaceFileDrop', () => {
     })
     expect(importFile).toHaveBeenCalledWith({
       file: workingFile,
+      name: 'working.txt',
       parentId: testId<'sidebarItems'>('created-Working'),
       onProgress: expect.any(Function),
     })
@@ -516,5 +521,35 @@ describe('importWorkspaceFileDrop', () => {
       skippedFiles: 0,
       lastFolderId: testId<'sidebarItems'>('created-4'),
     })
+  })
+
+  it('reserves deduplicated file names before importing the next same-drop file', async () => {
+    const catalog = createResourceCatalogModel({ activeItems: [], trashItems: [] }).catalog
+    const files = [
+      createImportFile(['first'], 'notes.txt', { type: 'text/plain' }),
+      createImportFile(['second'], 'notes.txt', { type: 'text/plain' }),
+    ]
+    const importFile = vi.fn<ResourceImportFileOperation>(({ file, name = file.name }) => ({
+      status: 'imported',
+      kind: 'note',
+      fileName: name,
+      result: {
+        status: 'completed',
+        id: testId<'sidebarItems'>(`imported-${name}`),
+        slug: `imported-${name}` as ResourceSlug,
+      },
+    }))
+
+    await importWorkspaceFileDrop({
+      catalog,
+      input: {
+        files: files.map((file) => ({ file })),
+        rootFolders: [],
+        parentId: null,
+      },
+      operations: { createItem: vi.fn(), importFile },
+    })
+
+    expect(importFile.mock.calls.map(([input]) => input.name)).toEqual(['notes.txt', 'notes.txt 1'])
   })
 })

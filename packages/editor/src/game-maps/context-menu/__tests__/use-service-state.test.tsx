@@ -1,6 +1,6 @@
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import type { MapPinId, SidebarItemId } from '../../../../../../shared/common/ids'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { MapItemWithContent, MapPinWithItem } from '../../../game-maps/item-contract'
@@ -11,16 +11,17 @@ import {
   RESOURCE_TYPES,
 } from '../../../workspace/items-persistence-contract'
 import { MapViewProvider } from '../../viewer/map-view-context'
+import { useMapView } from '../../viewer/use-map-view'
 import { useMapPinMenuServiceState } from '../use-service-state'
 
 describe('useMapPinMenuServiceState', () => {
-  it('returns null outside a map view instead of reading published viewer state', () => {
+  it('returns null outside a map view', () => {
     const { result } = renderHook(() => useMapPinMenuServiceState())
 
     expect(result.current).toBeNull()
   })
 
-  it('keeps projected map view service state stable when map view inputs do not change', () => {
+  it('projects map view service state', () => {
     const map = createGameMapFixture('map-1' as SidebarItemId, 'Map')
     const pin = createMapPin(map, 'map-pin-1' as MapPinId, 'note-1', 'Note')
     map.pins = [pin]
@@ -46,18 +47,51 @@ describe('useMapPinMenuServiceState', () => {
       </MapViewProvider>
     )
 
-    const { result, rerender } = renderHook(() => useMapPinMenuServiceState(), { wrapper })
-    const serviceState = result.current
-    const activeMap = result.current?.activeMap
-    const pinnedItemIds = result.current?.activeMap.pinnedItemIds
+    const { result } = renderHook(() => useMapPinMenuServiceState(), { wrapper })
 
-    rerender()
-
-    expect(result.current).toBe(serviceState)
-    expect(result.current?.activeMap).toBe(activeMap)
-    expect(result.current?.activeMap.pinnedItemIds).toBe(pinnedItemIds)
+    expect(result.current?.activeMap.id).toBe(map.id)
     expect(result.current?.activeMap.pinnedItemIds.has(pin.itemId)).toBe(true)
+    expect(result.current?.pinOperations).toBe(pinOperations)
+    expect(result.current?.pinRequests).toEqual({ requestPinMove, requestPinPlacement })
   })
+
+  it.each([
+    { canView: true, publishesItem: true },
+    { canView: false, publishesItem: false },
+  ])(
+    'projects only permitted active pin item data when canViewPinItem returns $canView',
+    ({ canView, publishesItem }) => {
+      const map = createGameMapFixture('map-1' as SidebarItemId, 'Map')
+      const pin = createMapPin(map, 'map-pin-1' as MapPinId, 'note-1', 'Note')
+      map.pins = [pin]
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MapViewProvider
+          canEditMap
+          canViewPinItem={() => canView}
+          map={map}
+          pins={[pin]}
+          pinOperations={{ removeMapPin: vi.fn(), updateMapPinVisibility: vi.fn() }}
+          requestPinMove={vi.fn()}
+          requestPinPlacement={vi.fn()}
+        >
+          {children}
+        </MapViewProvider>
+      )
+      const { result } = renderHook(
+        () => ({ mapView: useMapView(), serviceState: useMapPinMenuServiceState() }),
+        { wrapper },
+      )
+
+      act(() => {
+        result.current.mapView.setActivePinId(pin.id)
+      })
+
+      expect(result.current.serviceState?.activePin).toMatchObject({
+        id: pin.id,
+        item: publishesItem ? pin.item : null,
+      })
+    },
+  )
 })
 
 function createMapPin(

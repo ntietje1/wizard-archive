@@ -547,7 +547,7 @@ describe('useFileDropHandler', () => {
       })
     })
 
-    expect(consoleWarn).toHaveBeenCalledWith('invalid.png: An unexpected error occurred')
+    expect(consoleWarn).toHaveBeenCalledWith('invalid.png: Too large')
     expect(consoleWarn).toHaveBeenCalledWith('failed.png: Upload failed')
   })
 })

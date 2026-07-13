@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import type { ResourceCommand } from '../transaction-contract'
 import {
   getReceiptNavigationItemId,
+  getReceiptRemovedItemSnapshots,
   getReceiptRemovedRootIds,
   getReceiptSelectedRootIds,
 } from '../receipt-selectors'
@@ -72,6 +73,24 @@ describe('filesystem receipt selectors', () => {
         }),
       ),
     ).toEqual([itemId])
+
+    expect(
+      getReceiptRemovedItemSnapshots(
+        createFileSystemReceipt({
+          command,
+          direction: 'undo',
+          events: [{ type: 'restored', itemId }],
+          patches: [
+            {
+              type: 'updateResource',
+              itemId,
+              before: { status: 'active' },
+              fields: { status: 'trashed' },
+            },
+          ],
+        }),
+      ),
+    ).toEqual([{ id: itemId, parentId: null }])
   })
 
   it('derives removed visible items from patches even when events only name the merge root', () => {

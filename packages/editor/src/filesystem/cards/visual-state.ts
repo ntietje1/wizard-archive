@@ -34,11 +34,18 @@ export function folderItemFolderFillClass({
   isSelected = false,
   isViewing = false,
   isMultiSelected = false,
+  isCut = false,
 }: SidebarItemVisualState = {}): string {
   if (isViewing && isMultiSelected)
-    return 'fill-item-card-viewing group-focus-within/sidebar-surface:fill-item-card-selected-focus-hover'
-  if (isViewing) return 'fill-item-card-viewing'
+    return withCutOpacity(
+      'fill-item-card-viewing group-focus-within/sidebar-surface:fill-item-card-selected-focus-hover',
+      isCut,
+    )
+  if (isViewing) return withCutOpacity('fill-item-card-viewing', isCut)
   if (isSelected)
-    return 'fill-item-card-selected group-focus-within/sidebar-surface:fill-item-card-selected-focus'
-  return 'fill-card'
+    return withCutOpacity(
+      'fill-item-card-selected group-focus-within/sidebar-surface:fill-item-card-selected-focus',
+      isCut,
+    )
+  return withCutOpacity('fill-card', isCut)
 }

@@ -101,10 +101,7 @@ export function useFileSystemUndoHotkeys(
       if (!eventBelongsToHotkeyScope(event, scopeRef?.current ?? null)) return
       if (event.defaultPrevented) return
       const isOverlayFallbackTarget = isFileSystemCommandOverlayFallbackTarget(event.target)
-      if (
-        isOperationInFlightRef.current ||
-        (!isOverlayFallbackTarget && isEditableHotkeyTarget(event.target))
-      ) {
+      if (!isOverlayFallbackTarget && isEditableHotkeyTarget(event.target)) {
         return
       }
       if (!isFileSystemUndoRedoTarget(event.target)) return
@@ -112,6 +109,7 @@ export function useFileSystemUndoHotkeys(
       if (isFileSystemRedoShortcut(event)) {
         if (!handlersRef.current.canRedo) return
         event.preventDefault()
+        if (isOperationInFlightRef.current) return
         isOperationInFlightRef.current = true
         runHistoryHotkeyOperation({
           inFlightRef: isOperationInFlightRef,
@@ -126,6 +124,7 @@ export function useFileSystemUndoHotkeys(
       if (isFileSystemUndoShortcut(event)) {
         if (!handlersRef.current.canUndo) return
         event.preventDefault()
+        if (isOperationInFlightRef.current) return
         isOperationInFlightRef.current = true
         runHistoryHotkeyOperation({
           inFlightRef: isOperationInFlightRef,
@@ -170,7 +169,10 @@ function runHistoryHotkeyOperation({
 
   void Promise.resolve()
     .then(run)
-    .then((result) => reportResourceCommandFailure(result, message, reportError))
+    .then((result) => {
+      if (settled) return false
+      return reportResourceCommandFailure(result, message, reportError)
+    })
     .catch((error) => {
       if (!settled) reportError(error, message)
     })

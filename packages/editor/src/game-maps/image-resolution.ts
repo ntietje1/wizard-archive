@@ -36,7 +36,7 @@ export function resolveMapImage(
 export function withResolvedMapImage<TMap extends MapImageSource>(
   map: TMap,
   selectedLayerId?: string | null,
-): TMap {
+): Omit<TMap, 'imageAssetId' | 'imageUrl'> & Pick<ResolvedMapImage, 'imageAssetId' | 'imageUrl'> {
   const resolved = resolveMapImage(map, selectedLayerId)
   return {
     ...map,

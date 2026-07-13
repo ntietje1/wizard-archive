@@ -31,10 +31,6 @@ type MapViewerProps = {
 }
 
 export function MapViewer({ item: map, source }: MapViewerProps) {
-  return useMapViewerElement(map, source)
-}
-
-function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const canEditMap = source.canEditMap(map)
@@ -58,9 +54,12 @@ function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
     map,
   })
   const mapStageRef = useMergedRef(mapContainerRef, mapDropTargetRef)
-  const renderPinState = source.resolveRenderPins(map)
-  const pins = filterMapPinsForLayer(renderPinState.pins, activeLayerId, mapLayers)
-  const { isPinGhost } = renderPinState
+  const renderPinState = source.resolveEmbeddedMapState(map)
+  const pins =
+    renderPinState.status === 'available'
+      ? filterMapPinsForLayer(renderPinState.pins, activeLayerId, mapLayers)
+      : []
+  const isPinGhost = renderPinState.status === 'available' ? renderPinState.isPinGhost : () => false
 
   const {
     handleResetTransform,
@@ -92,6 +91,7 @@ function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
     requestPinPlacement,
     shouldDisablePanning,
   } = useMapPinInteractions({
+    activeLayerId,
     canEditMap,
     imageError,
     imageRef,
@@ -110,6 +110,7 @@ function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
     canPin: canEditMap,
     createMapPins: source.createMapPins,
     imageRef,
+    layerId: activeLayerId,
     map,
   })
 
@@ -184,7 +185,11 @@ function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
               canEditMap ? (
                 <MapImageUpload
                   onUpload={(file) =>
-                    source.updateMapImage({ mapId: map.id, file: createBrowserImportFile(file) })
+                    source.updateMapImage({
+                      file: createBrowserImportFile(file),
+                      layerId: activeLayerId,
+                      mapId: map.id,
+                    })
                   }
                 />
               ) : (

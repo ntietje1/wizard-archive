@@ -20,8 +20,9 @@ export interface SidebarItemCreationCommand extends SidebarItemCreationCommandDe
   key: SidebarItemCreationKey
 }
 
-const SIDEBAR_ITEM_CREATION_COMMAND_DEFINITIONS = {
-  note: {
+const SIDEBAR_ITEM_CREATION_ENTRIES = [
+  {
+    key: 'note',
     type: RESOURCE_TYPES.notes,
     label: 'Note',
     defaultName: 'Untitled Note',
@@ -29,7 +30,8 @@ const SIDEBAR_ITEM_CREATION_COMMAND_DEFINITIONS = {
     failureMessage: 'Failed to create note',
     icon: FilePlus,
   },
-  folder: {
+  {
+    key: 'folder',
     type: RESOURCE_TYPES.folders,
     label: 'Folder',
     defaultName: 'Untitled Folder',
@@ -37,15 +39,17 @@ const SIDEBAR_ITEM_CREATION_COMMAND_DEFINITIONS = {
     failureMessage: 'Failed to create folder',
     icon: FolderPlus,
   },
-  map: {
-    type: RESOURCE_TYPES.canvases,
+  {
+    key: 'map',
+    type: RESOURCE_TYPES.gameMaps,
     label: 'Map',
     defaultName: 'Untitled Map',
     dashboardDescription: 'Create a canvas for maps, pins, and references',
     failureMessage: 'Failed to create map',
     icon: MapPin,
   },
-  canvas: {
+  {
+    key: 'canvas',
     type: RESOURCE_TYPES.canvases,
     label: 'Canvas',
     defaultName: 'Untitled Canvas',
@@ -53,7 +57,8 @@ const SIDEBAR_ITEM_CREATION_COMMAND_DEFINITIONS = {
     failureMessage: 'Failed to create canvas',
     icon: Grid2x2Plus,
   },
-  file: {
+  {
+    key: 'file',
     type: RESOURCE_TYPES.files,
     label: 'File',
     defaultName: 'Untitled File',
@@ -61,36 +66,26 @@ const SIDEBAR_ITEM_CREATION_COMMAND_DEFINITIONS = {
     failureMessage: 'Failed to create file',
     icon: File,
   },
-} satisfies Record<SidebarItemCreationKey, SidebarItemCreationCommandDefinition>
-
-const SIDEBAR_ITEM_CREATION_ORDER = [
-  'note',
-  'folder',
-  'map',
-  'canvas',
-  'file',
-] satisfies ReadonlyArray<SidebarItemCreationKey>
+] satisfies ReadonlyArray<SidebarItemCreationCommandDefinition & { key: SidebarItemCreationKey }>
 
 function createSidebarItemCreationCommand(
-  key: SidebarItemCreationKey,
-  command: SidebarItemCreationCommandDefinition,
+  entry: SidebarItemCreationCommandDefinition & { key: SidebarItemCreationKey },
 ): SidebarItemCreationCommand {
   return {
-    id: `create.${key}` as SidebarItemCreationId,
-    key,
-    ...command,
+    id: `create.${entry.key}` as SidebarItemCreationId,
+    ...entry,
   }
 }
 
-const SIDEBAR_ITEM_CREATION_COMMAND_ENTRIES = SIDEBAR_ITEM_CREATION_ORDER.map((key) =>
-  createSidebarItemCreationCommand(key, SIDEBAR_ITEM_CREATION_COMMAND_DEFINITIONS[key]),
+const SIDEBAR_ITEM_CREATION_COMMANDS_INTERNAL = SIDEBAR_ITEM_CREATION_ENTRIES.map(
+  createSidebarItemCreationCommand,
 )
 
-export const SIDEBAR_ITEM_CREATION_COMMAND_BY_ID = Object.fromEntries(
-  SIDEBAR_ITEM_CREATION_COMMAND_ENTRIES.map((command) => [command.id, command]),
-) as Record<SidebarItemCreationId, SidebarItemCreationCommand>
+export const SIDEBAR_ITEM_CREATION_COMMAND_BY_ID: Readonly<
+  Record<string, SidebarItemCreationCommand>
+> = Object.fromEntries(
+  SIDEBAR_ITEM_CREATION_COMMANDS_INTERNAL.map((command) => [command.id, command]),
+)
 
 export const SIDEBAR_ITEM_CREATION_COMMANDS: ReadonlyArray<SidebarItemCreationCommand> =
-  SIDEBAR_ITEM_CREATION_ORDER.map(
-    (key) => SIDEBAR_ITEM_CREATION_COMMAND_BY_ID[`create.${key}` as SidebarItemCreationId],
-  )
+  SIDEBAR_ITEM_CREATION_COMMANDS_INTERNAL

@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PreventExternalDrop } from '../prevent-external-drop'
 import { removeProseMirrorDropCursors } from '../prevent-external-drop-cursors'
 import { shouldPreventExternalFileDrop } from '../prevent-external-drop-policy'
@@ -41,7 +41,7 @@ describe('PreventExternalDrop', () => {
     const { unmount } = render(<PreventExternalDrop />)
     const event = new Event('drop', { bubbles: true, cancelable: true }) as DragEvent
     const preventDefault = vi.spyOn(event, 'preventDefault')
-    const stopPropagation = vi.spyOn(event, 'stopPropagation')
+    const stopImmediatePropagation = vi.spyOn(event, 'stopImmediatePropagation')
 
     editorDomElement.dispatchEvent(event)
 
@@ -49,11 +49,23 @@ describe('PreventExternalDrop', () => {
     expect(shouldPreventExternalFileDrop).toHaveBeenCalledExactlyOnceWith(event)
     expect(removeProseMirrorDropCursors).toHaveBeenCalledExactlyOnceWith(editorDomElement)
     expect(preventDefault).toHaveBeenCalledExactlyOnceWith()
-    expect(stopPropagation).toHaveBeenCalledExactlyOnceWith()
+    expect(stopImmediatePropagation).toHaveBeenCalledExactlyOnceWith()
 
     unmount()
 
     expect(removeEventListener).toHaveBeenCalledWith('drop', expect.any(Function), true)
+  })
+
+  it('prevents later drop listeners on the same editor element', () => {
+    const laterListener = vi.fn()
+    vi.mocked(shouldPreventExternalFileDrop).mockReturnValue(true)
+    render(<PreventExternalDrop />)
+    editorDomElement.addEventListener('drop', laterListener)
+
+    editorDomElement.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }))
+
+    expect(laterListener).not.toHaveBeenCalled()
+    editorDomElement.removeEventListener('drop', laterListener)
   })
 
   it('leaves allowed drops untouched', () => {
@@ -62,12 +74,12 @@ describe('PreventExternalDrop', () => {
     render(<PreventExternalDrop />)
     const event = new Event('drop', { bubbles: true, cancelable: true }) as DragEvent
     const preventDefault = vi.spyOn(event, 'preventDefault')
-    const stopPropagation = vi.spyOn(event, 'stopPropagation')
+    const stopImmediatePropagation = vi.spyOn(event, 'stopImmediatePropagation')
 
     editorDomElement.dispatchEvent(event)
 
     expect(removeProseMirrorDropCursors).not.toHaveBeenCalled()
     expect(preventDefault).not.toHaveBeenCalled()
-    expect(stopPropagation).not.toHaveBeenCalled()
+    expect(stopImmediatePropagation).not.toHaveBeenCalled()
   })
 })

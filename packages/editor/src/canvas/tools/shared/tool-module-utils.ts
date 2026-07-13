@@ -1,6 +1,8 @@
-import type { CanvasViewportTools } from '../canvas-tool-types'
+import type { CanvasAwarenessPresenceWriter, CanvasViewportTools } from '../canvas-tool-types'
 import { canvasPointsToScreenPoints } from '../../components/canvas-screen-space-overlay-utils'
+import { canvasDevLogger } from '../../internal/dev-logger'
 import type { CanvasViewport } from '../../types/canvas-domain-types'
+import type { CanvasAwarenessNamespace } from '../../utils/canvas-awareness-types'
 
 export function screenEventToCanvasPosition(
   context: Pick<CanvasViewportTools, 'screenToCanvasPosition'>,
@@ -41,4 +43,33 @@ export function projectCanvasToolOverlayPoints<TPoint extends { x: number; y: nu
 ): Array<Omit<TPoint, 'x' | 'y'> & { x: number; y: number }> | null {
   if (points.length < 2) return null
   return canvasPointsToScreenPoints(points, viewport)
+}
+
+export function writeValidatedPresence<T>({
+  writer,
+  namespace,
+  value,
+  parse,
+  invalidMessage,
+  invalidValue = value,
+}: {
+  writer: CanvasAwarenessPresenceWriter
+  namespace: CanvasAwarenessNamespace
+  value: unknown
+  parse: (value: unknown) => T | null
+  invalidMessage: string
+  invalidValue?: unknown
+}) {
+  if (value === null) {
+    writer.setPresence(namespace, null)
+    return
+  }
+
+  const parsed = parse(value)
+  if (!parsed) {
+    canvasDevLogger.error(invalidMessage, invalidValue)
+    return
+  }
+
+  writer.setPresence(namespace, parsed)
 }

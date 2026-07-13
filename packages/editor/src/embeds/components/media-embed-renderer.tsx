@@ -858,27 +858,42 @@ function isBlockedBrowserMediaHost(hostname: string) {
 }
 
 function normalizeBrowserMediaHost(hostname: string) {
-  return hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  return hostname
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.+$/, '')
 }
 
 function isPrivateIpv4Host(hostname: string) {
   const octets = hostname.split('.').map((part) => Number(part))
   if (
-    octets.length < 1 ||
-    octets.length > 4 ||
+    octets.length !== 4 ||
     octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)
-  ) {
-    return false
-  }
-  const [first = 0, second = 0] = octets
-  return (
-    first === 10 ||
-    first === 0 ||
-    first === 127 ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 168) ||
-    (first === 169 && second === 254)
   )
+    return false
+
+  const address = octets.reduce((value, octet) => value * 256 + octet, 0)
+  return blockedIpv4Ranges.some(([start, end]) => address >= start && address <= end)
+}
+
+const blockedIpv4Ranges = [
+  ['0.0.0.0', '0.255.255.255'],
+  ['10.0.0.0', '10.255.255.255'],
+  ['100.64.0.0', '100.127.255.255'],
+  ['127.0.0.0', '127.255.255.255'],
+  ['169.254.0.0', '169.254.255.255'],
+  ['172.16.0.0', '172.31.255.255'],
+  ['192.0.0.0', '192.0.0.255'],
+  ['192.0.2.0', '192.0.2.255'],
+  ['192.168.0.0', '192.168.255.255'],
+  ['198.18.0.0', '198.19.255.255'],
+  ['198.51.100.0', '198.51.100.255'],
+  ['203.0.113.0', '203.0.113.255'],
+  ['224.0.0.0', '255.255.255.255'],
+].map(([start, end]) => [ipv4AddressValue(start), ipv4AddressValue(end)] as const)
+
+function ipv4AddressValue(hostname: string) {
+  return hostname.split('.').reduce((value, octet) => value * 256 + Number(octet), 0)
 }
 
 function isPrivateIpv6Host(hostname: string) {
@@ -892,6 +907,8 @@ function isPrivateIpv6Host(hostname: string) {
     hostname.startsWith('fe9') ||
     hostname.startsWith('fea') ||
     hostname.startsWith('feb') ||
+    hostname.startsWith('ff') ||
+    hostname.startsWith('2001:db8:') ||
     isPrivateEmbeddedIpv4Host(hostname)
   )
 }

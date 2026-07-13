@@ -174,8 +174,7 @@ describe('useCanvasContextMenu', () => {
         canEdit: true,
         canvasEngine,
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -215,8 +214,7 @@ describe('useCanvasContextMenu', () => {
           },
         },
         createNode,
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -261,8 +259,7 @@ describe('useCanvasContextMenu', () => {
         canvasEngine,
         source: createTestContextMenuSource(),
         createNode,
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -338,8 +335,7 @@ describe('useCanvasContextMenu', () => {
         canEdit: true,
         canvasEngine,
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -373,16 +369,14 @@ describe('useCanvasContextMenu', () => {
     const selection = createSelectionController()
     const canvasEngine = createContextMenuEngine()
     const createNode = vi.fn()
-    const setPendingEditNodeId = vi.fn()
-    const setPendingEditNodePoint = vi.fn()
+    const setPendingEdit = vi.fn()
     const { result } = renderHook(() =>
       useCanvasContextMenu({
         activeTool: 'select',
         canEdit: true,
         canvasEngine,
         createNode,
-        setPendingEditNodeId,
-        setPendingEditNodePoint,
+        setPendingEdit,
         screenToCanvasPosition: ({ x, y }) => ({ x: x + 100, y: y + 200 }),
         selection,
         commands: createCommands(),
@@ -425,8 +419,10 @@ describe('useCanvasContextMenu', () => {
       nodeIds: new Set([createdNode.id]),
       edgeIds: new Set<string>(),
     })
-    expect(setPendingEditNodePoint).toHaveBeenCalledWith({ x: 20, y: 40 })
-    expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNode.id)
+    expect(setPendingEdit).toHaveBeenCalledWith({
+      nodeId: createdNode.id,
+      point: { x: 20, y: 40 },
+    })
   })
 
   it('selects the right-clicked node before opening the menu', () => {
@@ -444,8 +440,7 @@ describe('useCanvasContextMenu', () => {
         canEdit: true,
         canvasEngine,
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -479,8 +474,7 @@ describe('useCanvasContextMenu', () => {
         canEdit: true,
         canvasEngine,
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -510,8 +504,7 @@ describe('useCanvasContextMenu', () => {
         canEdit: true,
         canvasEngine,
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -552,8 +545,7 @@ describe('useCanvasContextMenu', () => {
         canEdit: true,
         canvasEngine,
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -602,8 +594,7 @@ describe('useCanvasContextMenu', () => {
         canvasEngine,
         source: createTestContextMenuSource(),
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -653,8 +644,7 @@ describe('useCanvasContextMenu', () => {
         canvasEngine,
         source: createTestContextMenuSource(),
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -703,8 +693,7 @@ describe('useCanvasContextMenu', () => {
         canEdit: true,
         canvasEngine,
         createNode: vi.fn(),
-        setPendingEditNodeId: vi.fn(),
-        setPendingEditNodePoint: vi.fn(),
+        setPendingEdit: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),

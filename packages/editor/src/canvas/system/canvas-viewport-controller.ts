@@ -258,6 +258,7 @@ export function createCanvasViewportController({
 
       event.preventDefault()
       event.stopPropagation()
+      clearScheduledCommit()
       target.setPointerCapture(event.pointerId)
       panSession = {
         pointerId: event.pointerId,

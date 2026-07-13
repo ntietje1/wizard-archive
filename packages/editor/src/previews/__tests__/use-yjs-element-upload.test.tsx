@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { useYjsElementPreviewUpload } from '../use-yjs-element-upload'
 import type { SidebarItemId } from '../../../../../shared/common/ids'

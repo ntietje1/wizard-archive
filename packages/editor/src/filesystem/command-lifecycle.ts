@@ -68,17 +68,24 @@ export async function executeFileSystemCommandLifecycle({
   showReceiptToast,
 }: FileSystemCommandLifecycleArgs): Promise<FileSystemCommandLifecycleResult> {
   return await runMutation(async () => {
-    const operationDecisions = toDecisionArray(decisions)
-    const plan = planFileSystemOptimisticCommand({
-      command,
-      createParentPlan,
-      decisions: operationDecisions,
-      snapshot: cacheAdapter.getSnapshot(),
-      readModel: cacheAdapter.getReadModel(),
-      activeItemSurface,
-      currentUserId,
-      workspaceId,
-    })
+    let operationDecisions: Array<ResourceOperationDecision> | undefined
+    let plan: ReturnType<typeof planFileSystemOptimisticCommand>
+    try {
+      operationDecisions = toDecisionArray(decisions)
+      plan = planFileSystemOptimisticCommand({
+        command,
+        createParentPlan,
+        decisions: operationDecisions,
+        snapshot: cacheAdapter.getSnapshot(),
+        readModel: cacheAdapter.getReadModel(),
+        activeItemSurface,
+        currentUserId,
+        workspaceId,
+      })
+    } catch (error) {
+      reportError(error, 'Filesystem operation failed')
+      return { status: 'error' }
+    }
     if (plan.status === 'needsDecision') {
       return { status: 'needsDecision', conflicts: plan.conflicts }
     }

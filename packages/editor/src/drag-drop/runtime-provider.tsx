@@ -1,4 +1,4 @@
-import { useId, useRef, useSyncExternalStore } from 'react'
+import { useId, useRef, useState, useSyncExternalStore } from 'react'
 import type { DndExternalFileDropCapability, DndExternalFileDropContext } from './file-drop'
 import type { DndExecutionContext, ElementDragMonitorContext } from './monitor-context'
 import type { DndValue } from './context'
@@ -49,8 +49,7 @@ export function DndRuntimeProvider({
   paths,
 }: DndRuntimeProviderProps) {
   const runtimeId = useId()
-  const dndStoreRef = useRef<ReturnType<typeof createDndStore> | null>(null)
-  const dndStore = dndStoreRef.current ?? (dndStoreRef.current = createDndStore())
+  const [dndStore] = useState(createDndStore)
 
   const canAcceptExternalFiles = externalFiles.status === 'enabled'
   const handleDropFiles = externalFiles.handleDropFiles
@@ -75,11 +74,7 @@ export function DndRuntimeProvider({
       : null
 
     await executePlannedDropCommand(
-      resolveDropCommand({
-        payload,
-        target,
-        ctx: ctx.dropPlanningContext,
-      }),
+      resolveDropCommand({ payload, target, ctx: ctx.dropPlanningContext }),
       dropInput,
       {
         ...ctx.dndContext,

@@ -135,7 +135,7 @@ describe('resource content source', () => {
 
     expect(source.getContentState(note.id)).toMatchObject({
       status: 'unavailable',
-      label: 'Known note',
+      label: 'Page',
       item: undefined,
       availabilityState: { status: 'not_shared' },
     })
@@ -159,7 +159,7 @@ describe('resource content source', () => {
 
     expect(source.getContentState(note.id)).toMatchObject({
       status: 'unavailable',
-      label: 'Trashed note',
+      label: 'Page',
       item: undefined,
       availabilityState: { status: 'trashed' },
     })

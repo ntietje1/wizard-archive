@@ -138,6 +138,47 @@ describe('filesystem cache patches', () => {
     ])
   })
 
+  it('preserves subtype fields when a raw row upserts an existing item', () => {
+    const folder = createFolder({ inheritShares: true })
+    const updated = applyFileSystemPatchesToSidebarCache({ sidebar: [folder], trash: [] }, [
+      {
+        type: 'upsertResource',
+        item: { ...resourcePatchRowFromCacheItem(folder), name: 'Renamed' },
+      },
+    ])
+
+    expect(updated.sidebar[0]).toMatchObject({ name: 'Renamed', inheritShares: true })
+  })
+
+  it('does not apply updates after the same batch removes an item', () => {
+    const note = createNote({ name: 'Original' })
+    const updated = applyFileSystemPatchesToSidebarCache({ sidebar: [note], trash: [] }, [
+      { type: 'removeResource', itemId: note.id, snapshot: resourcePatchRowFromCacheItem(note) },
+      {
+        type: 'updateResource',
+        itemId: note.id,
+        before: { name: note.name },
+        fields: { name: 'Stale update' },
+      },
+    ])
+
+    expect(updated.sidebar).toEqual([])
+  })
+
+  it('does not overwrite concurrent state when a patch precondition is stale', () => {
+    const note = createNote({ name: 'Concurrent name' })
+    const updated = applyFileSystemPatchesToSidebarCache({ sidebar: [note], trash: [] }, [
+      {
+        type: 'updateResource',
+        itemId: note.id,
+        before: { name: 'Optimistic name' },
+        fields: { name: 'Original name' },
+      },
+    ])
+
+    expect(updated.sidebar[0]?.name).toBe('Concurrent name')
+  })
+
   it('keeps undo-hidden created rows available for redo receipt updates', () => {
     const created = createNote({ name: 'Created' })
 
@@ -285,6 +326,32 @@ describe('filesystem cache patches', () => {
         deletionTime: NOW,
       }),
     ])
+  })
+
+  it('reverses consecutive moves in operation order', () => {
+    const firstFolder = createFolder({ name: 'First' })
+    const secondFolder = createFolder({ name: 'Second' })
+    const note = createNote()
+    const snapshot: SidebarCacheSnapshot = {
+      sidebar: [firstFolder, secondFolder, note],
+      trash: [],
+    }
+    const projection = projectMoveOperations({
+      activeItems: snapshot.sidebar.map(resourcePatchRowFromCacheItem),
+      trashItems: [],
+      operations: [
+        { action: 'place', sourceItemId: note.id, targetParentId: firstFolder.id },
+        { action: 'place', sourceItemId: note.id, targetParentId: secondFolder.id },
+      ],
+      now: NOW,
+      userId: null,
+    })
+
+    const moved = applyFileSystemPatchesToSidebarCache(snapshot, projection.forwardPatches)
+    const restored = applyFileSystemPatchesToSidebarCache(moved, projection.inversePatches)
+
+    expect(moved.sidebar.find((item) => item.id === note.id)?.parentId).toBe(secondFolder.id)
+    expect(restored.sidebar.find((item) => item.id === note.id)?.parentId).toBeNull()
   })
 
   it('keeps resolved replacement names when restoring from trash', () => {

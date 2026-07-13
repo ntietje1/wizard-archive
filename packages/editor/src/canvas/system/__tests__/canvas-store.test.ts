@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vite-plus/test'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createInitialCanvasSelectionState } from '../canvas-selection'
 import {
   EMPTY_EDGE_IDS_BY_NODE_ID,
@@ -14,6 +14,10 @@ import { DEFAULT_CANVAS_VIEWPORT } from '../canvas-viewport-manager'
 import type { CanvasEngineSnapshot } from '../canvas-engine-types'
 
 describe('createCanvasStore', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('isolates throwing listeners across store and viewport notifications', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const store = createCanvasStore(createSnapshot())
@@ -39,8 +43,6 @@ describe('createCanvasStore', () => {
     expect(viewportChangeListener).toHaveBeenCalledWith({ x: 1, y: 2, zoom: 3 })
     expect(viewportCommitListener).toHaveBeenCalledWith({ x: 4, y: 5, zoom: 6 })
     expect(consoleError).toHaveBeenCalledTimes(3)
-
-    consoleError.mockRestore()
   })
 
   it('notifies selector subscribers only when equality reports a changed value', () => {

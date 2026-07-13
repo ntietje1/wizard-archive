@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { SidebarItemId } from '../../../../shared/common/ids'
 import { CreateNewDashboardSurface } from './create-new-dashboard-surface'
-import type { CreateItemOption } from './create-item-options'
+import type { SidebarItemCreationCommand } from '../workspace/sidebar/creation-catalog'
 import { handleError } from '../errors/handle-error'
 import type { CreateItemSource } from './create-item-source'
 
@@ -12,11 +12,11 @@ interface CreateNewDashboardProps {
 }
 
 export function CreateNewDashboard({ parentId, folderPath, source }: CreateNewDashboardProps) {
-  const [creatingKey, setCreatingKey] = useState<CreateItemOption['key'] | null>(null)
+  const [creatingKey, setCreatingKey] = useState<SidebarItemCreationCommand['key'] | null>(null)
 
   const isDisabled = creatingKey !== null
 
-  const handleCreate = async (option: CreateItemOption) => {
+  const handleCreate = async (option: SidebarItemCreationCommand) => {
     if (isDisabled) return
 
     setCreatingKey(option.key)
@@ -26,12 +26,14 @@ export function CreateNewDashboard({ parentId, folderPath, source }: CreateNewDa
         type: option.type,
         parentId,
       })
-      if (result.status === 'completed') {
-        try {
-          await source.openItem(result.id)
-        } catch (error) {
-          handleError(error, 'Created item, but failed to open it')
-        }
+      if (result.status !== 'completed') {
+        handleError(new Error(`Create item returned ${result.status}`), 'Failed to create item')
+        return
+      }
+      try {
+        await source.openItem(result.id)
+      } catch (error) {
+        handleError(error, 'Created item, but failed to open it')
       }
     } catch (error) {
       handleError(error, 'Failed to create item')

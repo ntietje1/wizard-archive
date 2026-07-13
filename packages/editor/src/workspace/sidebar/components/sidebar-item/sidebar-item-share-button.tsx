@@ -56,7 +56,7 @@ export function SidebarShareButton({
           }
         />
         <PopoverContent align="start" side="right" sideOffset={4} className="w-auto p-2">
-          {open && <SidebarSharePanel items={shareItems} source={source} />}
+          <SidebarSharePanel items={shareItems} source={source} />
         </PopoverContent>
       </Popover>
     </div>

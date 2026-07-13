@@ -16,7 +16,7 @@ export function EmbeddedMapContent({
   map: MapItemWithContent
   onMediaLayout?: EmbedMediaLayoutReporter
 }) {
-  const { pins, isPinGhost } = useEmbeddedMapState(map)
+  const embeddedMapState = useEmbeddedMapState(map)
   const activeMapImage = resolveMapImage(map)
   const activeLayer = activeMapImage.layer
   const activeLayerId = activeLayer?.id ?? null
@@ -30,6 +30,10 @@ export function EmbeddedMapContent({
   if (!activeMapImageUrl || imageError) {
     return <MapImagePreview imageUrl={imageError ? null : activeMapImageUrl} />
   }
+  if (embeddedMapState.status === 'unavailable') {
+    return <MapImagePreview imageUrl={activeMapImageUrl} />
+  }
+  const { pins, isPinGhost } = embeddedMapState
   const visiblePins = filterMapPinsForLayer(pins, activeLayerId, map.layers ?? [])
 
   return (
@@ -51,7 +55,7 @@ export function EmbeddedMapContent({
           const aspectRatio = getIntrinsicAspectRatio(naturalWidth, naturalHeight)
           onMediaLayout?.({ kind: 'intrinsicAspectRatio', aspectRatio })
 
-          handleImageLoad()
+          handleImageLoad(event)
         }}
         onError={handleImageError}
       />

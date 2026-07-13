@@ -47,7 +47,10 @@ function CustomSlashMenu(props: SuggestionMenuProps<DefaultReactSuggestionItem>)
                 role="option"
                 aria-selected={index === selectedIndex}
                 className={`slash-menu-item${index === selectedIndex ? ' selected' : ''}`}
-                onClick={() => onItemClick?.(item)}
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  onItemClick?.(item)
+                }}
               >
                 {item.icon && <span className="slash-menu-item-icon">{item.icon}</span>}
                 <span className="slash-menu-item-body">

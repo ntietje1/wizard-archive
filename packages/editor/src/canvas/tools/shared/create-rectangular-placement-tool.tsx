@@ -8,25 +8,30 @@ import {
 import type { CanvasToolHandlers, CanvasToolRuntime } from '../canvas-tool-types'
 import type { CanvasNodeType } from '../../document-contract'
 const MIN_DRAG_RECT_SIZE = 10
+type PlacementDragState =
+  | { kind: 'idle' }
+  | {
+      kind: 'dragging'
+      start: { x: number; y: number }
+      captureTarget: Element | null
+      pointerId: number
+    }
 
 export function createRectangularPlacementToolController<
   TNodeType extends Extract<CanvasNodeType, 'text'>,
 >(nodeType: TNodeType, services: CanvasToolRuntime): CanvasToolHandlers {
-  let start: { x: number; y: number } | null = null
+  let dragState: PlacementDragState = { kind: 'idle' }
   let lastClientPos = { x: 0, y: 0 }
-  let active = false
   let rafId = 0
-  let captureTarget: Element | null = null
-  let pointerId: number | null = null
 
   const updateDragRect = () => {
-    if (!active || !start) {
+    if (dragState.kind !== 'dragging') {
       return
     }
 
     const pos = services.viewport.screenToCanvasPosition(lastClientPos)
     services.localOverlay.setRectCreationDragRect(
-      getConstrainedRectFromPoints(start, pos, {
+      getConstrainedRectFromPoints(dragState.start, pos, {
         square: services.modifiers.getShiftPressed(),
       }),
     )
@@ -44,19 +49,20 @@ export function createRectangularPlacementToolController<
   }
 
   const reset = () => {
-    active = false
-    start = null
+    const previousDragState = dragState
+    dragState = { kind: 'idle' }
     services.localOverlay.setRectCreationDragRect(null)
     if (rafId) {
       cancelAnimationFrame(rafId)
       rafId = 0
     }
-    releasePointerCapture(captureTarget, pointerId)
-    captureTarget = null
-    pointerId = null
+    if (previousDragState.kind === 'dragging') {
+      releasePointerCapture(previousDragState.captureTarget, previousDragState.pointerId)
+    }
   }
 
-  const isActivePointer = (event: PointerEvent) => active && event.pointerId === pointerId
+  const isActivePointer = (event: PointerEvent) =>
+    dragState.kind === 'dragging' && event.pointerId === dragState.pointerId
 
   const createNodeAtPointer = (
     position: { x: number; y: number },
@@ -76,8 +82,7 @@ export function createRectangularPlacementToolController<
     }
     services.toolState.setActiveTool('select')
     if (placement.startEditing) {
-      services.editSession.setPendingEditNodePoint(point)
-      services.editSession.setPendingEditNodeId(placement.node.id)
+      services.editSession.setPendingEdit({ nodeId: placement.node.id, point })
     }
   }
 
@@ -97,19 +102,21 @@ export function createRectangularPlacementToolController<
 
   return {
     onPointerDown: (event) => {
-      if (active || event.button !== 0) {
+      if (dragState.kind === 'dragging' || event.button !== 0) {
         return
       }
 
-      captureTarget = setPointerCapture(event)
-      pointerId = event.pointerId
-      active = true
-      start = screenEventToCanvasPosition(services.viewport, event)
+      dragState = {
+        kind: 'dragging',
+        start: screenEventToCanvasPosition(services.viewport, event),
+        captureTarget: setPointerCapture(event),
+        pointerId: event.pointerId,
+      }
       lastClientPos = { x: event.clientX, y: event.clientY }
       services.localOverlay.setRectCreationDragRect(null)
     },
     onPointerMove: (event) => {
-      if (!isActivePointer(event) || (event.buttons & 1) !== 1 || !start) {
+      if (!isActivePointer(event) || (event.buttons & 1) !== 1) {
         return
       }
 
@@ -127,14 +134,11 @@ export function createRectangularPlacementToolController<
       }
     },
     onPointerUp: (event) => {
-      if (!isActivePointer(event)) {
+      if (dragState.kind !== 'dragging' || event.pointerId !== dragState.pointerId) {
         return
       }
 
-      if (!start) {
-        reset()
-        return
-      }
+      const { start } = dragState
 
       lastClientPos = { x: event.clientX, y: event.clientY }
       const point = { x: lastClientPos.x, y: lastClientPos.y }

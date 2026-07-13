@@ -153,6 +153,25 @@ function completeCreatedItem(
 ): MaybePromise<CreatedFileSystemHostItem> {
   const receipt = getCompletedReceipt(result)
   const created = getCreatedItemResult(receipt)
+  let didDiscard = false
+  let discardResult: MaybePromise<void>
+  const discardAndThrow = (error: unknown): MaybePromise<never> => {
+    if (!didDiscard) {
+      didDiscard = true
+      discardResult = driver.discardCreatedItem(created.transactionId)
+    }
+    if (isPromiseLike(discardResult)) {
+      return discardResult.then(
+        () => {
+          throw error
+        },
+        () => {
+          throw error
+        },
+      )
+    }
+    throw error
+  }
   const complete = (): MaybePromise<CreatedFileSystemHostItem> => {
     const finalized = driver.finalizeCreatedItem?.(created.transactionId)
     if (isPromiseLike(finalized)) {
@@ -162,15 +181,6 @@ function completeCreatedItem(
   }
   try {
     const initialized = initialize?.({ id: created.id, slug: created.slug })
-    const discardAndThrow = (error: unknown): MaybePromise<never> => {
-      const discarded = driver.discardCreatedItem(created.transactionId)
-      if (isPromiseLike(discarded)) {
-        return discarded.then(() => {
-          throw error
-        })
-      }
-      throw error
-    }
     const completeWithRollback = (): MaybePromise<CreatedFileSystemHostItem> => {
       try {
         const completed = complete()
@@ -187,13 +197,7 @@ function completeCreatedItem(
     }
     return completeWithRollback()
   } catch (error) {
-    const discarded = driver.discardCreatedItem(created.transactionId)
-    if (isPromiseLike(discarded)) {
-      return discarded.then(() => {
-        throw error
-      })
-    }
-    throw error
+    return discardAndThrow(error)
   }
 }
 
@@ -270,15 +274,14 @@ export function createFileSystemTrashDialogOperations({
       const currentReadModel = cacheAdapter.getReadModel()
       const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
       if (items.length === 0) return { status: 'noop', reason: 'no_items' }
-      if (items.length === 1) {
-        const item = items[0]
-        if (
+      const nonEmptyFolder = items.find(
+        (item): item is FolderItem =>
           item.type === RESOURCE_TYPES.folders &&
-          currentReadModel.getActiveChildren(item.id).length > 0
-        ) {
-          dialogs.requestTrashFolder(item)
-          return { status: 'pending', reason: 'folder_confirmation_required' }
-        }
+          currentReadModel.getActiveChildren(item.id).length > 0,
+      )
+      if (nonEmptyFolder) {
+        dialogs.requestTrashFolder(nonEmptyFolder)
+        return { status: 'pending', reason: 'folder_confirmation_required' }
       }
       return await trashItems(items.map((item) => item.id))
     },

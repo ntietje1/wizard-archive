@@ -194,7 +194,6 @@ export function useCanvasDocumentCommands({
           return null
         }
 
-        setClipboard(nextClipboard)
         return applyPaste(materializeCanvasPaste(nodesMap, edgesMap, nextClipboard))
       },
     },

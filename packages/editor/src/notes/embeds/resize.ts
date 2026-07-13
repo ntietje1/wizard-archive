@@ -1,11 +1,11 @@
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { ResizeHandlePosition } from '../../../../../shared/resize/resizeHandleDescriptors'
 import { getResizeHandleCursor } from '../../../../../shared/resize/resizeHandleDescriptors'
+import { getPositiveFiniteNumber } from './numbers'
 
-type ResizeSessionOptions = {
+type ResizeState = {
   aspectRatio: number | null
   editorElement: HTMLElement | null | undefined
-  event: ReactPointerEvent<HTMLElement>
   handle: ResizeHandlePosition
   height: number | undefined
   maxHeightAspectRatio: number | null
@@ -13,11 +13,16 @@ type ResizeSessionOptions = {
   root: HTMLElement | null
   useMeasuredAspectRatioFallback: boolean
   width: number | undefined
+}
+
+type ResizeSessionOptions = ResizeState & {
+  event: ReactPointerEvent<HTMLElement>
   onCommit: (size: { height?: number; width: number }) => void
 }
 
 const MIN_WIDTH = 64
 const MIN_BODY_HEIGHT = 144
+const KEYBOARD_RESIZE_STEP = 16
 
 export function startNoteEmbedResizeSession({
   aspectRatio,
@@ -45,23 +50,13 @@ export function startNoteEmbedResizeSession({
 
   const captureOverlay = createCaptureOverlay(ownerDocument, handle)
   const previousUserSelect = ownerDocument.body.style.userSelect
-  const rootRect = root.getBoundingClientRect()
-  const body = getBodyElement(root)
-  const bodyRect = body?.getBoundingClientRect()
-  const startWidth = positiveNumber(width) ?? positiveNumber(rootRect.width) ?? root.clientWidth
-  const startHeight =
-    positiveNumber(height) ??
-    positiveNumber(bodyRect?.height) ??
-    positiveNumber(rootRect.height) ??
-    positiveNumber(root.clientHeight) ??
-    MIN_BODY_HEIGHT
-  const activeAspectRatio =
-    positiveNumber(aspectRatio) ??
-    (useMeasuredAspectRatioFallback ? getAspectRatio(startWidth, startHeight) : undefined)
-  const minWidth = getMinimumWidthForAspectRatio(
+  const { activeAspectRatio, body, minWidth, startHeight, startWidth } = getResizeStart({
     aspectRatio,
-    getBodyWidthInset({ root, rootWidth: startWidth }),
-  )
+    height,
+    root,
+    useMeasuredAspectRatioFallback,
+    width,
+  })
   const startX = event.clientX
   const startY = event.clientY
 
@@ -122,8 +117,92 @@ export function startNoteEmbedResizeSession({
   ownerWindow.addEventListener('pointercancel', onPointerCancel)
 }
 
+export function getNoteEmbedKeyboardResize({
+  aspectRatio,
+  editorElement,
+  handle,
+  height,
+  key,
+  maxHeightAspectRatio,
+  resizeHeight,
+  root,
+  useMeasuredAspectRatioFallback,
+  width,
+}: ResizeState & { key: string }): { height?: number; width: number } | null {
+  if (!root) return null
+  const pointer = getKeyboardResizePointer(key, handle)
+  if (!pointer) return null
+
+  const { activeAspectRatio, minWidth, startHeight, startWidth } = getResizeStart({
+    aspectRatio,
+    height,
+    root,
+    useMeasuredAspectRatioFallback,
+    width,
+  })
+  const nextSize = getNextSize({
+    activeAspectRatio,
+    handle,
+    pointerX: pointer.x,
+    pointerY: pointer.y,
+    resizeHeight,
+    startHeight,
+    startWidth,
+    startX: 0,
+    startY: 0,
+  })
+  const nextWidth = clampWidth(nextSize.width, editorElement, minWidth)
+  const nextHeight = clampHeight(nextSize.height, getMaxHeight(nextWidth, maxHeightAspectRatio))
+  return activeAspectRatio || !resizeHeight
+    ? { width: nextWidth }
+    : { width: nextWidth, height: nextHeight }
+}
+
+function getKeyboardResizePointer(key: string, handle: ResizeHandlePosition) {
+  if (key === 'ArrowLeft' || key === 'ArrowRight') {
+    if (!handle.includes('left') && !handle.includes('right')) return null
+    return { x: key === 'ArrowLeft' ? -KEYBOARD_RESIZE_STEP : KEYBOARD_RESIZE_STEP, y: 0 }
+  }
+  if (key === 'ArrowUp' || key === 'ArrowDown') {
+    if (!handle.includes('top') && !handle.includes('bottom')) return null
+    return { x: 0, y: key === 'ArrowUp' ? -KEYBOARD_RESIZE_STEP : KEYBOARD_RESIZE_STEP }
+  }
+  return null
+}
+
 export function getNoteEmbedResizeCursor(handle: ResizeHandlePosition) {
   return getResizeHandleCursor(handle)
+}
+
+function getResizeStart({
+  aspectRatio,
+  height,
+  root,
+  useMeasuredAspectRatioFallback,
+  width,
+}: Pick<
+  ResizeState,
+  'aspectRatio' | 'height' | 'root' | 'useMeasuredAspectRatioFallback' | 'width'
+> & { root: HTMLElement }) {
+  const rootRect = root.getBoundingClientRect()
+  const body = getBodyElement(root)
+  const bodyRect = body?.getBoundingClientRect()
+  const startWidth =
+    getPositiveFiniteNumber(width) ?? getPositiveFiniteNumber(rootRect.width) ?? root.clientWidth
+  const startHeight =
+    getPositiveFiniteNumber(height) ??
+    getPositiveFiniteNumber(bodyRect?.height) ??
+    getPositiveFiniteNumber(rootRect.height) ??
+    getPositiveFiniteNumber(root.clientHeight) ??
+    MIN_BODY_HEIGHT
+  const activeAspectRatio =
+    getPositiveFiniteNumber(aspectRatio) ??
+    (useMeasuredAspectRatioFallback ? getAspectRatio(startWidth, startHeight) : undefined)
+  const minWidth = getMinimumWidthForAspectRatio(
+    activeAspectRatio ?? null,
+    getBodyWidthInset({ root, rootWidth: startWidth }),
+  )
+  return { activeAspectRatio, body, minWidth, startHeight, startWidth }
 }
 
 function clampWidth(
@@ -138,18 +217,22 @@ function clampWidth(
 
 function clampHeight(height: number, maxHeight: number | undefined) {
   const clampedHeight = Math.max(height, MIN_BODY_HEIGHT)
-  return Math.round(maxHeight ? Math.min(clampedHeight, maxHeight) : clampedHeight)
+  const effectiveMaxHeight =
+    maxHeight === undefined ? undefined : Math.max(maxHeight, MIN_BODY_HEIGHT)
+  return Math.round(
+    effectiveMaxHeight === undefined ? clampedHeight : Math.min(clampedHeight, effectiveMaxHeight),
+  )
 }
 
 function getMinimumWidthForAspectRatio(aspectRatio: number | null, widthInset: number) {
-  const ratio = positiveNumber(aspectRatio)
+  const ratio = getPositiveFiniteNumber(aspectRatio)
   if (!ratio) return MIN_WIDTH
   return Math.max(MIN_WIDTH, Math.ceil(ratio * MIN_BODY_HEIGHT + widthInset))
 }
 
 function getBodyWidthInset({ root, rootWidth }: { root: HTMLElement; rootWidth: number }) {
   const body = getBodyElement(root)
-  const bodyWidth = positiveNumber(body?.clientWidth)
+  const bodyWidth = getPositiveFiniteNumber(body?.clientWidth)
   if (!bodyWidth) return 0
   return Math.max(0, rootWidth - bodyWidth)
 }
@@ -256,16 +339,12 @@ function getVerticalHeight({
   return startHeight + (handle.includes('top') ? startY - pointerY : pointerY - startY)
 }
 
-function positiveNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
-}
-
 function getAspectRatio(width: number, height: number) {
   return height > 0 ? width / height : undefined
 }
 
 function getMaxHeight(width: number, aspectRatio: number | null) {
-  const ratio = positiveNumber(aspectRatio)
+  const ratio = getPositiveFiniteNumber(aspectRatio)
   return ratio ? width / ratio : undefined
 }
 

@@ -44,6 +44,7 @@ describe('MapCanvasStage', () => {
 
   it('activates map canvas and pin controls as native buttons', () => {
     const onMapClick = vi.fn()
+    const onMapKeyboardAction = vi.fn()
     const onPinClick = vi.fn()
     const pin = createMapPinFixture({ item: createNoteFixture({ name: 'Pinned note' }) })
 
@@ -53,6 +54,7 @@ describe('MapCanvasStage', () => {
       pins: [pin],
       hasPinAction: true,
       onMapClick,
+      onMapKeyboardAction,
       onPinClick,
     })
 
@@ -63,15 +65,35 @@ describe('MapCanvasStage', () => {
     expect(pinAction.tagName).toBe('BUTTON')
 
     fireEvent.click(mapCanvasAction)
+    fireEvent.keyDown(mapCanvasAction, { key: 'Enter' })
+    fireEvent.keyDown(mapCanvasAction, { key: ' ' })
     fireEvent.click(pinAction)
 
     expect(onMapClick).toHaveBeenCalledOnce()
+    expect(onMapKeyboardAction).toHaveBeenCalledTimes(2)
     expect(onPinClick).toHaveBeenCalledOnce()
+  })
+
+  it('remounts the image element when the active image changes', () => {
+    const firstMap = createGameMapFixture({ imageUrl: 'https://example.com/first.png' })
+    const { rerender } = renderMapCanvasStage({ map: firstMap })
+    const firstImage = screen.getByRole('img', { name: firstMap.name })
+    const secondMap = createGameMapFixture({ imageUrl: 'https://example.com/second.png' })
+
+    rerender(<MapCanvasStage {...createMapCanvasStageProps({ map: secondMap })} />)
+
+    expect(screen.getByRole('img', { name: secondMap.name })).not.toBe(firstImage)
   })
 })
 
 function renderMapCanvasStage(overrides: Partial<ComponentProps<typeof MapCanvasStage>> = {}) {
-  const props: ComponentProps<typeof MapCanvasStage> = {
+  return render(<MapCanvasStage {...createMapCanvasStageProps(overrides)} />)
+}
+
+function createMapCanvasStageProps(
+  overrides: Partial<ComponentProps<typeof MapCanvasStage>> = {},
+): ComponentProps<typeof MapCanvasStage> {
+  return {
     map: createGameMapFixture({ imageUrl: 'https://example.com/map.png' }),
     mapContainerRef: createRef<HTMLDivElement>(),
     transformWrapperRef: createRef<ReactZoomPanPinchRef>(),
@@ -102,6 +124,4 @@ function renderMapCanvasStage(overrides: Partial<ComponentProps<typeof MapCanvas
     emptyImageContent: <div>No image</div>,
     ...overrides,
   }
-
-  return render(<MapCanvasStage {...props} />)
 }

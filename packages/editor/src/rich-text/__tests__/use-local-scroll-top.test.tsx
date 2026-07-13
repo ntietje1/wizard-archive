@@ -5,8 +5,11 @@ import { useLocalScrollTop } from '../use-local-scroll-top'
 describe('useLocalScrollTop', () => {
   it('tracks the latest viewport scroll position', () => {
     const viewport = document.createElement('div')
+    viewport.scrollTop = 64
 
     const { result } = renderHook(() => useLocalScrollTop({ current: viewport }))
+
+    expect(result.current.current).toBe(64)
 
     act(() => {
       viewport.scrollTop = 128

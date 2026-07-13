@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { ErrorBoundary } from '@wizard-archive/ui/components/error-boundary'
 import { ErrorFallback } from '@wizard-archive/ui/components/error-fallback'
@@ -5,6 +6,7 @@ import type { ResourceHistoryAvailable, HistoryPreviewState, RollbackState } fro
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { HistoryPreviewViewer } from './viewer'
 import { RollbackConfirmDialog } from './rollback-confirm-dialog'
+import { handleError } from '../../errors/handle-error'
 
 const UNAVAILABLE_HISTORY_PREVIEW_STATE = {
   status: 'unavailable',
@@ -27,6 +29,12 @@ export function HistoryPreviewSurface({
   history: ResourceHistoryAvailable
   itemId: SidebarItemId
 }) {
+  const currentHistoryRef = useRef(history)
+  const currentItemIdRef = useRef(itemId)
+  useEffect(() => {
+    currentHistoryRef.current = history
+    currentItemIdRef.current = itemId
+  }, [history, itemId])
   const previewState =
     history.itemId === itemId ? history.preview : UNAVAILABLE_HISTORY_PREVIEW_STATE
   const rollbackState = history.itemId === itemId ? history.rollback : CLOSED_HISTORY_ROLLBACK_STATE
@@ -34,8 +42,19 @@ export function HistoryPreviewSurface({
     const rollbackEntryId = history.rollbackEntryId
     if (history.itemId !== itemId || !rollbackEntryId || rollbackState.isRestoring) return
 
-    const result = await history.restoreRollback(rollbackEntryId)
-    if (result.status === 'restored') {
+    let result: Awaited<ReturnType<typeof history.restoreRollback>>
+    try {
+      result = await history.restoreRollback(rollbackEntryId)
+    } catch (error) {
+      handleError(error, 'Failed to restore history version')
+      return
+    }
+    if (
+      result.status === 'restored' &&
+      currentHistoryRef.current === history &&
+      currentItemIdRef.current === itemId &&
+      history.rollbackEntryId === rollbackEntryId
+    ) {
       history.clearPreview()
       history.clearRollback()
     }
@@ -50,7 +69,7 @@ export function HistoryPreviewSurface({
     />
   )
 
-  if (!history.previewingEntryId) {
+  if (!history.previewingEntryId || history.itemId !== itemId) {
     return (
       <>
         {children}

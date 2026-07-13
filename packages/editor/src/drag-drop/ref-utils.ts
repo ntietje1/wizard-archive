@@ -1,22 +1,33 @@
-import { useRef } from 'react'
-import type { RefObject } from 'react'
+import type { RefCallback, RefObject } from 'react'
 
-type RefTarget<T> = RefObject<T | null> | ((node: T | null) => void) | null | undefined
+type RefTarget<T> = RefObject<T | null> | RefCallback<T> | null | undefined
 
-export function useMergedRef<T>(...refs: Array<RefTarget<T>>) {
-  const refsRef = useRef(refs)
-  refsRef.current = refs
-
-  const mergedRef = useRef((node: T | null) => {
-    for (const ref of refsRef.current) {
+export function useMergedRef<T>(
+  firstRef: RefTarget<T>,
+  secondRef?: RefTarget<T>,
+  thirdRef?: RefTarget<T>,
+  fourthRef?: RefTarget<T>,
+) {
+  return (node: T | null) => {
+    const cleanups: Array<() => void> = []
+    const refs = [firstRef, secondRef, thirdRef, fourthRef]
+    for (const ref of refs) {
       if (!ref) continue
       if (typeof ref === 'function') {
-        ref(node)
+        const cleanup = ref(node)
+        if (typeof cleanup === 'function') cleanups.push(cleanup)
       } else {
         ref.current = node
+        cleanups.push(() => {
+          ref.current = null
+        })
       }
     }
-  })
 
-  return mergedRef.current
+    return cleanups.length > 0
+      ? () => {
+          for (const cleanup of cleanups) cleanup()
+        }
+      : undefined
+  }
 }

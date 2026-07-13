@@ -19,6 +19,7 @@ export function normalizeSelectedRoots<T extends ResourceTreeNode>(
     let parentId = item.parentId
     const seen = new Set<ResourceId>([item.id])
     let depth = 0
+    let hasSelectedAncestor = false
 
     while (parentId) {
       if (depth >= MAX_SIDEBAR_TREE_DEPTH) {
@@ -36,11 +37,12 @@ export function normalizeSelectedRoots<T extends ResourceTreeNode>(
           `Missing resource ancestor ${parentId} while normalizing selected item ${item.id}`,
         )
       }
-      if (selectedIds.has(parentId)) return false
+      if (selectedIds.has(parentId)) hasSelectedAncestor = true
       parentId = parent.parentId
       depth += 1
     }
 
+    if (hasSelectedAncestor) return false
     normalizedIds.add(item.id)
     return true
   })

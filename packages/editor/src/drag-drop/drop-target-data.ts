@@ -148,13 +148,14 @@ function customDropTargetKey(rawTarget: object, type: DropZoneType) {
     case RESOURCE_TYPES.notes:
     case RESOURCE_TYPES.gameMaps:
     case RESOURCE_TYPES.files:
-    case RESOURCE_TYPES.canvases:
+    case RESOURCE_TYPES.canvases: {
       const sidebarItemId = getTargetValue(rawTarget, 'sidebarItemId')
       if (typeof sidebarItemId === 'string') {
         return getSidebarItemDropTargetKey(sidebarItemId as SidebarItemId)
       }
       const id = getTargetValue(rawTarget, 'id')
       return typeof id === 'string' ? getSidebarItemDropTargetKey(id as SidebarItemId) : null
+    }
     default:
       return null
   }

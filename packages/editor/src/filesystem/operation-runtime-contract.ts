@@ -29,7 +29,7 @@ import type {
   RenamedFileSystemHostItem,
   RenameFileSystemHostItemInput,
 } from './item-command-operations'
-import type { FileSystemExecutableDropCommand } from './drop-planner'
+import type { FileSystemIntentCommand } from './domain/intent-planning'
 import type { FileSystemTrashDialogState } from './trash/dialogs'
 
 type ResourceOperationDriverCreateItemInput = {
@@ -75,9 +75,7 @@ export type ResourceClipboardDriver = {
 }
 
 export type ResourceDropDriver = {
-  executeDropCommand: (
-    command: FileSystemExecutableDropCommand,
-  ) => MaybePromise<ResourceCommandResult>
+  executeDropCommand: (command: FileSystemIntentCommand) => MaybePromise<ResourceCommandResult>
 }
 
 export type ResourceHistoryOperationDriver = {

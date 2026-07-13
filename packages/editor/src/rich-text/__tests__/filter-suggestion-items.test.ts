@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { filterSuggestionItems } from '../filter-suggestion-items'
 
 const items = [
@@ -9,8 +9,8 @@ const items = [
 
 describe('filterSuggestionItems', () => {
   it('returns all items for empty query', () => {
-    expect(filterSuggestionItems(items, '')).toHaveLength(3)
-    expect(filterSuggestionItems(items, '  ')).toHaveLength(3)
+    expect(filterSuggestionItems(items, '')).toEqual(items)
+    expect(filterSuggestionItems(items, '  ')).toEqual(items)
   })
 
   it('filters by title (case-insensitive)', () => {

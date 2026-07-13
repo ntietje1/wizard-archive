@@ -79,4 +79,26 @@ describe('createFileSystemCacheAdapter', () => {
     })
     expect(adapter.getSnapshot()).not.toHaveProperty('hidden')
   })
+
+  it('returns a stable snapshot without mutating hidden state during reads', () => {
+    const note = createNote()
+    let snapshot: SidebarCacheSnapshot = { sidebar: [note], trash: [] }
+    const adapter = createFileSystemCacheAdapter({
+      getSnapshot: () => snapshot,
+      replaceSnapshot: (updater) => {
+        snapshot = updater(snapshot)
+      },
+    })
+    adapter.applyPatches([
+      {
+        type: 'updateResource',
+        itemId: note.id,
+        before: { status: RESOURCE_STATUS.active },
+        fields: { status: RESOURCE_STATUS.undoHidden },
+      },
+    ])
+
+    const first = adapter.getSnapshot()
+    expect(adapter.getSnapshot()).toBe(first)
+  })
 })

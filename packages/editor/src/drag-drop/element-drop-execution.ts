@@ -29,12 +29,18 @@ export async function executeElementDrop({
     itemIds: draggedItemIds,
     includeTrashed: true,
   })
-  if (draggedItems.length === 0 || draggedItems.length !== draggedItemIds.length) return
+  if (draggedItems.length === 0 || draggedItems.length !== draggedItemIds.length) {
+    surfaceDropCommandEffects.reportRejection('missing_data')
+    return
+  }
 
   const resolvedTarget = resolveDropTarget(targetData, ctx.catalog, {
     runtimeId: ctx.runtimeId ?? null,
   })
-  if (!resolvedTarget) return
+  if (!resolvedTarget) {
+    surfaceDropCommandEffects.reportRejection('unsupported_target')
+    return
+  }
 
   await executePlannedDropCommand(
     resolveDropCommand({

@@ -8,20 +8,23 @@ import { MAP_DROP_ZONE_TYPE } from '../../drag-drop/drop-target-data'
 import { useDndRuntimeDropData } from '../../drag-drop/context'
 import { registerSurfaceDropExecutor } from '../../drag-drop/surface-command'
 import { createMapPinsAtPosition } from './map-pin-creation'
+import type { MapPinPlacementInput } from './map-pin-placement'
 import { getImagePinPosition } from './map-pin-placement'
 
 export function useMapSidebarItemDropTarget({
   canPin,
   createMapPins,
   imageRef,
+  layerId,
   map,
 }: {
   canPin: boolean
   createMapPins: (input: {
     mapId: SidebarItemId
-    pins: Array<{ itemId: SidebarItemId; x: number; y: number }>
+    pins: Array<MapPinPlacementInput>
   }) => MaybePromise<MapPinsCreateResult>
   imageRef: React.RefObject<HTMLImageElement | null>
+  layerId?: string | null
   map: MapItemWithContent
 }) {
   const mapRef = useRef(map)
@@ -55,10 +58,11 @@ export function useMapSidebarItemDropTarget({
         await createMapPinsAtPosition({
           createMapPins,
           itemIds,
+          layerId,
           mapId: mapRef.current.id,
           position,
         })
       },
     })
-  }, [canPin, createMapPins, dropData])
+  }, [canPin, createMapPins, dropData, layerId])
 }

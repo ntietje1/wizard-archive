@@ -194,7 +194,7 @@ function createRuntimeMapViewerSource(
     openItem: async (itemId, navigationOptions) => {
       await runtime.navigation.openItem(createWorkspaceResource(itemId), navigationOptions)
     },
-    resolveRenderPins: createWorkspaceMapRenderPins(permissions),
+    resolveEmbeddedMapState: createWorkspaceMapRenderPins(permissions),
     transformStore: viewStateStores.mapTransform,
   }
 }

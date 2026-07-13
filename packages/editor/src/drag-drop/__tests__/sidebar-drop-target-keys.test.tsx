@@ -5,7 +5,7 @@ import { createFolder } from '../../test/sidebar-item-factory'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
 import { DndProviderContext } from '../context'
 import { getDropTargetKey, resolveDropTarget } from '../drop-target-data'
-import { useDndStore } from '../store'
+import { defaultDndStoreApi as useDndStore } from '../store'
 import { useSidebarItemDropTarget } from '../use-sidebar-item-drop-target'
 import { resetDndStore } from './store-test-utils'
 

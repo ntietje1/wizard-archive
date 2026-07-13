@@ -7,9 +7,9 @@ import type { FileSystemPasteTargetInput } from '../../filesystem/item-operation
 import type { FilesystemContextMenuActionTarget } from './filesystem-actions'
 import type { ResourceCommandResult } from '../../filesystem/transaction-contract'
 import type {
-  FileSystemDropTarget,
-  FileSystemExecutableDropCommand,
-} from '../../filesystem/drop-planner'
+  FileSystemDropTargetIntent,
+  FileSystemIntentCommand,
+} from '../../filesystem/domain/intent-planning'
 
 interface WorkspaceFilesystemContextMenuSource {
   catalog: {
@@ -18,7 +18,7 @@ interface WorkspaceFilesystemContextMenuSource {
   }
   operations: {
     canPasteIntoTarget: (input: FileSystemPasteTargetInput) => boolean
-    executeDropCommand: (command: FileSystemExecutableDropCommand) => MaybePromise<unknown>
+    executeDropCommand: (command: FileSystemIntentCommand) => MaybePromise<unknown>
     pasteIntoTarget: (input: FileSystemPasteTargetInput) => MaybePromise<ResourceCommandResult>
     requestDeleteItemsForever: (itemIds: Array<SidebarItemId>) => MaybePromise<void>
     requestEmptyTrash: () => MaybePromise<void>
@@ -53,13 +53,21 @@ export function createWorkspaceFilesystemContextMenuTarget(
     canRestoreItems: (items) => getSidebarFilesystemCapabilities(actor, items).canRestore,
     canTrashItems: (items) => getSidebarFilesystemCapabilities(actor, items).canTrash,
     duplicateItems: async (items) => {
-      for (const group of groupItemsByParent(items)) {
+      const commands = groupItemsByParent(items).map((group) => {
         const target = resolveDuplicateDropTargetOrThrow(filesystem.catalog, group.parentId)
         const command = resolveGlobalFileSystemDropCommand(group.items, target, actor, {
           copy: true,
         })
-        if (command.status === 'ready') await operations.executeDropCommand(command.plan.command)
-      }
+        if (command.status !== 'ready') {
+          throw new Error(
+            command.status === 'blocked'
+              ? `Unable to duplicate items: ${command.reason}`
+              : 'Unable to duplicate items',
+          )
+        }
+        return command.plan.command
+      })
+      await Promise.all(commands.map((command) => operations.executeDropCommand(command)))
     },
     pasteIntoTarget: (input) => operations.pasteIntoTarget(input),
     requestDeleteItemsForever: async (items) => {
@@ -119,7 +127,7 @@ function getItemIds(items: Array<AnyItem>): Array<SidebarItemId> {
 function resolveDuplicateDropTarget(
   catalog: WorkspaceFilesystemContextMenuSource['catalog'],
   targetParentId: SidebarItemId | null,
-): FileSystemDropTarget | null {
+): FileSystemDropTargetIntent | null {
   if (targetParentId === null) {
     return { type: 'parent', target: { parentId: null, parent: null }, label: 'Root' }
   }
@@ -139,7 +147,7 @@ function resolveDuplicateDropTarget(
 function resolveDuplicateDropTargetOrThrow(
   catalog: WorkspaceFilesystemContextMenuSource['catalog'],
   targetParentId: SidebarItemId | null,
-): FileSystemDropTarget {
+): FileSystemDropTargetIntent {
   const target = resolveDuplicateDropTarget(catalog, targetParentId)
   if (!target) throw new Error(`Missing duplicate target parent ${targetParentId}`)
   return target

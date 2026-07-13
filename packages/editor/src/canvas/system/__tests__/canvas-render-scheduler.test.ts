@@ -248,6 +248,7 @@ function createDomRegistry({
     getEdgePaths: (edgeId) => edgePaths.get(edgeId),
     getViewportTargets: () => viewportTargets,
     getViewportSurfaceBounds: () => null,
+    subscribeViewportSurfaceBounds: () => () => undefined,
     applyCullingDiff,
     clear: () => undefined,
   }

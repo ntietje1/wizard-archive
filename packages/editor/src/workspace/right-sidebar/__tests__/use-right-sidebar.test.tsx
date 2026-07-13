@@ -77,7 +77,7 @@ describe('useRightSidebar', () => {
 
     render(<RightSidebarProbe itemType={undefined} rendered={rendered} />)
 
-    expect(rendered[0]).toBe(RIGHT_SIDEBAR_CONTENT.history)
+    expect(rendered[0]).toBeNull()
   })
 
   it('stores the default content when asked to open unsupported content', () => {
@@ -113,7 +113,7 @@ function RightSidebarProbe({
 }: {
   availablePanels?: RightSidebarAvailablePanels
   itemType: ResourceKind | undefined
-  rendered?: Array<RightSidebarContentId>
+  rendered?: Array<RightSidebarContentId | null>
   renderedSidebar?: Array<ReturnType<typeof useRightSidebar>>
 }) {
   const sidebar = useRightSidebar(itemType, availablePanels)

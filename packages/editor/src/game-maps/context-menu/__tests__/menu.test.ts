@@ -1,5 +1,5 @@
 import { Eye, EyeOff } from 'lucide-react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import {
@@ -25,8 +25,6 @@ import type { WorkspaceSidebarItemContextMenuServices } from '../../../workspace
 function createStubMapPinActions(): WorkspaceMapPinContextMenuServices['actions']['mapPins'] {
   return {
     pinToMap: vi.fn(),
-    goToMapPin: vi.fn(),
-    createMapPin: vi.fn(),
     removeMapPin: vi.fn(),
     moveMapPin: vi.fn(),
     togglePinVisibility: vi.fn(),
@@ -102,7 +100,7 @@ describe('map pin context menu', () => {
         requestPinPlacement,
       },
     })
-    const actions = createMapPinActions({ mapPins, openItem: vi.fn() })
+    const actions = createMapPinActions({ mapPins })
 
     await actions.pinToMap(
       sidebarContext({
@@ -141,7 +139,7 @@ describe('map pin context menu', () => {
         requestPinPlacement: vi.fn(),
       },
     })
-    const actions = createMapPinActions({ mapPins, openItem: vi.fn() })
+    const actions = createMapPinActions({ mapPins })
 
     await actions.moveMapPin(sidebarContext({ item }))
 
@@ -173,26 +171,6 @@ describe('map pin context menu', () => {
     })
 
     expect(menu.flatItems.map((item) => item.id)).toContain('pin-to-map')
-  })
-
-  it('navigates from pinned sidebar items to the active map pin', () => {
-    const item = createNote()
-    const services = createServices({
-      mapPins: {
-        isPinnedOnActiveMap: (candidate) => candidate?.id === item.id,
-        isActiveMapItem: () => false,
-      },
-    })
-
-    const menu = buildMenu({
-      context: sidebarContext({ item }),
-      services,
-      contributors: mapPinContextMenuContributors,
-      commands: mapPinContextMenuCommands,
-      groupConfig: workspaceContextMenuGroupConfig,
-    })
-
-    expect(menu.flatItems.map((menuItem) => menuItem.id)).toContain('go-to-map-pin')
   })
 
   it('uses generic sidebar item commands for pinned item contexts', async () => {
@@ -278,8 +256,9 @@ describe('map pin context menu', () => {
     )
   })
 
-  it('exposes map pin edit actions for the active map pin context', () => {
+  it('exposes executable map pin edit actions for the active map pin context', async () => {
     const item = createNote()
+    const mapPinActions = createStubMapPinActions()
     const services = createServices({
       mapPins: {
         getActivePin: () => ({
@@ -292,6 +271,7 @@ describe('map pin context menu', () => {
         getActivePinVisible: () => true,
       },
     })
+    services.actions.mapPins = mapPinActions
 
     const menu = buildMenu({
       context: sidebarContext({
@@ -311,6 +291,20 @@ describe('map pin context menu', () => {
       'move-map-pin',
       'remove-map-pin',
     ])
+
+    for (const menuItem of menu.flatItems) {
+      await menuItem.onSelect()
+    }
+
+    expect(mapPinActions.togglePinVisibility).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ item, surface: VIEW_CONTEXT.MAP_VIEW }),
+    )
+    expect(mapPinActions.moveMapPin).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ item, surface: VIEW_CONTEXT.MAP_VIEW }),
+    )
+    expect(mapPinActions.removeMapPin).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ item, surface: VIEW_CONTEXT.MAP_VIEW }),
+    )
   })
 
   it('hides map pin edit actions when the active map cannot be edited', () => {

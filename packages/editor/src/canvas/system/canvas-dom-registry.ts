@@ -30,6 +30,7 @@ export interface CanvasDomRegistry {
   getEdgePaths: (edgeId: string) => CanvasRegisteredEdgePaths | undefined
   getViewportTargets: () => ReadonlyArray<HTMLElement>
   getViewportSurfaceBounds: () => Pick<DOMRect, 'width' | 'height'> | null
+  subscribeViewportSurfaceBounds: (listener: () => void) => () => void
   applyCullingDiff: (diff: CanvasCullingDiff) => void
   clear: () => void
 }
@@ -46,22 +47,37 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
   let viewport: HTMLElement | undefined
   let viewportSurfaceBounds: Pick<DOMRect, 'width' | 'height'> | null = null
   let viewportSurfaceBoundsObserver: ResizeObserver | null = null
+  const viewportSurfaceBoundsListeners = new Set<() => void>()
+
+  const setViewportSurfaceBounds = (bounds: Pick<DOMRect, 'width' | 'height'> | null) => {
+    if (
+      viewportSurfaceBounds?.width === bounds?.width &&
+      viewportSurfaceBounds?.height === bounds?.height
+    ) {
+      return
+    }
+
+    viewportSurfaceBounds = bounds
+    for (const listener of viewportSurfaceBoundsListeners) {
+      listener()
+    }
+  }
 
   const disconnectViewportSurfaceBoundsObserver = () => {
     viewportSurfaceBoundsObserver?.disconnect()
     viewportSurfaceBoundsObserver = null
-    viewportSurfaceBounds = null
+    setViewportSurfaceBounds(null)
   }
 
   const observeViewportSurfaceBounds = (element: HTMLElement) => {
     const surfaceElement = element.parentElement
     disconnectViewportSurfaceBoundsObserver()
     if (!surfaceElement) {
-      viewportSurfaceBounds = { width: 0, height: 0 }
+      setViewportSurfaceBounds({ width: 0, height: 0 })
       return
     }
 
-    viewportSurfaceBounds = readElementBorderBoxSize(surfaceElement)
+    setViewportSurfaceBounds(readElementBorderBoxSize(surfaceElement))
     if (typeof ResizeObserver === 'undefined') {
       return
     }
@@ -71,7 +87,7 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
         return
       }
 
-      viewportSurfaceBounds = readResizeObserverBorderBoxSize(entry)
+      setViewportSurfaceBounds(readResizeObserverBorderBoxSize(entry))
     })
     viewportSurfaceBoundsObserver.observe(surfaceElement)
   }
@@ -175,6 +191,10 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
     getEdgePaths: (edgeId) => edgePaths.get(edgeId),
     getViewportTargets: () => (viewport ? [viewport, ...viewportOverlays] : [...viewportOverlays]),
     getViewportSurfaceBounds: () => viewportSurfaceBounds,
+    subscribeViewportSurfaceBounds: (listener) => {
+      viewportSurfaceBoundsListeners.add(listener)
+      return () => viewportSurfaceBoundsListeners.delete(listener)
+    },
     applyCullingDiff: (diff) => {
       for (const [nodeId, isCulled] of diff.nodeIds) {
         updateCullingSet(culledNodeIds, nodeId, isCulled)
@@ -215,6 +235,7 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       culledEdgeIds.clear()
       viewport = undefined
       disconnectViewportSurfaceBoundsObserver()
+      viewportSurfaceBoundsListeners.clear()
     },
   }
 }

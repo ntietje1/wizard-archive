@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { useOwnedBlockNoteEditor } from '../use-owned-blocknote-editor'
 
 describe('useOwnedBlockNoteEditor', () => {
@@ -47,7 +47,7 @@ describe('useOwnedBlockNoteEditor', () => {
     const destroyEditor = vi.fn()
     const onEditorChange = vi.fn()
 
-    const { result, rerender } = renderHook(
+    const { result, rerender, unmount } = renderHook(
       ({ identity }: { identity: string }) =>
         useOwnedBlockNoteEditor({
           createEditor,
@@ -66,6 +66,11 @@ describe('useOwnedBlockNoteEditor', () => {
     expect(onEditorChange).toHaveBeenNthCalledWith(1, firstEditor)
     expect(onEditorChange).toHaveBeenNthCalledWith(2, null)
     expect(onEditorChange).toHaveBeenNthCalledWith(3, secondEditor)
+
+    unmount()
+
+    expect(destroyEditor).toHaveBeenLastCalledWith(secondEditor)
+    expect(onEditorChange).toHaveBeenLastCalledWith(null)
   })
 
   it('clears the owned editor when replacement construction returns null', () => {
@@ -97,19 +102,21 @@ describe('useOwnedBlockNoteEditor', () => {
   it('keeps cleanup local when editor destruction throws', () => {
     const createdEditor = { id: 'editor-1' }
     const destroyError = new Error('destroy failed')
+    const destroyEditor = vi.fn(() => {
+      throw destroyError
+    })
     const onEditorChange = vi.fn()
 
     const { unmount } = renderHook(() =>
       useOwnedBlockNoteEditor({
         createEditor: () => createdEditor,
-        destroyEditor: () => {
-          throw destroyError
-        },
+        destroyEditor,
         onEditorChange,
       }),
     )
 
     expect(() => unmount()).not.toThrow()
+    expect(destroyEditor).toHaveBeenCalledExactlyOnceWith(createdEditor)
     expect(onEditorChange).toHaveBeenNthCalledWith(1, createdEditor)
     expect(onEditorChange).toHaveBeenNthCalledWith(2, null)
   })

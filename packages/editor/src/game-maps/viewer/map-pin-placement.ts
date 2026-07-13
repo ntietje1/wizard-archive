@@ -5,6 +5,16 @@ export interface PinPosition {
   y: number
 }
 
+export interface ScreenPosition {
+  x: number
+  y: number
+}
+
+export interface MapPinPlacementInput extends PinPosition {
+  itemId: SidebarItemId
+  layerId?: string | null
+}
+
 const PIN_DROP_OFFSET_STEP_PERCENT = 2
 const PIN_DROP_OFFSET_MAX_PER_ROW = 8
 const IMAGE_EDGE_CLICK_TOLERANCE_PERCENT = 0.5
@@ -16,7 +26,7 @@ function clampPercent(value: number) {
 export function buildMapPinPlacementInputs(
   itemIds: Array<SidebarItemId>,
   position: PinPosition,
-): Array<{ itemId: SidebarItemId; x: number; y: number }> {
+): Array<MapPinPlacementInput> {
   return itemIds.map((itemId, index) => {
     const col = index % PIN_DROP_OFFSET_MAX_PER_ROW
     const row = Math.floor(index / PIN_DROP_OFFSET_MAX_PER_ROW)

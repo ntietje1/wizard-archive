@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
@@ -22,7 +22,15 @@ export function PreviewImage({
 }) {
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
   const hasError = src !== null && erroredUrl === src
+
+  useEffect(() => {
+    const image = imageRef.current
+    if (src && image?.complete && image.naturalWidth > 0) {
+      setLoadedUrl(src)
+    }
+  }, [src])
 
   if (!src || hasError) {
     return <div className="h-full w-full">{fallback}</div>
@@ -41,6 +49,7 @@ export function PreviewImage({
         key={src}
         src={src}
         alt={alt}
+        ref={imageRef}
         className={cn(
           'h-full w-full transition-opacity',
           objectFit === 'cover' ? 'object-cover' : 'object-contain',

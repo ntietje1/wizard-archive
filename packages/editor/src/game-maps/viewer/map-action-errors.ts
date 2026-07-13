@@ -16,7 +16,8 @@ export function reportMapActionError(error: unknown, fallbackMessage: string) {
 
 function resolveMapActionError(error: unknown) {
   if (isMapOperationFailure(error)) {
-    return error.status === 'error' ? error.error : new Error(error.reason)
+    if (error.status !== 'error') return new Error(error.reason)
+    return error.error ?? new Error('Map operation failed without error details')
   }
   return error
 }

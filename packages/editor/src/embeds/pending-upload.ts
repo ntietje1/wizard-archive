@@ -64,6 +64,7 @@ function emitChange() {
 function waitForPendingUploadPaint() {
   if (typeof requestAnimationFrame !== 'function') return Promise.resolve()
 
+  // Two frames let pending UI paint; the timeout bounds background-tab frame suppression.
   return new Promise<void>((resolve) => {
     let settled = false
     const finish = () => {

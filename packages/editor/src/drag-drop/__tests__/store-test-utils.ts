@@ -1,4 +1,4 @@
-import { useDndStore } from '../store'
+import { defaultDndStoreApi as useDndStore } from '../store'
 
 export function resetDndStore() {
   useDndStore.setState(useDndStore.getInitialState(), true)

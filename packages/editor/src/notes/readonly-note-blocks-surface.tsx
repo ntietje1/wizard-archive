@@ -28,15 +28,52 @@ export function ReadonlyNoteBlocksSurface({
       data-note-id={note?.id}
       style={style}
     >
-      {content.map((block) => (
-        <ReadonlyNoteBlock
-          key={block.id}
-          block={block}
-          embeddedNoteContentSource={embeddedNoteContentSource}
-        />
-      ))}
+      <ReadonlyNoteBlocks blocks={content} embeddedNoteContentSource={embeddedNoteContentSource} />
     </div>
   )
+}
+
+function ReadonlyNoteBlocks({
+  blocks,
+  embeddedNoteContentSource,
+}: {
+  blocks: Array<NoteBlock>
+  embeddedNoteContentSource: EmbeddedNoteContentSource
+}) {
+  const rendered: Array<ReactNode> = []
+  for (let index = 0; index < blocks.length; ) {
+    const block = blocks[index]
+    if (block.type === 'bulletListItem' || block.type === 'numberedListItem') {
+      const listType = block.type
+      const listItems: Array<Extract<NoteBlock, { type: typeof listType }>> = []
+      while (blocks[index]?.type === listType) {
+        listItems.push(blocks[index] as (typeof listItems)[number])
+        index += 1
+      }
+      const List = listType === 'bulletListItem' ? 'ul' : 'ol'
+      rendered.push(
+        <List key={`${listType}:${listItems[0].id}`}>
+          {listItems.map((listItem) => (
+            <ReadonlyNoteBlock
+              key={listItem.id}
+              block={listItem}
+              embeddedNoteContentSource={embeddedNoteContentSource}
+            />
+          ))}
+        </List>,
+      )
+      continue
+    }
+    rendered.push(
+      <ReadonlyNoteBlock
+        key={block.id}
+        block={block}
+        embeddedNoteContentSource={embeddedNoteContentSource}
+      />,
+    )
+    index += 1
+  }
+  return rendered
 }
 
 function ReadonlyNoteBlock({
@@ -134,7 +171,7 @@ function ReadonlyChecklistBlock({
       <input
         aria-label={block.props?.checked ? 'Checked checklist item' : 'Unchecked checklist item'}
         checked={Boolean(block.props?.checked)}
-        readOnly
+        disabled
         type="checkbox"
       />
       <ReadonlyInlineContent content={block.content} />
@@ -250,13 +287,10 @@ function ReadonlyNoteChildren({
   if (!childrenBlocks?.length) return null
   return (
     <div data-note-readonly-children="true">
-      {childrenBlocks.map((child) => (
-        <ReadonlyNoteBlock
-          key={child.id}
-          block={child}
-          embeddedNoteContentSource={embeddedNoteContentSource}
-        />
-      ))}
+      <ReadonlyNoteBlocks
+        blocks={childrenBlocks}
+        embeddedNoteContentSource={embeddedNoteContentSource}
+      />
     </div>
   )
 }

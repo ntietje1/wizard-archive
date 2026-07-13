@@ -179,6 +179,7 @@ describe('ResizableNodeWrapper', () => {
     expect(screen.getByTestId('canvas-selection-resize-zone-top')).toHaveAccessibleName(
       'Resize top selection edge',
     )
+    expect(screen.getByTestId('canvas-selection-resize-zone-top')).toHaveAttribute('tabindex', '0')
   })
 
   it('exposes only horizontal resize zones for horizontal-only nodes', () => {

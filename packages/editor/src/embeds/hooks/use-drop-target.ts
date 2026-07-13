@@ -287,15 +287,11 @@ function useElementDropTarget({
     return dropTargetForElements({
       element,
       getData: () => dropData,
-      canDrop: ({ source }) => {
-        const id = getSidebarItemIdFromAppDragData(source.data)
-        return isSingleSidebarItemDrag(source.data) && id !== null && id !== sourceItemId
-      },
+      canDrop: ({ source }) => canAcceptDrop(source.data),
       getDropEffect: () => 'copy',
       onDragEnter: ({ source }) => {
-        const id = getSidebarItemIdFromAppDragData(source.data)
         updateDropVisualState(
-          isSingleSidebarItemDrag(source.data) && id !== null && id !== sourceItemId
+          canAcceptDrop(source.data)
             ? { isDropTarget: true, isFileDropTarget: false }
             : inactiveDropVisualState,
         )
@@ -307,6 +303,11 @@ function useElementDropTarget({
         updateDropVisualState(inactiveDropVisualState)
       },
     })
+
+    function canAcceptDrop(data: Record<string | symbol, unknown>) {
+      const id = getSidebarItemIdFromAppDragData(data)
+      return isSingleSidebarItemDrag(data) && id !== null && id !== sourceItemId
+    }
   }, [dropData, enabled, ref, updateDropVisualState, sourceItemId])
 }
 

@@ -28,18 +28,22 @@ export function getFileTypeCategory(
   const mimeType = contentType?.toLowerCase().split(';', 1)[0]?.trim() ?? ''
   const extension = getFileExtension(fileName)
 
-  if (mimeType.startsWith('image/') || hasFileExtension('image', extension)) {
+  if (mimeType.startsWith('image/')) {
     return 'image'
   }
-  if (mimeType === 'application/pdf' || hasFileExtension('pdf', extension)) {
+  if (mimeType === 'application/pdf') {
     return 'pdf'
   }
-  if (mimeType.startsWith('video/') || hasFileExtension('video', extension)) {
+  if (mimeType.startsWith('video/')) {
     return 'video'
   }
-  if (mimeType.startsWith('audio/') || hasFileExtension('audio', extension)) {
+  if (mimeType.startsWith('audio/')) {
     return 'audio'
   }
+  if (hasFileExtension('image', extension)) return 'image'
+  if (hasFileExtension('pdf', extension)) return 'pdf'
+  if (hasFileExtension('video', extension)) return 'video'
+  if (hasFileExtension('audio', extension)) return 'audio'
   return 'file'
 }
 

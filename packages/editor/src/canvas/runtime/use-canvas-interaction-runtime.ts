@@ -235,7 +235,6 @@ function useCanvasSelectionIncompatibleToolCleanup({
 
     selection.clearSelection()
     editSession.setEditingEmbedId(null)
-    editSession.setPendingEditNodeId(null)
-    editSession.setPendingEditNodePoint(null)
+    editSession.setPendingEdit(null)
   }, [activeTool, canEdit, editSession, selection])
 }

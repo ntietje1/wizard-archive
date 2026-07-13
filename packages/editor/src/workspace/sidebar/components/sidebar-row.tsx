@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef, ReactNode } from 'react'
+import type { ComponentPropsWithRef, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import {
@@ -21,9 +21,14 @@ export function SidebarRow({
   rightSlot,
   isActive,
   className,
+  onClick,
+  onKeyDown,
+  role: providedRole,
+  tabIndex: providedTabIndex,
   ...props
 }: SidebarRowProps) {
   const visualState = { isSelected: false, isViewing: isActive === true, isMultiSelected: false }
+  const isInteractive = onClick !== undefined
 
   return (
     <div
@@ -34,6 +39,16 @@ export function SidebarRow({
         sidebarItemBackgroundClass(visualState),
         className,
       )}
+      onClick={onClick}
+      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+        onKeyDown?.(event)
+        if (!isInteractive || event.defaultPrevented) return
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        onClick?.(event as unknown as MouseEvent<HTMLDivElement>)
+      }}
+      role={isInteractive ? 'button' : providedRole}
+      tabIndex={isInteractive ? (providedTabIndex ?? 0) : providedTabIndex}
       {...props}
     >
       <div

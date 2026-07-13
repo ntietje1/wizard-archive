@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, CircleSlash, FileText, Files, ListChecks, RefreshCw } from 'lucide-react'
+import { isFolderConflict, resolveIncomingConflictDecision } from '../operation-planner'
 import type { ConflictDecision, ItemOperationConflict } from '../operation-planner'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import {
@@ -12,9 +13,8 @@ import {
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import { DEFAULT_SIDEBAR_ITEM_ICONS } from '../../workspace/sidebar/item-icons'
-import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 
-type ConflictDecisions = Partial<Record<ItemOperationConflict['sourceItemId'], ConflictDecision>>
+type ConflictDecisions = Record<ItemOperationConflict['sourceItemId'], ConflictDecision>
 type BulkDecisionAction = ConflictDecision['action']
 type ConflictRowSelection = {
   incoming: boolean
@@ -57,15 +57,8 @@ const BULK_ACTIONS: Array<{
   },
 ]
 
-function isFolderMergeConflict(conflict: ItemOperationConflict) {
-  return (
-    conflict.sourceType === RESOURCE_TYPES.folders &&
-    conflict.destinationType === RESOURCE_TYPES.folders
-  )
-}
-
 function incomingDecisionForConflict(conflict: ItemOperationConflict): ConflictDecision {
-  return { action: isFolderMergeConflict(conflict) ? 'mergeFolder' : 'replace' }
+  return resolveIncomingConflictDecision(conflict)
 }
 
 function labelForBulkAction({
@@ -82,7 +75,7 @@ function labelForBulkAction({
   multipleLabel: string
 }) {
   if (action !== 'replace') return isSingleConflict ? singleLabel : multipleLabel
-  const mergeConflictCount = conflicts.filter(isFolderMergeConflict).length
+  const mergeConflictCount = conflicts.filter(isFolderConflict).length
   if (mergeConflictCount === 0) return isSingleConflict ? singleLabel : multipleLabel
   if (mergeConflictCount === conflicts.length) {
     return isSingleConflict
@@ -333,7 +326,9 @@ export function ItemOperationConflictDialog({
     <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className={mode === 'per-item' ? 'max-w-3xl' : 'max-w-lg'}>
         <DialogHeader>
-          <DialogTitle>Resolve Name Conflict</DialogTitle>
+          <DialogTitle>
+            {isSingleConflict ? 'Resolve Name Conflict' : 'Resolve Name Conflicts'}
+          </DialogTitle>
           <DialogDescription>{conflictDescription}</DialogDescription>
         </DialogHeader>
 

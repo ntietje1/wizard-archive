@@ -21,6 +21,10 @@ export function resolveCanvasScreenMinimumStrokeWidth(
   return Math.max(safeAuthoredWidth, MIN_CANVAS_SCREEN_STROKE_WIDTH_PX / safeZoom)
 }
 
+export function resolveScreenSpaceStrokeWidth(authoredWidth: number, zoom: number): number {
+  return resolveCanvasScreenMinimumStrokeWidth(authoredWidth * zoom, 1)
+}
+
 export function resolveCanvasScreenMinimumStrokeWidthCss(
   authoredWidth: number,
   options: CanvasScreenMinimumStrokeWidthOptions = {},

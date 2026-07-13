@@ -258,9 +258,18 @@ export function createLassoSelectionStrategy({
     createInitialState: (input) => ({
       points: [copyPoint(input.canvasPoint)],
     }),
-    updateState: (state, input) => ({
-      points: [...state.points, copyPoint(input.canvasPoint)],
-    }),
+    updateState: (state, input) => {
+      const previousPoint = state.points[state.points.length - 1]
+      const nextPoint = input.canvasPoint
+      if (
+        Math.hypot(nextPoint.x - previousPoint.x, nextPoint.y - previousPoint.y) <
+        MIN_SELECTION_DRAG_DISTANCE_PX
+      ) {
+        return state
+      }
+
+      return { points: [...state.points, copyPoint(nextPoint)] }
+    },
     refreshState: (state) => state,
     sync: ({ points }) => {
       localOverlay.setLassoPoints([...points])

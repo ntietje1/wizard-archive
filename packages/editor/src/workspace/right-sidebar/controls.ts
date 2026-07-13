@@ -46,10 +46,12 @@ export function createRightSidebarControls({
   const setActiveContent = (contentId: RightSidebarContentId) => {
     if (!itemType) return
     if (!hasAvailablePanel) return
-    setActiveContentForItemType(
+    const resolvedContentId = resolveAvailableRightSidebarContentForItemType(
       itemType,
-      resolveAvailableRightSidebarContentForItemType(itemType, contentId, availablePanels),
+      contentId,
+      availablePanels,
     )
+    if (resolvedContentId) setActiveContentForItemType(itemType, resolvedContentId)
   }
 
   const open = (contentId: RightSidebarContentId) => {

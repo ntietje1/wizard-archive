@@ -4,37 +4,53 @@ import type { MapPinsCreateResult } from '../session-contract'
 import { reportMapActionError } from './map-action-errors'
 import { reportMapPinCreationResult } from './map-pin-creation-feedback'
 import { buildMapPinPlacementInputs } from './map-pin-placement'
-import type { PinPosition } from './map-pin-placement'
+import type { MapPinPlacementInput, PinPosition } from './map-pin-placement'
 
 type CreateMapPins = (input: {
   mapId: SidebarItemId
-  pins: Array<{ itemId: SidebarItemId; x: number; y: number }>
+  pins: Array<MapPinPlacementInput>
 }) => MaybePromise<MapPinsCreateResult>
 
 export async function createMapPinsAtPosition({
   createMapPins,
+  layerId,
   itemIds,
   mapId,
   position,
 }: {
   createMapPins: CreateMapPins
+  layerId?: string | null
   itemIds: Array<SidebarItemId>
   mapId: SidebarItemId
   position: PinPosition
 }) {
+  let result: MapPinsCreateResult
   try {
-    const result = await createMapPins({
+    result = await createMapPins({
       mapId,
-      pins: buildMapPinPlacementInputs(itemIds, position),
+      pins: buildMapPinPlacementInputs(itemIds, position).map((pin) => ({
+        ...pin,
+        layerId: layerId ?? null,
+      })),
     })
-    if (result.status === 'completed') {
-      return reportMapPinCreationResult(result.receipt.pinIds, itemIds.length)
-    }
+  } catch (error) {
+    reportMapActionError(
+      error,
+      itemIds.length === 1 ? 'Failed to place pin' : 'Failed to place pins',
+    )
+    return false
+  }
+
+  if (result.status !== 'completed') {
     reportMapActionError(
       result,
       itemIds.length === 1 ? 'Failed to place pin' : 'Failed to place pins',
     )
     return false
+  }
+
+  try {
+    return reportMapPinCreationResult(result.receipt.pinIds, itemIds.length)
   } catch (error) {
     reportMapActionError(
       error,

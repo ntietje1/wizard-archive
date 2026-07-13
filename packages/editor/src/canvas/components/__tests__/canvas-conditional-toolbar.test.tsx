@@ -167,10 +167,8 @@ function renderToolbar({
     editSession: {
       editingEmbedId: null,
       setEditingEmbedId: vi.fn(),
-      pendingEditNodeId: null,
-      pendingEditNodePoint: null,
-      setPendingEditNodeId: vi.fn(),
-      setPendingEditNodePoint: vi.fn(),
+      pendingEdit: null,
+      setPendingEdit: vi.fn(),
     },
     history: {
       canUndo: false,

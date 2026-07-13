@@ -20,6 +20,7 @@ export function useCanvasEdgeVisualSelection(id: string) {
         ? getCanvasVisualSelectionState({
             selected: state.selection.edgeIds.has(id),
             pendingPreview: state.selection.pendingPreview,
+            gestureMode: state.selection.gestureMode,
             id,
             kind: 'edge',
           })

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
   patchYSyncAfterTypeChanged,
   patchYUndoPluginDestroy,
@@ -13,6 +13,10 @@ vi.mock('y-prosemirror', () => ({
   getRelativeSelection: getRelativeSelectionMock,
   relativePositionToAbsolutePosition: vi.fn(() => null),
 }))
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('patchYUndoPluginDestroy', () => {
   it('applies one plugin view wrapper when patched repeatedly', () => {
@@ -112,6 +116,26 @@ describe('runYjsHistoryCommand', () => {
     expect(undo).toHaveBeenCalledOnce()
     expect(getRelativeSelectionMock).toHaveBeenCalledWith(binding, view.state)
   })
+
+  it('runs history when selection bookmark creation fails', () => {
+    getRelativeSelectionMock.mockImplementation(() => {
+      throw new Error('bookmark failed')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const undo = vi.fn()
+    const undoPlugin = createYUndoPlugin({ ...createUndoManager(), undo })
+    const bindingPlugin = {
+      getState: () => ({ binding: { doc: {}, mapping: {}, type: {} } }),
+      spec: {},
+    } as unknown as Plugin
+
+    runYjsHistoryCommand(
+      createEditorView([undoPlugin, bindingPlugin]) as unknown as EditorView,
+      'undo',
+    )
+
+    expect(undo).toHaveBeenCalledOnce()
+  })
 })
 
 describe('patchYSyncAfterTypeChanged', () => {
@@ -141,6 +165,31 @@ describe('patchYSyncAfterTypeChanged', () => {
 
     expect(binding._prosemirrorChanged).toHaveBeenCalledOnce()
     expect(binding.beforeTransactionSelection).toBe(selectionBeforeUndo)
+  })
+
+  it('re-registers the patched deep observer callback', () => {
+    const registeredTypeChanged = vi.fn()
+    const deepObservers = new Set<(...args: Array<any>) => void>([registeredTypeChanged])
+    const binding = {
+      beforeTransactionSelection: null,
+      mux: (run: () => void) => run(),
+      prosemirrorView: { state: { doc: {} } },
+      type: {
+        observeDeep: (observer: (...args: Array<any>) => void) => deepObservers.add(observer),
+        unobserveDeep: (observer: (...args: Array<any>) => void) => deepObservers.delete(observer),
+      },
+      _typeChanged: registeredTypeChanged,
+      _prosemirrorChanged: vi.fn(),
+    }
+    const plugin = { getState: () => ({ binding }) } as unknown as Plugin
+
+    patchYSyncAfterTypeChanged(createEditorView(plugin) as unknown as EditorView)
+    for (const observer of deepObservers) {
+      observer([], {})
+    }
+
+    expect(deepObservers).not.toContain(registeredTypeChanged)
+    expect(binding._prosemirrorChanged).toHaveBeenCalledOnce()
   })
 })
 

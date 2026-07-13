@@ -18,16 +18,20 @@ const FREEFORM_RESIZE_TYPES = new Set<AnyItemWithContent['type']>([
   RESOURCE_TYPES.canvases,
 ])
 
+function usesFreeformCanvasResize(item: AnyItemWithContent | undefined) {
+  return isSidebarItemType(item, FREEFORM_RESIZE_TYPES)
+}
+
 export function shouldCanvasSidebarItemEmbedUseFreeformResize(
   item: AnyItemWithContent | undefined,
 ) {
-  return isSidebarItemType(item, FREEFORM_RESIZE_TYPES)
+  return usesFreeformCanvasResize(item)
 }
 
 export function shouldClearDefaultCanvasSidebarItemEmbedAspectRatio(
   item: AnyItemWithContent | undefined,
 ) {
-  return isSidebarItemType(item, FREEFORM_RESIZE_TYPES)
+  return usesFreeformCanvasResize(item)
 }
 
 export function shouldCanvasSidebarItemEmbedUseDocumentShapeDefault(

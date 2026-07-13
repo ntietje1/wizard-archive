@@ -74,7 +74,7 @@ describe('useMapSidebarItemDropTarget', () => {
 
       expect(createMapPins).toHaveBeenCalledWith({
         mapId: map.id,
-        pins: [{ itemId: note.id, x: 25, y: 25 }],
+        pins: [{ itemId: note.id, layerId: null, x: 25, y: 25 }],
       })
       expect(toastMock.error).toHaveBeenCalledWith('Failed to place pin')
     } finally {
@@ -112,6 +112,12 @@ describe('useMapSidebarItemDropTarget', () => {
         { workspaceId: note.campaignId },
       )
 
+      expect(command).toMatchObject({
+        status: 'ready',
+        action: 'pin',
+        items: [note],
+      })
+
       await act(async () => {
         await executeRegisteredSurfaceDropCommand({
           command,
@@ -120,6 +126,10 @@ describe('useMapSidebarItemDropTarget', () => {
         })
       })
 
+      expect(createMapPins).toHaveBeenCalledExactlyOnceWith({
+        mapId: map.id,
+        pins: [{ itemId: note.id, layerId: null, x: 25, y: 25 }],
+      })
       expect(toastMock.error).toHaveBeenCalledWith('Pin was not placed')
     } finally {
       unmount()

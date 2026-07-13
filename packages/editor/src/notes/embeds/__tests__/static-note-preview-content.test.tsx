@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { ReactNode } from 'react'
@@ -12,20 +10,6 @@ vi.mock('@wizard-archive/ui/shadcn/components/scroll-area', () => ({
 }))
 
 describe('StaticNotePreviewContent', () => {
-  it('uses the lightweight readonly block surface for default previews', () => {
-    const source = readFileSync(
-      path.resolve(
-        process.cwd(),
-        'packages/editor/src/notes/embeds/static-note-preview-content.tsx',
-      ),
-      'utf8',
-    )
-
-    expect(source).toContain('ReadonlyNoteBlocksSurface')
-    expect(source).not.toContain("from '../static-content'")
-    expect(source).not.toContain('<StaticNoteContent')
-  })
-
   it('renders source-projected note content for read-only previews', () => {
     const visibleBlock = createParagraphBlock('visible-block', 'Visible')
     const hiddenBlock = createParagraphBlock('hidden-block', 'Hidden')

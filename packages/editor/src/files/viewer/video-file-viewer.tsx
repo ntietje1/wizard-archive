@@ -55,6 +55,7 @@ function VideoFileViewerContent({
           onError={() => setLoadFailed(true)}
         >
           <track
+            default
             kind="captions"
             src={captionsTrack.source.src}
             srcLang={captionsTrack.source.srcLang}

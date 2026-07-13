@@ -15,7 +15,7 @@ export function MapLayerSwitcher({
   return (
     <div
       aria-label="Map layers"
-      className="absolute left-3 top-3 z-30 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1 overflow-x-auto rounded-md border bg-background/95 p-1 shadow-sm"
+      className="absolute left-3 top-3 z-[1000] inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1 overflow-x-auto rounded-md border bg-background/95 p-1 shadow-sm"
       role="toolbar"
     >
       {layers.map((layer) => {

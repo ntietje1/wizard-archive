@@ -35,7 +35,11 @@ export function DroppableRoot({ canDrop, children, className }: DroppableRootPro
 
   const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
   const externalFileDropTargetKey = useDndStore((s) => s.externalFileDropTargetKey)
-  const isFileDragTarget = isDraggingFiles && externalFileDropTargetKey === dropTargetKey
+  const isFileDragTarget =
+    canDrop &&
+    canAcceptExternalFiles &&
+    isDraggingFiles &&
+    externalFileDropTargetKey === dropTargetKey
 
   return (
     <div

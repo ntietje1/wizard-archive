@@ -247,6 +247,7 @@ function CanvasPropertyControls({
             {strokeSizeProperty.definition.label}
           </p>
           <StrokeSizeControl
+            key={strokeSizeProperty.definition.id}
             property={strokeSizeProperty}
             onPropertyChange={onPropertyChange}
             onPropertyPreviewChange={onPropertyPreviewChange}

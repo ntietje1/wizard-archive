@@ -18,10 +18,10 @@ describe('filterMapPinsForLayer', () => {
     },
   ]
 
-  it('returns all pins when no active layer is selected', () => {
+  it('uses the first layer when no active layer is selected', () => {
     const pins = [{ id: 'legacy-pin' }, { id: 'upper-pin', layerId: 'upper' }]
 
-    expect(filterMapPinsForLayer(pins, null, layers)).toEqual(pins)
+    expect(filterMapPinsForLayer(pins, null, layers)).toEqual([{ id: 'legacy-pin' }])
   })
 
   it('treats pins without a layer as belonging to the default layer', () => {
