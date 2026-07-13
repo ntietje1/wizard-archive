@@ -2,7 +2,10 @@ import { useId, useState } from 'react'
 import type { AnyItem } from '../../items'
 import type { ResourceColor, ResourceIconName } from '../../resource-contract'
 
-import { DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE } from '../../items/appearance'
+import {
+  DEFAULT_SIDEBAR_ITEM_COLOR,
+  DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE,
+} from '../../items/appearance'
 import { toast } from 'sonner'
 import { FileEdit, Loader } from 'lucide-react'
 import { ColorPicker } from './color-picker'
@@ -18,7 +21,6 @@ import { getIconByName } from '../item-icons'
 import {
   InputGroup,
   InputGroupAddon,
-  InputGroupButton,
   InputGroupInput,
 } from '@wizard-archive/ui/shadcn/components/input-group'
 import { useSidebarNameValidator } from '../hooks/use-sidebar-name-validator'
@@ -127,9 +129,13 @@ function OpenSidebarItemEditDialog({
             />
             {isNameValidating && (
               <InputGroupAddon align="inline-end">
-                <InputGroupButton className="rounded-full" size="icon-xs">
+                <span
+                  role="status"
+                  aria-label="Validating name"
+                  className="flex size-6 items-center justify-center rounded-full"
+                >
                   <Loader className="size-4 animate-spin" />
-                </InputGroupButton>
+                </span>
               </InputGroupAddon>
             )}
           </InputGroup>
@@ -161,7 +167,7 @@ function OpenSidebarItemEditDialog({
             <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
               <PreviewIcon
                 className="size-4 flex-shrink-0"
-                style={values.color ? { color: values.color } : undefined}
+                style={{ color: values.color ?? DEFAULT_SIDEBAR_ITEM_COLOR }}
               />
               <span className="truncate text-sm">{values.name || `Untitled ${typeName}`}</span>
             </div>

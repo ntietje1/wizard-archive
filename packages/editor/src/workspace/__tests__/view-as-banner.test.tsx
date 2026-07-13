@@ -31,7 +31,7 @@ describe('ViewAsBanner', () => {
       <ViewAsBanner
         viewAsPlayer={createViewAsParticipantCapability({
           selectedParticipantId: 'member-a',
-          participant: { id: 'member-a', displayName: '@mina', username: 'mina', imageUrl: null },
+          participant: { id: 'member-a', displayName: '', username: 'mina', imageUrl: null },
         })}
       />,
     )

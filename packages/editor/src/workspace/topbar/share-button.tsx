@@ -25,7 +25,12 @@ export function ShareButton({
 
   const shareItems = item && item.isTrashed !== true ? [item] : []
   return share.renderItemsShareState(shareItems, (state) => (
-    <AvailableShareButton isLoading={isLoading} shareItems={shareItems} shareState={state} />
+    <AvailableShareButton
+      key={`${item?.id ?? 'none'}:${isLoading}:${state.status}:${state.status === 'ready' ? state.isMutating : false}`}
+      isLoading={isLoading}
+      shareItems={shareItems}
+      shareState={state}
+    />
   ))
 }
 

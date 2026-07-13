@@ -1,4 +1,5 @@
 import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { assertNever } from './utils/assert-never'
 import type { AnyItem } from '../items'
 import type { SidebarWorkspaceItemSurfaceName } from './workspace-state'
 
@@ -29,10 +30,8 @@ export function getKeyboardPasteParentId({
     case 'bookmarks':
     case 'sidebar':
       break
-    default: {
-      const exhaustiveSurface: never = surface
-      return exhaustiveSurface
-    }
+    default:
+      return assertNever(surface, 'Unhandled sidebar item surface')
   }
 
   if (selectedItems.length === 0) return surfaceParentId

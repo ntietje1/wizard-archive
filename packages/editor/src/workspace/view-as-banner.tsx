@@ -28,7 +28,11 @@ export function ViewAsBanner({ viewAsPlayer }: { viewAsPlayer: ViewAsParticipant
             </BannerButton>
           }
         >
-          Viewing as <span className="font-semibold">{participant.displayName}</span>
+          Viewing as{' '}
+          <span className="font-semibold">
+            {participant.displayName ||
+              (participant.username ? `@${participant.username}` : 'Player')}
+          </span>
         </Banner>
       </div>
     </>
