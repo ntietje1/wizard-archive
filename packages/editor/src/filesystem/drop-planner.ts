@@ -1,8 +1,8 @@
-import type { ResourceCommand } from './transaction-contract'
 import { planFileSystemDropIntent } from './domain/intent-planning'
 import type {
   FileSystemDropOptions,
-  FileSystemDropParentTarget,
+  FileSystemDropTargetIntent,
+  FileSystemIntentCommand,
   FileSystemIntentCommandPlan,
   FileSystemIntentRejectionReason,
 } from './domain/intent-planning'
@@ -16,15 +16,6 @@ function assertNever(value: never): never {
   throw new Error(`Unexpected value: ${String(value)}`)
 }
 
-export type FileSystemDropTarget =
-  | { type: 'trash'; label: string }
-  | { type: 'parent'; target: FileSystemDropParentTarget; label: string }
-
-export type FileSystemExecutableDropCommand = Extract<
-  ResourceCommand,
-  { type: 'move' | 'copy' | 'restore' | 'trash' }
->
-
 type FileSystemGlobalDropCommand =
   | { status: 'noop' }
   | { status: 'blocked'; reason: FileSystemIntentRejectionReason }
@@ -33,7 +24,7 @@ type FileSystemGlobalDropCommand =
 export function resolveFileSystemDropTarget(
   dropTarget: SidebarDropData,
   ctx: DropPlanningContext,
-): FileSystemDropTarget | null {
+): FileSystemDropTargetIntent | null {
   switch (dropTarget.type) {
     case TRASH_DROP_ZONE_TYPE:
       return { type: 'trash', label: 'Trash' }
@@ -62,7 +53,7 @@ export function resolveFileSystemDropTarget(
 
 export function resolveGlobalFileSystemDropCommand(
   items: Array<AnyItem>,
-  target: FileSystemDropTarget,
+  target: FileSystemDropTargetIntent,
   ctx: { canCreateRootItems: boolean; canManageFolders: boolean },
   options: FileSystemDropOptions = {},
 ): FileSystemGlobalDropCommand {
@@ -88,9 +79,7 @@ export function resolveGlobalFileSystemDropCommand(
   return result
 }
 
-export function fileSystemDropCommandFailureMessage(
-  command: FileSystemExecutableDropCommand,
-): string {
+export function fileSystemDropCommandFailureMessage(command: FileSystemIntentCommand): string {
   switch (command.type) {
     case 'move':
       return 'Failed to move items'

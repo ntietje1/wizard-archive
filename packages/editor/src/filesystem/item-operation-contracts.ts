@@ -9,7 +9,7 @@ import type {
   ResourceKind,
 } from '../workspace/resource-contract'
 
-import type { FileSystemExecutableDropCommand } from './drop-planner'
+import type { FileSystemIntentCommand } from './domain/intent-planning'
 import type { ResourceTrashRequestResult } from './operation-runtime-contract'
 import type { ResourceCommandResult } from './transaction-contract'
 
@@ -179,9 +179,7 @@ export type FileSystemItemDropImportOperations = FileSystemItemImportOperations 
 }
 
 type FileSystemItemDropExecutionOperations = {
-  executeDropCommand: (
-    command: FileSystemExecutableDropCommand,
-  ) => MaybePromise<ResourceCommandResult>
+  executeDropCommand: (command: FileSystemIntentCommand) => MaybePromise<ResourceCommandResult>
 }
 
 export type FileSystemItemDragDropOperations = FileSystemItemDropImportOperations &
@@ -224,9 +222,7 @@ export type FileSystemItemSidebarOperations = FileSystemItemCreateOperations &
   FileSystemItemTrashOperations
 
 type FileSystemItemContextMenuFilesystemOperations = {
-  executeDropCommand: (
-    command: FileSystemExecutableDropCommand,
-  ) => MaybePromise<ResourceCommandResult>
+  executeDropCommand: (command: FileSystemIntentCommand) => MaybePromise<ResourceCommandResult>
   requestEmptyTrash: () => MaybePromise<void>
   requestDeleteItemsForever: (itemIds: Array<SidebarItemId>) => MaybePromise<void>
   restoreItems: (

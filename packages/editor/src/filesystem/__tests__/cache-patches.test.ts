@@ -314,6 +314,32 @@ describe('filesystem cache patches', () => {
     ])
   })
 
+  it('reverses consecutive moves in operation order', () => {
+    const firstFolder = createFolder({ name: 'First' })
+    const secondFolder = createFolder({ name: 'Second' })
+    const note = createNote()
+    const snapshot: SidebarCacheSnapshot = {
+      sidebar: [firstFolder, secondFolder, note],
+      trash: [],
+    }
+    const projection = projectMoveOperations({
+      activeItems: snapshot.sidebar.map(resourcePatchRowFromCacheItem),
+      trashItems: [],
+      operations: [
+        { action: 'place', sourceItemId: note.id, targetParentId: firstFolder.id },
+        { action: 'place', sourceItemId: note.id, targetParentId: secondFolder.id },
+      ],
+      now: NOW,
+      userId: null,
+    })
+
+    const moved = applyFileSystemPatchesToSidebarCache(snapshot, projection.forwardPatches)
+    const restored = applyFileSystemPatchesToSidebarCache(moved, projection.inversePatches)
+
+    expect(moved.sidebar.find((item) => item.id === note.id)?.parentId).toBe(secondFolder.id)
+    expect(restored.sidebar.find((item) => item.id === note.id)?.parentId).toBeNull()
+  })
+
   it('keeps resolved replacement names when restoring from trash', () => {
     const destination = createNote({ name: 'Scene' })
     const trashed = createNote({ name: 'Scene', status: RESOURCE_STATUS.trashed })

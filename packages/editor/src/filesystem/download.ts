@@ -108,14 +108,16 @@ export function createCatalogFileSystemDownload({
   return {
     status: 'available',
     loadItemsForDownload: ({ itemIds, items }) =>
-      Promise.resolve().then(() => {
-        const roots = resolveSelectedDownloadRoots({ itemIds, items, operationItems })
-        return buildItems({ includeRootFolderName: roots.length > 1, roots })
-      }),
+      Promise.resolve()
+        .then(() => {
+          const roots = resolveSelectedDownloadRoots({ itemIds, items, operationItems })
+          return buildItems({ includeRootFolderName: roots.length > 1, roots })
+        })
+        .catch((error: unknown) => ({ status: 'error', error, items: [] })),
     loadRootItemsForDownload: () =>
-      Promise.resolve().then(() =>
-        buildItems({ includeRootFolderName: true, roots: catalog.getVisibleRoots() }),
-      ),
+      Promise.resolve()
+        .then(() => buildItems({ includeRootFolderName: true, roots: catalog.getVisibleRoots() }))
+        .catch((error: unknown) => ({ status: 'error', error, items: [] })),
   }
 }
 
@@ -135,5 +137,10 @@ function resolveSelectedDownloadRoots({
   const itemsById = new Map(items.map((item) => [item.id, item]))
   const fallbackItems = operationItems.resolveItems({ itemIds, includeTrashed: false })
   const fallbackItemsById = new Map(fallbackItems.map((item) => [item.id, item]))
-  return itemIds.flatMap((itemId) => itemsById.get(itemId) ?? fallbackItemsById.get(itemId) ?? [])
+  return itemIds.flatMap((itemId) => {
+    const fallback = fallbackItemsById.get(itemId)
+    if (!fallback) return []
+    const supplied = itemsById.get(itemId)
+    return supplied?.status === fallback.status ? supplied : fallback
+  })
 }

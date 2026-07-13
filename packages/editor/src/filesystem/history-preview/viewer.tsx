@@ -16,53 +16,31 @@ export function HistoryPreviewViewer({
   onRestore: () => void
   state: HistoryPreviewState
 }) {
+  let content: ReactNode
   if (state.status === 'loading') {
-    return (
-      <PreviewShell
-        canEdit={canEdit}
-        entryTime={state.entryTime}
-        onExit={onExit}
-        onRestore={onRestore}
-      >
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
-        </div>
-      </PreviewShell>
+    content = (
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
     )
-  }
-
-  if (state.status === 'error') {
-    return (
-      <PreviewShell
-        canEdit={canEdit}
-        entryTime={state.entryTime}
-        onExit={onExit}
-        onRestore={onRestore}
-      >
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            {getPreviewFallbackCopy({ surface: 'history', reason: 'loadError' })}
-          </p>
-        </div>
-      </PreviewShell>
+  } else if (state.status === 'error') {
+    content = (
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          {getPreviewFallbackCopy({ surface: 'history', reason: 'loadError' })}
+        </p>
+      </div>
     )
-  }
-
-  if (state.status === 'unavailable') {
-    return (
-      <PreviewShell
-        canEdit={canEdit}
-        entryTime={state.entryTime}
-        onExit={onExit}
-        onRestore={onRestore}
-      >
-        <div className="flex-1 min-h-0 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            {getPreviewFallbackCopy({ surface: 'history', reason: 'unavailableVersion' })}
-          </p>
-        </div>
-      </PreviewShell>
+  } else if (state.status === 'unavailable') {
+    content = (
+      <div className="flex-1 min-h-0 flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">
+          {getPreviewFallbackCopy({ surface: 'history', reason: 'unavailableVersion' })}
+        </p>
+      </div>
     )
+  } else {
+    content = <HistoryDocumentPreview snapshot={state.snapshot} />
   }
 
   return (
@@ -72,7 +50,7 @@ export function HistoryPreviewViewer({
       onExit={onExit}
       onRestore={onRestore}
     >
-      <HistoryDocumentPreview snapshot={state.snapshot} />
+      {content}
     </PreviewShell>
   )
 }

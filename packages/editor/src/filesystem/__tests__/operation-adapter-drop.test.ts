@@ -3,7 +3,7 @@ import path from 'node:path'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceCommandRuntimeArgs } from '../operation-runtime-contract'
-import type { FileSystemExecutableDropCommand } from '../drop-planner'
+import type { FileSystemIntentCommand } from '../domain/intent-planning'
 import { useWorkspaceResourceCommandRuntime } from '../operation-adapter'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 
@@ -146,7 +146,7 @@ describe('filesystem operation adapter drop execution', () => {
 
   it('opens the drop destination after a successful command', async () => {
     const folderId = sidebarItemId('folder-1')
-    const command: FileSystemExecutableDropCommand = {
+    const command: FileSystemIntentCommand = {
       type: 'move',
       itemIds: [sidebarItemId('note-1')],
       targetParentId: folderId,

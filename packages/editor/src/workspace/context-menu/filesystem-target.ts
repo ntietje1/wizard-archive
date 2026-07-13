@@ -7,9 +7,9 @@ import type { FileSystemPasteTargetInput } from '../../filesystem/item-operation
 import type { FilesystemContextMenuActionTarget } from './filesystem-actions'
 import type { ResourceCommandResult } from '../../filesystem/transaction-contract'
 import type {
-  FileSystemDropTarget,
-  FileSystemExecutableDropCommand,
-} from '../../filesystem/drop-planner'
+  FileSystemDropTargetIntent,
+  FileSystemIntentCommand,
+} from '../../filesystem/domain/intent-planning'
 
 interface WorkspaceFilesystemContextMenuSource {
   catalog: {
@@ -18,7 +18,7 @@ interface WorkspaceFilesystemContextMenuSource {
   }
   operations: {
     canPasteIntoTarget: (input: FileSystemPasteTargetInput) => boolean
-    executeDropCommand: (command: FileSystemExecutableDropCommand) => MaybePromise<unknown>
+    executeDropCommand: (command: FileSystemIntentCommand) => MaybePromise<unknown>
     pasteIntoTarget: (input: FileSystemPasteTargetInput) => MaybePromise<ResourceCommandResult>
     requestDeleteItemsForever: (itemIds: Array<SidebarItemId>) => MaybePromise<void>
     requestEmptyTrash: () => MaybePromise<void>
@@ -126,7 +126,7 @@ function getItemIds(items: Array<AnyItem>): Array<SidebarItemId> {
 function resolveDuplicateDropTarget(
   catalog: WorkspaceFilesystemContextMenuSource['catalog'],
   targetParentId: SidebarItemId | null,
-): FileSystemDropTarget | null {
+): FileSystemDropTargetIntent | null {
   if (targetParentId === null) {
     return { type: 'parent', target: { parentId: null, parent: null }, label: 'Root' }
   }
@@ -146,7 +146,7 @@ function resolveDuplicateDropTarget(
 function resolveDuplicateDropTargetOrThrow(
   catalog: WorkspaceFilesystemContextMenuSource['catalog'],
   targetParentId: SidebarItemId | null,
-): FileSystemDropTarget {
+): FileSystemDropTargetIntent {
   const target = resolveDuplicateDropTarget(catalog, targetParentId)
   if (!target) throw new Error(`Missing duplicate target parent ${targetParentId}`)
   return target

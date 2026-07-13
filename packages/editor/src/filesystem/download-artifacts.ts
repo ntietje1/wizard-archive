@@ -90,12 +90,14 @@ export async function prepareFileSystemDownloadArchive({
 
   const zip = new JSZip()
   const results = await prepareZipItems({ io, items })
+  const writtenPaths = new Set<string>()
+  let successCount = 0
   for (const result of results) {
-    if (result.status === 'added') {
-      zip.file(result.path, result.content)
-    }
+    if (result.status !== 'added' || writtenPaths.has(result.path)) continue
+    writtenPaths.add(result.path)
+    zip.file(result.path, result.content)
+    successCount += 1
   }
-  const successCount = results.filter((result) => result.status === 'added').length
   const failureCount = results.length - successCount
   if (successCount === 0) return { status: 'failed', failureCount }
 
@@ -154,12 +156,12 @@ async function prepareZipItem({
         console.warn(`No download URL for: ${item.path}`)
         return { status: 'failed' }
       }
-      const response = await fetchWithTimeout({ io, url: item.downloadUrl })
+      const { blob, response } = await fetchWithTimeout({ io, url: item.downloadUrl })
       if (!response.ok) {
         console.warn(`Failed to fetch: ${item.path}`)
         return { status: 'failed' }
       }
-      return { status: 'added', path, content: await response.blob() }
+      return { status: 'added', path, content: blob }
     }
     case RESOURCE_TYPES.notes:
       return { status: 'added', path, content: convertBlocksToMarkdown(item.content) }
@@ -178,7 +180,8 @@ async function fetchWithTimeout({ io, url }: { io: FileSystemDownloadIo; url: st
   const controller = new AbortController()
   const timeout = io.setTimeout(() => controller.abort(), DOWNLOAD_FETCH_TIMEOUT_MS)
   try {
-    return await io.fetch(url, { signal: controller.signal })
+    const response = await io.fetch(url, { signal: controller.signal })
+    return { response, blob: response.ok ? await response.blob() : new Blob() }
   } finally {
     io.clearTimeout(timeout)
   }
