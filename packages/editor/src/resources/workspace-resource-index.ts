@@ -159,8 +159,10 @@ function projectSummary(
     (resource.color !== null && typeof resource.color !== 'string') ||
     (resource.lifecycle !== 'active' && resource.lifecycle !== 'trashed') ||
     !isVersionStamp(resource.metadataVersion) ||
-    !Number.isFinite(resource.createdAt) ||
-    !Number.isFinite(resource.updatedAt)
+    !Number.isSafeInteger(resource.createdAt) ||
+    resource.createdAt < 0 ||
+    !Number.isSafeInteger(resource.updatedAt) ||
+    resource.updatedAt < 0
   ) {
     return null
   }
@@ -209,7 +211,12 @@ function createStoredCollection(
   collection: AuthorizedResourceSnapshot['collections'][number],
   resources: ReadonlyMap<ResourceId, AuthorizedResourceSummary>,
 ): StoredCollection | null {
-  const query = normalizeResourceCollectionQuery(collection.query)
+  let query: ResourceCollectionQuery
+  try {
+    query = normalizeResourceCollectionQuery(collection.query)
+  } catch {
+    return null
+  }
   const resourceIds = Array.from(new Set(collection.resourceIds)).sort()
   if (resourceIds.length !== collection.resourceIds.length) return null
   const items = resourceIds.map((resourceId) => resources.get(resourceId))
@@ -520,7 +527,12 @@ export function createResourceIndexLoader(
         () => index.getSnapshot().lookup(resourceId).state !== 'unknown',
       ),
     ensureCollection: (query) => {
-      const normalized = normalizeResourceCollectionQuery(query)
+      let normalized: ResourceCollectionQuery
+      try {
+        normalized = normalizeResourceCollectionQuery(query)
+      } catch {
+        return Promise.resolve(invalidLoadResult())
+      }
       return loadIndexKnowledge(
         index,
         (scope) => source.loadCollection(scope, normalized),

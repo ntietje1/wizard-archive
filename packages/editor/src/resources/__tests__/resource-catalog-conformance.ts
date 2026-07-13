@@ -174,6 +174,19 @@ export function defineResourceCatalogConformance(
       await expect(
         catalog.execute(
           actorId,
+          envelope(
+            campaignId,
+            domainId(DOMAIN_ID_KIND.operation, operation++),
+            createCommand(
+              domainId(DOMAIN_ID_KIND.resource, 25),
+              domainId(DOMAIN_ID_KIND.resource, 26),
+            ),
+          ),
+        ),
+      ).resolves.toEqual({ status: 'rejected', reason: 'invalid_parent' })
+      await expect(
+        catalog.execute(
+          actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'move',
             resourceIds: [folderId],
@@ -381,6 +394,16 @@ export function defineResourceCatalogConformance(
       const tombstone = await catalog.getTombstone(campaignId, folderId)
       expect(tombstone?.deletionVersion.revision).toBe(3)
       expect(await catalog.getResource(campaignId, childId)).not.toBeNull()
+      await expect(
+        catalog.execute(
+          actorId,
+          envelope(
+            secondCampaignId,
+            domainId(DOMAIN_ID_KIND.operation, operation++),
+            createCommand(folderId, null, 'folder'),
+          ),
+        ),
+      ).resolves.toEqual({ status: 'rejected', reason: 'ownership_mismatch' })
     })
 
     it('preserves the first alias observation and keeps application roles deterministic', async () => {

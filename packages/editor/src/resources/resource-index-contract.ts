@@ -1,5 +1,7 @@
 import type { VersionStamp } from './component-version'
+import { isUuidV7 } from './domain-id'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
+import { RESOURCE_KIND } from './resource-contract'
 import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-contract'
 
 declare const indexRevisionBrand: unique symbol
@@ -121,6 +123,26 @@ export interface WorkspaceResourceIndexController extends WorkspaceResourceIndex
 export function normalizeResourceCollectionQuery(
   query: ResourceCollectionQuery,
 ): ResourceCollectionQuery {
-  if (!query.kinds) return query
-  return { ...query, kinds: Array.from(new Set(query.kinds)).sort() }
+  if (query.parentId !== null && !isUuidV7(query.parentId)) {
+    throw new TypeError('Invalid resource collection parent')
+  }
+  if (query.lifecycle !== 'active' && query.lifecycle !== 'trashed') {
+    throw new TypeError('Invalid resource collection lifecycle')
+  }
+  if (
+    query.kinds !== undefined &&
+    (!Array.isArray(query.kinds) ||
+      query.kinds.some((kind) => !Object.values(RESOURCE_KIND).includes(kind)))
+  ) {
+    throw new TypeError('Invalid resource collection kinds')
+  }
+  return {
+    parentId: query.parentId,
+    lifecycle: query.lifecycle,
+    ...(query.kinds === undefined
+      ? {}
+      : {
+          kinds: Array.from(new Set(query.kinds)).sort((left, right) => left.localeCompare(right)),
+        }),
+  }
 }

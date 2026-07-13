@@ -59,6 +59,16 @@ function normalizeResourceKind(value: ResourceKind): ResourceKind {
   return value
 }
 
+function normalizeNullableString(value: string | null, field: string): string | null {
+  if (value !== null && typeof value !== 'string') throw new TypeError(`Invalid ${field}`)
+  return value
+}
+
+function normalizeBoolean(value: boolean, field: string): boolean {
+  if (typeof value !== 'boolean') throw new TypeError(`Invalid ${field}`)
+  return value
+}
+
 function normalizeMetadataUpdate(
   command: UpdateResourceMetadataCommand,
 ): UpdateResourceMetadataCommand {
@@ -66,8 +76,12 @@ function normalizeMetadataUpdate(
     ...(command.changes.title === undefined
       ? {}
       : { title: canonicalizeResourceTitle(command.changes.title) }),
-    ...(command.changes.icon === undefined ? {} : { icon: command.changes.icon }),
-    ...(command.changes.color === undefined ? {} : { color: command.changes.color }),
+    ...(command.changes.icon === undefined
+      ? {}
+      : { icon: normalizeNullableString(command.changes.icon, 'resource icon') }),
+    ...(command.changes.color === undefined
+      ? {}
+      : { color: normalizeNullableString(command.changes.color, 'resource color') }),
   }
   if (Object.keys(changes).length === 0) throw new TypeError('A metadata update cannot be empty')
   return {
@@ -112,8 +126,8 @@ export function normalizeResourceStructureCommand(
         kind: normalizeResourceKind(command.kind),
         parentId: normalizeParentId(command.parentId),
         title: canonicalizeResourceTitle(command.title),
-        icon: command.icon,
-        color: command.color,
+        icon: normalizeNullableString(command.icon, 'resource icon'),
+        color: normalizeNullableString(command.color, 'resource color'),
       }
     case 'updateMetadata':
       return normalizeMetadataUpdate(command)
@@ -160,7 +174,7 @@ export function normalizeResourceAccessCommand(
       return {
         type: 'setFolderAccessInheritance',
         folderId: normalizeResourceId(command.folderId),
-        inherited: command.inherited,
+        inherited: normalizeBoolean(command.inherited, 'folder inheritance state'),
       }
   }
 }
@@ -171,7 +185,7 @@ export function normalizeResourceBookmarkCommand(
   return {
     type: 'setBookmarkState',
     resourceIds: normalizeResourceIdSet(command.resourceIds),
-    bookmarked: command.bookmarked,
+    bookmarked: normalizeBoolean(command.bookmarked, 'bookmark state'),
   }
 }
 
@@ -184,7 +198,7 @@ export function normalizeNoteBlockAccessCommand(
         type: 'setNoteBlockAudienceAccess',
         noteId: normalizeResourceId(command.noteId),
         blockIds: normalizeNoteBlockIdSet(command.blockIds),
-        shared: command.shared,
+        shared: normalizeBoolean(command.shared, 'note block audience state'),
       }
     case 'setNoteBlockMemberAccess': {
       const permission = normalizePermission(command.permission)

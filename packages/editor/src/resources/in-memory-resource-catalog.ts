@@ -136,7 +136,9 @@ function activeFolder(
   parentId: ResourceId | null,
 ): ResourceRecord | null {
   if (parentId === null) return null
-  const parent = ownedResource(state, campaignId, parentId)
+  const parent = state.resources.get(parentId)
+  if (!parent) throw new CatalogRejection('invalid_parent')
+  if (parent.campaignId !== campaignId) throw new CatalogRejection('ownership_mismatch')
   if (parent.kind !== 'folder') throw new CatalogRejection('invalid_parent_kind')
   if (parent.lifecycle.state !== 'active') throw new CatalogRejection('invalid_parent')
   return parent
@@ -476,7 +478,12 @@ export class InMemoryResourceCatalog
         existing.campaignId === campaignId ? 'invalid_command' : 'ownership_mismatch',
       )
     }
-    if (state.tombstones.has(command.resourceId)) throw new CatalogRejection('invalid_command')
+    const tombstone = state.tombstones.get(command.resourceId)
+    if (tombstone) {
+      throw new CatalogRejection(
+        tombstone.campaignId === campaignId ? 'invalid_command' : 'ownership_mismatch',
+      )
+    }
     activeFolder(state, campaignId, command.parentId)
     const metadata = {
       parentId: command.parentId,

@@ -95,6 +95,17 @@ describe('resource-command-v1 normalization', () => {
         changes: {},
       }),
     ).toThrow(/cannot be empty/)
+    expect(() =>
+      normalizeResourceStructureCommand({
+        type: 'create',
+        resourceId: resourceA,
+        kind: RESOURCE_KIND.note,
+        parentId: null,
+        title: canonicalizeResourceTitle('Entry'),
+        icon: 1 as unknown as string,
+        color: null,
+      }),
+    ).toThrow(/resource icon/)
   })
 })
 
@@ -131,5 +142,23 @@ describe('separate command families', () => {
       fingerprintNoteBlockAccessCommand(blockAccess),
     ])
     expect(new Set(fingerprints).size).toBe(3)
+  })
+
+  it('rejects non-boolean family state at the protocol boundary', () => {
+    expect(() =>
+      normalizeResourceBookmarkCommand({
+        type: 'setBookmarkState',
+        resourceIds: [resourceA],
+        bookmarked: 'yes' as unknown as boolean,
+      }),
+    ).toThrow(/bookmark state/)
+    expect(() =>
+      normalizeNoteBlockAccessCommand({
+        type: 'setNoteBlockAudienceAccess',
+        noteId: resourceA,
+        blockIds: [blockId],
+        shared: 1 as unknown as boolean,
+      }),
+    ).toThrow(/audience state/)
   })
 })

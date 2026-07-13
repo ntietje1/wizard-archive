@@ -399,6 +399,13 @@ describe('ResourceIndexLoader', () => {
     await expect(
       incomplete.ensureCollection({ parentId: null, lifecycle: 'active' }),
     ).resolves.toEqual({ status: 'failed', retryable: false, reason: 'invalid_response' })
+    await expect(
+      incomplete.ensureCollection({
+        parentId: null,
+        lifecycle: 'active',
+        kinds: ['search' as 'note'],
+      }),
+    ).resolves.toEqual({ status: 'failed', retryable: false, reason: 'invalid_response' })
 
     const failure = createResourceIndexLoader(index, {
       loadResource: () => Promise.reject(new Error('provider failed')),
