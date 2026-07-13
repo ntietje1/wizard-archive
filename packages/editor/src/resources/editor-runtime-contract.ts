@@ -1,6 +1,10 @@
 import type { ContentSessionState } from './content-session-contract'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
-import type { ResourceStructureCommandGateway } from './resource-command-contract'
+import type {
+  ResourceAccessCommandGateway,
+  ResourceBookmarkCommandGateway,
+  ResourceStructureCommandGateway,
+} from './resource-command-contract'
 import type { ResourceIndexLoader, WorkspaceResourceIndex } from './resource-index-contract'
 
 export type EditorRuntimeScope = Readonly<{
@@ -9,14 +13,13 @@ export type EditorRuntimeScope = Readonly<{
   projection: string
 }>
 
-export interface ResourceAccessGateway {
+export interface ResourceAccessGateway extends ResourceAccessCommandGateway {
   get(resourceId: ResourceId): unknown
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
-export interface ResourceBookmarkGateway {
+export interface ResourceBookmarkGateway extends ResourceBookmarkCommandGateway {
   get(resourceId: ResourceId): boolean | 'unknown'
-  set(resourceId: ResourceId, bookmarked: boolean): Promise<void>
 }
 
 export interface ResourcePreviewSource {

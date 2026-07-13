@@ -137,6 +137,14 @@
       "types": "./dist/resources/resource-command-contract.d.mts",
       "default": "./dist/resources/resource-command-contract.mjs"
     },
+    "./resources/command-protocol": {
+      "types": "./dist/resources/resource-command-protocol.d.mts",
+      "default": "./dist/resources/resource-command-protocol.mjs"
+    },
+    "./resources/operation-ledger": {
+      "types": "./dist/resources/resource-operation-ledger.d.mts",
+      "default": "./dist/resources/resource-operation-ledger.mjs"
+    },
     "./resources/content-session-contract": {
       "types": "./dist/resources/content-session-contract.d.mts",
       "default": "./dist/resources/content-session-contract.mjs"
@@ -230,6 +238,8 @@
       "./resources/catalog-contract",
       "./resources/index-contract",
       "./resources/command-contract",
+      "./resources/command-protocol",
+      "./resources/operation-ledger",
       "./resources/content-session-contract",
       "./resources/content-copy-contract",
       "./resources/optimism-contract",

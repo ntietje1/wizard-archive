@@ -1,5 +1,11 @@
 import type { VersionStamp } from './component-version'
-import type { CampaignId, CampaignMemberId, OperationId, ResourceId } from './domain-id'
+import type {
+  CampaignId,
+  CampaignMemberId,
+  NoteBlockId,
+  OperationId,
+  ResourceId,
+} from './domain-id'
 import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-contract'
 
 export type CreateResourceCommand = Readonly<{
@@ -57,6 +63,58 @@ export type ResourceStructureCommand =
   | RestoreResourcesCommand
   | PermanentlyDeleteResourcesCommand
   | DeepCopyResourcesCommand
+
+export type ResourcePermission = 'none' | 'view' | 'edit'
+
+export type ResourceAccessCommand =
+  | Readonly<{
+      type: 'setAudienceAccess'
+      resourceIds: ReadonlyArray<ResourceId>
+      permission: ResourcePermission
+    }>
+  | Readonly<{
+      type: 'setMemberAccess'
+      resourceIds: ReadonlyArray<ResourceId>
+      memberId: CampaignMemberId
+      permission: ResourcePermission
+    }>
+  | Readonly<{
+      type: 'clearMemberAccess'
+      resourceIds: ReadonlyArray<ResourceId>
+      memberId: CampaignMemberId
+    }>
+  | Readonly<{
+      type: 'setFolderAccessInheritance'
+      folderId: ResourceId
+      inherited: boolean
+    }>
+
+export type ResourceBookmarkCommand = Readonly<{
+  type: 'setBookmarkState'
+  resourceIds: ReadonlyArray<ResourceId>
+  bookmarked: boolean
+}>
+
+export type NoteBlockAccessCommand =
+  | Readonly<{
+      type: 'setNoteBlockAudienceAccess'
+      noteId: ResourceId
+      blockIds: ReadonlyArray<NoteBlockId>
+      shared: boolean
+    }>
+  | Readonly<{
+      type: 'setNoteBlockMemberAccess'
+      noteId: ResourceId
+      blockIds: ReadonlyArray<NoteBlockId>
+      memberId: CampaignMemberId
+      permission: Extract<ResourcePermission, 'none' | 'view'>
+    }>
+  | Readonly<{
+      type: 'clearNoteBlockMemberAccess'
+      noteId: ResourceId
+      blockIds: ReadonlyArray<NoteBlockId>
+      memberId: CampaignMemberId
+    }>
 
 export type CommandEnvelope<TCommand> = Readonly<{
   campaignId: CampaignId
@@ -136,10 +194,88 @@ export type ResourceStructureCommandResult = CommandResult<
   ResourceStructureRejection
 >
 
+export type ResourceAccessReceipt = Readonly<{
+  campaignId: CampaignId
+  operationId: OperationId
+  resourceIds: ReadonlyArray<ResourceId>
+}>
+
+export type ResourceBookmarkReceipt = Readonly<{
+  campaignId: CampaignId
+  operationId: OperationId
+  resourceIds: ReadonlyArray<ResourceId>
+  bookmarked: boolean
+}>
+
+export type NoteBlockAccessReceipt = Readonly<{
+  campaignId: CampaignId
+  operationId: OperationId
+  noteId: ResourceId
+  blockIds: ReadonlyArray<NoteBlockId>
+}>
+
+export type ResourceAccessRejection =
+  | 'invalid_command'
+  | 'ownership_mismatch'
+  | 'unauthorized'
+  | 'resource_missing'
+  | 'invalid_resource_kind'
+  | 'invalid_permission'
+  | 'operation_id_reused'
+
+export type ResourceBookmarkRejection =
+  | 'invalid_command'
+  | 'ownership_mismatch'
+  | 'unauthorized'
+  | 'resource_missing'
+  | 'operation_id_reused'
+
+export type NoteBlockAccessRejection =
+  | 'invalid_command'
+  | 'ownership_mismatch'
+  | 'unauthorized'
+  | 'note_missing'
+  | 'block_missing'
+  | 'invalid_permission'
+  | 'operation_id_reused'
+
+export type ResourceAccessCommandResult = CommandResult<
+  ResourceAccessReceipt,
+  ResourceAccessRejection
+>
+
+export type ResourceBookmarkCommandResult = CommandResult<
+  ResourceBookmarkReceipt,
+  ResourceBookmarkRejection
+>
+
+export type NoteBlockAccessCommandResult = CommandResult<
+  NoteBlockAccessReceipt,
+  NoteBlockAccessRejection
+>
+
 export interface ResourceStructureCommandGateway {
   execute(
     envelope: CommandEnvelope<ResourceStructureCommand>,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>>
+}
+
+export interface ResourceAccessCommandGateway {
+  execute(
+    envelope: CommandEnvelope<ResourceAccessCommand>,
+  ): Promise<CommandDelivery<ResourceAccessCommandResult>>
+}
+
+export interface ResourceBookmarkCommandGateway {
+  execute(
+    envelope: CommandEnvelope<ResourceBookmarkCommand>,
+  ): Promise<CommandDelivery<ResourceBookmarkCommandResult>>
+}
+
+export interface NoteBlockAccessCommandGateway {
+  execute(
+    envelope: CommandEnvelope<NoteBlockAccessCommand>,
+  ): Promise<CommandDelivery<NoteBlockAccessCommandResult>>
 }
 
 export interface AuthoritativeResourceOperationExecutor {
@@ -149,11 +285,11 @@ export interface AuthoritativeResourceOperationExecutor {
   ): Promise<ResourceStructureCommandResult>
 }
 
-export type StoredResourceOperation = Readonly<{
+export type StoredResourceOperation<TReceipt = unknown> = Readonly<{
   campaignId: CampaignId
   actorId: CampaignMemberId
   operationId: OperationId
   protocolVersion: 'resource-command-v1'
   fingerprint: VersionStamp['digest']
-  receipt: ResourceCommandReceipt<unknown>
+  receipt: TReceipt
 }>
