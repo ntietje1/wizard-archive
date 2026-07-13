@@ -96,6 +96,30 @@ describe('filesystem item command operations', () => {
     expect(discardCreatedItem).toHaveBeenCalledWith(receipt.transactionId)
   })
 
+  it('discards a created item only once when synchronous finalization fails', async () => {
+    const created = createNote({ name: 'Scene', slug: 'scene' })
+    const receipt = createCreatedItemReceipt(created)
+    const finalizeError = new Error('finalize failed')
+    const discardCreatedItem = vi.fn()
+    const operations = createFileSystemItemCommandOperations({
+      discardCreatedItem,
+      executeCommand: vi.fn().mockResolvedValue({ status: 'completed', receipt }),
+      finalizeCreatedItem: vi.fn(() => {
+        throw finalizeError
+      }),
+    })
+
+    await expect(
+      operations.createItem({
+        itemType: RESOURCE_TYPES.notes,
+        name: created.name,
+        parentTarget: { kind: 'direct', parentId: null },
+      }),
+    ).rejects.toBe(finalizeError)
+
+    expect(discardCreatedItem).toHaveBeenCalledExactlyOnceWith(receipt.transactionId)
+  })
+
   it('requests folder trash confirmation for non-empty folders', async () => {
     const folder = createFolder({ name: 'Scenes' })
     const child = createNote({ parentId: folder.id })

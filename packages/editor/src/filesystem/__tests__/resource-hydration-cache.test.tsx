@@ -71,6 +71,26 @@ describe('useResourceHydrationCache', () => {
       value: 'fresh',
     })
   })
+
+  it('keeps separator-containing source and resource keys distinct', () => {
+    const load = vi.fn((_key: string) => new Promise<string>(() => undefined))
+    const { result } = renderHook(() => useResourceHydrationCache({ load }))
+
+    act(() => {
+      result.current.ensure({ sourceId: 'source:a', key: 'b' })
+      result.current.ensure({ sourceId: 'source', key: 'a:b' })
+    })
+
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(result.current.getEntry({ sourceId: 'source:a', key: 'b' })).toMatchObject({
+      sourceId: 'source:a',
+      key: 'b',
+    })
+    expect(result.current.getEntry({ sourceId: 'source', key: 'a:b' })).toMatchObject({
+      sourceId: 'source',
+      key: 'a:b',
+    })
+  })
 })
 
 function deferred<T>() {

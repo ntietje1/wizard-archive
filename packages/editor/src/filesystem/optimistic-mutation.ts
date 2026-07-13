@@ -132,12 +132,30 @@ export async function runFileSystemOptimisticMutation({
     reportError(mutationError, errorMessage)
     return null
   }
-  if (!receipt) return null
+  if (!receipt) {
+    await runMutationFailureEffects({
+      cacheAdapter,
+      rollback,
+      onMutationFailure,
+      reportError,
+      errorMessage,
+    })
+    reportError(new Error('Filesystem mutation returned no receipt'), errorMessage)
+    return null
+  }
 
   try {
     cacheAdapter.applyPatches([...rollback, ...receipt.patches])
   } catch (error) {
     reportError(error, errorMessage)
+    await runMutationFailureEffects({
+      cacheAdapter,
+      rollback,
+      onMutationFailure,
+      reportError,
+      errorMessage,
+    })
+    return null
   }
   try {
     await onSuccess(receipt)

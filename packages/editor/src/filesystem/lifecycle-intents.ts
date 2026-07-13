@@ -78,5 +78,11 @@ async function applyFileSystemLifecycleIntent({
       }
       return
     }
+    default:
+      return assertNever(intent)
   }
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unsupported filesystem lifecycle intent: ${JSON.stringify(value)}`)
 }

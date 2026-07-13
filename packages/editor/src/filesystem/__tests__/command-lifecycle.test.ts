@@ -85,7 +85,7 @@ describe('filesystem command lifecycle', () => {
     expect(showReceiptToast).toHaveBeenCalledWith(createCreatedItemReceipt(created))
   })
 
-  it('reports an error when cache reconciliation fails after provider commit', async () => {
+  it('does not run success effects when cache reconciliation fails after provider commit', async () => {
     const parent = createFolder({
       id: 'parent_folder' as SidebarItemId,
       name: 'Scenes',
@@ -140,13 +140,49 @@ describe('filesystem command lifecycle', () => {
       showReceiptToast,
     })
 
-    expect(result).toEqual({ status: 'completed', receipt })
+    expect(result).toEqual({ status: 'error' })
     expect(executeMutation).toHaveBeenCalledOnce()
-    expect(applyReceiptSideEffects).toHaveBeenCalledWith(receipt, null)
-    expect(recordUndoReceipt).toHaveBeenCalledWith(receipt)
-    expect(onSuccess).toHaveBeenCalledOnce()
-    expect(showReceiptToast).toHaveBeenCalledWith(receipt)
+    expect(applyReceiptSideEffects).not.toHaveBeenCalled()
+    expect(recordUndoReceipt).not.toHaveBeenCalled()
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(showReceiptToast).not.toHaveBeenCalled()
     expect(reportError).toHaveBeenCalledWith(reconciliationError, 'Filesystem operation failed')
+  })
+
+  it('reports planner failures without starting provider mutation work', async () => {
+    const planningError = new Error('snapshot unavailable')
+    const reportError = vi.fn()
+    const executeMutation = vi.fn()
+    const cacheAdapter = createReadWriteTestCache({ sidebar: [], trash: [] })
+    vi.spyOn(cacheAdapter, 'getSnapshot').mockImplementation(() => {
+      throw planningError
+    })
+
+    const result = await executeFileSystemCommandLifecycle({
+      command: { type: 'emptyTrash' },
+      workspaceId: campaignId,
+      currentUserId,
+      activeItemSurface: null,
+      cacheAdapter,
+      createClientOperationId: () => 'operation-1',
+      getCurrentResourceId: () => null,
+      runMutation: (operation) => operation(),
+      executeMutation,
+      applyLifecycleIntents: vi.fn(),
+      applyReceiptSideEffects: vi.fn(),
+      recordUndoReceipt: vi.fn(),
+      reportError,
+      showProgress: vi.fn(),
+      dismissProgress: vi.fn(),
+      showReceiptToast: vi.fn(),
+    })
+
+    expect(result).toEqual({ status: 'error' })
+    expect(executeMutation).not.toHaveBeenCalled()
+    expect(reportError).toHaveBeenCalledExactlyOnceWith(
+      planningError,
+      'Filesystem operation failed',
+    )
   })
 
   it('returns conflicts before starting provider mutation work', async () => {

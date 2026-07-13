@@ -55,6 +55,35 @@ function isRollbackPatchSet(patches: Array<ResourcePatch>) {
 }
 
 describe('runFileSystemOptimisticMutation', () => {
+  it('rolls back and reports a missing mutation receipt', async () => {
+    const cacheAdapter = createCacheAdapter()
+    const reportError = vi.fn()
+    const onMutationFailure = vi.fn()
+
+    const result = await runFileSystemOptimisticMutation({
+      cacheAdapter,
+      apply: [optimisticPatch],
+      rollback: [rollbackPatch],
+      mutate: vi
+        .fn()
+        .mockResolvedValue(null) as unknown as () => Promise<ResourceTransactionReceipt>,
+      onMutationFailure,
+      onSuccess: vi.fn(),
+      errorMessage: 'Filesystem operation failed',
+      reportError,
+      showProgress: vi.fn(),
+      dismissProgress: vi.fn(),
+    })
+
+    expect(result).toBeNull()
+    expect(cacheAdapter.applyPatches).toHaveBeenNthCalledWith(2, [rollbackPatch])
+    expect(onMutationFailure).toHaveBeenCalledOnce()
+    expect(reportError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Filesystem mutation returned no receipt' }),
+      'Filesystem operation failed',
+    )
+  })
+
   it('returns the committed receipt when success side effects fail', async () => {
     const error = new Error('side effect failed')
     const reportError = vi.fn()
@@ -100,7 +129,7 @@ describe('runFileSystemOptimisticMutation', () => {
     expect(reportError).toHaveBeenCalledWith(error, 'Failed to show filesystem progress')
   })
 
-  it('returns the committed receipt when local cache reconciliation fails after commit', async () => {
+  it('does not report success when local cache reconciliation fails after commit', async () => {
     const error = new Error('cache failed')
     const reportError = vi.fn()
     const onSuccess = vi.fn()
@@ -123,13 +152,14 @@ describe('runFileSystemOptimisticMutation', () => {
       dismissProgress: vi.fn(),
     })
 
-    expect(result).toBe(receipt)
+    expect(result).toBeNull()
     expect(cacheAdapter.applyPatches).toHaveBeenNthCalledWith(1, [optimisticPatch])
     expect(cacheAdapter.applyPatches).toHaveBeenNthCalledWith(2, [
       rollbackPatch,
       ...receipt.patches,
     ])
-    expect(onSuccess).toHaveBeenCalledWith(receipt)
+    expect(cacheAdapter.applyPatches).toHaveBeenNthCalledWith(3, [rollbackPatch])
+    expect(onSuccess).not.toHaveBeenCalled()
     expect(reportError).toHaveBeenCalledWith(error, 'Filesystem operation failed')
   })
 

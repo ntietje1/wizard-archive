@@ -98,5 +98,5 @@ export function useResourceHydrationCache<
 }
 
 function createResourceHydrationKey(sourceId: string, key: string) {
-  return `${sourceId}:${key}`
+  return JSON.stringify([sourceId, key])
 }
