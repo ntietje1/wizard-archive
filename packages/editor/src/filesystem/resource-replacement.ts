@@ -103,7 +103,9 @@ export function useResourceReplacementController({
       .finally(() => {
         activeSelectionsRef.current.delete(selectionId)
         if (latestSelectionRef.current === selectionId) latestSelectionRef.current = null
-        const hasActiveReplacement = activeSelectionsRef.current.size > 0
+        const hasActiveReplacement = allowSelectionWhilePending
+          ? latestSelectionRef.current !== null
+          : activeSelectionsRef.current.size > 0
         isReplacingRef.current = hasActiveReplacement
         setIsReplacing(hasActiveReplacement)
       })

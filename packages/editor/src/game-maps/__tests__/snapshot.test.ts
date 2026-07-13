@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { GameMapSnapshotData } from '../document-contract'

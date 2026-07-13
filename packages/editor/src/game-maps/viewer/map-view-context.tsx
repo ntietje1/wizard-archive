@@ -25,15 +25,11 @@ export function MapViewProvider({
   const activePin = map ? (pins.find((pin) => pin.id === activePinId) ?? null) : null
   const pinsRef = useRef(pins)
   pinsRef.current = pins
-  const setActivePinIdRef = useRef<((pinId: MapPinId | null) => void) | null>(null)
-  if (!setActivePinIdRef.current) {
-    setActivePinIdRef.current = (pinId: MapPinId | null) => {
-      setActivePinIdValue((current) =>
-        pinId === null || pinsRef.current.some((pin) => pin.id === pinId) ? pinId : current,
-      )
-    }
-  }
-  const setActivePinId = setActivePinIdRef.current!
+  const setActivePinId = useStableValue((pinId: MapPinId | null) => {
+    setActivePinIdValue((current) =>
+      pinId === null || pinsRef.current.some((pin) => pin.id === pinId) ? pinId : current,
+    )
+  }, [])
 
   const pinRequests = useStableValue(
     {

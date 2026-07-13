@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { resolveMapImage, withResolvedMapImage } from '../image-resolution'
 import type { MapImageSource } from '../image-resolution'
 import type { AssetId } from '../../../../../shared/common/ids'

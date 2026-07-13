@@ -102,7 +102,7 @@ const source: MapViewerSource = {
   createMapPins: vi.fn(),
   openItem: vi.fn(),
   removeMapPin: vi.fn(),
-  resolveRenderPins: () => ({ status: 'available', pins: [], isPinGhost: () => false }),
+  resolveEmbeddedMapState: () => ({ status: 'available', pins: [], isPinGhost: () => false }),
   transformStore: {
     loadMapTransform: () => ({ scale: 1, positionX: 0, positionY: 0 }),
     saveMapTransform: vi.fn(),

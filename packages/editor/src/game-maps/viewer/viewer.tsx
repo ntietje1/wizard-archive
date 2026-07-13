@@ -55,7 +55,7 @@ export function MapViewer({ item: map, source }: MapViewerProps) {
     map,
   })
   const mapStageRef = useMergedRef(mapContainerRef, mapDropTargetRef)
-  const renderPinState = source.resolveRenderPins(map)
+  const renderPinState = source.resolveEmbeddedMapState(map)
   const pins =
     renderPinState.status === 'available'
       ? filterMapPinsForLayer(renderPinState.pins, activeLayerId, mapLayers)

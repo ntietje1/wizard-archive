@@ -45,6 +45,7 @@ type PendingPinItems = {
 type PendingPinMove = { mapId: SidebarItemId; pinId: MapPinId }
 type DraggingPin = { pin: MapPinWithItem; pointerId: number }
 type PinContextMenuState = {
+  layerId: string | null
   pinId: MapPinId
   position: ScreenPosition
 }
@@ -72,6 +73,29 @@ function restoreDraggedPinElement(
   draggedPinPositionRef.current = null
 }
 
+function resetPinActions({
+  draggedPinPositionRef,
+  draggingPin,
+  pinsContainerRef,
+  setDraggingPin,
+  setPendingPinItems,
+  setPendingPinMove,
+}: {
+  draggedPinPositionRef: { current: PinPosition | null }
+  draggingPin: DraggingPin | null
+  pinsContainerRef: PinElementContainerRef
+  setDraggingPin: StateSetter<DraggingPin | null>
+  setPendingPinItems: StateSetter<PendingPinItems | null>
+  setPendingPinMove: StateSetter<PendingPinMove | null>
+}) {
+  if (draggingPin) {
+    restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
+  }
+  setPendingPinItems(null)
+  setPendingPinMove(null)
+  setDraggingPin(null)
+}
+
 export function useMapPinInteractions({
   activeLayerId,
   canEditMap,
@@ -89,7 +113,9 @@ export function useMapPinInteractions({
   pinsContainerRef: PinElementContainerRef
   source: MapPinInteractionSource
 }) {
-  const [pinContextMenu, setPinContextMenu] = useState<PinContextMenuState | null>(null)
+  const [pinContextMenuState, setPinContextMenu] = useState<PinContextMenuState | null>(null)
+  const pinContextMenu =
+    pinContextMenuState?.layerId === (activeLayerId ?? null) ? pinContextMenuState : null
   const [pendingPinItems, setPendingPinItems] = useState<PendingPinItems | null>(null)
   const [pendingPinMove, setPendingPinMove] = useState<PendingPinMove | null>(null)
   const [draggingPin, setDraggingPin] = useState<DraggingPin | null>(null)
@@ -141,6 +167,7 @@ export function useMapPinInteractions({
     })
 
   const { handlePinClick, handlePinContextMenu, handlePinDragStart } = useRenderedPinHandlers({
+    activeLayerId: activeLayerId ?? null,
     canEditMap,
     draggedPinPositionRef,
     justFinishedDraggingRef,
@@ -234,12 +261,14 @@ function usePinActionCancellation({
         if (pendingPinMove) {
           toast.info('Pin move cancelled')
         }
-        if (draggingPin) {
-          restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
-        }
-        setPendingPinItems(null)
-        setPendingPinMove(null)
-        setDraggingPin(null)
+        resetPinActions({
+          draggedPinPositionRef,
+          draggingPin,
+          pinsContainerRef,
+          setDraggingPin,
+          setPendingPinItems,
+          setPendingPinMove,
+        })
       }
     }
 
@@ -259,12 +288,19 @@ function usePinActionCancellation({
   useEffect(() => {
     if (canEditMap) return
     if (pendingPinItems || pendingPinMove || draggingPin) {
-      if (draggingPin) {
-        restoreDraggedPinElement(draggingPin, pinsContainerRef.current, draggedPinPositionRef)
-      }
-      setPendingPinItems(null)
-      setPendingPinMove(null)
-      setDraggingPin(null)
+      const timeout = setTimeout(
+        () =>
+          resetPinActions({
+            draggedPinPositionRef,
+            draggingPin,
+            pinsContainerRef,
+            setDraggingPin,
+            setPendingPinItems,
+            setPendingPinMove,
+          }),
+        0,
+      )
+      return () => clearTimeout(timeout)
     }
   }, [
     canEditMap,
@@ -576,6 +612,7 @@ function useMapPinActionEventHandlers({
 }
 
 function useRenderedPinHandlers({
+  activeLayerId,
   canEditMap,
   draggedPinPositionRef,
   justFinishedDraggingRef,
@@ -586,6 +623,7 @@ function useRenderedPinHandlers({
   setPinContextMenu,
   source,
 }: {
+  activeLayerId: string | null
   canEditMap: boolean
   draggedPinPositionRef: { current: PinPosition | null }
   justFinishedDraggingRef: { current: MapPinId | null }
@@ -627,6 +665,7 @@ function useRenderedPinHandlers({
     const position = getPinMenuPosition(e)
 
     setPinContextMenu({
+      layerId: activeLayerId,
       pinId: pin.id,
       position,
     })

@@ -28,7 +28,7 @@ export function MapModeBanners({
       aria-live="polite"
       className="absolute top-16 left-1/2 -translate-x-1/2 z-[2000] bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg"
     >
-      <p className="text-sm font-medium">{text}</p>
+      <span className="text-sm font-medium">{text}</span>
     </output>
   )
 }
