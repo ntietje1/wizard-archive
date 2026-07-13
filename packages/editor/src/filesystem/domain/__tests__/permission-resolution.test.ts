@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
@@ -11,6 +10,7 @@ import {
   getMemberResourcePermissionLevel,
 } from '../permission-resolution'
 import type { EditorWorkspaceActor } from '../permission-resolution'
+import { createPermissionLookup } from './permission-test-utils'
 
 const memberId = testId<'campaignMembers'>('permission_resolution_member')
 const ownerActor: EditorWorkspaceActor = { kind: 'owner' }
@@ -71,16 +71,39 @@ describe('permission resolution domain', () => {
 
     expect(canViewResourceAndKnownAncestors(note, ctx)).toBe(false)
   })
+
+  it('terminates inherited permission resolution on cyclic parent chains', () => {
+    const firstId = testId<'sidebarItems'>('permission_cycle_first')
+    const secondId = testId<'sidebarItems'>('permission_cycle_second')
+    const first = createFolder({ id: firstId, parentId: secondId, inheritShares: true })
+    const second = createFolder({ id: secondId, parentId: firstId, inheritShares: true })
+    const note = createNote({ parentId: firstId, allPermissionLevel: null, shares: [] })
+
+    expect(
+      getMemberResourcePermissionLevel(
+        note,
+        memberId,
+        createPermissionLookup([first, second, note]),
+      ),
+    ).toBe(PERMISSION_LEVEL.NONE)
+  })
+
+  it('skips non-folder ancestors while resolving inherited permission', () => {
+    const ancestor = createNote({
+      allPermissionLevel: PERMISSION_LEVEL.EDIT,
+      parentId: null,
+    })
+    const note = createNote({ parentId: ancestor.id, allPermissionLevel: null, shares: [] })
+
+    expect(
+      getMemberResourcePermissionLevel(note, memberId, createPermissionLookup([ancestor, note])),
+    ).toBe(PERMISSION_LEVEL.NONE)
+  })
 })
 
 function createPermissionContext(actor: EditorWorkspaceActor | null, items: Array<AnyItem>) {
   return {
     actor,
-    getItemById: createLookup(items),
+    getItemById: createPermissionLookup(items),
   }
-}
-
-function createLookup(items: Array<AnyItem>) {
-  const itemsById = new Map<SidebarItemId, AnyItem>(items.map((item) => [item.id, item]))
-  return (itemId: SidebarItemId) => itemsById.get(itemId) ?? null
 }

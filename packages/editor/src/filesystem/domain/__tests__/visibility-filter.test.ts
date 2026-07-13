@@ -3,9 +3,9 @@ import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
-import type { AnyItem } from '../../../workspace/items'
 import { filterVisibleResourcesForActor } from '../visibility-filter'
 import type { EditorWorkspaceActor } from '../permission-resolution'
+import { createPermissionLookup } from './permission-test-utils'
 
 const ownerActor: EditorWorkspaceActor = { kind: 'owner' }
 const participantActor: EditorWorkspaceActor = { kind: 'participant' }
@@ -23,7 +23,7 @@ describe('resource visibility filter domain', () => {
       filterVisibleResourcesForActor({
         resources,
         actor: ownerActor,
-        getItemById: createLookup(resources),
+        getItemById: createPermissionLookup(resources),
       }),
     ).toBe(resources)
   })
@@ -48,7 +48,7 @@ describe('resource visibility filter domain', () => {
       filterVisibleResourcesForActor({
         resources,
         actor: participantActor,
-        getItemById: createLookup(resources),
+        getItemById: createPermissionLookup(resources),
       }),
     ).toEqual([visibleRoot])
   })
@@ -56,9 +56,4 @@ describe('resource visibility filter domain', () => {
 
 function resourceId(id: string): SidebarItemId {
   return testId<'sidebarItems'>(id)
-}
-
-function createLookup(items: Array<AnyItem>) {
-  const itemsById = new Map<SidebarItemId, AnyItem>(items.map((item) => [item.id, item]))
-  return (itemId: SidebarItemId) => itemsById.get(itemId) ?? null
 }

@@ -29,51 +29,64 @@ function getAllPlayersPermission(item: AnyItem | FolderItem): PermissionLevel | 
   return item.allPermissionLevel ?? null
 }
 
+function visitKnownAncestors(
+  item: AnyItem,
+  getItemById: ResourcePermissionContext['getItemById'],
+  visit: (ancestor: AnyItem) => boolean,
+) {
+  let parentId = item.parentId
+  const seen = new Set<SidebarItemId>()
+  while (parentId) {
+    if (seen.has(parentId)) return false
+    seen.add(parentId)
+    const parent = getItemById(parentId)
+    if (!parent) return false
+    if (!visit(parent)) return false
+    parentId = parent.parentId
+  }
+  return true
+}
+
 function resolveInheritedPermission(
   item: AnyItem,
   participantId: EditorShareParticipantId,
   getItemById: ResourcePermissionContext['getItemById'],
-): { level: PermissionLevel; source: string } | null {
-  let currentParentId = item.parentId
-  const seen = new Set<SidebarItemId>()
-
-  while (currentParentId) {
-    if (seen.has(currentParentId)) return null
-    seen.add(currentParentId)
-
-    const folder = getItemById(currentParentId) as FolderItem | undefined
-    if (!folder) return null
-    currentParentId = folder.parentId
-
-    if (folder.type !== RESOURCE_TYPES.folders) continue
-    if (!folder.inheritShares) return null
+): PermissionLevel | null {
+  let inheritedPermission: PermissionLevel | null = null
+  visitKnownAncestors(item, getItemById, (ancestor) => {
+    if (ancestor.type !== RESOURCE_TYPES.folders) return true
+    const folder = ancestor as FolderItem
+    if (!folder.inheritShares) return false
 
     const memberPermission = getMemberPermission(folder, participantId)
-    if (memberPermission !== null) return { level: memberPermission, source: folder.name }
+    if (memberPermission !== null) {
+      inheritedPermission = memberPermission
+      return false
+    }
 
     const allPlayersPermission = getAllPlayersPermission(folder)
     if (allPlayersPermission !== null) {
-      return { level: allPlayersPermission, source: folder.name }
+      inheritedPermission = allPlayersPermission
+      return false
     }
-  }
+    return true
+  })
 
-  return null
+  return inheritedPermission
 }
 
 function resolveResourcePermissionLevel(
   item: AnyItem,
   participantId: EditorShareParticipantId,
   getItemById: ResourcePermissionContext['getItemById'],
-): { level: PermissionLevel; source?: string } {
+): PermissionLevel {
   const memberPermission = getMemberPermission(item, participantId)
-  if (memberPermission !== null) return { level: memberPermission }
+  if (memberPermission !== null) return memberPermission
 
   const allPlayersPermission = getAllPlayersPermission(item)
-  if (allPlayersPermission !== null) return { level: allPlayersPermission }
+  if (allPlayersPermission !== null) return allPlayersPermission
 
-  return (
-    resolveInheritedPermission(item, participantId, getItemById) ?? { level: PERMISSION_LEVEL.NONE }
-  )
+  return resolveInheritedPermission(item, participantId, getItemById) ?? PERMISSION_LEVEL.NONE
 }
 
 function getActorResourcePermissionLevel(
@@ -82,7 +95,7 @@ function getActorResourcePermissionLevel(
 ): PermissionLevel {
   if (opts.actor?.kind === 'owner') return PERMISSION_LEVEL.FULL_ACCESS
   if (opts.actor?.kind === 'owner_view_as') {
-    return resolveResourcePermissionLevel(item, opts.actor.participantId, opts.getItemById).level
+    return resolveResourcePermissionLevel(item, opts.actor.participantId, opts.getItemById)
   }
   return item.myPermissionLevel
 }
@@ -109,7 +122,7 @@ export function getMemberResourcePermissionLevel(
   participantId: EditorShareParticipantId,
   getItemById: ResourcePermissionContext['getItemById'],
 ): PermissionLevel {
-  return resolveResourcePermissionLevel(item, participantId, getItemById).level
+  return resolveResourcePermissionLevel(item, participantId, getItemById)
 }
 
 export function canViewResourceAndKnownAncestors(
@@ -120,17 +133,7 @@ export function canViewResourceAndKnownAncestors(
     return false
   }
 
-  let parentId = item.parentId
-  const seen = new Set<SidebarItemId>()
-  while (parentId) {
-    if (seen.has(parentId)) return false
-    seen.add(parentId)
-    const parent = permissionContext.getItemById(parentId)
-    if (!parent) return false
-    if (!actorHasResourcePermission(parent, PERMISSION_LEVEL.VIEW, permissionContext)) {
-      return false
-    }
-    parentId = parent.parentId
-  }
-  return true
+  return visitKnownAncestors(item, permissionContext.getItemById, (ancestor) =>
+    actorHasResourcePermission(ancestor, PERMISSION_LEVEL.VIEW, permissionContext),
+  )
 }

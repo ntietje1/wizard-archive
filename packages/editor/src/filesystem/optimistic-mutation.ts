@@ -69,7 +69,7 @@ async function runMutationFailureEffects({
   errorMessage: string
 }) {
   try {
-    cacheAdapter.applyPatches(rollback)
+    cacheAdapter.applyPatches([...rollback].reverse())
   } catch (error) {
     reportError(error, errorMessage)
   }

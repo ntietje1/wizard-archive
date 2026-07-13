@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { WORKSPACE_MODE } from '../../../../../../shared/workspace/workspace-mode'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
 import { RESOURCE_STATUS } from '../../../workspace/items-persistence-contract'
-import type { AnyItem } from '../../../workspace/items'
 import { resolveResourceWorkspaceModePolicy } from '../workspace-mode-policy'
 import type { EditorWorkspaceActor } from '../permission-resolution'
+import { createPermissionLookup } from './permission-test-utils'
 
 const memberId = testId<'campaignMembers'>('workspace_mode_member')
 const participantActor: EditorWorkspaceActor = { kind: 'participant' }
@@ -24,7 +23,7 @@ describe('resource workspace mode policy', () => {
       resolveResourceWorkspaceModePolicy({
         actor: participantActor,
         currentItem: note,
-        getItemById: createLookup([note]),
+        getItemById: createPermissionLookup([note]),
         rawWorkspaceMode: WORKSPACE_MODE.EDITOR,
       }),
     ).toEqual({ canEdit: true, workspaceMode: WORKSPACE_MODE.EDITOR })
@@ -53,7 +52,7 @@ describe('resource workspace mode policy', () => {
       resolveResourceWorkspaceModePolicy({
         actor: ownerViewAsActor,
         currentItem: note,
-        getItemById: createLookup([note]),
+        getItemById: createPermissionLookup([note]),
         rawWorkspaceMode: WORKSPACE_MODE.EDITOR,
       }),
     ).toEqual({ canEdit: false, workspaceMode: WORKSPACE_MODE.VIEWER })
@@ -69,14 +68,9 @@ describe('resource workspace mode policy', () => {
       resolveResourceWorkspaceModePolicy({
         actor: participantActor,
         currentItem: note,
-        getItemById: createLookup([note]),
+        getItemById: createPermissionLookup([note]),
         rawWorkspaceMode: WORKSPACE_MODE.EDITOR,
       }),
     ).toEqual({ canEdit: false, workspaceMode: WORKSPACE_MODE.VIEWER })
   })
 })
-
-function createLookup(items: Array<AnyItem>) {
-  const itemsById = new Map<SidebarItemId, AnyItem>(items.map((item) => [item.id, item]))
-  return (itemId: SidebarItemId) => itemsById.get(itemId) ?? null
-}
