@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { Plus } from 'lucide-react'
 import type { SidebarItemId } from '../../../../shared/common/ids'
 import { Card } from '@wizard-archive/ui/shadcn/components/card'
@@ -33,7 +34,7 @@ export function NewItemCard({ parentId, source }: NewItemCardProps) {
     setIsOpen(true)
   }
 
-  const openCreateMenu = (e: React.MouseEvent) => {
+  const openCreateMenu = (e: MouseEvent) => {
     e.preventDefault()
     openMenuAt(e.clientX, e.clientY)
   }

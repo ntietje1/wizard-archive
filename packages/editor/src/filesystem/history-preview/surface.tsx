@@ -50,7 +50,7 @@ export function HistoryPreviewSurface({
     />
   )
 
-  if (!history.previewingEntryId) {
+  if (!history.previewingEntryId || history.itemId !== itemId) {
     return (
       <>
         {children}
