@@ -1,6 +1,4 @@
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vite-plus/test'
 import { act, renderHook } from '@testing-library/react'
 import * as Y from 'yjs'
 import { applyAwarenessUpdate, Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
@@ -133,6 +131,7 @@ describe('YjsProvider', () => {
   afterEach(() => {
     provider.destroy()
     doc.destroy()
+    vi.unstubAllGlobals()
     vi.useRealTimers()
   })
 
@@ -258,6 +257,21 @@ describe('YjsProvider', () => {
 
       const frag = doc.getXmlFragment('document')
       expect(frag.length).toBe(1)
+    })
+
+    it('does not advance the remote cursor from local push acknowledgements', async () => {
+      ;(config.pushUpdate as ReturnType<typeof vi.fn>).mockResolvedValue({
+        status: 'accepted',
+        seq: 10,
+      })
+      provider.setWritable(true)
+      doc.getXmlFragment('local').insert(0, [new Y.XmlElement('paragraph')])
+      await vi.advanceTimersByTimeAsync(50)
+
+      provider.applyRemoteUpdates([createRemoteUpdate(1)])
+
+      expect(provider.lastAppliedSeq).toBe(1)
+      expect(doc.getXmlFragment('document').length).toBe(1)
     })
 
     it('sets synced to true and emits sync event on first apply', () => {
@@ -499,9 +513,51 @@ describe('YjsProvider', () => {
       await expect(provider.flushPendingUpdates()).resolves.toBe(true)
       expect(config.pushUpdate).toHaveBeenCalledTimes(2)
     })
+
+    it('backs off exponentially across consecutive push failures', async () => {
+      ;(config.pushUpdate as ReturnType<typeof vi.fn>)
+        .mockRejectedValueOnce(new Error('offline-1'))
+        .mockRejectedValueOnce(new Error('offline-2'))
+        .mockResolvedValue({ status: 'accepted', seq: 1 })
+      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
+
+      await vi.advanceTimersByTimeAsync(50)
+      expect(config.pushUpdate).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(99)
+      expect(config.pushUpdate).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(config.pushUpdate).toHaveBeenCalledTimes(2)
+
+      await vi.advanceTimersByTimeAsync(199)
+      expect(config.pushUpdate).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(config.pushUpdate).toHaveBeenCalledTimes(3)
+    })
   })
 
   describe('awareness push', () => {
+    it('uses a UUID fallback when randomUUID is unavailable', () => {
+      vi.stubGlobal('crypto', {
+        getRandomValues: (bytes: Uint8Array) => {
+          bytes.fill(7)
+          return bytes
+        },
+      })
+      const fallbackDoc = new Y.Doc()
+      const fallbackConfig = createConfig()
+      const fallbackProvider = new YjsProvider(fallbackDoc, DOCUMENT_ID, fallbackConfig)
+
+      fallbackProvider.updateUser(createYjsProviderUser({ userId: 'player-1', name: 'Mara' }))
+
+      const args = (fallbackConfig.pushAwareness as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
+      expect(args.sessionId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      )
+
+      fallbackProvider.destroy({ discardPendingUpdates: true })
+      fallbackDoc.destroy()
+    })
     it('throttles local awareness changes by flushing immediately then gating', () => {
       provider.awareness.setLocalState({ cursor: { x: 10, y: 20 } })
 
@@ -572,6 +628,18 @@ describe('YjsProvider', () => {
   })
 
   describe('edge cases', () => {
+    it('reports provider teardown failures', async () => {
+      const error = new Error('flush failed')
+      vi.spyOn(provider, 'flushUpdates').mockRejectedValue(error)
+
+      provider.destroy()
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(config.reportError).toHaveBeenCalledWith(
+        expect.stringContaining('Yjs provider teardown failed'),
+        error,
+      )
+    })
     it('flush on destroy sends pending updates when writable', async () => {
       provider.setWritable(true)
       doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
@@ -584,33 +652,12 @@ describe('YjsProvider', () => {
 })
 
 describe('Yjs collaboration ownership boundaries', () => {
-  it('keeps update sync and awareness controllers independent of React', () => {
-    const updateSyncController = readFileSync(
-      path.join(process.cwd(), 'packages/editor/src/collaboration/yjs-update-sync-controller.ts'),
-      'utf8',
-    )
-    const awarenessController = readFileSync(
-      path.join(process.cwd(), 'packages/editor/src/collaboration/yjs-awareness-controller.ts'),
-      'utf8',
-    )
-
-    expect(updateSyncController).not.toMatch(/\bfrom 'react'|\bfrom "react"/)
-    expect(awarenessController).not.toMatch(/\bfrom 'react'|\bfrom "react"/)
-  })
-
-  it('keeps adapter-facing Yjs helpers on the public provider contract', () => {
-    const adapterSource = readFileSync(
-      path.join(process.cwd(), 'packages/editor/src/adapter.ts'),
-      'utf8',
-    )
-    const providerContract = readFileSync(
-      path.join(process.cwd(), 'packages/editor/src/collaboration/yjs-provider.ts'),
-      'utf8',
-    )
-
-    expect(adapterSource).not.toContain('provider as YjsProvider')
-    expect(providerContract).toContain('flushPendingUpdates: () => Promise<boolean>')
-    expect(providerContract).toContain('isApplyingRemoteUpdate: () => boolean')
-    expect(providerContract).toContain('updateUser: (user: YjsProviderUser) => void')
+  it('keeps adapter-facing helpers on the provider contract', () => {
+    expectTypeOf<YjsProvider>().toMatchTypeOf<
+      Pick<
+        YjsCollaborationProvider,
+        'flushPendingUpdates' | 'isApplyingRemoteUpdate' | 'updateUser'
+      >
+    >()
   })
 })

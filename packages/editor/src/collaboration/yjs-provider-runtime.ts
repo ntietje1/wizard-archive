@@ -22,10 +22,12 @@ export class YjsProvider extends ObservableV2<YjsProviderEvents> {
 
   private readonly awarenessController: YjsAwarenessController
   private readonly updateSyncController: YjsUpdateSyncController
+  private readonly reportError: YjsProviderConfig['reportError']
   private destroyed = false
 
   constructor(doc: Y.Doc, documentId: SidebarItemId, config: YjsProviderConfig) {
     super()
+    this.reportError = config.reportError
     this.doc = doc
     this.updateSyncController = new YjsUpdateSyncController({
       doc,
@@ -62,7 +64,9 @@ export class YjsProvider extends ObservableV2<YjsProviderEvents> {
     }
 
     teardown()
-      .catch(() => {})
+      .catch((error: unknown) => {
+        this.reportError(`Yjs provider teardown failed for ${this.doc.guid}`, error)
+      })
       .finally(() => {
         this.doc.off('update', this.handleDocUpdate)
         this.awareness.off('update', this.handleAwarenessUpdate)
