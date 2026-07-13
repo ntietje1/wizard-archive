@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import type { FunctionArgs } from 'convex/server'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
@@ -136,6 +137,241 @@ describe('resource structure commands', () => {
     expect(renamedVersion.digest).not.toBe(createdVersion.digest)
   })
 
+  it('moves selected roots without allowing invalid parents or hierarchy cycles', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const rootId = await createResource(campaign, campaignUuid, 'folder', null, 'Root')
+    const childFolderId = await createResource(campaign, campaignUuid, 'folder', rootId, 'Child')
+    const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Note')
+    const initialVersion = await getMetadataVersion(noteId)
+
+    await expect(
+      execute(campaign, campaignUuid, {
+        type: 'move',
+        resourceIds: [rootId],
+        destinationParentId: childFolderId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'hierarchy_cycle' })
+    await expect(
+      execute(campaign, campaignUuid, {
+        type: 'move',
+        resourceIds: [rootId],
+        destinationParentId: noteId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_parent_kind' })
+
+    const moved = await execute(campaign, campaignUuid, {
+      type: 'move',
+      resourceIds: [noteId],
+      destinationParentId: rootId,
+    })
+    expect(moved).toEqual(
+      expect.objectContaining({
+        status: 'completed',
+        receipt: expect.objectContaining({
+          result: { type: 'moved', resourceIds: [noteId] },
+        }),
+      }),
+    )
+    await t.run(async (ctx) => {
+      const note = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', noteId))
+        .unique()
+      expect(note!.parentResourceUuid).toBe(rootId)
+      expect(note!.metadataVersion.revision).toBe(initialVersion.revision + 1)
+    })
+  })
+
+  it('validates an entire multi-resource mutation before writing', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const folderId = await createResource(campaign, campaignUuid, 'folder', null, 'Folder')
+    const activeId = await createResource(campaign, campaignUuid, 'note', null, 'Active')
+    const trashedId = await createResource(campaign, campaignUuid, 'note', null, 'Trashed')
+    await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [trashedId] })
+
+    await expect(
+      execute(campaign, campaignUuid, {
+        type: 'move',
+        resourceIds: [activeId, trashedId],
+        destinationParentId: folderId,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_lifecycle' })
+    await t.run(async (ctx) => {
+      const active = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', activeId))
+        .unique()
+      expect(active!.parentResourceUuid).toBeNull()
+    })
+  })
+
+  it('recursively trashes, restores with root fallback, and permanently deletes catalog state', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const rootId = await createResource(campaign, campaignUuid, 'folder', null, 'Root')
+    const childId = await createResource(campaign, campaignUuid, 'note', rootId, 'Child')
+    await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [rootId] })
+
+    await expect(
+      execute(campaign, campaignUuid, {
+        type: 'permanentlyDelete',
+        resourceIds: [childId],
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'invalid_root_selection' })
+    await execute(campaign, campaignUuid, { type: 'restore', resourceIds: [childId] })
+    await t.run(async (ctx) => {
+      const child = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', childId))
+        .unique()
+      expect(child).toEqual(
+        expect.objectContaining({ lifecycle: 'active', parentResourceUuid: null }),
+      )
+    })
+
+    const deleteRootId = await createResource(campaign, campaignUuid, 'folder', null, 'Delete')
+    const deleteChildId = await createResource(
+      campaign,
+      campaignUuid,
+      'note',
+      deleteRootId,
+      'Delete child',
+    )
+    await t.run(async (ctx) => {
+      const child = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', deleteChildId))
+        .unique()
+      await ctx.db.insert('resourceSourcePathAliases', {
+        campaignUuid,
+        resourceUuid: deleteChildId,
+        firstSeenImportJobUuid: generateDomainId(DOMAIN_ID_KIND.importJob),
+        sourceRootId: 'upload',
+        rawPath: 'Notes/Child.md',
+        normalizedPath: 'Notes/Child.md',
+      })
+      await ctx.db.insert('resourceRoles', {
+        campaignUuid,
+        resourceUuid: deleteChildId,
+        role: 'campaign-home',
+      })
+      await ctx.db.insert('resourceContentVersions', {
+        campaignUuid,
+        resourceUuid: deleteChildId,
+        component: 'note',
+        version: child!.metadataVersion,
+      })
+    })
+    await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [deleteRootId] })
+    const deleted = await execute(campaign, campaignUuid, {
+      type: 'permanentlyDelete',
+      resourceIds: [deleteRootId],
+    })
+    expect(deleted).toEqual(
+      expect.objectContaining({
+        status: 'completed',
+        receipt: expect.objectContaining({
+          result: {
+            type: 'permanentlyDeleted',
+            resourceIds: [deleteRootId, deleteChildId].sort(),
+          },
+        }),
+      }),
+    )
+    await t.run(async (ctx) => {
+      for (const resourceId of [deleteRootId, deleteChildId]) {
+        expect(
+          await ctx.db
+            .query('resources')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique(),
+        ).toBeNull()
+        expect(
+          await ctx.db
+            .query('resourceTombstones')
+            .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+            .unique(),
+        ).not.toBeNull()
+      }
+      expect(
+        await ctx.db
+          .query('resourceSourcePathAliases')
+          .withIndex('by_campaign_and_resource_and_normalizedPath', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('resourceUuid', deleteChildId),
+          )
+          .take(1),
+      ).toHaveLength(0)
+      expect(
+        await ctx.db
+          .query('resourceRoles')
+          .withIndex('by_campaign_and_resource', (query) =>
+            query.eq('campaignUuid', campaignUuid).eq('resourceUuid', deleteChildId),
+          )
+          .take(1),
+      ).toHaveLength(0)
+      expect(
+        await ctx.db
+          .query('resourceContentVersions')
+          .withIndex('by_resource_and_component', (query) =>
+            query.eq('resourceUuid', deleteChildId),
+          )
+          .take(1),
+      ).toHaveLength(0)
+    })
+  })
+
+  it('rejects closures above the synchronous resource limit', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const rootId = generateDomainId(DOMAIN_ID_KIND.resource)
+    let parentId: ResourceId | null = null
+    await t.run(async (ctx) => {
+      for (let index = 0; index <= 500; index += 1) {
+        const resourceId = index === 0 ? rootId : generateDomainId(DOMAIN_ID_KIND.resource)
+        const metadata = {
+          parentId,
+          kind: 'folder' as const,
+          title: canonicalizeResourceTitle(`Folder ${index}`),
+          icon: null,
+          color: null,
+          lifecycle: 'active' as const,
+        }
+        await ctx.db.insert('resources', {
+          resourceUuid: resourceId,
+          campaignUuid,
+          parentResourceUuid: parentId,
+          kind: metadata.kind,
+          title: metadata.title,
+          icon: null,
+          color: null,
+          lifecycle: 'active',
+          trashedAt: null,
+          trashedByMemberUuid: null,
+          metadataVersion: await initialResourceMetadataVersion(metadata),
+          createdAt: 1,
+          createdByMemberUuid: actorId,
+          updatedAt: 1,
+          updatedByMemberUuid: actorId,
+        })
+        parentId = resourceId
+      }
+    })
+
+    await expect(
+      execute(campaign, campaignUuid, { type: 'trash', resourceIds: [rootId] }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'closure_too_large' })
+    await t.run(async (ctx) => {
+      const root = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', rootId))
+        .unique()
+      expect(root!.lifecycle).toBe('active')
+    })
+  })
+
   it('returns domain rejections for invalid UUID and title input', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
@@ -180,6 +416,27 @@ describe('resource structure commands', () => {
         .unique()
       return resource!.metadataVersion
     })
+  }
+
+  async function createResource(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    campaignUuid: string,
+    kind: 'folder' | 'note',
+    parentId: ResourceId | null,
+    title: string,
+  ) {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const result = await execute(campaign, campaignUuid, {
+      type: 'create',
+      resourceId,
+      kind,
+      parentId,
+      title,
+      icon: null,
+      color: null,
+    })
+    expect(result.status).toBe('completed')
+    return resourceId
   }
 
   async function execute(
