@@ -32,7 +32,7 @@ export type FileSystemIntentRejectionReason =
   | Extract<ResourceOperationCapability, { ok: false }>['code']
   | 'mixed_actions'
 
-export type FileSystemDropParentTarget = Parameters<typeof evaluateMoveToParent>[2]
+type FileSystemDropParentTarget = Parameters<typeof evaluateMoveToParent>[2]
 
 export type FileSystemDropTargetIntent =
   | { type: 'trash'; label: string }

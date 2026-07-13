@@ -37,30 +37,35 @@ function useSnapshotReadResult<TKind extends HistorySnapshotParserRequest['kind'
   kind: TKind,
   data: ArrayBuffer,
 ): SnapshotReadResult<TKind> {
-  const [result, setResult] = useState<SnapshotReadResult<TKind>>({ status: 'loading' })
+  const [completedRead, setCompletedRead] = useState<{
+    data: ArrayBuffer | null
+    result: SnapshotReadResult<TKind>
+  }>({ data: null, result: { status: 'loading' } })
+  const result = completedRead.data === data ? completedRead.result : { status: 'loading' as const }
 
   useEffect(() => {
-    setResult({ status: 'loading' })
     const worker = new Worker(new URL('./snapshot-parser.worker.ts', import.meta.url), {
       type: 'module',
     })
     const timeout = window.setTimeout(() => {
       worker.terminate()
-      setResult({ status: 'corrupted' })
+      setCompletedRead({ data, result: { status: 'corrupted' } })
     }, SNAPSHOT_PARSE_TIMEOUT_MS)
     worker.onmessage = ({ data: parsed }: MessageEvent<HistorySnapshotParserResult>) => {
       window.clearTimeout(timeout)
       worker.terminate()
-      setResult(
-        parsed.status === 'ready' && parsed.kind === kind
-          ? (parsed as SnapshotReadResult<TKind>)
-          : { status: 'corrupted' },
-      )
+      setCompletedRead({
+        data,
+        result:
+          parsed.status === 'ready' && parsed.kind === kind
+            ? (parsed as SnapshotReadResult<TKind>)
+            : { status: 'corrupted' },
+      })
     }
     worker.onerror = () => {
       window.clearTimeout(timeout)
       worker.terminate()
-      setResult({ status: 'corrupted' })
+      setCompletedRead({ data, result: { status: 'corrupted' } })
     }
     const workerData = data.slice(0)
     worker.postMessage({ kind, data: workerData } satisfies HistorySnapshotParserRequest, [
