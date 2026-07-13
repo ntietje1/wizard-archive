@@ -104,6 +104,20 @@ export type AuthorizedResourceChangeSet = Readonly<{
   changes: ReadonlyArray<AuthorizedResourceChange>
 }>
 
+export type ResourceIndexApplyResult =
+  | { readonly status: 'applied' }
+  | { readonly status: 'duplicate' }
+  | {
+      readonly status: 'replacement_required'
+      readonly reason: 'invalid_projection' | 'revision_mismatch' | 'wrong_scope'
+    }
+
+export interface WorkspaceResourceIndexController extends WorkspaceResourceIndex {
+  replaceScope(scope: ResourceProjectionScope, revision: IndexRevision): void
+  replaceSnapshot(snapshot: AuthorizedResourceSnapshot): ResourceIndexApplyResult
+  applyChangeSet(changeSet: AuthorizedResourceChangeSet): ResourceIndexApplyResult
+}
+
 export function normalizeResourceCollectionQuery(
   query: ResourceCollectionQuery,
 ): ResourceCollectionQuery {

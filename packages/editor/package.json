@@ -133,6 +133,10 @@
       "types": "./dist/resources/resource-index-contract.d.mts",
       "default": "./dist/resources/resource-index-contract.mjs"
     },
+    "./resources/workspace-index": {
+      "types": "./dist/resources/workspace-resource-index.d.mts",
+      "default": "./dist/resources/workspace-resource-index.mjs"
+    },
     "./resources/command-contract": {
       "types": "./dist/resources/resource-command-contract.d.mts",
       "default": "./dist/resources/resource-command-contract.mjs"
@@ -241,6 +245,7 @@
       "./resources/resource-metadata-version",
       "./resources/catalog-contract",
       "./resources/index-contract",
+      "./resources/workspace-index",
       "./resources/command-contract",
       "./resources/command-protocol",
       "./resources/operation-ledger",
