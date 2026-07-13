@@ -70,7 +70,7 @@ describe('useMapPinInteractions', () => {
 
     expect(createMapPins).toHaveBeenCalledExactlyOnceWith({
       mapId: map.id,
-      pins: [{ itemId: pin.itemId, x: 50, y: 25 }],
+      pins: [{ itemId: pin.itemId, layerId: null, x: 50, y: 25 }],
     })
   })
 

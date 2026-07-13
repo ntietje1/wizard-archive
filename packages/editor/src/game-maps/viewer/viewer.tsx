@@ -95,6 +95,7 @@ function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
     requestPinPlacement,
     shouldDisablePanning,
   } = useMapPinInteractions({
+    activeLayerId,
     canEditMap,
     imageError,
     imageRef,
@@ -113,6 +114,7 @@ function useMapViewerElement(map: MapItemWithContent, source: MapViewerSource) {
     canPin: canEditMap,
     createMapPins: source.createMapPins,
     imageRef,
+    layerId: activeLayerId,
     map,
   })
 

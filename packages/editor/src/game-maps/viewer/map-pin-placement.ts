@@ -7,6 +7,7 @@ export interface PinPosition {
 
 export interface MapPinPlacementInput extends PinPosition {
   itemId: SidebarItemId
+  layerId?: string | null
 }
 
 const PIN_DROP_OFFSET_STEP_PERCENT = 2

@@ -102,6 +102,7 @@ export async function rollbackGameMap(
     ctx.db.insert('mapPins', {
       mapId: map.id,
       itemId: pin.itemId,
+      layerId: pin.layerId ?? null,
       x: pin.x,
       y: pin.y,
       visible: pin.visible,

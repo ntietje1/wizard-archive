@@ -15,6 +15,7 @@ export function useMapSidebarItemDropTarget({
   canPin,
   createMapPins,
   imageRef,
+  layerId,
   map,
 }: {
   canPin: boolean
@@ -23,6 +24,7 @@ export function useMapSidebarItemDropTarget({
     pins: Array<MapPinPlacementInput>
   }) => MaybePromise<MapPinsCreateResult>
   imageRef: React.RefObject<HTMLImageElement | null>
+  layerId?: string | null
   map: MapItemWithContent
 }) {
   const mapRef = useRef(map)
@@ -56,10 +58,11 @@ export function useMapSidebarItemDropTarget({
         await createMapPinsAtPosition({
           createMapPins,
           itemIds,
+          layerId,
           mapId: mapRef.current.id,
           position,
         })
       },
     })
-  }, [canPin, createMapPins, dropData])
+  }, [canPin, createMapPins, dropData, layerId])
 }

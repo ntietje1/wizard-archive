@@ -56,7 +56,11 @@ describe('useLiveGameMapSessionSource', () => {
 
     const createResult = await result.current.session.pins.create({
       mapId: 'map-1' as Id<'sidebarItems'>,
-      pins: [{ itemId: 'note-1' as Id<'sidebarItems'>, x: 12, y: 34 }],
+      pins: [{ itemId: 'note-1' as Id<'sidebarItems'>, layerId: 'upper', x: 12, y: 34 }],
+    })
+    expect(createPins).toHaveBeenCalledWith({
+      mapId: 'map-1',
+      pins: [{ itemId: 'note-1', layerId: 'upper', x: 12, y: 34 }],
     })
     expect(createResult).toEqual({
       status: 'completed',
@@ -100,7 +104,7 @@ describe('useLiveGameMapSessionSource', () => {
 
     expect(createPins).toHaveBeenCalledWith({
       mapId: 'map-1',
-      pins: [{ itemId: 'note-1', x: 12, y: 34 }],
+      pins: [{ itemId: 'note-1', layerId: 'upper', x: 12, y: 34 }],
     })
     expect(updatePin).toHaveBeenCalledWith({ mapPinId: 'pin-1', x: 56, y: 78 })
     expect(updateVisibility).toHaveBeenCalledWith({ mapPinId: 'pin-1', visible: false })

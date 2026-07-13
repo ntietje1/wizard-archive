@@ -52,6 +52,7 @@ export type MapPin = {
 
 type GameMapSnapshotPinData = {
   itemId: ResourceId
+  layerId?: string | null
   x: number
   y: number
   visible: boolean
@@ -92,6 +93,7 @@ function isGameMapSnapshotPinData(value: unknown) {
 
   return (
     typeof value.itemId === 'string' &&
+    (value.layerId === undefined || value.layerId === null || typeof value.layerId === 'string') &&
     typeof value.x === 'number' &&
     typeof value.y === 'number' &&
     typeof value.visible === 'boolean' &&

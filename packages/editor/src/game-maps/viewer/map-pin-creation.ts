@@ -13,11 +13,13 @@ type CreateMapPins = (input: {
 
 export async function createMapPinsAtPosition({
   createMapPins,
+  layerId,
   itemIds,
   mapId,
   position,
 }: {
   createMapPins: CreateMapPins
+  layerId?: string | null
   itemIds: Array<SidebarItemId>
   mapId: SidebarItemId
   position: PinPosition
@@ -25,7 +27,10 @@ export async function createMapPinsAtPosition({
   try {
     const result = await createMapPins({
       mapId,
-      pins: buildMapPinPlacementInputs(itemIds, position),
+      pins: buildMapPinPlacementInputs(itemIds, position).map((pin) => ({
+        ...pin,
+        layerId: layerId ?? null,
+      })),
     })
     if (result.status === 'completed') {
       return reportMapPinCreationResult(result.receipt.pinIds, itemIds.length)

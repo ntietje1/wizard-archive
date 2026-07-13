@@ -12,6 +12,7 @@ interface MapSessionCreatePinsInput {
   mapId: SidebarItemId
   pins: Array<{
     itemId: SidebarItemId
+    layerId?: string | null
     x: number
     y: number
   }>

@@ -74,7 +74,7 @@ describe('useMapSidebarItemDropTarget', () => {
 
       expect(createMapPins).toHaveBeenCalledWith({
         mapId: map.id,
-        pins: [{ itemId: note.id, x: 25, y: 25 }],
+        pins: [{ itemId: note.id, layerId: null, x: 25, y: 25 }],
       })
       expect(toastMock.error).toHaveBeenCalledWith('Failed to place pin')
     } finally {

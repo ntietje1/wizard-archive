@@ -37,7 +37,11 @@ type MapPinInteractionSource = {
   updateMapPin: MapPinSession['update']
 }
 
-type PendingPinItems = { itemIds: Array<SidebarItemId>; mapId: SidebarItemId }
+type PendingPinItems = {
+  itemIds: Array<SidebarItemId>
+  layerId: string | null
+  mapId: SidebarItemId
+}
 type PendingPinMove = { mapId: SidebarItemId; pinId: MapPinId }
 type DraggingPin = { pin: MapPinWithItem; pointerId: number }
 type PinContextMenuState = {
@@ -69,6 +73,7 @@ function restoreDraggedPinElement(
 }
 
 export function useMapPinInteractions({
+  activeLayerId,
   canEditMap,
   imageError,
   imageRef,
@@ -76,6 +81,7 @@ export function useMapPinInteractions({
   pinsContainerRef,
   source,
 }: {
+  activeLayerId?: string | null
   canEditMap: boolean
   imageError: boolean
   imageRef: ImageElementRef
@@ -116,6 +122,7 @@ export function useMapPinInteractions({
   const { requestPinMove, requestPinPlacement } = usePinPlacementRequests({
     canEditMap,
     imageError,
+    layerId: activeLayerId ?? null,
     mapId: map.id,
     setPendingPinItems,
     setPendingPinMove,
@@ -371,12 +378,14 @@ function useDraggedPinSession({
 function usePinPlacementRequests({
   canEditMap,
   imageError,
+  layerId,
   mapId,
   setPendingPinItems,
   setPendingPinMove,
 }: {
   canEditMap: boolean
   imageError: boolean
+  layerId: string | null
   mapId: SidebarItemId
   setPendingPinItems: StateSetter<PendingPinItems | null>
   setPendingPinMove: StateSetter<PendingPinMove | null>
@@ -389,7 +398,7 @@ function usePinPlacementRequests({
     }
     if (input.itemIds.length === 0) return
     setPendingPinMove(null)
-    setPendingPinItems({ itemIds: [...input.itemIds], mapId })
+    setPendingPinItems({ itemIds: [...input.itemIds], layerId, mapId })
     toast.info(
       input.itemIds.length === 1
         ? 'Click on the map to place the pin'
@@ -440,6 +449,7 @@ function useMapPinPositionActions({
     await createMapPinsAtPosition({
       createMapPins: source.createMapPins,
       itemIds,
+      layerId: pendingPinItems.layerId,
       mapId: map.id,
       position,
     })

@@ -14,6 +14,7 @@ const mapValidatorFields = {
 export const mapValidator = v.object(mapValidatorFields)
 
 const mapPinTableFields = {
+  layerId: v.optional(v.nullable(v.string())),
   mapId: v.id('sidebarItems'),
   itemId: v.id('sidebarItems'),
   x: v.number(),

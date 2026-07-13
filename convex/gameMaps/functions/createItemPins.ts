@@ -28,6 +28,7 @@ export async function createItemPins(
       x: number
       y: number
       itemId: Id<'sidebarItems'>
+      layerId?: string | null
     }>
   },
 ): Promise<Array<Id<'mapPins'>>> {
@@ -102,6 +103,7 @@ export async function createItemPins(
     pins.map((pin) =>
       ctx.db.insert('mapPins', {
         mapId,
+        layerId: pin.layerId ?? null,
         itemId: pin.itemId,
         x: pin.x,
         y: pin.y,

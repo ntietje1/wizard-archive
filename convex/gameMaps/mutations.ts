@@ -44,6 +44,7 @@ export const createItemPins = campaignMutation({
     pins: v.array(
       v.object({
         itemId: v.id('sidebarItems'),
+        layerId: v.optional(v.nullable(v.string())),
         x: v.number(),
         y: v.number(),
       }),

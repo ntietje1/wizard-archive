@@ -64,6 +64,7 @@ export async function encodeGameMapSnapshot(
     imageAssetId: map.imageStorageId,
     pins: validPins.map(({ pin, item }) => ({
       itemId: pin.itemId,
+      layerId: pin.layerId ?? null,
       x: pin.x,
       y: pin.y,
       visible: pin.visible,

@@ -1014,6 +1014,7 @@ interface WizardEditorMapSessionUpdateImageInput {
 
 export type WizardEditorMapPinCreationRequest = {
   itemId: InternalResourceItemId
+  layerId?: string | null
   x: number
   y: number
 }
