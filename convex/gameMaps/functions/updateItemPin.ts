@@ -6,7 +6,7 @@ import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import { assertPinCoordinate } from './pinCoordinates'
 import { requirePinAccess } from './requirePinAccess'
 import type { CampaignMutationCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function updateItemPin(
   ctx: CampaignMutationCtx,
@@ -15,16 +15,16 @@ export async function updateItemPin(
     x,
     y,
   }: {
-    mapPinId: Id<'mapPins'>
+    mapPinId: MapPinId
     x: number
     y: number
   },
-): Promise<Id<'mapPins'>> {
-  const { pin, map } = await requirePinAccess(ctx, { mapPinId })
+): Promise<MapPinId> {
+  const { pin, pinRowId, map } = await requirePinAccess(ctx, { mapPinId })
   assertPinCoordinate(x, 'x')
   assertPinCoordinate(y, 'y')
 
-  await ctx.db.patch('mapPins', mapPinId, {
+  await ctx.db.patch('mapPins', pinRowId, {
     x,
     y,
   })

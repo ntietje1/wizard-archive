@@ -253,6 +253,7 @@ describe('rollback data integrity', () => {
           .collect()
 
         expect(activePins).toHaveLength(1)
+        expect(activePins[0].mapPinUuid).toBe(pinId)
         expect(activePins[0].x).toBe(10)
         expect(activePins[0].y).toBe(20)
       })
@@ -320,7 +321,7 @@ describe('rollback of game map pin with non-note itemId', () => {
           .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
           .first()
         expect(pin).not.toBeNull()
-        return pin!._id
+        return pin!.mapPinUuid
       })
 
       await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {

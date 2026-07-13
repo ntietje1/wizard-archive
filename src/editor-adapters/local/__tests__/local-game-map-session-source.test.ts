@@ -6,10 +6,11 @@ import type {
   WizardEditorItem,
   WizardEditorItemWithContent,
 } from '@wizard-archive/editor/adapter'
-import type { CampaignId, MapPinId, SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { CampaignId, SidebarItemId, UserProfileId } from 'shared/common/ids'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
+import { testMapPinId } from 'shared/test/map-pin-id'
 import { createImportFile } from './helpers/import-file'
 import { createLocalGameMapSessionSource } from '../local-game-map-session-source'
-import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 
 const TEST_RESOURCE_LOCATION = {
   sidebar: 'sidebar',
@@ -25,6 +26,7 @@ const TEST_RESOURCE_TYPES = {
 type LocalMapItemWithContent = Extract<WizardEditorItemWithContent, { type: 'gameMap' }>
 type LocalNoteItemWithContent = Extract<WizardEditorItemWithContent, { type: 'note' }>
 type LocalImportFile = WizardEditorFileSessionReplaceInput['file']
+const VISIBLE_MAP_PIN_ID = testMapPinId('map-docks-pin-1')
 
 describe('createLocalGameMapSessionSource', () => {
   it('does not mutate maps that are known but not visible', async () => {
@@ -33,7 +35,6 @@ describe('createLocalGameMapSessionSource', () => {
       canEdit: true,
       catalog: createHiddenMapCatalog(),
       dispatch,
-      workspace: SAMPLE_LOCAL_WORKSPACE,
     })
 
     const createResult = session.pins.create({
@@ -56,13 +57,12 @@ describe('createLocalGameMapSessionSource', () => {
       canEdit: true,
       catalog: createVisibleMapCatalog(),
       dispatch,
-      workspace: SAMPLE_LOCAL_WORKSPACE,
     })
 
     expect(
       visibleSession.pins.update({
         mapId: 'map-docks' as SidebarItemId,
-        mapPinId: 'map-docks-pin-1' as MapPinId,
+        mapPinId: VISIBLE_MAP_PIN_ID,
         x: 30,
         y: 40,
       }),
@@ -70,38 +70,38 @@ describe('createLocalGameMapSessionSource', () => {
     expect(
       visibleSession.pins.setVisibility({
         mapId: 'map-docks' as SidebarItemId,
-        mapPinId: 'map-docks-pin-1' as MapPinId,
+        mapPinId: VISIBLE_MAP_PIN_ID,
         isVisible: false,
       }),
     ).toMatchObject({ status: 'completed', receipt: { kind: 'mapPinVisibilityUpdated' } })
     expect(
       visibleSession.pins.remove({
         mapId: 'map-docks' as SidebarItemId,
-        mapPinId: 'map-docks-pin-1' as MapPinId,
+        mapPinId: VISIBLE_MAP_PIN_ID,
       }),
     ).toMatchObject({ status: 'completed', receipt: { kind: 'mapPinRemoved' } })
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateMapPin',
-      mapPinId: 'map-docks-pin-1',
+      mapPinId: VISIBLE_MAP_PIN_ID,
       x: 30,
       y: 40,
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateMapPinVisibility',
-      mapPinId: 'map-docks-pin-1',
+      mapPinId: VISIBLE_MAP_PIN_ID,
       isVisible: false,
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'removeMapPin',
-      mapPinId: 'map-docks-pin-1',
+      mapPinId: VISIBLE_MAP_PIN_ID,
     })
     dispatch.mockClear()
 
     expect(
       visibleSession.pins.update({
         mapId: 'other-map' as SidebarItemId,
-        mapPinId: 'map-docks-pin-1' as MapPinId,
+        mapPinId: VISIBLE_MAP_PIN_ID,
         x: 50,
         y: 60,
       }),
@@ -113,13 +113,12 @@ describe('createLocalGameMapSessionSource', () => {
       canEdit: true,
       catalog: createHiddenMapCatalog(),
       dispatch,
-      workspace: SAMPLE_LOCAL_WORKSPACE,
     })
 
     expect(
       session.pins.update({
         mapId: 'map-docks' as SidebarItemId,
-        mapPinId: 'map-docks-pin-1' as MapPinId,
+        mapPinId: VISIBLE_MAP_PIN_ID,
         x: 30,
         y: 40,
       }),
@@ -127,14 +126,14 @@ describe('createLocalGameMapSessionSource', () => {
     expect(
       session.pins.setVisibility({
         mapId: 'map-docks' as SidebarItemId,
-        mapPinId: 'map-docks-pin-1' as MapPinId,
+        mapPinId: VISIBLE_MAP_PIN_ID,
         isVisible: false,
       }),
     ).toEqual({ status: 'unavailable', reason: 'map_pin_not_found' })
     expect(
       session.pins.remove({
         mapId: 'map-docks' as SidebarItemId,
-        mapPinId: 'map-docks-pin-1' as MapPinId,
+        mapPinId: VISIBLE_MAP_PIN_ID,
       }),
     ).toEqual({ status: 'unavailable', reason: 'map_pin_not_found' })
 
@@ -147,7 +146,6 @@ describe('createLocalGameMapSessionSource', () => {
       canEdit: true,
       catalog: createVisibleMapCatalog(),
       dispatch,
-      workspace: SAMPLE_LOCAL_WORKSPACE,
     })
 
     const firstCreateResult = await session.pins.create({
@@ -165,33 +163,37 @@ describe('createLocalGameMapSessionSource', () => {
     })
     if (secondCreateResult.status !== 'completed') throw new Error('Expected pins to be created')
 
-    expect(firstCreateResult.receipt.pinIds).toEqual(['local-map-pin-3'])
-    expect(secondCreateResult.receipt.pinIds).toEqual(['local-map-pin-4'])
+    const firstPinId = firstCreateResult.receipt.pinIds[0]!
+    const secondPinId = secondCreateResult.receipt.pinIds[0]!
+
+    expect(firstCreateResult.receipt.pinIds).toHaveLength(1)
+    expect(secondCreateResult.receipt.pinIds).toHaveLength(1)
+    expect(isUuidV7(firstPinId)).toBe(true)
+    expect(isUuidV7(secondPinId)).toBe(true)
+    expect(secondPinId).not.toBe(firstPinId)
     expect(dispatch).toHaveBeenCalledWith({
       type: 'createMapPins',
       mapId: 'map-docks',
       pins: [
         expect.objectContaining({
-          id: 'local-map-pin-3',
+          id: firstPinId,
           itemId: 'note-unpinned',
         }),
       ],
-      nextLocalMapPinIndex: 4,
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'removeMapPin',
-      mapPinId: 'local-map-pin-3',
+      mapPinId: firstPinId,
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'createMapPins',
       mapId: 'map-docks',
       pins: [
         expect.objectContaining({
-          id: 'local-map-pin-4',
+          id: secondPinId,
           itemId: 'note-unpinned',
         }),
       ],
-      nextLocalMapPinIndex: 5,
     })
   })
 
@@ -201,7 +203,6 @@ describe('createLocalGameMapSessionSource', () => {
       canEdit: true,
       catalog: createVisibleMapCatalog(),
       dispatch,
-      workspace: SAMPLE_LOCAL_WORKSPACE,
     })
     const firstRead = createDeferred<ArrayBuffer>()
     const firstUpdate = session.updateMapImage({
@@ -281,7 +282,7 @@ function createMapItem(): LocalMapItemWithContent {
     imageUrl: null,
     pins: [
       {
-        id: 'map-docks-pin-1' as MapPinId,
+        id: VISIBLE_MAP_PIN_ID,
         createdAt: 1,
         item: createNoteItem(),
         itemId: 'note-market' as SidebarItemId,

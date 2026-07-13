@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
-import type { MapPinId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import { reportMapPinCreationResult } from '../map-pin-creation-feedback'
 
 vi.mock('sonner', () => ({

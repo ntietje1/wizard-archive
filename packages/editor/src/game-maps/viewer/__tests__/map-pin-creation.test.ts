@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
-import type { MapPinId, SidebarItemId } from '../../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import { createMapPinsAtPosition } from '../map-pin-creation'
 
 vi.mock('sonner', () => ({

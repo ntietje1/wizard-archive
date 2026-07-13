@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { Ref } from 'react'
-import type { MapPinId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import type { ContextMenuHostRef } from '../../../context-menu/components/host'
 import { MapViewProvider } from '../map-view-context'
 import { MapImageContextMenuWrapper } from '../map-image-context-menu-wrapper'

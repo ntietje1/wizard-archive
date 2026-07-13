@@ -4,15 +4,15 @@ import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persisten
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import { requirePinAccess } from './requirePinAccess'
 import type { CampaignMutationCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function removeItemPin(
   ctx: CampaignMutationCtx,
-  { mapPinId }: { mapPinId: Id<'mapPins'> },
-): Promise<Id<'mapPins'>> {
-  const { pin, map } = await requirePinAccess(ctx, { mapPinId })
+  { mapPinId }: { mapPinId: MapPinId },
+): Promise<MapPinId> {
+  const { pin, pinRowId, map } = await requirePinAccess(ctx, { mapPinId })
 
-  await ctx.db.delete('mapPins', mapPinId)
+  await ctx.db.delete('mapPins', pinRowId)
 
   await ctx.db.patch('sidebarItems', map.id, {
     updatedTime: Date.now(),

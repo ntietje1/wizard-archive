@@ -12,8 +12,10 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 const MAX_ITEM_PINS_PER_REQUEST = 100
 
@@ -31,7 +33,7 @@ export async function createItemPins(
       layerId?: string | null
     }>
   },
-): Promise<Array<Id<'mapPins'>>> {
+): Promise<Array<MapPinId>> {
   const rawItem = await getSidebarItem(ctx, mapId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
   await requireItemAccess(ctx, {
@@ -99,9 +101,11 @@ export async function createItemPins(
 
   const userId = ctx.membership.userId
 
-  const pinIds = await Promise.all(
-    pins.map((pin) =>
+  const pinIds = pins.map(() => generateDomainId(DOMAIN_ID_KIND.mapPin))
+  await Promise.all(
+    pins.map((pin, index) =>
       ctx.db.insert('mapPins', {
+        mapPinUuid: pinIds[index]!,
         mapId,
         layerId: pin.layerId ?? null,
         itemId: pin.itemId,

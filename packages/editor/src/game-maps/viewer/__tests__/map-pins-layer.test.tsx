@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { MapPinId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import { MapPinsLayer } from '../map-pins-layer'
 import { createMapPinFixture, createNoteFixture, testId } from './test-fixtures'
 

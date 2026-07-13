@@ -1,5 +1,6 @@
 import type { MaybePromise } from '../../../../../shared/common/async'
-import type { MapPinId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { MapPinId } from '../../resources/domain-id'
 import type { ResourceOperationResult } from '../../filesystem/transaction-contract'
 
 export interface MapPinOperations {

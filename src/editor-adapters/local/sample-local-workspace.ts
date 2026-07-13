@@ -4,6 +4,16 @@ import {
   createLocalTextFilePayload,
 } from './local-workspace-model'
 import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+
+const SAMPLE_MARKET_PIN_ID = assertDomainId(
+  DOMAIN_ID_KIND.mapPin,
+  '01980c1a-5e70-7000-8000-000000000101',
+)
+const SAMPLE_HANDOUT_PIN_ID = assertDomainId(
+  DOMAIN_ID_KIND.mapPin,
+  '01980c1a-5e70-7000-8000-000000000102',
+)
 
 const INITIAL_NOTE_BODY = [
   'A waterfront bazaar where every stall hides a second ledger.',
@@ -43,7 +53,6 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
   },
   workspaceId: 'demo-campaign',
   nextLocalItemIndex: 2,
-  nextLocalMapPinIndex: 3,
   items: [
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
@@ -117,7 +126,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
       imageUrl: INITIAL_MAP_IMAGE_URL,
       pins: [
         {
-          id: 'local-map-pin-1',
+          id: SAMPLE_MARKET_PIN_ID,
           itemId: 'note-market',
           x: 20,
           y: 25,
@@ -125,7 +134,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
           creationTime: SAMPLE_TIMESTAMP,
         },
         {
-          id: 'local-map-pin-2',
+          id: SAMPLE_HANDOUT_PIN_ID,
           itemId: 'file-handout',
           x: 53,
           y: 23,

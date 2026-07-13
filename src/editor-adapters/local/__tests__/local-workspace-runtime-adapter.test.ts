@@ -13,6 +13,7 @@ import {
 import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { createLocalWorkspaceRuntime as createLocalWorkspaceRuntimeBase } from '../local-workspace-runtime-adapter'
 import { testNoteBlockId } from 'shared/test/note-block-id'
+import { testMapPinId } from 'shared/test/map-pin-id'
 import {
   createLocalFileSystemSnapshot,
   createLocalWorkspaceInitialNavigation,
@@ -40,6 +41,7 @@ import type {
   WizardEditorNavigationState,
   WizardEditorRuntime,
 } from '@wizard-archive/editor/adapter'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import { createImportFile } from './helpers/import-file'
 
 const TEST_RESOURCE_TYPES = {
@@ -59,6 +61,7 @@ type LocalMapItemWithContent = Extract<WizardEditorItemWithContent, { type: 'gam
 type LocalNoteItemWithContent = Extract<WizardEditorItemWithContent, { type: 'note' }>
 type LocalNoteBlock = LocalNoteItemWithContent['content'][number]
 type LocalImportFile = WizardEditorFileSessionReplaceInput['file']
+const SEEDED_MAP_PIN_IDS = SAMPLE_LOCAL_WORKSPACE.mapsById['map-docks']!.pins.map((pin) => pin.id)
 
 describe('createLocalRuntimeFileSystem', () => {
   it('keeps sharing command classification out of the local executor', () => {
@@ -187,8 +190,8 @@ describe('createLocalRuntimeFileSystem', () => {
       id: 'map-docks',
       imageUrl: expect.stringContaining('data:image/svg+xml'),
       pins: [
-        expect.objectContaining({ id: 'local-map-pin-1', itemId: 'note-market' }),
-        expect.objectContaining({ id: 'local-map-pin-2', itemId: 'file-handout' }),
+        expect.objectContaining({ id: SEEDED_MAP_PIN_IDS[0], itemId: 'note-market' }),
+        expect.objectContaining({ id: SEEDED_MAP_PIN_IDS[1], itemId: 'file-handout' }),
       ],
       type: TEST_RESOURCE_TYPES.gameMaps,
     })
@@ -740,12 +743,13 @@ describe('createLocalRuntimeFileSystem', () => {
       'map-docks' as SidebarItemId,
     ) as LocalMapItemWithContent
 
-    expect(createdPinIds).toEqual(['local-map-pin-3'])
+    expect(createdPinIds).toHaveLength(1)
+    expect(isUuidV7(createdPinIds[0]!)).toBe(true)
     expect(nextMap.imageUrl).toContain('data:image/svg+xml')
     expect(nextMap.pins).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'local-map-pin-3',
+          id: createdPinIds[0],
           itemId: 'canvas-heist',
           x: 41,
           y: 61,
@@ -770,7 +774,7 @@ describe('createLocalRuntimeFileSystem', () => {
       'map-docks' as SidebarItemId,
     ) as LocalMapItemWithContent
 
-    expect(finalMap.pins.map((pin) => pin.id)).toEqual(['local-map-pin-1', 'local-map-pin-2'])
+    expect(finalMap.pins.map((pin) => pin.id)).toEqual(SEEDED_MAP_PIN_IDS)
   })
 
   it('does not report duplicate map pins from a stale local runtime snapshot', async () => {
@@ -799,12 +803,12 @@ describe('createLocalRuntimeFileSystem', () => {
     )
     const nextMap = nextWorkspace.mapsById['map-docks']
 
-    expect(firstCreateResult.receipt.pinIds).toEqual(['local-map-pin-3'])
+    expect(firstCreateResult.receipt.pinIds).toHaveLength(1)
+    expect(isUuidV7(firstCreateResult.receipt.pinIds[0]!)).toBe(true)
     expect(duplicateCreateResult.receipt.pinIds).toEqual([])
-    expect(nextWorkspace.nextLocalMapPinIndex).toBe(4)
     expect(nextMap?.pins.filter((pin) => pin.itemId === 'canvas-heist')).toEqual([
       expect.objectContaining({
-        id: 'local-map-pin-3',
+        id: firstCreateResult.receipt.pinIds[0],
         x: 40,
         y: 60,
       }),
@@ -1772,7 +1776,7 @@ describe('createLocalRuntimeFileSystem', () => {
           ...workspaceWithNote.mapsById[mapId]!,
           pins: [
             {
-              id: 'local-map-pin-copy-target',
+              id: testMapPinId('local-map-pin-copy-target'),
               itemId: noteId,
               x: 32,
               y: 48,

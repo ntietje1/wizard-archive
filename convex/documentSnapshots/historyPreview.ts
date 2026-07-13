@@ -19,6 +19,7 @@ const gameMapSnapshotDataValidator = v.object({
   ),
   pins: v.array(
     v.object({
+      id: v.string(),
       itemId: v.string(),
       layerId: v.optional(v.nullable(v.string())),
       x: v.number(),

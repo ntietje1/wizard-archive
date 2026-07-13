@@ -1,8 +1,9 @@
 import { v } from 'convex/values'
+import type { Validator } from 'convex/values'
 import { defineTable } from 'convex/server'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
-import { domainValidatorFields } from '../common/schema'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 export const mapLayerValidator = v.object({
   id: v.string(),
@@ -21,7 +22,8 @@ export const mapValidatorFields = {
 
 export const mapValidator = v.object(mapValidatorFields)
 
-const mapPinTableFields = {
+const mapPinIdValidator = v.string() as Validator<MapPinId>
+const mapPinFields = {
   layerId: v.optional(v.nullable(v.string())),
   mapId: v.id('sidebarItems'),
   itemId: v.id('sidebarItems'),
@@ -31,14 +33,18 @@ const mapPinTableFields = {
 }
 
 export const mapPinValidatorFields = {
-  ...domainValidatorFields('mapPins'),
-  ...mapPinTableFields,
+  id: mapPinIdValidator,
+  createdAt: v.number(),
+  ...mapPinFields,
 }
 
 export const mapPinValidator = v.object(mapPinValidatorFields)
 
 export const mapPinsTables = {
   mapPins: defineTable({
-    ...mapPinTableFields,
-  }).index('by_map_item', ['mapId', 'itemId']),
+    mapPinUuid: mapPinIdValidator,
+    ...mapPinFields,
+  })
+    .index('by_mapPinUuid', ['mapPinUuid'])
+    .index('by_map_item', ['mapId', 'itemId']),
 }

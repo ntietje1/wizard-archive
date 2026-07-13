@@ -1,7 +1,7 @@
 import { fireEvent, render, renderHook, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { MapPinId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import { MapViewProvider } from '../map-view-context'
 import { useMapView, useMapViewOptional } from '../use-map-view'
 import {

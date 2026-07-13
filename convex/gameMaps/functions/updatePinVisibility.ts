@@ -5,13 +5,13 @@ import { logger } from '../../common/logger'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import { requirePinAccess } from './requirePinAccess'
 import type { CampaignMutationCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function updatePinVisibility(
   ctx: CampaignMutationCtx,
-  { mapPinId, visible }: { mapPinId: Id<'mapPins'>; visible: boolean },
-): Promise<Id<'mapPins'>> {
-  const { pin, map } = await requirePinAccess(ctx, { mapPinId })
+  { mapPinId, visible }: { mapPinId: MapPinId; visible: boolean },
+): Promise<MapPinId> {
+  const { pin, pinRowId, map } = await requirePinAccess(ctx, { mapPinId })
 
   if (visible === pin.visible) return mapPinId
 
@@ -22,7 +22,7 @@ export async function updatePinVisibility(
   }
 
   const now = Date.now()
-  await ctx.db.patch('mapPins', mapPinId, {
+  await ctx.db.patch('mapPins', pinRowId, {
     visible,
   })
 

@@ -39,10 +39,10 @@ import type { Awareness } from 'y-protocols/awareness'
 import type { Doc, Map as YMap } from 'yjs'
 import type {
   EditHistoryId,
-  MapPinId as InternalMapPinId,
   SidebarItemId as InternalResourceItemId,
   WorkspaceMemberId as InternalParticipantId,
 } from '../../../shared/common/ids'
+import type { MapPinId as InternalMapPinId } from './resources/domain-id'
 import type { BlockSearchResult } from '../../../shared/search/types'
 import { isPersistedResourceId, parseResourceSlug } from './workspace/resource-contract'
 import type {

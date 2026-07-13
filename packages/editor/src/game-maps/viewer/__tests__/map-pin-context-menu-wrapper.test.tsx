@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ComponentProps, ReactNode } from 'react'
-import type { MapPinId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import { MapPinContextMenuWrapper } from '../map-pin-context-menu-wrapper'
 import { WorkspaceContextMenu } from '../../../workspace/context-menu/context-menu'
 import { MapViewProvider } from '../map-view-context'

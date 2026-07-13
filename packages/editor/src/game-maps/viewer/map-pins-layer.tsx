@@ -5,7 +5,7 @@ import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
 } from '../../workspace/items/appearance'
-import type { MapPinId } from '../../../../../shared/common/ids'
+import type { MapPinId } from '../../resources/domain-id'
 import { getSidebarItemIcon } from '../../workspace/sidebar/item-icons'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import { PinMarker } from './pin-marker'

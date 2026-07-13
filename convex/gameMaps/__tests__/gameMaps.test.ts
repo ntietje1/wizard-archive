@@ -7,6 +7,7 @@ import { expectConflict, expectValidationFailed } from '../../_test/assertions.h
 import { storeUncommittedTestUploadSession } from '../../_test/storage.helper'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 
 describe('game map APIs', () => {
   it('rejects missing storage ids for map images without persisting them', async () => {
@@ -185,6 +186,7 @@ describe('game map APIs', () => {
     })
 
     expect(pinIds).toHaveLength(2)
+    expect(pinIds.every(isUuidV7)).toBe(true)
     const result = await dmAuth.query(api.gameMaps.queries.getMap, {
       campaignId: ctx.campaignId,
       mapId: map.mapId,
@@ -333,6 +335,18 @@ describe('game map APIs', () => {
       mapId: map.mapId,
     })
     expect(result?.pins).toMatchObject([{ id: pinId, x: 10, y: 20 }])
+  })
+
+  it('rejects provider-shaped map pin IDs', async () => {
+    const t = createTestContext()
+    const ctx = await setupCampaignContext(t)
+
+    await expectValidationFailed(
+      asDm(ctx).mutation(api.gameMaps.mutations.removeItemPin, {
+        campaignId: ctx.campaignId,
+        mapPinId: 'provider-row-id',
+      }),
+    )
   })
 
   it('rejects duplicate, self, and trashed pin targets', async () => {

@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import type { MapPinId } from '../../../../../shared/common/ids'
+import type { MapPinId } from '../../resources/domain-id'
 
 export function reportMapPinCreationResult(pinIds: Array<MapPinId>, requestedCount: number) {
   if (pinIds.length > requestedCount) {

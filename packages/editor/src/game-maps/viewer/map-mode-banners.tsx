@@ -1,4 +1,5 @@
-import type { MapPinId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { MapPinId } from '../../resources/domain-id'
 import type { MapPinWithItem } from '../../game-maps/item-contract'
 
 export function MapModeBanners({

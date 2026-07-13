@@ -3,6 +3,7 @@ import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { GameMapSnapshotData } from '../document-contract'
 import { readGameMapSnapshot } from '../document-contract'
+import { testMapPinId } from '../../test/map-pin-id'
 
 describe('readGameMapSnapshot', () => {
   it('parses a stored game map snapshot with its image and pins', () => {
@@ -10,6 +11,7 @@ describe('readGameMapSnapshot', () => {
       imageAssetId: 'storage-1',
       pins: [
         {
+          id: testMapPinId('snapshot-pin'),
           itemId: 'note-1' as SidebarItemId,
           x: 12,
           y: 34,

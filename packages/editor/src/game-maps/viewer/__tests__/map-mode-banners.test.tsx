@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
-import type { MapPinId, SidebarItemId } from '../../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import type { MapPinWithItem } from '../../../game-maps/item-contract'
 import { MapModeBanners } from '../map-mode-banners'
 

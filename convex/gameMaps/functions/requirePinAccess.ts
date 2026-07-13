@@ -9,15 +9,20 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { MapItemRow } from '@wizard-archive/editor/game-maps/item-contract'
 import type { MapPin } from '@wizard-archive/editor/game-maps/document-contract'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function requirePinAccess(
   ctx: CampaignMutationCtx,
-  { mapPinId }: { mapPinId: Id<'mapPins'> },
+  { mapPinId }: { mapPinId: MapPinId },
 ): Promise<{
   pin: MapPin
+  pinRowId: Id<'mapPins'>
   map: MapItemRow
 }> {
-  const pinRow = await ctx.db.get('mapPins', mapPinId)
+  const pinRow = await ctx.db
+    .query('mapPins')
+    .withIndex('by_mapPinUuid', (query) => query.eq('mapPinUuid', mapPinId))
+    .unique()
   if (!pinRow) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Pin not found')
   }
@@ -31,5 +36,5 @@ export async function requirePinAccess(
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  return { pin: mapPinRowToDomain(pinRow), map }
+  return { pin: mapPinRowToDomain(pinRow), pinRowId: pinRow._id, map }
 }

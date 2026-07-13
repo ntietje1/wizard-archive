@@ -626,10 +626,11 @@ export async function createMapPin(
     visible: true,
   }
   const data = { ...defaults, ...overrides }
+  const mapPinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
   const pinId = await t.run(async (ctx) => {
-    return await ctx.db.insert('mapPins', data)
+    return await ctx.db.insert('mapPins', { ...data, mapPinUuid: mapPinId })
   })
-  return { pinId, ...data }
+  return { pinId, mapPinId, ...data }
 }
 
 export async function setupFolderTree(

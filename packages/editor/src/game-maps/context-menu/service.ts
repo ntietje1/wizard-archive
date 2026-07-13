@@ -1,5 +1,6 @@
 import type { AnyItem } from '../../workspace/items'
-import type { MapPinId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { MapPinId } from '../../resources/domain-id'
 import type { MaybePromise } from '../../../../../shared/common/async'
 import type { WorkspaceMenuContext } from '../../workspace/menu-context'
 import type { MapPinInteractionRequests } from '../viewer/map-pin-operations'

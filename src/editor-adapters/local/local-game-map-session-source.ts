@@ -1,5 +1,7 @@
 import type { Dispatch } from 'react'
-import type { MapPinId, SidebarItemId } from 'shared/common/ids'
+import type { SidebarItemId } from 'shared/common/ids'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import {
   completeWizardEditorMapPinOperation,
   hasWizardEditorGameMapPin,
@@ -12,7 +14,7 @@ import type {
   WizardEditorMapSession,
   WizardEditorResourceCatalog,
 } from '@wizard-archive/editor/adapter'
-import type { LocalWorkspaceAction, LocalWorkspaceState } from './local-workspace-model'
+import type { LocalWorkspaceAction } from './local-workspace-model'
 import { assertLocalCanMutate, readLocalFileAsDataUrl } from './local-operation-utils'
 
 type CreatedLocalMapPin = Extract<LocalWorkspaceAction, { type: 'createMapPins' }>['pins'][number]
@@ -21,17 +23,14 @@ export function createLocalGameMapSessionSource({
   canEdit,
   catalog,
   dispatch,
-  workspace,
 }: {
   canEdit: boolean
   catalog: WizardEditorResourceCatalog
   dispatch: Dispatch<LocalWorkspaceAction>
-  workspace: LocalWorkspaceState
 }): WizardEditorMapSession {
   const sessionPinnedItemIdsByMapId = new Map<string, Set<SidebarItemId>>()
   const sessionCreatedPinsById = new Map<MapPinId, { itemId: SidebarItemId; mapId: string }>()
   const latestMapImageRequestByMapId = new Map<string, number>()
-  let nextLocalMapPinIndex = workspace.nextLocalMapPinIndex
   let nextMapImageRequestId = 0
 
   return {
@@ -44,11 +43,9 @@ export function createLocalGameMapSessionSource({
             dispatch,
             mapId,
             layerId: pins[0]?.layerId ?? null,
-            nextLocalMapPinIndex,
             pins,
             sessionPinnedItemIdsByMapId,
           })
-          nextLocalMapPinIndex = created.nextLocalMapPinIndex
           for (const pin of created.pins) {
             const pinId = pin.id as MapPinId
             sessionCreatedPinsById.set(pinId, {
@@ -207,7 +204,6 @@ function createLocalMapPins({
   dispatch,
   mapId,
   layerId,
-  nextLocalMapPinIndex,
   pins,
   sessionPinnedItemIdsByMapId,
 }: {
@@ -216,11 +212,9 @@ function createLocalMapPins({
   dispatch: Dispatch<LocalWorkspaceAction>
   mapId: SidebarItemId
   layerId: string | null
-  nextLocalMapPinIndex: number
   pins: Parameters<WizardEditorMapSession['pins']['create']>[0]['pins']
   sessionPinnedItemIdsByMapId: Map<string, Set<SidebarItemId>>
 }): {
-  nextLocalMapPinIndex: number
   pinIds: Array<MapPinId>
   pins: Array<CreatedLocalMapPin>
   unavailable: boolean
@@ -229,14 +223,12 @@ function createLocalMapPins({
   const map = catalog.getVisibleItemById(mapId)
   const existingPinnedItemIds = readWizardEditorGameMapPinnedItemIds(map)
   if (!existingPinnedItemIds) {
-    return { nextLocalMapPinIndex, pinIds: [], pins: [], unavailable: true }
+    return { pinIds: [], pins: [], unavailable: true }
   }
   const mapKey = String(mapId)
   const sessionPinnedItemIds = sessionPinnedItemIdsByMapId.get(mapKey) ?? new Set<SidebarItemId>()
   sessionPinnedItemIdsByMapId.set(mapKey, sessionPinnedItemIds)
   const pinnedItemIds = [...existingPinnedItemIds, ...sessionPinnedItemIds]
-  let nextIndex = nextLocalMapPinIndex
-
   const createdPins = planWizardEditorMapPinCreations({
     mapId,
     existingPinnedItemIds: pinnedItemIds,
@@ -244,31 +236,27 @@ function createLocalMapPins({
     canPinItem: (itemId) => Boolean(catalog.getVisibleItemById(itemId)),
     createPin: (pin) => {
       const created = createLocalMapPin({
-        index: nextIndex,
         itemId: String(pin.itemId),
         layerId,
         x: pin.x,
         y: pin.y,
       })
-      nextIndex += 1
       return created
     },
   })
   if (createdPins.length === 0) {
-    return { nextLocalMapPinIndex, pinIds: [], pins: [], unavailable: false }
+    return { pinIds: [], pins: [], unavailable: false }
   }
 
   dispatch({
     type: 'createMapPins',
     mapId: mapKey,
     pins: createdPins,
-    nextLocalMapPinIndex: nextIndex,
   })
   for (const pin of createdPins) {
     sessionPinnedItemIds.add(pin.itemId as SidebarItemId)
   }
   return {
-    nextLocalMapPinIndex: nextIndex,
     pinIds: createdPins.map((created) => created.id as MapPinId),
     pins: createdPins,
     unavailable: false,
@@ -276,20 +264,18 @@ function createLocalMapPins({
 }
 
 function createLocalMapPin({
-  index,
   itemId,
   layerId,
   x,
   y,
 }: {
-  index: number
   itemId: string
   layerId: string | null
   x: number
   y: number
 }): CreatedLocalMapPin {
   return {
-    id: `local-map-pin-${index}`,
+    id: generateDomainId(DOMAIN_ID_KIND.mapPin),
     itemId,
     layerId,
     x,

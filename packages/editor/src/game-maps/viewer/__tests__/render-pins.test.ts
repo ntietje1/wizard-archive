@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { MapPinId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { AnyItem } from '../../../workspace/items'
 import { createWorkspaceMapRenderPins } from '../render-pins'

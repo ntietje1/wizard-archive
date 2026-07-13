@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
-import type { MapPinId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import { createMapPinActions } from '../actions'
 import type { WorkspaceMapPinMenuService } from '../service'
 import type { MapPinOperations } from '../../viewer/map-pin-operations'

@@ -27,6 +27,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignActor } from 'shared/campaigns/actor'
 import type { LiveFileSystemReadModel } from '../filesystem/read-model'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
+import { testMapPinId } from 'shared/test/map-pin-id'
 
 const liveSourceState = vi.hoisted(() => ({
   contentItem: null as WizardEditorItemWithContent | null,
@@ -833,7 +834,8 @@ describe('useLiveWorkspaceRuntime', () => {
   })
 
   it('updates map pins through the runtime map session source', async () => {
-    campaignMutationMocks.mutateAsync.mockResolvedValueOnce(['pin-1'])
+    const mapPinId = testMapPinId('runtime-pin')
+    campaignMutationMocks.mutateAsync.mockResolvedValueOnce([mapPinId])
     const { result } = renderLiveWorkspaceRuntime()
 
     const createResult = await result.current.sessions.map.pins.create({
@@ -843,7 +845,7 @@ describe('useLiveWorkspaceRuntime', () => {
     await expect(
       result.current.sessions.map.pins.update({
         mapId: 'map-1' as Id<'sidebarItems'>,
-        mapPinId: 'pin-1' as Id<'mapPins'>,
+        mapPinId,
         x: 56,
         y: 78,
       }),
@@ -851,7 +853,7 @@ describe('useLiveWorkspaceRuntime', () => {
     await expect(
       result.current.sessions.map.pins.setVisibility({
         mapId: 'map-1' as Id<'sidebarItems'>,
-        mapPinId: 'pin-1' as Id<'mapPins'>,
+        mapPinId,
         isVisible: false,
       }),
     ).resolves.toMatchObject({
@@ -861,7 +863,7 @@ describe('useLiveWorkspaceRuntime', () => {
     await expect(
       result.current.sessions.map.pins.remove({
         mapId: 'map-1' as Id<'sidebarItems'>,
-        mapPinId: 'pin-1' as Id<'mapPins'>,
+        mapPinId,
       }),
     ).resolves.toMatchObject({ status: 'completed', receipt: { kind: 'mapPinRemoved' } })
 
@@ -871,7 +873,7 @@ describe('useLiveWorkspaceRuntime', () => {
         kind: 'mapPinsCreated',
         itemId: 'map-1',
         affectedCount: 1,
-        pinIds: ['pin-1'],
+        pinIds: [mapPinId],
       },
     })
     expect(campaignMutationMocks.mutateAsync).toHaveBeenCalledWith({
@@ -879,15 +881,15 @@ describe('useLiveWorkspaceRuntime', () => {
       pins: [{ itemId: 'note-1', x: 12, y: 34 }],
     })
     expect(campaignMutationMocks.mutateAsync).toHaveBeenCalledWith({
-      mapPinId: 'pin-1',
+      mapPinId,
       x: 56,
       y: 78,
     })
     expect(campaignMutationMocks.mutateAsync).toHaveBeenCalledWith({
-      mapPinId: 'pin-1',
+      mapPinId,
       visible: false,
     })
-    expect(campaignMutationMocks.mutateAsync).toHaveBeenCalledWith({ mapPinId: 'pin-1' })
+    expect(campaignMutationMocks.mutateAsync).toHaveBeenCalledWith({ mapPinId })
   })
 
   it('opens items separately through the supplied live navigation capability', async () => {

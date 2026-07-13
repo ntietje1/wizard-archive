@@ -1,4 +1,6 @@
-import type { MapPinId, AssetId } from '../../../../shared/common/ids'
+import type { AssetId } from '../../../../shared/common/ids'
+import { isUuidV7 } from '../resources/domain-id'
+import type { MapPinId } from '../resources/domain-id'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { ResourceId, ResourceStatus, ResourceKind } from '../workspace/resource-contract'
 
@@ -51,6 +53,7 @@ export type MapPin = {
 }
 
 type GameMapSnapshotPinData = {
+  id: MapPinId
   itemId: ResourceId
   layerId?: string | null
   x: number
@@ -106,6 +109,8 @@ function isGameMapSnapshotPinData(value: unknown) {
   if (!isRecord(value)) return false
 
   return (
+    typeof value.id === 'string' &&
+    isUuidV7(value.id) &&
     typeof value.itemId === 'string' &&
     (value.layerId === undefined || value.layerId === null || typeof value.layerId === 'string') &&
     typeof value.x === 'number' &&

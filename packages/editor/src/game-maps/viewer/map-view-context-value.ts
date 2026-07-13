@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import type { MapPinId } from '../../../../../shared/common/ids'
+import type { MapPinId } from '../../resources/domain-id'
 import type { MapItemWithContent, MapPinWithItem } from '../../game-maps/item-contract'
 import type { MapPinInteractionRequests, MapPinOperations } from './map-pin-operations'
 

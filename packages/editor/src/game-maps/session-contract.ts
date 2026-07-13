@@ -1,7 +1,8 @@
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { MapPinId, SidebarItemId } from '../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../shared/common/ids'
 import type { ResourceImportFile } from '../files/import-contract'
 import type { ResourceOperationResult } from '../filesystem/transaction-contract'
+import type { MapPinId } from '../resources/domain-id'
 
 interface MapSessionUpdateImageInput {
   file: ResourceImportFile

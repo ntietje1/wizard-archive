@@ -93,7 +93,6 @@ export function createLocalWorkspaceRuntime({
     canEdit: canMutateWorkspace,
     catalog,
     dispatch,
-    workspace,
   })
   const filesystemHost = createLocalFileSystemHost({
     canEdit: canMutateWorkspace,

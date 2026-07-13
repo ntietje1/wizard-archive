@@ -28,12 +28,8 @@ import {
   withValidLocalViewAsPlayerSelection,
 } from './local-workspace-model'
 import type { LocalWorkspaceState } from './local-workspace-model'
-import type {
-  CampaignMemberId,
-  MapPinId,
-  SidebarItemId,
-  SidebarItemShareId,
-} from 'shared/common/ids'
+import type { CampaignMemberId, SidebarItemId, SidebarItemShareId } from 'shared/common/ids'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 export type LocalFileSystemSnapshot = Omit<WizardEditorCatalogSnapshot, 'current'> & {
   workspace: LocalWorkspaceState

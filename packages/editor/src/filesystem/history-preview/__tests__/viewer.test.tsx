@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { HistoryPreviewViewer } from '../viewer'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import { testMapPinId } from '../../../test/map-pin-id'
 import { createNoteYDocFromContent } from '../../../notes/imported-text'
 import type * as ImportedTextModule from '../../../notes/imported-text'
 import { createCanvasDocumentDoc } from '../../../canvas/document-contract'
@@ -197,6 +198,7 @@ describe('HistoryPreviewViewer', () => {
               imageAssetId: 'storage-1',
               pins: [
                 {
+                  id: testMapPinId('history-preview-pin'),
                   itemId: 'note-1' as SidebarItemId,
                   x: 12,
                   y: 34,

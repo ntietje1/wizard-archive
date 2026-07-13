@@ -1,9 +1,5 @@
-import type {
-  CampaignId,
-  MapPinId,
-  SidebarItemId,
-  UserProfileId,
-} from '../../../../../../shared/common/ids'
+import type { CampaignId, SidebarItemId, UserProfileId } from '../../../../../../shared/common/ids'
+import type { MapPinId } from '../../../resources/domain-id'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { completedResourceOperation } from '../../../filesystem/transaction-contract'
 import type { ResourceOperationResult } from '../../../filesystem/transaction-contract'

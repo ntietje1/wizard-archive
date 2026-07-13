@@ -39,7 +39,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
 import type { ResourceImportFile } from '../files/import-contract'
 import { createCanvas, createFile, createGameMap, createNote } from '../test/sidebar-item-factory'
-import { testId } from '../test/id'
+import { testMapPinId } from '../../../../shared/test/map-pin-id'
 
 type AdapterCanvasItemWithContent = Extract<WizardEditorItemWithContent, { type: 'canvas' }>
 type AdapterFileItemWithContent = Extract<WizardEditorItemWithContent, { type: 'file' }>
@@ -76,7 +76,7 @@ describe('WizardEditor adapter contract', () => {
     const map = createGameMap()
     const note = createContentNote()
     const importFile = createTestImportFile()
-    const mapPinId = testId<'mapPins'>('map-pin-1')
+    const mapPinId = testMapPinId('map-pin-1')
 
     expect(runtime.sessions.canvas.document.useCanvasDocumentSession(canvas)).toEqual({
       status: 'loading',

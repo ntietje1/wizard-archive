@@ -8,7 +8,21 @@ import { createItemPins as createItemPinsFn } from './functions/createItemPins'
 import { updateItemPin as updateItemPinFn } from './functions/updateItemPin'
 import { updatePinVisibility as updatePinVisibilityFn } from './functions/updatePinVisibility'
 import { removeItemPin as removeItemPinFn } from './functions/removeItemPin'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 import type { Id } from '../_generated/dataModel'
+import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
+
+const mapPinIdValidator = v.string()
+
+function parseMapPinId(value: string): MapPinId {
+  const mapPinId = parseDomainId(DOMAIN_ID_KIND.mapPin, value)
+  if (!mapPinId) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Map pin ID must be a lowercase UUIDv7')
+  }
+  return mapPinId
+}
 
 export const beginMapImageReplacement = campaignMutation({
   args: {
@@ -52,8 +66,8 @@ export const createItemPins = campaignMutation({
       }),
     ),
   },
-  returns: v.array(v.id('mapPins')),
-  handler: async (ctx, args): Promise<Array<Id<'mapPins'>>> => {
+  returns: v.array(mapPinIdValidator),
+  handler: async (ctx, args): Promise<Array<MapPinId>> => {
     return await createItemPinsFn(ctx, {
       mapId: args.mapId,
       pins: args.pins,
@@ -63,14 +77,14 @@ export const createItemPins = campaignMutation({
 
 export const updateItemPin = campaignMutation({
   args: {
-    mapPinId: v.id('mapPins'),
+    mapPinId: mapPinIdValidator,
     x: v.number(),
     y: v.number(),
   },
-  returns: v.id('mapPins'),
-  handler: async (ctx, args): Promise<Id<'mapPins'>> => {
+  returns: mapPinIdValidator,
+  handler: async (ctx, args): Promise<MapPinId> => {
     return await updateItemPinFn(ctx, {
-      mapPinId: args.mapPinId,
+      mapPinId: parseMapPinId(args.mapPinId),
       x: args.x,
       y: args.y,
     })
@@ -79,13 +93,13 @@ export const updateItemPin = campaignMutation({
 
 export const updatePinVisibility = campaignMutation({
   args: {
-    mapPinId: v.id('mapPins'),
+    mapPinId: mapPinIdValidator,
     visible: v.boolean(),
   },
-  returns: v.id('mapPins'),
-  handler: async (ctx, args): Promise<Id<'mapPins'>> => {
+  returns: mapPinIdValidator,
+  handler: async (ctx, args): Promise<MapPinId> => {
     return await updatePinVisibilityFn(ctx, {
-      mapPinId: args.mapPinId,
+      mapPinId: parseMapPinId(args.mapPinId),
       visible: args.visible,
     })
   },
@@ -93,10 +107,12 @@ export const updatePinVisibility = campaignMutation({
 
 export const removeItemPin = campaignMutation({
   args: {
-    mapPinId: v.id('mapPins'),
+    mapPinId: mapPinIdValidator,
   },
-  returns: v.id('mapPins'),
-  handler: async (ctx, args): Promise<Id<'mapPins'>> => {
-    return await removeItemPinFn(ctx, { mapPinId: args.mapPinId })
+  returns: mapPinIdValidator,
+  handler: async (ctx, args): Promise<MapPinId> => {
+    return await removeItemPinFn(ctx, {
+      mapPinId: parseMapPinId(args.mapPinId),
+    })
   },
 })

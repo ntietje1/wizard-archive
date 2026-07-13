@@ -198,7 +198,10 @@ describe('useLocalWorkspaceRuntime', () => {
         id: 'map-docks',
         imageUrl: expect.stringContaining('data:image/svg+xml'),
         pins: expect.arrayContaining([
-          expect.objectContaining({ id: 'local-map-pin-1', itemId: 'note-market' }),
+          expect.objectContaining({
+            id: SAMPLE_LOCAL_WORKSPACE.mapsById['map-docks']!.pins[0]!.id,
+            itemId: 'note-market',
+          }),
         ]),
       }),
     })

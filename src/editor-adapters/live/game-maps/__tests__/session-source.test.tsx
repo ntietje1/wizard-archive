@@ -4,6 +4,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useLiveGameMapSessionSource } from '../session-source'
 import { uploadFile as uploadFileToUrl } from '~/shared/uploads/upload-file'
 import type { WizardEditorMapSession } from '@wizard-archive/editor/adapter'
+import { testMapPinId } from 'shared/test/map-pin-id'
 
 const campaignMutationQueue = vi.hoisted(() => [] as Array<ReturnType<typeof vi.fn>>)
 const appMutationQueue = vi.hoisted(() => [] as Array<{ mutateAsync: ReturnType<typeof vi.fn> }>)
@@ -46,7 +47,7 @@ describe('useLiveGameMapSessionSource', () => {
   })
 
   it('updates map pins through the live game map session source', async () => {
-    const createdPinId = 'pin-1' as Id<'mapPins'>
+    const createdPinId = testMapPinId('live-pin')
     const createPins = vi.fn().mockResolvedValue([createdPinId])
     const updatePin = vi.fn().mockResolvedValue(undefined)
     const removePin = vi.fn().mockResolvedValue(undefined)
@@ -106,9 +107,9 @@ describe('useLiveGameMapSessionSource', () => {
       mapId: 'map-1',
       pins: [{ itemId: 'note-1', layerId: 'upper', x: 12, y: 34 }],
     })
-    expect(updatePin).toHaveBeenCalledWith({ mapPinId: 'pin-1', x: 56, y: 78 })
-    expect(updateVisibility).toHaveBeenCalledWith({ mapPinId: 'pin-1', visible: false })
-    expect(removePin).toHaveBeenCalledWith({ mapPinId: 'pin-1' })
+    expect(updatePin).toHaveBeenCalledWith({ mapPinId: createdPinId, x: 56, y: 78 })
+    expect(updateVisibility).toHaveBeenCalledWith({ mapPinId: createdPinId, visible: false })
+    expect(removePin).toHaveBeenCalledWith({ mapPinId: createdPinId })
   })
 
   it('updates map images through the live game map session source', async () => {

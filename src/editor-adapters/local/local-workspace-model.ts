@@ -13,6 +13,7 @@ import {
 import type { CampaignMemberId, SidebarItemId, UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { PermissionLevel } from 'shared/permissions/types'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 type LocalWorkspaceItemType = 'note' | 'folder' | 'canvas' | 'map' | 'file'
 type LocalSidebarItemType = WizardEditorItem['type']
@@ -104,7 +105,6 @@ export interface LocalWorkspaceState {
   localUser: LocalWorkspaceUser
   workspaceId: string
   nextLocalItemIndex: number
-  nextLocalMapPinIndex: number
   items: Array<LocalWorkspaceItem>
   memberItemPermissionsById?: Record<string, Record<string, PermissionLevel>>
   noteBlockVisibilityById?: Record<string, Array<LocalNoteBlockVisibilityRule>>
@@ -191,7 +191,6 @@ export type LocalWorkspaceAction =
       type: 'createMapPins'
       mapId: string
       pins: Array<LocalMapPinCreation>
-      nextLocalMapPinIndex: number
     }
   | { type: 'createItem'; creation: LocalItemCreation }
   | { type: 'deleteItemsForever'; itemIds: Array<string> }
@@ -406,9 +405,7 @@ function createMapPins(
   action: Extract<LocalWorkspaceAction, { type: 'createMapPins' }>,
 ): LocalWorkspaceState {
   const map = state.mapsById[action.mapId]
-  if (!map || action.pins.length === 0) {
-    return { ...state, nextLocalMapPinIndex: action.nextLocalMapPinIndex }
-  }
+  if (!map || action.pins.length === 0) return state
 
   const activeItemIds = new Set<string>()
   for (const item of state.items) {
@@ -425,9 +422,7 @@ function createMapPins(
       return { ...localPin, itemId: String(localPin.itemId) }
     },
   })
-  if (createdPins.length === 0) {
-    return { ...state, nextLocalMapPinIndex: action.nextLocalMapPinIndex }
-  }
+  if (createdPins.length === 0) return state
   const updatedAt = createLocalWorkspaceMutationTimestamp()
 
   return {
@@ -437,7 +432,6 @@ function createMapPins(
       ...state.mapsById,
       [action.mapId]: { ...map, pins: [...map.pins, ...createdPins] },
     },
-    nextLocalMapPinIndex: action.nextLocalMapPinIndex,
   }
 }
 
@@ -890,7 +884,7 @@ function copyLocalMap(
       : {}),
     pins: sourceMap.pins.map((pin) => ({
       ...pin,
-      id: `${copiedMapId}-${pin.id}`,
+      id: generateDomainId(DOMAIN_ID_KIND.mapPin),
       layerId: pin.layerId ? (layerIdMap.get(pin.layerId) ?? pin.layerId) : pin.layerId,
     })),
   }

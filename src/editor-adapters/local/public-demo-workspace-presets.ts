@@ -29,8 +29,14 @@ const PUBLIC_DEMO_MAP_VISIBLE_GHOST_ITEM_ID = 'note-market'
 const PUBLIC_DEMO_MAP_VISIBLE_PLAYER_ITEM_ID = 'file-handout'
 const PUBLIC_DEMO_MAP_LAYER_2_VISIBLE_ITEM_ID = 'file-tunnel-sketch'
 const PUBLIC_DEMO_MAP_HIDDEN_PIN_ITEM_ID = 'canvas-heist'
-const PUBLIC_DEMO_MAP_HIDDEN_PIN_ID = 'local-map-pin-3'
-const PUBLIC_DEMO_MAP_LAYER_2_PIN_ID = 'local-map-pin-4'
+const PUBLIC_DEMO_MAP_HIDDEN_PIN_ID = assertDomainId(
+  DOMAIN_ID_KIND.mapPin,
+  '01980c1a-5e70-7000-8000-000000000103',
+)
+const PUBLIC_DEMO_MAP_LAYER_2_PIN_ID = assertDomainId(
+  DOMAIN_ID_KIND.mapPin,
+  '01980c1a-5e70-7000-8000-000000000104',
+)
 const PUBLIC_DEMO_PRIVATE_PREP_PLAYER_TEXT = 'Players know the public auction starts at dusk.'
 const PUBLIC_DEMO_PRIVATE_PREP_SECRET_TEXT =
   'GM secret: Mara Vell planted the blue-glass invoice to bait the Salt Warehouse clerk.'
@@ -308,7 +314,6 @@ function createPublicDemoLayeredLoreMapWorkspace(): LocalWorkspaceState {
         [PUBLIC_DEMO_PLAYER_MEMBER_ID]: PERMISSION_LEVEL.VIEW,
       },
     },
-    nextLocalMapPinIndex: 5,
     playerMembers: clonePublicDemoPlayerMembers(),
     selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
   }
