@@ -50,5 +50,6 @@ export function showSingleFileUploadErrorToast({
 }
 
 export function getErrorMessage(error: unknown): string {
+  if (typeof error === 'string') return error
   return error instanceof Error ? error.message : 'An unexpected error occurred'
 }

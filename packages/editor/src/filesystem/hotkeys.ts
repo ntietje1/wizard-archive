@@ -169,7 +169,10 @@ function runHistoryHotkeyOperation({
 
   void Promise.resolve()
     .then(run)
-    .then((result) => reportResourceCommandFailure(result, message, reportError))
+    .then((result) => {
+      if (settled) return false
+      return reportResourceCommandFailure(result, message, reportError)
+    })
     .catch((error) => {
       if (!settled) reportError(error, message)
     })

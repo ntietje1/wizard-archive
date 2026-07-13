@@ -95,6 +95,16 @@ describe('filesystem operation domain', () => {
         ]),
       ),
     ).toThrow(/Cycle detected/)
+
+    expect(() =>
+      normalizeSelectedRoots(
+        [folderA, folderB],
+        new Map<SidebarItemId, AnyItem>([
+          [folderA.id, folderA],
+          [folderB.id, folderB],
+        ]),
+      ),
+    ).toThrow(/Cycle detected/)
   })
 
   it('handles empty selection and plans no operations', () => {

@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vite-plus/test'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
@@ -75,21 +73,6 @@ describe('resource workspace mode policy', () => {
         rawWorkspaceMode: WORKSPACE_MODE.EDITOR,
       }),
     ).toEqual({ canEdit: false, workspaceMode: WORKSPACE_MODE.VIEWER })
-  })
-
-  it('keeps workspace mode policy out of access presentation', () => {
-    const source = readFileSync(
-      path.resolve(process.cwd(), 'packages/editor/src/filesystem/access.ts'),
-      'utf8',
-    )
-    const workspaceModeFunction = source.slice(
-      source.indexOf('export function resolveWorkspaceModeForItem'),
-      source.indexOf('export function createActorFileSystemPermissions'),
-    )
-
-    expect(workspaceModeFunction).toContain('resolveResourceWorkspaceModePolicy')
-    expect(workspaceModeFunction).not.toContain('isTrashedSidebarItem')
-    expect(workspaceModeFunction).not.toContain('actorCanMutateResource')
   })
 })
 

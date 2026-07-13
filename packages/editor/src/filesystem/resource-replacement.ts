@@ -167,10 +167,11 @@ function reportResourceReplacementError(
 
 function resolveResourceOperationError(error: unknown) {
   if (error instanceof ResourceReplacementTimeoutError) {
-    return { data: { kind: 'client', code: 'VALIDATION_FAILED', message: error.message } }
+    return { data: { kind: 'client', code: 'CONFLICT', message: error.message } }
   }
-  if (isResourceOperationFailure(error) && error.status === 'error') {
-    return error.error
+  if (isResourceOperationFailure(error)) {
+    if (error.status === 'error') return error.error
+    return { data: { kind: 'client', code: 'CONFLICT', message: error.reason } }
   }
   return error
 }

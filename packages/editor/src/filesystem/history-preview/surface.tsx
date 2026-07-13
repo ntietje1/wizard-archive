@@ -6,6 +6,7 @@ import type { ResourceHistoryAvailable, HistoryPreviewState, RollbackState } fro
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { HistoryPreviewViewer } from './viewer'
 import { RollbackConfirmDialog } from './rollback-confirm-dialog'
+import { handleError } from '../../errors/handle-error'
 
 const UNAVAILABLE_HISTORY_PREVIEW_STATE = {
   status: 'unavailable',
@@ -41,7 +42,13 @@ export function HistoryPreviewSurface({
     const rollbackEntryId = history.rollbackEntryId
     if (history.itemId !== itemId || !rollbackEntryId || rollbackState.isRestoring) return
 
-    const result = await history.restoreRollback(rollbackEntryId)
+    let result: Awaited<ReturnType<typeof history.restoreRollback>>
+    try {
+      result = await history.restoreRollback(rollbackEntryId)
+    } catch (error) {
+      handleError(error, 'Failed to restore history version')
+      return
+    }
     if (
       result.status === 'restored' &&
       currentHistoryRef.current === history &&

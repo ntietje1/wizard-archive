@@ -154,7 +154,7 @@ function appendFolderExportEntries({
     triedNames.push(candidateName)
   }
 
-  throw new Error('Could not generate a unique folder download path')
+  manifest.skippedItems.push(createPathConflictSkippedItem(item, currentPath))
 }
 
 function appendChildExportEntries({
@@ -216,7 +216,20 @@ function appendNonFolderExportEntry({
     triedNames.push(candidateName)
   }
 
-  throw new Error('Could not generate a unique download path')
+  manifest.skippedItems.push(createPathConflictSkippedItem(item, currentPath))
+}
+
+function createPathConflictSkippedItem(
+  item: AnyItem,
+  currentPath: string,
+): FileSystemDownloadSkippedItem {
+  return {
+    itemId: item.id,
+    type: item.type,
+    name: item.name,
+    path: buildExportPath(currentPath, item.name),
+    reason: 'path_conflict',
+  }
 }
 
 function createResourceExportEntry({

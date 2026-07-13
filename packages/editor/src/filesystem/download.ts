@@ -37,7 +37,7 @@ export interface FileSystemDownloadSkippedItem {
   type: AnyItem['type']
   name: string
   path: string
-  reason: 'content_unavailable' | 'unsupported_type'
+  reason: 'content_unavailable' | 'path_conflict' | 'unsupported_type'
 }
 
 export type FileSystemDownload =

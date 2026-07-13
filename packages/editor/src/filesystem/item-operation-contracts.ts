@@ -93,6 +93,7 @@ export type FileSystemClipboardOperations =
 
 interface ResourceImportFileInput {
   file: ResourceImportFile
+  name?: string
   parentId: SidebarItemId | null
   acceptedKinds?: ReadonlyArray<ResourceImportFileKind>
   onProgress?: (event: { fileName: string; percentage: number }) => void

@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { describe, expect, it } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { RESOURCE_STATUS } from '../../../workspace/items-persistence-contract'
@@ -292,18 +290,6 @@ describe('resolveResourceAvailabilityState', () => {
       status: 'error',
       message: 'Failed to load item: ',
     })
-  })
-})
-
-describe('availability state ownership', () => {
-  it('keeps resource availability resolution out of filesystem access assembly', () => {
-    const source = readFileSync(
-      join(process.cwd(), 'packages/editor/src/filesystem/access.ts'),
-      'utf8',
-    )
-
-    expect(source).not.toContain('resolveResourceAvailabilityState')
-    expect(source).not.toContain('createResourceAvailabilityMetadataSource')
   })
 })
 

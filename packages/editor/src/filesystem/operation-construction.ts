@@ -328,6 +328,7 @@ function createWorkspaceItemRequest({
   input: WorkspaceCreateItemInput
   optimisticCreatedItems: OptimisticCreatedItems
 }) {
+  reconcilePersistedOptimisticCreatedItems(catalog, optimisticCreatedItems)
   const { color, iconName, name, parentTarget, type } = input
   const resolved = resolveCreateItemName({
     catalog,
@@ -348,6 +349,16 @@ function createWorkspaceItemRequest({
       ...(iconName === undefined ? {} : { iconName: coerceSidebarItemIconNameForInput(iconName) }),
       ...(color === undefined ? {} : { color: coerceSidebarItemColorForInput(color) }),
     },
+  }
+}
+
+function reconcilePersistedOptimisticCreatedItems(
+  catalog: ResourceCatalog,
+  optimisticCreatedItems: OptimisticCreatedItems,
+) {
+  for (const createdItemId of optimisticCreatedItems.itemsById.keys()) {
+    if (!catalog.getKnownItemById(createdItemId)) continue
+    removeOptimisticCreatedItem(optimisticCreatedItems, { createdItemId })
   }
 }
 

@@ -148,6 +148,30 @@ describe('filesystem item command operations', () => {
     expect(snapshot.sidebar).toEqual([folder, child])
   })
 
+  it('requests folder confirmation when a mixed selection contains a non-empty folder', async () => {
+    const folder = createFolder({ name: 'Scenes' })
+    const child = createNote({ parentId: folder.id })
+    const unrelated = createNote({ name: 'Unrelated' })
+    const dialogs = {
+      requestDeleteForever: vi.fn(),
+      requestEmptyTrash: vi.fn(),
+      requestTrashFolder: vi.fn(),
+    }
+    const trashItems = vi.fn()
+    const operations = createFileSystemTrashDialogOperations({
+      cacheAdapter: createTestCache({ sidebar: [folder, child, unrelated], trash: [] }),
+      dialogs,
+      trashItems,
+    })
+
+    await expect(operations.requestTrashItems([folder.id, unrelated.id])).resolves.toEqual({
+      status: 'pending',
+      reason: 'folder_confirmation_required',
+    })
+    expect(dialogs.requestTrashFolder).toHaveBeenCalledWith(folder)
+    expect(trashItems).not.toHaveBeenCalled()
+  })
+
   it('returns an explicit no-op trash result when no operation items resolve', async () => {
     const dialogs = {
       requestDeleteForever: vi.fn(),

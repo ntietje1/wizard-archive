@@ -189,9 +189,14 @@ function getLinkRowId({
   resolvedItemId: SidebarItemId | null
   sourceNoteId: SidebarItemId
 }) {
-  return resolvedItemId
-    ? `link:resolved:${sourceNoteId}:${blockId}:${resolvedItemId}:${query}`
-    : `link:unresolved:${sourceNoteId}:${blockId}:${query}`
+  return JSON.stringify([
+    'link',
+    resolvedItemId ? 'resolved' : 'unresolved',
+    sourceNoteId,
+    blockId,
+    resolvedItemId,
+    query,
+  ])
 }
 
 function flattenVisibleNoteBlocks(note: NoteItemWithContent): Array<NoteBlock> {

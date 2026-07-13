@@ -274,15 +274,14 @@ export function createFileSystemTrashDialogOperations({
       const currentReadModel = cacheAdapter.getReadModel()
       const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
       if (items.length === 0) return { status: 'noop', reason: 'no_items' }
-      if (items.length === 1) {
-        const item = items[0]
-        if (
+      const nonEmptyFolder = items.find(
+        (item): item is FolderItem =>
           item.type === RESOURCE_TYPES.folders &&
-          currentReadModel.getActiveChildren(item.id).length > 0
-        ) {
-          dialogs.requestTrashFolder(item)
-          return { status: 'pending', reason: 'folder_confirmation_required' }
-        }
+          currentReadModel.getActiveChildren(item.id).length > 0,
+      )
+      if (nonEmptyFolder) {
+        dialogs.requestTrashFolder(nonEmptyFolder)
+        return { status: 'pending', reason: 'folder_confirmation_required' }
       }
       return await trashItems(items.map((item) => item.id))
     },

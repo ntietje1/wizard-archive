@@ -13,6 +13,7 @@ import { useDndStore } from '../../drag-drop/store'
 import { useItemSurfaceRegistration } from '../../workspace/sidebar/use-item-surface-registration'
 import { dropTargetChromeClass } from '@wizard-archive/ui/drag-drop/drop-target-visual-state'
 import type { TrashSource } from './source'
+import { handleError } from '../../errors/handle-error'
 
 export function TrashPageViewer({ source }: { source: TrashSource }) {
   const status = source.getStatus()
@@ -55,8 +56,12 @@ export function TrashPageViewer({ source }: { source: TrashSource }) {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => {
-                void source.refresh()
+              onClick={async () => {
+                try {
+                  await source.refresh()
+                } catch (error) {
+                  handleError(error, 'Failed to refresh trash')
+                }
               }}
             >
               Retry loading trash

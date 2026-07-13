@@ -34,6 +34,7 @@ export function createMergeFolderFixture({ withSourceRoot = false } = {}) {
     parentId: destinationFolder.id,
   })
   const getChildren = (parentId: SidebarItemId) => {
+    if (sourceRoot && parentId === sourceRoot.id) return [sourceFolder]
     if (parentId === sourceFolder.id) return [sourceChild]
     if (parentId === destinationFolder.id) return [destinationChild]
     return []

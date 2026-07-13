@@ -269,6 +269,8 @@ export function useFileDropHandler(
       for (const skippedFile of receipt.skippedFileDetails) {
         if (skippedFile.reason === 'failed') {
           console.error(skippedFile.error)
+        } else if (skippedFile.reason === 'invalid') {
+          console.warn(skippedFileMessage(skippedFile))
         } else if (skippedFile.reason === 'unsupported') {
           console.warn(`${skippedFile.fileName}: unsupported file type`)
         }
@@ -347,11 +349,11 @@ function handleSingleFileSkip({
 
   if (toastId !== undefined) toast.dismiss(toastId)
   if (upload.reason === 'invalid') {
-    toast.error(`${upload.fileName}: ${getErrorMessage(upload.error) ?? 'Invalid file'}`)
+    toast.error(`${upload.fileName}: ${skippedErrorMessage(upload.error, 'Invalid file')}`)
     return
   }
   if (upload.reason === 'failed') {
-    toast.error(`${upload.fileName}: Upload failed`)
+    toast.error(`${upload.fileName}: ${skippedErrorMessage(upload.error, 'Upload failed')}`)
     return
   }
   toast.error(`${upload.fileName}: unsupported file type`)
@@ -360,7 +362,7 @@ function handleSingleFileSkip({
 function getSingleFileSkipWarning(upload: Extract<ImportFileResult, { status: 'skipped' }>) {
   if (upload.reason === 'unsupported') return `${upload.fileName}: unsupported file type`
   if (upload.reason === 'invalid') {
-    return `${upload.fileName}: ${getErrorMessage(upload.error) ?? 'Invalid file'}`
+    return `${upload.fileName}: ${skippedErrorMessage(upload.error, 'Invalid file')}`
   }
-  return `${upload.fileName}: ${getErrorMessage(upload.error) ?? 'Upload failed'}`
+  return `${upload.fileName}: ${skippedErrorMessage(upload.error, 'Upload failed')}`
 }

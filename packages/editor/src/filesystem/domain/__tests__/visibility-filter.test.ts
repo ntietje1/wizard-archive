@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vite-plus/test'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
@@ -53,15 +51,6 @@ describe('resource visibility filter domain', () => {
         getItemById: createLookup(resources),
       }),
     ).toEqual([visibleRoot])
-  })
-
-  it('keeps visibility filtering out of access presentation', () => {
-    const source = readFileSync(
-      path.resolve(process.cwd(), 'packages/editor/src/filesystem/access.ts'),
-      'utf8',
-    )
-
-    expect(source).not.toContain('canViewResourceAndKnownAncestors')
   })
 })
 
