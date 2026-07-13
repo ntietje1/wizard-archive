@@ -355,6 +355,49 @@ describe('useMapPinInteractions', () => {
     })
     expect(pinButton).toHaveStyle({ left: '25%', top: '50%' })
   })
+
+  it('clears dragging state when a resolved pin update is not completed', async () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture(map)
+    const updateMapPin = vi.fn().mockResolvedValue({
+      status: 'error',
+      error: new Error('save failed'),
+    })
+
+    render(<MapPinInteractionHarness map={map} pin={pin} updateMapPin={updateMapPin} />)
+    setImageBounds()
+    const pinButton = screen.getByRole('button', { name: 'Note' })
+
+    fireEvent.pointerDown(pinButton, {
+      button: 0,
+      pointerId: 17,
+      pointerType: 'touch',
+    })
+    act(() => {
+      window.dispatchEvent(
+        createPointerEvent('pointermove', {
+          clientX: 100,
+          clientY: 25,
+          pointerId: 17,
+          pointerType: 'touch',
+        }),
+      )
+      window.dispatchEvent(
+        createPointerEvent('pointerup', {
+          clientX: 100,
+          clientY: 25,
+          pointerId: 17,
+          pointerType: 'touch',
+        }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(updateMapPin).toHaveBeenCalledOnce()
+      expect(screen.getByTestId('map-cursor')).toHaveAttribute('data-cursor', 'default')
+    })
+    expect(pinButton).toHaveStyle({ left: '25%', top: '50%' })
+  })
 })
 
 function MapPinInteractionHarness({

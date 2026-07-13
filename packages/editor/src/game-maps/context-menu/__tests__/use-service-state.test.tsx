@@ -1,6 +1,6 @@
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import type { MapPinId, SidebarItemId } from '../../../../../../shared/common/ids'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { MapItemWithContent, MapPinWithItem } from '../../../game-maps/item-contract'
@@ -11,7 +11,9 @@ import {
   RESOURCE_TYPES,
 } from '../../../workspace/items-persistence-contract'
 import { MapViewProvider } from '../../viewer/map-view-context'
-import { useMapPinMenuServiceState } from '../use-service-state'
+import { useMapView } from '../../viewer/use-map-view'
+import { MapPinMenuStatePublisher, useMapPinMenuServiceState } from '../use-service-state'
+import { MapPinMenuStateProvider } from '../state-context'
 
 describe('useMapPinMenuServiceState', () => {
   it('returns null outside a map view instead of reading published viewer state', () => {
@@ -33,17 +35,20 @@ describe('useMapPinMenuServiceState', () => {
     const requestPinPlacement = vi.fn()
     const canViewPinItem = () => true
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <MapViewProvider
-        canEditMap
-        canViewPinItem={canViewPinItem}
-        map={map}
-        pins={pins}
-        pinOperations={pinOperations}
-        requestPinMove={requestPinMove}
-        requestPinPlacement={requestPinPlacement}
-      >
-        {children}
-      </MapViewProvider>
+      <MapPinMenuStateProvider>
+        <MapViewProvider
+          canEditMap
+          canViewPinItem={canViewPinItem}
+          map={map}
+          pins={pins}
+          pinOperations={pinOperations}
+          requestPinMove={requestPinMove}
+          requestPinPlacement={requestPinPlacement}
+        >
+          <MapPinMenuStatePublisher />
+          {children}
+        </MapViewProvider>
+      </MapPinMenuStateProvider>
     )
 
     const { result, rerender } = renderHook(() => useMapPinMenuServiceState(), { wrapper })
@@ -58,6 +63,47 @@ describe('useMapPinMenuServiceState', () => {
     expect(result.current?.activeMap.pinnedItemIds).toBe(pinnedItemIds)
     expect(result.current?.activeMap.pinnedItemIds.has(pin.itemId)).toBe(true)
   })
+
+  it.each([
+    { canView: true, publishesItem: true },
+    { canView: false, publishesItem: false },
+  ])(
+    'publishes only permitted active pin item data when canViewPinItem returns $canView',
+    ({ canView, publishesItem }) => {
+      const map = createGameMapFixture('map-1' as SidebarItemId, 'Map')
+      const pin = createMapPin(map, 'map-pin-1' as MapPinId, 'note-1', 'Note')
+      map.pins = [pin]
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <MapPinMenuStateProvider>
+          <MapViewProvider
+            canEditMap
+            canViewPinItem={() => canView}
+            map={map}
+            pins={[pin]}
+            pinOperations={{ removeMapPin: vi.fn(), updateMapPinVisibility: vi.fn() }}
+            requestPinMove={vi.fn()}
+            requestPinPlacement={vi.fn()}
+          >
+            <MapPinMenuStatePublisher />
+            {children}
+          </MapViewProvider>
+        </MapPinMenuStateProvider>
+      )
+      const { result } = renderHook(
+        () => ({ mapView: useMapView(), serviceState: useMapPinMenuServiceState() }),
+        { wrapper },
+      )
+
+      act(() => {
+        result.current.mapView.setActivePinId(pin.id)
+      })
+
+      expect(result.current.serviceState?.activePin).toMatchObject({
+        id: pin.id,
+        item: publishesItem ? pin.item : null,
+      })
+    },
+  )
 })
 
 function createMapPin(

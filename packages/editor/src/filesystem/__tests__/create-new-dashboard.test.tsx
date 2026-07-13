@@ -46,7 +46,7 @@ describe('CreateNewDashboard', () => {
     expect(openItem).toHaveBeenCalledWith('note-1')
   })
 
-  it('creates map actions as canvas-backed resources with a map default name', async () => {
+  it('creates map actions as game-map resources with a map default name', async () => {
     const user = userEvent.setup()
     const createItem = vi.fn<CreateItemSource['createItem']>(() => ({
       status: 'completed',
@@ -71,7 +71,7 @@ describe('CreateNewDashboard', () => {
       expect(createItem).toHaveBeenCalledWith({
         name: 'Untitled Map',
         parentId: null,
-        type: RESOURCE_TYPES.canvases,
+        type: RESOURCE_TYPES.gameMaps,
       })
     })
   })

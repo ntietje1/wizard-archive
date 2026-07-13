@@ -825,6 +825,7 @@ describe('useLiveWorkspaceRuntime', () => {
       mapId: 'map-1',
     })
     expect(campaignMutationMocks.mutateAsync).toHaveBeenNthCalledWith(2, {
+      layerId: null,
       mapId: 'map-1',
       replacementToken: 'replacement-token',
       uploadSessionId: 'upload-session-1',

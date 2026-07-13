@@ -1,22 +1,13 @@
 import { toast } from 'sonner'
-import { getClientErrorMessage } from '../../../../../shared/errors/client'
 import type { WorkspaceMapPinMenuService } from './service'
 import type { WorkspaceMenuContext } from '../../workspace/menu-context'
-import type { ResourceOperationResult } from '../../filesystem/transaction-contract'
-import { isCompletedResourceOperation } from '../viewer/map-action-errors'
+import { isCompletedResourceOperation, reportMapActionError } from '../viewer/map-action-errors'
 
 export interface WorkspaceMapPinContextMenuActions {
   pinToMap: (context: WorkspaceMenuContext) => void | Promise<void>
   removeMapPin: (context: WorkspaceMenuContext) => void | Promise<void>
   moveMapPin: (context: WorkspaceMenuContext) => void | Promise<void>
   togglePinVisibility: (context: WorkspaceMenuContext) => void | Promise<void>
-}
-
-function reportMapPinActionError(error: unknown, fallbackMessage: string) {
-  const resolvedError = resolveMapPinActionError(error)
-  const message = getClientErrorMessage(resolvedError)
-  toast.error(message && message.trim().length > 0 ? message : fallbackMessage)
-  console.error(resolvedError)
 }
 
 export function createMapPinActions({
@@ -51,12 +42,12 @@ export function createMapPinActions({
           mapPinId: activePin.id,
         })
         if (!isCompletedResourceOperation(result)) {
-          reportMapPinActionError(result, 'Failed to remove pin')
+          reportMapActionError(result, 'Failed to remove pin')
           return
         }
         toast.success('Pin removed')
       } catch (error) {
-        reportMapPinActionError(error, 'Failed to remove pin')
+        reportMapActionError(error, 'Failed to remove pin')
       }
     },
 
@@ -76,12 +67,12 @@ export function createMapPinActions({
           mapPinId: activePin.id,
         })
         if (!isCompletedResourceOperation(result)) {
-          reportMapPinActionError(result, 'Failed to toggle pin visibility')
+          reportMapActionError(result, 'Failed to toggle pin visibility')
           return
         }
         toast.success(newVisible ? 'Pin shown' : 'Pin hidden')
       } catch (error) {
-        reportMapPinActionError(error, 'Failed to toggle pin visibility')
+        reportMapActionError(error, 'Failed to toggle pin visibility')
       }
     },
 
@@ -94,22 +85,4 @@ export function createMapPinActions({
       mapPins.requestPinMove({ pinId: activePin.id })
     },
   }
-}
-
-function resolveMapPinActionError(error: unknown) {
-  if (isMapPinOperationFailure(error)) {
-    return error.status === 'error' ? error.error : new Error(error.reason)
-  }
-  return error
-}
-
-function isMapPinOperationFailure(
-  error: unknown,
-): error is Exclude<ResourceOperationResult, { status: 'completed' }> {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'status' in error &&
-    (error.status === 'error' || error.status === 'unsupported' || error.status === 'unavailable')
-  )
 }

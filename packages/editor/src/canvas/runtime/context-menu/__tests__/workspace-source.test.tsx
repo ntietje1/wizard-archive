@@ -82,7 +82,7 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
     })
   })
 
-  it('creates map menu items as canvas-backed resources with map naming', async () => {
+  it('creates map menu items as game map resources with map naming', async () => {
     const createItem = vi.fn().mockResolvedValue({
       status: 'completed',
       id: createdItemId,
@@ -106,7 +106,7 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
     })
 
     expect(createItem).toHaveBeenCalledWith({
-      type: RESOURCE_TYPES.canvases,
+      type: RESOURCE_TYPES.gameMaps,
       parentTarget: { kind: 'direct', parentId: canvasParentId },
       name: 'Untitled Map',
     })

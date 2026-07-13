@@ -55,7 +55,7 @@ export function EmbeddedMapContent({
           const aspectRatio = getIntrinsicAspectRatio(naturalWidth, naturalHeight)
           onMediaLayout?.({ kind: 'intrinsicAspectRatio', aspectRatio })
 
-          handleImageLoad()
+          handleImageLoad(event)
         }}
         onError={handleImageError}
       />

@@ -5,6 +5,7 @@ import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
 import type { MapPinId } from '../../../../../shared/common/ids'
 import type { MapItemWithContent, MapPinWithItem } from '../../game-maps/item-contract'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
+import type { ReactNode, SyntheticEvent } from 'react'
 import type { DropOutcome } from '../../drag-drop/outcome'
 import type { MapTransformState } from './transform-state'
 
@@ -60,8 +61,8 @@ export function MapCanvasStage({
     ref: unknown,
     state: { scale: number; positionX: number; positionY: number },
   ) => void
-  onImageLoad: () => void
-  onImageError: () => void
+  onImageLoad: (event: SyntheticEvent<HTMLImageElement>) => void
+  onImageError: (event: SyntheticEvent<HTMLImageElement>) => void
   onMapClick: (event: React.MouseEvent) => void
   onMapKeyboardAction: () => void
   onMapCanvasContextMenu: (event: React.MouseEvent) => void
@@ -69,7 +70,7 @@ export function MapCanvasStage({
   onPinClick: (event: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => void
   onPinContextMenu: (event: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => void
   onPinDragStart: (event: React.PointerEvent, pin: MapPinWithItem) => void
-  emptyImageContent: React.ReactNode
+  emptyImageContent: ReactNode
   imageAlt?: string
 }) {
   const mapPinsLayer = imageLoaded ? (
@@ -90,39 +91,19 @@ export function MapCanvasStage({
   ) : null
 
   const mapContent = (
-    <div className="relative" onContextMenu={hasPinAction ? undefined : onMapCanvasContextMenu}>
-      <img
-        key={map.imageUrl ?? 'no-image'}
-        ref={imageRef}
-        src={map.imageUrl ?? undefined}
-        alt={imageAlt}
-        className="select-none pointer-events-auto"
-        draggable={false}
-        onLoad={onImageLoad}
-        onError={onImageError}
-        style={{
-          cursor: mapCursor,
-          display: 'block',
-        }}
-      />
-
-      {hasPinAction && (
-        <button
-          type="button"
-          aria-label="Map canvas"
-          className="absolute inset-0 z-10 border-0 bg-transparent p-0 text-left"
-          style={{ cursor: mapCursor }}
-          onClick={onMapClick}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-            onMapKeyboardAction()
-          }}
-          onContextMenu={onMapCanvasContextMenu}
-        />
-      )}
-      {mapPinsLayer}
-    </div>
+    <MapCanvasImageLayer
+      hasPinAction={hasPinAction}
+      imageAlt={imageAlt}
+      imageRef={imageRef}
+      imageUrl={map.imageUrl}
+      mapCursor={mapCursor}
+      mapPinsLayer={mapPinsLayer}
+      onImageError={onImageError}
+      onImageLoad={onImageLoad}
+      onMapCanvasContextMenu={onMapCanvasContextMenu}
+      onMapClick={onMapClick}
+      onMapKeyboardAction={onMapKeyboardAction}
+    />
   )
 
   return (
@@ -166,6 +147,65 @@ export function MapCanvasStage({
       ) : (
         emptyImageContent
       )}
+    </div>
+  )
+}
+
+function MapCanvasImageLayer({
+  hasPinAction,
+  imageAlt,
+  imageRef,
+  imageUrl,
+  mapCursor,
+  mapPinsLayer,
+  onImageError,
+  onImageLoad,
+  onMapCanvasContextMenu,
+  onMapClick,
+  onMapKeyboardAction,
+}: {
+  hasPinAction: boolean
+  imageAlt: string
+  imageRef: React.RefObject<HTMLImageElement | null>
+  imageUrl: string | null
+  mapCursor: string
+  mapPinsLayer: ReactNode
+  onImageError: (event: SyntheticEvent<HTMLImageElement>) => void
+  onImageLoad: (event: SyntheticEvent<HTMLImageElement>) => void
+  onMapCanvasContextMenu: (event: React.MouseEvent) => void
+  onMapClick: (event: React.MouseEvent) => void
+  onMapKeyboardAction: () => void
+}) {
+  return (
+    <div className="relative" onContextMenu={hasPinAction ? undefined : onMapCanvasContextMenu}>
+      <img
+        key={imageUrl ?? 'no-image'}
+        ref={imageRef}
+        src={imageUrl ?? undefined}
+        alt={imageAlt}
+        className="select-none pointer-events-auto"
+        draggable={false}
+        onLoad={onImageLoad}
+        onError={onImageError}
+        style={{ cursor: mapCursor, display: 'block' }}
+      />
+
+      {hasPinAction && (
+        <button
+          type="button"
+          aria-label="Map canvas"
+          className="absolute inset-0 z-10 border-0 bg-transparent p-0 text-left"
+          style={{ cursor: mapCursor }}
+          onClick={onMapClick}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return
+            event.preventDefault()
+            onMapKeyboardAction()
+          }}
+          onContextMenu={onMapCanvasContextMenu}
+        />
+      )}
+      {mapPinsLayer}
     </div>
   )
 }

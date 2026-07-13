@@ -98,7 +98,53 @@ describe('MapImageContextMenuWrapper', () => {
       undefined,
     )
   })
+
+  it('clears the active pin only after dialog or menu close completes', () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture({ map })
+
+    render(
+      <MapViewProvider
+        canEditMap
+        canViewPinItem={() => true}
+        map={map}
+        pins={[pin]}
+        pinOperations={{ removeMapPin: vi.fn(), updateMapPinVisibility: vi.fn() }}
+        requestPinMove={vi.fn()}
+        requestPinPlacement={vi.fn()}
+      >
+        <ActivePinControls pinId={pin.id} />
+        <MapImageContextMenuWrapper
+          contextMenuRef={{ current: null }}
+          map={map}
+          selectedMap={map}
+        />
+      </MapViewProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Activate pin' }))
+    act(() => {
+      lastWorkspaceContextMenuProps()?.onDialogOpen?.()
+      lastWorkspaceContextMenuProps()?.onClose?.()
+    })
+    expect(screen.getByTestId('active-pin')).toHaveTextContent(pin.id)
+
+    act(() => {
+      lastWorkspaceContextMenuProps()?.onDialogClose?.()
+    })
+    expect(screen.getByTestId('active-pin')).toHaveTextContent('none')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Activate pin' }))
+    act(() => {
+      lastWorkspaceContextMenuProps()?.onClose?.()
+    })
+    expect(screen.getByTestId('active-pin')).toHaveTextContent('none')
+  })
 })
+
+function lastWorkspaceContextMenuProps() {
+  return vi.mocked(WorkspaceContextMenu).mock.lastCall?.[0]
+}
 
 function ActivePinControls({ pinId }: { pinId: MapPinId }) {
   const mapView = useMapView()

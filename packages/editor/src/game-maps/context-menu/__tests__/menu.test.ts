@@ -1,5 +1,5 @@
 import { Eye, EyeOff } from 'lucide-react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import {
@@ -256,8 +256,9 @@ describe('map pin context menu', () => {
     )
   })
 
-  it('exposes map pin edit actions for the active map pin context', () => {
+  it('exposes executable map pin edit actions for the active map pin context', async () => {
     const item = createNote()
+    const mapPinActions = createStubMapPinActions()
     const services = createServices({
       mapPins: {
         getActivePin: () => ({
@@ -270,6 +271,7 @@ describe('map pin context menu', () => {
         getActivePinVisible: () => true,
       },
     })
+    services.actions.mapPins = mapPinActions
 
     const menu = buildMenu({
       context: sidebarContext({
@@ -289,6 +291,20 @@ describe('map pin context menu', () => {
       'move-map-pin',
       'remove-map-pin',
     ])
+
+    for (const menuItem of menu.flatItems) {
+      await menuItem.onSelect()
+    }
+
+    expect(mapPinActions.togglePinVisibility).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ item, surface: VIEW_CONTEXT.MAP_VIEW }),
+    )
+    expect(mapPinActions.moveMapPin).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ item, surface: VIEW_CONTEXT.MAP_VIEW }),
+    )
+    expect(mapPinActions.removeMapPin).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ item, surface: VIEW_CONTEXT.MAP_VIEW }),
+    )
   })
 
   it('hides map pin edit actions when the active map cannot be edited', () => {

@@ -9,8 +9,8 @@ import {
   ContextMenuTrigger,
 } from '@wizard-archive/ui/shadcn/components/context-menu'
 import type { ContextMenuRef } from '@wizard-archive/ui/shadcn/components/context-menu'
-import type { CreateItemOption } from './create-item-options'
-import { CREATE_ITEM_OPTIONS } from './create-item-options'
+import type { SidebarItemCreationCommand } from '../workspace/sidebar/creation-catalog'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '../workspace/sidebar/creation-catalog'
 import type { FolderViewerSource } from './cards/source'
 import { getClientErrorMessage } from '../../../../shared/errors/client'
 import { toast } from 'sonner'
@@ -38,7 +38,7 @@ export function NewItemCard({ parentId, source }: NewItemCardProps) {
     openMenuAt(e.clientX, e.clientY)
   }
 
-  const handleCreate = async (option: CreateItemOption) => {
+  const handleCreate = async (option: SidebarItemCreationCommand) => {
     if (isCreating) return
     setIsCreating(true)
     try {
@@ -77,7 +77,7 @@ export function NewItemCard({ parentId, source }: NewItemCardProps) {
         }
       />
       <ContextMenuContent className="w-48">
-        {CREATE_ITEM_OPTIONS.map((option) => {
+        {SIDEBAR_ITEM_CREATION_COMMANDS.map((option) => {
           const Icon = option.icon
           return (
             <ContextMenuItem

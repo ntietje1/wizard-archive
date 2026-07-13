@@ -36,4 +36,13 @@ describe('reportMapPinCreationResult', () => {
     expect(toast.success).toHaveBeenNthCalledWith(1, 'Pin placed on map')
     expect(toast.success).toHaveBeenNthCalledWith(2, '2 pins placed on map')
   })
+
+  it('rejects receipts that report more pins than requested', () => {
+    expect(() => reportMapPinCreationResult(['pin-1', 'pin-2'] as Array<MapPinId>, 1)).toThrow(
+      'Map pin creation returned too many pins',
+    )
+
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
 })

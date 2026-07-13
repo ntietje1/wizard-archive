@@ -1,13 +1,13 @@
 import { Loader2, Plus } from 'lucide-react'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
-import type { CreateItemOption } from './create-item-options'
-import { CREATE_ITEM_OPTIONS } from './create-item-options'
+import type { SidebarItemCreationCommand } from '../workspace/sidebar/creation-catalog'
+import { SIDEBAR_ITEM_CREATION_COMMANDS } from '../workspace/sidebar/creation-catalog'
 
 interface CreateNewDashboardSurfaceProps {
   disabled?: boolean
   folderPath?: string
-  onCreate: (option: CreateItemOption) => void
-  creatingKey?: CreateItemOption['key'] | null
+  onCreate: (option: SidebarItemCreationCommand) => void
+  creatingKey?: SidebarItemCreationCommand['key'] | null
 }
 
 export function CreateNewDashboardSurface({
@@ -27,7 +27,7 @@ export function CreateNewDashboardSurface({
             {folderPath && <p className="mt-1 text-xs text-muted-foreground">{folderPath}</p>}
           </div>
           <div className="space-y-2">
-            {CREATE_ITEM_OPTIONS.map((option) => (
+            {SIDEBAR_ITEM_CREATION_COMMANDS.map((option) => (
               <CreateNewButton
                 key={option.key}
                 icon={option.icon}
@@ -67,7 +67,7 @@ function CreateNewButton({
 }: {
   description: string
   disabled: boolean
-  icon: CreateItemOption['icon']
+  icon: SidebarItemCreationCommand['icon']
   isCreating: boolean
   name: string
   onClick: () => void

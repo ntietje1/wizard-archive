@@ -24,6 +24,7 @@ import {
   NAV_COLUMN_WIDTH,
 } from './sidebar/components/sidebar-toolbar/constants'
 import { WorkspaceRuntimeSidebarProviders } from './sidebar-providers'
+import { MapPinMenuStateProvider } from '../game-maps/context-menu/state-context'
 import { useRightSidebar } from './right-sidebar/use-right-sidebar'
 import { createRuntimeRightSidebarSource } from './right-sidebar/runtime-source'
 import { getRightSidebarAvailablePanels } from './right-sidebar/source'
@@ -179,31 +180,35 @@ function WorkspaceRuntimeHostWithSidebarState({
   const canDropExternalFiles = runtime.filesystem.permissions.canCreateItems
 
   return (
-    <WorkspaceRuntimeSidebarProviders
-      runtime={runtime}
-      sidebarWorkspaceState={sidebarWorkspaceState}
-    >
-      {(sidebarRuntime) => (
-        <WorkspaceRuntimeProvider value={sidebarRuntime}>
-          <NoteEditorStoreProvider>
-            <WorkspaceRuntimeDndProvider
-              externalFiles={canDropExternalFiles ? { status: 'enabled' } : { status: 'disabled' }}
-              runtime={sidebarRuntime}
-              workspaceName={workspaceName}
-            >
-              <WorkspaceRuntimeHostContent
-                ariaLabel={ariaLabel}
-                noteHeadingRequest={noteHeadingRequest}
+    <MapPinMenuStateProvider>
+      <WorkspaceRuntimeSidebarProviders
+        runtime={runtime}
+        sidebarWorkspaceState={sidebarWorkspaceState}
+      >
+        {(sidebarRuntime) => (
+          <WorkspaceRuntimeProvider value={sidebarRuntime}>
+            <NoteEditorStoreProvider>
+              <WorkspaceRuntimeDndProvider
+                externalFiles={
+                  canDropExternalFiles ? { status: 'enabled' } : { status: 'disabled' }
+                }
                 runtime={sidebarRuntime}
-                sidebar={sidebar}
-                sidebarSlots={sidebarSlots}
-                viewStateStores={viewStateStores}
-              />
-            </WorkspaceRuntimeDndProvider>
-          </NoteEditorStoreProvider>
-        </WorkspaceRuntimeProvider>
-      )}
-    </WorkspaceRuntimeSidebarProviders>
+                workspaceName={workspaceName}
+              >
+                <WorkspaceRuntimeHostContent
+                  ariaLabel={ariaLabel}
+                  noteHeadingRequest={noteHeadingRequest}
+                  runtime={sidebarRuntime}
+                  sidebar={sidebar}
+                  sidebarSlots={sidebarSlots}
+                  viewStateStores={viewStateStores}
+                />
+              </WorkspaceRuntimeDndProvider>
+            </NoteEditorStoreProvider>
+          </WorkspaceRuntimeProvider>
+        )}
+      </WorkspaceRuntimeSidebarProviders>
+    </MapPinMenuStateProvider>
   )
 }
 

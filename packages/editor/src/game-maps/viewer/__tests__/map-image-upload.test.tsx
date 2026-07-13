@@ -124,6 +124,39 @@ describe('MapImageUpload', () => {
     expect(objectUrls.revokeObjectURL).toHaveBeenCalledWith('blob:first.png')
   })
 
+  it('keeps the latest selected map image when an older upload resolves later', async () => {
+    const firstUpload = createDeferred<ResourceOperationResult>()
+    const secondUpload = createDeferred<ResourceOperationResult>()
+    const onUpload = vi.fn((file: File) =>
+      file.name === 'first.png' ? firstUpload.promise : secondUpload.promise,
+    )
+    render(<MapImageUpload onUpload={onUpload} />)
+
+    act(() => {
+      lastFileUploadProps().fileUpload.handleFileSelect(
+        new File(['first'], 'first.png', { type: 'image/png' }),
+      )
+      lastFileUploadProps().fileUpload.handleFileSelect(
+        new File(['second'], 'second.png', { type: 'image/png' }),
+      )
+    })
+
+    await act(async () => {
+      secondUpload.resolve(completedMapImageUpdate())
+      await secondUpload.promise
+    })
+    await act(async () => {
+      firstUpload.resolve(completedMapImageUpdate())
+      await firstUpload.promise
+    })
+
+    expect(lastFileUploadProps().fileUpload).toMatchObject({
+      preview: 'blob:second.png',
+      uploadError: '',
+      isUploading: false,
+    })
+  })
+
   it('reports synchronous upload failures through the upload state', async () => {
     const onUpload = vi.fn(() => {
       throw new Error('upload rejected')
@@ -161,6 +194,7 @@ describe('MapImageUpload', () => {
       preview: '',
       uploadError: 'Failed to preview map image',
     })
+    expect(onUpload).not.toHaveBeenCalled()
   })
 
   it('fails a hanging active upload and clears upload progress', async () => {

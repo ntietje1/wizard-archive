@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { SyntheticEvent } from 'react'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 export function useMapImageStatus(mapId: SidebarItemId, imageUrl: string | null) {
@@ -8,14 +9,14 @@ export function useMapImageStatus(mapId: SidebarItemId, imageUrl: string | null)
   const imageLoaded = mapImageKey !== null && loadedImageKey === mapImageKey
   const imageError = mapImageKey !== null && erroredImageKey === mapImageKey
 
-  const handleImageLoad = () => {
-    if (!mapImageKey) return
+  const handleImageLoad = (event: SyntheticEvent<HTMLImageElement>) => {
+    if (!mapImageKey || !isActiveImageEvent(event, imageUrl)) return
     setLoadedImageKey(mapImageKey)
     setErroredImageKey((current) => (current === mapImageKey ? null : current))
   }
 
-  const handleImageError = () => {
-    if (!mapImageKey) return
+  const handleImageError = (event: SyntheticEvent<HTMLImageElement>) => {
+    if (!mapImageKey || !isActiveImageEvent(event, imageUrl)) return
     setErroredImageKey(mapImageKey)
     setLoadedImageKey((current) => (current === mapImageKey ? null : current))
   }
@@ -26,4 +27,14 @@ export function useMapImageStatus(mapId: SidebarItemId, imageUrl: string | null)
     handleImageLoad,
     handleImageError,
   }
+}
+
+function isActiveImageEvent(event: SyntheticEvent<HTMLImageElement>, imageUrl: string | null) {
+  if (!imageUrl) return false
+  const image = event.currentTarget
+  return (
+    image.getAttribute('src') === imageUrl ||
+    image.currentSrc === imageUrl ||
+    image.src === imageUrl
+  )
 }

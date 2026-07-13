@@ -119,6 +119,38 @@ describe('MapPinContextMenuWrapper', () => {
       expect(onClose).toHaveBeenCalledOnce()
     })
   })
+
+  it('clears active pin state and closes once after a dialog closes', async () => {
+    const map = createGameMapFixture()
+    const pin = createMapPinFixture({ map })
+    const onClose = vi.fn()
+
+    render(
+      <MapViewProvider
+        canEditMap
+        canViewPinItem={() => true}
+        map={map}
+        pins={[pin]}
+        pinOperations={{ removeMapPin: vi.fn(), updateMapPinVisibility: vi.fn() }}
+        requestPinMove={vi.fn()}
+        requestPinPlacement={vi.fn()}
+      >
+        <MapPinContextMenuWrapper pin={pin} position={{ x: 100, y: 200 }} onClose={onClose} />
+        <ActivePinProbe />
+      </MapViewProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-pin')).toHaveTextContent(pin.id)
+    })
+    act(() => {
+      lastWorkspaceContextMenuProps()?.onDialogOpen?.()
+      lastWorkspaceContextMenuProps()?.onDialogClose?.()
+    })
+
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(screen.getByTestId('active-pin')).toHaveTextContent('none')
+  })
 })
 
 function ActivePinProbe() {

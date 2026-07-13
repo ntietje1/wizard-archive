@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { SidebarItemId } from '../../../../shared/common/ids'
 import { CreateNewDashboardSurface } from './create-new-dashboard-surface'
-import type { CreateItemOption } from './create-item-options'
+import type { SidebarItemCreationCommand } from '../workspace/sidebar/creation-catalog'
 import { handleError } from '../errors/handle-error'
 import type { CreateItemSource } from './create-item-source'
 
@@ -12,11 +12,11 @@ interface CreateNewDashboardProps {
 }
 
 export function CreateNewDashboard({ parentId, folderPath, source }: CreateNewDashboardProps) {
-  const [creatingKey, setCreatingKey] = useState<CreateItemOption['key'] | null>(null)
+  const [creatingKey, setCreatingKey] = useState<SidebarItemCreationCommand['key'] | null>(null)
 
   const isDisabled = creatingKey !== null
 
-  const handleCreate = async (option: CreateItemOption) => {
+  const handleCreate = async (option: SidebarItemCreationCommand) => {
     if (isDisabled) return
 
     setCreatingKey(option.key)

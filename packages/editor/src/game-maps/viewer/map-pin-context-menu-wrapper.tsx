@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { WorkspaceContextMenu } from '../../workspace/context-menu/context-menu'
 import { useMapView } from './use-map-view'
-import type { MapPinWithItem } from '../../game-maps/item-contract'
+import type { MapPinWithItem } from '../item-contract'
 import type { ContextMenuHostRef } from '../../context-menu/components/host'
 import type { ScreenPosition } from './map-pin-placement'
 
