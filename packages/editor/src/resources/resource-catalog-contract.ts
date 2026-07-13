@@ -8,6 +8,16 @@ import type {
 } from './resource-contract'
 import type { ResourceTombstone } from './resource-metadata-version'
 
+export const MAX_RESOURCE_CATALOG_PAGE_SIZE = 200
+
+export function assertResourceCatalogPageSize(limit: number): void {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_RESOURCE_CATALOG_PAGE_SIZE) {
+    throw new RangeError(
+      `Resource catalog page size must be between 1 and ${MAX_RESOURCE_CATALOG_PAGE_SIZE}`,
+    )
+  }
+}
+
 export type SourcePathAliasValue = Readonly<{
   rawPath: string
   normalizedPath: string

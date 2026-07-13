@@ -8,6 +8,7 @@ import type {
   ResourceMetadataChanges,
   SourcePathAlias,
 } from './resource-catalog-contract'
+import { assertResourceCatalogPageSize } from './resource-catalog-contract'
 import type {
   AuthoritativeResourceOperationExecutor,
   CommandEnvelope,
@@ -32,8 +33,6 @@ import {
 } from './resource-metadata-version'
 import type { ResourceTombstone } from './resource-metadata-version'
 import { InMemoryResourceOperationLedger } from './resource-operation-ledger'
-
-export const MAX_RESOURCE_CATALOG_PAGE_SIZE = 200
 
 export type ResourceOperationAuthorizer = (
   actorId: CampaignMemberId,
@@ -265,12 +264,10 @@ export class InMemoryResourceCatalog
     limit: number,
     cursor: string | null,
   ): Promise<ResourceCatalogPage<ResourceRecord>> {
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_RESOURCE_CATALOG_PAGE_SIZE) {
-      return Promise.reject(
-        new RangeError(
-          `Resource catalog page size must be between 1 and ${MAX_RESOURCE_CATALOG_PAGE_SIZE}`,
-        ),
-      )
+    try {
+      assertResourceCatalogPageSize(limit)
+    } catch (error) {
+      return Promise.reject(error)
     }
     const candidates = Array.from(this.#state.resources.values())
       .filter(

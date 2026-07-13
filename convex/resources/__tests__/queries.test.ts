@@ -1,0 +1,159 @@
+import { describe, expect, it } from 'vite-plus/test'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
+import type { FunctionArgs } from 'convex/server'
+import { api } from '../../_generated/api'
+import type { Id } from '../../_generated/dataModel'
+import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
+import { createTestContext } from '../../_test/setup.helper'
+
+type StoredResourceStructureCommand = FunctionArgs<
+  typeof api.resources.mutations.executeStructureCommand
+>['command']
+
+describe('authorized resource projection', () => {
+  const t = createTestContext()
+
+  it('loads an authorized resource with its complete visible ancestor spine', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const rootId = await createResource(campaign, campaignUuid, 'folder', null, 'Root')
+    const folderId = await createResource(campaign, campaignUuid, 'folder', rootId, 'Folder')
+    const noteId = await createResource(campaign, campaignUuid, 'note', folderId, 'Note')
+
+    const snapshot = await asDm(campaign).query(api.resources.queries.loadResource, {
+      campaignId: campaignUuid,
+      resourceId: noteId,
+    })
+
+    expect(snapshot.scope).toEqual({
+      campaignId: campaignUuid,
+      actorId: await getMemberUuid(campaign.dm.memberId),
+      projection: 'dm',
+      schema: RESOURCE_INDEX_SCHEMA,
+    })
+    expect(snapshot.resources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: rootId, displayParentId: null }),
+        expect.objectContaining({ id: folderId, displayParentId: rootId }),
+        expect.objectContaining({ id: noteId, displayParentId: folderId }),
+      ]),
+    )
+    expect(snapshot.resources).toHaveLength(3)
+    expect(snapshot.missingResourceIds).toEqual([])
+  })
+
+  it('returns neutral missing and empty collection knowledge to an actor without access', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Secret')
+
+    const resource = await asPlayer(campaign).query(api.resources.queries.loadResource, {
+      campaignId: campaignUuid,
+      resourceId,
+    })
+    const collection = await asPlayer(campaign).query(api.resources.queries.loadCollection, {
+      campaignId: campaignUuid,
+      query: { parentId: null, lifecycle: 'active' },
+    })
+
+    expect(resource.resources).toEqual([])
+    expect(resource.missingResourceIds).toEqual([resourceId])
+    expect(collection.snapshot.resources).toEqual([])
+    expect(collection.snapshot.collections).toEqual([
+      {
+        query: { parentId: null, lifecycle: 'active' },
+        resourceIds: [],
+        complete: true,
+      },
+    ])
+  })
+
+  it('loads normalized authorized collections without exposing unrelated resource kinds', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const folderId = await createResource(campaign, campaignUuid, 'folder', null, 'Folder')
+    await createResource(campaign, campaignUuid, 'note', null, 'Note')
+
+    const first = await asDm(campaign).query(api.resources.queries.loadCollection, {
+      campaignId: campaignUuid,
+      query: { parentId: null, lifecycle: 'active', kinds: ['folder', 'folder'] },
+    })
+    const replay = await asDm(campaign).query(api.resources.queries.loadCollection, {
+      campaignId: campaignUuid,
+      query: { parentId: null, lifecycle: 'active', kinds: ['folder'] },
+    })
+
+    expect(first.snapshot.collections).toEqual([
+      {
+        query: { parentId: null, lifecycle: 'active', kinds: ['folder'] },
+        resourceIds: [folderId],
+        complete: true,
+      },
+    ])
+    expect(first.snapshot.resources).toEqual([
+      expect.objectContaining({ id: folderId, kind: 'folder' }),
+    ])
+    expect(first.cursor).toBeNull()
+    expect(first.snapshot.revision).toBe(replay.snapshot.revision)
+  })
+
+  it('does not reveal a resource owned by another campaign', async () => {
+    const firstCampaign = await setupCampaignContext(t)
+    const secondCampaign = await setupCampaignContext(t)
+    const firstCampaignUuid = await getCampaignUuid(firstCampaign.campaignId)
+    const secondCampaignUuid = await getCampaignUuid(secondCampaign.campaignId)
+    const foreignId = await createResource(
+      secondCampaign,
+      secondCampaignUuid,
+      'note',
+      null,
+      'Foreign',
+    )
+
+    const snapshot = await asDm(firstCampaign).query(api.resources.queries.loadResource, {
+      campaignId: firstCampaignUuid,
+      resourceId: foreignId,
+    })
+
+    expect(snapshot.resources).toEqual([])
+    expect(snapshot.missingResourceIds).toEqual([foreignId])
+  })
+
+  async function getCampaignUuid(campaignId: Id<'campaigns'>) {
+    return await t.run(async (ctx) => (await ctx.db.get('campaigns', campaignId))!.campaignUuid)
+  }
+
+  async function getMemberUuid(memberId: Id<'campaignMembers'>) {
+    return await t.run(
+      async (ctx) => (await ctx.db.get('campaignMembers', memberId))!.campaignMemberUuid,
+    )
+  }
+
+  async function createResource(
+    campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
+    campaignUuid: string,
+    kind: 'folder' | 'note',
+    parentId: ResourceId | null,
+    title: string,
+  ) {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const command: StoredResourceStructureCommand = {
+      type: 'create',
+      resourceId,
+      kind,
+      parentId,
+      title,
+      icon: null,
+      color: null,
+    }
+    const result = await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command,
+    })
+    expect(result.status).toBe('completed')
+    return resourceId
+  }
+})

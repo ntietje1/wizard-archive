@@ -6,6 +6,8 @@ import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from '.
 
 declare const indexRevisionBrand: unique symbol
 
+export const RESOURCE_INDEX_SCHEMA = 'resource-index-v1'
+
 export type IndexRevision = string & { readonly [indexRevisionBrand]: true }
 
 export type ResourceProjectionScope = Readonly<{

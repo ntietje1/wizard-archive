@@ -17,6 +17,47 @@ export const versionStampValidator = v.object({
 
 export const resourceKindValidator = literals(...Object.values(RESOURCE_KIND))
 
+export const resourceProjectionScopeValidator = v.object({
+  campaignId: campaignUuidValidator,
+  actorId: campaignMemberUuidValidator,
+  projection: v.string(),
+  schema: v.string(),
+})
+
+export const resourceCollectionQueryValidator = v.object({
+  parentId: v.nullable(resourceUuidValidator),
+  lifecycle: literals('active', 'trashed'),
+  kinds: v.optional(v.array(resourceKindValidator)),
+})
+
+export const authorizedResourceSummaryValidator = v.object({
+  id: resourceUuidValidator,
+  campaignId: campaignUuidValidator,
+  displayParentId: v.nullable(resourceUuidValidator),
+  kind: resourceKindValidator,
+  title: v.string(),
+  icon: v.nullable(v.string()),
+  color: v.nullable(v.string()),
+  lifecycle: literals('active', 'trashed'),
+  metadataVersion: versionStampValidator,
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+
+export const authorizedResourceSnapshotValidator = v.object({
+  scope: resourceProjectionScopeValidator,
+  revision: v.string(),
+  resources: v.array(authorizedResourceSummaryValidator),
+  missingResourceIds: v.array(resourceUuidValidator),
+  collections: v.array(
+    v.object({
+      query: resourceCollectionQueryValidator,
+      resourceIds: v.array(resourceUuidValidator),
+      complete: v.boolean(),
+    }),
+  ),
+})
+
 const resourceAuditFields = {
   createdAt: v.number(),
   createdByMemberUuid: campaignMemberUuidValidator,
@@ -151,6 +192,7 @@ export const resourceStructureCommandResultValidator = v.union(
 export const resourceTables = {
   resources: defineTable(resourceTableValidator)
     .index('by_resourceUuid', ['resourceUuid'])
+    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])
     .index('by_campaign_and_parent', ['campaignUuid', 'parentResourceUuid'])
     .index('by_campaign_and_parent_and_lifecycle_and_resource', [
       'campaignUuid',
