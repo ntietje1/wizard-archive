@@ -338,4 +338,88 @@ describe('OptimisticWorkspaceResourceIndex', () => {
     expect(optimistic.getSnapshot().scope).toEqual(nextScope)
     expect(optimistic.getSnapshot().lookup(rootId)).toEqual({ state: 'unknown' })
   })
+
+  it('reconciles delivery without dropping indeterminate operations', async () => {
+    const optimistic = new OptimisticWorkspaceResourceIndex(indexWith())
+    const retainedOperation = operation(31)
+    await optimistic.submit(retainedOperation, {
+      type: 'updateMetadata',
+      resourceId: rootId,
+      changes: { title: canonicalizeResourceTitle('Retained') },
+    })
+
+    expect(
+      optimistic.reconcile(retainedOperation, {
+        status: 'indeterminate',
+        retryable: true,
+        reason: 'response_lost',
+      }),
+    ).toEqual({ status: 'retained' })
+    expect(optimistic.overlays()).toHaveLength(1)
+
+    expect(
+      optimistic.reconcile(retainedOperation, {
+        status: 'not_committed',
+        retryable: true,
+        reason: 'transport_unavailable',
+      }),
+    ).toEqual({ status: 'removed' })
+    expect(optimistic.overlays()).toEqual([])
+  })
+
+  it('removes only matching rejected or unavailable operations', async () => {
+    const optimistic = new OptimisticWorkspaceResourceIndex(indexWith())
+    const rejectedOperation = operation(32)
+    const unavailableOperation = operation(33)
+    for (const [operationId, title] of [
+      [rejectedOperation, 'Rejected'],
+      [unavailableOperation, 'Unavailable'],
+    ] as const) {
+      await optimistic.submit(operationId, {
+        type: 'updateMetadata',
+        resourceId: rootId,
+        changes: { title: canonicalizeResourceTitle(title) },
+      })
+    }
+
+    expect(
+      optimistic.reconcile(rejectedOperation, {
+        status: 'received',
+        result: { status: 'rejected', reason: 'unauthorized' },
+      }),
+    ).toEqual({ status: 'removed' })
+    expect(optimistic.overlays().map((overlay) => overlay.operationId)).toEqual([
+      unavailableOperation,
+    ])
+    expect(
+      optimistic.reconcile(unavailableOperation, {
+        status: 'received',
+        result: { status: 'unavailable', reason: 'scope_unavailable' },
+      }),
+    ).toEqual({ status: 'removed' })
+  })
+
+  it('confirms matching completed receipts and rejects mismatched receipt identities', async () => {
+    const optimistic = new OptimisticWorkspaceResourceIndex(indexWith())
+    const operationId = operation(34)
+    await optimistic.submit(operationId, {
+      type: 'updateMetadata',
+      resourceId: rootId,
+      changes: { title: canonicalizeResourceTitle('Confirmed') },
+    })
+
+    expect(
+      optimistic.reconcile(operationId, {
+        status: 'received',
+        result: { status: 'completed', receipt: receipt(operation(35), rootId) },
+      }),
+    ).toEqual({ status: 'rejected', reason: 'receipt_mismatch' })
+    expect(optimistic.overlays()).toHaveLength(1)
+    expect(
+      optimistic.reconcile(operationId, {
+        status: 'received',
+        result: { status: 'completed', receipt: receipt(operationId, rootId) },
+      }),
+    ).toEqual({ status: 'confirmed' })
+  })
 })

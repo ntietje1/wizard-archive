@@ -1,6 +1,11 @@
 import { DOMAIN_ID_KIND, assertDomainId } from './domain-id'
 import type { OperationId, ResourceId } from './domain-id'
-import type { ResourceCommandReceipt, ResourcePostcondition } from './resource-command-contract'
+import type {
+  CommandDelivery,
+  ResourceCommandReceipt,
+  ResourcePostcondition,
+  ResourceStructureCommandResult,
+} from './resource-command-contract'
 import { normalizeResourceStructureCommand } from './resource-command-protocol'
 import type {
   OptimisticResourceCommand,
@@ -42,6 +47,16 @@ export type ResourceOptimisticSubmitResult =
 
 export type ResourceOptimisticConfirmResult =
   | { readonly status: 'confirmed' }
+  | { readonly status: 'retired' }
+  | {
+      readonly status: 'rejected'
+      readonly reason: 'overlay_missing' | 'receipt_mismatch' | 'wrong_scope'
+    }
+
+export type ResourceOptimisticReconcileResult =
+  | { readonly status: 'confirmed' }
+  | { readonly status: 'retained' }
+  | { readonly status: 'removed' }
   | { readonly status: 'retired' }
   | {
       readonly status: 'rejected'
@@ -414,6 +429,26 @@ export class OptimisticWorkspaceResourceIndex implements WorkspaceResourceIndex 
     return { status: 'confirmed' }
   }
 
+  reconcile(
+    operationId: OperationId,
+    delivery: CommandDelivery<ResourceStructureCommandResult>,
+  ): ResourceOptimisticReconcileResult {
+    if (delivery.status === 'indeterminate') {
+      return this.#hasOverlay(operationId)
+        ? { status: 'retained' }
+        : { status: 'rejected', reason: 'overlay_missing' }
+    }
+    if (delivery.status === 'not_committed' || delivery.result.status !== 'completed') {
+      return this.remove(operationId)
+        ? { status: 'removed' }
+        : { status: 'rejected', reason: 'overlay_missing' }
+    }
+    if (delivery.result.receipt.operationId !== operationId) {
+      return { status: 'rejected', reason: 'receipt_mismatch' }
+    }
+    return this.confirm(delivery.result.receipt)
+  }
+
   remove(operationId: OperationId): boolean {
     const index = this.#overlays.findIndex((overlay) => overlay.operationId === operationId)
     if (index < 0) return false
@@ -425,6 +460,10 @@ export class OptimisticWorkspaceResourceIndex implements WorkspaceResourceIndex 
   dispose(): void {
     this.#unsubscribeBase()
     this.#listeners.clear()
+  }
+
+  #hasOverlay(operationId: OperationId): boolean {
+    return this.#overlays.some((overlay) => overlay.operationId === operationId)
   }
 
   #baseChanged(): void {
