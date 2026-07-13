@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import * as Y from 'yjs'
 import { Loader2 } from 'lucide-react'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
@@ -22,61 +22,40 @@ import { PinMarker } from '../../game-maps/viewer/pin-marker'
 import { resolvePinIcon } from '../../game-maps/viewer/pin-utils'
 import type { PreviewFallbackReason } from '../../previews/fallback-policy'
 import { getPreviewFallbackCopy } from '../../previews/fallback-policy'
-import type {
-  HistorySnapshotParserRequest,
-  HistorySnapshotParserResult,
-} from './snapshot-parser-contract'
+import { readNoteYDocContent } from '../../notes/imported-text'
+import { readCanvasDocumentContent } from '../../canvas/document-contract'
 
-const SNAPSHOT_PARSE_TIMEOUT_MS = 5_000
-type SnapshotReadResult<TKind extends HistorySnapshotParserRequest['kind']> =
-  | Extract<HistorySnapshotParserResult, { status: 'ready'; kind: TKind }>
-  | { status: 'loading' }
-  | { status: 'corrupted' }
+type SnapshotReadResult<T> = { status: 'ready'; value: T } | { status: 'corrupted' }
+const noteSnapshotCache = new WeakMap<
+  ArrayBuffer,
+  SnapshotReadResult<ReturnType<typeof readNoteYDocContent>>
+>()
+const canvasSnapshotCache = new WeakMap<
+  ArrayBuffer,
+  SnapshotReadResult<ReturnType<typeof readCanvasDocumentContent>>
+>()
 
-function useSnapshotReadResult<TKind extends HistorySnapshotParserRequest['kind']>(
-  kind: TKind,
+function readYjsSnapshot<T>(data: ArrayBuffer, read: (doc: Y.Doc) => T): SnapshotReadResult<T> {
+  const doc = new Y.Doc()
+  try {
+    Y.applyUpdate(doc, new Uint8Array(data))
+    return { status: 'ready', value: read(doc) }
+  } catch {
+    return { status: 'corrupted' }
+  } finally {
+    doc.destroy()
+  }
+}
+
+function readCachedYjsSnapshot<T>(
   data: ArrayBuffer,
-): SnapshotReadResult<TKind> {
-  const [completedRead, setCompletedRead] = useState<{
-    data: ArrayBuffer | null
-    result: SnapshotReadResult<TKind>
-  }>({ data: null, result: { status: 'loading' } })
-  const result = completedRead.data === data ? completedRead.result : { status: 'loading' as const }
-
-  useEffect(() => {
-    const worker = new Worker(new URL('./snapshot-parser.worker.ts', import.meta.url), {
-      type: 'module',
-    })
-    const timeout = window.setTimeout(() => {
-      worker.terminate()
-      setCompletedRead({ data, result: { status: 'corrupted' } })
-    }, SNAPSHOT_PARSE_TIMEOUT_MS)
-    worker.onmessage = ({ data: parsed }: MessageEvent<HistorySnapshotParserResult>) => {
-      window.clearTimeout(timeout)
-      worker.terminate()
-      setCompletedRead({
-        data,
-        result:
-          parsed.status === 'ready' && parsed.kind === kind
-            ? (parsed as SnapshotReadResult<TKind>)
-            : { status: 'corrupted' },
-      })
-    }
-    worker.onerror = () => {
-      window.clearTimeout(timeout)
-      worker.terminate()
-      setCompletedRead({ data, result: { status: 'corrupted' } })
-    }
-    const workerData = data.slice(0)
-    worker.postMessage({ kind, data: workerData } satisfies HistorySnapshotParserRequest, [
-      workerData,
-    ])
-    return () => {
-      window.clearTimeout(timeout)
-      worker.terminate()
-    }
-  }, [data, kind])
-
+  cache: WeakMap<ArrayBuffer, SnapshotReadResult<T>>,
+  read: (doc: Y.Doc) => T,
+): SnapshotReadResult<T> {
+  const cached = cache.get(data)
+  if (cached) return cached
+  const result = readYjsSnapshot(data, read)
+  cache.set(data, result)
   return result
 }
 
@@ -102,12 +81,11 @@ export function HistoryDocumentPreview({ snapshot }: { snapshot: HistoryPreviewS
 }
 
 function NoteYjsSnapshotPreview({ data, noteId }: { data: ArrayBuffer; noteId: SidebarItemId }) {
-  const result = useSnapshotReadResult('note-yjs', data)
+  const result = readCachedYjsSnapshot(data, noteSnapshotCache, readNoteYDocContent)
 
   if (result.status === 'corrupted') {
     return <CorruptedSnapshotState />
   }
-  if (result.status === 'loading') return <SnapshotLoadingState />
 
   return (
     <ScrollArea className="flex-1 min-h-0">
@@ -127,12 +105,11 @@ function NoteYjsSnapshotPreview({ data, noteId }: { data: ArrayBuffer; noteId: S
 }
 
 function CanvasSnapshotPreview({ canvasId, data }: { canvasId: SidebarItemId; data: ArrayBuffer }) {
-  const result = useSnapshotReadResult('canvas-yjs', data)
+  const result = readCachedYjsSnapshot(data, canvasSnapshotCache, readCanvasDocumentContent)
 
   if (result.status === 'corrupted') {
     return <CorruptedSnapshotState />
   }
-  if (result.status === 'loading') return <SnapshotLoadingState />
 
   return (
     <div className="flex-1 min-h-0">
@@ -148,15 +125,6 @@ function CanvasSnapshotPreview({ canvasId, data }: { canvasId: SidebarItemId; da
 
 function CorruptedSnapshotState() {
   return <HistoryPreviewFallback reason="corruptedSnapshot" />
-}
-
-function SnapshotLoadingState() {
-  return (
-    <div className="flex flex-1 min-h-0 items-center justify-center">
-      <Loader2 className="size-5 animate-spin text-muted-foreground" />
-      <span className="sr-only">Loading snapshot preview</span>
-    </div>
-  )
 }
 
 function GameMapSnapshotPreview({

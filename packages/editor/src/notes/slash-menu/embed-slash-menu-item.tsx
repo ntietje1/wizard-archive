@@ -17,7 +17,11 @@ export function createEmbedSlashMenuItem(
         type: 'embed' as const,
         props: { targetKind: 'empty' as const, previewWidth: DEFAULT_NOTE_EMBED_PREVIEW_WIDTH },
       }
-      if (blockHasContent(currentBlock)) {
+      const hasParagraphContent =
+        currentBlock.type === 'paragraph' &&
+        Array.isArray(currentBlock.content) &&
+        currentBlock.content.length > 0
+      if (hasParagraphContent) {
         editor.insertBlocks([embedBlock], currentBlock, 'after')
       } else {
         editor.replaceBlocks([currentBlock], [embedBlock])
@@ -25,14 +29,4 @@ export function createEmbedSlashMenuItem(
       editor.focus()
     },
   }
-}
-
-function blockHasContent(block: { content?: unknown }): boolean {
-  if (typeof block.content === 'string') return block.content.trim().length > 0
-  if (!Array.isArray(block.content)) return false
-  return block.content.some((entry) => {
-    if (typeof entry === 'string') return entry.trim().length > 0
-    if (!entry || typeof entry !== 'object') return false
-    return 'text' in entry ? String(entry.text).trim().length > 0 : true
-  })
 }

@@ -1,6 +1,7 @@
 import { Eye, X } from 'lucide-react'
 import { Banner, BannerButton } from '@wizard-archive/ui/components/banner'
 import type { ViewAsParticipantCapability } from '../sharing/contracts'
+import { getParticipantDisplayName } from '../sharing/participant-display-name'
 
 export function ViewAsBanner({ viewAsPlayer }: { viewAsPlayer: ViewAsParticipantCapability }) {
   if (viewAsPlayer.status !== 'available') return null
@@ -28,11 +29,7 @@ export function ViewAsBanner({ viewAsPlayer }: { viewAsPlayer: ViewAsParticipant
             </BannerButton>
           }
         >
-          Viewing as{' '}
-          <span className="font-semibold">
-            {participant.displayName ||
-              (participant.username ? `@${participant.username}` : 'Player')}
-          </span>
+          Viewing as <span className="font-semibold">{getParticipantDisplayName(participant)}</span>
         </Banner>
       </div>
     </>

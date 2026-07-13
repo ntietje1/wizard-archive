@@ -49,10 +49,7 @@ const searchDataState = vi.hoisted(() => ({
 const previewSurfaceSpy = vi.hoisted(() => vi.fn())
 const toastErrorSpy = vi.hoisted(() => vi.fn())
 const dialogOpenChangeSpy = vi.hoisted(() => vi.fn())
-const originalScrollIntoViewDescriptor = Object.getOwnPropertyDescriptor(
-  Element.prototype,
-  'scrollIntoView',
-)
+const originalScrollIntoView = Element.prototype.scrollIntoView?.bind(Element.prototype)
 
 vi.mock('../../previews/resource-preview-surface', () => ({
   ResourcePreviewSurface: (props: unknown) => {
@@ -122,11 +119,7 @@ describe('SearchDialog', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
-    if (originalScrollIntoViewDescriptor) {
-      Object.defineProperty(Element.prototype, 'scrollIntoView', originalScrollIntoViewDescriptor)
-    } else {
-      Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
-    }
+    Element.prototype.scrollIntoView = originalScrollIntoView
   })
 
   it('closes through the dialog open-state callback', () => {

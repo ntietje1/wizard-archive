@@ -1,19 +1,12 @@
 import * as Y from 'yjs'
-import { act, render, screen, waitFor } from '@testing-library/react'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vite-plus/test'
+import { render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { HistoryPreviewViewer } from '../viewer'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import { createNoteYDocFromContent } from '../../../notes/imported-text'
 import type * as ImportedTextModule from '../../../notes/imported-text'
-import {
-  createCanvasDocumentDoc,
-  readCanvasDocumentContent,
-} from '../../../canvas/document-contract'
+import { createCanvasDocumentDoc } from '../../../canvas/document-contract'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
-import type {
-  HistorySnapshotParserRequest,
-  HistorySnapshotParserResult,
-} from '../snapshot-parser-contract'
 
 const { canvasReadOnlyPreviewMock, readNoteYDocContentMock, staticNoteContentMock } = vi.hoisted(
   () => ({
@@ -53,45 +46,6 @@ function encodeSnapshot(doc: Y.Doc): ArrayBuffer {
   copy.set(update)
   return copy.buffer as ArrayBuffer
 }
-
-class TestSnapshotWorker {
-  onerror: (() => void) | null = null
-  onmessage: ((event: MessageEvent<HistorySnapshotParserResult>) => void) | null = null
-  private terminated = false
-
-  postMessage(request: HistorySnapshotParserRequest) {
-    queueMicrotask(() => {
-      if (this.terminated) return
-      const doc = new Y.Doc()
-      try {
-        Y.applyUpdate(doc, new Uint8Array(request.data))
-        const result: HistorySnapshotParserResult =
-          request.kind === 'note-yjs'
-            ? { status: 'ready', kind: request.kind, value: readNoteYDocContentMock(doc) }
-            : { status: 'ready', kind: request.kind, value: readCanvasDocumentContent(doc) }
-        this.onmessage?.(new MessageEvent('message', { data: result }))
-      } catch {
-        this.onmessage?.(new MessageEvent('message', { data: { status: 'corrupted' } }))
-      } finally {
-        doc.destroy()
-      }
-    })
-  }
-
-  terminate() {
-    this.terminated = true
-  }
-}
-
-class HangingSnapshotWorker {
-  onerror: (() => void) | null = null
-  onmessage: ((event: MessageEvent<HistorySnapshotParserResult>) => void) | null = null
-  postMessage() {}
-  terminate() {}
-}
-
-beforeAll(() => vi.stubGlobal('Worker', TestSnapshotWorker))
-afterAll(() => vi.unstubAllGlobals())
 
 describe('HistoryPreviewViewer', () => {
   it('keeps history preview actions visible while a snapshot is loading', () => {
@@ -224,35 +178,6 @@ describe('HistoryPreviewViewer', () => {
         edges: [],
       }),
     )
-  })
-
-  it('fails closed when snapshot parsing exceeds its timeout', async () => {
-    vi.useFakeTimers()
-    vi.stubGlobal('Worker', HangingSnapshotWorker)
-    try {
-      render(
-        <HistoryPreviewViewer
-          canEdit
-          onExit={vi.fn()}
-          onRestore={vi.fn()}
-          state={{
-            status: 'ready',
-            entryTime: 1,
-            snapshot: {
-              kind: 'note-yjs',
-              noteId: 'note-timeout' as SidebarItemId,
-              data: new ArrayBuffer(1),
-            },
-          }}
-        />,
-      )
-
-      await act(async () => vi.advanceTimersByTimeAsync(5_000))
-      expect(screen.getByText('Snapshot data is corrupted.')).toBeInTheDocument()
-    } finally {
-      vi.useRealTimers()
-      vi.stubGlobal('Worker', TestSnapshotWorker)
-    }
   })
 
   it('renders stored game map snapshots with the historical image and pins', () => {
