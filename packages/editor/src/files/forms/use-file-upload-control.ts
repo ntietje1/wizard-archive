@@ -82,7 +82,7 @@ export function useFileUploadControl({
     if (fileToVerify.size > maxFileSize) {
       return {
         valid: false,
-        error: `File must be less than ${formatMaxFileSizeMB(maxFileSize)}MB`,
+        error: `File must be at most ${formatMaxFileSizeMB(maxFileSize)}MB`,
       }
     }
 

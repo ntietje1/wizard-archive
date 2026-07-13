@@ -23,7 +23,8 @@ interface PdfPreviewFileSource {
 
 function isPdfFile(file: PdfPreviewFileSource): boolean {
   return (
-    (file.contentType ?? file.type) === 'application/pdf' ||
+    file.contentType === 'application/pdf' ||
+    file.type === 'application/pdf' ||
     file.name.toLowerCase().endsWith('.pdf')
   )
 }

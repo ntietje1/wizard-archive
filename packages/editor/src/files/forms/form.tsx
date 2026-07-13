@@ -59,7 +59,7 @@ export function FileForm({
 }: FileFormProps) {
   const { validateItemName } = source
   const file = fileState.item
-  const loadedFileId = fileId && file ? fileId : undefined
+  const loadedFileId = fileId && file?.id === fileId ? fileId : undefined
   const [valueState, setValueState] = useState<FileFormValueState>(() => ({
     loadedFileId,
     values: getFileFormDefaultValues(fileId, file),
@@ -243,6 +243,7 @@ async function saveFileForm(options: SaveFileFormOptions) {
 async function updateExistingFile({
   file,
   fileId,
+  onClose,
   onSuccess,
   source,
   upload,
@@ -269,6 +270,7 @@ async function updateExistingFile({
   }
 
   toast.success('File updated')
+  onClose()
   onSuccess?.(slug)
 }
 

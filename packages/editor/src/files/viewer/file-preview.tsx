@@ -73,7 +73,11 @@ function FilePreviewContent({
 
   return (
     <div className="h-full flex items-center justify-center text-muted-foreground">
-      <Icon className="h-6 w-6" aria-hidden />
+      <Icon
+        data-testid={`file-preview-${getFileTypeCategory(contentType, fileName ?? null)}-icon`}
+        className="h-6 w-6"
+        aria-hidden
+      />
       <span className="sr-only">File preview unavailable</span>
     </div>
   )

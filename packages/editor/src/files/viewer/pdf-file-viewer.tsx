@@ -184,7 +184,7 @@ function PdfFileViewerContent({
     scrollViewportRef,
     setCurrentPage,
   })
-  usePdfNativeWheelZoom(viewerRef, handleWheelZoom)
+  usePdfNativeWheelZoom(viewerRef, handleWheelZoom, presentation !== 'embed')
 
   const scrollToPage = (pageNumber: number) => {
     const el = pageRefsMap.get(pageNumber)
@@ -443,18 +443,20 @@ function usePdfZoom({ enabled }: { enabled: boolean }) {
 function usePdfNativeWheelZoom(
   viewerRef: RefObject<HTMLDivElement | null>,
   handleWheelZoom: (event: WheelEvent) => void,
+  enabled: boolean,
 ) {
   const handleWheelZoomRef = useRef(handleWheelZoom)
   handleWheelZoomRef.current = handleWheelZoom
 
   useEffect(() => {
+    if (!enabled) return
     const viewer = viewerRef.current
     if (!viewer) return
 
     const handleWheel = (event: WheelEvent) => handleWheelZoomRef.current(event)
     viewer.addEventListener('wheel', handleWheel, { passive: false })
     return () => viewer.removeEventListener('wheel', handleWheel)
-  }, [viewerRef])
+  }, [enabled, viewerRef])
 }
 
 function PdfPageLoadingPlaceholder({ testId, width }: { testId?: string; width?: number }) {
