@@ -1,4 +1,5 @@
 import { createEmptyCanvasTextContent } from '../text/editor'
+import { DOMAIN_ID_KIND, generateDomainId } from '../../resources/domain-id'
 import { normalizeCanvasNodeSurfaceStyleData } from '../node-surface-style'
 import type { CanvasNormalizedNodeSurfaceStyleData } from '../node-surface-style'
 import { clampStrokeNodeSize, resizeStrokeNode } from './stroke/stroke-node-model'
@@ -345,7 +346,7 @@ export function createCanvasNodePlacement(
       : args.position
 
   const node = parseCanvasDocumentNode({
-    id: crypto.randomUUID(),
+    id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
     type,
     position,
     width: resolvedSize.width,

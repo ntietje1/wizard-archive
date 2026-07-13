@@ -856,9 +856,23 @@ function copyLocalCanvasPayload(
   sourceCanvasId: string,
 ): LocalCanvasPayload {
   const sourceCanvas = requireLocalCanvasPayload(state, sourceCanvasId)
+  const nodeIdMap = new Map(
+    sourceCanvas.nodes.map(
+      (node) => [node.id, generateDomainId(DOMAIN_ID_KIND.canvasNode)] as const,
+    ),
+  )
   return {
-    edges: sourceCanvas.edges.map((edge) => structuredClone(edge)),
-    nodes: sourceCanvas.nodes.map((node) => structuredClone(node)),
+    edges: sourceCanvas.edges.flatMap((edge) => {
+      const source = nodeIdMap.get(edge.source)
+      const target = nodeIdMap.get(edge.target)
+      return source && target
+        ? [{ ...structuredClone(edge), id: crypto.randomUUID(), source, target }]
+        : []
+    }),
+    nodes: sourceCanvas.nodes.map((node) => ({
+      ...structuredClone(node),
+      id: nodeIdMap.get(node.id)!,
+    })),
   }
 }
 

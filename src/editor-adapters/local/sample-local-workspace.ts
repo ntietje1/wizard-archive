@@ -14,6 +14,18 @@ const SAMPLE_HANDOUT_PIN_ID = assertDomainId(
   DOMAIN_ID_KIND.mapPin,
   '01980c1a-5e70-7000-8000-000000000102',
 )
+const SAMPLE_BRIEF_NODE_ID = assertDomainId(
+  DOMAIN_ID_KIND.canvasNode,
+  '01980c1a-5e70-7000-8000-000000000201',
+)
+const SAMPLE_MAP_NODE_ID = assertDomainId(
+  DOMAIN_ID_KIND.canvasNode,
+  '01980c1a-5e70-7000-8000-000000000202',
+)
+const SAMPLE_CLOCK_NODE_ID = assertDomainId(
+  DOMAIN_ID_KIND.canvasNode,
+  '01980c1a-5e70-7000-8000-000000000203',
+)
 
 const INITIAL_NOTE_BODY = [
   'A waterfront bazaar where every stall hides a second ledger.',
@@ -149,7 +161,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
 function createInitialCanvasNodes(): SampleCanvasPayload['nodes'] {
   return [
     {
-      id: 'scene-brief',
+      id: SAMPLE_BRIEF_NODE_ID,
       type: 'text',
       position: { x: 40, y: 40 },
       width: 320,
@@ -179,7 +191,7 @@ function createInitialCanvasNodes(): SampleCanvasPayload['nodes'] {
       },
     },
     {
-      id: 'market-map',
+      id: SAMPLE_MAP_NODE_ID,
       type: 'embed',
       position: { x: 480, y: 56 },
       width: 300,
@@ -195,7 +207,7 @@ function createInitialCanvasNodes(): SampleCanvasPayload['nodes'] {
       },
     },
     {
-      id: 'encounter-clock',
+      id: SAMPLE_CLOCK_NODE_ID,
       type: 'text',
       position: { x: 180, y: 310 },
       width: 300,
@@ -226,8 +238,8 @@ function createInitialCanvasEdges(): SampleCanvasPayload['edges'] {
   return [
     {
       id: 'brief-to-map',
-      source: 'scene-brief',
-      target: 'market-map',
+      source: SAMPLE_BRIEF_NODE_ID,
+      target: SAMPLE_MAP_NODE_ID,
       type: 'bezier',
       sourceHandle: null,
       targetHandle: null,
@@ -235,8 +247,8 @@ function createInitialCanvasEdges(): SampleCanvasPayload['edges'] {
     },
     {
       id: 'brief-to-clock',
-      source: 'scene-brief',
-      target: 'encounter-clock',
+      source: SAMPLE_BRIEF_NODE_ID,
+      target: SAMPLE_CLOCK_NODE_ID,
       type: 'step',
       sourceHandle: null,
       targetHandle: null,

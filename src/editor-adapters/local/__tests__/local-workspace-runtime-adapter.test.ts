@@ -1754,8 +1754,15 @@ describe('createLocalRuntimeFileSystem', () => {
     const copiedCanvas = nextWorkspace.canvasPayloadsById['local-canvas-2']
 
     expect(copiedCanvas).toBeDefined()
-    expect(copiedCanvas?.nodes).toEqual(originalCanvas?.nodes)
-    expect(copiedCanvas?.edges).toEqual(originalCanvas?.edges)
+    expect(copiedCanvas?.nodes).toHaveLength(originalCanvas?.nodes.length ?? 0)
+    expect(copiedCanvas?.edges).toHaveLength(originalCanvas?.edges.length ?? 0)
+    expect(copiedCanvas?.nodes.every((node) => isUuidV7(node.id))).toBe(true)
+    expect(copiedCanvas?.nodes.map((node) => node.id)).not.toEqual(
+      originalCanvas?.nodes.map((node) => node.id),
+    )
+    expect(copiedCanvas?.edges.map((edge) => edge.source)).not.toEqual(
+      originalCanvas?.edges.map((edge) => edge.source),
+    )
     expect(copiedCanvas?.nodes[0]).not.toBe(originalCanvas?.nodes[0])
     expect(copiedCanvas?.nodes[0]?.position).not.toBe(originalCanvas?.nodes[0]?.position)
     expect(copiedCanvas?.nodes[0]?.data).not.toBe(originalCanvas?.nodes[0]?.data)

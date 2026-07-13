@@ -1,6 +1,7 @@
 import { getNextCanvasElementZIndex } from '../document/canvas-z-index'
 import { sortCanvasElementsByZIndex } from '../document/canvas-z-order'
 import { stripEphemeralCanvasNodeState } from '../../document-contract'
+import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import type { CanvasClipboardEntry } from './canvas-context-menu-types'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type * as Y from 'yjs'
@@ -66,7 +67,7 @@ export function materializeCanvasPaste(
   const nextEdgeZIndex = getNextCanvasElementZIndex(getCurrentCanvasEdges(edgesMap))
 
   const nodes = clipboardEntry.nodes.map((node, index) => {
-    const nextId = crypto.randomUUID()
+    const nextId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
     nodeIdMap.set(node.id, nextId)
     return {
       ...cloneCanvasNode(node),

@@ -6,6 +6,7 @@ import {
 import { normalizeCanvasNode } from '../canvas-node-normalization'
 import type { CanvasPaintPropertyBinding } from '../../properties/canvas-property-types'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import { isUuidV7 } from '../../../resources/domain-id'
 
 describe('canvas node specs', () => {
   it('creates default text nodes from the text node spec', () => {
@@ -24,6 +25,7 @@ describe('canvas node specs', () => {
         borderStroke: 'var(--border)',
       },
     })
+    expect(isUuidV7(node.id)).toBe(true)
     expect(createCanvasNodePlacement('text', { position: { x: 100, y: 200 } }).selectOnCreate).toBe(
       true,
     )

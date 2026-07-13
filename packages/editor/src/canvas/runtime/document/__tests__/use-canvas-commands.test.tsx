@@ -10,6 +10,7 @@ import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
 } from '../../../document-contract'
+import { isUuidV7 } from '../../../../resources/domain-id'
 
 function createNode(id: string, zIndex: number, width = 20, height = 10): Node {
   return {
@@ -195,9 +196,7 @@ describe('useCanvasDocumentCommands', () => {
   it('pastes the clipboard contents, advances pasteCount, and replaces the selection', () => {
     const randomUuidSpy = vi
       .spyOn(globalThis.crypto, 'randomUUID')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000001')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000002')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000003')
+      .mockReturnValue('00000000-0000-4000-8000-000000000003')
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
     const selection = createSelectionController(selectionSnapshot(new Set(['node-1'])))
 
@@ -221,15 +220,13 @@ describe('useCanvasDocumentCommands', () => {
       pastedSelection = result.current.paste.run()
     })
 
-    expect(pastedSelection).toEqual({
-      nodeIds: new Set([
-        '00000000-0000-4000-8000-000000000001',
-        '00000000-0000-4000-8000-000000000002',
-      ]),
-      edgeIds: new Set([
-        'e-00000000-0000-4000-8000-000000000001-00000000-0000-4000-8000-000000000002-00000000-0000-4000-8000-000000000003',
-      ]),
-    })
+    expect(pastedSelection).not.toBeNull()
+    const pastedNodeIds = Array.from(pastedSelection!.nodeIds)
+    expect(pastedNodeIds).toHaveLength(2)
+    expect(pastedNodeIds.every(isUuidV7)).toBe(true)
+    expect(pastedSelection!.edgeIds).toEqual(
+      new Set([`e-${pastedNodeIds[0]}-${pastedNodeIds[1]}-00000000-0000-4000-8000-000000000003`]),
+    )
     expect(selection.setSelection).toHaveBeenCalledWith(pastedSelection)
     expect(useCanvasClipboardStore.getState().clipboard?.pasteCount).toBe(1)
 
@@ -267,9 +264,7 @@ describe('useCanvasDocumentCommands', () => {
   it('duplicates the live selection and replaces the selection with the duplicated content', () => {
     const randomUuidSpy = vi
       .spyOn(globalThis.crypto, 'randomUUID')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000011')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000012')
-      .mockReturnValueOnce('00000000-0000-4000-8000-000000000013')
+      .mockReturnValue('00000000-0000-4000-8000-000000000013')
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
     const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
@@ -287,15 +282,15 @@ describe('useCanvasDocumentCommands', () => {
       duplicateSelection = result.current.duplicate.run()
     })
 
-    expect(duplicateSelection).toEqual({
-      nodeIds: new Set([
-        '00000000-0000-4000-8000-000000000011',
-        '00000000-0000-4000-8000-000000000012',
+    expect(duplicateSelection).not.toBeNull()
+    const duplicateNodeIds = Array.from(duplicateSelection!.nodeIds)
+    expect(duplicateNodeIds).toHaveLength(2)
+    expect(duplicateNodeIds.every(isUuidV7)).toBe(true)
+    expect(duplicateSelection!.edgeIds).toEqual(
+      new Set([
+        `e-${duplicateNodeIds[0]}-${duplicateNodeIds[1]}-00000000-0000-4000-8000-000000000013`,
       ]),
-      edgeIds: new Set([
-        'e-00000000-0000-4000-8000-000000000011-00000000-0000-4000-8000-000000000012-00000000-0000-4000-8000-000000000013',
-      ]),
-    })
+    )
     expect(selection.setSelection).toHaveBeenCalledWith(duplicateSelection)
     expect(useCanvasClipboardStore.getState().clipboard).toBeNull()
 

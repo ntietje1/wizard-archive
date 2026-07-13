@@ -1,4 +1,5 @@
 import { Pencil } from 'lucide-react'
+import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import {
   setPointerCapture,
   releasePointerCapture,
@@ -151,7 +152,7 @@ export const drawToolSpec: CanvasToolSpec<'draw'> = {
         if (renderedPoints.length >= 2) {
           const bounds = getStrokeBounds(renderedPoints, activeStrokeStyle.size)
           services.commands.createNode({
-            id: crypto.randomUUID(),
+            id: generateDomainId(DOMAIN_ID_KIND.canvasNode),
             type: 'stroke',
             position: { x: bounds.x, y: bounds.y },
             width: bounds.width,

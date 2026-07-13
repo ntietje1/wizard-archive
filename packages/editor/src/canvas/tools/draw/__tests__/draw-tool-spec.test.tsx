@@ -4,6 +4,7 @@ import { DRAW_TOOL_AWARENESS_NAMESPACE } from '../draw-tool-awareness-namespace'
 import { createCanvasToolLocalOverlayStore } from '../../../stores/canvas-tool-local-overlay-store'
 import type { CanvasToolRuntime } from '../../canvas-tool-types'
 import type { CanvasToolLocalOverlayControls } from '../../../stores/canvas-tool-local-overlay-store'
+import { isUuidV7 } from '../../../../resources/domain-id'
 
 type MockPointerTarget = HTMLDivElement & {
   setPointerCapture: (pointerId: number) => void
@@ -82,6 +83,7 @@ describe('drawToolSpec', () => {
     expect(setPresence).toHaveBeenLastCalledWith(DRAW_TOOL_AWARENESS_NAMESPACE, null)
     expect(localOverlayStore.getState().drawLocalDrawing).toBeNull()
     expect(createNode).toHaveBeenCalledTimes(1)
+    expect(isUuidV7(createNode.mock.calls[0]![0].id)).toBe(true)
   })
 
   it('clears local and remote draw previews when an active stroke is canceled', () => {
