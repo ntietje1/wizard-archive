@@ -42,7 +42,8 @@ export function useResourceReplacementController({
   const [replacementError, setReplacementError] = useState('')
   const [isReplacing, setIsReplacing] = useState(false)
   const isReplacingRef = useRef(false)
-  const activeSelectionRef = useRef<symbol | null>(null)
+  const activeSelectionsRef = useRef(new Set<symbol>())
+  const latestSelectionRef = useRef<symbol | null>(null)
 
   const rejectReplacement = (message: string) => {
     setReplacementError(message)
@@ -58,29 +59,21 @@ export function useResourceReplacementController({
       return { valid: false, error: inProgressMessage }
     }
 
-    const selectionId = Symbol(file.name)
-    activeSelectionRef.current = selectionId
-
     const validation = validateFile(file)
     if (!validation.valid) {
-      activeSelectionRef.current = null
-      isReplacingRef.current = false
-      setIsReplacing(false)
       rejectReplacement(validation.error)
       return validation
     }
 
     const accepted = onAcceptedFile?.(file)
     if (accepted && !accepted.valid) {
-      if (activeSelectionRef.current === selectionId) {
-        activeSelectionRef.current = null
-      }
-      isReplacingRef.current = false
-      setIsReplacing(false)
       rejectReplacement(accepted.error)
       return accepted
     }
 
+    const selectionId = Symbol(file.name)
+    activeSelectionsRef.current.add(selectionId)
+    latestSelectionRef.current = selectionId
     setReplacementError('')
     isReplacingRef.current = true
     setIsReplacing(true)
@@ -95,22 +88,24 @@ export function useResourceReplacementController({
           return
         }
         reportResourceReplacementError(result, failureMessage, (message) => {
-          if (activeSelectionRef.current !== selectionId) return
+          if (latestSelectionRef.current !== selectionId) return
           setReplacementError(message)
           onReplacementError?.(message)
         })
       })
       .catch((error: unknown) => {
         reportResourceReplacementError(error, failureMessage, (message) => {
-          if (activeSelectionRef.current !== selectionId) return
+          if (latestSelectionRef.current !== selectionId) return
           setReplacementError(message)
           onReplacementError?.(message)
         })
       })
       .finally(() => {
-        if (activeSelectionRef.current !== selectionId) return
-        isReplacingRef.current = false
-        setIsReplacing(false)
+        activeSelectionsRef.current.delete(selectionId)
+        if (latestSelectionRef.current === selectionId) latestSelectionRef.current = null
+        const hasActiveReplacement = activeSelectionsRef.current.size > 0
+        isReplacingRef.current = hasActiveReplacement
+        setIsReplacing(hasActiveReplacement)
       })
 
     return validation

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { ResourceItemCardShell } from '../shell'
 import type { ResourceItemCardProps } from '../shell'
@@ -30,9 +30,11 @@ vi.mock('../../../drag-drop/sidebar-drag-data', () => ({
   }),
 }))
 
+const { handleItemClickMock } = vi.hoisted(() => ({ handleItemClickMock: vi.fn() }))
+
 vi.mock('../../../workspace/sidebar/use-item-selection-interactions', () => ({
   useItemSelectionInteractions: () => ({
-    handleItemClick: vi.fn(),
+    handleItemClick: handleItemClickMock,
     handleItemContextMenu: vi.fn(),
   }),
 }))
@@ -49,6 +51,24 @@ describe('ResourceItemCardShell', () => {
     )
 
     expect(screen.getByRole('button', { name: 'More options for Lost Mine Clues' })).toBeEnabled()
+  })
+
+  it('lets selection intent decide whether the card action runs', () => {
+    const onClick = vi.fn()
+    render(
+      <ResourceItemCardShell
+        item={createItem('Lost Mine Clues')}
+        source={createSource()}
+        preview={<div>Preview</div>}
+        visualState={{}}
+        onClick={onClick}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lost Mine Clues' }), { ctrlKey: true })
+
+    expect(onClick).not.toHaveBeenCalled()
+    expect(handleItemClickMock).toHaveBeenCalledWith(expect.anything(), onClick)
   })
 })
 

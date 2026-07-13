@@ -138,6 +138,33 @@ describe('filesystem cache patches', () => {
     ])
   })
 
+  it('preserves subtype fields when a raw row upserts an existing item', () => {
+    const folder = createFolder({ inheritShares: true })
+    const updated = applyFileSystemPatchesToSidebarCache({ sidebar: [folder], trash: [] }, [
+      {
+        type: 'upsertResource',
+        item: { ...resourcePatchRowFromCacheItem(folder), name: 'Renamed' },
+      },
+    ])
+
+    expect(updated.sidebar[0]).toMatchObject({ name: 'Renamed', inheritShares: true })
+  })
+
+  it('does not apply updates after the same batch removes an item', () => {
+    const note = createNote({ name: 'Original' })
+    const updated = applyFileSystemPatchesToSidebarCache({ sidebar: [note], trash: [] }, [
+      { type: 'removeResource', itemId: note.id, snapshot: resourcePatchRowFromCacheItem(note) },
+      {
+        type: 'updateResource',
+        itemId: note.id,
+        before: { name: note.name },
+        fields: { name: 'Stale update' },
+      },
+    ])
+
+    expect(updated.sidebar).toEqual([])
+  })
+
   it('keeps undo-hidden created rows available for redo receipt updates', () => {
     const created = createNote({ name: 'Created' })
 

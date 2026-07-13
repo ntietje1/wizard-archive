@@ -121,8 +121,21 @@ export function useFileSystemDialogs({
         isDeleting={true}
         onTrash={async () => {
           const itemId = pendingTrashFolder.id
-          await trashItems([itemId])
-          setPendingTrashFolder(null)
+          try {
+            const result = await trashItems([itemId])
+            if (result.status === 'completed') {
+              setPendingTrashFolder(null)
+            } else if (result.status === 'pending' || result.status === 'noop') {
+              handleError(
+                new Error(`Trash items returned ${result.status}`),
+                'Failed to trash folder',
+              )
+            } else {
+              reportResourceCommandFailure(result, 'Failed to trash folder')
+            }
+          } catch (error) {
+            handleError(error, 'Failed to trash folder')
+          }
         }}
         onClose={() => setPendingTrashFolder(null)}
       />

@@ -56,16 +56,13 @@ export function ResourceItemCardShell<TItem extends AnyItem>({
       event.preventDefault()
       return
     }
-    if (onClick) {
-      event.preventDefault()
-      handleItemClick(event)
-      onClick()
-      return
-    }
-    handleItemClick(event, () =>
-      Promise.resolve(source.openItem(item.id)).catch((error) => {
-        handleError(error, 'Failed to open item')
-      }),
+    handleItemClick(
+      event,
+      onClick ??
+        (() =>
+          Promise.resolve(source.openItem(item.id)).catch((error) => {
+            handleError(error, 'Failed to open item')
+          })),
     )
   }
 

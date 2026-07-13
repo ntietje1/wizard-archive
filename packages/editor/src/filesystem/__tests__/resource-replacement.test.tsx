@@ -53,4 +53,44 @@ describe('useResourceReplacementController', () => {
     })
     expect(result.current.isReplacing).toBe(false)
   })
+
+  it('keeps an active replacement pending when a newer selection is rejected', async () => {
+    let resolveReplacement!: () => void
+    const replacement = new Promise<void>((resolve) => {
+      resolveReplacement = resolve
+    })
+    const replace = vi.fn(() =>
+      replacement.then(() =>
+        completedResourceOperation({ kind: 'fileReplaced', affectedCount: 1 }),
+      ),
+    )
+    const { result } = renderHook(() =>
+      useResourceReplacementController({
+        allowSelectionWhilePending: true,
+        disabledMessage: 'Disabled',
+        enabled: true,
+        failureMessage: 'Failed',
+        inProgressMessage: 'In progress',
+        replace,
+        successMessage: 'Replaced',
+        toastRejectedFiles: false,
+        validateFile: (file) =>
+          file.name === 'invalid.txt' ? { valid: false, error: 'Invalid' } : { valid: true },
+      }),
+    )
+
+    act(() => {
+      result.current.attemptReplacement(new File(['valid'], 'valid.txt'))
+      result.current.attemptReplacement(new File(['invalid'], 'invalid.txt'))
+    })
+
+    expect(result.current.isReplacing).toBe(true)
+    expect(replace).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveReplacement()
+      await replacement
+    })
+    expect(result.current.isReplacing).toBe(false)
+  })
 })

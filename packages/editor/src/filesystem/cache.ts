@@ -20,14 +20,31 @@ export function createFileSystemCacheAdapter(cache: SidebarItemsCache): FileSyst
   let cachedSidebar: Array<AnyItem> | null = null
   let cachedTrash: Array<AnyItem> | null = null
   let hiddenItems: Array<AnyItem> = []
+  let cachedVisibleSnapshot: SidebarCacheSnapshot | null = null
+  let cachedHiddenItems: Array<AnyItem> | null = null
+  let cachedMergedSnapshot: SidebarCacheSnapshot | null = null
   const getSnapshot = () => {
     const visibleSnapshot = cache.getSnapshot()
+    if (hiddenItems.length === 0) return visibleSnapshot
+    if (
+      cachedMergedSnapshot &&
+      cachedVisibleSnapshot === visibleSnapshot &&
+      cachedHiddenItems === hiddenItems
+    ) {
+      return cachedMergedSnapshot
+    }
     const visibleIds = new Set([
       ...visibleSnapshot.sidebar.map((item) => item.id),
       ...visibleSnapshot.trash.map((item) => item.id),
     ])
-    hiddenItems = hiddenItems.filter((item) => !visibleIds.has(item.id))
-    return hiddenItems.length > 0 ? { ...visibleSnapshot, hidden: hiddenItems } : visibleSnapshot
+    const visibleHiddenItems = hiddenItems.filter((item) => !visibleIds.has(item.id))
+    cachedVisibleSnapshot = visibleSnapshot
+    cachedHiddenItems = hiddenItems
+    cachedMergedSnapshot =
+      visibleHiddenItems.length > 0
+        ? { ...visibleSnapshot, hidden: visibleHiddenItems }
+        : visibleSnapshot
+    return cachedMergedSnapshot
   }
   const getReadModel = () => {
     const snapshot = getSnapshot()
@@ -49,6 +66,9 @@ export function createFileSystemCacheAdapter(cache: SidebarItemsCache): FileSyst
       hiddenItems = (next.hidden ?? []).filter((item) => !visibleIds.has(item.id))
       return { sidebar: next.sidebar, trash: next.trash }
     })
+    cachedVisibleSnapshot = null
+    cachedHiddenItems = null
+    cachedMergedSnapshot = null
     cachedReadModel = null
     cachedSidebar = null
     cachedTrash = null
