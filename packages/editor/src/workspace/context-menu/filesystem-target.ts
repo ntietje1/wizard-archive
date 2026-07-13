@@ -53,7 +53,7 @@ export function createWorkspaceFilesystemContextMenuTarget(
     canRestoreItems: (items) => getSidebarFilesystemCapabilities(actor, items).canRestore,
     canTrashItems: (items) => getSidebarFilesystemCapabilities(actor, items).canTrash,
     duplicateItems: async (items) => {
-      for (const group of groupItemsByParent(items)) {
+      const commands = groupItemsByParent(items).map((group) => {
         const target = resolveDuplicateDropTargetOrThrow(filesystem.catalog, group.parentId)
         const command = resolveGlobalFileSystemDropCommand(group.items, target, actor, {
           copy: true,
@@ -65,8 +65,9 @@ export function createWorkspaceFilesystemContextMenuTarget(
               : 'Unable to duplicate items',
           )
         }
-        await operations.executeDropCommand(command.plan.command)
-      }
+        return command.plan.command
+      })
+      await Promise.all(commands.map((command) => operations.executeDropCommand(command)))
     },
     pasteIntoTarget: (input) => operations.pasteIntoTarget(input),
     requestDeleteItemsForever: async (items) => {

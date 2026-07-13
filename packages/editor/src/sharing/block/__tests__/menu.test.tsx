@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { NoteItemWithContent } from '../../../notes/item-contract'
 import { createNote } from '../../../test/sidebar-item-factory'
 import type { BlocksShareSource, BlocksShareState } from '../../contracts'
@@ -22,6 +22,7 @@ describe('BlockShareMenuProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open block share' }))
 
     expect(screen.getByTestId('block-share-menu')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Share Block' })).toBeInstanceOf(HTMLDialogElement)
   })
 
   it('does not render a fake block share menu when sharing is unsupported', () => {
@@ -53,7 +54,7 @@ describe('BlockShareMenuProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Make sharing ready' }))
 
     expect(screen.getByTestId('block-share-menu')).toBeInTheDocument()
-    expect(observeElement).toHaveBeenCalledExactlyOnceWith(expect.any(HTMLDivElement))
+    expect(observeElement).toHaveBeenCalledExactlyOnceWith(expect.any(HTMLDialogElement))
   })
 })
 

@@ -30,7 +30,7 @@ export function BlockShareMenuProvider({
     open: setMenuState,
     close: () => setMenuState(null),
   }))
-  const menuRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
     if (!menuState) return
@@ -78,7 +78,7 @@ function BlockShareFloatingMenu({
   menuState,
 }: {
   blockSharing: BlocksShareSource
-  menuRef: RefObject<HTMLDivElement | null>
+  menuRef: RefObject<HTMLDialogElement | null>
   menuState: BlockShareMenuState
 }) {
   const [menuMetrics, setMenuMetrics] = useState<MenuLayoutMetrics | null>(null)
@@ -138,12 +138,12 @@ function BlockShareFloatingMenu({
   } = blockShareState
 
   return (
-    <div
+    <dialog
+      open
       ref={menuRef}
       aria-label={menuState.title ?? 'Share'}
-      role="dialog"
       tabIndex={-1}
-      className={`fixed z-[9999] max-h-[calc(100vh-16px)] overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 ${SHARE_MENU_WIDTH_CLASS}`}
+      className={`fixed m-0 max-h-[calc(100vh-16px)] overflow-y-auto rounded-lg border-0 bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 ${SHARE_MENU_WIDTH_CLASS}`}
       style={{
         left: position.x,
         maxWidth: `calc(100vw - ${MENU_GUTTER * 2}px)`,
@@ -158,7 +158,7 @@ function BlockShareFloatingMenu({
         onSetAllPlayersPermission={setDefaultPermission}
         onSetMemberPermission={setParticipantPermission}
       />
-    </div>
+    </dialog>
   )
 }
 

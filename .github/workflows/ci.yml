@@ -115,7 +115,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp test run --config vitest.config.ts --reporter=verbose
+      - run: vp run test:frontend
 
   backend-test:
     name: Backend Tests
@@ -130,7 +130,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp test run --config convex/vitest.config.mts --reporter=verbose
+      - run: vp run test:backend
 
   build:
     name: Build
@@ -145,4 +145,4 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp build
+      - run: vp run build

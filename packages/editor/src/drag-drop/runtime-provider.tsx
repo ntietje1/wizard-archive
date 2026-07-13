@@ -1,4 +1,4 @@
-import { useCallback, useId, useMemo, useRef, useSyncExternalStore } from 'react'
+import { useId, useRef, useState, useSyncExternalStore } from 'react'
 import type { DndExternalFileDropCapability, DndExternalFileDropContext } from './file-drop'
 import type { DndExecutionContext, ElementDragMonitorContext } from './monitor-context'
 import type { DndValue } from './context'
@@ -49,8 +49,7 @@ export function DndRuntimeProvider({
   paths,
 }: DndRuntimeProviderProps) {
   const runtimeId = useId()
-  const dndStoreRef = useRef<ReturnType<typeof createDndStore> | null>(null)
-  const dndStore = dndStoreRef.current ?? (dndStoreRef.current = createDndStore())
+  const [dndStore] = useState(createDndStore)
 
   const canAcceptExternalFiles = externalFiles.status === 'enabled'
   const handleDropFiles = externalFiles.handleDropFiles
@@ -64,35 +63,33 @@ export function DndRuntimeProvider({
     runtimeId,
   }
 
-  const dispatchDropPayload: DndValue['dispatchDropPayload'] = useCallback(
-    async ({ dropInput, payload, rawTarget }) => {
-      const ctx = ctxRef.current
-      const target = rawTarget
-        ? resolveDropTarget(rawTarget, ctx.catalog, { runtimeId: ctx.runtimeId ?? null })
-        : null
+  const dispatchDropPayload: DndValue['dispatchDropPayload'] = async ({
+    dropInput,
+    payload,
+    rawTarget,
+  }) => {
+    const ctx = ctxRef.current
+    const target = rawTarget
+      ? resolveDropTarget(rawTarget, ctx.catalog, { runtimeId: ctx.runtimeId ?? null })
+      : null
 
-      await executePlannedDropCommand(
-        resolveDropCommand({ payload, target, ctx: ctx.dropPlanningContext }),
-        dropInput,
-        {
-          ...ctx.dndContext,
-          handleDropFiles: ctx.handleDropFiles,
-          setBatchDecision: dndStore.getState().setBatchDecision,
-        },
-      )
-    },
-    [dndStore],
-  )
+    await executePlannedDropCommand(
+      resolveDropCommand({ payload, target, ctx: ctx.dropPlanningContext }),
+      dropInput,
+      {
+        ...ctx.dndContext,
+        handleDropFiles: ctx.handleDropFiles,
+        setBatchDecision: dndStore.getState().setBatchDecision,
+      },
+    )
+  }
 
-  const value: DndValue = useMemo(
-    () => ({
-      canAcceptExternalFiles,
-      dispatchDropPayload,
-      getItemLinkPath: paths.getVisibleItemLinkPath,
-      runtimeId,
-    }),
-    [canAcceptExternalFiles, dispatchDropPayload, paths.getVisibleItemLinkPath, runtimeId],
-  )
+  const value: DndValue = {
+    canAcceptExternalFiles,
+    dispatchDropPayload,
+    getItemLinkPath: paths.getVisibleItemLinkPath,
+    runtimeId,
+  }
 
   return (
     <DndStoreContext.Provider value={dndStore}>

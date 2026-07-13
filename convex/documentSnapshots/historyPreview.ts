@@ -8,9 +8,19 @@ const historyPreviewImageUrlStateValidator = v.union(
 
 const gameMapSnapshotDataValidator = v.object({
   imageAssetId: v.nullable(v.string()),
+  layers: v.optional(
+    v.array(
+      v.object({
+        id: v.string(),
+        imageAssetId: v.nullable(v.string()),
+        name: v.string(),
+      }),
+    ),
+  ),
   pins: v.array(
     v.object({
       itemId: v.string(),
+      layerId: v.optional(v.nullable(v.string())),
       x: v.number(),
       y: v.number(),
       visible: v.boolean(),

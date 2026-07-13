@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type BlockNoteDomElementSource = {
   domElement?: HTMLElement | null
+}
+
+type EditorDomElementState = {
+  editor: BlockNoteDomElementSource | undefined
+  domElement: HTMLElement | null
 }
 
 const MAX_DOM_ELEMENT_RETRY_FRAMES = 10
@@ -9,39 +14,39 @@ const MAX_DOM_ELEMENT_RETRY_FRAMES = 10
 export function useEditorDomElement(
   editor: BlockNoteDomElementSource | undefined,
 ): HTMLElement | null {
-  const [domElement, setDomElement] = useState<HTMLElement | null>(() => editor?.domElement ?? null)
-  const currentEditorRef = useRef(editor)
-  if (currentEditorRef.current !== editor) {
-    currentEditorRef.current = editor
-  }
+  const [state, setState] = useState<EditorDomElementState>(() => ({
+    editor,
+    domElement: editor?.domElement ?? null,
+  }))
 
   useEffect(() => {
+    const publish = (domElement: HTMLElement | null) => {
+      setState((current) =>
+        current.editor === editor && current.domElement === domElement
+          ? current
+          : { editor, domElement },
+      )
+    }
+
     if (!editor) {
-      setDomElement(null)
+      publish(null)
       return
     }
 
-    const el = editor.domElement
-    setDomElement(el ?? null)
-    if (el) {
-      return
-    }
+    const domElement = editor.domElement ?? null
+    publish(domElement)
+    if (domElement) return
 
     let rafId: number
     let attempts = 0
     const poll = () => {
-      const domEl = editor.domElement
-      if (domEl) {
-        setDomElement(domEl)
-      } else if (attempts < MAX_DOM_ELEMENT_RETRY_FRAMES) {
-        attempts += 1
-        if (attempts === MAX_DOM_ELEMENT_RETRY_FRAMES) {
-          setDomElement(null)
-          return
-        }
-        rafId = requestAnimationFrame(poll)
+      const nextDomElement = editor.domElement
+      if (nextDomElement) {
+        publish(nextDomElement)
       } else {
-        setDomElement(null)
+        attempts += 1
+        if (attempts >= MAX_DOM_ELEMENT_RETRY_FRAMES) return
+        rafId = requestAnimationFrame(poll)
       }
     }
     rafId = requestAnimationFrame(poll)
@@ -49,5 +54,5 @@ export function useEditorDomElement(
     return () => cancelAnimationFrame(rafId)
   }, [editor])
 
-  return currentEditorRef.current === editor ? domElement : null
+  return state.editor === editor ? state.domElement : (editor?.domElement ?? null)
 }
