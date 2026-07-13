@@ -48,6 +48,11 @@ const searchDataState = vi.hoisted(() => ({
 }))
 const previewSurfaceSpy = vi.hoisted(() => vi.fn())
 const toastErrorSpy = vi.hoisted(() => vi.fn())
+const dialogOpenChangeSpy = vi.hoisted(() => vi.fn())
+const originalScrollIntoViewDescriptor = Object.getOwnPropertyDescriptor(
+  Element.prototype,
+  'scrollIntoView',
+)
 
 vi.mock('../../previews/resource-preview-surface', () => ({
   ResourcePreviewSurface: (props: unknown) => {
@@ -63,8 +68,18 @@ vi.mock('sonner', () => ({
 }))
 
 vi.mock('@wizard-archive/ui/shadcn/components/dialog', () => ({
-  Dialog: ({ open, children }: { open: boolean; children: ReactNode }) =>
-    open ? createElement('div', null, children) : null,
+  Dialog: ({
+    open,
+    children,
+    onOpenChange,
+  }: {
+    open: boolean
+    children: ReactNode
+    onOpenChange: (open: boolean) => void
+  }) => {
+    dialogOpenChangeSpy(onOpenChange)
+    return open ? createElement('div', null, children) : null
+  },
   DialogContent: ({
     children,
     ...props
@@ -102,10 +117,25 @@ describe('SearchDialog', () => {
     searchDataState.createSidebarItem.mockReset()
     previewSurfaceSpy.mockReset()
     toastErrorSpy.mockReset()
+    dialogOpenChangeSpy.mockReset()
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    if (originalScrollIntoViewDescriptor) {
+      Object.defineProperty(Element.prototype, 'scrollIntoView', originalScrollIntoViewDescriptor)
+    } else {
+      Reflect.deleteProperty(Element.prototype, 'scrollIntoView')
+    }
+  })
+
+  it('closes through the dialog open-state callback', () => {
+    renderSearchDialog()
+
+    const handleOpenChange = dialogOpenChangeSpy.mock.lastCall?.[0]
+    handleOpenChange(false)
+
+    expect(searchState.close).toHaveBeenCalledOnce()
   })
 
   it('shows matching creation commands from the command catalog', () => {
