@@ -78,6 +78,40 @@ const resourceStructureResultValidator = v.union(
   }),
 )
 
+export const resourceStructureCommandValidator = v.union(
+  v.object({
+    type: v.literal('create'),
+    resourceId: resourceUuidValidator,
+    kind: resourceKindValidator,
+    parentId: v.nullable(resourceUuidValidator),
+    title: v.string(),
+    icon: v.nullable(v.string()),
+    color: v.nullable(v.string()),
+  }),
+  v.object({
+    type: v.literal('updateMetadata'),
+    resourceId: resourceUuidValidator,
+    changes: v.object({
+      title: v.optional(v.string()),
+      icon: v.optional(v.nullable(v.string())),
+      color: v.optional(v.nullable(v.string())),
+    }),
+  }),
+  v.object({
+    type: v.literal('move'),
+    resourceIds: v.array(resourceUuidValidator),
+    destinationParentId: v.nullable(resourceUuidValidator),
+  }),
+  v.object({ type: v.literal('trash'), resourceIds: v.array(resourceUuidValidator) }),
+  v.object({ type: v.literal('restore'), resourceIds: v.array(resourceUuidValidator) }),
+  v.object({ type: v.literal('permanentlyDelete'), resourceIds: v.array(resourceUuidValidator) }),
+  v.object({
+    type: v.literal('deepCopy'),
+    sourceRootIds: v.array(resourceUuidValidator),
+    destinationParentId: v.nullable(resourceUuidValidator),
+  }),
+)
+
 export const resourceCommandReceiptValidator = v.object({
   campaignId: campaignUuidValidator,
   operationId: v.string(),
@@ -85,10 +119,40 @@ export const resourceCommandReceiptValidator = v.object({
   postconditions: v.array(resourcePostconditionValidator),
 })
 
+export const resourceStructureCommandResultValidator = v.union(
+  v.object({ status: v.literal('completed'), receipt: resourceCommandReceiptValidator }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'invalid_command',
+      'invalid_uuid',
+      'invalid_title',
+      'ownership_mismatch',
+      'unauthorized',
+      'resource_missing',
+      'invalid_parent',
+      'invalid_parent_kind',
+      'hierarchy_cycle',
+      'invalid_lifecycle',
+      'invalid_root_selection',
+      'closure_too_large',
+      'content_unavailable',
+      'content_integrity_failure',
+      'version_exhausted',
+      'operation_id_reused',
+    ),
+  }),
+  v.object({
+    status: v.literal('unavailable'),
+    reason: literals('capability_not_supported', 'scope_unavailable'),
+  }),
+)
+
 export const resourceTables = {
   resources: defineTable(resourceTableValidator)
     .index('by_resourceUuid', ['resourceUuid'])
-    .index('by_campaign_parent_lifecycle_resourceUuid', [
+    .index('by_campaign_and_parent', ['campaignUuid', 'parentResourceUuid'])
+    .index('by_campaign_and_parent_and_lifecycle_and_resource', [
       'campaignUuid',
       'parentResourceUuid',
       'lifecycle',
@@ -102,7 +166,7 @@ export const resourceTables = {
     deletedAt: v.number(),
   })
     .index('by_resourceUuid', ['resourceUuid'])
-    .index('by_campaign_resourceUuid', ['campaignUuid', 'resourceUuid']),
+    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid']),
 
   resourceSourcePathAliases: defineTable({
     campaignUuid: campaignUuidValidator,
@@ -111,7 +175,7 @@ export const resourceTables = {
     sourceRootId: v.string(),
     rawPath: v.string(),
     normalizedPath: v.string(),
-  }).index('by_campaign_resource_normalizedPath', [
+  }).index('by_campaign_and_resource_and_normalizedPath', [
     'campaignUuid',
     'resourceUuid',
     'normalizedPath',
@@ -122,8 +186,8 @@ export const resourceTables = {
     role: v.string(),
     resourceUuid: resourceUuidValidator,
   })
-    .index('by_campaign_role', ['campaignUuid', 'role'])
-    .index('by_campaign_resourceUuid', ['campaignUuid', 'resourceUuid']),
+    .index('by_campaign_and_role', ['campaignUuid', 'role'])
+    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid']),
 
   resourceOperations: defineTable({
     campaignUuid: campaignUuidValidator,
@@ -133,8 +197,8 @@ export const resourceTables = {
     fingerprint: v.string(),
     receipt: resourceCommandReceiptValidator,
   })
-    .index('by_campaign_operationUuid', ['campaignUuid', 'operationUuid'])
-    .index('by_campaign_actorMemberUuid', ['campaignUuid', 'actorMemberUuid']),
+    .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
+    .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
 
   resourceContentVersions: defineTable({
     campaignUuid: campaignUuidValidator,
@@ -146,5 +210,5 @@ export const resourceTables = {
       RESOURCE_KIND.canvas,
     ),
     version: versionStampValidator,
-  }).index('by_resourceUuid_component', ['resourceUuid', 'component']),
+  }).index('by_resource_and_component', ['resourceUuid', 'component']),
 }

@@ -10,6 +10,7 @@ import type {
   ResourceBookmarkCommand,
   ResourcePermission,
   ResourceStructureCommand,
+  ResourceStructureRejection,
   RestoreResourcesCommand,
   TrashResourcesCommand,
   UpdateResourceMetadataCommand,
@@ -22,6 +23,13 @@ export const RESOURCE_COMMAND_PROTOCOL_VERSION = 'resource-command-v1' as const
 const textEncoder = new TextEncoder()
 const resourceKinds = new Set<ResourceKind>(Object.values(RESOURCE_KIND))
 const resourcePermissions = new Set<ResourcePermission>(['none', 'view', 'edit'])
+
+export function resourceStructureInputRejection(error: unknown): ResourceStructureRejection {
+  if (!(error instanceof Error)) return 'invalid_command'
+  if (error.message.includes('UUIDv7')) return 'invalid_uuid'
+  if (error.message.includes('title') || error.message.includes('Title')) return 'invalid_title'
+  return 'invalid_command'
+}
 
 function normalizeResourceId(value: ResourceId): ResourceId {
   return assertDomainId(DOMAIN_ID_KIND.resource, value)

@@ -21,6 +21,7 @@ import {
   RESOURCE_COMMAND_PROTOCOL_VERSION,
   fingerprintResourceStructureCommand,
   normalizeResourceStructureCommand,
+  resourceStructureInputRejection,
 } from './resource-command-protocol'
 import type { AuditStamp, ResourceRecord } from './resource-contract'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE, resourceMetadataValue } from './resource-contract'
@@ -226,13 +227,6 @@ function completed(
   }
 }
 
-function inputRejection(error: unknown): ResourceStructureRejection {
-  if (!(error instanceof Error)) return 'invalid_command'
-  if (error.message.includes('UUIDv7')) return 'invalid_uuid'
-  if (error.message.includes('title') || error.message.includes('Title')) return 'invalid_title'
-  return 'invalid_command'
-}
-
 export class InMemoryResourceCatalog
   implements ResourceCatalogReader, AuthoritativeResourceOperationExecutor
 {
@@ -393,7 +387,7 @@ export class InMemoryResourceCatalog
       }
       assertDomainId(DOMAIN_ID_KIND.campaignMember, actorId)
     } catch (error) {
-      return { status: 'rejected', reason: inputRejection(error) }
+      return { status: 'rejected', reason: resourceStructureInputRejection(error) }
     }
 
     if (!(await this.#authorize(actorId, normalizedEnvelope))) {

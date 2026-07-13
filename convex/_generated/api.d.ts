@@ -159,6 +159,8 @@ import type * as notes_internalQueries from "../notes/internalQueries.js";
 import type * as notes_projection from "../notes/projection.js";
 import type * as notes_queries from "../notes/queries.js";
 import type * as notes_triggers from "../notes/triggers.js";
+import type * as resources_functions_executeStructureCommand from "../resources/functions/executeStructureCommand.js";
+import type * as resources_mutations from "../resources/mutations.js";
 import type * as sessions_functions_endCurrentSession from "../sessions/functions/endCurrentSession.js";
 import type * as sessions_functions_getCurrentSession from "../sessions/functions/getCurrentSession.js";
 import type * as sessions_functions_getSession from "../sessions/functions/getSession.js";
@@ -438,6 +440,8 @@ declare const fullApi: ApiFromModules<{
   "notes/projection": typeof notes_projection;
   "notes/queries": typeof notes_queries;
   "notes/triggers": typeof notes_triggers;
+  "resources/functions/executeStructureCommand": typeof resources_functions_executeStructureCommand;
+  "resources/mutations": typeof resources_mutations;
   "sessions/functions/endCurrentSession": typeof sessions_functions_endCurrentSession;
   "sessions/functions/getCurrentSession": typeof sessions_functions_getCurrentSession;
   "sessions/functions/getSession": typeof sessions_functions_getSession;
