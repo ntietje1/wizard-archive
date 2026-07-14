@@ -2,10 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { ViewAsPlayerButton } from '../view-as-button'
-import type {
-  EditorShareParticipantId,
-  ViewAsParticipantCapability,
-} from '../../../sharing/contracts'
+import type { ViewAsParticipantCapability } from '../../../sharing/contracts'
+import type { CampaignMemberId } from '../../../resources/domain-id'
 import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
 import { testDomainId } from '../../../test/domain-id'
 
@@ -17,7 +15,7 @@ type AvailableViewAsParticipantCapability = Extract<
 >
 
 const viewAsState = vi.hoisted(() => ({
-  viewAsParticipantId: undefined as EditorShareParticipantId | undefined,
+  viewAsParticipantId: undefined as CampaignMemberId | undefined,
   setSelectedParticipantId: vi.fn(),
 }))
 

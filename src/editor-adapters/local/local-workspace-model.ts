@@ -2,8 +2,8 @@ import type {
   WizardEditorEmbeddedCanvasState,
   WizardEditorItem,
   WizardEditorNoteCollaborationSessionRequest,
-  WizardEditorResourceCommandResult,
   WizardEditorResourceSlug,
+  completeWizardEditorResourceCommand,
 } from '@wizard-archive/editor/adapter'
 import {
   parseWizardEditorResourceSlug,
@@ -145,7 +145,7 @@ export function withValidLocalViewAsPlayerSelection(
 type LocalAvailableCanvasPayload = Extract<WizardEditorEmbeddedCanvasState, { status: 'available' }>
 type LocalCanvasPayload = Pick<LocalAvailableCanvasPayload, 'edges' | 'nodes'>
 type LocalResourceCommandReceipt = Extract<
-  WizardEditorResourceCommandResult,
+  ReturnType<typeof completeWizardEditorResourceCommand>,
   { status: 'completed' }
 >['receipt']
 

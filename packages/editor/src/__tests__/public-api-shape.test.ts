@@ -10,7 +10,7 @@ const compareText = (left: string, right: string) => left.localeCompare(right)
 const publicApiShape = {
   publishableStableApi: ['.', './adapter'],
   backendSchemaLeafContracts: readEditorPackage().wizardArchive.backendSafeSubpaths,
-  stableAdapterContracts: ['./collaboration/yjs-provider', './sharing'],
+  stableAdapterContracts: ['./collaboration/yjs-provider', './runtime', './sharing'],
   packageAssets: ['./style.css'],
   temporaryAdapterConstructionContracts: [],
 } as const
@@ -320,6 +320,7 @@ describe('editor package public API shape', () => {
       expect.arrayContaining([
         './canvas/workspace-session-source',
         './notes/workspace-session-source',
+        './workspace/runtime',
       ]),
     )
   })
@@ -1309,7 +1310,6 @@ describe('editor package public API shape', () => {
         'WizardEditorResourceCommand',
         'WizardEditorResourceCommandCompletionOptions',
         'WizardEditorResourceCommandExecutionOptions',
-        'WizardEditorResourceCommandResult',
         'WizardEditorResourceCreateCommand',
         'WizardEditorResourceCreateParentPlan',
         'WizardEditorResourceEvent',
@@ -1318,13 +1318,8 @@ describe('editor package public API shape', () => {
         'WizardEditorResourceSharingCommand',
         'WizardEditorResourceSource',
         'WizardEditorResourceSlug',
-        'WizardEditorRuntime',
-        'WizardEditorRuntimeCommands',
         'WizardEditorRuntimeDocumentSourceInput',
-        'WizardEditorRuntimeIo',
         'WizardEditorRuntimeResourceSourceInput',
-        'WizardEditorRuntimeResources',
-        'WizardEditorRuntimeSearch',
         'WizardEditorRuntimeSourcesInput',
         'WizardEditorSearchSource',
         'WizardEditorSharingSourceInput',
@@ -1408,25 +1403,16 @@ describe('editor package public API shape', () => {
     )
   })
 
-  it('keeps resource content on runtime resources instead of search', () => {
-    const sourcePath = 'packages/editor/src/adapter.ts'
+  it('keeps resource content on the authoritative runtime filesystem', () => {
+    const sourcePath = 'packages/editor/src/filesystem/filesystem.ts'
     const source = readFileSync(path.join(process.cwd(), sourcePath), 'utf8')
 
-    expect(interfaceMemberNames(sourcePath, source, 'WizardEditorRuntimeResources')).toContain(
+    expect(interfaceMemberNames(sourcePath, source, 'WorkspaceFileSystem')).toContain(
       'resourceContent',
     )
-    expect(interfaceMemberNames(sourcePath, source, 'WizardEditorRuntimeResources')).not.toContain(
+    expect(interfaceMemberNames(sourcePath, source, 'WorkspaceFileSystem')).not.toContain(
       'resourcePreview',
     )
-    expect(interfaceMemberNames(sourcePath, source, 'WizardEditorRuntimeSearch')).toEqual(['items'])
-    expect(interfaceMemberNames(sourcePath, source, 'WizardEditorSearchSource')).toEqual(['items'])
-    expect(
-      interfaceMemberNames(sourcePath, source, 'WizardEditorRuntimeResourceSourceInput'),
-    ).toContain('resourceContent')
-    expect(
-      interfaceMemberNames(sourcePath, source, 'WizardEditorRuntimeResourceSourceInput'),
-    ).not.toContain('resourcePreview')
-    expect(source).not.toContain('createWizardEditorItemContentState')
   })
 
   it('keeps resource content resolution on the resourceContent source only', () => {
@@ -1461,30 +1447,42 @@ describe('editor package public API shape', () => {
     }
   })
 
-  it('keeps the root editor facade declarations free of internal runtime contracts', () => {
+  it('makes the root editor consume the authoritative runtime without translation', () => {
     const source = readFileSync(path.join(process.cwd(), 'packages/editor/src/index.ts'), 'utf8')
     const declaration = declarationTextForExport('.')
 
-    expect(source).not.toContain("from './workspace/runtime'")
-    expect(source).not.toContain('runtime: WorkspaceRuntime')
-    expect(declaration).not.toMatch(/\bWorkspaceRuntime\b/)
+    expect(source).toContain("from './workspace/runtime'")
+    expect(source).toContain('runtime: WorkspaceRuntime')
+    expect(source).toContain('createElement(WorkspaceRuntimeHost, props)')
+    expect(source).not.toContain('toWorkspaceRuntime')
+    expect(declaration).toMatch(/\bWorkspaceRuntime\b/)
     expect(declaration).not.toMatch(/\bSidebarItemId\b/)
-    expect(declaration).toContain('runtime: WizardEditorRuntime')
+    expect(declaration).toContain('runtime: WorkspaceRuntime')
   })
 
-  it('keeps adapter contracts independent from private runtime factory shapes', () => {
+  it('keeps the adapter as construction input instead of a second runtime model', () => {
     const source = readFileSync(path.join(process.cwd(), 'packages/editor/src/adapter.ts'), 'utf8')
     const declaration = declarationTextForExport('./adapter')
-    const implementationDeclaration = declarationImplementationTextForExport('./adapter')
 
     expect(source).not.toContain('ReturnType<typeof')
     expect(source).not.toContain('Parameters<typeof')
-    expect(source).not.toContain('filesystem: WizardEditorRuntimeResources')
-    expect(source).toContain('resources: WizardEditorRuntimeResources')
-    expect(implementationDeclaration).not.toContain('filesystem: WizardEditorRuntimeResources')
-    expect(implementationDeclaration).toContain('resources: WizardEditorRuntimeResources')
-    expect(source).not.toContain("WizardEditorRuntime['filesystem']")
-    expect(source).not.toContain("WizardEditorRuntime['sessions']")
+    expect(
+      interfaceMemberNames('packages/editor/src/adapter.ts', source, 'WizardEditorRuntime'),
+    ).toEqual([])
+    expect(
+      interfaceMemberNames(
+        'packages/editor/src/adapter.ts',
+        source,
+        'WizardEditorRuntimeResources',
+      ),
+    ).toEqual([])
+    expect(
+      interfaceMemberNames('packages/editor/src/adapter.ts', source, 'WizardEditorRuntimeCommands'),
+    ).toEqual([])
+    expect(source).toContain(
+      'createWizardEditorRuntime(adapter: WizardEditorAdapter): WorkspaceRuntime',
+    )
+    expect(source).toContain('return workspaceRuntime')
     expect(declaration).not.toContain('operation-construction')
     expect(declaration).not.toContain('WorkspaceFileSystemOperationDriver')
     expect(declaration).not.toContain('WorkspaceFileSystemClipboardDriver')
@@ -1499,42 +1497,22 @@ describe('editor package public API shape', () => {
     expect(declaration).not.toContain('FileSystemOperationRuntime')
     expect(declaration).not.toContain('FileSystemCommandCapabilities')
     expect(declaration).not.toContain('FileSystemIoCapabilities')
-    expect(declaration).not.toMatch(/\bWorkspaceRuntime\b/)
-    expect(declaration).not.toMatch(/\bWorkspaceNavigation\b/)
-    expect(declaration).not.toMatch(/\bWorkspaceFileSystem\b/)
     expect(declaration).not.toMatch(/\bSidebarItemId\b/)
     expect(declaration).not.toContain('ReturnType<')
     expect(declaration).not.toContain('Parameters<')
   })
 
-  it('keeps root runtime domains out of the resource graph contract', () => {
-    const sourcePath = path.join(process.cwd(), 'packages/editor/src/adapter.ts')
+  it('keeps one root runtime model', () => {
+    const sourcePath = path.join(process.cwd(), 'packages/editor/src/workspace/runtime.ts')
     const source = readFileSync(sourcePath, 'utf8')
 
-    expect(interfaceMemberNames(sourcePath, source, 'WizardEditorRuntime')).toEqual(
-      [
-        'commands',
-        'history',
-        'io',
-        'navigation',
-        'resources',
-        'search',
-        'sessions',
-        'sharing',
-        'workspace',
-      ].sort(compareText),
+    expect(interfaceMemberNames(sourcePath, source, 'WorkspaceRuntime')).toEqual(
+      ['filesystem', 'navigation', 'sessions', 'workspace'].sort(compareText),
     )
-    expect(interfaceMemberNames(sourcePath, source, 'WizardEditorRuntimeResources')).toEqual(
-      [
-        'catalog',
-        'current',
-        'load',
-        'operationItems',
-        'paths',
-        'permissions',
-        'resourceContent',
-        'selection',
-      ].sort(compareText),
+    const adapterSourcePath = 'packages/editor/src/adapter.ts'
+    const adapterSource = readFileSync(path.join(process.cwd(), adapterSourcePath), 'utf8')
+    expect(interfaceMemberNames(adapterSourcePath, adapterSource, 'WizardEditorRuntime')).toEqual(
+      [],
     )
   })
 
@@ -1753,7 +1731,7 @@ describe('editor package public API shape', () => {
     expect(source).not.toContain('createWizardEditorCanvasSidebarEmbedSessionPorts')
   })
 
-  it('keeps adapter availability and preview projection contracts participant-shaped', () => {
+  it('keeps adapter availability participant-shaped with canonical member identity', () => {
     const source = readFileSync(path.join(process.cwd(), 'packages/editor/src/adapter.ts'), 'utf8')
     const participantAdapterSource = readFileSync(
       path.join(process.cwd(), 'src/editor-adapters/sharing/share-participants.ts'),
@@ -1764,26 +1742,29 @@ describe('editor package public API shape', () => {
     for (const text of [source, implementationDeclaration]) {
       expect(text).not.toContain('directMessage: WizardEditorResourceAvailabilityMetadataLookup')
       expect(text).not.toContain('player: WizardEditorResourceAvailabilityMetadataLookup')
-      expect(text).not.toContain('participantId: CampaignMemberId')
       expect(text).not.toContain('viewAsPlayerId: CampaignMemberId')
     }
     expect(source).toContain('owner: WizardEditorResourceAvailabilityMetadataLookup')
     expect(source).toContain('participant: WizardEditorResourceAvailabilityMetadataLookup')
-    expect(source).toContain('viewAsParticipantId: EditorShareParticipantId | undefined')
+    expect(source).toContain('participantId: CampaignMemberId')
+    expect(source).toContain('viewAsParticipantId: CampaignMemberId | undefined')
     expect(participantAdapterSource).toContain('@wizard-archive/editor/sharing')
     expect(participantAdapterSource).not.toContain('@wizard-archive/editor/adapter')
   })
 
-  it('keeps adapter canvas document sessions workspace-shaped', () => {
+  it('keeps adapter canvas document sessions scoped to canvas resources', () => {
     const source = readFileSync(path.join(process.cwd(), 'packages/editor/src/adapter.ts'), 'utf8')
-    const implementationDeclaration = declarationImplementationTextForExport('./adapter')
 
     expect(source).not.toContain('CampaignId as InternalWorkspaceId')
     expect(source).not.toContain('InternalWorkspaceId')
     expect(source).not.toContain('campaignId: InternalWorkspaceId')
-    expect(implementationDeclaration).not.toContain('campaignId: CampaignId;')
-    expect(implementationDeclaration).not.toContain('workspaceId: CampaignId;')
-    expect(implementationDeclaration).toContain('workspaceId: string;')
+    expect(
+      interfaceMemberNames(
+        'packages/editor/src/adapter.ts',
+        source,
+        'WizardEditorCanvasSessionPorts',
+      ),
+    ).toEqual(['document'])
   })
 
   it('keeps the canvas document session hook workspace-shaped internally', () => {
@@ -2191,7 +2172,6 @@ describe('editor package public API shape', () => {
       'EDITOR_PERMISSION_LEVEL',
       'EditorPermissionLevel',
       'EditorShareParticipant',
-      'EditorShareParticipantId',
       'ResourceShareOperations',
       'ResourceShareProjection',
       'ResourceShareProjectionData',
@@ -2274,14 +2254,13 @@ describe('editor package public API shape', () => {
     }
   })
 
-  it('keeps sharing adapter contracts in source-neutral vocabulary', () => {
+  it('keeps sharing contracts provider-neutral while using canonical member identity', () => {
     for (const subpath of ['./adapter', './sharing']) {
-      const declaration = declarationTextForExport(subpath)
+      const contract = readFileSync(path.join(process.cwd(), sourcePathForExport(subpath)), 'utf8')
 
-      expect(declaration).not.toMatch(/\bCampaign\w*\b/)
-      expect(declaration).not.toMatch(/\bcampaign\w*\b/)
-      expect(declaration).not.toMatch(/\bPlayer\w*\b/)
-      expect(declaration).not.toMatch(/\bplayer\w*\b/)
+      expect(contract).toContain('CampaignMemberId')
+      expect(contract).not.toContain('Id<"campaignMembers">')
+      expect(contract).not.toContain('convex/_generated/dataModel')
     }
   })
 

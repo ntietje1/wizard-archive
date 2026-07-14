@@ -11,8 +11,8 @@ import type {
   BlocksShareOperations,
   BlocksShareState,
   EditorPermissionLevel,
-  EditorShareParticipantId,
 } from '@wizard-archive/editor/sharing'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { createBlocksShareRuntimeState } from '@wizard-archive/editor/sharing'
 import {
   isPersistedWizardEditorItem,
@@ -23,7 +23,6 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { canLoadLiveShareData, canRunLiveShareMutation } from './share-capability'
 import { useShareMutationRunner } from './use-share-mutation-runner'
 import { toEditorShareParticipant } from '~/editor-adapters/sharing/share-participants'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 type BlockVisibilityLevel = Extract<PermissionLevel, 'none' | 'view'>
 type BlockShareStatus = ShareStatus
@@ -38,7 +37,7 @@ interface SetBlocksShareStatusInput {
 interface SetBlockMemberPermissionInput {
   noteId: BlockShareTargetNote['id']
   noteBlockIds: Array<string>
-  participantId: EditorShareParticipantId
+  participantId: CampaignMemberId
   permissionLevel: BlockVisibilityLevel | null
 }
 

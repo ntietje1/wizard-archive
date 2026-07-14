@@ -56,17 +56,17 @@ describe('WizardEditor adapter contract', () => {
     const runtime = createWizardEditorRuntime(adapter)
 
     expect(runtime.workspace.id).toBe('workspace-1')
-    expect(runtime.resources.current).toBe(adapter.resources.current)
-    expect(runtime.sharing).toBe(adapter.sharing)
+    expect(runtime.filesystem.current).toBe(adapter.resources.current)
+    expect(runtime.filesystem.sharing).toBe(adapter.sharing)
     expect('operations' in adapter.resources).toBe(false)
-    expect(runtime.commands.operations).toEqual(expect.any(Object))
-    expect(runtime.resources.permissions.canCreateItems).toBe(true)
-    expect(runtime.resources.selection.selectedItemIds).toEqual([])
+    expect(runtime.filesystem.operations).toEqual(expect.any(Object))
+    expect(runtime.filesystem.permissions.canCreateItems).toBe(true)
+    expect(runtime.filesystem.selection.selectedItemIds).toEqual([])
     expect(runtime.navigation.canOpenItemsSeparately).toEqual({ status: 'available' })
     expect(runtime.navigation.current).toBe(adapter.navigation.current)
     expect(runtime.navigation.openItem).toBe(adapter.navigation.openItem)
-    expect(runtime.sessions).not.toBe(adapter.documents)
-    expect(runtime.sessions.canvas).not.toBe(adapter.documents.canvas)
+    expect(runtime.sessions).toBe(adapter.documents)
+    expect(runtime.sessions.canvas).toBe(adapter.documents.canvas)
     expect(runtime.sessions.canvasEmbedded).toBe(adapter.documents.canvasEmbedded)
     expect(runtime.sessions.file).toBe(adapter.documents.file)
   })
@@ -296,7 +296,7 @@ describe('WizardEditor adapter contract', () => {
       },
     })
 
-    expect(createWizardEditorRuntime(adapter).sharing.viewAsParticipant).toEqual({
+    expect(createWizardEditorRuntime(adapter).filesystem.sharing.viewAsParticipant).toEqual({
       status: 'unsupported',
       reason: 'not_available',
     })
@@ -500,12 +500,12 @@ describe('WizardEditor adapter contract', () => {
     expect('history' in resources).toBe(false)
     expect('download' in resources).toBe(false)
     expect('sharing' in resources).toBe(false)
-    expect(runtime.resources.load.activeStatus).toBe('success')
-    expect(runtime.resources.resourceContent.status).toBe('unsupported')
-    expect(runtime.search.items.status).toBe('unsupported')
-    expect('resourcePreview' in runtime.search).toBe(false)
-    expect(runtime.io.download.status).toBe('unsupported')
-    expect(runtime.history).toEqual({
+    expect(runtime.filesystem.load.activeStatus).toBe('success')
+    expect(runtime.filesystem.resourceContent.status).toBe('unsupported')
+    expect(runtime.filesystem.search.status).toBe('unsupported')
+    expect('resourcePreview' in runtime.filesystem.search).toBe(false)
+    expect(runtime.filesystem.download.status).toBe('unsupported')
+    expect(runtime.filesystem.history).toEqual({
       status: 'unsupported',
       reason: 'not_implemented',
     })
@@ -562,19 +562,19 @@ describe('WizardEditor adapter contract', () => {
     })
 
     expect(runtime.workspace).toEqual({ id: 'workspace-1', instanceId: 'runtime-1' })
-    expect(runtime.resources.current).toBe(snapshot.current)
-    expect(runtime.resources.load.activeStatus).toBe('success')
-    expect(runtime.resources.resourceContent.status).toBe('available')
-    if (runtime.resources.resourceContent.status !== 'available') {
+    expect(runtime.filesystem.current).toBe(snapshot.current)
+    expect(runtime.filesystem.load.activeStatus).toBe('success')
+    expect(runtime.filesystem.resourceContent.status).toBe('available')
+    if (runtime.filesystem.resourceContent.status !== 'available') {
       throw new Error('Expected available resource content capability')
     }
-    expect(runtime.resources.resourceContent.getContentState(visible.id)).toMatchObject({
+    expect(runtime.filesystem.resourceContent.getContentState(visible.id)).toMatchObject({
       status: 'ready',
       item: expect.objectContaining({ id: visible.id }),
     })
-    expect(runtime.search.items.status).toBe('available')
-    expect('resourcePreview' in runtime.search).toBe(false)
-    expect(runtime.commands.operations).toEqual(expect.any(Object))
+    expect(runtime.filesystem.search.status).toBe('available')
+    expect('resourcePreview' in runtime.filesystem.search).toBe(false)
+    expect(runtime.filesystem.operations).toEqual(expect.any(Object))
 
     runtime.navigation.openDefaultItem()
     expect(setNavigation).toHaveBeenCalledWith({
@@ -711,11 +711,11 @@ describe('WizardEditor adapter contract', () => {
       }),
     )
 
-    expect(runtime.io.download.status).toBe('available')
-    if (runtime.io.download.status !== 'available') {
+    expect(runtime.filesystem.download.status).toBe('available')
+    if (runtime.filesystem.download.status !== 'available') {
       throw new Error('Expected available download capability')
     }
-    await expect(runtime.io.download.loadRootItemsForDownload()).resolves.toEqual({
+    await expect(runtime.filesystem.download.loadRootItemsForDownload()).resolves.toEqual({
       status: 'completed',
       receipt: { kind: 'downloadPrepared', affectedCount: 0 },
       items: [],

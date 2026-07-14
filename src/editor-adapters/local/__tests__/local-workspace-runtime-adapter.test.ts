@@ -1,3 +1,4 @@
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it, vi } from 'vite-plus/test'
@@ -40,7 +41,6 @@ import type {
   WizardEditorItem,
   WizardEditorItemWithContent,
   WizardEditorNavigationState,
-  WizardEditorRuntime,
 } from '@wizard-archive/editor/adapter'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import { testCampaignMemberId } from 'shared/test/campaign-member-id'
@@ -227,7 +227,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
@@ -262,7 +262,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'applyResourceCommandReceipt',
@@ -307,7 +307,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
     const file = nextFilesystem.catalog.getKnownItemById(
       'file-handout' as ResourceId,
     ) as LocalFileItemWithContent
@@ -357,7 +357,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const file = nextRuntime.resources.catalog.getKnownItemById(
+    const file = nextRuntime.filesystem.catalog.getKnownItemById(
       'file-handout' as ResourceId,
     ) as LocalFileItemWithContent
 
@@ -419,7 +419,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
     const file = nextFilesystem.catalog.getKnownItemById(
       'local-file-2' as ResourceId,
     ) as LocalFileItemWithContent
@@ -504,7 +504,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
     const note = nextFilesystem.catalog.getKnownItemById(
       'local-note-2' as ResourceId,
     ) as LocalNoteItemWithContent
@@ -558,7 +558,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
     const note = nextFilesystem.catalog.getKnownItemById(
       'local-note-2' as ResourceId,
     ) as LocalNoteItemWithContent
@@ -617,7 +617,7 @@ describe('createLocalRuntimeFileSystem', () => {
       itemIds: ['local-note-2'],
     })
     expect(nextWorkspace.noteBodiesById).not.toHaveProperty('local-note-2')
-    expect(nextRuntime.resources.catalog.getKnownItemById('local-note-2' as ResourceId)).toBe(null)
+    expect(nextRuntime.filesystem.catalog.getKnownItemById('local-note-2' as ResourceId)).toBe(null)
   })
 
   it('imports local file drop trees through the workspace filesystem operation', async () => {
@@ -649,7 +649,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
     const note = nextFilesystem.catalog.getKnownItemById(
       'local-note-2' as ResourceId,
     ) as LocalNoteItemWithContent
@@ -738,7 +738,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: nextDispatch,
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
     const nextMap = nextFilesystem.catalog.getKnownItemById(
       'map-docks' as ResourceId,
     ) as LocalMapItemWithContent
@@ -1027,7 +1027,7 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     const filesystem = createTestRuntimeFileSystem(runtime)
 
-    expect(runtime.sharing.viewAsParticipant).toMatchObject({
+    expect(runtime.filesystem.sharing.viewAsParticipant).toMatchObject({
       status: 'available',
       selectedParticipantId: miraMemberId,
       participants: [
@@ -1085,7 +1085,7 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: scenario.workspace,
     })
 
-    expect(runtime.sharing.viewAsParticipant).toEqual({
+    expect(runtime.filesystem.sharing.viewAsParticipant).toEqual({
       status: 'unsupported',
       reason: 'not_available',
     })
@@ -1121,7 +1121,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
     const child = nextFilesystem.catalog.getKnownItemById('local-note-3' as ResourceId)
 
     expect(child).toMatchObject({
@@ -1155,7 +1155,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
 
     expect(nextFilesystem.catalog.getKnownItemById('local-file-2' as ResourceId)).toMatchObject({
       id: 'local-file-2',
@@ -1693,7 +1693,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const nextFilesystem = nextRuntime.resources
+    const nextFilesystem = nextRuntime.filesystem
     const duplicate = nextFilesystem.catalog.getKnownItemById(
       'local-file-3' as ResourceId,
     ) as LocalFileItemWithContent
@@ -2282,7 +2282,7 @@ describe('createLocalRuntimeFileSystem', () => {
       },
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
-    const filesystem = runtime.resources
+    const filesystem = runtime.filesystem
 
     expect(getWizardEditorNavigationCurrentResourceId(runtime.navigation)).toBe('canvas-heist')
     expect(filesystem.current.contentItem).toBe(
@@ -2585,14 +2585,14 @@ function createLocalRuntime(options: LocalFileSystemAdapterTestOptions) {
   })
 }
 
-function createTestRuntimeFileSystem(runtime: WizardEditorRuntime) {
+function createTestRuntimeFileSystem(runtime: WorkspaceRuntime) {
   return {
-    ...runtime.resources,
-    operations: runtime.commands.operations,
-    search: runtime.search.items,
-    download: runtime.io.download,
-    history: runtime.history,
-    sharing: runtime.sharing,
+    ...runtime.filesystem,
+    operations: runtime.filesystem.operations,
+    search: runtime.filesystem.search,
+    download: runtime.filesystem.download,
+    history: runtime.filesystem.history,
+    sharing: runtime.filesystem.sharing,
   }
 }
 

@@ -65,6 +65,7 @@ const editorAdapterImportBaseline = {
     '@wizard-archive/editor/adapter',
     '@wizard-archive/editor/collaboration/yjs-provider',
     '@wizard-archive/editor/resources/items',
+    '@wizard-archive/editor/runtime',
     '@wizard-archive/editor/sharing',
   ]),
 }

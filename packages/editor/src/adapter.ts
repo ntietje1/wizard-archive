@@ -1,5 +1,6 @@
 import type {
   AssetId,
+  CampaignMemberId,
   HistoryEntryId,
   MapPinId as InternalMapPinId,
   ResourceId,
@@ -103,15 +104,12 @@ import type { FileSystemLoadState } from './filesystem/load-state'
 import type { FileSystemPermissions } from './filesystem/permissions'
 import type {
   EditorShareParticipant,
-  EditorShareParticipantId,
   ResourceShareSource,
   UnsupportedSharingSource,
   WizardEditorSharingSource,
 } from './sharing/contracts'
 import type { FileSystemSearch } from './filesystem/search'
 import type { ResourceContentSource } from './filesystem/resource-content-source'
-import type { FileSystemOperations } from './filesystem/operations'
-import type { FileSystemSelection } from './filesystem/selection'
 import type {
   ResourceClipboardDriver,
   ResourceCommandCapabilities,
@@ -160,7 +158,6 @@ import {
 } from './notes/imported-text'
 import type { ImportedTextNotePayload } from './notes/imported-text'
 
-type WizardEditorInternalDocumentSource = WorkspaceRuntime['sessions']
 type InternalCatalogItemLinkRow = Omit<WizardEditorCatalogItemLinkRow, 'item'> & {
   item: { id: ResourceId; name: string } | null
 }
@@ -201,7 +198,6 @@ export type WizardEditorResourceCommand = ResourceCommand & {}
 export type WizardEditorResourceCatalogCommand = ResourceCatalogCommand & {}
 export type WizardEditorResourceSharingCommand = ResourceSharingCommand & {}
 export type WizardEditorResourceCommandExecutionOptions = ResourceCommandExecutionOptions & {}
-export type WizardEditorResourceCommandResult = ResourceCommandResult
 export type WizardEditorResourceCreateCommand = ResourceCreateCommand & {}
 export type WizardEditorResourceCreateParentPlan = ResourceCreateParentPlan & {}
 export type WizardEditorResourceRenameCommand = ResourceRenameCommand & {}
@@ -241,7 +237,7 @@ export const WIZARD_EDITOR_RESOURCE_EVENT_TYPE = {
 export type WizardEditorWorkspaceActor =
   | { kind: 'owner' }
   | { kind: 'participant' }
-  | { kind: 'owner_view_as'; participantId: EditorShareParticipantId }
+  | { kind: 'owner_view_as'; participantId: CampaignMemberId }
 
 export type WizardEditorResourceAvailabilitySubject = 'item' | 'page'
 
@@ -362,21 +358,6 @@ export function parseWizardEditorResourceSlug(value: string): WizardEditorResour
   return parseResourceSlug(value)
 }
 
-export interface WizardEditorRuntime {
-  workspace: {
-    id: string
-    instanceId: string
-  }
-  resources: WizardEditorRuntimeResources
-  commands: WizardEditorRuntimeCommands
-  search: WizardEditorRuntimeSearch
-  io: WizardEditorRuntimeIo
-  history: WizardEditorHistorySource
-  sharing: WizardEditorSharingSource
-  navigation: WizardEditorNavigation
-  sessions: WizardEditorDocumentSource
-}
-
 type WizardEditorNavigationTarget = 'current' | 'separate'
 
 type WizardEditorNavigationOptions = {
@@ -429,17 +410,6 @@ export interface WizardEditorCurrentResourceState {
   item: WizardEditorItem | null
 }
 
-export interface WizardEditorRuntimeResources {
-  catalog: ResourceCatalog
-  operationItems: ResourceOperationItems
-  paths: FileSystemPaths
-  load: FileSystemLoadState
-  current: WizardEditorCurrentResourceState
-  selection: FileSystemSelection
-  permissions: FileSystemPermissions
-  resourceContent: ResourceContentSource
-}
-
 export interface WizardEditorResourceCatalog {
   getKnownItemById: (itemId: ResourceId) => WizardEditorItem | null
   getKnownItemBySlug: (slug: ResourceSlug) => WizardEditorItem | null
@@ -464,18 +434,6 @@ export interface WizardEditorResourceOperationItems {
     excludeItemIds?: ReadonlyArray<ResourceId>
     includeTrashed?: boolean
   }) => Array<WizardEditorItem>
-}
-
-export interface WizardEditorRuntimeCommands {
-  operations: FileSystemOperations
-}
-
-export interface WizardEditorRuntimeSearch {
-  items: FileSystemSearch
-}
-
-export interface WizardEditorRuntimeIo {
-  download: FileSystemDownload
 }
 
 export interface WizardEditorCommandSource {
@@ -592,8 +550,8 @@ export interface WizardEditorSharingSourceInput {
     canUse: boolean
     isPending: boolean
     participants: Array<EditorShareParticipant>
-    selectedParticipantId: EditorShareParticipantId | undefined
-    setSelectedParticipantId?: (participantId: EditorShareParticipantId | undefined) => void
+    selectedParticipantId: CampaignMemberId | undefined
+    setSelectedParticipantId?: (participantId: CampaignMemberId | undefined) => void
   }
 }
 
@@ -619,7 +577,7 @@ export interface WizardEditorPermissionSource {
   canMutateItem: (item: WizardEditorItem, requiredLevel: PermissionLevel) => boolean
   getMemberItemPermissionLevel: (
     item: WizardEditorItem,
-    participantId: EditorShareParticipantId,
+    participantId: CampaignMemberId,
   ) => PermissionLevel
   setWorkspaceMode: (workspaceMode: WorkspaceMode) => void
   workspaceMode: WorkspaceMode
@@ -672,9 +630,9 @@ export interface WizardEditorHydratedCatalogResourceContentSourceInput<
     canAccessItem: (item: WizardEditorItem, requiredLevel: PermissionLevel) => boolean
     getMemberItemPermissionLevel: (
       item: WizardEditorItem,
-      participantId: EditorShareParticipantId,
+      participantId: CampaignMemberId,
     ) => PermissionLevel
-    viewAsParticipantId: EditorShareParticipantId | undefined
+    viewAsParticipantId: CampaignMemberId | undefined
   }
   sourceId: SourceId | null | undefined
 }
@@ -1388,7 +1346,7 @@ export interface WizardEditorRuntimeSourcesInput {
   sharing: WizardEditorSharingSource | WizardEditorSharingSourceInput
 }
 
-export function createWizardEditorRuntime(adapter: WizardEditorAdapter): WizardEditorRuntime {
+export function createWizardEditorRuntime(adapter: WizardEditorAdapter): WorkspaceRuntime {
   const operations = createWorkspaceFileSystemOperations({
     ...adapter.commands,
     catalog: adapter.resources.catalog,
@@ -1404,37 +1362,12 @@ export function createWizardEditorRuntime(adapter: WizardEditorAdapter): WizardE
       sharing: adapter.sharing,
     },
     navigation: adapter.navigation,
-    sessions: toInternalWizardEditorDocumentSource(adapter.documents),
+    sessions: adapter.documents,
     workspaceInstanceId: adapter.workspace.instanceId,
     workspaceId: adapter.workspace.id,
   })
 
-  return {
-    workspace: workspaceRuntime.workspace,
-    resources: {
-      catalog: workspaceRuntime.filesystem.catalog,
-      operationItems: workspaceRuntime.filesystem.operationItems,
-      paths: workspaceRuntime.filesystem.paths,
-      load: workspaceRuntime.filesystem.load,
-      current: workspaceRuntime.filesystem.current,
-      selection: workspaceRuntime.filesystem.selection,
-      permissions: workspaceRuntime.filesystem.permissions,
-      resourceContent: workspaceRuntime.filesystem.resourceContent,
-    },
-    commands: {
-      operations: workspaceRuntime.filesystem.operations,
-    },
-    search: {
-      items: workspaceRuntime.filesystem.search,
-    },
-    io: {
-      download: workspaceRuntime.filesystem.download,
-    },
-    history: workspaceRuntime.filesystem.history,
-    sharing: workspaceRuntime.filesystem.sharing,
-    navigation: workspaceRuntime.navigation as WizardEditorNavigation,
-    sessions: toWizardEditorDocumentSource(workspaceRuntime.sessions),
-  }
+  return workspaceRuntime
 }
 
 export function createWizardEditorRuntimeSources({
@@ -1510,7 +1443,7 @@ export function completeWizardEditorResourceCommand(
   command: WizardEditorResourceCommand,
   events: Array<WizardEditorResourceEvent>,
   { transactionId = null, undoable = false }: WizardEditorResourceCommandCompletionOptions = {},
-): WizardEditorResourceCommandResult {
+): ResourceCommandResult {
   return completedResourceCommand(command, events, {
     transactionId: transactionId as ResourceTransactionReceipt['transactionId'],
     undoable,
@@ -2234,44 +2167,6 @@ function createReadyFileSystemLoadState(): WizardEditorRuntimeFilesystemSource['
   }
 }
 
-function toWizardEditorDocumentSource(
-  source: WizardEditorInternalDocumentSource,
-): WizardEditorDocumentSource {
-  return {
-    ...source,
-    canvas: toWizardEditorCanvasSessionPorts(source.canvas),
-  }
-}
-
-function toInternalWizardEditorDocumentSource(
-  source: WizardEditorDocumentSource,
-): WizardEditorInternalDocumentSource {
-  return {
-    ...source,
-    canvas: toInternalCanvasSessionPorts(source.canvas),
-  }
-}
-
-function toWizardEditorCanvasSessionPorts(
-  source: WizardEditorInternalDocumentSource['canvas'],
-): WizardEditorCanvasSessionPorts {
-  return {
-    document: {
-      useCanvasDocumentSession: (canvas) => source.document.useCanvasDocumentSession(canvas),
-    },
-  }
-}
-
-function toInternalCanvasSessionPorts(
-  source: WizardEditorCanvasSessionPorts,
-): WizardEditorInternalDocumentSource['canvas'] {
-  return {
-    document: {
-      useCanvasDocumentSession: (canvas) => source.document.useCanvasDocumentSession(canvas),
-    },
-  }
-}
-
 function createWizardEditorCommandCapability(
   isAvailable: boolean,
   unavailableReason: string,
@@ -2338,7 +2233,7 @@ function createWizardEditorViewAsParticipantSharing({
 }): WizardEditorSharingSource['viewAsParticipant'] {
   if (!source?.canUse || !source.setSelectedParticipantId) return unsupported
 
-  const resolveParticipantId = (participantId: EditorShareParticipantId | undefined) =>
+  const resolveParticipantId = (participantId: CampaignMemberId | undefined) =>
     source.isPending ||
     (participantId && source.participants.some((participant) => participant.id === participantId))
       ? participantId

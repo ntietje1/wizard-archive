@@ -1,3 +1,4 @@
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { testResourceId } from '../../../../shared/test/resource-id'
 import { testCampaignId } from '../../../../shared/test/campaign-id'
@@ -12,9 +13,7 @@ import type {
   WizardEditorItemWithContent,
   WizardEditorFileSession,
   WizardEditorFileSessionReplaceInput,
-  WizardEditorRuntime,
   WizardEditorResourceCommand,
-  WizardEditorResourceCommandResult,
   WizardEditorResourceEvent,
   WizardEditorResourceSlug,
   WizardEditorWorkspaceActor,
@@ -46,8 +45,8 @@ const availabilityStateCalls = vi.hoisted(
       subject: string
     }>,
 )
-type FileSystemSearch = WizardEditorRuntime['search']['items']
-type FileSystemResourceContent = WizardEditorRuntime['resources']['resourceContent']
+type FileSystemSearch = WorkspaceRuntime['filesystem']['search']
+type FileSystemResourceContent = WorkspaceRuntime['filesystem']['resourceContent']
 type LiveRuntimeFileSystemHost = Parameters<typeof useLiveWorkspaceRuntime>[0]['filesystemHost']
 type LiveRuntimeSidebarItemsShareOperations = Parameters<
   typeof useLiveWorkspaceRuntime
@@ -56,7 +55,7 @@ type LiveRuntimeClipboardDriver = LiveRuntimeFileSystemHost['clipboardOperations
 type LiveRuntimeDropDriver = LiveRuntimeFileSystemHost['dropOperations']
 type LiveRuntimeTrashDriver = LiveRuntimeFileSystemHost['trashOperations']
 type CompletedResourceCommandResult = Extract<
-  WizardEditorResourceCommandResult,
+  ReturnType<typeof completeWizardEditorResourceCommand>,
   { status: 'completed' }
 >
 type LiveRuntimeImportFile = WizardEditorFileSessionReplaceInput['file']
@@ -572,12 +571,12 @@ describe('useLiveWorkspaceRuntime', () => {
     textImportMocks.convexQuery.mockResolvedValue({ items: [] })
     const { result } = renderLiveWorkspaceRuntime()
 
-    expect(result.current.io.download.status).toBe('available')
-    if (result.current.io.download.status !== 'available') {
+    expect(result.current.filesystem.download.status).toBe('available')
+    if (result.current.filesystem.download.status !== 'available') {
       throw new Error('Expected available download capability')
     }
 
-    await expect(result.current.io.download.loadRootItemsForDownload()).resolves.toEqual({
+    await expect(result.current.filesystem.download.loadRootItemsForDownload()).resolves.toEqual({
       status: 'completed',
       receipt: { kind: 'downloadPrepared', affectedCount: 0 },
       items: [],
@@ -591,7 +590,7 @@ describe('useLiveWorkspaceRuntime', () => {
     liveSourceState.extraActiveItems = [createFolder({ id: testResourceId('folder-1') })]
     const { result } = renderLiveWorkspaceRuntime()
 
-    const created = await result.current.commands.operations.createItem({
+    const created = await result.current.filesystem.operations.createItem({
       type: 'note',
       parentTarget: {
         kind: 'direct',
@@ -626,7 +625,7 @@ describe('useLiveWorkspaceRuntime', () => {
     liveSourceState.item = null
 
     const { result } = renderLiveWorkspaceRuntime()
-    const currentContent = result.current.resources.current
+    const currentContent = result.current.filesystem.current
 
     expect(result.current.navigation.current).toEqual({ kind: 'resource', resource: null })
     expect(currentContent.availabilityState).toMatchObject({
@@ -672,7 +671,7 @@ describe('useLiveWorkspaceRuntime', () => {
     const { result } = renderLiveWorkspaceRuntime()
 
     expect(result.current.navigation.current).toEqual({ kind: 'create' })
-    expect(result.current.resources.permissions.canCreateItems).toBe(true)
+    expect(result.current.filesystem.permissions.canCreateItems).toBe(true)
   })
 
   it('uses the active view-as actor to suppress DM-only runtime affordances', async () => {
@@ -689,15 +688,15 @@ describe('useLiveWorkspaceRuntime', () => {
     const { result } = renderLiveWorkspaceRuntime()
 
     expect(result.current.navigation.current).toEqual({ kind: 'empty' })
-    expect(result.current.resources.permissions.canCreateItems).toBe(false)
-    expect(result.current.resources.permissions.canManageFolders).toBe(false)
-    expect(result.current.resources.permissions.canEmptyTrash).toBe(false)
-    expect(result.current.io.download.status).toBe('available')
-    if (result.current.io.download.status !== 'available') {
+    expect(result.current.filesystem.permissions.canCreateItems).toBe(false)
+    expect(result.current.filesystem.permissions.canManageFolders).toBe(false)
+    expect(result.current.filesystem.permissions.canEmptyTrash).toBe(false)
+    expect(result.current.filesystem.download.status).toBe('available')
+    if (result.current.filesystem.download.status !== 'available') {
       throw new Error('Expected available download capability')
     }
 
-    await expect(result.current.io.download.loadRootItemsForDownload()).resolves.toEqual({
+    await expect(result.current.filesystem.download.loadRootItemsForDownload()).resolves.toEqual({
       status: 'unsupported',
       reason: 'not_dm',
       items: [],
@@ -768,7 +767,7 @@ describe('useLiveWorkspaceRuntime', () => {
     const { result } = renderLiveWorkspaceRuntime()
 
     expect(result.current.navigation.current).toEqual({ kind: 'empty' })
-    expect(result.current.resources.current.availabilityState).toMatchObject({
+    expect(result.current.filesystem.current.availabilityState).toMatchObject({
       status: 'loading',
     })
   })
@@ -928,7 +927,7 @@ describe('useLiveWorkspaceRuntime', () => {
       },
     ])
     const { result } = renderLiveWorkspaceRuntime()
-    const search = result.current.search.items
+    const search = result.current.filesystem.search
     if (search.status !== 'available') {
       throw new Error('Expected available search capability')
     }
@@ -1146,7 +1145,7 @@ describe('useLiveWorkspaceRuntime', () => {
     liveSourceState.extraActiveItems = [previewItem]
     textImportMocks.convexQuery.mockResolvedValueOnce({ status: 'available', item: previewItem })
     const { result } = renderLiveWorkspaceRuntime()
-    const resourceContent = result.current.resources.resourceContent
+    const resourceContent = result.current.filesystem.resourceContent
     if (resourceContent.status !== 'available') {
       throw new Error('Expected available resource content capability')
     }
@@ -1332,13 +1331,13 @@ describe('useLiveWorkspaceRuntime', () => {
   it('uses the current live item as the unmounted runtime filesystem selection fallback', () => {
     const { result } = renderLiveWorkspaceRuntime()
 
-    expect(result.current.resources.selection.selectedItemIds).toEqual([testResourceId('note-1')])
+    expect(result.current.filesystem.selection.selectedItemIds).toEqual([testResourceId('note-1')])
   })
 
   it('updates item metadata through the filesystem operation capability', async () => {
     const { result } = renderLiveWorkspaceRuntime()
 
-    await result.current.commands.operations.updateItemMetadata({
+    await result.current.filesystem.operations.updateItemMetadata({
       item: liveSourceState.item!,
       name: 'Renamed Note',
       iconName: 'FileText',
@@ -1366,7 +1365,7 @@ describe('useLiveWorkspaceRuntime', () => {
   it('toggles bookmarks through the filesystem operation capability', async () => {
     const { result } = renderLiveWorkspaceRuntime()
 
-    await result.current.commands.operations.toggleBookmarks([
+    await result.current.filesystem.operations.toggleBookmarks([
       testResourceId('note-1'),
       testResourceId('note-2'),
     ])
@@ -1394,7 +1393,7 @@ describe('useLiveWorkspaceRuntime', () => {
     )
     const { result } = renderLiveWorkspaceRuntime()
 
-    const imported = await result.current.commands.operations.importFile({
+    const imported = await result.current.filesystem.operations.importFile({
       file,
       parentId: testResourceId('folder-1'),
       onProgress,
@@ -1456,7 +1455,7 @@ describe('useLiveWorkspaceRuntime', () => {
     )
     const { result } = renderLiveWorkspaceRuntime()
 
-    const imported = await result.current.commands.operations.importFile({
+    const imported = await result.current.filesystem.operations.importFile({
       file,
       parentId: testResourceId('folder-1'),
     })
@@ -1494,22 +1493,22 @@ describe('useLiveWorkspaceRuntime', () => {
     const { result } = renderLiveWorkspaceRuntime()
     const itemId = liveSourceState.contentItem!.id
 
-    expect(result.current.resources.catalog.getKnownItemById(itemId)).toEqual(liveSourceState.item)
-    expect(result.current.resources.current).toMatchObject({
+    expect(result.current.filesystem.catalog.getKnownItemById(itemId)).toEqual(liveSourceState.item)
+    expect(result.current.filesystem.current).toMatchObject({
       item: liveSourceState.item,
       contentItem: liveSourceState.contentItem,
       availabilityState: { status: 'available' },
     })
-    expect(result.current.sharing.items).toMatchObject({
+    expect(result.current.filesystem.sharing.items).toMatchObject({
       status: 'available',
       renderItemsShareState: expect.any(Function),
       setDefaultPermission: expect.any(Function),
       setParticipantPermission: expect.any(Function),
     })
-    expect(result.current.resources.permissions.canCreateItems).toBe(true)
-    expect(result.current.resources.permissions.canEmptyTrash).toBe(true)
-    expect(result.current.resources.permissions.workspaceMode).toBe(WORKSPACE_MODE.EDITOR)
-    expect(result.current.sharing.viewAsParticipant).toMatchObject({
+    expect(result.current.filesystem.permissions.canCreateItems).toBe(true)
+    expect(result.current.filesystem.permissions.canEmptyTrash).toBe(true)
+    expect(result.current.filesystem.permissions.workspaceMode).toBe(WORKSPACE_MODE.EDITOR)
+    expect(result.current.filesystem.sharing.viewAsParticipant).toMatchObject({
       status: 'available',
       isPending: false,
       participants: [],
@@ -1520,7 +1519,7 @@ describe('useLiveWorkspaceRuntime', () => {
       upload: previewUploadMock,
     })
     expect(
-      result.current.resources.permissions.canMutateItem(
+      result.current.filesystem.permissions.canMutateItem(
         liveSourceState.item!,
         PERMISSION_LEVEL.FULL_ACCESS,
       ),
@@ -1536,7 +1535,7 @@ describe('useLiveWorkspaceRuntime', () => {
 
     const { result } = renderLiveWorkspaceRuntime()
 
-    expect(result.current.sharing.viewAsParticipant).toMatchObject({
+    expect(result.current.filesystem.sharing.viewAsParticipant).toMatchObject({
       status: 'available',
       isPending: false,
       participants: [],
@@ -1603,7 +1602,7 @@ describe('useLiveWorkspaceRuntime', () => {
 
   it('wires sidebar sharing through the sidebar share mutation contract', () => {
     const { result } = renderLiveWorkspaceRuntime()
-    const sharing = result.current.sharing.items
+    const sharing = result.current.filesystem.sharing.items
     if (sharing.status !== 'available') throw new Error('Expected sidebar sharing')
 
     render(sharing.renderItemsShareState([liveSourceState.item!], () => null))
@@ -1629,7 +1628,7 @@ describe('useLiveWorkspaceRuntime', () => {
     const { result } = renderLiveWorkspaceRuntime()
 
     expect(sidebarShareMocks.useLiveSidebarItemsShare).not.toHaveBeenCalled()
-    expect(result.current.sharing.items).toEqual({
+    expect(result.current.filesystem.sharing.items).toEqual({
       status: 'unsupported',
       reason: 'insufficient_authority',
     })
@@ -1670,20 +1669,20 @@ function createNoteBlock(id: string): LiveRuntimeNoteBlock {
   } as unknown as LiveRuntimeNoteBlock
 }
 
-function getAvailableSearch(runtime: {
-  search: { items: FileSystemSearch }
-}): Extract<FileSystemSearch, { status: 'available' }> {
-  const search = runtime.search.items
+function getAvailableSearch(
+  runtime: Pick<WorkspaceRuntime, 'filesystem'>,
+): Extract<FileSystemSearch, { status: 'available' }> {
+  const search = runtime.filesystem.search
   if (search.status !== 'available') {
     throw new Error('Expected available search capability')
   }
   return search
 }
 
-function getAvailableResourceContent(runtime: {
-  resources: { resourceContent: FileSystemResourceContent }
-}): Extract<FileSystemResourceContent, { status: 'available' }> {
-  const resourceContent = runtime.resources.resourceContent
+function getAvailableResourceContent(
+  runtime: Pick<WorkspaceRuntime, 'filesystem'>,
+): Extract<FileSystemResourceContent, { status: 'available' }> {
+  const resourceContent = runtime.filesystem.resourceContent
   if (resourceContent.status !== 'available') {
     throw new Error('Expected available resource content capability')
   }

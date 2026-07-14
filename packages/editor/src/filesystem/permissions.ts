@@ -1,6 +1,6 @@
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { WorkspaceMode } from '../../../../shared/workspace/workspace-mode'
-import type { EditorShareParticipantId } from '../sharing/contracts'
+import type { CampaignMemberId } from '../resources/domain-id'
 import type { AnyItem } from '../workspace/items'
 
 export interface FileSystemPermissions {
@@ -12,8 +12,5 @@ export interface FileSystemPermissions {
   canManageFolders: boolean
   canAccessItem: (item: AnyItem, requiredLevel: PermissionLevel) => boolean
   canMutateItem: (item: AnyItem, requiredLevel: PermissionLevel) => boolean
-  getMemberItemPermissionLevel: (
-    item: AnyItem,
-    participantId: EditorShareParticipantId,
-  ) => PermissionLevel
+  getMemberItemPermissionLevel: (item: AnyItem, participantId: CampaignMemberId) => PermissionLevel
 }

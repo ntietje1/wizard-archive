@@ -16,9 +16,9 @@ import type {
   WizardEditorNavigation,
   WizardEditorPermissionSource,
   WizardEditorResourceAvailabilityMetadataSource,
-  WizardEditorRuntime,
   WizardEditorWorkspaceActor,
 } from '@wizard-archive/editor/adapter'
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import { createElement, useCallback, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
@@ -85,7 +85,7 @@ export function useLiveWorkspaceRuntime({
   sidebarItemsShareOperations: LiveSidebarItemsShareOperations
   openExternalUrl: LiveWorkspaceExternalUrlNavigation
   openSeparateItem: LiveWorkspaceSeparateItemNavigation
-}): WizardEditorRuntime {
+}): WorkspaceRuntime {
   const campaign = useCampaign()
   const convex = useConvex()
   const filesystemModel = createWizardEditorResourceCatalogSource({

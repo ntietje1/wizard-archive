@@ -1,12 +1,8 @@
 import { createElement } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { WorkspaceRuntimeHost } from './workspace/runtime-host'
+import type { WorkspaceRuntime } from './workspace/runtime'
 import type { SortOptions } from './workspace/items-persistence-contract'
-import type {
-  WizardEditorCanvasSessionPorts,
-  WizardEditorDocumentSource,
-  WizardEditorRuntime,
-} from './adapter'
 
 type WizardEditorResourceId = string
 
@@ -38,7 +34,7 @@ export interface WizardEditorProps {
       visible: boolean
     }) => void
   }
-  runtime: WizardEditorRuntime
+  runtime: WorkspaceRuntime
   sidebar?: 'fixed' | 'none' | 'resizable'
   sidebarSlots?: {
     bottomPanel?: ReactNode
@@ -90,49 +86,7 @@ const WORKSPACE_VIEW_STATE_STORAGE = {
 } as const
 
 export function WizardEditor(props: WizardEditorProps): ReactElement {
-  return createElement(WorkspaceRuntimeHost, {
-    ...props,
-    runtime: toWorkspaceRuntime(props.runtime),
-  })
-}
-
-type InternalHostProps = Parameters<typeof WorkspaceRuntimeHost>[0]
-type InternalRuntime = InternalHostProps['runtime']
-type WizardEditorInternalDocumentSource = InternalRuntime['sessions']
-
-function toWorkspaceRuntime(runtime: WizardEditorRuntime): InternalRuntime {
-  return {
-    workspace: runtime.workspace,
-    filesystem: {
-      ...runtime.resources,
-      operations: runtime.commands.operations,
-      search: runtime.search.items,
-      download: runtime.io.download,
-      history: runtime.history,
-      sharing: runtime.sharing,
-    },
-    navigation: runtime.navigation as InternalRuntime['navigation'],
-    sessions: toInternalWizardEditorDocumentSource(runtime.sessions),
-  }
-}
-
-function toInternalWizardEditorDocumentSource(
-  source: WizardEditorDocumentSource,
-): WizardEditorInternalDocumentSource {
-  return {
-    ...source,
-    canvas: toInternalCanvasSessionPorts(source.canvas),
-  }
-}
-
-function toInternalCanvasSessionPorts(
-  source: WizardEditorCanvasSessionPorts,
-): WizardEditorInternalDocumentSource['canvas'] {
-  return {
-    document: {
-      useCanvasDocumentSession: (canvas) => source.document.useCanvasDocumentSession(canvas),
-    },
-  }
+  return createElement(WorkspaceRuntimeHost, props)
 }
 
 export function createBrowserWizardEditorViewStateStores({

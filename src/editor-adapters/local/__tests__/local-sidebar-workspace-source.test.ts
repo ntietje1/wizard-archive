@@ -1,3 +1,4 @@
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { createWizardEditorResource } from '@wizard-archive/editor/adapter'
 import { act } from '@testing-library/react'
@@ -7,11 +8,7 @@ import type { LocalWorkspaceAction, LocalWorkspaceState } from '../local-workspa
 import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import type { createLocalRuntimeFileSystem } from './helpers/local-runtime'
 import { createLocalWorkspaceRuntime } from './helpers/local-runtime'
-import type {
-  WizardEditorItem,
-  WizardEditorNavigationState,
-  WizardEditorRuntime,
-} from '@wizard-archive/editor/adapter'
+import type { WizardEditorItem, WizardEditorNavigationState } from '@wizard-archive/editor/adapter'
 import type { Dispatch } from 'react'
 
 const TEST_RESOURCE_TYPES = {
@@ -30,19 +27,21 @@ describe('local demo workspace runtime', () => {
   it('adapts the local filesystem catalog into the sidebar workspace source contract', () => {
     const { filesystem, setNavigation, source } = createLocalSidebarSource()
 
-    expect(source.resources.catalog.getVisibleItems()).toEqual(filesystem.catalog.getVisibleItems())
+    expect(source.filesystem.catalog.getVisibleItems()).toEqual(
+      filesystem.catalog.getVisibleItems(),
+    )
 
     void source.navigation.openCreateDashboard()
-    expect(source.sharing.items.status).toBe('unsupported')
+    expect(source.filesystem.sharing.items.status).toBe('unsupported')
     expect(setNavigation).toHaveBeenCalledWith({ kind: 'create' })
   })
 
   it('renames items through the local filesystem operation', async () => {
     const { dispatch, source } = createLocalSidebarSource()
-    const item = source.resources.catalog.getVisibleItems()[0]!
+    const item = source.filesystem.catalog.getVisibleItems()[0]!
 
     await act(async () => {
-      await source.commands.operations.updateItemMetadata({
+      await source.filesystem.operations.updateItemMetadata({
         item,
         name: testResourceTitle('Renamed note'),
       })
@@ -58,10 +57,10 @@ describe('local demo workspace runtime', () => {
 
   it('rejects local rename commands when the target item is missing from the catalog', async () => {
     const { source } = createLocalSidebarSource()
-    const item = source.resources.catalog.getVisibleItems()[0]!
+    const item = source.filesystem.catalog.getVisibleItems()[0]!
 
     await expect(
-      source.commands.operations.updateItemMetadata({
+      source.filesystem.operations.updateItemMetadata({
         item: { ...item, id: 'missing-local-item' as ResourceId },
         name: testResourceTitle('Renamed note'),
       }),
@@ -71,7 +70,7 @@ describe('local demo workspace runtime', () => {
   it('keeps sidebar actions disabled through runtime read-only state in view-only mode', () => {
     const { source } = createLocalSidebarSource({ canEdit: false })
 
-    expect(source.resources.permissions.canEdit).toBe(false)
+    expect(source.filesystem.permissions.canEdit).toBe(false)
   })
 
   it('keeps filesystem creation permission on the runtime', () => {
@@ -83,7 +82,7 @@ describe('local demo workspace runtime', () => {
       },
     })
 
-    expect(source.resources.permissions.canCreateItems).toBe(false)
+    expect(source.filesystem.permissions.canCreateItems).toBe(false)
   })
 
   it('keeps local runtime instance identity separate from durable workspace identity', () => {
@@ -153,11 +152,11 @@ describe('local demo workspace runtime', () => {
       workspace,
     })
 
-    expect(source.resources.current.contentItem).toMatchObject({
+    expect(source.filesystem.current.contentItem).toMatchObject({
       id: 'canvas-heist',
       isTrashed: true,
     })
-    expect(source.resources.current.availabilityState).toMatchObject({
+    expect(source.filesystem.current.availabilityState).toMatchObject({
       status: 'trashed',
       label: 'Harbor Heist Board',
     })
@@ -167,7 +166,7 @@ describe('local demo workspace runtime', () => {
     const { dispatch, source } = createLocalSidebarSource()
 
     const created = await Promise.resolve(
-      source.commands.operations.createItem({
+      source.filesystem.operations.createItem({
         type: TEST_RESOURCE_TYPES.notes,
         parentTarget: { kind: TEST_PARENT_TARGET_KIND.direct, parentId: null },
         name: 'Local source note',
@@ -200,18 +199,18 @@ describe('local demo workspace runtime', () => {
       dispatch,
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
-    const filesystem = source.resources
+    const filesystem = source.filesystem
     const note = filesystem.catalog.getKnownItemById('note-market' as ResourceId)
     const canvas = filesystem.catalog.getKnownItemById('canvas-heist' as ResourceId)
     if (!note) throw new Error('Expected seeded note to exist in local demo catalog')
     if (!canvas) throw new Error('Expected seeded canvas to exist in local demo catalog')
 
-    await source.commands.operations.executeDropCommand({
+    await source.filesystem.operations.executeDropCommand({
       type: 'copy',
       itemIds: [note.id],
       targetParentId: null,
     })
-    await source.commands.operations.trashItems([canvas.id])
+    await source.filesystem.operations.trashItems([canvas.id])
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'applyResourceCommandReceipt',
@@ -245,7 +244,9 @@ describe('local demo workspace runtime', () => {
       workspace,
     })
 
-    await deleteSource.commands.operations.requestDeleteItemsForever(['canvas-heist' as ResourceId])
+    await deleteSource.filesystem.operations.requestDeleteItemsForever([
+      'canvas-heist' as ResourceId,
+    ])
 
     expect(deleteDispatch).toHaveBeenCalledExactlyOnceWith({
       type: 'applyResourceCommandReceipt',
@@ -264,7 +265,7 @@ describe('local demo workspace runtime', () => {
       workspace: deletedWorkspace,
     })
 
-    await emptyTrashSource.commands.operations.requestEmptyTrash()
+    await emptyTrashSource.filesystem.operations.requestEmptyTrash()
 
     expect(emptyTrashDispatch).not.toHaveBeenCalled()
   })
@@ -296,10 +297,10 @@ function createLocalSidebarSource({
     setNavigation: resolvedSetNavigation,
     workspace,
   })
-  const filesystem = runtime.resources
-  const source: WizardEditorRuntime = {
+  const filesystem = runtime.filesystem
+  const source: WorkspaceRuntime = {
     ...runtime,
-    resources: {
+    filesystem: {
       ...filesystem,
       permissions: {
         ...filesystem.permissions,

@@ -20,7 +20,8 @@ import type {
   NoteWikiLinkContentSource,
 } from '../../runtime'
 import type { NoteEditorSetParticipantPermission, NoteEditorSource } from '../note-editor-source'
-import type { EditorShareParticipant, EditorShareParticipantId } from '../../../sharing/contracts'
+import type { EditorShareParticipant } from '../../../sharing/contracts'
+import type { CampaignMemberId } from '../../../resources/domain-id'
 import type { WikiLinkAutocompleteItemSource } from '../../wiki-link/autocomplete-model'
 import { buildWikiLinkAutocompleteModelFromSource } from '../../wiki-link/autocomplete-model'
 import type { WikiLinkAutocompleteModelData } from '../../wiki-link/autocomplete-source'
@@ -335,7 +336,7 @@ function renderNoteEditor(note: NoteItemWithContent, options: CreateNoteEditorSo
 }
 
 function createParticipant(
-  id: EditorShareParticipantId,
+  id: CampaignMemberId,
   name: string,
   email: string,
 ): EditorShareParticipant {

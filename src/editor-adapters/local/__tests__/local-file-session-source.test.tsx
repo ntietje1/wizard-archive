@@ -34,7 +34,7 @@ describe('local demo filesystem file session source', () => {
       setNavigation: vi.fn(),
       setWorkspaceMode: vi.fn(),
     })
-    const filesystem = runtime.resources
+    const filesystem = runtime.filesystem
     const file = filesystem.catalog.getKnownItemById('file-handout' as ResourceId)
     if (!file || file.type !== 'file') {
       throw new Error('Expected the seeded demo file to exist in the filesystem catalog')

@@ -2,11 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { ViewAsBanner } from '../view-as-banner'
-import type {
-  EditorShareParticipant,
-  EditorShareParticipantId,
-  ViewAsParticipantCapability,
-} from '../../sharing/contracts'
+import type { EditorShareParticipant, ViewAsParticipantCapability } from '../../sharing/contracts'
+import type { CampaignMemberId } from '../../resources/domain-id'
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
 
@@ -53,8 +50,8 @@ function createViewAsParticipantCapability({
   setSelectedParticipantId,
   participant = { id: MEMBER_ID, displayName: 'Mina', username: 'mina', imageUrl: null },
 }: {
-  selectedParticipantId: EditorShareParticipantId | undefined
-  setSelectedParticipantId?: (playerId: EditorShareParticipantId | undefined) => void
+  selectedParticipantId: CampaignMemberId | undefined
+  setSelectedParticipantId?: (playerId: CampaignMemberId | undefined) => void
   participant?: EditorShareParticipant
 }): ViewAsParticipantCapability {
   return {

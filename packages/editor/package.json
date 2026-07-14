@@ -189,6 +189,10 @@
       "types": "./dist/resources/editor-runtime-contract.d.mts",
       "default": "./dist/resources/editor-runtime-contract.mjs"
     },
+    "./runtime": {
+      "types": "./dist/workspace/runtime.d.mts",
+      "default": "./dist/workspace/runtime.mjs"
+    },
     "./style.css": "./dist/style.css"
   },
   "dependencies": {

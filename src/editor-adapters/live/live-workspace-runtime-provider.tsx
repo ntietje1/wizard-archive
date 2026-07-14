@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { WizardEditorRuntime } from '@wizard-archive/editor/adapter'
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
@@ -21,7 +21,7 @@ import { useLiveResourceCore } from './resources/use-live-resource-core'
 export function LiveWorkspaceRuntimeProvider({
   children,
 }: {
-  children: (runtime: WizardEditorRuntime) => ReactNode
+  children: (runtime: WorkspaceRuntime) => ReactNode
 }) {
   return <LiveWorkspaceRuntimeContent>{children}</LiveWorkspaceRuntimeContent>
 }
@@ -29,7 +29,7 @@ export function LiveWorkspaceRuntimeProvider({
 function LiveWorkspaceRuntimeContent({
   children,
 }: {
-  children: (runtime: WizardEditorRuntime) => ReactNode
+  children: (runtime: WorkspaceRuntime) => ReactNode
 }) {
   const { campaign, campaignId, campaignSlug, dmUsername } = useCampaign()
   const membership = campaign.data?.myMembership
@@ -66,7 +66,7 @@ function LoadedLiveWorkspaceRuntimeContent({
   workspaceId: CampaignId
   actorId: CampaignMemberId
   campaignSlug: ReturnType<typeof useCampaign>['campaignSlug']
-  children: (runtime: WizardEditorRuntime) => ReactNode
+  children: (runtime: WorkspaceRuntime) => ReactNode
   dmUsername: ReturnType<typeof useCampaign>['dmUsername']
   projection: 'dm' | 'player'
 }) {

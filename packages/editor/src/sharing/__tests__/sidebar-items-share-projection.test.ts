@@ -7,12 +7,12 @@ import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persisten
 import { createResourceShareRuntimeState } from '../contracts'
 import type {
   EditorShareParticipant,
-  EditorShareParticipantId,
   ResourceShareOperations,
   ResourceShareProjectionData,
   ResourceShareState,
 } from '../contracts'
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import type { CampaignMemberId } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
 
 const PLAYER_1 = testDomainId(DOMAIN_ID_KIND.campaignMember, 'item_share_player_1')
@@ -224,7 +224,7 @@ function createResourceShareState({
   })
 }
 
-function createShareData<MemberId extends EditorShareParticipantId = EditorShareParticipantId>(
+function createShareData<MemberId extends CampaignMemberId = CampaignMemberId>(
   itemId: string,
   overrides: Partial<ResourceShareProjectionData<MemberId>> = {},
 ): ResourceShareProjectionData<MemberId> {
@@ -260,7 +260,7 @@ function createFolderItem(itemId: string): AnyItem {
   } as AnyItem
 }
 
-function createPlayerMember<MemberId extends EditorShareParticipantId>(
+function createPlayerMember<MemberId extends CampaignMemberId>(
   memberId: MemberId,
 ): EditorShareParticipant & { id: MemberId } {
   return {

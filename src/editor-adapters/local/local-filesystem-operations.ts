@@ -15,7 +15,6 @@ import type {
   WizardEditorResourceCatalogCommand,
   WizardEditorResourceCommand,
   WizardEditorResourceCommandExecutionOptions,
-  WizardEditorResourceCommandResult,
   WizardEditorResourceCreateCommand,
   WizardEditorResourceCreateParentPlan,
   WizardEditorResourceRenameCommand,
@@ -314,7 +313,7 @@ function executeLocalFileSystemCommand(
   command: WizardEditorResourceCommand,
   context: LocalCommandContext,
   options?: WizardEditorResourceCommandExecutionOptions,
-): WizardEditorResourceCommandResult {
+): ReturnType<typeof completeWizardEditorResourceCommand> {
   const { canEdit } = context
   assertLocalCanMutate(canEdit)
 
@@ -330,7 +329,7 @@ function executeLocalFileSystemCommand(
 function executeLocalCommittedFileSystemCommand(
   command: LocalCommittedFileSystemCommand,
   { catalog, creationSession, dispatch }: LocalCommandContext,
-): WizardEditorResourceCommandResult {
+): ReturnType<typeof completeWizardEditorResourceCommand> {
   if (isWizardEditorResourceSharingCommand(command)) {
     return { status: 'unsupported', reason: 'sharing_unsupported' }
   }
@@ -384,7 +383,9 @@ function pasteLocalClipboard({
   workspaceId,
 }: {
   catalog: WizardEditorResourceCatalog
-  executeCommand: (command: WizardEditorResourceCommand) => WizardEditorResourceCommandResult
+  executeCommand: (
+    command: WizardEditorResourceCommand,
+  ) => ReturnType<typeof completeWizardEditorResourceCommand>
   parentId: ResourceId | null
   scopeId: string
   workspaceId: string
@@ -397,7 +398,7 @@ function pasteLocalClipboard({
     return {
       status: 'unavailable',
       reason: 'clipboard_empty',
-    } satisfies WizardEditorResourceCommandResult
+    } satisfies ReturnType<typeof completeWizardEditorResourceCommand>
   }
   const { itemIds, mode } = localFileSystemClipboard
   const visibleItemIds = itemIds.filter((itemId) => catalog.getVisibleItemById(itemId))
@@ -406,7 +407,7 @@ function pasteLocalClipboard({
     return {
       status: 'unavailable',
       reason: 'clipboard_empty',
-    } satisfies WizardEditorResourceCommandResult
+    } satisfies ReturnType<typeof completeWizardEditorResourceCommand>
   }
   const result = executeCommand({
     type:

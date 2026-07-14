@@ -18,8 +18,8 @@ import type {
   WizardEditorNotePlaybackSessionPorts,
   WizardEditorNoteSessionPorts,
   WizardEditorNoteValueSessionPorts,
-  WizardEditorRuntime,
 } from '@wizard-archive/editor/adapter'
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import type { Dispatch } from 'react'
 import type { WorkspaceMode } from 'shared/workspace/workspace-mode'
 
@@ -80,7 +80,7 @@ export function createLocalWorkspaceRuntime({
   setNavigation,
   setSelectedViewAsPlayerId,
   setWorkspaceMode,
-}: LocalFileSystemAdapterInput): WizardEditorRuntime {
+}: LocalFileSystemAdapterInput): WorkspaceRuntime {
   const { catalog, current, workspace } = snapshot
   const actor = createLocalWorkspaceActor(workspace)
   const playerMembers = workspace.playerMembers ?? []

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { EDITOR_ROUTE, EDITOR_ROUTE_ID } from '../editor-route'
 import { LiveWorkspacePage } from '../live-workspace-page'
-import type { WizardEditorRuntime } from '@wizard-archive/editor/adapter'
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const useMatchMock = vi.hoisted(() => vi.fn())
@@ -115,8 +115,8 @@ vi.mock('../live-workspace-runtime-provider', () => ({
   LiveWorkspaceRuntimeProvider: ({
     children,
   }: {
-    children: (runtime: WizardEditorRuntime) => React.ReactNode
-  }) => <>{children(runtime as unknown as WizardEditorRuntime)}</>,
+    children: (runtime: WorkspaceRuntime) => React.ReactNode
+  }) => <>{children(runtime as unknown as WorkspaceRuntime)}</>,
 }))
 
 vi.mock('../sidebar/use-live-sidebar-sort-options', () => ({

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { WizardEditorRuntime } from '@wizard-archive/editor/adapter'
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import { testCampaignId } from '../../../../shared/test/campaign-id'
 import { testCampaignMemberId } from '../../../../shared/test/campaign-member-id'
 import { testResourceId } from '../../../../shared/test/resource-id'
@@ -51,7 +51,7 @@ const runtime = vi.hoisted(
       resources: {
         catalog,
       },
-    }) as unknown as WizardEditorRuntime,
+    }) as unknown as WorkspaceRuntime,
 )
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -201,6 +201,6 @@ describe('LiveWorkspaceRuntimeProvider', () => {
   })
 })
 
-function RuntimeProbe({ providedRuntime }: { providedRuntime: WizardEditorRuntime }) {
+function RuntimeProbe({ providedRuntime }: { providedRuntime: WorkspaceRuntime }) {
   return <div data-testid="runtime-probe" data-render-prop={String(providedRuntime === runtime)} />
 }

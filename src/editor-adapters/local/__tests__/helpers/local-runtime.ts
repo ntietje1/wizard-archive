@@ -1,9 +1,7 @@
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import { vi } from 'vite-plus/test'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
-import type {
-  WizardEditorNavigationState,
-  WizardEditorRuntime,
-} from '@wizard-archive/editor/adapter'
+import type { WizardEditorNavigationState } from '@wizard-archive/editor/adapter'
 import type { LocalWorkspaceState } from '../../local-workspace-model'
 import { createLocalWorkspaceRuntime as createLocalWorkspaceRuntimeBase } from '../../local-workspace-runtime-adapter'
 import {
@@ -23,7 +21,7 @@ export function createLocalRuntimeFileSystem(options: LocalRuntimeTestOptions) {
   return createTestRuntimeFileSystem(createLocalWorkspaceRuntime(options))
 }
 
-export function createLocalWorkspaceRuntime(options: LocalRuntimeTestOptions): WizardEditorRuntime {
+export function createLocalWorkspaceRuntime(options: LocalRuntimeTestOptions): WorkspaceRuntime {
   const { navigation, setNavigation, workspace, ...adapterOptions } = options
   return createLocalWorkspaceRuntimeBase({
     canvasEmbedded: createTestCanvasEmbeddedSessionPorts(),
@@ -46,14 +44,14 @@ export function createLocalWorkspaceRuntime(options: LocalRuntimeTestOptions): W
   })
 }
 
-function createTestRuntimeFileSystem(runtime: WizardEditorRuntime) {
+function createTestRuntimeFileSystem(runtime: WorkspaceRuntime) {
   return {
-    ...runtime.resources,
-    operations: runtime.commands.operations,
-    search: runtime.search.items,
-    download: runtime.io.download,
-    history: runtime.history,
-    sharing: runtime.sharing,
+    ...runtime.filesystem,
+    operations: runtime.filesystem.operations,
+    search: runtime.filesystem.search,
+    download: runtime.filesystem.download,
+    history: runtime.filesystem.history,
+    sharing: runtime.filesystem.sharing,
   }
 }
 

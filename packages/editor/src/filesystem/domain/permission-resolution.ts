@@ -1,16 +1,15 @@
-import type { ResourceId } from '../../resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '../../resources/domain-id'
 import { hasAtLeastPermissionLevel } from '../../../../../shared/permissions/hasAtLeastPermissionLevel'
 import { normalizeExplicitSharePermissionLevel } from '../../../../../shared/permissions/share-permissions'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import type { PermissionLevel } from '../../../../../shared/permissions/types'
-import type { EditorShareParticipantId } from '../../sharing/contracts'
 import type { AnyItem, FolderItem } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 
 export type EditorWorkspaceActor =
   | { kind: 'owner' }
   | { kind: 'participant' }
-  | { kind: 'owner_view_as'; participantId: EditorShareParticipantId }
+  | { kind: 'owner_view_as'; participantId: CampaignMemberId }
 
 export interface ResourcePermissionContext {
   actor: EditorWorkspaceActor | null
@@ -19,7 +18,7 @@ export interface ResourcePermissionContext {
 
 function getMemberPermission(
   item: AnyItem | FolderItem,
-  participantId: EditorShareParticipantId,
+  participantId: CampaignMemberId,
 ): PermissionLevel | null {
   const memberShare = item.shares.find((s) => s.campaignMemberId === participantId)
   return memberShare ? normalizeExplicitSharePermissionLevel(memberShare.permissionLevel) : null
@@ -49,7 +48,7 @@ function visitKnownAncestors(
 
 function resolveInheritedPermission(
   item: AnyItem,
-  participantId: EditorShareParticipantId,
+  participantId: CampaignMemberId,
   getItemById: ResourcePermissionContext['getItemById'],
 ): PermissionLevel | null {
   let inheritedPermission: PermissionLevel | null = null
@@ -77,7 +76,7 @@ function resolveInheritedPermission(
 
 function resolveResourcePermissionLevel(
   item: AnyItem,
-  participantId: EditorShareParticipantId,
+  participantId: CampaignMemberId,
   getItemById: ResourcePermissionContext['getItemById'],
 ): PermissionLevel {
   const memberPermission = getMemberPermission(item, participantId)
@@ -119,7 +118,7 @@ export function actorCanMutateResource(
 
 export function getMemberResourcePermissionLevel(
   item: AnyItem,
-  participantId: EditorShareParticipantId,
+  participantId: CampaignMemberId,
   getItemById: ResourcePermissionContext['getItemById'],
 ): PermissionLevel {
   return resolveResourcePermissionLevel(item, participantId, getItemById)

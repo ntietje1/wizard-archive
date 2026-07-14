@@ -1,4 +1,4 @@
-import type { ResourceId } from '../../resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vitest'
 import type { MaybePromise } from '../../../../../shared/common/async'
 
@@ -10,7 +10,6 @@ import type {
   BlocksShareOperations,
   BlocksShareState,
   EditorShareParticipant,
-  EditorShareParticipantId,
 } from '../contracts'
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
@@ -262,7 +261,7 @@ function createBlockShareState({
   })
 }
 
-function createPlayerMember<MemberId extends EditorShareParticipantId>(
+function createPlayerMember<MemberId extends CampaignMemberId>(
   memberId: MemberId,
 ): EditorShareParticipant & { id: MemberId } {
   return {

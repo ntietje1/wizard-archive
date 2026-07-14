@@ -8,7 +8,6 @@ import type {
   WizardEditorItem,
   WizardEditorResourceCatalog,
   WizardEditorResourceCatalogCommand,
-  WizardEditorResourceCommandResult,
   WizardEditorResourceEvent,
 } from '@wizard-archive/editor/adapter'
 import { localItemTypeForSidebarItemType } from './local-workspace-model'
@@ -22,7 +21,7 @@ export function createCompletedLocalFileSystemCommandResult(
     catalog: WizardEditorResourceCatalog
     claimNextItemIndex: () => number
   },
-): WizardEditorResourceCommandResult {
+): ReturnType<typeof completeWizardEditorResourceCommand> {
   const events = planLocalFileSystemCommandEvents(command, {
     catalog,
     claimNextItemIndex,

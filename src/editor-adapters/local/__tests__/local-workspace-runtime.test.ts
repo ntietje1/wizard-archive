@@ -1,3 +1,4 @@
+import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import {
   createWizardEditorResource,
   getWizardEditorNavigationCurrentResourceId,
@@ -17,7 +18,6 @@ import { createLocalRuntimeFileSystem, createLocalWorkspaceRuntime } from './hel
 import type {
   WizardEditorItemWithContent,
   WizardEditorNoteEditorSession,
-  WizardEditorRuntime,
 } from '@wizard-archive/editor/adapter'
 import { createImportFile } from './helpers/import-file'
 import {
@@ -43,44 +43,44 @@ describe('useLocalWorkspaceRuntime', () => {
       dispatch,
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
-    const filesystem = source.resources
+    const filesystem = source.filesystem
 
-    expect(source.resources.current.contentItem).toMatchObject({
+    expect(source.filesystem.current.contentItem).toMatchObject({
       id: 'note-market',
       name: 'The Lantern Market',
       type: TEST_RESOURCE_TYPES.notes,
     })
-    const sourceNote = source.resources.catalog.getKnownItemById('note-market' as ResourceId)
-    expect(source.resources.current.contentItem).toBe(sourceNote)
-    expect(source.resources.catalog.getKnownItemById('note-market' as ResourceId)).toBe(
-      source.resources.current.contentItem,
+    const sourceNote = source.filesystem.catalog.getKnownItemById('note-market' as ResourceId)
+    expect(source.filesystem.current.contentItem).toBe(sourceNote)
+    expect(source.filesystem.catalog.getKnownItemById('note-market' as ResourceId)).toBe(
+      source.filesystem.current.contentItem,
     )
-    expect(source.resources).toBe(filesystem)
-    expect(source).not.toHaveProperty('filesystem')
+    expect(source.filesystem).toBe(filesystem)
+    expect(source).not.toHaveProperty('resources')
     expect(source.sessions.note.document.useCollaborationSession).toEqual(expect.any(Function))
     expect(source.sessions.noteHeadings.headings.useNoteHeadings).toEqual(expect.any(Function))
     expect(source.sessions.noteValues.values.useNoteValueStates).toEqual(expect.any(Function))
-    expect(source.resources.permissions.canEdit).toBe(true)
-    expect(source.sharing.items).toEqual({
+    expect(source.filesystem.permissions.canEdit).toBe(true)
+    expect(source.filesystem.sharing.items).toEqual({
       status: 'unsupported',
       reason: 'not_available',
     })
-    expect(source.sharing.viewAsParticipant).toEqual({
+    expect(source.filesystem.sharing.viewAsParticipant).toEqual({
       status: 'unsupported',
       reason: 'not_available',
     })
-    expect(source.search.items.status).toBe('available')
-    if (source.search.items.status !== 'available') {
+    expect(source.filesystem.search.status).toBe('available')
+    if (source.filesystem.search.status !== 'available') {
       throw new Error('Expected local search to be available')
     }
-    expect(source.search.items.itemLinks.status).toBe('available')
-    expect(source.history).toEqual({
+    expect(source.filesystem.search.itemLinks.status).toBe('available')
+    expect(source.filesystem.history).toEqual({
       status: 'unsupported',
       reason: 'not_implemented',
     })
 
-    await source.commands.operations.updateItemMetadata({
-      item: source.resources.catalog.getKnownItemById('canvas-heist' as ResourceId)!,
+    await source.filesystem.operations.updateItemMetadata({
+      item: source.filesystem.catalog.getKnownItemById('canvas-heist' as ResourceId)!,
       name: 'Board',
     })
     expect(dispatch).toHaveBeenCalledWith({
@@ -90,7 +90,7 @@ describe('useLocalWorkspaceRuntime', () => {
       title: 'Board',
     })
 
-    const created = await source.commands.operations.createItem({
+    const created = await source.filesystem.operations.createItem({
       type: TEST_RESOURCE_TYPES.notes,
       parentTarget: { kind: TEST_PARENT_TARGET_KIND.direct, parentId: null },
       name: 'Local note',
@@ -125,11 +125,11 @@ describe('useLocalWorkspaceRuntime', () => {
       setNavigation,
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
-    const catalogCanvas = source.resources.catalog.getKnownItemById('canvas-heist' as ResourceId)
+    const catalogCanvas = source.filesystem.catalog.getKnownItemById('canvas-heist' as ResourceId)
 
-    expect(source.resources.current.contentItem).toBe(catalogCanvas)
+    expect(source.filesystem.current.contentItem).toBe(catalogCanvas)
     expect(getWizardEditorNavigationCurrentResourceId(source.navigation)).toBe('canvas-heist')
-    expect(source.resources.catalog.getKnownItemBySlug(catalogCanvas!.slug)).toBe(catalogCanvas)
+    expect(source.filesystem.catalog.getKnownItemBySlug(catalogCanvas!.slug)).toBe(catalogCanvas)
     await source.navigation.openItem(createWizardEditorResource(catalogCanvas!.id))
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
@@ -193,7 +193,7 @@ describe('useLocalWorkspaceRuntime', () => {
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
 
-    expect(source.resources.current.availabilityState).toMatchObject({
+    expect(source.filesystem.current.availabilityState).toMatchObject({
       status: 'available',
       item: expect.objectContaining({
         id: 'map-docks',
@@ -206,7 +206,7 @@ describe('useLocalWorkspaceRuntime', () => {
         ]),
       }),
     })
-    expect(source.resources.current.contentItem).toMatchObject({
+    expect(source.filesystem.current.contentItem).toMatchObject({
       id: 'map-docks',
       type: TEST_RESOURCE_TYPES.gameMaps,
     })
@@ -224,7 +224,7 @@ describe('useLocalWorkspaceRuntime', () => {
 
     let uploadedItemId: ResourceId | null = null
     await act(async () => {
-      const receipt = await result.current.commands.operations.importFile({
+      const receipt = await result.current.filesystem.operations.importFile({
         file: createImportFile(['image'], 'portrait.png', { type: 'image/png' }),
         parentId: null,
       })
@@ -245,7 +245,7 @@ describe('useLocalWorkspaceRuntime', () => {
         openExternalUrl: vi.fn(),
         reportCreateItemError: vi.fn(),
       })
-      const canvas = runtime.resources.current.contentItem
+      const canvas = runtime.filesystem.current.contentItem
       if (canvas?.type !== TEST_RESOURCE_TYPES.canvases) {
         throw new Error('Expected selected demo item to be a canvas')
       }
@@ -288,7 +288,7 @@ describe('useLocalWorkspaceRuntime', () => {
         openExternalUrl: vi.fn(),
         reportCreateItemError: vi.fn(),
       })
-      const canvas = runtime.resources.current.contentItem
+      const canvas = runtime.filesystem.current.contentItem
       if (canvas?.type !== TEST_RESOURCE_TYPES.canvases) {
         throw new Error('Expected selected public demo item to be a canvas')
       }
@@ -312,13 +312,13 @@ describe('useLocalWorkspaceRuntime', () => {
       }),
     )
 
-    expect(result.current.resources.permissions.workspaceMode).toBe(WORKSPACE_MODE.EDITOR)
+    expect(result.current.filesystem.permissions.workspaceMode).toBe(WORKSPACE_MODE.EDITOR)
 
     act(() => {
-      result.current.resources.permissions.setWorkspaceMode(WORKSPACE_MODE.VIEWER)
+      result.current.filesystem.permissions.setWorkspaceMode(WORKSPACE_MODE.VIEWER)
     })
 
-    expect(result.current.resources.permissions.workspaceMode).toBe(WORKSPACE_MODE.VIEWER)
+    expect(result.current.filesystem.permissions.workspaceMode).toBe(WORKSPACE_MODE.VIEWER)
   })
 
   it('switches the public prep scenario through the runtime view-as capability', () => {
@@ -334,7 +334,7 @@ describe('useLocalWorkspaceRuntime', () => {
     )
 
     const gmNote = requireCurrentNote(result.current)
-    expect(result.current.sharing.viewAsParticipant).toMatchObject({
+    expect(result.current.filesystem.sharing.viewAsParticipant).toMatchObject({
       status: 'available',
       selectedParticipantId: undefined,
     })
@@ -344,7 +344,7 @@ describe('useLocalWorkspaceRuntime', () => {
     )
 
     act(() => {
-      const viewAsParticipant = result.current.sharing.viewAsParticipant
+      const viewAsParticipant = result.current.filesystem.sharing.viewAsParticipant
       if (viewAsParticipant.status !== 'available') {
         throw new Error('Expected public prep scenario to expose view-as player capability')
       }
@@ -352,13 +352,13 @@ describe('useLocalWorkspaceRuntime', () => {
     })
 
     const playerNote = requireCurrentNote(result.current)
-    expect(result.current.sharing.viewAsParticipant).toMatchObject({
+    expect(result.current.filesystem.sharing.viewAsParticipant).toMatchObject({
       status: 'available',
       selectedParticipantId: miraMemberId,
     })
     expect(playerNote.myPermissionLevel).toBe(PERMISSION_LEVEL.VIEW)
     expect(
-      result.current.resources.permissions.canAccessItem(playerNote, PERMISSION_LEVEL.VIEW),
+      result.current.filesystem.permissions.canAccessItem(playerNote, PERMISSION_LEVEL.VIEW),
     ).toBe(true)
     expect(
       playerNote.blockMeta[
@@ -385,13 +385,13 @@ describe('useLocalWorkspaceRuntime', () => {
 
     const note = requireCurrentNote(result.current)
 
-    expect(result.current.sharing.viewAsParticipant).toMatchObject({
+    expect(result.current.filesystem.sharing.viewAsParticipant).toMatchObject({
       status: 'available',
       selectedParticipantId: undefined,
     })
     expect(note.myPermissionLevel).toBe(PERMISSION_LEVEL.FULL_ACCESS)
     expect(
-      result.current.commands.operations.validateCreateItem({
+      result.current.filesystem.operations.validateCreateItem({
         type: TEST_RESOURCE_TYPES.notes,
         name: 'Valid DM note',
         parentTarget: { kind: TEST_PARENT_TARGET_KIND.direct, parentId: null },
@@ -412,14 +412,14 @@ describe('useLocalWorkspaceRuntime', () => {
     )
 
     act(() => {
-      const viewAsParticipant = result.current.sharing.viewAsParticipant
+      const viewAsParticipant = result.current.filesystem.sharing.viewAsParticipant
       if (viewAsParticipant.status !== 'available') {
         throw new Error('Expected public prep scenario to expose view-as player capability')
       }
       viewAsParticipant.setSelectedParticipantId(miraMemberId)
     })
 
-    const search = result.current.search.items
+    const search = result.current.filesystem.search
     if (search.status !== 'available') {
       throw new Error('Expected local search to be available')
     }
@@ -459,8 +459,8 @@ describe('useLocalWorkspaceRuntime', () => {
   })
 })
 
-function requireCurrentNote(runtime: WizardEditorRuntime): LocalNoteItemWithContent {
-  const item = runtime.resources.current.contentItem
+function requireCurrentNote(runtime: WorkspaceRuntime): LocalNoteItemWithContent {
+  const item = runtime.filesystem.current.contentItem
   if (!item || item.type !== TEST_RESOURCE_TYPES.notes) {
     throw new Error('Expected current local runtime item to be a note')
   }
