@@ -1,0 +1,175 @@
+import { describe, expect, it, vi } from 'vite-plus/test'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
+import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
+import { createLiveResourceIndexRuntime } from '../live-resource-index'
+
+const scope: ResourceProjectionScope = {
+  campaignId: testCampaignId('live-index'),
+  actorId: testCampaignMemberId('live-index'),
+  projection: 'dm',
+  schema: RESOURCE_INDEX_SCHEMA,
+}
+const version = {
+  scheme: 'authoritative-revision-v1' as const,
+  revision: 1,
+  digest: '0'.repeat(64),
+}
+
+function resource(id: ReturnType<typeof testResourceId>, parentId: string | null = null) {
+  return {
+    id,
+    campaignId: scope.campaignId,
+    displayParentId: parentId,
+    kind: parentId === null ? ('folder' as const) : ('note' as const),
+    title: parentId === null ? 'Lore' : 'Session Notes',
+    icon: null,
+    color: null,
+    lifecycle: 'active' as const,
+    metadataVersion: version,
+    createdAt: 1,
+    updatedAt: 1,
+  }
+}
+
+function snapshot(
+  resources: Array<ReturnType<typeof resource>>,
+  input: {
+    missingResourceIds?: Array<string>
+    collections?: Array<{
+      query: { parentId: string | null; lifecycle: 'active' | 'trashed' }
+      resourceIds: Array<string>
+      complete: boolean
+    }>
+    scopeOverride?: Partial<ResourceProjectionScope>
+  } = {},
+) {
+  return {
+    scope: { ...scope, ...input.scopeOverride },
+    revision: `server-${resources.length}-${input.missingResourceIds?.length ?? 0}`,
+    resources,
+    missingResourceIds: input.missingResourceIds ?? [],
+    collections: input.collections ?? [],
+  }
+}
+
+describe('createLiveResourceIndexRuntime', () => {
+  it('loads exact resource knowledge with its ancestor spine', async () => {
+    const folderId = testResourceId('folder')
+    const noteId = testResourceId('note')
+    const loadResource = vi.fn(() =>
+      Promise.resolve(snapshot([resource(folderId), resource(noteId, folderId)])),
+    )
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      loadResource,
+      loadCollection: vi.fn(),
+    })
+
+    await expect(runtime.loader.ensureResource(noteId)).resolves.toEqual({ status: 'completed' })
+    expect(runtime.index.getSnapshot().lookup(noteId)).toMatchObject({
+      state: 'known',
+      value: { id: noteId, displayParentId: folderId },
+    })
+    expect(runtime.index.getSnapshot().ancestors(noteId)).toMatchObject({
+      state: 'known',
+      value: [{ id: folderId }],
+    })
+    expect(loadResource).toHaveBeenCalledWith({ campaignId: scope.campaignId, resourceId: noteId })
+  })
+
+  it('retains prior knowledge while loading a collection', async () => {
+    const knownId = testResourceId('known')
+    const rootId = testResourceId('root')
+    const query = { parentId: null, lifecycle: 'active' as const }
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      loadResource: vi.fn(() => Promise.resolve(snapshot([resource(knownId)]))),
+      loadCollection: vi.fn(() =>
+        Promise.resolve({
+          snapshot: snapshot([resource(rootId)], {
+            collections: [{ query, resourceIds: [rootId], complete: true }],
+          }),
+          cursor: null,
+        }),
+      ),
+    })
+
+    await runtime.loader.ensureResource(knownId)
+    await expect(runtime.loader.ensureCollection(query)).resolves.toEqual({ status: 'completed' })
+
+    expect(runtime.index.getSnapshot().lookup(knownId).state).toBe('known')
+    expect(runtime.index.getSnapshot().list(query)).toMatchObject({
+      state: 'known',
+      complete: true,
+      items: expect.arrayContaining([
+        expect.objectContaining({ id: knownId }),
+        expect.objectContaining({ id: rootId }),
+      ]),
+    })
+  })
+
+  it('lets the latest authoritative missing response remove stale collection knowledge', async () => {
+    const resourceId = testResourceId('deleted')
+    const query = { parentId: null, lifecycle: 'active' as const }
+    const loadResource = vi
+      .fn()
+      .mockResolvedValueOnce(snapshot([resource(resourceId)]))
+      .mockResolvedValueOnce(snapshot([], { missingResourceIds: [resourceId] }))
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      loadResource,
+      loadCollection: vi.fn(() =>
+        Promise.resolve({
+          snapshot: snapshot([resource(resourceId)], {
+            collections: [{ query, resourceIds: [resourceId], complete: true }],
+          }),
+          cursor: null,
+        }),
+      ),
+    })
+
+    await runtime.loader.ensureResource(resourceId)
+    await runtime.loader.ensureCollection(query)
+    await runtime.loader.ensureResource(resourceId)
+
+    expect(runtime.index.getSnapshot().lookup(resourceId)).toEqual({ state: 'missing' })
+    expect(runtime.index.getSnapshot().list(query)).toMatchObject({
+      state: 'known',
+      items: [],
+      complete: true,
+    })
+  })
+
+  it('rejects a provider response from another projection without publishing it', async () => {
+    const resourceId = testResourceId('foreign')
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      loadResource: vi.fn(() =>
+        Promise.resolve(
+          snapshot([resource(resourceId)], { scopeOverride: { projection: 'player' } }),
+        ),
+      ),
+      loadCollection: vi.fn(),
+    })
+
+    await expect(runtime.loader.ensureResource(resourceId)).resolves.toEqual({
+      status: 'failed',
+      retryable: false,
+      reason: 'invalid_response',
+    })
+    expect(runtime.index.getSnapshot().lookup(resourceId)).toEqual({ state: 'unknown' })
+  })
+
+  it('normalizes provider failures as retryable load failures', async () => {
+    const resourceId = testResourceId('offline')
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      loadResource: vi.fn(() => Promise.reject(new Error('offline'))),
+      loadCollection: vi.fn(),
+    })
+
+    await expect(runtime.loader.ensureResource(resourceId)).resolves.toEqual({
+      status: 'failed',
+      retryable: true,
+      reason: 'provider_failure',
+    })
+  })
+})

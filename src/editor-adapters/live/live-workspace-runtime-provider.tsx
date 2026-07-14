@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
 import type { WizardEditorRuntime } from '@wizard-archive/editor/adapter'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useFileSystemReadModel } from './filesystem/read-model'
 import { useLiveFileSystemRuntime } from './filesystem/host'
@@ -13,6 +16,7 @@ import { useLiveWorkspaceRuntime } from './use-live-workspace-runtime'
 import type { LiveWorkspaceSeparateItemNavigation } from './use-live-workspace-runtime'
 import { openBrowserExternalUrl } from '~/editor-adapters/browser/open-browser-external-url'
 import { createEditorRoutePath } from './editor-route'
+import { useLiveResourceCore } from './resources/use-live-resource-core'
 
 export function LiveWorkspaceRuntimeProvider({
   children,
@@ -27,9 +31,10 @@ function LiveWorkspaceRuntimeContent({
 }: {
   children: (runtime: WizardEditorRuntime) => ReactNode
 }) {
-  const { campaignId: workspaceRecordId, campaignSlug, dmUsername } = useCampaign()
+  const { campaign, campaignId: workspaceRecordId, campaignSlug, dmUsername } = useCampaign()
+  const membership = campaign.data?.myMembership
 
-  if (!workspaceRecordId) {
+  if (!workspaceRecordId || !membership) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -40,8 +45,10 @@ function LiveWorkspaceRuntimeContent({
   return (
     <LoadedLiveWorkspaceRuntimeContent
       workspaceId={workspaceRecordId}
+      actorId={membership.id}
       campaignSlug={campaignSlug}
       dmUsername={dmUsername}
+      projection={membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player'}
     >
       {children}
     </LoadedLiveWorkspaceRuntimeContent>
@@ -50,15 +57,25 @@ function LiveWorkspaceRuntimeContent({
 
 function LoadedLiveWorkspaceRuntimeContent({
   workspaceId,
+  actorId,
   campaignSlug,
   children,
   dmUsername,
+  projection,
 }: {
-  workspaceId: string
+  workspaceId: CampaignId
+  actorId: CampaignMemberId
   campaignSlug: ReturnType<typeof useCampaign>['campaignSlug']
   children: (runtime: WizardEditorRuntime) => ReactNode
   dmUsername: ReturnType<typeof useCampaign>['dmUsername']
+  projection: 'dm' | 'player'
 }) {
+  const resourceCore = useLiveResourceCore({
+    campaignId: workspaceId,
+    actorId,
+    projection,
+    schema: RESOURCE_INDEX_SCHEMA,
+  })
   const filesystemReadModel = useFileSystemReadModel()
   const liveWorkspaceNavigation = useLiveWorkspaceNavigation()
   const currentResourceId = useLiveWorkspaceSelectedResourceId()
@@ -84,7 +101,7 @@ function LoadedLiveWorkspaceRuntimeContent({
 
   return (
     <>
-      <LiveWorkspaceRouteEffects />
+      <LiveWorkspaceRouteEffects resourceLoader={resourceCore.loader} />
       {children(runtime)}
       {liveFileSystemRuntime.filesystem.dialog}
     </>

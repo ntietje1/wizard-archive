@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { WizardEditorRuntime } from '@wizard-archive/editor/adapter'
+import { testCampaignId } from '../../../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../../../shared/test/campaign-member-id'
 import { testResourceId } from '../../../../shared/test/resource-id'
 import { LiveWorkspaceRuntimeProvider } from '../live-workspace-runtime-provider'
 
@@ -9,11 +11,20 @@ const navigateToItemMock = vi.hoisted(() => vi.fn())
 const useLiveFileSystemRuntimeMock = vi.hoisted(() => vi.fn())
 const useLiveWorkspaceRuntimeMock = vi.hoisted(() => vi.fn())
 const selectedResourceId = testResourceId('scene-one')
+const campaignId = testCampaignId('live-provider')
+const actorId = testCampaignMemberId('live-provider')
 const campaignState = vi.hoisted(() => ({
-  campaignId: 'campaign_1' as string | undefined,
+  campaignId: undefined as ReturnType<typeof testCampaignId> | undefined,
   campaignSlug: 'lost city',
   dmUsername: 'gm user',
+  membership: undefined as { id: ReturnType<typeof testCampaignMemberId>; role: 'DM' } | undefined,
 }))
+const resourceCore = vi.hoisted(() => ({
+  index: {},
+  loader: { ensureResource: vi.fn(), ensureCollection: vi.fn() },
+  structure: { execute: vi.fn() },
+}))
+const useLiveResourceCoreMock = vi.hoisted(() => vi.fn((_scope: unknown) => resourceCore))
 const filesystemReadModel = vi.hoisted(() => ({
   activeItems: ['active-item'],
   visibleTrashItems: [],
@@ -48,7 +59,12 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
     campaignId: campaignState.campaignId,
     campaignSlug: campaignState.campaignSlug,
     dmUsername: campaignState.dmUsername,
+    campaign: { data: { myMembership: campaignState.membership } },
   }),
+}))
+
+vi.mock('../resources/use-live-resource-core', () => ({
+  useLiveResourceCore: (scope: unknown) => useLiveResourceCoreMock(scope),
 }))
 
 vi.mock('../filesystem/read-model', () => ({
@@ -64,8 +80,8 @@ vi.mock('../use-live-workspace-navigation', () => ({
 }))
 
 vi.mock('../filesystem/host', () => ({
-  useLiveFileSystemRuntime: (campaignId: unknown, navigation: unknown, readModel: unknown) =>
-    useLiveFileSystemRuntimeMock(campaignId, navigation, readModel),
+  useLiveFileSystemRuntime: (workspaceId: unknown, navigation: unknown, readModel: unknown) =>
+    useLiveFileSystemRuntimeMock(workspaceId, navigation, readModel),
 }))
 
 vi.mock('../use-live-workspace-runtime', () => ({
@@ -78,7 +94,8 @@ vi.mock('../live-workspace-route-effects', () => ({
 
 describe('LiveWorkspaceRuntimeProvider', () => {
   beforeEach(() => {
-    campaignState.campaignId = 'campaign_1'
+    campaignState.campaignId = campaignId
+    campaignState.membership = { id: actorId, role: 'DM' }
     campaignState.campaignSlug = 'lost city'
     campaignState.dmUsername = 'gm user'
     clearWorkspaceContentMock.mockReset()
@@ -88,6 +105,7 @@ describe('LiveWorkspaceRuntimeProvider', () => {
     useLiveFileSystemRuntimeMock.mockReturnValue(filesystemRuntime)
     useLiveWorkspaceRuntimeMock.mockReset()
     useLiveWorkspaceRuntimeMock.mockReturnValue(runtime)
+    useLiveResourceCoreMock.mockClear()
   })
 
   it('builds one live runtime surface from campaign sidebar state and filesystem operations', () => {
@@ -98,7 +116,7 @@ describe('LiveWorkspaceRuntimeProvider', () => {
     )
 
     expect(useLiveFileSystemRuntimeMock).toHaveBeenCalledExactlyOnceWith(
-      'campaign_1',
+      campaignId,
       {
         getCurrentResourceId: expect.any(Function),
         clearWorkspaceContent: clearWorkspaceContentMock,
@@ -115,7 +133,7 @@ describe('LiveWorkspaceRuntimeProvider', () => {
     navigation.openResource({ id: otherResourceId }, { replace: true })
     expect(navigateToItemMock).toHaveBeenCalledWith(otherResourceId, { replace: true })
     expect(useLiveWorkspaceRuntimeMock).toHaveBeenCalledExactlyOnceWith({
-      workspaceId: 'campaign_1',
+      workspaceId: campaignId,
       filesystemReadModel,
       filesystemHost: filesystemRuntime.filesystem,
       sidebarItemsShareOperations: filesystemRuntime.sharing.sidebarItems,
@@ -123,12 +141,19 @@ describe('LiveWorkspaceRuntimeProvider', () => {
       openSeparateItem: expect.any(Function),
     })
     expect(screen.getByTestId('runtime-probe')).toHaveAttribute('data-render-prop', 'true')
+    expect(useLiveResourceCoreMock).toHaveBeenCalledExactlyOnceWith({
+      campaignId,
+      actorId,
+      projection: 'dm',
+      schema: 'resource-index-v1',
+    })
     expect(screen.getByTestId('route-effects')).toBeInTheDocument()
     expect(screen.getByText('Filesystem operation dialog')).toBeInTheDocument()
   })
 
   it('renders loading feedback until a campaign workspace id is available', () => {
     campaignState.campaignId = undefined
+    campaignState.membership = undefined
 
     render(
       <LiveWorkspaceRuntimeProvider>
