@@ -5,6 +5,7 @@ import { createRuntimeRightSidebarSource } from '../runtime-source'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
 import { testId } from '../../../test/id'
+import { testHistoryEntryId } from '../../../test/history-entry-id'
 import { createAvailableSearch } from './test-helpers'
 import { RightSidebarContainer } from '../container'
 import { RightSidebarPanel } from '../panels'
@@ -270,7 +271,7 @@ describe('right-sidebar panel source', () => {
 
 function historyEntry(overrides: Partial<EditHistoryEntry> = {}): EditHistoryEntry {
   return {
-    id: testId<'editHistory'>('history-1'),
+    id: testHistoryEntryId('history-1'),
     createdAt: Date.UTC(2026, 0, 1),
     action: 'content_edited',
     workspaceId: testId<'campaigns'>('campaign-1'),

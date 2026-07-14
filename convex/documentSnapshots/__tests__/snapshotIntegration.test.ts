@@ -716,7 +716,7 @@ describe('rollbackToSnapshot', () => {
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
-        editHistoryId: historyEntry!._id,
+        editHistoryId: historyEntry!.historyEntryUuid,
       })
 
       await t.run(async (dbCtx) => {

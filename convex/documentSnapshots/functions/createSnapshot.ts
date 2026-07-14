@@ -2,6 +2,8 @@ import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
 import type { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { DOCUMENT_SNAPSHOT_TYPE } from '../types'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { SnapshotId } from '@wizard-archive/editor/resources/domain-id'
 
 type CreateSnapshotArgs = {
   itemId: Id<'sidebarItems'>
@@ -22,8 +24,10 @@ type CreateSnapshotArgs = {
 export async function createSnapshot(
   ctx: MutationCtx,
   { itemId, itemType, editHistoryId, campaignId, snapshotType, data }: CreateSnapshotArgs,
-): Promise<Id<'documentSnapshots'>> {
-  return ctx.db.insert('documentSnapshots', {
+): Promise<SnapshotId> {
+  const snapshotUuid = generateDomainId(DOMAIN_ID_KIND.snapshot)
+  await ctx.db.insert('documentSnapshots', {
+    snapshotUuid,
     itemId,
     itemType,
     editHistoryId,
@@ -31,4 +35,5 @@ export async function createSnapshot(
     snapshotType,
     data,
   })
+  return snapshotUuid
 }

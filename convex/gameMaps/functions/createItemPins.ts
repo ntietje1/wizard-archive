@@ -121,7 +121,7 @@ export async function createItemPins(
     updatedBy: userId,
   })
 
-  const editHistoryId = await logEditHistory(
+  const historyEntry = await logEditHistory(
     ctx,
     {
       itemId: mapId,
@@ -134,10 +134,10 @@ export async function createItemPins(
 
   await captureGameMapSnapshot(ctx, {
     mapId,
-    editHistoryId,
+    editHistoryId: historyEntry.rowId,
     campaignId: rawItem.campaignId,
   })
-  await ctx.db.patch('editHistory', editHistoryId, { hasSnapshot: true })
+  await ctx.db.patch('editHistory', historyEntry.rowId, { hasSnapshot: true })
 
   return pinIds
 }

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { EditHistoryId, SidebarItemId } from '../../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import { testHistoryEntryId } from '../../../test/history-entry-id'
 import type { ResourceHistoryAvailable } from '../../history-types'
 import type { HistoryRollbackResult } from '../../history-contract'
 import { HistoryPreviewSurface } from '../surface'
@@ -52,7 +53,7 @@ describe('HistoryPreviewSurface', () => {
       resolveRestore = resolve
     })
     const firstHistory = historyFor('note-1' as SidebarItemId)
-    firstHistory.rollbackEntryId = 'history-1' as EditHistoryId
+    firstHistory.rollbackEntryId = testHistoryEntryId('history-1')
     firstHistory.rollback = { status: 'ready', entryTime: 1, isRestoring: false }
     firstHistory.restoreRollback = vi.fn(() => restore)
     const { rerender } = render(
@@ -71,9 +72,9 @@ describe('HistoryPreviewSurface', () => {
     )
     resolveRestore({
       status: 'restored',
-      historyEntryId: 'history-2' as EditHistoryId,
-      preservedHistoryEntryId: 'history-3' as EditHistoryId,
-      restoredFromHistoryEntryId: 'history-1' as EditHistoryId,
+      historyEntryId: testHistoryEntryId('history-2'),
+      preservedHistoryEntryId: testHistoryEntryId('history-3'),
+      restoredFromHistoryEntryId: testHistoryEntryId('history-1'),
       restoredItemId: firstHistory.itemId,
     })
     await restore
@@ -94,11 +95,11 @@ function historyFor(itemId: SidebarItemId): ResourceHistoryAvailable {
         entries: [],
         membersMap: new Map(),
         myMemberId: null,
-        previewingEntryId: 'history-1' as EditHistoryId,
+        previewingEntryId: testHistoryEntryId('history-1'),
         status: 'Exhausted',
       },
     },
-    previewingEntryId: 'history-1' as EditHistoryId,
+    previewingEntryId: testHistoryEntryId('history-1'),
     preview: { status: 'loading', entryTime: 1 },
     previewEntry: vi.fn(),
     rollbackEntryId: null,

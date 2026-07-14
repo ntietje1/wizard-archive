@@ -6,6 +6,7 @@ import { api } from '../../_generated/api'
 import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { DOCUMENT_SNAPSHOT_TYPE } from '../../documentSnapshots/types'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 describe('campaign lifecycle', () => {
   const t = createTestContext()
@@ -74,6 +75,7 @@ describe('campaign lifecycle', () => {
         .unique()
       if (!dmMember) throw new Error('Missing DM member')
       const editHistoryId = await dbCtx.db.insert('editHistory', {
+        historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
         itemId: lifecycleNote.noteId,
         itemType: 'note',
         campaignId,
@@ -83,6 +85,7 @@ describe('campaign lifecycle', () => {
         hasSnapshot: true,
       })
       await dbCtx.db.insert('documentSnapshots', {
+        snapshotUuid: generateDomainId(DOMAIN_ID_KIND.snapshot),
         itemId: lifecycleNote.noteId,
         itemType: 'note',
         editHistoryId,

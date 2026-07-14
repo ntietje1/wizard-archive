@@ -21,7 +21,7 @@ export async function removeItemPin(
 
   const pinnedItem = await ctx.db.get('sidebarItems', pin.itemId)
 
-  const editHistoryId = await logEditHistory(
+  const historyEntry = await logEditHistory(
     ctx,
     {
       itemId: map.id,
@@ -34,7 +34,7 @@ export async function removeItemPin(
 
   await captureGameMapSnapshot(ctx, {
     mapId: map.id,
-    editHistoryId,
+    editHistoryId: historyEntry.rowId,
     campaignId: map.campaignId,
   })
 

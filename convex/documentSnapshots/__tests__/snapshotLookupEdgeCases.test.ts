@@ -7,6 +7,7 @@ import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdate } from '../../_test/yjs.helper'
 import { storeUncommittedTestUploadSession } from '../../_test/storage.helper'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 describe('snapshot exists when history entry claims hasSnapshot=true', () => {
   const t = createTestContext()
@@ -82,7 +83,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
 
       const snapshot = await dmAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
         campaignId: ctx.campaignId,
-        editHistoryId: historyEntry!._id,
+        editHistoryId: historyEntry!.historyEntryUuid,
       })
 
       expect(snapshot).not.toBeNull()
@@ -139,7 +140,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       await expect(
         playerAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
           campaignId: ctx.campaignId,
-          editHistoryId: historyEntry!._id,
+          editHistoryId: historyEntry!.historyEntryUuid,
         }),
       ).resolves.toMatchObject({
         kind: 'game-map',
@@ -170,7 +171,9 @@ describe('rollback edge cases', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const fakeId = await t.run(async (dbCtx) => {
+      const historyEntryUuid = generateDomainId(DOMAIN_ID_KIND.historyEntry)
       const id = await dbCtx.db.insert('editHistory', {
+        historyEntryUuid,
         itemId: noteId,
         itemType: 'note',
         campaignId: ctx.campaignId,
@@ -180,7 +183,7 @@ describe('rollback edge cases', () => {
         hasSnapshot: false,
       })
       await dbCtx.db.delete('editHistory', id)
-      return id
+      return historyEntryUuid
     })
 
     const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
@@ -209,7 +212,7 @@ describe('rollback edge cases', () => {
 
     const snapshot = await dmAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
       campaignId: ctx.campaignId,
-      editHistoryId: historyEntry!._id,
+      editHistoryId: historyEntry!.historyEntryUuid,
     })
 
     expect(snapshot).toBeNull()
@@ -245,13 +248,13 @@ describe('rollback edge cases', () => {
     await expect(
       dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
-        editHistoryId: historyEntry._id,
+        editHistoryId: historyEntry.historyEntryUuid,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'snapshot_incompatible' })
     await expect(
       dmAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
         campaignId: ctx.campaignId,
-        editHistoryId: historyEntry._id,
+        editHistoryId: historyEntry.historyEntryUuid,
       }),
     ).resolves.toEqual({ kind: 'unsupported' })
   })
@@ -282,7 +285,7 @@ describe('rollback edge cases', () => {
     await expectPermissionDenied(
       playerAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
         campaignId: ctx.campaignId,
-        editHistoryId: historyEntry!._id,
+        editHistoryId: historyEntry!.historyEntryUuid,
       }),
     )
   })
@@ -316,7 +319,7 @@ describe('rollback edge cases', () => {
 
     const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
       campaignId: ctx.campaignId,
-      editHistoryId: snapshotEntry!._id,
+      editHistoryId: snapshotEntry!.historyEntryUuid,
     })
 
     expect(result.status).toBe('restored')

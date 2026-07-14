@@ -34,7 +34,7 @@ export async function updateItemPin(
     logger.warn(`Pin ${mapPinId} references missing item ${pin.itemId}`)
   }
 
-  const editHistoryId = await logEditHistory(
+  const historyEntry = await logEditHistory(
     ctx,
     {
       itemId: map.id,
@@ -47,7 +47,7 @@ export async function updateItemPin(
 
   await captureGameMapSnapshot(ctx, {
     mapId: map.id,
-    editHistoryId,
+    editHistoryId: historyEntry.rowId,
     campaignId: map.campaignId,
   })
 

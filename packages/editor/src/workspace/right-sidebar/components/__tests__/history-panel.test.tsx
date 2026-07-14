@@ -4,6 +4,7 @@ import type { ResourceHistory, HistoryMemberSummary } from '../../../../filesyst
 import type { EditHistoryEntry } from '../../../../filesystem/history-contract'
 import { assertUsername } from '../../../../../../../shared/users/validation'
 import { testId } from '../../../../test/id'
+import { testHistoryEntryId } from '../../../../test/history-entry-id'
 import { HistoryPanel } from '../history'
 
 type HistoryEntriesState = Extract<ResourceHistory, { status: 'available' }>['entries']['state']
@@ -21,7 +22,7 @@ class IntersectionObserverStub {
 
 function historyEntry(overrides: Partial<EditHistoryEntry> = {}): EditHistoryEntry {
   return {
-    id: testId<'editHistory'>('history-1'),
+    id: testHistoryEntryId('history-1'),
     createdAt: Date.UTC(2026, 0, 1),
     action: 'content_edited',
     workspaceId: testId<'campaigns'>('campaign-1'),
@@ -86,13 +87,13 @@ describe('HistoryPanel', () => {
 
     expect(screen.getByText('Avery')).toBeInTheDocument()
     expect(screen.getByText('edited content')).toBeInTheDocument()
-    expect(onPreviewEntryChange).toHaveBeenCalledWith('history-1')
-    expect(onRollbackEntry).toHaveBeenCalledWith('history-1')
+    expect(onPreviewEntryChange).toHaveBeenCalledWith(testHistoryEntryId('history-1'))
+    expect(onRollbackEntry).toHaveBeenCalledWith(testHistoryEntryId('history-1'))
   })
 
   it('renders the selected history entry as pressed and clears preview on click', () => {
     const { onPreviewEntryChange } = renderHistoryPanel({
-      previewingEntryId: testId<'editHistory'>('history-1'),
+      previewingEntryId: testHistoryEntryId('history-1'),
     })
 
     fireEvent.click(screen.getByRole('button', { pressed: true }))

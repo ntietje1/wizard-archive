@@ -31,7 +31,7 @@ export async function updatePinVisibility(
     updatedBy: ctx.membership.userId,
   })
 
-  const editHistoryId = await logEditHistory(
+  const historyEntry = await logEditHistory(
     ctx,
     {
       itemId: map.id,
@@ -44,7 +44,7 @@ export async function updatePinVisibility(
 
   await captureGameMapSnapshot(ctx, {
     mapId: map.id,
-    editHistoryId,
+    editHistoryId: historyEntry.rowId,
     campaignId: map.campaignId,
   })
 

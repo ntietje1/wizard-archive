@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import type { Infer } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { HISTORY_ROLLBACK_REJECTION_REASON } from '@wizard-archive/editor/resources/history-contract'
+import { historyEntryIdValidator } from '../editHistory/schema'
 
 export const rollbackRejectionReasonValidator = literals(
   HISTORY_ROLLBACK_REJECTION_REASON.contentChanged,
@@ -15,9 +16,9 @@ export const rollbackRejectionReasonValidator = literals(
 export const rollbackResultValidator = v.union(
   v.object({
     status: v.literal('restored'),
-    historyEntryId: v.id('editHistory'),
-    preservedHistoryEntryId: v.id('editHistory'),
-    restoredFromHistoryEntryId: v.id('editHistory'),
+    historyEntryId: historyEntryIdValidator,
+    preservedHistoryEntryId: historyEntryIdValidator,
+    restoredFromHistoryEntryId: historyEntryIdValidator,
     restoredItemId: v.id('sidebarItems'),
   }),
   v.object({

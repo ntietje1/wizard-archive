@@ -4,6 +4,7 @@ import { createGameMap, createNote } from './factories.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type { DataModel, Doc, Id } from '../_generated/dataModel'
 import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
+import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
 import type schema from '../schema'
 
 type T = TestConvex<typeof schema>
@@ -82,6 +83,13 @@ export async function getSnapshotForEditHistoryEntry(db: TestDb, editHistoryId: 
     .query('documentSnapshots')
     .withIndex('by_editHistory', (q) => q.eq('editHistoryId', editHistoryId))
     .first()
+}
+
+export async function getEditHistoryEntryByUuid(db: TestDb, historyEntryId: HistoryEntryId) {
+  return await db
+    .query('editHistory')
+    .withIndex('by_historyEntryUuid', (q) => q.eq('historyEntryUuid', historyEntryId))
+    .unique()
 }
 
 export function parseGameMapSnapshotData(

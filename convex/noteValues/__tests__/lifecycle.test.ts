@@ -268,7 +268,7 @@ describe('note value lifecycle', () => {
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
-        editHistoryId: snapshotEntry!._id,
+        editHistoryId: snapshotEntry!.historyEntryUuid,
       })
       await t.action(internal.notes.internalActions.persistNoteBlocksFromYjs, {
         documentId: noteId,

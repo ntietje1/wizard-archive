@@ -10,6 +10,7 @@ import { yjsDocumentIdValidator } from './schema'
 import { SNAPSHOT_MIN_INTERVAL_MS } from './constants'
 import { AWARENESS_CLEANUP_BATCH_SIZE, AWARENESS_TTL_MS } from '../../shared/yjs-sync/awareness'
 import { DOCUMENT_SNAPSHOT_TYPE } from '../documentSnapshots/types'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { logEditHistory } from '../editHistory/log'
 import { getYjsDocumentRevision } from './functions/documentRevision'
 import {
@@ -109,6 +110,7 @@ async function commitYjsSnapshotCaptureHandler(
   }
 
   const snapshotId = await ctx.db.insert('documentSnapshots', {
+    snapshotUuid: generateDomainId(DOMAIN_ID_KIND.snapshot),
     itemId: args.itemId,
     itemType: args.itemType,
     editHistoryId: args.editHistoryId,
@@ -241,7 +243,7 @@ export const maybeCreateSnapshot = internalMutation({
       updatedBy: args.userId,
     })
 
-    const editHistoryId = await logEditHistory(
+    const historyEntry = await logEditHistory(
       {
         db: ctx.db,
         campaign: { _id: args.campaignId },
@@ -258,7 +260,7 @@ export const maybeCreateSnapshot = internalMutation({
     await ctx.scheduler.runAfter(0, internal.yjsSync.internalActions.captureSnapshot, {
       documentId: args.documentId,
       itemType: doc.type,
-      editHistoryId,
+      editHistoryId: historyEntry.rowId,
       campaignId: args.campaignId,
       expectedRevision,
       maxSeq: args.triggerSeq,

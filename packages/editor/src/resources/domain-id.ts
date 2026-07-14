@@ -8,6 +8,7 @@ export const DOMAIN_ID_KIND = {
   campaign: 'campaign',
   campaignMember: 'campaignMember',
   canvasNode: 'canvasNode',
+  historyEntry: 'historyEntry',
   importJob: 'importJob',
   mapPin: 'mapPin',
   noteBlock: 'noteBlock',
@@ -28,6 +29,7 @@ export type AssetId = DomainId<typeof DOMAIN_ID_KIND.asset>
 export type CampaignId = DomainId<typeof DOMAIN_ID_KIND.campaign>
 export type CampaignMemberId = DomainId<typeof DOMAIN_ID_KIND.campaignMember>
 export type CanvasNodeId = DomainId<typeof DOMAIN_ID_KIND.canvasNode>
+export type HistoryEntryId = DomainId<typeof DOMAIN_ID_KIND.historyEntry>
 export type ImportJobId = DomainId<typeof DOMAIN_ID_KIND.importJob>
 export type MapPinId = DomainId<typeof DOMAIN_ID_KIND.mapPin>
 export type NoteBlockId = DomainId<typeof DOMAIN_ID_KIND.noteBlock>
@@ -42,6 +44,7 @@ export type DomainIdByKind = {
   [DOMAIN_ID_KIND.campaign]: CampaignId
   [DOMAIN_ID_KIND.campaignMember]: CampaignMemberId
   [DOMAIN_ID_KIND.canvasNode]: CanvasNodeId
+  [DOMAIN_ID_KIND.historyEntry]: HistoryEntryId
   [DOMAIN_ID_KIND.importJob]: ImportJobId
   [DOMAIN_ID_KIND.mapPin]: MapPinId
   [DOMAIN_ID_KIND.noteBlock]: NoteBlockId

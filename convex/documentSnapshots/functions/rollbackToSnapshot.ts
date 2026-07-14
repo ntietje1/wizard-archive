@@ -53,13 +53,13 @@ export async function rollbackToSnapshot(
     updatedBy: ctx.membership.userId,
   })
 
-  const historyEntryId = await recordRestoredState(ctx, resolution, editHistoryId)
+  const historyEntryId = await recordRestoredState(ctx, resolution)
 
   return {
     status: 'restored',
     historyEntryId,
     preservedHistoryEntryId,
-    restoredFromHistoryEntryId: editHistoryId,
+    restoredFromHistoryEntryId: resolution.historyEntry.historyEntryUuid,
     restoredItemId: resolution.historyEntry.itemId,
   }
 }
@@ -124,7 +124,7 @@ async function recordPreservedState(
   resolution: ReadyHistorySnapshot,
   data: ArrayBuffer,
 ) {
-  const editHistoryId = await logEditHistory(
+  const historyEntry = await logEditHistory(
     ctx,
     {
       itemId: resolution.historyEntry.itemId,
@@ -135,35 +135,31 @@ async function recordPreservedState(
   )
   await createHistorySnapshot(ctx, {
     data,
-    editHistoryId,
+    editHistoryId: historyEntry.rowId,
     itemId: resolution.historyEntry.itemId,
     itemType: resolution.historyEntry.itemType,
   })
-  return editHistoryId
+  return historyEntry.id
 }
 
-async function recordRestoredState(
-  ctx: CampaignMutationCtx,
-  resolution: ReadyHistorySnapshot,
-  restoredFromHistoryEntryId: Id<'editHistory'>,
-) {
-  const editHistoryId = await logEditHistory(
+async function recordRestoredState(ctx: CampaignMutationCtx, resolution: ReadyHistorySnapshot) {
+  const historyEntry = await logEditHistory(
     ctx,
     {
       itemId: resolution.historyEntry.itemId,
       itemType: resolution.historyEntry.itemType,
       action: EDIT_HISTORY_ACTION.rolled_back,
-      metadata: { restoredFromHistoryEntryId },
+      metadata: { restoredFromHistoryEntryId: resolution.historyEntry.historyEntryUuid },
     },
     { hasSnapshot: true },
   )
   await createHistorySnapshot(ctx, {
     data: resolution.snapshot.data,
-    editHistoryId,
+    editHistoryId: historyEntry.rowId,
     itemId: resolution.historyEntry.itemId,
     itemType: resolution.historyEntry.itemType,
   })
-  return editHistoryId
+  return historyEntry.id
 }
 
 async function createHistorySnapshot(

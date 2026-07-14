@@ -1,8 +1,8 @@
 import { RIGHT_SIDEBAR_CONTENT } from './content'
 import type { RightSidebarContentId } from './content'
-import type { EditHistoryId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
 import type { Heading } from '../../notes/document/model'
-import type { NoteBlockId } from '../../resources/domain-id'
+import type { HistoryEntryId, NoteBlockId } from '../../resources/domain-id'
 import type { WorkspaceNavigation } from '../runtime'
 import type { ResourceHistory } from '../../filesystem/history-types'
 import type { ItemLinksCapability } from '../../filesystem/search'
@@ -19,8 +19,8 @@ type RightSidebarHistorySource =
       status: 'available'
       itemId: SidebarItemId
       entries: Extract<ResourceHistory, { status: 'available' }>['entries']
-      previewEntry: (entryId: EditHistoryId | null) => void
-      requestRollback: (entryId: EditHistoryId) => void
+      previewEntry: (entryId: HistoryEntryId | null) => void
+      requestRollback: (entryId: HistoryEntryId) => void
     }
   | {
       status: 'unavailable'

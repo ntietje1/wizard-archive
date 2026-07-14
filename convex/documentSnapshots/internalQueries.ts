@@ -5,6 +5,9 @@ import { resolveHistorySnapshot } from './functions/getSnapshot'
 import { getYjsDocumentRevision } from '../yjsSync/functions/documentRevision'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { rollbackRejectionReasonValidator } from './rollback'
+import { historyEntryIdValidator } from '../editHistory/schema'
+import { getHistoryEntryRow, requireHistoryEntryId } from '../editHistory/functions/getHistoryEntry'
+import { HISTORY_ROLLBACK_REJECTION_REASON } from '@wizard-archive/editor/resources/history-contract'
 
 const rollbackPlanValidator = v.union(
   v.object({
@@ -17,23 +20,36 @@ const rollbackPlanValidator = v.union(
     currentUpdates: v.array(v.bytes()),
     expectedRevision: v.number(),
     expectedSeq: v.number(),
+    editHistoryRowId: v.id('editHistory'),
   }),
   v.object({
     status: v.literal('ready'),
     kind: v.literal('game-map'),
+    editHistoryRowId: v.id('editHistory'),
   }),
 )
 
 export type RollbackPlan = Infer<typeof rollbackPlanValidator>
 
 export const prepareRollback = campaignInternalQuery({
-  args: { editHistoryId: v.id('editHistory') },
+  args: { editHistoryId: historyEntryIdValidator },
   returns: rollbackPlanValidator,
   handler: async (ctx, { editHistoryId }) => {
-    const resolution = await resolveHistorySnapshot(ctx, { editHistoryId })
+    const historyEntry = await getHistoryEntryRow(ctx, requireHistoryEntryId(editHistoryId))
+    if (!historyEntry) {
+      return {
+        status: 'rejected' as const,
+        reason: HISTORY_ROLLBACK_REJECTION_REASON.historyEntryUnavailable,
+      }
+    }
+    const resolution = await resolveHistorySnapshot(ctx, { editHistoryId: historyEntry._id })
     if (resolution.status === 'rejected') return resolution
     if (resolution.historyEntry.itemType === RESOURCE_TYPES.gameMaps) {
-      return { status: 'ready' as const, kind: 'game-map' as const }
+      return {
+        status: 'ready' as const,
+        kind: 'game-map' as const,
+        editHistoryRowId: historyEntry._id,
+      }
     }
 
     const [updates, revision] = await Promise.all([
@@ -51,6 +67,7 @@ export const prepareRollback = campaignInternalQuery({
       currentUpdates: updates.map((update) => update.update),
       expectedRevision: revision,
       expectedSeq: updates[updates.length - 1]?.seq ?? -1,
+      editHistoryRowId: historyEntry._id,
     }
   },
 })

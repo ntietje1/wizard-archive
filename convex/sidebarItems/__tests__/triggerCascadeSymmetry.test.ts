@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import {
@@ -191,6 +192,7 @@ describe('trigger cascade symmetry', () => {
         const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
         const { editHistoryId, snapshotId } = await t.run(async (dbCtx) => {
           const historyId = await dbCtx.db.insert('editHistory', {
+            historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
             itemId: noteId,
             itemType: 'note',
             campaignId: ctx.campaignId,
@@ -200,6 +202,7 @@ describe('trigger cascade symmetry', () => {
             hasSnapshot: true,
           })
           const createdSnapshotId = await dbCtx.db.insert('documentSnapshots', {
+            snapshotUuid: generateDomainId(DOMAIN_ID_KIND.snapshot),
             itemId: noteId,
             itemType: 'note',
             editHistoryId: historyId,

@@ -7,11 +7,13 @@ import { encodeYjsSnapshot } from '../yjsSync/_yjsNode'
 import { rollbackResultValidator } from './rollback'
 import type { RollbackServerResult } from './rollback'
 import type { RollbackPlan } from './internalQueries'
+import { historyEntryIdValidator } from '../editHistory/schema'
+import { requireHistoryEntryId } from '../editHistory/functions/getHistoryEntry'
 
 export const rollbackToSnapshot = action({
   args: {
     campaignId: v.id('campaigns'),
-    editHistoryId: v.id('editHistory'),
+    editHistoryId: historyEntryIdValidator,
   },
   returns: rollbackResultValidator,
   handler: async (ctx, { campaignId, editHistoryId }): Promise<RollbackServerResult> => {
@@ -19,7 +21,7 @@ export const rollbackToSnapshot = action({
       internal.documentSnapshots.internalQueries.prepareRollback,
       {
         campaignId,
-        editHistoryId,
+        editHistoryId: requireHistoryEntryId(editHistoryId),
       },
     )
     if (plan.status === 'rejected') return plan
@@ -37,7 +39,7 @@ export const rollbackToSnapshot = action({
     return await ctx.runMutation(internal.documentSnapshots.internalMutations.applyRollback, {
       campaignId,
       currentState,
-      editHistoryId,
+      editHistoryId: plan.editHistoryRowId,
     })
   },
 })

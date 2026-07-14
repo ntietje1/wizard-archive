@@ -24,7 +24,8 @@ import { createElement, useCallback, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { EditHistoryId, SidebarItemId } from 'shared/common/ids'
+import type { SidebarItemId } from 'shared/common/ids'
+import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import type { LiveFileSystemReadModel } from '~/editor-adapters/live/filesystem/read-model'
@@ -272,15 +273,15 @@ function useLiveRuntimeSources({
 
 type LiveResourceHistoryControlState = {
   itemId: SidebarItemId | null
-  previewingEntryId: EditHistoryId | null
-  rollbackEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
+  rollbackEntryId: HistoryEntryId | null
 }
 
 type LiveResourceHistoryControls = {
-  previewingEntryId: EditHistoryId | null
-  rollbackEntryId: EditHistoryId | null
-  previewEntry: (entryId: EditHistoryId | null) => void
-  requestRollback: (entryId: EditHistoryId | null) => void
+  previewingEntryId: HistoryEntryId | null
+  rollbackEntryId: HistoryEntryId | null
+  previewEntry: (entryId: HistoryEntryId | null) => void
+  requestRollback: (entryId: HistoryEntryId | null) => void
   clearPreview: () => void
   clearRollback: () => void
   clearItemSession: () => void
@@ -293,7 +294,7 @@ function useLiveResourceHistoryControls(itemId: SidebarItemId | null): LiveResou
     rollbackEntryId: null,
   })
   const previewEntry = useCallback(
-    (entryId: EditHistoryId | null) => {
+    (entryId: HistoryEntryId | null) => {
       if (!itemId) return
       setState((prev) => ({
         itemId,
@@ -304,7 +305,7 @@ function useLiveResourceHistoryControls(itemId: SidebarItemId | null): LiveResou
     [itemId],
   )
   const requestRollback = useCallback(
-    (entryId: EditHistoryId | null) => {
+    (entryId: HistoryEntryId | null) => {
       if (!itemId) return
       setState((prev) => ({
         itemId,

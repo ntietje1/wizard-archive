@@ -15,6 +15,7 @@ import {
   createTestWorkspaceRuntime,
 } from '../../../../test/workspace-runtime-factory'
 import { testId } from '../../../../test/id'
+import { testHistoryEntryId } from '../../../../test/history-entry-id'
 import { createRuntimeSidebarItemViewerSource } from '../runtime-source'
 import { SidebarItemViewer } from '../sidebar-item-viewer'
 import { PERMISSION_LEVEL } from '../../../../../../../shared/permissions/types'
@@ -219,7 +220,7 @@ describe('SidebarItemContent', () => {
       blockMeta: {},
       blockShareAccessWarnings: [],
     }
-    const entryId = testId<'editHistory'>('history-1')
+    const entryId = testHistoryEntryId('history-1')
 
     renderWithSidebarReveal(
       <SidebarItemContent
@@ -245,7 +246,7 @@ describe('SidebarItemContent', () => {
       blockMeta: {},
       blockShareAccessWarnings: [],
     }
-    const entryId = testId<'editHistory'>('history-1')
+    const entryId = testHistoryEntryId('history-1')
 
     renderWithSidebarReveal(
       <SidebarItemContent

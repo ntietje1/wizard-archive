@@ -11,6 +11,11 @@ import { captureGameMapSnapshot } from '../../gameMaps/functions/captureGameMapS
 import { internal } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
+import {
+  DOMAIN_ID_KIND,
+  generateDomainId,
+  isUuidV7,
+} from '@wizard-archive/editor/resources/domain-id'
 
 function createEditHistoryEntry(
   t: ReturnType<typeof createTestContext>,
@@ -22,6 +27,7 @@ function createEditHistoryEntry(
 ) {
   return t.run(async (dbCtx) => {
     return await dbCtx.db.insert('editHistory', {
+      historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
       itemId: args.itemId,
       itemType: args.itemType,
       campaignId: args.campaignId,
@@ -51,6 +57,7 @@ describe('document snapshot schema invariants', () => {
     await expect(
       t.run(async (dbCtx) =>
         dbCtx.db.insert('documentSnapshots', {
+          snapshotUuid: generateDomainId(DOMAIN_ID_KIND.snapshot),
           itemId: noteId,
           itemType: RESOURCE_TYPES.notes,
           editHistoryId,
@@ -114,6 +121,7 @@ describe('captureCanvasSnapshot', () => {
         .first()
 
       expect(snapshot).not.toBeNull()
+      expect(isUuidV7(snapshot!.snapshotUuid)).toBe(true)
       expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
       expect(snapshot!.itemId).toBe(canvasId)
       expect(snapshot!.itemType).toBe(RESOURCE_TYPES.canvases)
@@ -317,6 +325,7 @@ describe('scheduled Yjs snapshot ownership', () => {
       await t.run(async (dbCtx) => {
         for (let index = 0; index < 125; index++) {
           const editHistoryId = await dbCtx.db.insert('editHistory', {
+            historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
             itemId: noteId,
             itemType: RESOURCE_TYPES.notes,
             campaignId: ctx.campaignId,
@@ -326,6 +335,7 @@ describe('scheduled Yjs snapshot ownership', () => {
             hasSnapshot: true,
           })
           await dbCtx.db.insert('documentSnapshots', {
+            snapshotUuid: generateDomainId(DOMAIN_ID_KIND.snapshot),
             itemId: noteId,
             itemType: RESOURCE_TYPES.notes,
             editHistoryId,

@@ -7,6 +7,8 @@ import type {
   LogEditHistoryArgs,
 } from '@wizard-archive/editor/resources/history-contract'
 import type { ResourceKind } from '@wizard-archive/editor/resources/resource-contract'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
 
 type EditHistoryCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>
@@ -18,12 +20,19 @@ type LogEditHistoryBase = {
   itemType: ResourceKind
 }
 
+type LoggedEditHistory = {
+  id: HistoryEntryId
+  rowId: Id<'editHistory'>
+}
+
 async function insertEditHistory(
   ctx: EditHistoryCtx,
   args: LogEditHistoryArgs,
   options?: { hasSnapshot?: boolean },
-): Promise<Id<'editHistory'>> {
-  return await ctx.db.insert('editHistory', {
+): Promise<LoggedEditHistory> {
+  const id = generateDomainId(DOMAIN_ID_KIND.historyEntry)
+  const rowId = await ctx.db.insert('editHistory', {
+    historyEntryUuid: id,
     itemId: args.itemId,
     itemType: args.itemType,
     campaignId: ctx.campaign._id,
@@ -32,6 +41,7 @@ async function insertEditHistory(
     metadata: args.metadata ?? null,
     hasSnapshot: options?.hasSnapshot ?? false,
   })
+  return { id, rowId }
 }
 
 function toLogEditHistoryArgs<T extends LogEditHistoryArgs['action']>(
@@ -46,7 +56,7 @@ export async function logEditHistory(
   ctx: EditHistoryCtx,
   args: LogEditHistoryArgs | (LogEditHistoryBase & { changes: Array<EditHistoryChange> }),
   options?: { hasSnapshot?: boolean },
-): Promise<Id<'editHistory'>> {
+): Promise<LoggedEditHistory> {
   if ('action' in args) {
     return insertEditHistory(ctx, args, options)
   }

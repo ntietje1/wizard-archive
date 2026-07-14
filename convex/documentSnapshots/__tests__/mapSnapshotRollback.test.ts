@@ -242,7 +242,7 @@ describe('rollback data integrity', () => {
       // Rollback to the pin add snapshot
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
-        editHistoryId: addEntry!._id,
+        editHistoryId: addEntry!.historyEntryUuid,
       })
 
       // Verify the pin is back at original position
@@ -333,7 +333,7 @@ describe('rollback of game map pin with non-note itemId', () => {
       // Rollback to the state with the folder pin
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
-        editHistoryId: addEntry!._id,
+        editHistoryId: addEntry!.historyEntryUuid,
       })
 
       // The restored pin should reference the FOLDER, not a note

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
-import type { EditHistoryId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { testHistoryEntryId } from '../../test/history-entry-id'
 import { createResourceFileSystemHistory, resolveResourceHistoryScope } from '../history'
 import type { HistoryPreviewSnapshot, ResourceHistory } from '../history-types'
 
@@ -9,8 +10,8 @@ describe('workspace history model', () => {
       resolveResourceHistoryScope({
         canEdit: true,
         itemId: 'optimistic-create-1' as SidebarItemId,
-        previewingEntryId: 'history-1' as EditHistoryId,
-        rollbackEntryId: 'history-2' as EditHistoryId,
+        previewingEntryId: testHistoryEntryId('history-1'),
+        rollbackEntryId: testHistoryEntryId('history-2'),
       }),
     ).toEqual({
       activePreviewingEntryId: null,
@@ -22,8 +23,8 @@ describe('workspace history model', () => {
       resolveResourceHistoryScope({
         canEdit: false,
         itemId: 'item-1' as SidebarItemId,
-        previewingEntryId: 'history-1' as EditHistoryId,
-        rollbackEntryId: 'history-2' as EditHistoryId,
+        previewingEntryId: testHistoryEntryId('history-1'),
+        rollbackEntryId: testHistoryEntryId('history-2'),
       }),
     ).toEqual({
       activePreviewingEntryId: null,
@@ -47,11 +48,11 @@ describe('workspace history model', () => {
         loadMore: () => undefined,
         members: [],
         myMemberId: null,
-        previewingEntryId: 'history-1' as EditHistoryId,
+        previewingEntryId: testHistoryEntryId('history-1'),
         status: 'Exhausted',
       },
       itemId: 'item-1' as SidebarItemId,
-      ...historyControls({ previewingEntryId: 'history-1' as EditHistoryId }),
+      ...historyControls({ previewingEntryId: testHistoryEntryId('history-1') }),
       preview: {
         entryTime: 2,
         historyEntryError: null,
@@ -71,7 +72,7 @@ describe('workspace history model', () => {
 
     expect(history).toMatchObject({
       status: 'available',
-      previewingEntryId: 'history-1',
+      previewingEntryId: testHistoryEntryId('history-1'),
       rollbackEntryId: null,
       preview: {
         status: 'ready',

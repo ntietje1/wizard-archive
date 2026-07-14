@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Loader2, RotateCcw } from 'lucide-react'
-import type { EditHistoryId } from '../../../../../../shared/common/ids'
+import type { HistoryEntryId } from '../../../resources/domain-id'
 import type { ResourceHistory } from '../../../filesystem/history-types'
 import type { EditHistoryEntry } from '../../../filesystem/history-contract'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
@@ -130,7 +130,7 @@ function groupByDay(
   }))
 }
 
-function keyedDescriptions(entryId: EditHistoryId, descriptions: Array<string>) {
+function keyedDescriptions(entryId: HistoryEntryId, descriptions: Array<string>) {
   const descriptionCounts = new Map<string, number>()
 
   return descriptions.map((description) => {
@@ -150,8 +150,8 @@ export function HistoryPanel({
   state,
 }: {
   onLoadMore: () => void
-  onPreviewEntryChange: (entryId: EditHistoryId | null) => void
-  onRollbackEntry: (entryId: EditHistoryId) => void
+  onPreviewEntryChange: (entryId: HistoryEntryId | null) => void
+  onRollbackEntry: (entryId: HistoryEntryId) => void
   state: HistoryEntriesState
 }) {
   const { canEdit, entries, membersMap, myMemberId, previewingEntryId, status } = state

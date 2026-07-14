@@ -3,7 +3,8 @@ import { useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import type { EditHistoryId, SidebarItemId } from 'shared/common/ids'
+import type { SidebarItemId } from 'shared/common/ids'
+import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
 import {
   createWizardEditorHistorySource,
   resolveWizardEditorHistoryScope,
@@ -27,15 +28,10 @@ type LiveResourceHistoryControls = Pick<
   WizardEditorHistoryInput,
   'clearItemSession' | 'clearPreview' | 'clearRollback' | 'previewEntry' | 'requestRollback'
 > & {
-  previewingEntryId: EditHistoryId | null
-  rollbackEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
+  rollbackEntryId: HistoryEntryId | null
 }
-type LiveHistoryEntry = Omit<
-  EditorHistoryEntry,
-  'id' | 'createdAt' | 'memberId' | 'metadata' | 'workspaceId'
-> & {
-  _id: Id<'editHistory'>
-  _creationTime: number
+type LiveHistoryEntry = Omit<EditorHistoryEntry, 'memberId' | 'metadata' | 'workspaceId'> & {
   campaignMemberId: Id<'campaignMembers'>
   metadata: EditorHistoryEntry['metadata']
 } & Record<'campaignId', Id<'campaigns'>>
@@ -67,7 +63,7 @@ export function useLiveWorkspaceHistory({
   })
   const preview = useLiveHistoryPreviewState({ entryId: activePreviewingEntryId })
   const rollbackState = useLiveRollbackState(activeRollbackEntryId, isRollbackPending)
-  const restoreRollback = async (entryId: EditHistoryId) => {
+  const restoreRollback = async (entryId: HistoryEntryId) => {
     if (rollbackPendingRef.current) return { status: 'already_running' as const }
     if (!campaignId) {
       return {
@@ -81,7 +77,7 @@ export function useLiveWorkspaceHistory({
     try {
       const result = (await convex.action(api.documentSnapshots.actions.rollbackToSnapshot, {
         campaignId,
-        editHistoryId: entryId as Id<'editHistory'>,
+        editHistoryId: entryId,
       })) as EditorHistoryRollbackResult
       reportRollbackResult(result)
       return result
@@ -134,7 +130,7 @@ function useLiveHistoryEntriesModel({
 }: {
   canEdit: boolean
   itemId: SidebarItemId | null
-  previewingEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
 }): WizardEditorHistoryInput['entries'] {
   const membersQuery = useCampaignMembers()
   const { campaign, campaignId: workspaceRecordId } = useCampaign()
@@ -148,7 +144,7 @@ function useLiveHistoryEntriesModel({
 
   return {
     canEdit,
-    entries: (results as Array<LiveHistoryEntry>).map(toEditorHistoryEntry),
+    entries: results.map(toEditorHistoryEntry),
     loadMore: () => {
       if (itemId && canEdit) loadMore(HISTORY_ENTRIES_PAGE_SIZE)
     },
@@ -162,15 +158,15 @@ function useLiveHistoryEntriesModel({
 function useLiveHistoryPreviewState({
   entryId,
 }: {
-  entryId: EditHistoryId | null
+  entryId: HistoryEntryId | null
 }): WizardEditorHistoryInput['preview'] {
   const snapshotQuery = useCampaignQuery(
     api.documentSnapshots.queries.getHistoryPreview,
-    entryId ? { editHistoryId: entryId as Id<'editHistory'> } : 'skip',
+    entryId ? { editHistoryId: entryId } : 'skip',
   )
   const historyEntry = useCampaignQuery(
     api.editHistory.queries.getHistoryEntry,
-    entryId ? { editHistoryId: entryId as Id<'editHistory'> } : 'skip',
+    entryId ? { editHistoryId: entryId } : 'skip',
   )
   const hasEntry = entryId !== null
   const snapshot = (hasEntry ? snapshotQuery?.data : undefined) as
@@ -215,18 +211,9 @@ function toHistoryMemberSummary(member: {
 }
 
 function toEditorHistoryEntry(entry: LiveHistoryEntry): EditorHistoryEntry {
-  const {
-    _id,
-    _creationTime,
-    campaignId: workspaceRecordId,
-    campaignMemberId,
-    metadata,
-    ...fields
-  } = entry
+  const { campaignId: workspaceRecordId, campaignMemberId, metadata, ...fields } = entry
   return {
     ...fields,
-    id: _id,
-    createdAt: _creationTime,
     workspaceId: workspaceRecordId,
     memberId: campaignMemberId,
     metadata: toEditorHistoryMetadata(metadata),
@@ -235,18 +222,16 @@ function toEditorHistoryEntry(entry: LiveHistoryEntry): EditorHistoryEntry {
 
 function readLiveCreatedAt(entry: unknown): number | undefined {
   if (!isRecord(entry)) return undefined
-  if (typeof entry.createdAt === 'number') return entry.createdAt
-  if (typeof entry._creationTime === 'number') return entry._creationTime
-  return undefined
+  return typeof entry.createdAt === 'number' ? entry.createdAt : undefined
 }
 
 function useLiveRollbackState(
-  rollbackEntryId: EditHistoryId | null,
+  rollbackEntryId: HistoryEntryId | null,
   isRestoring: boolean,
 ): WizardEditorHistoryInput['rollback'] {
   const historyEntry = useCampaignQuery(
     api.editHistory.queries.getHistoryEntry,
-    rollbackEntryId ? { editHistoryId: rollbackEntryId as Id<'editHistory'> } : 'skip',
+    rollbackEntryId ? { editHistoryId: rollbackEntryId } : 'skip',
   )
   const hasRollback = rollbackEntryId !== null
 

@@ -5,6 +5,7 @@ import type { WizardEditorHistoryInput } from '@wizard-archive/editor/adapter'
 import { useLiveWorkspaceHistory } from '~/editor-adapters/live/use-live-workspace-history'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'shared/common/ids'
+import { testHistoryEntryId } from 'shared/test/history-entry-id'
 
 type HistorySnapshot = NonNullable<WizardEditorHistoryInput['preview']['snapshot']>
 const { useAuthPaginatedQueryMock, useCampaignQueryMock } = vi.hoisted(() => ({
@@ -91,7 +92,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
 
   it('loads snapshot and history entry through the live source wrapper', () => {
     const noteId = 'note-1' as Id<'sidebarItems'>
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     const doc = new Y.Doc()
     const snapshotData = encodeSnapshot(doc)
     doc.destroy()
@@ -102,7 +103,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
         error: null,
       },
       historyEntry: {
-        data: { _creationTime: 1 },
+        data: { createdAt: 1 },
         isLoading: false,
         error: null,
       },
@@ -131,8 +132,8 @@ describe('useLiveWorkspaceHistory preview state', () => {
 
   it('does not enable live history queries for non-persisted item ids', () => {
     const optimisticItemId = 'optimistic-create-1' as SidebarItemId
-    const previewEntryId = 'history-1' as Id<'editHistory'>
-    const rollbackEntryId = 'history-2' as Id<'editHistory'>
+    const previewEntryId = testHistoryEntryId('history-1')
+    const rollbackEntryId = testHistoryEntryId('history-2')
     useCampaignQueryMock.mockReturnValue({ data: null, isLoading: false, error: null })
 
     const { result } = renderHook(() =>
@@ -160,7 +161,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
 
   it('does not query edit-only item history for view-only access', () => {
     const noteId = 'note-1' as Id<'sidebarItems'>
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     useCampaignQueryMock.mockReturnValue({ data: null, isLoading: false, error: null })
 
     const { result } = renderHook(() =>
@@ -195,7 +196,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
   })
 
   it('loads game-map snapshots with their live storage image URL', () => {
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     mockHistoryPreviewQueries({
       snapshot: {
         data: {
@@ -207,7 +208,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
         error: null,
       },
       historyEntry: {
-        data: { _creationTime: 2 },
+        data: { createdAt: 2 },
         isLoading: false,
         error: null,
       },
@@ -237,7 +238,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
   })
 
   it('reports loading preview state while snapshot or history entry is loading', () => {
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     mockHistoryPreviewQueries({
       snapshot: {
         data: undefined,
@@ -245,7 +246,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
         error: null,
       },
       historyEntry: {
-        data: { _creationTime: 4 },
+        data: { createdAt: 4 },
         isLoading: false,
         error: null,
       },
@@ -264,7 +265,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
   })
 
   it('reports error preview state when live snapshot loading fails', () => {
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     mockHistoryPreviewQueries({
       snapshot: {
         data: null,
@@ -272,7 +273,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
         error: new Error('snapshot failed'),
       },
       historyEntry: {
-        data: { _creationTime: 5 },
+        data: { createdAt: 5 },
         isLoading: false,
         error: null,
       },
@@ -292,7 +293,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
 
   it('loads canvas Yjs snapshots as canvas preview state', () => {
     const canvasId = 'canvas-1' as Id<'sidebarItems'>
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     const doc = new Y.Doc()
     const snapshotData = encodeSnapshot(doc)
     doc.destroy()
@@ -303,7 +304,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
         error: null,
       },
       historyEntry: {
-        data: { _creationTime: 6 },
+        data: { createdAt: 6 },
         isLoading: false,
         error: null,
       },
@@ -326,7 +327,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
   })
 
   it('passes explicit unsupported snapshot content through the live source', () => {
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     mockHistoryPreviewQueries({
       snapshot: {
         data: { kind: 'unsupported' } satisfies HistorySnapshot,
@@ -334,7 +335,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
         error: null,
       },
       historyEntry: {
-        data: { _creationTime: 3 },
+        data: { createdAt: 3 },
         isLoading: false,
         error: null,
       },

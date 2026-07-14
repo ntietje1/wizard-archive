@@ -1,5 +1,6 @@
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { EditHistoryId, SidebarItemId } from '../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { HistoryEntryId } from '../resources/domain-id'
 import type { GameMapSnapshotData } from '../game-maps/document-contract'
 import type { EditHistoryEntry, HistoryRollbackResult } from './history-contract'
 
@@ -48,7 +49,7 @@ export interface HistoryEntriesState {
   entries: Array<EditHistoryEntry>
   membersMap: ReadonlyMap<string, HistoryMemberSummary>
   myMemberId: string | null
-  previewingEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
   status: HistoryEntriesLoadStatus
 }
 
@@ -61,13 +62,13 @@ export interface ResourceHistoryAvailable {
   status: 'available'
   itemId: SidebarItemId
   entries: HistoryEntriesModel
-  previewingEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
   preview: HistoryPreviewState
-  previewEntry: (entryId: EditHistoryId | null) => void
-  rollbackEntryId: EditHistoryId | null
+  previewEntry: (entryId: HistoryEntryId | null) => void
+  rollbackEntryId: HistoryEntryId | null
   rollback: RollbackState
-  requestRollback: (entryId: EditHistoryId | null) => void
-  restoreRollback: (entryId: EditHistoryId) => MaybePromise<HistoryRollbackResult>
+  requestRollback: (entryId: HistoryEntryId | null) => void
+  restoreRollback: (entryId: HistoryEntryId) => MaybePromise<HistoryRollbackResult>
   clearPreview: () => void
   clearRollback: () => void
   clearItemSession: () => void

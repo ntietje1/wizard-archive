@@ -1,4 +1,5 @@
-import type { EditHistoryId, SidebarItemId } from '../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { HistoryEntryId } from '../resources/domain-id'
 import { isPersistedResourceItemId } from '../workspace/items'
 import type { EditHistoryEntry, HistoryRollbackResult } from './history-contract'
 import type {
@@ -15,13 +16,13 @@ import type {
 interface ResourceHistoryScopeInput {
   canEdit: boolean
   itemId: SidebarItemId | null
-  previewingEntryId: EditHistoryId | null
-  rollbackEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
+  rollbackEntryId: HistoryEntryId | null
 }
 
 interface ResourceHistoryScope {
-  activePreviewingEntryId: EditHistoryId | null
-  activeRollbackEntryId: EditHistoryId | null
+  activePreviewingEntryId: HistoryEntryId | null
+  activeRollbackEntryId: HistoryEntryId | null
   persistedItemId: SidebarItemId | null
 }
 
@@ -31,7 +32,7 @@ interface ResourceHistoryEntriesInput {
   loadMore: () => void
   members: Iterable<HistoryMemberSummary>
   myMemberId: string | null
-  previewingEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
   status: HistoryEntriesLoadStatus
 }
 
@@ -45,7 +46,7 @@ interface ResourceHistoryPreviewInput {
 }
 
 interface ResourceHistoryRollbackInput {
-  entryId: EditHistoryId | null
+  entryId: HistoryEntryId | null
   entryTime: number | undefined
   historyEntryError: unknown
   historyEntryLoading: boolean
@@ -53,17 +54,17 @@ interface ResourceHistoryRollbackInput {
 }
 
 interface ResourceFileSystemHistoryInput {
-  activeRollbackEntryId: EditHistoryId | null
+  activeRollbackEntryId: HistoryEntryId | null
   clearItemSession: () => void
   clearPreview: () => void
   clearRollback: () => void
   entries: ResourceHistoryEntriesInput
   itemId: SidebarItemId | null
-  previewEntry: (entryId: EditHistoryId | null) => void
+  previewEntry: (entryId: HistoryEntryId | null) => void
   preview: ResourceHistoryPreviewInput
-  requestRollback: (entryId: EditHistoryId | null) => void
+  requestRollback: (entryId: HistoryEntryId | null) => void
   restoreRollback: (
-    entryId: EditHistoryId,
+    entryId: HistoryEntryId,
   ) => HistoryRollbackResult | Promise<HistoryRollbackResult>
   rollback: Omit<ResourceHistoryRollbackInput, 'entryId'>
 }

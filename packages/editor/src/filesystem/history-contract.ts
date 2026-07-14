@@ -1,4 +1,5 @@
-import type { EditHistoryId, WorkspaceId, WorkspaceMemberId } from '../../../../shared/common/ids'
+import type { WorkspaceId, WorkspaceMemberId } from '../../../../shared/common/ids'
+import type { HistoryEntryId } from '../resources/domain-id'
 import type { ResourceId, ResourceKind } from '../workspace/resource-contract'
 
 const SHARED_HISTORY_ACTION = {
@@ -54,9 +55,9 @@ export type HistoryRollbackRejectionReason =
 export type HistoryRollbackResult =
   | {
       status: 'restored'
-      historyEntryId: EditHistoryId
-      preservedHistoryEntryId: EditHistoryId
-      restoredFromHistoryEntryId: EditHistoryId
+      historyEntryId: HistoryEntryId
+      preservedHistoryEntryId: HistoryEntryId
+      restoredFromHistoryEntryId: HistoryEntryId
       restoredItemId: ResourceId
     }
   | { status: 'rejected'; reason: HistoryRollbackRejectionReason }
@@ -75,7 +76,7 @@ type SharedHistoryMetadataMap = {
   icon_changed: { from: string | null; to: string | null }
   color_changed: { from: string | null; to: string | null }
   content_edited: null
-  rolled_back: { restoredFromHistoryEntryId: EditHistoryId }
+  rolled_back: { restoredFromHistoryEntryId: HistoryEntryId }
   updated: { changes: Array<EditHistoryChange> }
   permission_changed: {
     memberName: string | null
@@ -122,7 +123,7 @@ export type EditHistoryChange = {
 
 export type EditHistoryEntry = {
   [K in EditHistoryAction]: {
-    id: EditHistoryId
+    id: HistoryEntryId
     createdAt: number
     itemId: ResourceId
     itemType: ResourceKind

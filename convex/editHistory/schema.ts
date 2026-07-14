@@ -1,10 +1,14 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import type { Validator } from 'convex/values'
 import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
-import { convexValidatorFields } from '../common/schema'
+import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
+
+export const historyEntryIdValidator = v.string() as Validator<HistoryEntryId>
 
 const editHistoryCommonFields = {
+  historyEntryUuid: historyEntryIdValidator,
   itemId: v.id('sidebarItems'),
   itemType: sidebarItemTypeValidator,
   campaignId: v.id('campaigns'),
@@ -37,7 +41,7 @@ const optionalStringChangeMetadataValidator = v.object({
   to: v.nullable(v.string()),
 })
 const rolledBackMetadataValidator = v.object({
-  restoredFromHistoryEntryId: v.id('editHistory'),
+  restoredFromHistoryEntryId: historyEntryIdValidator,
 })
 const permissionChangedMetadataValidator = v.object({
   memberName: v.nullable(v.string()),
@@ -186,14 +190,15 @@ const editHistoryVariants = [
   },
 ] as const
 
-const editHistorySystemFields = convexValidatorFields('editHistory')
-
 export const editHistoryValidator = v.union(
-  ...editHistoryVariants.map((fields) => v.object({ ...editHistorySystemFields, ...fields })),
+  ...editHistoryVariants.map(({ historyEntryUuid: _historyEntryUuid, ...fields }) =>
+    v.object({ id: historyEntryIdValidator, createdAt: v.number(), ...fields }),
+  ),
 )
 
 export const editHistoryTables = {
   editHistory: defineTable(v.union(...editHistoryVariants.map((fields) => v.object(fields))))
+    .index('by_historyEntryUuid', ['historyEntryUuid'])
     .index('by_campaign', ['campaignId'])
     .index('by_item', ['itemId'])
     .index('by_item_action', ['itemId', 'action']),

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
 import { useLiveWorkspaceHistory } from '~/editor-adapters/live/use-live-workspace-history'
 import type { Id } from 'convex/_generated/dataModel'
+import { testHistoryEntryId } from 'shared/test/history-entry-id'
 
 const { actionMock, useCampaignQueryMock } = vi.hoisted(() => ({
   actionMock: vi.fn(),
@@ -74,16 +75,16 @@ describe('useLiveWorkspaceHistory rollback details', () => {
   })
 
   it('loads rollback details and restores through the live source', async () => {
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     useCampaignQueryMock.mockReturnValue({
-      data: { _creationTime: Date.UTC(2026, 0, 1) },
+      data: { createdAt: Date.UTC(2026, 0, 1) },
       error: null,
       isLoading: false,
     })
     actionMock.mockResolvedValue({
       status: 'restored',
-      historyEntryId: 'history-2',
-      preservedHistoryEntryId: 'history-3',
+      historyEntryId: testHistoryEntryId('history-2'),
+      preservedHistoryEntryId: testHistoryEntryId('history-3'),
       restoredFromHistoryEntryId: entryId,
       restoredItemId: 'item-1',
     })
@@ -120,7 +121,7 @@ describe('useLiveWorkspaceHistory rollback details', () => {
   })
 
   it('reports loaded rollback entries without history data as unavailable', () => {
-    const entryId = 'history-1' as Id<'editHistory'>
+    const entryId = testHistoryEntryId('history-1')
     useCampaignQueryMock.mockReturnValue({
       data: null,
       error: null,

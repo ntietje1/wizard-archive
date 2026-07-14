@@ -38,11 +38,10 @@ import type { NoteProjectionResult } from '../../../shared/yjs-sync/note-project
 import type { Awareness } from 'y-protocols/awareness'
 import type { Doc, Map as YMap } from 'yjs'
 import type {
-  EditHistoryId,
   SidebarItemId as InternalResourceItemId,
   WorkspaceMemberId as InternalParticipantId,
 } from '../../../shared/common/ids'
-import type { MapPinId as InternalMapPinId } from './resources/domain-id'
+import type { HistoryEntryId, MapPinId as InternalMapPinId } from './resources/domain-id'
 import type { BlockSearchResult } from '../../../shared/search/types'
 import { isPersistedResourceId, parseResourceSlug } from './workspace/resource-contract'
 import type {
@@ -921,7 +920,7 @@ interface WizardEditorHistoryEntriesState {
   entries: Array<EditHistoryEntry>
   membersMap: ReadonlyMap<string, WizardEditorHistoryMemberSummary>
   myMemberId: string | null
-  previewingEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
   status: WizardEditorHistoryEntriesLoadStatus
 }
 
@@ -934,13 +933,13 @@ interface WizardEditorAvailableHistorySource {
   status: 'available'
   itemId: InternalResourceItemId
   entries: WizardEditorHistoryEntriesModel
-  previewingEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
   preview: WizardEditorHistoryPreviewState
-  previewEntry: (entryId: EditHistoryId | null) => void
-  rollbackEntryId: EditHistoryId | null
+  previewEntry: (entryId: HistoryEntryId | null) => void
+  rollbackEntryId: HistoryEntryId | null
   rollback: WizardEditorRollbackState
-  requestRollback: (entryId: EditHistoryId | null) => void
-  restoreRollback: (entryId: EditHistoryId) => MaybePromise<HistoryRollbackResult>
+  requestRollback: (entryId: HistoryEntryId | null) => void
+  restoreRollback: (entryId: HistoryEntryId) => MaybePromise<HistoryRollbackResult>
   clearPreview: () => void
   clearRollback: () => void
   clearItemSession: () => void
@@ -956,13 +955,13 @@ export type WizardEditorHistorySource =
 export interface WizardEditorHistoryScopeInput {
   canEdit: boolean
   itemId: InternalResourceItemId | null
-  previewingEntryId: EditHistoryId | null
-  rollbackEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
+  rollbackEntryId: HistoryEntryId | null
 }
 
 export interface WizardEditorHistoryScope {
-  activePreviewingEntryId: EditHistoryId | null
-  activeRollbackEntryId: EditHistoryId | null
+  activePreviewingEntryId: HistoryEntryId | null
+  activeRollbackEntryId: HistoryEntryId | null
   persistedItemId: InternalResourceItemId | null
 }
 
@@ -972,7 +971,7 @@ export interface WizardEditorHistoryEntriesInput {
   loadMore: () => void
   members: Iterable<WizardEditorHistoryMemberSummary>
   myMemberId: string | null
-  previewingEntryId: EditHistoryId | null
+  previewingEntryId: HistoryEntryId | null
   status: WizardEditorHistoryEntriesLoadStatus
 }
 
@@ -993,17 +992,17 @@ export interface WizardEditorHistoryRollbackInput {
 }
 
 export interface WizardEditorHistoryInput {
-  activeRollbackEntryId: EditHistoryId | null
+  activeRollbackEntryId: HistoryEntryId | null
   clearItemSession: () => void
   clearPreview: () => void
   clearRollback: () => void
   entries: WizardEditorHistoryEntriesInput
   itemId: InternalResourceItemId | null
-  previewEntry: (entryId: EditHistoryId | null) => void
+  previewEntry: (entryId: HistoryEntryId | null) => void
   preview: WizardEditorHistoryPreviewInput
-  requestRollback: (entryId: EditHistoryId | null) => void
+  requestRollback: (entryId: HistoryEntryId | null) => void
   restoreRollback: (
-    entryId: EditHistoryId,
+    entryId: HistoryEntryId,
   ) => HistoryRollbackResult | Promise<HistoryRollbackResult>
   rollback: WizardEditorHistoryRollbackInput
 }
