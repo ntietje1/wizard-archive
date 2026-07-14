@@ -42,6 +42,7 @@ export async function commitUpload(
     })
   }
   return {
+    assetId: fileStorage.assetUuid,
     metadata: storageMetadata,
     originalFileName: fileStorage.originalFileName,
     sessionId: fileStorage._id,

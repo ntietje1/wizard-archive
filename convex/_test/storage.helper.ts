@@ -1,4 +1,5 @@
 import { FILE_STORAGE_STATUS } from '../storage/types'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { Id } from '../_generated/dataModel'
 import type { createTestContext } from './setup.helper'
 
@@ -22,6 +23,7 @@ export async function storeCommittedTestUploadSession(
   return await t.run(async (dbCtx) => {
     const storageId = await dbCtx.storage.store(blob)
     const sessionId = await dbCtx.db.insert('fileStorage', {
+      assetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
       storageId,
       userId,
       status: FILE_STORAGE_STATUS.Committed,
@@ -40,6 +42,7 @@ export async function storeUncommittedTestUploadSession(
   return await t.run(async (dbCtx) => {
     const storageId = await dbCtx.storage.store(blob)
     const sessionId = await dbCtx.db.insert('fileStorage', {
+      assetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
       storageId,
       userId,
       status: FILE_STORAGE_STATUS.Uncommitted,

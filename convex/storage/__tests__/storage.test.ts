@@ -3,6 +3,11 @@ import { api } from '../../_generated/api'
 import { expectNotAuthenticated } from '../../_test/assertions.helper'
 import { setupUser } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
+import {
+  DOMAIN_ID_KIND,
+  generateDomainId,
+  isUuidV7,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { Id } from '../../_generated/dataModel'
 
 type TestContext = ReturnType<typeof createTestContext>
@@ -23,6 +28,7 @@ describe('createUploadSession', () => {
     expect(result.uploadUrl).toBeTypeOf('string')
     await t.run(async (ctx) => {
       await expect(ctx.db.get('fileStorage', result.sessionId)).resolves.toMatchObject({
+        assetUuid: null,
         originalFileName: null,
         status: 'pending',
         storageId: null,
@@ -53,6 +59,15 @@ describe('bindUpload', () => {
     const { sessionId, storageId } = await createBoundUpload(t, authed, 'handout.txt')
 
     await t.run(async (ctx) => {
+      const upload = await ctx.db.get('fileStorage', sessionId)
+      expect(upload?.assetUuid && isUuidV7(upload.assetUuid)).toBe(true)
+      const byAsset = upload?.assetUuid
+        ? await ctx.db
+            .query('fileStorage')
+            .withIndex('by_assetUuid', (query) => query.eq('assetUuid', upload.assetUuid))
+            .unique()
+        : null
+      expect(byAsset?._id).toBe(sessionId)
       await expect(ctx.db.get('fileStorage', sessionId)).resolves.toMatchObject({
         originalFileName: 'handout.txt',
         status: 'uncommitted',
@@ -188,6 +203,7 @@ describe('discardUpload', () => {
     const storageId = await storeTestFile(t)
     const sessionId = await t.run(async (ctx) =>
       ctx.db.insert('fileStorage', {
+        assetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
         storageId,
         userId: profile._id,
         status: 'committed',
@@ -226,6 +242,7 @@ describe('committed storage metadata reads', () => {
     const storageId = await storeTestFile(t)
     await t.run(async (ctx) => {
       await ctx.db.insert('fileStorage', {
+        assetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
         storageId,
         userId: profile._id,
         status: 'committed',

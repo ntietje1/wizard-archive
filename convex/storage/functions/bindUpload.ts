@@ -2,6 +2,7 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { FILE_STORAGE_STATUS } from '../types'
 import { getUserUploadSession } from './getUserUploadSession'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
@@ -45,6 +46,7 @@ export async function bindUpload(
   }
 
   await ctx.db.patch('fileStorage', session._id, {
+    assetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
     status: FILE_STORAGE_STATUS.Uncommitted,
     storageId,
     originalFileName: originalFileName ?? null,
