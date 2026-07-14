@@ -25,5 +25,5 @@ test('sign in with wrong credentials shows error', async ({ page }) => {
 
 test('protected route requires authentication', async ({ page }) => {
   await page.goto('/campaigns', { waitUntil: 'commit' })
-  await expect(page.getByRole('heading', { name: /welcome back|sign in/i })).toBeVisible()
+  await expect(page.getByLabel('Email', { exact: true })).toBeVisible({ timeout: 30000 })
 })

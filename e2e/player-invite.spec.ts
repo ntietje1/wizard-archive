@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
+import { getCampaignIdFromUrl, getCampaignInvitationRoute } from './helpers/convex-helpers'
 import { gotoSignIn, signIn } from './helpers/auth-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -57,14 +58,11 @@ test.describe.serial('player invite flow', () => {
   })
 
   test('player navigates to join URL and requests to join', async ({ browser, page }) => {
-    // DM navigates to campaign to extract the URL
     await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
 
-    const url = page.url()
-    const match = url.match(/\/campaigns\/([^/]+)\/([^/]+)/)
-    expect(match).toBeTruthy()
-    const [, dmUsername, campaignSlug] = match!
+    const campaignId = getCampaignIdFromUrl(page.url())
+    const { dmUsername, campaignSlug } = await getCampaignInvitationRoute(campaignId)
 
     const playerContext = await browser.newContext()
     const playerPage = await playerContext.newPage()
