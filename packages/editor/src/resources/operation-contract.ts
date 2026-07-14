@@ -1,6 +1,6 @@
-import type { ResourceId } from '../resources/domain-id'
-import { isTrashedSidebarItem } from '../workspace/items/status'
-import { normalizeSelectedRoots } from './domain/selection-roots'
+import type { ResourceId } from './domain-id'
+import { isTrashedSidebarItem } from './items/status'
+import { normalizeSelectedRoots } from './selection-roots'
 import type { ResourcePatchRow } from './patch-contract'
 
 export type OperationPlannerItem<TId extends string = ResourceId> = Pick<

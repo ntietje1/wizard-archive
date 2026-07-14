@@ -5,7 +5,7 @@ import {
 } from '../in-memory-resource-catalog'
 import { defineResourceCatalogConformance } from './resource-catalog-conformance'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 import type { AuthoritativeResourceOperationExecutor } from '../resource-command-contract'
 
 defineResourceCatalogConformance('in-memory', (options) => {

@@ -1,7 +1,7 @@
 import { advanceVersion, initialVersion, sha256Digest, successorVersion } from './component-version'
 import type { VersionStamp } from './component-version'
 import type { CampaignId, ResourceId } from './domain-id'
-import type { ResourceMetadataValue } from './resource-contract'
+import type { ResourceMetadataValue } from './resource-record'
 
 export type ResourceTombstone = Readonly<{
   resourceId: ResourceId

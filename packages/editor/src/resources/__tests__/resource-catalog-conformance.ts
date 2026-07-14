@@ -20,7 +20,7 @@ import type {
   ResourceStructureCommand,
   ResourceStructureCommandResult,
 } from '../resource-command-contract'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 import type { ResourceOperationAuthorizer } from '../in-memory-resource-catalog'
 
 type CatalogUnderTest = AuthoritativeResourceOperationExecutor & {

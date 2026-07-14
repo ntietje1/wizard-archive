@@ -8,7 +8,7 @@ import {
 } from '../portable-path-contract'
 import type { PortablePathResource } from '../portable-path-contract'
 import { projectPortablePaths } from '../portable-path-projector'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 
 const ROOT_ID = asResourceId('01890f47-f6c8-7a5b-8c9d-0123456789ab')
 const CHILD_ID = asResourceId('01890f48-f6c8-7a5b-8c9d-0123456789ab')

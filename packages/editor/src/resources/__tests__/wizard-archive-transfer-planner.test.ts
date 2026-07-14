@@ -15,7 +15,7 @@ import type {
 } from '../domain-id'
 import type { PortableRelativePath } from '../portable-path-contract'
 import { PORTABLE_PATH_VERSION } from '../portable-path-contract'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 import { createSourcePathAlias } from '../source-path-alias'
 import {
   WIZARD_ARCHIVE_CANVAS_SECTION_VERSION,

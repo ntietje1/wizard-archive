@@ -17,7 +17,7 @@ import type {
   ResourceCollectionQuery,
   ResourceIndexLoader,
 } from '../resource-index-contract'
-import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-contract'
+import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-record'
 import type { WizardArchiveManifest } from '../wizard-archive-contract'
 import {
   WIZARD_ARCHIVE_CANVAS_SECTION_VERSION,

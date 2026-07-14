@@ -20,9 +20,9 @@ import type {
   ResourceStatus,
   ResourceKind,
 } from './resource-contract'
-import type { ResourceId } from '../resources/domain-id'
-import { canonicalizeResourceTitle } from '../resources/resource-contract'
-import type { ResourceTitle } from '../resources/resource-contract'
+import type { ResourceId } from './domain-id'
+import { canonicalizeResourceTitle } from './resource-record'
+import type { ResourceTitle } from './resource-record'
 import type { RESOURCE_TYPES } from './items-persistence-contract'
 import { isOptimisticSidebarItem, isOptimisticSidebarItemId } from './items/optimistic'
 

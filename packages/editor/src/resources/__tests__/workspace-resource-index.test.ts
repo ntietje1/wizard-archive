@@ -15,7 +15,7 @@ import type {
   ResourceLoadResult,
   ResourceProjectionScope,
 } from '../resource-index-contract'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 import {
   MutableWorkspaceResourceIndex,
   createResourceIndexLoader,

@@ -9,7 +9,7 @@ import type {
   ResourceStructureCommandGateway,
   ResourceStructureCommandResult,
 } from '../resource-command-contract'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 import { indexRevision, MutableWorkspaceResourceIndex } from '../workspace-resource-index'
 import { createOptimisticResourceStructureRuntime } from '../resource-optimistic-runtime'
 import { testDomainId } from '../../test/domain-id'

@@ -4,7 +4,7 @@ import { assertSha256Digest, initialVersion, sha256Digest } from '../component-v
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import type { PortableRelativePath } from '../portable-path-contract'
 import { PORTABLE_PATH_VERSION } from '../portable-path-contract'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 import { createSourcePathAlias } from '../source-path-alias'
 import {
   encodeWizardArchiveManifest,

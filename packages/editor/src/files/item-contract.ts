@@ -1,10 +1,10 @@
 import type { AssetId } from '../resources/domain-id'
-import type { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
+import type { RESOURCE_TYPES } from '../resources/items-persistence-contract'
 import type {
   BaseResource,
   BaseResourceRow,
   BaseResourceWithContent,
-} from '../workspace/resource-contract'
+} from '../resources/resource-contract'
 
 export type FileItemRow = BaseResourceRow<typeof RESOURCE_TYPES.files> & {
   assetId: AssetId | null

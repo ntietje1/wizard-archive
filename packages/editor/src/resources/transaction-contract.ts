@@ -1,9 +1,9 @@
 import type { ShareStatus } from '../../../../shared/block-shares/share-status'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
-import type { CreateParentTarget } from '../workspace/items'
-import type { ResourceColor, ResourceIconName, ResourceKind } from '../workspace/resource-contract'
-import type { ResourceTitle } from '../resources/resource-contract'
-import type { CampaignMemberId, OperationId, ResourceId } from '../resources/domain-id'
+import type { CreateParentTarget } from './items'
+import type { ResourceColor, ResourceIconName, ResourceKind } from './resource-contract'
+import type { ResourceTitle } from './resource-record'
+import type { CampaignMemberId, OperationId, ResourceId } from './domain-id'
 
 import type { ResourceChange, ResourcePatch } from './patch-contract'
 

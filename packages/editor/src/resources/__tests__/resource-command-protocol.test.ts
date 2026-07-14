@@ -16,7 +16,7 @@ import {
   normalizeResourceBookmarkCommand,
   normalizeResourceStructureCommand,
 } from '../resource-command-protocol'
-import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-contract'
+import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-record'
 
 const resourceA = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-f6c8-7a5b-8c9d-0123456789a1')
 const resourceB = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-f6c8-7a5b-8c9d-0123456789a2')

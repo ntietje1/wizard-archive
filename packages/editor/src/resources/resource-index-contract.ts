@@ -1,14 +1,14 @@
 import type { VersionStamp } from './component-version'
 import { isUuidV7 } from './domain-id'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
-import { RESOURCE_KIND } from './resource-contract'
+import { RESOURCE_KIND } from './resource-record'
 import type {
   ResourceColor,
   ResourceIcon,
   ResourceKind,
   ResourceRecord,
   ResourceTitle,
-} from './resource-contract'
+} from './resource-record'
 
 declare const indexRevisionBrand: unique symbol
 

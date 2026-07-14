@@ -1,1 +1,0 @@
-export const MAX_SIDEBAR_TREE_DEPTH = 50

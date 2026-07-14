@@ -5,9 +5,9 @@ import type { MaybePromise } from '../../../../shared/common/async'
 
 import type { ReactNode } from 'react'
 import { hasPermissionForRequirement } from '../../../../shared/permissions/requirements'
-import type { AnyItem } from '../workspace/items'
-import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
-import type { ResourceCommandResult } from '../filesystem/transaction-contract'
+import type { AnyItem } from '../resources/items'
+import { RESOURCE_TYPES } from '../resources/items-persistence-contract'
+import type { ResourceCommandResult } from '../resources/transaction-contract'
 import type { AggregateShareStatus, ShareItem, ShareState } from './share-state'
 
 export const EDITOR_PERMISSION_LEVEL = {

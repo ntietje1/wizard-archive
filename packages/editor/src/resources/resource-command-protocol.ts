@@ -15,8 +15,8 @@ import type {
   TrashResourcesCommand,
   UpdateResourceMetadataCommand,
 } from './resource-command-contract'
-import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-contract'
-import type { ResourceKind } from './resource-contract'
+import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-record'
+import type { ResourceKind } from './resource-record'
 
 export const RESOURCE_COMMAND_PROTOCOL_VERSION = 'resource-command-v1' as const
 

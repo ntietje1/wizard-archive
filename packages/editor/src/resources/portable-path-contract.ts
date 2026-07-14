@@ -1,5 +1,5 @@
 import type { ResourceId } from './domain-id'
-import type { ResourceKind, ResourceTitle } from './resource-contract'
+import type { ResourceKind, ResourceTitle } from './resource-record'
 
 declare const portableRelativePathBrand: unique symbol
 

@@ -3,7 +3,7 @@ import { createInMemoryResourceRuntime } from '../in-memory-resource-runtime'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import type { ResourceId } from '../domain-id'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 import { initialResourceMetadataVersion } from '../resource-metadata-version'
 import type { ResourceCatalogSnapshot } from '../resource-catalog-contract'
 

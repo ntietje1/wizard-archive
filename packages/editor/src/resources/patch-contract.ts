@@ -4,7 +4,7 @@ import type {
   ResourceLocation,
   ResourceStatus,
   ResourceKind,
-} from '../workspace/resource-contract'
+} from './resource-contract'
 import type {
   AssetId,
   CampaignId,
@@ -12,7 +12,7 @@ import type {
   ResourceId,
   ResourceShareId,
   SessionId,
-} from '../resources/domain-id'
+} from './domain-id'
 
 export type ResourcePatchRow = {
   id: ResourceId

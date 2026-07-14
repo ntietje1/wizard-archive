@@ -1,7 +1,7 @@
 import type { ResourceId } from '../resources/domain-id'
 import type { MaybePromise } from '../../../../shared/common/async'
 
-import type { ResourceOperationResult } from '../filesystem/transaction-contract'
+import type { ResourceOperationResult } from '../resources/transaction-contract'
 
 export interface ResourceImportFile {
   name: string

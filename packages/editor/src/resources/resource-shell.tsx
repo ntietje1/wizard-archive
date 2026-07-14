@@ -10,8 +10,8 @@ import type {
   ResourceKnowledge,
   WorkspaceResourceIndexSnapshot,
 } from './resource-index-contract'
-import { canonicalizeResourceTitle, RESOURCE_KIND } from './resource-contract'
-import type { ResourceKind } from './resource-contract'
+import { canonicalizeResourceTitle, RESOURCE_KIND } from './resource-record'
+import type { ResourceKind } from './resource-record'
 import { sortAuthorizedResourceSummaries } from './workspace-resource-index'
 
 export type ResourceShellSort = Readonly<{

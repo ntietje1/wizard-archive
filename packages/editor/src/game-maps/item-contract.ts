@@ -1,12 +1,12 @@
 import type { AssetId } from '../resources/domain-id'
-import type { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
+import type { RESOURCE_TYPES } from '../resources/items-persistence-contract'
 import type {
   BaseResource,
   BaseResourceRow,
   BaseResourceWithContent,
   ResourceByKind,
   ResourceKind,
-} from '../workspace/resource-contract'
+} from '../resources/resource-contract'
 import type { MapLayer, MapPin } from './document-contract'
 
 type MapPinItem = ResourceByKind<ResourceKind>

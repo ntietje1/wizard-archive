@@ -34,28 +34,28 @@
       "default": "./dist/files/item-contract.mjs"
     },
     "./resources/history-contract": {
-      "types": "./dist/filesystem/history-contract.d.mts",
-      "default": "./dist/filesystem/history-contract.mjs"
+      "types": "./dist/resources/history-contract.d.mts",
+      "default": "./dist/resources/history-contract.mjs"
     },
     "./resources/patch-contract": {
-      "types": "./dist/filesystem/patch-contract.d.mts",
-      "default": "./dist/filesystem/patch-contract.mjs"
+      "types": "./dist/resources/patch-contract.d.mts",
+      "default": "./dist/resources/patch-contract.mjs"
     },
     "./resources/operation-contract": {
-      "types": "./dist/filesystem/operation-contract.d.mts",
-      "default": "./dist/filesystem/operation-contract.mjs"
+      "types": "./dist/resources/operation-contract.d.mts",
+      "default": "./dist/resources/operation-contract.mjs"
     },
     "./resources/operation-capabilities": {
-      "types": "./dist/filesystem/domain/operation-capabilities.d.mts",
-      "default": "./dist/filesystem/domain/operation-capabilities.mjs"
+      "types": "./dist/resources/operation-capabilities.d.mts",
+      "default": "./dist/resources/operation-capabilities.mjs"
     },
     "./resources/selection-roots": {
-      "types": "./dist/filesystem/domain/selection-roots.d.mts",
-      "default": "./dist/filesystem/domain/selection-roots.mjs"
+      "types": "./dist/resources/selection-roots.d.mts",
+      "default": "./dist/resources/selection-roots.mjs"
     },
     "./resources/transaction-contract": {
-      "types": "./dist/filesystem/transaction-contract.d.mts",
-      "default": "./dist/filesystem/transaction-contract.mjs"
+      "types": "./dist/resources/transaction-contract.d.mts",
+      "default": "./dist/resources/transaction-contract.mjs"
     },
     "./game-maps/document-contract": {
       "types": "./dist/game-maps/document-contract.d.mts",
@@ -94,16 +94,16 @@
       "default": "./dist/sharing/contracts.mjs"
     },
     "./resources/items": {
-      "types": "./dist/workspace/items.d.mts",
-      "default": "./dist/workspace/items.mjs"
+      "types": "./dist/resources/items.d.mts",
+      "default": "./dist/resources/items.mjs"
     },
     "./resources/items-persistence-contract": {
-      "types": "./dist/workspace/items-persistence-contract.d.mts",
-      "default": "./dist/workspace/items-persistence-contract.mjs"
+      "types": "./dist/resources/items-persistence-contract.d.mts",
+      "default": "./dist/resources/items-persistence-contract.mjs"
     },
     "./resources/resource-contract": {
-      "types": "./dist/workspace/resource-contract.d.mts",
-      "default": "./dist/workspace/resource-contract.mjs"
+      "types": "./dist/resources/resource-contract.d.mts",
+      "default": "./dist/resources/resource-contract.mjs"
     },
     "./resources/domain-id": {
       "types": "./dist/resources/domain-id.d.mts",
@@ -114,8 +114,8 @@
       "default": "./dist/resources/component-version.mjs"
     },
     "./resources/resource-record": {
-      "types": "./dist/resources/resource-contract.d.mts",
-      "default": "./dist/resources/resource-contract.mjs"
+      "types": "./dist/resources/resource-record.d.mts",
+      "default": "./dist/resources/resource-record.mjs"
     },
     "./resources/resource-metadata-version": {
       "types": "./dist/resources/resource-metadata-version.d.mts",

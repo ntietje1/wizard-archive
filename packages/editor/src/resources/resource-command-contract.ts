@@ -6,7 +6,7 @@ import type {
   OperationId,
   ResourceId,
 } from './domain-id'
-import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-contract'
+import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-record'
 
 export type CreateResourceCommand = Readonly<{
   type: 'create'

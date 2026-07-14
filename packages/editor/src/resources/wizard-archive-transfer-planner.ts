@@ -3,7 +3,7 @@ import { compareVersionStamps } from './component-version'
 import type { VersionComparison, VersionStamp } from './component-version'
 import type { CampaignId, ResourceId } from './domain-id'
 import { initialResourceMetadataVersion } from './resource-metadata-version'
-import type { ResourceKind } from './resource-contract'
+import type { ResourceKind } from './resource-record'
 import type { SourcePathAlias } from './resource-catalog-contract'
 import type {
   SameCampaignPolicy,

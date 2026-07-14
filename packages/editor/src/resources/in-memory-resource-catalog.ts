@@ -26,12 +26,12 @@ import {
   normalizeResourceStructureCommand,
   resourceStructureInputRejection,
 } from './resource-command-protocol'
-import type { AuditStamp, ResourceRecord } from './resource-contract'
+import type { AuditStamp, ResourceRecord } from './resource-record'
 import {
   MAX_SYNCHRONOUS_RESOURCE_CLOSURE,
   canonicalizeResourceTitle,
   resourceMetadataValue,
-} from './resource-contract'
+} from './resource-record'
 import {
   advanceResourceMetadataVersion,
   createResourceTombstone,

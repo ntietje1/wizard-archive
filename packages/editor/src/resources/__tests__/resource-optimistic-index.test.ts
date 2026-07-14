@@ -8,7 +8,7 @@ import type {
   AuthorizedResourceSummary,
   ResourceProjectionScope,
 } from '../resource-index-contract'
-import { canonicalizeResourceTitle } from '../resource-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
 import { OptimisticWorkspaceResourceIndex } from '../resource-optimistic-index'
 import { MutableWorkspaceResourceIndex, indexRevision } from '../workspace-resource-index'
 

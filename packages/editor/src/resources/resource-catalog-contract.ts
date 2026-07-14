@@ -5,7 +5,7 @@ import type {
   ResourceIcon,
   ResourceRecord,
   ResourceTitle,
-} from './resource-contract'
+} from './resource-record'
 import type { ResourceTombstone } from './resource-metadata-version'
 
 export const MAX_RESOURCE_CATALOG_PAGE_SIZE = 200

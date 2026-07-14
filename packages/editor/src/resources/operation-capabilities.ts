@@ -1,13 +1,13 @@
-import type { ResourceId } from '../../resources/domain-id'
+import type { ResourceId } from './domain-id'
 import {
   PERMISSION_OPERATION,
   hasPermissionForOperation,
-} from '../../../../../shared/permissions/requirements'
-import type { PermissionLevel } from '../../../../../shared/permissions/types'
-import { isActiveResourceItem } from '../../workspace/items'
-import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import { isTrashedSidebarItem } from '../../workspace/items/status'
-import type { ResourcePatchRow } from '../patch-contract'
+} from '../../../../shared/permissions/requirements'
+import type { PermissionLevel } from '../../../../shared/permissions/types'
+import { isActiveResourceItem } from './items'
+import { RESOURCE_TYPES } from './items-persistence-contract'
+import { isTrashedSidebarItem } from './items/status'
+import type { ResourcePatchRow } from './patch-contract'
 
 export type ResourceOperationRejectionCode =
   | 'not_found'

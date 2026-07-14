@@ -23,8 +23,8 @@ import {
   resourceMatchesCollectionQuery,
   sameResourceProjectionScope,
 } from './resource-index-contract'
-import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-contract'
-import type { ResourceKind } from './resource-contract'
+import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-record'
+import type { ResourceKind } from './resource-record'
 
 export type ResourceIndexLoadSource = Readonly<{
   loadResource(scope: ResourceProjectionScope, resourceId: ResourceId): Promise<ResourceLoadResult>

@@ -1,5 +1,6 @@
-import type { ResourceId } from '../../resources/domain-id'
-import { MAX_SIDEBAR_TREE_DEPTH } from './tree'
+import type { ResourceId } from './domain-id'
+
+const MAX_RESOURCE_TREE_DEPTH = 50
 
 type ResourceTreeNode<TId extends string> = {
   id: TId
@@ -22,7 +23,7 @@ export function normalizeSelectedRoots<
     let hasSelectedAncestor = false
 
     while (parentId) {
-      if (depth >= MAX_SIDEBAR_TREE_DEPTH) {
+      if (depth >= MAX_RESOURCE_TREE_DEPTH) {
         throw new Error(`Max resource operation depth exceeded at ${parentId}`)
       }
       if (seen.has(parentId)) {

@@ -8,7 +8,7 @@ import {
   encodeResourceTombstone,
   initialResourceMetadataVersion,
 } from '../resource-metadata-version'
-import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-contract'
+import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-record'
 
 const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-f6c8-7a5b-8c9d-0123456789ab')
 const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, '01890f47-f6c8-7a5b-8c9d-0123456789ac')

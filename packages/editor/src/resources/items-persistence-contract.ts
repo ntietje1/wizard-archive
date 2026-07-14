@@ -1,6 +1,4 @@
-export const RESOURCE_LOCATION = {
-  sidebar: 'sidebar',
-} as const
+export const RESOURCE_LOCATION = { sidebar: 'sidebar' } as const
 
 export const RESOURCE_STATUS = {
   active: 'active',

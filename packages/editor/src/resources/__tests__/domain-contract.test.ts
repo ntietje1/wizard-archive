@@ -6,7 +6,7 @@ import {
   isUuidV7,
   parseDomainId,
 } from '../domain-id'
-import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-contract'
+import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-record'
 
 describe('canonical domain identity', () => {
   it('accepts only lowercase RFC 9562 UUIDv7 values', () => {
