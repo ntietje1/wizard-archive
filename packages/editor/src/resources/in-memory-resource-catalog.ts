@@ -4,6 +4,7 @@ import type {
   ApplicationResourceRole,
   ResourceCatalogPage,
   ResourceCatalogReader,
+  ResourceCatalogSnapshotSource,
   ResourceCatalogSnapshot,
   ResourceMetadataChanges,
   SourcePathAlias,
@@ -41,6 +42,7 @@ export type ResourceOperationAuthorizer = (
 
 export type InMemoryResourceCatalogOptions = Readonly<{
   authorize: ResourceOperationAuthorizer
+  initialSnapshot?: ResourceCatalogSnapshot
   now?: () => number
 }>
 
@@ -75,6 +77,80 @@ function cloneCatalogState(state: CatalogState): CatalogState {
     ),
     roles: new Map(Array.from(state.roles, ([campaignId, roles]) => [campaignId, new Map(roles)])),
   }
+}
+
+function addSnapshotResources(state: CatalogState, snapshot: ResourceCatalogSnapshot): void {
+  for (const resource of snapshot.resources) {
+    if (resource.campaignId !== snapshot.campaignId || state.resources.has(resource.id)) {
+      throw new TypeError('Invalid initial resource catalog snapshot')
+    }
+    state.resources.set(resource.id, resource)
+  }
+}
+
+function addSnapshotTombstones(state: CatalogState, snapshot: ResourceCatalogSnapshot): void {
+  for (const tombstone of snapshot.tombstones) {
+    if (
+      tombstone.campaignId !== snapshot.campaignId ||
+      state.resources.has(tombstone.resourceId) ||
+      state.tombstones.has(tombstone.resourceId)
+    ) {
+      throw new TypeError('Invalid initial resource catalog snapshot')
+    }
+    state.tombstones.set(tombstone.resourceId, tombstone)
+  }
+}
+
+function validateSnapshotHierarchy(state: CatalogState, campaignId: CampaignId): void {
+  for (const resource of state.resources.values()) {
+    const visited = new Set<ResourceId>([resource.id])
+    let parentId = resource.parentId
+    while (parentId !== null) {
+      if (visited.has(parentId)) throw new TypeError('Invalid initial resource catalog hierarchy')
+      visited.add(parentId)
+      const parent = state.resources.get(parentId)
+      if (!parent || parent.campaignId !== campaignId || parent.kind !== 'folder') {
+        throw new TypeError('Invalid initial resource catalog hierarchy')
+      }
+      parentId = parent.parentId
+    }
+  }
+}
+
+function addSnapshotAliases(state: CatalogState, snapshot: ResourceCatalogSnapshot): void {
+  for (const alias of snapshot.aliases) {
+    if (alias.campaignId !== snapshot.campaignId || !state.resources.has(alias.resourceId)) {
+      throw new TypeError('Invalid initial resource catalog alias')
+    }
+    const aliases = state.aliases.get(alias.resourceId) ?? []
+    if (
+      aliases.some((candidate) => candidate.value.normalizedPath === alias.value.normalizedPath)
+    ) {
+      throw new TypeError('Duplicate initial resource catalog alias')
+    }
+    state.aliases.set(alias.resourceId, [...aliases, alias])
+  }
+}
+
+function addSnapshotRoles(state: CatalogState, snapshot: ResourceCatalogSnapshot): void {
+  const roles = new Map<string, ResourceId>()
+  for (const role of snapshot.roles) {
+    if (roles.has(role.role) || !state.resources.has(role.resourceId)) {
+      throw new TypeError('Invalid initial resource catalog role')
+    }
+    roles.set(role.role, role.resourceId)
+  }
+  if (roles.size > 0) state.roles.set(snapshot.campaignId, roles)
+}
+
+function catalogStateFromSnapshot(snapshot: ResourceCatalogSnapshot): CatalogState {
+  const state = emptyCatalogState()
+  addSnapshotResources(state, snapshot)
+  addSnapshotTombstones(state, snapshot)
+  validateSnapshotHierarchy(state, snapshot.campaignId)
+  addSnapshotAliases(state, snapshot)
+  addSnapshotRoles(state, snapshot)
+  return state
 }
 
 function byResourceId(left: ResourceRecord, right: ResourceRecord): number {
@@ -227,17 +303,59 @@ function completed(
 }
 
 export class InMemoryResourceCatalog
-  implements ResourceCatalogReader, AuthoritativeResourceOperationExecutor
+  implements
+    ResourceCatalogReader,
+    ResourceCatalogSnapshotSource,
+    AuthoritativeResourceOperationExecutor
 {
-  #state = emptyCatalogState()
+  #state: CatalogState
   readonly #ledger = new InMemoryResourceOperationLedger<ResourceCommandReceipt>()
   readonly #authorize: ResourceOperationAuthorizer
   readonly #now: () => number
+  readonly #listeners = new Map<CampaignId, Set<() => void>>()
+  readonly #snapshotCache = new Map<CampaignId, ResourceCatalogSnapshot>()
   #operationQueue: Promise<void> = Promise.resolve()
 
   constructor(options: InMemoryResourceCatalogOptions) {
     this.#authorize = options.authorize
     this.#now = options.now ?? Date.now
+    this.#state = options.initialSnapshot
+      ? catalogStateFromSnapshot(options.initialSnapshot)
+      : emptyCatalogState()
+  }
+
+  getSnapshot(campaignId: CampaignId): ResourceCatalogSnapshot {
+    const cached = this.#snapshotCache.get(campaignId)
+    if (cached) return cached
+    const snapshot = {
+      campaignId,
+      resources: Array.from(this.#state.resources.values())
+        .filter((resource) => resource.campaignId === campaignId)
+        .sort(byResourceId),
+      tombstones: Array.from(this.#state.tombstones.values())
+        .filter((tombstone) => tombstone.campaignId === campaignId)
+        .sort(byTombstoneResourceId),
+      aliases: Array.from(this.#state.aliases.values())
+        .flat()
+        .filter((alias) => alias.campaignId === campaignId)
+        .sort(byAlias),
+      roles: Array.from(this.#state.roles.get(campaignId) ?? [], ([role, resourceId]) => ({
+        role,
+        resourceId,
+      })).sort(byRole),
+    } satisfies ResourceCatalogSnapshot
+    this.#snapshotCache.set(campaignId, snapshot)
+    return snapshot
+  }
+
+  subscribe(campaignId: CampaignId, listener: () => void): () => void {
+    const listeners = this.#listeners.get(campaignId) ?? new Set<() => void>()
+    listeners.add(listener)
+    this.#listeners.set(campaignId, listeners)
+    return () => {
+      listeners.delete(listener)
+      if (listeners.size === 0) this.#listeners.delete(campaignId)
+    }
   }
 
   getResource(campaignId: CampaignId, resourceId: ResourceId): Promise<ResourceRecord | null> {
@@ -310,21 +428,8 @@ export class InMemoryResourceCatalog
     )
   }
 
-  async readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot> {
-    return {
-      campaignId,
-      resources: Array.from(this.#state.resources.values())
-        .filter((resource) => resource.campaignId === campaignId)
-        .sort(byResourceId),
-      tombstones: Array.from(this.#state.tombstones.values())
-        .filter((tombstone) => tombstone.campaignId === campaignId)
-        .sort(byTombstoneResourceId),
-      aliases: Array.from(this.#state.aliases.values())
-        .flat()
-        .filter((alias) => alias.campaignId === campaignId)
-        .sort(byAlias),
-      roles: await this.listRoles(campaignId),
-    }
+  readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot> {
+    return Promise.resolve(this.getSnapshot(campaignId))
   }
 
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias> {
@@ -336,6 +441,7 @@ export class InMemoryResourceCatalog
       )
       if (existing) return existing
       this.#state.aliases.set(alias.resourceId, [...current, alias])
+      this.#publish(alias.campaignId)
       return alias
     })
   }
@@ -344,14 +450,16 @@ export class InMemoryResourceCatalog
     return this.#enqueue(() => {
       ownedResource(this.#state, campaignId, role.resourceId)
       const roles = this.#state.roles.get(campaignId) ?? new Map<string, ResourceId>()
+      if (roles.get(role.role) === role.resourceId) return
       roles.set(role.role, role.resourceId)
       this.#state.roles.set(campaignId, roles)
+      this.#publish(campaignId)
     })
   }
 
   removeRole(campaignId: CampaignId, role: string): Promise<void> {
     return this.#enqueue(() => {
-      this.#state.roles.get(campaignId)?.delete(role)
+      if (this.#state.roles.get(campaignId)?.delete(role)) this.#publish(campaignId)
     })
   }
 
@@ -426,7 +534,19 @@ export class InMemoryResourceCatalog
       receipt: result.receipt,
     })
     this.#state = draft
+    this.#publish(normalizedEnvelope.campaignId)
     return result
+  }
+
+  #publish(campaignId: CampaignId): void {
+    this.#snapshotCache.delete(campaignId)
+    for (const listener of this.#listeners.get(campaignId) ?? []) {
+      try {
+        listener()
+      } catch {
+        // Observers cannot change the outcome of an already committed catalog operation.
+      }
+    }
   }
 
   async #apply(

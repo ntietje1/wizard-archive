@@ -71,6 +71,11 @@ export interface ResourceCatalogReader {
   readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot>
 }
 
+export interface ResourceCatalogSnapshotSource {
+  getSnapshot(campaignId: CampaignId): ResourceCatalogSnapshot
+  subscribe(campaignId: CampaignId, listener: () => void): () => void
+}
+
 export type ResourceMetadataChanges = Readonly<{
   parentId?: ResourceId | null
   title?: ResourceTitle
