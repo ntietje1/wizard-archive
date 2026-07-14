@@ -207,6 +207,120 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('deep copies a bounded folder closure with final UUIDs and replayable receipts', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const destinationId = await createResource(
+      campaign,
+      campaignUuid,
+      'folder',
+      null,
+      'Destination',
+    )
+    const sourceRootId = await createResource(campaign, campaignUuid, 'folder', null, 'Archive')
+    const sourceChildId = await createResource(
+      campaign,
+      campaignUuid,
+      'folder',
+      sourceRootId,
+      'Archive',
+    )
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const args = {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'deepCopy' as const,
+        sourceRootIds: [sourceRootId],
+        destinationParentId: destinationId,
+      },
+    }
+
+    const first = await asDm(campaign).mutation(
+      api.resources.mutations.executeStructureCommand,
+      args,
+    )
+    const replay = await asDm(campaign).mutation(
+      api.resources.mutations.executeStructureCommand,
+      args,
+    )
+
+    expect(replay).toEqual(first)
+    expect(first).toMatchObject({
+      status: 'completed',
+      receipt: {
+        campaignId: campaignUuid,
+        operationId,
+        result: {
+          type: 'deepCopied',
+          roots: [{ sourceRootId, destinationRootId: expect.any(String) }],
+        },
+        postconditions: [
+          { state: 'present', resourceId: expect.any(String) },
+          { state: 'present', resourceId: expect.any(String) },
+        ],
+      },
+    })
+    if (first.status !== 'completed' || first.receipt.result.type !== 'deepCopied') {
+      throw new Error('Expected completed deep copy')
+    }
+    const destinationRootId = first.receipt.result.roots[0]!.destinationRootId
+    expect(destinationRootId).not.toBe(sourceRootId)
+
+    await t.run(async (ctx) => {
+      const destinationRoot = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', destinationRootId))
+        .unique()
+      const destinationChildren = await ctx.db
+        .query('resources')
+        .withIndex('by_campaign_and_parent', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('parentResourceUuid', destinationRootId),
+        )
+        .take(2)
+      expect(destinationRoot).toEqual(
+        expect.objectContaining({
+          campaignUuid,
+          parentResourceUuid: destinationId,
+          title: 'Archive',
+          metadataVersion: expect.objectContaining({ revision: 1 }),
+        }),
+      )
+      expect(destinationChildren[0]!.resourceUuid).not.toBe(sourceChildId)
+      expect(destinationChildren).toEqual([
+        expect.objectContaining({
+          parentResourceUuid: destinationRootId,
+          title: 'Archive',
+          metadataVersion: expect.objectContaining({ revision: 1 }),
+        }),
+      ])
+    })
+  })
+
+  it('rejects deep copy before writes when a content-owned plan is unavailable', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const noteId = await createResource(campaign, campaignUuid, 'note', null, 'Note')
+
+    await expect(
+      execute(campaign, campaignUuid, {
+        type: 'deepCopy',
+        sourceRootIds: [noteId],
+        destinationParentId: null,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_unavailable' })
+    await t.run(async (ctx) => {
+      const roots = await ctx.db
+        .query('resources')
+        .withIndex('by_campaign_and_parent', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('parentResourceUuid', null),
+        )
+        .take(2)
+      expect(roots).toHaveLength(1)
+      expect(roots[0]!.resourceUuid).toBe(noteId)
+    })
+  })
+
   it('recursively trashes, restores with root fallback, and permanently deletes catalog state', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)

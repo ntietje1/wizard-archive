@@ -1,4 +1,8 @@
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  assertDomainId,
+  generateDomainId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type {
   CampaignId,
   CampaignMemberId,
@@ -525,6 +529,87 @@ async function permanentlyDeleteResources(
   )
 }
 
+async function deepCopyResources(
+  ctx: CampaignMutationCtx,
+  campaignId: CampaignId,
+  actorId: CampaignMemberId,
+  operationId: OperationId,
+  command: Extract<ResourceStructureCommand, { type: 'deepCopy' }>,
+): Promise<ResourceStructureCommandResult> {
+  await validateParent(ctx, campaignId, command.destinationParentId)
+  const { roots, closure } = await lifecycleClosure(
+    ctx,
+    campaignId,
+    command.sourceRootIds,
+    'active',
+  )
+  if (closure.some((resource) => resource.kind !== 'folder')) {
+    throw new CatalogRejection('content_unavailable')
+  }
+
+  const rootIds = new Set(roots.map((root) => root.resourceUuid))
+  const resourceMap = new Map(
+    closure.map((resource) => [
+      resource.resourceUuid as ResourceId,
+      generateDomainId(DOMAIN_ID_KIND.resource),
+    ]),
+  )
+  const now = Date.now()
+  const copies = await Promise.all(
+    closure.map(async (source) => {
+      const sourceId = source.resourceUuid as ResourceId
+      const resourceId = resourceMap.get(sourceId)!
+      const parentId = rootIds.has(source.resourceUuid)
+        ? command.destinationParentId
+        : resourceMap.get(source.parentResourceUuid as ResourceId)!
+      const title = canonicalizeResourceTitle(source.title)
+      if (title !== source.title) throw new CatalogRejection('content_integrity_failure')
+      const metadataVersion = await initialResourceMetadataVersion({
+        parentId,
+        kind: source.kind,
+        title,
+        icon: source.icon,
+        color: source.color,
+        lifecycle: 'active',
+      })
+      return { resourceId, parentId, source, title, metadataVersion }
+    }),
+  )
+
+  for (const copy of copies) {
+    await ctx.db.insert('resources', {
+      resourceUuid: copy.resourceId,
+      campaignUuid: campaignId,
+      parentResourceUuid: copy.parentId,
+      kind: copy.source.kind,
+      title: copy.title,
+      icon: copy.source.icon,
+      color: copy.source.color,
+      lifecycle: 'active',
+      trashedAt: null,
+      trashedByMemberUuid: null,
+      metadataVersion: copy.metadataVersion,
+      createdAt: now,
+      createdByMemberUuid: actorId,
+      updatedAt: now,
+      updatedByMemberUuid: actorId,
+    })
+  }
+
+  return completed(
+    campaignId,
+    operationId,
+    {
+      type: 'deepCopied',
+      roots: roots.map((root) => ({
+        sourceRootId: root.resourceUuid as ResourceId,
+        destinationRootId: resourceMap.get(root.resourceUuid as ResourceId)!,
+      })),
+    },
+    copies.map((copy) => presentPostcondition(copy.resourceId, copy.metadataVersion)),
+  )
+}
+
 async function applyCommand(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
@@ -545,7 +630,7 @@ async function applyCommand(
     case 'permanentlyDelete':
       return await permanentlyDeleteResources(ctx, campaignId, operationId, command)
     case 'deepCopy':
-      return { status: 'unavailable', reason: 'capability_not_supported' }
+      return await deepCopyResources(ctx, campaignId, actorId, operationId, command)
   }
 }
 
