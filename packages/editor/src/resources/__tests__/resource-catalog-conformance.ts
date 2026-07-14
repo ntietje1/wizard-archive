@@ -23,17 +23,16 @@ import type {
 import { canonicalizeResourceTitle } from '../resource-contract'
 import type { ResourceOperationAuthorizer } from '../in-memory-resource-catalog'
 
-type CatalogUnderTest = ResourceCatalogReader &
-  AuthoritativeResourceOperationExecutor & {
-    appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
-    setRole(campaignId: CampaignId, role: ApplicationResourceRole): Promise<void>
-    removeRole(campaignId: CampaignId, role: string): Promise<void>
-  }
+type CatalogUnderTest = AuthoritativeResourceOperationExecutor & {
+  appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
+  setRole(campaignId: CampaignId, role: ApplicationResourceRole): Promise<void>
+  removeRole(campaignId: CampaignId, role: string): Promise<void>
+}
 
-type CatalogFactory = (input: {
-  authorize: ResourceOperationAuthorizer
-  now: () => number
-}) => CatalogUnderTest
+type CatalogFactory = (input: { authorize: ResourceOperationAuthorizer; now: () => number }) => {
+  catalog: ResourceCatalogReader
+  operations: CatalogUnderTest
+}
 
 const campaignId = domainId(DOMAIN_ID_KIND.campaign, 1)
 const secondCampaignId = domainId(DOMAIN_ID_KIND.campaign, 2)
@@ -86,7 +85,7 @@ export function defineResourceCatalogConformance(
   describe(`${name} resource catalog conformance`, () => {
     it('stores duplicate-safe natural titles and returns deterministic bounded reads', async () => {
       let operation = 100
-      const catalog = createCatalog({ authorize: () => true, now: () => 10 })
+      const { catalog, operations } = createCatalog({ authorize: () => true, now: () => 10 })
       const folderId = domainId(DOMAIN_ID_KIND.resource, 10)
       const firstId = domainId(DOMAIN_ID_KIND.resource, 12)
       const secondId = domainId(DOMAIN_ID_KIND.resource, 11)
@@ -97,7 +96,7 @@ export function defineResourceCatalogConformance(
         createCommand(secondId, folderId),
       ]) {
         expectCompleted(
-          await catalog.execute(
+          await operations.execute(
             actorId,
             envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), command),
           ),
@@ -131,7 +130,7 @@ export function defineResourceCatalogConformance(
 
     it('enforces global identity, immutable ownership, folder parents, and acyclic hierarchy', async () => {
       let operation = 200
-      const catalog = createCatalog({ authorize: () => true, now: () => 20 })
+      const { catalog, operations } = createCatalog({ authorize: () => true, now: () => 20 })
       const folderId = domainId(DOMAIN_ID_KIND.resource, 20)
       const childFolderId = domainId(DOMAIN_ID_KIND.resource, 21)
       const noteId = domainId(DOMAIN_ID_KIND.resource, 22)
@@ -144,7 +143,7 @@ export function defineResourceCatalogConformance(
         [secondCampaignId, createCommand(foreignFolderId, null, 'folder')],
       ] as const) {
         expectCompleted(
-          await catalog.execute(
+          await operations.execute(
             actorId,
             envelope(campaign, domainId(DOMAIN_ID_KIND.operation, operation++), command),
           ),
@@ -152,7 +151,7 @@ export function defineResourceCatalogConformance(
       }
 
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(
             secondCampaignId,
@@ -162,7 +161,7 @@ export function defineResourceCatalogConformance(
         ),
       ).resolves.toEqual({ status: 'rejected', reason: 'ownership_mismatch' })
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(
             campaignId,
@@ -172,7 +171,7 @@ export function defineResourceCatalogConformance(
         ),
       ).resolves.toEqual({ status: 'rejected', reason: 'invalid_parent_kind' })
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(
             campaignId,
@@ -185,7 +184,7 @@ export function defineResourceCatalogConformance(
         ),
       ).resolves.toEqual({ status: 'rejected', reason: 'invalid_parent' })
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'move',
@@ -195,7 +194,7 @@ export function defineResourceCatalogConformance(
         ),
       ).resolves.toEqual({ status: 'rejected', reason: 'hierarchy_cycle' })
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'move',
@@ -209,10 +208,10 @@ export function defineResourceCatalogConformance(
     })
 
     it('advances versions only for semantic metadata changes', async () => {
-      const catalog = createCatalog({ authorize: () => true, now: () => 30 })
+      const { catalog, operations } = createCatalog({ authorize: () => true, now: () => 30 })
       const resourceId = domainId(DOMAIN_ID_KIND.resource, 30)
       expectCompleted(
-        await catalog.execute(
+        await operations.execute(
           actorId,
           envelope(
             campaignId,
@@ -224,7 +223,7 @@ export function defineResourceCatalogConformance(
       const created = (await catalog.getResource(campaignId, resourceId))!
 
       expectCompleted(
-        await catalog.execute(
+        await operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, 301), {
             type: 'updateMetadata',
@@ -238,7 +237,7 @@ export function defineResourceCatalogConformance(
       expect(unchanged.updated).toEqual(created.updated)
 
       expectCompleted(
-        await catalog.execute(
+        await operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, 302), {
             type: 'updateMetadata',
@@ -254,20 +253,20 @@ export function defineResourceCatalogConformance(
 
     it('commits commands atomically and retains actor-bound replay receipts', async () => {
       let authorized = true
-      const catalog = createCatalog({ authorize: () => authorized, now: () => 40 })
+      const { catalog, operations } = createCatalog({ authorize: () => authorized, now: () => 40 })
       const resourceId = domainId(DOMAIN_ID_KIND.resource, 40)
       const operationId = domainId(DOMAIN_ID_KIND.operation, 400)
       const command = createCommand(resourceId, null)
-      const first = await catalog.execute(actorId, envelope(campaignId, operationId, command))
+      const first = await operations.execute(actorId, envelope(campaignId, operationId, command))
       const firstReceipt = expectCompleted(first)
-      const replay = await catalog.execute(actorId, envelope(campaignId, operationId, command))
+      const replay = await operations.execute(actorId, envelope(campaignId, operationId, command))
       expect(expectCompleted(replay)).toEqual(firstReceipt)
 
       await expect(
-        catalog.execute(secondActorId, envelope(campaignId, operationId, command)),
+        operations.execute(secondActorId, envelope(campaignId, operationId, command)),
       ).resolves.toEqual({ status: 'rejected', reason: 'operation_id_reused' })
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(campaignId, operationId, {
             type: 'updateMetadata',
@@ -279,7 +278,7 @@ export function defineResourceCatalogConformance(
 
       authorized = false
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(
             campaignId,
@@ -293,7 +292,7 @@ export function defineResourceCatalogConformance(
 
     it('aborts an entire multi-resource mutation when any selected resource is invalid', async () => {
       let operation = 500
-      const catalog = createCatalog({ authorize: () => true, now: () => 50 })
+      const { catalog, operations } = createCatalog({ authorize: () => true, now: () => 50 })
       const destinationId = domainId(DOMAIN_ID_KIND.resource, 50)
       const movableId = domainId(DOMAIN_ID_KIND.resource, 51)
       const trashedId = domainId(DOMAIN_ID_KIND.resource, 52)
@@ -303,14 +302,14 @@ export function defineResourceCatalogConformance(
         createCommand(trashedId, null),
       ]) {
         expectCompleted(
-          await catalog.execute(
+          await operations.execute(
             actorId,
             envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), command),
           ),
         )
       }
       expectCompleted(
-        await catalog.execute(
+        await operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'trash',
@@ -320,7 +319,7 @@ export function defineResourceCatalogConformance(
       )
 
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'move',
@@ -334,7 +333,7 @@ export function defineResourceCatalogConformance(
 
     it('recursively trashes, restores with root fallback, and permanently deletes trash roots', async () => {
       let operation = 600
-      const catalog = createCatalog({ authorize: () => true, now: () => 60 })
+      const { catalog, operations } = createCatalog({ authorize: () => true, now: () => 60 })
       const folderId = domainId(DOMAIN_ID_KIND.resource, 60)
       const childId = domainId(DOMAIN_ID_KIND.resource, 61)
       for (const command of [
@@ -342,14 +341,14 @@ export function defineResourceCatalogConformance(
         createCommand(childId, folderId),
       ]) {
         expectCompleted(
-          await catalog.execute(
+          await operations.execute(
             actorId,
             envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), command),
           ),
         )
       }
       expectCompleted(
-        await catalog.execute(
+        await operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'trash',
@@ -360,7 +359,7 @@ export function defineResourceCatalogConformance(
       expect((await catalog.getResource(campaignId, childId))?.lifecycle.state).toBe('trashed')
 
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'permanentlyDelete',
@@ -369,7 +368,7 @@ export function defineResourceCatalogConformance(
         ),
       ).resolves.toEqual({ status: 'rejected', reason: 'invalid_root_selection' })
       expectCompleted(
-        await catalog.execute(
+        await operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'restore',
@@ -382,7 +381,7 @@ export function defineResourceCatalogConformance(
       )
 
       expectCompleted(
-        await catalog.execute(
+        await operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, operation++), {
             type: 'permanentlyDelete',
@@ -395,7 +394,7 @@ export function defineResourceCatalogConformance(
       expect(tombstone?.deletionVersion.revision).toBe(3)
       expect(await catalog.getResource(campaignId, childId)).not.toBeNull()
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(
             secondCampaignId,
@@ -407,10 +406,10 @@ export function defineResourceCatalogConformance(
     })
 
     it('preserves the first alias observation and keeps application roles deterministic', async () => {
-      const catalog = createCatalog({ authorize: () => true, now: () => 70 })
+      const { catalog, operations } = createCatalog({ authorize: () => true, now: () => 70 })
       const resourceId = domainId(DOMAIN_ID_KIND.resource, 70)
       expectCompleted(
-        await catalog.execute(
+        await operations.execute(
           actorId,
           envelope(
             campaignId,
@@ -421,29 +420,29 @@ export function defineResourceCatalogConformance(
       )
       const first = alias(resourceId, domainId(DOMAIN_ID_KIND.importJob, 701), 'Notes/Entry.md')
       const repeated = alias(resourceId, domainId(DOMAIN_ID_KIND.importJob, 702), 'notes/entry.md')
-      expect(await catalog.appendAlias(first)).toBe(first)
-      expect(await catalog.appendAlias(repeated)).toBe(first)
+      expect(await operations.appendAlias(first)).toBe(first)
+      expect(await operations.appendAlias(repeated)).toBe(first)
       expect(await catalog.listAliases(campaignId, resourceId)).toEqual([first])
 
-      await catalog.setRole(campaignId, { role: 'player-handout', resourceId })
-      await catalog.setRole(campaignId, { role: 'campaign-home', resourceId })
+      await operations.setRole(campaignId, { role: 'player-handout', resourceId })
+      await operations.setRole(campaignId, { role: 'campaign-home', resourceId })
       expect(await catalog.listRoles(campaignId)).toEqual([
         { role: 'campaign-home', resourceId },
         { role: 'player-handout', resourceId },
       ])
-      await catalog.removeRole(campaignId, 'campaign-home')
+      await operations.removeRole(campaignId, 'campaign-home')
       expect(await catalog.listRoles(campaignId)).toEqual([{ role: 'player-handout', resourceId }])
     })
 
     it('rejects closures above the synchronous operation limit without partial lifecycle changes', async () => {
       let operation = 800
-      const catalog = createCatalog({ authorize: () => true, now: () => 80 })
+      const { catalog, operations } = createCatalog({ authorize: () => true, now: () => 80 })
       let parentId: ResourceId | null = null
       const rootId = domainId(DOMAIN_ID_KIND.resource, 800)
       for (let index = 0; index <= 500; index += 1) {
         const resourceId = domainId(DOMAIN_ID_KIND.resource, 800 + index)
         expectCompleted(
-          await catalog.execute(
+          await operations.execute(
             actorId,
             envelope(
               campaignId,
@@ -456,7 +455,7 @@ export function defineResourceCatalogConformance(
       }
 
       await expect(
-        catalog.execute(
+        operations.execute(
           actorId,
           envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, 9_999), {
             type: 'trash',

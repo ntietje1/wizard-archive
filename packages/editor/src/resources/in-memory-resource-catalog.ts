@@ -41,8 +41,11 @@ export type ResourceOperationAuthorizer = (
 ) => boolean | Promise<boolean>
 
 export type InMemoryResourceCatalogOptions = Readonly<{
-  authorize: ResourceOperationAuthorizer
   initialSnapshot?: ResourceCatalogSnapshot
+}>
+
+export type InMemoryResourceOperationExecutorOptions = Readonly<{
+  authorize: ResourceOperationAuthorizer
   now?: () => number
 }>
 
@@ -51,6 +54,21 @@ type CatalogState = {
   tombstones: Map<ResourceId, ResourceTombstone>
   aliases: Map<ResourceId, Array<SourcePathAlias>>
   roles: Map<CampaignId, Map<string, ResourceId>>
+}
+
+type InMemoryResourceCatalogBackend = {
+  state: CatalogState
+  operationQueue: Promise<void>
+  listeners: Map<CampaignId, Set<() => void>>
+  snapshotCache: Map<CampaignId, ResourceCatalogSnapshot>
+}
+
+const catalogBackends = new WeakMap<InMemoryResourceCatalog, InMemoryResourceCatalogBackend>()
+
+function requireCatalogBackend(catalog: InMemoryResourceCatalog): InMemoryResourceCatalogBackend {
+  const backend = catalogBackends.get(catalog)
+  if (!backend) throw new TypeError('Unknown in-memory resource catalog')
+  return backend
 }
 
 class CatalogRejection extends Error {
@@ -303,63 +321,57 @@ function completed(
 }
 
 export class InMemoryResourceCatalog
-  implements
-    ResourceCatalogReader,
-    ResourceCatalogSnapshotSource,
-    AuthoritativeResourceOperationExecutor
+  implements ResourceCatalogReader, ResourceCatalogSnapshotSource
 {
-  #state: CatalogState
-  readonly #ledger = new InMemoryResourceOperationLedger<ResourceCommandReceipt>()
-  readonly #authorize: ResourceOperationAuthorizer
-  readonly #now: () => number
-  readonly #listeners = new Map<CampaignId, Set<() => void>>()
-  readonly #snapshotCache = new Map<CampaignId, ResourceCatalogSnapshot>()
-  #operationQueue: Promise<void> = Promise.resolve()
-
-  constructor(options: InMemoryResourceCatalogOptions) {
-    this.#authorize = options.authorize
-    this.#now = options.now ?? Date.now
-    this.#state = options.initialSnapshot
-      ? catalogStateFromSnapshot(options.initialSnapshot)
-      : emptyCatalogState()
+  constructor(options: InMemoryResourceCatalogOptions = {}) {
+    catalogBackends.set(this, {
+      state: options.initialSnapshot
+        ? catalogStateFromSnapshot(options.initialSnapshot)
+        : emptyCatalogState(),
+      operationQueue: Promise.resolve(),
+      listeners: new Map(),
+      snapshotCache: new Map(),
+    })
   }
 
   getSnapshot(campaignId: CampaignId): ResourceCatalogSnapshot {
-    const cached = this.#snapshotCache.get(campaignId)
+    const backend = requireCatalogBackend(this)
+    const cached = backend.snapshotCache.get(campaignId)
     if (cached) return cached
     const snapshot = {
       campaignId,
-      resources: Array.from(this.#state.resources.values())
+      resources: Array.from(backend.state.resources.values())
         .filter((resource) => resource.campaignId === campaignId)
         .sort(byResourceId),
-      tombstones: Array.from(this.#state.tombstones.values())
+      tombstones: Array.from(backend.state.tombstones.values())
         .filter((tombstone) => tombstone.campaignId === campaignId)
         .sort(byTombstoneResourceId),
-      aliases: Array.from(this.#state.aliases.values())
+      aliases: Array.from(backend.state.aliases.values())
         .flat()
         .filter((alias) => alias.campaignId === campaignId)
         .sort(byAlias),
-      roles: Array.from(this.#state.roles.get(campaignId) ?? [], ([role, resourceId]) => ({
+      roles: Array.from(backend.state.roles.get(campaignId) ?? [], ([role, resourceId]) => ({
         role,
         resourceId,
       })).sort(byRole),
     } satisfies ResourceCatalogSnapshot
-    this.#snapshotCache.set(campaignId, snapshot)
+    backend.snapshotCache.set(campaignId, snapshot)
     return snapshot
   }
 
   subscribe(campaignId: CampaignId, listener: () => void): () => void {
-    const listeners = this.#listeners.get(campaignId) ?? new Set<() => void>()
+    const backend = requireCatalogBackend(this)
+    const listeners = backend.listeners.get(campaignId) ?? new Set<() => void>()
     listeners.add(listener)
-    this.#listeners.set(campaignId, listeners)
+    backend.listeners.set(campaignId, listeners)
     return () => {
       listeners.delete(listener)
-      if (listeners.size === 0) this.#listeners.delete(campaignId)
+      if (listeners.size === 0) backend.listeners.delete(campaignId)
     }
   }
 
   getResource(campaignId: CampaignId, resourceId: ResourceId): Promise<ResourceRecord | null> {
-    const resource = this.#state.resources.get(resourceId)
+    const resource = requireCatalogBackend(this).state.resources.get(resourceId)
     return Promise.resolve(resource?.campaignId === campaignId ? resource : null)
   }
 
@@ -367,9 +379,10 @@ export class InMemoryResourceCatalog
     campaignId: CampaignId,
     resourceIds: ReadonlyArray<ResourceId>,
   ): Promise<ReadonlyArray<ResourceRecord>> {
+    const state = requireCatalogBackend(this).state
     return Promise.resolve(
       resourceIds.flatMap((resourceId) => {
-        const resource = this.#state.resources.get(resourceId)
+        const resource = state.resources.get(resourceId)
         return resource?.campaignId === campaignId ? [resource] : []
       }),
     )
@@ -387,7 +400,7 @@ export class InMemoryResourceCatalog
     } catch (error) {
       return Promise.reject(error)
     }
-    const candidates = Array.from(this.#state.resources.values())
+    const candidates = Array.from(requireCatalogBackend(this).state.resources.values())
       .filter(
         (resource) =>
           resource.campaignId === campaignId &&
@@ -404,7 +417,7 @@ export class InMemoryResourceCatalog
   }
 
   getTombstone(campaignId: CampaignId, resourceId: ResourceId): Promise<ResourceTombstone | null> {
-    const tombstone = this.#state.tombstones.get(resourceId)
+    const tombstone = requireCatalogBackend(this).state.tombstones.get(resourceId)
     return Promise.resolve(tombstone?.campaignId === campaignId ? tombstone : null)
   }
 
@@ -413,7 +426,7 @@ export class InMemoryResourceCatalog
     resourceId: ResourceId,
   ): Promise<ReadonlyArray<SourcePathAlias>> {
     return Promise.resolve(
-      (this.#state.aliases.get(resourceId) ?? [])
+      (requireCatalogBackend(this).state.aliases.get(resourceId) ?? [])
         .filter((alias) => alias.campaignId === campaignId)
         .sort(byAlias),
     )
@@ -421,26 +434,42 @@ export class InMemoryResourceCatalog
 
   listRoles(campaignId: CampaignId): Promise<ReadonlyArray<ApplicationResourceRole>> {
     return Promise.resolve(
-      Array.from(this.#state.roles.get(campaignId) ?? [], ([role, resourceId]) => ({
-        role,
-        resourceId,
-      })).sort(byRole),
+      Array.from(
+        requireCatalogBackend(this).state.roles.get(campaignId) ?? [],
+        ([role, resourceId]) => ({
+          role,
+          resourceId,
+        }),
+      ).sort(byRole),
     )
   }
 
   readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot> {
     return Promise.resolve(this.getSnapshot(campaignId))
   }
+}
+
+export class InMemoryResourceOperationExecutor implements AuthoritativeResourceOperationExecutor {
+  readonly #backend: InMemoryResourceCatalogBackend
+  readonly #ledger = new InMemoryResourceOperationLedger<ResourceCommandReceipt>()
+  readonly #authorize: ResourceOperationAuthorizer
+  readonly #now: () => number
+
+  constructor(catalog: InMemoryResourceCatalog, options: InMemoryResourceOperationExecutorOptions) {
+    this.#backend = requireCatalogBackend(catalog)
+    this.#authorize = options.authorize
+    this.#now = options.now ?? Date.now
+  }
 
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias> {
     return this.#enqueue(() => {
-      ownedResource(this.#state, alias.campaignId, alias.resourceId)
-      const current = this.#state.aliases.get(alias.resourceId) ?? []
+      ownedResource(this.#backend.state, alias.campaignId, alias.resourceId)
+      const current = this.#backend.state.aliases.get(alias.resourceId) ?? []
       const existing = current.find(
         (candidate) => candidate.value.normalizedPath === alias.value.normalizedPath,
       )
       if (existing) return existing
-      this.#state.aliases.set(alias.resourceId, [...current, alias])
+      this.#backend.state.aliases.set(alias.resourceId, [...current, alias])
       this.#publish(alias.campaignId)
       return alias
     })
@@ -448,18 +477,18 @@ export class InMemoryResourceCatalog
 
   setRole(campaignId: CampaignId, role: ApplicationResourceRole): Promise<void> {
     return this.#enqueue(() => {
-      ownedResource(this.#state, campaignId, role.resourceId)
-      const roles = this.#state.roles.get(campaignId) ?? new Map<string, ResourceId>()
+      ownedResource(this.#backend.state, campaignId, role.resourceId)
+      const roles = this.#backend.state.roles.get(campaignId) ?? new Map<string, ResourceId>()
       if (roles.get(role.role) === role.resourceId) return
       roles.set(role.role, role.resourceId)
-      this.#state.roles.set(campaignId, roles)
+      this.#backend.state.roles.set(campaignId, roles)
       this.#publish(campaignId)
     })
   }
 
   removeRole(campaignId: CampaignId, role: string): Promise<void> {
     return this.#enqueue(() => {
-      if (this.#state.roles.get(campaignId)?.delete(role)) this.#publish(campaignId)
+      if (this.#backend.state.roles.get(campaignId)?.delete(role)) this.#publish(campaignId)
     })
   }
 
@@ -471,8 +500,8 @@ export class InMemoryResourceCatalog
   }
 
   #enqueue<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
-    const result = this.#operationQueue.then(operation)
-    this.#operationQueue = result.then(
+    const result = this.#backend.operationQueue.then(operation)
+    this.#backend.operationQueue = result.then(
       () => undefined,
       () => undefined,
     )
@@ -512,7 +541,7 @@ export class InMemoryResourceCatalog
     if (lookup.status === 'replay') return { status: 'completed', receipt: lookup.receipt }
     if (lookup.status === 'rejected') return { status: 'rejected', reason: lookup.reason }
 
-    const draft = cloneCatalogState(this.#state)
+    const draft = cloneCatalogState(this.#backend.state)
     let result: ResourceStructureCommandResult
     try {
       result = await this.#apply(actorId, normalizedEnvelope, draft)
@@ -533,14 +562,14 @@ export class InMemoryResourceCatalog
       fingerprint,
       receipt: result.receipt,
     })
-    this.#state = draft
+    this.#backend.state = draft
     this.#publish(normalizedEnvelope.campaignId)
     return result
   }
 
   #publish(campaignId: CampaignId): void {
-    this.#snapshotCache.delete(campaignId)
-    for (const listener of this.#listeners.get(campaignId) ?? []) {
+    this.#backend.snapshotCache.delete(campaignId)
+    for (const listener of this.#backend.listeners.get(campaignId) ?? []) {
       try {
         listener()
       } catch {

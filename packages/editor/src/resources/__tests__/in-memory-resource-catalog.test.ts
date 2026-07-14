@@ -1,10 +1,16 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { InMemoryResourceCatalog } from '../in-memory-resource-catalog'
+import {
+  InMemoryResourceCatalog,
+  InMemoryResourceOperationExecutor,
+} from '../in-memory-resource-catalog'
 import { defineResourceCatalogConformance } from './resource-catalog-conformance'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import { canonicalizeResourceTitle } from '../resource-contract'
 
-defineResourceCatalogConformance('in-memory', (options) => new InMemoryResourceCatalog(options))
+defineResourceCatalogConformance('in-memory', (options) => {
+  const catalog = new InMemoryResourceCatalog()
+  return { catalog, operations: new InMemoryResourceOperationExecutor(catalog, options) }
+})
 
 const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, '01890f47-f6c8-7a5b-8c9d-000000000001')
 const actorId = assertDomainId(
@@ -14,9 +20,22 @@ const actorId = assertDomainId(
 const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-f6c8-7a5b-8c9d-000000000003')
 
 describe('InMemoryResourceCatalog snapshots', () => {
+  it('keeps authorization, operation execution, and transaction writers off the catalog', () => {
+    const catalog = new InMemoryResourceCatalog()
+
+    expect(catalog).not.toHaveProperty('execute')
+    expect(catalog).not.toHaveProperty('appendAlias')
+    expect(catalog).not.toHaveProperty('setRole')
+    expect(catalog).not.toHaveProperty('removeRole')
+  })
+
   it('hydrates an authoritative snapshot and publishes committed changes', async () => {
-    const source = new InMemoryResourceCatalog({ authorize: () => true, now: () => 10 })
-    await source.execute(actorId, {
+    const source = new InMemoryResourceCatalog()
+    const sourceOperations = new InMemoryResourceOperationExecutor(source, {
+      authorize: () => true,
+      now: () => 10,
+    })
+    await sourceOperations.execute(actorId, {
       campaignId,
       operationId: assertDomainId(DOMAIN_ID_KIND.operation, '01890f47-f6c8-7a5b-8c9d-000000000004'),
       command: {
@@ -30,8 +49,10 @@ describe('InMemoryResourceCatalog snapshots', () => {
       },
     })
     const catalog = new InMemoryResourceCatalog({
-      authorize: () => true,
       initialSnapshot: source.getSnapshot(campaignId),
+    })
+    const operations = new InMemoryResourceOperationExecutor(catalog, {
+      authorize: () => true,
       now: () => 20,
     })
     const listener = vi.fn()
@@ -43,7 +64,7 @@ describe('InMemoryResourceCatalog snapshots', () => {
       expect.objectContaining({ id: resourceId, title: 'Seeded note' }),
     ])
 
-    await catalog.execute(actorId, {
+    await operations.execute(actorId, {
       campaignId,
       operationId: assertDomainId(DOMAIN_ID_KIND.operation, '01890f47-f6c8-7a5b-8c9d-000000000005'),
       command: {
@@ -58,13 +79,17 @@ describe('InMemoryResourceCatalog snapshots', () => {
     expect(catalog.getSnapshot(campaignId).resources[0]?.title).toBe('Renamed note')
 
     unsubscribe()
-    await catalog.removeRole(campaignId, 'missing-role')
+    await operations.removeRole(campaignId, 'missing-role')
     expect(listener).toHaveBeenCalledOnce()
   })
 
   it('rejects invalid hydrated ownership and hierarchy', async () => {
-    const source = new InMemoryResourceCatalog({ authorize: () => true, now: () => 10 })
-    await source.execute(actorId, {
+    const source = new InMemoryResourceCatalog()
+    const sourceOperations = new InMemoryResourceOperationExecutor(source, {
+      authorize: () => true,
+      now: () => 10,
+    })
+    await sourceOperations.execute(actorId, {
       campaignId,
       operationId: assertDomainId(DOMAIN_ID_KIND.operation, '01890f47-f6c8-7a5b-8c9d-000000000006'),
       command: {
@@ -82,7 +107,6 @@ describe('InMemoryResourceCatalog snapshots', () => {
     expect(
       () =>
         new InMemoryResourceCatalog({
-          authorize: () => true,
           initialSnapshot: {
             ...snapshot,
             resources: [{ ...snapshot.resources[0]!, parentId: resourceId }],
@@ -92,7 +116,6 @@ describe('InMemoryResourceCatalog snapshots', () => {
     expect(
       () =>
         new InMemoryResourceCatalog({
-          authorize: () => true,
           initialSnapshot: {
             ...snapshot,
             resources: [snapshot.resources[0]!, snapshot.resources[0]!],
