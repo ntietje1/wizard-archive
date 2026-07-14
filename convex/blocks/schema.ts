@@ -143,11 +143,6 @@ const embedPropsValidator = v.union(
     ...embedSharedPropsValidator,
   }),
   v.object({
-    targetKind: v.literal('sidebarItem'),
-    sidebarItemId: v.id('sidebarItems'),
-    ...embedSharedPropsValidator,
-  }),
-  v.object({
     targetKind: v.literal('externalUrl'),
     url: v.string(),
     name: v.optional(v.string()),

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
 import { getDeleteBlockInlineContentProjectionFieldPatch } from '../blocks/inlineContentMigration'
-import { getResourceEmbedPropsMigrationPatch } from '../blocks/embedTargetMigration'
 import { getCampaignDefaultFolderInheritSharesMigrationPatch } from '../campaigns/defaultFolderInheritSharesMigration'
 import { getFolderInheritSharesMigrationPatch } from '../folders/inheritSharesMigration'
 import { getFileSystemTransactionVocabularyMigrationPatch } from '../sidebarItems/filesystem/transactionVocabularyMigration'
@@ -88,37 +87,6 @@ describe('migrations', () => {
 
     it('leaves already-clean projection rows alone', () => {
       expect(getDeleteBlockInlineContentProjectionFieldPatch({})).toBeNull()
-    })
-  })
-
-  describe('getResourceEmbedPropsMigrationPatch', () => {
-    it('replaces provider row identity with canonical resource identity', () => {
-      expect(
-        getResourceEmbedPropsMigrationPatch(
-          {
-            targetKind: 'sidebarItem',
-            sidebarItemId: 'sidebarItems:target' as never,
-            previewWidth: 480,
-          },
-          '0198a31c-e655-7000-8000-000000000001',
-        ),
-      ).toEqual({
-        targetKind: 'resource',
-        resourceId: '0198a31c-e655-7000-8000-000000000001',
-        previewWidth: 480,
-      })
-    })
-
-    it('clears embeds whose target no longer exists', () => {
-      expect(
-        getResourceEmbedPropsMigrationPatch(
-          {
-            targetKind: 'sidebarItem',
-            sidebarItemId: 'sidebarItems:missing' as never,
-          },
-          null,
-        ),
-      ).toEqual({ targetKind: 'empty' })
     })
   })
 
