@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { useRef } from 'react'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useEmbedDropTarget } from '../use-drop-target'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { EmbedTarget } from '../../../../../../shared/embeds/embedTargets'
 import type { EmbedTargetUploadFileResult } from '../../target-operations'
 import { EMPTY_EMBED_DROP_TYPE } from '../../../drag-drop/drop-target-data'
@@ -632,8 +633,8 @@ function renderHookHarness({
   target = { kind: 'empty' },
 }: {
   embedBlockId?: string
-  sourceCanvasId?: SidebarItemId | null
-  sourceItemId?: SidebarItemId | null
+  sourceCanvasId?: ResourceId | null
+  sourceItemId?: ResourceId | null
   setTarget?: (target: EmbedTarget) => Promise<void>
   uploadFile?: (file: File) => Promise<EmbedTargetUploadFileResult>
   dispatchDropPayload?: TestDropPayloadDispatcher
@@ -664,7 +665,7 @@ function renderHookHarness({
   )
 }
 
-function sidebarDragData(itemId: SidebarItemId) {
+function sidebarDragData(itemId: ResourceId) {
   return {
     sidebarItemId: itemId,
     sidebarItemIds: [itemId],
@@ -682,7 +683,7 @@ function CanvasEmbedDropTargetHarness({
 }: {
   embedBlockId: string
   elementTestId: string
-  sourceItemId: SidebarItemId | null
+  sourceItemId: ResourceId | null
   setTarget: (target: EmbedTarget) => Promise<void>
   target?: EmbedTarget
   uploadFile: (file: File) => Promise<EmbedTargetUploadFileResult>
@@ -712,8 +713,8 @@ function CanvasEmbedDropTargetHarness({
   )
 }
 
-function sidebarItemId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function sidebarItemId(value: string): ResourceId {
+  return value as ResourceId
 }
 
 function dispatchNativeDrop(dataTransfer: {

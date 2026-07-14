@@ -12,6 +12,7 @@ import type { AnyItem, FolderItem } from '@wizard-archive/editor/resources/items
 import { slugify } from '../../shared/slugs'
 import type { Id } from '../_generated/dataModel'
 import { testCampaignId } from '../../shared/test/campaign-id'
+import { testResourceId } from '../../shared/test/resource-id'
 
 function assertNeverSidebarItemType(type: never): never {
   throw new Error(`Unhandled sidebar item type: ${String(type)}`)
@@ -29,7 +30,7 @@ export function createSidebarItem(
   overrides: Partial<Omit<AnyItem, 'type' | 'location'>> = {},
 ): AnyItem {
   const common = {
-    id: id as Id<'sidebarItems'>,
+    id: testResourceId(id),
     createdAt: 1,
     name: name as AnyItem['name'],
     slug: testSidebarSlug(name),

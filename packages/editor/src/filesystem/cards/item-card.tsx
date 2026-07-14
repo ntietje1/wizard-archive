@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
 import { CanvasCard } from '../../canvas/preview/card'
@@ -5,7 +6,7 @@ import { FileCard } from '../../files/viewer/card'
 import { FolderCard } from '../../folders/viewer/card'
 import { MapCard } from '../../game-maps/viewer/card'
 import { NoteCard } from '../../notes/viewer/card'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { SidebarWorkspaceItemSurfaceName } from '../../workspace/sidebar/workspace-state'
 import type { ItemCardSource } from './source'
 
@@ -17,9 +18,9 @@ export interface ItemCardProps<T extends AnyItem> {
   item: T
   onClick?: () => void
   isLoading?: boolean
-  parentId?: SidebarItemId | null
+  parentId?: ResourceId | null
   source: ItemCardSource
-  visibleItemIds?: ReadonlyArray<SidebarItemId>
+  visibleItemIds?: ReadonlyArray<ResourceId>
   itemSurface?: SidebarWorkspaceItemSurfaceName
 }
 

@@ -58,7 +58,6 @@ export async function resolveHistorySnapshot(
   const snapshot = snapshots[0]
   if (
     snapshots.length !== 1 ||
-    rawItem.id !== historyEntry.itemId ||
     rawItem.type !== historyEntry.itemType ||
     snapshot.itemId !== historyEntry.itemId ||
     snapshot.itemType !== historyEntry.itemType ||

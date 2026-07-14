@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceTitle } from '../../resources/resource-contract'
@@ -6,7 +7,7 @@ import type { SidebarCacheSnapshot } from '../cache-patches'
 import { executeFileSystemCommandLifecycle } from '../command-lifecycle'
 import { createCreatedItemReceipt } from './receipt-factory'
 import { createReadWriteTestCache } from './cache-test-utils'
-import type { CampaignId, SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import type { CampaignId, UserProfileId } from '../../../../../shared/common/ids'
 import { testOperationId } from '../../test/operation-id'
 
 const campaignId = 'campaign_1' as CampaignId
@@ -15,11 +16,11 @@ const currentUserId = 'user_1' as UserProfileId
 describe('filesystem command lifecycle', () => {
   it('executes create lifecycle through injected provider adapters', async () => {
     const parent = createFolder({
-      id: 'parent_folder' as SidebarItemId,
+      id: 'parent_folder' as ResourceId,
       name: 'Scenes',
     })
     const created = createNote({
-      id: 'created_item' as SidebarItemId,
+      id: 'created_item' as ResourceId,
       name: 'Scene',
       slug: 'scene',
       parentId: parent.id,
@@ -87,11 +88,11 @@ describe('filesystem command lifecycle', () => {
 
   it('does not run success effects when cache reconciliation fails after provider commit', async () => {
     const parent = createFolder({
-      id: 'parent_folder' as SidebarItemId,
+      id: 'parent_folder' as ResourceId,
       name: 'Scenes',
     })
     const created = createNote({
-      id: 'created_item' as SidebarItemId,
+      id: 'created_item' as ResourceId,
       name: 'Scene',
       slug: 'scene',
       parentId: parent.id,
@@ -187,20 +188,20 @@ describe('filesystem command lifecycle', () => {
 
   it('starts provider mutation work for duplicate destination titles', async () => {
     const sourceParent = createFolder({
-      id: 'source_parent' as SidebarItemId,
+      id: 'source_parent' as ResourceId,
       name: 'Source',
     })
     const targetParent = createFolder({
-      id: 'target_parent' as SidebarItemId,
+      id: 'target_parent' as ResourceId,
       name: 'Target',
     })
     const source = createNote({
-      id: 'source_item' as SidebarItemId,
+      id: 'source_item' as ResourceId,
       name: 'Scene',
       parentId: sourceParent.id,
     })
     const existing = createNote({
-      id: 'existing_item' as SidebarItemId,
+      id: 'existing_item' as ResourceId,
       name: 'Scene',
       parentId: targetParent.id,
     })
@@ -246,7 +247,7 @@ describe('filesystem command lifecycle', () => {
     const result = await executeFileSystemCommandLifecycle({
       command: {
         type: 'trash',
-        itemIds: ['removed-item' as SidebarItemId],
+        itemIds: ['removed-item' as ResourceId],
       },
       workspaceId: campaignId,
       currentUserId,
@@ -271,20 +272,20 @@ describe('filesystem command lifecycle', () => {
 
   it('plans commands inside the serialized mutation lane', async () => {
     const sourceParent = createFolder({
-      id: 'source_parent' as SidebarItemId,
+      id: 'source_parent' as ResourceId,
       name: 'Source',
     })
     const targetParent = createFolder({
-      id: 'target_parent' as SidebarItemId,
+      id: 'target_parent' as ResourceId,
       name: 'Target',
     })
     const source = createNote({
-      id: 'source_item' as SidebarItemId,
+      id: 'source_item' as ResourceId,
       name: 'Scene',
       parentId: sourceParent.id,
     })
     const existing = createNote({
-      id: 'existing_item' as SidebarItemId,
+      id: 'existing_item' as ResourceId,
       name: 'Scene',
       parentId: targetParent.id,
     })
@@ -327,7 +328,7 @@ describe('filesystem command lifecycle', () => {
 
   it('rolls back optimistic patches and lifecycle intents when the mutation fails', async () => {
     const parent = createFolder({
-      id: 'parent_folder' as SidebarItemId,
+      id: 'parent_folder' as ResourceId,
       name: 'Scenes',
     })
     const snapshot: SidebarCacheSnapshot = { sidebar: [parent], trash: [] }
@@ -351,7 +352,7 @@ describe('filesystem command lifecycle', () => {
       activeItemSurface: { parentId: null },
       cacheAdapter,
       createOperationId: () => testOperationId('operation-1'),
-      getCurrentResourceId: () => 'previous_item' as SidebarItemId,
+      getCurrentResourceId: () => 'previous_item' as ResourceId,
       runMutation: (operation) => operation(),
       executeMutation,
       applyLifecycleIntents,

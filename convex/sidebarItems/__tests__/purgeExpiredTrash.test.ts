@@ -14,7 +14,7 @@ describe('purgeExpiredTrash', () => {
     const ctx = await setupCampaignContext(t)
     const expiredTime = Date.now() - THIRTY_ONE_DAYS_MS
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: expiredTime,
       deletedBy: ctx.dm.profile._id,
@@ -23,7 +23,7 @@ describe('purgeExpiredTrash', () => {
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
 
     const result = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get('sidebarItems', noteId)
+      return await dbCtx.db.get('sidebarItems', noteRowId)
     })
     expect(result).toBeNull()
   })
@@ -32,7 +32,7 @@ describe('purgeExpiredTrash', () => {
     const ctx = await setupCampaignContext(t)
     const recentTime = Date.now() - TWENTY_NINE_DAYS_MS
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: recentTime,
       deletedBy: ctx.dm.profile._id,
@@ -41,7 +41,7 @@ describe('purgeExpiredTrash', () => {
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
 
     const result = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get('sidebarItems', noteId)
+      return await dbCtx.db.get('sidebarItems', noteRowId)
     })
     expect(result).not.toBeNull()
   })
@@ -50,7 +50,7 @@ describe('purgeExpiredTrash', () => {
     const ctx = await setupCampaignContext(t)
     const expiredTime = Date.now() - THIRTY_ONE_DAYS_MS
 
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: expiredTime,
       deletedBy: ctx.dm.profile._id,
@@ -58,7 +58,7 @@ describe('purgeExpiredTrash', () => {
 
     const recentTime = Date.now() - TWENTY_NINE_DAYS_MS
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       parentId: folderId,
       status: 'trashed',
       deletionTime: recentTime,
@@ -68,8 +68,8 @@ describe('purgeExpiredTrash', () => {
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
 
     const { folder: folderResult, note: noteResult } = await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get('sidebarItems', folderId)
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const folder = await dbCtx.db.get('sidebarItems', folderRowId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       return { folder, note }
     })
     expect(folderResult).toBeNull()
@@ -81,13 +81,18 @@ describe('purgeExpiredTrash', () => {
     const expiredTime = Date.now() - THIRTY_ONE_DAYS_MS
     const recentTime = Date.now() - TWENTY_NINE_DAYS_MS
 
-    const { noteId: expiredNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      status: 'trashed',
-      deletionTime: expiredTime,
-      deletedBy: ctx.dm.profile._id,
-    })
+    const { noteRowId: expiredNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        status: 'trashed',
+        deletionTime: expiredTime,
+        deletedBy: ctx.dm.profile._id,
+      },
+    )
 
-    const { noteId: recentNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteRowId: recentNoteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: recentTime,
       deletedBy: ctx.dm.profile._id,
@@ -96,8 +101,8 @@ describe('purgeExpiredTrash', () => {
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
 
     const { expired, recent } = await t.run(async (dbCtx) => {
-      const expiredResult = await dbCtx.db.get('sidebarItems', expiredNote)
-      const recentResult = await dbCtx.db.get('sidebarItems', recentNote)
+      const expiredResult = await dbCtx.db.get('sidebarItems', expiredNoteRowId)
+      const recentResult = await dbCtx.db.get('sidebarItems', recentNoteRowId)
       return { expired: expiredResult, recent: recentResult }
     })
     expect(expired).toBeNull()

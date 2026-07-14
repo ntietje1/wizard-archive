@@ -1,14 +1,14 @@
+import type { ResourceId } from '../resources/domain-id'
 import { createContext, use } from 'react'
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 import type { StoreApi } from 'zustand/vanilla'
 import type { DndBatchDecision } from './batch-decision'
 import type { DropOutcome } from './outcome'
-import type { SidebarItemId } from '../../../../shared/common/ids'
 
 interface DndState {
   activeDropTargetKey: string | null
-  dragPreviewItemIds: Array<SidebarItemId>
+  dragPreviewItemIds: Array<ResourceId>
   dragOutcome: DropOutcome | null
   externalFileDropTargetKey: string | null
   isDraggingFiles: boolean
@@ -18,7 +18,7 @@ interface DndState {
 
 interface DndActions {
   setActiveDropTargetKey: (key: string | null) => void
-  setDragPreviewItemIds: (ids: Array<SidebarItemId>) => void
+  setDragPreviewItemIds: (ids: Array<ResourceId>) => void
   setDragOutcome: (outcome: DropOutcome | null) => void
   setExternalFileDropTargetKey: (key: string | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
@@ -39,7 +39,7 @@ const initialDndState: DndState = {
   batchDecision: null,
 }
 
-function sameItemIds(a: Array<SidebarItemId>, b: Array<SidebarItemId>) {
+function sameItemIds(a: Array<ResourceId>, b: Array<ResourceId>) {
   return a.length === b.length && a.every((id, index) => id === b[index])
 }
 
@@ -74,8 +74,6 @@ export function createDndStore(): DndStore {
 }
 
 const defaultDndStore = createDndStore()
-// fallow-ignore-next-line unused-exports
-export const defaultDndStoreApi = defaultDndStore
 
 export const DndStoreContext = createContext<DndStore | null>(null)
 

@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type { AnyItem } from '../items'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { MaybePromise } from '../../../../../shared/common/async'
 import { getSidebarFilesystemCapabilities } from '../../filesystem/capabilities'
 import { resolveGlobalFileSystemDropCommand } from '../../filesystem/drop-planner'
@@ -13,20 +14,20 @@ import type {
 
 interface WorkspaceFilesystemContextMenuSource {
   catalog: {
-    getKnownItemById: (itemId: SidebarItemId) => AnyItem | null
-    getVisibleAncestors: (itemId: SidebarItemId) => ReadonlyArray<AnyItem>
+    getKnownItemById: (itemId: ResourceId) => AnyItem | null
+    getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<AnyItem>
   }
   operations: {
     canPasteIntoTarget: (input: FileSystemPasteTargetInput) => boolean
     executeDropCommand: (command: FileSystemIntentCommand) => MaybePromise<unknown>
     pasteIntoTarget: (input: FileSystemPasteTargetInput) => MaybePromise<ResourceCommandResult>
-    requestDeleteItemsForever: (itemIds: Array<SidebarItemId>) => MaybePromise<void>
+    requestDeleteItemsForever: (itemIds: Array<ResourceId>) => MaybePromise<void>
     requestEmptyTrash: () => MaybePromise<void>
     restoreItems: (
-      itemIds: Array<SidebarItemId>,
-      targetParentId: SidebarItemId | null,
+      itemIds: Array<ResourceId>,
+      targetParentId: ResourceId | null,
     ) => MaybePromise<unknown>
-    trashItems: (itemIds: Array<SidebarItemId>) => MaybePromise<unknown>
+    trashItems: (itemIds: Array<ResourceId>) => MaybePromise<unknown>
   }
   permissions: {
     canCreateItems: boolean
@@ -99,10 +100,10 @@ function canDuplicateItems(
 }
 
 function groupItemsByParent(items: Array<AnyItem>): Array<{
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   items: Array<AnyItem>
 }> {
-  const groups = new Map<SidebarItemId | null, Array<AnyItem>>()
+  const groups = new Map<ResourceId | null, Array<AnyItem>>()
 
   for (const item of items) {
     const parentId = item.parentId ?? null
@@ -120,13 +121,13 @@ function groupItemsByParent(items: Array<AnyItem>): Array<{
   }))
 }
 
-function getItemIds(items: Array<AnyItem>): Array<SidebarItemId> {
+function getItemIds(items: Array<AnyItem>): Array<ResourceId> {
   return items.map((item) => item.id)
 }
 
 function resolveDuplicateDropTarget(
   catalog: WorkspaceFilesystemContextMenuSource['catalog'],
-  targetParentId: SidebarItemId | null,
+  targetParentId: ResourceId | null,
 ): FileSystemDropTargetIntent | null {
   if (targetParentId === null) {
     return { type: 'parent', target: { parentId: null, parent: null }, label: 'Root' }
@@ -146,7 +147,7 @@ function resolveDuplicateDropTarget(
 
 function resolveDuplicateDropTargetOrThrow(
   catalog: WorkspaceFilesystemContextMenuSource['catalog'],
-  targetParentId: SidebarItemId | null,
+  targetParentId: ResourceId | null,
 ): FileSystemDropTargetIntent {
   const target = resolveDuplicateDropTarget(catalog, targetParentId)
   if (!target) throw new Error(`Missing duplicate target parent ${targetParentId}`)

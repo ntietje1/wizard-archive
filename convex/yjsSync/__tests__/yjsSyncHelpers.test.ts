@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createFile, createNote } from '../../_test/factories.helper'
+import { createFile, createNote, getSidebarItemRowId } from '../../_test/factories.helper'
 import { shouldCompact } from '../constants'
 import { uint8ToArrayBuffer } from '../../../shared/yjs-sync/uint8ToArrayBuffer'
 import { createYjsDocument } from '../functions/createYjsDocument'
@@ -72,11 +72,12 @@ describe('createYjsDocument', () => {
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, result.noteId)
 
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', result.noteId).eq('seq', 0))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId).eq('seq', 0))
         .collect()
       expect(rows).toHaveLength(1)
       expect(rows[0].isSnapshot).toBe(true)
@@ -92,19 +93,20 @@ describe('createYjsDocument', () => {
       name: 'Idempotent Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await t.run(async (dbCtx) => {
-      await createYjsDocument(dbCtx, { documentId: noteId })
+      await createYjsDocument(dbCtx, { documentId: noteRowId })
     })
 
     await t.run(async (dbCtx) => {
-      await createYjsDocument(dbCtx, { documentId: noteId })
+      await createYjsDocument(dbCtx, { documentId: noteRowId })
     })
 
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId).eq('seq', 0))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId).eq('seq', 0))
         .collect()
       expect(rows).toHaveLength(1)
     })
@@ -112,10 +114,10 @@ describe('createYjsDocument', () => {
 
   it('rejects non-Yjs sidebar item types', async () => {
     const ctx = await setupCampaignContext(t)
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await expect(createYjsDocument(dbCtx, { documentId: fileId })).rejects.toThrow(
+      await expect(createYjsDocument(dbCtx, { documentId: fileRowId })).rejects.toThrow(
         'is not a Yjs document',
       )
     })
@@ -127,7 +129,7 @@ describe('deleteYjsDocument', () => {
 
   it('deletes all yjsUpdates and yjsAwareness for a document', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const update = makeYjsUpdate()
 
     await t.run(async (dbCtx) => {
@@ -173,8 +175,8 @@ describe('deleteYjsDocument', () => {
 
   it('does not affect other documents rows', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId: noteA } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { noteId: noteB } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteA } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteB } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const update = makeYjsUpdate()
 
     await t.run(async (dbCtx) => {

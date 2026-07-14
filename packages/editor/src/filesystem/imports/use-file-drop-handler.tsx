@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { toast } from 'sonner'
 import type { ResourceSlug } from '../../workspace/resource-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { MaybePromise } from '../../../../../shared/common/async'
 import type {
   DropResult,
@@ -31,7 +32,7 @@ interface UploadSingleFileOptions {
 }
 
 interface UploadSingleFileResult {
-  id: SidebarItemId
+  id: ResourceId
   slug: ResourceSlug
 }
 
@@ -46,9 +47,9 @@ type ImportDropResult = Awaited<ReturnType<FileDropFileSystem['operations']['imp
 type ImportFolderEntry = Parameters<
   FileDropFileSystem['operations']['importDrop']
 >[0]['rootFolders'][number]
-type RevealDroppedItem = (itemId: SidebarItemId) => void | Promise<void>
+type RevealDroppedItem = (itemId: ResourceId) => void | Promise<void>
 type OpenDroppedItem = (
-  itemId: SidebarItemId,
+  itemId: ResourceId,
   options?: { heading?: string; replace?: boolean },
 ) => MaybePromise<void>
 
@@ -123,6 +124,78 @@ function startSingleFileToast(fileName: string, silent: boolean): string | numbe
   })
 }
 
+function startBatchUploadToast(hasFolders: boolean, stats: ReturnType<typeof getDropResultStats>) {
+  return toast.loading(
+    hasFolders ? (
+      <FolderProgressContent
+        progress={{
+          toastId: '',
+          totalFiles: stats.totalFiles,
+          totalFolders: stats.totalFolders,
+          processedFiles: 0,
+          processedFolders: 0,
+          skippedFiles: 0,
+        }}
+      />
+    ) : (
+      <FileProgressContent totalFiles={stats.totalFiles} processedFiles={0} skippedFiles={0} />
+    ),
+    { duration: Infinity, style: UPLOAD_TOAST_STYLE },
+  )
+}
+
+function logSkippedFiles(receipt: ImportDropResult) {
+  for (const skippedFile of receipt.skippedFileDetails) {
+    switch (skippedFile.reason) {
+      case 'failed':
+        console.error(skippedFile.error)
+        break
+      case 'invalid':
+        console.warn(skippedFileMessage(skippedFile))
+        break
+      case 'unsupported':
+        console.warn(`${skippedFile.fileName}: unsupported file type`)
+        break
+    }
+  }
+}
+
+function finishBatchUpload(
+  toastId: string | number,
+  hasFolders: boolean,
+  progress: UploadProgress,
+  receipt: ImportDropResult,
+) {
+  progress.processedFiles = receipt.processedFiles
+  progress.processedFolders = receipt.processedFolders
+  progress.skippedFiles = receipt.skippedFiles
+  toast.dismiss(toastId)
+  if (receipt.skippedFiles > 0 && receipt.processedFiles + receipt.processedFolders === 0) {
+    toast.error(<ToastContent title="Upload skipped" message={skippedUploadMessage(receipt)} />, {
+      duration: 5000,
+      style: UPLOAD_TOAST_STYLE,
+    })
+    return
+  }
+
+  toast.success(
+    <ToastContent title="Upload complete" message={uploadCompleteMessage(hasFolders, progress)} />,
+    {
+      duration: 3000,
+      style: UPLOAD_TOAST_STYLE,
+    },
+  )
+}
+
+function revealBatchUploadDestination(
+  receipt: ImportDropResult,
+  parentId: ResourceId | null,
+  revealItem: RevealDroppedItem,
+) {
+  const itemId = receipt.lastFolderId ?? parentId
+  if (itemId) runDroppedItemNavigation(() => revealItem(itemId))
+}
+
 export function useFileDropHandler(
   filesystem: FileDropFileSystem,
   { openItem, revealItem }: { openItem: OpenDroppedItem; revealItem: RevealDroppedItem },
@@ -163,7 +236,7 @@ export function useFileDropHandler(
 
   const uploadSingleFile = async (
     file: File,
-    parentId: SidebarItemId | null,
+    parentId: ResourceId | null,
     { silent = false, navigate = true }: UploadSingleFileOptions = {},
   ): Promise<UploadSingleFileResult | null> => {
     const toastId = startSingleFileToast(file.name, silent)
@@ -202,44 +275,14 @@ export function useFileDropHandler(
     return destination.parentId
   }
 
-  const handleDrop = async (
+  const uploadBatchDrop = async (
     dropResult: DropResult,
-    options?: FileDropOptions,
+    destination: FileDropDestination | undefined,
   ): Promise<FileDropHandleResult> => {
     const { files, rootFolders } = dropResult
     const hasFolders = rootFolders.length > 0
-    const isSingleFile = files.length === 1 && !hasFolders
-
-    if (isSingleFile) {
-      try {
-        const parentId = await resolveDropDestinationParentId(options?.destination)
-        const upload = await uploadSingleFile(files[0].file, parentId)
-        return { status: 'completed', receipt: upload }
-      } catch (error) {
-        console.error(error)
-        throw error
-      }
-    }
-
     const stats = getDropResultStats(dropResult)
-    const toastId = toast.loading(
-      hasFolders ? (
-        <FolderProgressContent
-          progress={{
-            toastId: '',
-            totalFiles: stats.totalFiles,
-            totalFolders: stats.totalFolders,
-            processedFiles: 0,
-            processedFolders: 0,
-            skippedFiles: 0,
-          }}
-        />
-      ) : (
-        <FileProgressContent totalFiles={stats.totalFiles} processedFiles={0} skippedFiles={0} />
-      ),
-      { duration: Infinity, style: UPLOAD_TOAST_STYLE },
-    )
-
+    const toastId = startBatchUploadToast(hasFolders, stats)
     const progress: UploadProgress = {
       toastId,
       totalFiles: stats.totalFiles,
@@ -250,7 +293,7 @@ export function useFileDropHandler(
     }
 
     try {
-      const parentId = await resolveDropDestinationParentId(options?.destination)
+      const parentId = await resolveDropDestinationParentId(destination)
       const receipt = await importDrop({
         files: files.map(({ file }) => ({ file: createBrowserImportFile(file) })),
         rootFolders: toWorkspaceImportFolders(rootFolders),
@@ -265,43 +308,9 @@ export function useFileDropHandler(
           showBatchProgress(toastId, hasFolders, stats, progress)
         },
       })
-
-      for (const skippedFile of receipt.skippedFileDetails) {
-        if (skippedFile.reason === 'failed') {
-          console.error(skippedFile.error)
-        } else if (skippedFile.reason === 'invalid') {
-          console.warn(skippedFileMessage(skippedFile))
-        } else if (skippedFile.reason === 'unsupported') {
-          console.warn(`${skippedFile.fileName}: unsupported file type`)
-        }
-      }
-
-      progress.processedFiles = receipt.processedFiles
-      progress.processedFolders = receipt.processedFolders
-      progress.skippedFiles = receipt.skippedFiles
-      toast.dismiss(toastId)
-      if (receipt.skippedFiles > 0 && receipt.processedFiles + receipt.processedFolders === 0) {
-        toast.error(
-          <ToastContent title="Upload skipped" message={skippedUploadMessage(receipt)} />,
-          {
-            duration: 5000,
-            style: UPLOAD_TOAST_STYLE,
-          },
-        )
-      } else {
-        const message = uploadCompleteMessage(hasFolders, progress)
-        toast.success(<ToastContent title="Upload complete" message={message} />, {
-          duration: 3000,
-          style: UPLOAD_TOAST_STYLE,
-        })
-      }
-
-      if (receipt.lastFolderId) {
-        const itemId = receipt.lastFolderId
-        runDroppedItemNavigation(() => revealItem(itemId))
-      } else if (parentId) {
-        runDroppedItemNavigation(() => revealItem(parentId))
-      }
+      logSkippedFiles(receipt)
+      finishBatchUpload(toastId, hasFolders, progress, receipt)
+      revealBatchUploadDestination(receipt, parentId, revealItem)
       return { status: 'completed', receipt }
     } catch (error) {
       console.error(error)
@@ -310,6 +319,23 @@ export function useFileDropHandler(
         duration: 5000,
         style: UPLOAD_TOAST_STYLE,
       })
+      throw error
+    }
+  }
+
+  const handleDrop = async (
+    dropResult: DropResult,
+    options?: FileDropOptions,
+  ): Promise<FileDropHandleResult> => {
+    const isSingleFile = dropResult.files.length === 1 && dropResult.rootFolders.length === 0
+    if (!isSingleFile) return await uploadBatchDrop(dropResult, options?.destination)
+
+    try {
+      const parentId = await resolveDropDestinationParentId(options?.destination)
+      const upload = await uploadSingleFile(dropResult.files[0].file, parentId)
+      return { status: 'completed', receipt: upload }
+    } catch (error) {
+      console.error(error)
       throw error
     }
   }

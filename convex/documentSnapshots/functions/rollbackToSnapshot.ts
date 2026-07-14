@@ -16,6 +16,7 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { RollbackServerResult } from '../rollback'
 import type { HistorySnapshotResolution } from './getSnapshot'
+import { sidebarItemResourceId } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 type RollbackCurrentState =
   | {
@@ -48,7 +49,9 @@ export async function rollbackToSnapshot(
   const preservedHistoryEntryId = await recordPreservedState(ctx, resolution, currentData)
   await restoreSnapshot(ctx, resolution, currentState)
 
-  await ctx.db.patch('sidebarItems', resolution.historyEntry.itemId, {
+  const restoredItem = await ctx.db.get('sidebarItems', resolution.historyEntry.itemId)
+  if (!restoredItem) throw new Error('Resolved rollback item is missing')
+  await ctx.db.patch('sidebarItems', restoredItem._id, {
     updatedTime: Date.now(),
     updatedBy: ctx.membership.userId,
   })
@@ -60,7 +63,7 @@ export async function rollbackToSnapshot(
     historyEntryId,
     preservedHistoryEntryId,
     restoredFromHistoryEntryId: resolution.historyEntry.historyEntryUuid,
-    restoredItemId: resolution.historyEntry.itemId,
+    restoredItemId: sidebarItemResourceId(restoredItem),
   }
 }
 

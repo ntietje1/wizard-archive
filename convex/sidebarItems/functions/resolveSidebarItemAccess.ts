@@ -4,14 +4,16 @@ import { getSidebarItem } from './getSidebarItem'
 import { canAccessResourceAndAncestors } from './resourceAccessPolicy'
 import { isTrashedSidebarItem, isUndoHiddenSidebarItem } from '../types/status'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Doc } from '../../_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   AnyResourceWithContent,
   ResourceSlug,
 } from '@wizard-archive/editor/resources/resource-contract'
+import { findSidebarItemRow } from './sidebarItemIdentity'
 
 export type SidebarItemAccessLookup =
-  | { kind: 'id'; id: Id<'sidebarItems'> }
+  | { kind: 'id'; id: ResourceId }
   | { kind: 'slug'; slug: ResourceSlug }
 
 export type SidebarItemAccessResolution =
@@ -48,7 +50,7 @@ async function getSidebarItemByAccessLookup(
 ): Promise<Doc<'sidebarItems'> | null> {
   const raw =
     lookup.kind === 'id'
-      ? await ctx.db.get('sidebarItems', lookup.id)
+      ? await findSidebarItemRow(ctx, lookup.id)
       : await ctx.db
           .query('sidebarItems')
           .withIndex('by_campaign_slug', (q) =>

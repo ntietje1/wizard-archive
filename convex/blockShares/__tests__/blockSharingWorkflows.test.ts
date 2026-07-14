@@ -74,7 +74,7 @@ describe('block sharing workflows', () => {
           .withIndex('by_campaign_note_block', (q) =>
             q
               .eq('campaignId', ctx.campaignId)
-              .eq('noteId', note.noteId)
+              .eq('noteId', note.noteRowId)
               .eq('blockNoteId', testBlockNoteId('pending-block')),
           )
           .unique()
@@ -211,7 +211,7 @@ describe('block sharing workflows', () => {
 
       const blockDbId = await getBlockDbId(t, {
         campaignId: ctx.campaignId,
-        noteId: note.noteId,
+        noteId: note.noteRowId,
         blockNoteId: block.blockNoteId,
       })
 
@@ -333,7 +333,7 @@ describe('block sharing workflows', () => {
 
       const blockDbId = await getBlockDbId(t, {
         campaignId: ctx.campaignId,
-        noteId: note.noteId,
+        noteId: note.noteRowId,
         blockNoteId: block.blockNoteId,
       })
 

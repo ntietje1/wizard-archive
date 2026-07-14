@@ -1,11 +1,10 @@
+import type { ResourceId, CanvasNodeId } from '../../../resources/domain-id'
 import type { CanvasPosition } from '../../types/canvas-domain-types'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasTextDocumentNode,
 } from '../../document-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
-import type { CanvasNodeId } from '../../../resources/domain-id'
 
 interface CanvasPerformanceMetric {
   name: string
@@ -21,7 +20,7 @@ type CanvasRuntimeSelectionInput =
 interface CanvasPerformanceRuntime {
   clearCanvas: () => void
   getCounts: () => { nodes: number; edges: number }
-  getCanvasId: () => SidebarItemId
+  getCanvasId: () => ResourceId
   getSnapshot: () => {
     nodes: Array<CanvasDocumentNode>
     edges: Array<CanvasDocumentEdge>
@@ -77,7 +76,7 @@ interface CanvasPerformanceRuntime {
   }) => void
   seedEmbedNode: (options: {
     id: CanvasNodeId
-    resourceId: SidebarItemId
+    resourceId: ResourceId
     position: CanvasPosition
     width?: number
     height?: number

@@ -1,8 +1,8 @@
+import type { ResourceId, MapPinId } from '../../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
-import type { MapPinId } from '../../../resources/domain-id'
+
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { MapItemWithContent, MapPinWithItem } from '../../../game-maps/item-contract'
 import type { NoteItem } from '../../../notes/item-contract'
@@ -23,7 +23,7 @@ describe('useMapPinMenuServiceState', () => {
   })
 
   it('projects map view service state', () => {
-    const map = createGameMapFixture('map-1' as SidebarItemId, 'Map')
+    const map = createGameMapFixture('map-1' as ResourceId, 'Map')
     const pin = createMapPin(map, 'map-pin-1' as MapPinId, 'note-1', 'Note')
     map.pins = [pin]
     const pins = [pin]
@@ -62,7 +62,7 @@ describe('useMapPinMenuServiceState', () => {
   ])(
     'projects only permitted active pin item data when canViewPinItem returns $canView',
     ({ canView, publishesItem }) => {
-      const map = createGameMapFixture('map-1' as SidebarItemId, 'Map')
+      const map = createGameMapFixture('map-1' as ResourceId, 'Map')
       const pin = createMapPin(map, 'map-pin-1' as MapPinId, 'note-1', 'Note')
       map.pins = [pin]
       const wrapper = ({ children }: { children: ReactNode }) => (
@@ -101,7 +101,7 @@ function createMapPin(
   itemId: string,
   itemName: string,
 ): MapPinWithItem {
-  const item = createNoteFixture(itemId as SidebarItemId, itemName)
+  const item = createNoteFixture(itemId as ResourceId, itemName)
   return {
     id: id,
     createdAt: Date.now(),
@@ -114,7 +114,7 @@ function createMapPin(
   }
 }
 
-function createGameMapFixture(id: SidebarItemId, name: string): MapItemWithContent {
+function createGameMapFixture(id: ResourceId, name: string): MapItemWithContent {
   return {
     ...createSidebarItemFixture(RESOURCE_TYPES.gameMaps, id, name),
     ancestors: [],
@@ -124,11 +124,11 @@ function createGameMapFixture(id: SidebarItemId, name: string): MapItemWithConte
   } as unknown as MapItemWithContent
 }
 
-function createNoteFixture(id: SidebarItemId, name: string): NoteItem {
+function createNoteFixture(id: ResourceId, name: string): NoteItem {
   return createSidebarItemFixture(RESOURCE_TYPES.notes, id, name) as unknown as NoteItem
 }
 
-function createSidebarItemFixture(type: string, id: SidebarItemId, name: string) {
+function createSidebarItemFixture(type: string, id: ResourceId, name: string) {
   return {
     createdAt: 0,
     id: id,

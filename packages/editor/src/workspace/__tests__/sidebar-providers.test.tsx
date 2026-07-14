@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
@@ -6,7 +7,7 @@ import { VIEW_CONTEXT } from '../view-context'
 import type { ViewContext } from '../menu-context'
 import { useWorkspaceContextMenuModelSource } from '../context-menu-model-source'
 import { WorkspaceContextMenu } from '../context-menu/context-menu'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { FileSystemOperations } from '../../filesystem/operations'
 import type { FileSystemDownload } from '../../filesystem/download'
 import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory'
@@ -56,9 +57,9 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
         }}
       >
         <ContextMenuCommandProbe
-          clickedItemId={'folder_1' as SidebarItemId}
+          clickedItemId={'folder_1' as ResourceId}
           commandItemId="create-new-submenu"
-          selectedItemIds={['folder_1' as SidebarItemId]}
+          selectedItemIds={['folder_1' as ResourceId]}
           viewContext={VIEW_CONTEXT.SIDEBAR}
         />
       </ProviderHarness>,
@@ -80,9 +81,9 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
       render(
         <ProviderHarness canCreateItems={true} executeDropCommand={executeDropCommand}>
           <ContextMenuCommandProbe
-            clickedItemId={'note_2' as SidebarItemId}
+            clickedItemId={'note_2' as ResourceId}
             commandItemId="duplicate"
-            selectedItemIds={['note_1' as SidebarItemId, 'note_2' as SidebarItemId]}
+            selectedItemIds={['note_1' as ResourceId, 'note_2' as ResourceId]}
             viewContext={viewContext}
           />
         </ProviderHarness>,
@@ -106,9 +107,9 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
     render(
       <ProviderHarness canCreateItems={false}>
         <ContextMenuCommandProbe
-          clickedItemId={'note_1' as SidebarItemId}
+          clickedItemId={'note_1' as ResourceId}
           commandItemId="duplicate"
-          selectedItemIds={['note_1' as SidebarItemId]}
+          selectedItemIds={['note_1' as ResourceId]}
           viewContext={VIEW_CONTEXT.SIDEBAR}
         />
       </ProviderHarness>,
@@ -123,12 +124,12 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
     render(
       <ProviderHarness>
         <ContextMenuCommandProbe
-          clickedItemId={'note_2' as SidebarItemId}
+          clickedItemId={'note_2' as ResourceId}
           commandItemId="show-in-sidebar"
-          selectedItemIds={['note_2' as SidebarItemId]}
+          selectedItemIds={['note_2' as ResourceId]}
           viewContext={VIEW_CONTEXT.FOLDER_VIEW}
         />
-        <SidebarRevealCommandProbe itemId={'note_2' as SidebarItemId} />
+        <SidebarRevealCommandProbe itemId={'note_2' as ResourceId} />
       </ProviderHarness>,
     )
 
@@ -148,9 +149,9 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
     render(
       <ProviderHarness canCreateItems={true} restoreItems={restoreItems}>
         <ContextMenuCommandProbe
-          clickedItemId={'trash_2' as SidebarItemId}
+          clickedItemId={'trash_2' as ResourceId}
           commandItemId="restore"
-          selectedItemIds={['trash_1' as SidebarItemId, 'trash_2' as SidebarItemId]}
+          selectedItemIds={['trash_1' as ResourceId, 'trash_2' as ResourceId]}
           viewContext={VIEW_CONTEXT.TRASH_VIEW}
         />
       </ProviderHarness>,
@@ -172,9 +173,9 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
     render(
       <ProviderHarness trashItems={trashItems}>
         <ContextMenuCommandProbe
-          clickedItemId={'folder_1' as SidebarItemId}
+          clickedItemId={'folder_1' as ResourceId}
           commandItemId="delete"
-          selectedItemIds={['folder_1' as SidebarItemId]}
+          selectedItemIds={['folder_1' as ResourceId]}
           viewContext={VIEW_CONTEXT.SIDEBAR}
         />
       </ProviderHarness>,
@@ -192,7 +193,7 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
   it('reveals nested items through the workspace sidebar reveal command', async () => {
     render(
       <ProviderHarness>
-        <SidebarRevealCommandProbe itemId={'note_2' as SidebarItemId} />
+        <SidebarRevealCommandProbe itemId={'note_2' as ResourceId} />
       </ProviderHarness>,
     )
 
@@ -203,7 +204,7 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
 
   it('reveals the current runtime item parents when the editor mounts', async () => {
     render(
-      <ProviderHarness currentItemId={'note_2' as SidebarItemId}>
+      <ProviderHarness currentItemId={'note_2' as ResourceId}>
         <SidebarFolderStateProbe />
       </ProviderHarness>,
     )
@@ -216,9 +217,9 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
     render(
       <ProviderHarness canCreateItems={true} executeDropCommand={executeDropCommand}>
         <ContextMenuCommandProbe
-          clickedItemId={'note_2' as SidebarItemId}
+          clickedItemId={'note_2' as ResourceId}
           commandItemId="duplicate"
-          selectedItemIds={['note_1' as SidebarItemId, 'note_2' as SidebarItemId]}
+          selectedItemIds={['note_1' as ResourceId, 'note_2' as ResourceId]}
           viewContext={VIEW_CONTEXT.SIDEBAR}
         />
         <MountedSelectionProbe />
@@ -244,7 +245,7 @@ describe('WorkspaceRuntimeSidebarProviders', () => {
 function ProviderHarness({
   canCreateItems,
   children,
-  currentItemId = 'note_1' as SidebarItemId,
+  currentItemId = 'note_1' as ResourceId,
   download,
   executeDropCommand = vi.fn(),
   restoreItems = vi.fn(),
@@ -252,7 +253,7 @@ function ProviderHarness({
 }: {
   canCreateItems?: boolean
   children?: ReactNode
-  currentItemId?: SidebarItemId
+  currentItemId?: ResourceId
   download?: FileSystemDownload
   executeDropCommand?: FileSystemOperations['executeDropCommand']
   restoreItems?: FileSystemOperations['restoreItems']
@@ -268,7 +269,7 @@ function ProviderHarness({
     trashItems,
   })
   const runtime = runtimeRef.current
-  const item = runtime.filesystem.catalog.getKnownItemById('note_1' as SidebarItemId)
+  const item = runtime.filesystem.catalog.getKnownItemById('note_1' as ResourceId)
   const sidebarWorkspaceState = useRuntimeSidebarWorkspaceState(runtime)
 
   if (!item) throw new Error('Expected note_1 to exist in the test runtime catalog')
@@ -293,7 +294,7 @@ function ProviderHarness({
   )
 }
 
-function SidebarRevealCommandProbe({ itemId }: { itemId: SidebarItemId }) {
+function SidebarRevealCommandProbe({ itemId }: { itemId: ResourceId }) {
   const showItemInSidebar = useWorkspaceSidebarReveal()
 
   return (
@@ -336,9 +337,9 @@ function ContextMenuCommandProbe({
   selectedItemIds,
   viewContext,
 }: {
-  clickedItemId: SidebarItemId
+  clickedItemId: ResourceId
   commandItemId: string
-  selectedItemIds: Array<SidebarItemId>
+  selectedItemIds: Array<ResourceId>
   viewContext: ViewContext
 }) {
   const source = useSidebarWorkspaceState()
@@ -403,24 +404,24 @@ function createRuntime({
   trashItems,
 }: {
   canCreateItems?: boolean
-  currentItemId?: SidebarItemId
+  currentItemId?: ResourceId
   download?: FileSystemDownload
   executeDropCommand?: FileSystemOperations['executeDropCommand']
   restoreItems?: FileSystemOperations['restoreItems']
   trashItems?: FileSystemOperations['trashItems']
 }): WorkspaceRuntime {
-  const note = createNote({ id: 'note_1' as SidebarItemId })
-  const folder = createFolder({ id: 'folder_1' as SidebarItemId })
+  const note = createNote({ id: 'note_1' as ResourceId })
+  const folder = createFolder({ id: 'folder_1' as ResourceId })
   const secondNote = createNote({
-    id: 'note_2' as SidebarItemId,
+    id: 'note_2' as ResourceId,
     parentId: folder.id,
   })
   const trashedNote = createNote({
-    id: 'trash_1' as SidebarItemId,
+    id: 'trash_1' as ResourceId,
     status: RESOURCE_STATUS.trashed,
   })
   const secondTrashedNote = createNote({
-    id: 'trash_2' as SidebarItemId,
+    id: 'trash_2' as ResourceId,
     status: RESOURCE_STATUS.trashed,
   })
   const currentItem = currentItemId === secondNote.id ? secondNote : note

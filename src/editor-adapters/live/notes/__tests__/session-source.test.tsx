@@ -1,3 +1,4 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
@@ -6,10 +7,10 @@ import {
   useLiveNoteSessionPorts,
   useLiveNoteValueSessionPorts,
 } from '~/editor-adapters/live/notes/session-source'
-import type { Id } from 'convex/_generated/dataModel'
 import type { WizardEditorNoteCollaborationSessionRequest } from '@wizard-archive/editor/adapter'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { createNote } from '~/test/factories/sidebar-item-factory'
+import { testResourceId } from '../../../../../shared/test/resource-id'
 
 const noteDoc = vi.hoisted(() => ({ getXmlFragment: vi.fn() }))
 type TestNoteItemWithContent = WizardEditorNoteCollaborationSessionRequest['note']
@@ -65,8 +66,8 @@ beforeEach(() => {
 
 describe('live note session source note data', () => {
   it('loads headings and note value states through source-neutral data hooks', () => {
-    const headingsNoteId = 'headings-note' as Id<'sidebarItems'>
-    const persistedValuesNoteId = 'values-note' as Id<'sidebarItems'>
+    const headingsNoteId = testResourceId('headings-note')
+    const persistedValuesNoteId = testResourceId('values-note')
     const persistedValue = runtimeState({
       noteId: persistedValuesNoteId,
       valueId: 'source-value',
@@ -119,9 +120,9 @@ describe('live note session source note data', () => {
   })
 
   it('hydrates note data only for persisted note ids', () => {
-    const headingsNoteId = 'optimistic-headings-note' as SidebarItemId
-    const optimisticValuesNoteId = 'optimistic-values-note' as SidebarItemId
-    const persistedValuesNoteId = 'values-note' as Id<'sidebarItems'>
+    const headingsNoteId = 'optimistic-headings-note' as ResourceId
+    const optimisticValuesNoteId = 'optimistic-values-note' as ResourceId
+    const persistedValuesNoteId = testResourceId('values-note')
     const persistedValue = runtimeState({
       noteId: persistedValuesNoteId,
       valueId: 'source-value',
@@ -171,11 +172,11 @@ describe('live note session source note data', () => {
 
     await initializer.result.current({
       file,
-      noteId: 'note_1' as Id<'sidebarItems'>,
+      noteId: testResourceId('note_1'),
     })
 
     expect(mutateAsync).toHaveBeenCalledWith({
-      documentId: 'note_1',
+      documentId: testResourceId('note_1'),
       revision: 0,
       update: expect.any(ArrayBuffer),
       content: [
@@ -215,7 +216,7 @@ describe('live note session source note data', () => {
   })
 
   it('keeps optimistic notes out of live collaboration paths', () => {
-    const note = createContentNote('optimistic-note' as SidebarItemId)
+    const note = createContentNote('optimistic-note' as ResourceId)
     const canEditNote = vi.fn(() => true)
 
     const session = renderHook(() => {
@@ -289,7 +290,7 @@ describe('live note session source note data', () => {
 
 function runtimeState(overrides: Record<string, unknown> = {}) {
   return {
-    noteId: 'note-1' as Id<'sidebarItems'>,
+    noteId: testResourceId('note-1'),
     blockNoteId: 'block-1',
     valueId: 'value-1',
     slug: 'draft_value',
@@ -300,9 +301,7 @@ function runtimeState(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function createContentNote(
-  id: SidebarItemId = 'note_1' as Id<'sidebarItems'>,
-): TestNoteItemWithContent {
+function createContentNote(id: ResourceId = testResourceId('note_1')): TestNoteItemWithContent {
   return {
     ...createNote({ id }),
     ancestors: [],

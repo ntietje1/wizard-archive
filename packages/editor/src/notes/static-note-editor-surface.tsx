@@ -1,7 +1,8 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useStaticNoteContentEditor } from './static-note-editor'
 import { StaticNoteRuntimeSurface } from './static-note-runtime-surface'
 import type { CSSProperties, ReactNode } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { NoteBlock } from './document/model'
 import type { NoteItemWithContent } from '../notes/item-contract'
 import type {
@@ -35,7 +36,7 @@ export function StaticNoteEditorSurface({
   linkNavigationSource: NoteLinkNavigationSource | null
   linkResolutionSource: NoteLinkResolutionSource
   note?: NoteItemWithContent
-  noteId?: SidebarItemId
+  noteId?: ResourceId
   noteValueReferences: NoteValueReferences
   noteValueStateSource: NoteValueRuntimeStateSource
   onEditorChange?: StaticNoteEditorChangeHandler

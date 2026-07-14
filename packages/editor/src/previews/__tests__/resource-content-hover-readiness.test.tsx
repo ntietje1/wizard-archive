@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import {
   ResourceContentSourceProvider,
   useResourceContentState,
@@ -13,7 +14,7 @@ import { ResourcePreviewSurface } from '../resource-preview-surface'
 describe('resource content hover readiness', () => {
   it('lets resource surfaces ensure and render content without embed-specific state', async () => {
     const note = {
-      ...createNote({ id: 'note-a' as SidebarItemId, name: 'Session Notes' }),
+      ...createNote({ id: 'note-a' as ResourceId, name: 'Session Notes' }),
       ancestors: [],
       blockMeta: {},
       blockShareAccessWarnings: [],
@@ -45,7 +46,7 @@ describe('resource content hover readiness', () => {
   })
 })
 
-function HoverPreviewProbe({ itemId }: { itemId: SidebarItemId }) {
+function HoverPreviewProbe({ itemId }: { itemId: ResourceId }) {
   const state = useResourceContentState(itemId, 'Item')
   if (state.status !== 'ready') return <div>{state.status}</div>
   return <ResourcePreviewSurface item={state.item} folderChildren={state.folderChildren} />

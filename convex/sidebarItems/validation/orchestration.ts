@@ -22,9 +22,12 @@ import { isActiveSidebarItem } from '../types/status'
 import { evaluateMoveToParent } from '@wizard-archive/editor/resources/operation-capabilities'
 import type { OperationResourceItem } from '@wizard-archive/editor/resources/operation-capabilities'
 import { assertSidebarOperationAllowed, operationActorFromRole } from '../filesystem/capabilities'
-import { checkItemAccess, requireItemAccess } from './access'
+import { checkSidebarItemRowAccess } from '../filesystem/access'
+import type { AccessibleSidebarItemRow } from '../filesystem/access'
+import { requireItemAccess } from './access'
 const MAX_SIDEBAR_PARENT_DEPTH = 100
-type NamedOperationResourceItem = OperationResourceItem & Pick<AnyResource, 'name'>
+type NamedOperationResourceItem<TId extends string> = OperationResourceItem<TId> &
+  Pick<AnyResource, 'name'>
 
 export async function validateNoCircularSidebarParentChange(
   ctx: CampaignQueryCtx,
@@ -32,7 +35,7 @@ export async function validateNoCircularSidebarParentChange(
     item,
     newParentId,
   }: {
-    item: OperationResourceItem
+    item: OperationResourceItem<Id<'sidebarItems'>>
     newParentId: Id<'sidebarItems'> | null
   },
 ): Promise<void> {
@@ -53,25 +56,24 @@ export async function validateSidebarParentChange(
     item,
     newParentId,
   }: {
-    item: OperationResourceItem
+    item: OperationResourceItem<Id<'sidebarItems'>>
     newParentId: Id<'sidebarItems'> | null
   },
 ): Promise<void> {
   await validateNoCircularSidebarParentChange(ctx, { item, newParentId })
-  let parent: AnyResource | null = null
+  let parent: AccessibleSidebarItemRow | null = null
   if (newParentId) {
-    const parentRow = await getSidebarItem(ctx, newParentId)
+    const parentRow = await ctx.db.get('sidebarItems', newParentId)
     if (!parentRow) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
-    // checkItemAccess with PERMISSION_LEVEL.NONE intentionally normalizes parentRow for evaluateMoveToParent.
-    parent = await checkItemAccess(ctx, {
+    parent = await checkSidebarItemRowAccess(ctx, {
       rawItem: parentRow,
       requiredLevel: PERMISSION_LEVEL.NONE,
     })
   }
   const ancestorIds: Array<Id<'sidebarItems'>> = []
-  let currentParentId = parent?.parentId ?? null
+  let currentParentId = newParentId ? (parent?.parentId ?? null) : null
   const visitedParentIds = new Set<Id<'sidebarItems'>>()
   while (currentParentId) {
     if (visitedParentIds.has(currentParentId)) {
@@ -132,7 +134,7 @@ export async function validateSidebarMove(
     item,
     newParentId,
   }: {
-    item: NamedOperationResourceItem
+    item: NamedOperationResourceItem<Id<'sidebarItems'>>
     newParentId: Id<'sidebarItems'> | null
     name?: ResourceTitle
   },
@@ -219,7 +221,7 @@ export async function prepareSidebarItemRename(
     item,
     newName,
   }: {
-    item: NamedOperationResourceItem
+    item: NamedOperationResourceItem<Id<'sidebarItems'>>
     newName: ResourceTitle
   },
 ): Promise<{ name: ResourceTitle; slug: ResourceSlug } | null> {

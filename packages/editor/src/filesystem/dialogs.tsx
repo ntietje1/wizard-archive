@@ -1,5 +1,6 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useState } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceCommandResult } from './transaction-contract'
 import type { ResourceTrashRequestResult } from './operation-runtime-contract'
 import type { AnyItem, FolderItem } from '../workspace/items'
@@ -15,8 +16,8 @@ import { handleError } from '../errors/handle-error'
 type FileSystemDialogsArgs = {
   cacheAdapter: FileSystemCacheAdapter
   trashState: FileSystemTrashDialogState
-  trashItems: (itemIds: Array<SidebarItemId>) => Promise<ResourceTrashRequestResult>
-  deleteForever: (itemIds: Array<SidebarItemId>) => Promise<ResourceCommandResult | void>
+  trashItems: (itemIds: Array<ResourceId>) => Promise<ResourceTrashRequestResult>
+  deleteForever: (itemIds: Array<ResourceId>) => Promise<ResourceCommandResult | void>
   emptyTrash: () => Promise<ResourceCommandResult | void>
 }
 

@@ -21,7 +21,7 @@ export async function buildPermanentDeleteDelta(
 
   return await session.build({
     command,
-    events: rootItems.map((item) => deletedForeverEvent(item._id)),
+    events: rootItems.map(deletedForeverEvent),
     undoable: false,
   })
 }

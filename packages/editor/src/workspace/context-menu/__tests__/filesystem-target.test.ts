@@ -1,19 +1,19 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
 import { createWorkspaceFilesystemContextMenuTarget } from '../filesystem-target'
 import type { FileSystemItemContextMenuOperations } from '../../../filesystem/item-operation-contracts'
 
 describe('createWorkspaceFilesystemContextMenuTarget', () => {
   it('routes context-menu duplicate through the filesystem resource command model', async () => {
-    const folder = createFolder({ id: testId<'sidebarItems'>('folder_1'), name: 'Scenes' })
+    const folder = createFolder({ id: testResourceId('folder_1'), name: 'Scenes' })
     const first = createNote({
-      id: testId<'sidebarItems'>('note_1'),
+      id: testResourceId('note_1'),
       parentId: folder.id,
     })
     const second = createNote({
-      id: testId<'sidebarItems'>('note_2'),
+      id: testResourceId('note_2'),
       parentId: folder.id,
     })
     const executeDropCommand =
@@ -35,22 +35,22 @@ describe('createWorkspaceFilesystemContextMenuTarget', () => {
 
   it('duplicates mixed-parent selections in each item group original parent', async () => {
     const firstFolder = createFolder({
-      id: testId<'sidebarItems'>('folder_1'),
+      id: testResourceId('folder_1'),
       name: 'Scenes',
     })
     const secondFolder = createFolder({
-      id: testId<'sidebarItems'>('folder_2'),
+      id: testResourceId('folder_2'),
       name: 'NPCs',
     })
     const first = createNote({
-      id: testId<'sidebarItems'>('note_1'),
+      id: testResourceId('note_1'),
       parentId: firstFolder.id,
     })
     const second = createNote({
-      id: testId<'sidebarItems'>('note_2'),
+      id: testResourceId('note_2'),
       parentId: secondFolder.id,
     })
-    const root = createNote({ id: testId<'sidebarItems'>('note_root'), parentId: null })
+    const root = createNote({ id: testResourceId('note_root'), parentId: null })
     const executeDropCommand =
       operationMock<FileSystemItemContextMenuOperations['executeDropCommand']>()
     const runtime = createTestWorkspaceRuntime({
@@ -80,7 +80,7 @@ describe('createWorkspaceFilesystemContextMenuTarget', () => {
   })
 
   it('hides duplicate for root items when root creation is unavailable', () => {
-    const root = createNote({ id: testId<'sidebarItems'>('note_root'), parentId: null })
+    const root = createNote({ id: testResourceId('note_root'), parentId: null })
     const runtime = createTestWorkspaceRuntime({
       activeItems: [root],
       canCreateItems: false,
@@ -91,7 +91,7 @@ describe('createWorkspaceFilesystemContextMenuTarget', () => {
   })
 
   it('allows duplicate for root items when root creation is available', () => {
-    const root = createNote({ id: testId<'sidebarItems'>('note_root'), parentId: null })
+    const root = createNote({ id: testResourceId('note_root'), parentId: null })
     const runtime = createTestWorkspaceRuntime({
       activeItems: [root],
       canCreateItems: true,
@@ -103,11 +103,11 @@ describe('createWorkspaceFilesystemContextMenuTarget', () => {
 
   it('allows duplicate into an editable original folder without root creation access', () => {
     const folder = createFolder({
-      id: testId<'sidebarItems'>('folder_1'),
+      id: testResourceId('folder_1'),
       name: 'Scenes',
     })
     const note = createNote({
-      id: testId<'sidebarItems'>('note_1'),
+      id: testResourceId('note_1'),
       parentId: folder.id,
     })
     const runtime = createTestWorkspaceRuntime({
@@ -120,8 +120,8 @@ describe('createWorkspaceFilesystemContextMenuTarget', () => {
   })
 
   it('passes context-menu operations through to the workspace filesystem operation model', async () => {
-    const first = createNote({ id: testId<'sidebarItems'>('note_1') })
-    const second = createNote({ id: testId<'sidebarItems'>('note_2') })
+    const first = createNote({ id: testResourceId('note_1') })
+    const second = createNote({ id: testResourceId('note_2') })
     const trashItems = operationMock<FileSystemItemContextMenuOperations['trashItems']>()
     const restoreItems = operationMock<FileSystemItemContextMenuOperations['restoreItems']>()
     const requestDeleteItemsForever =
@@ -154,7 +154,7 @@ describe('createWorkspaceFilesystemContextMenuTarget', () => {
 
     expect(target.canPasteIntoTarget(pasteInput)).toBe(true)
     await target.trashItems([first, second])
-    await target.restoreItems([first, second], testId<'sidebarItems'>('folder_1'))
+    await target.restoreItems([first, second], testResourceId('folder_1'))
     await target.requestDeleteItemsForever([first, second])
     await target.requestEmptyTrash()
     expect(await target.pasteIntoTarget(pasteInput)).toEqual({
@@ -163,17 +163,20 @@ describe('createWorkspaceFilesystemContextMenuTarget', () => {
     })
 
     expect(canPasteIntoTarget).toHaveBeenCalledExactlyOnceWith(pasteInput)
-    expect(trashItems).toHaveBeenCalledExactlyOnceWith(['note_1', 'note_2'])
-    expect(restoreItems).toHaveBeenCalledExactlyOnceWith(['note_1', 'note_2'], 'folder_1')
-    expect(requestDeleteItemsForever).toHaveBeenCalledExactlyOnceWith(['note_1', 'note_2'])
+    expect(trashItems).toHaveBeenCalledExactlyOnceWith([first.id, second.id])
+    expect(restoreItems).toHaveBeenCalledExactlyOnceWith(
+      [first.id, second.id],
+      testResourceId('folder_1'),
+    )
+    expect(requestDeleteItemsForever).toHaveBeenCalledExactlyOnceWith([first.id, second.id])
     expect(requestEmptyTrash).toHaveBeenCalledOnce()
     expect(pasteIntoTarget).toHaveBeenCalledExactlyOnceWith(pasteInput)
   })
 
   it('routes folder trash requests through the workspace filesystem operation model', async () => {
-    const folder = createFolder({ id: testId<'sidebarItems'>('folder_1') })
+    const folder = createFolder({ id: testResourceId('folder_1') })
     const child = createNote({
-      id: testId<'sidebarItems'>('note_child'),
+      id: testResourceId('note_child'),
       parentId: folder.id,
     })
     const trashItems = operationMock<FileSystemItemContextMenuOperations['trashItems']>()
@@ -185,7 +188,7 @@ describe('createWorkspaceFilesystemContextMenuTarget', () => {
 
     await target.trashItems([folder])
 
-    expect(trashItems).toHaveBeenCalledExactlyOnceWith(['folder_1'])
+    expect(trashItems).toHaveBeenCalledExactlyOnceWith([folder.id])
   })
 })
 

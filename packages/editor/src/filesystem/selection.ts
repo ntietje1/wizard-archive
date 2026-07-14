@@ -1,47 +1,43 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
-
+import type { ResourceId } from '../resources/domain-id'
 interface FileSystemSelectionSnapshot {
-  selectedItemIds: ReadonlyArray<SidebarItemId>
-  anchorItemId: SidebarItemId | null
-  focusedItemId: SidebarItemId | null
+  selectedItemIds: ReadonlyArray<ResourceId>
+  anchorItemId: ResourceId | null
+  focusedItemId: ResourceId | null
 }
 
 interface FileSystemSelectionRangeResolution {
-  selectedItemIds: Array<SidebarItemId>
-  anchorItemId: SidebarItemId
+  selectedItemIds: Array<ResourceId>
+  anchorItemId: ResourceId
 }
 
 export interface FileSystemSelection extends FileSystemSelectionSnapshot {
-  setSelectedItemIds: (ids: ReadonlyArray<SidebarItemId>, anchorId?: SidebarItemId | null) => void
-  selectSingleItem: (id: SidebarItemId) => void
-  toggleItemSelection: (id: SidebarItemId) => void
-  selectItemRange: (targetId: SidebarItemId, visibleItemIds: ReadonlyArray<SidebarItemId>) => void
-  setFocusedItem: (id: SidebarItemId | null) => void
+  setSelectedItemIds: (ids: ReadonlyArray<ResourceId>, anchorId?: ResourceId | null) => void
+  selectSingleItem: (id: ResourceId) => void
+  toggleItemSelection: (id: ResourceId) => void
+  selectItemRange: (targetId: ResourceId, visibleItemIds: ReadonlyArray<ResourceId>) => void
+  setFocusedItem: (id: ResourceId | null) => void
   moveFocus: (
     direction: 'up' | 'down',
-    visibleItemIds: ReadonlyArray<SidebarItemId>,
+    visibleItemIds: ReadonlyArray<ResourceId>,
     extendSelection: boolean,
   ) => void
   clearItemSelection: () => void
-  normalizeContextSelection: (
-    id: SidebarItemId,
-    visibleItemIds?: ReadonlyArray<SidebarItemId>,
-  ) => void
+  normalizeContextSelection: (id: ResourceId, visibleItemIds?: ReadonlyArray<ResourceId>) => void
   getSelectionSnapshot: () => FileSystemSelectionSnapshot
 }
 
 type SetFileSystemSelection = (
-  selectedIds: ReadonlyArray<SidebarItemId>,
-  focusedItemId?: SidebarItemId | null,
-  anchorItemId?: SidebarItemId | null,
+  selectedIds: ReadonlyArray<ResourceId>,
+  focusedItemId?: ResourceId | null,
+  anchorItemId?: ResourceId | null,
 ) => void
 
 function createStaticFileSystemSelection({
   currentItemId,
   fallbackSelectedItemIds,
 }: {
-  currentItemId: SidebarItemId | null
-  fallbackSelectedItemIds: Array<SidebarItemId>
+  currentItemId: ResourceId | null
+  fallbackSelectedItemIds: Array<ResourceId>
 }): FileSystemSelection {
   let snapshot: FileSystemSelectionSnapshot = {
     selectedItemIds: [...fallbackSelectedItemIds],
@@ -49,9 +45,9 @@ function createStaticFileSystemSelection({
     focusedItemId: currentItemId,
   }
   const setSelection = (
-    selectedIds: ReadonlyArray<SidebarItemId>,
-    focusedItemId: SidebarItemId | null = selectedIds[0] ?? null,
-    anchorItemId: SidebarItemId | null = focusedItemId ?? selectedIds[0] ?? null,
+    selectedIds: ReadonlyArray<ResourceId>,
+    focusedItemId: ResourceId | null = selectedIds[0] ?? null,
+    anchorItemId: ResourceId | null = focusedItemId ?? selectedIds[0] ?? null,
   ) => {
     snapshot = {
       selectedItemIds: [...selectedIds],
@@ -67,7 +63,7 @@ function createStaticFileSystemSelection({
 }
 
 export function createCurrentItemFileSystemSelection(
-  currentItem: { id: SidebarItemId } | null,
+  currentItem: { id: ResourceId } | null,
 ): FileSystemSelection {
   const selectedItemIds = currentItem ? [currentItem.id] : []
   return createStaticFileSystemSelection({
@@ -82,10 +78,10 @@ export function resolveFileSystemSelectionRange({
   targetId,
   visibleItemIds,
 }: {
-  anchorId: SidebarItemId | null
-  fallbackAnchorId?: SidebarItemId | null
-  targetId: SidebarItemId
-  visibleItemIds: ReadonlyArray<SidebarItemId>
+  anchorId: ResourceId | null
+  fallbackAnchorId?: ResourceId | null
+  targetId: ResourceId
+  visibleItemIds: ReadonlyArray<ResourceId>
 }): FileSystemSelectionRangeResolution {
   const anchorItemId = resolveVisibleSelectionAnchorId(
     anchorId,
@@ -100,21 +96,21 @@ export function resolveFileSystemSelectionRange({
 }
 
 function resolveVisibleSelectionAnchorId(
-  anchorId: SidebarItemId | null,
-  fallbackAnchorId: SidebarItemId | null,
-  targetId: SidebarItemId,
-  visibleItemIds: ReadonlyArray<SidebarItemId>,
-): SidebarItemId {
+  anchorId: ResourceId | null,
+  fallbackAnchorId: ResourceId | null,
+  targetId: ResourceId,
+  visibleItemIds: ReadonlyArray<ResourceId>,
+): ResourceId {
   if (anchorId && visibleItemIds.includes(anchorId)) return anchorId
   if (fallbackAnchorId && visibleItemIds.includes(fallbackAnchorId)) return fallbackAnchorId
   return targetId
 }
 
 function selectVisibleFileSystemItemRange(
-  anchorId: SidebarItemId,
-  targetId: SidebarItemId,
-  visibleItemIds: ReadonlyArray<SidebarItemId>,
-): Array<SidebarItemId> {
+  anchorId: ResourceId,
+  targetId: ResourceId,
+  visibleItemIds: ReadonlyArray<ResourceId>,
+): Array<ResourceId> {
   const anchorIndex = visibleItemIds.indexOf(anchorId)
   const targetIndex = visibleItemIds.indexOf(targetId)
 
@@ -128,8 +124,8 @@ function selectVisibleFileSystemItemRange(
 }
 
 export function selectionBelongsToSurface(
-  selectedIds: ReadonlyArray<SidebarItemId>,
-  visibleItemIds: ReadonlyArray<SidebarItemId>,
+  selectedIds: ReadonlyArray<ResourceId>,
+  visibleItemIds: ReadonlyArray<ResourceId>,
 ): boolean {
   if (selectedIds.length === 0) return false
   const visible = new Set(visibleItemIds)
@@ -137,9 +133,9 @@ export function selectionBelongsToSurface(
 }
 
 export function getNextFileSystemFocusedItemId(
-  currentId: SidebarItemId | null,
+  currentId: ResourceId | null,
   direction: 'up' | 'down',
-  visibleItemIds: ReadonlyArray<SidebarItemId>,
+  visibleItemIds: ReadonlyArray<ResourceId>,
 ) {
   if (visibleItemIds.length === 0) return null
   const currentIndex = currentId ? visibleItemIds.indexOf(currentId) : -1
@@ -217,7 +213,7 @@ function detachSelectionSnapshot(
 function toggleSelection(
   snapshot: FileSystemSelectionSnapshot,
   setSelection: SetFileSystemSelection,
-  id: SidebarItemId,
+  id: ResourceId,
 ) {
   const selectedItemIds = snapshot.selectedItemIds.includes(id)
     ? snapshot.selectedItemIds.filter((selectedId) => selectedId !== id)
@@ -233,8 +229,8 @@ function toggleSelection(
 function selectRange(
   snapshot: FileSystemSelectionSnapshot,
   setSelection: SetFileSystemSelection,
-  targetId: SidebarItemId,
-  visibleItemIds: ReadonlyArray<SidebarItemId>,
+  targetId: ResourceId,
+  visibleItemIds: ReadonlyArray<ResourceId>,
 ) {
   const { anchorItemId, selectedItemIds } = resolveFileSystemSelectionRange({
     anchorId: snapshot.anchorItemId,
@@ -249,7 +245,7 @@ function moveFocus(
   snapshot: FileSystemSelectionSnapshot,
   setSelection: SetFileSystemSelection,
   direction: 'up' | 'down',
-  visibleItemIds: ReadonlyArray<SidebarItemId>,
+  visibleItemIds: ReadonlyArray<ResourceId>,
   extendSelection: boolean,
 ) {
   const focusedItemId = getNextFileSystemFocusedItemId(

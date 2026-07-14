@@ -1,6 +1,6 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { CanvasViewportStore, PersistedCanvasViewport } from './canvas-viewport-storage'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
 const VIEWPORT_SAVE_DEBOUNCE_MS = 250
 
@@ -11,7 +11,7 @@ export function createCanvasViewportPersistence({
   viewportStore,
 }: {
   canvasEngine: CanvasEngine
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   initialViewport: PersistedCanvasViewport
   viewportStore: CanvasViewportStore
 }) {

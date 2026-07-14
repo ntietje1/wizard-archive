@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { testHistoryEntryId } from '../../test/history-entry-id'
 import { createResourceFileSystemHistory, resolveResourceHistoryScope } from '../history'
 import type { HistoryPreviewSnapshot, ResourceHistory } from '../history-types'
@@ -10,7 +11,7 @@ describe('workspace history model', () => {
     expect(
       resolveResourceHistoryScope({
         canEdit: true,
-        itemId: 'optimistic-create-1' as SidebarItemId,
+        itemId: 'optimistic-create-1' as ResourceId,
         previewingEntryId: testHistoryEntryId('history-1'),
         rollbackEntryId: testHistoryEntryId('history-2'),
       }),
@@ -23,7 +24,7 @@ describe('workspace history model', () => {
     expect(
       resolveResourceHistoryScope({
         canEdit: false,
-        itemId: 'item-1' as SidebarItemId,
+        itemId: 'item-1' as ResourceId,
         previewingEntryId: testHistoryEntryId('history-1'),
         rollbackEntryId: testHistoryEntryId('history-2'),
       }),
@@ -52,7 +53,7 @@ describe('workspace history model', () => {
         previewingEntryId: testHistoryEntryId('history-1'),
         status: 'Exhausted',
       },
-      itemId: 'item-1' as SidebarItemId,
+      itemId: 'item-1' as ResourceId,
       ...historyControls({ previewingEntryId: testHistoryEntryId('history-1') }),
       preview: {
         entryTime: 2,

@@ -7,8 +7,8 @@ import { act, render, renderHook } from '@testing-library/react'
 import { createElement } from 'react'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { SidebarItemId } from 'shared/common/ids'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceState } from '../local-workspace-model'
 import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { useInMemoryNoteSessionSource } from '../in-memory-note-session-source'
@@ -50,9 +50,9 @@ describe('useLocalWorkspaceRuntime', () => {
       name: 'The Lantern Market',
       type: TEST_RESOURCE_TYPES.notes,
     })
-    const sourceNote = source.resources.catalog.getKnownItemById('note-market' as SidebarItemId)
+    const sourceNote = source.resources.catalog.getKnownItemById('note-market' as ResourceId)
     expect(source.resources.current.contentItem).toBe(sourceNote)
-    expect(source.resources.catalog.getKnownItemById('note-market' as SidebarItemId)).toBe(
+    expect(source.resources.catalog.getKnownItemById('note-market' as ResourceId)).toBe(
       source.resources.current.contentItem,
     )
     expect(source.resources).toBe(filesystem)
@@ -80,7 +80,7 @@ describe('useLocalWorkspaceRuntime', () => {
     })
 
     await source.commands.operations.updateItemMetadata({
-      item: source.resources.catalog.getKnownItemById('canvas-heist' as SidebarItemId)!,
+      item: source.resources.catalog.getKnownItemById('canvas-heist' as ResourceId)!,
       name: 'Board',
     })
     expect(dispatch).toHaveBeenCalledWith({
@@ -120,12 +120,12 @@ describe('useLocalWorkspaceRuntime', () => {
       dispatch: vi.fn(),
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource('canvas-heist' as SidebarItemId),
+        resource: createWizardEditorResource('canvas-heist' as ResourceId),
       },
       setNavigation,
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
-    const catalogCanvas = source.resources.catalog.getKnownItemById('canvas-heist' as SidebarItemId)
+    const catalogCanvas = source.resources.catalog.getKnownItemById('canvas-heist' as ResourceId)
 
     expect(source.resources.current.contentItem).toBe(catalogCanvas)
     expect(getWizardEditorNavigationCurrentResourceId(source.navigation)).toBe('canvas-heist')
@@ -137,7 +137,7 @@ describe('useLocalWorkspaceRuntime', () => {
     })
 
     const missingItemResult = await source.navigation.openItem(
-      createWizardEditorResource('new-local-note' as SidebarItemId),
+      createWizardEditorResource('new-local-note' as ResourceId),
     )
     expect(setNavigation).toHaveBeenCalledTimes(1)
     expect(missingItemResult).toEqual({
@@ -188,7 +188,7 @@ describe('useLocalWorkspaceRuntime', () => {
       dispatch,
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource('map-docks' as SidebarItemId),
+        resource: createWizardEditorResource('map-docks' as ResourceId),
       },
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
@@ -222,7 +222,7 @@ describe('useLocalWorkspaceRuntime', () => {
       }),
     )
 
-    let uploadedItemId: SidebarItemId | null = null
+    let uploadedItemId: ResourceId | null = null
     await act(async () => {
       const receipt = await result.current.commands.operations.importFile({
         file: createImportFile(['image'], 'portrait.png', { type: 'image/png' }),
@@ -434,7 +434,7 @@ describe('useLocalWorkspaceRuntime', () => {
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
     const note = filesystem.catalog.getKnownItemById(
-      'note-market' as SidebarItemId,
+      'note-market' as ResourceId,
     ) as LocalNoteItemWithContent
 
     function Harness({ show }: { show: boolean }) {

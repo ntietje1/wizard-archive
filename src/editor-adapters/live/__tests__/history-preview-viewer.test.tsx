@@ -1,10 +1,10 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import * as Y from 'yjs'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { WizardEditorHistoryInput } from '@wizard-archive/editor/adapter'
 import { useLiveWorkspaceHistory } from '~/editor-adapters/live/use-live-workspace-history'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { testHistoryEntryId } from 'shared/test/history-entry-id'
 import { testAssetId } from 'shared/test/asset-id'
 
@@ -92,7 +92,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
   })
 
   it('loads snapshot and history entry through the live source wrapper', () => {
-    const noteId = 'note-1' as Id<'sidebarItems'>
+    const noteId = 'note-1' as ResourceId
     const entryId = testHistoryEntryId('history-1')
     const doc = new Y.Doc()
     const snapshotData = encodeSnapshot(doc)
@@ -132,7 +132,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
   })
 
   it('does not enable live history queries for non-persisted item ids', () => {
-    const optimisticItemId = 'optimistic-create-1' as SidebarItemId
+    const optimisticItemId = 'optimistic-create-1' as ResourceId
     const previewEntryId = testHistoryEntryId('history-1')
     const rollbackEntryId = testHistoryEntryId('history-2')
     useCampaignQueryMock.mockReturnValue({ data: null, isLoading: false, error: null })
@@ -161,7 +161,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
   })
 
   it('does not query edit-only item history for view-only access', () => {
-    const noteId = 'note-1' as Id<'sidebarItems'>
+    const noteId = 'note-1' as ResourceId
     const entryId = testHistoryEntryId('history-1')
     useCampaignQueryMock.mockReturnValue({ data: null, isLoading: false, error: null })
 
@@ -218,7 +218,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
     const { result } = renderHook(() => {
       const history = useLiveWorkspaceHistory({
         canEdit: true,
-        itemId: 'map-1' as Id<'sidebarItems'>,
+        itemId: 'map-1' as ResourceId,
         controls: historyControls({ previewingEntryId: entryId }),
       })
       return history.status === 'available' ? history.preview : null
@@ -256,7 +256,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
     const { result } = renderHook(() => {
       const history = useLiveWorkspaceHistory({
         canEdit: true,
-        itemId: 'note-1' as Id<'sidebarItems'>,
+        itemId: 'note-1' as ResourceId,
         controls: historyControls({ previewingEntryId: entryId }),
       })
       return history.status === 'available' ? history.preview : null
@@ -283,7 +283,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
     const { result } = renderHook(() => {
       const history = useLiveWorkspaceHistory({
         canEdit: true,
-        itemId: 'note-1' as Id<'sidebarItems'>,
+        itemId: 'note-1' as ResourceId,
         controls: historyControls({ previewingEntryId: entryId }),
       })
       return history.status === 'available' ? history.preview : null
@@ -293,7 +293,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
   })
 
   it('loads canvas Yjs snapshots as canvas preview state', () => {
-    const canvasId = 'canvas-1' as Id<'sidebarItems'>
+    const canvasId = 'canvas-1' as ResourceId
     const entryId = testHistoryEntryId('history-1')
     const doc = new Y.Doc()
     const snapshotData = encodeSnapshot(doc)
@@ -345,7 +345,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
     const { result } = renderHook(() => {
       const history = useLiveWorkspaceHistory({
         canEdit: true,
-        itemId: 'note-1' as Id<'sidebarItems'>,
+        itemId: 'note-1' as ResourceId,
         controls: historyControls({ previewingEntryId: entryId }),
       })
       return history.status === 'available' ? history.preview : null

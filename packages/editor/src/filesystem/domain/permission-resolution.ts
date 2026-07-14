@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import { hasAtLeastPermissionLevel } from '../../../../../shared/permissions/hasAtLeastPermissionLevel'
 import { normalizeExplicitSharePermissionLevel } from '../../../../../shared/permissions/share-permissions'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
@@ -14,7 +14,7 @@ export type EditorWorkspaceActor =
 
 export interface ResourcePermissionContext {
   actor: EditorWorkspaceActor | null
-  getItemById: (itemId: SidebarItemId) => AnyItem | null | undefined
+  getItemById: (itemId: ResourceId) => AnyItem | null | undefined
 }
 
 function getMemberPermission(
@@ -35,7 +35,7 @@ function visitKnownAncestors(
   visit: (ancestor: AnyItem) => boolean,
 ) {
   let parentId = item.parentId
-  const seen = new Set<SidebarItemId>()
+  const seen = new Set<ResourceId>()
   while (parentId) {
     if (seen.has(parentId)) return false
     seen.add(parentId)

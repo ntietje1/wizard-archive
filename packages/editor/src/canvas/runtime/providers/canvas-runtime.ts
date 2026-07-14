@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { createContext, createElement, use, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
 import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { EmbedTargetOperations } from '../../../embeds/target-operations'
 import type {
   CanvasDocumentWriter,
@@ -21,7 +22,7 @@ import type { CanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasNoteContentSources } from '../../note-content-sources'
 
 type CanvasRuntimeProviderProps = {
-  canvasId?: SidebarItemId | null
+  canvasId?: ResourceId | null
   canEdit: boolean
   children: ReactNode
   commands: CanvasCommands
@@ -29,7 +30,7 @@ type CanvasRuntimeProviderProps = {
   domRuntime: CanvasDomRuntime
   editSession: CanvasEditSessionState
   history: CanvasHistoryController
-  isSidebarItemEmbedRichTextEditable: (itemId: SidebarItemId) => boolean
+  isSidebarItemEmbedRichTextEditable: (itemId: ResourceId) => boolean
   nodeActions: CanvasNodeActions
   provider?: CanvasCollaborationProvider | null
   remoteNodeHighlights: ReadonlyMap<string, RemoteHighlight>
@@ -41,11 +42,11 @@ type CanvasRuntimeProviderProps = {
 } & CanvasNoteContentSources
 
 type CanvasDocumentRuntimeServices = {
-  canvasId: SidebarItemId | null
+  canvasId: ResourceId | null
   commands: CanvasCommands
   documentWriter: CanvasDocumentWriter
   history: CanvasHistoryController
-  isSidebarItemEmbedRichTextEditable: (itemId: SidebarItemId) => boolean
+  isSidebarItemEmbedRichTextEditable: (itemId: ResourceId) => boolean
   embedTargetOperations?: EmbedTargetOperations
   provider: CanvasCollaborationProvider | null
 } & CanvasNoteContentSources

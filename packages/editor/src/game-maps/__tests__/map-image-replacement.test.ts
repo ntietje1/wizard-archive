@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { ResourceImportFile } from '../../files/import-contract'
 import { replaceMapImage } from '../map-image-replacement'
 import { completedResourceOperation } from '../../filesystem/transaction-contract'
@@ -24,7 +25,7 @@ describe('replaceMapImage', () => {
       replaceMapImage({
         commitImage,
         file,
-        mapId: 'map-1' as SidebarItemId,
+        mapId: 'map-1' as ResourceId,
         stageImage,
       }),
     ).resolves.toEqual({
@@ -59,7 +60,7 @@ describe('replaceMapImage', () => {
       replaceMapImage({
         commitImage,
         file: createImportFile(),
-        mapId: 'map-1' as SidebarItemId,
+        mapId: 'map-1' as ResourceId,
         stageImage,
       }),
     ).resolves.toEqual({ status: 'unavailable', reason: 'map_not_found' })
@@ -77,7 +78,7 @@ describe('replaceMapImage', () => {
       replaceMapImage({
         commitImage: vi.fn().mockResolvedValue(commitResult),
         file: createImportFile(),
-        mapId: 'map-1' as SidebarItemId,
+        mapId: 'map-1' as ResourceId,
         stageImage: vi.fn().mockResolvedValue({
           status: 'staged',
           image: 'storage-1',
@@ -103,7 +104,7 @@ describe('replaceMapImage', () => {
       replaceMapImage({
         commitImage: vi.fn().mockRejectedValue(commitError),
         file: createImportFile(),
-        mapId: 'map-1' as SidebarItemId,
+        mapId: 'map-1' as ResourceId,
         stageImage: vi.fn().mockResolvedValue({
           status: 'staged',
           image: 'storage-1',
@@ -126,7 +127,7 @@ describe('replaceMapImage', () => {
     const result = await replaceMapImage({
       commitImage: vi.fn().mockRejectedValue(commitError),
       file: createImportFile(),
-      mapId: 'map-1' as SidebarItemId,
+      mapId: 'map-1' as ResourceId,
       stageImage: vi.fn().mockResolvedValue({
         status: 'staged',
         image: 'storage-1',
@@ -152,7 +153,7 @@ describe('replaceMapImage', () => {
       replaceMapImage({
         commitImage,
         file: createImportFile(),
-        mapId: 'map-1' as SidebarItemId,
+        mapId: 'map-1' as ResourceId,
         stageImage: vi.fn().mockRejectedValue(stageError),
       }),
     ).resolves.toEqual({ status: 'error', error: stageError })

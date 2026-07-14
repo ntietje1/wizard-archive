@@ -83,7 +83,7 @@ describe('campaign lifecycle', () => {
       if (!dmMember) throw new Error('Missing DM member')
       const editHistoryId = await dbCtx.db.insert('editHistory', {
         historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
-        itemId: lifecycleNote.noteId,
+        itemId: lifecycleNote.noteRowId,
         itemType: 'note',
         campaignId: campaignRowId,
         campaignMemberId: dmMember._id,
@@ -93,7 +93,7 @@ describe('campaign lifecycle', () => {
       })
       await dbCtx.db.insert('documentSnapshots', {
         snapshotUuid: generateDomainId(DOMAIN_ID_KIND.snapshot),
-        itemId: lifecycleNote.noteId,
+        itemId: lifecycleNote.noteRowId,
         itemType: 'note',
         editHistoryId,
         campaignId: campaignRowId,

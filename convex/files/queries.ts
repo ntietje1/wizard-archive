@@ -3,10 +3,11 @@ import { campaignQuery } from '../functions'
 import { fileWithContentValidator } from './schema'
 import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { resourceIdValidator } from '../resources/validators'
 
 export const getFile = campaignQuery({
   args: {
-    fileId: v.id('sidebarItems'),
+    fileId: resourceIdValidator,
   },
   returns: v.nullable(fileWithContentValidator),
   handler: async (ctx, args) => {

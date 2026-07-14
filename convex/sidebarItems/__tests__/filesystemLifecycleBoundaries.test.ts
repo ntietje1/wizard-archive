@@ -25,12 +25,17 @@ describe('filesystem command lifecycle boundaries', () => {
     const { noteId: activeNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Active Note',
     })
-    const { noteId: trashedNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Trashed Note',
-      status: 'trashed',
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
-    })
+    const { noteId: trashedNoteId, noteRowId: trashedNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Trashed Note',
+        status: 'trashed',
+        deletionTime: Date.now(),
+        deletedBy: ctx.dm.profile._id,
+      },
+    )
 
     await expect(
       executeCommand(dmAuth, ctx.campaignDomainId, {
@@ -48,17 +53,22 @@ describe('filesystem command lifecycle boundaries', () => {
       }),
     ).rejects.toThrow('Only active items can be moved')
 
-    const trashedNote = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', trashedNoteId))
+    const trashedNote = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', trashedNoteRowId))
     expect(trashedNote?.status).toBe('trashed')
   })
 
   it('rejects normal filesystem commands for undo-hidden source items', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId: hiddenNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Hidden Note',
-      status: 'undoHidden',
-    })
+    const { noteId: hiddenNoteId, noteRowId: hiddenNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Hidden Note',
+        status: 'undoHidden',
+      },
+    )
 
     const commandCases: Array<{ command: ResourceCommand; message: string }> = [
       {
@@ -91,16 +101,21 @@ describe('filesystem command lifecycle boundaries', () => {
       await expect(executeCommand(dmAuth, ctx.campaignDomainId, command)).rejects.toThrow(message)
     }
 
-    const hiddenNote = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', hiddenNoteId))
+    const hiddenNote = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', hiddenNoteRowId))
     expect(hiddenNote?.status).toBe('undoHidden')
   })
 
   it('rejects oversized tree operations before mutating roots', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { folderId: rootFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Deep Root',
-    })
+    const { folderId: rootFolderId, folderRowId: rootFolderRowId } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Deep Root',
+      },
+    )
     let parentId = rootFolderId
     // 51 descendants exceeds the max sidebar move planning depth enforced by the planner.
     for (let index = 0; index < 51; index += 1) {
@@ -115,14 +130,14 @@ describe('filesystem command lifecycle boundaries', () => {
       executeCommand(dmAuth, ctx.campaignDomainId, { type: 'trash', itemIds: [rootFolderId] }),
     ).rejects.toThrow('Max sidebar tree depth exceeded')
 
-    const rootFolder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', rootFolderId))
+    const rootFolder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', rootFolderRowId))
     expect(rootFolder?.status).toBe('active')
   })
 
   it('rejects permanent delete when one selected folder exceeds the affected-row limit', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Large Trash Folder',
       status: 'trashed',
       deletionTime: Date.now(),
@@ -145,14 +160,14 @@ describe('filesystem command lifecycle boundaries', () => {
       }),
     ).rejects.toThrow('Permanent delete can delete at most 100 items at once')
 
-    const folder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folderId))
+    const folder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folderRowId))
     expect(folder?.status).toBe('trashed')
   })
 
   it('rejects empty trash when one folder subtree exceeds the affected-row limit', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Large Trash Folder',
       status: 'trashed',
       deletionTime: Date.now(),
@@ -172,7 +187,7 @@ describe('filesystem command lifecycle boundaries', () => {
       executeCommand(dmAuth, ctx.campaignDomainId, { type: 'emptyTrash' }),
     ).rejects.toThrow('Empty Trash can delete at most 100 items at once')
 
-    const folder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folderId))
+    const folder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folderRowId))
     expect(folder?.status).toBe('trashed')
   })
 })

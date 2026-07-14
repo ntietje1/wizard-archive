@@ -1,13 +1,14 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceCommand } from '../transaction-contract'
 import { getCommandProgressToastText, getHistoryProgressToastText } from '../progress-messages'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { fileSystemCommandFixtures } from './command-fixtures'
 import { RESOURCE_COMMAND_TYPE } from '../transaction-contract'
 
-const itemId = (value: string) => value as SidebarItemId
+const itemId = (value: string) => value as ResourceId
 
 describe('filesystem progress messages', () => {
   it('has progress coverage for every filesystem command type', () => {

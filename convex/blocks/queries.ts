@@ -12,6 +12,8 @@ import {
 } from './functions/searchBlocks'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { requireCampaignMemberRowForCampaign } from '../campaigns/functions/campaignIdentity'
+import { resourceIdValidator } from '../resources/validators'
+import { requireSidebarItemRow } from '../sidebarItems/functions/sidebarItemIdentity'
 
 const blockShareInfoValidator = v.object({
   noteBlockId: blockNoteIdValidator,
@@ -21,7 +23,7 @@ const blockShareInfoValidator = v.object({
 
 export const getBlocksWithShares = dmQuery({
   args: {
-    noteId: v.id('sidebarItems'),
+    noteId: resourceIdValidator,
     blockNoteIds: v.array(blockNoteIdValidator),
   },
   returns: v.object({
@@ -30,8 +32,9 @@ export const getBlocksWithShares = dmQuery({
     notePermissionsByMemberId: v.record(campaignMemberIdValidator, permissionLevelValidator),
   }),
   handler: async (ctx, args) => {
+    const note = await requireSidebarItemRow(ctx, args.noteId)
     return await getBlocksWithSharesFn(ctx, {
-      noteId: args.noteId,
+      noteId: note._id,
       blockNoteIds: args.blockNoteIds.map((id) => assertDomainId(DOMAIN_ID_KIND.noteBlock, id)),
     })
   },
@@ -46,17 +49,18 @@ const headingResultValidator = v.object({
 
 export const getHeadingsByNote = campaignQuery({
   args: {
-    noteId: v.id('sidebarItems'),
+    noteId: resourceIdValidator,
   },
   returns: v.array(headingResultValidator),
   handler: async (ctx, args) => {
-    return await getHeadingsByNoteFn(ctx, { noteId: args.noteId })
+    const note = await requireSidebarItemRow(ctx, args.noteId)
+    return await getHeadingsByNoteFn(ctx, { noteId: note._id })
   },
 })
 
 const blockSearchResultValidator = v.object({
   blockNoteId: blockNoteIdValidator,
-  noteId: v.id('sidebarItems'),
+  noteId: resourceIdValidator,
   plainText: v.string(),
   type: blockTypeValidator,
 })

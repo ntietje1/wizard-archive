@@ -1,8 +1,8 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useState } from 'react'
 import type { SyntheticEvent } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
-export function useMapImageStatus(mapId: SidebarItemId, imageUrl: string | null) {
+export function useMapImageStatus(mapId: ResourceId, imageUrl: string | null) {
   const mapImageKey = imageUrl ? `${mapId}:${imageUrl}` : null
   const [loadedImageKey, setLoadedImageKey] = useState<string | null>(null)
   const [erroredImageKey, setErroredImageKey] = useState<string | null>(null)

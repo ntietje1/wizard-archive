@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import {
@@ -32,7 +33,7 @@ describe('sidebar item factory', () => {
     resetSidebarItemFactoryCounter()
 
     const folder = createFolder({
-      id: 'folder_override' as SidebarItemId,
+      id: 'folder_override' as ResourceId,
       inheritShares: false,
       name: 'Scenes',
       slug: 'scene-folder',

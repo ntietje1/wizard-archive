@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import type { ReactNode } from 'react'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { useItemSurfaceRegistration } from '../use-item-surface-registration'
 import type { SidebarWorkspaceItemSurfaceName } from '../workspace-state'
 
@@ -14,9 +15,9 @@ export function SidebarSurfaceScrollArea({
 }: {
   children: ReactNode
   className?: string
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   surface: SidebarWorkspaceItemSurfaceName
-  visibleItemIds: ReadonlyArray<SidebarItemId>
+  visibleItemIds: ReadonlyArray<ResourceId>
 }) {
   const { activateSurface, handleSurfacePointerDown, itemSurfaceHotkeyProps } =
     useItemSurfaceRegistration({

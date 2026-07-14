@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import { describe, expect, it, vi } from 'vitest'
 import {
   createWizardEditorCatalogNavigation,
@@ -34,7 +35,7 @@ import {
   completedResourceCommand,
   RESOURCE_EVENT_TYPE,
 } from '@wizard-archive/editor/resources/transaction-contract'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
 import type { ResourceImportFile } from '../files/import-contract'
@@ -174,18 +175,18 @@ describe('WizardEditor adapter contract', () => {
 
   it('builds catalog navigation from adapter navigation callbacks and catalog facts', () => {
     const visible = createContentNote({
-      id: 'visible-note' as SidebarItemId,
+      id: 'visible-note' as ResourceId,
       name: 'Visible Note',
       slug: 'visible-note',
     })
     const trashed = createContentNote({
-      id: 'trashed-note' as SidebarItemId,
+      id: 'trashed-note' as ResourceId,
       name: 'Trashed Note',
       slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     const hidden = createContentNote({
-      id: 'hidden-note' as SidebarItemId,
+      id: 'hidden-note' as ResourceId,
       name: 'Hidden Note',
       slug: 'hidden-note',
     })
@@ -277,7 +278,7 @@ describe('WizardEditor adapter contract', () => {
       reason: 'demo_single_surface',
     })
     expect(
-      navigation.openItem(createWizardEditorResource('missing-item' as SidebarItemId), {
+      navigation.openItem(createWizardEditorResource('missing-item' as ResourceId), {
         target: 'separate',
       }),
     ).toEqual({
@@ -409,7 +410,7 @@ describe('WizardEditor adapter contract', () => {
 
   it('exposes item mutation checks from the package-owned permission source', () => {
     const editableFile = createContentFile({
-      id: 'editable-file' as SidebarItemId,
+      id: 'editable-file' as ResourceId,
       myPermissionLevel: PERMISSION_LEVEL.EDIT,
     })
     const permissions = createWizardEditorPermissionSource({
@@ -617,7 +618,7 @@ describe('WizardEditor adapter contract', () => {
     })
     const fileDocument = {
       canReplaceFile: () => true,
-      getItemById: (itemId: string) => snapshot.catalog.getKnownItemById(itemId as SidebarItemId),
+      getItemById: (itemId: string) => snapshot.catalog.getKnownItemById(itemId as ResourceId),
       resolveFile: (file: AdapterFileItemWithContent) => ({
         allowObjectUrl: false,
         contentType: file.contentType,
@@ -1031,7 +1032,7 @@ function createTestResourceCommandDriver(): WizardEditorCommandSource['resourceC
           [
             {
               type: RESOURCE_EVENT_TYPE.created,
-              itemId: 'created-item' as SidebarItemId,
+              itemId: 'created-item' as ResourceId,
               slug: assertResourceItemSlug('created-item'),
             },
           ],

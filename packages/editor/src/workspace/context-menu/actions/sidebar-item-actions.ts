@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { createWorkspaceResource } from '../../runtime'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { FileSystemItemContextMenuOperations } from '../../../filesystem/item-operation-contracts'
 import type { WorkspaceMenuContext } from '../../menu-context'
 import type { WorkspaceNavigation } from '../../runtime'
@@ -18,8 +19,8 @@ export function createSidebarItemContextMenuActions({
   showItemInSidebar,
 }: {
   source: SidebarItemContextMenuActionsSource
-  setRenamingItemId: (itemId: SidebarItemId | null) => void
-  showItemInSidebar: (itemId: SidebarItemId) => void
+  setRenamingItemId: (itemId: ResourceId | null) => void
+  showItemInSidebar: (itemId: ResourceId) => void
 }): WorkspaceSidebarItemContextMenuActions {
   return {
     canOpenInNewTab: source.canOpenItemsSeparately,

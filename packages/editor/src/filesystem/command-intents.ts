@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import { normalizeSelectedRoots } from './domain/selection-roots'
 import type { ResourceCommand } from './transaction-contract'
 import { isActiveResourceItem } from '../workspace/items'
@@ -6,7 +6,7 @@ import type { AnyItem, WorkspaceResourceReadModel } from '../workspace/items'
 import type { FileSystemClipboard } from './clipboard'
 
 function normalizeActiveItems(
-  itemIds: Array<SidebarItemId>,
+  itemIds: Array<ResourceId>,
   readModel: WorkspaceResourceReadModel<AnyItem>,
 ) {
   return normalizeSelectedRoots(
@@ -16,9 +16,9 @@ function normalizeActiveItems(
 }
 
 function resolvePasteTargetParentId(
-  activeItemSurface: { parentId: SidebarItemId | null } | null,
-  targetParentId?: SidebarItemId | null,
-): SidebarItemId | null {
+  activeItemSurface: { parentId: ResourceId | null } | null,
+  targetParentId?: ResourceId | null,
+): ResourceId | null {
   return targetParentId === undefined ? (activeItemSurface?.parentId ?? null) : targetParentId
 }
 
@@ -31,8 +31,8 @@ export function resolveFileSystemClipboardCommand({
 }: {
   clipboard: FileSystemClipboard | null
   workspaceId: string
-  activeItemSurface: { parentId: SidebarItemId | null } | null
-  targetParentId?: SidebarItemId | null
+  activeItemSurface: { parentId: ResourceId | null } | null
+  targetParentId?: ResourceId | null
   readModel: WorkspaceResourceReadModel<AnyItem>
 }): { command: ResourceCommand | null; clearClipboard: boolean } {
   if (!clipboard || clipboard.workspaceId !== workspaceId) {
@@ -63,7 +63,7 @@ export function resolveFileSystemClipboardCommand({
 
 export function createFileSystemClipboard(
   mode: FileSystemClipboard['mode'],
-  itemIds: Array<SidebarItemId>,
+  itemIds: Array<ResourceId>,
   workspaceId: string,
   readModel: WorkspaceResourceReadModel<AnyItem>,
 ): FileSystemClipboard | null {

@@ -38,6 +38,11 @@ import { getSidebarItemRow } from '../sidebarItemRows'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
 import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
+import {
+  requireSidebarItemRow,
+  requireSidebarItemRows,
+  sidebarItemResourceId,
+} from '../../functions/sidebarItemIdentity'
 const MAX_COPY_DEPTH = 50
 type CopyFileSystemCommand = Extract<ResourceCommand, { type: 'copy' }>
 
@@ -89,7 +94,7 @@ async function insertCopiedSidebarItem(
   },
 ): Promise<Id<'sidebarItems'>> {
   const previewStorageId = source.previewStorageId
-  const { itemId } = await copyContext.session.insertResource({
+  const { itemId, resourceId } = await copyContext.session.insertResource({
     type: source.type,
     name,
     parentId,
@@ -106,7 +111,7 @@ async function insertCopiedSidebarItem(
     itemType: source.type,
     action: EDIT_HISTORY_ACTION.copied,
     metadata: {
-      copiedFromItemId: source._id,
+      copiedFromItemId: sidebarItemResourceId(source),
       copiedFromName: source.name,
     },
   })
@@ -114,8 +119,8 @@ async function insertCopiedSidebarItem(
   if (isRoot) {
     copyContext.events.push({
       type: RESOURCE_EVENT_TYPE.copied,
-      itemId,
-      sourceItemId: source._id,
+      itemId: resourceId,
+      sourceItemId: sidebarItemResourceId(source),
     })
   }
   return itemId
@@ -164,7 +169,7 @@ async function copyChildrenIntoFolder(
 
 async function executeCopyOperations(
   ctx: CampaignMutationCtx,
-  operations: Array<TransferOperation>,
+  operations: Array<TransferOperation<Id<'sidebarItems'>>>,
   rootSourceIds: ReadonlySet<Id<'sidebarItems'>>,
   session: FileSystemWriteSession,
 ): Promise<Array<ResourceEvent>> {
@@ -182,7 +187,7 @@ async function executeCopyOperations(
 
 async function executeCopyOperation(
   ctx: CampaignMutationCtx,
-  operation: TransferOperation,
+  operation: TransferOperation<Id<'sidebarItems'>>,
   copyContext: CopyCommandContext,
   rootSourceIds: ReadonlySet<Id<'sidebarItems'>>,
 ) {
@@ -297,7 +302,10 @@ function planCopyEffects({
 }: {
   sourceItems: Array<AccessibleSidebarItemRow>
   targetParentId: Id<'sidebarItems'> | null
-  itemsById: Parameters<typeof planTransferOperations>[0]['itemsById']
+  itemsById: ReadonlyMap<
+    Id<'sidebarItems'>,
+    { id: Id<'sidebarItems'>; parentId: Id<'sidebarItems'> | null }
+  >
 }) {
   return planTransferOperations({
     mode: 'copy',
@@ -356,9 +364,14 @@ export async function executeCopyCommand(
   },
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
+  const sourceRows = await requireSidebarItemRows(ctx, command.itemIds)
+  const targetParentRow =
+    command.targetParentId === null
+      ? null
+      : await requireSidebarItemRow(ctx, command.targetParentId)
   const events = await executeCopyPlan(ctx, {
-    sourceItemIds: command.itemIds,
-    targetParentId: command.targetParentId,
+    sourceItemIds: sourceRows.map((row) => row._id),
+    targetParentId: targetParentRow?._id ?? null,
     session,
   })
 

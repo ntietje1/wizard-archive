@@ -1,9 +1,10 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceState } from './local-workspace-model'
 import {
   LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
   createLocalTextFilePayload,
 } from './local-workspace-model'
-import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { UserProfileId } from 'shared/common/ids'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 const SAMPLE_MARKET_PIN_ID = assertDomainId(
@@ -197,7 +198,7 @@ function createInitialCanvasNodes(): SampleCanvasPayload['nodes'] {
       width: 300,
       height: 210,
       data: {
-        target: { kind: 'resource', resourceId: 'map-docks' as SidebarItemId },
+        target: { kind: 'resource', resourceId: 'map-docks' as ResourceId },
         textColor: 'var(--foreground)',
         backgroundColor: 'var(--t-green)',
         backgroundOpacity: 0.12,

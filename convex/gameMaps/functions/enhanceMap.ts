@@ -5,8 +5,6 @@ import { enhanceFolder } from '../../folders/functions/enhanceFolder'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
-import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type {
@@ -15,7 +13,7 @@ import type {
 } from '@wizard-archive/editor/resources/resource-contract'
 import { enhanceNote } from '../../notes/functions/enhanceNote'
 import { assertNever } from '../../common/types'
-import { mapPinRowToDomain } from './mapPinRow'
+import { canAccessResourceAndAncestors } from '../../sidebarItems/functions/resourceAccessPolicy'
 import type { CampaignQueryCtx } from '../../functions'
 import type {
   MapItemRow,
@@ -23,9 +21,10 @@ import type {
   MapItemWithContent,
   MapPinWithItem,
 } from '@wizard-archive/editor/game-maps/item-contract'
-import type { MapPin } from '@wizard-archive/editor/game-maps/document-contract'
+import type { Doc } from '../../_generated/dataModel'
 import type { SidebarItemEnhancement } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
+import { findSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 export const enhanceGameMap = async (
   ctx: CampaignQueryCtx,
@@ -59,20 +58,33 @@ export const enhanceGameMap = async (
 
 const enhanceMapPin = async (
   ctx: CampaignQueryCtx,
-  { pin }: { pin: MapPin },
+  { pin, mapId }: { pin: Doc<'mapPins'>; mapId: MapItem['id'] },
 ): Promise<MapPinWithItem | null> => {
   const item = await getSidebarItem(ctx, pin.itemId)
   if (!item) return null
-  const permissionLevel = await getSidebarItemPermissionLevel(ctx, { item })
-  if (!hasAtLeastPermissionLevel(permissionLevel, PERMISSION_LEVEL.VIEW)) {
+  const projectedPin = {
+    id: pin.mapPinUuid,
+    createdAt: pin._creationTime,
+    mapId,
+    itemId: item.id,
+    layerId: pin.layerId,
+    x: pin.x,
+    y: pin.y,
+    visible: pin.visible,
+  }
+  const providerItem = await findSidebarItemRow(ctx, item.id)
+  if (
+    !providerItem ||
+    !(await canAccessResourceAndAncestors(ctx, providerItem, PERMISSION_LEVEL.VIEW))
+  ) {
     return {
-      ...pin,
+      ...projectedPin,
       item: null,
     }
   }
   const enhancedItem = await enhancePinnedItem(ctx, { item })
   return {
-    ...pin,
+    ...projectedPin,
     item: enhancedItem,
   }
 }
@@ -101,6 +113,8 @@ export const enhanceGameMapWithContent = async (
   ctx: CampaignQueryCtx,
   { gameMap }: { gameMap: MapItem },
 ): Promise<MapItemWithContent> => {
+  const mapRow = await findSidebarItemRow(ctx, gameMap.id)
+  if (!mapRow) throw new Error('Game map provider row is missing')
   const [ancestors, rawPins] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: gameMap.parentId,
@@ -108,12 +122,12 @@ export const enhanceGameMapWithContent = async (
     }),
     ctx.db
       .query('mapPins')
-      .withIndex('by_map_item', (q) => q.eq('mapId', gameMap.id))
+      .withIndex('by_map_item', (q) => q.eq('mapId', mapRow._id))
       .collect(),
   ])
 
   const pins = (
-    await asyncMap(rawPins.map(mapPinRowToDomain), (pin) => enhanceMapPin(ctx, { pin }))
+    await asyncMap(rawPins, (pin) => enhanceMapPin(ctx, { pin, mapId: gameMap.id }))
   ).filter((pin) => pin !== null)
 
   return {

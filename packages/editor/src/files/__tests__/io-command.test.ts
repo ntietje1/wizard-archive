@@ -1,17 +1,18 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { createFile } from '../../test/sidebar-item-factory'
 import { executeFileIoCommand } from '../io-command'
 import type { ResourceImportFile } from '../import-contract'
 
 describe('executeFileIoCommand', () => {
   it('executes import and replace file commands through shared writer receipts', async () => {
-    const fileItem = createFile({ id: 'file-handout' as SidebarItemId })
+    const fileItem = createFile({ id: 'file-handout' as ResourceId })
     const importFile = createImportFile('handout.png')
     const writeFile = vi.fn(() => Promise.resolve())
     const executor = {
       canReplaceFile: () => true,
-      getFileTargetById: (fileId: SidebarItemId) => (fileId === fileItem.id ? fileItem : null),
+      getFileTargetById: (fileId: ResourceId) => (fileId === fileItem.id ? fileItem : null),
       writeFile,
     }
 
@@ -34,13 +35,13 @@ describe('executeFileIoCommand', () => {
   })
 
   it('maps validation and writer failures before command-specific receipts', async () => {
-    const fileItem = createFile({ id: 'file-handout' as SidebarItemId })
+    const fileItem = createFile({ id: 'file-handout' as ResourceId })
     const oversizedFile = createImportFile('oversized.png', { size: 200 })
     const writeError = new Error('Write failed')
     const writeFile = vi.fn(() => Promise.reject(writeError))
     const executor = {
       canReplaceFile: () => true,
-      getFileTargetById: (fileId: SidebarItemId) => (fileId === fileItem.id ? fileItem : null),
+      getFileTargetById: (fileId: ResourceId) => (fileId === fileItem.id ? fileItem : null),
       maxUploadBytes: 100,
       writeFile,
     }
@@ -69,7 +70,7 @@ describe('executeFileIoCommand', () => {
         {
           type: 'replaceFile',
           file: createImportFile('replacement.png'),
-          fileId: 'missing' as SidebarItemId,
+          fileId: 'missing' as ResourceId,
         },
         {
           canReplaceFile: () => true,
@@ -82,7 +83,7 @@ describe('executeFileIoCommand', () => {
   })
 
   it('returns a structured error when replacement is read-only', async () => {
-    const fileItem = createFile({ id: 'file-handout' as SidebarItemId })
+    const fileItem = createFile({ id: 'file-handout' as ResourceId })
     const writeFile = vi.fn()
 
     await expect(

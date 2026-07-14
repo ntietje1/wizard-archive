@@ -1,5 +1,6 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useEffect } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { SearchDialog } from '../search/dialog'
 import type { ItemSearchInput, ItemSearchState } from '../search/model'
 import { useWorkspaceRuntimeSearchDialogController } from './search-controller'
@@ -178,7 +179,7 @@ function useRuntimeSearchState(
 
 function useRuntimeResourceContentState(
   resourceContent: ResourceContentSource,
-  itemId: SidebarItemId | null | undefined,
+  itemId: ResourceId | null | undefined,
   fallbackLabel: string | undefined,
 ): ResourceContentState {
   useEffect(() => {

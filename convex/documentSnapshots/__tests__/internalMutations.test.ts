@@ -19,7 +19,8 @@ import {
 
 function createEditHistoryEntry(
   t: ReturnType<typeof createTestContext>,
-  args: LogEditHistoryArgs & {
+  args: Omit<LogEditHistoryArgs, 'itemId'> & {
+    itemId: Id<'sidebarItems'>
     campaignId: Id<'campaigns'>
     campaignMemberId: Id<'campaignMembers'>
     hasSnapshot: boolean
@@ -44,9 +45,9 @@ describe('document snapshot schema invariants', () => {
 
   it('rejects incompatible item and snapshot variants', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: noteId,
+      itemId: noteRowId,
       itemType: RESOURCE_TYPES.notes,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -58,7 +59,7 @@ describe('document snapshot schema invariants', () => {
       t.run(async (dbCtx) =>
         dbCtx.db.insert('documentSnapshots', {
           snapshotUuid: generateDomainId(DOMAIN_ID_KIND.snapshot),
-          itemId: noteId,
+          itemId: noteRowId,
           itemType: RESOURCE_TYPES.notes,
           editHistoryId,
           campaignId: ctx.campaignId,
@@ -75,12 +76,12 @@ describe('captureCanvasSnapshot', () => {
 
   it('captures Y.Doc state for a canvas', async () => {
     const ctx = await setupCampaignContext(t)
-    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+    const { canvasRowId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const yjsUpdate = makeYjsUpdate()
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('yjsUpdates', {
-        documentId: canvasId,
+        documentId: canvasRowId,
         update: yjsUpdate,
         seq: 0,
         isSnapshot: true,
@@ -88,7 +89,7 @@ describe('captureCanvasSnapshot', () => {
     })
 
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: canvasId,
+      itemId: canvasRowId,
       itemType: RESOURCE_TYPES.canvases,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -97,7 +98,7 @@ describe('captureCanvasSnapshot', () => {
     })
 
     const captureArgs = {
-      documentId: canvasId,
+      documentId: canvasRowId,
       itemType: RESOURCE_TYPES.canvases,
       editHistoryId,
       campaignId: ctx.campaignId,
@@ -123,7 +124,7 @@ describe('captureCanvasSnapshot', () => {
       expect(snapshot).not.toBeNull()
       expect(isUuidV7(snapshot!.snapshotUuid)).toBe(true)
       expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
-      expect(snapshot!.itemId).toBe(canvasId)
+      expect(snapshot!.itemId).toBe(canvasRowId)
       expect(snapshot!.itemType).toBe(RESOURCE_TYPES.canvases)
 
       const expectedDoc = new Y.Doc()
@@ -141,7 +142,7 @@ describe('captureCanvasSnapshot', () => {
 
   it('merges multiple yjs updates into snapshot', async () => {
     const ctx = await setupCampaignContext(t)
-    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+    const { canvasRowId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const originalDoc = new Y.Doc()
     const fragment = originalDoc.getXmlFragment('document')
@@ -164,13 +165,13 @@ describe('captureCanvasSnapshot', () => {
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('yjsUpdates', {
-        documentId: canvasId,
+        documentId: canvasRowId,
         update: initialAb,
         seq: 0,
         isSnapshot: true,
       })
       await dbCtx.db.insert('yjsUpdates', {
-        documentId: canvasId,
+        documentId: canvasRowId,
         update: modAb,
         seq: 1,
         isSnapshot: false,
@@ -178,7 +179,7 @@ describe('captureCanvasSnapshot', () => {
     })
 
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: canvasId,
+      itemId: canvasRowId,
       itemType: RESOURCE_TYPES.canvases,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -187,7 +188,7 @@ describe('captureCanvasSnapshot', () => {
     })
 
     await t.action(internal.yjsSync.internalActions.captureSnapshot, {
-      documentId: canvasId,
+      documentId: canvasRowId,
       itemType: RESOURCE_TYPES.canvases,
       editHistoryId,
       campaignId: ctx.campaignId,
@@ -216,12 +217,12 @@ describe('captureNoteSnapshot', () => {
 
   it('captures Y.Doc state for a note', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const yjsUpdate = makeYjsUpdate()
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('yjsUpdates', {
-        documentId: noteId,
+        documentId: noteRowId,
         update: yjsUpdate,
         seq: 0,
         isSnapshot: true,
@@ -229,7 +230,7 @@ describe('captureNoteSnapshot', () => {
     })
 
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: noteId,
+      itemId: noteRowId,
       itemType: RESOURCE_TYPES.notes,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -238,7 +239,7 @@ describe('captureNoteSnapshot', () => {
     })
 
     await t.action(internal.yjsSync.internalActions.captureSnapshot, {
-      documentId: noteId,
+      documentId: noteRowId,
       itemType: RESOURCE_TYPES.notes,
       editHistoryId,
       campaignId: ctx.campaignId,
@@ -254,7 +255,7 @@ describe('captureNoteSnapshot', () => {
 
       expect(snapshot).not.toBeNull()
       expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.YjsState)
-      expect(snapshot!.itemId).toBe(noteId)
+      expect(snapshot!.itemId).toBe(noteRowId)
       expect(snapshot!.itemType).toBe(RESOURCE_TYPES.notes)
 
       const expectedDoc = new Y.Doc()
@@ -276,17 +277,17 @@ describe('scheduled Yjs snapshot ownership', () => {
 
   it('rejects final capture after its item is hard-deleted', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('yjsUpdates', {
-        documentId: noteId,
+        documentId: noteRowId,
         update: makeYjsUpdate(),
         seq: 0,
         isSnapshot: true,
       })
     })
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: noteId,
+      itemId: noteRowId,
       itemType: RESOURCE_TYPES.notes,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -294,12 +295,12 @@ describe('scheduled Yjs snapshot ownership', () => {
       hasSnapshot: false,
     })
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('sidebarItems', noteId)
+      await dbCtx.db.delete('sidebarItems', noteRowId)
     })
 
     await expect(
       t.action(internal.yjsSync.internalActions.captureSnapshot, {
-        documentId: noteId,
+        documentId: noteRowId,
         itemType: RESOURCE_TYPES.notes,
         editHistoryId,
         campaignId: ctx.campaignId,
@@ -321,12 +322,12 @@ describe('scheduled Yjs snapshot ownership', () => {
     vi.useFakeTimers()
     try {
       const ctx = await setupCampaignContext(t)
-      const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       await t.run(async (dbCtx) => {
         for (let index = 0; index < 125; index++) {
           const editHistoryId = await dbCtx.db.insert('editHistory', {
             historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
-            itemId: noteId,
+            itemId: noteRowId,
             itemType: RESOURCE_TYPES.notes,
             campaignId: ctx.campaignId,
             campaignMemberId: ctx.dm.memberId,
@@ -336,7 +337,7 @@ describe('scheduled Yjs snapshot ownership', () => {
           })
           await dbCtx.db.insert('documentSnapshots', {
             snapshotUuid: generateDomainId(DOMAIN_ID_KIND.snapshot),
-            itemId: noteId,
+            itemId: noteRowId,
             itemType: RESOURCE_TYPES.notes,
             editHistoryId,
             campaignId: ctx.campaignId,
@@ -348,7 +349,7 @@ describe('scheduled Yjs snapshot ownership', () => {
 
       const firstBatch = await t.mutation(
         internal.documentSnapshots.internalMutations.cleanupItemHistoryBatch,
-        { itemId: noteId },
+        { itemId: noteRowId },
       )
       expect(firstBatch).toEqual({
         deletedHistoryCount: 100,
@@ -361,13 +362,13 @@ describe('scheduled Yjs snapshot ownership', () => {
         expect(
           await dbCtx.db
             .query('editHistory')
-            .withIndex('by_item', (q) => q.eq('itemId', noteId))
+            .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
             .collect(),
         ).toEqual([])
         expect(
           await dbCtx.db
             .query('documentSnapshots')
-            .withIndex('by_item', (q) => q.eq('itemId', noteId))
+            .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
             .collect(),
         ).toEqual([])
       })
@@ -382,7 +383,7 @@ describe('captureGameMapSnapshot', () => {
 
   it('captures map image and pin data', async () => {
     const ctx = await setupCampaignContext(t)
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
@@ -394,7 +395,7 @@ describe('captureGameMapSnapshot', () => {
     })
 
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: mapId,
+      itemId: mapRowId,
       itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -405,7 +406,7 @@ describe('captureGameMapSnapshot', () => {
 
     await t.run(async (dbCtx) => {
       await captureGameMapSnapshot(dbCtx, {
-        mapId,
+        mapId: mapRowId,
         editHistoryId,
         campaignId: ctx.campaignId,
       })
@@ -419,7 +420,7 @@ describe('captureGameMapSnapshot', () => {
 
       expect(snapshot).not.toBeNull()
       expect(snapshot!.snapshotType).toBe(DOCUMENT_SNAPSHOT_TYPE.GameMap)
-      expect(snapshot!.itemId).toBe(mapId)
+      expect(snapshot!.itemId).toBe(mapRowId)
 
       const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
       expect(parsed.imageAssetId).toBeNull()
@@ -437,7 +438,7 @@ describe('captureGameMapSnapshot', () => {
 
   it('excludes hard-deleted pins', async () => {
     const ctx = await setupCampaignContext(t)
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: note1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: note2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
@@ -459,7 +460,7 @@ describe('captureGameMapSnapshot', () => {
     })
 
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: mapId,
+      itemId: mapRowId,
       itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -470,7 +471,7 @@ describe('captureGameMapSnapshot', () => {
 
     await t.run(async (dbCtx) => {
       await captureGameMapSnapshot(dbCtx, {
-        mapId,
+        mapId: mapRowId,
         editHistoryId,
         campaignId: ctx.campaignId,
       })
@@ -494,10 +495,10 @@ describe('captureGameMapSnapshot', () => {
 
   it('throws when map does not exist', async () => {
     const ctx = await setupCampaignContext(t)
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: mapId,
+      itemId: mapRowId,
       itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -507,13 +508,13 @@ describe('captureGameMapSnapshot', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('sidebarItems', mapId)
+      await dbCtx.db.delete('sidebarItems', mapRowId)
     })
 
     await expect(
       t.run(async (dbCtx) => {
         await captureGameMapSnapshot(dbCtx, {
-          mapId,
+          mapId: mapRowId,
           editHistoryId,
           campaignId: ctx.campaignId,
         })
@@ -523,10 +524,10 @@ describe('captureGameMapSnapshot', () => {
 
   it('captures empty pin array when map has no pins', async () => {
     const ctx = await setupCampaignContext(t)
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: mapId,
+      itemId: mapRowId,
       itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -536,7 +537,7 @@ describe('captureGameMapSnapshot', () => {
 
     await t.run(async (dbCtx) => {
       await captureGameMapSnapshot(dbCtx, {
-        mapId,
+        mapId: mapRowId,
         editHistoryId,
         campaignId: ctx.campaignId,
       })
@@ -555,7 +556,7 @@ describe('captureGameMapSnapshot', () => {
 
   it('captures multiple pins with correct positions', async () => {
     const ctx = await setupCampaignContext(t)
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: n3 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
@@ -580,7 +581,7 @@ describe('captureGameMapSnapshot', () => {
     })
 
     const editHistoryId = await createEditHistoryEntry(t, {
-      itemId: mapId,
+      itemId: mapRowId,
       itemType: RESOURCE_TYPES.gameMaps,
       campaignId: ctx.campaignId,
       campaignMemberId: ctx.dm.memberId,
@@ -591,7 +592,7 @@ describe('captureGameMapSnapshot', () => {
 
     await t.run(async (dbCtx) => {
       await captureGameMapSnapshot(dbCtx, {
-        mapId,
+        mapId: mapRowId,
         editHistoryId,
         campaignId: ctx.campaignId,
       })

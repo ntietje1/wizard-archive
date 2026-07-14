@@ -1,14 +1,14 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { act } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
-import { testId } from '../../../test/id'
 import { createSidebarFileSystemSelection } from '../file-system-selection'
 import { createSidebarWorkspaceStateHarness } from './test-helpers'
 
 describe('createSidebarFileSystemSelection', () => {
   it('mirrors workspace selection commands with detached snapshots', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
     const selection = createSidebarFileSystemSelection(sidebar.current)
 
     act(() => {
@@ -20,14 +20,14 @@ describe('createSidebarFileSystemSelection', () => {
     expect(selection.focusedItemId).toBe(noteId)
 
     const snapshot = selection.getSelectionSnapshot()
-    ;(snapshot.selectedItemIds as Array<unknown>).push(testId<'sidebarItems'>('leaked_item'))
+    ;(snapshot.selectedItemIds as Array<unknown>).push(testResourceId('leaked_item'))
 
     expect(selection.selectedItemIds).toEqual([noteId, mapId])
   })
 
   it('selects a single item through the workspace selection contract', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
+    const noteId = testResourceId('note_1')
     const selection = createSidebarFileSystemSelection(sidebar.current)
 
     act(() => {
@@ -41,7 +41,7 @@ describe('createSidebarFileSystemSelection', () => {
 
   it('clears selected ids and anchor without clearing focused keyboard position', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
+    const noteId = testResourceId('note_1')
     const selection = createSidebarFileSystemSelection(sidebar.current)
 
     act(() => {
@@ -56,8 +56,8 @@ describe('createSidebarFileSystemSelection', () => {
 
   it('updates anchor and focused ids independently through adapter commands', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
     const selection = createSidebarFileSystemSelection(sidebar.current)
 
     act(() => {

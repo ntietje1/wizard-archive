@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../../shared/test/resource-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceHistory, HistoryMemberSummary } from '../../../../filesystem/history-types'
@@ -28,7 +29,7 @@ function historyEntry(overrides: Partial<EditHistoryEntry> = {}): EditHistoryEnt
     workspaceId: testId<'campaigns'>('campaign-1'),
     memberId: testId<'campaignMembers'>('member-1'),
     hasSnapshot: true,
-    itemId: testId<'sidebarItems'>('note-1'),
+    itemId: testResourceId('note-1'),
     itemType: 'note',
     metadata: null,
     ...overrides,

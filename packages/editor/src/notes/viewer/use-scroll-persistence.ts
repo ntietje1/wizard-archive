@@ -1,13 +1,13 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 export interface NoteScrollStore {
-  loadNoteScrollTop: (noteId: SidebarItemId) => number
-  saveNoteScrollTop: (noteId: SidebarItemId, scrollTop: number) => void
+  loadNoteScrollTop: (noteId: ResourceId) => number
+  saveNoteScrollTop: (noteId: ResourceId, scrollTop: number) => void
 }
 
 export function useScrollPersistence(
-  itemId: SidebarItemId,
+  itemId: ResourceId,
   viewport: HTMLDivElement | null,
   scrollStore: NoteScrollStore,
   skipRestore?: boolean,

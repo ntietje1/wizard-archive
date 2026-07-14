@@ -1,11 +1,11 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { applyFileSystemPatchesToSidebarCache } from '../cache-patches'
 import { createNote } from '../../test/sidebar-item-factory'
-import type { SidebarItemId } from 'shared/common/ids'
 
 describe('filesystem bookmark cache patches', () => {
   it('applies item bookmark-state receipt patches to visible sidebar items', () => {
-    const note = createNote({ id: 'note_1' as SidebarItemId, isBookmarked: false })
+    const note = createNote({ id: 'note_1' as ResourceId, isBookmarked: false })
 
     const bookmarked = applyFileSystemPatchesToSidebarCache({ sidebar: [note], trash: [] }, [
       {

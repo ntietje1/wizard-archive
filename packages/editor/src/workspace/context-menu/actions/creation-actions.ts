@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import type { WorkspaceMenuContext } from '../../menu-context'
 import { isFolderItem } from '../../sidebar/utils/sidebar-item-types'
 import { handleError } from '../../../errors/handle-error'
@@ -9,7 +10,7 @@ import type { CreateParentTarget } from '../../items'
 import type { ResourceKind } from '../../resource-contract'
 
 import type { MaybePromise } from '../../../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { createWorkspaceResource } from '../../runtime'
 import type { WorkspaceNavigation } from '../../runtime'
 import type { FileSystemCreateItemResult } from '../../../filesystem/item-operation-contracts'
@@ -26,7 +27,7 @@ export function createCreationActions({
 }: {
   createItem: CreateContextMenuItem
   openItem: WorkspaceNavigation['openItem']
-  setRenamingItemId: (itemId: SidebarItemId | null) => void
+  setRenamingItemId: (itemId: ResourceId | null) => void
 }): WorkspaceCreationContextMenuActions {
   const createItem = async (ctx: WorkspaceMenuContext, command: SidebarItemCreationCommand) => {
     if (ctx.item && !isFolderItem(ctx.item)) {

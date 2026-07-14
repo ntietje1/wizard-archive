@@ -10,11 +10,15 @@ import {
   planWizardEditorMapPinCreations,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
 } from '@wizard-archive/editor/adapter'
-import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMemberId, MapPinId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignMemberId,
+  MapPinId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 
 type LocalWorkspaceItemType = 'note' | 'folder' | 'canvas' | 'map' | 'file'
 type LocalSidebarItemType = WizardEditorItem['type']
@@ -411,10 +415,10 @@ function createMapPins(
   for (const item of state.items) {
     if (item.status === 'active') activeItemIds.add(item.id)
   }
-  const pins = action.pins.map((pin) => ({ ...pin, itemId: pin.itemId as SidebarItemId }))
+  const pins = action.pins.map((pin) => ({ ...pin, itemId: pin.itemId as ResourceId }))
   const createdPins = planWizardEditorMapPinCreations({
-    mapId: action.mapId as SidebarItemId,
-    existingPinnedItemIds: map.pins.map((pin) => pin.itemId as SidebarItemId),
+    mapId: action.mapId as ResourceId,
+    existingPinnedItemIds: map.pins.map((pin) => pin.itemId as ResourceId),
     pins,
     canPinItem: (itemId) => activeItemIds.has(String(itemId)),
     createPin: (pin): LocalMapPinCreation => {

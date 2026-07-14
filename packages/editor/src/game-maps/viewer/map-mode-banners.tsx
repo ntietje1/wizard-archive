@@ -1,5 +1,5 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-import type { MapPinId } from '../../resources/domain-id'
+import type { ResourceId, MapPinId } from '../../resources/domain-id'
+
 import type { MapPinWithItem } from '../../game-maps/item-contract'
 
 export function MapModeBanners({
@@ -7,7 +7,7 @@ export function MapModeBanners({
   pendingPinMove,
   draggingPin,
 }: {
-  pendingPinItems: { itemIds: Array<SidebarItemId> } | null
+  pendingPinItems: { itemIds: Array<ResourceId> } | null
   pendingPinMove: { pinId: MapPinId } | null
   draggingPin: { pin: MapPinWithItem } | null
 }) {

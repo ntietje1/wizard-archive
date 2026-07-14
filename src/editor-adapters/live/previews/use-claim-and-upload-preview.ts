@@ -5,6 +5,7 @@ import type {
   WizardEditorPreviewUpload,
   WizardEditorPreviewUploadResult,
 } from '@wizard-archive/editor/adapter'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useStorageUploadMutations } from '../shared/upload-helpers'
 
@@ -21,7 +22,7 @@ export function useClaimAndUploadPreview() {
     try {
       if (options.signal?.aborted) return { status: 'stale' }
       const claim = await claimPreview.mutateAsync({
-        itemId: itemId as Id<'sidebarItems'>,
+        itemId,
       })
       if (claim.status !== 'claimed') return { status: 'not-claimed' }
       if (options.signal?.aborted) return { status: 'stale' }
@@ -36,7 +37,7 @@ export function useClaimAndUploadPreview() {
             uploadUrl: string
           }>,
         (args) => setPreviewImage.mutateAsync(args),
-        itemId as Id<'sidebarItems'>,
+        itemId,
         claim.claimToken,
         {
           signal: options.signal,
@@ -51,7 +52,7 @@ export function useClaimAndUploadPreview() {
       if (options.signal?.aborted) return { status: 'stale' }
       return { status: 'error', error }
     }
-  }) satisfies WizardEditorPreviewUpload
+  }) satisfies WizardEditorPreviewUpload<ResourceId>
 
   return claimAndUpload
 }

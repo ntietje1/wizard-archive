@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import type { FileSystemPermissions } from '../../filesystem/permissions'
 import type { ResourceCatalog } from '../../filesystem/catalog'
 import type { FileSystemItemMetadataOperations } from '../../filesystem/item-operation-contracts'
@@ -10,7 +10,7 @@ import type { CurrentItemState, WorkspaceNavigation, WorkspaceNavigationState } 
 export interface FileTopbarSource {
   current: Pick<CurrentItemState, 'availabilityState' | 'item'>
   getTrashItemCount: () => number
-  getVisibleAncestors: (itemId: SidebarItemId) => ReadonlyArray<AnyItem>
+  getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<AnyItem>
   history: Pick<ResourceHistory, 'status'>
   operations: FileSystemItemMetadataOperations
   permissions: Pick<FileSystemPermissions, 'canAccessItem' | 'canEdit' | 'canMutateItem'>

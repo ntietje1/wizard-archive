@@ -1,9 +1,10 @@
+import type { ResourceId } from '../resources/domain-id'
 import { isMediaFile, isTextFile } from '../../../../shared/storage/validation'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import { validateFileIoInput } from '../files/io-command'
 import type { ResourceCatalog } from './catalog'
 import type { ResourceImportContentInitializers } from '../files/import-contract'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceOperationResult } from './transaction-contract'
 import type {
   FileSystemItemCreateOperations,
@@ -165,9 +166,9 @@ function createImportDropState(input: ImportDropInput) {
     skippedFiles: 0,
   }
   const state = {
-    lastFolderId: null as SidebarItemId | null,
+    lastFolderId: null as ResourceId | null,
     progress,
-    siblingNamesByParent: new Map<SidebarItemId | null, Array<string>>(),
+    siblingNamesByParent: new Map<ResourceId | null, Array<string>>(),
     skippedFileDetails: [] as Array<ImportDropSkippedFile>,
   }
   notifyProgress(input, state.progress)
@@ -186,7 +187,7 @@ async function importDroppedFolder({
   folder: ImportFolderEntry
   input: ImportDropInput
   operations: FileSystemItemImportOperations
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   state: ReturnType<typeof createImportDropState>
 }): Promise<void> {
   const folderName = reserveImportDropSiblingName({
@@ -257,7 +258,7 @@ async function importDroppedFile({
   file: ImportFileEntry
   input: ImportDropInput
   operations: FileSystemItemImportOperations
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   state: ReturnType<typeof createImportDropState>
 }) {
   const fileName = reserveImportDropSiblingName({
@@ -296,7 +297,7 @@ function getImportDropSiblingNames({
   state,
 }: {
   catalog: Pick<ResourceCatalog, 'getVisibleChildren'>
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   state: ReturnType<typeof createImportDropState>
 }) {
   const names = state.siblingNamesByParent.get(parentId)
@@ -314,7 +315,7 @@ function reserveImportDropSiblingName({
 }: {
   catalog: Pick<ResourceCatalog, 'getVisibleChildren'>
   name: string
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   state: ReturnType<typeof createImportDropState>
 }) {
   getImportDropSiblingNames({ catalog, parentId, state }).push(name)

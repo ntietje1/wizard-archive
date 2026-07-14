@@ -1,10 +1,11 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useEffect, useRef, useState } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import type { DragOverlayState } from './drag-overlay'
 import type { ElementDragMonitorContext } from './monitor-context'
 import { useDndStore } from './store'
 import type { DropOutcome } from './outcome'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import {
   getElementDragFeedbackInput,
   globalDropOptionsFromInput,
@@ -32,7 +33,7 @@ function resetElementDragState({
   setActiveDropTargetKey: (id: string | null) => void
   setDragOutcome: (outcome: DropOutcome | null) => void
   setIsDraggingElement: (isDragging: boolean) => void
-  setDragPreviewItemIds: (ids: Array<SidebarItemId>) => void
+  setDragPreviewItemIds: (ids: Array<ResourceId>) => void
 }) {
   if (overlayRef.current) overlayRef.current.style.display = 'none'
   lastDropTargetKeyRef.current = null

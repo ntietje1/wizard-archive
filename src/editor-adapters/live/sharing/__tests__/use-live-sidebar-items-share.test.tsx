@@ -1,6 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { Id } from 'convex/_generated/dataModel'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
@@ -10,13 +9,14 @@ import type {
   ShareActionResult,
 } from '@wizard-archive/editor/sharing'
 import { useLiveSidebarItemsShare } from '../use-live-sidebar-items-share'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
+import { testResourceId } from '../../../../../shared/test/resource-id'
 
 type ReadyResourceShareState = Extract<ResourceShareState, { status: 'ready' }>
 
 type SidebarShareQueryItem = {
-  sidebarItemId: Id<'sidebarItems'>
+  sidebarItemId: ResourceId
   allPermissionLevel: PermissionLevel | null
   inheritShares: boolean
   inheritedAllPermissionLevel: PermissionLevel | null
@@ -46,7 +46,7 @@ const operationsMock = vi.hoisted(() => ({
 const handleErrorMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../use-live-sidebar-items-share-query', () => ({
-  useLiveSidebarItemsShareQuery: (itemIds: Array<Id<'sidebarItems'>>) =>
+  useLiveSidebarItemsShareQuery: (itemIds: Array<ResourceId>) =>
     useLiveSidebarItemsShareQueryMock(itemIds),
 }))
 
@@ -66,7 +66,7 @@ vi.mock('~/shared/utils/logger', () => ({
 }))
 
 function shareQueryItem(
-  itemId: Id<'sidebarItems'>,
+  itemId: ResourceId,
   overrides: Partial<SidebarShareQueryItem> = {},
 ): SidebarShareQueryItem {
   return {
@@ -154,7 +154,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('skips share queries for optimistic sidebar items', () => {
-    const item = createNote({ id: 'optimistic-create-1' as Id<'sidebarItems'> })
+    const item = createNote({ id: 'optimistic-create-1' as ResourceId })
 
     const { result } = renderLiveShareHook([item])
 
@@ -163,8 +163,8 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('loads persisted share rows for mixed persisted and optimistic selections', () => {
-    const persistedItem = createNote({ id: 'note_1' as Id<'sidebarItems'> })
-    const optimisticItem = createNote({ id: 'optimistic-create-1' as Id<'sidebarItems'> })
+    const persistedItem = createNote({ id: testResourceId('note_1') })
+    const optimisticItem = createNote({ id: 'optimistic-create-1' as ResourceId })
     useLiveSidebarItemsShareQueryMock.mockReturnValue({
       data: [
         shareQueryItem(persistedItem.id, {
@@ -177,12 +177,12 @@ describe('useLiveSidebarItemsShare', () => {
 
     const { result } = renderLiveShareHook([persistedItem, optimisticItem])
 
-    expect(useLiveSidebarItemsShareQueryMock).toHaveBeenCalledWith(['note_1'])
+    expect(useLiveSidebarItemsShareQueryMock).toHaveBeenCalledWith([persistedItem.id])
     expect(result.current.status).toBe('incomplete')
   })
 
   it('queries share data for persisted sidebar items', () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     useLiveSidebarItemsShareQueryMock.mockReturnValue({
       data: [shareQueryItem(item.id)],
       isPending: false,
@@ -191,7 +191,7 @@ describe('useLiveSidebarItemsShare', () => {
 
     const { result } = renderLiveShareHook([item])
 
-    expect(useLiveSidebarItemsShareQueryMock).toHaveBeenCalledWith(['note_1'])
+    expect(useLiveSidebarItemsShareQueryMock).toHaveBeenCalledWith([item.id])
     expect(result.current.status).toBe('ready')
     expect(result.current.shareableItems).toEqual([item])
     expect(result.current.aggregateShareStatus).toBe('not_shared')
@@ -199,9 +199,9 @@ describe('useLiveSidebarItemsShare', () => {
 
   it('loads share rows for large sidebars through the share query boundary', () => {
     const items = Array.from({ length: 101 }, (_, index) =>
-      createNote({ id: `note_${index + 1}` as Id<'sidebarItems'> }),
+      createNote({ id: testResourceId(`note_${index + 1}`) }),
     )
-    useLiveSidebarItemsShareQueryMock.mockImplementation((itemIds: Array<Id<'sidebarItems'>>) => ({
+    useLiveSidebarItemsShareQueryMock.mockImplementation((itemIds: Array<ResourceId>) => ({
       data: itemIds.map((id) => shareQueryItem(id)),
       isPending: false,
       isSuccess: true,
@@ -215,7 +215,7 @@ describe('useLiveSidebarItemsShare', () => {
 
   it('keeps sharing unavailable until campaign context is loaded', () => {
     campaignMock.campaignData = undefined
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
 
     const { result } = renderLiveShareHook([item])
 
@@ -224,7 +224,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('surfaces share query failures without projecting private state', () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     const error = new Error('share query failed')
     useLiveSidebarItemsShareQueryMock.mockReturnValue({
       data: undefined,
@@ -244,13 +244,13 @@ describe('useLiveSidebarItemsShare', () => {
   it('projects loaded share rows into aggregate item state', () => {
     const playerId = testCampaignMemberId('live_item_share_player_1')
     const otherPlayerId = testCampaignMemberId('live_item_share_player_2')
-    const folder = createFolder({ id: 'folder_1' as Id<'sidebarItems'>, name: 'Lore' })
+    const folder = createFolder({ id: testResourceId('folder_1'), name: 'Lore' })
     const firstNote = createNote({
-      id: 'note_1' as Id<'sidebarItems'>,
+      id: testResourceId('note_1'),
       parentId: folder.id,
     })
     const secondNote = createNote({
-      id: 'note_2' as Id<'sidebarItems'>,
+      id: testResourceId('note_2'),
       parentId: folder.id,
     })
     useCampaignMembersMock.mockReturnValue({
@@ -308,8 +308,8 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('reports mixed share status when selected items combine shared and unshared state', () => {
-    const sharedNote = createNote({ id: 'note_1' as Id<'sidebarItems'> })
-    const unsharedNote = createNote({ id: 'note_2' as Id<'sidebarItems'> })
+    const sharedNote = createNote({ id: testResourceId('note_1') })
+    const unsharedNote = createNote({ id: testResourceId('note_2') })
     useLiveSidebarItemsShareQueryMock.mockReturnValue({
       data: [
         shareQueryItem(sharedNote.id, {
@@ -328,7 +328,7 @@ describe('useLiveSidebarItemsShare', () => {
 
   it('keeps explicit member denies ahead of inherited all-player access', () => {
     const playerId = testCampaignMemberId('live_item_deny_player')
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     useCampaignMembersMock.mockReturnValue({
       data: [playerMember(playerId)],
       isSuccess: true,
@@ -360,7 +360,7 @@ describe('useLiveSidebarItemsShare', () => {
 
   it('does not count explicit member denies as active individual shares', () => {
     const playerId = testCampaignMemberId('live_item_inherited_player')
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     useCampaignMembersMock.mockReturnValue({
       data: [playerMember(playerId)],
       isSuccess: true,
@@ -391,7 +391,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('marks sharing incomplete when loaded selections are missing item share rows', () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     const playerId = testCampaignMemberId('live_item_pending_player')
     useCampaignMembersMock.mockReturnValue({
       data: [playerMember(playerId)],
@@ -404,7 +404,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('keeps sharing pending until campaign members load', () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     useLiveSidebarItemsShareQueryMock.mockReturnValue({
       data: [shareQueryItem(item.id)],
       isPending: false,
@@ -423,7 +423,7 @@ describe('useLiveSidebarItemsShare', () => {
 
   it('marks sharing unavailable for non-DMs', () => {
     campaignMock.isDm = false
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
 
     const { result } = renderLiveShareHook([item])
 
@@ -432,7 +432,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('routes all-player share writes through filesystem operations', async () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     useLiveSidebarItemsShareQueryMock.mockReturnValue({
       data: [shareQueryItem(item.id)],
       isPending: false,
@@ -448,13 +448,13 @@ describe('useLiveSidebarItemsShare', () => {
     })
 
     expect(operationsMock.setDefaultPermission).toHaveBeenCalledExactlyOnceWith({
-      itemIds: ['note_1'],
+      itemIds: [item.id],
       permissionLevel: PERMISSION_LEVEL.VIEW,
     })
   })
 
   it('reports failed share writes and clears the mutation state', async () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     const error = new Error('share failed')
     operationsMock.setDefaultPermission.mockRejectedValue(error)
     useLiveSidebarItemsShareQueryMock.mockReturnValue({
@@ -477,7 +477,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('routes member share writes and clears through filesystem operations', async () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     const player = {
       id: testCampaignMemberId('live_item_write_player'),
       role: 'Player',
@@ -501,18 +501,18 @@ describe('useLiveSidebarItemsShare', () => {
     await state.clearParticipantPermission(player.id)
 
     expect(operationsMock.setParticipantPermission).toHaveBeenCalledExactlyOnceWith({
-      itemIds: ['note_1'],
+      itemIds: [item.id],
       participantId: player.id,
       permissionLevel: PERMISSION_LEVEL.EDIT,
     })
     expect(operationsMock.clearParticipantPermission).toHaveBeenCalledExactlyOnceWith({
-      itemIds: ['note_1'],
+      itemIds: [item.id],
       participantId: player.id,
     })
   })
 
   it('keeps sharing mutations pending until overlapping commands settle', async () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     const player = playerMember(testCampaignMemberId('live_item_concurrent_player'))
     const firstCommand = createDeferredPromise()
     const secondCommand = createDeferredPromise()
@@ -554,7 +554,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('writes an explicit member deny when toggling inherited member access off', async () => {
-    const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
+    const item = createNote({ id: testResourceId('note_1') })
     const player = playerMember(testCampaignMemberId('live_item_toggle_player'))
     useCampaignMembersMock.mockReturnValue({
       data: [player],
@@ -580,7 +580,7 @@ describe('useLiveSidebarItemsShare', () => {
     })
 
     expect(operationsMock.setParticipantPermission).toHaveBeenCalledExactlyOnceWith({
-      itemIds: ['note_1'],
+      itemIds: [item.id],
       participantId: player.id,
       permissionLevel: PERMISSION_LEVEL.NONE,
     })
@@ -588,7 +588,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('routes folder inheritance changes through filesystem operations', async () => {
-    const folder = createFolder({ id: 'folder_1' as Id<'sidebarItems'> })
+    const folder = createFolder({ id: testResourceId('folder_1') })
     useLiveSidebarItemsShareQueryMock.mockReturnValue({
       data: [{ ...shareQueryItem(folder.id), inheritShares: false }],
       isPending: false,
@@ -607,7 +607,7 @@ describe('useLiveSidebarItemsShare', () => {
     await state.setInheritShares(true)
 
     expect(operationsMock.setFolderInheritShares).toHaveBeenCalledExactlyOnceWith({
-      folderId: 'folder_1',
+      folderId: folder.id,
       inheritShares: true,
     })
   })

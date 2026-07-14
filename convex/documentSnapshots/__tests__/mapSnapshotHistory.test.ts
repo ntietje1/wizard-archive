@@ -4,6 +4,7 @@ import { createTestContext } from '../../_test/setup.helper'
 import { createGameMapViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
+import { getSidebarItemRowId } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
 describe('updateMap creates correct number of history entries', () => {
@@ -26,12 +27,13 @@ describe('updateMap creates correct number of history entries', () => {
       parentTarget: { kind: 'direct', parentId: null },
       uploadSessionId: sessionId,
     })
+    const mapRowId = await getSidebarItemRowId(t, result.mapId)
 
     // Count history entries before
     const beforeCount = await t.run(async (dbCtx) => {
       const entries = await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item', (q) => q.eq('itemId', result.mapId))
+        .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
         .collect()
       return entries.length
     })
@@ -47,7 +49,7 @@ describe('updateMap creates correct number of history entries', () => {
     const afterEntries = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item', (q) => q.eq('itemId', result.mapId))
+        .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
         .collect()
     })
 
@@ -76,11 +78,12 @@ describe('updateMap creates correct number of history entries', () => {
       parentTarget: { kind: 'direct', parentId: null },
       uploadSessionId: sessionId,
     })
+    const mapRowId = await getSidebarItemRowId(t, result.mapId)
 
     const beforeCount = await t.run(async (dbCtx) => {
       const entries = await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item', (q) => q.eq('itemId', result.mapId))
+        .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
         .collect()
       return entries.length
     })
@@ -104,7 +107,7 @@ describe('updateMap creates correct number of history entries', () => {
     const afterEntries = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item', (q) => q.eq('itemId', result.mapId))
+        .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
         .collect()
     })
 

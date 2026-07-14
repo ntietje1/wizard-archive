@@ -1,4 +1,4 @@
-import type { ResourceId } from '../../workspace/resource-contract'
+import type { ResourceId } from '../../resources/domain-id'
 import {
   PERMISSION_OPERATION,
   hasPermissionForOperation,
@@ -32,15 +32,19 @@ export type OperationActorSnapshot = {
   canManageFolders: boolean
 }
 
-export type OperationResourceItem = Pick<
+export type OperationResourceItem<TId extends string = ResourceId> = Pick<
   ResourcePatchRow,
-  'id' | 'type' | 'status' | 'parentId'
-> & { myPermissionLevel?: PermissionLevel | null }
+  'type' | 'status'
+> & {
+  id: TId
+  parentId: TId | null
+  myPermissionLevel?: PermissionLevel | null
+}
 
-type OperationTargetSnapshot = {
-  parentId: ResourceId | null
-  parent: OperationResourceItem | null
-  ancestorIds?: Array<ResourceId>
+type OperationTargetSnapshot<TId extends string> = {
+  parentId: TId | null
+  parent: OperationResourceItem<TId> | null
+  ancestorIds?: Array<TId>
 }
 
 function ok(): ResourceOperationCapability {
@@ -60,7 +64,9 @@ export function isResourceOperationPermissionRejection(
   return code === 'no_source_permission' || code === 'no_target_permission' || code === 'dm_only'
 }
 
-function evaluateParentAccess(target: OperationTargetSnapshot): ResourceOperationCapability {
+function evaluateParentAccess<TId extends string>(
+  target: OperationTargetSnapshot<TId>,
+): ResourceOperationCapability {
   if (target.parentId === null) return ok()
 
   if (!target.parent) {
@@ -108,10 +114,10 @@ export function evaluateCreateItem(
   return ok()
 }
 
-function evaluateTargetParent(
+function evaluateTargetParent<TId extends string>(
   actor: OperationActorSnapshot,
-  item: OperationResourceItem,
-  target: OperationTargetSnapshot,
+  item: OperationResourceItem<TId>,
+  target: OperationTargetSnapshot<TId>,
 ): ResourceOperationCapability {
   const parentAccess = evaluateParentAccess(target)
   if (!parentAccess.ok) return parentAccess
@@ -129,10 +135,10 @@ function evaluateTargetParent(
   return ok()
 }
 
-export function evaluateMoveToParent(
+export function evaluateMoveToParent<TId extends string>(
   actor: OperationActorSnapshot,
-  item: OperationResourceItem,
-  target: OperationTargetSnapshot,
+  item: OperationResourceItem<TId>,
+  target: OperationTargetSnapshot<TId>,
 ): ResourceOperationCapability {
   if (!isActiveResourceItem(item)) {
     return reject('trashed_item', 'Only active items can be moved')
@@ -145,9 +151,9 @@ export function evaluateMoveToParent(
   return evaluateTargetParent(actor, item, target)
 }
 
-export function evaluateTrash(
+export function evaluateTrash<TId extends string>(
   actor: OperationActorSnapshot,
-  item: OperationResourceItem,
+  item: OperationResourceItem<TId>,
 ): ResourceOperationCapability {
   if (!isActiveResourceItem(item) && !isTrashedSidebarItem(item)) {
     return reject('invalid_target', 'Only active items can be moved to trash')
@@ -168,10 +174,10 @@ export function evaluateTrash(
   return ok()
 }
 
-export function evaluateRestore(
+export function evaluateRestore<TId extends string>(
   actor: OperationActorSnapshot,
-  item: OperationResourceItem,
-  target: OperationTargetSnapshot,
+  item: OperationResourceItem<TId>,
+  target: OperationTargetSnapshot<TId>,
 ): ResourceOperationCapability {
   if (!isTrashedSidebarItem(item)) {
     return reject('not_trashed', 'Only trashed items can be restored')
@@ -190,9 +196,9 @@ export function evaluateRestore(
   return evaluateTargetParent(actor, item, target)
 }
 
-export function evaluatePermanentDelete(
+export function evaluatePermanentDelete<TId extends string>(
   actor: OperationActorSnapshot,
-  item: OperationResourceItem,
+  item: OperationResourceItem<TId>,
 ): ResourceOperationCapability {
   if (!isTrashedSidebarItem(item)) {
     return reject('not_trashed', 'This item is no longer in the trash')
@@ -216,10 +222,10 @@ export function evaluatePermanentDelete(
   return ok()
 }
 
-export function evaluateCopy(
+export function evaluateCopy<TId extends string>(
   actor: OperationActorSnapshot,
-  item: OperationResourceItem,
-  target: OperationTargetSnapshot,
+  item: OperationResourceItem<TId>,
+  target: OperationTargetSnapshot<TId>,
 ): ResourceOperationCapability {
   if (!isActiveResourceItem(item)) {
     return reject('trashed_item', 'Only active resources can be copied')

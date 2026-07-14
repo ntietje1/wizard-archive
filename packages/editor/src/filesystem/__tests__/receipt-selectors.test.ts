@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import type { ResourceCommand } from '../transaction-contract'
 import {
@@ -8,11 +9,10 @@ import {
 } from '../receipt-selectors'
 import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { createFileSystemReceipt } from './receipt-factory'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 describe('filesystem receipt selectors', () => {
   it('selects moved roots after forward, undo, and redo receipts', () => {
-    const itemId = 'item_1' as SidebarItemId
+    const itemId = 'item_1' as ResourceId
     const command = {
       type: 'move',
       itemIds: [itemId],
@@ -49,7 +49,7 @@ describe('filesystem receipt selectors', () => {
   })
 
   it('reports the restored item as removed when undoing restore', () => {
-    const itemId = 'item_1' as SidebarItemId
+    const itemId = 'item_1' as ResourceId
     const command = {
       type: 'restore',
       itemIds: [itemId],
@@ -94,8 +94,8 @@ describe('filesystem receipt selectors', () => {
   })
 
   it('selects the created copy from copy receipts', () => {
-    const copiedItemId = 'copied_item' as SidebarItemId
-    const sourceItemId = 'source_item' as SidebarItemId
+    const copiedItemId = 'copied_item' as ResourceId
+    const sourceItemId = 'source_item' as ResourceId
     const command = {
       type: 'copy',
       itemIds: [sourceItemId],
@@ -114,7 +114,7 @@ describe('filesystem receipt selectors', () => {
   })
 
   it('navigates rename receipts by current item id', () => {
-    const itemId = 'item_1' as SidebarItemId
+    const itemId = 'item_1' as ResourceId
     const command = {
       type: 'rename',
       itemId,

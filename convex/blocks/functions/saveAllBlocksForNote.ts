@@ -10,6 +10,9 @@ import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { Block, BlockInsert, PersistedFlatBlock } from '../types'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
+import { findSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function saveAllBlocksForNote(
   ctx: Pick<MutationCtx, 'db'>,
@@ -141,20 +144,20 @@ async function validateResourceEmbedTargets(
     flatBlocks: Array<PersistedFlatBlock>
   },
 ) {
-  const targetIds = new Set<Id<'sidebarItems'>>()
+  const targetIds = new Set<ResourceId>()
   for (const block of flatBlocks) {
-    const targetId = getResourceEmbedTargetId(ctx, block)
+    const targetId = getResourceEmbedTargetId(block)
     if (!targetId) continue
-    if (targetId === noteId) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'A note cannot embed itself')
-    }
     targetIds.add(targetId)
   }
 
   await asyncMap([...targetIds], async (targetId) => {
-    const item = await ctx.db.get('sidebarItems', targetId)
+    const item = await findSidebarItemRow(ctx, targetId)
     if (!item) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target not found')
+    }
+    if (item._id === noteId) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'A note cannot embed itself')
     }
     if (item.campaignId !== campaignId) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Embed target belongs to different campaign')
@@ -165,10 +168,7 @@ async function validateResourceEmbedTargets(
   })
 }
 
-function getResourceEmbedTargetId(
-  ctx: Pick<MutationCtx, 'db'>,
-  block: PersistedFlatBlock,
-): Id<'sidebarItems'> | null {
+function getResourceEmbedTargetId(block: PersistedFlatBlock): ResourceId | null {
   if (block.type !== 'embed') return null
   const props = block.props
   if (
@@ -179,7 +179,7 @@ function getResourceEmbedTargetId(
     'resourceId' in props &&
     typeof props.resourceId === 'string'
   ) {
-    const resourceId = ctx.db.normalizeId('sidebarItems', props.resourceId)
+    const resourceId = parseDomainId(DOMAIN_ID_KIND.resource, props.resourceId)
     if (!resourceId) {
       throwClientError(
         ERROR_CODE.VALIDATION_FAILED,

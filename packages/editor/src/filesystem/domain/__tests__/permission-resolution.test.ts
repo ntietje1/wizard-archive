@@ -1,7 +1,7 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import { testDomainId } from '../../../test/domain-id'
 import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
 import type { AnyItem } from '../../../workspace/items'
@@ -42,7 +42,7 @@ describe('permission resolution domain', () => {
 
   it('resolves owner view-as permission from inherited folder shares without mutation', () => {
     const folder = createFolder({
-      id: testId<'sidebarItems'>('permission_resolution_folder'),
+      id: testResourceId('permission_resolution_folder'),
       inheritShares: true,
       allPermissionLevel: PERMISSION_LEVEL.EDIT,
     })
@@ -62,7 +62,7 @@ describe('permission resolution domain', () => {
 
   it('requires visible ancestor chains', () => {
     const folder = createFolder({
-      id: testId<'sidebarItems'>('permission_resolution_hidden_folder'),
+      id: testResourceId('permission_resolution_hidden_folder'),
       myPermissionLevel: PERMISSION_LEVEL.NONE,
     })
     const note = createNote({
@@ -75,8 +75,8 @@ describe('permission resolution domain', () => {
   })
 
   it('terminates inherited permission resolution on cyclic parent chains', () => {
-    const firstId = testId<'sidebarItems'>('permission_cycle_first')
-    const secondId = testId<'sidebarItems'>('permission_cycle_second')
+    const firstId = testResourceId('permission_cycle_first')
+    const secondId = testResourceId('permission_cycle_second')
     const first = createFolder({ id: firstId, parentId: secondId, inheritShares: true })
     const second = createFolder({ id: secondId, parentId: firstId, inheritShares: true })
     const note = createNote({ parentId: firstId, allPermissionLevel: null, shares: [] })

@@ -10,6 +10,11 @@ import { getHistoryEntryRow, requireHistoryEntryId } from './functions/getHistor
 import type { Doc } from '../_generated/dataModel'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { QueryCtx } from '../_generated/server'
+import { resourceIdValidator } from '../resources/validators'
+import {
+  requireSidebarItemRow,
+  sidebarItemResourceId,
+} from '../sidebarItems/functions/sidebarItemIdentity'
 
 async function toEditHistoryEntry(
   ctx: Pick<QueryCtx, 'db'>,
@@ -22,6 +27,10 @@ async function toEditHistoryEntry(
   const member = await ctx.db.get('campaignMembers', entry.campaignMemberId)
   if (!member || member.campaignId !== entry.campaignId) {
     throw new Error('Edit history member is missing from its campaign')
+  }
+  const item = await ctx.db.get('sidebarItems', entry.itemId)
+  if (!item || item.campaignId !== entry.campaignId) {
+    throw new Error('Edit history resource is missing from its campaign')
   }
 
   const {
@@ -36,6 +45,7 @@ async function toEditHistoryEntry(
     ...fields,
     id: historyEntryUuid,
     createdAt: _creationTime,
+    itemId: sidebarItemResourceId(item),
     campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid),
     campaignMemberId: assertDomainId(DOMAIN_ID_KIND.campaignMember, member.campaignMemberUuid),
   }
@@ -62,7 +72,7 @@ export const getHistoryEntry = campaignQuery({
 
 export const getItemHistory = campaignQuery({
   args: {
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
     paginationOpts: paginationOptsValidator,
   },
   returns: v.object({
@@ -70,14 +80,15 @@ export const getItemHistory = campaignQuery({
     ...paginatedQueryResultFields,
   }),
   handler: async (ctx, { itemId, paginationOpts }) => {
-    const itemRow = await getSidebarItem(ctx, itemId)
+    const providerItem = await requireSidebarItemRow(ctx, itemId)
+    const itemRow = await getSidebarItem(ctx, providerItem._id)
     await requireItemAccess(ctx, {
       rawItem: itemRow,
       requiredLevel: PERMISSION_LEVEL.EDIT,
     })
     const page = await ctx.db
       .query('editHistory')
-      .withIndex('by_item', (q) => q.eq('itemId', itemId))
+      .withIndex('by_item', (q) => q.eq('itemId', providerItem._id))
       .order('desc')
       .paginate(paginationOpts)
     return {

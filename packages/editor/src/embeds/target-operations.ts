@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import { createElement } from 'react'
 import { toast } from 'sonner'
 import type { FileSystemLoadState } from '../filesystem/load-state'
@@ -17,7 +17,7 @@ import type { FileSystemItemImportOperations } from '../filesystem/item-operatio
 export type EmbedTargetUploadFileResult =
   | {
       status: 'completed'
-      itemId: SidebarItemId
+      itemId: ResourceId
     }
   | {
       status: 'skipped'

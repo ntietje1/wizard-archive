@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vitest'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { BlockSearchResult } from '../../../../../shared/search/types'
 import { createNote } from '../../test/sidebar-item-factory'
 import { buildItemSearchResults } from '../model'
@@ -7,11 +8,11 @@ import { buildItemSearchResults } from '../model'
 describe('buildItemSearchResults', () => {
   it('orders title matches by exact, prefix, then contains priority', () => {
     const contains = createNote({
-      id: 'note_contains' as SidebarItemId,
+      id: 'note_contains' as ResourceId,
       name: 'Ancient Dragon Lore',
     })
-    const exact = createNote({ id: 'note_exact' as SidebarItemId, name: 'Dragon' })
-    const prefix = createNote({ id: 'note_prefix' as SidebarItemId, name: 'Dragon Market' })
+    const exact = createNote({ id: 'note_exact' as ResourceId, name: 'Dragon' })
+    const prefix = createNote({ id: 'note_prefix' as ResourceId, name: 'Dragon Market' })
 
     const results = buildItemSearchResults({
       bodyResults: undefined,
@@ -31,14 +32,14 @@ describe('buildItemSearchResults', () => {
 
   it('dedupes body results while excluding notes that already matched by title', () => {
     const titleMatch = createNote({
-      id: 'note_title' as SidebarItemId,
+      id: 'note_title' as ResourceId,
       name: 'Dragon',
     })
     const bodyMatch = createNote({
-      id: 'note_body' as SidebarItemId,
+      id: 'note_body' as ResourceId,
       name: 'Market Notes',
     })
-    const missingId = 'note_missing' as SidebarItemId
+    const missingId = 'note_missing' as ResourceId
     const bodyResults: Array<BlockSearchResult> = [
       createBodyResult(titleMatch.id, 'title match body should be skipped'),
       createBodyResult(bodyMatch.id, 'first body hit wins'),
@@ -66,7 +67,7 @@ describe('buildItemSearchResults', () => {
   })
 })
 
-function createBodyResult(noteId: SidebarItemId, plainText: string): BlockSearchResult {
+function createBodyResult(noteId: ResourceId, plainText: string): BlockSearchResult {
   return {
     blockNoteId: `${noteId}-block`,
     noteId,

@@ -1,7 +1,7 @@
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import type { ResourceId } from '../../../resources/domain-id'
 import { useSidebarWorkspaceState } from '../workspace-state'
 
-export function useFolderState(folderId: SidebarItemId) {
+export function useFolderState(folderId: ResourceId) {
   const {
     ui: { closeAllFoldersMode, folderStates },
     uiCommands: { clearAllFolderStates, exitCloseAllMode, setFolderState, toggleFolderState },

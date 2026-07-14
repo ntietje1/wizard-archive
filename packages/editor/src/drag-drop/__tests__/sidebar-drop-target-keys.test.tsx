@@ -5,9 +5,8 @@ import { createFolder } from '../../test/sidebar-item-factory'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
 import { DndProviderContext } from '../context'
 import { getDropTargetKey, resolveDropTarget } from '../drop-target-data'
-import { defaultDndStoreApi as useDndStore } from '../store'
+import { defaultDndStoreApi as useDndStore, resetDndStore } from './store-test-utils'
 import { useSidebarItemDropTarget } from '../use-sidebar-item-drop-target'
-import { resetDndStore } from './store-test-utils'
 
 describe('sidebar item drop target keys', () => {
   beforeEach(() => {

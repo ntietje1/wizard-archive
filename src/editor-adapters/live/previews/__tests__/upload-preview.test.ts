@@ -1,3 +1,4 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { uploadPreviewBlob } from '../upload-preview'
 import type { Id } from 'convex/_generated/dataModel'
@@ -5,7 +6,7 @@ import type { Id } from 'convex/_generated/dataModel'
 const MOCK_UPLOAD_URL = 'https://upload.example.com/upload'
 const MOCK_SESSION_ID = 'upload-session-1' as Id<'fileStorage'>
 const MOCK_STORAGE_ID = 'storage_abc123' as Id<'_storage'>
-const MOCK_ITEM_ID = 'note_123' as Id<'sidebarItems'>
+const MOCK_ITEM_ID = 'note_123' as ResourceId
 const MOCK_CLAIM_TOKEN = 'test-claim-token'
 
 describe('uploadPreviewBlob', () => {
@@ -14,7 +15,7 @@ describe('uploadPreviewBlob', () => {
     uploadUrl: string
   }>
   let mockSetPreviewImage: (args: {
-    itemId: Id<'sidebarItems'>
+    itemId: ResourceId
     uploadSessionId: Id<'fileStorage'>
     claimToken: string
   }) => Promise<{ status: 'published' } | { status: 'stale' }>

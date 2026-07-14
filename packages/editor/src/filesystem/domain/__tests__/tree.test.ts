@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
 import { collectDescendantIdsFromItems } from '../tree'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { createSidebarItem } from './test-sidebar-item'
 
 describe('collectDescendantIdsFromItems', () => {
@@ -47,7 +48,7 @@ describe('collectDescendantIdsFromItems', () => {
 
   it('throws when a cycle reaches the root folder', () => {
     const root = createSidebarItem('folder_1', 'Folder 1', RESOURCE_TYPES.folders, {
-      parentId: 'folder_2' as SidebarItemId,
+      parentId: 'folder_2' as ResourceId,
     })
     const childFolder = createSidebarItem('folder_2', 'Folder 2', RESOURCE_TYPES.folders, {
       parentId: root.id,

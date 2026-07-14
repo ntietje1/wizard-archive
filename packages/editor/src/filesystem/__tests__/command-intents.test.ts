@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { createWorkspaceResourceReadModel } from '../../workspace/items'
 import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
@@ -7,13 +8,13 @@ import { testId } from '../../test/id'
 
 describe('filesystem command intents', () => {
   it('stores clipboard selections scoped to a workspace', () => {
-    const folder = createFolder({ id: testId<'sidebarItems'>('folder') })
+    const folder = createFolder({ id: testResourceId('folder') })
     const child = createNote({
-      id: testId<'sidebarItems'>('child'),
+      id: testResourceId('child'),
       parentId: folder.id,
     })
     const sibling = createNote({
-      id: testId<'sidebarItems'>('sibling'),
+      id: testResourceId('sibling'),
       parentId: folder.id,
     })
 
@@ -33,8 +34,8 @@ describe('filesystem command intents', () => {
 
   it('resolves clipboard paste commands against the active surface parent', () => {
     const workspaceId = testId<'campaigns'>('campaign')
-    const folder = createFolder({ id: testId<'sidebarItems'>('folder') })
-    const note = createNote({ id: testId<'sidebarItems'>('note') })
+    const folder = createFolder({ id: testResourceId('folder') })
+    const note = createNote({ id: testResourceId('note') })
 
     const resolved = resolveFileSystemClipboardCommand({
       clipboard: { mode: 'copy', workspaceId, itemIds: [note.id] },
@@ -51,10 +52,10 @@ describe('filesystem command intents', () => {
 
   it('resolves paste commands from still-active clipboard roots', () => {
     const workspaceId = testId<'campaigns'>('campaign')
-    const folder = createFolder({ id: testId<'sidebarItems'>('folder') })
-    const note = createNote({ id: testId<'sidebarItems'>('note') })
+    const folder = createFolder({ id: testResourceId('folder') })
+    const note = createNote({ id: testResourceId('note') })
     const trashed = createNote({
-      id: testId<'sidebarItems'>('trashed'),
+      id: testResourceId('trashed'),
       status: RESOURCE_STATUS.trashed,
     })
 
@@ -73,9 +74,9 @@ describe('filesystem command intents', () => {
 
   it('clears clipboard paste state when no clipboard roots remain active', () => {
     const workspaceId = testId<'campaigns'>('campaign')
-    const folder = createFolder({ id: testId<'sidebarItems'>('folder') })
+    const folder = createFolder({ id: testResourceId('folder') })
     const trashed = createNote({
-      id: testId<'sidebarItems'>('trashed'),
+      id: testResourceId('trashed'),
       status: RESOURCE_STATUS.trashed,
     })
 

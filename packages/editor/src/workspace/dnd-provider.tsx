@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import { createWorkspaceResource } from './runtime'
 import type { ReactNode } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { WorkspaceNavigation } from './runtime'
 import type { FileSystemPaths } from '../filesystem/catalog-paths'
 import type { ResourceCatalog, ResourceOperationItems } from '../filesystem/catalog'
@@ -46,7 +47,7 @@ export function WorkspaceRuntimeDndProvider({
     openItem: async (itemId, options) => {
       await runtime.navigation.openItem(createWorkspaceResource(itemId), options)
     },
-    revealItem: (itemId: SidebarItemId) => {
+    revealItem: (itemId: ResourceId) => {
       revealSidebarItemParents({
         catalog: filesystem.catalog,
         itemId,

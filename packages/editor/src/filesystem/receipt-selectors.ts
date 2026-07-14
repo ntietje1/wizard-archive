@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import { RESOURCE_STATUS } from '../workspace/items-persistence-contract'
 import type { ResourceEvent, ResourceTransactionReceipt } from './transaction-contract'
 
@@ -23,9 +23,7 @@ function createReceiptEventGroups(receipt: ResourceTransactionReceipt) {
   }
 }
 
-export function getReceiptRemovedRootIds(
-  receipt: ResourceTransactionReceipt,
-): Array<SidebarItemId> {
+export function getReceiptRemovedRootIds(receipt: ResourceTransactionReceipt): Array<ResourceId> {
   return receipt.patches.flatMap((patch) => {
     if (patch.type === 'removeResource') return [patch.itemId]
     if (patch.type !== 'updateResource') return []
@@ -37,8 +35,8 @@ export function getReceiptRemovedRootIds(
 }
 
 export type ReceiptRemovedItemSnapshot = {
-  id: SidebarItemId
-  parentId: SidebarItemId | null
+  id: ResourceId
+  parentId: ResourceId | null
 }
 
 export function getReceiptRemovedItemSnapshots(
@@ -69,9 +67,7 @@ export function getReceiptRemovedItemSnapshots(
   })
 }
 
-export function getReceiptSelectedRootIds(
-  receipt: ResourceTransactionReceipt,
-): Array<SidebarItemId> {
+export function getReceiptSelectedRootIds(receipt: ResourceTransactionReceipt): Array<ResourceId> {
   const events = createReceiptEventGroups(receipt)
   const selectedEvents =
     receipt.direction === 'undo'
@@ -82,8 +78,8 @@ export function getReceiptSelectedRootIds(
 
 export function getReceiptNavigationItemId(
   receipt: ResourceTransactionReceipt,
-  currentResourceId: SidebarItemId | null,
-): SidebarItemId | null {
+  currentResourceId: ResourceId | null,
+): ResourceId | null {
   if (!currentResourceId) return null
   const events = createReceiptEventGroups(receipt)
   const event = events.renamed.find((candidate) => candidate.itemId === currentResourceId)

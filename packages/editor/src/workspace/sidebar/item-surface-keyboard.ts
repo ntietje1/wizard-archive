@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import { assertNever } from './utils/assert-never'
 import type { AnyItem } from '../items'
 import type { SidebarWorkspaceItemSurfaceName } from './workspace-state'
@@ -8,7 +8,7 @@ export function getKeyboardOpenItem({
   focusedItemId,
 }: {
   selectedItems: Array<AnyItem>
-  focusedItemId: SidebarItemId | null
+  focusedItemId: ResourceId | null
 }): AnyItem | null {
   if (selectedItems.length <= 1) return selectedItems[0] ?? null
   return selectedItems.find((item) => item.id === focusedItemId) ?? selectedItems[0]
@@ -21,8 +21,8 @@ export function getKeyboardPasteParentId({
 }: {
   selectedItems: Array<AnyItem>
   surface: SidebarWorkspaceItemSurfaceName
-  surfaceParentId: SidebarItemId | null
-}): SidebarItemId | null {
+  surfaceParentId: ResourceId | null
+}): ResourceId | null {
   switch (surface) {
     case 'folder-view':
     case 'trash':

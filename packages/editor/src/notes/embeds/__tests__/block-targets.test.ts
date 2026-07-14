@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { noteBlockContentSchema } from '../../document/model'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { blockPropsFromEmbedTarget, embedTargetFromBlockProps } from '../block-targets'
 
 describe('note embed block target props', () => {
@@ -57,6 +58,6 @@ describe('note embed block target props', () => {
   })
 })
 
-function sidebarId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function sidebarId(value: string): ResourceId {
+  return value as ResourceId
 }

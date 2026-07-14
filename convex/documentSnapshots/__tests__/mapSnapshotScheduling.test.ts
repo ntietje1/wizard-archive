@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createGameMapViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createGameMap, createNote } from '../../_test/factories.helper'
+import { createGameMap, createNote, getSidebarItemRowId } from '../../_test/factories.helper'
 import {
   createSnapshotPin,
   getEditHistoryEntryByItemAction,
@@ -23,6 +23,7 @@ describe('cross-action debounce independence on game maps', () => {
         name: 'Cross Action Map',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const mapRowId = await getSidebarItemRowId(t, result.mapId)
 
       // Change the image — property changes don't create snapshots
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
@@ -44,8 +45,7 @@ describe('cross-action debounce independence on game maps', () => {
       })
 
       const pinEntry = await t.run(
-        async (dbCtx) =>
-          await getEditHistoryEntryByItemAction(dbCtx.db, result.mapId, 'map_pin_added'),
+        async (dbCtx) => await getEditHistoryEntryByItemAction(dbCtx.db, mapRowId, 'map_pin_added'),
       )
 
       expect(pinEntry).not.toBeNull()
@@ -65,7 +65,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
@@ -93,7 +93,9 @@ describe('no duplicate snapshots from concurrent mutations', () => {
       await t.run(async (dbCtx) => {
         const entries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .collect()
 
         for (const entry of entries) {
@@ -109,7 +111,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
         // Total snapshots for this map should be reasonable
         const allSnapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
 
         // With 2 pin adds, should have at most 2 snapshots
@@ -126,9 +128,17 @@ describe('no duplicate snapshots from concurrent mutations', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-      const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n1, noteRowId: n1RowId } = await createNote(
+        t,
+        ctx.campaignId,
+        ctx.dm.profile._id,
+      )
+      const { noteId: n2, noteRowId: n2RowId } = await createNote(
+        t,
+        ctx.campaignId,
+        ctx.dm.profile._id,
+      )
 
       const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignDomainId,
@@ -145,20 +155,22 @@ describe('no duplicate snapshots from concurrent mutations', () => {
       await t.run(async (dbCtx) => {
         const pins = await dbCtx.db
           .query('mapPins')
-          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapRowId))
           .collect()
-        expect(pins.map((pin) => pin.itemId).sort()).toEqual([n1, n2].sort())
+        expect(pins.map((pin) => pin.itemId).sort()).toEqual([n1RowId, n2RowId].sort())
 
         const entries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .collect()
         expect(entries).toHaveLength(1)
         expect(entries[0].hasSnapshot).toBe(true)
 
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
         expect(snapshots).toHaveLength(1)
       })

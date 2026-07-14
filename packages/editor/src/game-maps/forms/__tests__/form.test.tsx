@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { MapForm } from '../form'
 import type { FileUploadControl } from '@wizard-archive/ui/file-upload/control'
 import type { MapFormSource } from '../source'
@@ -41,8 +42,8 @@ describe('MapForm', () => {
   })
 
   it('does not reject an edited map title because a sibling uses it', async () => {
-    const parentId = 'folder-1' as SidebarItemId
-    const mapId = 'map-1' as SidebarItemId
+    const parentId = 'folder-1' as ResourceId
+    const mapId = 'map-1' as ResourceId
     const map = createExistingMap(mapId, { parentId })
 
     render(
@@ -63,7 +64,7 @@ describe('MapForm', () => {
   it('keeps edit controls disabled when the backing map is missing', () => {
     render(
       <MapForm
-        mapId={'missing-map' as SidebarItemId}
+        mapId={'missing-map' as ResourceId}
         mapState={{ status: 'not_found', item: null, isPending: false, error: null }}
         onClose={vi.fn()}
         source={createSource()}
@@ -80,7 +81,7 @@ describe('MapForm', () => {
     const onClose = vi.fn()
     const onSuccess = vi.fn()
     const updateItemMetadata = vi.fn().mockResolvedValue({ slug: 'updated-map' })
-    const mapId = 'map-1' as SidebarItemId
+    const mapId = 'map-1' as ResourceId
     const updateMapImage = vi.fn().mockResolvedValue(completedMapImageUpdate(mapId))
     const map = createExistingMap(mapId)
     const source = createSource({ updateItemMetadata, updateMapImage })
@@ -135,7 +136,7 @@ describe('MapForm', () => {
 
   it('reports replacement upload failures after existing map metadata is saved', async () => {
     const onSuccess = vi.fn()
-    const mapId = 'map-1' as SidebarItemId
+    const mapId = 'map-1' as ResourceId
     const map = createExistingMap(mapId)
     const updateMapImage = vi.fn().mockResolvedValue({
       status: 'error' as const,
@@ -177,12 +178,12 @@ describe('MapForm', () => {
 function createSource(overrides: Partial<MapFormSource> = {}): MapFormSource {
   return {
     updateItemMetadata: vi.fn().mockResolvedValue({ slug: 'map' }),
-    updateMapImage: vi.fn().mockResolvedValue(completedMapImageUpdate('map-1' as SidebarItemId)),
+    updateMapImage: vi.fn().mockResolvedValue(completedMapImageUpdate('map-1' as ResourceId)),
     ...overrides,
   } as MapFormSource
 }
 
-function completedMapImageUpdate(mapId: SidebarItemId) {
+function completedMapImageUpdate(mapId: ResourceId) {
   return completedResourceOperation({
     kind: 'mapImageUpdated',
     itemId: mapId,
@@ -211,7 +212,7 @@ function createImageFile() {
   return new File(['image'], 'map.png', { type: 'image/png' })
 }
 
-function createExistingMap(id: SidebarItemId, overrides: Partial<MapItem> = {}): MapItem {
+function createExistingMap(id: ResourceId, overrides: Partial<MapItem> = {}): MapItem {
   return {
     id: id,
     name: 'Dungeon',

@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import * as Y from 'yjs'
 import { useEffect, useRef, useState } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type {
   AwarenessLeaseResult,
   AwarenessReleaseResult,
@@ -30,13 +31,13 @@ type YjsCollaborationLoad<T> = {
 
 export type YjsCollaborationSourceHook<T> = (input: {
   afterSeq?: number
-  documentId: SidebarItemId
+  documentId: ResourceId
   sourceId: string | null | undefined
 }) => YjsCollaborationLoad<T>
 
 export type YjsSessionTransport = {
   pushUpdate: (args: {
-    documentId: SidebarItemId
+    documentId: ResourceId
     revision: number
     sourceId: string
     update: ArrayBuffer
@@ -45,14 +46,14 @@ export type YjsSessionTransport = {
   >
   pushAwareness: (args: {
     clientId: number
-    documentId: SidebarItemId
+    documentId: ResourceId
     sessionId: string
     sourceId: string
     state: ArrayBuffer
   }) => Promise<AwarenessLeaseResult>
   removeAwareness: (args: {
     clientId: number
-    documentId: SidebarItemId
+    documentId: ResourceId
     sessionId: string
     sourceId: string
   }) => Promise<AwarenessReleaseResult>
@@ -60,7 +61,7 @@ export type YjsSessionTransport = {
 }
 
 export type YjsSessionBeforeDestroyInput = {
-  documentId: SidebarItemId
+  documentId: ResourceId
   doc: Y.Doc
   provider: YjsCollaborationProvider
   sourceId: string
@@ -75,7 +76,7 @@ export type YjsCollaborationSession = {
 }
 
 type YjsSessionState = {
-  documentId: SidebarItemId
+  documentId: ResourceId
   doc: Y.Doc
   provider: YjsProvider
   instanceId: number
@@ -84,7 +85,7 @@ type YjsSessionState = {
 
 type UseYjsCollaborationSessionInput = {
   canEdit: boolean
-  documentId: SidebarItemId
+  documentId: ResourceId
   onBeforeDestroy?: (state: YjsSessionBeforeDestroyInput) => Promise<void> | void
   sourceId: string | null | undefined
   transport: YjsSessionTransport

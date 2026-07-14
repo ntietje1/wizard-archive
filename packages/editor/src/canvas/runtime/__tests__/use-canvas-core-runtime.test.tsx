@@ -1,7 +1,7 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useCanvasCoreRuntime } from '../use-canvas-core-runtime'
-import { testId } from '../../../test/id'
 import { createMemoryCanvasViewportStore } from '../../../test/view-state-store-factory'
 
 const viewportPersistenceSpy = vi.hoisted(() => vi.fn(() => vi.fn()))
@@ -20,7 +20,7 @@ describe('useCanvasCoreRuntime', () => {
     const viewportStore = createMemoryCanvasViewportStore()
     const { result, unmount } = renderHook(() =>
       useCanvasCoreRuntime({
-        canvasId: testId<'sidebarItems'>('canvas-id'),
+        canvasId: testResourceId('canvas-id'),
         initialViewport,
         viewportStore,
       }),
@@ -30,7 +30,7 @@ describe('useCanvasCoreRuntime', () => {
     expect(result.current.viewportController.getViewport()).toEqual(initialViewport)
     expect(viewportPersistenceSpy).toHaveBeenCalledWith({
       canvasEngine: result.current.canvasEngine,
-      canvasId: 'canvas-id',
+      canvasId: testResourceId('canvas-id'),
       initialViewport,
       viewportStore,
     })
@@ -43,7 +43,7 @@ describe('useCanvasCoreRuntime', () => {
     const { result, rerender, unmount } = renderHook(
       ({ zoom }) =>
         useCanvasCoreRuntime({
-          canvasId: testId<'sidebarItems'>('canvas-id'),
+          canvasId: testResourceId('canvas-id'),
           initialViewport: { x: 0, y: 0, zoom },
           viewportStore,
         }),
@@ -73,20 +73,20 @@ describe('useCanvasCoreRuntime', () => {
         }),
       {
         initialProps: {
-          canvasId: testId<'sidebarItems'>('canvas-1'),
+          canvasId: testResourceId('canvas-1'),
           initialViewport: { x: 10, y: 20, zoom: 1.25 },
         },
       },
     )
 
     rerender({
-      canvasId: testId<'sidebarItems'>('canvas-2'),
+      canvasId: testResourceId('canvas-2'),
       initialViewport: { x: -40, y: 80, zoom: 0.75 },
     })
 
     expect(viewportPersistenceSpy).toHaveBeenLastCalledWith({
       canvasEngine: result.current.canvasEngine,
-      canvasId: 'canvas-2',
+      canvasId: testResourceId('canvas-2'),
       initialViewport: { x: -40, y: 80, zoom: 0.75 },
       viewportStore,
     })

@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { RIGHT_SIDEBAR_CONTENT } from '../content'
@@ -56,7 +57,7 @@ describe('right-sidebar panel source', () => {
           id: 'link-1',
           query: 'Target Note',
           displayName: null,
-          item: { id: testId<'sidebarItems'>('target-id'), name: 'Target Note' },
+          item: { id: testResourceId('target-id'), name: 'Target Note' },
         },
       ],
     }))
@@ -189,7 +190,7 @@ describe('right-sidebar panel source', () => {
           id: 'link-1',
           query: 'Target Note',
           displayName: null,
-          item: { id: testId<'sidebarItems'>('target-id'), name: 'Target Note' },
+          item: { id: testResourceId('target-id'), name: 'Target Note' },
         },
       ],
     }))
@@ -278,7 +279,7 @@ function historyEntry(overrides: Partial<EditHistoryEntry> = {}): EditHistoryEnt
     workspaceId: testId<'campaigns'>('campaign-1'),
     memberId: testId<'campaignMembers'>('member-1'),
     hasSnapshot: true,
-    itemId: testId<'sidebarItems'>('note-1'),
+    itemId: testResourceId('note-1'),
     itemType: 'note',
     metadata: null,
     ...overrides,

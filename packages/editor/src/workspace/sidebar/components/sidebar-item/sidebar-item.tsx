@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../../resources/domain-id'
 import { useEffect, useRef } from 'react'
 import { Collapsible, CollapsibleContent } from '@wizard-archive/ui/shadcn/components/collapsible'
 import { RESOURCE_TYPES } from '../../../items-persistence-contract'
@@ -5,16 +6,16 @@ import { isOptimisticSidebarItem } from '../../../items/optimistic'
 import type { AnyItem } from '../../../items'
 import { DroppableSidebarItem } from './droppable-sidebar-item'
 import { SidebarItemButton } from './sidebar-item-button'
-import type { SidebarItemId } from '../../../../../../../shared/common/ids'
+
 import { useFolderState } from '../../hooks/use-folder-state'
 import { useSidebarWorkspaceState } from '../../workspace-state'
 import type { SidebarItemSource } from '../sidebar-tree-source'
 
 interface SidebarItemProps {
-  getChildren: (parentId: SidebarItemId) => ReadonlyArray<AnyItem>
+  getChildren: (parentId: ResourceId) => ReadonlyArray<AnyItem>
   item: AnyItem
   source: SidebarItemSource
-  visibleItemIds: ReadonlyArray<SidebarItemId>
+  visibleItemIds: ReadonlyArray<ResourceId>
   depth?: number
 }
 

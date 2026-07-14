@@ -1,19 +1,19 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { createContext, use } from 'react'
 import type { NoteValueReferences, NoteValueStatesForNotesStatus } from '../value-runtime-model'
 import type { NoteValueAuthoringDefinition } from '../values/runtime'
 import type { NoteValueRuntimeState } from '../values/state-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 export interface NoteValueRuntimeContextValue {
-  noteId?: SidebarItemId
+  noteId?: ResourceId
   editable: boolean
-  authoredDefinitions: Array<NoteValueAuthoringDefinition<SidebarItemId>>
-  authoredValueStates: Array<NoteValueRuntimeState<SidebarItemId>>
-  externalDependencyStates: Array<NoteValueRuntimeState<SidebarItemId>>
+  authoredDefinitions: Array<NoteValueAuthoringDefinition<ResourceId>>
+  authoredValueStates: Array<NoteValueRuntimeState<ResourceId>>
+  externalDependencyStates: Array<NoteValueRuntimeState<ResourceId>>
   externalDependencyStatesStatus: NoteValueStatesForNotesStatus
-  referenceableStates: Array<NoteValueRuntimeState<SidebarItemId>>
+  referenceableStates: Array<NoteValueRuntimeState<ResourceId>>
   referenceableStatesStatus: NoteValueStatesForNotesStatus
-  stateByValueId: Map<string, NoteValueRuntimeState<SidebarItemId>>
+  stateByValueId: Map<string, NoteValueRuntimeState<ResourceId>>
   references: NoteValueReferences
 }
 

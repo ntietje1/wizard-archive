@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
 import type { NoteItem } from '../item-contract'
@@ -5,14 +6,14 @@ import type { ResourceKind } from '../../workspace/resource-contract'
 import { parseWikiLinkText } from '../../../../../shared/links/parsing'
 import type { Heading, HeadingLevel } from '../document/model'
 import type { NoteValueRuntimeState } from '../values/state-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { filterSuggestionItems } from '../../rich-text/filter-suggestion-items'
 
 const SUGGESTION_LIMIT = 10
 
 export interface FileSuggestion {
   kind: 'file'
-  key: SidebarItemId
+  key: ResourceId
   title: string
   subtext: string
   badge: string
@@ -34,7 +35,7 @@ export interface ValueSuggestion {
   title: string
   slug: string
   formattedValue: string
-  value: NoteValueRuntimeState<SidebarItemId>
+  value: NoteValueRuntimeState<ResourceId>
 }
 
 interface DisplayNameAutocompleteContext {
@@ -46,7 +47,7 @@ export interface FileAutocompleteContext {
   pathKind: 'global' | 'relative'
   fileQuery: string
   completedFolderPath: Array<string>
-  resolvedParentId: SidebarItemId | null | undefined
+  resolvedParentId: ResourceId | null | undefined
 }
 
 export interface HeadingAutocompleteContext {
@@ -105,23 +106,23 @@ type WikiLinkPathKind = 'global' | 'relative'
 interface WikiLinkAutocompletePathInput {
   pathKind: WikiLinkPathKind
   pathSegments: Array<string>
-  sourceItemId?: SidebarItemId
+  sourceItemId?: ResourceId
 }
 
 interface WikiLinkAutocompleteNotePathInput {
   text: string
-  sourceItemId?: SidebarItemId
+  sourceItemId?: ResourceId
 }
 
 interface WikiLinkAutocompleteItemQuery {
-  parentId?: SidebarItemId | null
+  parentId?: ResourceId | null
 }
 
 export interface WikiLinkAutocompleteItemSource {
   getItemBreadcrumbs: (item: AnyItem) => string
   getItemLinkPath: (item: AnyItem) => ReadonlyArray<string>
   queryItems: (input?: WikiLinkAutocompleteItemQuery) => ReadonlyArray<AnyItem>
-  resolveFolderPath: (input: WikiLinkAutocompletePathInput) => SidebarItemId | null | undefined
+  resolveFolderPath: (input: WikiLinkAutocompletePathInput) => ResourceId | null | undefined
   resolveItemPath: (input: WikiLinkAutocompletePathInput) => AnyItem | null
   resolveNotePath: (input: WikiLinkAutocompleteNotePathInput) => NoteItem | null
 }
@@ -129,7 +130,7 @@ export interface WikiLinkAutocompleteItemSource {
 export function getWikiLinkAutocompleteContextFromSource(
   query: string,
   itemSource: WikiLinkAutocompleteItemSource,
-  sourceNoteId?: SidebarItemId,
+  sourceNoteId?: ResourceId,
 ): AutocompleteContext {
   if (query.includes('|')) {
     return {
@@ -170,7 +171,7 @@ export function buildWikiLinkAutocompleteModelFromSource({
   context: AutocompleteContext | null
   itemSource: WikiLinkAutocompleteItemSource
   headings: Array<Heading>
-  values?: Array<NoteValueRuntimeState<SidebarItemId>>
+  values?: Array<NoteValueRuntimeState<ResourceId>>
 }): WikiLinkAutocompleteModel {
   if (!context || context.mode === 'display-name') {
     return { mode: 'empty', suggestions: [], totalCount: 0 }
@@ -302,7 +303,7 @@ function parseAutocompleteFileQuery(query: string): {
 function getValueAutocompleteContextFromSource(
   query: string,
   itemSource: WikiLinkAutocompleteItemSource,
-  sourceNoteId?: SidebarItemId,
+  sourceNoteId?: ResourceId,
 ): ValueAutocompleteContext | null {
   const dotIdx = query.lastIndexOf('.')
   if (dotIdx === -1) {
@@ -335,7 +336,7 @@ function getHeadingAutocompleteContextFromSource(
   query: string,
   hashIdx: number,
   itemSource: WikiLinkAutocompleteItemSource,
-  sourceNoteId?: SidebarItemId,
+  sourceNoteId?: ResourceId,
 ): AutocompleteContext {
   const filePath = query.slice(0, hashIdx)
   const parsedFilePath = parseWikiLinkText(filePath)
@@ -470,7 +471,7 @@ function buildHeadingSuggestion(heading: Heading, fullPath: Array<string>): Head
 }
 
 function buildValueSuggestions(
-  values: Array<NoteValueRuntimeState<SidebarItemId>>,
+  values: Array<NoteValueRuntimeState<ResourceId>>,
   query: string,
 ): Array<ValueSuggestion> {
   const suggestions = values.map((value) => ({

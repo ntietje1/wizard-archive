@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type { WorkspaceNavigation, WorkspaceRuntime } from '../runtime'
 import { createElement, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { AnyItem } from '../items'
 import { reportShareActionFailure, useWorkspaceContextMenuActions } from './use-actions'
 import { projectFileSystemActionItem } from '../../filesystem/action-item'
@@ -311,8 +312,8 @@ type RuntimeItemEditDialogsInput = {
 }
 
 type RuntimeItemEditDialogState =
-  | { kind: 'map'; itemId: SidebarItemId }
-  | { kind: 'file'; itemId: SidebarItemId }
+  | { kind: 'map'; itemId: ResourceId }
+  | { kind: 'file'; itemId: ResourceId }
   | { kind: 'item'; item: AnyItem }
 
 type RuntimeItemEditDialogScope = WorkspaceContextMenuModelOptions['viewContext']

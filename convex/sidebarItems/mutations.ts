@@ -7,27 +7,31 @@ import {
   previewPublicationResultValidator,
 } from './previewGeneration'
 import type { PreviewGenerationClaim, PreviewPublicationResult } from './previewGeneration'
+import { resourceIdValidator } from '../resources/validators'
+import { requireSidebarItemRow } from './functions/sidebarItemIdentity'
 
 export const claimPreviewGeneration = campaignMutation({
   args: {
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
   },
   returns: previewGenerationClaimValidator,
   handler: async (ctx, args): Promise<PreviewGenerationClaim> => {
-    return await claimPreviewGenerationFn(ctx, { itemId: args.itemId })
+    const item = await requireSidebarItemRow(ctx, args.itemId)
+    return await claimPreviewGenerationFn(ctx, { itemId: item._id })
   },
 })
 
 export const setPreviewImage = campaignMutation({
   args: {
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
     uploadSessionId: v.id('fileStorage'),
     claimToken: v.string(),
   },
   returns: previewPublicationResultValidator,
   handler: async (ctx, args): Promise<PreviewPublicationResult> => {
+    const item = await requireSidebarItemRow(ctx, args.itemId)
     return await setPreviewImageFn(ctx, {
-      itemId: args.itemId,
+      itemId: item._id,
       uploadSessionId: args.uploadSessionId,
       claimToken: args.claimToken,
     })

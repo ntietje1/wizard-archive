@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import type { ReactNode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
@@ -5,7 +6,6 @@ import { ResourceItemCardShell } from '../shell'
 import type { ResourceItemCardProps } from '../shell'
 import type { AnyItem } from '../../../workspace/items'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
 vi.mock('../../../workspace/context-menu/context-menu', () => ({
   WorkspaceContextMenu: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
@@ -87,7 +87,7 @@ function createSource(): ResourceItemCardProps<AnyItem>['source'] {
 
 function createItem(name: string): AnyItem {
   return {
-    id: 'note-1' as SidebarItemId,
+    id: 'note-1' as ResourceId,
     name,
     type: RESOURCE_TYPES.notes,
   } as unknown as AnyItem

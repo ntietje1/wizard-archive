@@ -4,7 +4,8 @@ import { checkItemAccess } from '../validation/access'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { findSidebarItemRow } from './sidebarItemIdentity'
 import type {
   AnyResource,
   AnyResourceWithContent,
@@ -22,19 +23,21 @@ function isSidebarItemOfType<T extends ResourceKind>(
 
 export async function getSidebarItemWithContent(
   ctx: CampaignQueryCtx,
-  id: Id<'sidebarItems'>,
+  id: ResourceId,
 ): Promise<AnyResourceWithContent | null>
 export async function getSidebarItemWithContent<T extends ResourceKind>(
   ctx: CampaignQueryCtx,
-  id: Id<'sidebarItems'>,
+  id: ResourceId,
   expectedType: T,
 ): Promise<ResourceWithContentByKind<T> | null>
 export async function getSidebarItemWithContent<T extends ResourceKind>(
   ctx: CampaignQueryCtx,
-  id: Id<'sidebarItems'>,
+  id: ResourceId,
   expectedType?: T,
 ): Promise<AnyResourceWithContent | null> {
-  const item = await getSidebarItem(ctx, id)
+  const row = await findSidebarItemRow(ctx, id)
+  if (!row) return null
+  const item = await getSidebarItem(ctx, row._id)
   if (!item) return null
   const enhanced = await checkItemAccess(ctx, {
     rawItem: item,

@@ -44,7 +44,7 @@ import {
   getSidebarItemByName,
   getSidebarItemBySlug,
 } from './helpers/convex-helpers'
-import type { Id } from 'convex/_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { Locator, Page, TestInfo } from '@playwright/test'
 
 const campaignName = testName('CnvEmbeds')
@@ -406,7 +406,7 @@ async function createEmbeddedCanvasFixture(page: Page, testInfo: TestInfo) {
   return { hostName, sourceCanvasId, sourceName }
 }
 
-async function persistCurrentCanvasSnapshot(page: Page, canvasId: Id<'sidebarItems'>) {
+async function persistCurrentCanvasSnapshot(page: Page, canvasId: ResourceId) {
   const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
   const snapshot = await getCanvasRuntimeSnapshot(page)

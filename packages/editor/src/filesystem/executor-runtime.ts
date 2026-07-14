@@ -1,4 +1,5 @@
-import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
+import type { ResourceId, OperationId } from '../resources/domain-id'
+import type { UserProfileId } from '../../../../shared/common/ids'
 import type {
   ResourceCommand,
   ResourceCommandExecutionOptions,
@@ -18,14 +19,13 @@ import { withFileSystemHistoryReplayFingerprint } from './undo-store'
 import type { FileSystemUndoStore } from './undo-store'
 import type { FileSystemExecutorEffects } from './executor-effects'
 import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
-import type { OperationId } from '../resources/domain-id'
 
 type ExecuteFileSystemHistoryMutation = (
   transactionId: OperationId,
 ) => Promise<ResourceTransactionReceipt>
 
 type FileSystemNavigationEffects = {
-  getCurrentResourceId: () => SidebarItemId | null
+  getCurrentResourceId: () => ResourceId | null
   clearWorkspaceContent: () => Promise<void>
   openResource: (
     resource: AnyItem,
@@ -35,12 +35,12 @@ type FileSystemNavigationEffects = {
 
 type FileSystemSelectionCommands = {
   clearItemSelection: () => void
-  getSelectionSnapshot: () => { selectedItemIds: ReadonlyArray<SidebarItemId> }
-  setSelectedItemIds: (itemIds: ReadonlyArray<SidebarItemId>, focusedItemId?: SidebarItemId) => void
+  getSelectionSnapshot: () => { selectedItemIds: ReadonlyArray<ResourceId> }
+  setSelectedItemIds: (itemIds: ReadonlyArray<ResourceId>, focusedItemId?: ResourceId) => void
 }
 
 type FileSystemUiCommands = {
-  setFolderState: (folderId: SidebarItemId, isOpen: boolean) => void
+  setFolderState: (folderId: ResourceId, isOpen: boolean) => void
 }
 
 type FileSystemExecutorSnapshot = {
@@ -50,7 +50,7 @@ type FileSystemExecutorSnapshot = {
 export type FileSystemExecutorRuntimeArgs = {
   workspaceId: string
   currentUserId: UserProfileId | null
-  activeItemSurface: { parentId: SidebarItemId | null } | null
+  activeItemSurface: { parentId: ResourceId | null } | null
   cacheAdapter: FileSystemCacheAdapter
   navigation: FileSystemNavigationEffects
   selectionCommands: FileSystemSelectionCommands
@@ -141,7 +141,7 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
   const applyLifecycleIntents = (
     operationArgs: FileSystemExecutorRuntimeArgs,
     intents: Array<FileSystemLifecycleIntent>,
-    previousResourceId: SidebarItemId | null,
+    previousResourceId: ResourceId | null,
   ) =>
     applyFileSystemLifecycleIntents({
       intents,

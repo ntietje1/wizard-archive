@@ -1,10 +1,10 @@
+import type { ResourceId, CanvasNodeId } from '../../resources/domain-id'
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { useEmbeddedCanvasStateFromUpdates } from '../embedded-state'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { testCanvasNodeId } from '../../../../../shared/test/canvas-node-id'
-import type { CanvasNodeId } from '../../resources/domain-id'
 
 const NODE_1 = testCanvasNodeId('embedded-node-1')
 const NODE_2 = testCanvasNodeId('embedded-node-2')
@@ -167,7 +167,7 @@ describe('useEmbeddedCanvasStateFromUpdates', () => {
     }
     const updateRequests: Array<{
       afterSeq: number | undefined
-      canvasId: SidebarItemId
+      canvasId: ResourceId
     }> = []
 
     const { result, rerender } = renderHook(
@@ -310,6 +310,6 @@ function requireAvailableEmbeddedCanvasState(
   return state
 }
 
-function canvasId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function canvasId(value: string): ResourceId {
+  return value as ResourceId
 }

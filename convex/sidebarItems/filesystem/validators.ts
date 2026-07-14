@@ -16,7 +16,11 @@ import {
 } from '../../blockShares/commandValidators'
 import { createParentTargetValidator } from '../validation/parent'
 import { resourceShareIdValidator } from '../../sidebarShares/validators'
-import { assetIdValidator, operationIdValidator } from '../../resources/validators'
+import {
+  assetIdValidator,
+  operationIdValidator,
+  resourceIdValidator,
+} from '../../resources/validators'
 import { campaignIdValidator, campaignMemberIdValidator } from '../../campaigns/schema'
 import { sessionIdValidator } from '../../sessions/schema'
 
@@ -31,7 +35,7 @@ const createCommandValidator = v.object({
 
 const renameCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.rename),
-  itemId: v.id('sidebarItems'),
+  itemId: resourceIdValidator,
   name: v.optional(v.string()),
   iconName: v.optional(v.nullable(v.string())),
   color: v.optional(v.nullable(v.string())),
@@ -39,30 +43,30 @@ const renameCommandValidator = v.object({
 
 const moveCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.move),
-  itemIds: v.array(v.id('sidebarItems')),
-  targetParentId: v.nullable(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
+  targetParentId: v.nullable(resourceIdValidator),
 })
 
 const copyCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.copy),
-  itemIds: v.array(v.id('sidebarItems')),
-  targetParentId: v.nullable(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
+  targetParentId: v.nullable(resourceIdValidator),
 })
 
 const trashCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.trash),
-  itemIds: v.array(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
 })
 
 const restoreCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.restore),
-  itemIds: v.array(v.id('sidebarItems')),
-  targetParentId: v.nullable(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
+  targetParentId: v.nullable(resourceIdValidator),
 })
 
 const deleteForeverCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.deleteForever),
-  itemIds: v.array(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
 })
 
 const emptyTrashCommandValidator = v.object({
@@ -71,32 +75,32 @@ const emptyTrashCommandValidator = v.object({
 
 const setResourceAudiencePermissionCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.setResourceAudiencePermission),
-  itemIds: v.array(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
   permissionLevel: v.nullable(permissionLevelValidator),
 })
 
 const setResourcesMemberPermissionCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.setResourcesMemberPermission),
-  itemIds: v.array(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
   campaignMemberId: campaignMemberIdValidator,
   permissionLevel: permissionLevelValidator,
 })
 
 const clearResourcesMemberPermissionCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.clearResourcesMemberPermission),
-  itemIds: v.array(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
   campaignMemberId: campaignMemberIdValidator,
 })
 
 const setFolderInheritSharesCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.setFolderInheritShares),
-  folderId: v.id('sidebarItems'),
+  folderId: resourceIdValidator,
   inheritShares: v.boolean(),
 })
 
 const toggleBookmarksCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.toggleBookmarks),
-  itemIds: v.array(v.id('sidebarItems')),
+  itemIds: v.array(resourceIdValidator),
 })
 
 const fileSystemCommandValidatorsByType = {
@@ -141,43 +145,43 @@ export const fileSystemCommandValidator = v.union(
 export const fileSystemEventValidator = v.union(
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.created),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
     slug: v.string(),
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.updated),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.renamed),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
     slug: v.string(),
     previousSlug: v.string(),
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.copied),
-    itemId: v.id('sidebarItems'),
-    sourceItemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
+    sourceItemId: resourceIdValidator,
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.moved),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.trashed),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.restored),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.deletedForever),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.noop),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
   }),
 )
 
@@ -200,11 +204,11 @@ const fileSystemSummaryValidator = v.object({
 })
 
 const sidebarItemSnapshotValidator = v.object({
-  id: v.id('sidebarItems'),
+  id: resourceIdValidator,
   createdAt: v.number(),
   name: v.string(),
   slug: v.string(),
-  parentId: v.nullable(v.id('sidebarItems')),
+  parentId: v.nullable(resourceIdValidator),
   workspaceId: campaignIdValidator,
   type: sidebarItemTypeValidator,
   color: v.nullable(v.string()),
@@ -231,7 +235,7 @@ const sidebarItemPatchCommonFields = {
   slug: v.optional(v.string()),
   iconName: v.optional(v.nullable(v.string())),
   color: v.optional(v.nullable(v.string())),
-  parentId: v.optional(v.nullable(v.id('sidebarItems'))),
+  parentId: v.optional(v.nullable(resourceIdValidator)),
   status: v.optional(sidebarItemStatusValidator),
   allPermissionLevel: v.optional(v.nullable(permissionLevelValidator)),
   previewAssetId: v.optional(v.nullable(assetIdValidator)),
@@ -253,7 +257,7 @@ const sidebarItemShareSnapshotValidator = v.object({
   id: resourceShareIdValidator,
   createdAt: v.number(),
   workspaceId: campaignIdValidator,
-  resourceId: v.id('sidebarItems'),
+  resourceId: resourceIdValidator,
   sidebarItemType: sidebarItemTypeValidator,
   memberId: campaignMemberIdValidator,
   sessionId: v.nullable(sessionIdValidator),
@@ -276,12 +280,12 @@ const sidebarItemSharePatchFieldsValidator = v.object({
   permissionLevel: v.nullable(permissionLevelValidator),
 })
 
-const folderShareSnapshotValidator = v.object({
-  folderId: v.id('sidebarItems'),
+const folderSharePatchFieldsValidator = v.object({
   inheritShares: v.boolean(),
 })
 
-const folderSharePatchFieldsValidator = v.object({
+const storedFolderShareSnapshotValidator = v.object({
+  folderId: v.id('sidebarItems'),
   inheritShares: v.boolean(),
 })
 
@@ -307,13 +311,13 @@ export const fileSystemPatchValidator = v.union(
   }),
   v.object({
     type: v.literal('updateResource'),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
     before: sidebarItemPatchPreconditionValidator,
     fields: sidebarItemPatchFieldsValidator,
   }),
   v.object({
     type: v.literal('removeResource'),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
     snapshot: sidebarItemSnapshotValidator,
   }),
   v.object({
@@ -322,7 +326,7 @@ export const fileSystemPatchValidator = v.union(
   }),
   v.object({
     type: v.literal('updateResourceShare'),
-    resourceId: v.id('sidebarItems'),
+    resourceId: resourceIdValidator,
     memberId: campaignMemberIdValidator,
     before: sidebarItemSharePatchFieldsValidator,
     fields: sidebarItemSharePatchFieldsValidator,
@@ -333,13 +337,13 @@ export const fileSystemPatchValidator = v.union(
   }),
   v.object({
     type: v.literal('updateFolderShare'),
-    folderId: v.id('sidebarItems'),
+    folderId: resourceIdValidator,
     before: folderSharePatchFieldsValidator,
     fields: folderSharePatchFieldsValidator,
   }),
   v.object({
     type: v.literal('setResourceBookmarkState'),
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
     isBookmarked: v.boolean(),
   }),
 )
@@ -376,8 +380,8 @@ export const fileSystemChangeValidator = v.union(
   }),
   v.object({
     type: v.literal('updateFolderShare'),
-    before: folderShareSnapshotValidator,
-    after: folderShareSnapshotValidator,
+    before: storedFolderShareSnapshotValidator,
+    after: storedFolderShareSnapshotValidator,
   }),
   v.object({
     type: v.literal('updateResourceBookmarkState'),

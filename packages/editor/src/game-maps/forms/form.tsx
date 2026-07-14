@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef, useState } from 'react'
 import type { ResourceColor, ResourceIconName } from '../../workspace/resource-contract'
 
 import { toast } from 'sonner'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { handleError } from '../../errors/handle-error'
 import { useNameValidation } from '../../filesystem/use-name-validation'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
@@ -27,7 +28,7 @@ interface MapFormValues {
 
 interface MapFormProps {
   mapState: MapFormEditState
-  mapId: SidebarItemId
+  mapId: ResourceId
   onClose: () => void
   onSuccess?: (mapSlug?: string) => void
   source: MapFormSource
@@ -44,7 +45,7 @@ export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }:
   const { updateItemMetadata, updateMapImage } = source
   const map = mapState.item
   const [values, setValues] = useState(() => getMapFormDefaultValues(map))
-  const loadedMapIdRef = useRef<SidebarItemId | null>(map?.id ?? null)
+  const loadedMapIdRef = useRef<ResourceId | null>(map?.id ?? null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
@@ -198,7 +199,7 @@ async function replaceMapImageFromForm({
   selectedFile,
   updateMapImage,
 }: {
-  mapId: SidebarItemId
+  mapId: ResourceId
   selectedFile: File
   updateMapImage: MapFormSource['updateMapImage']
 }) {

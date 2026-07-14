@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import type { RefObject } from 'react'
@@ -9,7 +10,7 @@ import { WikiLinkAutocomplete } from '../autocomplete'
 import type { AnyItem } from '../../../workspace/items'
 import type { CustomBlockNoteEditor } from '../../editor-schema'
 import type { NoteValueRuntimeState } from '../../values/state-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { WikiLinkAutocompleteMenuState } from '../autocomplete-source'
 import {
   createWikiLinkAutocompleteModelData,
@@ -86,8 +87,8 @@ function TestWikiLinkAutocomplete({
 }: {
   editor: CustomBlockNoteEditor | undefined
   onForceOpenRef?: RefObject<(() => void) | null>
-  persistedValues?: Array<NoteValueRuntimeState<SidebarItemId>>
-  sourceNoteId?: SidebarItemId
+  persistedValues?: Array<NoteValueRuntimeState<ResourceId>>
+  sourceNoteId?: ResourceId
   visibleItems: Array<AnyItem>
 }) {
   const runtime = createTestWorkspaceRuntime({ activeItems: visibleItems })
@@ -139,13 +140,13 @@ describe('WikiLinkAutocomplete', () => {
 
   it('uses live current-note values for qualified value autocomplete', async () => {
     const currentNote = createNote({
-      id: 'note-1' as SidebarItemId,
+      id: 'note-1' as ResourceId,
       name: 'Current Note',
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
 
     const { editor, openAutocomplete } = createEditorStub('[[Current Note.')
-    const currentNoteValue: NoteValueRuntimeState<SidebarItemId> = {
+    const currentNoteValue: NoteValueRuntimeState<ResourceId> = {
       noteId: currentNote.id,
       noteBlockId: 'block-1',
       valueId: 'value-1',
@@ -220,8 +221,8 @@ function createAutocompleteItemSource(
 }
 
 function createValueRuntime(
-  noteId: SidebarItemId,
-  authoredValueStates: Array<NoteValueRuntimeState<SidebarItemId>>,
+  noteId: ResourceId,
+  authoredValueStates: Array<NoteValueRuntimeState<ResourceId>>,
 ): NoteValueRuntimeContextValue {
   return {
     noteId,

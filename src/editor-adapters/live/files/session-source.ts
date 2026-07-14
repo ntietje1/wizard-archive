@@ -6,7 +6,7 @@ import type {
   WizardEditorFileContentSourceInput,
   WizardEditorFileSessionReplaceInput,
 } from '@wizard-archive/editor/adapter'
-import type { Id } from 'convex/_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { uploadToStorage, useStorageUploadMutations } from '../shared/upload-helpers'
 import { handleError } from '~/shared/utils/logger'
 
@@ -79,12 +79,12 @@ async function uploadAndAttachFileStorage({
   updateFileStorage,
 }: {
   file: LiveFileUploadSource
-  fileId: string
+  fileId: ResourceId
   generatePdfPreviewIfNeeded: ReturnType<typeof usePdfPreviewUpload>['generatePdfPreviewIfNeeded']
   onProgress?: (percentage: number) => void
   storageUploadMutations: ReturnType<typeof useStorageUploadMutations>
   updateFileStorage: (args: {
-    fileId: Id<'sidebarItems'>
+    fileId: ResourceId
     uploadSessionId: Awaited<ReturnType<typeof uploadToStorage>>['sessionId']
   }) => Promise<unknown>
 }) {
@@ -95,7 +95,7 @@ async function uploadAndAttachFileStorage({
   )
   try {
     await updateFileStorage({
-      fileId: fileId as Id<'sidebarItems'>,
+      fileId,
       uploadSessionId: upload.sessionId,
     })
   } catch (error) {
@@ -109,7 +109,7 @@ async function uploadAndAttachFileStorage({
 
 function generatePdfPreview(
   file: LiveFileUploadSource,
-  fileId: string,
+  fileId: ResourceId,
   generatePdfPreviewIfNeeded: ReturnType<typeof usePdfPreviewUpload>['generatePdfPreviewIfNeeded'],
 ) {
   void Promise.resolve(generatePdfPreviewIfNeeded(file, fileId)).catch((error) => {

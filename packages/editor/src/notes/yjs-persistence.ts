@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useEffect, useRef } from 'react'
 import type { Doc } from 'yjs'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { NoteProjectionResult } from '../../../../shared/yjs-sync/note-projection'
 import { NOTE_YJS_PERSIST_DEBOUNCE_MS, NOTE_YJS_PERSIST_INTERVAL_MS } from './session-timing'
 
@@ -11,7 +12,7 @@ type NoteYjsPersistenceSession<Provider> = {
 }
 
 type NoteYjsBeforeDestroyState<Provider> = {
-  noteId: SidebarItemId
+  noteId: ResourceId
   sourceId: string
   provider: Provider
 }
@@ -20,7 +21,7 @@ type NoteYjsPersistenceAdapter<Provider> = {
   flushProvider: (provider: Provider, label: string) => Promise<boolean> | boolean
   isApplyingRemoteUpdate: (provider: Provider) => boolean
   persistNote: (
-    noteId: SidebarItemId,
+    noteId: ResourceId,
     sourceId: string,
   ) => Promise<NoteProjectionResult> | NoteProjectionResult
   reportError: (message: string, error?: unknown) => void
@@ -39,7 +40,7 @@ type PersistLifecycle = {
 }
 
 type UseNoteYjsPersistenceLifecycleOptions<Provider> = {
-  noteId: SidebarItemId
+  noteId: ResourceId
   sourceId: string | null | undefined
   canEdit: boolean
   session: NoteYjsPersistenceSession<Provider>
@@ -242,7 +243,7 @@ function runPersistCycle<Provider>({
   lifecycle: PersistLifecycle
   adapter: NoteYjsPersistenceAdapter<Provider>
   provider: Provider | null
-  noteId: SidebarItemId
+  noteId: ResourceId
   sourceId: string
   label: string
   errorMessage: string
@@ -277,6 +278,6 @@ function runPersistCycle<Provider>({
   return true
 }
 
-function persistLifecycleKey(noteId: SidebarItemId, sourceId: string | null | undefined) {
+function persistLifecycleKey(noteId: ResourceId, sourceId: string | null | undefined) {
   return `${noteId}:${sourceId ?? ''}`
 }

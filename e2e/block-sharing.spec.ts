@@ -32,8 +32,11 @@ import {
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import { signInByApi } from './helpers/auth-helpers'
 import type { Browser } from '@playwright/test'
-import type { Id } from 'convex/_generated/dataModel'
-import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  CampaignMemberId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { ShareStatus } from '../shared/block-shares/share-status'
 import type { PermissionLevel } from 'shared/permissions/types'
 
@@ -52,7 +55,7 @@ const conditionalBlockText = `Conditional block ${Date.now()}`
 const PLAYER_AUTH_STORAGE_PATH = 'e2e/.auth/player.json'
 
 let campaignId: CampaignId
-let noteId: Id<'sidebarItems'>
+let noteId: ResourceId
 let playerMemberId: CampaignMemberId
 let dmUsername: string
 let campaignSlug: string

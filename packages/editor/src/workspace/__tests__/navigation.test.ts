@@ -1,11 +1,11 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { createWorkspaceResource, resolveWorkspaceNavigationState } from '../runtime'
-import { testId } from '../../test/id'
 import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory'
 
 describe('workspace navigation', () => {
   it('resolves trash and requested item states before default workspace destinations', () => {
-    const resource = createWorkspaceResource(testId<'sidebarItems'>('note-1'))
+    const resource = createWorkspaceResource(testResourceId('note-1'))
 
     expect(
       resolveWorkspaceNavigationState({
@@ -61,7 +61,7 @@ describe('workspace navigation', () => {
   })
 
   it('ignores an available resource when resource navigation was not requested', () => {
-    const resource = createWorkspaceResource(testId<'sidebarItems'>('note-1'))
+    const resource = createWorkspaceResource(testResourceId('note-1'))
 
     expect(
       resolveWorkspaceNavigationState({

@@ -3,6 +3,7 @@ import type { WizardEditorFileSessionReplaceInput } from '@wizard-archive/editor
 import { useClaimAndUploadPreview } from './use-claim-and-upload-preview'
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 type LivePdfPreviewFile = File | WizardEditorFileSessionReplaceInput['file']
 
@@ -11,7 +12,7 @@ export function usePdfPreviewUpload() {
 
   async function generatePdfPreviewIfNeeded(
     file: LivePdfPreviewFile,
-    fileId: WizardEditorFileSessionReplaceInput['fileId'],
+    fileId: ResourceId,
     options?: { signal?: AbortSignal },
   ) {
     try {

@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import { RESOURCE_COMMAND_TYPE, RESOURCE_EVENT_TYPE } from '../transaction-contract'
@@ -7,12 +7,12 @@ import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
 
 export const commandFixtureItemIds = {
-  item: 'fixture_item' as SidebarItemId,
-  source: 'fixture_source' as SidebarItemId,
-  destination: 'fixture_destination' as SidebarItemId,
-  folder: 'fixture_folder' as SidebarItemId,
+  item: 'fixture_item' as ResourceId,
+  source: 'fixture_source' as ResourceId,
+  destination: 'fixture_destination' as ResourceId,
+  folder: 'fixture_folder' as ResourceId,
   memberDomain: testDomainId(DOMAIN_ID_KIND.campaignMember, 'fixture_member'),
-  note: 'fixture_note' as SidebarItemId,
+  note: 'fixture_note' as ResourceId,
 } as const
 
 export const fileSystemCommandFixtures = {

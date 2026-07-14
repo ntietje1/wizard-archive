@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasReadOnlyPreview } from '../read-only-preview'
 import { ResourceContentSourceProvider } from '../../../filesystem/resource-content-context'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../document-contract'
 import type { ResourceContentSource } from '../../../filesystem/resource-content-source'
 
@@ -537,5 +538,5 @@ function createDomRect({ width, height }: { width: number; height: number }): DO
 }
 
 function createSidebarItemId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }

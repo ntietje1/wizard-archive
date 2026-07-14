@@ -8,18 +8,20 @@ import type { AnyItem } from '@wizard-archive/editor/resources/items'
 import type { Id } from '../../_generated/dataModel'
 import { assertConvexResourceTitle } from '../../sidebarItems/validation/name'
 import { assertConvexSidebarItemSlug } from '../../sidebarItems/validation/slug'
+import { testResourceId } from '../../../shared/test/resource-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 function makeItem(id: string, name: string, parentId: string | null = null): AnyItem {
   const rawSlug = name.toLowerCase().replace(/\s+/g, '-')
   const slug = rawSlug.length >= 3 ? rawSlug : rawSlug.padEnd(3, '0')
 
   return {
-    id: id as Id<'sidebarItems'>,
+    id: testResourceId(id),
     _id: id as Id<'sidebarItems'>,
     _creationTime: 0,
     name: name ? assertConvexResourceTitle(name) : ('' as AnyItem['name']),
     slug: name ? assertConvexSidebarItemSlug(slug) : ('invalid' as AnyItem['slug']),
-    parentId: parentId as Id<'sidebarItems'> | null,
+    parentId: parentId ? testResourceId(parentId) : null,
     campaignId: 'campaign1' as Id<'campaigns'>,
     type: 'notes',
     color: null,
@@ -41,14 +43,14 @@ function buildMap(items: Array<AnyItem>) {
   return new Map(items.map((i) => [i.id, i]))
 }
 
-function sidebarId(id: string): Id<'sidebarItems'> {
-  return id as Id<'sidebarItems'>
+function resourceId(id: string): ResourceId {
+  return testResourceId(id)
 }
 
 function resolveGlobalItemByPath(
   pathSegments: Array<string>,
   items: Array<AnyItem>,
-  itemsMap: Map<Id<'sidebarItems'>, AnyItem>,
+  itemsMap: Map<ResourceId, AnyItem>,
 ) {
   return resolveParsedItemPath('global', pathSegments, items, itemsMap)
 }
@@ -64,11 +66,11 @@ describe('resolveParsedItemPath global resolution', () => {
   const map = buildMap(items)
 
   it('resolves by name alone', () => {
-    expect(resolveGlobalItemByPath(['The Guild'], items, map)?.id).toBe('b')
+    expect(resolveGlobalItemByPath(['The Guild'], items, map)?.id).toBe(resourceId('b'))
   })
 
   it('resolves by full path', () => {
-    expect(resolveGlobalItemByPath(['Factions', 'The Guild'], items, map)?.id).toBe('b')
+    expect(resolveGlobalItemByPath(['Factions', 'The Guild'], items, map)?.id).toBe(resourceId('b'))
   })
 
   it('returns undefined for non-existent path', () => {
@@ -76,16 +78,18 @@ describe('resolveParsedItemPath global resolution', () => {
   })
 
   it('is case-insensitive', () => {
-    expect(resolveGlobalItemByPath(['the guild'], items, map)?.id).toBe('b')
+    expect(resolveGlobalItemByPath(['the guild'], items, map)?.id).toBe(resourceId('b'))
   })
 
   it('ignores surrounding whitespace in path segments', () => {
-    expect(resolveGlobalItemByPath(['  factions  ', '  the guild  '], items, map)?.id).toBe('b')
+    expect(resolveGlobalItemByPath(['  factions  ', '  the guild  '], items, map)?.id).toBe(
+      resourceId('b'),
+    )
   })
 
   it('prefers the alphabetically earlier full path for ambiguous names', () => {
     const result = resolveGlobalItemByPath(['Design'], items, map)
-    expect(result?.id).toBe('e')
+    expect(result?.id).toBe(resourceId('e'))
   })
 
   it('prefers the item highest in the sidebar hierarchy for ambiguous paths', () => {
@@ -97,7 +101,7 @@ describe('resolveParsedItemPath global resolution', () => {
     ]
     const nestedMap = buildMap(nestedItems)
 
-    expect(resolveGlobalItemByPath(['Tavern'], nestedItems, nestedMap)?.id).toBe('c')
+    expect(resolveGlobalItemByPath(['Tavern'], nestedItems, nestedMap)?.id).toBe(resourceId('c'))
   })
 
   it('breaks ties alphabetically by full path', () => {
@@ -109,7 +113,7 @@ describe('resolveParsedItemPath global resolution', () => {
     ]
     const tiedMap = buildMap(tiedItems)
 
-    expect(resolveGlobalItemByPath(['Guild'], tiedItems, tiedMap)?.id).toBe('d')
+    expect(resolveGlobalItemByPath(['Guild'], tiedItems, tiedMap)?.id).toBe(resourceId('d'))
   })
 
   it('does not match collapsed paths through unnamed ancestors', () => {
@@ -122,7 +126,7 @@ describe('resolveParsedItemPath global resolution', () => {
     const unnamedAncestorMap = buildMap(unnamedAncestorItems)
 
     expect(resolveGlobalItemByPath(['A', 'C'], unnamedAncestorItems, unnamedAncestorMap)?.id).toBe(
-      'd',
+      resourceId('d'),
     )
   })
 })
@@ -137,14 +141,14 @@ describe('resolveParsedItemPath', () => {
   const map = buildMap(items)
 
   it('uses global resolution for bare paths', () => {
-    expect(resolveParsedItemPath('global', ['Atlas'], items, map)?.id).toBe('atlas')
+    expect(resolveParsedItemPath('global', ['Atlas'], items, map)?.id).toBe(resourceId('atlas'))
   })
 
   it('uses relative resolution when requested', () => {
     expect(
-      resolveParsedItemPath('relative', ['..', 'North', 'Atlas'], items, map, sidebarId('north'))
+      resolveParsedItemPath('relative', ['..', 'North', 'Atlas'], items, map, resourceId('north'))
         ?.id,
-    ).toBe('atlas')
+    ).toBe(resourceId('atlas'))
   })
 })
 

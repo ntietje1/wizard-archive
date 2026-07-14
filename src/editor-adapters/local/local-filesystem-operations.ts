@@ -1,7 +1,7 @@
 import type { Dispatch } from 'react'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { OperationId } from '@wizard-archive/editor/resources/domain-id'
+import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import {
   completeWizardEditorResourceCommand,
   isWizardEditorResourceCatalogCommand,
@@ -36,13 +36,13 @@ type LocalCommittedFileSystemCommand = Exclude<
   WizardEditorResourceCreateCommand | WizardEditorResourceRenameCommand
 >
 type LocalCreatedPathFolderEntry = {
-  id: SidebarItemId
+  id: ResourceId
   key: string
   owner: symbol
 }
 type LocalPathFolderReservation = {
   committed: boolean
-  id: SidebarItemId
+  id: ResourceId
   owners: Set<symbol>
 }
 type LocalCreatedTransaction = {
@@ -75,7 +75,7 @@ type LocalCommandContext = Omit<
 
 type LocalFileSystemClipboard = {
   scopeId: string
-  itemIds: Array<SidebarItemId>
+  itemIds: Array<ResourceId>
   mode: 'copy' | 'cut'
   workspaceId: string
 }
@@ -165,7 +165,7 @@ function createLocalItemOperations({
       canRedo: false,
     },
     trashDialogDriver: {
-      confirmDeleteForever: (itemIds: Array<SidebarItemId>) => {
+      confirmDeleteForever: (itemIds: Array<ResourceId>) => {
         return executeCommand({ type: WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.deleteForever, itemIds })
       },
       confirmEmptyTrash: () => {
@@ -173,14 +173,14 @@ function createLocalItemOperations({
       },
     },
     clipboardDriver: {
-      copy: (itemIds: Array<SidebarItemId>) => {
+      copy: (itemIds: Array<ResourceId>) => {
         localFileSystemClipboard = createLocalClipboard('copy', {
           itemIds,
           scopeId: clipboardScopeId,
           workspaceId,
         })
       },
-      cut: (itemIds: Array<SidebarItemId>) => {
+      cut: (itemIds: Array<ResourceId>) => {
         assertLocalCanMutate(canEdit)
         localFileSystemClipboard = createLocalClipboard('cut', {
           itemIds,
@@ -194,9 +194,9 @@ function createLocalItemOperations({
         if (hadClipboard) localFileSystemClipboard = null
         return hadClipboard
       },
-      canPaste: (_targetParentId?: SidebarItemId | null) =>
+      canPaste: (_targetParentId?: ResourceId | null) =>
         canEdit && canUseLocalClipboard({ scopeId: clipboardScopeId, workspaceId }),
-      paste: (targetParentId: SidebarItemId | null = null) =>
+      paste: (targetParentId: ResourceId | null = null) =>
         pasteLocalClipboard({
           catalog: getCatalog(),
           executeCommand,
@@ -255,7 +255,7 @@ function executeLocalCreateCommand(
     [
       {
         type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.created,
-        itemId: creation.id as SidebarItemId,
+        itemId: creation.id as ResourceId,
         slug: creation.slug,
       },
     ],
@@ -296,7 +296,7 @@ function executeLocalRenameCommand(
 
 function createLocalRenameSlug(
   catalog: WizardEditorResourceCatalog,
-  itemId: SidebarItemId,
+  itemId: ResourceId,
   name: string,
 ) {
   const value = deduplicateSlug(
@@ -358,7 +358,7 @@ function createLocalClipboard(
     scopeId,
     workspaceId,
   }: {
-    itemIds: Array<SidebarItemId>
+    itemIds: Array<ResourceId>
     scopeId: string
     workspaceId: string
   },
@@ -385,7 +385,7 @@ function pasteLocalClipboard({
 }: {
   catalog: WizardEditorResourceCatalog
   executeCommand: (command: WizardEditorResourceCommand) => WizardEditorResourceCommandResult
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   scopeId: string
   workspaceId: string
 }) {
@@ -436,7 +436,7 @@ function resolveLocalCreateParentTarget({
   pathFolderOwner: symbol
 }): {
   createdPathFolderEntries: Array<LocalCreatedPathFolderEntry>
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
 } {
   if (parentTarget.kind === 'direct') {
     return { createdPathFolderEntries: [], parentId: parentTarget.parentId }
@@ -447,7 +447,7 @@ function resolveLocalCreateParentTarget({
   }
 
   const createdPathFolderEntries: Array<LocalCreatedPathFolderEntry> = []
-  let currentParentId: SidebarItemId | null = null
+  let currentParentId: ResourceId | null = null
   for (const targetFolder of parentPlan.folders) {
     if (targetFolder.kind === 'existing') {
       currentParentId = targetFolder.id
@@ -474,7 +474,7 @@ function resolveLocalCreateParentTarget({
       parentId: currentParentId ? String(currentParentId) : null,
       type: 'folder',
     })
-    const folderId = creation.id as SidebarItemId
+    const folderId = creation.id as ResourceId
     dispatch({
       type: 'createItem',
       creation,
@@ -492,7 +492,7 @@ function resolveLocalCreateParentTarget({
 }
 
 function resolveCreatedLocalPathFolder(
-  parentId: SidebarItemId | null,
+  parentId: ResourceId | null,
   name: string,
   createdPathFolders: ReadonlyMap<string, LocalPathFolderReservation>,
   owner: symbol,
@@ -549,7 +549,7 @@ function collectLocalPathFolderRollbackItemIds(
   return itemIds
 }
 
-function createLocalPathFolderKey(parentId: SidebarItemId | null, name: string) {
+function createLocalPathFolderKey(parentId: ResourceId | null, name: string) {
   return `${parentId ?? 'root'}:${normalizeLocalPathFolderName(name)}`
 }
 

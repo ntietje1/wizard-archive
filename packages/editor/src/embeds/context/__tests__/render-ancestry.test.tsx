@@ -1,10 +1,10 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import { EmbedAncestryProvider } from '../render-ancestry'
 import { useEmbedAncestry } from '../render-ancestry-context'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
-function Probe({ id }: { id: SidebarItemId }) {
+function Probe({ id }: { id: ResourceId }) {
   const ancestry = useEmbedAncestry()
   return <div>{ancestry.has(id) ? 'recursive' : 'clear'}</div>
 }
@@ -36,6 +36,6 @@ describe('EmbedAncestryProvider', () => {
   })
 })
 
-function sidebarItemId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function sidebarItemId(value: string): ResourceId {
+  return value as ResourceId
 }

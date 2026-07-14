@@ -10,11 +10,12 @@ import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
 import { assertConvexSidebarItemSlug } from './validation/slug'
+import { resourceIdValidator } from '../resources/validators'
 
 const sidebarItemAccessLookupValidator = v.union(
   v.object({
     kind: v.literal('id'),
-    id: v.id('sidebarItems'),
+    id: resourceIdValidator,
   }),
   v.object({
     kind: v.literal('slug'),
@@ -51,7 +52,7 @@ export const getSidebarItems = campaignQuery({
 
 export const getSidebarItemsByParent = campaignQuery({
   args: {
-    parentId: v.nullable(v.id('sidebarItems')),
+    parentId: v.nullable(resourceIdValidator),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args) => {
@@ -63,7 +64,7 @@ export const getSidebarItemsByParent = campaignQuery({
 
 export const getSidebarItem = campaignQuery({
   args: {
-    id: v.id('sidebarItems'),
+    id: resourceIdValidator,
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args) => {

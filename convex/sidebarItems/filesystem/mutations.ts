@@ -23,15 +23,15 @@ import {
 } from './transactions'
 import { fileSystemCommandValidator, fileSystemTransactionReceiptValidator } from './validators'
 import type { StoredResourceDelta } from './deltas'
-import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { operationIdValidator } from '../../resources/validators'
 const MAX_FILE_SYSTEM_COMMAND_ITEMS = 100
 
-type FileSystemCommandWithItemIds = Extract<ResourceCommand, { itemIds: Array<Id<'sidebarItems'>> }>
+type FileSystemCommandWithItemIds = Extract<ResourceCommand, { itemIds: Array<ResourceId> }>
 
-function uniqueItemIds(itemIds: Array<Id<'sidebarItems'>>) {
+function uniqueItemIds(itemIds: Array<ResourceId>) {
   return Array.from(new Set(itemIds))
 }
 
@@ -45,7 +45,7 @@ function normalizeCommand(command: ResourceCommand): ResourceCommand {
     : command
 }
 
-function commandItemIds(command: ResourceCommand): Array<Id<'sidebarItems'>> {
+function commandItemIds(command: ResourceCommand): Array<ResourceId> {
   return commandHasItemIds(command) ? command.itemIds : []
 }
 

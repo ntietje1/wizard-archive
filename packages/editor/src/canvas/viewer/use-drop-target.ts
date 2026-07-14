@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useMemo, useRef } from 'react'
 import {
   createEmbedCanvasNode,
@@ -19,7 +20,7 @@ import type { CanvasCollaborationProvider } from '../session-contract'
 import type { CanvasDocumentNode } from '../document-contract'
 import type { CanvasDocumentWriter } from '../tools/canvas-tool-types'
 import { useCanAcceptExternalFiles, useDndRuntimeDropData } from '../../drag-drop/context'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { EmbedTargetUploadFileResult } from '../../embeds/target-operations'
 import { resourceEmbedTarget } from '../../embeds/utils/targets'
 import { runWithPendingEmbedUpload } from '../../embeds/pending-upload'
@@ -34,7 +35,7 @@ function reportCanvasDropError(error: unknown, fallbackMessage: string) {
 }
 
 interface UseCanvasDropTargetOptions {
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   enabled: boolean
   createNodes: (nodes: ReadonlyArray<CanvasDocumentNode>) => void
   patchNodeData: CanvasDocumentWriter['patchNodeData']

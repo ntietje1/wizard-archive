@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { File } from 'lucide-react'
 import { FileForm } from './form'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { FormDialog } from '@wizard-archive/ui/components/form-dialog'
 import type { FileUploadControl } from '@wizard-archive/ui/file-upload/control'
 import type { FileFormEditState, FileFormSource } from './source'
@@ -9,8 +10,8 @@ interface FileDialogProps {
   fileState: FileFormEditState
   isOpen: boolean
   onClose: () => void
-  fileId?: SidebarItemId
-  parentId?: SidebarItemId | null
+  fileId?: ResourceId
+  parentId?: ResourceId | null
   onSuccess?: (fileSlug?: string) => void
   source: FileFormSource
   upload: FileUploadControl

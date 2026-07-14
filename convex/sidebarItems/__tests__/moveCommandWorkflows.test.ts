@@ -44,10 +44,13 @@ describe('executeMoveCommand', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId: sourceFolder } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Source',
-    })
-    const { folderId: destinationFolder } = await createFolder(
+    const { folderId: sourceFolder, folderRowId: sourceFolderRow } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Source' },
+    )
+    const { folderId: destinationFolder, folderRowId: destinationFolderRow } = await createFolder(
       t,
       ctx.campaignId,
       ctx.dm.profile._id,
@@ -55,16 +58,26 @@ describe('executeMoveCommand', () => {
         name: 'Destination',
       },
     )
-    const { noteId: sourceNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-      slug: 'scene-source',
-      parentId: sourceFolder,
-    })
-    const { noteId: sourceSibling } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene 2',
-      slug: 'scene-2-source',
-      parentId: sourceFolder,
-    })
+    const { noteId: sourceNote, noteRowId: sourceNoteRow } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Scene',
+        slug: 'scene-source',
+        parentId: sourceFolder,
+      },
+    )
+    const { noteRowId: sourceSiblingRow } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Scene 2',
+        slug: 'scene-2-source',
+        parentId: sourceFolder,
+      },
+    )
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scene',
       slug: 'scene-destination',
@@ -78,13 +91,13 @@ describe('executeMoveCommand', () => {
     })
 
     const rows = await t.run(async (dbCtx) => ({
-      moved: await dbCtx.db.get('sidebarItems', sourceNote),
-      sourceSibling: await dbCtx.db.get('sidebarItems', sourceSibling),
+      moved: await dbCtx.db.get('sidebarItems', sourceNoteRow),
+      sourceSibling: await dbCtx.db.get('sidebarItems', sourceSiblingRow),
     }))
 
-    expect(rows.moved?.parentId).toBe(destinationFolder)
+    expect(rows.moved?.parentId).toBe(destinationFolderRow)
     expect(rows.moved?.name).toBe('Scene')
-    expect(rows.sourceSibling?.parentId).toBe(sourceFolder)
+    expect(rows.sourceSibling?.parentId).toBe(sourceFolderRow)
     expect(rows.sourceSibling?.name).toBe('Scene 2')
   })
 

@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { createSidebarItem } from './test-sidebar-item'
 import { planCopyTransfer, planMoveTransfer } from './transfer-planning-test-helpers'
 
@@ -39,7 +40,7 @@ describe('copy transfer planning', () => {
 describe('move transfer planning', () => {
   it('moves into a duplicate sibling title without changing metadata', () => {
     const source = createSidebarItem('note-1', 'Scene', RESOURCE_TYPES.notes, {
-      parentId: 'source-folder' as SidebarItemId,
+      parentId: 'source-folder' as ResourceId,
     })
 
     expect(

@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it } from 'vite-plus/test'
 import type { SurfaceDropPlanningContext } from '../planning-context'
 import {
@@ -7,7 +8,6 @@ import {
 } from '../drop-target-data'
 import { resolveSurfaceDropCommand } from '../surface-planner'
 import { createNote as createNoteFixture } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
 const campaignId = testCampaignId('campaign_1')
@@ -31,7 +31,7 @@ describe('resolveSurfaceDropCommand', () => {
     const second = createNote()
     const target = {
       type: MAP_DROP_ZONE_TYPE,
-      mapId: testId<'sidebarItems'>('map_99'),
+      mapId: testResourceId('map_99'),
       mapName: 'World Map',
       pinnedItemIds: [],
     }
@@ -173,7 +173,7 @@ describe('resolveSurfaceDropCommand', () => {
         [note],
         {
           type: MAP_DROP_ZONE_TYPE,
-          mapId: testId<'sidebarItems'>('map_99'),
+          mapId: testResourceId('map_99'),
           mapName: 'World Map',
           pinnedItemIds: [],
         },
@@ -188,7 +188,7 @@ describe('resolveSurfaceDropCommand', () => {
     expect(
       resolveSurfaceDropCommand(
         [note],
-        { type: NOTE_EDITOR_DROP_TYPE, noteId: testId<'sidebarItems'>('note_99') },
+        { type: NOTE_EDITOR_DROP_TYPE, noteId: testResourceId('note_99') },
         planningContext(),
       ),
     ).toEqual({ status: 'blocked', reason: 'wrong_workspace' })

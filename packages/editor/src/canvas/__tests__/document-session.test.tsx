@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
@@ -13,7 +14,7 @@ import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contrac
 import type { CanvasItemWithContent } from '../item-contract'
 import { createCanvasDocumentDoc } from '../document-contract'
 import { useCanvasDocumentSession } from '../use-document-session'
-import type { SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import type { UserProfileId } from '../../../../../shared/common/ids'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
 describe('useCanvasDocumentSession', () => {
@@ -139,12 +140,12 @@ describe('useCanvasDocumentSession', () => {
 
 function createCanvas(overrides: Partial<CanvasItemWithContent> = {}): CanvasItemWithContent {
   return {
-    id: 'canvas-1' as SidebarItemId,
+    id: 'canvas-1' as ResourceId,
     createdAt: 1,
     type: RESOURCE_TYPES.canvases,
     campaignId: testCampaignId('campaign-1'),
     name: 'Canvas' as ResourceTitle,
-    parentId: 'folder-1' as SidebarItemId,
+    parentId: 'folder-1' as ResourceId,
     iconName: null,
     color: null,
     slug: 'canvas' as ResourceSlug,

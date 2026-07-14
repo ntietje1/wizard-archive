@@ -17,8 +17,13 @@ import type {
   ResourceTransactionReceipt,
 } from '@wizard-archive/editor/resources/transaction-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  CampaignMemberId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
+import { resourceIdValidator } from '../resources/validators'
 
 type BlockShareActionCtx = Pick<ActionCtx, 'runMutation' | 'runQuery'>
 type BlockShareActionCommand = Extract<
@@ -51,21 +56,25 @@ async function executeProjectedBlockShareCommand(
     historyStatus?: 'shared' | 'unshared'
   },
 ): Promise<ResourceTransactionReceipt> {
-  await ctx.runMutation(internal.blockShares.internalMutations.authorizeBlockShareAction, {
-    campaignId: args.campaignId,
-    noteId: args.command.noteId,
-  })
+  const noteRowId = await ctx.runMutation(
+    internal.blockShares.internalMutations.authorizeBlockShareAction,
+    {
+      campaignId: args.campaignId,
+      noteId: args.command.noteId,
+    },
+  )
   const command = {
     ...args.command,
     blockNoteIds: normalizeBlockShareTargetIds(args.command.blockNoteIds),
   } as BlockShareActionCommand
-  const content = await readProjectedBlocks(ctx, command.noteId)
+  const content = await readProjectedBlocks(ctx, noteRowId)
   const receipt: ResourceTransactionReceipt = await ctx.runMutation(
     internal.blockShares.internalMutations.executeBlockShareCommand,
     {
       campaignId: args.campaignId,
       command,
       content,
+      noteRowId,
       historyStatus: args.historyStatus,
       operationId: generateDomainId(DOMAIN_ID_KIND.operation),
     },
@@ -83,7 +92,7 @@ function blockMemberPermissionCommand({
   noteId,
   permissionLevel,
 }: {
-  noteId: Id<'sidebarItems'>
+  noteId: ResourceId
   blockNoteIds: Array<string>
   campaignMemberId: CampaignMemberId
   permissionLevel: 'none' | 'view' | null
@@ -99,7 +108,7 @@ function blockMemberPermissionCommand({
 
 const blockMemberActionArgs = {
   campaignId: campaignIdValidator,
-  noteId: v.id('sidebarItems'),
+  noteId: resourceIdValidator,
   blockNoteIds: v.array(blockNoteIdValidator),
   campaignMemberId: campaignMemberIdValidator,
 }
@@ -112,7 +121,7 @@ function createBlockMemberPermissionHandler(
     ctx: BlockShareActionCtx,
     args: {
       campaignId: CampaignId
-      noteId: Id<'sidebarItems'>
+      noteId: ResourceId
       blockNoteIds: Array<string>
       campaignMemberId: CampaignMemberId
     },
@@ -134,7 +143,7 @@ function createBlockMemberPermissionHandler(
 export const setBlocksShareStatus = action({
   args: {
     campaignId: campaignIdValidator,
-    noteId: v.id('sidebarItems'),
+    noteId: resourceIdValidator,
     blockNoteIds: v.array(blockNoteIdValidator),
     status: blockShareStatusValidator,
   },
@@ -168,7 +177,7 @@ export const unshareBlocks = action({
 export const setBlockMemberPermission = action({
   args: {
     campaignId: campaignIdValidator,
-    noteId: v.id('sidebarItems'),
+    noteId: resourceIdValidator,
     blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: campaignMemberIdValidator,
     permissionLevel: v.nullable(blockVisibilityPermissionLevelValidator),

@@ -1,5 +1,7 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { CREATE_PARENT_TARGET_KIND } from '../../items'
 import type { AnyItem } from '../../items'
 import {
@@ -9,14 +11,13 @@ import {
 import { RESOURCE_STATUS } from '../../items-persistence-contract'
 import { validateCreateItemLocally } from '../../items/local-create-validation'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 
 function buildValidationSource(
   items: Array<AnyItem>,
   options: { includeInactiveChildren?: boolean } = {},
 ) {
   const itemsById = new Map(items.map((item) => [item.id, item]))
-  const map = new Map<SidebarItemId | null, Array<AnyItem>>()
+  const map = new Map<ResourceId | null, Array<AnyItem>>()
 
   for (const item of items) {
     if (!options.includeInactiveChildren && item.status !== RESOURCE_STATUS.active) continue
@@ -26,8 +27,8 @@ function buildValidationSource(
   }
 
   return {
-    getItemById: (itemId: SidebarItemId) => itemsById.get(itemId),
-    getActiveChildren: (parentId: SidebarItemId | null) => map.get(parentId) ?? [],
+    getItemById: (itemId: ResourceId) => itemsById.get(itemId),
+    getActiveChildren: (parentId: ResourceId | null) => map.get(parentId) ?? [],
   }
 }
 
@@ -50,7 +51,7 @@ describe('validateCreateParentTarget', () => {
 
   it('rejects non-folder collisions in the path', () => {
     const note = createNote({
-      id: testId('note_path_collision'),
+      id: testResourceId('note_path_collision'),
       name: 'Taken',
       parentId: null,
     })
@@ -72,7 +73,7 @@ describe('validateCreateParentTarget', () => {
 
   it('rejects a trashed direct parent', () => {
     const folder = createFolder({
-      id: testId('trashed_direct_parent'),
+      id: testResourceId('trashed_direct_parent'),
       status: RESOURCE_STATUS.trashed,
     })
 
@@ -92,7 +93,7 @@ describe('validateCreateParentTarget', () => {
 
   it('rejects a trashed path base parent', () => {
     const folder = createFolder({
-      id: testId('trashed_path_base_parent'),
+      id: testResourceId('trashed_path_base_parent'),
       status: RESOURCE_STATUS.trashed,
     })
 
@@ -113,12 +114,12 @@ describe('validateCreateParentTarget', () => {
 
   it('rejects path parents whose ancestor chain contains a non-folder item', () => {
     const noteAncestor = createNote({
-      id: testId('note_path_ancestor'),
+      id: testResourceId('note_path_ancestor'),
       name: 'Scene',
       parentId: null,
     })
     const childFolder = createFolder({
-      id: testId('folder_under_note'),
+      id: testResourceId('folder_under_note'),
       name: 'Impossible Folder',
       parentId: noteAncestor.id,
     })
@@ -140,7 +141,7 @@ describe('validateCreateParentTarget', () => {
 
   it('does not resolve trashed child folders as path parents', () => {
     const folder = createFolder({
-      id: testId('trashed_path_child_parent'),
+      id: testResourceId('trashed_path_child_parent'),
       name: 'Archive',
       parentId: null,
       status: RESOURCE_STATUS.trashed,
@@ -166,7 +167,7 @@ describe('validateCreateParentTarget', () => {
 describe('planCreateParentTarget', () => {
   it('plans existing and virtual path folders through package-owned create-parent semantics', () => {
     const folder = createFolder({
-      id: testId('folder_lore'),
+      id: testResourceId('folder_lore'),
       name: 'Lore',
       parentId: null,
     })
@@ -190,8 +191,8 @@ describe('planCreateParentTarget', () => {
   })
 
   it('reuses pending path folders before the catalog refreshes', () => {
-    const loreId = testId<'sidebarItems'>('pending_lore')
-    const capitalId = testId<'sidebarItems'>('pending_capital')
+    const loreId = testResourceId('pending_lore')
+    const capitalId = testResourceId('pending_capital')
 
     const result = planCreateParentTarget(
       {
@@ -219,8 +220,8 @@ describe('planCreateParentTarget', () => {
   })
 
   it('plans child paths under a pending base folder before the catalog refreshes', () => {
-    const loreId = testId<'sidebarItems'>('pending_lore')
-    const capitalId = testId<'sidebarItems'>('pending_capital')
+    const loreId = testResourceId('pending_lore')
+    const capitalId = testResourceId('pending_capital')
 
     const result = planCreateParentTarget(
       {
@@ -283,12 +284,12 @@ describe('validateCreateItemLocally', () => {
 
   it('accepts duplicate titles once the parent path resolves locally', () => {
     const folder = createFolder({
-      id: testId('folder_world'),
+      id: testResourceId('folder_world'),
       name: 'World',
       parentId: null,
     })
     const existingNote = createNote({
-      id: testId('note_capital'),
+      id: testResourceId('note_capital'),
       name: 'Capital',
       parentId: folder.id,
     })

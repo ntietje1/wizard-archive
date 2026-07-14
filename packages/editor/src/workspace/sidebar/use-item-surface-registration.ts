@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef } from 'react'
 import type { PointerEvent } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { useSidebarWorkspaceState } from './workspace-state'
 import type {
   SidebarWorkspaceItemSurface,
@@ -18,8 +19,8 @@ export function useItemSurfaceRegistration({
   visibleItemIds,
 }: {
   surface: SidebarWorkspaceItemSurfaceName
-  parentId: SidebarItemId | null
-  visibleItemIds: ReadonlyArray<SidebarItemId>
+  parentId: ResourceId | null
+  visibleItemIds: ReadonlyArray<ResourceId>
 }) {
   const {
     selection: { activeItemSurface },

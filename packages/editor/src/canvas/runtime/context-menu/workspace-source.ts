@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { toast } from 'sonner'
 import { createEmbedNodeContextMenuContributor } from '../../nodes/embed/embed-node-context-menu'
 import { createAndSelectResourceCanvasNode } from '../document/canvas-document-commands'
@@ -15,7 +16,7 @@ import type {
 } from './canvas-context-menu-types'
 import type { SidebarItemCreationCommand } from '../../../workspace/sidebar/creation-catalog'
 import type { CanvasDocumentSession } from '../../session-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { CanvasContextMenuRuntime } from './canvas-context-menu-runtime'
 
 export function createWorkspaceCanvasContextMenuSource({
@@ -25,7 +26,7 @@ export function createWorkspaceCanvasContextMenuSource({
 }: {
   runtime: CanvasContextMenuRuntime
   session: CanvasDocumentSession
-  showItemInSidebar: (itemId: SidebarItemId) => void
+  showItemInSidebar: (itemId: ResourceId) => void
 }): CanvasContextMenuSource | undefined {
   if (session.status !== 'ready') return undefined
   const { filesystem } = runtime
@@ -76,8 +77,8 @@ function createSidebarItemEmbedRevealContributor({
   showItemInSidebar,
 }: {
   openItem: CanvasContextMenuRuntime['navigation']['openItem']
-  resolveSidebarItemForEmbedTarget: (target: CanvasEmbedNodeTarget) => { id: SidebarItemId } | null
-  showItemInSidebar: (itemId: SidebarItemId) => void
+  resolveSidebarItemForEmbedTarget: (target: CanvasEmbedNodeTarget) => { id: ResourceId } | null
+  showItemInSidebar: (itemId: ResourceId) => void
 }): CanvasContextMenuContributor {
   return {
     id: 'embed-node-show-in-sidebar',
@@ -171,7 +172,7 @@ function getSidebarItemForEmbedTarget(
   embedTarget: CanvasEmbedNodeTarget,
 ) {
   if (embedTarget.target.kind !== 'resource') return null
-  return filesystem.catalog.getKnownItemById(embedTarget.target.resourceId as SidebarItemId) ?? null
+  return filesystem.catalog.getKnownItemById(embedTarget.target.resourceId as ResourceId) ?? null
 }
 
 async function openEmbedTarget(

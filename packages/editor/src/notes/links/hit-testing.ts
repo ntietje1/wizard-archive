@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type { LinkPathKind } from '../../../../../shared/links/types'
 import { LINK_ROLE } from './decoration'
 import type { LinkStatus, LinkType } from './decoration'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { ResourceSlug } from '../../workspace/resource-contract'
 
 interface ParsedLinkElement {
@@ -10,7 +11,7 @@ interface ParsedLinkElement {
   pathKind: LinkPathKind
   itemPath: Array<string>
   itemName: string | null
-  itemId: SidebarItemId | null
+  itemId: ResourceId | null
   itemSlug: ResourceSlug | null
   href: string | null
   heading: string | null
@@ -77,7 +78,7 @@ function parseLinkElement(linkEl: Element): ParsedLinkElement | null {
     pathKind,
     itemPath: itemPath ?? [],
     itemName: linkEl.getAttribute('data-link-item-name'),
-    itemId: linkEl.getAttribute('data-link-item-id') as SidebarItemId | null,
+    itemId: linkEl.getAttribute('data-link-item-id') as ResourceId | null,
     itemSlug: linkEl.getAttribute('data-link-slug') as ResourceSlug | null,
     href: linkEl.getAttribute('data-link-href'),
     heading: linkEl.getAttribute('data-link-heading'),

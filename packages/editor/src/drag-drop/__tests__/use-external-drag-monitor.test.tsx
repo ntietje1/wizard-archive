@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { DropResult } from '../file-drop'
@@ -8,11 +9,9 @@ import {
   SIDEBAR_ROOT_DROP_TYPE,
 } from '../drop-target-data'
 import { registerSurfaceFileImportExecutor } from '../drop-command-execution'
-import { defaultDndStoreApi as useDndStore } from '../store'
-import { resetDndStore } from './store-test-utils'
+import { defaultDndStoreApi as useDndStore, resetDndStore } from './store-test-utils'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
-import { testId } from '../../test/id'
 import { useExternalDragMonitor } from '../use-external-drag-monitor'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
 import { createFolder as createFolderFixture } from '../../test/sidebar-item-factory'
@@ -95,7 +94,7 @@ describe('useExternalDragMonitor', () => {
   })
 
   it('tracks the top external file drop target without treating note editors as sidebar root', () => {
-    const noteId = testId<'sidebarItems'>('note_target')
+    const noteId = testResourceId('note_target')
     const ctx = createMonitorCtx()
 
     renderHook(() =>
@@ -144,7 +143,7 @@ describe('useExternalDragMonitor', () => {
   it('clears external file drag state when the monitor disables mid-drag', () => {
     const cleanup = vi.fn()
     monitorForExternal.mockReturnValue(cleanup)
-    const noteId = testId<'sidebarItems'>('note_target')
+    const noteId = testResourceId('note_target')
     const ctx = createMonitorCtx()
 
     const { rerender } = renderHook(
@@ -180,7 +179,7 @@ describe('useExternalDragMonitor', () => {
   })
 
   it('clears the hovered external file target when the active target belongs to another runtime', () => {
-    const noteId = testId<'sidebarItems'>('note_target')
+    const noteId = testResourceId('note_target')
     const ctx = {
       ...createMonitorCtx(),
       runtimeId: 'runtime-b',
@@ -236,7 +235,7 @@ describe('useExternalDragMonitor', () => {
   })
 
   it('routes external files dropped on registered targets to the target executor', async () => {
-    const canvasId = testId<'sidebarItems'>('canvas_target')
+    const canvasId = testResourceId('canvas_target')
     const target = {
       type: CANVAS_DROP_ZONE_TYPE,
       canvasId,
@@ -289,7 +288,7 @@ describe('useExternalDragMonitor', () => {
   })
 
   it('imports mixed canvas file and folder drops through an explicit command sequence', async () => {
-    const canvasId = testId<'sidebarItems'>('canvas_target')
+    const canvasId = testResourceId('canvas_target')
     const target = {
       type: CANVAS_DROP_ZONE_TYPE,
       canvasId,
@@ -348,7 +347,7 @@ describe('useExternalDragMonitor', () => {
   })
 
   it('reports registered target executor failures without retrying the generic upload flow', async () => {
-    const canvasId = testId<'sidebarItems'>('canvas_target')
+    const canvasId = testResourceId('canvas_target')
     const target = {
       type: CANVAS_DROP_ZONE_TYPE,
       canvasId,
@@ -394,7 +393,7 @@ describe('useExternalDragMonitor', () => {
   })
 
   it('falls back to uploading into sidebar item targets by sidebar item id', async () => {
-    const folder = createFolderFixture({ id: testId<'sidebarItems'>('folder_target') })
+    const folder = createFolderFixture({ id: testResourceId('folder_target') })
     const file = new File(['content'], 'portrait.png', { type: 'image/png' })
     const dropResult: DropResult = {
       files: [{ file, relativePath: 'portrait.png' }],
@@ -433,7 +432,7 @@ describe('useExternalDragMonitor', () => {
   })
 
   it('ignores external drops on targets owned by another runtime', async () => {
-    const folderId = testId<'sidebarItems'>('folder_target')
+    const folderId = testResourceId('folder_target')
     const file = new File(['content'], 'portrait.png', { type: 'image/png' })
     const dropResult: DropResult = {
       files: [{ file, relativePath: 'portrait.png' }],
@@ -537,8 +536,8 @@ describe('useExternalDragMonitor', () => {
   })
 
   it('does not let a registered canvas executor intercept external drops for non-canvas targets', async () => {
-    const canvasId = testId<'sidebarItems'>('canvas_target')
-    const folderId = testId<'sidebarItems'>('folder_target')
+    const canvasId = testResourceId('canvas_target')
+    const folderId = testResourceId('folder_target')
     const dropResult: DropResult = {
       files: [],
       rootFolders: [{ name: 'Maps', relativePath: 'Maps', files: [], subfolders: [] }],

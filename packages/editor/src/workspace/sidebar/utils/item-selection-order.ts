@@ -1,23 +1,24 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { RESOURCE_TYPES } from '../../items-persistence-contract'
 import type { AnyItem } from '../../items'
 import type { SortOptions } from '../../items-persistence-contract'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { sortItemsByOptions } from './sidebar-item-sort'
 
 interface BuildVisibleSidebarItemIdsOptions {
-  getChildren: (parentId: SidebarItemId) => ReadonlyArray<AnyItem>
+  getChildren: (parentId: ResourceId) => ReadonlyArray<AnyItem>
   getRoots: () => ReadonlyArray<AnyItem>
-  expandedFolderIds: ReadonlySet<SidebarItemId>
+  expandedFolderIds: ReadonlySet<ResourceId>
   sortOptions: SortOptions
 }
 
 interface BuildVisibleSidebarItemIdsInternalOptions {
   getChildren: BuildVisibleSidebarItemIdsOptions['getChildren']
-  expandedFolderIds: ReadonlySet<SidebarItemId>
+  expandedFolderIds: ReadonlySet<ResourceId>
   items: ReadonlyArray<AnyItem>
   sortOptions: SortOptions
-  accumulator: Array<SidebarItemId>
-  visited: Set<SidebarItemId>
+  accumulator: Array<ResourceId>
+  visited: Set<ResourceId>
 }
 
 function appendVisibleSidebarItemIds({
@@ -27,7 +28,7 @@ function appendVisibleSidebarItemIds({
   sortOptions,
   accumulator,
   visited,
-}: BuildVisibleSidebarItemIdsInternalOptions): Array<SidebarItemId> {
+}: BuildVisibleSidebarItemIdsInternalOptions): Array<ResourceId> {
   const sortedItems = sortItemsByOptions(sortOptions, items)
 
   for (const item of sortedItems) {
@@ -51,7 +52,7 @@ function appendVisibleSidebarItemIds({
 
 export function buildVisibleSidebarItemIds(
   options: BuildVisibleSidebarItemIdsOptions,
-): Array<SidebarItemId> {
+): Array<ResourceId> {
   return appendVisibleSidebarItemIds({
     ...options,
     items: options.getRoots(),

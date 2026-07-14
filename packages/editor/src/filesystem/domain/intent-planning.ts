@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import {
   evaluateCopy,
   evaluateMoveToParent,
@@ -32,7 +32,7 @@ export type FileSystemIntentRejectionReason =
   | Extract<ResourceOperationCapability, { ok: false }>['code']
   | 'mixed_actions'
 
-type FileSystemDropParentTarget = Parameters<typeof evaluateMoveToParent>[2]
+type FileSystemDropParentTarget = Parameters<typeof evaluateMoveToParent<ResourceId>>[2]
 
 export type FileSystemDropTargetIntent =
   | { type: 'trash'; label: string }
@@ -77,7 +77,7 @@ function planTrashDropIntent({
   items: Array<OperationResourceItem>
   targetLabel: string
 }): FileSystemIntentResult {
-  const itemIds: Array<SidebarItemId> = []
+  const itemIds: Array<ResourceId> = []
 
   for (const item of items) {
     if (isTrashedSidebarItem(item)) continue
@@ -102,7 +102,7 @@ function planCopyDropIntent({
   target: FileSystemDropParentTarget
   targetLabel: string
 }): FileSystemIntentResult {
-  const itemIds: Array<SidebarItemId> = []
+  const itemIds: Array<ResourceId> = []
 
   for (const item of items) {
     const capability = evaluateCopy(actor, item, target)
@@ -137,8 +137,8 @@ function evaluateParentDrop(
 
 function readyParentCommand(
   action: 'move' | 'restore' | null,
-  itemIds: Array<SidebarItemId>,
-  targetParentId: SidebarItemId | null,
+  itemIds: Array<ResourceId>,
+  targetParentId: ResourceId | null,
   targetLabel: string,
 ): FileSystemIntentResult {
   if (!action || itemIds.length === 0) return { status: 'noop' }
@@ -157,7 +157,7 @@ function planParentDropIntent({
   targetLabel: string
 }): FileSystemIntentResult {
   let action: 'move' | 'restore' | null = null
-  const itemIds: Array<SidebarItemId> = []
+  const itemIds: Array<ResourceId> = []
 
   for (const item of items) {
     const itemAction = getParentDropAction(item, target)

@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../../resources/domain-id'
 import type { MouseEvent, ReactNode, Ref } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { ResourceTitle } from '../../../../resources/resource-contract'
-import type { SidebarItemId } from '../../../../../../../shared/common/ids'
+
 import type { SidebarItemVisualState } from '../../item-visual-state'
 
 interface SidebarItemHandlers {
@@ -22,7 +23,7 @@ interface SidebarItemPresentation {
 
 export interface SidebarItemButtonProps extends SidebarItemHandlers {
   icon: LucideIcon
-  itemId: SidebarItemId
+  itemId: ResourceId
   name: ResourceTitle
   nameContent?: ReactNode
   presentation: SidebarItemPresentation

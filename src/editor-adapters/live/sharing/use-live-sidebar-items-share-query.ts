@@ -2,7 +2,7 @@ import { useQueries } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { useConvexAuth } from 'convex/react'
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { UseQueryOptions } from '@tanstack/react-query'
 import type { FunctionReturnType } from 'convex/server'
 import { ERROR_CODE, isClientError } from 'shared/errors/client'
@@ -22,7 +22,7 @@ interface SidebarItemsShareQueryResult {
 }
 
 export function useLiveSidebarItemsShareQuery(
-  sidebarItemIds: Array<Id<'sidebarItems'>>,
+  sidebarItemIds: Array<ResourceId>,
 ): SidebarItemsShareQueryResult {
   const { campaignId: workspaceRecordId } = useCampaign()
   const { isAuthenticated, isLoading } = useConvexAuth()

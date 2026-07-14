@@ -1,6 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import {
@@ -13,8 +13,8 @@ import {
 import type { ResourceCommand } from '../transaction-contract'
 import { fileSystemCommandFixtures, fileSystemCommandReceiptEvents } from './command-fixtures'
 
-const sourceItemId = 'source' as SidebarItemId
-const itemId = 'item' as SidebarItemId
+const sourceItemId = 'source' as ResourceId
+const itemId = 'item' as ResourceId
 
 describe('summarizeResourceReceipt', () => {
   it('classifies catalog-backed commands in the package command contract', () => {

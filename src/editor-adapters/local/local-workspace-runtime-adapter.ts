@@ -23,8 +23,8 @@ import type {
 } from '@wizard-archive/editor/adapter'
 import type { Dispatch } from 'react'
 import type { WorkspaceMode } from 'shared/workspace/workspace-mode'
-import type { SidebarItemId } from 'shared/common/ids'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceAction } from './local-workspace-model'
 import { requireLocalCanvasPayload, requireLocalFilePayloadForItem } from './local-workspace-model'
 import { createLocalWorkspaceActor, getLocalCampaignMemberId } from './local-filesystem-snapshot'
@@ -117,7 +117,7 @@ export function createLocalWorkspaceRuntime({
   })
   const fileDocument: WizardEditorFileContentSourceInput = {
     canReplaceFile: () => canMutateWorkspace,
-    getItemById: (itemId) => catalog.getKnownItemById(itemId as SidebarItemId),
+    getItemById: (itemId) => catalog.getKnownItemById(itemId as ResourceId),
     maxUploadBytes: MAX_LOCAL_IMPORT_BYTES,
     readOnlyErrorMessage: 'This local workspace is read-only',
     resolveFile: (file) =>

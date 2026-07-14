@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { EmbeddedCanvasContent } from '../embedded-canvas-content'
 import { EmbeddedCanvasStateProvider } from '../../../canvas/embedded-canvas-state-context'
 import type { EmbeddedCanvasStateSource } from '../../../canvas/embedded-canvas-state-context'
@@ -144,5 +145,5 @@ function renderEmbeddedCanvasContent() {
 }
 
 function createCanvasId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }

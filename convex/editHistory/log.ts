@@ -20,6 +20,10 @@ type LogEditHistoryBase = {
   itemType: ResourceKind
 }
 
+type StoredLogEditHistoryArgs<T = LogEditHistoryArgs> = T extends LogEditHistoryArgs
+  ? Omit<T, 'itemId'> & LogEditHistoryBase
+  : never
+
 type LoggedEditHistory = {
   id: HistoryEntryId
   rowId: Id<'editHistory'>
@@ -27,7 +31,7 @@ type LoggedEditHistory = {
 
 async function insertEditHistory(
   ctx: EditHistoryCtx,
-  args: LogEditHistoryArgs,
+  args: StoredLogEditHistoryArgs,
   options?: { hasSnapshot?: boolean },
 ): Promise<LoggedEditHistory> {
   const id = generateDomainId(DOMAIN_ID_KIND.historyEntry)
@@ -48,13 +52,13 @@ function toLogEditHistoryArgs<T extends LogEditHistoryArgs['action']>(
   base: LogEditHistoryBase,
   action: T,
   metadata: EditHistoryMetadataMap[T],
-): LogEditHistoryArgs {
-  return { ...base, action, metadata } as LogEditHistoryArgs
+): StoredLogEditHistoryArgs {
+  return { ...base, action, metadata } as StoredLogEditHistoryArgs
 }
 
 export async function logEditHistory(
   ctx: EditHistoryCtx,
-  args: LogEditHistoryArgs | (LogEditHistoryBase & { changes: Array<EditHistoryChange> }),
+  args: StoredLogEditHistoryArgs | (LogEditHistoryBase & { changes: Array<EditHistoryChange> }),
   options?: { hasSnapshot?: boolean },
 ): Promise<LoggedEditHistory> {
   if ('action' in args) {

@@ -1,11 +1,11 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { ItemLink } from './search'
 
 interface CatalogItemLinkRow {
   id: string
   query: string
   displayName: string | null
-  item: { id: SidebarItemId; name: string } | null
+  item: { id: ResourceId; name: string } | null
 }
 
 export function createCatalogItemLink(row: CatalogItemLinkRow): ItemLink {

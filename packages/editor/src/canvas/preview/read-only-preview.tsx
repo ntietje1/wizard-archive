@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { createContext, use, useEffect, useLayoutEffect, useRef } from 'react'
 import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { CanvasRenderModeContext } from '../runtime/providers/canvas-render-mode-context'
@@ -36,7 +37,7 @@ import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import type { MouseEvent as ReactMouseEvent, RefObject } from 'react'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contract'
 import type { CanvasElementSize } from '../dom/element-size'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { CanvasViewportStore } from '../runtime/interaction/canvas-viewport-storage'
 import type {
   NoteDocumentContentSource,
@@ -59,7 +60,7 @@ const DEFAULT_MAX_ZOOM = 4
 const DEFAULT_FIT_PADDING = 0.12
 const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 }
 const PREVIEW_WORKSPACE_ID = 'canvas-read-only-preview'
-const CanvasReadOnlyPreviewSourceItemIdContext = createContext<SidebarItemId | null>(null)
+const CanvasReadOnlyPreviewSourceItemIdContext = createContext<ResourceId | null>(null)
 
 interface CanvasReadOnlyPreviewProps {
   nodes: ReadonlyArray<CanvasDocumentNode>
@@ -69,7 +70,7 @@ interface CanvasReadOnlyPreviewProps {
   minZoom?: number
   maxZoom?: number
   className?: string
-  sourceItemId?: SidebarItemId | null
+  sourceItemId?: ResourceId | null
 }
 
 interface CanvasReadOnlyPreviewDocumentState {
@@ -169,7 +170,7 @@ export function CanvasReadOnlyPreview({
   const runtime = useCanvasEditorRuntimeCore({
     nodesMap,
     edgesMap,
-    canvasId: sourceItemId ?? (PREVIEW_WORKSPACE_ID as SidebarItemId),
+    canvasId: sourceItemId ?? (PREVIEW_WORKSPACE_ID as ResourceId),
     canEdit: false,
     provider: null,
     doc,
@@ -254,7 +255,7 @@ function CanvasReadOnlyPreviewRuntime({
   maxZoom: number
   minZoom: number
   runtime: ReturnType<typeof useCanvasEditorRuntimeCore>
-  sourceItemId: SidebarItemId | null
+  sourceItemId: ResourceId | null
 }) {
   useCanvasReadOnlyPreviewAutoFit({
     fitPadding,
@@ -329,7 +330,7 @@ function CanvasReadOnlyPreviewNodeContent({
   sourceItemId,
 }: {
   nodeId: string
-  sourceItemId: SidebarItemId | null
+  sourceItemId: ResourceId | null
 }) {
   const renderers = {
     embed: (props) => <CanvasReadOnlyPreviewEmbedNode {...props} sourceItemId={sourceItemId} />,
@@ -344,7 +345,7 @@ function CanvasReadOnlyPreviewEmbedNode({
   data,
   sourceItemId,
 }: CanvasNodeComponentProps<'embed'> & {
-  sourceItemId: SidebarItemId | null
+  sourceItemId: ResourceId | null
 }) {
   const normalizedData = normalizeEmbedNodeData(data)
 

@@ -1,10 +1,11 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { createContext, use } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { EmbedTargetOperations } from '../../embeds/target-operations'
 import type { EmbeddedNotePreviewRenderer } from './embedded-note-preview-renderer'
 
 type NoteEmbedSurfaceBase = {
-  sourceNoteId: SidebarItemId | null
+  sourceNoteId: ResourceId | null
   renderEmbeddedNotePreview?: EmbeddedNotePreviewRenderer
 }
 

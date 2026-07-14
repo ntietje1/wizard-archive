@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import { BlockNoteView } from '@blocknote/shadcn'
 import '@blocknote/shadcn/style.css'
 import { useEffect, useRef } from 'react'
@@ -7,7 +8,7 @@ import { NoteEmbedSurfaceProvider } from './embeds/surface-context'
 import type { CustomBlockNoteEditor } from './editor-schema'
 import type { LinkResolver } from './references/resolver'
 import type { CSSProperties, DragEvent as ReactDragEvent, ReactNode, RefObject } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { EmbedTargetOperations } from '../embeds/target-operations'
 import type { EmbeddedNotePreviewRenderer } from './embeds/embedded-note-preview-renderer'
 import { useNoteLinkDecorations } from './links/use-note-link-decorations'
@@ -44,7 +45,7 @@ export function NoteEditorCore({
   enableYjsHistory?: boolean
   linkResolver: LinkResolver
   renderEmbeddedNotePreview?: EmbeddedNotePreviewRenderer
-  sourceNoteId?: SidebarItemId | null
+  sourceNoteId?: ResourceId | null
   style?: CSSProperties
   children?: ReactNode
 }) {

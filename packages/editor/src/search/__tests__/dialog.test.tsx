@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { createElement, createRef } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ReactNode } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { SearchDialog } from '../dialog'
 import { useSearchDialogController } from '../dialog-controller'
 import type {
@@ -190,7 +191,7 @@ describe('SearchDialog', () => {
   it('ignores repeated item activation while open is pending', async () => {
     const user = userEvent.setup()
     const note = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Dragon notes',
       slug: 'dragon-notes',
     })
@@ -210,7 +211,7 @@ describe('SearchDialog', () => {
   it('allows retrying item activation after an open failure', async () => {
     const user = userEvent.setup()
     const note = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Dragon notes',
       slug: 'dragon-notes',
     })
@@ -270,7 +271,7 @@ describe('SearchDialog', () => {
   it('keeps title matches visible when body search fails', () => {
     searchDataState.items = [
       createNote({
-        id: 'note_1' as SidebarItemId,
+        id: 'note_1' as ResourceId,
         name: 'Dragon notes',
         slug: 'dragon-notes',
       }),
@@ -286,14 +287,14 @@ describe('SearchDialog', () => {
   it('clamps the selected result when the result list shrinks without a query change', async () => {
     const user = userEvent.setup()
     const firstNote = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Dragon Alpha',
       slug: 'dragon-alpha',
     })
     searchDataState.items = [
       firstNote,
       createNote({
-        id: 'note_2' as SidebarItemId,
+        id: 'note_2' as ResourceId,
         name: 'Dragon Beta',
         slug: 'dragon-beta',
       }),
@@ -319,7 +320,7 @@ describe('SearchDialog', () => {
 
   it('opens a sidebar-item context menu from search results', async () => {
     const note = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Dragon notes',
       slug: 'dragon-notes',
     })
@@ -337,7 +338,7 @@ describe('SearchDialog', () => {
 
   it('opens a sidebar-item context menu from the preview header', async () => {
     const note = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Dragon notes',
       slug: 'dragon-notes',
     })
@@ -352,7 +353,7 @@ describe('SearchDialog', () => {
 
   it('keeps a result openable when preview lookup fails', () => {
     const note = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Dragon notes',
       slug: 'dragon-notes',
     })
@@ -373,7 +374,7 @@ describe('SearchDialog', () => {
   it('reports item-open failures without dismissing the current result', async () => {
     const user = userEvent.setup()
     const note = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Dragon notes',
       slug: 'dragon-notes',
     })
@@ -391,7 +392,7 @@ describe('SearchDialog', () => {
 
   it('shows unavailable-preview copy when a selected result has no previewable content', () => {
     const note = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Dragon notes',
       slug: 'dragon-notes',
     })
@@ -440,12 +441,12 @@ describe('SearchDialog', () => {
 
   it('passes filtered folder children to folder previews without a workspace runtime provider', () => {
     const folder = createFolder({
-      id: 'folder_1' as SidebarItemId,
+      id: 'folder_1' as ResourceId,
       name: 'Dragon Folder',
       slug: 'dragon-folder',
     })
     const child = createNote({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       name: 'Child Note',
       parentId: folder.id,
     })
@@ -555,7 +556,7 @@ function createSearchActions(): SearchDialogActions {
   }
 }
 
-function getPreviewState(itemId: SidebarItemId | undefined) {
+function getPreviewState(itemId: ResourceId | undefined) {
   const fallbackItem = itemId ? searchDataState.items.find((item) => item.id === itemId) : undefined
   const selectedContentItem =
     (searchDataState.previewQuery.data as AnyItemWithContent | undefined) ??

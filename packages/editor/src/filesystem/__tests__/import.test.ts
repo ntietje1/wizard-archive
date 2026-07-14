@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceSlug } from '../../workspace/resource-contract'
@@ -6,7 +7,6 @@ import type { FileSystemCreateItem, ResourceImportFileOperation } from '../item-
 import { importWorkspaceFile, importWorkspaceFileDrop } from '../import'
 import { createBrowserImportFile } from '../browser-import-file'
 import { createFile, createFolder } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { completedResourceOperation } from '../transaction-contract'
 
 function createImportFile(parts: Array<BlobPart>, name: string, options: FilePropertyBag) {
@@ -14,7 +14,7 @@ function createImportFile(parts: Array<BlobPart>, name: string, options: FilePro
 }
 
 describe('importWorkspaceFile', () => {
-  function createSuccessfulFileImport(fileId = testId<'sidebarItems'>('imported-file')) {
+  function createSuccessfulFileImport(fileId = testResourceId('imported-file')) {
     return completedResourceOperation({
       kind: 'fileImported',
       itemId: fileId,
@@ -23,7 +23,7 @@ describe('importWorkspaceFile', () => {
   }
 
   it('validates and routes text files without changing duplicate titles', async () => {
-    const parentId = testId<'sidebarItems'>('parent')
+    const parentId = testResourceId('parent')
     const parent = createFolder({ id: parentId, name: 'Session' })
     const existingText = createFile({ name: 'notes.txt', parentId })
     const catalog = createResourceCatalogModel({
@@ -35,7 +35,7 @@ describe('importWorkspaceFile', () => {
     const createItem = vi.fn<FileSystemCreateItem>(async ({ name }, initialize) => {
       const created = {
         status: 'completed' as const,
-        id: testId<'sidebarItems'>(`note-${name}`),
+        id: testResourceId(`note-${name}`),
         slug: `note-${name}` as ResourceSlug,
       }
       await initialize?.(created, createItem)
@@ -60,7 +60,7 @@ describe('importWorkspaceFile', () => {
     )
     expect(initializeImportedTextFile).toHaveBeenCalledWith({
       file: text,
-      noteId: testId<'sidebarItems'>('note-notes.txt'),
+      noteId: testResourceId('note-notes.txt'),
     })
     expect(result).toEqual({
       status: 'imported',
@@ -68,7 +68,7 @@ describe('importWorkspaceFile', () => {
       fileName: 'notes.txt',
       result: {
         status: 'completed',
-        id: testId<'sidebarItems'>('note-notes.txt'),
+        id: testResourceId('note-notes.txt'),
         slug: 'note-notes.txt',
       },
     })
@@ -81,7 +81,7 @@ describe('importWorkspaceFile', () => {
     const createItem = vi.fn<FileSystemCreateItem>(async ({ name }, initialize) => {
       const created = {
         status: 'completed' as const,
-        id: testId<'sidebarItems'>(`file-${name}`),
+        id: testResourceId(`file-${name}`),
         slug: `file-${name}` as ResourceSlug,
       }
       await initialize?.(created, createItem)
@@ -110,7 +110,7 @@ describe('importWorkspaceFile', () => {
     )
     expect(initializeImportedFile).toHaveBeenCalledWith({
       file: image,
-      fileId: testId<'sidebarItems'>('file-portrait.png'),
+      fileId: testResourceId('file-portrait.png'),
       onProgress: expect.any(Function),
     })
     expect(onProgress).toHaveBeenCalledWith({ fileName: 'portrait.png', percentage: 47 })
@@ -120,7 +120,7 @@ describe('importWorkspaceFile', () => {
       fileName: 'portrait.png',
       result: {
         status: 'completed',
-        id: testId<'sidebarItems'>('file-portrait.png'),
+        id: testResourceId('file-portrait.png'),
         slug: 'file-portrait.png',
       },
     })
@@ -132,7 +132,7 @@ describe('importWorkspaceFile', () => {
     const initializeImportedTextFile = vi.fn()
     const createItem = vi.fn<FileSystemCreateItem>(({ name }) => ({
       status: 'completed',
-      id: testId<'sidebarItems'>(`file-${name}`),
+      id: testResourceId(`file-${name}`),
       slug: `file-${name}` as ResourceSlug,
     }))
     const image = createImportFile(['image'], 'portrait.png', { type: '' })
@@ -166,7 +166,7 @@ describe('importWorkspaceFile', () => {
     const createItem = vi.fn<FileSystemCreateItem>(async ({ name }, initialize) => {
       const created = {
         status: 'completed' as const,
-        id: testId<'sidebarItems'>(`file-${name}`),
+        id: testResourceId(`file-${name}`),
         slug: `file-${name}` as ResourceSlug,
       }
       try {
@@ -260,7 +260,7 @@ describe('importWorkspaceFile', () => {
 
 describe('importWorkspaceFileDrop', () => {
   it('imports root files and nested folders through filesystem primitives', async () => {
-    const parentId = testId<'sidebarItems'>('parent')
+    const parentId = testResourceId('parent')
     const parent = createFolder({ id: parentId, name: 'Session' })
     const catalog = createResourceCatalogModel({
       activeItems: [parent],
@@ -268,7 +268,7 @@ describe('importWorkspaceFileDrop', () => {
     }).catalog
     const createItem = vi.fn<FileSystemCreateItem>(({ name }) => ({
       status: 'completed',
-      id: testId<'sidebarItems'>(`created-${name}`),
+      id: testResourceId(`created-${name}`),
       slug: `created-${name}` as ResourceSlug,
     }))
     const importFile = vi.fn<ResourceImportFileOperation>(({ file }) => ({
@@ -277,7 +277,7 @@ describe('importWorkspaceFileDrop', () => {
       fileName: file.name,
       result: {
         status: 'completed',
-        id: testId<'sidebarItems'>(`imported-${file.name}`),
+        id: testResourceId(`imported-${file.name}`),
         slug: `imported-${file.name}` as ResourceSlug,
       },
     }))
@@ -317,24 +317,24 @@ describe('importWorkspaceFileDrop', () => {
     expect(importFile).toHaveBeenCalledWith({
       file: image,
       name: 'portrait.png',
-      parentId: testId<'sidebarItems'>('created-Assets'),
+      parentId: testResourceId('created-Assets'),
       onProgress: expect.any(Function),
     })
     expect(createItem).toHaveBeenNthCalledWith(2, {
       type: RESOURCE_TYPES.folders,
       name: 'Nested',
-      parentTarget: { kind: 'direct', parentId: testId<'sidebarItems'>('created-Assets') },
+      parentTarget: { kind: 'direct', parentId: testResourceId('created-Assets') },
     })
     expect(importFile).toHaveBeenCalledWith({
       file: nestedText,
       name: 'nested.txt',
-      parentId: testId<'sidebarItems'>('created-Nested'),
+      parentId: testResourceId('created-Nested'),
       onProgress: expect.any(Function),
     })
     expect(receipt).toMatchObject({
       processedFiles: 3,
       processedFolders: 2,
-      lastFolderId: testId<'sidebarItems'>('created-Nested'),
+      lastFolderId: testResourceId('created-Nested'),
     })
     expect(onProgress).toHaveBeenLastCalledWith({
       processedFiles: 3,
@@ -384,7 +384,7 @@ describe('importWorkspaceFileDrop', () => {
       if (name === 'Broken') return { status: 'failed', reason: 'create_failed' }
       return {
         status: 'completed',
-        id: testId<'sidebarItems'>(`created-${name}`),
+        id: testResourceId(`created-${name}`),
         slug: `created-${name}` as ResourceSlug,
       }
     })
@@ -394,7 +394,7 @@ describe('importWorkspaceFileDrop', () => {
       fileName: file.name,
       result: {
         status: 'completed',
-        id: testId<'sidebarItems'>(`imported-${file.name}`),
+        id: testResourceId(`imported-${file.name}`),
         slug: `imported-${file.name}` as ResourceSlug,
       },
     }))
@@ -442,14 +442,14 @@ describe('importWorkspaceFileDrop', () => {
     expect(importFile).toHaveBeenCalledWith({
       file: workingFile,
       name: 'working.txt',
-      parentId: testId<'sidebarItems'>('created-Working'),
+      parentId: testResourceId('created-Working'),
       onProgress: expect.any(Function),
     })
     expect(receipt).toMatchObject({
       processedFiles: 1,
       processedFolders: 1,
       skippedFiles: 4,
-      lastFolderId: testId<'sidebarItems'>('created-Working'),
+      lastFolderId: testResourceId('created-Working'),
       skippedFileDetails: [{ fileName: 'Broken', reason: 'failed' }],
     })
     expect(onProgress).toHaveBeenLastCalledWith({
@@ -470,7 +470,7 @@ describe('importWorkspaceFileDrop', () => {
       createCount++
       return {
         status: 'completed',
-        id: testId<'sidebarItems'>(`created-${createCount}`),
+        id: testResourceId(`created-${createCount}`),
         slug: `created-${name}` as ResourceSlug,
       }
     })
@@ -504,12 +504,12 @@ describe('importWorkspaceFileDrop', () => {
     expect(createItem).toHaveBeenNthCalledWith(2, {
       type: RESOURCE_TYPES.folders,
       name: 'Scenes',
-      parentTarget: { kind: 'direct', parentId: testId<'sidebarItems'>('created-1') },
+      parentTarget: { kind: 'direct', parentId: testResourceId('created-1') },
     })
     expect(createItem).toHaveBeenNthCalledWith(3, {
       type: RESOURCE_TYPES.folders,
       name: 'Scenes',
-      parentTarget: { kind: 'direct', parentId: testId<'sidebarItems'>('created-1') },
+      parentTarget: { kind: 'direct', parentId: testResourceId('created-1') },
     })
     expect(createItem).toHaveBeenNthCalledWith(4, {
       type: RESOURCE_TYPES.folders,
@@ -519,7 +519,7 @@ describe('importWorkspaceFileDrop', () => {
     expect(receipt).toMatchObject({
       processedFolders: 4,
       skippedFiles: 0,
-      lastFolderId: testId<'sidebarItems'>('created-4'),
+      lastFolderId: testResourceId('created-4'),
     })
   })
 
@@ -535,7 +535,7 @@ describe('importWorkspaceFileDrop', () => {
       fileName: name,
       result: {
         status: 'completed',
-        id: testId<'sidebarItems'>(`imported-${name}`),
+        id: testResourceId(`imported-${name}`),
         slug: `imported-${name}` as ResourceSlug,
       },
     }))

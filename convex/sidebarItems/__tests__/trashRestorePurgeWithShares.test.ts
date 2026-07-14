@@ -23,10 +23,10 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     const playerAuth = asPlayer(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Shared Folder',
     })
-    const { noteId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, dmId, {
       parentId: folderId,
       name: 'Shared Note',
     })
@@ -61,8 +61,8 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     // Verify parent sidebarItems are trashed; shares and bookmarks are untouched (no cascade soft-delete)
     const afterTrash = await t.run(async (dbCtx) => {
       return {
-        folder: await dbCtx.db.get('sidebarItems', folderId),
-        note: await dbCtx.db.get('sidebarItems', noteId),
+        folder: await dbCtx.db.get('sidebarItems', folderRowId),
+        note: await dbCtx.db.get('sidebarItems', noteRowId),
         share: await dbCtx.db.get('sidebarItemShares', shareId),
         bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
       }
@@ -85,8 +85,8 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     // Verify everything is restored
     const afterRestore = await t.run(async (dbCtx) => {
       return {
-        folder: await dbCtx.db.get('sidebarItems', folderId),
-        note: await dbCtx.db.get('sidebarItems', noteId),
+        folder: await dbCtx.db.get('sidebarItems', folderRowId),
+        note: await dbCtx.db.get('sidebarItems', noteRowId),
         share: await dbCtx.db.get('sidebarItemShares', shareId),
         bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
       }
@@ -121,8 +121,8 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     // Verify all hard-deleted
     const afterPurge = await t.run(async (dbCtx) => {
       return {
-        folder: await dbCtx.db.get('sidebarItems', folderId),
-        note: await dbCtx.db.get('sidebarItems', noteId),
+        folder: await dbCtx.db.get('sidebarItems', folderRowId),
+        note: await dbCtx.db.get('sidebarItems', noteRowId),
         share: await dbCtx.db.get('sidebarItemShares', shareId),
         bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
       }
@@ -173,16 +173,21 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Batch Folder',
     })
-    const { noteId: childNoteId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteRowId: childNoteRowId } = await createNote(t, ctx.campaignId, dmId, {
       parentId: folderId,
       name: 'Nested Note',
     })
-    const { noteId: siblingNoteId } = await createNote(t, ctx.campaignId, dmId, {
-      name: 'Sibling Note',
-    })
+    const { noteId: siblingNoteId, noteRowId: siblingNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      dmId,
+      {
+        name: 'Sibling Note',
+      },
+    )
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -193,9 +198,9 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     const afterTrash = await t.run(async (dbCtx) =>
       Promise.all([
-        dbCtx.db.get('sidebarItems', folderId),
-        dbCtx.db.get('sidebarItems', childNoteId),
-        dbCtx.db.get('sidebarItems', siblingNoteId),
+        dbCtx.db.get('sidebarItems', folderRowId),
+        dbCtx.db.get('sidebarItems', childNoteRowId),
+        dbCtx.db.get('sidebarItems', siblingNoteRowId),
       ]),
     )
     expect(afterTrash.map((item) => item?.status)).toEqual(['trashed', 'trashed', 'trashed'])
@@ -209,9 +214,9 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     const afterRestore = await t.run(async (dbCtx) =>
       Promise.all([
-        dbCtx.db.get('sidebarItems', folderId),
-        dbCtx.db.get('sidebarItems', childNoteId),
-        dbCtx.db.get('sidebarItems', siblingNoteId),
+        dbCtx.db.get('sidebarItems', folderRowId),
+        dbCtx.db.get('sidebarItems', childNoteRowId),
+        dbCtx.db.get('sidebarItems', siblingNoteRowId),
       ]),
     )
     expect(afterRestore.map((item) => item?.location)).toEqual(['sidebar', 'sidebar', 'sidebar'])

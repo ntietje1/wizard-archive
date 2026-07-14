@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { GameMapSnapshotData } from '../document-contract'
 import { readGameMapSnapshot } from '../document-contract'
@@ -13,7 +14,7 @@ describe('readGameMapSnapshot', () => {
       pins: [
         {
           id: testMapPinId('snapshot-pin'),
-          itemId: 'note-1' as SidebarItemId,
+          itemId: 'note-1' as ResourceId,
           x: 12,
           y: 34,
           visible: true,

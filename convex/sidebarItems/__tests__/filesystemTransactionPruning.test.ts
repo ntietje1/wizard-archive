@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
-import { createNote } from '../../_test/factories.helper'
+import { createNote, getSidebarItemRowId } from '../../_test/factories.helper'
 import { testOperationId } from '../../../shared/test/operation-id'
 
 describe('filesystem transaction pruning', () => {
@@ -64,13 +64,14 @@ describe('filesystem transaction pruning', () => {
     })
     const copiedEvent = copyReceipt.events.find((event) => event.type === 'copied')
     expect(copiedEvent).toBeDefined()
+    const copiedRowId = await getSidebarItemRowId(t, copiedEvent!.itemId)
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignDomainId,
       transactionId: copyReceipt.transactionId!,
     })
     await t.run(async (dbCtx) => {
-      const copied = await dbCtx.db.get('sidebarItems', copiedEvent!.itemId)
+      const copied = await dbCtx.db.get('sidebarItems', copiedRowId)
       expect(copied?.status).toBe('undoHidden')
     })
 
@@ -89,7 +90,7 @@ describe('filesystem transaction pruning', () => {
         )
         .unique()
       expect(transaction).toBeNull()
-      expect(await dbCtx.db.get('sidebarItems', copiedEvent!.itemId)).toBeNull()
+      expect(await dbCtx.db.get('sidebarItems', copiedRowId)).toBeNull()
     })
   })
 

@@ -1,11 +1,12 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { createFolder } from '../../test/sidebar-item-factory'
 import { planTransferOperations } from '../operation-contract'
 
 describe('planTransferOperations', () => {
   it('copies a duplicate folder as an independent resource with the same title', () => {
-    const source = createFolder({ id: 'source' as SidebarItemId, name: 'Scenes' })
+    const source = createFolder({ id: 'source' as ResourceId, name: 'Scenes' })
 
     expect(
       planTransferOperations({

@@ -24,8 +24,8 @@ import { createElement, useCallback, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { SidebarItemId } from 'shared/common/ids'
-import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
+
+import type { HistoryEntryId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import type { LiveFileSystemReadModel } from '~/editor-adapters/live/filesystem/read-model'
@@ -179,7 +179,7 @@ function useLiveRuntimeSources({
     actor: workspaceMode.workspaceActor,
     canEdit: workspaceMode.canEdit,
     canUseWorkspaceActions: canUseDmWorkspaceActions,
-    getItemById: (itemId) => catalog.getKnownItemById(itemId as SidebarItemId),
+    getItemById: (itemId) => catalog.getKnownItemById(itemId as ResourceId),
     workspaceMode: workspaceMode.workspaceMode,
     setWorkspaceMode: workspaceMode.setWorkspaceMode,
   })
@@ -272,7 +272,7 @@ function useLiveRuntimeSources({
 }
 
 type LiveResourceHistoryControlState = {
-  itemId: SidebarItemId | null
+  itemId: ResourceId | null
   previewingEntryId: HistoryEntryId | null
   rollbackEntryId: HistoryEntryId | null
 }
@@ -287,7 +287,7 @@ type LiveResourceHistoryControls = {
   clearItemSession: () => void
 }
 
-function useLiveResourceHistoryControls(itemId: SidebarItemId | null): LiveResourceHistoryControls {
+function useLiveResourceHistoryControls(itemId: ResourceId | null): LiveResourceHistoryControls {
   const [state, setState] = useState<LiveResourceHistoryControlState>({
     itemId: null,
     previewingEntryId: null,
@@ -529,7 +529,7 @@ function useLiveRuntimeContentSessions({
   const file = useLiveFileSessionAdapter({
     canReplaceFile: (fileItem) => permissions.canMutateItem(fileItem, PERMISSION_LEVEL.EDIT),
     getItemById: (fileId) => {
-      const item = catalog.getKnownItemById(fileId as SidebarItemId)
+      const item = catalog.getKnownItemById(fileId as ResourceId)
       return isWizardEditorFileItem(item) ? item : null
     },
   })

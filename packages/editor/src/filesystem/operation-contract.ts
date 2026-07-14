@@ -1,37 +1,40 @@
-import type { ResourceId } from '../workspace/resource-contract'
+import type { ResourceId } from '../resources/domain-id'
 import { isTrashedSidebarItem } from '../workspace/items/status'
 import { normalizeSelectedRoots } from './domain/selection-roots'
 import type { ResourcePatchRow } from './patch-contract'
 
-export type OperationPlannerItem = Pick<
+export type OperationPlannerItem<TId extends string = ResourceId> = Pick<
   ResourcePatchRow,
-  'id' | 'parentId' | 'name' | 'type' | 'status'
->
+  'name' | 'type' | 'status'
+> & {
+  id: TId
+  parentId: TId | null
+}
 
 type TransferMode = 'copy' | 'move'
 
-export type TransferOperation = {
-  sourceItemId: ResourceId
+export type TransferOperation<TId extends string = ResourceId> = {
+  sourceItemId: TId
   action: 'place'
-  targetParentId: ResourceId | null
+  targetParentId: TId | null
   name?: string
 }
 
-type PlanTransferOperationsInput = {
+type PlanTransferOperationsInput<TId extends string> = {
   mode: TransferMode
-  items: Array<OperationPlannerItem>
-  itemsById: ReadonlyMap<ResourceId, Pick<OperationPlannerItem, 'id' | 'parentId'>>
-  targetParentId: ResourceId | null
+  items: Array<OperationPlannerItem<TId>>
+  itemsById: ReadonlyMap<TId, Pick<OperationPlannerItem<TId>, 'id' | 'parentId'>>
+  targetParentId: TId | null
 }
 
-export function planTransferOperations({
+export function planTransferOperations<TId extends string>({
   mode,
   items,
   itemsById,
   targetParentId,
-}: PlanTransferOperationsInput): Array<TransferOperation> {
+}: PlanTransferOperationsInput<TId>): Array<TransferOperation<TId>> {
   const roots = normalizeSelectedRoots(items, itemsById)
-  const operations = roots.flatMap((item): Array<TransferOperation> => {
+  const operations = roots.flatMap((item): Array<TransferOperation<TId>> => {
     if (mode === 'move' && item.parentId === targetParentId && !isTrashedSidebarItem(item)) {
       return []
     }

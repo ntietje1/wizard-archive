@@ -1,9 +1,10 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'
 import type { WizardEditorItem } from '@wizard-archive/editor/adapter'
 import type { CampaignActor } from 'shared/campaigns/actor'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { testCampaignId } from 'shared/test/campaign-id'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
@@ -35,23 +36,23 @@ describe('useFileSystemReadModel', () => {
 
   it('builds runtime lookups from player-visible active items', () => {
     const visible = createNote({
-      id: 'visible_note' as SidebarItemId,
+      id: 'visible_note' as ResourceId,
       campaignId,
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const hidden = createNote({
-      id: 'hidden_note' as SidebarItemId,
+      id: 'hidden_note' as ResourceId,
       campaignId,
       myPermissionLevel: PERMISSION_LEVEL.NONE,
     })
     const visibleTrashed = createNote({
-      id: 'visible_trashed_note' as SidebarItemId,
+      id: 'visible_trashed_note' as ResourceId,
       campaignId,
       status: TEST_RESOURCE_STATUS.trashed,
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const hiddenTrashed = createNote({
-      id: 'hidden_trashed_note' as SidebarItemId,
+      id: 'hidden_trashed_note' as ResourceId,
       campaignId,
       status: TEST_RESOURCE_STATUS.trashed,
       myPermissionLevel: PERMISSION_LEVEL.NONE,
@@ -74,23 +75,23 @@ describe('useFileSystemReadModel', () => {
 
   it('filters active descendants through hierarchical player permissions', () => {
     const visibleFolder = createFolder({
-      id: 'visible_folder' as SidebarItemId,
+      id: 'visible_folder' as ResourceId,
       campaignId,
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const visibleChild = createNote({
-      id: 'visible_child' as SidebarItemId,
+      id: 'visible_child' as ResourceId,
       campaignId,
       parentId: visibleFolder.id,
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const hiddenFolder = createFolder({
-      id: 'hidden_folder' as SidebarItemId,
+      id: 'hidden_folder' as ResourceId,
       campaignId,
       myPermissionLevel: PERMISSION_LEVEL.NONE,
     })
     const hiddenChild = createNote({
-      id: 'hidden_child' as SidebarItemId,
+      id: 'hidden_child' as ResourceId,
       campaignId,
       parentId: hiddenFolder.id,
       myPermissionLevel: PERMISSION_LEVEL.VIEW,

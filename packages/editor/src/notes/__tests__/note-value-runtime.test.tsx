@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { renderHook } from '@testing-library/react'
@@ -13,7 +14,7 @@ import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory
 import { useNoteValueRuntimeSource } from '../value-runtime'
 import type { NoteValueReferences } from '../value-runtime-model'
 import type { CustomBlockNoteEditor } from '../editor-schema'
-import type { SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import type { UserProfileId } from '../../../../../shared/common/ids'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import type { NoteValueRuntimeState } from '../values/state-contract'
 import type { FolderItem } from '../../workspace/items'
@@ -201,11 +202,11 @@ function createStateSource({
   byNotes = new Map(),
   status = 'success',
 }: {
-  byNotes?: Map<SidebarItemId, Array<NoteValueRuntimeState<SidebarItemId>>>
+  byNotes?: Map<ResourceId, Array<NoteValueRuntimeState<ResourceId>>>
   status?: 'pending' | 'success' | 'error'
 }) {
   return {
-    useNoteValueStates: vi.fn((noteIds: Array<SidebarItemId>) => ({
+    useNoteValueStates: vi.fn((noteIds: Array<ResourceId>) => ({
       states: noteIds.flatMap((noteId) => byNotes.get(noteId) ?? []),
       status,
     })),
@@ -239,7 +240,7 @@ function createEditor(expressionSource: string): CustomBlockNoteEditor {
   } as unknown as CustomBlockNoteEditor
 }
 
-function folderItem(id: SidebarItemId, name: string): FolderItem {
+function folderItem(id: ResourceId, name: string): FolderItem {
   return {
     ...baseItem(id, name),
     inheritShares: true,
@@ -247,11 +248,7 @@ function folderItem(id: SidebarItemId, name: string): FolderItem {
   }
 }
 
-function noteItem(
-  id: SidebarItemId,
-  name: string,
-  parentId: SidebarItemId | null = null,
-): NoteItem {
+function noteItem(id: ResourceId, name: string, parentId: ResourceId | null = null): NoteItem {
   return {
     ...baseItem(id, name),
     parentId,
@@ -259,7 +256,7 @@ function noteItem(
   }
 }
 
-function baseItem(id: SidebarItemId, name: string) {
+function baseItem(id: ResourceId, name: string) {
   return {
     id: id,
     createdAt: 1,
@@ -288,8 +285,8 @@ function baseItem(id: SidebarItemId, name: string) {
 }
 
 function runtimeState(
-  overrides: Partial<Extract<NoteValueRuntimeState<SidebarItemId>, { status: 'ok' }>> = {},
-): NoteValueRuntimeState<SidebarItemId> {
+  overrides: Partial<Extract<NoteValueRuntimeState<ResourceId>, { status: 'ok' }>> = {},
+): NoteValueRuntimeState<ResourceId> {
   return {
     noteId: sidebarItemId('note-1'),
     noteBlockId: 'block-1',
@@ -302,8 +299,8 @@ function runtimeState(
   }
 }
 
-function sidebarItemId(id: string): SidebarItemId {
-  return id as SidebarItemId
+function sidebarItemId(id: string): ResourceId {
+  return id as ResourceId
 }
 
 function campaignId(id: string) {

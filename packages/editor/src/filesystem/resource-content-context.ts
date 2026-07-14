@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import { createContext, createElement, useContext, useEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceContentSource, ResourceContentState } from './resource-content-source'
 
 const DEFAULT_RESOURCE_CONTENT_SOURCE: ResourceContentSource = {
@@ -27,7 +28,7 @@ function useResourceContentSource(): ResourceContentSource {
 }
 
 export function useResourceContentState(
-  itemId: SidebarItemId | null | undefined,
+  itemId: ResourceId | null | undefined,
   fallbackLabel?: string,
 ): ResourceContentState {
   const source = useResourceContentSource()

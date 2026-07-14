@@ -55,7 +55,7 @@ describe('filesystem transaction guards', () => {
     const { noteId: localNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Local',
     })
-    const { noteId: otherNoteId } = await createNote(
+    const { noteRowId: otherNoteRowId } = await createNote(
       t,
       otherCampaign.campaignId,
       ctx.dm.profile._id,
@@ -84,11 +84,11 @@ describe('filesystem transaction guards', () => {
         changes: [
           {
             type: 'insertResourceShare',
-            after: { ...shareRow, sidebarItemId: otherNoteId },
+            after: { ...shareRow, sidebarItemId: otherNoteRowId },
           },
           {
             type: 'updateResourceBookmarkState',
-            itemId: otherNoteId,
+            itemId: otherNoteRowId,
             campaignMemberId: ctx.dm.memberId,
             before: false,
             after: true,
@@ -103,7 +103,7 @@ describe('filesystem transaction guards', () => {
         campaignId: ctx.campaignDomainId,
         transactionId,
       }),
-    ).rejects.toThrow('Filesystem item no longer exists')
+    ).rejects.toThrow('Resource not found')
 
     const relatedRows = await t.run(async (dbCtx) => {
       const [shares, bookmarks] = await Promise.all([
@@ -112,7 +112,7 @@ describe('filesystem transaction guards', () => {
           .withIndex('by_campaign_item_member', (q) =>
             q
               .eq('campaignId', ctx.campaignId)
-              .eq('sidebarItemId', otherNoteId)
+              .eq('sidebarItemId', otherNoteRowId)
               .eq('campaignMemberId', ctx.player.memberId),
           )
           .collect(),
@@ -122,7 +122,7 @@ describe('filesystem transaction guards', () => {
             q
               .eq('campaignId', ctx.campaignId)
               .eq('campaignMemberId', ctx.dm.memberId)
-              .eq('sidebarItemId', otherNoteId),
+              .eq('sidebarItemId', otherNoteRowId),
           )
           .collect(),
       ])
@@ -137,7 +137,7 @@ describe('filesystem transaction guards', () => {
     const otherPlayer = await createUserProfile(t)
     const otherCampaign = await createCampaignWithDm(t, ctx.dm.profile)
     const otherMember = await addPlayerToCampaign(t, otherCampaign.campaignId, otherPlayer)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Local',
     })
     const share = await createSidebarShare(t, {
@@ -188,7 +188,7 @@ describe('filesystem transaction guards', () => {
         .withIndex('by_campaign_item_member', (q) =>
           q
             .eq('campaignId', ctx.campaignId)
-            .eq('sidebarItemId', noteId)
+            .eq('sidebarItemId', noteRowId)
             .eq('campaignMemberId', otherMember.memberId),
         )
         .collect()
@@ -202,7 +202,7 @@ describe('filesystem transaction guards', () => {
     const otherPlayer = await createUserProfile(t)
     const otherCampaign = await createCampaignWithDm(t, ctx.dm.profile)
     const otherMember = await addPlayerToCampaign(t, otherCampaign.campaignId, otherPlayer)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Local',
     })
 
@@ -218,7 +218,7 @@ describe('filesystem transaction guards', () => {
         changes: [
           {
             type: 'updateResourceBookmarkState',
-            itemId: noteId,
+            itemId: noteRowId,
             campaignMemberId: otherMember.memberId,
             before: false,
             after: true,
@@ -241,7 +241,7 @@ describe('filesystem transaction guards', () => {
             q
               .eq('campaignId', ctx.campaignId)
               .eq('campaignMemberId', ctx.dm.memberId)
-              .eq('sidebarItemId', noteId),
+              .eq('sidebarItemId', noteRowId),
           )
           .collect(),
         dbCtx.db
@@ -250,7 +250,7 @@ describe('filesystem transaction guards', () => {
             q
               .eq('campaignId', ctx.campaignId)
               .eq('campaignMemberId', otherMember.memberId)
-              .eq('sidebarItemId', noteId),
+              .eq('sidebarItemId', noteRowId),
           )
           .collect(),
       ])
@@ -264,7 +264,7 @@ describe('filesystem transaction guards', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const otherCampaign = await createCampaignWithDm(t, ctx.dm.profile)
-    const { folderId: otherFolderId } = await createFolder(
+    const { folderId: otherFolderId, folderRowId: otherFolderRowId } = await createFolder(
       t,
       otherCampaign.campaignId,
       ctx.dm.profile._id,
@@ -287,8 +287,8 @@ describe('filesystem transaction guards', () => {
         changes: [
           {
             type: 'updateFolderShare',
-            before: { folderId: otherFolderId, inheritShares: false },
-            after: { folderId: otherFolderId, inheritShares: true },
+            before: { folderId: otherFolderRowId, inheritShares: false },
+            after: { folderId: otherFolderRowId, inheritShares: true },
           },
         ],
         undoable: true,
@@ -300,12 +300,12 @@ describe('filesystem transaction guards', () => {
         campaignId: ctx.campaignDomainId,
         transactionId,
       }),
-    ).rejects.toThrow('Filesystem item no longer exists')
+    ).rejects.toThrow('Resource not found')
 
     const otherFolder = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('folders')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', otherFolderId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', otherFolderRowId))
         .unique()
     })
     expect(otherFolder?.inheritShares).toBe(false)
@@ -413,6 +413,6 @@ describe('filesystem transaction guards', () => {
         campaignId: ctx.campaignDomainId,
         command: { type: 'move', itemIds: [noteId], targetParentId: hiddenFolderId },
       }),
-    ).rejects.toThrow('Parent not found')
+    ).rejects.toThrow('Parent is no longer available')
   })
 })

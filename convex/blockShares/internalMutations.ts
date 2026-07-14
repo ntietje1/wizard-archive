@@ -22,7 +22,7 @@ import { normalizeBlockShareTargetIds } from './blockShareCommand'
 import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { NoteBlockId, OperationId } from '@wizard-archive/editor/resources/domain-id'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import { operationIdValidator } from '../resources/validators'
+import { operationIdValidator, resourceIdValidator } from '../resources/validators'
 import type {
   ResourceCommand,
   ResourceTransactionReceipt,
@@ -99,6 +99,7 @@ async function executeProjectedBlockShareCommand(
     campaignId: Id<'campaigns'>
     command: BlockShareCommand
     content: Array<NoteBlock>
+    noteRowId: Id<'sidebarItems'>
     historyStatus?: 'shared' | 'unshared'
     operationId: OperationId
   },
@@ -110,7 +111,7 @@ async function executeProjectedBlockShareCommand(
   } as BlockShareCommand
   const blockShareCtx = await getBlockShareCtx(ctx, {
     campaignId: args.campaignId,
-    noteId: command.noteId,
+    noteId: args.noteRowId,
     content: args.content,
   })
 
@@ -118,7 +119,7 @@ async function executeProjectedBlockShareCommand(
   switch (command.type) {
     case RESOURCE_COMMAND_TYPE.setBlocksShareStatus:
       changedBlockNoteIds = await setBlocksShareStatusFn(blockShareCtx, {
-        noteId: command.noteId,
+        noteId: args.noteRowId,
         blockNoteIds,
         status: command.status,
       })
@@ -130,7 +131,7 @@ async function executeProjectedBlockShareCommand(
         command.campaignMemberId,
       )
       changedBlockNoteIds = await setBlockMemberPermissionFn(blockShareCtx, {
-        noteId: command.noteId,
+        noteId: args.noteRowId,
         blockNoteIds,
         campaignMemberId: member._id,
         permissionLevel: command.permissionLevel,
@@ -159,12 +160,17 @@ async function executeProjectedBlockShareCommand(
 export const authorizeBlockShareAction = internalMutation({
   args: {
     campaignId: v.id('campaigns'),
-    noteId: v.id('sidebarItems'),
+    noteId: resourceIdValidator,
   },
-  returns: v.null(),
+  returns: v.id('sidebarItems'),
   handler: async (ctx, args) => {
-    await authorizeBlockShareMutation(ctx, args)
-    return null
+    const note = await ctx.db
+      .query('sidebarItems')
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', args.noteId))
+      .unique()
+    if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+    await authorizeBlockShareMutation(ctx, { campaignId: args.campaignId, noteId: note._id })
+    return note._id
   },
 })
 
@@ -173,6 +179,7 @@ export const executeBlockShareCommand = internalMutation({
     campaignId: v.id('campaigns'),
     command: blockShareCommandValidator,
     content: v.array(editorBlockInputValidator),
+    noteRowId: v.id('sidebarItems'),
     historyStatus: v.optional(v.union(v.literal('shared'), v.literal('unshared'))),
     operationId: operationIdValidator,
   },
@@ -183,6 +190,7 @@ export const executeBlockShareCommand = internalMutation({
       campaignId: args.campaignId,
       command: args.command as BlockShareCommand,
       content,
+      noteRowId: args.noteRowId,
       historyStatus: args.historyStatus,
       operationId: args.operationId,
     })

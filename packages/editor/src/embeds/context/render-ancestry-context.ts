@@ -1,7 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { createContext, use } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
-type EmbedAncestry = ReadonlySet<SidebarItemId>
+type EmbedAncestry = ReadonlySet<ResourceId>
 
 export const EmbedAncestryContext = createContext<EmbedAncestry>(new Set())
 

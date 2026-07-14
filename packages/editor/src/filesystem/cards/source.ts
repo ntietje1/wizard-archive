@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type { MaybePromise } from '../../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { AnyItem, FolderItem } from '../../workspace/items'
 import type { ResourceKind } from '../../workspace/resource-contract'
 import type { SidebarDragDataSource } from '../../drag-drop/sidebar-drag-data'
@@ -9,8 +10,8 @@ export type FolderViewerStatus = 'pending' | 'error' | 'success'
 
 export interface ItemCardSource extends SidebarDragDataSource {
   canDragItem: (item: AnyItem) => boolean
-  currentItemId: SidebarItemId | null
-  openItem: (itemId: SidebarItemId) => MaybePromise<unknown>
+  currentItemId: ResourceId | null
+  openItem: (itemId: ResourceId) => MaybePromise<unknown>
 }
 
 export interface FolderViewerSource extends ItemCardSource {
@@ -18,7 +19,7 @@ export interface FolderViewerSource extends ItemCardSource {
   canDropIntoFolder: (folder: FolderItem) => boolean
   createItemInFolder: (input: {
     name?: string
-    parentId: SidebarItemId
+    parentId: ResourceId
     type: ResourceKind
   }) => MaybePromise<FileSystemCreateItemResult>
   getChildren: (folder: FolderItem) => ReadonlyArray<AnyItem>

@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import type { CanvasDocumentContent } from '../canvas/document-contract'
 import type { CanvasItemWithContent } from '../canvas/item-contract'
 import type { FileItemWithContent } from '../files/item-contract'
@@ -5,7 +6,7 @@ import type { MapItemWithContent } from '../game-maps/item-contract'
 import type { NoteBlock } from '../notes/document/model'
 import type { AnyItem } from '../workspace/items'
 import type { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { buildResourceExportManifest } from './resource-export-manifest'
 import type { ResourceCatalog, ResourceOperationItems } from './catalog'
 import type { ResourceOperationReceipt } from './transaction-contract'
@@ -33,7 +34,7 @@ export type FileSystemDownloadItem =
     }
 
 export interface FileSystemDownloadSkippedItem {
-  itemId: SidebarItemId
+  itemId: ResourceId
   type: AnyItem['type']
   name: string
   path: string
@@ -44,7 +45,7 @@ export type FileSystemDownload =
   | {
       status: 'available'
       loadItemsForDownload: (input: {
-        itemIds: ReadonlyArray<SidebarItemId>
+        itemIds: ReadonlyArray<ResourceId>
         items?: ReadonlyArray<AnyItem>
       }) => Promise<FileSystemDownloadResult>
       loadRootItemsForDownload: () => Promise<FileSystemDownloadResult>
@@ -126,7 +127,7 @@ function resolveSelectedDownloadRoots({
   items,
   operationItems,
 }: {
-  itemIds: ReadonlyArray<SidebarItemId>
+  itemIds: ReadonlyArray<ResourceId>
   items: ReadonlyArray<AnyItem> | undefined
   operationItems: ResourceOperationItems
 }) {

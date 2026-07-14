@@ -3,7 +3,6 @@ import { CAMPAIGN_MEMBER_ROLE } from '../../../../shared/campaigns/types'
 import { throwClientError } from '../../../errors'
 import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
 import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
-import type { ResourceChange } from '@wizard-archive/editor/resources/patch-contract'
 import { createFileSystemWriteSession } from '../deltas'
 import {
   clearResourcesMemberPermission,
@@ -16,12 +15,17 @@ import type { Id } from '../../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../../functions'
 import type {
   StoredResourceDelta,
+  StoredFolderSharePatchRow,
   StoredResourcePatchRow,
   StoredSidebarItemSharePatchRow,
 } from '../deltas'
 import { requireCampaignMemberRow } from '../../../campaigns/functions/campaignIdentity'
+import {
+  requireSidebarItemRow,
+  requireSidebarItemRows,
+  sidebarItemResourceId,
+} from '../../functions/sidebarItemIdentity'
 
-type FolderSharePatchRow = Extract<ResourceChange, { type: 'updateFolderShare' }>['before']
 type SidebarItemSharePatchRow = StoredSidebarItemSharePatchRow
 
 type ClearSidebarItemsMemberPermissionFileSystemCommand = Extract<
@@ -95,7 +99,7 @@ async function loadSidebarItemShareSnapshots(
 async function getFolderShareSnapshot(
   ctx: CampaignMutationCtx,
   folderId: Id<'sidebarItems'>,
-): Promise<FolderSharePatchRow> {
+): Promise<StoredFolderSharePatchRow> {
   const folder = await ctx.db
     .query('folders')
     .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderId))
@@ -104,8 +108,11 @@ async function getFolderShareSnapshot(
   return { folderId, inheritShares: folder.inheritShares }
 }
 
-function changedEvents(itemIds: Array<Id<'sidebarItems'>>) {
-  return itemIds.map((itemId) => ({ type: RESOURCE_EVENT_TYPE.updated, itemId }))
+function changedEvents(items: Array<StoredResourcePatchRow>) {
+  return items.map((item) => ({
+    type: RESOURCE_EVENT_TYPE.updated,
+    itemId: sidebarItemResourceId(item),
+  }))
 }
 
 async function executeAllPlayersCommand(
@@ -113,67 +120,61 @@ async function executeAllPlayersCommand(
   command: SetAllPlayersPermissionFileSystemCommand,
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
-  const before = await loadSidebarItemSnapshots(ctx, command.itemIds)
+  const itemRows = await requireSidebarItemRows(ctx, command.itemIds)
+  const itemIds = itemRows.map((row) => row._id)
+  const before = await loadSidebarItemSnapshots(ctx, itemIds)
 
   await setResourceAudiencePermissionForSidebarItems(ctx, {
-    sidebarItemIds: command.itemIds,
+    sidebarItemIds: itemIds,
     permissionLevel: command.permissionLevel,
   })
 
-  const after = await loadSidebarItemSnapshots(ctx, command.itemIds)
-  const changedItemIds: Array<Id<'sidebarItems'>> = []
+  const after = await loadSidebarItemSnapshots(ctx, itemIds)
+  const changedItems: Array<StoredResourcePatchRow> = []
   for (const [itemId, beforeItem] of before) {
     const afterItem = after.get(itemId)
     if (!afterItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
     if (beforeItem.allPermissionLevel !== afterItem.allPermissionLevel) {
-      changedItemIds.push(itemId)
+      changedItems.push(afterItem)
       session.recordSidebarItemChange(beforeItem, afterItem)
     }
   }
 
   return await session.build({
     command,
-    events: changedEvents(changedItemIds),
+    events: changedEvents(changedItems),
   })
 }
 
-async function executeMemberCommand(
+async function executeMemberPermissionCommand(
   ctx: CampaignMutationCtx,
-  command: SetSidebarItemsMemberPermissionFileSystemCommand,
+  command:
+    | SetSidebarItemsMemberPermissionFileSystemCommand
+    | ClearSidebarItemsMemberPermissionFileSystemCommand,
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
   const member = await requireShareCommandMember(ctx, command.campaignMemberId)
+  const itemRows = await requireSidebarItemRows(ctx, command.itemIds)
+  const itemIds = itemRows.map((row) => row._id)
   const before = await loadSidebarItemShareSnapshots(ctx, {
-    itemIds: command.itemIds,
+    itemIds,
     campaignMemberId: member._id,
   })
 
-  await setResourcesMemberPermission(ctx, {
-    sidebarItemIds: command.itemIds,
-    campaignMemberId: member._id,
-    permissionLevel: command.permissionLevel,
-  })
+  if (command.type === 'setResourcesMemberPermission') {
+    await setResourcesMemberPermission(ctx, {
+      sidebarItemIds: itemIds,
+      campaignMemberId: member._id,
+      permissionLevel: command.permissionLevel,
+    })
+  } else {
+    await clearResourcesMemberPermission(ctx, {
+      sidebarItemIds: itemIds,
+      campaignMemberId: member._id,
+    })
+  }
 
-  return await recordMemberShareChanges(ctx, session, command, member._id, before)
-}
-
-async function executeClearMemberCommand(
-  ctx: CampaignMutationCtx,
-  command: ClearSidebarItemsMemberPermissionFileSystemCommand,
-): Promise<StoredResourceDelta> {
-  const session = createFileSystemWriteSession(ctx)
-  const member = await requireShareCommandMember(ctx, command.campaignMemberId)
-  const before = await loadSidebarItemShareSnapshots(ctx, {
-    itemIds: command.itemIds,
-    campaignMemberId: member._id,
-  })
-
-  await clearResourcesMemberPermission(ctx, {
-    sidebarItemIds: command.itemIds,
-    campaignMemberId: member._id,
-  })
-
-  return await recordMemberShareChanges(ctx, session, command, member._id, before)
+  return await recordMemberShareChanges(ctx, session, command, member._id, itemRows, before)
 }
 
 async function requireShareCommandMember(
@@ -194,28 +195,30 @@ async function recordMemberShareChanges(
     | SetSidebarItemsMemberPermissionFileSystemCommand
     | ClearSidebarItemsMemberPermissionFileSystemCommand,
   campaignMemberId: Id<'campaignMembers'>,
+  itemRows: Array<StoredResourcePatchRow>,
   before: Map<Id<'sidebarItems'>, SidebarItemSharePatchRow | null>,
 ) {
+  const itemIds = itemRows.map((row) => row._id)
   const shares = await Promise.all(
-    command.itemIds.map((itemId) =>
+    itemIds.map((itemId) =>
       getSidebarItemShareRow(ctx, {
         sidebarItemId: itemId,
         campaignMemberId,
       }),
     ),
   )
-  const changedItemIds: Array<Id<'sidebarItems'>> = []
-  for (let index = 0; index < command.itemIds.length; index++) {
-    const itemId = command.itemIds[index]!
+  const changedItems: Array<StoredResourcePatchRow> = []
+  for (let index = 0; index < itemIds.length; index++) {
+    const itemId = itemIds[index]!
     const after = shares[index] ?? null
     const beforeShare = before.get(itemId) ?? null
     session.recordSidebarItemShareChange(beforeShare, after)
-    if (beforeShare?.permissionLevel !== after?.permissionLevel) changedItemIds.push(itemId)
+    if (beforeShare?.permissionLevel !== after?.permissionLevel) changedItems.push(itemRows[index]!)
   }
 
   return await session.build({
     command,
-    events: changedEvents(changedItemIds),
+    events: changedEvents(changedItems),
   })
 }
 
@@ -224,19 +227,20 @@ async function executeFolderInheritCommand(
   command: SetFolderInheritSharesFileSystemCommand,
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
-  const before = await getFolderShareSnapshot(ctx, command.folderId)
+  const folderRow = await requireSidebarItemRow(ctx, command.folderId)
+  const before = await getFolderShareSnapshot(ctx, folderRow._id)
 
   await setFolderInheritShares(ctx, {
-    folderId: command.folderId,
+    folderId: folderRow._id,
     inheritShares: command.inheritShares,
   })
 
-  const after = await getFolderShareSnapshot(ctx, command.folderId)
+  const after = await getFolderShareSnapshot(ctx, folderRow._id)
   session.recordFolderShareChange(before, after)
 
   return await session.build({
     command,
-    events: changedEvents(before.inheritShares === after.inheritShares ? [] : [command.folderId]),
+    events: changedEvents(before.inheritShares === after.inheritShares ? [] : [folderRow]),
   })
 }
 
@@ -250,9 +254,9 @@ export async function executeShareCommand(
     case 'setResourceAudiencePermission':
       return await executeAllPlayersCommand(ctx, command)
     case 'setResourcesMemberPermission':
-      return await executeMemberCommand(ctx, command)
+      return await executeMemberPermissionCommand(ctx, command)
     case 'clearResourcesMemberPermission':
-      return await executeClearMemberCommand(ctx, command)
+      return await executeMemberPermissionCommand(ctx, command)
     case 'setFolderInheritShares':
       return await executeFolderInheritCommand(ctx, command)
   }

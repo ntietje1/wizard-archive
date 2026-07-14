@@ -1,4 +1,3 @@
-import { asyncMap } from 'convex-helpers'
 import { getCanvasForDownload } from '../../canvases/functions/getCanvasForDownload'
 import { getFileForDownload } from '../../files/functions/getFileForDownload'
 import { getGameMapForDownload } from '../../gameMaps/functions/getGameMapForDownload'
@@ -13,14 +12,12 @@ import type {
 } from '@wizard-archive/editor/resources/resource-contract'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import { findSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
 import { normalizeSelectedRoots } from '@wizard-archive/editor/resources/selection-roots'
-import { loadSidebarItemAncestorMap } from '../../sidebarItems/filesystem/ancestors'
-import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
-import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { assertNever } from '../../common/types'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
 
 type DownloadBuildContext = {
@@ -137,22 +134,15 @@ async function collectItemsRecursively(
     currentPath,
     downloadContext,
   }: {
-    parentId: Id<'sidebarItems'> | null
+    parentId: ResourceId | null
     currentPath: string
     downloadContext: DownloadBuildContext
   },
 ): Promise<Array<DownloadItem>> {
   const children = await getSidebarItemsByParent(ctx, { parentId })
   const items: Array<DownloadItem> = []
-  const permissionLevels = await asyncMap(children, (child) =>
-    getSidebarItemPermissionLevel(ctx, { item: child }),
-  )
 
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i]
-    const level = permissionLevels[i]
-    if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.VIEW)) continue
-
+  for (const child of children) {
     if (child.type === RESOURCE_TYPES.folders) {
       items.push(
         ...(await collectFolderDownloadItems(ctx, {
@@ -190,14 +180,15 @@ export async function getRootContentsForDownload(
 
 async function getDownloadSourceItems(
   ctx: CampaignQueryCtx,
-  sourceItemIds: Array<Id<'sidebarItems'>>,
+  sourceItemIds: Array<ResourceId>,
 ): Promise<{
   sourceItems: Array<AnyResource>
-  allItemsMap: Map<Id<'sidebarItems'>, Pick<AnyResource, 'id' | 'parentId'>>
+  allItemsMap: Map<ResourceId, Pick<AnyResource, 'id' | 'parentId'>>
 }> {
   const sourceItems = await Promise.all(
     sourceItemIds.map(async (sourceItemId) => {
-      const rawItem = await getSidebarItem(ctx, sourceItemId)
+      const row = await findSidebarItemRow(ctx, sourceItemId)
+      const rawItem = row ? await getSidebarItem(ctx, row._id) : null
       if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Sidebar item not found')
       return await requireItemAccess(ctx, {
         rawItem,
@@ -205,12 +196,43 @@ async function getDownloadSourceItems(
       })
     }),
   )
-  const allItemsMap = new Map<Id<'sidebarItems'>, Pick<AnyResource, 'id' | 'parentId'>>()
+  const allItemsMap = new Map<ResourceId, Pick<AnyResource, 'id' | 'parentId'>>()
   for (const item of sourceItems) {
     allItemsMap.set(item.id, item)
   }
 
   return { sourceItems, allItemsMap }
+}
+
+async function loadDownloadAncestorMap(
+  ctx: CampaignQueryCtx,
+  sourceItems: Array<AnyResource>,
+  allItemsMap: Map<ResourceId, Pick<AnyResource, 'id' | 'parentId'>>,
+) {
+  for (const sourceItem of sourceItems) {
+    let parentId = sourceItem.parentId
+    let depth = 0
+    while (parentId) {
+      if (depth >= MAX_DOWNLOAD_ANCESTOR_DEPTH) {
+        throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max sidebar ancestor depth exceeded')
+      }
+      const existingParent = allItemsMap.get(parentId)
+      if (existingParent) {
+        parentId = existingParent.parentId
+        depth += 1
+        continue
+      }
+      const row = await findSidebarItemRow(ctx, parentId)
+      const parent = row ? await getSidebarItem(ctx, row._id) : null
+      if (!parent) {
+        throwClientError(ERROR_CODE.NOT_FOUND, 'Sidebar item ancestor not found')
+      }
+      allItemsMap.set(parent.id, parent)
+      parentId = parent.parentId
+      depth += 1
+    }
+  }
+  return allItemsMap
 }
 
 async function collectDownloadItemsForSource(
@@ -243,16 +265,12 @@ async function collectDownloadItemsForSource(
 
 export async function getSidebarItemsForDownload(
   ctx: CampaignQueryCtx,
-  sourceItemIds: Array<Id<'sidebarItems'>>,
+  sourceItemIds: Array<ResourceId>,
 ): Promise<{ items: Array<DownloadItem> }> {
   if (sourceItemIds.length === 0) return { items: [] }
 
   const { sourceItems, allItemsMap } = await getDownloadSourceItems(ctx, sourceItemIds)
-  const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
-    items: sourceItems,
-    itemsById: allItemsMap,
-    maxDepth: MAX_DOWNLOAD_ANCESTOR_DEPTH,
-  })
+  const ancestorItemsById = await loadDownloadAncestorMap(ctx, sourceItems, allItemsMap)
   const normalizedItems = normalizeSelectedRoots(sourceItems, ancestorItemsById)
   const items: Array<DownloadItem> = []
   const downloadContext: DownloadBuildContext = { reservedPaths: new Set() }

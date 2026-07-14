@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { use } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { Heading } from '../document/model'
 import type { NoteValueRuntimeState } from '../values/state-contract'
 import {
@@ -25,7 +26,7 @@ export interface WikiLinkAutocompleteModelData {
 
 export type WikiLinkAutocompleteModelDataArgs = {
   menu: WikiLinkAutocompleteMenuState
-  sourceNoteId?: SidebarItemId
+  sourceNoteId?: ResourceId
 }
 
 interface WikiLinkAutocompleteState {
@@ -37,13 +38,13 @@ interface WikiLinkAutocompleteState {
 interface WikiLinkAutocompleteLoad {
   headings: Array<Heading>
   headingsPending: boolean
-  persistedValues?: Array<NoteValueRuntimeState<SidebarItemId>>
+  persistedValues?: Array<NoteValueRuntimeState<ResourceId>>
   persistedValuesPending: boolean
 }
 
 interface WikiLinkAutocompleteLoadRequest {
-  headingsNoteId: SidebarItemId | null
-  persistedValuesNoteId: SidebarItemId | null
+  headingsNoteId: ResourceId | null
+  persistedValuesNoteId: ResourceId | null
 }
 
 interface WikiLinkAutocompleteModelDataInput

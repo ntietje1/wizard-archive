@@ -1,5 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
-
+import type { ResourceId } from '../resources/domain-id'
 type FileSystemLoadStatus = 'pending' | 'error' | 'success'
 
 export interface FileSystemLoadState {
@@ -51,7 +50,7 @@ export function createItemContentLoadState<T>({
 }: {
   error?: unknown
   item: T | null | undefined
-  itemId: SidebarItemId | undefined
+  itemId: ResourceId | undefined
   isPending: boolean
 }): ItemContentLoadState<T> {
   if (!itemId) {

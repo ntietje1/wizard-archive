@@ -1,7 +1,6 @@
 import type { UserProfileId, WorkspaceMemberId } from '../../../../shared/common/ids'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type {
-  ResourceId,
   ResourceIconName,
   ResourceLocation,
   ResourceStatus,
@@ -11,6 +10,7 @@ import type {
   AssetId,
   CampaignId,
   CampaignMemberId,
+  ResourceId,
   ResourceShareId,
   SessionId,
 } from '../resources/domain-id'

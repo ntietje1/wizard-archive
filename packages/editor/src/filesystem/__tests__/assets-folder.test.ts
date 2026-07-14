@@ -7,7 +7,7 @@ import { createResourceCatalogModel } from '../catalog'
 import type { FileSystemLoadState } from '../load-state'
 import type { FileSystemCreateItem } from '../item-operation-contracts'
 import { createFolder } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
+import { testResourceId } from '../../../../../shared/test/resource-id'
 
 type ResolveAssetsFolderInput = Parameters<typeof resolveAssetsFolderId>[0]
 type CreateAssetsFolder = ResolveAssetsFolderInput['createItem']
@@ -33,11 +33,14 @@ function createReadyFileSystemLoadState(): FileSystemLoadState {
 
 function assetsFolderItem(): ReturnType<typeof createFolder> {
   return createFolder({
-    id: testId('assets-id'),
+    id: testResourceId('assets-id'),
     name: 'Assets',
     parentId: null,
   })
 }
+
+const assetsFolderId = testResourceId('assets-id')
+const newAssetsFolderId = testResourceId('new-assets')
 
 describe('resolveAssetsFolderId', () => {
   it('reuses a root folder named Assets when it exists', async () => {
@@ -49,11 +52,13 @@ describe('resolveAssetsFolderId', () => {
       loaded: true,
     })
 
-    expect(result).toBe('assets-id')
+    expect(result).toBe(assetsFolderId)
   })
 
   it('creates Assets at root with the asset icon when missing', async () => {
-    const createItem = createResolverItemMock().mockResolvedValue({ id: testId('new-assets') })
+    const createItem = createResolverItemMock().mockResolvedValue({
+      id: newAssetsFolderId,
+    })
 
     const result = await resolveAssetsFolderId({
       rootItems: [],
@@ -61,7 +66,7 @@ describe('resolveAssetsFolderId', () => {
       loaded: true,
     })
 
-    expect(result).toBe('new-assets')
+    expect(result).toBe(newAssetsFolderId)
     expect(createItem).toHaveBeenCalledWith({
       type: RESOURCE_TYPES.folders,
       name: 'Assets',
@@ -77,19 +82,19 @@ describe('createAssetsFolderResolver', () => {
       activeItems: [assetsFolderItem()],
     })
 
-    await expect(resolver.resolveAssetsFolderId()).resolves.toBe('assets-id')
+    await expect(resolver.resolveAssetsFolderId()).resolves.toBe(assetsFolderId)
   })
 
   it('creates through workspace filesystem operations when Assets is missing', async () => {
     const createItem = createRuntimeItemMock().mockResolvedValue({
       status: 'completed',
-      id: testId('new-assets'),
+      id: newAssetsFolderId,
       slug: assertResourceItemSlug('new-assets'),
     })
 
     const resolver = createTestAssetsFolderResolver({ createItem })
 
-    await expect(resolver.resolveAssetsFolderId()).resolves.toBe('new-assets')
+    await expect(resolver.resolveAssetsFolderId()).resolves.toBe(newAssetsFolderId)
     expect(createItem).toHaveBeenCalledWith({
       type: RESOURCE_TYPES.folders,
       name: 'Assets',
@@ -101,7 +106,7 @@ describe('createAssetsFolderResolver', () => {
   it('shares an in-flight Assets folder creation across concurrent resolves', async () => {
     const createdAssets = {
       status: 'completed' as const,
-      id: testId<'sidebarItems'>('new-assets'),
+      id: newAssetsFolderId,
       slug: assertResourceItemSlug('new-assets'),
     }
     const releaseCreate: Array<() => void> = []
@@ -123,21 +128,21 @@ describe('createAssetsFolderResolver', () => {
     releaseCreate.forEach((release) => release())
 
     await expect(Promise.all([firstResolution, secondResolution])).resolves.toEqual([
-      'new-assets',
-      'new-assets',
+      newAssetsFolderId,
+      newAssetsFolderId,
     ])
   })
 
   it('reuses the created Assets folder across sequential resolves while the catalog is stale', async () => {
     const createItem = createRuntimeItemMock().mockResolvedValue({
       status: 'completed',
-      id: testId('new-assets'),
+      id: newAssetsFolderId,
       slug: assertResourceItemSlug('new-assets'),
     })
     const resolver = createTestAssetsFolderResolver({ createItem })
 
-    await expect(resolver.resolveAssetsFolderId()).resolves.toBe('new-assets')
-    await expect(resolver.resolveAssetsFolderId()).resolves.toBe('new-assets')
+    await expect(resolver.resolveAssetsFolderId()).resolves.toBe(newAssetsFolderId)
+    await expect(resolver.resolveAssetsFolderId()).resolves.toBe(newAssetsFolderId)
 
     expect(createItem).toHaveBeenCalledTimes(1)
   })

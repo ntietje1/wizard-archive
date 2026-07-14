@@ -4,6 +4,7 @@ import { enhanceSidebarItem } from '../functions/enhanceSidebarItem'
 import { canAccessResourceAndAncestors } from '../functions/resourceAccessPolicy'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
+import { findSidebarItemRow } from '../functions/sidebarItemIdentity'
 import type {
   AnyResourceRow,
   EnhancedResource,
@@ -23,7 +24,7 @@ export async function checkItemAccess<T extends AnyResourceRow>(
   },
 ): Promise<EnhancedResource<T> | null> {
   if (!rawItem) return null
-  const persistedRow = await ctx.db.get('sidebarItems', rawItem.id)
+  const persistedRow = await findSidebarItemRow(ctx, rawItem.id)
   if (
     !persistedRow ||
     (requiredStatus !== undefined && persistedRow.status !== requiredStatus) ||

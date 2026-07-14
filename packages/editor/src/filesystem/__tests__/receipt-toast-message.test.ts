@@ -1,12 +1,12 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { testOperationId } from '../../test/operation-id'
 import { RESOURCE_COMMAND_TYPE } from '../transaction-contract'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
 import { getReceiptToastMessage } from '../receipt-toast-message'
 
-const itemId = 'metadata_item' as SidebarItemId
+const itemId = 'metadata_item' as ResourceId
 
 function metadataUpdateReceipt(
   direction: ResourceTransactionReceipt['direction'],
@@ -35,12 +35,12 @@ function copyReceipt(
     direction,
     command: {
       type: RESOURCE_COMMAND_TYPE.copy,
-      itemIds: ['folder_1' as SidebarItemId],
+      itemIds: ['folder_1' as ResourceId],
       targetParentId: null,
     },
     events: Array.from({ length: createdCount }, (_, index) => ({
       type: 'copied' as const,
-      itemId: `copy_${index}` as SidebarItemId,
+      itemId: `copy_${index}` as ResourceId,
       sourceItemId: itemId,
     })),
     patches: [],

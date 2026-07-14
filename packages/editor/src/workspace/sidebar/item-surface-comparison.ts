@@ -1,10 +1,7 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import type { SidebarWorkspaceItemSurface } from './workspace-state'
 
-function sameVisibleItemIds(
-  a: ReadonlyArray<SidebarItemId>,
-  b: ReadonlyArray<SidebarItemId>,
-): boolean {
+function sameVisibleItemIds(a: ReadonlyArray<ResourceId>, b: ReadonlyArray<ResourceId>): boolean {
   return a.length === b.length && a.every((id, index) => id === b[index])
 }
 

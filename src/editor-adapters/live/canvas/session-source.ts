@@ -1,3 +1,4 @@
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { api } from 'convex/_generated/api'
 import { useEffect } from 'react'
 import {
@@ -11,8 +12,7 @@ import { useResolvedTheme } from '@wizard-archive/ui/theme/context'
 import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
 import { useConvexYjsCollaboration } from '~/editor-adapters/live/collaboration/yjs-collaboration'
 import { useLiveCollaborationUser } from '~/editor-adapters/live/collaboration/use-live-collaboration-user'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import type {
   WizardEditorCanvasEmbeddedSessionPorts,
   WizardEditorCanvasEmbeddedSessionPortsInput,
@@ -109,7 +109,7 @@ function resolveLiveCanvasDocumentCollaboration(
   }
 }
 
-function useLiveEmbeddedCanvasState(workspaceId: string, canvasId: SidebarItemId) {
+function useLiveEmbeddedCanvasState(workspaceId: string, canvasId: ResourceId) {
   return useWizardEditorEmbeddedCanvasStateFromUpdates({
     canvasId,
     useUpdates: (input) => useLiveEmbeddedCanvasUpdates({ ...input, workspaceId }),
@@ -127,7 +127,7 @@ const useLiveEmbeddedCanvasUpdates = ({
     persistedCanvasId
       ? {
           campaignId: liveCanvasWorkspaceRecordId(workspaceId),
-          documentId: persistedCanvasId as Id<'sidebarItems'>,
+          documentId: persistedCanvasId,
           afterSeq: afterSeq ?? null,
         }
       : 'skip',
@@ -148,6 +148,6 @@ const useLiveEmbeddedCanvasUpdates = ({
   }
 }
 
-function liveCanvasWorkspaceRecordId(workspaceId: string): Id<'campaigns'> {
-  return workspaceId as Id<'campaigns'>
+function liveCanvasWorkspaceRecordId(workspaceId: string): CampaignId {
+  return workspaceId as CampaignId
 }

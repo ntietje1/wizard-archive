@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../../../resources/domain-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
@@ -11,7 +12,6 @@ import { createFolder, createNote } from '../../../../../test/sidebar-item-facto
 import { createTestWorkspaceRuntime } from '../../../../../test/workspace-runtime-factory'
 import { createSidebarShareButtonSource } from '../../../sidebar-share-button-source'
 import type { SidebarShareButtonSource } from '../../../sidebar-share-button-source'
-import type { SidebarItemId } from '../../../../../../../../shared/common/ids'
 
 const selectionState: SidebarWorkspaceState['selection'] = {
   selectedItemIds: [],
@@ -263,7 +263,7 @@ function sidebarWorkspaceSource(): SidebarWorkspaceState {
       clearItemSelection: () => {
         selectionState.selectedItemIds = []
       },
-      normalizeContextSelection: (id: SidebarItemId) => {
+      normalizeContextSelection: (id: ResourceId) => {
         if (!selectionState.selectedItemIds.includes(id)) {
           selectionState.selectedItemIds = [id]
         }

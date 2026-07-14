@@ -37,10 +37,10 @@ describe('game map APIs', () => {
     )
 
     await t.run(async (dbCtx) => {
-      const item = await dbCtx.db.get('sidebarItems', map.mapId)
+      const item = await dbCtx.db.get('sidebarItems', map.mapRowId)
       const extension = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map.mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map.mapRowId))
         .unique()
       expect(item?.previewStorageId).toBeNull()
       expect(extension?.imageStorageId).toBeNull()
@@ -102,10 +102,10 @@ describe('game map APIs', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const item = await dbCtx.db.get('sidebarItems', map.mapId)
+      const item = await dbCtx.db.get('sidebarItems', map.mapRowId)
       const extension = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map.mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map.mapRowId))
         .unique()
       expect(item?.previewStorageId).toBe(imageUpload.storageId)
       expect(extension?.imageStorageId).toBe(imageUpload.storageId)
@@ -159,7 +159,7 @@ describe('game map APIs', () => {
     await t.run(async (dbCtx) => {
       const extension = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map.mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map.mapRowId))
         .unique()
       expect(extension?.imageStorageId).toBe(newerUpload.storageId)
       await expect(dbCtx.db.get('fileStorage', olderUpload.sessionId)).resolves.toMatchObject({

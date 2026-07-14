@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type { ReactNode } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { EmbedTargetOperations } from '../../embeds/target-operations'
 import { NoteEmbedSurfaceContext } from './surface-context-value'
 import type { NoteEmbedSurfaceContextValue } from './surface-context-value'
@@ -15,7 +16,7 @@ export function NoteEmbedSurfaceProvider({
   editable: boolean
   embedTargetOperations?: EmbedTargetOperations
   renderEmbeddedNotePreview?: NoteEmbedSurfaceContextValue['renderEmbeddedNotePreview']
-  sourceNoteId: SidebarItemId | null
+  sourceNoteId: ResourceId | null
 }) {
   const value: NoteEmbedSurfaceContextValue = editable
     ? {

@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { createNote } from '../../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
 import { getWikiLinkAutocompleteContextFromSource } from '../autocomplete-model'
@@ -36,7 +37,7 @@ describe('wiki link autocomplete source', () => {
     expect(
       getWikiLinkAutocompleteLoadRequest({
         context: valueContext,
-        valueRuntime: createValueRuntime('source-note' as SidebarItemId),
+        valueRuntime: createValueRuntime('source-note' as ResourceId),
       }),
     ).toEqual({
       headingsNoteId: null,
@@ -77,7 +78,7 @@ function createAutocompleteItemSource(runtime: WorkspaceRuntime): WikiLinkAutoco
   }
 }
 
-function createValueRuntime(noteId: SidebarItemId): NoteValueRuntimeContextValue {
+function createValueRuntime(noteId: ResourceId): NoteValueRuntimeContextValue {
   return {
     noteId,
     editable: true,

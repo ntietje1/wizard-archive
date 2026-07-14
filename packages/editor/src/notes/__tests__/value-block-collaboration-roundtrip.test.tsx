@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import * as Y from 'yjs'
 import React from 'react'
 import { describe, expect, it } from 'vite-plus/test'
@@ -12,7 +13,7 @@ import { NOTE_YJS_FRAGMENT } from '../document/headless-yjs'
 import { createNoteYDocFromContent, readNoteYDocContent } from '../imported-text'
 import type { PartialNoteBlock } from '../document/model'
 import type { CustomBlockNoteEditor } from '../editor-schema'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { testNoteBlockId } from '../../test/blocknote-id'
 
 const TestBlockNoteView = BlockNoteView as React.ComponentType<{
@@ -21,7 +22,7 @@ const TestBlockNoteView = BlockNoteView as React.ComponentType<{
 }>
 
 function createProvider(doc: Y.Doc) {
-  const provider = new YjsProvider(doc, 'test-note' as SidebarItemId, {
+  const provider = new YjsProvider(doc, 'test-note' as ResourceId, {
     pushUpdate: () => Promise.resolve({ status: 'accepted', seq: 0 }),
     pushAwareness: () => Promise.resolve({ status: 'active', expiresAt: Date.now() + 30_000 }),
     removeAwareness: () => Promise.resolve({ status: 'released' }),
@@ -41,7 +42,7 @@ function createInitialDoc(blocks: Array<PartialNoteBlock>) {
 }
 
 const runtimeContextValue: NoteValueRuntimeContextValue = {
-  noteId: 'test-note' as SidebarItemId,
+  noteId: 'test-note' as ResourceId,
   editable: true,
   authoredDefinitions: [],
   authoredValueStates: [],

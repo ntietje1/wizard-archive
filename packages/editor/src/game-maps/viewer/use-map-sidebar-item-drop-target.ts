@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
 import type { MaybePromise } from '../../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { MapItemWithContent } from '../../game-maps/item-contract'
 import type { MapPinsCreateResult } from '../session-contract'
 import { MAP_DROP_ZONE_TYPE } from '../../drag-drop/drop-target-data'
@@ -20,7 +21,7 @@ export function useMapSidebarItemDropTarget({
 }: {
   canPin: boolean
   createMapPins: (input: {
-    mapId: SidebarItemId
+    mapId: ResourceId
     pins: Array<MapPinPlacementInput>
   }) => MaybePromise<MapPinsCreateResult>
   imageRef: React.RefObject<HTMLImageElement | null>

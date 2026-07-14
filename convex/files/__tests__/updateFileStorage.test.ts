@@ -19,7 +19,7 @@ describe('updateFileStorage', () => {
   it('player with edit share can replace file storage', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileId, fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
@@ -45,9 +45,9 @@ describe('updateFileStorage', () => {
     await t.run(async (dbCtx) => {
       const fileExt = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
-      const fileItem = await dbCtx.db.get('sidebarItems', fileId)
+      const fileItem = await dbCtx.db.get('sidebarItems', fileRowId)
 
       expect(fileExt!.storageId).toBe(storageId)
       expect(fileItem!.previewStorageId).toBeNull()
@@ -121,7 +121,7 @@ describe('updateFileStorage', () => {
   it('commits and attaches an uncommitted upload in one mutation', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileId, fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
@@ -153,7 +153,7 @@ describe('updateFileStorage', () => {
       })
       const file = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
       expect(file?.storageId).toBe(storageId)
     })

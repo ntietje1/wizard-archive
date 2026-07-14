@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { Eye, EyeOff } from 'lucide-react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -438,7 +439,7 @@ function createSidebarItem(type: string, name: string): AnyItem {
   sidebarItemSequence += 1
   return {
     createdAt: 0,
-    id: `${type}_${sidebarItemSequence}` as SidebarItemId,
+    id: `${type}_${sidebarItemSequence}` as ResourceId,
     allPermissionLevel: null,
     campaignId: 'campaign-1',
     color: null,

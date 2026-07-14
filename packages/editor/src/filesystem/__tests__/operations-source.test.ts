@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { assertResourceItemSlug } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
@@ -9,7 +10,7 @@ import {
   createGameMap,
   createNote,
 } from '../../test/sidebar-item-factory'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { ResourceImportContentInitializers } from '../../files/import-contract'
 import type { AnyItem } from '../../workspace/items'
 import type { ResourceSlug } from '../../workspace/resource-contract'
@@ -29,13 +30,13 @@ type TestWorkspaceFileSystemOperationDriver = Parameters<
   typeof createWorkspaceFileSystemOperations
 >[0]['operationDriver']
 type TestWorkspaceFileSystemClipboardDriver = {
-  copy: (itemIds: Array<SidebarItemId>) => void
-  cut: (itemIds: Array<SidebarItemId>) => void
+  copy: (itemIds: Array<ResourceId>) => void
+  cut: (itemIds: Array<ResourceId>) => void
   canUseClipboardOperations: boolean
   cancelClipboard: () => boolean
-  canPaste: (targetParentId?: SidebarItemId | null) => boolean
+  canPaste: (targetParentId?: ResourceId | null) => boolean
   paste: (
-    targetParentId?: SidebarItemId | null,
+    targetParentId?: ResourceId | null,
   ) => ResourceCommandResult | Promise<ResourceCommandResult>
 }
 type TestWorkspaceFileSystemDropDriver = Parameters<
@@ -225,7 +226,7 @@ describe('filesystem operations source', () => {
       (_: Parameters<TestWorkspaceFileSystemOperationDriver['createItem']>[0]) => {
         createdCount += 1
         return {
-          id: `created_${createdCount}` as SidebarItemId,
+          id: `created_${createdCount}` as ResourceId,
           slug: assertResourceItemSlug(`created-${createdCount}`),
         }
       },
@@ -271,7 +272,7 @@ describe('filesystem operations source', () => {
       trashItems: [],
     }).catalog
     const createItem = vi.fn().mockResolvedValue({
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       slug: assertResourceItemSlug('untitled-note-2'),
     })
     const operationDriver = createOperationDriver({ createItem })
@@ -301,12 +302,12 @@ describe('filesystem operations source', () => {
     const operationDriver = createOperationDriver({
       createItem: vi.fn(({ itemType, parentTarget }) => {
         if (itemType === RESOURCE_TYPES.folders) {
-          return { id: 'folder_1' as SidebarItemId, slug: assertResourceItemSlug('folder-1') }
+          return { id: 'folder_1' as ResourceId, slug: assertResourceItemSlug('folder-1') }
         }
         if (parentTarget.kind !== 'direct' || parentTarget.parentId !== 'folder_1') {
           throw new Error('Expected imported file to target the imported folder')
         }
-        return { id: 'file_1' as SidebarItemId, slug: assertResourceItemSlug('file-1') }
+        return { id: 'file_1' as ResourceId, slug: assertResourceItemSlug('file-1') }
       }),
     })
 
@@ -351,15 +352,14 @@ describe('filesystem operations source', () => {
       trashItems: [],
     }).catalog
     const createdFolder = {
-      id: 'folder_1' as SidebarItemId,
+      id: 'folder_1' as ResourceId,
       slug: assertResourceItemSlug('folder-1'),
     }
     const createdNote = {
-      id: 'note_1' as SidebarItemId,
+      id: 'note_1' as ResourceId,
       slug: assertResourceItemSlug('note-1'),
     }
-    let initializedChild: { status: 'completed'; id: SidebarItemId; slug: ResourceSlug } | null =
-      null
+    let initializedChild: { status: 'completed'; id: ResourceId; slug: ResourceSlug } | null = null
     const createItem = vi.fn(
       async (
         input: Parameters<TestWorkspaceFileSystemOperationDriver['createItem']>[0],
@@ -415,12 +415,12 @@ describe('filesystem operations source', () => {
       trashItems: [],
     }).catalog
     const createdFolder = {
-      id: 'folder_1' as SidebarItemId,
+      id: 'folder_1' as ResourceId,
       slug: assertResourceItemSlug('folder-1'),
     }
     const createdNotes = [
-      { id: 'note_1' as SidebarItemId, slug: assertResourceItemSlug('scene') },
-      { id: 'note_2' as SidebarItemId, slug: assertResourceItemSlug('scene-1') },
+      { id: 'note_1' as ResourceId, slug: assertResourceItemSlug('scene') },
+      { id: 'note_2' as ResourceId, slug: assertResourceItemSlug('scene-1') },
     ]
     let noteIndex = 0
     const createItem = vi.fn(
@@ -479,8 +479,8 @@ describe('filesystem operations source', () => {
       trashItems: [],
     }).catalog
     const createdNotes = [
-      { id: 'note_1' as SidebarItemId, slug: assertResourceItemSlug('scene') },
-      { id: 'note_2' as SidebarItemId, slug: assertResourceItemSlug('scene') },
+      { id: 'note_1' as ResourceId, slug: assertResourceItemSlug('scene') },
+      { id: 'note_2' as ResourceId, slug: assertResourceItemSlug('scene') },
     ]
     let noteIndex = 0
     const createItem = vi.fn(
@@ -527,11 +527,11 @@ describe('filesystem operations source', () => {
       trashItems: [],
     }).catalog
     const createdFolder = {
-      id: 'folder_1' as SidebarItemId,
+      id: 'folder_1' as ResourceId,
       slug: assertResourceItemSlug('folder-1'),
     }
     const createdChildFolder = {
-      id: 'folder_child_1' as SidebarItemId,
+      id: 'folder_child_1' as ResourceId,
       slug: assertResourceItemSlug('folder-child-1'),
     }
     const createItem = vi.fn(
@@ -546,7 +546,7 @@ describe('filesystem operations source', () => {
         if (input.name === 'Nested') {
           return createdChildFolder
         }
-        return { id: 'note_1' as SidebarItemId, slug: assertResourceItemSlug('scene') }
+        return { id: 'note_1' as ResourceId, slug: assertResourceItemSlug('scene') }
       },
     )
     const operationDriver = createOperationDriver({ createItem })
@@ -590,8 +590,8 @@ describe('filesystem operations source', () => {
       trashItems: [],
     }).catalog
     const createdNotes = [
-      { id: 'note_1' as SidebarItemId, slug: assertResourceItemSlug('untitled-note') },
-      { id: 'note_2' as SidebarItemId, slug: assertResourceItemSlug('untitled-note-1') },
+      { id: 'note_1' as ResourceId, slug: assertResourceItemSlug('untitled-note') },
+      { id: 'note_2' as ResourceId, slug: assertResourceItemSlug('untitled-note-1') },
     ]
     let noteIndex = 0
     const createItem = vi.fn(
@@ -888,7 +888,7 @@ function createTestWorkspaceFileSystemOperations({
   dropDriver?: TestWorkspaceFileSystemDropDriver
   operationDriver: TestWorkspaceFileSystemOperationDriver
   navigateToItem?: TestWorkspaceFileSystemNavigateToItem
-  onItemSlugChange?: (itemId: SidebarItemId, slug: ResourceSlug | null) => void
+  onItemSlugChange?: (itemId: ResourceId, slug: ResourceSlug | null) => void
   setLastSelectedItem?: (slug: ResourceSlug) => void
   trashDriver?: TestWorkspaceFileSystemTrashDriver
 }) {

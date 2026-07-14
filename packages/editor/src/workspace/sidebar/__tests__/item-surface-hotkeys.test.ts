@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import {
   isEditableHotkeyTarget,
   isItemSurfaceHotkeyTarget,
@@ -129,7 +129,7 @@ describe('item surface hotkey utilities', () => {
     expect(
       getKeyboardOpenItem({
         selectedItems: [note, folder],
-        focusedItemId: testId('other_item'),
+        focusedItemId: testResourceId('other_item'),
       }),
     ).toBe(note)
     expect(

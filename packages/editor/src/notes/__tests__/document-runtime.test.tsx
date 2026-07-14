@@ -1,3 +1,5 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../resources/domain-id'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { render } from '@testing-library/react'
@@ -10,12 +12,11 @@ import {
   createTestNoteValueSessionPorts,
 } from '../../test/workspace-note-session-source-factory'
 import { createNote } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { createRuntimeNoteContentSource } from '../runtime-content-source'
 import type { CustomBlockNoteEditor } from '../editor-schema'
 import type { NoteValueRuntimeState } from '../values/state-contract'
 import type { NoteBlock } from '../document/model'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { testNoteBlockId } from '../../test/blocknote-id'
 
 describe('NoteDocumentRuntime', () => {
@@ -77,12 +78,12 @@ describe('NoteDocumentRuntime', () => {
 
   it('builds note runtime from workspace paths and note value state loads', () => {
     const currentNote = createNote({
-      id: testId<'sidebarItems'>('note-current'),
+      id: testResourceId('note-current'),
       name: 'Current Note',
       slug: 'current-note',
     })
     const sourceNote = createNote({
-      id: testId<'sidebarItems'>('note-source'),
+      id: testResourceId('note-source'),
       name: 'Source Note',
       slug: 'source-note',
     })
@@ -98,7 +99,7 @@ describe('NoteDocumentRuntime', () => {
       slug: 'prof_bonus',
       formattedValue: '2',
     })
-    const useNoteValueStates = vi.fn((noteIds: Array<SidebarItemId>) => ({
+    const useNoteValueStates = vi.fn((noteIds: Array<ResourceId>) => ({
       states: [
         ...(noteIds.includes(currentNote.id) ? [currentValue] : []),
         ...(noteIds.includes(sourceNote.id) ? [sourceValue] : []),
@@ -166,7 +167,7 @@ describe('NoteDocumentRuntime', () => {
 
   it('reads note value candidates from the current catalog on every request', () => {
     let noteName = 'First Name'
-    const noteId = testId<'sidebarItems'>('candidate-note')
+    const noteId = testResourceId('candidate-note')
     const source = createRuntimeNoteContentSource({
       navigation: {
         openExternalUrl: vi.fn(),
@@ -255,10 +256,10 @@ function createEditor(expressionSource: string): CustomBlockNoteEditor {
 }
 
 function createRuntimeState(
-  overrides: Partial<Extract<NoteValueRuntimeState<SidebarItemId>, { status: 'ok' }>> = {},
-): NoteValueRuntimeState<SidebarItemId> {
+  overrides: Partial<Extract<NoteValueRuntimeState<ResourceId>, { status: 'ok' }>> = {},
+): NoteValueRuntimeState<ResourceId> {
   return {
-    noteId: testId('note-id'),
+    noteId: testResourceId('note-id'),
     noteBlockId: testNoteBlockId('block-1'),
     valueId: 'value-1',
     slug: 'draft_value',

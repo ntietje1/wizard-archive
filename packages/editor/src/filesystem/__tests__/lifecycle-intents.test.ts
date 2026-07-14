@@ -1,11 +1,12 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { createNote } from '../../test/sidebar-item-factory'
 import { applyFileSystemLifecycleIntents } from '../lifecycle-intents'
 
 describe('applyFileSystemLifecycleIntents', () => {
   it('surfaces open-resource intents that point at missing items', async () => {
-    const itemId = 'missing_item' as SidebarItemId
+    const itemId = 'missing_item' as ResourceId
 
     await expect(
       applyFileSystemLifecycleIntents({
@@ -23,22 +24,22 @@ describe('applyFileSystemLifecycleIntents', () => {
     const clearWorkspaceContent = vi.fn()
 
     await applyFileSystemLifecycleIntents({
-      previousResourceId: 'previous_item' as SidebarItemId,
+      previousResourceId: 'previous_item' as ResourceId,
       readModel: { getItem: vi.fn() },
       intents: [
         {
           type: 'restorePreviousLocation',
-          guardedByItemId: 'created_item' as SidebarItemId,
+          guardedByItemId: 'created_item' as ResourceId,
         },
       ],
       adapters: {
         setFolderState: vi.fn(),
         setSelectedItemIds: vi.fn(),
         getSelectionState: () => ({
-          selectedItemIds: ['created_item' as SidebarItemId],
+          selectedItemIds: ['created_item' as ResourceId],
           clearItemSelection,
         }),
-        getCurrentResourceId: () => 'other_item' as SidebarItemId,
+        getCurrentResourceId: () => 'other_item' as ResourceId,
         openResource,
         clearWorkspaceContent,
       },
@@ -52,7 +53,7 @@ describe('applyFileSystemLifecycleIntents', () => {
   it('restores the previous location while still on the guarded resource', async () => {
     const clearItemSelection = vi.fn()
     const openResource = vi.fn()
-    const previousItem = createNote({ id: 'previous_item' as SidebarItemId })
+    const previousItem = createNote({ id: 'previous_item' as ResourceId })
 
     await applyFileSystemLifecycleIntents({
       previousResourceId: previousItem.id,
@@ -60,7 +61,7 @@ describe('applyFileSystemLifecycleIntents', () => {
       intents: [
         {
           type: 'restorePreviousLocation',
-          guardedByItemId: 'created_item' as SidebarItemId,
+          guardedByItemId: 'created_item' as ResourceId,
         },
       ],
       adapters: {
@@ -70,7 +71,7 @@ describe('applyFileSystemLifecycleIntents', () => {
           selectedItemIds: [],
           clearItemSelection,
         }),
-        getCurrentResourceId: () => 'created_item' as SidebarItemId,
+        getCurrentResourceId: () => 'created_item' as ResourceId,
         openResource,
         clearWorkspaceContent: vi.fn(),
       },

@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { AnyItem } from '../../../workspace/items'
@@ -56,7 +57,7 @@ describe('useFileDropHandler', () => {
   })
 
   it('imports text file drops through the runtime filesystem import operation', async () => {
-    const parentId = testId<'sidebarItems'>('folder-1')
+    const parentId = testResourceId('folder-1')
     mocks.importFile.mockResolvedValue({
       status: 'imported',
       kind: 'note',
@@ -93,7 +94,7 @@ describe('useFileDropHandler', () => {
   })
 
   it('imports dropped media files through the runtime filesystem import operation', async () => {
-    const parentId = testId<'sidebarItems'>('folder-1')
+    const parentId = testResourceId('folder-1')
     mocks.importFile.mockResolvedValue({
       status: 'imported',
       kind: 'file',
@@ -256,7 +257,7 @@ describe('useFileDropHandler', () => {
   })
 
   it('imports multiple dropped files through runtime filesystem drop operations', async () => {
-    const parentId = testId<'sidebarItems'>('assets-folder')
+    const parentId = testResourceId('assets-folder')
     mocks.importDrop.mockResolvedValue({
       processedFiles: 2,
       processedFolders: 0,

@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 
-import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { CampaignId } from '../../../../../shared/common/ids'
 import { testOperationId } from '../../test/operation-id'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import type { ResourceTitle } from '../../resources/resource-contract'
@@ -115,7 +116,7 @@ describe('useFileSystemExecutor', () => {
 
   it('rejects undo replay when the recorded graph fingerprint is stale', async () => {
     const item = createNote({
-      id: 'renamed_item' as SidebarItemId,
+      id: 'renamed_item' as ResourceId,
       name: 'Old Name',
       slug: 'old-name',
     })

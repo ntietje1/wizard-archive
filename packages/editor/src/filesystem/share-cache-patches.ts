@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { AnyItem } from '../workspace/items'
 import type { ResourcePatch } from './patch-contract'
 
@@ -15,8 +15,8 @@ function sidebarSharePatchToCacheShare(share: SidebarSharePatch): AnyItem['share
 }
 
 function updateCachedItem(
-  itemsById: Map<SidebarItemId, AnyItem>,
-  itemId: SidebarItemId,
+  itemsById: Map<ResourceId, AnyItem>,
+  itemId: ResourceId,
   update: (item: AnyItem) => AnyItem,
 ) {
   const item = itemsById.get(itemId)

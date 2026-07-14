@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { EmbeddedCanvasState } from './embedded-state-contract'
 import type { CanvasItemWithContent } from './item-contract'
 import type { CanvasDocumentSession, CanvasSessionSource } from './session-contract'
@@ -12,7 +12,7 @@ export interface CanvasEmbeddedSessionPorts {
 }
 
 interface CanvasEmbeddedCanvasSource {
-  useEmbeddedCanvasState: (canvasId: SidebarItemId) => EmbeddedCanvasState
+  useEmbeddedCanvasState: (canvasId: ResourceId) => EmbeddedCanvasState
 }
 
 interface CanvasDocumentSessionCapability {
@@ -23,7 +23,7 @@ interface CanvasDocumentSessionCapability {
 }
 
 interface CanvasEmbeddedCanvasCapability {
-  useEmbeddedCanvasState: (canvasId: SidebarItemId) => EmbeddedCanvasState
+  useEmbeddedCanvasState: (canvasId: ResourceId) => EmbeddedCanvasState
 }
 
 interface CanvasSessionAccessCapability {

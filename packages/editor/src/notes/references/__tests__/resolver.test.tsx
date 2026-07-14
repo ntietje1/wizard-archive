@@ -1,9 +1,9 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
 import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
 import type { AnyItem } from '../../../workspace/items'
 import { createResourceCatalogModel } from '../../../filesystem/catalog'
 import { createLinkResolver } from '../resolver'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
 describe('createLinkResolver', () => {
   beforeEach(() => {
@@ -69,26 +69,26 @@ describe('createLinkResolver', () => {
   it('resolves relative links from the source note parent', () => {
     mockWorkspaceItems([
       {
-        id: 'folder-1' as SidebarItemId,
+        id: 'folder-1' as ResourceId,
         name: canonicalizeResourceItemTitle('Lore'),
         parentId: null,
         slug: assertResourceItemSlug('lore'),
       },
       {
-        id: 'note-1' as SidebarItemId,
+        id: 'note-1' as ResourceId,
         name: canonicalizeResourceItemTitle('Current Note'),
-        parentId: 'folder-1' as SidebarItemId,
+        parentId: 'folder-1' as ResourceId,
         slug: assertResourceItemSlug('current-note'),
       },
       {
-        id: 'note-2' as SidebarItemId,
+        id: 'note-2' as ResourceId,
         name: canonicalizeResourceItemTitle('Sibling Note'),
-        parentId: 'folder-1' as SidebarItemId,
+        parentId: 'folder-1' as ResourceId,
         slug: assertResourceItemSlug('sibling-note'),
       },
     ])
 
-    const resolver = createCatalogLinkResolver('note-1' as SidebarItemId)
+    const resolver = createCatalogLinkResolver('note-1' as ResourceId)
 
     const resolved = resolver.resolveLink({
       syntax: 'wiki',
@@ -114,20 +114,20 @@ describe('createLinkResolver', () => {
   it('resolves internal heading links without browser href construction', () => {
     mockWorkspaceItems([
       {
-        id: 'note-1' as SidebarItemId,
+        id: 'note-1' as ResourceId,
         name: canonicalizeResourceItemTitle('Current Note'),
         parentId: null,
         slug: assertResourceItemSlug('current-note'),
       },
       {
-        id: 'note-2' as SidebarItemId,
+        id: 'note-2' as ResourceId,
         name: canonicalizeResourceItemTitle('Sibling Note'),
         parentId: null,
         slug: assertResourceItemSlug('sibling-note'),
       },
     ])
 
-    const resolver = createCatalogLinkResolver('note-1' as SidebarItemId)
+    const resolver = createCatalogLinkResolver('note-1' as ResourceId)
 
     const resolved = resolver.resolveLink({
       syntax: 'wiki',
@@ -152,14 +152,14 @@ describe('createLinkResolver', () => {
   it('resolves heading-only links against the source note', () => {
     mockWorkspaceItems([
       {
-        id: 'note-1' as SidebarItemId,
+        id: 'note-1' as ResourceId,
         name: canonicalizeResourceItemTitle('Current Note'),
         parentId: null,
         slug: assertResourceItemSlug('current-note'),
       },
     ])
 
-    const resolver = createCatalogLinkResolver('note-1' as SidebarItemId)
+    const resolver = createCatalogLinkResolver('note-1' as ResourceId)
 
     const resolved = resolver.resolveLink({
       syntax: 'wiki',
@@ -186,10 +186,10 @@ let currentPaths = createResourceCatalogModel({
   activeItems: [],
   trashItems: [],
 }).paths
-let currentItemsById = new Map<SidebarItemId, AnyItem>()
+let currentItemsById = new Map<ResourceId, AnyItem>()
 
 function createCatalogLinkResolver(
-  sourceNoteId?: SidebarItemId,
+  sourceNoteId?: ResourceId,
   options: { isViewerMode: boolean } = { isViewerMode: false },
 ) {
   return createLinkResolver({
@@ -206,7 +206,7 @@ function createCatalogLinkResolver(
   })
 }
 
-function mockWorkspaceItems(items: Array<Partial<AnyItem> & { id: SidebarItemId }>) {
+function mockWorkspaceItems(items: Array<Partial<AnyItem> & { id: ResourceId }>) {
   const activeItems = items as Array<AnyItem>
   currentPaths = createResourceCatalogModel({
     activeItems,

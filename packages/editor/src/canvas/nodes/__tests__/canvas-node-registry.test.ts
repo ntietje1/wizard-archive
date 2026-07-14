@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import {
@@ -6,7 +7,7 @@ import {
 } from '../canvas-node-modules'
 import { normalizeCanvasNode } from '../canvas-node-normalization'
 import type { CanvasPaintPropertyBinding } from '../../properties/canvas-property-types'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { isUuidV7 } from '../../../resources/domain-id'
 
 describe('canvas node specs', () => {
@@ -224,8 +225,8 @@ describe('canvas node specs', () => {
   })
 })
 
-function sidebarId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function sidebarId(value: string): ResourceId {
+  return value as ResourceId
 }
 
 function getPaintBinding(

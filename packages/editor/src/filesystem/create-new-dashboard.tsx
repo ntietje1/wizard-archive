@@ -1,12 +1,13 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useState } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { CreateNewDashboardSurface } from './create-new-dashboard-surface'
 import type { SidebarItemCreationCommand } from '../workspace/sidebar/creation-catalog'
 import { handleError } from '../errors/handle-error'
 import type { CreateItemSource } from './create-item-source'
 
 interface CreateNewDashboardProps {
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   folderPath?: string
   source: CreateItemSource
 }

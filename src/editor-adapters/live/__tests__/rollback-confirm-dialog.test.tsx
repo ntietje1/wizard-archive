@@ -1,8 +1,8 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
 import { useLiveWorkspaceHistory } from '~/editor-adapters/live/use-live-workspace-history'
-import type { Id } from 'convex/_generated/dataModel'
 import { testHistoryEntryId } from 'shared/test/history-entry-id'
 
 const { actionMock, useCampaignQueryMock } = vi.hoisted(() => ({
@@ -92,7 +92,7 @@ describe('useLiveWorkspaceHistory rollback details', () => {
     const { result } = renderHook(() => {
       const history = useLiveWorkspaceHistory({
         canEdit: true,
-        itemId: 'item-1' as Id<'sidebarItems'>,
+        itemId: 'item-1' as ResourceId,
         controls: historyControls({ rollbackEntryId: entryId }),
       })
       return {
@@ -131,7 +131,7 @@ describe('useLiveWorkspaceHistory rollback details', () => {
     const { result } = renderHook(() => {
       const history = useLiveWorkspaceHistory({
         canEdit: true,
-        itemId: 'item-1' as Id<'sidebarItems'>,
+        itemId: 'item-1' as ResourceId,
         controls: historyControls({ rollbackEntryId: entryId }),
       })
       return history.status === 'available' ? history.rollback : null

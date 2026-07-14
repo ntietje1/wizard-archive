@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -11,7 +12,7 @@ import type {
 import type { ReactNode } from 'react'
 import { testOperationId } from '../../../../../shared/test/operation-id'
 import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())
 const convexActionMock = vi.hoisted(() => vi.fn())
@@ -490,7 +491,7 @@ function createDeferredPromise() {
 }
 
 function createNoteWithContent(id = 'embedded-note-id'): BlockShareTargetNote {
-  return { id: testId<'sidebarItems'>(id) }
+  return { id: id.startsWith('optimistic-') ? (id as ResourceId) : testResourceId(id) }
 }
 
 function createPlayerMember(memberId: CampaignMemberId) {

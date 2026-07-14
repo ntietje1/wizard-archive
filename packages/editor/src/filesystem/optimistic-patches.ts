@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import { assertResourceItemSlug, RESOURCE_SLUG_MAX_LENGTH } from '../workspace/items'
 import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../workspace/items/optimistic'
 import {
@@ -12,7 +13,7 @@ import { diffResourceFields } from './patch-contract'
 import type { ResourceCreateCommand, ResourceRenameCommand } from './transaction-contract'
 import type { ResourcePatch } from './patch-contract'
 import { deduplicateSlug, slugify } from '../../../../shared/slugs'
-import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
+import type { UserProfileId } from '../../../../shared/common/ids'
 import type { FileSystemOptimisticPreview } from './domain/lifecycle'
 import { sidebarCachePatchItemFromCacheItem } from './cache-patches'
 import type { SidebarCacheSnapshot } from './cache-patches'
@@ -50,7 +51,7 @@ export function buildOptimisticCreatePreview({
   now = Date.now(),
 }: {
   command: ResourceCreateCommand
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   currentUserId: UserProfileId | null
   workspaceId: string
   name: AnyItem['name']
@@ -71,7 +72,7 @@ export function buildOptimisticCreatePreview({
     workspaceId,
     command,
     currentUserId,
-    id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}create-${now}-${index}` as SidebarItemId,
+    id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}create-${now}-${index}` as ResourceId,
     name,
     now,
     parentId,
@@ -103,10 +104,10 @@ function buildOptimisticCreateItem({
   workspaceId: string
   command: ResourceCreateCommand
   currentUserId: UserProfileId
-  id: SidebarItemId
+  id: ResourceId
   name: AnyItem['name']
   now: number
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   slug: ResourceSlug
 }): AnyItem {
   const base = {

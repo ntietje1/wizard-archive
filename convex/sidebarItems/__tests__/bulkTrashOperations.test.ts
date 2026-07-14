@@ -20,6 +20,7 @@ import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { testCampaignId } from '../../../shared/test/campaign-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 describe('bulk trash operations', () => {
   const t = createTestContext()
@@ -62,27 +63,27 @@ describe('bulk trash operations', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folderId: root } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId: root, folderRowId: rootRowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Root',
     })
-    const { folderId: sub1 } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId: sub1, folderRowId: sub1RowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Sub1',
       parentId: root,
     })
-    const { folderId: sub2 } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId: sub2, folderRowId: sub2RowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Sub2',
       parentId: sub1,
     })
 
-    const { noteId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, dmId, {
       parentId: root,
       name: 'Root Note',
     })
-    const { fileId } = await createFile(t, ctx.campaignId, dmId, {
+    const { fileRowId } = await createFile(t, ctx.campaignId, dmId, {
       parentId: sub1,
       name: 'Sub1 File',
     })
-    const { mapId } = await createGameMap(t, ctx.campaignId, dmId, {
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, dmId, {
       parentId: sub2,
       name: 'Sub2 Map',
     })
@@ -115,12 +116,12 @@ describe('bulk trash operations', () => {
     await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignDomainId })
 
     const results = await t.run(async (dbCtx) => ({
-      root: await dbCtx.db.get('sidebarItems', root),
-      sub1: await dbCtx.db.get('sidebarItems', sub1),
-      sub2: await dbCtx.db.get('sidebarItems', sub2),
-      note: await dbCtx.db.get('sidebarItems', noteId),
-      file: await dbCtx.db.get('sidebarItems', fileId),
-      map: await dbCtx.db.get('sidebarItems', mapId),
+      root: await dbCtx.db.get('sidebarItems', rootRowId),
+      sub1: await dbCtx.db.get('sidebarItems', sub1RowId),
+      sub2: await dbCtx.db.get('sidebarItems', sub2RowId),
+      note: await dbCtx.db.get('sidebarItems', noteRowId),
+      file: await dbCtx.db.get('sidebarItems', fileRowId),
+      map: await dbCtx.db.get('sidebarItems', mapRowId),
       block: await dbCtx.db.get('blocks', blockDbId),
       share: await dbCtx.db.get('sidebarItemShares', shareId),
       bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
@@ -137,18 +138,18 @@ describe('bulk trash operations', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const items: Array<{ id: Id<'sidebarItems'> }> = []
+    const items: Array<{ id: ResourceId; rowId: Id<'sidebarItems'> }> = []
     for (let i = 0; i < 5; i++) {
-      const { noteId } = await createNote(t, ctx.campaignId, dmId, {
+      const { noteId, noteRowId } = await createNote(t, ctx.campaignId, dmId, {
         name: `Note ${i}`,
       })
-      items.push({ id: noteId })
+      items.push({ id: noteId, rowId: noteRowId })
     }
     for (let i = 0; i < 3; i++) {
-      const { fileId } = await createFile(t, ctx.campaignId, dmId, {
+      const { fileId, fileRowId } = await createFile(t, ctx.campaignId, dmId, {
         name: `File ${i}`,
       })
-      items.push({ id: fileId })
+      items.push({ id: fileId, rowId: fileRowId })
     }
 
     await executeMoveCommand(dmAuth, {
@@ -161,7 +162,7 @@ describe('bulk trash operations', () => {
     await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignDomainId })
 
     for (const item of items) {
-      const result = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', item.id))
+      const result = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', item.rowId))
       expect(result).toBeNull()
     }
   })
@@ -175,12 +176,17 @@ describe('bulk trash operations', () => {
     const { campaignId: campaign2Id, campaignDomainId: campaign2DomainId } =
       await createCampaignWithDm(t, dm2.profile)
 
-    const { noteId: note1 } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteId: note1, noteRowId: note1RowId } = await createNote(t, ctx.campaignId, dmId, {
       name: 'Campaign1 Note',
     })
-    const { noteId: note2 } = await createNote(t, campaign2Id, dm2.profile._id, {
-      name: 'Campaign2 Note',
-    })
+    const { noteId: note2, noteRowId: note2RowId } = await createNote(
+      t,
+      campaign2Id,
+      dm2.profile._id,
+      {
+        name: 'Campaign2 Note',
+      },
+    )
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -198,8 +204,8 @@ describe('bulk trash operations', () => {
     await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignDomainId })
 
     const [r1, r2] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get('sidebarItems', note1),
-      await dbCtx.db.get('sidebarItems', note2),
+      await dbCtx.db.get('sidebarItems', note1RowId),
+      await dbCtx.db.get('sidebarItems', note2RowId),
     ])
     expect(r1).toBeNull()
     expect(r2).not.toBeNull()
@@ -211,10 +217,10 @@ describe('bulk trash operations', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Parent',
     })
-    const { noteId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, dmId, {
       parentId: folderId,
       name: 'Child Note',
     })
@@ -235,8 +241,8 @@ describe('bulk trash operations', () => {
     await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignDomainId })
 
     const [folder, note] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get('sidebarItems', folderId),
-      await dbCtx.db.get('sidebarItems', noteId),
+      await dbCtx.db.get('sidebarItems', folderRowId),
+      await dbCtx.db.get('sidebarItems', noteRowId),
     ])
     expect(folder).toBeNull()
     expect(note).toBeNull()
@@ -247,10 +253,12 @@ describe('bulk trash operations', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folders, leaf: leafId } = await setupFolderTree(t, ctx.campaignId, dmId, {
-      depth: 5,
-      leafType: 'note',
-    })
+    const {
+      folders,
+      folderRowIds,
+      leaf: leafId,
+      leafRowId,
+    } = await setupFolderTree(t, ctx.campaignId, dmId, { depth: 5, leafType: 'note' })
 
     const { blockDbId } = await createBlock(t, leafId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('deep-block'),
@@ -271,12 +279,12 @@ describe('bulk trash operations', () => {
 
     await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignDomainId })
 
-    for (const fId of folders) {
+    for (const fId of folderRowIds) {
       const result = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fId))
       expect(result).toBeNull()
     }
     const [leafResult, blockResult, shareResult] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get('sidebarItems', leafId),
+      await dbCtx.db.get('sidebarItems', leafRowId),
       await dbCtx.db.get('blocks', blockDbId),
       await dbCtx.db.get('sidebarItemShares', shareId),
     ])

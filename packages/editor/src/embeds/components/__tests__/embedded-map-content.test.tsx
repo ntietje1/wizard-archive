@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { MapItemWithContent } from '../../../game-maps/item-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { ReactNode } from 'react'
 import { canonicalizeResourceItemTitle } from '../../../workspace/items'
 import {
@@ -101,7 +102,7 @@ function createMapStateSource(): EmbeddedMapStateSource {
 
 function createMap(overrides: Partial<MapItemWithContent> = {}): MapItemWithContent {
   const map = {
-    id: 'map-id' as SidebarItemId,
+    id: 'map-id' as ResourceId,
     createdAt: 0,
     name: canonicalizeResourceItemTitle('Dungeon'),
     iconName: null,
@@ -142,7 +143,7 @@ function createPin({
   layerId?: string | null
 }): MapItemWithContent['pins'][number] {
   const item = {
-    id: 'note-id' as SidebarItemId,
+    id: 'note-id' as ResourceId,
     name: canonicalizeResourceItemTitle('Pinned Note'),
     type: RESOURCE_TYPES.notes,
     color: null,
@@ -155,7 +156,7 @@ function createPin({
     item,
     itemId: item.id,
     layerId,
-    mapId: 'map-id' as SidebarItemId,
+    mapId: 'map-id' as ResourceId,
     visible: true,
     x: 50,
     y: 50,

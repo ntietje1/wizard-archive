@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useMemo, useReducer } from 'react'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import type { RefObject } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { EmbedTarget } from '../../../../../shared/embeds/embedTargets'
 import { getSidebarItemIdFromDragData, resourceEmbedTarget } from '../utils/targets'
 import { EMPTY_EMBED_DROP_TYPE } from '../../drag-drop/drop-target-data'
@@ -49,7 +50,7 @@ export function useEmbedDropTarget({
   embedBlockId: string
   ref: RefObject<HTMLElement | null>
   enabled: boolean
-  sourceItemId: SidebarItemId | null
+  sourceItemId: ResourceId | null
   setTarget: (target: EmbedTarget) => Promise<void> | void
   targetKind: EmbedTarget['kind']
   uploadFile: EmbedTargetOperations['uploadFile']
@@ -174,7 +175,7 @@ function useEmptyEmbedSurfaceExecutor({
 }: {
   dropData: EmptyEmbedDropZoneData | null
   enabled: boolean
-  sourceItemId: SidebarItemId | null
+  sourceItemId: ResourceId | null
   setTarget: (target: EmbedTarget) => Promise<void> | void
 }) {
   useEffect(() => {
@@ -277,7 +278,7 @@ function useElementDropTarget({
   dropData: Record<string, unknown>
   ref: RefObject<HTMLElement | null>
   enabled: boolean
-  sourceItemId: SidebarItemId | null
+  sourceItemId: ResourceId | null
   updateDropVisualState: (state: EmbedDropTargetVisualState) => void
 }) {
   useEffect(() => {

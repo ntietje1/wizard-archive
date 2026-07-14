@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ReactNode } from 'react'
@@ -10,7 +11,6 @@ import { useNoteEditorDropTarget } from '../use-note-editor-drop-target'
 import type { AnyItem } from '../../workspace/items'
 import type { DndValue } from '../../drag-drop/context'
 import type { CustomBlockNoteEditor } from '../editor-schema'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 const dropTargetCalls = vi.hoisted(() => [] as Array<Record<string, unknown>>)
 const externalDropTargetState = vi.hoisted(() => ({
@@ -181,7 +181,7 @@ describe('useNoteEditorDropTarget', () => {
     const editor = createEditor()
     const upload = createDeferred<{
       status: 'completed'
-      itemId: SidebarItemId
+      itemId: ResourceId
     }>()
     const uploadFile = vi.fn(() => upload.promise)
     const file = new File(['content'], 'portrait.png', { type: 'image/png' })
@@ -429,6 +429,6 @@ function createItem(id: string, name: string): AnyItem {
   } as unknown as AnyItem
 }
 
-function noteId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function noteId(value: string): ResourceId {
+  return value as ResourceId
 }

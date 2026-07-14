@@ -1,6 +1,6 @@
+import type { ResourceId, HistoryEntryId } from '../resources/domain-id'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
-import type { HistoryEntryId } from '../resources/domain-id'
+
 import type { GameMapSnapshotData } from '../game-maps/document-contract'
 import type { EditHistoryEntry, HistoryRollbackResult } from './history-contract'
 
@@ -17,8 +17,8 @@ export type HistoryPreviewImageUrlState =
   | { status: 'ready'; url: string }
 
 export type HistoryPreviewSnapshot =
-  | { kind: 'note-yjs'; noteId: SidebarItemId; data: ArrayBuffer }
-  | { kind: 'canvas-yjs'; canvasId: SidebarItemId; data: ArrayBuffer }
+  | { kind: 'note-yjs'; noteId: ResourceId; data: ArrayBuffer }
+  | { kind: 'canvas-yjs'; canvasId: ResourceId; data: ArrayBuffer }
   | {
       kind: 'game-map'
       snapshotData: GameMapSnapshotData
@@ -60,7 +60,7 @@ export interface HistoryEntriesModel {
 
 export interface ResourceHistoryAvailable {
   status: 'available'
-  itemId: SidebarItemId
+  itemId: ResourceId
   entries: HistoryEntriesModel
   previewingEntryId: HistoryEntryId | null
   preview: HistoryPreviewState

@@ -10,6 +10,7 @@ import {
   loadSidebarItemShareIdentityProjection,
   projectSidebarItemShare,
 } from '../../sidebarShares/functions/projectSidebarItemShare'
+import { sidebarItemResourceId } from './sidebarItemIdentity'
 
 export async function enhanceSidebarItemRows(
   ctx: CampaignQueryCtx,
@@ -17,6 +18,9 @@ export async function enhanceSidebarItemRows(
 ): Promise<Array<AnyResource>> {
   if (accessibleRows.length === 0) return []
   const itemIds = new Set(accessibleRows.map(({ rawItem }) => rawItem._id))
+  const resourceIdsByItemId = new Map(
+    accessibleRows.map(({ rawItem }) => [rawItem._id, sidebarItemResourceId(rawItem)]),
+  )
   const isDm = ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM
   const [campaignShares, memberBookmarks, projection] = await Promise.all([
     isDm
@@ -38,7 +42,9 @@ export async function enhanceSidebarItemRows(
     if (!itemIds.has(share.sidebarItemId)) continue
     const itemShares = sharesByItemId.get(share.sidebarItemId) ?? []
     if (!projection) throw new Error('Resource share projection is unavailable')
-    itemShares.push(projectSidebarItemShare(share, projection.identities))
+    const resourceId = resourceIdsByItemId.get(share.sidebarItemId)
+    if (!resourceId) continue
+    itemShares.push(projectSidebarItemShare(share, projection.identities, resourceId))
     sharesByItemId.set(share.sidebarItemId, itemShares)
   }
   const bookmarkedItemIds = new Set(

@@ -1,7 +1,7 @@
+import type { ResourceId, MapPinId } from '../../../resources/domain-id'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
-import type { MapPinId } from '../../../resources/domain-id'
+
 import { createMapPinsAtPosition } from '../map-pin-creation'
 
 vi.mock('sonner', () => ({
@@ -18,7 +18,7 @@ describe('createMapPinsAtPosition', () => {
   })
 
   it('reports invalid completed receipts without rejecting the event path', async () => {
-    const mapId = 'map-1' as SidebarItemId
+    const mapId = 'map-1' as ResourceId
     const createMapPins = vi.fn().mockResolvedValue({
       status: 'completed',
       receipt: {
@@ -31,7 +31,7 @@ describe('createMapPinsAtPosition', () => {
     await expect(
       createMapPinsAtPosition({
         createMapPins,
-        itemIds: ['note-1' as SidebarItemId],
+        itemIds: ['note-1' as ResourceId],
         mapId,
         position: { x: 25, y: 75 },
       }),

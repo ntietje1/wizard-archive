@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import type { MaybePromise } from '../../../../../shared/common/async'
 import type { WorkspaceMode } from '../../../../../shared/workspace/workspace-mode'
 import type {
@@ -19,7 +19,7 @@ import type { EditorPermissionLevel, EditorShareParticipant } from '../../sharin
 import type { NoteValueReferences, NoteValueRuntimeStateSource } from '../value-runtime-model'
 
 export type NoteEditorSetParticipantPermission = (input: {
-  itemIds: Array<SidebarItemId>
+  itemIds: Array<ResourceId>
   participantId: EditorShareParticipant['id']
   permissionLevel: EditorPermissionLevel
 }) => MaybePromise<void>

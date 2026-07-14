@@ -1,7 +1,7 @@
+import type { ResourceId, MapPinId } from '../../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
-import type { MapPinId } from '../../../resources/domain-id'
+
 import type { MapPinWithItem } from '../../../game-maps/item-contract'
 import { MapModeBanners } from '../map-mode-banners'
 
@@ -9,7 +9,7 @@ describe('MapModeBanners', () => {
   it('shows pending placement instructions for one item', () => {
     render(
       <MapModeBanners
-        pendingPinItems={{ itemIds: ['note-1' as SidebarItemId] }}
+        pendingPinItems={{ itemIds: ['note-1' as ResourceId] }}
         pendingPinMove={null}
         draggingPin={null}
       />,
@@ -23,7 +23,7 @@ describe('MapModeBanners', () => {
   it('pluralizes pending placement instructions for multiple items', () => {
     render(
       <MapModeBanners
-        pendingPinItems={{ itemIds: ['note-1' as SidebarItemId, 'note-2' as SidebarItemId] }}
+        pendingPinItems={{ itemIds: ['note-1' as ResourceId, 'note-2' as ResourceId] }}
         pendingPinMove={null}
         draggingPin={null}
       />,

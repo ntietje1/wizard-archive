@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { NoteBlock, Heading } from '../../../notes/document/model'
@@ -7,7 +8,6 @@ import { createRuntimeRightSidebarSource } from '../runtime-source'
 import { useActiveNoteHeadingNavigation } from '../../../notes/outline/note-outline'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
-import { testId } from '../../../test/id'
 import { testNoteBlockId } from '../../../test/blocknote-id'
 import { OutlinePanel } from '../components/outline'
 import { RightSidebarPanel } from '../panels'
@@ -208,7 +208,7 @@ function createOutlineNote(): NoteItemWithContent {
   ]
 
   return {
-    ...createNote({ id: testId<'sidebarItems'>('note-1') }),
+    ...createNote({ id: testResourceId('note-1') }),
     ancestors: [],
     blockMeta: {},
     blockShareAccessWarnings: [],

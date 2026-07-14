@@ -12,7 +12,7 @@ describe('enhanceBase previewUrl resolution', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { assetId, storageId } = await storeCommittedTestUploadSession(
       t,
@@ -22,7 +22,7 @@ describe('enhanceBase previewUrl resolution', () => {
     )
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', noteId, { previewStorageId: storageId })
+      await dbCtx.db.patch('sidebarItems', noteRowId, { previewStorageId: storageId })
     })
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
@@ -40,7 +40,7 @@ describe('enhanceBase previewUrl resolution', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+    const { canvasId, canvasRowId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { assetId, storageId } = await storeCommittedTestUploadSession(
       t,
@@ -50,7 +50,7 @@ describe('enhanceBase previewUrl resolution', () => {
     )
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', canvasId, { previewStorageId: storageId })
+      await dbCtx.db.patch('sidebarItems', canvasRowId, { previewStorageId: storageId })
     })
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {

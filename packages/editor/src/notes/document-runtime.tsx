@@ -1,10 +1,11 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useState } from 'react'
 import { LinkClickHandlerSurface } from './link-click-handler'
 import { WikiLinkAutocomplete } from './wiki-link/autocomplete'
 import { createLinkResolver } from './references/resolver'
 import { useNoteValueRuntimeSource } from './value-runtime'
 import type { ReactNode, RefObject } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { NoteItemWithContent } from '../notes/item-contract'
 import type { CustomBlockNoteEditor } from './editor-schema'
 import type { LinkResolver } from './references/resolver'
@@ -64,7 +65,7 @@ export function NoteDocumentRuntime({
   editor: CustomBlockNoteEditor | null
   isViewerMode: boolean
   linkResolutionSource: NoteLinkResolutionSource
-  noteId?: SidebarItemId
+  noteId?: ResourceId
   noteValueReferences: NoteValueReferences
   noteValueStateSource: NoteValueRuntimeStateSource
 }) {
@@ -91,7 +92,7 @@ function useNoteDocumentRuntime({
   editor: CustomBlockNoteEditor | null
   isViewerMode: boolean
   linkResolutionSource: NoteLinkResolutionSource
-  noteId?: SidebarItemId
+  noteId?: ResourceId
   noteValueReferences: NoteValueReferences
   noteValueStateSource: NoteValueRuntimeStateSource
 }): NoteRuntime {
@@ -130,7 +131,7 @@ export function NoteLinkClickHandler({
   forceOpenLinkPopover?: () => void
   linkCreation: NoteLinkCreationSource | null
   linkNavigationSource: NoteLinkNavigationSource | null
-  sourceNoteId?: SidebarItemId
+  sourceNoteId?: ResourceId
 }) {
   const linkNavigation = linkNavigationSource
   if (!linkNavigation && !linkCreation) return null
@@ -158,7 +159,7 @@ export function NoteWikiLinkAutocomplete({
   editor: CustomBlockNoteEditor | undefined
   onForceOpenRef?: RefObject<(() => void) | null>
   source: NoteWikiLinkContentSource
-  sourceNoteId?: SidebarItemId
+  sourceNoteId?: ResourceId
 }) {
   const [menu, setMenu] = useState<WikiLinkAutocompleteMenuState>(
     CLOSED_WIKI_LINK_AUTOCOMPLETE_MENU,

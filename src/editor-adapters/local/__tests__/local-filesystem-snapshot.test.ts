@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
-import type { SidebarItemId } from 'shared/common/ids'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { createWizardEditorResource } from '@wizard-archive/editor/adapter'
 import type { WizardEditorItemWithContent } from '@wizard-archive/editor/adapter'
 import {
@@ -39,7 +39,7 @@ describe('local filesystem snapshot', () => {
         ? { ...item, createdAt, status: 'trash', trashedAt, updatedAt }
         : item,
     )
-    const noteId = 'note-market' as SidebarItemId
+    const noteId = 'note-market' as ResourceId
 
     vi.setSystemTime(new Date('2026-07-01T16:00:00.000Z'))
     const firstNote = createLocalFileSystemSnapshot(workspace).catalog.getKnownItemById(noteId)
@@ -90,7 +90,7 @@ describe('local filesystem snapshot', () => {
 
     const snapshot = createLocalFileSystemSnapshot(workspace)
     const repeatedSnapshot = createLocalFileSystemSnapshot(workspace)
-    const noteId = 'visible-note' as SidebarItemId
+    const noteId = 'visible-note' as ResourceId
     const share = snapshot.catalog.getKnownItemById(noteId)?.shares[0]
 
     expect(isUuidV7(share!.id)).toBe(true)
@@ -106,7 +106,7 @@ describe('local filesystem snapshot', () => {
       ...scenario.workspace,
       selectedViewAsPlayerId: 'missing-player' as CampaignMemberId,
     })
-    const note = snapshot.catalog.getKnownItemById('note-market' as SidebarItemId)
+    const note = snapshot.catalog.getKnownItemById('note-market' as ResourceId)
 
     expect(snapshot.workspace.selectedViewAsPlayerId).toBeUndefined()
     expect(note).toMatchObject({
@@ -120,7 +120,7 @@ describe('local filesystem snapshot', () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap)
     const snapshot = createLocalFileSystemSnapshot(scenario.workspace, {
       kind: 'resource',
-      resource: createWizardEditorResource('note-market' as SidebarItemId),
+      resource: createWizardEditorResource('note-market' as ResourceId),
     })
 
     expect(snapshot.current.contentItem).toBeNull()
@@ -138,7 +138,7 @@ describe('local filesystem snapshot', () => {
 
     expect(navigation).toEqual({
       kind: 'resource',
-      resource: createWizardEditorResource('note-market' as SidebarItemId),
+      resource: createWizardEditorResource('note-market' as ResourceId),
     })
     expect(snapshot.current.availabilityState).toMatchObject({ status: 'not_shared' })
   })
@@ -210,7 +210,7 @@ describe('local filesystem snapshot', () => {
     }
 
     const map = createLocalFileSystemSnapshot(workspace).catalog.getVisibleItemById(
-      'visible-map' as SidebarItemId,
+      'visible-map' as ResourceId,
     ) as LocalMapItemWithContent | null
 
     expect(map?.pins.map((pin) => pin.itemId)).toEqual(['visible-note'])
@@ -236,7 +236,7 @@ describe('local filesystem snapshot', () => {
     }
 
     const note = createLocalFileSystemSnapshot(workspace).catalog.getKnownItemById(
-      'note-market' as SidebarItemId,
+      'note-market' as ResourceId,
     ) as LocalNoteItemWithContent | null
 
     expect(note?.blockMeta[testNoteBlockId('shared-clue-1')]).toMatchObject({

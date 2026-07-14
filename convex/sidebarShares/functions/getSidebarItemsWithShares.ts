@@ -7,7 +7,7 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceShare } from '@wizard-archive/editor/resources/resource-contract'
 import {
   loadSidebarItemShareIdentityProjection,
@@ -16,7 +16,7 @@ import {
 import type { SidebarItemShareIdentityProjection } from './projectSidebarItemShare'
 
 export interface SidebarItemWithShares {
-  sidebarItemId: Id<'sidebarItems'>
+  sidebarItemId: ResourceId
   allPermissionLevel: PermissionLevel | null
   inheritShares: boolean | null
   shares: Array<ResourceShare>
@@ -32,6 +32,8 @@ async function getShareInfoForSidebarItem(
   playerMemberIds: Array<Id<'campaignMembers'>>,
   identities: SidebarItemShareIdentityProjection,
 ): Promise<SidebarItemWithShares> {
+  const rawItem = await ctx.db.get('sidebarItems', sidebarItemId)
+  if (!rawItem) throw new Error('Resource provider row is missing')
   const itemRow = await getSidebarItem(ctx, sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemRow,
@@ -46,7 +48,7 @@ async function getShareInfoForSidebarItem(
     .collect()
 
   const inherited = await resolveInheritedPermissions(ctx, {
-    parentId: item.parentId,
+    parentId: rawItem.parentId,
     memberIds: playerMemberIds,
   })
 
@@ -63,10 +65,10 @@ async function getShareInfoForSidebarItem(
   }
 
   return {
-    sidebarItemId,
+    sidebarItemId: item.id,
     allPermissionLevel: item.allPermissionLevel,
     inheritShares: item.type === RESOURCE_TYPES.folders ? item.inheritShares : null,
-    shares: shares.map((share) => projectSidebarItemShare(share, identities)),
+    shares: shares.map((share) => projectSidebarItemShare(share, identities, item.id)),
     inheritedAllPermissionLevel: inherited.allPlayers.level,
     inheritedFromFolderName: inherited.allPlayers.folderName,
     memberInheritedPermissions,

@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef, useState } from 'react'
 import type { Dispatch, KeyboardEvent, Ref, SetStateAction } from 'react'
 import {
@@ -8,7 +9,7 @@ import type { FormulaAutocompleteContext } from '../values/authoring'
 import { collectFormulaReferences } from '../values/formula-parser'
 import type { NoteValueRuntimeState } from '../values/state-contract'
 import type { FormulaReferenceToken } from '../values/model'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { getFormulaSuggestions } from './formula-suggestions'
 import type { FormulaSuggestion } from './formula-suggestions'
 import { useNoteValueRuntime } from './value-block-runtime-context'
@@ -36,7 +37,7 @@ interface FormulaDependenciesResult {
 
 const MAX_VISIBLE_FORMULA_DEPENDENCIES = 6
 
-function getExternalValueKey(noteId: SidebarItemId, slug: string) {
+function getExternalValueKey(noteId: ResourceId, slug: string) {
   return `${noteId}:${slug}`
 }
 
@@ -51,9 +52,9 @@ function getLocalValuesBySlug(localValues: Array<{ valueId: string; slug: string
 }
 
 function getReferenceableStatesByKey(
-  referenceableStates: Array<NoteValueRuntimeState<SidebarItemId>>,
+  referenceableStates: Array<NoteValueRuntimeState<ResourceId>>,
 ) {
-  const statesByKey = new Map<string, Array<NoteValueRuntimeState<SidebarItemId>>>()
+  const statesByKey = new Map<string, Array<NoteValueRuntimeState<ResourceId>>>()
   for (const state of referenceableStates) {
     const key = getExternalValueKey(state.noteId, state.slug)
     const states = statesByKey.get(key)
@@ -67,7 +68,7 @@ function duplicateExternalSlugDependency({
   noteId,
   slug,
 }: {
-  noteId: SidebarItemId
+  noteId: ResourceId
   slug: string
 }): FormulaDependency {
   return {
@@ -121,7 +122,7 @@ function addDependency(
 
 function getLocalDependency(
   matchingValues: Array<{ valueId: string; slug: string }> | undefined,
-  stateByValueId: Map<string, NoteValueRuntimeState<SidebarItemId>>,
+  stateByValueId: Map<string, NoteValueRuntimeState<ResourceId>>,
 ): FormulaDependency | null {
   if (matchingValues && matchingValues.length > 1) {
     return duplicateLocalSlugDependency(matchingValues[0].slug)
@@ -140,9 +141,9 @@ function getLocalDependency(
 }
 
 function getExternalDependency(
-  externalNoteId: SidebarItemId | undefined,
+  externalNoteId: ResourceId | undefined,
   slug: string,
-  referenceableStatesByKey: Map<string, Array<NoteValueRuntimeState<SidebarItemId>>>,
+  referenceableStatesByKey: Map<string, Array<NoteValueRuntimeState<ResourceId>>>,
   externalDependencyStatesStatus: ReturnType<
     typeof useNoteValueRuntime
   >['externalDependencyStatesStatus'],
@@ -186,12 +187,12 @@ function getReferenceDependency({
 }: {
   reference: FormulaReferenceToken
   localValuesBySlug: Map<string, Array<{ valueId: string; slug: string }>>
-  stateByValueId: Map<string, NoteValueRuntimeState<SidebarItemId>>
-  referenceableStatesByKey: Map<string, Array<NoteValueRuntimeState<SidebarItemId>>>
+  stateByValueId: Map<string, NoteValueRuntimeState<ResourceId>>
+  referenceableStatesByKey: Map<string, Array<NoteValueRuntimeState<ResourceId>>>
   externalDependencyStatesStatus: ReturnType<
     typeof useNoteValueRuntime
   >['externalDependencyStatesStatus']
-  noteId: SidebarItemId | undefined
+  noteId: ResourceId | undefined
   resolveNoteIdByPath: ReturnType<typeof useNoteValueRuntime>['references']['resolveNoteIdByPath']
 }) {
   if (reference.kind === 'self') {
@@ -225,12 +226,12 @@ function getReferenceDependency({
 function getReferencedDependencies(
   expressionSource: string,
   localValues: Array<{ valueId: string; slug: string }>,
-  stateByValueId: Map<string, NoteValueRuntimeState<SidebarItemId>>,
-  referenceableStates: Array<NoteValueRuntimeState<SidebarItemId>>,
+  stateByValueId: Map<string, NoteValueRuntimeState<ResourceId>>,
+  referenceableStates: Array<NoteValueRuntimeState<ResourceId>>,
   externalDependencyStatesStatus: ReturnType<
     typeof useNoteValueRuntime
   >['externalDependencyStatesStatus'],
-  noteId: SidebarItemId | undefined,
+  noteId: ResourceId | undefined,
   resolveNoteIdByPath: ReturnType<typeof useNoteValueRuntime>['references']['resolveNoteIdByPath'],
 ): FormulaDependenciesResult {
   const dependencies: Array<FormulaDependency> = []
@@ -262,15 +263,15 @@ function getReferencedDependencies(
   }
 }
 
-function getDisplayedValue(state: NoteValueRuntimeState<SidebarItemId> | undefined) {
+function getDisplayedValue(state: NoteValueRuntimeState<ResourceId> | undefined) {
   return state?.status === 'ok' ? state.formattedValue : (state?.errorMessage ?? 'No formula')
 }
 
-function getHasError(state: NoteValueRuntimeState<SidebarItemId> | undefined) {
+function getHasError(state: NoteValueRuntimeState<ResourceId> | undefined) {
   return state?.status === 'error'
 }
 
-function SuggestionValueChip({ value }: { value: NoteValueRuntimeState<SidebarItemId> }) {
+function SuggestionValueChip({ value }: { value: NoteValueRuntimeState<ResourceId> }) {
   return (
     <ValueInlineChip
       slug={value.slug}
@@ -283,11 +284,7 @@ function SuggestionValueChip({ value }: { value: NoteValueRuntimeState<SidebarIt
   )
 }
 
-function SuggestionValueChipMeasurement({
-  value,
-}: {
-  value: NoteValueRuntimeState<SidebarItemId>
-}) {
+function SuggestionValueChipMeasurement({ value }: { value: NoteValueRuntimeState<ResourceId> }) {
   return (
     <span
       className={cn(

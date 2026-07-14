@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { blockNoteIdValidator } from '../blocks/schema'
 import { NOTE_VALUE_ERROR_CODES } from '@wizard-archive/editor/notes/values-contract'
+import { resourceIdValidator } from '../resources/validators'
 
 const noteValueErrorCodeValidator = literals(...NOTE_VALUE_ERROR_CODES)
 
@@ -42,7 +43,7 @@ export const noteValuesTables = {
 }
 
 const noteValueRuntimeStateIdentityValidators = {
-  noteId: v.id('sidebarItems'),
+  noteId: resourceIdValidator,
   noteBlockId: blockNoteIdValidator,
   valueId: v.string(),
   slug: v.string(),

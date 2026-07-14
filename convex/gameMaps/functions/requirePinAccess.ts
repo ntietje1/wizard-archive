@@ -4,20 +4,17 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
-import { mapPinRowToDomain } from './mapPinRow'
 import type { CampaignMutationCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
-import type { MapItemRow } from '@wizard-archive/editor/game-maps/item-contract'
-import type { MapPin } from '@wizard-archive/editor/game-maps/document-contract'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function requirePinAccess(
   ctx: CampaignMutationCtx,
   { mapPinId }: { mapPinId: MapPinId },
 ): Promise<{
-  pin: MapPin
+  pin: Doc<'mapPins'>
   pinRowId: Id<'mapPins'>
-  map: MapItemRow
+  mapRowId: Id<'sidebarItems'>
 }> {
   const pinRow = await ctx.db
     .query('mapPins')
@@ -36,5 +33,5 @@ export async function requirePinAccess(
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  return { pin: mapPinRowToDomain(pinRow), pinRowId: pinRow._id, map }
+  return { pin: pinRow, pinRowId: pinRow._id, mapRowId: pinRow.mapId }
 }

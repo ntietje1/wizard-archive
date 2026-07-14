@@ -1,21 +1,21 @@
+import type { ResourceId, MapPinId } from '../../resources/domain-id'
 import type { MaybePromise } from '../../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-import type { MapPinId } from '../../resources/domain-id'
+
 import type { ResourceOperationResult } from '../../filesystem/transaction-contract'
 
 export interface MapPinOperations {
   removeMapPin: (input: {
-    mapId: SidebarItemId
+    mapId: ResourceId
     mapPinId: MapPinId
   }) => MaybePromise<ResourceOperationResult>
   updateMapPinVisibility: (input: {
     isVisible: boolean
-    mapId: SidebarItemId
+    mapId: ResourceId
     mapPinId: MapPinId
   }) => MaybePromise<ResourceOperationResult>
 }
 
 export interface MapPinInteractionRequests {
-  requestPinPlacement: (input: { itemIds: Array<SidebarItemId> }) => void
+  requestPinPlacement: (input: { itemIds: Array<ResourceId> }) => void
   requestPinMove: (input: { pinId: MapPinId }) => void
 }

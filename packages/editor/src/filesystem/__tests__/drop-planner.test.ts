@@ -1,10 +1,10 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vite-plus/test'
 import { SIDEBAR_ROOT_DROP_TYPE, TRASH_DROP_ZONE_TYPE } from '../../drag-drop/drop-target-data'
 import type { DropPlanningContext } from '../../drag-drop/planning-context'
 import { createFolder } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { resolveFileSystemDropTarget } from '../drop-planner'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
@@ -23,7 +23,7 @@ function planningContext(overrides?: Partial<DropPlanningContext>): DropPlanning
 describe('filesystem drop planner', () => {
   it('resolves sidebar drop zones directly to filesystem intent targets', () => {
     const folder = createFolder({ campaignId, name: 'Destination' })
-    const folderTarget = { ...folder, ancestorIds: [testId<'sidebarItems'>('root')] }
+    const folderTarget = { ...folder, ancestorIds: [testResourceId('root')] }
 
     expect(resolveFileSystemDropTarget({ type: TRASH_DROP_ZONE_TYPE }, planningContext())).toEqual({
       type: 'trash',
@@ -41,7 +41,7 @@ describe('filesystem drop planner', () => {
       target: {
         parentId: folder.id,
         parent: folderTarget,
-        ancestorIds: [testId<'sidebarItems'>('root')],
+        ancestorIds: [testResourceId('root')],
       },
       label: 'Destination',
     })

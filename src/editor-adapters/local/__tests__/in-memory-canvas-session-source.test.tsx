@@ -1,7 +1,8 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, test, vi } from 'vite-plus/test'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
-import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { UserProfileId } from 'shared/common/ids'
 import { testCampaignId } from 'shared/test/campaign-id'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type {
@@ -15,7 +16,7 @@ import {
 } from '../in-memory-canvas-session-source'
 
 const workspaceId = 'workspace-1'
-const canvasId = 'canvas-1' as SidebarItemId
+const canvasId = 'canvas-1' as ResourceId
 const TEST_RESOURCE_LOCATION = {
   sidebar: 'sidebar',
 } as const satisfies Record<string, WizardEditorItem['location']>

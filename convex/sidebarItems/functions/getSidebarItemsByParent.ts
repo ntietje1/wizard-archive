@@ -6,6 +6,8 @@ import { isActiveSidebarItem } from '../types/status'
 import type { AnyResource } from '@wizard-archive/editor/resources/resource-contract'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { findSidebarItemRow } from './sidebarItemIdentity'
 
 export const getActiveSidebarItemRowsByParent = async (
   ctx: CampaignQueryCtx,
@@ -24,10 +26,10 @@ export const getActiveSidebarItemRowsByParent = async (
 
 export const getSidebarItemsByParent = async (
   ctx: CampaignQueryCtx,
-  { parentId }: { parentId: Id<'sidebarItems'> | null },
+  { parentId }: { parentId: ResourceId | null },
 ): Promise<Array<AnyResource>> => {
+  const parent = parentId ? await findSidebarItemRow(ctx, parentId) : null
   if (parentId) {
-    const parent = await ctx.db.get('sidebarItems', parentId)
     if (
       !parent ||
       !isActiveSidebarItem(parent) ||
@@ -37,7 +39,7 @@ export const getSidebarItemsByParent = async (
     }
   }
 
-  const rawItems = await getActiveSidebarItemRowsByParent(ctx, { parentId })
+  const rawItems = await getActiveSidebarItemRowsByParent(ctx, { parentId: parent?._id ?? null })
   return await enhanceSidebarItemRows(
     ctx,
     await resolveResourceRowsByAccess(ctx, rawItems, PERMISSION_LEVEL.VIEW),

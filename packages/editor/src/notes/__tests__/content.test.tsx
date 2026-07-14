@@ -1,3 +1,5 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import type { ResourceId, CampaignMemberId } from '../../resources/domain-id'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -15,7 +17,6 @@ import {
   createTestNoteSessionPortsWithSession,
   createTestNoteValueSessionPorts,
 } from '../../test/workspace-note-session-source-factory'
-import { testId } from '../../test/id'
 import { testResourceShareId } from '../../test/resource-share-id'
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
@@ -34,8 +35,7 @@ import type {
   NoteSessionPorts,
   NoteValueSessionPorts,
 } from '../workspace-session-source'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-import type { CampaignMemberId } from '../../resources/domain-id'
+
 import type * as ImportedTextModule from '../imported-text'
 
 const { activeItemsState, blockNoteCreateMock, viewAsState, noteSessionState, noteViewSpy } =
@@ -85,7 +85,7 @@ vi.mock('../view', () => ({
     editor: CustomBlockNoteEditor
     editable: boolean
     note?: NoteItemWithContent
-    noteId?: SidebarItemId
+    noteId?: ResourceId
     editableChrome?: ReactNode
     children?: ReactNode
   }) => {
@@ -589,7 +589,7 @@ function createNoteWithContent({
   Partial<Pick<NoteItemWithContent, 'allPermissionLevel'>>): NoteItemWithContent {
   return {
     ...createNote({
-      id: testId<'sidebarItems'>('note-1'),
+      id: testResourceId('note-1'),
       myPermissionLevel,
       allPermissionLevel,
     }),
@@ -631,7 +631,7 @@ function createWorkspaceRuntime(
   })
 }
 
-function createSourceNoteContent(noteId: SidebarItemId): NoteSessionPorts {
+function createSourceNoteContent(noteId: ResourceId): NoteSessionPorts {
   const doc = createCollaborationDoc()
   const provider = createCollaborationProvider(doc)
   return createTestNoteSessionPortsWithSession(

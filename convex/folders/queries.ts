@@ -6,6 +6,7 @@ import {
   getRootContentsForDownload as getRootContentsForDownloadFn,
   getSidebarItemsForDownload as getSidebarItemsForDownloadFn,
 } from './functions/getItemsForDownload'
+import { resourceIdValidator } from '../resources/validators'
 
 const downloadItemValidator = v.union(
   v.object({
@@ -49,7 +50,7 @@ export const getRootContentsForDownload = dmQuery({
 
 export const getSidebarItemsForDownload = campaignQuery({
   args: {
-    sourceItemIds: v.array(v.id('sidebarItems')),
+    sourceItemIds: v.array(resourceIdValidator),
   },
   returns: v.object({
     items: v.array(downloadItemValidator),

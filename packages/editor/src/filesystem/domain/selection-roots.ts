@@ -1,23 +1,23 @@
-import type { ResourceId } from '../../workspace/resource-contract'
+import type { ResourceId } from '../../resources/domain-id'
 import { MAX_SIDEBAR_TREE_DEPTH } from './tree'
 
-type ResourceTreeNode = {
-  id: ResourceId
-  parentId: ResourceId | null
+type ResourceTreeNode<TId extends string> = {
+  id: TId
+  parentId: TId | null
 }
 
-export function normalizeSelectedRoots<T extends ResourceTreeNode>(
-  items: Array<T>,
-  allItemsMap: ReadonlyMap<ResourceId, ResourceTreeNode>,
-): Array<T> {
+export function normalizeSelectedRoots<
+  TId extends string = ResourceId,
+  T extends ResourceTreeNode<TId> = ResourceTreeNode<TId>,
+>(items: Array<T>, allItemsMap: ReadonlyMap<TId, ResourceTreeNode<TId>>): Array<T> {
   const selectedIds = new Set(items.map((item) => item.id))
-  const normalizedIds = new Set<ResourceId>()
+  const normalizedIds = new Set<TId>()
 
   return items.filter((item) => {
     if (normalizedIds.has(item.id)) return false
 
     let parentId = item.parentId
-    const seen = new Set<ResourceId>([item.id])
+    const seen = new Set<TId>([item.id])
     let depth = 0
     let hasSelectedAncestor = false
 

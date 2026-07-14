@@ -59,7 +59,7 @@ describe('saveAllNoteValuesForNote', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Invalid Function Value Note',
     })
 
@@ -80,7 +80,7 @@ describe('saveAllNoteValuesForNote', () => {
       const rows = await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .collect()
 
@@ -196,9 +196,14 @@ describe('saveAllNoteValuesForNote', () => {
     const { noteId: hiddenNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Hidden Values',
     })
-    const { noteId: editableNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Player Formula',
-    })
+    const { noteId: editableNoteId, noteRowId: editableNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Player Formula',
+      },
+    )
     const formulaBlock = valueBlockWithGeneratedId({
       idSeed: 'hidden-reference',
       valueId: 'value-hidden-reference',
@@ -241,7 +246,7 @@ describe('saveAllNoteValuesForNote', () => {
       const row = await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', editableNoteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', editableNoteRowId),
         )
         .unique()
       expect(row).toMatchObject({

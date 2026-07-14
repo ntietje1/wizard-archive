@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import {
   buildContinuedFolderPathText,
@@ -20,7 +21,7 @@ import {
   RESOURCE_TYPES,
 } from '../../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../../workspace/items'
-import type { SidebarItemId, UserProfileId } from '../../../../../../shared/common/ids'
+import type { UserProfileId } from '../../../../../../shared/common/ids'
 import { testCampaignId } from '../../../../../../shared/test/campaign-id'
 import { createResourceCatalogModel } from '../../../filesystem/catalog'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
@@ -29,7 +30,7 @@ function modelFor(
   query: string,
   sidebarItems: Array<AnyItem>,
   headings: Array<Heading> = [],
-  sourceNoteId?: SidebarItemId,
+  sourceNoteId?: ResourceId,
 ) {
   const itemSource = createTestAutocompleteItemSource(sidebarItems)
   const context = getWikiLinkAutocompleteContextFromSource(query, itemSource, sourceNoteId)
@@ -44,9 +45,9 @@ function modelFor(
 
 let testIdCounter = 0
 
-function createSidebarItemId(label: string): SidebarItemId {
+function createSidebarItemId(label: string): ResourceId {
   testIdCounter += 1
-  return `${label}-${testIdCounter}` as SidebarItemId
+  return `${label}-${testIdCounter}` as ResourceId
 }
 
 function createCampaignId() {
@@ -63,7 +64,7 @@ function createBaseItem({
   type,
 }: {
   name: string
-  parentId?: SidebarItemId | null
+  parentId?: ResourceId | null
   type: AnyItem['type']
 }): AnyItem {
   const id = createSidebarItemId(name.toLowerCase().replace(/\W+/g, '-'))
@@ -96,11 +97,11 @@ function createBaseItem({
   } as AnyItem
 }
 
-function createNote({ name, parentId }: { name: string; parentId?: SidebarItemId | null }) {
+function createNote({ name, parentId }: { name: string; parentId?: ResourceId | null }) {
   return createBaseItem({ name, parentId, type: RESOURCE_TYPES.notes })
 }
 
-function createFolder({ name, parentId }: { name: string; parentId?: SidebarItemId | null }) {
+function createFolder({ name, parentId }: { name: string; parentId?: ResourceId | null }) {
   return {
     ...createBaseItem({ name, parentId, type: RESOURCE_TYPES.folders }),
     inheritShares: false,
@@ -189,7 +190,7 @@ describe('wiki link autocomplete model', () => {
   it('continues global file suggestions with their full nested path', () => {
     const suggestion = {
       kind: 'file',
-      key: 'clock-tower' as SidebarItemId,
+      key: 'clock-tower' as ResourceId,
       title: 'Clock Tower',
       subtext: 'Places',
       badge: 'Note',

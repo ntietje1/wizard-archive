@@ -22,10 +22,11 @@ import type {
   NoteItemRow,
   NoteItemWithContent,
 } from '@wizard-archive/editor/notes/item-contract'
-import type { Id } from '../../_generated/dataModel'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { SidebarItemEnhancement } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { findSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 export const enhanceNote = async (
   ctx: CampaignQueryCtx,
@@ -38,13 +39,15 @@ export const enhanceNoteWithContent = async (
   ctx: CampaignQueryCtx,
   { note }: { note: NoteItem },
 ): Promise<NoteItemWithContent> => {
+  const noteRow = await findSidebarItemRow(ctx, note.id)
+  if (!noteRow) throw new Error('Note provider row is missing')
   const isDm = ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM
   const [ancestors, allBlocks, campaignMembers] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: note.parentId,
       isTrashed: note.isTrashed,
     }),
-    getAllBlocksByNote(ctx, { noteId: note.id }),
+    getAllBlocksByNote(ctx, { noteId: noteRow._id }),
     isDm
       ? ctx.db
           .query('campaignMembers')
@@ -112,7 +115,7 @@ export const enhanceNoteWithContent = async (
     }
   }
   const blockShareAccessWarnings = isDm
-    ? await getBlockShareAccessWarnings(ctx, note, warningBlockCountsByMemberId, memberIdByRowId)
+    ? await getBlockShareAccessWarnings(ctx, noteRow, warningBlockCountsByMemberId, memberIdByRowId)
     : []
 
   const content = reconstructBlockTree(permittedBlocks)
@@ -127,7 +130,7 @@ export const enhanceNoteWithContent = async (
 
 async function getBlockShareAccessWarnings(
   ctx: CampaignQueryCtx,
-  note: NoteItem,
+  note: Doc<'sidebarItems'>,
   blockCountsByMemberId: Map<Id<'campaignMembers'>, number>,
   memberIdByRowId: Map<Id<'campaignMembers'>, CampaignMemberId>,
 ): Promise<Array<BlockShareAccessWarning>> {

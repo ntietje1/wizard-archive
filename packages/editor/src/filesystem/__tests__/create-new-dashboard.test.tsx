@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { CreateNewDashboard } from '../create-new-dashboard'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { assertResourceItemSlug } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { CreateItemSource } from '../create-item-source'
@@ -18,14 +19,14 @@ describe('CreateNewDashboard', () => {
     const user = userEvent.setup()
     const createItem = vi.fn<CreateItemSource['createItem']>((_input) => ({
       status: 'completed',
-      id: 'note-1' as SidebarItemId,
+      id: 'note-1' as ResourceId,
       slug: assertResourceItemSlug('note-1'),
     }))
     const openItem = vi.fn()
 
     render(
       <CreateNewDashboard
-        parentId={'folder-1' as SidebarItemId}
+        parentId={'folder-1' as ResourceId}
         folderPath="Folder/"
         source={createDashboardSource({
           createItem,
@@ -50,7 +51,7 @@ describe('CreateNewDashboard', () => {
     const user = userEvent.setup()
     const createItem = vi.fn<CreateItemSource['createItem']>(() => ({
       status: 'completed',
-      id: 'map-canvas-1' as SidebarItemId,
+      id: 'map-canvas-1' as ResourceId,
       slug: assertResourceItemSlug('untitled-map'),
     }))
     const openItem = vi.fn()
@@ -80,7 +81,7 @@ describe('CreateNewDashboard', () => {
     const user = userEvent.setup()
     const createItem = vi.fn<CreateItemSource['createItem']>(() => ({
       status: 'completed',
-      id: 'note-1' as SidebarItemId,
+      id: 'note-1' as ResourceId,
       slug: assertResourceItemSlug('note-1'),
     }))
     const openError = new Error('open failed')
@@ -90,7 +91,7 @@ describe('CreateNewDashboard', () => {
 
     render(
       <CreateNewDashboard
-        parentId={'folder-1' as SidebarItemId}
+        parentId={'folder-1' as ResourceId}
         folderPath="Folder/"
         source={createDashboardSource({
           createItem,

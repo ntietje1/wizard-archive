@@ -18,7 +18,7 @@ describe('storage lifecycle with file/map deletion', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { fileId, fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Delete Me',
     })
 
@@ -33,7 +33,7 @@ describe('storage lifecycle with file/map deletion', () => {
       sourceItemIds: [fileId],
     })
 
-    const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileId))
+    const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileRowId))
     expect(file).toBeNull()
   })
 
@@ -41,7 +41,7 @@ describe('storage lifecycle with file/map deletion', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Delete Map',
     })
 
@@ -56,7 +56,7 @@ describe('storage lifecycle with file/map deletion', () => {
       sourceItemIds: [mapId],
     })
 
-    const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapId))
+    const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapRowId))
     expect(map).toBeNull()
   })
 
@@ -64,16 +64,16 @@ describe('storage lifecycle with file/map deletion', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
       campaignId: ctx.campaignDomainId,
     })
 
     const [file, map] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get('sidebarItems', fileId),
-      await dbCtx.db.get('sidebarItems', mapId),
+      await dbCtx.db.get('sidebarItems', fileRowId),
+      await dbCtx.db.get('sidebarItems', mapRowId),
     ])
     expect(file).toBeNull()
     expect(map).toBeNull()
@@ -84,10 +84,10 @@ describe('storage lifecycle with file/map deletion', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Folder with File',
     })
-    const { fileId } = await createFile(t, ctx.campaignId, dmId, {
+    const { fileRowId } = await createFile(t, ctx.campaignId, dmId, {
       parentId: folderId,
       name: 'Nested File',
     })
@@ -102,8 +102,8 @@ describe('storage lifecycle with file/map deletion', () => {
     await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignDomainId })
 
     const [folder, file] = await t.run(async (dbCtx) => [
-      await dbCtx.db.get('sidebarItems', folderId),
-      await dbCtx.db.get('sidebarItems', fileId),
+      await dbCtx.db.get('sidebarItems', folderRowId),
+      await dbCtx.db.get('sidebarItems', fileRowId),
     ])
     expect(folder).toBeNull()
     expect(file).toBeNull()
@@ -113,7 +113,7 @@ describe('storage lifecycle with file/map deletion', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { fileId, fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'No Storage File',
       storageId: null,
     })
@@ -129,7 +129,7 @@ describe('storage lifecycle with file/map deletion', () => {
       sourceItemIds: [fileId],
     })
 
-    const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileId))
+    const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileRowId))
     expect(file).toBeNull()
   })
 
@@ -137,7 +137,7 @@ describe('storage lifecycle with file/map deletion', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'No Storage Map',
       imageStorageId: null,
     })
@@ -153,7 +153,7 @@ describe('storage lifecycle with file/map deletion', () => {
       sourceItemIds: [mapId],
     })
 
-    const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapId))
+    const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapRowId))
     expect(map).toBeNull()
   })
 })

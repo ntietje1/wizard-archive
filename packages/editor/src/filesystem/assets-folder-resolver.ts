@@ -1,13 +1,13 @@
+import type { ResourceId } from '../resources/domain-id'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { CreateParentTarget } from '../workspace/items'
 import type { ResourceIconName, ResourceKind } from '../workspace/resource-contract'
 
-import type { SidebarItemId } from '../../../../shared/common/ids'
 type AssetsFolderItem = {
-  id: SidebarItemId
+  id: ResourceId
   type: ResourceKind
   name: string
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
 }
 
 type CreateAssetsFolder = (args: {
@@ -15,7 +15,7 @@ type CreateAssetsFolder = (args: {
   name: string
   iconName: ResourceIconName
   parentTarget: CreateParentTarget
-}) => Promise<{ id: SidebarItemId }>
+}) => Promise<{ id: ResourceId }>
 
 export async function resolveAssetsFolderId({
   rootItems,

@@ -1,5 +1,5 @@
 import type { MutationCtx } from '../../_generated/server'
-import type { SidebarItemId } from '../../../shared/common/ids'
+import type { Id } from '../../_generated/dataModel'
 import { isYjsDocumentType } from './yjsDocumentTypes'
 
 const EMPTY_YJS_UPDATE = new Uint8Array([0, 0]).buffer as ArrayBuffer
@@ -10,7 +10,7 @@ export async function createYjsDocument(
     documentId,
     initialState,
   }: {
-    documentId: SidebarItemId
+    documentId: Id<'sidebarItems'>
     initialState?: ArrayBuffer
   },
 ) {

@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { AnyItem } from '../workspace/items'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceCatalog } from '../filesystem/catalog'
 
 export type DropTargetCatalog = Pick<ResourceCatalog, 'getKnownItemById' | 'getVisibleAncestors'>
@@ -39,21 +40,21 @@ const IDLESS_DROP_ZONE_TYPES = [
 ] as const
 
 export type ResolvedSidebarItemDropData = AnyItem & {
-  ancestorIds?: Array<SidebarItemId>
+  ancestorIds?: Array<ResourceId>
 }
 
 export interface CanvasDropZoneData {
   [key: string | symbol]: unknown
   type: typeof CANVAS_DROP_ZONE_TYPE
-  canvasId: SidebarItemId
+  canvasId: ResourceId
 }
 
 export interface MapDropZoneData {
   [key: string | symbol]: unknown
   type: typeof MAP_DROP_ZONE_TYPE
-  mapId: SidebarItemId
+  mapId: ResourceId
   mapName: string
-  pinnedItemIds?: ReadonlyArray<SidebarItemId>
+  pinnedItemIds?: ReadonlyArray<ResourceId>
 }
 
 interface SidebarRootDropZoneData {
@@ -69,14 +70,14 @@ interface EmptyEditorDropZoneData {
 export interface EmptyEmbedDropZoneData {
   [key: string | symbol]: unknown
   type: typeof EMPTY_EMBED_DROP_TYPE
-  sourceItemId: SidebarItemId
+  sourceItemId: ResourceId
   embedBlockId: string
 }
 
 export interface NoteEditorDropZoneData {
   [key: string | symbol]: unknown
   type: typeof NOTE_EDITOR_DROP_TYPE
-  noteId: SidebarItemId
+  noteId: ResourceId
 }
 
 interface TrashDropZoneData {
@@ -123,7 +124,7 @@ function canUseTypeAsDropTargetKey(type: DropZoneType) {
   return isOneOf(IDLESS_DROP_ZONE_TYPES, type)
 }
 
-function getSidebarItemDropTargetKey(sidebarItemId: SidebarItemId): string {
+function getSidebarItemDropTargetKey(sidebarItemId: ResourceId): string {
   return `sidebar-item:${sidebarItemId}`
 }
 
@@ -151,10 +152,10 @@ function customDropTargetKey(rawTarget: object, type: DropZoneType) {
     case RESOURCE_TYPES.canvases: {
       const sidebarItemId = getTargetValue(rawTarget, 'sidebarItemId')
       if (typeof sidebarItemId === 'string') {
-        return getSidebarItemDropTargetKey(sidebarItemId as SidebarItemId)
+        return getSidebarItemDropTargetKey(sidebarItemId as ResourceId)
       }
       const id = getTargetValue(rawTarget, 'id')
-      return typeof id === 'string' ? getSidebarItemDropTargetKey(id as SidebarItemId) : null
+      return typeof id === 'string' ? getSidebarItemDropTargetKey(id as ResourceId) : null
     }
     default:
       return null
@@ -210,7 +211,7 @@ function resolveSidebarItemDropTarget(
 ): ResolvedSidebarItemDropData | null {
   if (isCustomDropZoneType(rawData.type)) return null
 
-  const id = rawData.sidebarItemId as SidebarItemId
+  const id = rawData.sidebarItemId as ResourceId
   const item = catalog.getKnownItemById(id)
   if (!item) return null
   return scopeDropTargetData(
@@ -227,10 +228,10 @@ function resolveMapDropTarget(rawData: Record<string, unknown>): MapDropZoneData
 
   return {
     type: MAP_DROP_ZONE_TYPE,
-    mapId: rawData.mapId as SidebarItemId,
+    mapId: rawData.mapId as ResourceId,
     mapName: rawData.mapName,
     pinnedItemIds: Array.isArray(rawData.pinnedItemIds)
-      ? rawData.pinnedItemIds.filter((id): id is SidebarItemId => typeof id === 'string')
+      ? rawData.pinnedItemIds.filter((id): id is ResourceId => typeof id === 'string')
       : undefined,
   }
 }
@@ -253,19 +254,19 @@ function resolveUnscopedCustomDropTarget(
   switch (rawData.type) {
     case CANVAS_DROP_ZONE_TYPE:
       return typeof rawData.canvasId === 'string'
-        ? { type: CANVAS_DROP_ZONE_TYPE, canvasId: rawData.canvasId as SidebarItemId }
+        ? { type: CANVAS_DROP_ZONE_TYPE, canvasId: rawData.canvasId as ResourceId }
         : null
     case MAP_DROP_ZONE_TYPE:
       return resolveMapDropTarget(rawData)
     case NOTE_EDITOR_DROP_TYPE:
       return typeof rawData.noteId === 'string'
-        ? { type: NOTE_EDITOR_DROP_TYPE, noteId: rawData.noteId as SidebarItemId }
+        ? { type: NOTE_EDITOR_DROP_TYPE, noteId: rawData.noteId as ResourceId }
         : null
     case EMPTY_EMBED_DROP_TYPE:
       return typeof rawData.sourceItemId === 'string' && typeof rawData.embedBlockId === 'string'
         ? {
             type: EMPTY_EMBED_DROP_TYPE,
-            sourceItemId: rawData.sourceItemId as SidebarItemId,
+            sourceItemId: rawData.sourceItemId as ResourceId,
             embedBlockId: rawData.embedBlockId,
           }
         : null

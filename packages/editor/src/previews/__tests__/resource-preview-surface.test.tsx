@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { ResourcePreviewSurface } from '../resource-preview-surface'
@@ -5,7 +6,6 @@ import type { ResourcePreviewRenderer } from '../resource-preview-surface'
 import { getPreviewFallbackCopy, getResourceUnavailableFallbackReason } from '../fallback-policy'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { AnyItem, AnyItemWithContent } from '../../workspace/items'
-import type { SidebarItemId } from 'shared/common/ids'
 
 vi.mock('../../folders/preview/folder-list-content-simple', () => ({
   FolderListContentSimple: ({ items }: { items: Array<{ id: string; name: string }> }) => {
@@ -237,7 +237,7 @@ function createItem(
   fields: Partial<AnyItemWithContent> = {},
 ): AnyItemWithContent {
   return {
-    id: id as SidebarItemId,
+    id: id as ResourceId,
     type,
     name,
     parentId: null,

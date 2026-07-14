@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import type { Awareness } from 'y-protocols/awareness'
 import type * as Y from 'yjs'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { CanvasDocumentEdge, CanvasDocumentNode } from './document-contract'
 import type { CanvasItemWithContent } from './item-contract'
 
@@ -19,11 +20,11 @@ export type CanvasDocumentSession =
   | { status: 'error'; error: unknown }
   | {
       status: 'ready'
-      canvasId: SidebarItemId
+      canvasId: ResourceId
       workspaceId: string
       canEdit: boolean
       colorMode: 'light' | 'dark'
-      parentId: SidebarItemId | null
+      parentId: ResourceId | null
       collaboration: CanvasCollaborationCapability
       user: { name: string; color: string }
       doc: Y.Doc

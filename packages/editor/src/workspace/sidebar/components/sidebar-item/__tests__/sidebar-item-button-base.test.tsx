@@ -1,13 +1,14 @@
+import type { ResourceId } from '../../../../../resources/domain-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { Folder } from 'lucide-react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../../../shared/common/ids'
+
 import { canonicalizeResourceItemTitle } from '../../../../items'
 import { SidebarItemButtonBase } from '../sidebar-item-button-base'
 
-const questFolderId = 'quest-folder' as SidebarItemId
-const creatingQuestId = 'creating-quest' as SidebarItemId
-const questNoteId = 'quest-note' as SidebarItemId
+const questFolderId = 'quest-folder' as ResourceId
+const creatingQuestId = 'creating-quest' as ResourceId
+const questNoteId = 'quest-note' as ResourceId
 
 describe('SidebarItemButtonBase', () => {
   it('renders supplied name content while renaming', () => {

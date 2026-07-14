@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef } from 'react'
 import { createCanvasViewportPersistence } from './interaction/canvas-viewport-persistence'
 import { createCanvasDomRuntime } from '../system/canvas-dom-runtime'
@@ -5,10 +6,9 @@ import { createCanvasEngine } from '../system/canvas-engine'
 import { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { CanvasViewportStore } from './interaction/canvas-viewport-storage'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 interface UseCanvasCoreRuntimeOptions {
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   initialViewport: CanvasViewport
   viewportStore: CanvasViewportStore
 }

@@ -1,14 +1,14 @@
+import type { ResourceId, OperationId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { shouldRecordFileSystemUndo } from '../undo-recording'
 import { createFileSystemUndoStore } from '../undo-store'
-import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { CampaignId } from '../../../../../shared/common/ids'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
 import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { createNote } from '../../test/sidebar-item-factory'
 import { createFileSystemReceipt } from './receipt-factory'
 import { resourcePatchRowFromCacheItem } from '../cache-patches'
 import { testOperationId } from '../../test/operation-id'
-import type { OperationId } from '../../resources/domain-id'
 
 function assertNotNull<T>(value: T | null, message: string): asserts value is T {
   if (value === null) throw new Error(message)
@@ -16,7 +16,7 @@ function assertNotNull<T>(value: T | null, message: string): asserts value is T 
 
 describe('filesystem undo recording', () => {
   const transactionId = testOperationId('tx-1')
-  const itemId = 'item-1' as SidebarItemId
+  const itemId = 'item-1' as ResourceId
   const workspaceId = 'campaign-1' as CampaignId
   const otherWorkspaceId = 'campaign-2' as CampaignId
 

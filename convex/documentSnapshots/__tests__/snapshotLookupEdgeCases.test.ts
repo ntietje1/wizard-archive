@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createGameMap, createNote, createSidebarShare } from '../../_test/factories.helper'
+import {
+  createGameMap,
+  createNote,
+  createSidebarShare,
+  getSidebarItemRowId,
+} from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdate } from '../../_test/yjs.helper'
@@ -18,7 +23,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -33,7 +38,9 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       await t.run(async (dbCtx) => {
         const history = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .first()
 
         expect(history).not.toBeNull()
@@ -62,6 +69,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
         name: 'Async Race Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -74,7 +82,9 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const historyEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .first()
       })
 
@@ -98,7 +108,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
       const playerAuth = asPlayer(ctx)
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: mapId,
@@ -132,7 +142,9 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const historyEntry = await t.run(async (dbCtx) =>
         dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .first(),
       )
 
@@ -168,13 +180,13 @@ describe('rollback edge cases', () => {
   })
 
   it('rejects a nonexistent editHistoryId explicitly', async () => {
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const fakeId = await t.run(async (dbCtx) => {
       const historyEntryUuid = generateDomainId(DOMAIN_ID_KIND.historyEntry)
       const id = await dbCtx.db.insert('editHistory', {
         historyEntryUuid,
-        itemId: noteId,
+        itemId: noteRowId,
         itemType: 'note',
         campaignId: ctx.campaignId,
         campaignMemberId: ctx.dm.memberId,
@@ -199,11 +211,12 @@ describe('rollback edge cases', () => {
       name: 'No Snapshot Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const historyEntry = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'created'))
+        .withIndex('by_item_action', (q) => q.eq('itemId', noteRowId).eq('action', 'created'))
         .first()
     })
 
@@ -224,7 +237,8 @@ describe('rollback edge cases', () => {
       name: 'Snapshot Target',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: otherNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const noteRowId = await getSidebarItemRowId(t, noteId)
+    const { noteRowId: otherNoteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
@@ -235,13 +249,15 @@ describe('rollback edge cases', () => {
     const historyEntry = await t.run(async (dbCtx) => {
       const entry = await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+        .withIndex('by_item_action', (q) =>
+          q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+        )
         .first()
       const snapshot = await dbCtx.db
         .query('documentSnapshots')
         .withIndex('by_editHistory', (q) => q.eq('editHistoryId', entry!._id))
         .unique()
-      await dbCtx.db.patch('documentSnapshots', snapshot!._id, { itemId: otherNoteId })
+      await dbCtx.db.patch('documentSnapshots', snapshot!._id, { itemId: otherNoteRowId })
       return entry!
     })
 
@@ -266,6 +282,7 @@ describe('rollback edge cases', () => {
       name: 'View Only Snapshot Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
@@ -277,7 +294,7 @@ describe('rollback edge cases', () => {
     const historyEntry = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'created'))
+        .withIndex('by_item_action', (q) => q.eq('itemId', noteRowId).eq('action', 'created'))
         .first()
     })
     expect(historyEntry).not.toBeNull()
@@ -291,7 +308,7 @@ describe('rollback edge cases', () => {
   })
 
   it('rollback of soft-deleted item does not throw', async () => {
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -304,13 +321,13 @@ describe('rollback edge cases', () => {
     const snapshotEntry = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+        .withIndex('by_item_action', (q) => q.eq('itemId', mapRowId).eq('action', 'map_pin_added'))
         .first()
     })
     expect(snapshotEntry!.hasSnapshot).toBe(true)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', mapId, {
+      await dbCtx.db.patch('sidebarItems', mapRowId, {
         status: 'trashed',
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,

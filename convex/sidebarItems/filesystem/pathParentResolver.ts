@@ -4,6 +4,7 @@ import { validateSidebarCreateParent } from '../validation/orchestration'
 import { RESOURCE_PARENT_TARGET_KIND } from '@wizard-archive/editor/resources/resource-contract'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { assertSidebarItemLifecycleConsistency, isActiveSidebarItem } from '../types/status'
 import type { ParsedCreateParentTarget } from '../validation/parent'
 import { initializeEmptySidebarItemCompanion } from './companionInitialization'
@@ -14,6 +15,17 @@ import { evaluateCreateItem } from '@wizard-archive/editor/resources/operation-c
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { FileSystemWriteSession } from './deltas'
+import { findSidebarItemRow } from '../functions/sidebarItemIdentity'
+
+async function resolveProviderParentId(
+  ctx: CampaignMutationCtx,
+  resourceId: ResourceId | null,
+): Promise<Id<'sidebarItems'> | null> {
+  if (resourceId === null) return null
+  const row = await findSidebarItemRow(ctx, resourceId)
+  if (!row) throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
+  return row._id
+}
 
 async function getParentFolderId(
   ctx: CampaignMutationCtx,
@@ -81,10 +93,10 @@ export async function resolveCreateCommandParentId(
   },
 ): Promise<Id<'sidebarItems'> | null> {
   if (parentTarget.kind === RESOURCE_PARENT_TARGET_KIND.direct) {
-    return parentTarget.parentId
+    return await resolveProviderParentId(ctx, parentTarget.parentId)
   }
 
-  let currentParentId = parentTarget.baseParentId
+  let currentParentId = await resolveProviderParentId(ctx, parentTarget.baseParentId)
   await validateSidebarCreateParent(ctx, { parentId: currentParentId })
 
   for (const segment of parentTarget.pathSegments) {

@@ -19,6 +19,7 @@ import {
   PREVIEW_GENERATION_COOLDOWN_MS,
 } from '../previewGeneration'
 import { getPreviewLease } from '../previewLease'
+import { requireSidebarItemRow } from '../functions/sidebarItemIdentity'
 
 describe('claimPreviewGeneration', () => {
   const t = createTestContext()
@@ -39,8 +40,8 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const note = await dbCtx.db.get('sidebarItems', noteId)
-      const lease = await getPreviewLease(dbCtx, noteId)
+      const note = await requireSidebarItemRow(dbCtx, noteId)
+      const lease = await getPreviewLease(dbCtx, note._id)
       expect(note).not.toHaveProperty('previewLockedUntil')
       expect(note).not.toHaveProperty('previewClaimToken')
       expect(lease!.lockedUntil).toBeGreaterThan(now)
@@ -149,9 +150,9 @@ describe('claimPreviewGeneration', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('sidebarItems', noteId)
+      await dbCtx.db.delete('sidebarItems', noteRowId)
     })
 
     await expectNotFound(
@@ -197,7 +198,8 @@ describe('claimPreviewGeneration', () => {
     expect(first.status).toBe('claimed')
 
     await t.run(async (dbCtx) => {
-      const lease = await getPreviewLease(dbCtx, noteId)
+      const note = await requireSidebarItemRow(dbCtx, noteId)
+      const lease = await getPreviewLease(dbCtx, note._id)
       await dbCtx.db.patch('sidebarItemPreviewLeases', lease!._id, { lockedUntil: Date.now() - 1 })
     })
 
@@ -216,7 +218,8 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       const previewUpdatedAt = Date.now() - PREVIEW_GENERATION_COOLDOWN_MS / 2
-      await dbCtx.db.patch('sidebarItems', noteId, {
+      const note = await requireSidebarItemRow(dbCtx, noteId)
+      await dbCtx.db.patch('sidebarItems', note._id, {
         previewUpdatedAt,
         updatedTime: previewUpdatedAt - 1,
       })
@@ -239,7 +242,8 @@ describe('claimPreviewGeneration', () => {
     const now = Date.now()
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', noteId, {
+      const note = await requireSidebarItemRow(dbCtx, noteId)
+      await dbCtx.db.patch('sidebarItems', note._id, {
         previewUpdatedAt: now - 1_000,
         updatedTime: now - 500,
       })
@@ -265,8 +269,8 @@ describe('claimPreviewGeneration', () => {
     expect(first.status).toBe('claimed')
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', noteId)
-      await dbCtx.db.patch('sidebarItems', noteId, {
+      const note = await requireSidebarItemRow(dbCtx, noteId)
+      await dbCtx.db.patch('sidebarItems', note._id, {
         updatedTime: (note?.updatedTime ?? note?._creationTime ?? Date.now()) + 1,
       })
     })
@@ -290,7 +294,8 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', noteId, {
+      const note = await requireSidebarItemRow(dbCtx, noteId)
+      await dbCtx.db.patch('sidebarItems', note._id, {
         previewUpdatedAt: Date.now() - (PREVIEW_GENERATION_COOLDOWN_MS + 1),
       })
     })
@@ -318,8 +323,8 @@ describe('claimPreviewGeneration', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const canvas = await dbCtx.db.get('sidebarItems', canvasId)
-      const lease = await getPreviewLease(dbCtx, canvasId)
+      const canvas = await requireSidebarItemRow(dbCtx, canvasId)
+      const lease = await getPreviewLease(dbCtx, canvas._id)
       expect(canvas).not.toHaveProperty('previewLockedUntil')
       expect(canvas).not.toHaveProperty('previewClaimToken')
       expect(lease!.lockedUntil).toBeGreaterThan(now)

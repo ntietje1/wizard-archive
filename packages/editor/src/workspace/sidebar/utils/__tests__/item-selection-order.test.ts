@@ -1,18 +1,18 @@
+import type { ResourceId } from '../../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { SORT_DIRECTIONS, SORT_ORDERS } from '../../../items-persistence-contract'
 import type { AnyItem } from '../../../items'
 import type { SortOptions } from '../../../items-persistence-contract'
 import { createFolder, createNote } from '../../../../test/sidebar-item-factory'
 import { buildVisibleSidebarItemIds } from '../item-selection-order'
-import type { SidebarItemId } from '../../../../../../../shared/common/ids'
 
 const alphaSort: SortOptions = {
   order: SORT_ORDERS.Alphabetical,
   direction: SORT_DIRECTIONS.Ascending,
 }
 
-function parentMap(items: Array<AnyItem>): Map<SidebarItemId | null, Array<AnyItem>> {
-  const map = new Map<SidebarItemId | null, Array<AnyItem>>()
+function parentMap(items: Array<AnyItem>): Map<ResourceId | null, Array<AnyItem>> {
+  const map = new Map<ResourceId | null, Array<AnyItem>>()
   for (const item of items) {
     let siblings = map.get(item.parentId)
     if (!siblings) {
@@ -27,7 +27,7 @@ function parentMap(items: Array<AnyItem>): Map<SidebarItemId | null, Array<AnyIt
 function getHierarchyFrom(items: Array<AnyItem>) {
   const map = parentMap(items)
   return {
-    getChildren: (parentId: SidebarItemId) => map.get(parentId) ?? [],
+    getChildren: (parentId: ResourceId) => map.get(parentId) ?? [],
     getRoots: () => map.get(null) ?? [],
   }
 }

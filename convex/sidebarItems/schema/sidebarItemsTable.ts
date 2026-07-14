@@ -8,8 +8,11 @@ import {
   fileSystemEventValidator,
 } from '../filesystem/validators'
 import { sidebarItemShareValidator } from '../../sidebarShares/schema'
-import { domainValidatorFields } from '../../common/schema'
-import { assetIdValidator, operationIdValidator } from '../../resources/validators'
+import {
+  assetIdValidator,
+  operationIdValidator,
+  resourceIdValidator,
+} from '../../resources/validators'
 import { campaignIdValidator } from '../../campaigns/schema'
 
 const {
@@ -22,8 +25,10 @@ const {
 } = sidebarItemTableFields
 
 export const sidebarItemValidatorFields = {
-  ...domainValidatorFields('sidebarItems'),
   ...publicSidebarItemFields,
+  id: resourceIdValidator,
+  createdAt: v.number(),
+  parentId: v.nullable(resourceIdValidator),
   campaignId: campaignIdValidator,
   previewAssetId: v.nullable(assetIdValidator),
   shares: v.array(sidebarItemShareValidator),

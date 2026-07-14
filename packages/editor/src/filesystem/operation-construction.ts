@@ -1,5 +1,6 @@
+import type { ResourceId } from '../resources/domain-id'
 import { isPromiseLike } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceImportContentInitializers } from '../files/import-contract'
 import { canonicalizeResourceItemTitle } from '../workspace/items'
 import type { AnyItem } from '../workspace/items'
@@ -47,6 +48,15 @@ type FileSystemHostPasteTargetInput = {
   clickedItem?: AnyItem
 }
 
+type NavigateToWorkspaceItem = (
+  slug: ResourceSlug,
+  options?: { heading?: string; replace?: boolean },
+) => Promise<unknown> | void
+
+type ResourceSlugChangeListener = (itemId: ResourceId, slug: ResourceSlug | null) => void
+type CreateItemErrorReporter = (error: unknown, message: string) => void
+type LastSelectedItemWriter = (slug: ResourceSlug) => void
+
 type WorkspaceFileSystemOperationsInput = {
   capabilities: ResourceCommandCapabilities
   catalog: ResourceCatalog
@@ -58,19 +68,16 @@ type WorkspaceFileSystemOperationsInput = {
   ioCapabilities?: ResourceIoCapabilities
   operationDriver: ResourceOperationDriver
   trashDriver: ResourceTrashDriver
-  navigateToItem: (
-    slug: ResourceSlug,
-    options?: { heading?: string; replace?: boolean },
-  ) => Promise<unknown> | void
-  onItemSlugChange?: (itemId: SidebarItemId, slug: ResourceSlug | null) => void
-  reportCreateItemError: (error: unknown, message: string) => void
-  setLastSelectedItem?: (slug: ResourceSlug) => void
+  navigateToItem: NavigateToWorkspaceItem
+  onItemSlugChange?: ResourceSlugChangeListener
+  reportCreateItemError: CreateItemErrorReporter
+  setLastSelectedItem?: LastSelectedItemWriter
 }
 
 type OptimisticCreatedItems = {
-  folderIds: Set<SidebarItemId>
+  folderIds: Set<ResourceId>
   itemsById: Map<
-    SidebarItemId,
+    ResourceId,
     {
       name: ResourceTitle
       parentKey: string
@@ -195,8 +202,8 @@ type CreatedRuntimeItem = Awaited<ReturnType<ResourceOperationDriver['createItem
 
 type CreateItemScope = {
   discard: () => void
-  forget: (itemId: SidebarItemId) => void
-  record: (itemId: SidebarItemId) => void
+  forget: (itemId: ResourceId) => void
+  record: (itemId: ResourceId) => void
 }
 
 function createWorkspaceItemWithScope({
@@ -290,7 +297,7 @@ function createItemScope(
   onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange'],
   ownerScope: CreateItemScope | null,
 ): CreateItemScope {
-  const createScope = new Set<SidebarItemId>()
+  const createScope = new Set<ResourceId>()
   return {
     record: (itemId) => {
       createScope.add(itemId)
@@ -417,7 +424,7 @@ function recordOptimisticCreatedItem(
     parentKey,
     type,
   }: {
-    createdItemId: SidebarItemId
+    createdItemId: ResourceId
     name: ResourceTitle
     parentKey: string
     type: ResourceKind
@@ -432,7 +439,7 @@ function recordOptimisticCreatedItem(
 
 function removeOptimisticCreatedItem(
   optimisticCreatedItems: OptimisticCreatedItems,
-  { createdItemId }: { createdItemId: SidebarItemId },
+  { createdItemId }: { createdItemId: ResourceId },
 ) {
   const item = optimisticCreatedItems.itemsById.get(createdItemId)
   if (!item) return
@@ -626,7 +633,7 @@ function createFileSystemValidationOperations(catalog: ResourceCatalog) {
 
 function getContextMenuPasteParentId({
   clickedItem,
-}: FileSystemHostPasteTargetInput): SidebarItemId | null | undefined {
+}: FileSystemHostPasteTargetInput): ResourceId | null | undefined {
   if (clickedItem?.type === RESOURCE_TYPES.folders) return clickedItem.id
   return clickedItem ? clickedItem.parentId : undefined
 }
@@ -670,6 +677,6 @@ function createOptimisticParentKey(plan: NonNullable<ReturnType<typeof planCreat
   return key
 }
 
-function createExistingParentKey(parentId: SidebarItemId | null) {
+function createExistingParentKey(parentId: ResourceId | null) {
   return `id:${parentId ?? 'root'}`
 }

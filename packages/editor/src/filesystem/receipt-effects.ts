@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { ResourceTransactionReceipt } from './transaction-contract'
 import type { FileSystemLifecycleIntent } from './domain/lifecycle'
 import type { AnyItem, WorkspaceResourceReadModel } from '../workspace/items'
@@ -7,8 +7,8 @@ import { planFileSystemReceiptEffects } from './receipt-effect-planner'
 export type FileSystemReceiptEffectError = {
   effect: 'clearEditor' | 'openResource'
   receipt: ResourceTransactionReceipt
-  currentResourceId: SidebarItemId | null
-  navigationResourceId?: SidebarItemId
+  currentResourceId: ResourceId | null
+  navigationResourceId?: ResourceId
 }
 
 async function applyReceiptIntent({
@@ -23,9 +23,9 @@ async function applyReceiptIntent({
 }: {
   intent: FileSystemLifecycleIntent
   receipt: ResourceTransactionReceipt
-  currentResourceId: SidebarItemId | null
+  currentResourceId: ResourceId | null
   readModel: WorkspaceResourceReadModel<AnyItem>
-  setSelectedItemIds: (itemIds: Array<SidebarItemId>) => void
+  setSelectedItemIds: (itemIds: Array<ResourceId>) => void
   clearWorkspaceContent: () => Promise<void>
   openResource: (resource: AnyItem, options?: { replace?: boolean }) => Promise<void>
   reportEffectError: (error: unknown, context: FileSystemReceiptEffectError) => void
@@ -81,9 +81,9 @@ export async function applyFileSystemReceiptEffects({
 }: {
   receipt: ResourceTransactionReceipt
   readModel: WorkspaceResourceReadModel<AnyItem>
-  currentResourceId: SidebarItemId | null
-  getSelectedItemIds: () => ReadonlyArray<SidebarItemId>
-  setSelectedItemIds: (itemIds: ReadonlyArray<SidebarItemId>) => void
+  currentResourceId: ResourceId | null
+  getSelectedItemIds: () => ReadonlyArray<ResourceId>
+  setSelectedItemIds: (itemIds: ReadonlyArray<ResourceId>) => void
   clearWorkspaceContent: () => Promise<void>
   openResource: (resource: AnyItem, options?: { replace?: boolean }) => Promise<void>
   reportEffectError: (error: unknown, context: FileSystemReceiptEffectError) => void

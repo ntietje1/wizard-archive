@@ -29,7 +29,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { sessionId, storageId } = await storeUncommittedTestUploadSession(
       t,
@@ -53,11 +53,11 @@ describe('setPreviewImage', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       expect(note!.previewStorageId).toBe(storageId)
       expect(note!.previewUpdatedAt).not.toBeNull()
       expect(Math.abs(now - note!.previewUpdatedAt!)).toBeLessThan(1000)
-      expect(await getPreviewLease(dbCtx, noteId)).toBeNull()
+      expect(await getPreviewLease(dbCtx, noteRowId)).toBeNull()
       const uploadSession = await dbCtx.db.get('fileStorage', sessionId)
       expect(uploadSession?.status).toBe('committed')
     })
@@ -67,7 +67,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const oldStorageId = (
       await storeCommittedTestUploadSession(
@@ -79,7 +79,7 @@ describe('setPreviewImage', () => {
     ).storageId
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', noteId, { previewStorageId: oldStorageId })
+      await dbCtx.db.patch('sidebarItems', noteRowId, { previewStorageId: oldStorageId })
     })
 
     const { sessionId, storageId: newStorageId } = await storeUncommittedTestUploadSession(
@@ -102,7 +102,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       expect(note!.previewStorageId).toBe(newStorageId)
 
       const oldUrl = await dbCtx.storage.getUrl(oldStorageId)
@@ -114,8 +114,8 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
     const oldStorageId = (
       await storeCommittedTestUploadSession(
@@ -129,9 +129,9 @@ describe('setPreviewImage', () => {
     await t.run(async (dbCtx) => {
       const fileExt = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
-      await dbCtx.db.patch('sidebarItems', noteId, { previewStorageId: oldStorageId })
+      await dbCtx.db.patch('sidebarItems', noteRowId, { previewStorageId: oldStorageId })
       if (fileExt) await dbCtx.db.patch('files', fileExt._id, { storageId: oldStorageId })
     })
 
@@ -155,10 +155,10 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       const fileExt = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
       const oldUrl = await dbCtx.storage.getUrl(oldStorageId)
 
@@ -172,7 +172,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
@@ -202,7 +202,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       expect(note!.previewStorageId).toBe(storageId)
     })
   })
@@ -247,7 +247,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileId, fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
@@ -277,7 +277,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get('sidebarItems', fileId)
+      const file = await dbCtx.db.get('sidebarItems', fileRowId)
       expect(file!.previewStorageId).toBe(storageId)
     })
   })
@@ -363,9 +363,9 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('sidebarItems', noteId)
+      await dbCtx.db.delete('sidebarItems', noteRowId)
     })
 
     const { sessionId } = await storeUncommittedTestUploadSession(
@@ -416,7 +416,7 @@ describe('setPreviewImage', () => {
   it('rejects publication as stale when content changes after the claim', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const claim = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
       campaignId: ctx.campaignDomainId,
       itemId: noteId,
@@ -424,8 +424,8 @@ describe('setPreviewImage', () => {
     if (claim.status !== 'claimed') throw new Error('Expected preview claim')
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', noteId)
-      await dbCtx.db.patch('sidebarItems', noteId, {
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
+      await dbCtx.db.patch('sidebarItems', noteRowId, {
         updatedTime: (note?.updatedTime ?? note?._creationTime ?? Date.now()) + 1,
       })
     })
@@ -445,7 +445,7 @@ describe('setPreviewImage', () => {
 
     expect(result).toEqual({ status: 'stale' })
     await t.run(async (dbCtx) => {
-      expect((await dbCtx.db.get('sidebarItems', noteId))?.previewStorageId).toBeNull()
+      expect((await dbCtx.db.get('sidebarItems', noteRowId))?.previewStorageId).toBeNull()
       expect((await dbCtx.db.get('fileStorage', sessionId))?.status).toBe('uncommitted')
     })
   })
@@ -454,7 +454,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
@@ -462,7 +462,7 @@ describe('setPreviewImage', () => {
     )
 
     await t.run(async (dbCtx) => {
-      const lease = await getPreviewLease(dbCtx, noteId)
+      const lease = await getPreviewLease(dbCtx, noteRowId)
       await dbCtx.db.patch('sidebarItemPreviewLeases', lease!._id, { lockedUntil: Date.now() - 1 })
     })
 
@@ -487,7 +487,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+    const { canvasId, canvasRowId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { sessionId, storageId } = await storeUncommittedTestUploadSession(
       t,
@@ -510,11 +510,11 @@ describe('setPreviewImage', () => {
 
     await t.run(async (dbCtx) => {
       const now = Date.now()
-      const canvas = await dbCtx.db.get('sidebarItems', canvasId)
+      const canvas = await dbCtx.db.get('sidebarItems', canvasRowId)
       expect(canvas!.previewStorageId).toBe(storageId)
       expect(canvas!.previewUpdatedAt).not.toBeNull()
       expect(Math.abs(now - canvas!.previewUpdatedAt!)).toBeLessThan(1000)
-      expect(await getPreviewLease(dbCtx, canvasId)).toBeNull()
+      expect(await getPreviewLease(dbCtx, canvasRowId)).toBeNull()
     })
   })
 
@@ -522,7 +522,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+    const { canvasId, canvasRowId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const oldStorageId = (
       await storeCommittedTestUploadSession(
@@ -534,7 +534,7 @@ describe('setPreviewImage', () => {
     ).storageId
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', canvasId, { previewStorageId: oldStorageId })
+      await dbCtx.db.patch('sidebarItems', canvasRowId, { previewStorageId: oldStorageId })
     })
 
     const { sessionId, storageId: newStorageId } = await storeUncommittedTestUploadSession(
@@ -557,7 +557,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const canvas = await dbCtx.db.get('sidebarItems', canvasId)
+      const canvas = await dbCtx.db.get('sidebarItems', canvasRowId)
       expect(canvas!.previewStorageId).toBe(newStorageId)
 
       const oldUrl = await dbCtx.storage.getUrl(oldStorageId)
@@ -569,7 +569,7 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
 
-    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+    const { canvasId, canvasRowId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
@@ -599,7 +599,7 @@ describe('setPreviewImage', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const canvas = await dbCtx.db.get('sidebarItems', canvasId)
+      const canvas = await dbCtx.db.get('sidebarItems', canvasRowId)
       expect(canvas!.previewStorageId).toBe(storageId)
     })
   })
@@ -662,9 +662,9 @@ describe('setPreviewImage', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
+    const { canvasId, canvasRowId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('sidebarItems', canvasId)
+      await dbCtx.db.delete('sidebarItems', canvasRowId)
     })
 
     const { sessionId } = await storeUncommittedTestUploadSession(

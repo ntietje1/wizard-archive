@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import {
   Awareness,
@@ -8,7 +9,7 @@ import {
 import { useEffect } from 'react'
 import * as Y from 'yjs'
 import { absolutePositionToRelativePosition, ySyncPluginKey } from 'y-prosemirror'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { CustomBlockNoteEditor } from './editor-schema'
 import type { YjsCollaborationProvider } from '../collaboration/yjs-provider'
 import type { NoteCollaborationPlayback } from './playback-contract'
@@ -23,7 +24,7 @@ export function useNoteCollaborationPlayback({
   provider,
 }: {
   editor: CustomBlockNoteEditor | null
-  noteId: SidebarItemId | undefined
+  noteId: ResourceId | undefined
   playback: NoteCollaborationPlayback | undefined
   provider: YjsCollaborationProvider | undefined
 }) {

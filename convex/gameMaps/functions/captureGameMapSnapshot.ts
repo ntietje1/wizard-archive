@@ -8,6 +8,7 @@ import type { MutationCtx, QueryCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
 import { DOCUMENT_SNAPSHOT_TYPE } from '../../documentSnapshots/types'
 import { getAssetIdByStorageId } from '../../storage/functions/assetIdentity'
+import { sidebarItemResourceId } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 export async function encodeGameMapSnapshot(
   ctx: QueryCtx,
@@ -77,7 +78,7 @@ export async function encodeGameMapSnapshot(
     ...(layers ? { layers } : {}),
     pins: validPins.map(({ pin, item }) => ({
       id: pin.mapPinUuid,
-      itemId: pin.itemId,
+      itemId: sidebarItemResourceId(item),
       layerId: pin.layerId ?? null,
       x: pin.x,
       y: pin.y,

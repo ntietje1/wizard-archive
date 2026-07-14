@@ -1,12 +1,11 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-
+import type { ResourceId } from '../../resources/domain-id'
 export interface SidebarRevealCatalog {
-  getVisibleAncestors: (itemId: SidebarItemId) => ReadonlyArray<{ id: SidebarItemId }>
+  getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<{ id: ResourceId }>
 }
 
 interface SidebarRevealCommands {
   exitCloseAllMode: () => void
-  setFolderState: (folderId: SidebarItemId, isOpen: boolean) => void
+  setFolderState: (folderId: ResourceId, isOpen: boolean) => void
 }
 
 export function revealSidebarItemParents({
@@ -15,7 +14,7 @@ export function revealSidebarItemParents({
   uiCommands,
 }: {
   catalog: SidebarRevealCatalog
-  itemId: SidebarItemId
+  itemId: ResourceId
   uiCommands: SidebarRevealCommands
 }) {
   uiCommands.exitCloseAllMode()

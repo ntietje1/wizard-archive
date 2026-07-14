@@ -1,3 +1,9 @@
+import type {
+  AssetId,
+  HistoryEntryId,
+  MapPinId as InternalMapPinId,
+  ResourceId,
+} from './resources/domain-id'
 import { createWorkspaceFileSystemOperations } from './filesystem/operation-construction'
 import { useWorkspaceResourceCommandRuntime } from './filesystem/operation-adapter'
 import { createCatalogItemLink } from './filesystem/catalog-links'
@@ -37,13 +43,11 @@ import type { MaybePromise } from '../../../shared/common/async'
 import type { NoteProjectionResult } from '../../../shared/yjs-sync/note-projection'
 import type { Awareness } from 'y-protocols/awareness'
 import type { Doc, Map as YMap } from 'yjs'
-import type { SidebarItemId as InternalResourceItemId } from '../../../shared/common/ids'
-import type { AssetId, HistoryEntryId, MapPinId as InternalMapPinId } from './resources/domain-id'
+
 import type { BlockSearchResult } from '../../../shared/search/types'
 import { isPersistedResourceId, parseResourceSlug } from './workspace/resource-contract'
 import type {
   ResourceByKind,
-  ResourceId,
   ResourceKind,
   ResourceSlug,
   ResourceWithContentByKind,
@@ -156,10 +160,9 @@ import {
 } from './notes/imported-text'
 import type { ImportedTextNotePayload } from './notes/imported-text'
 
-type ResourceItemId = string
 type WizardEditorInternalDocumentSource = WorkspaceRuntime['sessions']
 type InternalCatalogItemLinkRow = Omit<WizardEditorCatalogItemLinkRow, 'item'> & {
-  item: { id: InternalResourceItemId; name: string } | null
+  item: { id: ResourceId; name: string } | null
 }
 
 export interface WizardEditorWorkspaceSource {
@@ -438,27 +441,27 @@ export interface WizardEditorRuntimeResources {
 }
 
 export interface WizardEditorResourceCatalog {
-  getKnownItemById: (itemId: InternalResourceItemId) => WizardEditorItem | null
+  getKnownItemById: (itemId: ResourceId) => WizardEditorItem | null
   getKnownItemBySlug: (slug: ResourceSlug) => WizardEditorItem | null
-  getVisibleItemById: (itemId: InternalResourceItemId) => WizardEditorItem | null
+  getVisibleItemById: (itemId: ResourceId) => WizardEditorItem | null
   getVisibleItemBySlug: (slug: ResourceSlug) => WizardEditorItem | null
-  getVisibleAncestors: (itemId: InternalResourceItemId) => ReadonlyArray<WizardEditorItem>
+  getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<WizardEditorItem>
   getVisibleItems: () => ReadonlyArray<WizardEditorItem>
   getVisibleRoots: () => ReadonlyArray<WizardEditorItem>
   getTrashedItems: () => ReadonlyArray<WizardEditorItem>
   getTrashedRoots: () => ReadonlyArray<WizardEditorItem>
-  getVisibleChildren: (parentId: InternalResourceItemId | null) => ReadonlyArray<WizardEditorItem>
-  getTrashedChildren: (parentId: InternalResourceItemId | null) => ReadonlyArray<WizardEditorItem>
+  getVisibleChildren: (parentId: ResourceId | null) => ReadonlyArray<WizardEditorItem>
+  getTrashedChildren: (parentId: ResourceId | null) => ReadonlyArray<WizardEditorItem>
   queryVisibleItems: (input?: {
-    parentId?: InternalResourceItemId | null
+    parentId?: ResourceId | null
     type?: ResourceKind | ReadonlyArray<ResourceKind>
   }) => ReadonlyArray<WizardEditorItem>
 }
 
 export interface WizardEditorResourceOperationItems {
   resolveItems: (input: {
-    itemIds: ReadonlyArray<InternalResourceItemId>
-    excludeItemIds?: ReadonlyArray<InternalResourceItemId>
+    itemIds: ReadonlyArray<ResourceId>
+    excludeItemIds?: ReadonlyArray<ResourceId>
     includeTrashed?: boolean
   }) => Array<WizardEditorItem>
 }
@@ -488,7 +491,7 @@ export interface WizardEditorCommandSource {
     slug: ResourceSlug,
     options?: { heading?: string; replace?: boolean },
   ) => Promise<unknown> | void
-  onItemSlugChange?: (itemId: ResourceItemId, slug: ResourceSlug | null) => void
+  onItemSlugChange?: (itemId: ResourceId, slug: ResourceSlug | null) => void
   reportCreateItemError: (error: unknown, message: string) => void
   setLastSelectedItem?: (slug: ResourceSlug) => void
   trashDriver: ResourceTrashDriver
@@ -610,7 +613,7 @@ export interface WizardEditorPermissionSourceInput {
   canEmptyTrash?: boolean
   canManageFolders?: boolean
   canUseWorkspaceActions: boolean
-  getItemById: (itemId: ResourceItemId) => WizardEditorItem | null | undefined
+  getItemById: (itemId: ResourceId) => WizardEditorItem | null | undefined
   setWorkspaceMode: (workspaceMode: WorkspaceMode) => void
   workspaceMode: WorkspaceMode
 }
@@ -634,7 +637,7 @@ export interface WizardEditorPermissionSource {
 export interface WizardEditorWorkspaceModeInput {
   actor: WizardEditorWorkspaceActor | null
   currentItem: WizardEditorItem | null
-  getItemById: (itemId: ResourceItemId) => WizardEditorItem | null | undefined
+  getItemById: (itemId: ResourceId) => WizardEditorItem | null | undefined
   rawWorkspaceMode: WorkspaceMode
 }
 
@@ -673,7 +676,7 @@ export interface WizardEditorHydratedCatalogResourceContentSourceInput<
 > {
   catalog: ResourceCatalog
   current: WizardEditorCurrentResourceState
-  loadItemContent: (itemId: InternalResourceItemId) => Promise<WizardEditorItemWithContent | null>
+  loadItemContent: (itemId: ResourceId) => Promise<WizardEditorItemWithContent | null>
   contentProjection?: {
     canAccessItem: (item: WizardEditorItem, requiredLevel: PermissionLevel) => boolean
     getMemberItemPermissionLevel: (
@@ -687,13 +690,13 @@ export interface WizardEditorHydratedCatalogResourceContentSourceInput<
 
 export interface WizardEditorFileContentSourceInput {
   canReplaceFile: (file: FileItem) => boolean
-  getItemById: (itemId: ResourceItemId) => WizardEditorItem | null
+  getItemById: (itemId: ResourceId) => WizardEditorItem | null
   maxUploadBytes?: number
   readOnlyErrorMessage?: string
   resolveFile: (file: FileItemWithContent) => WizardEditorResolvedFile
   writeFile: (input: {
     file: ResourceImportFile
-    fileId: ResourceItemId
+    fileId: ResourceId
     onProgress?: (percentage: number) => void
   }) => MaybePromise<void>
 }
@@ -729,12 +732,12 @@ export type WizardEditorResolvedFile =
       status: 'unavailable'
     })
 
-export interface WizardEditorFileSessionReplaceInput<TFileId extends string = string> {
+export interface WizardEditorFileSessionReplaceInput<TFileId extends string = ResourceId> {
   fileId: TFileId
   file: ResourceImportFile
 }
 
-export interface WizardEditorFileSession<TFileId extends string = string> {
+export interface WizardEditorFileSession<TFileId extends string = ResourceId> {
   maxUploadBytes?: number
   replaceFile(
     input: WizardEditorFileSessionReplaceInput<TFileId>,
@@ -756,13 +759,13 @@ export type WizardEditorPreviewUploadResult =
   | { status: 'stale' }
   | { status: 'error'; error: unknown }
 
-export type WizardEditorPreviewUpload<TItemId extends string = string> = (
+export type WizardEditorPreviewUpload<TItemId extends string = ResourceId> = (
   itemId: TItemId,
   generate: () => Promise<Blob>,
   options?: { signal?: AbortSignal },
 ) => Promise<WizardEditorPreviewUploadResult>
 
-type WizardEditorPreviewUploadCapability<TItemId extends string = string> =
+type WizardEditorPreviewUploadCapability<TItemId extends string = ResourceId> =
   | {
       status: 'available'
       upload: WizardEditorPreviewUpload<TItemId>
@@ -817,7 +820,7 @@ export interface WizardEditorResolvedMapImage {
 
 type WizardEditorAvailableDownload = Extract<FileSystemDownload, { status: 'available' }>
 export interface WizardEditorDownloadRequest {
-  itemIds: ReadonlyArray<ResourceItemId>
+  itemIds: ReadonlyArray<ResourceId>
   items?: ReadonlyArray<WizardEditorItem>
 }
 export type WizardEditorRemoteDownloadResult =
@@ -877,8 +880,8 @@ type WizardEditorHistoryPreviewImageUrlState =
   | { status: 'ready'; url: string }
 
 type WizardEditorHistoryPreviewSnapshot =
-  | { kind: 'note-yjs'; noteId: InternalResourceItemId; data: ArrayBuffer }
-  | { kind: 'canvas-yjs'; canvasId: InternalResourceItemId; data: ArrayBuffer }
+  | { kind: 'note-yjs'; noteId: ResourceId; data: ArrayBuffer }
+  | { kind: 'canvas-yjs'; canvasId: ResourceId; data: ArrayBuffer }
   | {
       kind: 'game-map'
       snapshotData: GameMapSnapshotData
@@ -924,7 +927,7 @@ interface WizardEditorHistoryEntriesModel {
 
 interface WizardEditorAvailableHistorySource {
   status: 'available'
-  itemId: InternalResourceItemId
+  itemId: ResourceId
   entries: WizardEditorHistoryEntriesModel
   previewingEntryId: HistoryEntryId | null
   preview: WizardEditorHistoryPreviewState
@@ -947,7 +950,7 @@ export type WizardEditorHistorySource =
 
 export interface WizardEditorHistoryScopeInput {
   canEdit: boolean
-  itemId: InternalResourceItemId | null
+  itemId: ResourceId | null
   previewingEntryId: HistoryEntryId | null
   rollbackEntryId: HistoryEntryId | null
 }
@@ -955,7 +958,7 @@ export interface WizardEditorHistoryScopeInput {
 export interface WizardEditorHistoryScope {
   activePreviewingEntryId: HistoryEntryId | null
   activeRollbackEntryId: HistoryEntryId | null
-  persistedItemId: InternalResourceItemId | null
+  persistedItemId: ResourceId | null
 }
 
 export interface WizardEditorHistoryEntriesInput {
@@ -990,7 +993,7 @@ export interface WizardEditorHistoryInput {
   clearPreview: () => void
   clearRollback: () => void
   entries: WizardEditorHistoryEntriesInput
-  itemId: InternalResourceItemId | null
+  itemId: ResourceId | null
   previewEntry: (entryId: HistoryEntryId | null) => void
   preview: WizardEditorHistoryPreviewInput
   requestRollback: (entryId: HistoryEntryId | null) => void
@@ -1004,7 +1007,7 @@ export interface WizardEditorCatalogItemLinkRow {
   id: string
   query: string
   displayName: string | null
-  item: { id: ResourceItemId; name: string } | null
+  item: { id: ResourceId; name: string } | null
 }
 
 export interface WizardEditorResourceSource extends WizardEditorRuntimeResourceSourceInput {}
@@ -1012,43 +1015,43 @@ export interface WizardEditorResourceSource extends WizardEditorRuntimeResourceS
 interface WizardEditorMapSessionUpdateImageInput {
   file: ResourceImportFile
   layerId?: string | null
-  mapId: InternalResourceItemId
+  mapId: ResourceId
 }
 
 export type WizardEditorMapPinCreationRequest = {
-  itemId: InternalResourceItemId
+  itemId: ResourceId
   layerId?: string | null
   x: number
   y: number
 }
 
 interface WizardEditorMapSessionCreatePinsInput {
-  mapId: InternalResourceItemId
+  mapId: ResourceId
   pins: Array<WizardEditorMapPinCreationRequest>
 }
 
 interface WizardEditorMapSessionUpdatePinInput {
-  mapId: InternalResourceItemId
+  mapId: ResourceId
   mapPinId: InternalMapPinId
   x: number
   y: number
 }
 
 interface WizardEditorMapSessionSetPinVisibilityInput {
-  mapId: InternalResourceItemId
+  mapId: ResourceId
   mapPinId: InternalMapPinId
   isVisible: boolean
 }
 
 interface WizardEditorMapSessionRemovePinInput {
-  mapId: InternalResourceItemId
+  mapId: ResourceId
   mapPinId: InternalMapPinId
 }
 
 type WizardEditorMapPinsCreatedReceipt = {
   kind: 'mapPinsCreated'
   affectedCount: number
-  itemId: InternalResourceItemId
+  itemId: ResourceId
   pinIds: Array<InternalMapPinId>
 }
 
@@ -1060,14 +1063,14 @@ type WizardEditorMapPinOperationKind = 'mapPinUpdated' | 'mapPinVisibilityUpdate
 
 interface WizardEditorMapPinOperationInput {
   kind: WizardEditorMapPinOperationKind
-  mapId: InternalResourceItemId
+  mapId: ResourceId
 }
 
 export interface WizardEditorMapPinCreationsInput<TPin> {
-  mapId: InternalResourceItemId
-  existingPinnedItemIds: Iterable<InternalResourceItemId>
+  mapId: ResourceId
+  existingPinnedItemIds: Iterable<ResourceId>
   pins: ReadonlyArray<WizardEditorMapPinCreationRequest>
-  canPinItem: (itemId: InternalResourceItemId) => boolean
+  canPinItem: (itemId: ResourceId) => boolean
   createPin: (pin: WizardEditorMapPinCreationRequest) => TPin
 }
 
@@ -1093,7 +1096,7 @@ export interface WizardEditorNoteCollaborationPlayback {
   collaborators: ReadonlyArray<{ color: string; name: string }>
   initialTypingStep: number
   intervalMs?: number
-  noteId: InternalResourceItemId
+  noteId: ResourceId
   typingBlockIndex: number
   typingText: string
 }
@@ -1135,7 +1138,7 @@ export type WizardEditorNoteEditorSession =
 type WizardEditorNoteValueStatesForNotesStatus = 'pending' | 'success' | 'error'
 
 interface WizardEditorNoteValueStatesLoad {
-  states: Array<NoteValueRuntimeState<InternalResourceItemId>>
+  states: Array<NoteValueRuntimeState<ResourceId>>
   status: WizardEditorNoteValueStatesForNotesStatus
 }
 
@@ -1152,16 +1155,16 @@ interface WizardEditorNoteDocumentSessionSource {
 
 interface WizardEditorNotePlaybackSource {
   getCollaborationPlayback?: (
-    noteId: InternalResourceItemId,
+    noteId: ResourceId,
   ) => WizardEditorNoteCollaborationPlayback | undefined
 }
 
 interface WizardEditorNoteHeadingSource {
-  useNoteHeadings: (noteId: InternalResourceItemId | null) => WizardEditorNoteHeadingsLoad
+  useNoteHeadings: (noteId: ResourceId | null) => WizardEditorNoteHeadingsLoad
 }
 
 interface WizardEditorNoteValueRuntimeStateSource {
-  useNoteValueStates: (noteIds: Array<InternalResourceItemId>) => WizardEditorNoteValueStatesLoad
+  useNoteValueStates: (noteIds: Array<ResourceId>) => WizardEditorNoteValueStatesLoad
 }
 
 export interface WizardEditorNoteSessionPorts {
@@ -1195,11 +1198,11 @@ export type WizardEditorCanvasDocumentSession =
   | { status: 'error'; error: unknown }
   | {
       status: 'ready'
-      canvasId: InternalResourceItemId
+      canvasId: ResourceId
       workspaceId: string
       canEdit: boolean
       colorMode: 'light' | 'dark'
-      parentId: InternalResourceItemId | null
+      parentId: ResourceId | null
       collaboration: WizardEditorCanvasCollaborationCapability
       user: { name: string; color: string }
       doc: Doc
@@ -1256,7 +1259,7 @@ export interface WizardEditorEmbeddedCanvasUpdateState {
 
 export type WizardEditorEmbeddedCanvasUpdateSource = (input: {
   afterSeq: number | undefined
-  canvasId: InternalResourceItemId
+  canvasId: ResourceId
 }) => WizardEditorEmbeddedCanvasUpdateState
 
 export type WizardEditorEmbeddedCanvasState =
@@ -1272,7 +1275,7 @@ export function useWizardEditorEmbeddedCanvasStateFromUpdates({
   canvasId,
   useUpdates,
 }: {
-  canvasId: InternalResourceItemId
+  canvasId: ResourceId
   useUpdates: WizardEditorEmbeddedCanvasUpdateSource
 }): WizardEditorEmbeddedCanvasState {
   return useEmbeddedCanvasStateFromUpdates({ canvasId, useUpdates })
@@ -1290,11 +1293,11 @@ interface WizardEditorCanvasDocumentSessionSource {
 }
 
 interface WizardEditorCanvasEmbeddedCanvasSource {
-  useEmbeddedCanvasState: (canvasId: InternalResourceItemId) => WizardEditorEmbeddedCanvasState
+  useEmbeddedCanvasState: (canvasId: ResourceId) => WizardEditorEmbeddedCanvasState
 }
 
 interface WizardEditorCanvasEmbeddedCanvasCapability {
-  useEmbeddedCanvasState: (canvasId: InternalResourceItemId) => WizardEditorEmbeddedCanvasState
+  useEmbeddedCanvasState: (canvasId: ResourceId) => WizardEditorEmbeddedCanvasState
 }
 
 interface WizardEditorCanvasSessionAccessCapability {
@@ -1342,7 +1345,7 @@ export function createWizardEditorCanvasEmbeddedSessionPorts(
 export interface WizardEditorDocumentSource {
   canvas: WizardEditorCanvasSessionPorts
   canvasEmbedded: WizardEditorCanvasEmbeddedSessionPorts
-  canvasPreviewUpload: WizardEditorPreviewUploadCapability<InternalResourceItemId>
+  canvasPreviewUpload: WizardEditorPreviewUploadCapability<ResourceId>
   file: WizardEditorFileSession
   map: WizardEditorMapSession
   note: WizardEditorNoteSessionPorts
@@ -1526,7 +1529,7 @@ export function completeWizardEditorResourceCommand(
 
 export interface WizardEditorYjsCollaborationSessionInput {
   canEdit: boolean
-  documentId: ResourceItemId
+  documentId: ResourceId
   onBeforeDestroy?: (state: YjsSessionBeforeDestroyInput) => Promise<void> | void
   sourceId: string | null | undefined
   transport: YjsSessionTransport
@@ -1540,7 +1543,7 @@ export function useWizardEditorYjsCollaborationSession(
 ): YjsCollaborationSession {
   return useYjsCollaborationSession({
     ...input,
-    documentId: input.documentId as InternalResourceItemId,
+    documentId: input.documentId as ResourceId,
   })
 }
 
@@ -1551,7 +1554,7 @@ export type WizardEditorNoteYjsPersistenceSession<Provider> = {
 }
 
 export type WizardEditorNoteYjsBeforeDestroyState<Provider> = {
-  noteId: ResourceItemId
+  noteId: ResourceId
   sourceId: string
   provider: Provider
 }
@@ -1560,14 +1563,14 @@ export type WizardEditorNoteYjsPersistenceAdapter<Provider> = {
   flushProvider: (provider: Provider, label: string) => Promise<boolean> | boolean
   isApplyingRemoteUpdate: (provider: Provider) => boolean
   persistNote: (
-    noteId: ResourceItemId,
+    noteId: ResourceId,
     sourceId: string,
   ) => Promise<NoteProjectionResult> | NoteProjectionResult
   reportError: (message: string, error?: unknown) => void
 }
 
 export function useWizardEditorNoteYjsPersistenceLifecycle<Provider>(input: {
-  noteId: ResourceItemId
+  noteId: ResourceId
   sourceId: string | null | undefined
   canEdit: boolean
   session: WizardEditorNoteYjsPersistenceSession<Provider>
@@ -1575,14 +1578,14 @@ export function useWizardEditorNoteYjsPersistenceLifecycle<Provider>(input: {
 }) {
   const persistence = useNoteYjsPersistenceLifecycle({
     ...input,
-    noteId: input.noteId as InternalResourceItemId,
+    noteId: input.noteId as ResourceId,
   })
 
   return {
     handleBeforeDestroy: (state: WizardEditorNoteYjsBeforeDestroyState<Provider>) =>
       persistence.handleBeforeDestroy({
         ...state,
-        noteId: state.noteId as InternalResourceItemId,
+        noteId: state.noteId as ResourceId,
       }),
   }
 }
@@ -1604,7 +1607,7 @@ export function updateWizardEditorYjsProviderUser(
 
 export function createWizardEditorCatalogItemLink(row: WizardEditorCatalogItemLinkRow) {
   const internalRow = (
-    row.item ? { ...row, item: { ...row.item, id: row.item.id as InternalResourceItemId } } : row
+    row.item ? { ...row, item: { ...row.item, id: row.item.id as ResourceId } } : row
   ) as InternalCatalogItemLinkRow
   return createCatalogItemLink(internalRow)
 }
@@ -1664,10 +1667,9 @@ export function createWizardEditorCatalogNavigation({
   setNavigation,
 }: WizardEditorCatalogNavigationInput): WizardEditorNavigation {
   const isOpenableItem = (itemId: ResourceId) => {
-    if (catalog.getVisibleItemById(itemId as InternalResourceItemId)) return true
+    if (catalog.getVisibleItemById(itemId as ResourceId)) return true
     return (
-      current.kind === 'trash' &&
-      catalog.getKnownItemById(itemId as InternalResourceItemId)?.isTrashed === true
+      current.kind === 'trash' && catalog.getKnownItemById(itemId as ResourceId)?.isTrashed === true
     )
   }
   const openItemInCurrentSurface = (itemId: ResourceId) => {
@@ -1775,7 +1777,7 @@ export function createWizardEditorCatalogSnapshot({
     ? getWizardEditorStaticCatalogContentItem(catalog, currentResourceId)
     : null
   const availabilityState = resolveResourceAvailabilityState({
-    lookup: { kind: 'id', id: currentResourceId as InternalResourceItemId | null | undefined },
+    lookup: { kind: 'id', id: currentResourceId as ResourceId | null | undefined },
     metadataSource: createResourceAvailabilityMetadataSource({
       catalog,
       load: { activeStatus: 'success' },
@@ -1814,8 +1816,7 @@ export function createWizardEditorCatalogResourceSource({
   const resolvedPermissions = isWizardEditorPermissionSourceInput(permissions)
     ? createWizardEditorPermissionSource({
         ...permissions,
-        getItemById: (itemId) =>
-          snapshot.catalog.getKnownItemById(itemId as InternalResourceItemId),
+        getItemById: (itemId) => snapshot.catalog.getKnownItemById(itemId as ResourceId),
       })
     : permissions
 
@@ -1931,7 +1932,7 @@ export function createWizardEditorFileContentSource({
 }: WizardEditorFileContentSourceInput): WizardEditorFileContentSource {
   const fileIoExecutor = {
     canReplaceFile,
-    getFileTargetById: (itemId: ResourceItemId) => {
+    getFileTargetById: (itemId: ResourceId) => {
       const item = getItemById(itemId)
       return item?.type === RESOURCE_TYPES.files ? item : null
     },
@@ -1952,7 +1953,7 @@ export function createWizardEditorFileContentSource({
       resolveFile,
       replaceFile: ({ file, fileId }) =>
         executeFileIoCommand(
-          { type: 'replaceFile', file, fileId: fileId as InternalResourceItemId },
+          { type: 'replaceFile', file, fileId: fileId as ResourceId },
           fileIoExecutor,
         ),
     },
@@ -1976,7 +1977,7 @@ export function runWizardEditorPdfPreviewGeneration<TItemId extends string>(inpu
     ...input,
     claimAndUpload: (itemId, generate, options) =>
       input.claimAndUpload(itemId as unknown as TItemId, generate, options),
-    fileId: input.fileId as unknown as InternalResourceItemId,
+    fileId: input.fileId as unknown as ResourceId,
   })
 }
 
@@ -1986,7 +1987,7 @@ export function replaceWizardEditorMapImage<TImage, TMapId extends string = stri
   return replaceMapImage({
     file: input.file,
     layerId: input.layerId,
-    mapId: input.mapId as unknown as InternalResourceItemId,
+    mapId: input.mapId as unknown as ResourceId,
     stageImage: async ({ file, layerId, mapId }) => {
       const staged = await input.stageImage({
         file,
@@ -2373,10 +2374,10 @@ function getWizardEditorStaticCatalogContentItem(
   catalog: ResourceCatalog,
   resourceId: ResourceId,
 ): WizardEditorItemWithContent | null {
-  const visibleItem = catalog.getVisibleItemById(resourceId as InternalResourceItemId)
+  const visibleItem = catalog.getVisibleItemById(resourceId as ResourceId)
   if (isWizardEditorItemWithContent(visibleItem)) return visibleItem
 
-  const knownItem = catalog.getKnownItemById(resourceId as InternalResourceItemId)
+  const knownItem = catalog.getKnownItemById(resourceId as ResourceId)
   return knownItem?.isTrashed && isWizardEditorItemWithContent(knownItem) ? knownItem : null
 }
 

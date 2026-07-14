@@ -1,3 +1,4 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { Id } from 'convex/_generated/dataModel'
@@ -56,7 +57,7 @@ describe('useLiveCurrentItem', () => {
 
   it('resolves optimistic slugs from the active sidebar cache', () => {
     const optimisticItem = createNote({
-      id: 'optimistic-create-1' as Id<'sidebarItems'>,
+      id: 'optimistic-create-1' as ResourceId,
       name: 'Scene Draft',
       slug: 'scene-draft',
     })
@@ -87,7 +88,7 @@ describe('useLiveCurrentItem', () => {
 
   it('uses the server item after the optimistic item resolves', () => {
     const serverItem = createNote({
-      id: 'note_1' as Id<'sidebarItems'>,
+      id: 'note_1' as ResourceId,
       name: 'Resolved Scene',
       slug: 'resolved-scene',
     })
@@ -140,12 +141,12 @@ describe('useLiveCurrentItem', () => {
 
   it('prefers the resolved server item over a stale optimistic cache item', () => {
     const optimisticItem = createNote({
-      id: 'optimistic-create-1' as Id<'sidebarItems'>,
+      id: 'optimistic-create-1' as ResourceId,
       name: 'Scene Draft',
       slug: 'resolved-scene',
     })
     const serverItem = createNote({
-      id: 'note_1' as Id<'sidebarItems'>,
+      id: 'note_1' as ResourceId,
       name: 'Resolved Scene',
       slug: optimisticItem.slug,
     })
@@ -180,7 +181,7 @@ describe('useLiveCurrentItem', () => {
 
   it('treats a successful stale query item as missing for the requested slug', () => {
     const staleItem = createNote({
-      id: 'note_stale' as Id<'sidebarItems'>,
+      id: 'note_stale' as ResourceId,
       name: 'Stale Scene',
       slug: 'stale-scene',
     })

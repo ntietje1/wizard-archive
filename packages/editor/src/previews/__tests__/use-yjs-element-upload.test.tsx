@@ -1,8 +1,8 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { useYjsElementPreviewUpload } from '../use-yjs-element-upload'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 const capturePreviewSpy = vi.hoisted(() => vi.fn())
 
@@ -10,7 +10,7 @@ vi.mock('../generate', () => ({
   captureElementPreview: capturePreviewSpy,
 }))
 
-const itemId = 'item-id' as SidebarItemId
+const itemId = 'item-id' as ResourceId
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void

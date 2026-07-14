@@ -1,3 +1,5 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import { testSessionId } from '../../../../../shared/test/session-id'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { renderHook } from '@testing-library/react'
 import * as Y from 'yjs'
@@ -5,11 +7,11 @@ import { useConvexYjsCollaboration } from '../yjs-collaboration'
 import type { Id } from 'convex/_generated/dataModel'
 import type { YjsCollaborationProvider } from '@wizard-archive/editor/collaboration/yjs-provider'
 
-const DOCUMENT_ID = 'test-doc-id' as Id<'sidebarItems'>
+const DOCUMENT_ID = testResourceId('test-doc-id')
 const CAMPAIGN_ID = 'test-campaign-id' as Id<'campaigns'>
 const OTHER_CAMPAIGN_ID = 'other-campaign-id' as Id<'campaigns'>
 const USER = { name: 'Test User', color: '#ff0000' }
-const AWARENESS_SESSION_ID = 'awareness-session-id'
+const AWARENESS_SESSION_ID = testSessionId('awareness-session-id')
 
 const {
   mockMutation,

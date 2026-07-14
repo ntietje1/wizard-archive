@@ -1,5 +1,6 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useCallback, useSyncExternalStore } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { extractNoteValueDefinitions } from './values/definitions'
 import { hydrateNoteValueRuntimeSource, planNoteValueRuntimeStateLoad } from './value-runtime-model'
 import type {
@@ -21,7 +22,7 @@ export function useNoteValueRuntimeSource({
   stateSource,
 }: {
   editor: CustomBlockNoteEditor | null
-  noteId?: SidebarItemId
+  noteId?: ResourceId
   references: NoteValueReferences
   stateSource: NoteValueRuntimeStateSource
 }): NoteValueRuntimeSource {
@@ -96,7 +97,7 @@ function useEditorNoteValueDefinitions({
   noteId,
 }: {
   editor: CustomBlockNoteEditor | null
-  noteId?: SidebarItemId
+  noteId?: ResourceId
 }) {
   const editorDocumentSnapshot = useEditorDocumentSnapshot(editor)
   return noteId ? extractNoteValueDefinitions(editorDocumentSnapshot.document, noteId) : []

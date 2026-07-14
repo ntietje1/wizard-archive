@@ -1,7 +1,8 @@
+import type { ResourceId } from '../resources/domain-id'
 import { NoteEditorCore } from './editor-core'
 import { NoteValueRuntimeProvider } from './value-block/value-block-runtime'
 import type { CustomBlockNoteEditor } from './editor-schema'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { NoteItemWithContent } from '../notes/item-contract'
 import type { CSSProperties, ReactNode } from 'react'
 import type { LinkResolver } from './references/resolver'
@@ -25,7 +26,7 @@ export function NoteView({
 }: {
   editor: CustomBlockNoteEditor
   note?: NoteItemWithContent
-  noteId?: SidebarItemId
+  noteId?: ResourceId
   editable: boolean
   evaluateValuesFromEditor?: boolean
   linkResolver: LinkResolver

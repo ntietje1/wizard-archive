@@ -157,10 +157,10 @@ describe('setBlocksShareStatus', () => {
 
   it('authorizes callers before projecting note content', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('yjsUpdates', {
-        documentId: noteId,
+        documentId: noteRowId,
         update: new Uint8Array([1, 2, 3]).buffer,
         seq: 0,
         isSnapshot: false,
@@ -607,7 +607,7 @@ describe('block permission resolution', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
@@ -639,7 +639,7 @@ describe('block permission resolution', () => {
       return await dbCtx.db
         .query('editHistory')
         .withIndex('by_item_action', (query) =>
-          query.eq('itemId', noteId).eq('action', 'block_share_changed'),
+          query.eq('itemId', noteRowId).eq('action', 'block_share_changed'),
         )
         .unique()
     })
@@ -720,7 +720,7 @@ describe('block permission resolution', () => {
   it('does not log history for empty member permission updates', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.action(api.blockShares.actions.setBlockMemberPermission, {
       campaignId: ctx.campaignDomainId,
@@ -734,7 +734,7 @@ describe('block permission resolution', () => {
       return await dbCtx.db
         .query('editHistory')
         .withIndex('by_item_action', (q) =>
-          q.eq('itemId', noteId).eq('action', 'block_share_changed'),
+          q.eq('itemId', noteRowId).eq('action', 'block_share_changed'),
         )
         .collect()
     })

@@ -1,7 +1,8 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useRef } from 'react'
 import type { Ref } from 'react'
 import type { AnyItem } from './items'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ContextMenuHostRef } from '../context-menu/components/host'
 import type {
   WorkspaceContextMenuModel,
@@ -30,8 +31,8 @@ interface WorkspaceContextMenuBaseOptions {
 }
 
 interface WorkspaceContextMenuItemSource {
-  selectedItemIds: ReadonlyArray<SidebarItemId>
-  resolveOperationItems: (input: { itemIds: ReadonlyArray<SidebarItemId> }) => Array<AnyItem>
+  selectedItemIds: ReadonlyArray<ResourceId>
+  resolveOperationItems: (input: { itemIds: ReadonlyArray<ResourceId> }) => Array<AnyItem>
 }
 
 interface WorkspaceContextMenuBase {

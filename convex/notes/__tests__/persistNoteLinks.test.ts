@@ -15,12 +15,13 @@ import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import { createAccessibleResourcePathResolver } from '../../sidebarItems/functions/resourcePathResolver'
 import type { Block } from '../../blocks/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { requireSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,
   campaignId: CampaignId,
-  noteId: Id<'sidebarItems'>,
+  noteId: ResourceId,
   blocks: Parameters<typeof makeYjsUpdateWithBlocks>[0],
 ) {
   await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -36,24 +37,26 @@ async function pushAndPersist(
 
 type FactoryBlock = Awaited<ReturnType<typeof createBlock>>
 
-function toBlock(noteId: Id<'sidebarItems'>, block: FactoryBlock): Block {
-  const { blockDbId, ...fields } = block
+function toBlock(noteId: ResourceId, block: FactoryBlock): Block {
+  if (block.noteId !== noteId) throw new Error('Block belongs to a different note')
+  const { blockDbId, noteId: _noteId, noteRowId, ...fields } = block
   return {
     ...fields,
     _id: blockDbId,
     _creationTime: 0,
-    noteId,
+    noteId: noteRowId,
   }
 }
 
 async function runSync(
   t: ReturnType<typeof createTestContext>,
   campaignId: Id<'campaigns'>,
-  noteId: Id<'sidebarItems'>,
+  noteId: ResourceId,
   blocks: Array<Block>,
   campaignMemberId?: Id<'campaignMembers'>,
 ) {
   await t.run(async (dbCtx) => {
+    const note = await requireSidebarItemRow(dbCtx, noteId)
     const campaign = await dbCtx.db.get('campaigns', campaignId)
     if (!campaign) throw new Error('Campaign not found')
     const membership = campaignMemberId
@@ -73,7 +76,7 @@ async function runSync(
     await syncNoteLinks(
       { ...dbCtx, campaign },
       {
-        noteId,
+        noteId: note._id,
         campaignId,
         blocks,
         resourcePathResolver,
@@ -85,15 +88,24 @@ async function runSync(
 async function listLinksForNote(
   t: ReturnType<typeof createTestContext>,
   campaignId: Id<'campaigns'>,
-  noteId: Id<'sidebarItems'>,
+  noteId: ResourceId,
 ) {
   return await t.run(async (dbCtx) => {
-    return await dbCtx.db
+    const note = await requireSidebarItemRow(dbCtx, noteId)
+    const links = await dbCtx.db
       .query('noteLinks')
       .withIndex('by_campaign_source', (q) =>
-        q.eq('campaignId', campaignId).eq('sourceNoteId', noteId),
+        q.eq('campaignId', campaignId).eq('sourceNoteId', note._id),
       )
       .collect()
+    return await Promise.all(
+      links.map(async (link) => ({
+        ...link,
+        targetItemId: link.targetItemId
+          ? ((await dbCtx.db.get('sidebarItems', link.targetItemId))?.resourceUuid ?? null)
+          : null,
+      })),
+    )
   })
 }
 
@@ -204,17 +216,11 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       },
     ])
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-
+    {
+      const links = await listLinksForNote(t, ctx.campaignId, sourceId)
       expect(links).toHaveLength(1)
       expect(links[0].query).toBe('Target Note')
-    })
+    }
   })
 
   it('keeps resolved links with different heading anchors as separate rows', async () => {
@@ -248,18 +254,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       },
     ])
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-
+    {
+      const links = await listLinksForNote(t, ctx.campaignId, sourceId)
       expect(links).toHaveLength(2)
       expect(links.every((link) => link.targetItemId === targetId)).toBe(true)
       expect(links.map((link) => link.query).sort()).toEqual(['Capital', 'Capital#Geography'])
-    })
+    }
   })
 
   it('deduplicates unresolved links in a block by query', async () => {
@@ -288,18 +288,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       },
     ])
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-
+    {
+      const links = await listLinksForNote(t, ctx.campaignId, sourceId)
       expect(links).toHaveLength(2)
       expect(links.every((link) => link.targetItemId === null)).toBe(true)
       expect(links.map((link) => link.query).sort()).toEqual(['Missing Note', 'Other Missing'])
-    })
+    }
   })
 
   it('ignores external markdown links', async () => {
@@ -322,15 +316,10 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       },
     ])
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
+    {
+      const links = await listLinksForNote(t, ctx.campaignId, sourceId)
       expect(links).toHaveLength(0)
-    })
+    }
   })
 
   it('stores unresolved internal links with null target ids', async () => {
@@ -353,13 +342,8 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       },
     ])
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
+    {
+      const links = await listLinksForNote(t, ctx.campaignId, sourceId)
       expect(links).toHaveLength(1)
       expect(links[0]).toMatchObject({
         targetItemId: null,
@@ -367,7 +351,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
         displayName: 'Alias',
         syntax: 'wiki',
       })
-    })
+    }
   })
 
   it('keeps unchanged link rows instead of recreating them', async () => {
@@ -396,30 +380,16 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     ] as Parameters<typeof makeYjsUpdateWithBlocks>[0]
 
     await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, blocks)
-    const originalLink = await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-      return links[0]
-    })
+    const originalLink = (await listLinksForNote(t, ctx.campaignId, sourceId))[0]
 
     await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, blocks)
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-
+    {
+      const links = await listLinksForNote(t, ctx.campaignId, sourceId)
       expect(links).toHaveLength(1)
       expect(links[0]._id).toBe(originalLink._id)
       expect(links[0]._creationTime).toBe(originalLink._creationTime)
-    })
+    }
   })
 
   it('patches an existing resolved row when query or syntax changes but the target stays the same', async () => {
@@ -444,15 +414,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
     await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, originalBlock)])
 
-    const originalLink = await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-      return links[0]
-    })
+    const originalLink = (await listLinksForNote(t, ctx.campaignId, sourceId))[0]
 
     await runSync(t, ctx.campaignId, sourceId, [
       {
@@ -461,14 +423,8 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       },
     ])
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-
+    {
+      const links = await listLinksForNote(t, ctx.campaignId, sourceId)
       expect(links).toHaveLength(1)
       expect(links[0]._id).toBe(originalLink._id)
       expect(links[0]).toMatchObject({
@@ -477,7 +433,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
         displayName: 'New Label',
         syntax: 'md',
       })
-    })
+    }
   })
 
   it('deletes only stale rows when one source block disappears', async () => {
@@ -509,31 +465,18 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       toBlock(sourceId, blockB),
     ])
 
-    const originalLinks = await t.run(async (dbCtx) => {
-      return await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-    })
+    const originalLinks = await listLinksForNote(t, ctx.campaignId, sourceId)
 
     await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, blockB)])
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
-
+    {
+      const links = await listLinksForNote(t, ctx.campaignId, sourceId)
       expect(links).toHaveLength(1)
       expect(links[0].blockId).toBe(blockB.blockDbId)
       expect(links[0]._id).toBe(
         originalLinks.find((link) => link.blockId === blockB.blockDbId)?._id,
       )
-    })
+    }
   })
 
   it('collapses duplicate existing rows for the same dedupe key during sync', async () => {
@@ -557,10 +500,14 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const duplicateIds = await t.run(async (dbCtx) => {
+      const [source, target] = await Promise.all([
+        requireSidebarItemRow(dbCtx, sourceId),
+        requireSidebarItemRow(dbCtx, targetId),
+      ])
       return await Promise.all([
         dbCtx.db.insert('noteLinks', {
-          sourceNoteId: sourceId,
-          targetItemId: targetId,
+          sourceNoteId: source._id,
+          targetItemId: target._id,
           query: 'Target Note',
           displayName: null,
           syntax: 'wiki',
@@ -568,8 +515,8 @@ describe('persistNoteBlocks — note link reconciliation', () => {
           blockId: block.blockDbId,
         }),
         dbCtx.db.insert('noteLinks', {
-          sourceNoteId: sourceId,
-          targetItemId: targetId,
+          sourceNoteId: source._id,
+          targetItemId: target._id,
           query: 'Target Note',
           displayName: 'Alias',
           syntax: 'md',
@@ -715,7 +662,8 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     expect(resolvedLink.targetItemId).toBe(targetId)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', targetId, {
+      const target = await requireSidebarItemRow(dbCtx, targetId)
+      await dbCtx.db.patch('sidebarItems', target._id, {
         name: 'Renamed Target',
         normalizedName: 'renamed target',
       })
@@ -783,11 +731,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    await t.run((dbCtx) =>
-      dbCtx.db.patch('sidebarItems', targetId, {
+    await t.run(async (dbCtx) => {
+      const target = await requireSidebarItemRow(dbCtx, targetId)
+      await dbCtx.db.patch('sidebarItems', target._id, {
         allPermissionLevel: PERMISSION_LEVEL.NONE,
-      }),
-    )
+      })
+    })
     const block = await createBlock(t, sourceId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('block-a'),
       plainText: '[[Hidden Target]]',

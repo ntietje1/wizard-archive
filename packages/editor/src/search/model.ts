@@ -1,11 +1,11 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { BlockSearchResult } from '../../../../shared/search/types'
 import type { AnyItem } from '../workspace/items'
 import { createWorkspaceResource } from '../workspace/runtime'
 import type { WorkspaceResource } from '../workspace/runtime'
 
 export interface ItemSearchResult {
-  itemId: SidebarItemId
+  itemId: ResourceId
   resource: WorkspaceResource
   item: AnyItem
   breadcrumb: string
@@ -51,14 +51,14 @@ export function buildItemSearchResults({
   scored.sort((a, b) => b.score - a.score)
 
   const results: Array<ItemSearchResult> = []
-  const titleMatchIds = new Set<SidebarItemId>()
+  const titleMatchIds = new Set<ResourceId>()
   for (const { item } of scored) {
     titleMatchIds.add(item.id)
     results.push(toItemSearchResult(item, getBreadcrumb, 'title', null))
   }
 
   if (bodyResults) {
-    const seenNotes = new Set<SidebarItemId>()
+    const seenNotes = new Set<ResourceId>()
     for (const block of bodyResults) {
       if (titleMatchIds.has(block.noteId) || seenNotes.has(block.noteId)) continue
       const item = itemsById.get(block.noteId)

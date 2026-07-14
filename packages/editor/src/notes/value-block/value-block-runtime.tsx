@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { evaluateNoteValueAuthoringDefinitions } from '../values/runtime'
 import { useRef } from 'react'
 import type { NoteValueAuthoringDefinition, NoteValueResolution } from '../values/runtime'
 import type { NoteValueRuntimeState } from '../values/state-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { CustomBlockNoteEditor } from '../editor-schema'
 import { NoteValueRuntimeContext } from './value-block-runtime-context'
 import type { NoteValueRuntimeContextValue } from './value-block-runtime-context'
@@ -16,19 +17,19 @@ function evaluateSameNoteAuthoringStates({
   externalDependencyStatesStatus,
   references,
 }: {
-  noteId: SidebarItemId
-  definitions: Array<NoteValueAuthoringDefinition<SidebarItemId>>
-  externalDependencyStates: Array<NoteValueRuntimeState<SidebarItemId>>
+  noteId: ResourceId
+  definitions: Array<NoteValueAuthoringDefinition<ResourceId>>
+  externalDependencyStates: Array<NoteValueRuntimeState<ResourceId>>
   externalDependencyStatesStatus: NoteValueRuntimeSource['externalDependencyStatesStatus']
   references: NoteValueReferences
 }) {
-  const definitionsBySlug = new Map<string, Array<NoteValueAuthoringDefinition<SidebarItemId>>>()
+  const definitionsBySlug = new Map<string, Array<NoteValueAuthoringDefinition<ResourceId>>>()
   for (const definition of definitions) {
     const matches = definitionsBySlug.get(definition.slug)
     if (matches) matches.push(definition)
     else definitionsBySlug.set(definition.slug, [definition])
   }
-  const externalValuesByNoteAndSlug = new Map<string, Array<NoteValueRuntimeState<SidebarItemId>>>()
+  const externalValuesByNoteAndSlug = new Map<string, Array<NoteValueRuntimeState<ResourceId>>>()
   for (const state of externalDependencyStates) {
     const key = `${state.noteId}:${state.slug}`
     const states = externalValuesByNoteAndSlug.get(key)
@@ -40,7 +41,7 @@ function evaluateSameNoteAuthoringStates({
   )
   return evaluateNoteValueAuthoringDefinitions(definitions, {
     currentNoteId: noteId,
-    resolveExternal: (notePathRaw, slug): NoteValueResolution<SidebarItemId> => {
+    resolveExternal: (notePathRaw, slug): NoteValueResolution<ResourceId> => {
       const externalNoteId = references.resolveNoteIdByPath({
         notePathRaw,
         sourceNoteId: noteId,

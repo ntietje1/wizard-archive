@@ -1,12 +1,12 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { RESOURCE_STATUS } from '../items-persistence-contract'
 import { createWorkspaceResourceReadModel } from '../items'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 describe('sidebar item read model', () => {
   it('indexes items by id and slug', () => {
-    const note = createNote({ id: 'note-1' as SidebarItemId, name: 'Note' })
+    const note = createNote({ id: 'note-1' as ResourceId, name: 'Note' })
     const model = createWorkspaceResourceReadModel([note])
 
     expect(model.getItem(note.id)).toBe(note)
@@ -14,20 +14,20 @@ describe('sidebar item read model', () => {
   })
 
   it('throws when duplicate ids are supplied', () => {
-    const first = createNote({ id: 'note-1' as SidebarItemId, name: 'First' })
-    const second = createNote({ id: 'note-1' as SidebarItemId, name: 'Second' })
+    const first = createNote({ id: 'note-1' as ResourceId, name: 'First' })
+    const second = createNote({ id: 'note-1' as ResourceId, name: 'Second' })
 
     expect(() => createWorkspaceResourceReadModel([first, second])).toThrow(/Duplicate resource id/)
   })
 
   it('throws when duplicate slugs are supplied', () => {
     const first = createNote({
-      id: 'note-1' as SidebarItemId,
+      id: 'note-1' as ResourceId,
       name: 'First',
       slug: 'same',
     })
     const second = createNote({
-      id: 'note-2' as SidebarItemId,
+      id: 'note-2' as ResourceId,
       name: 'Second',
       slug: 'same',
     })
@@ -40,7 +40,7 @@ describe('sidebar item read model', () => {
   it('rejects invalid persisted slugs before indexing', () => {
     const note = {
       ...createNote({
-        id: 'note-1' as SidebarItemId,
+        id: 'note-1' as ResourceId,
         name: 'Note',
       }),
       slug: 'bad slug',
@@ -50,14 +50,14 @@ describe('sidebar item read model', () => {
   })
 
   it('indexes active children only', () => {
-    const folder = createFolder({ id: 'folder-1' as SidebarItemId, name: 'Folder' })
+    const folder = createFolder({ id: 'folder-1' as ResourceId, name: 'Folder' })
     const activeChild = createNote({
-      id: 'note-1' as SidebarItemId,
+      id: 'note-1' as ResourceId,
       name: 'Active',
       parentId: folder.id,
     })
     const trashedChild = createNote({
-      id: 'note-2' as SidebarItemId,
+      id: 'note-2' as ResourceId,
       name: 'Trashed',
       parentId: folder.id,
       status: RESOURCE_STATUS.trashed,
@@ -69,16 +69,16 @@ describe('sidebar item read model', () => {
 
   it('walks active ancestors through the loaded tree', () => {
     const grandparent = createFolder({
-      id: 'folder-grandparent' as SidebarItemId,
+      id: 'folder-grandparent' as ResourceId,
       name: 'Grandparent',
     })
     const parent = createFolder({
-      id: 'folder-parent' as SidebarItemId,
+      id: 'folder-parent' as ResourceId,
       name: 'Parent',
       parentId: grandparent.id,
     })
     const note = createNote({
-      id: 'note-child' as SidebarItemId,
+      id: 'note-child' as ResourceId,
       name: 'Child',
       parentId: parent.id,
     })
@@ -88,9 +88,9 @@ describe('sidebar item read model', () => {
   })
 
   it('returns loaded items and throws for missing required items', () => {
-    const first = createNote({ id: 'note-1' as SidebarItemId, name: 'First' })
-    const second = createNote({ id: 'note-2' as SidebarItemId, name: 'Second' })
-    const missingId = 'missing' as SidebarItemId
+    const first = createNote({ id: 'note-1' as ResourceId, name: 'First' })
+    const second = createNote({ id: 'note-2' as ResourceId, name: 'Second' })
+    const missingId = 'missing' as ResourceId
     const model = createWorkspaceResourceReadModel([first, second])
 
     expect(model.getItems([first.id, missingId, second.id])).toEqual([first, second])
@@ -98,14 +98,14 @@ describe('sidebar item read model', () => {
   })
 
   it('exposes immutable collections and keeps query methods isolated', () => {
-    const folder = createFolder({ id: 'folder-1' as SidebarItemId, name: 'Folder' })
+    const folder = createFolder({ id: 'folder-1' as ResourceId, name: 'Folder' })
     const note = createNote({
-      id: 'note-1' as SidebarItemId,
+      id: 'note-1' as ResourceId,
       name: 'Note',
       parentId: folder.id,
     })
     const injected = createNote({
-      id: 'note-injected' as SidebarItemId,
+      id: 'note-injected' as ResourceId,
       name: 'Injected',
       parentId: folder.id,
     })
@@ -113,7 +113,7 @@ describe('sidebar item read model', () => {
 
     expect(() => (model.items as Array<typeof injected>).push(injected)).toThrow(TypeError)
     expect(() =>
-      (model.itemsById as Map<SidebarItemId, typeof injected>).set(injected.id, injected),
+      (model.itemsById as Map<ResourceId, typeof injected>).set(injected.id, injected),
     ).toThrow(TypeError)
     expect(() =>
       (model.itemsBySlug as Map<typeof injected.slug, typeof injected>).set(

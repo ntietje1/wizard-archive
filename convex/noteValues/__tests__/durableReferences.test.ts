@@ -9,6 +9,7 @@ import {
   valueBlockWithGeneratedId,
 } from './helpers.helper'
 import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import { requireSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 type CampaignContext = Awaited<ReturnType<typeof setupCampaignContext>>
 type DmAuth = ReturnType<typeof asDm>
@@ -78,10 +79,11 @@ describe('note value durable references', () => {
     noteId: Parameters<typeof replaceNoteDocumentAndPersist>[2]['noteId'],
   ) {
     return await t.run(async (dbCtx) => {
+      const note = await requireSidebarItemRow(dbCtx, noteId)
       return await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', note._id),
         )
         .collect()
     })
@@ -93,14 +95,21 @@ describe('note value durable references', () => {
     valueId: string,
   ) {
     const rows = await t.run(async (dbCtx) => {
+      const note = await requireSidebarItemRow(dbCtx, noteId)
       return await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', note._id),
         )
         .collect()
     })
     return rows.filter((row) => row.valueId === valueId)
+  }
+
+  async function getNoteRowId(
+    noteId: Parameters<typeof replaceNoteDocumentAndPersist>[2]['noteId'],
+  ) {
+    return await t.run(async (dbCtx) => (await requireSidebarItemRow(dbCtx, noteId))._id)
   }
 
   it('keeps durable external bindings working after source note rename and dependent re-persist', async () => {
@@ -152,7 +161,7 @@ describe('note value durable references', () => {
     expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
-        targetNoteId: sourceNoteId,
+        targetNoteId: await getNoteRowId(sourceNoteId),
         targetValueId: sourceValueId,
       },
     ])
@@ -204,7 +213,7 @@ describe('note value durable references', () => {
     expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
-        targetNoteId: sourceNoteId,
+        targetNoteId: await getNoteRowId(sourceNoteId),
         targetValueId: sourceValueId,
       },
     ])
@@ -248,7 +257,7 @@ describe('note value durable references', () => {
     expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
-        targetNoteId: sourceNoteId,
+        targetNoteId: await getNoteRowId(sourceNoteId),
         targetValueId: sourceValueId,
       },
     ])
@@ -287,7 +296,7 @@ describe('note value durable references', () => {
     expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
-        targetNoteId: sourceNoteId,
+        targetNoteId: await getNoteRowId(sourceNoteId),
         targetValueId: sourceValueId,
       },
     ])
@@ -339,7 +348,7 @@ describe('note value durable references', () => {
     expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
-        targetNoteId: noteId,
+        targetNoteId: await getNoteRowId(noteId),
         targetValueId: 'value-replacement-base',
       },
     ])
@@ -411,12 +420,12 @@ describe('note value durable references', () => {
     expect(targetRows[0].compile.status === 'ok' ? targetRows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
-        targetNoteId: targetNoteId,
+        targetNoteId: await getNoteRowId(targetNoteId),
         targetValueId: 'value-replacement-base',
       },
       {
         key: 'ref_1',
-        targetNoteId: sourceNoteId,
+        targetNoteId: await getNoteRowId(sourceNoteId),
         targetValueId: sourceValueId,
       },
     ])
@@ -499,8 +508,12 @@ describe('note value durable references', () => {
 
     const rows = await getRowsForValue(ctx, targetNoteId, 'value-total')
     expect(rows[0].compile.status === 'ok' ? rows[0].compile.bindings : []).toEqual([
-      { key: 'ref_0', targetNoteId, targetValueId: 'value-base' },
-      { key: 'ref_1', targetNoteId: sourceNoteId, targetValueId: 'value-prof-bonus' },
+      { key: 'ref_0', targetNoteId: await getNoteRowId(targetNoteId), targetValueId: 'value-base' },
+      {
+        key: 'ref_1',
+        targetNoteId: await getNoteRowId(sourceNoteId),
+        targetValueId: 'value-prof-bonus',
+      },
     ])
   })
 

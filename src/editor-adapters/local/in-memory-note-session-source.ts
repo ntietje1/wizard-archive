@@ -1,5 +1,6 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { useEffect, useRef } from 'react'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { Awareness, removeAwarenessStates } from 'y-protocols/awareness'
 import type { Doc } from 'yjs'
 import {
@@ -29,7 +30,7 @@ type InMemoryNoteEditorSessionEntry = {
   session: WizardEditorNoteEditorSession
 }
 
-type NoteContentChangeHandler = (input: { body: string; noteId: SidebarItemId }) => void
+type NoteContentChangeHandler = (input: { body: string; noteId: ResourceId }) => void
 
 export function useInMemoryNoteSessionSource({
   onNoteContentChange,

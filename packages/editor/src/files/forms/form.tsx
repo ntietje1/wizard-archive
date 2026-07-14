@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useState } from 'react'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceColor, ResourceIconName } from '../../workspace/resource-contract'
 
 import { toast } from 'sonner'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { useNameValidation } from '../../filesystem/use-name-validation'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import { FILE_UPLOAD_ACCEPT_PATTERN } from '../../../../../shared/storage/validation'
@@ -28,14 +29,14 @@ interface FileFormValues {
 }
 
 interface FileFormValueState {
-  loadedFileId: SidebarItemId | undefined
+  loadedFileId: ResourceId | undefined
   values: FileFormValues
 }
 
 interface FileFormProps {
   fileState: FileFormEditState
-  fileId?: SidebarItemId
-  parentId?: SidebarItemId | null
+  fileId?: ResourceId
+  parentId?: ResourceId | null
   onClose: () => void
   onSuccess?: (fileSlug?: string) => void
   source: FileFormSource
@@ -183,11 +184,11 @@ export function FileForm({
 
 interface SaveFileFormOptions {
   file: FileItem | null
-  fileId?: SidebarItemId
+  fileId?: ResourceId
   hasFile: boolean
   onClose: () => void
   onSuccess?: (fileSlug?: string) => void
-  parentId?: SidebarItemId | null
+  parentId?: ResourceId | null
   setIsSubmitting: (isSubmitting: boolean) => void
   source: FileFormSource
   upload: FileUploadControl
@@ -244,7 +245,7 @@ async function updateExistingFile({
   source,
   upload,
   values,
-}: SaveFileFormOptions & { file: FileItem; fileId: SidebarItemId }) {
+}: SaveFileFormOptions & { file: FileItem; fileId: ResourceId }) {
   const { slug } = await source.updateItemMetadata({
     item: file,
     name: resolveFinalName({ file, upload, values }),
@@ -312,7 +313,7 @@ async function replaceFileAttachment({
   selectedFile,
   source,
 }: {
-  fileId: SidebarItemId
+  fileId: ResourceId
   selectedFile: File
   source: FileFormSource
 }) {
@@ -327,7 +328,7 @@ async function replaceFileAttachment({
   assertCompletedResourceReplacement(result, 'File replacement did not complete')
 }
 
-async function openCreatedFile(source: FileFormSource, fileId: SidebarItemId) {
+async function openCreatedFile(source: FileFormSource, fileId: ResourceId) {
   try {
     await source.openItem(fileId)
   } catch (error) {
@@ -348,7 +349,7 @@ function resolveFinalName({
 }
 
 function getFileFormDefaultValues(
-  fileId: SidebarItemId | undefined,
+  fileId: ResourceId | undefined,
   file: FileItem | null,
 ): FileFormValues {
   if (!fileId || !file) return defaultFileFormValues
@@ -359,18 +360,11 @@ function getFileFormDefaultValues(
   }
 }
 
-function isFileLoading(
-  fileId: SidebarItemId | undefined,
-  file: FileItem | null,
-  isPending: boolean,
-) {
+function isFileLoading(fileId: ResourceId | undefined, file: FileItem | null, isPending: boolean) {
   return fileId !== undefined && file === null && isPending
 }
 
-function isFileEditLoadFailed(
-  fileId: SidebarItemId | undefined,
-  status: FileFormEditState['status'],
-) {
+function isFileEditLoadFailed(fileId: ResourceId | undefined, status: FileFormEditState['status']) {
   return fileId !== undefined && (status === 'not_found' || status === 'error')
 }
 

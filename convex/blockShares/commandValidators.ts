@@ -3,17 +3,18 @@ import { RESOURCE_COMMAND_TYPE } from '@wizard-archive/editor/resources/transact
 import { blockNoteIdValidator, blockShareStatusValidator } from '../blocks/schema'
 import { blockVisibilityPermissionLevelValidator } from './schema'
 import { campaignMemberIdValidator } from '../campaigns/schema'
+import { resourceIdValidator } from '../resources/validators'
 
 export const setBlocksShareStatusCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.setBlocksShareStatus),
-  noteId: v.id('sidebarItems'),
+  noteId: resourceIdValidator,
   blockNoteIds: v.array(blockNoteIdValidator),
   status: blockShareStatusValidator,
 })
 
 export const setBlockMemberPermissionCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.setBlockMemberPermission),
-  noteId: v.id('sidebarItems'),
+  noteId: resourceIdValidator,
   blockNoteIds: v.array(blockNoteIdValidator),
   campaignMemberId: campaignMemberIdValidator,
   permissionLevel: v.nullable(blockVisibilityPermissionLevelValidator),

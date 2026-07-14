@@ -17,7 +17,7 @@ describe('filesystem transaction semantics', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Destination',
     })
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scene',
     })
 
@@ -26,7 +26,7 @@ describe('filesystem transaction semantics', () => {
       command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
     })
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', noteId, {
+      await dbCtx.db.patch('sidebarItems', noteRowId, {
         updatedTime: CONTENT_UPDATED_TIMESTAMP,
         updatedBy: ctx.dm.profile._id,
       })
@@ -37,7 +37,7 @@ describe('filesystem transaction semantics', () => {
       transactionId: receipt.transactionId!,
     })
 
-    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note).toMatchObject({
       parentId: null,
       updatedTime: CONTENT_UPDATED_TIMESTAMP,
@@ -47,7 +47,7 @@ describe('filesystem transaction semantics', () => {
   it('records metadata-only sidebar edits as real events and replays them symmetrically', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scene',
       color: '#14b8a6' as ResourceColor,
     })
@@ -68,14 +68,14 @@ describe('filesystem transaction semantics', () => {
       campaignId: ctx.campaignDomainId,
       transactionId: receipt.transactionId!,
     })
-    let note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    let note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.color).toBe('#14b8a6')
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
       campaignId: ctx.campaignDomainId,
       transactionId: receipt.transactionId!,
     })
-    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.color).toBe('#ff0000')
   })
 })

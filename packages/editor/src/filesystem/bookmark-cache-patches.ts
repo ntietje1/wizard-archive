@@ -1,9 +1,9 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { AnyItem } from '../workspace/items'
 import type { ResourcePatch } from './patch-contract'
 
 function bookmarkPatchState(patches: Array<ResourcePatch>) {
-  const stateByItemId = new Map<SidebarItemId, boolean>()
+  const stateByItemId = new Map<ResourceId, boolean>()
   for (const patch of patches) {
     if (patch.type === 'setResourceBookmarkState') {
       stateByItemId.set(patch.itemId, patch.isBookmarked)

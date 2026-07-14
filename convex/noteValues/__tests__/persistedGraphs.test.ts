@@ -350,15 +350,21 @@ describe('persisted note value graphs', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: referencedNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Referenced Stats',
-    })
+    const { noteId: referencedNoteId, noteRowId: referencedNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Referenced Stats' },
+    )
     const { noteId: unrelatedNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Unrelated Stats',
     })
-    const { noteId: targetNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Target Stats',
-    })
+    const { noteId: targetNoteId, noteRowId: targetNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Target Stats' },
+    )
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -401,7 +407,7 @@ describe('persisted note value graphs', () => {
       return await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', targetNoteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', targetNoteRowId),
         )
         .collect()
     })
@@ -409,7 +415,7 @@ describe('persisted note value graphs', () => {
     expect(rows[0].compile.status === 'ok' ? rows[0].compile.bindings : []).toEqual([
       {
         key: 'ref_0',
-        targetNoteId: referencedNoteId,
+        targetNoteId: referencedNoteRowId,
         targetValueId: 'value-referenced-score',
       },
     ])
@@ -428,9 +434,14 @@ describe('persisted note value graphs', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: sourceNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Hidden Source',
-    })
+    const { noteId: sourceNoteId, noteRowId: sourceNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Hidden Source',
+      },
+    )
     const { noteId: targetNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Hidden Target',
     })
@@ -461,7 +472,7 @@ describe('persisted note value graphs', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', sourceNoteId, { status: 'undoHidden' })
+      await dbCtx.db.patch('sidebarItems', sourceNoteRowId, { status: 'undoHidden' })
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {

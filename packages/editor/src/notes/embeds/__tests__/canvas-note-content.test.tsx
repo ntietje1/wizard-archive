@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { EmbedNoteContent } from '../canvas-note-content'
@@ -8,7 +9,6 @@ import type * as BlockNoteContextMenuModule from '../../context-menu/blocknote-c
 import type * as BlockShareMenuModule from '../../../sharing/block/use-menu'
 import type { ReactNode, Ref } from 'react'
 import { createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import {
   createTestNoteContentSource,
   createTestNotePermissionContentSource,
@@ -282,7 +282,7 @@ describe('EmbedNoteContent', () => {
 
 function createTestNote(): NoteItemWithContent {
   return {
-    ...createNote({ id: testId<'sidebarItems'>('note-id') }),
+    ...createNote({ id: testResourceId('note-id') }),
     ancestors: [],
     content: [],
     blockMeta: {},

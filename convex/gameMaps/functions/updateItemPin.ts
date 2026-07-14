@@ -20,7 +20,7 @@ export async function updateItemPin(
     y: number
   },
 ): Promise<MapPinId> {
-  const { pin, pinRowId, map } = await requirePinAccess(ctx, { mapPinId })
+  const { pin, pinRowId, mapRowId } = await requirePinAccess(ctx, { mapPinId })
   assertPinCoordinate(x, 'x')
   assertPinCoordinate(y, 'y')
 
@@ -37,7 +37,7 @@ export async function updateItemPin(
   const historyEntry = await logEditHistory(
     ctx,
     {
-      itemId: map.id,
+      itemId: mapRowId,
       itemType: RESOURCE_TYPES.gameMaps,
       action: EDIT_HISTORY_ACTION.map_pin_moved,
       metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
@@ -46,7 +46,7 @@ export async function updateItemPin(
   )
 
   await captureGameMapSnapshot(ctx, {
-    mapId: map.id,
+    mapId: mapRowId,
     editHistoryId: historyEntry.rowId,
     campaignId: ctx.campaign._id,
   })

@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { SHARE_STATUS } from '../../../../../shared/block-shares/share-status'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import { getNoteRenderState } from '../render-state'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
 import type { NoteBlock } from '../document/model'
@@ -103,7 +104,7 @@ describe('note render state', () => {
 function createNote(blockMetaById: Record<string, BlockMeta>): NoteItemWithContent {
   const content = Object.keys(blockMetaById).map(createBlock)
   return {
-    id: 'note-1' as SidebarItemId,
+    id: 'note-1' as ResourceId,
     blockMeta: blockMetaById,
     blockShareAccessWarnings: [],
     content,

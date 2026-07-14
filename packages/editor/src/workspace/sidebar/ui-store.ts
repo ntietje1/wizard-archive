@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useMemo } from 'react'
 import { create } from 'zustand'
 import type { StoreApi } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import {
   getNextFileSystemFocusedItemId,
   resolveFileSystemSelectionRange,
@@ -22,17 +23,17 @@ type ActiveItemSurface = SidebarWorkspaceItemSurface
 
 interface ItemSurfaceIdentity {
   surface: ItemSurface
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
 }
 
 interface WorkspaceSidebarState {
-  folderStates: Record<SidebarItemId, boolean>
+  folderStates: Record<ResourceId, boolean>
   bookmarksOnlyMode: boolean
   closeAllFoldersMode: boolean
-  renamingId: SidebarItemId | null
-  selectedItemIds: Array<SidebarItemId>
-  anchorItemId: SidebarItemId | null
-  focusedItemId: SidebarItemId | null
+  renamingId: ResourceId | null
+  selectedItemIds: Array<ResourceId>
+  anchorItemId: ResourceId | null
+  focusedItemId: ResourceId | null
   selectionSurface: ItemSurfaceIdentity | null
   focusSurface: ItemSurfaceIdentity | null
   activeItemSurface: ActiveItemSurface | null
@@ -43,37 +44,37 @@ interface SidebarUIState {
 }
 
 interface SidebarUIActions {
-  setRenamingId: (workspaceId: string, id: SidebarItemId | null) => void
-  setFolderState: (workspaceId: string, folderId: SidebarItemId, isOpen: boolean) => void
-  toggleFolderState: (workspaceId: string, folderId: SidebarItemId) => void
+  setRenamingId: (workspaceId: string, id: ResourceId | null) => void
+  setFolderState: (workspaceId: string, folderId: ResourceId, isOpen: boolean) => void
+  toggleFolderState: (workspaceId: string, folderId: ResourceId) => void
   clearAllFolderStates: (workspaceId: string) => void
   toggleCloseAllFoldersMode: (workspaceId: string) => void
   exitCloseAllMode: (workspaceId: string) => void
   toggleBookmarksOnlyMode: (workspaceId: string) => void
   setSelectedItemIds: (
     workspaceId: string,
-    ids: ReadonlyArray<SidebarItemId>,
-    anchorId?: SidebarItemId | null,
+    ids: ReadonlyArray<ResourceId>,
+    anchorId?: ResourceId | null,
   ) => void
-  selectSingleItem: (workspaceId: string, id: SidebarItemId) => void
-  toggleItemSelection: (workspaceId: string, id: SidebarItemId) => void
+  selectSingleItem: (workspaceId: string, id: ResourceId) => void
+  toggleItemSelection: (workspaceId: string, id: ResourceId) => void
   selectItemRange: (
     workspaceId: string,
-    targetId: SidebarItemId,
-    visibleItemIds: ReadonlyArray<SidebarItemId>,
+    targetId: ResourceId,
+    visibleItemIds: ReadonlyArray<ResourceId>,
   ) => void
-  setFocusedItem: (workspaceId: string, id: SidebarItemId | null) => void
+  setFocusedItem: (workspaceId: string, id: ResourceId | null) => void
   moveFocus: (
     workspaceId: string,
     direction: 'up' | 'down',
-    visibleItemIds: ReadonlyArray<SidebarItemId>,
+    visibleItemIds: ReadonlyArray<ResourceId>,
     extendSelection: boolean,
   ) => void
   clearItemSelection: (workspaceId: string) => void
   normalizeContextSelection: (
     workspaceId: string,
-    id: SidebarItemId,
-    visibleItemIds?: ReadonlyArray<SidebarItemId>,
+    id: ResourceId,
+    visibleItemIds?: ReadonlyArray<ResourceId>,
   ) => void
   setActiveItemSurface: (workspaceId: string, surface: ActiveItemSurface | null) => void
   clearSelectionForWorkspaceChange: (workspaceId: string) => void
@@ -131,7 +132,7 @@ function updateWorkspaceSidebarState(
   }
 }
 
-function uniqueIds(ids: ReadonlyArray<SidebarItemId>): Array<SidebarItemId> {
+function uniqueIds(ids: ReadonlyArray<ResourceId>): Array<ResourceId> {
   return Array.from(new Set(ids))
 }
 
@@ -303,7 +304,7 @@ function createSidebarRangeSelectionActions(
 function moveSidebarFocusState(
   state: WorkspaceSidebarState,
   direction: 'up' | 'down',
-  visibleItemIds: ReadonlyArray<SidebarItemId>,
+  visibleItemIds: ReadonlyArray<ResourceId>,
   extendSelection: boolean,
 ): Partial<WorkspaceSidebarState> {
   const focusedItemId = getNextFileSystemFocusedItemId(
@@ -389,8 +390,8 @@ function createSidebarSelectionSurfaceActions(
 
 function normalizeSidebarContextSelectionState(
   state: WorkspaceSidebarState,
-  id: SidebarItemId,
-  visibleItemIds?: ReadonlyArray<SidebarItemId>,
+  id: ResourceId,
+  visibleItemIds?: ReadonlyArray<ResourceId>,
 ): Partial<WorkspaceSidebarState> | WorkspaceSidebarState {
   if (
     state.selectedItemIds.includes(id) &&
@@ -501,8 +502,8 @@ export function useClearSidebarWorkspaceStateOnUnmount(workspaceId: string, enab
   }, [enabled, workspaceId])
 }
 
-const EMPTY_FOLDER_STATES: Record<SidebarItemId, boolean> = {}
-const EMPTY_SELECTED_ITEM_IDS: ReadonlyArray<SidebarItemId> = []
+const EMPTY_FOLDER_STATES: Record<ResourceId, boolean> = {}
+const EMPTY_SELECTED_ITEM_IDS: ReadonlyArray<ResourceId> = []
 
 function useWorkspaceSidebarState(workspaceId: string) {
   return useSidebarUIStore(
@@ -519,9 +520,9 @@ function useWorkspaceSidebarState(workspaceId: string) {
 
 function createWorkspaceSidebarActions(workspaceId: string) {
   return {
-    setFolderState: (folderId: SidebarItemId, isOpen: boolean) =>
+    setFolderState: (folderId: ResourceId, isOpen: boolean) =>
       useSidebarUIStore.getState().setFolderState(workspaceId, folderId, isOpen),
-    toggleFolderState: (folderId: SidebarItemId) =>
+    toggleFolderState: (folderId: ResourceId) =>
       useSidebarUIStore.getState().toggleFolderState(workspaceId, folderId),
     clearAllFolderStates: () => useSidebarUIStore.getState().clearAllFolderStates(workspaceId),
     toggleCloseAllFoldersMode: () =>
@@ -542,7 +543,7 @@ function useWorkspaceEditingState(workspaceId: string) {
 
 function createWorkspaceEditingActions(workspaceId: string) {
   return {
-    setRenamingItemId: (id: SidebarItemId | null) =>
+    setRenamingItemId: (id: ResourceId | null) =>
       useSidebarUIStore.getState().setRenamingId(workspaceId, id),
   }
 }
@@ -644,24 +645,21 @@ function useSidebarWorkspaceSelectionCommands(workspaceId: string) {
   )
   return useMemo(
     () => ({
-      setSelectedItemIds: (ids: ReadonlyArray<SidebarItemId>, anchorId?: SidebarItemId | null) =>
+      setSelectedItemIds: (ids: ReadonlyArray<ResourceId>, anchorId?: ResourceId | null) =>
         storeCommands.setSelectedItemIds(workspaceId, ids, anchorId),
-      selectSingleItem: (id: SidebarItemId) => storeCommands.selectSingleItem(workspaceId, id),
-      toggleItemSelection: (id: SidebarItemId) =>
-        storeCommands.toggleItemSelection(workspaceId, id),
-      selectItemRange: (targetId: SidebarItemId, visibleItemIds: ReadonlyArray<SidebarItemId>) =>
+      selectSingleItem: (id: ResourceId) => storeCommands.selectSingleItem(workspaceId, id),
+      toggleItemSelection: (id: ResourceId) => storeCommands.toggleItemSelection(workspaceId, id),
+      selectItemRange: (targetId: ResourceId, visibleItemIds: ReadonlyArray<ResourceId>) =>
         storeCommands.selectItemRange(workspaceId, targetId, visibleItemIds),
-      setFocusedItem: (id: SidebarItemId | null) => storeCommands.setFocusedItem(workspaceId, id),
+      setFocusedItem: (id: ResourceId | null) => storeCommands.setFocusedItem(workspaceId, id),
       moveFocus: (
         direction: 'up' | 'down',
-        visibleItemIds: ReadonlyArray<SidebarItemId>,
+        visibleItemIds: ReadonlyArray<ResourceId>,
         extendSelection: boolean,
       ) => storeCommands.moveFocus(workspaceId, direction, visibleItemIds, extendSelection),
       clearItemSelection: () => storeCommands.clearItemSelection(workspaceId),
-      normalizeContextSelection: (
-        id: SidebarItemId,
-        visibleItemIds?: ReadonlyArray<SidebarItemId>,
-      ) => storeCommands.normalizeContextSelection(workspaceId, id, visibleItemIds),
+      normalizeContextSelection: (id: ResourceId, visibleItemIds?: ReadonlyArray<ResourceId>) =>
+        storeCommands.normalizeContextSelection(workspaceId, id, visibleItemIds),
       setActiveItemSurface: (surface: ActiveItemSurface | null) =>
         storeCommands.setActiveItemSurface(workspaceId, surface),
       clearSelectionForWorkspaceChange: () =>

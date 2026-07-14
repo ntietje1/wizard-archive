@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { ErrorBoundary } from '@wizard-archive/ui/components/error-boundary'
 import { ErrorFallback } from '@wizard-archive/ui/components/error-fallback'
 import type { ResourceHistoryAvailable, HistoryPreviewState, RollbackState } from '../history-types'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { HistoryPreviewViewer } from './viewer'
 import { RollbackConfirmDialog } from './rollback-confirm-dialog'
 import { handleError } from '../../errors/handle-error'
@@ -27,7 +28,7 @@ export function HistoryPreviewSurface({
   canEdit: boolean
   children: ReactNode
   history: ResourceHistoryAvailable
-  itemId: SidebarItemId
+  itemId: ResourceId
 }) {
   const currentHistoryRef = useRef(history)
   const currentItemIdRef = useRef(itemId)

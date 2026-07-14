@@ -1,7 +1,8 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
 import type { WizardEditorFolderItem, WizardEditorItem } from '@wizard-archive/editor/adapter'
-import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { UserProfileId } from 'shared/common/ids'
 import { testCampaignId } from 'shared/test/campaign-id'
 
 let itemCounter = 0
@@ -74,7 +75,7 @@ export function createNote(overrides?: SidebarItemOverrides<NoteItem>): NoteItem
   const { slug, name, ...rest } = overrides ?? {}
   return withLifecycleFacts({
     ...base,
-    id: `note_${itemCounter}` as SidebarItemId,
+    id: `note_${itemCounter}` as ResourceId,
     type: TEST_ITEM_TYPES.notes,
     ...(name !== undefined ? { name: testResourceTitle(name) } : {}),
     ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),

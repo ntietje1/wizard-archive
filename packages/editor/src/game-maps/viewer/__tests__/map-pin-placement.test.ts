@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { buildMapPinPlacementInputs, getImagePinPosition } from '../map-pin-placement'
 
 describe('buildMapPinPlacementInputs', () => {
@@ -8,7 +9,7 @@ describe('buildMapPinPlacementInputs', () => {
   })
 
   it('places a single pin at the requested position', () => {
-    const itemId = 'note_1' as SidebarItemId
+    const itemId = 'note_1' as ResourceId
 
     expect(buildMapPinPlacementInputs([itemId], { x: 50, y: 25 })).toEqual([
       { itemId, x: 50, y: 25 },
@@ -16,11 +17,7 @@ describe('buildMapPinPlacementInputs', () => {
   })
 
   it('spreads multiple pins around the requested position', () => {
-    const itemIds = [
-      'note_1' as SidebarItemId,
-      'note_2' as SidebarItemId,
-      'note_3' as SidebarItemId,
-    ]
+    const itemIds = ['note_1' as ResourceId, 'note_2' as ResourceId, 'note_3' as ResourceId]
 
     expect(buildMapPinPlacementInputs(itemIds, { x: 50, y: 25 })).toEqual([
       { itemId: itemIds[0], x: 48, y: 25 },
@@ -31,10 +28,10 @@ describe('buildMapPinPlacementInputs', () => {
 
   it('spreads even-numbered pins around the requested position', () => {
     const itemIds = [
-      'note_1' as SidebarItemId,
-      'note_2' as SidebarItemId,
-      'note_3' as SidebarItemId,
-      'note_4' as SidebarItemId,
+      'note_1' as ResourceId,
+      'note_2' as ResourceId,
+      'note_3' as ResourceId,
+      'note_4' as ResourceId,
     ]
 
     expect(buildMapPinPlacementInputs(itemIds, { x: 50, y: 25 })).toEqual([
@@ -46,11 +43,7 @@ describe('buildMapPinPlacementInputs', () => {
   })
 
   it('clamps generated pin positions to map bounds', () => {
-    const itemIds = [
-      'note_1' as SidebarItemId,
-      'note_2' as SidebarItemId,
-      'note_3' as SidebarItemId,
-    ]
+    const itemIds = ['note_1' as ResourceId, 'note_2' as ResourceId, 'note_3' as ResourceId]
 
     expect(buildMapPinPlacementInputs(itemIds, { x: 0, y: 100 })).toEqual([
       { itemId: itemIds[0], x: 0, y: 100 },
@@ -60,11 +53,7 @@ describe('buildMapPinPlacementInputs', () => {
   })
 
   it('clamps generated pin positions to upper map bounds', () => {
-    const itemIds = [
-      'note_1' as SidebarItemId,
-      'note_2' as SidebarItemId,
-      'note_3' as SidebarItemId,
-    ]
+    const itemIds = ['note_1' as ResourceId, 'note_2' as ResourceId, 'note_3' as ResourceId]
 
     expect(buildMapPinPlacementInputs(itemIds, { x: 100, y: 0 })).toEqual([
       { itemId: itemIds[0], x: 98, y: 0 },

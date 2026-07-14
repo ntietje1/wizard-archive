@@ -4,7 +4,6 @@ import { throwClientError } from '../../errors'
 import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockNoteId'
 import { patchBlockMetadata } from '../../blocks/functions/patchBlockMetadata'
 import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
-import type { NoteItemRow } from '@wizard-archive/editor/notes/item-contract'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { PermissionLevel } from '../../../shared/permissions/types'
@@ -106,7 +105,7 @@ export async function setBlocksMemberPermissionHelper(
     campaignMemberId,
     permissionLevel,
   }: {
-    note: NoteItemRow
+    note: Doc<'sidebarItems'>
     blockNoteIds: Array<NoteBlockId>
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel: Extract<PermissionLevel, 'none' | 'view'> | null
@@ -132,7 +131,7 @@ export async function setBlockMemberPermissionHelper(
     campaignMemberId,
     permissionLevel,
   }: {
-    note: NoteItemRow
+    note: Doc<'sidebarItems'>
     blockNoteId: NoteBlockId
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel: Extract<PermissionLevel, 'none' | 'view'> | null
@@ -140,7 +139,7 @@ export async function setBlockMemberPermissionHelper(
 ): Promise<boolean> {
   if (permissionLevel === null) {
     const block = await findBlockByBlockNoteId(ctx, {
-      noteId: note.id,
+      noteId: note._id,
       blockNoteId,
     })
     if (!block) return false
@@ -150,7 +149,7 @@ export async function setBlockMemberPermissionHelper(
   }
 
   const block = await findBlockOrThrow(ctx, {
-    noteId: note.id,
+    noteId: note._id,
     blockNoteId,
   })
 
@@ -166,7 +165,7 @@ export async function setBlockMemberPermissionHelper(
   }
 
   const shareChanged = await addBlockShare(ctx, {
-    noteId: note.id,
+    noteId: note._id,
     block,
     campaignMemberId,
     permissionLevel,
@@ -181,13 +180,13 @@ export async function setBlockShareStatusHelper(
     blockNoteId,
     status,
   }: {
-    note: NoteItemRow
+    note: Doc<'sidebarItems'>
     blockNoteId: NoteBlockId
     status: ShareStatus
   },
 ): Promise<boolean> {
   const block = await findBlockOrThrow(ctx, {
-    noteId: note.id,
+    noteId: note._id,
     blockNoteId,
   })
 

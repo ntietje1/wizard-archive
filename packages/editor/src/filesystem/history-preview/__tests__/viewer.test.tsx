@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import * as Y from 'yjs'
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { HistoryPreviewViewer } from '../viewer'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { testMapPinId } from '../../../test/map-pin-id'
 import { createNoteYDocFromContent } from '../../../notes/imported-text'
 import type * as ImportedTextModule from '../../../notes/imported-text'
@@ -71,7 +72,7 @@ describe('HistoryPreviewViewer', () => {
   })
 
   it('passes the snapshot note id into static note previews', async () => {
-    const noteId = 'note-1' as SidebarItemId
+    const noteId = 'note-1' as ResourceId
     const doc = createNoteYDocFromContent([
       {
         id: testNoteBlockId('block-1'),
@@ -106,7 +107,7 @@ describe('HistoryPreviewViewer', () => {
   })
 
   it('reuses decoded note snapshots while the snapshot data is stable', async () => {
-    const noteId = 'note-1' as SidebarItemId
+    const noteId = 'note-1' as ResourceId
     const doc = createNoteYDocFromContent([
       {
         id: testNoteBlockId('block-1'),
@@ -137,8 +138,8 @@ describe('HistoryPreviewViewer', () => {
   })
 
   it('passes sidebar-backed canvas nodes into canvas snapshot previews', async () => {
-    const canvasId = 'canvas-1' as SidebarItemId
-    const noteId = 'note-1' as SidebarItemId
+    const canvasId = 'canvas-1' as ResourceId
+    const noteId = 'note-1' as ResourceId
     const doc = createCanvasDocumentDoc({
       nodes: [
         {
@@ -201,7 +202,7 @@ describe('HistoryPreviewViewer', () => {
               pins: [
                 {
                   id: testMapPinId('history-preview-pin'),
-                  itemId: 'note-1' as SidebarItemId,
+                  itemId: 'note-1' as ResourceId,
                   x: 12,
                   y: 34,
                   visible: true,

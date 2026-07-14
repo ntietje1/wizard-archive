@@ -1,7 +1,7 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import { DEFAULT_SORT_OPTIONS } from '../../items-persistence-contract'
-import { testId } from '../../../test/id'
 import {
   useRuntimeSidebarWorkspaceState,
   useRuntimeSidebarWorkspaceStateWithSort,
@@ -13,7 +13,7 @@ const workspaceId = 'workspace_1'
 describe('folder states', () => {
   it('setFolderState opens a folder', () => {
     const sidebar = createSidebarWorkspaceStateHarness({ workspaceId })
-    const folderId = testId<'sidebarItems'>('folder_1')
+    const folderId = testResourceId('folder_1')
 
     act(() => {
       sidebar.current.uiCommands.setFolderState(folderId, true)
@@ -24,7 +24,7 @@ describe('folder states', () => {
 
   it('toggleFolderState opens a closed folder', () => {
     const sidebar = createSidebarWorkspaceStateHarness({ workspaceId })
-    const folderId = testId<'sidebarItems'>('folder_1')
+    const folderId = testResourceId('folder_1')
 
     act(() => {
       sidebar.current.uiCommands.toggleFolderState(folderId)
@@ -36,7 +36,7 @@ describe('folder states', () => {
   it('folder states are isolated per workspace', () => {
     const firstWorkspace = createSidebarWorkspaceStateHarness({ workspaceId: 'workspace_1' })
     const secondWorkspace = createSidebarWorkspaceStateHarness({ workspaceId: 'workspace_2' })
-    const folderId = testId<'sidebarItems'>('folder_1')
+    const folderId = testResourceId('folder_1')
 
     act(() => {
       firstWorkspace.current.uiCommands.setFolderState(folderId, true)
@@ -57,8 +57,8 @@ describe('folder states', () => {
 describe('closeAllFoldersMode', () => {
   it('toggleCloseAllFoldersMode preserves persisted folder state', () => {
     const sidebar = createSidebarWorkspaceStateHarness({ workspaceId })
-    const firstFolderId = testId<'sidebarItems'>('folder_1')
-    const secondFolderId = testId<'sidebarItems'>('folder_2')
+    const firstFolderId = testResourceId('folder_1')
+    const secondFolderId = testResourceId('folder_2')
 
     act(() => {
       sidebar.current.uiCommands.setFolderState(firstFolderId, true)
@@ -99,7 +99,7 @@ describe('bookmarksOnlyMode', () => {
 describe('selection', () => {
   it('selectSingleItem stores one selected and focused item', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
+    const noteId = testResourceId('note_1')
 
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(noteId)
@@ -112,8 +112,8 @@ describe('selection', () => {
   it('isolates selection, focus, active surface, and rename state per workspace', () => {
     const firstWorkspace = createSidebarWorkspaceStateHarness({ workspaceId: 'workspace_a' })
     const secondWorkspace = createSidebarWorkspaceStateHarness({ workspaceId: 'workspace_b' })
-    const firstNoteId = testId<'sidebarItems'>('note_a')
-    const secondNoteId = testId<'sidebarItems'>('note_b')
+    const firstNoteId = testResourceId('note_a')
+    const secondNoteId = testResourceId('note_b')
 
     act(() => {
       firstWorkspace.current.selectionCommands.setActiveItemSurface({
@@ -143,8 +143,8 @@ describe('selection', () => {
 
   it('toggleItemSelection adds and removes one item', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
 
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(noteId)
@@ -163,10 +163,10 @@ describe('selection', () => {
 
   it('selectItemRange selects visible ids between the anchor and target', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const a = testId<'sidebarItems'>('item_a')
-    const b = testId<'sidebarItems'>('item_b')
-    const c = testId<'sidebarItems'>('item_c')
-    const d = testId<'sidebarItems'>('item_d')
+    const a = testResourceId('item_a')
+    const b = testResourceId('item_b')
+    const c = testResourceId('item_c')
+    const d = testResourceId('item_d')
 
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(b)
@@ -179,8 +179,8 @@ describe('selection', () => {
 
   it('moves focus down and selects the focused item', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const a = testId<'sidebarItems'>('item_a')
-    const b = testId<'sidebarItems'>('item_b')
+    const a = testResourceId('item_a')
+    const b = testResourceId('item_b')
 
     act(() => {
       sidebar.current.selectionCommands.moveFocus('down', [a, b], false)
@@ -199,9 +199,9 @@ describe('selection', () => {
 
   it('shift focus movement extends selection from the anchor', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const a = testId<'sidebarItems'>('item_a')
-    const b = testId<'sidebarItems'>('item_b')
-    const c = testId<'sidebarItems'>('item_c')
+    const a = testResourceId('item_a')
+    const b = testResourceId('item_b')
+    const c = testResourceId('item_c')
 
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(a)
@@ -215,10 +215,10 @@ describe('selection', () => {
 
   it('shift focus movement extends from the visible focus when the stored anchor is hidden', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const hidden = testId<'sidebarItems'>('hidden_item')
-    const a = testId<'sidebarItems'>('item_a')
-    const b = testId<'sidebarItems'>('item_b')
-    const c = testId<'sidebarItems'>('item_c')
+    const hidden = testResourceId('hidden_item')
+    const a = testResourceId('item_a')
+    const b = testResourceId('item_b')
+    const c = testResourceId('item_c')
 
     act(() => {
       sidebar.current.selectionCommands.setSelectedItemIds([hidden], hidden)
@@ -234,8 +234,8 @@ describe('selection', () => {
 
   it('normalizeContextSelection preserves a group when right-clicking a selected item', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
 
     act(() => {
       sidebar.current.selectionCommands.setSelectedItemIds([noteId, mapId], noteId)
@@ -247,8 +247,8 @@ describe('selection', () => {
 
   it('allows callers to clear the selection anchor while preserving selected items', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
 
     act(() => {
       sidebar.current.selectionCommands.setSelectedItemIds([noteId, mapId], null)
@@ -261,8 +261,8 @@ describe('selection', () => {
 
   it('normalizeContextSelection scopes the selected group to the context surface', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
 
     act(() => {
       sidebar.current.selectionCommands.setSelectedItemIds([noteId, mapId], noteId)
@@ -274,9 +274,9 @@ describe('selection', () => {
 
   it('normalizeContextSelection selects only an unselected right-click target', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
-    const fileId = testId<'sidebarItems'>('file_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
+    const fileId = testResourceId('file_1')
 
     act(() => {
       sidebar.current.selectionCommands.setSelectedItemIds([noteId, mapId], noteId)
@@ -289,8 +289,8 @@ describe('selection', () => {
 
   it('tracks active item surface context for scoped hotkeys and paste targets', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const folderId = testId<'sidebarItems'>('folder_1')
-    const noteId = testId<'sidebarItems'>('note_1')
+    const folderId = testResourceId('folder_1')
+    const noteId = testResourceId('note_1')
 
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -309,11 +309,11 @@ describe('selection', () => {
 
   it('keeps selection snapshots detached from stored selection state', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const folderId = testId<'sidebarItems'>('folder_1')
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
-    const leakedSelection = testId<'sidebarItems'>('leaked_selection')
-    const leakedVisibleItem = testId<'sidebarItems'>('leaked_visible_item')
+    const folderId = testResourceId('folder_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
+    const leakedSelection = testResourceId('leaked_selection')
+    const leakedVisibleItem = testResourceId('leaked_visible_item')
     const visibleItemIds = [noteId, mapId]
 
     act(() => {
@@ -338,8 +338,8 @@ describe('selection', () => {
 
   it('preserves item selection when the active surface changes but selected ids are visible', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const folderId = testId<'sidebarItems'>('folder_1')
-    const noteId = testId<'sidebarItems'>('note_1')
+    const folderId = testResourceId('folder_1')
+    const noteId = testResourceId('note_1')
 
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -361,8 +361,8 @@ describe('selection', () => {
 
   it('clears item selection when a different active surface cannot see the selected ids', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const folderId = testId<'sidebarItems'>('folder_1')
-    const noteId = testId<'sidebarItems'>('note_1')
+    const folderId = testResourceId('folder_1')
+    const noteId = testResourceId('note_1')
 
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -385,8 +385,8 @@ describe('selection', () => {
 
   it('preserves item selection when the active surface transiently unregisters', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
 
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -403,10 +403,10 @@ describe('selection', () => {
 
   it('clears transient item selection when the next active surface cannot see it', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
+    const noteId = testResourceId('note_1')
     const folderViewSurface = {
       surface: 'folder-view' as const,
-      parentId: testId<'sidebarItems'>('folder_1'),
+      parentId: testResourceId('folder_1'),
       visibleItemIds: [],
     }
 
@@ -427,9 +427,9 @@ describe('selection', () => {
 
   it('preserves a plain-click anchor for the next shift-click range', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const a = testId<'sidebarItems'>('item_a')
-    const b = testId<'sidebarItems'>('item_b')
-    const c = testId<'sidebarItems'>('item_c')
+    const a = testResourceId('item_a')
+    const b = testResourceId('item_b')
+    const c = testResourceId('item_c')
 
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(a)
@@ -441,8 +441,8 @@ describe('selection', () => {
 
   it('clears selection, focus, active surface, and rename state for workspace changes', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const mapId = testId<'sidebarItems'>('map_1')
+    const noteId = testResourceId('note_1')
+    const mapId = testResourceId('map_1')
 
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -465,7 +465,7 @@ describe('selection', () => {
 describe('renaming', () => {
   it('setRenamingId updates state', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
+    const noteId = testResourceId('note_1')
 
     act(() => {
       sidebar.current.editing.setRenamingItemId(noteId)
@@ -477,8 +477,8 @@ describe('renaming', () => {
 
 describe('useStoredSidebarWorkspaceState', () => {
   it('composes stored sidebar UI, selection, editing, and supplied sort state', () => {
-    const folderId = testId<'sidebarItems'>('folder_1')
-    const noteId = testId<'sidebarItems'>('note_1')
+    const folderId = testResourceId('folder_1')
+    const noteId = testResourceId('note_1')
     const sort = { options: DEFAULT_SORT_OPTIONS, setOptions: () => {} }
     const sidebar = createSidebarWorkspaceStateHarness({ sort, workspaceId })
 
@@ -523,8 +523,8 @@ describe('useRuntimeSidebarWorkspaceState', () => {
   it('isolates transient state for mounted runtime instances with the same workspace id', () => {
     const firstRuntime = { workspace: { id: 'demo-campaign', instanceId: 'demo-runtime-a' } }
     const secondRuntime = { workspace: { id: 'demo-campaign', instanceId: 'demo-runtime-b' } }
-    const firstNoteId = testId<'sidebarItems'>('note_a')
-    const secondNoteId = testId<'sidebarItems'>('note_b')
+    const firstNoteId = testResourceId('note_a')
+    const secondNoteId = testResourceId('note_b')
     const first = renderHook(() => useRuntimeSidebarWorkspaceState(firstRuntime))
     const second = renderHook(() => useRuntimeSidebarWorkspaceState(secondRuntime))
 
@@ -549,7 +549,7 @@ describe('useRuntimeSidebarWorkspaceState', () => {
 
   it('removes transient runtime instance state on unmount', () => {
     const runtime = { workspace: { id: 'demo-campaign', instanceId: 'demo-runtime-a' } }
-    const folderId = testId<'sidebarItems'>('folder_1')
+    const folderId = testResourceId('folder_1')
     const first = renderHook(() => useRuntimeSidebarWorkspaceState(runtime))
 
     act(() => {

@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { SHARE_STATUS } from '../../../../../shared/block-shares/share-status'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import {
@@ -383,5 +384,5 @@ function deferred<T>() {
 }
 
 function sidebarItemId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }

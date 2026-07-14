@@ -6,11 +6,11 @@ import {
   createNoteViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { getSidebarItemRowId, testBlockNoteId } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { DOCUMENT_SNAPSHOT_TYPE } from '../types'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
-import { testBlockNoteId } from '../../_test/factories.helper'
 import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 
 describe('note snapshots capture Y.Doc state directly', () => {
@@ -27,6 +27,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
         name: 'Content Test Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       const blocks: Array<PartialNoteBlock> = [
         {
@@ -50,7 +51,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
       const snapshot = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', noteId))
+          .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
           .first()
       })
 
@@ -83,6 +84,7 @@ describe('canvas snapshot uses yjs_state format', () => {
         name: 'Test Canvas',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const canvasRowId = await getSidebarItemRowId(t, canvasId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -94,7 +96,7 @@ describe('canvas snapshot uses yjs_state format', () => {
       await t.run(async (dbCtx) => {
         const snapshot = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', canvasId))
+          .withIndex('by_item', (q) => q.eq('itemId', canvasRowId))
           .first()
 
         expect(snapshot).not.toBeNull()
@@ -121,6 +123,7 @@ describe('Note snapshots use yjs_state format', () => {
         name: 'Snapshot Type Check',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -132,7 +135,7 @@ describe('Note snapshots use yjs_state format', () => {
       await t.run(async (dbCtx) => {
         const snapshot = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', noteId))
+          .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
           .first()
 
         expect(snapshot).not.toBeNull()

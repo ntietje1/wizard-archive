@@ -1,7 +1,8 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useEffect, useRef } from 'react'
 import { captureElementPreview } from './generate'
 import type { PreviewUploadCapability } from '../files/preview-upload-contract'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type * as Y from 'yjs'
 
 const DEFAULT_DEBOUNCE_MS = 5_000
@@ -26,7 +27,7 @@ export function useYjsElementPreviewUpload({
   debounceMs = DEFAULT_DEBOUNCE_MS,
   enabled = true,
 }: {
-  itemId: SidebarItemId
+  itemId: ResourceId
   doc: Y.Doc | null
   containerRef: React.RefObject<HTMLElement | null>
   previewUpload: PreviewUploadCapability

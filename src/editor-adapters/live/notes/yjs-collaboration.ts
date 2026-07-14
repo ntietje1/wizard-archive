@@ -3,8 +3,7 @@ import { convexQuery, useConvex } from '@convex-dev/react-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { useConvexYjsCollaboration } from '~/editor-adapters/live/collaboration/yjs-collaboration'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import {
   flushWizardEditorYjsProviderPendingUpdates,
   isWizardEditorYjsProviderApplyingRemoteUpdate,
@@ -13,14 +12,14 @@ import {
 import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
 import type { YjsCollaborationProvider } from '@wizard-archive/editor/collaboration/yjs-provider'
 import { logger } from '~/shared/utils/logger'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 type ConvexClient = ReturnType<typeof useConvex>
 type QueryClient = ReturnType<typeof useQueryClient>
-type GetNoteSlugById = (noteId: Id<'sidebarItems'>) => WizardEditorResourceSlug | null | undefined
+type GetNoteSlugById = (noteId: ResourceId) => WizardEditorResourceSlug | null | undefined
 type BeforeDestroyState = {
   sourceId: CampaignId
-  documentId: string
+  documentId: ResourceId
   provider: YjsCollaborationProvider
 }
 
@@ -45,7 +44,7 @@ async function invalidatePersistedNoteQueries({
   sourceId,
 }: {
   getNoteSlugById: GetNoteSlugById
-  noteId: Id<'sidebarItems'>
+  noteId: ResourceId
   queryClient: QueryClient
   sourceId: CampaignId
 }) {
@@ -98,7 +97,7 @@ async function persistNoteBlocksNow({
 }: {
   convex: ConvexClient
   getNoteSlugById: GetNoteSlugById
-  noteId: Id<'sidebarItems'>
+  noteId: ResourceId
   queryClient: QueryClient
   sourceId: CampaignId
 }) {
@@ -113,7 +112,7 @@ async function persistNoteBlocksNow({
 
 export function useNoteYjsCollaboration(
   sourceId: string | null,
-  noteId: Id<'sidebarItems'>,
+  noteId: ResourceId,
   user: { name: string; color: string },
   canEdit: boolean,
   { getNoteSlugById }: { getNoteSlugById: GetNoteSlugById },
@@ -134,7 +133,7 @@ export function useNoteYjsCollaboration(
   })
 
   const persistence = useWizardEditorNoteYjsPersistenceLifecycle({
-    noteId: noteId as SidebarItemId,
+    noteId,
     sourceId,
     canEdit,
     session: result,
@@ -145,7 +144,7 @@ export function useNoteYjsCollaboration(
         persistNoteBlocksNow({
           convex: convexRef.current,
           getNoteSlugById: getNoteSlugByIdRef.current,
-          noteId: persistedNoteId as Id<'sidebarItems'>,
+          noteId: persistedNoteId,
           queryClient: queryClientRef.current,
           sourceId: persistedSourceId as CampaignId,
         }),
@@ -155,7 +154,7 @@ export function useNoteYjsCollaboration(
 
   beforeDestroyRef.current = ({ documentId, provider, sourceId: cleanupSourceId }) =>
     persistence.handleBeforeDestroy({
-      noteId: documentId as SidebarItemId,
+      noteId: documentId,
       sourceId: cleanupSourceId,
       provider,
     })

@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useCallback } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { useSidebarWorkspaceState } from './workspace-state'
 import { revealSidebarItemParents } from './reveal'
 import type { SidebarRevealCatalog } from './reveal'
@@ -11,7 +12,7 @@ export function useRevealSidebarItemParents(source: SidebarRevealCatalog) {
   } = useSidebarWorkspaceState()
 
   return useCallback(
-    (itemId: SidebarItemId) => {
+    (itemId: ResourceId) => {
       revealSidebarItemParents({
         catalog: { getVisibleAncestors },
         itemId,

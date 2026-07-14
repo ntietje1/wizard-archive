@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
@@ -5,7 +6,7 @@ import type { CanvasDocumentNode } from '../../document-contract'
 import type { AnyItem } from '../../../workspace/items'
 import { CANVAS_DROP_ZONE_TYPE } from '../../../drag-drop/drop-target-data'
 import { executeRegisteredSurfaceDropCommand } from '../../../drag-drop/surface-command'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { useCanvasDropTarget } from '../use-drop-target'
 import type { DropResult } from '../../../drag-drop/file-drop'
 import { executePlannedDropCommand } from '../../../drag-drop/drop-command-execution'
@@ -35,7 +36,7 @@ vi.mock('../../../drag-drop/context', () => ({
 }))
 
 function sidebarItemId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }
 
 describe('useCanvasDropTarget', () => {
@@ -62,7 +63,7 @@ describe('useCanvasDropTarget', () => {
       files: [{ file, relativePath: 'portrait.png' }],
       rootFolders: [{ name: 'Maps', relativePath: 'Maps', files: [], subfolders: [] }],
     }
-    const upload = createDeferred<{ status: 'completed'; itemId: SidebarItemId }>()
+    const upload = createDeferred<{ status: 'completed'; itemId: ResourceId }>()
     uploadEmbedFile.mockReturnValue(upload.promise)
 
     renderHook(() =>

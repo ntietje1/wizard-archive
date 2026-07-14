@@ -15,7 +15,7 @@ import {
   createMemoryWorkspaceViewStateStores,
   createTestWorkspaceRuntime,
 } from '../../test/workspace-runtime-factory'
-import { testId } from '../../test/id'
+import { testResourceId } from '../../../../../shared/test/resource-id'
 
 type WorkspaceRuntimeShellRightSidebar = NonNullable<
   ComponentProps<typeof WorkspaceRuntimeShell>['rightSidebar']
@@ -59,7 +59,7 @@ describe('WorkspaceRuntimeShell', () => {
         runtime: expect.objectContaining({
           filesystem: expect.objectContaining({
             current: expect.objectContaining({
-              item: expect.objectContaining({ id: 'item-a' }),
+              item: expect.objectContaining({ id: testResourceId('item-a') }),
             }),
           }),
         }),
@@ -114,7 +114,7 @@ describe('WorkspaceRuntimeShell', () => {
       />,
     )
 
-    expect(screen.getByTestId('runtime-current-item')).toHaveTextContent('item-a')
+    expect(screen.getByTestId('runtime-current-item')).toHaveTextContent(testResourceId('item-a'))
   })
 
   it('provides resource content and embedded canvas state from separate runtime sources', () => {
@@ -138,7 +138,7 @@ describe('WorkspaceRuntimeShell', () => {
 
     expect(screen.getByTestId('resource-content-state')).toHaveTextContent('ready')
     expect(screen.getByTestId('embedded-canvas-state')).toHaveTextContent('available')
-    expect(useEmbeddedCanvasStateFromRuntime).toHaveBeenCalledWith(testId('canvas-a'))
+    expect(useEmbeddedCanvasStateFromRuntime).toHaveBeenCalledWith(testResourceId('canvas-a'))
   })
 
   it('keeps provider children mounted when runtime source functions change', () => {
@@ -192,8 +192,8 @@ function RuntimeShellHarness({
 }
 
 function WorkspaceSourceProbe() {
-  const resourceContentState = useResourceContentState(testId('item-a'), 'Item A')
-  const embeddedCanvasState = useEmbeddedCanvasState(testId('canvas-a'))
+  const resourceContentState = useResourceContentState(testResourceId('item-a'), 'Item A')
+  const embeddedCanvasState = useEmbeddedCanvasState(testResourceId('canvas-a'))
 
   return (
     <>
@@ -231,7 +231,7 @@ function createRightSidebar(): WorkspaceRuntimeShellRightSidebar {
 function workspaceRuntimeWithCurrentItem(itemId: string): WorkspaceRuntime {
   const item = {
     ...createNote({
-      id: testId<'sidebarItems'>(itemId),
+      id: testResourceId(itemId),
       name: itemId,
     }),
     ancestors: [],

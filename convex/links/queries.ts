@@ -8,6 +8,9 @@ import { getSidebarItem } from '../sidebarItems/functions/getSidebarItem'
 import { checkItemAccess } from '../sidebarItems/validation/access'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { CampaignQueryCtx } from '../functions'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { resourceIdValidator } from '../resources/validators'
+import { findSidebarItemRow } from '../sidebarItems/functions/sidebarItemIdentity'
 type LinkPanelItem = Pick<AnyResourceRow, 'id' | 'name' | 'slug' | 'type'>
 
 type LinkPanelRow = Pick<Doc<'noteLinks'>, 'blockId' | 'query' | 'displayName' | 'syntax'> & {
@@ -17,7 +20,7 @@ type LinkPanelRow = Pick<Doc<'noteLinks'>, 'blockId' | 'query' | 'displayName' |
 }
 
 const linkPanelItemValidator = v.object({
-  id: v.id('sidebarItems'),
+  id: resourceIdValidator,
   name: v.string(),
   slug: v.string(),
   type: sidebarItemTypeValidator,
@@ -72,15 +75,17 @@ function toLinkPanelRow(link: Doc<'noteLinks'>, item: LinkPanelItem | null): Lin
 
 async function getBacklinkPanelRowsFn(
   ctx: CampaignQueryCtx,
-  { itemId }: { itemId: Id<'sidebarItems'> },
+  { itemId }: { itemId: ResourceId },
 ): Promise<Array<LinkPanelRow>> {
-  const target = await getLinkPanelItem(ctx, itemId)
+  const targetRow = await findSidebarItemRow(ctx, itemId)
+  if (!targetRow) return []
+  const target = await getLinkPanelItem(ctx, targetRow._id)
   if (!target) return []
 
   const links = await ctx.db
     .query('noteLinks')
     .withIndex('by_campaign_target', (q) =>
-      q.eq('campaignId', ctx.campaign._id).eq('targetItemId', itemId),
+      q.eq('campaignId', ctx.campaign._id).eq('targetItemId', targetRow._id),
     )
     .collect()
   const rows = await Promise.all(
@@ -95,15 +100,17 @@ async function getBacklinkPanelRowsFn(
 
 async function getOutgoingLinkPanelRowsFn(
   ctx: CampaignQueryCtx,
-  { noteId }: { noteId: Id<'sidebarItems'> },
+  { noteId }: { noteId: ResourceId },
 ): Promise<Array<LinkPanelRow>> {
-  const source = await getLinkPanelItem(ctx, noteId)
+  const sourceRow = await findSidebarItemRow(ctx, noteId)
+  if (!sourceRow) return []
+  const source = await getLinkPanelItem(ctx, sourceRow._id)
   if (!source) return []
 
   const links = await ctx.db
     .query('noteLinks')
     .withIndex('by_campaign_source', (q) =>
-      q.eq('campaignId', ctx.campaign._id).eq('sourceNoteId', noteId),
+      q.eq('campaignId', ctx.campaign._id).eq('sourceNoteId', sourceRow._id),
     )
     .collect()
 
@@ -117,7 +124,7 @@ async function getOutgoingLinkPanelRowsFn(
 
 export const getBacklinkPanelRows = campaignQuery({
   args: {
-    itemId: v.id('sidebarItems'),
+    itemId: resourceIdValidator,
   },
   returns: v.array(linkPanelRowValidator),
   handler: async (ctx, { itemId }) => {
@@ -127,7 +134,7 @@ export const getBacklinkPanelRows = campaignQuery({
 
 export const getOutgoingLinkPanelRows = campaignQuery({
   args: {
-    noteId: v.id('sidebarItems'),
+    noteId: resourceIdValidator,
   },
   returns: v.array(linkPanelRowValidator),
   handler: async (ctx, { noteId }) => {

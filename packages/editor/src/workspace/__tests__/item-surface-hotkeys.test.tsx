@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { HotkeyFileSystemActions } from '../sidebar/use-item-surface-hotkeys'
@@ -5,7 +6,6 @@ import { WorkspaceRuntimeItemSurfaceHotkeys } from '../item-surface-hotkeys'
 import { createWorkspaceResource } from '../runtime'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory'
-import { testId } from '../../test/id'
 
 let capturedHotkeyActions: HotkeyFileSystemActions | null = null
 
@@ -17,8 +17,8 @@ vi.mock('../sidebar/use-item-surface-hotkeys', () => ({
 
 describe('WorkspaceRuntimeItemSurfaceHotkeys', () => {
   it('routes item-surface hotkey actions through workspace runtime operations', async () => {
-    const folder = createFolder({ id: testId<'sidebarItems'>('folder_1') })
-    const note = createNote({ id: testId<'sidebarItems'>('note_1'), parentId: folder.id })
+    const folder = createFolder({ id: testResourceId('folder_1') })
+    const note = createNote({ id: testResourceId('note_1'), parentId: folder.id })
     const copyItems = vi.fn()
     const cutItems = vi.fn()
     const pasteResult = { status: 'unavailable' as const, reason: 'operation-pending' }

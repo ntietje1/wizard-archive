@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
@@ -20,7 +21,6 @@ import type {
   CanvasEdgeType,
   CanvasNodeType,
 } from '../../document-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
 const nodesMock = vi.hoisted(() => ({
   nodes: [] as Array<Node>,
@@ -254,7 +254,7 @@ function createNode(
         ? {
             target: {
               kind: 'resource',
-              resourceId: options.sidebarItemId as SidebarItemId,
+              resourceId: options.sidebarItemId as ResourceId,
             },
           }
         : {}),

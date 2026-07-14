@@ -1,6 +1,6 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { Id } from 'convex/_generated/dataModel'
 import { useClaimAndUploadPreview } from '../use-claim-and-upload-preview'
 
 const campaignMutationQueue = vi.hoisted(
@@ -39,7 +39,7 @@ vi.mock('~/shared/hooks/useAppMutation', () => ({
   useAppMutation: () => appMutationQueue.shift(),
 }))
 
-const itemId = 'item_1' as Id<'sidebarItems'>
+const itemId = 'item_1' as ResourceId
 
 describe('useClaimAndUploadPreview', () => {
   beforeEach(() => {

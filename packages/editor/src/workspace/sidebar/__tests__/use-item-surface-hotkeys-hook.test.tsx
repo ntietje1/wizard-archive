@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { RESOURCE_STATUS } from '../../items-persistence-contract'
 import type { AnyItem } from '../../items'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { useItemSurfaceHotkeys } from '../use-item-surface-hotkeys'
 import type { HotkeyFileSystemActions } from '../use-item-surface-hotkeys'
 import { setFileSystemClipboard } from '../../../filesystem/clipboard'
@@ -56,7 +57,7 @@ function createFileSystem(overrides?: Partial<HotkeyFileSystemActions>): HotkeyF
   return filesystem
 }
 
-function setupClipboardForPaste(mode: 'copy' | 'cut', itemIds: Array<SidebarItemId>) {
+function setupClipboardForPaste(mode: 'copy' | 'cut', itemIds: Array<ResourceId>) {
   setFileSystemClipboard({
     mode,
     workspaceId: 'workspace_1',

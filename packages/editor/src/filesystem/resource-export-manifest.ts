@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import type { CanvasDocumentContent } from '../canvas/document-contract'
 import type { CanvasItemWithContent } from '../canvas/item-contract'
 import type { FileItemWithContent } from '../files/item-contract'
@@ -5,7 +6,7 @@ import type { MapItemWithContent } from '../game-maps/item-contract'
 import { isResourceItemWithContent } from '../workspace/items'
 import type { AnyItem, AnyItemWithContent } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceCatalog } from './catalog'
 import type { FileSystemDownloadItem, FileSystemDownloadSkippedItem } from './download'
 
@@ -162,7 +163,7 @@ function appendChildExportEntries({
   currentPath: string
   context: ResourceExportBuildContext
   manifest: ResourceExportManifest
-  parentId: SidebarItemId
+  parentId: ResourceId
   source: ResourceExportManifestSource
 }) {
   for (const child of source.catalog.getVisibleChildren(parentId)) {

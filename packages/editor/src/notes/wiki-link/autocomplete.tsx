@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
@@ -29,7 +30,7 @@ import type { CustomBlockNoteEditor, CustomValuePartialInlineContent } from '../
 import type { ReactNode } from 'react'
 import { NOTE_VALUE_SLUG_OPTIONS } from '../values/constants'
 import { extractNoteValueDefinitions } from '../values/definitions'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { deduplicateSlug } from '../../../../../shared/slugs'
 import { ScrollArea } from '@wizard-archive/ui/shadcn/components/scroll-area'
 import { SearchResultItem } from '@wizard-archive/ui/components/search-result-item'
@@ -387,7 +388,7 @@ export function WikiLinkAutocomplete({
   menu: WikiLinkAutocompleteMenuState
   modelData: WikiLinkAutocompleteModelData
   onForceOpenRef?: React.RefObject<(() => void) | null>
-  sourceNoteId?: SidebarItemId
+  sourceNoteId?: ResourceId
   setMenu: (menu: WikiLinkAutocompleteMenuState) => void
 }) {
   const editorEl = useEditorDomElement(editor)

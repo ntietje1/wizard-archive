@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type * as Y from 'yjs'
 import { useEffect, useLayoutEffect, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
@@ -19,13 +20,13 @@ import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { CanvasContextMenuSource } from './context-menu/canvas-context-menu-types'
 import type { CanvasCollaborationProvider } from '../session-contract'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { CanvasViewportStore } from './interaction/canvas-viewport-storage'
 
 interface UseCanvasEditorRuntimeCoreOptions {
   nodesMap: Y.Map<CanvasDocumentNode>
   edgesMap: Y.Map<CanvasDocumentEdge>
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   canEdit: boolean
   contextMenuSource?: CanvasContextMenuSource
   provider: CanvasCollaborationProvider | null

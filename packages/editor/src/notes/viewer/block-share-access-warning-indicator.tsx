@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { CircleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -11,7 +12,7 @@ import {
   TooltipTrigger,
 } from '@wizard-archive/ui/shadcn/components/tooltip'
 import type { NoteEditorSetParticipantPermission } from './note-editor-source'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { EditorShareParticipant } from '../../sharing/contracts'
 
 const EMPTY_WARNINGS: Array<BlockShareAccessWarning> = []
@@ -22,7 +23,7 @@ export function BlockShareAccessWarningIndicator({
   setParticipantPermission,
   warnings = EMPTY_WARNINGS,
 }: {
-  noteId: SidebarItemId
+  noteId: ResourceId
   participants: Array<EditorShareParticipant>
   setParticipantPermission: NoteEditorSetParticipantPermission
   warnings?: Array<BlockShareAccessWarning>

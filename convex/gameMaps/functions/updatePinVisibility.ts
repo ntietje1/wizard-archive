@@ -11,7 +11,7 @@ export async function updatePinVisibility(
   ctx: CampaignMutationCtx,
   { mapPinId, visible }: { mapPinId: MapPinId; visible: boolean },
 ): Promise<MapPinId> {
-  const { pin, pinRowId, map } = await requirePinAccess(ctx, { mapPinId })
+  const { pin, pinRowId, mapRowId } = await requirePinAccess(ctx, { mapPinId })
 
   if (visible === pin.visible) return mapPinId
 
@@ -26,7 +26,7 @@ export async function updatePinVisibility(
     visible,
   })
 
-  await ctx.db.patch('sidebarItems', map.id, {
+  await ctx.db.patch('sidebarItems', mapRowId, {
     updatedTime: now,
     updatedBy: ctx.membership.userId,
   })
@@ -34,7 +34,7 @@ export async function updatePinVisibility(
   const historyEntry = await logEditHistory(
     ctx,
     {
-      itemId: map.id,
+      itemId: mapRowId,
       itemType: RESOURCE_TYPES.gameMaps,
       action: EDIT_HISTORY_ACTION.map_pin_visibility_changed,
       metadata: { pinItemName: pinnedItem?.name ?? 'Unknown', visible },
@@ -43,7 +43,7 @@ export async function updatePinVisibility(
   )
 
   await captureGameMapSnapshot(ctx, {
-    mapId: map.id,
+    mapId: mapRowId,
     editHistoryId: historyEntry.rowId,
     campaignId: ctx.campaign._id,
   })

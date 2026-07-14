@@ -37,7 +37,7 @@ export async function applySidebarItemContentUpdate({
   })
   const { sidebarUpdates, changes } = await apply(item)
 
-  if (changes.length === 0) return { itemId: item.id }
+  if (changes.length === 0) return { itemId }
 
   await ctx.db.patch('sidebarItems', itemId, {
     ...sidebarUpdates,
@@ -46,10 +46,10 @@ export async function applySidebarItemContentUpdate({
   })
 
   await logEditHistory(ctx, {
-    itemId: item.id,
+    itemId,
     itemType,
     changes,
   })
 
-  return { itemId: item.id }
+  return { itemId }
 }

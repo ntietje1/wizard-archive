@@ -26,9 +26,13 @@ describe('folder cascade hierarchy', () => {
       const dmAuth = asDm(ctx)
       const dmId = ctx.dm.profile._id
 
-      const { folderId } = await createFolder(t, ctx.campaignId, dmId, { name: 'Mixed' })
+      const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, dmId, {
+        name: 'Mixed',
+      })
 
-      const { noteId } = await createNote(t, ctx.campaignId, dmId, { parentId: folderId })
+      const { noteId, noteRowId } = await createNote(t, ctx.campaignId, dmId, {
+        parentId: folderId,
+      })
       const block = await createBlock(t, noteId, ctx.campaignId)
       const blockShare = await createBlockShare(t, {
         campaignId: ctx.campaignId,
@@ -37,20 +41,26 @@ describe('folder cascade hierarchy', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      const { canvasId } = await createCanvas(t, ctx.campaignId, dmId, { parentId: folderId })
+      const { canvasId, canvasRowId } = await createCanvas(t, ctx.campaignId, dmId, {
+        parentId: folderId,
+      })
       const canvasYjsId = await t.run(async (dbCtx) =>
         dbCtx.db.insert('yjsUpdates', {
-          documentId: canvasId,
+          documentId: canvasRowId,
           update: makeYjsUpdate(),
           seq: 0,
           isSnapshot: false,
         }),
       )
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, dmId, { parentId: folderId })
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, dmId, {
+        parentId: folderId,
+      })
       const pin = await createMapPin(t, mapId, { itemId: noteId })
 
-      const { fileId } = await createFile(t, ctx.campaignId, dmId, { parentId: folderId })
+      const { fileRowId } = await createFile(t, ctx.campaignId, dmId, {
+        parentId: folderId,
+      })
 
       const share = await createSidebarShare(t, {
         campaignId: ctx.campaignId,
@@ -72,11 +82,11 @@ describe('folder cascade hierarchy', () => {
       })
 
       const afterTrash = await t.run(async (dbCtx) => ({
-        folder: await dbCtx.db.get('sidebarItems', folderId),
-        note: await dbCtx.db.get('sidebarItems', noteId),
-        canvas: await dbCtx.db.get('sidebarItems', canvasId),
-        map: await dbCtx.db.get('sidebarItems', mapId),
-        file: await dbCtx.db.get('sidebarItems', fileId),
+        folder: await dbCtx.db.get('sidebarItems', folderRowId),
+        note: await dbCtx.db.get('sidebarItems', noteRowId),
+        canvas: await dbCtx.db.get('sidebarItems', canvasRowId),
+        map: await dbCtx.db.get('sidebarItems', mapRowId),
+        file: await dbCtx.db.get('sidebarItems', fileRowId),
         block: await dbCtx.db.get('blocks', block.blockDbId),
         blockShare: await dbCtx.db.get('blockShares', blockShare.blockShareId),
         canvasYjs: await dbCtx.db.get('yjsUpdates', canvasYjsId),
@@ -111,11 +121,11 @@ describe('folder cascade hierarchy', () => {
       })
 
       const afterRestore = await t.run(async (dbCtx) => ({
-        folder: await dbCtx.db.get('sidebarItems', folderId),
-        note: await dbCtx.db.get('sidebarItems', noteId),
-        canvas: await dbCtx.db.get('sidebarItems', canvasId),
-        map: await dbCtx.db.get('sidebarItems', mapId),
-        file: await dbCtx.db.get('sidebarItems', fileId),
+        folder: await dbCtx.db.get('sidebarItems', folderRowId),
+        note: await dbCtx.db.get('sidebarItems', noteRowId),
+        canvas: await dbCtx.db.get('sidebarItems', canvasRowId),
+        map: await dbCtx.db.get('sidebarItems', mapRowId),
+        file: await dbCtx.db.get('sidebarItems', fileRowId),
         block: await dbCtx.db.get('blocks', block.blockDbId),
         blockShare: await dbCtx.db.get('blockShares', blockShare.blockShareId),
         canvasYjs: await dbCtx.db.get('yjsUpdates', canvasYjsId),
@@ -128,7 +138,7 @@ describe('folder cascade hierarchy', () => {
       expect(afterRestore.folder!.deletionTime).toBeNull()
       expect(afterRestore.note!.location).toBe('sidebar')
       expect(afterRestore.note!.deletionTime).toBeNull()
-      expect(afterRestore.note!.parentId).toBe(folderId)
+      expect(afterRestore.note!.parentId).toBe(folderRowId)
       expect(afterRestore.canvas!.location).toBe('sidebar')
       expect(afterRestore.canvas!.deletionTime).toBeNull()
       expect(afterRestore.map!.location).toBe('sidebar')
@@ -148,33 +158,43 @@ describe('folder cascade hierarchy', () => {
       const dmAuth = asDm(ctx)
       const dmId = ctx.dm.profile._id
 
-      const { folderId } = await createFolder(t, ctx.campaignId, dmId, { name: 'ToDelete' })
+      const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, dmId, {
+        name: 'ToDelete',
+      })
 
-      const { noteId } = await createNote(t, ctx.campaignId, dmId, { parentId: folderId })
+      const { noteId, noteRowId } = await createNote(t, ctx.campaignId, dmId, {
+        parentId: folderId,
+      })
       const block = await createBlock(t, noteId, ctx.campaignId)
       const noteYjsId = await t.run(async (dbCtx) =>
         dbCtx.db.insert('yjsUpdates', {
-          documentId: noteId,
+          documentId: noteRowId,
           update: makeYjsUpdate(),
           seq: 0,
           isSnapshot: false,
         }),
       )
 
-      const { canvasId } = await createCanvas(t, ctx.campaignId, dmId, { parentId: folderId })
+      const { canvasId, canvasRowId } = await createCanvas(t, ctx.campaignId, dmId, {
+        parentId: folderId,
+      })
       const canvasYjsId = await t.run(async (dbCtx) =>
         dbCtx.db.insert('yjsUpdates', {
-          documentId: canvasId,
+          documentId: canvasRowId,
           update: makeYjsUpdate(),
           seq: 0,
           isSnapshot: false,
         }),
       )
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, dmId, { parentId: folderId })
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, dmId, {
+        parentId: folderId,
+      })
       const pin = await createMapPin(t, mapId, { itemId: noteId })
 
-      const { fileId } = await createFile(t, ctx.campaignId, dmId, { parentId: folderId })
+      const { fileRowId } = await createFile(t, ctx.campaignId, dmId, {
+        parentId: folderId,
+      })
 
       const blockShare = await createBlockShare(t, {
         campaignId: ctx.campaignId,
@@ -198,23 +218,23 @@ describe('folder cascade hierarchy', () => {
         const [noteExt, mapExt, fileExt, canvasExt, folderExt] = await Promise.all([
           dbCtx.db
             .query('notes')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', noteId))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', noteRowId))
             .unique(),
           dbCtx.db
             .query('gameMaps')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
             .unique(),
           dbCtx.db
             .query('files')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
             .unique(),
           dbCtx.db
             .query('canvases')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', canvasId))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', canvasRowId))
             .unique(),
           dbCtx.db
             .query('folders')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderId))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderRowId))
             .unique(),
         ])
         return {
@@ -238,11 +258,11 @@ describe('folder cascade hierarchy', () => {
       })
 
       const afterDelete = await t.run(async (dbCtx) => ({
-        folder: await dbCtx.db.get('sidebarItems', folderId),
-        note: await dbCtx.db.get('sidebarItems', noteId),
-        canvas: await dbCtx.db.get('sidebarItems', canvasId),
-        map: await dbCtx.db.get('sidebarItems', mapId),
-        file: await dbCtx.db.get('sidebarItems', fileId),
+        folder: await dbCtx.db.get('sidebarItems', folderRowId),
+        note: await dbCtx.db.get('sidebarItems', noteRowId),
+        canvas: await dbCtx.db.get('sidebarItems', canvasRowId),
+        map: await dbCtx.db.get('sidebarItems', mapRowId),
+        file: await dbCtx.db.get('sidebarItems', fileRowId),
         block: await dbCtx.db.get('blocks', block.blockDbId),
         blockShare: await dbCtx.db.get('blockShares', blockShare.blockShareId),
         noteYjs: await dbCtx.db.get('yjsUpdates', noteYjsId),
@@ -283,16 +303,31 @@ describe('folder cascade hierarchy', () => {
       const dmAuth = asDm(ctx)
       const dmId = ctx.dm.profile._id
 
-      const { folderId: root } = await createFolder(t, ctx.campaignId, dmId, { name: 'Root' })
-      const { folderId: child } = await createFolder(t, ctx.campaignId, dmId, {
-        name: 'Child',
-        parentId: root,
-      })
-      const { folderId: grandchild } = await createFolder(t, ctx.campaignId, dmId, {
-        name: 'Grandchild',
-        parentId: child,
-      })
-      const { noteId: leaf } = await createNote(t, ctx.campaignId, dmId, {
+      const { folderId: root, folderRowId: rootRowId } = await createFolder(
+        t,
+        ctx.campaignId,
+        dmId,
+        { name: 'Root' },
+      )
+      const { folderId: child, folderRowId: childRowId } = await createFolder(
+        t,
+        ctx.campaignId,
+        dmId,
+        {
+          name: 'Child',
+          parentId: root,
+        },
+      )
+      const { folderId: grandchild, folderRowId: grandchildRowId } = await createFolder(
+        t,
+        ctx.campaignId,
+        dmId,
+        {
+          name: 'Grandchild',
+          parentId: child,
+        },
+      )
+      const { noteId: leaf, noteRowId: leafRowId } = await createNote(t, ctx.campaignId, dmId, {
         name: 'DeepNote',
         parentId: grandchild,
       })
@@ -306,10 +341,10 @@ describe('folder cascade hierarchy', () => {
       })
 
       const afterTrash = await t.run(async (dbCtx) => ({
-        root: await dbCtx.db.get('sidebarItems', root),
-        child: await dbCtx.db.get('sidebarItems', child),
-        grandchild: await dbCtx.db.get('sidebarItems', grandchild),
-        leaf: await dbCtx.db.get('sidebarItems', leaf),
+        root: await dbCtx.db.get('sidebarItems', rootRowId),
+        child: await dbCtx.db.get('sidebarItems', childRowId),
+        grandchild: await dbCtx.db.get('sidebarItems', grandchildRowId),
+        leaf: await dbCtx.db.get('sidebarItems', leafRowId),
         block: await dbCtx.db.get('blocks', block.blockDbId),
       }))
 
@@ -331,10 +366,10 @@ describe('folder cascade hierarchy', () => {
       })
 
       const afterRestore = await t.run(async (dbCtx) => ({
-        root: await dbCtx.db.get('sidebarItems', root),
-        child: await dbCtx.db.get('sidebarItems', child),
-        grandchild: await dbCtx.db.get('sidebarItems', grandchild),
-        leaf: await dbCtx.db.get('sidebarItems', leaf),
+        root: await dbCtx.db.get('sidebarItems', rootRowId),
+        child: await dbCtx.db.get('sidebarItems', childRowId),
+        grandchild: await dbCtx.db.get('sidebarItems', grandchildRowId),
+        leaf: await dbCtx.db.get('sidebarItems', leafRowId),
         block: await dbCtx.db.get('blocks', block.blockDbId),
       }))
 
@@ -342,13 +377,13 @@ describe('folder cascade hierarchy', () => {
       expect(afterRestore.root!.deletionTime).toBeNull()
       expect(afterRestore.child!.location).toBe('sidebar')
       expect(afterRestore.child!.deletionTime).toBeNull()
-      expect(afterRestore.child!.parentId).toBe(root)
+      expect(afterRestore.child!.parentId).toBe(rootRowId)
       expect(afterRestore.grandchild!.location).toBe('sidebar')
       expect(afterRestore.grandchild!.deletionTime).toBeNull()
-      expect(afterRestore.grandchild!.parentId).toBe(child)
+      expect(afterRestore.grandchild!.parentId).toBe(childRowId)
       expect(afterRestore.leaf!.location).toBe('sidebar')
       expect(afterRestore.leaf!.deletionTime).toBeNull()
-      expect(afterRestore.leaf!.parentId).toBe(grandchild)
+      expect(afterRestore.leaf!.parentId).toBe(grandchildRowId)
       expect(afterRestore.block).not.toBeNull()
     })
 
@@ -357,21 +392,46 @@ describe('folder cascade hierarchy', () => {
       const dmAuth = asDm(ctx)
       const dmId = ctx.dm.profile._id
 
-      const { folderId: root } = await createFolder(t, ctx.campaignId, dmId, { name: 'Root' })
-      const { folderId: child } = await createFolder(t, ctx.campaignId, dmId, {
-        name: 'Child',
-        parentId: root,
-      })
-      const { folderId: grandchild } = await createFolder(t, ctx.campaignId, dmId, {
-        name: 'Grandchild',
-        parentId: child,
-      })
-      const { noteId: leafNote } = await createNote(t, ctx.campaignId, dmId, {
-        parentId: grandchild,
-      })
-      const { mapId: leafMap } = await createGameMap(t, ctx.campaignId, dmId, {
-        parentId: grandchild,
-      })
+      const { folderId: root, folderRowId: rootRowId } = await createFolder(
+        t,
+        ctx.campaignId,
+        dmId,
+        { name: 'Root' },
+      )
+      const { folderId: child, folderRowId: childRowId } = await createFolder(
+        t,
+        ctx.campaignId,
+        dmId,
+        {
+          name: 'Child',
+          parentId: root,
+        },
+      )
+      const { folderId: grandchild, folderRowId: grandchildRowId } = await createFolder(
+        t,
+        ctx.campaignId,
+        dmId,
+        {
+          name: 'Grandchild',
+          parentId: child,
+        },
+      )
+      const { noteId: leafNote, noteRowId: leafNoteRowId } = await createNote(
+        t,
+        ctx.campaignId,
+        dmId,
+        {
+          parentId: grandchild,
+        },
+      )
+      const { mapId: leafMap, mapRowId: leafMapRowId } = await createGameMap(
+        t,
+        ctx.campaignId,
+        dmId,
+        {
+          parentId: grandchild,
+        },
+      )
       const block = await createBlock(t, leafNote, ctx.campaignId)
       const pin = await createMapPin(t, leafMap, { itemId: leafNote })
 
@@ -386,23 +446,23 @@ describe('folder cascade hierarchy', () => {
         const [noteExt, mapExt, rootExt, childExt, grandchildExt] = await Promise.all([
           dbCtx.db
             .query('notes')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', leafNote))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', leafNoteRowId))
             .unique(),
           dbCtx.db
             .query('gameMaps')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', leafMap))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', leafMapRowId))
             .unique(),
           dbCtx.db
             .query('folders')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', root))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', rootRowId))
             .unique(),
           dbCtx.db
             .query('folders')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', child))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', childRowId))
             .unique(),
           dbCtx.db
             .query('folders')
-            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', grandchild))
+            .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', grandchildRowId))
             .unique(),
         ])
         return {
@@ -426,11 +486,11 @@ describe('folder cascade hierarchy', () => {
       })
 
       const afterDelete = await t.run(async (dbCtx) => ({
-        root: await dbCtx.db.get('sidebarItems', root),
-        child: await dbCtx.db.get('sidebarItems', child),
-        grandchild: await dbCtx.db.get('sidebarItems', grandchild),
-        leafNote: await dbCtx.db.get('sidebarItems', leafNote),
-        leafMap: await dbCtx.db.get('sidebarItems', leafMap),
+        root: await dbCtx.db.get('sidebarItems', rootRowId),
+        child: await dbCtx.db.get('sidebarItems', childRowId),
+        grandchild: await dbCtx.db.get('sidebarItems', grandchildRowId),
+        leafNote: await dbCtx.db.get('sidebarItems', leafNoteRowId),
+        leafMap: await dbCtx.db.get('sidebarItems', leafMapRowId),
         block: await dbCtx.db.get('blocks', block.blockDbId),
         pin: await dbCtx.db.get('mapPins', pin.pinId),
         share: await dbCtx.db.get('sidebarItemShares', share.shareId),

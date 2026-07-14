@@ -1,8 +1,8 @@
+import type { ResourceId, CampaignMemberId } from '../resources/domain-id'
 import { SHARE_STATUS } from '../../../../shared/block-shares/share-status'
 import type { ShareStatus } from '../../../../shared/block-shares/share-status'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
-import type { CampaignMemberId } from '../resources/domain-id'
+
 import type { ReactNode } from 'react'
 import { hasPermissionForRequirement } from '../../../../shared/permissions/requirements'
 import type { AnyItem } from '../workspace/items'
@@ -100,7 +100,7 @@ export interface BlockShareTargetBlock {
 }
 
 export interface BlockShareTargetNote {
-  id: SidebarItemId
+  id: ResourceId
 }
 
 interface BlockShareItem {
@@ -269,20 +269,20 @@ export interface ResourceShareProjection<
 
 export interface ResourceShareOperations {
   setParticipantPermission: (input: {
-    itemIds: Array<SidebarItemId>
+    itemIds: Array<ResourceId>
     participantId: EditorShareParticipantId
     permissionLevel: EditorPermissionLevel
   }) => MaybePromise<ResourceCommandResult>
   clearParticipantPermission: (input: {
-    itemIds: Array<SidebarItemId>
+    itemIds: Array<ResourceId>
     participantId: EditorShareParticipantId
   }) => MaybePromise<ResourceCommandResult>
   setDefaultPermission: (input: {
-    itemIds: Array<SidebarItemId>
+    itemIds: Array<ResourceId>
     permissionLevel: EditorPermissionLevel | null
   }) => MaybePromise<ResourceCommandResult>
   setFolderInheritShares: (input: {
-    folderId: SidebarItemId
+    folderId: ResourceId
     inheritShares: boolean
   }) => MaybePromise<ResourceCommandResult>
 }

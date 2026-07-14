@@ -1,10 +1,10 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { runPdfPreviewGeneration } from '../pdf-preview-generation'
 import type { PreviewUpload } from '../preview-upload-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 const OVERSIZED_PDF_BYTES = 50 * 1024 * 1024 + 1
-const fileId = 'file-1' as SidebarItemId
+const fileId = 'file-1' as ResourceId
 type PreviewUploadResult = Awaited<ReturnType<PreviewUpload>>
 
 describe('runPdfPreviewGeneration', () => {

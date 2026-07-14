@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
@@ -7,9 +8,8 @@ import {
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
 } from '../drop-target-data'
-import { defaultDndStoreApi as useDndStore } from '../store'
+import { defaultDndStoreApi as useDndStore } from './store-test-utils'
 import { createGameMap, createNote } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 
 function createDeferredConfirm() {
   let resolveConfirm!: () => void
@@ -71,7 +71,7 @@ describe('DndBatchDecisionDialog', () => {
         ],
         target: {
           type: NOTE_EDITOR_DROP_TYPE,
-          noteId: testId<'sidebarItems'>('note_target'),
+          noteId: testResourceId('note_target'),
         },
         label: 'Add link here',
       },
@@ -98,7 +98,7 @@ describe('DndBatchDecisionDialog', () => {
         ],
         target: {
           type: CANVAS_DROP_ZONE_TYPE,
-          canvasId: testId<'sidebarItems'>('canvas_target'),
+          canvasId: testResourceId('canvas_target'),
         },
         label: 'Embed items in canvas',
       },
@@ -124,7 +124,7 @@ describe('DndBatchDecisionDialog', () => {
         rejectedItems: [{ item: createGameMap(), reason: 'already_pinned' }],
         target: {
           type: MAP_DROP_ZONE_TYPE,
-          mapId: testId<'sidebarItems'>('map_target'),
+          mapId: testResourceId('map_target'),
           mapName: 'World Map',
           pinnedItemIds: [],
         },

@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { NOTE_VALUE_FUNCTIONS } from '../values/constants'
 import type { FormulaAutocompleteContext } from '../values/authoring'
 import type { NoteValueRuntimeState } from '../values/state-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { filterSuggestionItems } from '../../rich-text/filter-suggestion-items'
 import type { ValueReferenceCandidate } from './use-value-reference-authoring'
 
@@ -14,7 +15,7 @@ export interface FormulaSuggestion {
   title: string
   detail: string
   insertText: string
-  previewValues?: Array<NoteValueRuntimeState<SidebarItemId>>
+  previewValues?: Array<NoteValueRuntimeState<ResourceId>>
 }
 
 export function getFormulaSuggestions({

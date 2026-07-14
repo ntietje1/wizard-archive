@@ -1,4 +1,3 @@
-import { createResourceReadModel } from '@wizard-archive/editor/resources/resource-contract'
 import type { ResourceStatus } from '@wizard-archive/editor/resources/resource-contract'
 import type { OperationPlannerItem } from '@wizard-archive/editor/resources/operation-contract'
 import type { Id } from '../../_generated/dataModel'
@@ -20,7 +19,9 @@ function toSidebarOperationNode(item: SidebarOperationReadModelRow) {
   }
 }
 
-export function toSidebarOperationItem(item: SidebarOperationPlannerRow): OperationPlannerItem {
+export function toSidebarOperationItem(
+  item: SidebarOperationPlannerRow,
+): OperationPlannerItem<Id<'sidebarItems'>> {
   return {
     ...toSidebarOperationNode(item),
     name: item.name,
@@ -30,7 +31,7 @@ export function toSidebarOperationItem(item: SidebarOperationPlannerRow): Operat
 
 export function toSidebarOperationItems(
   items: ReadonlyArray<SidebarOperationPlannerRow>,
-): Array<OperationPlannerItem> {
+): Array<OperationPlannerItem<Id<'sidebarItems'>>> {
   return items.map(toSidebarOperationItem)
 }
 
@@ -56,8 +57,7 @@ export function createSidebarOperationReadModel<T extends SidebarOperationReadMo
     }
   }
 
-  const model = createResourceReadModel(Array.from(rowsById.values()))
   return {
-    itemsById: model.resourcesById,
+    itemsById: rowsById,
   }
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { SidebarItemId } from '../common/ids'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 export const externalEmbedUrlSchema = z.string().refine(isHttpsUrl, {
   message: 'External embed URL must use HTTPS',
@@ -30,7 +30,7 @@ export const embedTargetSchema = z.discriminatedUnion('kind', [
 
 type EmptyEmbedTarget = z.infer<typeof emptyEmbedTargetSchema>
 type ResourceEmbedTarget = Omit<z.infer<typeof resourceEmbedTargetSchema>, 'resourceId'> & {
-  resourceId: SidebarItemId
+  resourceId: ResourceId
 }
 type ExternalUrlEmbedTarget = z.infer<typeof externalUrlEmbedTargetSchema>
 
@@ -55,7 +55,7 @@ export function parseEmbedTarget(value: unknown): EmbedTarget | null {
   if (target.kind !== 'resource') return target
   return {
     kind: 'resource',
-    resourceId: target.resourceId as SidebarItemId,
+    resourceId: target.resourceId as ResourceId,
   }
 }
 

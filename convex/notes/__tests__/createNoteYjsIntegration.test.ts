@@ -3,6 +3,7 @@ import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
+import { getSidebarItemRowId } from '../../_test/factories.helper'
 
 describe('createNote YJS integration', () => {
   const t = createTestContext()
@@ -16,11 +17,12 @@ describe('createNote YJS integration', () => {
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const updates = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
         .collect()
     })
 
@@ -38,11 +40,12 @@ describe('createNote YJS integration', () => {
       name: 'Empty Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const updates = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
         .collect()
     })
 

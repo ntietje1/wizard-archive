@@ -1,25 +1,25 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { AnyItem } from '../workspace/items'
 import type { ResourceSlug, ResourceKind } from '../workspace/resource-contract'
 
 export interface FileSystemCatalogIndex {
   visibleItems: ReadonlyArray<AnyItem>
-  visibleItemsById: ReadonlyMap<SidebarItemId, AnyItem>
+  visibleItemsById: ReadonlyMap<ResourceId, AnyItem>
   trashedItems: ReadonlyArray<AnyItem>
   visibleRoots: ReadonlyArray<AnyItem>
   trashRoots: ReadonlyArray<AnyItem>
-  visibleChildrenByParent: ReadonlyMap<SidebarItemId | null, ReadonlyArray<AnyItem>>
-  trashChildrenByParent: ReadonlyMap<SidebarItemId | null, ReadonlyArray<AnyItem>>
-  getKnownItemById: (itemId: SidebarItemId) => AnyItem | null
+  visibleChildrenByParent: ReadonlyMap<ResourceId | null, ReadonlyArray<AnyItem>>
+  trashChildrenByParent: ReadonlyMap<ResourceId | null, ReadonlyArray<AnyItem>>
+  getKnownItemById: (itemId: ResourceId) => AnyItem | null
   getKnownItemBySlug: (slug: ResourceSlug) => AnyItem | null
-  getVisibleItemById: (itemId: SidebarItemId) => AnyItem | null
+  getVisibleItemById: (itemId: ResourceId) => AnyItem | null
   getVisibleItemBySlug: (slug: ResourceSlug) => AnyItem | null
-  getVisibleAncestors: (itemId: SidebarItemId) => ReadonlyArray<AnyItem>
+  getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<AnyItem>
   queryVisibleItems: (input?: FileSystemCatalogVisibleItemsInput) => ReadonlyArray<AnyItem>
 }
 
 export interface FileSystemCatalogVisibleItemsInput {
-  parentId?: SidebarItemId | null
+  parentId?: ResourceId | null
   type?: ResourceKind | ReadonlyArray<ResourceKind>
 }
 
@@ -49,10 +49,7 @@ export function createFileSystemCatalogIndex({
     (item) => !item.parentId || !visibleItemsById.has(item.parentId),
   )
   const trashItemsById = new Map(trashedItems.map((item) => [item.id, item] as const))
-  const knownItemsById = new Map<SidebarItemId, AnyItem>([
-    ...trashItemsById,
-    ...knownActiveItemsById,
-  ])
+  const knownItemsById = new Map<ResourceId, AnyItem>([...trashItemsById, ...knownActiveItemsById])
   const knownItemsBySlug = new Map<ResourceSlug, AnyItem>([
     ...trashedItems.map((item) => [item.slug, item] as const),
     ...knownActiveItems.map((item) => [item.slug, item] as const),
@@ -83,10 +80,10 @@ export function createFileSystemCatalogIndex({
 
 function normalizeVisibleItemsWithCycles(items: Array<AnyItem>) {
   const itemsById = new Map(items.map((item) => [item.id, item] as const))
-  const cycleItemIds = new Set<SidebarItemId>()
+  const cycleItemIds = new Set<ResourceId>()
 
   for (const item of items) {
-    const path = new Map<SidebarItemId, number>()
+    const path = new Map<ResourceId, number>()
     let current: AnyItem | undefined = item
     while (current?.parentId) {
       const pathIndex = path.get(current.id)
@@ -124,8 +121,8 @@ function freezeCatalogSnapshot<T>(value: T, seen = new WeakSet<object>()): T {
 }
 
 function getVisibleAncestors(
-  itemId: SidebarItemId,
-  visibleItemsById: ReadonlyMap<SidebarItemId, AnyItem>,
+  itemId: ResourceId,
+  visibleItemsById: ReadonlyMap<ResourceId, AnyItem>,
 ) {
   const item = visibleItemsById.get(itemId)
   if (!item) return []
@@ -162,9 +159,9 @@ function queryVisibleItems(
 
 function buildChildrenByParent(
   items: Iterable<AnyItem>,
-  itemsById: ReadonlyMap<SidebarItemId, AnyItem>,
+  itemsById: ReadonlyMap<ResourceId, AnyItem>,
 ) {
-  const childrenByParent = new Map<SidebarItemId | null, Array<AnyItem>>()
+  const childrenByParent = new Map<ResourceId | null, Array<AnyItem>>()
 
   for (const item of items) {
     const parentId = item.parentId && !itemsById.has(item.parentId) ? null : item.parentId

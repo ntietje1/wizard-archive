@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import { collectFormulaReferences } from './values/formula-parser'
 import type { NoteValueAuthoringDefinition } from './values/runtime'
 import type { NoteValueRuntimeState } from './values/state-contract'
@@ -6,27 +6,27 @@ import type { NoteValueRuntimeState } from './values/state-contract'
 export type NoteValueStatesForNotesStatus = 'pending' | 'success' | 'error'
 
 interface NoteValueRuntimeStateLoad {
-  states: Array<NoteValueRuntimeState<SidebarItemId>>
+  states: Array<NoteValueRuntimeState<ResourceId>>
   status: NoteValueStatesForNotesStatus
 }
 
 export interface NoteValueRuntimeStateSource {
-  useNoteValueStates: (noteIds: Array<SidebarItemId>) => NoteValueRuntimeStateLoad
+  useNoteValueStates: (noteIds: Array<ResourceId>) => NoteValueRuntimeStateLoad
 }
 
 export interface NoteValueRuntimeSource {
-  noteId?: SidebarItemId
-  authoredDefinitions: Array<NoteValueAuthoringDefinition<SidebarItemId>>
-  externalDependencyStates: Array<NoteValueRuntimeState<SidebarItemId>>
+  noteId?: ResourceId
+  authoredDefinitions: Array<NoteValueAuthoringDefinition<ResourceId>>
+  externalDependencyStates: Array<NoteValueRuntimeState<ResourceId>>
   externalDependencyStatesStatus: NoteValueStatesForNotesStatus
-  persistedStates: Array<NoteValueRuntimeState<SidebarItemId>>
-  referenceableStates: Array<NoteValueRuntimeState<SidebarItemId>>
+  persistedStates: Array<NoteValueRuntimeState<ResourceId>>
+  referenceableStates: Array<NoteValueRuntimeState<ResourceId>>
   referenceableStatesStatus: NoteValueStatesForNotesStatus
   references: NoteValueReferences
 }
 
 interface NoteValueReferenceNoteCandidate {
-  noteId: SidebarItemId
+  noteId: ResourceId
   title: string
   path: string
 }
@@ -35,14 +35,14 @@ export interface NoteValueReferences {
   getNoteCandidates: () => Array<NoteValueReferenceNoteCandidate>
   resolveNoteIdByPath: (input: {
     notePathRaw: string | null
-    sourceNoteId?: SidebarItemId
-  }) => SidebarItemId | null
+    sourceNoteId?: ResourceId
+  }) => ResourceId | null
 }
 
 interface NoteValueRuntimeStatePlan {
-  noteIds: Array<SidebarItemId>
-  externalDependencyNoteIds: Array<SidebarItemId>
-  referenceableNoteIds: Array<SidebarItemId>
+  noteIds: Array<ResourceId>
+  externalDependencyNoteIds: Array<ResourceId>
+  referenceableNoteIds: Array<ResourceId>
 }
 
 export function planNoteValueRuntimeStateLoad({
@@ -50,8 +50,8 @@ export function planNoteValueRuntimeStateLoad({
   noteId,
   references,
 }: {
-  authoredDefinitions: Array<NoteValueAuthoringDefinition<SidebarItemId>>
-  noteId?: SidebarItemId
+  authoredDefinitions: Array<NoteValueAuthoringDefinition<ResourceId>>
+  noteId?: ResourceId
   references: NoteValueReferences
 }): NoteValueRuntimeStatePlan {
   const externalDependencyNoteIds = noteId
@@ -84,8 +84,8 @@ export function hydrateNoteValueRuntimeSource({
   stateLoad,
   statePlan,
 }: {
-  authoredDefinitions: Array<NoteValueAuthoringDefinition<SidebarItemId>>
-  noteId?: SidebarItemId
+  authoredDefinitions: Array<NoteValueAuthoringDefinition<ResourceId>>
+  noteId?: ResourceId
   references: NoteValueReferences
   stateLoad: NoteValueRuntimeStateLoad
   statePlan: NoteValueRuntimeStatePlan
@@ -112,12 +112,12 @@ function getReferencedExternalNoteIds({
   resolveNoteIdByPath,
   sourceNoteId,
 }: {
-  currentNoteId: SidebarItemId
-  definitions: Array<NoteValueAuthoringDefinition<SidebarItemId>>
+  currentNoteId: ResourceId
+  definitions: Array<NoteValueAuthoringDefinition<ResourceId>>
   resolveNoteIdByPath: NoteValueReferences['resolveNoteIdByPath']
-  sourceNoteId?: SidebarItemId
+  sourceNoteId?: ResourceId
 }) {
-  const noteIds = new Set<SidebarItemId>()
+  const noteIds = new Set<ResourceId>()
   for (const definition of definitions) {
     for (const reference of collectFormulaReferences(definition.expressionSource)) {
       if (reference.kind !== 'external') continue
@@ -133,6 +133,6 @@ function getReferencedExternalNoteIds({
   return [...noteIds]
 }
 
-function uniqueSidebarItemIds(ids: Array<SidebarItemId>) {
+function uniqueSidebarItemIds(ids: Array<ResourceId>) {
   return [...new Set(ids)]
 }

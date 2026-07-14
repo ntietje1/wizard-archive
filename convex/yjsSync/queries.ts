@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
 import { campaignQuery } from '../functions'
-import { yjsDocumentIdValidator } from './schema'
 import { checkYjsReadAccess } from './functions/checkYjsAccess'
 import { paginatedQueryResultFields } from '../common/pagination'
 import { getYjsDocumentRevision } from './functions/documentRevision'
+import { resourceIdValidator } from '../resources/validators'
 
 const yjsUpdatePageEntryValidator = v.object({
   revision: v.number(),
@@ -20,7 +20,7 @@ const yjsAwarenessPageEntryValidator = v.object({
 
 export const getUpdates = campaignQuery({
   args: {
-    documentId: yjsDocumentIdValidator,
+    documentId: resourceIdValidator,
     afterSeq: v.union(v.number(), v.null()),
     paginationOpts: paginationOptsValidator,
   },
@@ -29,14 +29,14 @@ export const getUpdates = campaignQuery({
     ...paginatedQueryResultFields,
   }),
   handler: async (ctx, { documentId, afterSeq, paginationOpts }) => {
-    await checkYjsReadAccess(ctx, documentId)
+    const providerDocumentId = await checkYjsReadAccess(ctx, documentId)
 
-    const revision = await getYjsDocumentRevision(ctx, documentId)
+    const revision = await getYjsDocumentRevision(ctx, providerDocumentId)
 
     const result = await ctx.db
       .query('yjsUpdates')
       .withIndex('by_document_seq', (q) => {
-        const base = q.eq('documentId', documentId)
+        const base = q.eq('documentId', providerDocumentId)
         return afterSeq !== null ? base.gt('seq', afterSeq) : base
       })
       .order('asc')
@@ -51,7 +51,7 @@ export const getUpdates = campaignQuery({
 
 export const getAwareness = campaignQuery({
   args: {
-    documentId: yjsDocumentIdValidator,
+    documentId: resourceIdValidator,
     paginationOpts: paginationOptsValidator,
   },
   returns: v.object({
@@ -59,11 +59,11 @@ export const getAwareness = campaignQuery({
     ...paginatedQueryResultFields,
   }),
   handler: async (ctx, { documentId, paginationOpts }) => {
-    await checkYjsReadAccess(ctx, documentId)
+    const providerDocumentId = await checkYjsReadAccess(ctx, documentId)
 
     const result = await ctx.db
       .query('yjsAwareness')
-      .withIndex('by_document_client', (q) => q.eq('documentId', documentId))
+      .withIndex('by_document_client', (q) => q.eq('documentId', providerDocumentId))
       .order('asc')
       .paginate(paginationOpts)
 

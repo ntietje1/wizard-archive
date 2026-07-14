@@ -12,6 +12,7 @@ import {
   createNote,
   createSidebarShare,
   executeMoveCommand,
+  getSidebarItemRowId,
 } from '../../_test/factories.helper'
 import {
   expectNotAuthenticated,
@@ -21,9 +22,10 @@ import {
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdate as makeEmptyYjsUpdate } from '../../_test/yjs.helper'
+import { testSessionId } from '../../../shared/test/session-id'
 
 const COMPACTION_SEQ = 20
-const AWARENESS_SESSION_ID = 'awareness-session-1'
+const AWARENESS_SESSION_ID = testSessionId('awareness-session-1')
 
 function makeAwarenessState(): ArrayBuffer {
   return new Uint8Array([1, 2, 3, 4]).buffer
@@ -169,9 +171,9 @@ describe('pushUpdate', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('sidebarItems', noteId)
+      await dbCtx.db.delete('sidebarItems', noteRowId)
     })
 
     await expectNotFound(
@@ -254,6 +256,7 @@ describe('pushUpdate', () => {
         name: 'Compact Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       for (let i = 1; i <= COMPACTION_SEQ; i++) {
         await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -268,7 +271,7 @@ describe('pushUpdate', () => {
       await t.run(async (dbCtx) => {
         const rows = await dbCtx.db
           .query('yjsUpdates')
-          .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+          .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
           .collect()
 
         expect(rows.length).toBeGreaterThan(1)
@@ -287,6 +290,7 @@ describe('pushUpdate', () => {
       name: 'No Compact Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     for (let i = 1; i < COMPACTION_SEQ; i++) {
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -299,7 +303,7 @@ describe('pushUpdate', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
         .collect()
 
       expect(rows).toHaveLength(20)
@@ -371,6 +375,7 @@ describe('pushAwareness', () => {
       name: 'Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const state = makeAwarenessState()
 
@@ -385,11 +390,11 @@ describe('pushAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 42))
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteRowId).eq('clientId', 42))
         .collect()
 
       expect(rows).toHaveLength(1)
-      expect(rows[0].documentId).toBe(noteId)
+      expect(rows[0].documentId).toBe(noteRowId)
       expect(rows[0].clientId).toBe(42)
       expect(rows[0].userId).toBe(ctx.dm.profile._id)
     })
@@ -404,6 +409,7 @@ describe('pushAwareness', () => {
       name: 'Lifecycle Canvas',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const canvasRowId = await getSidebarItemRowId(t, canvasId)
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -440,7 +446,7 @@ describe('pushAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) => q.eq('documentId', canvasId).eq('clientId', 7))
+        .withIndex('by_document_client', (q) => q.eq('documentId', canvasRowId).eq('clientId', 7))
         .collect()
 
       expect(rows).toHaveLength(1)
@@ -456,6 +462,7 @@ describe('pushAwareness', () => {
       name: 'Upsert Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
       campaignId: ctx.campaignDomainId,
@@ -477,7 +484,7 @@ describe('pushAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 10))
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteRowId).eq('clientId', 10))
         .collect()
 
       expect(rows).toHaveLength(1)
@@ -493,6 +500,7 @@ describe('pushAwareness', () => {
       name: 'Multi Client Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
       campaignId: ctx.campaignDomainId,
@@ -506,14 +514,14 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 2,
-      sessionId: `${AWARENESS_SESSION_ID}-2`,
+      sessionId: testSessionId('awareness-session-2'),
       state: makeAwarenessState(),
     })
 
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document', (q) => q.eq('documentId', noteRowId))
         .collect()
 
       expect(rows).toHaveLength(2)
@@ -530,6 +538,7 @@ describe('pushAwareness', () => {
       name: 'View Share Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
@@ -550,7 +559,7 @@ describe('pushAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 99))
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteRowId).eq('clientId', 99))
         .collect()
 
       expect(rows).toHaveLength(1)
@@ -567,6 +576,7 @@ describe('pushAwareness', () => {
       name: 'Owned Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
@@ -588,7 +598,7 @@ describe('pushAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 50,
-        sessionId: 'attacker-session',
+        sessionId: testSessionId('attacker-session'),
         state: new Uint8Array([9]).buffer,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'session_conflict' })
@@ -596,7 +606,7 @@ describe('pushAwareness', () => {
     await t.run(async (dbCtx) => {
       const row = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 50))
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteRowId).eq('clientId', 50))
         .unique()
       expect(row?.userId).toBe(ctx.dm.profile._id)
       expect(row?.sessionId).toBe(AWARENESS_SESSION_ID)
@@ -646,6 +656,7 @@ describe('removeAwareness', () => {
       name: 'Remove Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
       campaignId: ctx.campaignDomainId,
@@ -665,7 +676,7 @@ describe('removeAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 5))
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteRowId).eq('clientId', 5))
         .collect()
 
       expect(rows).toHaveLength(0)
@@ -701,6 +712,7 @@ describe('removeAwareness', () => {
       name: 'Selective Remove Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
       campaignId: ctx.campaignDomainId,
@@ -714,7 +726,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 2,
-      sessionId: `${AWARENESS_SESSION_ID}-2`,
+      sessionId: testSessionId('awareness-session-2'),
       state: makeAwarenessState(),
     })
 
@@ -728,7 +740,7 @@ describe('removeAwareness', () => {
     await t.run(async (dbCtx) => {
       const rows = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document', (q) => q.eq('documentId', noteRowId))
         .collect()
 
       expect(rows).toHaveLength(1)
@@ -744,6 +756,7 @@ describe('removeAwareness', () => {
       name: 'Session Release Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
@@ -757,14 +770,14 @@ describe('removeAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 52,
-        sessionId: 'different-session',
+        sessionId: testSessionId('different-session'),
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'session_conflict' })
 
     await t.run(async (dbCtx) => {
       const row = await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document_client', (q) => q.eq('documentId', noteId).eq('clientId', 52))
+        .withIndex('by_document_client', (q) => q.eq('documentId', noteRowId).eq('clientId', 52))
         .unique()
       expect(row).not.toBeNull()
     })

@@ -1,6 +1,6 @@
 import type { Dispatch } from 'react'
-import type { SidebarItemId } from 'shared/common/ids'
-import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
+
+import type { MapPinId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import {
   completeWizardEditorMapPinOperation,
@@ -28,8 +28,8 @@ export function createLocalGameMapSessionSource({
   catalog: WizardEditorResourceCatalog
   dispatch: Dispatch<LocalWorkspaceAction>
 }): WizardEditorMapSession {
-  const sessionPinnedItemIdsByMapId = new Map<string, Set<SidebarItemId>>()
-  const sessionCreatedPinsById = new Map<MapPinId, { itemId: SidebarItemId; mapId: string }>()
+  const sessionPinnedItemIdsByMapId = new Map<string, Set<ResourceId>>()
+  const sessionCreatedPinsById = new Map<MapPinId, { itemId: ResourceId; mapId: string }>()
   const latestMapImageRequestByMapId = new Map<string, number>()
   let nextMapImageRequestId = 0
 
@@ -48,7 +48,7 @@ export function createLocalGameMapSessionSource({
           })
           for (const pin of created.pins) {
             sessionCreatedPinsById.set(pin.id, {
-              itemId: pin.itemId as SidebarItemId,
+              itemId: pin.itemId as ResourceId,
               mapId: String(mapId),
             })
           }
@@ -180,7 +180,7 @@ export function createLocalGameMapSessionSource({
 function canMutateLocalMapPin(
   catalog: WizardEditorResourceCatalog,
   sessionCreatedPinsById: ReadonlyMap<MapPinId, { mapId: string }>,
-  mapId: SidebarItemId,
+  mapId: ResourceId,
   mapPinId: MapPinId,
 ) {
   const mapKey = String(mapId)
@@ -193,7 +193,7 @@ function catalogHasVisibleMapPin(
   mapId: string,
   mapPinId: MapPinId,
 ) {
-  const map = catalog.getVisibleItemById(mapId as SidebarItemId)
+  const map = catalog.getVisibleItemById(mapId as ResourceId)
   return hasWizardEditorGameMapPin(map, mapPinId)
 }
 
@@ -209,10 +209,10 @@ function createLocalMapPins({
   canEdit: boolean
   catalog: WizardEditorResourceCatalog
   dispatch: Dispatch<LocalWorkspaceAction>
-  mapId: SidebarItemId
+  mapId: ResourceId
   layerId: string | null
   pins: Parameters<WizardEditorMapSession['pins']['create']>[0]['pins']
-  sessionPinnedItemIdsByMapId: Map<string, Set<SidebarItemId>>
+  sessionPinnedItemIdsByMapId: Map<string, Set<ResourceId>>
 }): {
   pinIds: Array<MapPinId>
   pins: Array<CreatedLocalMapPin>
@@ -225,7 +225,7 @@ function createLocalMapPins({
     return { pinIds: [], pins: [], unavailable: true }
   }
   const mapKey = String(mapId)
-  const sessionPinnedItemIds = sessionPinnedItemIdsByMapId.get(mapKey) ?? new Set<SidebarItemId>()
+  const sessionPinnedItemIds = sessionPinnedItemIdsByMapId.get(mapKey) ?? new Set<ResourceId>()
   sessionPinnedItemIdsByMapId.set(mapKey, sessionPinnedItemIds)
   const pinnedItemIds = [...existingPinnedItemIds, ...sessionPinnedItemIds]
   const createdPins = planWizardEditorMapPinCreations({
@@ -253,7 +253,7 @@ function createLocalMapPins({
     pins: createdPins,
   })
   for (const pin of createdPins) {
-    sessionPinnedItemIds.add(pin.itemId as SidebarItemId)
+    sessionPinnedItemIds.add(pin.itemId as ResourceId)
   }
   return {
     pinIds: createdPins.map((created) => created.id),

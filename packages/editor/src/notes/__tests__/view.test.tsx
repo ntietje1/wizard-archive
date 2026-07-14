@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { NoteView } from '../view'
@@ -7,7 +8,7 @@ import type { ReactNode } from 'react'
 import type { NoteValueRuntimeSource } from '../value-runtime-model'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceTitle } from '../../resources/resource-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import {
   clearInternalNativeDrag,
   isInternalNativeDrag,
@@ -265,8 +266,8 @@ function createNote(overrides: Partial<NoteItemWithContent> = {}): NoteItemWithC
   } as unknown as NoteItemWithContent
 }
 
-function sidebarItemId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function sidebarItemId(value: string): ResourceId {
+  return value as ResourceId
 }
 
 function createValueRuntimeSource(noteId: NoteItemWithContent['id']): NoteValueRuntimeSource {

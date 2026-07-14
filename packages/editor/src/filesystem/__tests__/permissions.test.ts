@@ -1,10 +1,11 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import { WORKSPACE_MODE } from '../../../../../shared/workspace/workspace-mode'
 import type { AnyItem } from '../../workspace/items'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { testDomainId } from '../../test/domain-id'
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { createActorFileSystemPermissions } from '../access'
@@ -84,7 +85,7 @@ describe('createActorFileSystemPermissions', () => {
 
   it('resolves view-as sharing while keeping mutations read-only', () => {
     const folder = createFolder({
-      id: testId<'sidebarItems'>('folder_permissions_parent'),
+      id: testResourceId('folder_permissions_parent'),
       allPermissionLevel: PERMISSION_LEVEL.EDIT,
       inheritShares: true,
     })
@@ -111,6 +112,6 @@ describe('createActorFileSystemPermissions', () => {
 })
 
 function createLookup(items: Array<AnyItem>) {
-  const itemsById = new Map<SidebarItemId, AnyItem>(items.map((item) => [item.id, item]))
-  return (itemId: SidebarItemId) => itemsById.get(itemId) ?? null
+  const itemsById = new Map<ResourceId, AnyItem>(items.map((item) => [item.id, item]))
+  return (itemId: ResourceId) => itemsById.get(itemId) ?? null
 }

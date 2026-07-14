@@ -23,5 +23,5 @@ export async function rollbackCanvas(
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  return await rollbackYjsDocument(ctx, rawItem.id, snapshotData, expected)
+  return await rollbackYjsDocument(ctx, itemId, snapshotData, expected)
 }

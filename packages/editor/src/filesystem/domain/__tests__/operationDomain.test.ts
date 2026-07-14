@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../../workspace/items'
 import { createSidebarItem } from './test-sidebar-item'
 import { normalizeSelectedRoots } from '../selection-roots'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { planMoveTransfer } from './transfer-planning-test-helpers'
 
 describe('filesystem operation domain', () => {
@@ -12,7 +13,7 @@ describe('filesystem operation domain', () => {
     const child = createSidebarItem('note-1', 'Child', RESOURCE_TYPES.notes, {
       parentId: folder.id,
     })
-    const itemsMap = new Map<SidebarItemId, AnyItem>([
+    const itemsMap = new Map<ResourceId, AnyItem>([
       [folder.id, folder],
       [child.id, child],
     ])
@@ -32,7 +33,7 @@ describe('filesystem operation domain', () => {
     const noteA = createSidebarItem('note-1', 'A')
     const noteB = createSidebarItem('note-2', 'B')
     const targetFolder = createSidebarItem('folder-1', 'Folder', RESOURCE_TYPES.folders)
-    const itemsMap = new Map<SidebarItemId, AnyItem>([
+    const itemsMap = new Map<ResourceId, AnyItem>([
       [noteA.id, noteA],
       [noteB.id, noteB],
       [targetFolder.id, targetFolder],
@@ -60,7 +61,7 @@ describe('filesystem operation domain', () => {
     const child = createSidebarItem('note-1', 'Child', RESOURCE_TYPES.notes, {
       parentId: parent.id,
     })
-    const itemsMap = new Map<SidebarItemId, AnyItem>([
+    const itemsMap = new Map<ResourceId, AnyItem>([
       [grandparent.id, grandparent],
       [parent.id, parent],
       [child.id, child],
@@ -71,7 +72,7 @@ describe('filesystem operation domain', () => {
 
   it('throws on circular parent references during selection normalization', () => {
     const folderA = createSidebarItem('folder-1', 'A', RESOURCE_TYPES.folders, {
-      parentId: 'folder-2' as SidebarItemId,
+      parentId: 'folder-2' as ResourceId,
     })
     const folderB = createSidebarItem('folder-2', 'B', RESOURCE_TYPES.folders, {
       parentId: folderA.id,
@@ -80,7 +81,7 @@ describe('filesystem operation domain', () => {
     expect(() =>
       normalizeSelectedRoots(
         [folderA],
-        new Map<SidebarItemId, AnyItem>([
+        new Map<ResourceId, AnyItem>([
           [folderA.id, folderA],
           [folderB.id, folderB],
         ]),
@@ -90,7 +91,7 @@ describe('filesystem operation domain', () => {
     expect(() =>
       normalizeSelectedRoots(
         [folderA, folderB],
-        new Map<SidebarItemId, AnyItem>([
+        new Map<ResourceId, AnyItem>([
           [folderA.id, folderA],
           [folderB.id, folderB],
         ]),

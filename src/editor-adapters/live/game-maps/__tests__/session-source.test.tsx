@@ -1,3 +1,4 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { Id } from 'convex/_generated/dataModel'
@@ -56,8 +57,8 @@ describe('useLiveGameMapSessionSource', () => {
     const { result } = renderHook(() => useLiveGameMapSessionSource())
 
     const createResult = await result.current.session.pins.create({
-      mapId: 'map-1' as Id<'sidebarItems'>,
-      pins: [{ itemId: 'note-1' as Id<'sidebarItems'>, layerId: 'upper', x: 12, y: 34 }],
+      mapId: 'map-1' as ResourceId,
+      pins: [{ itemId: 'note-1' as ResourceId, layerId: 'upper', x: 12, y: 34 }],
     })
     expect(createPins).toHaveBeenCalledWith({
       mapId: 'map-1',
@@ -74,7 +75,7 @@ describe('useLiveGameMapSessionSource', () => {
     })
     await expect(
       result.current.session.pins.update({
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: 'map-1' as ResourceId,
         mapPinId: createdPinId,
         x: 56,
         y: 78,
@@ -85,7 +86,7 @@ describe('useLiveGameMapSessionSource', () => {
     })
     await expect(
       result.current.session.pins.setVisibility({
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: 'map-1' as ResourceId,
         mapPinId: createdPinId,
         isVisible: false,
       }),
@@ -95,7 +96,7 @@ describe('useLiveGameMapSessionSource', () => {
     })
     await expect(
       result.current.session.pins.remove({
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: 'map-1' as ResourceId,
         mapPinId: createdPinId,
       }),
     ).resolves.toMatchObject({
@@ -139,7 +140,7 @@ describe('useLiveGameMapSessionSource', () => {
     await expect(
       result.current.session.updateMapImage({
         file,
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: 'map-1' as ResourceId,
       }),
     ).resolves.toEqual({
       status: 'completed',
@@ -195,7 +196,7 @@ describe('useLiveGameMapSessionSource', () => {
     await expect(
       result.current.session.updateMapImage({
         file,
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: 'map-1' as ResourceId,
       }),
     ).resolves.toEqual({ status: 'error', error: updateError })
 
@@ -235,12 +236,12 @@ describe('useLiveGameMapSessionSource', () => {
 
     const firstUpdate = result.current.session.updateMapImage({
       file: createImportFile(['first'], 'first.png', { type: 'image/png' }),
-      mapId: 'map-1' as Id<'sidebarItems'>,
+      mapId: 'map-1' as ResourceId,
     })
     await vi.waitFor(() => expect(uploadFileToUrl).toHaveBeenCalledOnce())
     const secondUpdate = await result.current.session.updateMapImage({
       file: createImportFile(['second'], 'second.png', { type: 'image/png' }),
-      mapId: 'map-1' as Id<'sidebarItems'>,
+      mapId: 'map-1' as ResourceId,
     })
     firstUpload.resolve('storage-1' as Id<'_storage'>)
 

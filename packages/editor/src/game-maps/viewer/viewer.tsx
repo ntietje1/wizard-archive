@@ -1,8 +1,8 @@
+import type { ResourceId, MapPinId } from '../../resources/domain-id'
 import { useRef, useState } from 'react'
 import { ClientOnly } from '@wizard-archive/ui/components/client-only'
 import type { MapItemWithContent } from '../../game-maps/item-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-import type { MapPinId } from '../../resources/domain-id'
+
 import type { ContextMenuHostRef } from '../../context-menu/components/host'
 import { MAP_DROP_ZONE_TYPE } from '../../drag-drop/drop-target-data'
 import { useDndDropTarget } from '../../drag-drop/use-drop-target'
@@ -229,7 +229,7 @@ export function MapViewer({ item: map, source }: MapViewerProps) {
 function useActiveMapView(map: MapItemWithContent) {
   const mapLayers = map.layers ?? []
   const [selectedLayer, setSelectedLayer] = useState<{
-    mapId: SidebarItemId
+    mapId: ResourceId
     layerId: string | null
   }>(() => ({
     mapId: map.id,

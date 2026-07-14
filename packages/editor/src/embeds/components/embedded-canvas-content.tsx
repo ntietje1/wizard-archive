@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { Loader2 } from 'lucide-react'
 import { useEmbeddedCanvasState } from '../../canvas/embedded-canvas-state-context'
 import type { EmbeddedCanvasState } from '../../canvas/embedded-state-contract'
 import { CanvasThumbnailPreview } from '../../canvas/preview/canvas-thumbnail-preview'
 import { CanvasReadOnlyPreview } from '../../canvas/preview/read-only-preview'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.01
 const FIT_PADDING = 0.12
@@ -13,7 +14,7 @@ export function EmbeddedCanvasContent({
   previewUrl,
   alt,
 }: {
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   previewUrl: string | null
   alt: string
 }) {
@@ -36,7 +37,7 @@ function ResolvedEmbeddedCanvasContent({
   state,
 }: {
   alt: string
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   previewUrl: string | null
   state: EmbeddedCanvasState
 }) {

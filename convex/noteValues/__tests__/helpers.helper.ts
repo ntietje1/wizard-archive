@@ -2,12 +2,13 @@ import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.help
 import { api } from '../../_generated/api'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { executeMoveCommand, testBlockNoteId } from '../../_test/factories.helper'
-import type { Id, DataModel } from '../../_generated/dataModel'
+import type { DataModel } from '../../_generated/dataModel'
 import type { TestInlineContent } from '../../_test/yjs.helper'
 import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type schema from '../../schema'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { requireSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 export function valueBlock({
   id,
@@ -82,7 +83,7 @@ export async function renameValueTestNote(
     name,
   }: {
     campaignId: CampaignId
-    noteId: Id<'sidebarItems'>
+    noteId: ResourceId
     name: string
   },
 ) {
@@ -99,7 +100,7 @@ export async function hardDeleteValueTestNote(
     noteId,
   }: {
     campaignId: CampaignId
-    noteId: Id<'sidebarItems'>
+    noteId: ResourceId
   },
 ) {
   await executeMoveCommand(dmAuth, {
@@ -124,16 +125,17 @@ export async function replaceNoteDocumentAndPersist(
     blocks,
   }: {
     campaignId: CampaignId
-    noteId: Id<'sidebarItems'>
+    noteId: ResourceId
     blocks: Array<PartialNoteBlock>
   },
 ) {
   const snapshot = makeYjsUpdateWithBlocks(blocks)
 
   await t.run(async (dbCtx) => {
+    const note = await requireSidebarItemRow(dbCtx, noteId)
     const existingUpdates = await dbCtx.db
       .query('yjsUpdates')
-      .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+      .withIndex('by_document_seq', (q) => q.eq('documentId', note._id))
       .collect()
 
     for (const row of existingUpdates) {
@@ -141,7 +143,7 @@ export async function replaceNoteDocumentAndPersist(
     }
 
     await dbCtx.db.insert('yjsUpdates', {
-      documentId: noteId,
+      documentId: note._id,
       update: snapshot,
       seq: 0,
       isSnapshot: true,

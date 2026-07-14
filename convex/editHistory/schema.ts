@@ -5,6 +5,7 @@ import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-co
 import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
 import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
 import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
+import { resourceIdValidator } from '../resources/validators'
 
 export const historyEntryIdValidator = v.string() as Validator<HistoryEntryId>
 
@@ -29,7 +30,7 @@ const nullMetadataActions = [
 ] as const
 
 const copiedMetadataValidator = v.object({
-  copiedFromItemId: v.id('sidebarItems'),
+  copiedFromItemId: resourceIdValidator,
   copiedFromName: v.string(),
 })
 const renamedMetadataValidator = v.object({ from: v.string(), to: v.string() })
@@ -197,12 +198,14 @@ export const editHistoryValidator = v.union(
       historyEntryUuid: _historyEntryUuid,
       campaignId: _campaignRowId,
       campaignMemberId: _campaignMemberRowId,
+      itemId: _itemRowId,
       ...fields
     }) =>
       v.object({
         id: historyEntryIdValidator,
         createdAt: v.number(),
         ...fields,
+        itemId: resourceIdValidator,
         campaignId: campaignIdValidator,
         campaignMemberId: campaignMemberIdValidator,
       }),

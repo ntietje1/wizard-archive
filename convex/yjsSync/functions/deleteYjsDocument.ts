@@ -1,8 +1,11 @@
 import { asyncMap } from 'convex-helpers'
 import type { MutationCtx } from '../../_generated/server'
-import type { SidebarItemId } from '../../../shared/common/ids'
+import type { Id } from '../../_generated/dataModel'
 
-export async function deleteYjsDocument(ctx: Pick<MutationCtx, 'db'>, documentId: SidebarItemId) {
+export async function deleteYjsDocument(
+  ctx: Pick<MutationCtx, 'db'>,
+  documentId: Id<'sidebarItems'>,
+) {
   const [updates, awareness, documentState] = await Promise.all([
     ctx.db
       .query('yjsUpdates')

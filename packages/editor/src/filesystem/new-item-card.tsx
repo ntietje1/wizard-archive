@@ -1,7 +1,8 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { Plus } from 'lucide-react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { Card } from '@wizard-archive/ui/shadcn/components/card'
 import {
   ContextMenu,
@@ -19,7 +20,7 @@ import { toast } from 'sonner'
 type NewItemCardSource = Pick<FolderViewerSource, 'createItemInFolder'>
 
 interface NewItemCardProps {
-  parentId: SidebarItemId
+  parentId: ResourceId
   source: NewItemCardSource
 }
 

@@ -1,3 +1,5 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { testResourceId } from '../../../../shared/test/resource-id'
 import {
   completeWizardEditorResourceCommand,
   createWizardEditorResource,
@@ -434,7 +436,7 @@ function createCompletedCommandResult(
 ): CompletedResourceCommandResult {
   const events: Array<WizardEditorResourceEvent> =
     command.type === 'create'
-      ? [{ type: 'created', itemId: 'created-item' as Id<'sidebarItems'>, slug: 'created-item' }]
+      ? [{ type: 'created', itemId: testResourceId('created-item'), slug: 'created-item' }]
       : command.type === 'rename'
         ? [
             {
@@ -465,7 +467,7 @@ function createCompletedCreateCommandResult({
   slug,
 }: {
   command: Extract<WizardEditorResourceCommand, { type: 'create' }>
-  itemId: Id<'sidebarItems'>
+  itemId: ResourceId
   slug: string
 }): CompletedResourceCommandResult {
   return {
@@ -546,7 +548,7 @@ describe('useLiveWorkspaceRuntime', () => {
     navigationMocks.setLastSelectedItem.mockReset()
     noteSessionMocks.useNoteYjsCollaboration.mockReset()
     fileSystemItemMocks.createItem.mockResolvedValue({
-      id: 'created-note' as Id<'sidebarItems'>,
+      id: testResourceId('created-note'),
       slug: 'created-note',
     })
     fileSystemItemMocks.renameItem.mockResolvedValue({ slug: 'renamed-note' })
@@ -586,14 +588,14 @@ describe('useLiveWorkspaceRuntime', () => {
   })
 
   it('creates editor items through the filesystem operation capability', async () => {
-    liveSourceState.extraActiveItems = [createFolder({ id: 'folder-1' as Id<'sidebarItems'> })]
+    liveSourceState.extraActiveItems = [createFolder({ id: testResourceId('folder-1') })]
     const { result } = renderLiveWorkspaceRuntime()
 
     const created = await result.current.commands.operations.createItem({
       type: 'note',
       parentTarget: {
         kind: 'direct',
-        parentId: 'folder-1' as Id<'sidebarItems'>,
+        parentId: testResourceId('folder-1'),
       },
       name: 'Session Notes',
     })
@@ -607,7 +609,7 @@ describe('useLiveWorkspaceRuntime', () => {
         itemType: 'note',
         parentTarget: {
           kind: 'direct',
-          parentId: 'folder-1',
+          parentId: testResourceId('folder-1'),
         },
         name: 'Session Notes',
       },
@@ -774,12 +776,9 @@ describe('useLiveWorkspaceRuntime', () => {
   it('opens items through the filesystem selection capability with heading targets', async () => {
     const { result } = renderLiveWorkspaceRuntime()
 
-    await result.current.navigation.openItem(
-      createWizardEditorResource('note-1' as Id<'sidebarItems'>),
-      {
-        heading: 'Intro#Details',
-      },
-    )
+    await result.current.navigation.openItem(createWizardEditorResource(testResourceId('note-1')), {
+      heading: 'Intro#Details',
+    })
 
     expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith(liveSourceState.item!.slug)
     expect(navigationMocks.navigateToItem).toHaveBeenCalledWith(liveSourceState.item!.slug, {
@@ -807,11 +806,15 @@ describe('useLiveWorkspaceRuntime', () => {
     await expect(
       result.current.sessions.map.updateMapImage({
         file,
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: testResourceId('map-1'),
       }),
     ).resolves.toMatchObject({
       status: 'completed',
-      receipt: { kind: 'mapImageUpdated', itemId: 'map-1', affectedCount: 1 },
+      receipt: {
+        kind: 'mapImageUpdated',
+        itemId: testResourceId('map-1'),
+        affectedCount: 1,
+      },
     })
 
     expect(mediaImportMocks.createUploadSession.mutateAsync).toHaveBeenCalledWith({})
@@ -822,11 +825,11 @@ describe('useLiveWorkspaceRuntime', () => {
       originalFileName: 'map.png',
     })
     expect(campaignMutationMocks.mutateAsync).toHaveBeenNthCalledWith(1, {
-      mapId: 'map-1',
+      mapId: testResourceId('map-1'),
     })
     expect(campaignMutationMocks.mutateAsync).toHaveBeenNthCalledWith(2, {
       layerId: null,
-      mapId: 'map-1',
+      mapId: testResourceId('map-1'),
       replacementToken: 'replacement-token',
       uploadSessionId: 'upload-session-1',
     })
@@ -838,12 +841,12 @@ describe('useLiveWorkspaceRuntime', () => {
     const { result } = renderLiveWorkspaceRuntime()
 
     const createResult = await result.current.sessions.map.pins.create({
-      mapId: 'map-1' as Id<'sidebarItems'>,
-      pins: [{ itemId: 'note-1' as Id<'sidebarItems'>, x: 12, y: 34 }],
+      mapId: testResourceId('map-1'),
+      pins: [{ itemId: testResourceId('note-1'), x: 12, y: 34 }],
     })
     await expect(
       result.current.sessions.map.pins.update({
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: testResourceId('map-1'),
         mapPinId,
         x: 56,
         y: 78,
@@ -851,7 +854,7 @@ describe('useLiveWorkspaceRuntime', () => {
     ).resolves.toMatchObject({ status: 'completed', receipt: { kind: 'mapPinUpdated' } })
     await expect(
       result.current.sessions.map.pins.setVisibility({
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: testResourceId('map-1'),
         mapPinId,
         isVisible: false,
       }),
@@ -861,7 +864,7 @@ describe('useLiveWorkspaceRuntime', () => {
     })
     await expect(
       result.current.sessions.map.pins.remove({
-        mapId: 'map-1' as Id<'sidebarItems'>,
+        mapId: testResourceId('map-1'),
         mapPinId,
       }),
     ).resolves.toMatchObject({ status: 'completed', receipt: { kind: 'mapPinRemoved' } })
@@ -870,14 +873,14 @@ describe('useLiveWorkspaceRuntime', () => {
       status: 'completed',
       receipt: {
         kind: 'mapPinsCreated',
-        itemId: 'map-1',
+        itemId: testResourceId('map-1'),
         affectedCount: 1,
         pinIds: [mapPinId],
       },
     })
     expect(campaignMutationMocks.mutateAsync).toHaveBeenCalledWith({
-      mapId: 'map-1',
-      pins: [{ itemId: 'note-1', x: 12, y: 34 }],
+      mapId: testResourceId('map-1'),
+      pins: [{ itemId: testResourceId('note-1'), x: 12, y: 34 }],
     })
     expect(campaignMutationMocks.mutateAsync).toHaveBeenCalledWith({
       mapPinId,
@@ -894,13 +897,10 @@ describe('useLiveWorkspaceRuntime', () => {
   it('opens items separately through the supplied live navigation capability', async () => {
     const { result } = renderLiveWorkspaceRuntime()
 
-    await result.current.navigation.openItem(
-      createWizardEditorResource('note-1' as Id<'sidebarItems'>),
-      {
-        heading: 'Intro#Details',
-        target: 'separate',
-      },
-    )
+    await result.current.navigation.openItem(createWizardEditorResource(testResourceId('note-1')), {
+      heading: 'Intro#Details',
+      target: 'separate',
+    })
 
     expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith(liveSourceState.item!.slug)
     expect(navigationMocks.openSeparateItem).toHaveBeenCalledExactlyOnceWith({
@@ -923,7 +923,7 @@ describe('useLiveWorkspaceRuntime', () => {
     liveSourceState.extraActiveItems = [createContentNote('note-2', 'Hidden Archive')]
     textImportMocks.convexQuery.mockResolvedValueOnce([
       {
-        noteId: 'note-2',
+        noteId: testResourceId('note-2'),
         plainText: 'session clue',
       },
     ])
@@ -947,7 +947,7 @@ describe('useLiveWorkspaceRuntime', () => {
         bodySearchPending: false,
         results: [
           expect.objectContaining({
-            itemId: 'note-2',
+            itemId: testResourceId('note-2'),
             matchText: 'session clue',
             matchType: 'body',
           }),
@@ -979,11 +979,11 @@ describe('useLiveWorkspaceRuntime', () => {
       getAvailableSearch(result.current).ensureSearchState({ query: 'rabbit' })
     })
 
-    fastSearch.resolve([{ noteId: 'note-3', plainText: 'rabbit clue' }])
+    fastSearch.resolve([{ noteId: testResourceId('note-3'), plainText: 'rabbit clue' }])
     await act(async () => {
       await fastSearch.promise
     })
-    slowSearch.resolve([{ noteId: 'note-2', plainText: 'turtle clue' }])
+    slowSearch.resolve([{ noteId: testResourceId('note-2'), plainText: 'turtle clue' }])
     await act(async () => {
       await slowSearch.promise
     })
@@ -993,7 +993,7 @@ describe('useLiveWorkspaceRuntime', () => {
         bodySearchPending: false,
         results: [
           expect.objectContaining({
-            itemId: 'note-3',
+            itemId: testResourceId('note-3'),
             matchText: 'rabbit clue',
             matchType: 'body',
           }),
@@ -1006,7 +1006,7 @@ describe('useLiveWorkspaceRuntime', () => {
     liveSourceState.extraActiveItems = [createContentNote('note-2', 'Hidden Archive')]
     textImportMocks.convexQuery
       .mockRejectedValueOnce(new Error('temporary search failure'))
-      .mockResolvedValueOnce([{ noteId: 'note-2', plainText: 'recovered clue' }])
+      .mockResolvedValueOnce([{ noteId: testResourceId('note-2'), plainText: 'recovered clue' }])
     const { result } = renderLiveWorkspaceRuntime()
 
     act(() => {
@@ -1033,7 +1033,7 @@ describe('useLiveWorkspaceRuntime', () => {
           bodySearchPending: false,
           results: [
             expect.objectContaining({
-              itemId: 'note-2',
+              itemId: testResourceId('note-2'),
               matchText: 'recovered clue',
               matchType: 'body',
             }),
@@ -1047,8 +1047,8 @@ describe('useLiveWorkspaceRuntime', () => {
   it('invalidates successful body searches when current note content changes', async () => {
     liveSourceState.extraActiveItems = [createContentNote('note-2', 'Archive Two')]
     textImportMocks.convexQuery
-      .mockResolvedValueOnce([{ noteId: 'note-2', plainText: 'old clue' }])
-      .mockResolvedValueOnce([{ noteId: 'note-2', plainText: 'updated clue' }])
+      .mockResolvedValueOnce([{ noteId: testResourceId('note-2'), plainText: 'old clue' }])
+      .mockResolvedValueOnce([{ noteId: testResourceId('note-2'), plainText: 'updated clue' }])
     const { rerender, result } = renderLiveWorkspaceRuntime()
 
     act(() => {
@@ -1080,8 +1080,12 @@ describe('useLiveWorkspaceRuntime', () => {
   it('hydrates live filesystem search per workspace source identity', async () => {
     liveSourceState.extraActiveItems = [createContentNote('note-2', 'Archive Two')]
     textImportMocks.convexQuery
-      .mockResolvedValueOnce([{ noteId: 'note-2', plainText: 'first campaign clue' }])
-      .mockResolvedValueOnce([{ noteId: 'note-2', plainText: 'second campaign clue' }])
+      .mockResolvedValueOnce([
+        { noteId: testResourceId('note-2'), plainText: 'first campaign clue' },
+      ])
+      .mockResolvedValueOnce([
+        { noteId: testResourceId('note-2'), plainText: 'second campaign clue' },
+      ])
     const { rerender, result } = renderLiveWorkspaceRuntime()
 
     act(() => {
@@ -1115,7 +1119,7 @@ describe('useLiveWorkspaceRuntime', () => {
       memberId: 'member-1' as DmViewAsActor['memberId'],
     }
     textImportMocks.convexQuery.mockResolvedValueOnce([
-      { noteId: 'note-2', plainText: 'visible player clue' },
+      { noteId: testResourceId('note-2'), plainText: 'visible player clue' },
     ])
     const { result } = renderLiveWorkspaceRuntime()
 
@@ -1328,7 +1332,7 @@ describe('useLiveWorkspaceRuntime', () => {
   it('uses the current live item as the unmounted runtime filesystem selection fallback', () => {
     const { result } = renderLiveWorkspaceRuntime()
 
-    expect(result.current.resources.selection.selectedItemIds).toEqual(['note-1'])
+    expect(result.current.resources.selection.selectedItemIds).toEqual([testResourceId('note-1')])
   })
 
   it('updates item metadata through the filesystem operation capability', async () => {
@@ -1360,19 +1364,19 @@ describe('useLiveWorkspaceRuntime', () => {
     const { result } = renderLiveWorkspaceRuntime()
 
     await result.current.commands.operations.toggleBookmarks([
-      'note-1' as Id<'sidebarItems'>,
-      'note-2' as Id<'sidebarItems'>,
+      testResourceId('note-1'),
+      testResourceId('note-2'),
     ])
 
     expect(fileSystemItemMocks.executeCommand).toHaveBeenCalledWith({
       type: 'toggleBookmarks',
-      itemIds: ['note-1', 'note-2'],
+      itemIds: [testResourceId('note-1'), testResourceId('note-2')],
     })
   })
 
   it('imports media files through the live filesystem operation capability', async () => {
-    const createdFileId = 'created-file' as Id<'sidebarItems'>
-    liveSourceState.extraActiveItems = [createFolder({ id: 'folder-1' as Id<'sidebarItems'> })]
+    const createdFileId = testResourceId('created-file')
+    liveSourceState.extraActiveItems = [createFolder({ id: testResourceId('folder-1') })]
     const onProgress = vi.fn()
     const file = createImportFile(['image'], 'portrait.png', { type: 'image/png' })
     fileSystemItemMocks.executeCommand.mockImplementationOnce(
@@ -1389,7 +1393,7 @@ describe('useLiveWorkspaceRuntime', () => {
 
     const imported = await result.current.commands.operations.importFile({
       file,
-      parentId: 'folder-1' as Id<'sidebarItems'>,
+      parentId: testResourceId('folder-1'),
       onProgress,
     })
 
@@ -1409,7 +1413,7 @@ describe('useLiveWorkspaceRuntime', () => {
         type: 'create',
         itemType: 'file',
         name: 'portrait.png',
-        parentTarget: { kind: 'direct', parentId: 'folder-1' },
+        parentTarget: { kind: 'direct', parentId: testResourceId('folder-1') },
       },
       undefined,
     )
@@ -1432,9 +1436,9 @@ describe('useLiveWorkspaceRuntime', () => {
   })
 
   it('imports text files as notes through the live filesystem operation capability', async () => {
-    const createdNoteId = 'created-note' as Id<'sidebarItems'>
+    const createdNoteId = testResourceId('created-note')
     campaignMutationMocks.mutateAsync.mockResolvedValue({ status: 'accepted', seq: 1 })
-    liveSourceState.extraActiveItems = [createFolder({ id: 'folder-1' as Id<'sidebarItems'> })]
+    liveSourceState.extraActiveItems = [createFolder({ id: testResourceId('folder-1') })]
     const file = createImportFile(['hello'], 'notes.txt', { type: 'text/plain' })
     fileSystemItemMocks.executeCommand.mockImplementationOnce(
       (command: WizardEditorResourceCommand) => {
@@ -1450,7 +1454,7 @@ describe('useLiveWorkspaceRuntime', () => {
 
     const imported = await result.current.commands.operations.importFile({
       file,
-      parentId: 'folder-1' as Id<'sidebarItems'>,
+      parentId: testResourceId('folder-1'),
     })
 
     expect(fileSystemItemMocks.executeCommand).toHaveBeenCalledWith(
@@ -1458,7 +1462,7 @@ describe('useLiveWorkspaceRuntime', () => {
         type: 'create',
         itemType: 'note',
         name: 'notes.txt',
-        parentTarget: { kind: 'direct', parentId: 'folder-1' },
+        parentTarget: { kind: 'direct', parentId: testResourceId('folder-1') },
       },
       undefined,
     )
@@ -1537,7 +1541,7 @@ describe('useLiveWorkspaceRuntime', () => {
 
   it('does not navigate to catalog items outside the visible projection', async () => {
     const hiddenItem = createNote({
-      id: 'hidden-note' as Id<'sidebarItems'>,
+      id: testResourceId('hidden-note'),
       name: 'Hidden Note',
       slug: 'hidden-note',
     })
@@ -1558,8 +1562,8 @@ describe('useLiveWorkspaceRuntime', () => {
     renderLiveWorkspaceRuntime()
 
     const queryArgs = campaignQueryMock.mock.calls.map((call) => call[1])
-    expect(queryArgs).toContainEqual({ itemId: 'map-1' })
-    expect(queryArgs).not.toContainEqual({ noteId: 'map-1' })
+    expect(queryArgs).toContainEqual({ itemId: testResourceId('map-1') })
+    expect(queryArgs).not.toContainEqual({ noteId: testResourceId('map-1') })
   })
 
   it('keeps optimistic current item link ids out of live link queries', () => {
@@ -1574,13 +1578,13 @@ describe('useLiveWorkspaceRuntime', () => {
 
     expect(
       search.itemLinks.getItemLinks({
-        itemId: 'optimistic-create-1' as Id<'sidebarItems'>,
+        itemId: 'optimistic-create-1' as ResourceId,
         kind: 'backlinks',
       }),
     ).toEqual({ status: 'success', links: [] })
     expect(
       search.itemLinks.getItemLinks({
-        itemId: 'optimistic-create-1' as Id<'sidebarItems'>,
+        itemId: 'optimistic-create-1' as ResourceId,
         kind: 'outgoing',
       }),
     ).toEqual({ status: 'success', links: [] })
@@ -1632,8 +1636,9 @@ function createContentNote(
   name?: string,
   overrides: Partial<LiveRuntimeNoteItemWithContent> = {},
 ): LiveRuntimeNoteItemWithContent {
+  const resourceId = id.startsWith('optimistic-') ? (id as ResourceId) : testResourceId(id)
   return {
-    ...createNote({ id: id as Id<'sidebarItems'>, name }),
+    ...createNote({ id: resourceId, name }),
     ancestors: [],
     content: [],
     blockMeta: {},
@@ -1644,7 +1649,7 @@ function createContentNote(
 
 function createContentMap(id: string): WizardEditorItemWithContent {
   return {
-    ...createGameMap({ id: id as Id<'sidebarItems'> }),
+    ...createGameMap({ id: testResourceId(id) }),
     ancestors: [],
     imageUrl: null,
     layers: [],

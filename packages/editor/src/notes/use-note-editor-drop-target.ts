@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import { use, useEffect, useMemo } from 'react'
 import { NOTE_EDITOR_DROP_TYPE } from '../drag-drop/drop-target-data'
 import {
@@ -22,12 +23,12 @@ import type { SurfaceBatchDropCommand } from '../drag-drop/surface-planner'
 import type { DndValue } from '../drag-drop/context'
 import type { AnyItem } from '../workspace/items'
 import type { CustomBlockNoteEditor } from './editor-schema'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { EmbedTarget } from '../../../../shared/embeds/embedTargets'
 import type { EmbedTargetOperations } from '../embeds/target-operations'
 import { runWithPendingEmbedUpload } from '../embeds/pending-upload'
 
-const EMPTY_NOTE_ID = '' as SidebarItemId
+const EMPTY_NOTE_ID = '' as ResourceId
 const BLOCKED_NOTE_BODY_EXTERNAL_DROP_SELECTOR = '[data-blocknote-external-drop-blocked="true"]'
 
 type NoteDropEditor = CustomBlockNoteEditor & {
@@ -68,7 +69,7 @@ export function useNoteEditorDropTarget({
 }: {
   editor: CustomBlockNoteEditor
   enabled: boolean
-  sourceNoteId: SidebarItemId | null
+  sourceNoteId: ResourceId | null
   uploadFile?: EmbedTargetOperations['uploadFile']
 }) {
   const dndContext = use(DndProviderContext)

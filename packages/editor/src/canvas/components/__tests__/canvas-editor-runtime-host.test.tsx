@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { render, screen } from '@testing-library/react'
@@ -7,7 +8,7 @@ import {
   createTestNotePermissionContentSource,
 } from '../../../test/note-content-source-factory'
 import { CanvasEditorRuntimeHost } from '../canvas-editor-runtime-host'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { ReactNode } from 'react'
 
 const renderCanvasSurface = vi.hoisted(() => vi.fn())
@@ -35,7 +36,7 @@ describe('CanvasEditorRuntimeHost', () => {
 
     render(
       <CanvasEditorRuntimeHost
-        canvasId={'canvas-1' as SidebarItemId}
+        canvasId={'canvas-1' as ResourceId}
         canEdit={true}
         canvasCursor="pointer"
         isSidebarItemEmbedRichTextEditable={() => true}

@@ -1,3 +1,4 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { Id } from 'convex/_generated/dataModel'
 import { api } from 'convex/_generated/api'
@@ -15,7 +16,7 @@ describe('createLiveWorkspaceDownloadSource', () => {
     expect(dataSource.kind).toBe('remoteItems')
     if (dataSource.kind !== 'remoteItems') throw new Error('Expected remote item data source')
     await dataSource.loadItemsForDownload({
-      itemIds: ['note_1' as Id<'sidebarItems'>],
+      itemIds: ['note_1' as ResourceId],
     })
     await dataSource.loadRootItemsForDownload()
 
@@ -37,7 +38,7 @@ describe('createLiveWorkspaceDownloadSource', () => {
     )
 
     await dataSource.loadItemsForDownload({
-      itemIds: ['note_1' as Id<'sidebarItems'>],
+      itemIds: ['note_1' as ResourceId],
     })
     await expect(dataSource.loadRootItemsForDownload()).resolves.toEqual({
       status: 'unsupported',

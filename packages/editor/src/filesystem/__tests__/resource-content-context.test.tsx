@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { ResourceContentSource, ResourceContentState } from '../resource-content-source'
 import { ResourceContentSourceProvider, useResourceContentState } from '../resource-content-context'
 
@@ -64,7 +65,7 @@ function ContentStateProbe({
   onState,
 }: {
   fallbackLabel: string
-  itemId: SidebarItemId
+  itemId: ResourceId
   onState?: (state: ResourceContentState) => void
 }) {
   const state = useResourceContentState(itemId, fallbackLabel)
@@ -73,5 +74,5 @@ function ContentStateProbe({
 }
 
 function sidebarItemId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }

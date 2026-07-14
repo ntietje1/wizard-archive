@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type {
   CanvasViewportStore,
   PersistedCanvasViewport,
@@ -10,7 +10,7 @@ import type { NoteScrollStore } from '../notes/viewer/use-scroll-persistence'
 const DEFAULT_CANVAS_VIEWPORT = { x: 0, y: 0, zoom: 1 } satisfies PersistedCanvasViewport
 
 export function createMemoryCanvasViewportStore(
-  initialViewports: ReadonlyMap<SidebarItemId, PersistedCanvasViewport> = new Map(),
+  initialViewports: ReadonlyMap<ResourceId, PersistedCanvasViewport> = new Map(),
 ): CanvasViewportStore {
   const viewports = new Map(initialViewports)
 
@@ -23,7 +23,7 @@ export function createMemoryCanvasViewportStore(
 }
 
 export function createMemoryMapTransformStore(
-  initialTransforms: ReadonlyMap<SidebarItemId, MapTransformState> = new Map(),
+  initialTransforms: ReadonlyMap<ResourceId, MapTransformState> = new Map(),
 ): MapTransformStore {
   const transforms = new Map(initialTransforms)
 
@@ -36,7 +36,7 @@ export function createMemoryMapTransformStore(
 }
 
 export function createMemoryNoteScrollStore(
-  initialPositions: ReadonlyMap<SidebarItemId, number> = new Map(),
+  initialPositions: ReadonlyMap<ResourceId, number> = new Map(),
 ): NoteScrollStore {
   const positions = new Map(initialPositions)
 

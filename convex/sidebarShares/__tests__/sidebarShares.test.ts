@@ -8,14 +8,17 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import type { Id } from '../../_generated/dataModel'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  CampaignMemberId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 
 async function getShareInfo(
   dmAuth: ReturnType<typeof asDm>,
   campaignId: CampaignId,
-  sidebarItemId: Id<'sidebarItems'>,
+  sidebarItemId: ResourceId,
 ) {
   const [result] = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
     campaignId,
@@ -30,7 +33,7 @@ async function getShareInfo(
 async function shareWithPlayer(
   dmAuth: ReturnType<typeof asDm>,
   campaignId: CampaignId,
-  sidebarItemIds: Array<Id<'sidebarItems'>>,
+  sidebarItemIds: Array<ResourceId>,
   campaignMemberId: CampaignMemberId,
   permissionLevel: 'view' | 'edit' | 'full_access' | 'none' = 'view',
 ) {
@@ -111,8 +114,10 @@ describe('setResourcesMemberPermission', () => {
   it('logs permission history for each changed item in a batch', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'Note' })
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Note',
+    })
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Folder',
     })
 
@@ -128,13 +133,13 @@ describe('setResourcesMemberPermission', () => {
       const noteHistory = await dbCtx.db
         .query('editHistory')
         .withIndex('by_item_action', (q) =>
-          q.eq('itemId', noteId).eq('action', 'permission_changed'),
+          q.eq('itemId', noteRowId).eq('action', 'permission_changed'),
         )
         .collect()
       const folderHistory = await dbCtx.db
         .query('editHistory')
         .withIndex('by_item_action', (q) =>
-          q.eq('itemId', folderId).eq('action', 'permission_changed'),
+          q.eq('itemId', folderRowId).eq('action', 'permission_changed'),
         )
         .collect()
 
@@ -280,7 +285,7 @@ describe('clearResourcesMemberPermission', () => {
   it('clears legacy shares for inactive same-campaign players', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await shareWithPlayer(dmAuth, ctx.campaignDomainId, [noteId], ctx.player.memberDomainId)
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('campaignMembers', ctx.player.memberId, { status: 'Removed' })
@@ -298,7 +303,7 @@ describe('clearResourcesMemberPermission', () => {
         .withIndex('by_campaign_item_member', (q) =>
           q
             .eq('campaignId', ctx.campaignId)
-            .eq('sidebarItemId', noteId)
+            .eq('sidebarItemId', noteRowId)
             .eq('campaignMemberId', ctx.player.memberId),
         )
         .collect()
@@ -309,8 +314,10 @@ describe('clearResourcesMemberPermission', () => {
   it('logs permission history only for cleared existing shares', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'Note' })
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Note',
+    })
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Folder',
     })
 
@@ -325,13 +332,13 @@ describe('clearResourcesMemberPermission', () => {
       const noteHistory = await dbCtx.db
         .query('editHistory')
         .withIndex('by_item_action', (q) =>
-          q.eq('itemId', noteId).eq('action', 'permission_changed'),
+          q.eq('itemId', noteRowId).eq('action', 'permission_changed'),
         )
         .collect()
       const folderHistory = await dbCtx.db
         .query('editHistory')
         .withIndex('by_item_action', (q) =>
-          q.eq('itemId', folderId).eq('action', 'permission_changed'),
+          q.eq('itemId', folderRowId).eq('action', 'permission_changed'),
         )
         .collect()
 

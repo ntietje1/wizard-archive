@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { useEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
@@ -11,7 +12,7 @@ import type {
 import { EmbedAncestryProvider } from '../../context/render-ancestry'
 import { EmbedContent } from '../embed-content'
 import type { ResourceEmbedSurfaceRenderer } from '../embed-content'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { ComponentProps } from 'react'
 const sidebarItemPreviewSurface = vi.hoisted(() => vi.fn())
 
@@ -31,7 +32,7 @@ describe('EmbedContent', () => {
     render(
       <EmbedContent
         target={{ kind: 'empty' }}
-        sourceItemId={'note-a' as SidebarItemId}
+        sourceItemId={'note-a' as ResourceId}
         mode="editable"
         onUpload={vi.fn()}
         onLinkExternal={vi.fn()}
@@ -45,7 +46,7 @@ describe('EmbedContent', () => {
     render(
       <EmbedContent
         target={{ kind: 'empty' }}
-        sourceItemId={'note-a' as SidebarItemId}
+        sourceItemId={'note-a' as ResourceId}
         mode="editable"
         loadingLabel="Uploading portrait.png"
         onUpload={vi.fn()}
@@ -61,7 +62,7 @@ describe('EmbedContent', () => {
     render(
       <EmbedContent
         target={{ kind: 'empty' }}
-        sourceItemId={'note-a' as SidebarItemId}
+        sourceItemId={'note-a' as ResourceId}
         mode="readonly"
         onUpload={vi.fn()}
         onLinkExternal={vi.fn()}
@@ -92,10 +93,10 @@ describe('EmbedContent', () => {
 
   it('renders recursive state when the target is already in ancestry', () => {
     render(
-      <EmbedAncestryProvider itemId={'note-a' as SidebarItemId}>
+      <EmbedAncestryProvider itemId={'note-a' as ResourceId}>
         <EmbedContent
-          target={{ kind: 'resource', resourceId: 'note-a' as SidebarItemId }}
-          sourceItemId={'note-b' as SidebarItemId}
+          target={{ kind: 'resource', resourceId: 'note-a' as ResourceId }}
+          sourceItemId={'note-b' as ResourceId}
           mode="readonly"
         />
       </EmbedAncestryProvider>,
@@ -107,8 +108,8 @@ describe('EmbedContent', () => {
   it('does not allow a note to embed itself', () => {
     render(
       <EmbedContent
-        target={{ kind: 'resource', resourceId: 'note-a' as SidebarItemId }}
-        sourceItemId={'note-a' as SidebarItemId}
+        target={{ kind: 'resource', resourceId: 'note-a' as ResourceId }}
+        sourceItemId={'note-a' as ResourceId}
         mode="readonly"
       />,
     )
@@ -119,7 +120,7 @@ describe('EmbedContent', () => {
   it('renders missing content-provider wiring as unavailable infrastructure', () => {
     render(
       <EmbedContent
-        target={{ kind: 'resource', resourceId: 'note-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'note-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
       />,
@@ -144,7 +145,7 @@ describe('EmbedContent', () => {
 
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'folder-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'folder-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={readyContentState(item as AnyItemWithContent, [folderChild])}
@@ -181,7 +182,7 @@ describe('EmbedContent', () => {
     render(
       <ResourceContentSourceProvider source={source}>
         <EmbedContent
-          target={{ kind: 'resource', resourceId: 'folder-a' as SidebarItemId }}
+          target={{ kind: 'resource', resourceId: 'folder-a' as ResourceId }}
           sourceItemId={null}
           mode="readonly"
         />
@@ -204,7 +205,7 @@ describe('EmbedContent', () => {
 
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'folder-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'folder-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={readyContentState(item as AnyItemWithContent)}
@@ -224,7 +225,7 @@ describe('EmbedContent', () => {
   it('renders loading resource content embeds as stable loading placeholders', () => {
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'file-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'file-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={loadingContentState('Map PDF')}
@@ -241,7 +242,7 @@ describe('EmbedContent', () => {
   it('announces loading resource content embeds as status content', () => {
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'file-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'file-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={loadingContentState('Map PDF')}
@@ -254,7 +255,7 @@ describe('EmbedContent', () => {
   it('renders idle resource content embeds as stable loading placeholders', () => {
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'file-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'file-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={idleContentState('Map PDF')}
@@ -277,7 +278,7 @@ describe('EmbedContent', () => {
 
     const { rerender } = render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'canvas-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'canvas-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={readyContentState(item as AnyItemWithContent)}
@@ -286,7 +287,7 @@ describe('EmbedContent', () => {
 
     rerender(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'canvas-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'canvas-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={readyContentState(item as AnyItemWithContent)}
@@ -300,7 +301,7 @@ describe('EmbedContent', () => {
   it('renders trashed resource content embeds as unavailable instead of rich content', () => {
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'note-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'note-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={unavailableContentState('trashed', 'Trashed Note')}
@@ -314,7 +315,7 @@ describe('EmbedContent', () => {
   it('renders not-shared resource content embeds as unavailable permission content', () => {
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'note-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'note-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={unavailableContentState('not_shared', 'Private Note')}
@@ -338,7 +339,7 @@ describe('EmbedContent', () => {
 
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'file-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'file-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={readyContentState(item as AnyItemWithContent)}
@@ -359,7 +360,7 @@ describe('EmbedContent', () => {
 
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'folder-a' as SidebarItemId }}
+        target={{ kind: 'resource', resourceId: 'folder-a' as ResourceId }}
         sourceItemId={null}
         mode="readonly"
         resourceContentState={readyContentState(item as AnyItemWithContent)}
@@ -380,8 +381,8 @@ describe('EmbedContent', () => {
 
     render(
       <ResolvedEmbedContent
-        target={{ kind: 'resource', resourceId: 'note-b' as SidebarItemId }}
-        sourceItemId={'note-a' as SidebarItemId}
+        target={{ kind: 'resource', resourceId: 'note-b' as ResourceId }}
+        sourceItemId={'note-a' as ResourceId}
         mode="readonly"
         resourceContentState={readyContentState(item as AnyItemWithContent)}
       />,
@@ -395,7 +396,7 @@ describe('EmbedContent', () => {
 function RecursiveSameTargetSurface() {
   return (
     <EmbedContent
-      target={{ kind: 'resource', resourceId: 'folder-a' as SidebarItemId }}
+      target={{ kind: 'resource', resourceId: 'folder-a' as ResourceId }}
       sourceItemId={null}
       mode="readonly"
     />
@@ -405,8 +406,8 @@ function RecursiveSameTargetSurface() {
 function RecursiveSourceSurface() {
   return (
     <EmbedContent
-      target={{ kind: 'resource', resourceId: 'note-a' as SidebarItemId }}
-      sourceItemId={'note-b' as SidebarItemId}
+      target={{ kind: 'resource', resourceId: 'note-a' as ResourceId }}
+      sourceItemId={'note-b' as ResourceId}
       mode="readonly"
     />
   )

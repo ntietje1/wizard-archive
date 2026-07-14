@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type { MaybePromise } from '../../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { MapPinsCreateResult } from '../session-contract'
 import { reportMapActionError } from './map-action-errors'
 import { reportMapPinCreationResult } from './map-pin-creation-feedback'
@@ -7,7 +8,7 @@ import { buildMapPinPlacementInputs } from './map-pin-placement'
 import type { MapPinPlacementInput, PinPosition } from './map-pin-placement'
 
 type CreateMapPins = (input: {
-  mapId: SidebarItemId
+  mapId: ResourceId
   pins: Array<MapPinPlacementInput>
 }) => MaybePromise<MapPinsCreateResult>
 
@@ -20,8 +21,8 @@ export async function createMapPinsAtPosition({
 }: {
   createMapPins: CreateMapPins
   layerId?: string | null
-  itemIds: Array<SidebarItemId>
-  mapId: SidebarItemId
+  itemIds: Array<ResourceId>
+  mapId: ResourceId
   position: PinPosition
 }) {
   let result: MapPinsCreateResult

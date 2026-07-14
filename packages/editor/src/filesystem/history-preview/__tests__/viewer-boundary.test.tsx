@@ -1,7 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { HistoryPreviewViewer } from '../viewer'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
 const { historyDocumentPreviewMock } = vi.hoisted(() => ({
   historyDocumentPreviewMock: vi.fn(),
@@ -18,7 +18,7 @@ describe('HistoryPreviewViewer document boundary', () => {
   it('delegates ready snapshot rendering to the historical document preview surface', () => {
     const snapshot = {
       kind: 'note-yjs' as const,
-      noteId: 'note-1' as SidebarItemId,
+      noteId: 'note-1' as ResourceId,
       data: new ArrayBuffer(0),
     }
 

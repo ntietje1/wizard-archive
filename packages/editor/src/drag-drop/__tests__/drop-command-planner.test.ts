@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, expectTypeOf, it } from 'vite-plus/test'
 import '../drop-command'
 import type { DropPayload, PlannedDropCommand } from '../drop-command'
@@ -15,7 +16,6 @@ import {
   createFolder as createFolderFixture,
   createNote as createNoteFixture,
 } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
 const emptyExternalPayload: DropPayload = {
@@ -163,7 +163,7 @@ describe('resolveDropCommand', () => {
 
     const command = resolveDropCommand({
       payload: { kind: 'resources', items: [note] },
-      target: { type: CANVAS_DROP_ZONE_TYPE, canvasId: testId<'sidebarItems'>('canvas_1') },
+      target: { type: CANVAS_DROP_ZONE_TYPE, canvasId: testResourceId('canvas_1') },
       ctx: planningContext(),
     })
 
@@ -238,7 +238,7 @@ describe('resolveDropCommand', () => {
 
   it('plans external files on canvas as surface file imports', () => {
     const dropResult = testDropResult({ files: [{ name: 'token.png' }] })
-    const target = { type: CANVAS_DROP_ZONE_TYPE, canvasId: testId<'sidebarItems'>('canvas_1') }
+    const target = { type: CANVAS_DROP_ZONE_TYPE, canvasId: testResourceId('canvas_1') }
 
     expect(
       resolveDropCommand({
@@ -263,7 +263,7 @@ describe('resolveDropCommand', () => {
         payload: { kind: 'externalFiles', dropResult },
         target: {
           type: EMPTY_EMBED_DROP_TYPE,
-          sourceItemId: testId<'sidebarItems'>('canvas_1'),
+          sourceItemId: testResourceId('canvas_1'),
           embedBlockId: 'embed-block-1',
         },
         ctx: planningContext(),
@@ -275,7 +275,7 @@ describe('resolveDropCommand', () => {
     const dropResult = testDropResult({ files: [{ name: 'portrait.png' }] })
     const target = {
       type: NOTE_EDITOR_DROP_TYPE,
-      noteId: testId<'sidebarItems'>('note_1'),
+      noteId: testResourceId('note_1'),
     }
 
     expect(
@@ -301,7 +301,7 @@ describe('resolveDropCommand', () => {
         payload: { kind: 'externalFiles', dropResult },
         target: {
           type: NOTE_EDITOR_DROP_TYPE,
-          noteId: testId<'sidebarItems'>('note_1'),
+          noteId: testResourceId('note_1'),
         },
         ctx: planningContext(),
       }),
@@ -320,7 +320,7 @@ describe('resolveDropCommand', () => {
     expect(
       resolveDropCommand({
         payload: { kind: 'externalFiles', dropResult },
-        target: { type: CANVAS_DROP_ZONE_TYPE, canvasId: testId<'sidebarItems'>('canvas_1') },
+        target: { type: CANVAS_DROP_ZONE_TYPE, canvasId: testResourceId('canvas_1') },
         ctx: planningContext(),
       }),
     ).toMatchObject({
@@ -352,7 +352,7 @@ describe('resolveDropCommand', () => {
       url: 'https://example.com/file.pdf',
       name: 'file.pdf',
     }
-    const target = { type: CANVAS_DROP_ZONE_TYPE, canvasId: testId<'sidebarItems'>('canvas_1') }
+    const target = { type: CANVAS_DROP_ZONE_TYPE, canvasId: testResourceId('canvas_1') }
 
     expect(
       resolveDropCommand({
@@ -377,7 +377,7 @@ describe('resolveDropCommand', () => {
     }
     const target = {
       type: EMPTY_EMBED_DROP_TYPE,
-      sourceItemId: testId<'sidebarItems'>('canvas_1'),
+      sourceItemId: testResourceId('canvas_1'),
       embedBlockId: 'embed-block-1',
     }
 
@@ -404,7 +404,7 @@ describe('resolveDropCommand', () => {
     }
     const target = {
       type: NOTE_EDITOR_DROP_TYPE,
-      noteId: testId<'sidebarItems'>('note_1'),
+      noteId: testResourceId('note_1'),
     }
 
     expect(
@@ -443,7 +443,7 @@ describe('resolveDropCommand', () => {
     expect(
       resolveDropCommand({
         payload: { kind: 'rejectedExternalUrl', reason: 'missing_data' },
-        target: { type: NOTE_EDITOR_DROP_TYPE, noteId: testId<'sidebarItems'>('note_1') },
+        target: { type: NOTE_EDITOR_DROP_TYPE, noteId: testResourceId('note_1') },
         ctx: planningContext(),
       }),
     ).toEqual({ kind: 'blocked', reason: 'missing_data' })

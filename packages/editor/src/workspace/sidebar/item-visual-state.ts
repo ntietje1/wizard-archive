@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import type { AnyItem } from '../items'
 
 export interface SidebarItemVisualState {
@@ -18,9 +18,9 @@ export function getSidebarItemVisualState({
   cutItemIds,
 }: {
   item: AnyItem
-  selectedItemIds?: ReadonlyArray<SidebarItemId> | null
-  currentItemId?: SidebarItemId | null
-  cutItemIds?: ReadonlyArray<SidebarItemId> | null
+  selectedItemIds?: ReadonlyArray<ResourceId> | null
+  currentItemId?: ResourceId | null
+  cutItemIds?: ReadonlyArray<ResourceId> | null
 }): SidebarItemVisualState {
   const selectedIds = selectedItemIds ?? []
   const cutIds = cutItemIds ?? []

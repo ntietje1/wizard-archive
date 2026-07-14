@@ -14,7 +14,7 @@ describe('compact', () => {
 
   it('merges multiple updates into single snapshot', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const update = makeYjsUpdate()
 
     for (let i = 0; i < 5; i++) {
@@ -44,7 +44,7 @@ describe('compact', () => {
 
   it('preserves max seq value', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const update = makeYjsUpdate()
 
     for (let i = 0; i < 4; i++) {
@@ -74,7 +74,7 @@ describe('compact', () => {
 
   it('no-op when only one update exists', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const update = makeYjsUpdate()
 
     await t.run(async (dbCtx) => {
@@ -102,7 +102,7 @@ describe('compact', () => {
 
   it('resulting snapshot produces same YDoc state', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const originalDoc = new Y.Doc()
     const fragment = originalDoc.getXmlFragment('document')
@@ -167,7 +167,7 @@ describe('cleanupStaleAwareness', () => {
 
   it('removes entries older than AWARENESS_TTL_MS', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('yjsAwareness', {
@@ -193,7 +193,7 @@ describe('cleanupStaleAwareness', () => {
 
   it('preserves recent entries', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('yjsAwareness', {
@@ -219,7 +219,7 @@ describe('cleanupStaleAwareness', () => {
 
   it('handles mix of stale and fresh entries', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('yjsAwareness', {
@@ -265,7 +265,7 @@ describe('cleanupStaleAwareness', () => {
   it('deletes at most one fixed batch and schedules the remainder', async () => {
     vi.useFakeTimers()
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId: noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       for (let clientId = 0; clientId < 125; clientId += 1) {

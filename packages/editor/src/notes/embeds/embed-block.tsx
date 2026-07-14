@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { SideMenuExtension } from '@blocknote/core/extensions'
 import { useExtension } from '@blocknote/react'
 import { use, useEffect, useRef, useState } from 'react'
@@ -5,7 +6,7 @@ import { File as FileIcon, Link } from 'lucide-react'
 import type { EmbedTarget } from '../../../../../shared/embeds/embedTargets'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { AnyItemWithContent } from '../../workspace/items'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type {
   CSSProperties,
   DragEvent as ReactDragEvent,
@@ -75,7 +76,7 @@ type NoteEmbedBlockViewProps = {
     setTextCursorPosition?: (targetBlock: unknown, placement?: 'start' | 'end') => void
     updateBlock: (block: unknown, update: unknown) => void
   }
-  sourceNoteId: SidebarItemId | null
+  sourceNoteId: ResourceId | null
 }
 
 type ResolvedNoteEmbedBlockViewProps = NoteEmbedBlockViewProps & {
@@ -101,7 +102,7 @@ type NoteEmbedVisualSurfaceProps = {
   setTarget: (target: EmbedTarget) => void
   sidebarPreviewReady: boolean
   resolvedSidebarItemState: ResourceContentState | undefined
-  sourceNoteId: SidebarItemId | null
+  sourceNoteId: ResourceId | null
   target: EmbedTarget
 }
 
@@ -273,7 +274,7 @@ function ResolvedNoteEmbedVisualSurface({
   selection: ReturnType<typeof useNoteEmbedPointerSelection>
   sidebarPreviewReady: boolean
   resolvedSidebarItemState: ResourceContentState | undefined
-  sourceNoteId: SidebarItemId | null
+  sourceNoteId: ResourceId | null
   target: EmbedTarget
 }) {
   return (
@@ -709,9 +710,9 @@ function useNoteEmbedPointerSelection({
 
 function useSidebarPreviewReady(
   targetKind: EmbedTarget['kind'],
-  targetSidebarItemId: SidebarItemId | null,
+  targetSidebarItemId: ResourceId | null,
 ) {
-  const [readySidebarItemId, setReadySidebarItemId] = useState<SidebarItemId | null>(null)
+  const [readySidebarItemId, setReadySidebarItemId] = useState<ResourceId | null>(null)
 
   useEffect(() => {
     if (targetKind !== 'resource') return

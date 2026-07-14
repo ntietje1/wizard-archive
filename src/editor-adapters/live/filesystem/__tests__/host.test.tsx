@@ -14,7 +14,7 @@ import { useLiveFileSystemRuntime } from '../host'
 import type { LiveFileSystemReadModel } from '../read-model'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testOperationId } from '../../../../../shared/test/operation-id'
-import type { OperationId } from '@wizard-archive/editor/resources/domain-id'
+import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 let sidebarItems: Array<WizardEditorItem> = []
 let trashItems: Array<WizardEditorItem> = []
@@ -30,7 +30,7 @@ const toastSuccessMock = vi.hoisted(() => vi.fn())
 const toastInfoMock = vi.hoisted(() => vi.fn())
 const toastErrorMock = vi.hoisted(() => vi.fn())
 const currentResourceIdState = vi.hoisted(() => ({
-  value: null as Id<'sidebarItems'> | null,
+  value: null as ResourceId | null,
 }))
 const currentWorkspaceIdState = vi.hoisted(() => ({
   value: 'campaign_1' as Id<'campaigns'>,
@@ -174,7 +174,7 @@ vi.mock('sonner', () => ({
 
 function createReceipt(transactionId: OperationId = TRANSACTION_1): ResourceTransactionReceipt {
   const item = createNote({
-    id: 'item_1' as Id<'sidebarItems'>,
+    id: 'item_1' as ResourceId,
     name: 'Scene',
     slug: 'scene',
     status: TEST_RESOURCE_STATUS.active,
@@ -233,7 +233,7 @@ function createRenameReceipt({
   before?: string
   after?: string
 } = {}): ResourceTransactionReceipt {
-  const itemId = 'rename_item' as Id<'sidebarItems'>
+  const itemId = 'rename_item' as ResourceId
   const beforeName = testResourceTitle(before)
   const afterName = testResourceTitle(after)
   return {
@@ -309,12 +309,10 @@ function createUndoCopiedFolderReceipt({
     direction: 'undo',
     command: {
       type: 'copy',
-      itemIds: ['source_folder' as Id<'sidebarItems'>],
+      itemIds: ['source_folder' as ResourceId],
       targetParentId: null,
     },
-    events: [
-      { type: 'copied', itemId: folder.id, sourceItemId: 'source_folder' as Id<'sidebarItems'> },
-    ],
+    events: [{ type: 'copied', itemId: folder.id, sourceItemId: 'source_folder' as ResourceId }],
     patches: [
       {
         type: 'updateResource',
@@ -402,13 +400,7 @@ function FileSystemButtons() {
   )
 }
 
-function RenameButton({
-  itemId,
-  name = 'New Name',
-}: {
-  itemId: Id<'sidebarItems'>
-  name?: string
-}) {
+function RenameButton({ itemId, name = 'New Name' }: { itemId: ResourceId; name?: string }) {
   const filesystem = useTestFileSystemHost()
   return (
     <button
@@ -439,7 +431,7 @@ function EmptyTrashButton() {
   )
 }
 
-function ToggleBookmarksButton({ itemIds }: { itemIds: Array<Id<'sidebarItems'>> }) {
+function ToggleBookmarksButton({ itemIds }: { itemIds: Array<ResourceId> }) {
   const filesystem = useTestFileSystemHost()
   return (
     <button type="button" onClick={() => void filesystem.toggleBookmarks(itemIds)}>
@@ -452,8 +444,8 @@ function ClipboardButtons({
   itemId,
   targetParentId = null,
 }: {
-  itemId: Id<'sidebarItems'>
-  targetParentId?: Id<'sidebarItems'> | null
+  itemId: ResourceId
+  targetParentId?: ResourceId | null
 }) {
   const clipboard = useTestFileSystemClipboard()
   return (
@@ -643,7 +635,7 @@ describe('useLiveFileSystemRuntime', () => {
   })
 
   it('keeps undo state stable while pending and applies the server receipt when it resolves', async () => {
-    const item = createNote({ id: 'rename_item' as Id<'sidebarItems'>, name: 'Old Name' })
+    const item = createNote({ id: 'rename_item' as ResourceId, name: 'Old Name' })
     sidebarItems = [item]
     let resolveUndo: (receipt: ResourceTransactionReceipt) => void = () => {}
     executeMutateAsync.mockResolvedValueOnce(createRenameReceipt())
@@ -683,7 +675,7 @@ describe('useLiveFileSystemRuntime', () => {
   })
 
   it('leaves visible state unchanged when undo fails and preserves the undo stack', async () => {
-    const item = createNote({ id: 'rename_item' as Id<'sidebarItems'>, name: 'Old Name' })
+    const item = createNote({ id: 'rename_item' as ResourceId, name: 'Old Name' })
     sidebarItems = [item]
     executeMutateAsync.mockResolvedValueOnce(createRenameReceipt())
     undoMutateAsync
@@ -714,7 +706,7 @@ describe('useLiveFileSystemRuntime', () => {
 
   it('clears the editor when undo hides the currently viewed created item', async () => {
     const item = createNote({
-      id: 'item_1' as Id<'sidebarItems'>,
+      id: 'item_1' as ResourceId,
       name: 'Scene',
       slug: 'scene',
       status: TEST_RESOURCE_STATUS.active,
@@ -739,13 +731,13 @@ describe('useLiveFileSystemRuntime', () => {
 
   it('clears editor state when undo hides a copied folder tree', async () => {
     const folder = createFolder({
-      id: 'copied_folder' as Id<'sidebarItems'>,
+      id: 'copied_folder' as ResourceId,
       name: 'Copied Folder',
       slug: 'copied-folder',
       status: TEST_RESOURCE_STATUS.active,
     })
     const child = createNote({
-      id: 'copied_child' as Id<'sidebarItems'>,
+      id: 'copied_child' as ResourceId,
       name: 'Copied Child',
       slug: 'copied-child',
       parentId: folder.id,
@@ -772,7 +764,7 @@ describe('useLiveFileSystemRuntime', () => {
   })
 
   it('keeps redo state stable while pending and applies the server receipt when it resolves', async () => {
-    const item = createNote({ id: 'rename_item' as Id<'sidebarItems'>, name: 'Old Name' })
+    const item = createNote({ id: 'rename_item' as ResourceId, name: 'Old Name' })
     sidebarItems = [item]
     executeMutateAsync.mockResolvedValueOnce(createRenameReceipt())
     undoMutateAsync.mockResolvedValueOnce(
@@ -809,7 +801,7 @@ describe('useLiveFileSystemRuntime', () => {
   })
 
   it('leaves visible state unchanged when redo fails and preserves the redo stack', async () => {
-    const item = createNote({ id: 'rename_item' as Id<'sidebarItems'>, name: 'Old Name' })
+    const item = createNote({ id: 'rename_item' as ResourceId, name: 'Old Name' })
     sidebarItems = [item]
     executeMutateAsync.mockResolvedValueOnce(createRenameReceipt())
     undoMutateAsync.mockResolvedValueOnce(
@@ -842,7 +834,7 @@ describe('useLiveFileSystemRuntime', () => {
   })
 
   it('keeps additional undo and redo calls gated while a transaction is pending', async () => {
-    const item = createNote({ id: 'rename_item' as Id<'sidebarItems'>, name: 'Old Name' })
+    const item = createNote({ id: 'rename_item' as ResourceId, name: 'Old Name' })
     sidebarItems = [item]
     executeMutateAsync.mockResolvedValueOnce(createRenameReceipt())
     undoMutateAsync.mockReturnValueOnce(new Promise<ResourceTransactionReceipt>(() => {}))
@@ -918,7 +910,7 @@ describe('useLiveFileSystemRuntime', () => {
   })
 
   it('runs redo through the latest transaction after undo', async () => {
-    const staleItem = createNote({ id: 'stale_item' as Id<'sidebarItems'>, name: 'Stale' })
+    const staleItem = createNote({ id: 'stale_item' as ResourceId, name: 'Stale' })
     sidebarItems = [staleItem]
     executeMutateAsync.mockResolvedValueOnce(createReceipt())
     undoMutateAsync.mockResolvedValueOnce({ ...createReceipt(), direction: 'undo' })
@@ -945,16 +937,16 @@ describe('useLiveFileSystemRuntime', () => {
 
   it('moves a cut item into a duplicate-title destination without prompting', async () => {
     const source = createNote({
-      id: 'cut_source' as Id<'sidebarItems'>,
+      id: 'cut_source' as ResourceId,
       name: 'Shared Name',
       parentId: null,
     })
     const target = createFolder({
-      id: 'target_folder' as Id<'sidebarItems'>,
+      id: 'target_folder' as ResourceId,
       name: 'Target Folder',
     })
     const conflictingChild = createNote({
-      id: 'existing_child' as Id<'sidebarItems'>,
+      id: 'existing_child' as ResourceId,
       name: 'Shared Name',
       parentId: target.id,
     })
@@ -982,20 +974,20 @@ describe('useLiveFileSystemRuntime', () => {
 
   it('runs a duplicate-title drop directly', async () => {
     const sourceParent = createFolder({
-      id: 'source_parent' as Id<'sidebarItems'>,
+      id: 'source_parent' as ResourceId,
       name: 'Source Folder',
     })
     const target = createFolder({
-      id: 'target_folder' as Id<'sidebarItems'>,
+      id: 'target_folder' as ResourceId,
       name: 'Target Folder',
     })
     const source = createNote({
-      id: 'drop_source' as Id<'sidebarItems'>,
+      id: 'drop_source' as ResourceId,
       name: 'Shared Name',
       parentId: sourceParent.id,
     })
     const conflictingChild = createNote({
-      id: 'drop_existing_child' as Id<'sidebarItems'>,
+      id: 'drop_existing_child' as ResourceId,
       name: 'Shared Name',
       parentId: target.id,
     })
@@ -1020,7 +1012,7 @@ describe('useLiveFileSystemRuntime', () => {
 
   it('clears editor state from delete receipt snapshots', async () => {
     const item = createNote({
-      id: 'trash_item' as Id<'sidebarItems'>,
+      id: 'trash_item' as ResourceId,
       name: 'Trash Item',
       slug: 'trash-item',
       status: TEST_RESOURCE_STATUS.trashed,
@@ -1061,8 +1053,8 @@ describe('useLiveFileSystemRuntime', () => {
   })
 
   it('routes bookmark toggles through the filesystem command executor', async () => {
-    const first = createNote({ id: 'bookmark_1' as Id<'sidebarItems'>, name: 'First' })
-    const second = createNote({ id: 'bookmark_2' as Id<'sidebarItems'>, name: 'Second' })
+    const first = createNote({ id: 'bookmark_1' as ResourceId, name: 'First' })
+    const second = createNote({ id: 'bookmark_2' as ResourceId, name: 'Second' })
     sidebarItems = [first, second]
     render(
       <TestLiveFileSystemHost>

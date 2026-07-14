@@ -1,5 +1,6 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useEffect, useRef } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { BlockSearchResult } from '../../../../shared/search/types'
 import type { ItemSearchInput, ItemSearchResult, ItemSearchState } from '../search/model'
 import type { AnyItem } from '../workspace/items'
@@ -20,11 +21,11 @@ export interface ItemLink {
   id: string
   query: string
   displayName: string | null
-  item: { id: SidebarItemId; name: string } | null
+  item: { id: ResourceId; name: string } | null
 }
 
 interface ItemLinksInput {
-  itemId: SidebarItemId
+  itemId: ResourceId
   kind: ItemLinksKind
 }
 

@@ -1,9 +1,9 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import { FileDialog } from '../dialog'
 import type { FileUploadControl } from '@wizard-archive/ui/file-upload/control'
@@ -28,7 +28,7 @@ vi.mock('../../../filesystem/use-name-validation', () => ({
 describe('FileDialog', () => {
   it('keeps an in-progress edit draft when mutable file metadata refreshes', () => {
     const first = createFile({
-      id: testId('file_1'),
+      id: testResourceId('file_1'),
       name: 'Original handout',
       assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
@@ -65,7 +65,7 @@ function createFileFormSource(): FileFormSource {
   return {
     createItem: vi.fn(() => ({
       status: 'completed' as const,
-      id: testId<'sidebarItems'>('created_file'),
+      id: testResourceId('created_file'),
       slug: assertResourceItemSlug('created-file'),
     })),
     openItem: vi.fn(),

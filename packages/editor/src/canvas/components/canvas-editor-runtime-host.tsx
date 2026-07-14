@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { Profiler } from 'react'
 import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime'
 import { CanvasEngineProvider } from '../react/canvas-engine-context'
@@ -8,7 +9,7 @@ import {
 } from '../runtime/performance/canvas-performance-metrics'
 import { CanvasEditorSurface } from './canvas-editor-surface'
 import type { useCanvasEditorRuntimeCore } from '../runtime/use-canvas-editor-runtime-core'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { ComponentType, ReactNode } from 'react'
 import type { CanvasCollaborationProvider } from '../session-contract'
 import type { CanvasNoteContentSources } from '../note-content-sources'
@@ -41,9 +42,9 @@ export function CanvasEditorRuntimeHost({
 }: {
   canEdit: boolean
   canvasCursor: string
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   dropOverlay?: ReactNode
-  isSidebarItemEmbedRichTextEditable: (itemId: SidebarItemId) => boolean
+  isSidebarItemEmbedRichTextEditable: (itemId: ResourceId) => boolean
   NodeContentComponent: ComponentType<{ nodeId: string }>
   provider?: CanvasCollaborationProvider | null
   runtime: CanvasEditorRuntimeHostRuntime

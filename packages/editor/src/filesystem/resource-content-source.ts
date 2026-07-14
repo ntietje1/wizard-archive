@@ -1,5 +1,5 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
-import type { CampaignMemberId } from '../resources/domain-id'
+import type { ResourceId, CampaignMemberId } from '../resources/domain-id'
+
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { ResourceAvailabilityState } from './domain/availability-state'
@@ -77,12 +77,12 @@ export type ResourceContentSource =
   | { status: 'unsupported'; reason: 'not_available' | 'not_implemented' }
   | {
       status: 'available'
-      ensureContentState: (itemId: SidebarItemId | null | undefined) => void
+      ensureContentState: (itemId: ResourceId | null | undefined) => void
       getContentState: (
-        itemId: SidebarItemId | null | undefined,
+        itemId: ResourceId | null | undefined,
         fallbackLabel?: string,
       ) => ResourceContentState
-      resolveItem: (itemId: SidebarItemId) => AnyItem | null
+      resolveItem: (itemId: ResourceId) => AnyItem | null
     }
 
 type ContentStateInput = {
@@ -91,13 +91,13 @@ type ContentStateInput = {
   fallbackLabel: string
   isLoading: boolean
   item: AnyItemWithContent | null | undefined
-  itemId: SidebarItemId | null | undefined
+  itemId: ResourceId | null | undefined
 }
 
 type ResourceContentCatalog = {
-  getKnownItemById: (itemId: SidebarItemId) => AnyItem | null
-  getVisibleItemById: (itemId: SidebarItemId) => AnyItem | null
-  queryVisibleItems: (input?: { parentId?: SidebarItemId | null }) => ReadonlyArray<AnyItem>
+  getKnownItemById: (itemId: ResourceId) => AnyItem | null
+  getVisibleItemById: (itemId: ResourceId) => AnyItem | null
+  queryVisibleItems: (input?: { parentId?: ResourceId | null }) => ReadonlyArray<AnyItem>
 }
 
 type ResourceContentProjection = {
@@ -109,9 +109,9 @@ type ResourceContentProjection = {
 type CatalogResourceContentSourceInput = {
   catalog: ResourceContentCatalog
   current: CurrentItemState
-  ensureContentState: (itemId: SidebarItemId | null | undefined) => void
+  ensureContentState: (itemId: ResourceId | null | undefined) => void
   getContentState: (
-    itemId: SidebarItemId | null | undefined,
+    itemId: ResourceId | null | undefined,
     fallbackLabel?: string,
   ) => ResourceContentState
   contentProjection?: ResourceContentProjection
@@ -126,7 +126,7 @@ type StaticCatalogResourceContentSourceInput = {
 type HydratedCatalogResourceContentSourceInput<SourceId extends string> = {
   catalog: ResourceContentCatalog
   current: CurrentItemState
-  loadItemContent: (itemId: SidebarItemId) => Promise<AnyItemWithContent | null>
+  loadItemContent: (itemId: ResourceId) => Promise<AnyItemWithContent | null>
   contentProjection?: ResourceContentProjection
   sourceId: SourceId | null | undefined
 }
@@ -255,7 +255,7 @@ export function useHydratedCatalogFileSystemResourceContentSource<SourceId exten
   contentProjection,
   sourceId,
 }: HydratedCatalogResourceContentSourceInput<SourceId>): ResourceContentSource {
-  const hydration = useResourceHydrationCache<SourceId, SidebarItemId, AnyItemWithContent | null>({
+  const hydration = useResourceHydrationCache<SourceId, ResourceId, AnyItemWithContent | null>({
     load: loadItemContent,
   })
 
@@ -292,10 +292,10 @@ function createCatalogResourceContentState({
   current: CurrentItemState
   fallbackLabel: string | undefined
   getContentState: (
-    itemId: SidebarItemId | null | undefined,
+    itemId: ResourceId | null | undefined,
     fallbackLabel?: string,
   ) => ResourceContentState
-  itemId: SidebarItemId | null | undefined
+  itemId: ResourceId | null | undefined
   contentProjection: ResourceContentProjection | undefined
 }): ResourceContentState {
   const label = getContentStateLabel({ catalog, fallbackLabel, itemId })
@@ -326,7 +326,7 @@ function createStaticCatalogResourceContentState({
 }: {
   catalog: ResourceContentCatalog
   fallbackLabel: string | undefined
-  itemId: SidebarItemId | null | undefined
+  itemId: ResourceId | null | undefined
 }): ResourceContentState {
   const item = itemId ? catalog.getVisibleItemById(itemId) : null
   return createResourceContentState({
@@ -345,9 +345,9 @@ function createHydratedResourceContentState<SourceId extends string>({
   sourceId,
 }: {
   catalog: ResourceContentCatalog
-  entry: ResourceHydrationEntry<SourceId, SidebarItemId, AnyItemWithContent | null> | undefined
+  entry: ResourceHydrationEntry<SourceId, ResourceId, AnyItemWithContent | null> | undefined
   fallbackLabel: string | undefined
-  itemId: SidebarItemId | null | undefined
+  itemId: ResourceId | null | undefined
   sourceId: SourceId | null | undefined
 }) {
   const label = getContentStateLabel({ catalog, fallbackLabel, itemId })
@@ -422,7 +422,7 @@ function getCatalogUnavailableContentState({
   label,
 }: {
   catalog: ResourceContentCatalog
-  itemId: SidebarItemId | null | undefined
+  itemId: ResourceId | null | undefined
   label: string
 }): ResourceContentState | null {
   if (!itemId) return null
@@ -483,7 +483,7 @@ function getContentStateLabel({
 }: {
   catalog: ResourceContentCatalog
   fallbackLabel: string | undefined
-  itemId: SidebarItemId | null | undefined
+  itemId: ResourceId | null | undefined
 }) {
   if (!itemId) return fallbackLabel ?? 'Page'
   return catalog.getVisibleItemById(itemId)?.name ?? fallbackLabel ?? 'Page'

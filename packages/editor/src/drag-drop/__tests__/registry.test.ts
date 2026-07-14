@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
@@ -36,7 +37,6 @@ import {
   getDropTargetKey,
   resolveDropTarget,
 } from '../drop-target-data'
-import { testId } from '../../test/id'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
 
@@ -127,18 +127,18 @@ function emptyEditorTarget(): EmptyEditorDropZoneData {
 }
 
 function emptyEmbedTarget(
-  sourceItemId = testId<'sidebarItems'>('note_99'),
+  sourceItemId = testResourceId('note_99'),
   embedBlockId = 'embed-block-99',
 ): EmptyEmbedDropZoneData {
   return { type: EMPTY_EMBED_DROP_TYPE, sourceItemId, embedBlockId }
 }
 
-function noteEditorTarget(noteId = testId<'sidebarItems'>('note_99')): NoteEditorDropZoneData {
+function noteEditorTarget(noteId = testResourceId('note_99')): NoteEditorDropZoneData {
   return { type: NOTE_EDITOR_DROP_TYPE, noteId }
 }
 
 function mapTarget(
-  mapId = testId<'sidebarItems'>('map_99'),
+  mapId = testResourceId('map_99'),
   overrides?: Partial<MapDropZoneData>,
 ): MapDropZoneData {
   return {
@@ -150,7 +150,7 @@ function mapTarget(
   }
 }
 
-function canvasTarget(canvasId = testId<'sidebarItems'>('canvas_99')): CanvasDropZoneData {
+function canvasTarget(canvasId = testResourceId('canvas_99')): CanvasDropZoneData {
   return { type: CANVAS_DROP_ZONE_TYPE, canvasId }
 }
 
@@ -330,7 +330,7 @@ describe('resolveDropOutcome', () => {
 
   describe('root zone', () => {
     it('allows moving nested item to root', () => {
-      const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+      const note = createNote({ parentId: testResourceId('folder_1') })
       const result = resolveDropOutcome(note, rootTarget(), createCtx())
 
       expect(result).toMatchObject({ type: 'operation', action: 'move' })
@@ -384,7 +384,7 @@ describe('resolveDropOutcome', () => {
 
     it('returns null when item is already in target folder', () => {
       const target = folderTarget()
-      const note = createNote({ parentId: testId<'sidebarItems'>(target.id) })
+      const note = createNote({ parentId: target.id })
       const result = resolveDropOutcome(note, target, createCtx())
 
       expect(result).toBeNull()
@@ -413,7 +413,7 @@ describe('resolveDropOutcome', () => {
     it('does not reject circular for non-folder items', () => {
       const note = createNote()
       const target = folderTarget({
-        ancestorIds: [testId<'sidebarItems'>(note.id)],
+        ancestorIds: [testResourceId(note.id)],
       })
       const result = resolveDropOutcome(note, target, createCtx())
 
@@ -469,7 +469,7 @@ describe('resolveDropOutcome', () => {
 
     it('rejects pinning an already-pinned item', () => {
       const note = createNote()
-      const target = mapTarget(testId<'sidebarItems'>('map_99'), {
+      const target = mapTarget(testResourceId('map_99'), {
         pinnedItemIds: [note.id],
       })
       const result = resolveDropOutcome(note, target, createCtx())
@@ -528,7 +528,7 @@ describe('resolveDropOutcome', () => {
 
     it('rejects embedding a canvas into itself', () => {
       const canvas = createNote()
-      const target = canvasTarget(testId<'sidebarItems'>(canvas.id))
+      const target = canvasTarget(canvas.id)
       const result = resolveDropOutcome(canvas, target, createCtx())
 
       expect(result).toEqual({ type: 'rejection', reason: 'self_embed' })
@@ -611,7 +611,7 @@ describe('global filesystem drop planning', () => {
   it('returns movable items while ignoring selected items already in the target folder', () => {
     const target = folderTarget()
     const alreadyInside = createNote({ parentId: target.id })
-    const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
+    const outside = createNote({ parentId: testResourceId('folder_other') })
     const result = resolveTestGlobalDropCommand([alreadyInside, outside], target, createCtx())
 
     expect(result).toMatchObject({
@@ -653,7 +653,7 @@ describe('resolveTestDropCommand', () => {
   it('returns one batch move command while ignoring selected items already in the target folder', () => {
     const target = folderTarget()
     const alreadyInside = createNote({ parentId: target.id })
-    const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
+    const outside = createNote({ parentId: testResourceId('folder_other') })
 
     expect(resolveTestDropCommand([alreadyInside, outside], target, createCtx())).toMatchObject({
       status: 'ready',
@@ -785,7 +785,7 @@ describe('resolveTestDropCommand', () => {
   })
 
   it('returns one batch embed command for canvas drops', () => {
-    const canvas = createGameMap({ id: testId<'sidebarItems'>('canvas_1') })
+    const canvas = createGameMap({ id: testResourceId('canvas_1') })
     const first = createNote()
     const second = createNote()
     const target = canvasTarget(canvas.id)
@@ -837,7 +837,7 @@ describe('resolveTestDropCommand', () => {
   })
 
   it('returns a copy command for ctrl-dragging active items to root', () => {
-    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+    const note = createNote({ parentId: testResourceId('folder_1') })
 
     expect(
       resolveTestGlobalDropCommand([note], rootTarget(), createCtx(), { copy: true }),
@@ -850,7 +850,7 @@ describe('resolveTestDropCommand', () => {
   })
 
   it('blocks ctrl-drag copy to root for non-DM users', () => {
-    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+    const note = createNote({ parentId: testResourceId('folder_1') })
 
     expect(
       resolveTestGlobalDropCommand([note], rootTarget(), createCtx({ canCreateRootItems: false }), {
@@ -1000,8 +1000,9 @@ describe('getDropTargetKey for resolved targets', () => {
   })
 
   it('returns source-and-block-scoped highlight id for empty embed', () => {
-    expect(getDropTargetKey(emptyEmbedTarget(testId<'sidebarItems'>('note_7'), 'block_7'))).toBe(
-      'empty-embed:note_7:block_7',
+    const noteId = testResourceId('note_7')
+    expect(getDropTargetKey(emptyEmbedTarget(noteId, 'block_7'))).toBe(
+      `empty-embed:${noteId}:block_7`,
     )
   })
 
@@ -1010,13 +1011,13 @@ describe('getDropTargetKey for resolved targets', () => {
   })
 
   it('returns canvas:id for canvas zone', () => {
-    expect(getDropTargetKey(canvasTarget(testId<'sidebarItems'>('canvas_7')))).toBe(
-      'canvas:canvas_7',
-    )
+    const canvasId = testResourceId('canvas_7')
+    expect(getDropTargetKey(canvasTarget(canvasId))).toBe(`canvas:${canvasId}`)
   })
 
   it('returns map:id for map zone', () => {
-    expect(getDropTargetKey(mapTarget(testId<'sidebarItems'>('map_7')))).toBe('map:map_7')
+    const mapId = testResourceId('map_7')
+    expect(getDropTargetKey(mapTarget(mapId))).toBe(`map:${mapId}`)
   })
 
   it('returns a namespaced sidebar item id for folder target', () => {
@@ -1135,7 +1136,7 @@ describe('batch commands', () => {
   })
 
   it('root move operation returns a batch move command with null parentId', () => {
-    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+    const note = createNote({ parentId: testResourceId('folder_1') })
     const ctx = createCtx()
     const result = resolveTestDropCommand([note], rootTarget(), ctx)
 

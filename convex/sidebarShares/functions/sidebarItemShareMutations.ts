@@ -50,22 +50,22 @@ async function getTargetMemberName(
 async function getShareTargetItem(
   ctx: CampaignMutationCtx,
   sidebarItemId: Id<'sidebarItems'>,
-): Promise<AnyResource> {
+): Promise<{ item: AnyResource; itemId: Id<'sidebarItems'> }> {
   const rawItem = await getSidebarItem(ctx, sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-  return item
+  return { item, itemId: sidebarItemId }
 }
 
 async function getExistingMemberShare(
   ctx: CampaignMutationCtx,
   {
-    item,
+    itemId,
     campaignMemberId,
   }: {
-    item: AnyResource
+    itemId: Id<'sidebarItems'>
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<ExistingShare> {
@@ -74,7 +74,7 @@ async function getExistingMemberShare(
     .withIndex('by_campaign_item_member', (q) =>
       q
         .eq('campaignId', ctx.campaign._id)
-        .eq('sidebarItemId', item.id)
+        .eq('sidebarItemId', itemId)
         .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
@@ -84,18 +84,20 @@ async function logPermissionChange(
   ctx: CampaignMutationCtx,
   {
     item,
+    itemId,
     memberName,
     level,
     previousLevel,
   }: {
     item: AnyResource
+    itemId: Id<'sidebarItems'>
     memberName: string | null
     level: PermissionLevel | null
     previousLevel: PermissionLevel | null
   },
 ) {
   await logEditHistory(ctx, {
-    itemId: item.id,
+    itemId,
     itemType: item.type,
     action: EDIT_HISTORY_ACTION.permission_changed,
     metadata: {
@@ -119,45 +121,51 @@ export async function setResourcesMemberPermission(
   },
 ): Promise<void> {
   assertShareBatchSize(sidebarItemIds)
-  const memberName = await getTargetMemberName(ctx, campaignMemberId, 'accepted_player')
   const currentSessionId = ctx.campaign.currentSessionId
-  const currentSession = currentSessionId ? await ctx.db.get('sessions', currentSessionId) : null
-  for (const sidebarItemId of sidebarItemIds) {
-    const item = await getShareTargetItem(ctx, sidebarItemId)
-    const existingShare = await getExistingMemberShare(ctx, { item, campaignMemberId })
-    const previousLevel = existingShare?.permissionLevel ?? null
+  const [memberName, currentSession] = await Promise.all([
+    getTargetMemberName(ctx, campaignMemberId, 'accepted_player'),
+    currentSessionId ? ctx.db.get('sessions', currentSessionId) : null,
+  ])
+  await Promise.all(
+    [...new Set(sidebarItemIds)].map(async (sidebarItemId) => {
+      const { item, itemId } = await getShareTargetItem(ctx, sidebarItemId)
+      const existingShare = await getExistingMemberShare(ctx, { itemId, campaignMemberId })
+      const previousLevel = existingShare?.permissionLevel ?? null
 
-    if (existingShare) {
-      if (existingShare.permissionLevel !== permissionLevel) {
-        await ctx.db.patch('sidebarItemShares', existingShare._id, {
-          permissionLevel,
-        })
-        await logPermissionChange(ctx, {
-          item,
-          memberName,
-          level: permissionLevel,
-          previousLevel,
-        })
+      if (existingShare) {
+        if (existingShare.permissionLevel !== permissionLevel) {
+          await ctx.db.patch('sidebarItemShares', existingShare._id, {
+            permissionLevel,
+          })
+          await logPermissionChange(ctx, {
+            item,
+            itemId,
+            memberName,
+            level: permissionLevel,
+            previousLevel,
+          })
+        }
+        return
       }
-      continue
-    }
 
-    await ctx.db.insert('sidebarItemShares', {
-      resourceShareUuid: generateDomainId(DOMAIN_ID_KIND.resourceShare),
-      campaignId: ctx.campaign._id,
-      sidebarItemId: item.id,
-      sidebarItemType: item.type,
-      campaignMemberId,
-      sessionId: currentSession?._id ?? null,
-      permissionLevel,
-    })
-    await logPermissionChange(ctx, {
-      item,
-      memberName,
-      level: permissionLevel,
-      previousLevel: null,
-    })
-  }
+      await ctx.db.insert('sidebarItemShares', {
+        resourceShareUuid: generateDomainId(DOMAIN_ID_KIND.resourceShare),
+        campaignId: ctx.campaign._id,
+        sidebarItemId: itemId,
+        sidebarItemType: item.type,
+        campaignMemberId,
+        sessionId: currentSession?._id ?? null,
+        permissionLevel,
+      })
+      await logPermissionChange(ctx, {
+        item,
+        itemId,
+        memberName,
+        level: permissionLevel,
+        previousLevel: null,
+      })
+    }),
+  )
 }
 
 export async function clearResourcesMemberPermission(
@@ -173,16 +181,19 @@ export async function clearResourcesMemberPermission(
   assertShareBatchSize(sidebarItemIds)
   const memberName = await getTargetMemberName(ctx, campaignMemberId, 'existing_member')
 
-  for (const sidebarItemId of sidebarItemIds) {
-    const item = await getShareTargetItem(ctx, sidebarItemId)
-    const share = await getExistingMemberShare(ctx, { item, campaignMemberId })
-    if (!share) continue
-    await ctx.db.delete('sidebarItemShares', share._id)
-    await logPermissionChange(ctx, {
-      item,
-      memberName,
-      level: null,
-      previousLevel: share.permissionLevel,
-    })
-  }
+  await Promise.all(
+    [...new Set(sidebarItemIds)].map(async (sidebarItemId) => {
+      const { item, itemId } = await getShareTargetItem(ctx, sidebarItemId)
+      const share = await getExistingMemberShare(ctx, { itemId, campaignMemberId })
+      if (!share) return
+      await ctx.db.delete('sidebarItemShares', share._id)
+      await logPermissionChange(ctx, {
+        item,
+        itemId,
+        memberName,
+        level: null,
+        previousLevel: share.permissionLevel,
+      })
+    }),
+  )
 }

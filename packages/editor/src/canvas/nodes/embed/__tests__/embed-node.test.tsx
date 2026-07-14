@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../../shared/test/resource-id'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import type { ReactNode } from 'react'
@@ -15,7 +16,6 @@ import {
   DOCUMENT_EMBED_ASPECT_RATIO_WIDTH,
 } from '../../../../embeds/utils/document-layout'
 import type { EmbedMediaLayout } from '../../../../embeds/utils/media'
-import { testId } from '../../../../test/id'
 import type { ResourcePreviewSurface } from '../../../../previews/resource-preview-surface'
 import type {
   ResourceContentSource,
@@ -789,7 +789,7 @@ describe('EmbedNode', () => {
   })
 
   it('renders the recursive unavailable state for canvas self-embeds', () => {
-    canvasRuntimeState.canvasId = testId<'sidebarItems'>('canvas-1')
+    canvasRuntimeState.canvasId = testResourceId('canvas-1')
 
     renderEmbedNode('node-1', 'canvas-1')
 
@@ -884,7 +884,7 @@ function createEmbedNodeProps(
   return {
     id: testCanvasNodeId(id),
     data: {
-      target: { kind: 'resource', resourceId: testId<'sidebarItems'>(sidebarItemId) },
+      target: { kind: 'resource', resourceId: testResourceId(sidebarItemId) },
       ...data,
     },
     dragging: false,

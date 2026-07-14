@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import type { ResourcePatch } from '../patch-contract'
 
 type FileSystemLifecycleWorkspaceId = string
@@ -7,20 +7,20 @@ export type FileSystemLifecycleIntent =
   | {
       type: 'openFolder'
       workspaceId: FileSystemLifecycleWorkspaceId
-      folderId: SidebarItemId
+      folderId: ResourceId
     }
   | {
       type: 'selectItem'
-      itemId: SidebarItemId
+      itemId: ResourceId
     }
   | {
       type: 'selectItems'
-      itemIds: Array<SidebarItemId>
-      focusedItemId?: SidebarItemId
+      itemIds: Array<ResourceId>
+      focusedItemId?: ResourceId
     }
   | {
       type: 'openResource'
-      itemId: SidebarItemId
+      itemId: ResourceId
       replace?: boolean
     }
   | {
@@ -28,7 +28,7 @@ export type FileSystemLifecycleIntent =
     }
   | {
       type: 'restorePreviousLocation'
-      guardedByItemId: SidebarItemId
+      guardedByItemId: ResourceId
     }
 
 export type FileSystemOptimisticPreview = {

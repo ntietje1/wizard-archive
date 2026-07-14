@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { createWorkspaceResource } from '../runtime'
 import { FileDialog } from '../../files/forms/dialog'
 import type { FileFormSource } from '../../files/forms/source'
@@ -13,7 +14,7 @@ import type { MapFormSource } from '../../game-maps/forms/source'
 import { validateFileForUpload } from '../../../../../shared/storage/validation'
 import { RESOURCE_TYPES } from '../items-persistence-contract'
 import type { AnyItem } from '../items'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { MapItem } from '../../game-maps/item-contract'
 import type { MapSession } from '../../game-maps/session-contract'
 import type { WorkspaceNavigation } from '../runtime'
@@ -46,7 +47,7 @@ export function RuntimeMapEditDialog({
   onClose,
   runtime,
 }: {
-  mapId: SidebarItemId
+  mapId: ResourceId
   onClose: () => void
   runtime: RuntimeMapEditDialogInput
 }) {
@@ -91,7 +92,7 @@ export function RuntimeFileEditDialog({
   onClose,
   runtime,
 }: {
-  fileId: SidebarItemId
+  fileId: ResourceId
   onClose: () => void
   runtime: RuntimeFileEditDialogInput
 }) {

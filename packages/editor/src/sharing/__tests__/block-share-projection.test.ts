@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vitest'
 import type { MaybePromise } from '../../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import type { ResourceCommandResult } from '../../filesystem/transaction-contract'
 import { createBlocksShareRuntimeState } from '../contracts'
@@ -123,7 +124,7 @@ describe('createBlocksShareRuntimeState', () => {
 
   it('toggles private blocks through exact block share operations', async () => {
     const setBlocksShareStatus = vi.fn(completedBlockShareCommandResult)
-    const noteId = 'note-1' as SidebarItemId
+    const noteId = 'note-1' as ResourceId
     const state = createBlockShareState({
       noteId,
       operations: {
@@ -143,7 +144,7 @@ describe('createBlocksShareRuntimeState', () => {
 
   it('toggles mixed all-player visibility back to not shared for the full block selection', async () => {
     const setBlocksShareStatus = vi.fn(completedBlockShareCommandResult)
-    const noteId = 'note-1' as SidebarItemId
+    const noteId = 'note-1' as ResourceId
     const state = createBlockShareState({
       noteBlockIds: ['block-1', 'block-2'],
       noteId,
@@ -228,7 +229,7 @@ function createBlockShareState({
     participants: [],
   },
   isMutating = false,
-  noteId = 'note-1' as SidebarItemId,
+  noteId = 'note-1' as ResourceId,
   operations = {
     setBlockParticipantPermission: vi.fn(),
     setBlocksShareStatus: vi.fn(completedBlockShareCommandResult),
@@ -245,7 +246,7 @@ function createBlockShareState({
   canRunShareMutations?: boolean
   data?: BlockShareProjectionData | undefined
   isMutating?: boolean
-  noteId?: SidebarItemId | undefined
+  noteId?: ResourceId | undefined
   operations?: BlocksShareOperations
   runShareCommand?: Parameters<typeof createBlocksShareRuntimeState>[0]['runShareCommand']
 } = {}) {
@@ -280,7 +281,7 @@ function completedBlockShareCommandResult(): ResourceCommandResult {
       direction: 'forward',
       command: {
         type: 'setBlocksShareStatus',
-        noteId: 'note-1' as SidebarItemId,
+        noteId: 'note-1' as ResourceId,
         blockNoteIds: ['block-1'],
         status: 'all_shared',
       },

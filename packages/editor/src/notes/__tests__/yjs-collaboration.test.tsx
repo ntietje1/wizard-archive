@@ -1,12 +1,13 @@
+import type { ResourceId } from '../../resources/domain-id'
 import * as Y from 'yjs'
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { NOTE_YJS_PERSIST_DEBOUNCE_MS, NOTE_YJS_PERSIST_INTERVAL_MS } from '../session-timing'
 import { useNoteYjsPersistenceLifecycle } from '../yjs-persistence'
 import type { NoteProjectionResult } from '../../../../../shared/yjs-sync/note-projection'
 
-const NOTE_ID = 'note-1' as SidebarItemId
+const NOTE_ID = 'note-1' as ResourceId
 const SOURCE_ID = 'workspace-1'
 
 describe('useNoteYjsPersistenceLifecycle', () => {
@@ -274,7 +275,7 @@ function createAdapter(
   overrides: Partial<{
     flushProvider: (provider: TestProvider, label: string) => Promise<boolean> | boolean
     persistNote: (
-      noteId: SidebarItemId,
+      noteId: ResourceId,
       sourceId: string,
     ) => Promise<NoteProjectionResult> | NoteProjectionResult
     reportError: (message: string, error?: unknown) => void
@@ -285,7 +286,7 @@ function createAdapter(
   )
   const persistNote = vi.fn(
     overrides.persistNote ??
-      ((_noteId: SidebarItemId, _sourceId: string) =>
+      ((_noteId: ResourceId, _sourceId: string) =>
         Promise.resolve({ status: 'projected' as const, throughSeq: 0 })),
   )
   const reportError = vi.fn(overrides.reportError ?? ((_message: string, _error?: unknown) => {}))

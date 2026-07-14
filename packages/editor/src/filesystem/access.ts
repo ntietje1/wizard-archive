@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import { WORKSPACE_MODE } from '../../../../shared/workspace/workspace-mode'
 import type { WorkspaceMode } from '../../../../shared/workspace/workspace-mode'
 import { createWorkspaceResourceReadModel } from '../workspace/items'
@@ -22,7 +22,7 @@ type ActorFileSystemPermissionsInput = {
   canCreateItems: boolean
   canEmptyTrash: boolean
   canManageFolders: boolean
-  getItemById: (itemId: SidebarItemId) => AnyItem | null | undefined
+  getItemById: (itemId: ResourceId) => AnyItem | null | undefined
   setWorkspaceMode: (workspaceMode: WorkspaceMode) => void
   workspaceMode: WorkspaceMode
 }

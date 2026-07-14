@@ -1,16 +1,15 @@
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import type { ResourceId } from '../../../resources/domain-id'
 import { planTransferOperations } from '../../operation-contract'
 import type { OperationPlannerItem } from '../../operation-contract'
 
-type TransferPlanInput = Omit<
-  Parameters<typeof planTransferOperations>[0],
-  'itemsById' | 'mode'
-> & {
+type TransferPlanInput = {
   graphItems?: Array<OperationPlannerItem>
+  items: Array<OperationPlannerItem>
+  targetParentId: ResourceId | null
 }
 
 function buildTransferItemsById({ graphItems = [], items }: TransferPlanInput) {
-  return new Map<SidebarItemId, OperationPlannerItem>(
+  return new Map<ResourceId, OperationPlannerItem>(
     [...items, ...graphItems].map((item) => [item.id, item]),
   )
 }

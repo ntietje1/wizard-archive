@@ -5,7 +5,7 @@ import {
   createGameMap,
   createNote,
 } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import {
   emptyTrashDescription,
   permanentDeleteDescription,
@@ -31,7 +31,7 @@ describe('permanentDeleteDescription', () => {
 
   it('includes descendant count for folders with trashed children', () => {
     const folder = createFolder({
-      id: testId('folder_t1'),
+      id: testResourceId('folder_t1'),
       name: 'My Folder',
     })
     const child1 = createNote({ parentId: folder.id })
@@ -44,7 +44,7 @@ describe('permanentDeleteDescription', () => {
 
   it('uses singular descendant copy', () => {
     const folder = createFolder({
-      id: testId('folder_t2'),
+      id: testResourceId('folder_t2'),
       name: 'My Folder',
     })
     const child = createNote({ parentId: folder.id })
@@ -58,7 +58,7 @@ describe('permanentDeleteDescription', () => {
 describe('permanentDeleteItemsDescription', () => {
   it('describes extra descendant deletion for selected folders', () => {
     const folder = createFolder({
-      id: testId('folder_t3'),
+      id: testResourceId('folder_t3'),
       name: 'My Folder',
     })
     const child = createNote({ parentId: folder.id })
@@ -71,7 +71,7 @@ describe('permanentDeleteItemsDescription', () => {
 
   it('does not double count descendants that are already selected', () => {
     const folder = createFolder({
-      id: testId('folder_t4'),
+      id: testResourceId('folder_t4'),
       name: 'My Folder',
     })
     const child = createNote({ parentId: folder.id })

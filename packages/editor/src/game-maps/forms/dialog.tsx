@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { MapPin } from 'lucide-react'
 import { MapForm } from './form'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { FormDialog } from '@wizard-archive/ui/components/form-dialog'
 import type { FileUploadControl } from '@wizard-archive/ui/file-upload/control'
 import type { MapFormEditState, MapFormSource } from './source'
@@ -9,7 +10,7 @@ interface MapDialogProps {
   mapState: MapFormEditState
   isOpen: boolean
   onClose: () => void
-  mapId: SidebarItemId
+  mapId: ResourceId
   onSuccess?: (mapSlug?: string) => void
   source: MapFormSource
   upload: FileUploadControl

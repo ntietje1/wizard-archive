@@ -270,9 +270,9 @@ describe('getSidebarItem', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('sidebarItems', noteId)
+      await dbCtx.db.delete('sidebarItems', noteRowId)
     })
 
     await expectNotFound(
@@ -286,12 +286,12 @@ describe('getSidebarItem', () => {
   it('throws NOT_FOUND when an extension row is missing', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       const folder = await dbCtx.db
         .query('folders')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderRowId))
         .unique()
       if (!folder) throw new Error('Missing setup folder')
       await dbCtx.db.delete('folders', folder._id)

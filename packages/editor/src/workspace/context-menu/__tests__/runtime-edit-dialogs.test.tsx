@@ -1,7 +1,7 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { createGameMap } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
 import { RuntimeMapEditDialog } from '../runtime-edit-dialogs'
 
@@ -29,7 +29,7 @@ vi.mock('../../../game-maps/forms/dialog', async () => {
 describe('RuntimeMapEditDialog', () => {
   it('closes after the map form saves successfully', () => {
     const map = createGameMap({
-      id: testId<'sidebarItems'>('map_1'),
+      id: testResourceId('map_1'),
       name: 'Dungeon',
     })
     const onClose = vi.fn()

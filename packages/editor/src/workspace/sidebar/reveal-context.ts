@@ -1,6 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { createContext } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
-export type WorkspaceSidebarReveal = (itemId: SidebarItemId) => void
+export type WorkspaceSidebarReveal = (itemId: ResourceId) => void
 
 export const WorkspaceSidebarRevealContext = createContext<WorkspaceSidebarReveal | null>(null)

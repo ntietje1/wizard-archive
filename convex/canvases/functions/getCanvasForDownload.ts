@@ -7,6 +7,7 @@ import type {
   CanvasDownloadContent,
   DownloadItem,
 } from '../../sidebarItems/functions/downloadTypes'
+import { requireSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 type CanvasResource = ResourceByKind<typeof RESOURCE_TYPES.canvases>
 
@@ -27,9 +28,10 @@ async function readCanvasContentFromYjsUpdates(
   ctx: CampaignQueryCtx,
   canvasId: CanvasResource['id'],
 ): Promise<CanvasDownloadContent> {
+  const canvas = await requireSidebarItemRow(ctx, canvasId)
   const rows = ctx.db
     .query('yjsUpdates')
-    .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+    .withIndex('by_document_seq', (q) => q.eq('documentId', canvas._id))
     .order('asc')
   const doc = new Y.Doc()
   for await (const row of rows) {

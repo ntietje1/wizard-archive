@@ -1,10 +1,11 @@
+import type { ResourceId } from '../resources/domain-id'
 import { WORKSPACE_MODE } from '../../../../shared/workspace/workspace-mode'
 import { hasPermissionForRequirement } from '../../../../shared/permissions/requirements'
 import { PERMISSION_LEVEL, PERMISSION_RANK } from '../../../../shared/permissions/types'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import { isResourceItemWithContent } from '../workspace/items'
 import type { AnyItem, AnyItemWithContent } from '../workspace/items'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { WorkspaceMode } from '../../../../shared/workspace/workspace-mode'
 import { createResourceCatalogModel } from '../filesystem/catalog'
 import { createStaticCatalogFileSystemResourceContentSource } from '../filesystem/resource-content-source'
@@ -144,7 +145,7 @@ export function createTestWorkspaceRuntime({
   resourceContent?: ResourceContentSource
   search?: FileSystemSearch
   selection?: Partial<FileSystemSelection>
-  selectedItemIds?: Array<SidebarItemId>
+  selectedItemIds?: Array<ResourceId>
   sharing?: ResourceShareSource
   trashItems?: Array<AnyItem>
   viewAsParticipant?: ViewAsParticipantCapability
@@ -392,8 +393,8 @@ function createTestFileSystemSelection({
   currentItemId,
   fallbackSelectedItemIds,
 }: {
-  currentItemId: SidebarItemId | null
-  fallbackSelectedItemIds: Array<SidebarItemId>
+  currentItemId: ResourceId | null
+  fallbackSelectedItemIds: Array<ResourceId>
 }): FileSystemSelection {
   const selection = createCurrentItemFileSystemSelection(
     currentItemId ? { id: currentItemId } : null,
@@ -409,7 +410,7 @@ function createTestGameMapSessionSource(): MapSession {
         status: 'completed',
         receipt: {
           kind: 'mapPinsCreated',
-          itemId: 'test-map' as SidebarItemId,
+          itemId: 'test-map' as ResourceId,
           affectedCount: 0,
           pinIds: [],
         },

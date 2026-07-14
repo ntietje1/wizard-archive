@@ -1,9 +1,9 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it } from 'vite-plus/test'
 import {
   createFolder as createFolderFixture,
   createNote as createNoteFixture,
 } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import {
   CANVAS_DROP_ZONE_TYPE,
@@ -43,7 +43,7 @@ describe('resolveExternalFileDropTarget', () => {
     expect(
       resolveExternalFileDropTarget({
         type: CANVAS_DROP_ZONE_TYPE,
-        canvasId: testId<'sidebarItems'>('canvas_1'),
+        canvasId: testResourceId('canvas_1'),
       }),
     ).toEqual({
       kind: 'accepted',
@@ -58,7 +58,7 @@ describe('resolveExternalFileDropTarget', () => {
     expect(
       resolveExternalFileDropTarget({
         type: EMPTY_EMBED_DROP_TYPE,
-        sourceItemId: testId<'sidebarItems'>('canvas_1'),
+        sourceItemId: testResourceId('canvas_1'),
         embedBlockId: 'embed-block-1',
       }),
     ).toEqual({
@@ -77,7 +77,7 @@ describe('resolveExternalFileDropTarget', () => {
       resolveExternalFileDropTarget(
         {
           type: CANVAS_DROP_ZONE_TYPE,
-          canvasId: testId<'sidebarItems'>('canvas_1'),
+          canvasId: testResourceId('canvas_1'),
         },
         { surfaceFileUploadAvailable: false },
       ),
@@ -91,7 +91,7 @@ describe('resolveExternalFileDropTarget', () => {
     expect(
       resolveExternalFileDropTarget({
         type: NOTE_EDITOR_DROP_TYPE,
-        noteId: testId<'sidebarItems'>('note_1'),
+        noteId: testResourceId('note_1'),
       }),
     ).toEqual({
       kind: 'accepted',

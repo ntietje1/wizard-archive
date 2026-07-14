@@ -1,6 +1,7 @@
-import type { SidebarItemId, UserProfileId } from '../../../../../../shared/common/ids'
+import type { ResourceId, MapPinId } from '../../../resources/domain-id'
+import type { UserProfileId } from '../../../../../../shared/common/ids'
 import { testCampaignId } from '../../../../../../shared/test/campaign-id'
-import type { MapPinId } from '../../../resources/domain-id'
+
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { completedResourceOperation } from '../../../filesystem/transaction-contract'
 import type { ResourceOperationResult } from '../../../filesystem/transaction-contract'
@@ -20,7 +21,7 @@ import {
   RESOURCE_TYPES,
 } from '../../../workspace/items-persistence-contract'
 
-export function testId(id: string): SidebarItemId
+export function testId(id: string): ResourceId
 export function testId<Id extends string>(id: string): Id
 export function testId<Id extends string>(id: string): Id {
   return id as Id
@@ -33,7 +34,7 @@ export function createGameMapFixture({
   name = 'Map',
   pins = [],
 }: {
-  id?: SidebarItemId
+  id?: ResourceId
   imageUrl?: string | null
   layers?: Array<MapLayer>
   name?: string
@@ -52,7 +53,7 @@ function createMapItemFixture({
   imageUrl = null,
   name = 'Map',
 }: {
-  id?: SidebarItemId
+  id?: ResourceId
   imageUrl?: string | null
   name?: string
 } = {}): MapItem {
@@ -70,7 +71,7 @@ export function createNoteFixture({
   name = 'Note',
 }: {
   color?: string | null
-  id?: SidebarItemId
+  id?: ResourceId
   name?: string
 } = {}): NoteItem {
   return {
@@ -121,7 +122,7 @@ export function completedMapPinUpdate(): ResourceOperationResult {
 }
 
 export function completedMapPinsCreate(
-  mapId: SidebarItemId,
+  mapId: ResourceId,
   pinIds: Array<MapPinWithItem['id']>,
 ): MapPinsCreateResult {
   return {
@@ -141,7 +142,7 @@ function createBaseResourceItem({
   name,
 }: {
   color?: string | null
-  id: SidebarItemId
+  id: ResourceId
   name: string
 }) {
   return {

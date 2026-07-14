@@ -46,18 +46,18 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('sidebarItemPreviewLeases', {
-        sidebarItemId: noteId,
+        sidebarItemId: noteRowId,
         claimToken: 'claim',
         lockedUntil: Date.now() + 1000,
       })
     })
     const storageId = await storeTestAsset(t, ctx.dm.profile._id, 'preview')
 
-    await trashItem(t, noteId, ctx.dm.profile._id, {
+    await trashItem(t, noteRowId, ctx.dm.profile._id, {
       previewStorageId: storageId,
     })
 
@@ -67,9 +67,9 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       expect(note).toBeNull()
-      expect(await getPreviewLease(dbCtx, noteId)).toBeNull()
+      expect(await getPreviewLease(dbCtx, noteRowId)).toBeNull()
 
       const url = await dbCtx.storage.getUrl(storageId)
       expect(url).toBeNull()
@@ -83,16 +83,16 @@ describe('preview cleanup on hard delete', () => {
     const fileBlob = await storeTestAsset(t, ctx.dm.profile._id, 'file-content')
     const previewBlob = await storeTestAsset(t, ctx.dm.profile._id, 'preview-content')
 
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileId, fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       const ext = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
       if (ext) await dbCtx.db.patch('files', ext._id, { storageId: fileBlob })
     })
-    await trashItem(t, fileId, ctx.dm.profile._id, {
+    await trashItem(t, fileRowId, ctx.dm.profile._id, {
       previewStorageId: previewBlob,
     })
 
@@ -102,7 +102,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get('sidebarItems', fileId)
+      const file = await dbCtx.db.get('sidebarItems', fileRowId)
       expect(file).toBeNull()
 
       const fileUrl = await dbCtx.storage.getUrl(fileBlob)
@@ -118,22 +118,22 @@ describe('preview cleanup on hard delete', () => {
 
     const sharedBlob = await storeTestAsset(t, ctx.dm.profile._id, 'shared-file-map')
 
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { fileId, fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       const fileExt = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
       const mapExt = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
         .unique()
       if (fileExt) await dbCtx.db.patch('files', fileExt._id, { storageId: sharedBlob })
       if (mapExt) await dbCtx.db.patch('gameMaps', mapExt._id, { imageStorageId: sharedBlob })
     })
-    await trashItem(t, fileId, ctx.dm.profile._id)
+    await trashItem(t, fileRowId, ctx.dm.profile._id)
 
     await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -141,10 +141,10 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const file = await dbCtx.db.get('sidebarItems', fileId)
+      const file = await dbCtx.db.get('sidebarItems', fileRowId)
       const mapExt = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
         .unique()
       const url = await dbCtx.storage.getUrl(sharedBlob)
 
@@ -160,16 +160,16 @@ describe('preview cleanup on hard delete', () => {
 
     const sharedBlob = await storeTestAsset(t, ctx.dm.profile._id, 'map-image')
 
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       const ext = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
         .unique()
       if (ext) await dbCtx.db.patch('gameMaps', ext._id, { imageStorageId: sharedBlob })
     })
-    await trashItem(t, mapId, ctx.dm.profile._id, {
+    await trashItem(t, mapRowId, ctx.dm.profile._id, {
       previewStorageId: sharedBlob,
     })
 
@@ -179,7 +179,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const map = await dbCtx.db.get('sidebarItems', mapId)
+      const map = await dbCtx.db.get('sidebarItems', mapRowId)
       expect(map).toBeNull()
 
       const url = await dbCtx.storage.getUrl(sharedBlob)
@@ -194,16 +194,16 @@ describe('preview cleanup on hard delete', () => {
     const imageBlob = await storeTestAsset(t, ctx.dm.profile._id, 'map-image')
     const previewBlob = await storeTestAsset(t, ctx.dm.profile._id, 'map-preview')
 
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
       const ext = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
         .unique()
       if (ext) await dbCtx.db.patch('gameMaps', ext._id, { imageStorageId: imageBlob })
     })
-    await trashItem(t, mapId, ctx.dm.profile._id, {
+    await trashItem(t, mapRowId, ctx.dm.profile._id, {
       previewStorageId: previewBlob,
     })
 
@@ -213,7 +213,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const map = await dbCtx.db.get('sidebarItems', mapId)
+      const map = await dbCtx.db.get('sidebarItems', mapRowId)
       expect(map).toBeNull()
 
       const imageUrl = await dbCtx.storage.getUrl(imageBlob)
@@ -229,25 +229,25 @@ describe('preview cleanup on hard delete', () => {
 
     const sharedBlob = await storeTestAsset(t, ctx.dm.profile._id, 'shared-map-file-preview')
 
-    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { fileRowId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       previewStorageId: sharedBlob,
     })
 
     await t.run(async (dbCtx) => {
       const fileExt = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
       const mapExt = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
         .unique()
       if (fileExt) await dbCtx.db.patch('files', fileExt._id, { storageId: sharedBlob })
       if (mapExt) await dbCtx.db.patch('gameMaps', mapExt._id, { imageStorageId: sharedBlob })
     })
-    await trashItem(t, mapId, ctx.dm.profile._id)
+    await trashItem(t, mapRowId, ctx.dm.profile._id)
 
     await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -255,12 +255,12 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const map = await dbCtx.db.get('sidebarItems', mapId)
+      const map = await dbCtx.db.get('sidebarItems', mapRowId)
       const fileExt = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       const url = await dbCtx.storage.getUrl(sharedBlob)
 
       expect(map).toBeNull()
@@ -274,8 +274,8 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    await trashItem(t, noteId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    await trashItem(t, noteRowId, ctx.dm.profile._id)
 
     await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -283,7 +283,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       expect(note).toBeNull()
     })
   })
@@ -292,8 +292,8 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
-    await trashItem(t, folderId, ctx.dm.profile._id)
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+    await trashItem(t, folderRowId, ctx.dm.profile._id)
 
     await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -301,7 +301,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const folder = await dbCtx.db.get('sidebarItems', folderId)
+      const folder = await dbCtx.db.get('sidebarItems', folderRowId)
       expect(folder).toBeNull()
     })
   })

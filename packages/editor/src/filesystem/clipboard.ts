@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import { create } from 'zustand'
 
 type FileSystemClipboardMode = 'copy' | 'cut'
@@ -6,7 +6,7 @@ type FileSystemClipboardMode = 'copy' | 'cut'
 export type FileSystemClipboard = {
   mode: FileSystemClipboardMode
   workspaceId: string
-  itemIds: ReadonlyArray<SidebarItemId>
+  itemIds: ReadonlyArray<ResourceId>
 }
 
 type FileSystemClipboardState = {
@@ -34,7 +34,7 @@ export function useFileSystemClipboard() {
   return useFileSystemClipboardStore((state) => state.clipboard)
 }
 
-export function useCutFileSystemItemIds(): ReadonlyArray<SidebarItemId> | null {
+export function useCutFileSystemItemIds(): ReadonlyArray<ResourceId> | null {
   return useFileSystemClipboardStore((state) =>
     state.clipboard?.mode === 'cut' ? state.clipboard.itemIds : null,
   )

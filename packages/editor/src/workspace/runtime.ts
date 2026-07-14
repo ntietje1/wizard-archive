@@ -16,7 +16,7 @@ import type {
   NoteValueSessionPorts,
 } from '../notes/workspace-session-source'
 import type { AnyItem, AnyItemWithContent } from './items'
-import type { ResourceId } from './resource-contract'
+import type { ResourceId } from '../resources/domain-id'
 
 declare const resourceUriBrand: unique symbol
 const WORKSPACE_RESOURCE_URI_PREFIX = 'resource:'

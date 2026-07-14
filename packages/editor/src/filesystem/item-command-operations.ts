@@ -1,7 +1,7 @@
+import type { ResourceId, OperationId } from '../resources/domain-id'
 import { isPromiseLike } from '../../../../shared/common/async'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
-import type { OperationId } from '../resources/domain-id'
+
 import { assertResourceItemSlug } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { AnyItem, FolderItem } from '../workspace/items'
@@ -34,7 +34,7 @@ type CreateFileSystemHostItemInput = Omit<ResourceCreateCommand, 'type'> & {
 }
 
 export type CreatedFileSystemHostItem = {
-  id: SidebarItemId
+  id: ResourceId
   slug: ResourceSlug
 }
 
@@ -54,7 +54,7 @@ function getCompletedReceipt(result: ResourceCommandResult): ResourceTransaction
 }
 
 function getCreatedItemResult(receipt: ResourceTransactionReceipt): {
-  id: SidebarItemId
+  id: ResourceId
   slug: ResourceSlug
   transactionId: OperationId
 } {
@@ -83,14 +83,14 @@ type FileSystemItemCommandOperations = {
     initialize?: CreateFileSystemHostItemInitializer,
   ) => MaybePromise<CreatedFileSystemHostItem>
   renameItem: (input: RenameFileSystemHostItemInput) => MaybePromise<RenamedFileSystemHostItem>
-  toggleBookmarks: (itemIds: Array<SidebarItemId>) => MaybePromise<ResourceCommandResult>
+  toggleBookmarks: (itemIds: Array<ResourceId>) => MaybePromise<ResourceCommandResult>
   restoreItems: (
-    itemIds: Array<SidebarItemId>,
-    targetParentId?: SidebarItemId | null,
+    itemIds: Array<ResourceId>,
+    targetParentId?: ResourceId | null,
   ) => MaybePromise<ResourceCommandResult>
-  deleteForever: (itemIds: Array<SidebarItemId>) => MaybePromise<ResourceCommandResult>
+  deleteForever: (itemIds: Array<ResourceId>) => MaybePromise<ResourceCommandResult>
   emptyTrash: () => MaybePromise<ResourceCommandResult>
-  trashItems: (itemIds: Array<SidebarItemId>) => MaybePromise<ResourceCommandResult>
+  trashItems: (itemIds: Array<ResourceId>) => MaybePromise<ResourceCommandResult>
 }
 
 export function createFileSystemItemCommandOperations({
@@ -249,9 +249,9 @@ export function createResourceCommandDrivers(
 }
 
 type FileSystemTrashDialogOperations = {
-  confirmDeleteForever: (itemIds: Array<SidebarItemId>) => void
+  confirmDeleteForever: (itemIds: Array<ResourceId>) => void
   confirmEmptyTrash: () => void
-  requestTrashItems: (itemIds: Array<SidebarItemId>) => Promise<ResourceTrashRequestResult>
+  requestTrashItems: (itemIds: Array<ResourceId>) => Promise<ResourceTrashRequestResult>
 }
 
 export function createFileSystemTrashDialogOperations({
@@ -265,7 +265,7 @@ export function createFileSystemTrashDialogOperations({
     requestEmptyTrash: () => void
     requestTrashFolder: (folder: FolderItem) => void
   }
-  trashItems: (itemIds: Array<SidebarItemId>) => MaybePromise<ResourceTrashRequestResult>
+  trashItems: (itemIds: Array<ResourceId>) => MaybePromise<ResourceTrashRequestResult>
 }): FileSystemTrashDialogOperations {
   const normalizeOperationItems = (items: Array<AnyItem>, model = cacheAdapter.getReadModel()) =>
     normalizeSelectedRoots(items, model.itemsById)

@@ -4,9 +4,8 @@ import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote } from '../../_test/factories.helper'
 import { createTestContext } from '../../_test/setup.helper'
-import type { Id } from '../../_generated/dataModel'
 import type { ResourceTransactionReceipt } from '@wizard-archive/editor/resources/transaction-contract'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 async function executeToggleBookmarks(
   dmAuth: ReturnType<typeof asDm>,
@@ -15,7 +14,7 @@ async function executeToggleBookmarks(
     itemIds,
   }: {
     campaignId: CampaignId
-    itemIds: Array<Id<'sidebarItems'>>
+    itemIds: Array<ResourceId>
   },
 ) {
   return await executeTestFileSystemCommand(dmAuth, {

@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import type * as Y from 'yjs'
 import {
   Awareness,
@@ -5,7 +6,7 @@ import {
   encodeAwarenessUpdate,
   removeAwarenessStates,
 } from 'y-protocols/awareness'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { uint8ToArrayBuffer } from '../../../../shared/yjs-sync/uint8ToArrayBuffer'
 import { AWARENESS_HEARTBEAT_MS } from '../../../../shared/yjs-sync/awareness'
 import type {
@@ -87,7 +88,7 @@ export class YjsAwarenessController {
   constructor(
     private readonly input: {
       doc: Y.Doc
-      documentId: SidebarItemId
+      documentId: ResourceId
       origin: unknown
       transport: YjsAwarenessTransport
     },

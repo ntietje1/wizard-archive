@@ -1,4 +1,5 @@
-import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
+import type { ResourceId, OperationId } from '../resources/domain-id'
+import type { UserProfileId } from '../../../../shared/common/ids'
 import type {
   ResourceCommand,
   ResourceCommandMutationInput,
@@ -12,7 +13,6 @@ import { planFileSystemOptimisticCommand } from './optimistic-planner'
 import { getCommandProgressToastText } from './progress-messages'
 import { executeFileSystemReceiptLifecycle } from './receipt-lifecycle'
 import { shouldRecordFileSystemUndo } from './undo-recording'
-import type { OperationId } from '../resources/domain-id'
 
 type ProgressToastId = string | number
 
@@ -21,19 +21,19 @@ type FileSystemCommandLifecycleArgs = {
   createParentPlan?: ResourceCreateParentPlan
   workspaceId: string
   currentUserId: UserProfileId | null
-  activeItemSurface: { parentId: SidebarItemId | null } | null
+  activeItemSurface: { parentId: ResourceId | null } | null
   cacheAdapter: FileSystemCacheAdapter
   createOperationId: () => OperationId
-  getCurrentResourceId: () => SidebarItemId | null
+  getCurrentResourceId: () => ResourceId | null
   runMutation: <T>(operation: () => Promise<T>) => Promise<T>
   executeMutation: (args: ResourceCommandMutationInput) => Promise<ResourceTransactionReceipt>
   applyLifecycleIntents: (
     intents: Array<FileSystemLifecycleIntent>,
-    previousResourceId: SidebarItemId | null,
+    previousResourceId: ResourceId | null,
   ) => Promise<void>
   applyReceiptSideEffects: (
     receipt: ResourceTransactionReceipt,
-    currentResourceId: SidebarItemId | null,
+    currentResourceId: ResourceId | null,
   ) => Promise<void>
   recordUndoReceipt: (receipt: ResourceTransactionReceipt) => void
   onSuccess?: () => void

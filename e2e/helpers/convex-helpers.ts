@@ -4,8 +4,11 @@ import { api } from 'convex/_generated/api'
 import { AUTH_STORAGE_PATH } from './constants'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import type { APIRequestContext, APIResponse } from '@playwright/test'
-import type { Id } from 'convex/_generated/dataModel'
-import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  CampaignMemberId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 
 const E2E_APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:3000'
 const CONVEX_OPERATION_ATTEMPTS = 3
@@ -45,7 +48,7 @@ export async function getSidebarItemIdBySlug({
 }: {
   campaignId: CampaignId
   slug: string
-}): Promise<Id<'sidebarItems'>> {
+}): Promise<ResourceId> {
   return (
     await getSidebarItemBySlug({
       campaignId,

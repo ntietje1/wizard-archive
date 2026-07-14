@@ -4,7 +4,12 @@ import { api } from '../../_generated/api'
 import { getPreviewLease } from '../previewLease'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
-import { createFolder, createNote, createSidebarShare } from '../../_test/factories.helper'
+import {
+  createFolder,
+  createNote,
+  createSidebarShare,
+  getSidebarItemRowId,
+} from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { getNoteLinksForSource, setupSiblingRelativeNoteLink } from '../../_test/noteLinks.helper'
 
@@ -186,10 +191,10 @@ describe('filesystem transaction undo and redo', () => {
   it('undoes and redoes rename, move, trash, and restore through the same patch path', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scenes',
     })
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Opening',
     })
 
@@ -202,13 +207,13 @@ describe('filesystem transaction undo and redo', () => {
       campaignId: ctx.campaignDomainId,
       transactionId: renameReceipt.transactionId!,
     })
-    let note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    let note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.name).toBe('Opening')
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
       campaignId: ctx.campaignDomainId,
       transactionId: renameReceipt.transactionId!,
     })
-    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.name).toBe('Cold Open')
 
     const moveReceipt = await executeTestFileSystemCommand(dmAuth, {
@@ -220,27 +225,27 @@ describe('filesystem transaction undo and redo', () => {
       campaignId: ctx.campaignDomainId,
       transactionId: moveReceipt.transactionId!,
     })
-    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.parentId).toBeNull()
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
       campaignId: ctx.campaignDomainId,
       transactionId: moveReceipt.transactionId!,
     })
-    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
-    expect(note?.parentId).toBe(folderId)
+    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
+    expect(note?.parentId).toBe(folderRowId)
 
     const trashReceipt = await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
       command: { type: 'trash', itemIds: [noteId] },
     })
     expect(trashReceipt.undoable).toBe(true)
-    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.status).toBe('trashed')
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignDomainId,
       transactionId: trashReceipt.transactionId!,
     })
-    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.status).toBe('active')
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
       campaignId: ctx.campaignDomainId,
@@ -255,21 +260,21 @@ describe('filesystem transaction undo and redo', () => {
       campaignId: ctx.campaignDomainId,
       transactionId: restoreReceipt.transactionId!,
     })
-    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.status).toBe('trashed')
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
       campaignId: ctx.campaignDomainId,
       transactionId: restoreReceipt.transactionId!,
     })
-    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.status).toBe('active')
-    expect(note?.parentId).toBe(folderId)
+    expect(note?.parentId).toBe(folderRowId)
   })
 
   it('undo preconditions ignore unrelated fields', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Original',
     })
 
@@ -280,7 +285,7 @@ describe('filesystem transaction undo and redo', () => {
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('sidebarItemPreviewLeases', {
-        sidebarItemId: noteId,
+        sidebarItemId: noteRowId,
         claimToken: 'claim',
         lockedUntil: Date.now() + 1000,
       })
@@ -290,9 +295,9 @@ describe('filesystem transaction undo and redo', () => {
       campaignId: ctx.campaignDomainId,
       transactionId: receipt.transactionId!,
     })
-    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.name).toBe('Original')
-    const lease = await t.run(async (dbCtx) => await getPreviewLease(dbCtx, noteId))
+    const lease = await t.run(async (dbCtx) => await getPreviewLease(dbCtx, noteRowId))
     expect(lease?.lockedUntil).toEqual(expect.any(Number))
   })
 
@@ -324,7 +329,8 @@ describe('filesystem transaction undo and redo', () => {
       }),
     ).rejects.toThrow('Filesystem transaction can no longer be applied cleanly')
 
-    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', created!.itemId))
+    const createdRowId = await getSidebarItemRowId(t, created!.itemId)
+    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', createdRowId))
     expect(note).toMatchObject({ name: 'Draft Revised', status: 'active' })
   })
 

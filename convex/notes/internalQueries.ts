@@ -5,7 +5,8 @@ import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persisten
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
 import type { CampaignQueryCtx } from '../functions'
-import type { Id } from '../_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { resourceIdValidator } from '../resources/validators'
 
 function assertNoteItem(item: { type: string }) {
   if (item.type !== RESOURCE_TYPES.notes) {
@@ -13,27 +14,36 @@ function assertNoteItem(item: { type: string }) {
   }
 }
 
-async function requireNoteWriteAccessForMember(
-  ctx: CampaignQueryCtx,
-  documentId: Id<'sidebarItems'>,
-) {
-  const item = await checkYjsWriteAccess(ctx, documentId)
+async function requireNoteWriteAccessForMember(ctx: CampaignQueryCtx, documentId: ResourceId) {
+  const providerDocumentId = await checkYjsWriteAccess(ctx, documentId)
+  const item = await ctx.db.get('sidebarItems', providerDocumentId)
+  if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   assertNoteItem(item)
-  return ctx.membership._id
+  return { campaignMemberId: ctx.membership._id, documentId: providerDocumentId }
 }
 
+const noteWriteAccessArgs = {
+  documentId: resourceIdValidator,
+}
+
+const noteWriteAccessReturns = v.object({
+  campaignMemberId: v.id('campaignMembers'),
+  documentId: v.id('sidebarItems'),
+})
+
+const noteWriteAccessHandler = async (
+  ctx: CampaignQueryCtx,
+  { documentId }: { documentId: ResourceId },
+) => await requireNoteWriteAccessForMember(ctx, documentId)
+
 export const requireNoteWriteAccess = campaignInternalQuery({
-  args: {
-    documentId: v.id('sidebarItems'),
-  },
-  returns: v.id('campaignMembers'),
-  handler: async (ctx, { documentId }) => await requireNoteWriteAccessForMember(ctx, documentId),
+  args: noteWriteAccessArgs,
+  returns: noteWriteAccessReturns,
+  handler: noteWriteAccessHandler,
 })
 
 export const requireNoteDmWriteAccess = dmInternalQuery({
-  args: {
-    documentId: v.id('sidebarItems'),
-  },
-  returns: v.id('campaignMembers'),
-  handler: async (ctx, { documentId }) => await requireNoteWriteAccessForMember(ctx, documentId),
+  args: noteWriteAccessArgs,
+  returns: noteWriteAccessReturns,
+  handler: noteWriteAccessHandler,
 })

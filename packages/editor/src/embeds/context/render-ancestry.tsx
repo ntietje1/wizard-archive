@@ -1,12 +1,13 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type { ReactNode } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { EmbedAncestryContext, useEmbedAncestry } from './render-ancestry-context'
 
 export function EmbedAncestryProvider({
   itemId,
   children,
 }: {
-  itemId: SidebarItemId
+  itemId: ResourceId
   children: ReactNode
 }) {
   const parent = useEmbedAncestry()

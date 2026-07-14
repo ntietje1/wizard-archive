@@ -905,11 +905,11 @@ describe('updateCampaign', () => {
       defaultFolderInheritShares: false,
     })
 
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+    const { folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
     const folder = await t.run(async (dbCtx) =>
       dbCtx.db
         .query('folders')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderRowId))
         .unique(),
     )
     expect(folder?.inheritShares).toBe(false)

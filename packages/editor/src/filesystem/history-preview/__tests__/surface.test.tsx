@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { testHistoryEntryId } from '../../../test/history-entry-id'
 import type { ResourceHistoryAvailable } from '../../history-types'
 import type { HistoryRollbackResult } from '../../history-contract'
@@ -24,8 +25,8 @@ describe('HistoryPreviewSurface', () => {
     render(
       <HistoryPreviewSurface
         canEdit
-        history={historyFor('note-1' as SidebarItemId)}
-        itemId={'note-2' as SidebarItemId}
+        history={historyFor('note-1' as ResourceId)}
+        itemId={'note-2' as ResourceId}
       >
         <div>Current item</div>
       </HistoryPreviewSurface>,
@@ -36,7 +37,7 @@ describe('HistoryPreviewSurface', () => {
   })
 
   it('shows the preview for its own item', () => {
-    const itemId = 'note-1' as SidebarItemId
+    const itemId = 'note-1' as ResourceId
     render(
       <HistoryPreviewSurface canEdit history={historyFor(itemId)} itemId={itemId}>
         <div>Current item</div>
@@ -52,7 +53,7 @@ describe('HistoryPreviewSurface', () => {
     const restore = new Promise<HistoryRollbackResult>((resolve) => {
       resolveRestore = resolve
     })
-    const firstHistory = historyFor('note-1' as SidebarItemId)
+    const firstHistory = historyFor('note-1' as ResourceId)
     firstHistory.rollbackEntryId = testHistoryEntryId('history-1')
     firstHistory.rollback = { status: 'ready', entryTime: 1, isRestoring: false }
     firstHistory.restoreRollback = vi.fn(() => restore)
@@ -64,7 +65,7 @@ describe('HistoryPreviewSurface', () => {
     const onRestore = rollbackDialogProps.mock.lastCall?.[0].onRestore as () => void
     onRestore()
 
-    const secondHistory = historyFor('note-2' as SidebarItemId)
+    const secondHistory = historyFor('note-2' as ResourceId)
     rerender(
       <HistoryPreviewSurface canEdit history={secondHistory} itemId={secondHistory.itemId}>
         <div>Current item</div>
@@ -84,7 +85,7 @@ describe('HistoryPreviewSurface', () => {
   })
 })
 
-function historyFor(itemId: SidebarItemId): ResourceHistoryAvailable {
+function historyFor(itemId: ResourceId): ResourceHistoryAvailable {
   return {
     status: 'available',
     itemId,

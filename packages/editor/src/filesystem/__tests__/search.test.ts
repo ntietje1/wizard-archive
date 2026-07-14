@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import {
   createCatalogFileSystemSearch,
   createCatalogItemSearchResult,
@@ -90,7 +91,7 @@ describe('filesystem search', () => {
 describe('filesystem search hydration', () => {
   it('projects static catalog item content into the shared content state contract', () => {
     const note = {
-      ...createNote({ id: 'note-1' as SidebarItemId }),
+      ...createNote({ id: 'note-1' as ResourceId }),
       ancestors: [],
       blockMeta: {},
       blockShareAccessWarnings: [],
@@ -122,7 +123,7 @@ describe('filesystem search hydration', () => {
         id: 'link-1',
         query: '[[Lore]]',
         displayName: 'Lore',
-        item: { id: 'note-1' as SidebarItemId, name: 'Lore note' },
+        item: { id: 'note-1' as ResourceId, name: 'Lore note' },
       }),
     ).toEqual({
       id: 'link-1',
@@ -563,5 +564,5 @@ function requireSuccessLinks(
 }
 
 function sidebarItemId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }

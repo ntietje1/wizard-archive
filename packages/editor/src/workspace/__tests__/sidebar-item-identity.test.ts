@@ -1,16 +1,16 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { createNote } from '../../test/sidebar-item-factory'
 import { isPersistedResourceItem, isPersistedResourceItemId } from '../items'
 import { isOptimisticSidebarItem, isOptimisticSidebarItemId } from '../items/optimistic'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 describe('sidebar item identity', () => {
   it('partitions persisted items and optimistic editor placeholders by id', () => {
     const persistedItem = createNote({
-      id: 'persisted-note' as SidebarItemId,
+      id: 'persisted-note' as ResourceId,
     })
     const optimisticItem = createNote({
-      id: 'optimistic-create-1' as SidebarItemId,
+      id: 'optimistic-create-1' as ResourceId,
     })
 
     const items = [persistedItem, optimisticItem]

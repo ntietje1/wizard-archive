@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import type { FileSystemLoadState } from '../load-state'
 import type { AnyItem, AnyItemWithContent } from '../../workspace/items'
@@ -36,11 +36,11 @@ export type ResourceAvailabilityState =
 type ResourceAvailabilitySubject = 'item' | 'page'
 
 type ResourceAvailabilityLookup =
-  | { kind: 'id'; id: SidebarItemId | null | undefined }
+  | { kind: 'id'; id: ResourceId | null | undefined }
   | { kind: 'slug'; slug: string | null | undefined }
 
 interface ResourceAvailabilityMetadataLookup {
-  getItemById: (itemId: SidebarItemId) => AnyItem | null | undefined
+  getItemById: (itemId: ResourceId) => AnyItem | null | undefined
   getItemBySlug: (slug: string) => AnyItem | null | undefined
 }
 
@@ -51,9 +51,9 @@ interface ResourceAvailabilityMetadataSource {
 }
 
 type ResourceAvailabilityCatalog = {
-  getKnownItemById: (itemId: SidebarItemId) => AnyItem | null | undefined
+  getKnownItemById: (itemId: ResourceId) => AnyItem | null | undefined
   getKnownItemBySlug: (slug: ResourceSlug) => AnyItem | null | undefined
-  getVisibleItemById: (itemId: SidebarItemId) => AnyItem | null | undefined
+  getVisibleItemById: (itemId: ResourceId) => AnyItem | null | undefined
   getVisibleItemBySlug: (slug: ResourceSlug) => AnyItem | null | undefined
 }
 

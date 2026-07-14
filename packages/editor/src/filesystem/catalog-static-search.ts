@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import { extractLinksFromText, getLinkQuery } from '../../../../shared/links/extraction'
 import type { ParsedLinkData } from '../../../../shared/links/types'
 import type { BlockSearchResult } from '../../../../shared/search/types'
@@ -15,8 +15,8 @@ import type { ItemLink, ItemLinksCapability } from './search'
 export type StaticCatalogFileSystemSearchPaths = Pick<FileSystemPaths, 'resolveVisibleItemPath'>
 
 export interface StaticCatalogSearchCatalog {
-  getKnownItemById: (itemId: SidebarItemId) => AnyItem | null
-  getVisibleItemById: (itemId: SidebarItemId) => AnyItem | null
+  getKnownItemById: (itemId: ResourceId) => AnyItem | null
+  getVisibleItemById: (itemId: ResourceId) => AnyItem | null
   queryVisibleItems: (input?: { type?: AnyItem['type'] }) => ReadonlyArray<AnyItem>
 }
 
@@ -83,7 +83,7 @@ function getOutgoingLinks({
 }: {
   catalog: StaticCatalogSearchCatalog
   paths: StaticCatalogFileSystemSearchPaths
-  noteId: SidebarItemId
+  noteId: ResourceId
 }): Array<ItemLink> {
   const note = getVisibleNote(catalog, noteId)
   if (!note) return []
@@ -105,7 +105,7 @@ function getBacklinks({
 }: {
   catalog: StaticCatalogSearchCatalog
   paths: StaticCatalogFileSystemSearchPaths
-  itemId: SidebarItemId
+  itemId: ResourceId
 }): Array<ItemLink> {
   const links: Array<ItemLink> = []
   for (const sourceNote of getVisibleNotes(catalog)) {
@@ -126,7 +126,7 @@ function getBacklinks({
 
 function getVisibleNote(
   catalog: StaticCatalogSearchCatalog,
-  itemId: SidebarItemId,
+  itemId: ResourceId,
 ): NoteItemWithContent | null {
   const item = catalog.getVisibleItemById(itemId)
   return isNoteWithContent(item) ? item : null
@@ -186,8 +186,8 @@ function getLinkRowId({
 }: {
   blockId: string
   query: string
-  resolvedItemId: SidebarItemId | null
-  sourceNoteId: SidebarItemId
+  resolvedItemId: ResourceId | null
+  sourceNoteId: ResourceId
 }) {
   return JSON.stringify([
     'link',

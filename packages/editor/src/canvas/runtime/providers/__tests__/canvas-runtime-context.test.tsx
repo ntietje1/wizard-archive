@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../../resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../../shared/common/ids'
+
 import { createCanvasRuntime } from '../../__tests__/canvas-runtime-test-utils'
 import {
   CanvasRuntimeProvider,
@@ -82,7 +83,7 @@ describe('CanvasRuntimeProvider', () => {
     const uploadFile = () =>
       Promise.resolve({
         status: 'completed' as const,
-        itemId: 'uploaded-file' as SidebarItemId,
+        itemId: 'uploaded-file' as ResourceId,
       })
     const baseRuntime = createCanvasRuntime()
     const runtime = createCanvasRuntime({

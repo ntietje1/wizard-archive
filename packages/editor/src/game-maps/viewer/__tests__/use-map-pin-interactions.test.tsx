@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
 import type { MapItemWithContent, MapPinWithItem } from '../../../game-maps/item-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { useMapPinInteractions } from '../use-map-pin-interactions'
 import type { MapPinsCreateResult } from '../../session-contract'
 import type { ResourceOperationResult } from '../../../filesystem/transaction-contract'
@@ -154,8 +155,8 @@ describe('useMapPinInteractions', () => {
   })
 
   it('clears pending pin placement when the active map changes', () => {
-    const firstMap = createGameMapFixture('map-1' as SidebarItemId)
-    const secondMap = createGameMapFixture('map-2' as SidebarItemId)
+    const firstMap = createGameMapFixture('map-1' as ResourceId)
+    const secondMap = createGameMapFixture('map-2' as ResourceId)
     const pin = createMapPinFixture(firstMap)
     const createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate(firstMap.id, []))
 
@@ -178,8 +179,8 @@ describe('useMapPinInteractions', () => {
   })
 
   it('clears pending pin move when the active map changes', () => {
-    const firstMap = createGameMapFixture('map-1' as SidebarItemId)
-    const secondMap = createGameMapFixture('map-2' as SidebarItemId)
+    const firstMap = createGameMapFixture('map-1' as ResourceId)
+    const secondMap = createGameMapFixture('map-2' as ResourceId)
     const pin = createMapPinFixture(firstMap)
     const updateMapPin = vi.fn().mockResolvedValue(completedMapPinUpdate())
 
@@ -488,7 +489,7 @@ describe('useMapPinInteractions', () => {
 
 function MapPinInteractionHarness({
   canEditMap = true,
-  createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate('map-1' as SidebarItemId, [])),
+  createMapPins = vi.fn().mockResolvedValue(completedMapPinsCreate('map-1' as ResourceId, [])),
   map,
   openItem = vi.fn().mockResolvedValue(undefined),
   pin,
@@ -497,10 +498,10 @@ function MapPinInteractionHarness({
   canEditMap?: boolean
   createMapPins?: (input: {
     mapId: MapItemWithContent['id']
-    pins: Array<{ itemId: SidebarItemId; layerId?: string | null; x: number; y: number }>
+    pins: Array<{ itemId: ResourceId; layerId?: string | null; x: number; y: number }>
   }) => Promise<MapPinsCreateResult>
   map: MapItemWithContent
-  openItem?: (itemId: SidebarItemId) => Promise<void>
+  openItem?: (itemId: ResourceId) => Promise<void>
   pin: MapPinWithItem
   updateMapPin?: (input: {
     mapPinId: MapPinWithItem['id']
@@ -557,7 +558,7 @@ function MapPinInteractionHarness({
   )
 }
 
-function createGameMapFixture(id = 'map-1' as SidebarItemId): MapItemWithContent {
+function createGameMapFixture(id = 'map-1' as ResourceId): MapItemWithContent {
   return createSharedGameMapFixture({ id, imageUrl: 'map.png' })
 }
 

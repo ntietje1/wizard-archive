@@ -13,13 +13,11 @@ import {
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { ResourcePatch } from '@wizard-archive/editor/resources/patch-contract'
 
 type StoredSidebarItemRow = Doc<'sidebarItems'>
 type ItemOperation = (ctx: MutationCtx, item: StoredSidebarItemRow) => Promise<void>
-type SidebarItemFieldPatch = Extract<ResourcePatch, { type: 'updateResource' }>['fields']
 export type TrashTreePatch = Required<
-  Pick<SidebarItemFieldPatch, 'status' | 'deletionTime' | 'deletedBy' | 'parentId'>
+  Pick<StoredSidebarItemRow, 'status' | 'deletionTime' | 'deletedBy' | 'parentId'>
 >
 
 async function applyToTree(

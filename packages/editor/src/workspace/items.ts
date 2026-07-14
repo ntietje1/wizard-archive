@@ -22,8 +22,8 @@ import type {
   WithContentResource,
   ResourceStatus,
   ResourceKind,
-  ResourceId,
 } from './resource-contract'
+import type { ResourceId } from '../resources/domain-id'
 import { canonicalizeResourceTitle } from '../resources/resource-contract'
 import type { ResourceTitle } from '../resources/resource-contract'
 import type { RESOURCE_TYPES } from './items-persistence-contract'
@@ -156,7 +156,13 @@ export type CreateParentTarget =
 export async function validateNoCircularParentAsync(
   itemId: ResourceId,
   newParentId: ResourceId | null,
-  getParent: Parameters<typeof validateNoCircularResourceParentAsync>[2],
+  getParent: (
+    id: ResourceId,
+  ) =>
+    | { parentId: ResourceId | null }
+    | null
+    | undefined
+    | Promise<{ parentId: ResourceId | null } | null | undefined>,
 ): Promise<ValidationResult> {
   return await validateNoCircularResourceParentAsync(itemId, newParentId, getParent)
 }

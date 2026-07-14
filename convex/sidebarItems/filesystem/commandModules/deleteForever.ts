@@ -21,6 +21,7 @@ import type { CampaignMutationCtx } from '../../../functions'
 import type { Doc, Id } from '../../../_generated/dataModel'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { StoredResourceDelta } from '../deltas'
+import { requireSidebarItemRows } from '../../functions/sidebarItemIdentity'
 const MAX_PERMANENT_DELETE_DEPTH = 50
 const MAX_PERMANENT_DELETE_BATCH_SIZE = 100
 type StoredSidebarItemRow = Doc<'sidebarItems'>
@@ -120,7 +121,7 @@ async function normalizePermanentDeleteRoots(
     }
   }
   const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
-    items: toSidebarOperationItems(sourceItems),
+    items: sourceItems,
     itemsById,
     maxDepth: MAX_PERMANENT_DELETE_DEPTH,
   })
@@ -147,8 +148,9 @@ export async function executeDeleteForeverCommand(
     return await buildPermanentDeleteDelta(ctx, command, [])
   }
 
+  const sourceRows = await requireSidebarItemRows(ctx, command.itemIds)
   const sourceItems = await Promise.all(
-    command.itemIds.map((itemId) => loadPermanentDeleteSource(ctx, itemId)),
+    sourceRows.map((row) => loadPermanentDeleteSource(ctx, row._id)),
   )
   const { rootItems, affectedItemCount } = await normalizePermanentDeleteRoots(ctx, sourceItems)
   if (affectedItemCount > MAX_PERMANENT_DELETE_BATCH_SIZE) {

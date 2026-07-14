@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import type { DropPlanningContext } from '../planning-context'
@@ -17,7 +18,6 @@ import {
   createGameMap as createGameMapFixture,
   createNote as createNoteFixture,
 } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
 const campaignId = testCampaignId('campaign_1')
@@ -82,7 +82,7 @@ describe('resolveDropFeedback', () => {
   })
 
   it('uses global move feedback for filesystem targets', () => {
-    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+    const note = createNote({ parentId: testResourceId('folder_1') })
 
     expect(
       resolveDropFeedback([note], { type: SIDEBAR_ROOT_DROP_TYPE }, planningContext()),
@@ -96,7 +96,7 @@ describe('resolveDropFeedback', () => {
   })
 
   it('uses copy feedback for ctrl-dragging to filesystem targets', () => {
-    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+    const note = createNote({ parentId: testResourceId('folder_1') })
 
     expect(
       resolveDropFeedback([note], { type: SIDEBAR_ROOT_DROP_TYPE }, planningContext(), {
@@ -112,8 +112,8 @@ describe('resolveDropFeedback', () => {
   })
 
   it('uses copy feedback for multi-item ctrl-dragging to folders', () => {
-    const first = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
-    const second = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+    const first = createNote({ parentId: testResourceId('folder_1') })
+    const second = createNote({ parentId: testResourceId('folder_1') })
     const folder = createFolder({ name: 'Destination' })
 
     expect(
@@ -152,7 +152,7 @@ describe('resolveDropFeedback', () => {
         [note],
         {
           type: MAP_DROP_ZONE_TYPE,
-          mapId: testId<'sidebarItems'>('map_1'),
+          mapId: testResourceId('map_1'),
           mapName: 'World Map',
           pinnedItemIds: [],
         },
@@ -190,7 +190,7 @@ describe('resolveDropFeedback', () => {
         [first, second],
         {
           type: CANVAS_DROP_ZONE_TYPE,
-          canvasId: testId<'sidebarItems'>('canvas_1'),
+          canvasId: testResourceId('canvas_1'),
         },
         planningContext(),
       ),
@@ -211,7 +211,7 @@ describe('resolveDropFeedback', () => {
         [note],
         {
           type: NOTE_EDITOR_DROP_TYPE,
-          noteId: testId<'sidebarItems'>('note_target'),
+          noteId: testResourceId('note_target'),
         },
         planningContext(),
         { noteEditorDropAction: 'embed' },

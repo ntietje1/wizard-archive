@@ -27,18 +27,18 @@ describe('campaign deletion cascade', () => {
     const p1 = ctx.players[0]
     const p2 = ctx.players[1]
 
-    const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Root Folder',
       inheritShares: true,
     })
-    const { noteId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, dmId, {
       parentId: folderId,
       name: 'Nested Note',
     })
-    const { fileId } = await createFile(t, ctx.campaignId, dmId, {
+    const { fileId, fileRowId } = await createFile(t, ctx.campaignId, dmId, {
       name: 'Test File',
     })
-    const { mapId } = await createGameMap(t, ctx.campaignId, dmId, {
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, dmId, {
       name: 'Battle Map',
     })
 
@@ -93,10 +93,10 @@ describe('campaign deletion cascade', () => {
     const results = await t.run(async (dbCtx) => {
       return {
         campaign: await dbCtx.db.get('campaigns', cId),
-        folder: await dbCtx.db.get('sidebarItems', folderId),
-        note: await dbCtx.db.get('sidebarItems', noteId),
-        file: await dbCtx.db.get('sidebarItems', fileId),
-        map: await dbCtx.db.get('sidebarItems', mapId),
+        folder: await dbCtx.db.get('sidebarItems', folderRowId),
+        note: await dbCtx.db.get('sidebarItems', noteRowId),
+        file: await dbCtx.db.get('sidebarItems', fileRowId),
+        map: await dbCtx.db.get('sidebarItems', mapRowId),
         block: await dbCtx.db.get('blocks', blockDbId),
         blockShare: await dbCtx.db.get('blockShares', blockShareId),
         folderShare: await dbCtx.db.get('sidebarItemShares', folderShareId),
@@ -149,10 +149,10 @@ describe('campaign deletion cascade', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { noteId: activeNoteId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteRowId: activeNoteRowId } = await createNote(t, ctx.campaignId, dmId, {
       name: 'Active Note',
     })
-    const { noteId: trashedNoteId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteRowId: trashedNoteRowId } = await createNote(t, ctx.campaignId, dmId, {
       name: 'Trashed Note',
       status: 'trashed',
       deletionTime: Date.now(),
@@ -165,8 +165,8 @@ describe('campaign deletion cascade', () => {
 
     const [active, trashed] = await t.run(async (dbCtx) => {
       return [
-        await dbCtx.db.get('sidebarItems', activeNoteId),
-        await dbCtx.db.get('sidebarItems', trashedNoteId),
+        await dbCtx.db.get('sidebarItems', activeNoteRowId),
+        await dbCtx.db.get('sidebarItems', trashedNoteRowId),
       ]
     })
     expect(active).toBeNull()

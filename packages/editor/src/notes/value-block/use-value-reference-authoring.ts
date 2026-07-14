@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { buildExternalNoteValuePrefix, buildSameNoteValueReference } from '../values/authoring'
 import type { NoteValueRuntimeState } from '../values/state-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { useNoteValueRuntime } from './value-block-runtime-context'
 
 export interface ValueReferenceCandidate {
@@ -10,18 +11,18 @@ export interface ValueReferenceCandidate {
   detail: string
   insertText: string
   slug?: string
-  noteId?: SidebarItemId
-  previewValues?: Array<NoteValueRuntimeState<SidebarItemId>>
+  noteId?: ResourceId
+  previewValues?: Array<NoteValueRuntimeState<ResourceId>>
 }
 
-type ValuesByNoteId = Map<SidebarItemId, Array<NoteValueRuntimeState<SidebarItemId>>>
+type ValuesByNoteId = Map<ResourceId, Array<NoteValueRuntimeState<ResourceId>>>
 
 export function useValueReferenceAuthoring({
   selectedExternalNoteId = null,
   externalNotePathRaw = null,
   includeNoteValuePreviews = false,
 }: {
-  selectedExternalNoteId?: SidebarItemId | null
+  selectedExternalNoteId?: ResourceId | null
   externalNotePathRaw?: string | null
   includeNoteValuePreviews?: boolean
 }) {
@@ -117,15 +118,15 @@ export function useValueReferenceAuthoring({
 }
 
 function filterValuesByNoteIds(
-  values: Array<NoteValueRuntimeState<SidebarItemId>>,
-  noteIds: ReadonlyArray<SidebarItemId>,
+  values: Array<NoteValueRuntimeState<ResourceId>>,
+  noteIds: ReadonlyArray<ResourceId>,
 ) {
   if (noteIds.length === 0) return []
   const noteIdSet = new Set(noteIds)
   return values.filter((value) => noteIdSet.has(value.noteId))
 }
 
-function groupValuesByNoteId(values: Array<NoteValueRuntimeState<SidebarItemId>>): ValuesByNoteId {
+function groupValuesByNoteId(values: Array<NoteValueRuntimeState<ResourceId>>): ValuesByNoteId {
   const valuesByNoteId: ValuesByNoteId = new Map()
   for (const value of values) {
     const noteValues = valuesByNoteId.get(value.noteId)

@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
 import type { ResourcePatch } from '../patch-contract'
@@ -5,7 +6,7 @@ import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceTitle } from '../../resources/resource-contract'
 import type { FileSystemCacheAdapter } from '../cache'
 import { runFileSystemOptimisticMutation } from '../optimistic-mutation'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { testOperationId } from '../../test/operation-id'
 
 const receipt: ResourceTransactionReceipt = {
@@ -37,14 +38,14 @@ function createCacheAdapter(): FileSystemCacheAdapter {
 
 const optimisticPatch = {
   type: 'updateResource',
-  itemId: 'item_1' as SidebarItemId,
+  itemId: 'item_1' as ResourceId,
   before: { name: 'Before' as ResourceTitle },
   fields: { name: 'Optimistic' as ResourceTitle },
 } satisfies ResourcePatch
 
 const rollbackPatch = {
   type: 'updateResource',
-  itemId: 'item_1' as SidebarItemId,
+  itemId: 'item_1' as ResourceId,
   before: { name: 'Optimistic' as ResourceTitle },
   fields: { name: 'Before' as ResourceTitle },
 } satisfies ResourcePatch

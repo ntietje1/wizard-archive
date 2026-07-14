@@ -29,8 +29,9 @@ import { requireSidebarItemRowOperationAccess } from './access'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { toSidebarItemDocument, toSidebarItemReplacement } from '../types/status'
-import type { OperationId } from '@wizard-archive/editor/resources/domain-id'
+import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { requireCampaignMemberRow } from '../../campaigns/functions/campaignIdentity'
+import { requireSidebarItemRow } from '../functions/sidebarItemIdentity'
 const MAX_FILESYSTEM_UNDO_HISTORY = 50
 const MAX_FILESYSTEM_NON_UNDOABLE_HISTORY = 50
 const MAX_FILESYSTEM_TRANSACTION_EVENTS = 1_000
@@ -215,10 +216,7 @@ async function applySidebarItemPatch(
   ctx: CampaignMutationCtx,
   patch: Extract<ResourcePatch, { type: 'updateResource' }>,
 ) {
-  const item = await ctx.db.get('sidebarItems', patch.itemId)
-  if (!item || item.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
-  }
+  const item = await requireSidebarItemRow(ctx, patch.itemId)
   await requireSidebarItemPatchAuthority(ctx, item, patch)
   if (hasMismatchedPrecondition(item, await storedSidebarItemPatchFields(ctx, patch.before))) {
     throwClientError(
@@ -230,7 +228,7 @@ async function applySidebarItemPatch(
     ...item,
     ...(await storedSidebarItemPatchFields(ctx, patch.fields)),
   })
-  await ctx.db.replace('sidebarItems', patch.itemId, toSidebarItemReplacement(after))
+  await ctx.db.replace('sidebarItems', item._id, toSidebarItemReplacement(after))
 }
 
 function requireDmShareReplay(ctx: CampaignMutationCtx) {
@@ -265,7 +263,7 @@ function sidebarItemPatchOperation(patch: Extract<ResourcePatch, { type: 'update
 
 async function requireSidebarParentPatchAuthority(
   ctx: CampaignMutationCtx,
-  parentId: Id<'sidebarItems'> | null | undefined,
+  parentId: ResourceId | null | undefined,
 ) {
   if (parentId === undefined) return
   if (parentId === null) {
@@ -307,13 +305,13 @@ async function applySidebarItemSharePatch(
   patch: Extract<ResourcePatch, { type: 'updateResourceShare' }>,
 ) {
   requireDmShareReplay(ctx)
-  await requireTransactionItemOperation(ctx, {
+  const item = await requireTransactionItemOperation(ctx, {
     itemId: patch.resourceId,
     operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
   const member = await requireTransactionShareMember(ctx, patch.memberId)
   const share = await getSidebarItemShareRow(ctx, {
-    sidebarItemId: patch.resourceId,
+    sidebarItemId: item._id,
     campaignMemberId: member._id,
   })
   if (!share) throwClientError(ERROR_CODE.NOT_FOUND, 'Sidebar item share no longer exists')
@@ -326,12 +324,8 @@ async function applySidebarItemSharePatch(
   await ctx.db.patch('sidebarItemShares', share._id, patch.fields)
 }
 
-async function requireTransactionTargetItem(ctx: CampaignMutationCtx, itemId: Id<'sidebarItems'>) {
-  const item = await ctx.db.get('sidebarItems', itemId)
-  if (!item || item.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
-  }
-  return item
+async function requireTransactionTargetItem(ctx: CampaignMutationCtx, itemId: ResourceId) {
+  return await requireSidebarItemRow(ctx, itemId)
 }
 
 async function requireTransactionItemOperation(
@@ -340,12 +334,13 @@ async function requireTransactionItemOperation(
     itemId,
     operation,
   }: {
-    itemId: Id<'sidebarItems'>
+    itemId: ResourceId
     operation: (typeof PERMISSION_OPERATION)[keyof typeof PERMISSION_OPERATION]
   },
 ) {
   const item = await requireTransactionTargetItem(ctx, itemId)
   await requireSidebarItemRowOperationAccess(ctx, { rawItem: item, operation })
+  return item
 }
 
 async function assertTransactionTargetMember(
@@ -380,13 +375,13 @@ async function applySidebarItemShareRemoval(
   patch: Extract<ResourcePatch, { type: 'removeResourceShare' }>,
 ) {
   requireDmShareReplay(ctx)
-  await requireTransactionItemOperation(ctx, {
+  const item = await requireTransactionItemOperation(ctx, {
     itemId: patch.share.resourceId,
     operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
   const member = await requireTransactionShareMember(ctx, patch.share.memberId)
   const share = await getSidebarItemShareRow(ctx, {
-    sidebarItemId: patch.share.resourceId,
+    sidebarItemId: item._id,
     campaignMemberId: member._id,
   })
   if (!share) return
@@ -404,7 +399,7 @@ async function applySidebarItemShareUpsert(
   patch: Extract<ResourcePatch, { type: 'upsertResourceShare' }>,
 ) {
   requireDmShareReplay(ctx)
-  await requireTransactionItemOperation(ctx, {
+  const item = await requireTransactionItemOperation(ctx, {
     itemId: patch.share.resourceId,
     operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
@@ -434,7 +429,7 @@ async function applySidebarItemShareUpsert(
     )
   }
   const existing = await getSidebarItemShareRow(ctx, {
-    sidebarItemId: patch.share.resourceId,
+    sidebarItemId: item._id,
     campaignMemberId: member._id,
   })
   if (existing) {
@@ -449,7 +444,7 @@ async function applySidebarItemShareUpsert(
   await ctx.db.insert('sidebarItemShares', {
     resourceShareUuid: patch.share.id,
     campaignId: ctx.campaign._id,
-    sidebarItemId: patch.share.resourceId,
+    sidebarItemId: item._id,
     sidebarItemType: patch.share.sidebarItemType,
     campaignMemberId: member._id,
     sessionId: session?._id ?? null,
@@ -462,13 +457,13 @@ async function applyFolderSharePatch(
   patch: Extract<ResourcePatch, { type: 'updateFolderShare' }>,
 ) {
   requireDmShareReplay(ctx)
-  await requireTransactionItemOperation(ctx, {
+  const folderItem = await requireTransactionItemOperation(ctx, {
     itemId: patch.folderId,
     operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
   const folder = await ctx.db
     .query('folders')
-    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', patch.folderId))
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderItem._id))
     .unique()
   if (!folder) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder no longer exists')
   if (hasMismatchedPrecondition(folder, patch.before)) {
@@ -505,7 +500,7 @@ async function applyBookmarkStatePatch(
   ctx: CampaignMutationCtx,
   patch: Extract<ResourcePatch, { type: 'setResourceBookmarkState' }>,
 ) {
-  await requireTransactionItemOperation(ctx, {
+  const item = await requireTransactionItemOperation(ctx, {
     itemId: patch.itemId,
     operation: PERMISSION_OPERATION.READ_SIDEBAR_ITEM,
   })
@@ -513,7 +508,7 @@ async function applyBookmarkStatePatch(
   await assertTransactionTargetMember(ctx, campaignMemberId)
   const existing = await getBookmarkRow(ctx, {
     campaignMemberId,
-    sidebarItemId: patch.itemId,
+    sidebarItemId: item._id,
   })
   if (!patch.isBookmarked) {
     if (existing) await ctx.db.delete('bookmarks', existing._id)
@@ -522,7 +517,7 @@ async function applyBookmarkStatePatch(
   if (existing) return
   await ctx.db.insert('bookmarks', {
     campaignId: ctx.campaign._id,
-    sidebarItemId: patch.itemId,
+    sidebarItemId: item._id,
     campaignMemberId,
   })
 }
@@ -567,8 +562,7 @@ async function noteIdsAffectedByPathPatch(
   patch: ResourcePatch,
 ): Promise<Array<Id<'sidebarItems'>>> {
   if (!patchChangesPathOrVisibility(patch)) return []
-  const item = await ctx.db.get('sidebarItems', patch.itemId)
-  if (!item || item.campaignId !== ctx.campaign._id) return []
+  const item = await requireSidebarItemRow(ctx, patch.itemId)
   if (item.type === RESOURCE_TYPES.notes) return [item._id]
   if (item.type !== RESOURCE_TYPES.folders || item.status === RESOURCE_STATUS.undoHidden) {
     return []
@@ -637,26 +631,19 @@ async function hardDeleteUndoHiddenCreatedRows(
   ctx: CampaignMutationCtx,
   inversePatches: Array<ResourcePatch>,
 ) {
-  const hiddenItemIds = new Set<Id<'sidebarItems'>>()
-  for (const patch of inversePatches) {
-    if (patch.type === 'updateResource' && patch.fields.status === RESOURCE_STATUS.undoHidden) {
-      hiddenItemIds.add(patch.itemId)
-    }
-  }
-  if (hiddenItemIds.size === 0) return
+  const hiddenItemIds = inversePatches.flatMap((patch) =>
+    patch.type === 'updateResource' && patch.fields.status === RESOURCE_STATUS.undoHidden
+      ? [patch.itemId]
+      : [],
+  )
+  const hiddenItems = (
+    await Promise.all(hiddenItemIds.map((id) => requireSidebarItemRow(ctx, id)))
+  ).filter((item) => item.status === RESOURCE_STATUS.undoHidden)
+  if (hiddenItems.length === 0) return
 
-  const hiddenItems: Array<Doc<'sidebarItems'>> = []
-  for (const itemId of hiddenItemIds) {
-    const item = await ctx.db.get('sidebarItems', itemId)
-    if (item?.campaignId === ctx.campaign._id && item.status === RESOURCE_STATUS.undoHidden) {
-      hiddenItems.push(item)
-    }
-  }
-
-  const roots = hiddenItems.filter((item) => !item.parentId || !hiddenItemIds.has(item.parentId))
-  for (const item of roots) {
-    await hardDeleteTree(ctx, item)
-  }
+  const hiddenRowIds = new Set(hiddenItems.map((item) => item._id))
+  const roots = hiddenItems.filter((item) => !item.parentId || !hiddenRowIds.has(item.parentId))
+  await Promise.all(roots.map((item) => hardDeleteTree(ctx, item)))
 }
 
 export async function applyFilesystemTransactionDirection(

@@ -110,10 +110,10 @@ describe('executeMoveCommand cross-module effects', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Parent Folder',
     })
-    const { noteId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteRowId } = await createNote(t, ctx.campaignId, dmId, {
       parentId: folderId,
       name: 'Child Note',
     })
@@ -126,13 +126,13 @@ describe('executeMoveCommand cross-module effects', () => {
     })
 
     const afterTrash = await t.run(async (dbCtx) => ({
-      folder: await dbCtx.db.get('sidebarItems', folderId),
-      note: await dbCtx.db.get('sidebarItems', noteId),
+      folder: await dbCtx.db.get('sidebarItems', folderRowId),
+      note: await dbCtx.db.get('sidebarItems', noteRowId),
     }))
     expect(afterTrash.folder).toBeDefined()
     expect(afterTrash.folder?.parentId).toBeNull()
     expect(afterTrash.note).toBeDefined()
-    expect(afterTrash.note?.parentId).toBe(folderId)
+    expect(afterTrash.note?.parentId).toBe(folderRowId)
   })
 
   it('moving folder into its own descendant is rejected', async () => {
@@ -258,11 +258,11 @@ describe('executeMoveCommand cross-module effects', () => {
     const { folderId: elsewhereId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Elsewhere',
     })
-    const { noteId: targetId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteRowId: targetRowId } = await createNote(t, ctx.campaignId, dmId, {
       name: 'Target',
       parentId: worldId,
     })
-    const { noteId: sourceId } = await createNote(t, ctx.campaignId, dmId, {
+    const { noteId: sourceId, noteRowId: sourceRowId } = await createNote(t, ctx.campaignId, dmId, {
       name: 'Source',
       parentId: districtId,
     })
@@ -289,12 +289,12 @@ describe('executeMoveCommand cross-module effects', () => {
       return await dbCtx.db
         .query('noteLinks')
         .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceRowId),
         )
         .collect()
     })
     expect(links).toHaveLength(1)
-    expect(links[0].targetItemId).toBe(targetId)
+    expect(links[0].targetItemId).toBe(targetRowId)
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -306,7 +306,7 @@ describe('executeMoveCommand cross-module effects', () => {
       return await dbCtx.db
         .query('noteLinks')
         .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceRowId),
         )
         .collect()
     })

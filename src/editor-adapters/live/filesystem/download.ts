@@ -1,7 +1,7 @@
 import { api } from 'convex/_generated/api'
 import type { ConvexReactClient } from 'convex/react'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { createWizardEditorRemoteDownloadSource } from '@wizard-archive/editor/adapter'
 import type { WizardEditorRemoteDownloadSource } from '@wizard-archive/editor/adapter'
 
@@ -18,7 +18,7 @@ export function createLiveWorkspaceDownloadSource(
     loadItemsForDownload: async ({ itemIds }) =>
       convex.query(api.folders.queries.getSidebarItemsForDownload, {
         campaignId: workspaceRecordId,
-        sourceItemIds: itemIds.map(asLiveSidebarItemId),
+        sourceItemIds: [...itemIds],
       }),
     loadRootItemsForDownload: async () =>
       convex.query(api.folders.queries.getRootContentsForDownload, {
@@ -29,8 +29,4 @@ export function createLiveWorkspaceDownloadSource(
 
 function asLiveDownloadWorkspaceRecordId(workspaceId: string) {
   return workspaceId as Id<'campaigns'>
-}
-
-function asLiveSidebarItemId(sidebarItemId: SidebarItemId | string) {
-  return sidebarItemId as Id<'sidebarItems'>
 }

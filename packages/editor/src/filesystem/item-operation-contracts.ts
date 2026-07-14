@@ -1,5 +1,6 @@
+import type { ResourceId } from '../resources/domain-id'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceImportFile } from '../files/import-contract'
 import type { AnyItem, CreateParentTarget, ValidationResult } from '../workspace/items'
 import type {
@@ -29,7 +30,7 @@ interface FileSystemCreateItemValidationInput {
 
 export interface FileSystemCreateItemCompletedResult {
   status: 'completed'
-  id: SidebarItemId
+  id: ResourceId
   slug: ResourceSlug
 }
 
@@ -86,15 +87,15 @@ export type FileSystemClipboardOperations =
       status: 'available'
       canPaste: boolean
       cancel: () => boolean
-      copyItems: (itemIds: Array<SidebarItemId>) => void
-      cutItems: (itemIds: Array<SidebarItemId>) => void
-      paste: (targetParentId?: SidebarItemId | null) => MaybePromise<ResourceCommandResult>
+      copyItems: (itemIds: Array<ResourceId>) => void
+      cutItems: (itemIds: Array<ResourceId>) => void
+      paste: (targetParentId?: ResourceId | null) => MaybePromise<ResourceCommandResult>
     }
 
 interface ResourceImportFileInput {
   file: ResourceImportFile
   name?: string
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   acceptedKinds?: ReadonlyArray<ResourceImportFileKind>
   onProgress?: (event: { fileName: string; percentage: number }) => void
 }
@@ -140,13 +141,13 @@ interface FileSystemImportDropSkippedFile {
 interface FileSystemImportDropInput {
   files: Array<ResourceImportFileEntry>
   rootFolders: Array<FileSystemImportFolderEntry>
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   onFileProgress?: (event: { fileName: string; percentage: number }) => void
   onProgress?: (progress: FileSystemImportDropProgress) => void
 }
 
 interface FileSystemImportDropResult extends FileSystemImportDropProgress {
-  lastFolderId: SidebarItemId | null
+  lastFolderId: ResourceId | null
   skippedFileDetails: Array<FileSystemImportDropSkippedFile>
 }
 
@@ -201,10 +202,10 @@ type FileSystemItemPasteTargetOperations = {
 
 export type FileSystemItemTrashOperations = {
   requestEmptyTrash: () => MaybePromise<void>
-  requestDeleteItemsForever: (itemIds: Array<SidebarItemId>) => MaybePromise<void>
+  requestDeleteItemsForever: (itemIds: Array<ResourceId>) => MaybePromise<void>
   restoreItems: (
-    itemIds: Array<SidebarItemId>,
-    targetParentId: SidebarItemId | null,
+    itemIds: Array<ResourceId>,
+    targetParentId: ResourceId | null,
   ) => MaybePromise<ResourceCommandResult>
 }
 
@@ -215,12 +216,12 @@ export type FileSystemItemSidebarOperations = FileSystemItemCreateOperations &
 type FileSystemItemContextMenuFilesystemOperations = {
   executeDropCommand: (command: FileSystemIntentCommand) => MaybePromise<ResourceCommandResult>
   requestEmptyTrash: () => MaybePromise<void>
-  requestDeleteItemsForever: (itemIds: Array<SidebarItemId>) => MaybePromise<void>
+  requestDeleteItemsForever: (itemIds: Array<ResourceId>) => MaybePromise<void>
   restoreItems: (
-    itemIds: Array<SidebarItemId>,
-    targetParentId: SidebarItemId | null,
+    itemIds: Array<ResourceId>,
+    targetParentId: ResourceId | null,
   ) => MaybePromise<ResourceCommandResult>
-  trashItems: (itemIds: Array<SidebarItemId>) => MaybePromise<ResourceTrashRequestResult>
+  trashItems: (itemIds: Array<ResourceId>) => MaybePromise<ResourceTrashRequestResult>
 } & FileSystemItemPasteTargetOperations
 
 export type FileSystemItemContextMenuOperations = FileSystemItemFormOperations &
@@ -228,5 +229,5 @@ export type FileSystemItemContextMenuOperations = FileSystemItemFormOperations &
   FileSystemItemBookmarkOperations
 
 type FileSystemItemBookmarkOperations = {
-  toggleBookmarks: (itemIds: Array<SidebarItemId>) => MaybePromise<ResourceCommandResult>
+  toggleBookmarks: (itemIds: Array<ResourceId>) => MaybePromise<ResourceCommandResult>
 }

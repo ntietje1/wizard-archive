@@ -1,13 +1,13 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it } from 'vite-plus/test'
-import { testId } from '../../test/id'
 import { createCurrentItemFileSystemSelection } from '../selection'
 
 describe('filesystem selection', () => {
   it('preserves the original anchor across reverse range extensions', () => {
-    const a = testId<'sidebarItems'>('item_a')
-    const b = testId<'sidebarItems'>('item_b')
-    const c = testId<'sidebarItems'>('item_c')
-    const d = testId<'sidebarItems'>('item_d')
+    const a = testResourceId('item_a')
+    const b = testResourceId('item_b')
+    const c = testResourceId('item_c')
+    const d = testResourceId('item_d')
     const selection = createCurrentItemFileSystemSelection(null)
 
     selection.selectSingleItem(d)
@@ -19,10 +19,10 @@ describe('filesystem selection', () => {
   })
 
   it('extends keyboard ranges from the visible focus when the stored anchor is hidden', () => {
-    const hidden = testId<'sidebarItems'>('hidden_item')
-    const a = testId<'sidebarItems'>('item_a')
-    const b = testId<'sidebarItems'>('item_b')
-    const c = testId<'sidebarItems'>('item_c')
+    const hidden = testResourceId('hidden_item')
+    const a = testResourceId('item_a')
+    const b = testResourceId('item_b')
+    const c = testResourceId('item_c')
     const selection = createCurrentItemFileSystemSelection(null)
 
     selection.setSelectedItemIds([hidden], hidden)
@@ -36,9 +36,9 @@ describe('filesystem selection', () => {
   })
 
   it('keeps exposed selected ids detached from internal selection state', () => {
-    const a = testId<'sidebarItems'>('item_a')
-    const b = testId<'sidebarItems'>('item_b')
-    const leakedSelection = testId<'sidebarItems'>('mutated_outside')
+    const a = testResourceId('item_a')
+    const b = testResourceId('item_b')
+    const leakedSelection = testResourceId('mutated_outside')
     const selection = createCurrentItemFileSystemSelection(null)
 
     selection.setSelectedItemIds([a, b], a)

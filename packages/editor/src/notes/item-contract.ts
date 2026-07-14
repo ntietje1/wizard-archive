@@ -2,12 +2,11 @@ import type { ShareStatus } from '../../../../shared/block-shares/share-status'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { NoteBlock } from './document/model'
 import type { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
-import type { CampaignMemberId } from '../resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '../resources/domain-id'
 import type {
   BaseResource,
   BaseResourceRow,
   BaseResourceWithContent,
-  ResourceId,
 } from '../workspace/resource-contract'
 
 export type BlockMeta = {

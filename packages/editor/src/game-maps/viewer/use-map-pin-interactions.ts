@@ -1,3 +1,4 @@
+import type { ResourceId, MapPinId } from '../../resources/domain-id'
 import { useEffect, useRef, useState } from 'react'
 import type {
   Dispatch,
@@ -8,8 +9,7 @@ import type {
 } from 'react'
 import { toast } from 'sonner'
 import type { MaybePromise } from '../../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-import type { MapPinId } from '../../resources/domain-id'
+
 import type { MapItemWithContent, MapPinWithItem } from '../../game-maps/item-contract'
 import type { MapSession } from '../../game-maps/session-contract'
 import type { AnyItem } from '../../workspace/items'
@@ -32,18 +32,18 @@ type MapPinInteractionSource = {
   canViewItem: (item: AnyItem | null | undefined) => boolean
   createMapPins: MapPinSession['create']
   openItem: (
-    itemId: SidebarItemId,
+    itemId: ResourceId,
     options?: { heading?: string; replace?: boolean },
   ) => MaybePromise<void>
   updateMapPin: MapPinSession['update']
 }
 
 type PendingPinItems = {
-  itemIds: Array<SidebarItemId>
+  itemIds: Array<ResourceId>
   layerId: string | null
-  mapId: SidebarItemId
+  mapId: ResourceId
 }
-type PendingPinMove = { mapId: SidebarItemId; pinId: MapPinId }
+type PendingPinMove = { mapId: ResourceId; pinId: MapPinId }
 type DraggingPin = { pin: MapPinWithItem; pointerId: number }
 type PinContextMenuState = {
   layerId: string | null
@@ -222,7 +222,7 @@ function usePinActionCancellation({
   canEditMap: boolean
   draggedPinPositionRef: { current: PinPosition | null }
   draggingPin: DraggingPin | null
-  mapId: SidebarItemId
+  mapId: ResourceId
   pendingPinItems: PendingPinItems | null
   pendingPinMove: PendingPinMove | null
   pinsContainerRef: PinElementContainerRef
@@ -426,11 +426,11 @@ function usePinPlacementRequests({
   canEditMap: boolean
   imageError: boolean
   layerId: string | null
-  mapId: SidebarItemId
+  mapId: ResourceId
   setPendingPinItems: StateSetter<PendingPinItems | null>
   setPendingPinMove: StateSetter<PendingPinMove | null>
 }) {
-  const requestPinPlacement = (input: { itemIds: Array<SidebarItemId> }) => {
+  const requestPinPlacement = (input: { itemIds: Array<ResourceId> }) => {
     if (!canEditMap) return
     if (imageError) {
       toast.error('Cannot place pin: map image failed to load')

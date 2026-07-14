@@ -1,3 +1,4 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { createWizardEditorResource } from '@wizard-archive/editor/adapter'
 import { act } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
@@ -12,7 +13,6 @@ import type {
   WizardEditorRuntime,
 } from '@wizard-archive/editor/adapter'
 import type { Dispatch } from 'react'
-import type { SidebarItemId } from 'shared/common/ids'
 
 const TEST_RESOURCE_TYPES = {
   notes: 'note',
@@ -62,7 +62,7 @@ describe('local demo workspace runtime', () => {
 
     await expect(
       source.commands.operations.updateItemMetadata({
-        item: { ...item, id: 'missing-local-item' as SidebarItemId },
+        item: { ...item, id: 'missing-local-item' as ResourceId },
         name: testResourceTitle('Renamed note'),
       }),
     ).rejects.toThrow('Failed to update item metadata')
@@ -101,12 +101,12 @@ describe('local demo workspace runtime', () => {
     const { setNavigation, source } = createLocalSidebarSource()
 
     await act(async () => {
-      await source.navigation.openItem(createWizardEditorResource('canvas-heist' as SidebarItemId))
+      await source.navigation.openItem(createWizardEditorResource('canvas-heist' as ResourceId))
     })
 
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource('canvas-heist' as SidebarItemId),
+      resource: createWizardEditorResource('canvas-heist' as ResourceId),
     })
   })
 
@@ -131,12 +131,12 @@ describe('local demo workspace runtime', () => {
     })
 
     await act(async () => {
-      await source.navigation.openItem(createWizardEditorResource('canvas-heist' as SidebarItemId))
+      await source.navigation.openItem(createWizardEditorResource('canvas-heist' as ResourceId))
     })
 
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource('canvas-heist' as SidebarItemId),
+      resource: createWizardEditorResource('canvas-heist' as ResourceId),
     })
   })
 
@@ -148,7 +148,7 @@ describe('local demo workspace runtime', () => {
     const { source } = createLocalSidebarSource({
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource('canvas-heist' as SidebarItemId),
+        resource: createWizardEditorResource('canvas-heist' as ResourceId),
       },
       workspace,
     })
@@ -201,8 +201,8 @@ describe('local demo workspace runtime', () => {
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
     const filesystem = source.resources
-    const note = filesystem.catalog.getKnownItemById('note-market' as SidebarItemId)
-    const canvas = filesystem.catalog.getKnownItemById('canvas-heist' as SidebarItemId)
+    const note = filesystem.catalog.getKnownItemById('note-market' as ResourceId)
+    const canvas = filesystem.catalog.getKnownItemById('canvas-heist' as ResourceId)
     if (!note) throw new Error('Expected seeded note to exist in local demo catalog')
     if (!canvas) throw new Error('Expected seeded canvas to exist in local demo catalog')
 
@@ -245,9 +245,7 @@ describe('local demo workspace runtime', () => {
       workspace,
     })
 
-    await deleteSource.commands.operations.requestDeleteItemsForever([
-      'canvas-heist' as SidebarItemId,
-    ])
+    await deleteSource.commands.operations.requestDeleteItemsForever(['canvas-heist' as ResourceId])
 
     expect(deleteDispatch).toHaveBeenCalledExactlyOnceWith({
       type: 'applyResourceCommandReceipt',

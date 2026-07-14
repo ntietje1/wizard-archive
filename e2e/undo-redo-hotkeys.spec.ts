@@ -18,7 +18,7 @@ import { getCampaignIdFromRoute, getSidebarItemIdBySlug } from './helpers/convex
 import { pressRedo, pressUndo } from './helpers/keyboard-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import type { Page } from '@playwright/test'
-import type { Id } from 'convex/_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 const campaignName = testName('URHotkeys')
 
@@ -135,7 +135,7 @@ async function openFreshRuntimeCanvas(page: Page, canvasName: string) {
   await selectCanvasTool(page, 'Pointer')
 }
 
-async function getCurrentNoteId(page: Page): Promise<Id<'sidebarItems'>> {
+async function getCurrentNoteId(page: Page): Promise<ResourceId> {
   const noteSlug = getCurrentItemSlug(page)
   const { dmUsername, campaignSlug } = getCurrentCampaignRoute(page)
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })

@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import type { WorkspaceMenuContext } from '../menu-context'
 import type { AnyItem } from '../items'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { MaybePromise } from '../../../../../shared/common/async'
 import type { FileSystemPasteTargetInput } from '../../filesystem/item-operation-contracts'
 import type { ResourceCommandResult } from '../../filesystem/transaction-contract'
@@ -17,7 +18,7 @@ export interface FilesystemContextMenuActionTarget {
   requestEmptyTrash: () => MaybePromise<void>
   pasteIntoTarget: (input: FileSystemPasteTargetInput) => MaybePromise<ResourceCommandResult>
   requestDeleteItemsForever: (items: Array<AnyItem>) => MaybePromise<void>
-  restoreItems: (items: Array<AnyItem>, targetParentId: SidebarItemId | null) => MaybePromise<void>
+  restoreItems: (items: Array<AnyItem>, targetParentId: ResourceId | null) => MaybePromise<void>
   trashItems: (items: Array<AnyItem>) => MaybePromise<void>
 }
 

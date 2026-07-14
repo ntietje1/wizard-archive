@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { use, useState } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -10,7 +11,7 @@ import {
   RESOURCE_STATUS,
   RESOURCE_TYPES,
 } from '../../../workspace/items-persistence-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { NoteValueProps } from '../../values/schema'
 import type { NoteValueAuthoringDefinition } from '../../values/runtime'
@@ -23,7 +24,7 @@ import { NoteValueRuntimeProvider } from '../value-block-runtime'
 import { ValueInlineContent } from '../value-block-spec'
 import type { NoteValueReferences } from '../../value-runtime-model'
 
-type TestRuntimeState = NoteValueRuntimeState<SidebarItemId>
+type TestRuntimeState = NoteValueRuntimeState<ResourceId>
 type TestRuntimeOkState = Extract<TestRuntimeState, { status: 'ok' }>
 type TestRuntimeErrorState = Extract<TestRuntimeState, { status: 'error' }>
 type TestRuntimeStateOverrides =
@@ -33,7 +34,7 @@ type TestRuntimeStateOverrides =
 
 function runtimeState(overrides: TestRuntimeStateOverrides = {}): TestRuntimeState {
   const identity = {
-    noteId: 'note-1' as SidebarItemId,
+    noteId: 'note-1' as ResourceId,
     noteBlockId: 'block-1',
     valueId: 'value-1',
     slug: 'prof_bonus',
@@ -50,7 +51,7 @@ function runtimeState(overrides: TestRuntimeStateOverrides = {}): TestRuntimeSta
   }
 }
 
-function noteItem(id: SidebarItemId, name: string): NoteItem {
+function noteItem(id: ResourceId, name: string): NoteItem {
   return {
     id: id,
     createdAt: 1,
@@ -104,16 +105,16 @@ function renderInlineValue({
   externalDependencyStatesStatus = 'success',
 }: {
   editable?: boolean
-  authoredDefinitions?: Array<NoteValueAuthoringDefinition<SidebarItemId>>
+  authoredDefinitions?: Array<NoteValueAuthoringDefinition<ResourceId>>
   updateInlineContent?: (update: {
     type: 'value'
     props: { valueId: string; slug: string; expressionSource: string }
   }) => void
   runtimeStates?:
-    | Array<NoteValueRuntimeState<SidebarItemId>>
-    | ((props: NoteValueProps) => Array<NoteValueRuntimeState<SidebarItemId>>)
+    | Array<NoteValueRuntimeState<ResourceId>>
+    | ((props: NoteValueProps) => Array<NoteValueRuntimeState<ResourceId>>)
   sidebarItems?: Array<AnyItem>
-  valueStatesForNotes?: Array<NoteValueRuntimeState<SidebarItemId>>
+  valueStatesForNotes?: Array<NoteValueRuntimeState<ResourceId>>
   externalDependencyStatesStatus?: 'pending' | 'success' | 'error'
 } = {}) {
   function TestHarness() {
@@ -134,7 +135,7 @@ function renderInlineValue({
     return (
       <NoteValueRuntimeContext.Provider
         value={{
-          noteId: 'note-1' as SidebarItemId,
+          noteId: 'note-1' as ResourceId,
           editable,
           authoredDefinitions,
           authoredValueStates: currentRuntimeStates,
@@ -215,24 +216,24 @@ function renderRuntimeProviderChip({
 }: {
   expressionSource: string
   evaluateValuesFromEditor?: boolean
-  persistedStates: Array<NoteValueRuntimeState<SidebarItemId>>
-  externalDependencyStates?: Array<NoteValueRuntimeState<SidebarItemId>>
+  persistedStates: Array<NoteValueRuntimeState<ResourceId>>
+  externalDependencyStates?: Array<NoteValueRuntimeState<ResourceId>>
   externalDependencyStatesStatus?: 'pending' | 'success' | 'error'
-  referenceableStates?: Array<NoteValueRuntimeState<SidebarItemId>>
+  referenceableStates?: Array<NoteValueRuntimeState<ResourceId>>
   sidebarItems?: Array<AnyItem>
   filteredSidebarItems?: Array<AnyItem>
   extraValues?: Parameters<typeof makeRuntimeProviderEditor>[1]
 }) {
-  const authoredDefinitions: Array<NoteValueAuthoringDefinition<SidebarItemId>> = [
+  const authoredDefinitions: Array<NoteValueAuthoringDefinition<ResourceId>> = [
     {
-      noteId: 'note-1' as SidebarItemId,
+      noteId: 'note-1' as ResourceId,
       noteBlockId: 'block-1',
       valueId: 'value-1',
       slug: 'draft_total',
       expressionSource,
     },
     ...extraValues.map((value, index) => ({
-      noteId: 'note-1' as SidebarItemId,
+      noteId: 'note-1' as ResourceId,
       noteBlockId: `block-${index + 2}`,
       valueId: value.valueId,
       slug: value.slug,
@@ -256,7 +257,7 @@ function renderRuntimeProviderChip({
       editable={false}
       evaluateValuesFromEditor={evaluateValuesFromEditor}
       source={{
-        noteId: 'note-1' as SidebarItemId,
+        noteId: 'note-1' as ResourceId,
         authoredDefinitions,
         externalDependencyStates,
         externalDependencyStatesStatus,
@@ -275,9 +276,9 @@ function useNoteValueRuntimeForTest() {
   return use(NoteValueRuntimeContext)!
 }
 
-function evaluateTestDefinitions(definitions: Array<NoteValueAuthoringDefinition<SidebarItemId>>) {
+function evaluateTestDefinitions(definitions: Array<NoteValueAuthoringDefinition<ResourceId>>) {
   const compiledDefinitions = compileNoteValueDefinitions(definitions, {
-    currentNoteId: 'note-1' as SidebarItemId,
+    currentNoteId: 'note-1' as ResourceId,
     resolveExternal: () => ({
       ok: false,
       errorCode: 'unknown_reference',
@@ -306,10 +307,10 @@ describe('inline value chip runtime', () => {
         editable={false}
         evaluateValuesFromEditor
         source={{
-          noteId: 'note-1' as SidebarItemId,
+          noteId: 'note-1' as ResourceId,
           authoredDefinitions: [
             {
-              noteId: 'note-1' as SidebarItemId,
+              noteId: 'note-1' as ResourceId,
               noteBlockId: 'block-1',
               valueId: 'value-1',
               slug: 'draft_total',
@@ -341,10 +342,10 @@ describe('inline value chip runtime', () => {
   it('keeps the runtime context stable when the source inputs do not change', () => {
     const contextValues: Array<NoteValueRuntimeContextValue> = []
     const source = {
-      noteId: 'note-1' as SidebarItemId,
+      noteId: 'note-1' as ResourceId,
       authoredDefinitions: [
         {
-          noteId: 'note-1' as SidebarItemId,
+          noteId: 'note-1' as ResourceId,
           noteBlockId: 'block-1',
           valueId: 'value-1',
           slug: 'draft_total',
@@ -391,8 +392,8 @@ describe('inline value chip runtime', () => {
   })
 
   it('evaluates changed external-reference drafts from authoring state', () => {
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
-    const sourceNote = noteItem('note-2' as SidebarItemId, 'Source Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
+    const sourceNote = noteItem('note-2' as ResourceId, 'Source Note')
 
     renderRuntimeProviderChip({
       expressionSource: '[[Source Note.prof_bonus]] + 1',
@@ -421,8 +422,8 @@ describe('inline value chip runtime', () => {
   })
 
   it('keeps external formulas pending while dependency states load', () => {
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
-    const sourceNote = noteItem('note-2' as SidebarItemId, 'Source Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
+    const sourceNote = noteItem('note-2' as ResourceId, 'Source Note')
 
     renderRuntimeProviderChip({
       expressionSource: '[[Source Note.prof_bonus]] + 1',
@@ -436,8 +437,8 @@ describe('inline value chip runtime', () => {
   })
 
   it('reports failed external dependency loads instead of unknown references', () => {
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
-    const sourceNote = noteItem('note-2' as SidebarItemId, 'Source Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
+    const sourceNote = noteItem('note-2' as ResourceId, 'Source Note')
 
     renderRuntimeProviderChip({
       expressionSource: '[[Source Note.prof_bonus]] + 1',
@@ -481,7 +482,7 @@ describe('inline value chip runtime', () => {
   })
 
   it('resolves the current note path as a same-note value dependency', () => {
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
 
     renderRuntimeProviderChip({
       expressionSource: '[[Current Note.draft_total]]',
@@ -495,8 +496,8 @@ describe('inline value chip runtime', () => {
   })
 
   it('reports filtered external notes as unknown references', () => {
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
-    const hiddenNote = noteItem('note-2' as SidebarItemId, 'Hidden Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
+    const hiddenNote = noteItem('note-2' as ResourceId, 'Hidden Note')
 
     renderRuntimeProviderChip({
       expressionSource: '[[Hidden Note.prof_bonus]] + 1',
@@ -521,7 +522,7 @@ describe('inline value chip runtime', () => {
   })
 
   it('reports duplicate authored slugs when the current note path is used', () => {
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
 
     renderRuntimeProviderChip({
       expressionSource: '[[Current Note.shared]]',
@@ -701,7 +702,7 @@ describe('inline value chip runtime', () => {
     renderInlineValue({
       authoredDefinitions: [
         {
-          noteId: 'note-1' as SidebarItemId,
+          noteId: 'note-1' as ResourceId,
           noteBlockId: 'block-2',
           valueId: 'value-2',
           slug: 'strength',
@@ -736,7 +737,7 @@ describe('inline value chip runtime', () => {
       renderInlineValue({
         authoredDefinitions: [
           {
-            noteId: 'note-1' as SidebarItemId,
+            noteId: 'note-1' as ResourceId,
             noteBlockId: 'block-1',
             valueId: 'value-1',
             slug: 'prof_bonus',
@@ -746,7 +747,7 @@ describe('inline value chip runtime', () => {
         runtimeStates: (props) =>
           evaluateTestDefinitions([
             {
-              noteId: 'note-1' as SidebarItemId,
+              noteId: 'note-1' as ResourceId,
               noteBlockId: 'block-1',
               valueId: props.valueId,
               slug: props.slug,
@@ -777,8 +778,8 @@ describe('inline value chip runtime', () => {
 
   it('shows available external values on note autocomplete suggestions', async () => {
     const user = userEvent.setup()
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
-    const sourceNote = noteItem('note-2' as SidebarItemId, 'Source Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
+    const sourceNote = noteItem('note-2' as ResourceId, 'Source Note')
 
     renderInlineValue({
       sidebarItems: [currentNote, sourceNote],
@@ -817,12 +818,12 @@ describe('inline value chip runtime', () => {
 
   it('shows authored values after selecting the current note in formula autocomplete', async () => {
     const user = userEvent.setup()
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
     renderInlineValue({
       sidebarItems: [currentNote],
       authoredDefinitions: [
         {
-          noteId: 'note-1' as SidebarItemId,
+          noteId: 'note-1' as ResourceId,
           noteBlockId: 'block-2',
           valueId: 'value-2',
           slug: 'strength',
@@ -866,7 +867,7 @@ describe('inline value chip runtime', () => {
     try {
       renderInlineValue({
         authoredDefinitions: Array.from({ length: 6 }, (_, index) => ({
-          noteId: 'note-1' as SidebarItemId,
+          noteId: 'note-1' as ResourceId,
           noteBlockId: `block-${index + 2}`,
           valueId: `value-${index + 2}`,
           slug: `value_${index + 1}`,
@@ -910,8 +911,8 @@ describe('inline value chip runtime', () => {
 
   it('collapses excess note autocomplete values into a more pill', async () => {
     const user = userEvent.setup()
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
-    const sourceNote = noteItem('note-2' as SidebarItemId, 'Source Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
+    const sourceNote = noteItem('note-2' as ResourceId, 'Source Note')
     const measureElement = vi
       .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
       .mockImplementation(function getTestRect(this: HTMLElement) {
@@ -963,7 +964,7 @@ describe('inline value chip runtime', () => {
     renderInlineValue({
       authoredDefinitions: [
         {
-          noteId: 'note-1' as SidebarItemId,
+          noteId: 'note-1' as ResourceId,
           noteBlockId: 'block-2',
           valueId: 'value-2',
           slug: 'strength',
@@ -997,8 +998,8 @@ describe('inline value chip runtime', () => {
 
   it('shows external formula dependencies resolved through workspace note paths', async () => {
     const user = userEvent.setup()
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
-    const sourceNote = noteItem('note-2' as SidebarItemId, 'Source Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
+    const sourceNote = noteItem('note-2' as ResourceId, 'Source Note')
     renderInlineValue({
       sidebarItems: [currentNote, sourceNote],
       valueStatesForNotes: [
@@ -1028,7 +1029,7 @@ describe('inline value chip runtime', () => {
 
   it('shows an error dependency for an unresolved external note path', async () => {
     const user = userEvent.setup()
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
     renderInlineValue({ sidebarItems: [currentNote], valueStatesForNotes: [] })
 
     await user.click(screen.getByTestId('note-value-inline'))
@@ -1048,8 +1049,8 @@ describe('inline value chip runtime', () => {
     ['error', 'Failed to load value'],
   ] as const)('shows %s external formula dependency state', async (status, message) => {
     const user = userEvent.setup()
-    const currentNote = noteItem('note-1' as SidebarItemId, 'Current Note')
-    const sourceNote = noteItem('note-2' as SidebarItemId, 'Source Note')
+    const currentNote = noteItem('note-1' as ResourceId, 'Current Note')
+    const sourceNote = noteItem('note-2' as ResourceId, 'Source Note')
     renderInlineValue({
       externalDependencyStatesStatus: status,
       sidebarItems: [currentNote, sourceNote],

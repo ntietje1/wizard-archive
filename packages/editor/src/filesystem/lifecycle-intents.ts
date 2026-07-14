@@ -1,17 +1,17 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { FileSystemLifecycleIntent } from './domain/lifecycle'
 import type { AnyItem, WorkspaceResourceReadModel } from '../workspace/items'
 
 type FileSystemLifecycleSelectionState = {
-  selectedItemIds: ReadonlyArray<SidebarItemId>
+  selectedItemIds: ReadonlyArray<ResourceId>
   clearItemSelection: () => void
 }
 
 type FileSystemLifecycleIntentAdapters = {
-  setFolderState: (workspaceId: string, folderId: SidebarItemId, isOpen: boolean) => void
-  setSelectedItemIds: (itemIds: ReadonlyArray<SidebarItemId>, focusedItemId?: SidebarItemId) => void
+  setFolderState: (workspaceId: string, folderId: ResourceId, isOpen: boolean) => void
+  setSelectedItemIds: (itemIds: ReadonlyArray<ResourceId>, focusedItemId?: ResourceId) => void
   getSelectionState: () => FileSystemLifecycleSelectionState
-  getCurrentResourceId: () => SidebarItemId | null
+  getCurrentResourceId: () => ResourceId | null
   openResource: (resource: AnyItem, options?: { replace?: boolean }) => Promise<void>
   clearWorkspaceContent: () => Promise<void>
 }
@@ -23,7 +23,7 @@ export async function applyFileSystemLifecycleIntents({
   adapters,
 }: {
   intents: Array<FileSystemLifecycleIntent>
-  previousResourceId: SidebarItemId | null
+  previousResourceId: ResourceId | null
   readModel: Pick<WorkspaceResourceReadModel<AnyItem>, 'getItem'>
   adapters: FileSystemLifecycleIntentAdapters
 }) {
@@ -39,7 +39,7 @@ async function applyFileSystemLifecycleIntent({
   adapters,
 }: {
   intent: FileSystemLifecycleIntent
-  previousResourceId: SidebarItemId | null
+  previousResourceId: ResourceId | null
   readModel: Pick<WorkspaceResourceReadModel<AnyItem>, 'getItem'>
   adapters: FileSystemLifecycleIntentAdapters
 }) {

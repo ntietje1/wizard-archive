@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import * as Y from 'yjs'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { EmbeddedCanvasState } from './embedded-state-contract'
 import { yMapToArray } from './utils/canvas-yjs-utils'
 import { parseCanvasDocumentEdge, parseCanvasDocumentNode } from './document-contract'
@@ -18,12 +19,12 @@ interface EmbeddedCanvasUpdateState {
 
 type EmbeddedCanvasUpdateSource = (input: {
   afterSeq: number | undefined
-  canvasId: SidebarItemId
+  canvasId: ResourceId
 }) => EmbeddedCanvasUpdateState
 
 interface EmbeddedCanvasCursor {
   afterSeq: number | undefined
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   initialLoadComplete: boolean
   revision: number
 }
@@ -32,7 +33,7 @@ export function useEmbeddedCanvasStateFromUpdates({
   canvasId,
   useUpdates,
 }: {
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   useUpdates: EmbeddedCanvasUpdateSource
 }): EmbeddedCanvasState {
   const [cursor, setCursor] = useState<EmbeddedCanvasCursor>(() => createInitialCursor(canvasId))
@@ -112,7 +113,7 @@ function resolveEmbeddedCanvasStatus(
   return activeCursor.initialLoadComplete ? 'available' : 'loading'
 }
 
-function createInitialCursor(canvasId: SidebarItemId): EmbeddedCanvasCursor {
+function createInitialCursor(canvasId: ResourceId): EmbeddedCanvasCursor {
   return {
     afterSeq: undefined,
     canvasId,

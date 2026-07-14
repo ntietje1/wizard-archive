@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { WorkspaceMode } from 'shared/workspace/workspace-mode'
 import { liveWorkspacePreferencesQuery } from './live-workspace-preferences'
 import type { LiveWorkspacePreferences } from './live-workspace-preferences'
@@ -15,7 +15,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignViewAsStore } from '~/features/campaigns/state/campaign-view-as-store'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { toEditorWorkspaceActor } from './workspace-actor'
 
 interface WorkspaceModeContextType {
@@ -30,7 +30,7 @@ interface WorkspaceModeContextType {
 
 export function useLiveWorkspaceMode(
   currentItem: WizardEditorItem | null,
-  getItemById: (itemId: SidebarItemId) => WizardEditorItem | null | undefined,
+  getItemById: (itemId: ResourceId) => WizardEditorItem | null | undefined,
 ): WorkspaceModeContextType {
   const { isDm, campaignId: workspaceRecordId } = useCampaign()
   const queryClient = useQueryClient()
@@ -91,7 +91,7 @@ export function useLiveWorkspaceMode(
     resolveWizardEditorWorkspaceModeForItem({
       actor: workspaceActor,
       currentItem,
-      getItemById: (itemId) => getItemById(itemId as SidebarItemId),
+      getItemById: (itemId) => getItemById(itemId as ResourceId),
       rawWorkspaceMode,
     })
   const mutate = setEditorMutation.mutate

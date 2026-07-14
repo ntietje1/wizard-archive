@@ -2,12 +2,11 @@ import { toast } from 'sonner'
 import { useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
 import type {
   CampaignId,
   CampaignMemberId,
   HistoryEntryId,
+  ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import {
   createWizardEditorHistorySource,
@@ -47,7 +46,7 @@ export function useLiveWorkspaceHistory({
 }: {
   canEdit: boolean
   controls: LiveResourceHistoryControls
-  itemId: SidebarItemId | null
+  itemId: ResourceId | null
 }) {
   const { activePreviewingEntryId, activeRollbackEntryId, persistedItemId } =
     resolveWizardEditorHistoryScope({
@@ -133,16 +132,14 @@ function useLiveHistoryEntriesModel({
   previewingEntryId,
 }: {
   canEdit: boolean
-  itemId: SidebarItemId | null
+  itemId: ResourceId | null
   previewingEntryId: HistoryEntryId | null
 }): WizardEditorHistoryInput['entries'] {
   const membersQuery = useCampaignMembers()
   const { campaign, campaignId: workspaceRecordId } = useCampaign()
   const { results, status, loadMore } = useAuthPaginatedQuery(
     api.editHistory.queries.getItemHistory,
-    workspaceRecordId && itemId && canEdit
-      ? { campaignId: workspaceRecordId, itemId: itemId as Id<'sidebarItems'> }
-      : 'skip',
+    workspaceRecordId && itemId && canEdit ? { campaignId: workspaceRecordId, itemId } : 'skip',
     { initialNumItems: HISTORY_ENTRIES_PAGE_SIZE },
   )
 

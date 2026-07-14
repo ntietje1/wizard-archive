@@ -2,14 +2,17 @@ import { expect } from '@playwright/test'
 import { navigateToCampaign } from './campaign-helpers'
 import { getBrowserPrimaryModifier } from './keyboard-helpers'
 import { openItem, sidebarItem, waitForFilesystemIdle } from './sidebar-helpers'
-import type { Id } from 'convex/_generated/dataModel'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from '@wizard-archive/editor/canvas/document-contract'
 import type { Locator, Page } from '@playwright/test'
-import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CanvasNodeId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  assertDomainId,
+  parseDomainId,
+} from '@wizard-archive/editor/resources/domain-id'
+import type { CanvasNodeId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 
 export interface CanvasPoint {
@@ -317,13 +320,13 @@ export async function clearCanvasViaRuntime(page: Page) {
   await expect.poll(() => getCanvasEdges(page).count()).toBe(0)
 }
 
-export async function getCanvasRuntimeCanvasId(page: Page): Promise<Id<'sidebarItems'>> {
+export async function getCanvasRuntimeCanvasId(page: Page): Promise<ResourceId> {
   await waitForCanvasRuntime(page)
   const canvasId = await page.evaluate(() => window.__WA_CANVAS_PERF_RUNTIME__?.getCanvasId())
   if (!canvasId) {
     throw new Error('Missing canvas runtime canvas id')
   }
-  return canvasId as Id<'sidebarItems'>
+  return assertDomainId(DOMAIN_ID_KIND.resource, canvasId)
 }
 
 export async function getCanvasRuntimeSnapshot(page: Page): Promise<CanvasRuntimeSnapshot> {
@@ -495,7 +498,7 @@ export async function seedCanvasEmbedNodeViaRuntime(
   page: Page,
   options: {
     id: string
-    resourceId: Id<'sidebarItems'>
+    resourceId: ResourceId
     position: CanvasPoint
     width?: number
     height?: number

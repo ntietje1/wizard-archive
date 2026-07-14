@@ -38,6 +38,11 @@ import type { CampaignMutationCtx } from '../../../functions'
 import type { Doc, Id } from '../../../_generated/dataModel'
 import { assertConvexResourceTitle } from '../../validation/name'
 import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
+import {
+  requireSidebarItemRow,
+  requireSidebarItemRows,
+  sidebarItemResourceId,
+} from '../../functions/sidebarItemIdentity'
 const clearDeletion = { deletionTime: null, deletedBy: null }
 type StoredSidebarItemRow = Doc<'sidebarItems'>
 
@@ -57,9 +62,9 @@ const MAX_SIDEBAR_MOVE_DEPTH = 50
 function pushSelfEvent(
   events: Array<ResourceEvent>,
   type: MoveSelfEventType,
-  itemId: Id<'sidebarItems'>,
+  item: StoredSidebarItemRow,
 ) {
-  events.push({ type, itemId })
+  events.push({ type, itemId: sidebarItemResourceId(item) })
 }
 
 async function resyncRelativeLinksForMovedItems(
@@ -272,29 +277,30 @@ async function executeParentMove(
 
 async function executeMoveOperations(
   ctx: CampaignMutationCtx,
-  operations: Array<TransferOperation>,
+  operations: Array<TransferOperation<Id<'sidebarItems'>>>,
   action: MoveCommandAction,
-  rootSourceIds: Array<Id<'sidebarItems'>>,
+  rootSources: Array<AccessibleSidebarItemRow>,
   session: FileSystemWriteSession,
 ): Promise<Array<ResourceEvent>> {
   const events: Array<ResourceEvent> = []
-  const operationSourceIds = new Set<Id<'sidebarItems'>>()
+  const operationSourceIds = new Set(operations.map((operation) => operation.sourceItemId))
+  const affectedItems = await Promise.all(
+    operations.map((operation) => executeMoveOperation(ctx, operation, action, session)),
+  )
 
-  for (const operation of operations) {
-    operationSourceIds.add(operation.sourceItemId)
-    const affectedId = await executeMoveOperation(ctx, operation, action, session)
-    if (!affectedId) continue
+  for (const affected of affectedItems) {
+    if (!affected) continue
 
     if (action === 'restore') {
-      pushSelfEvent(events, RESOURCE_EVENT_TYPE.restored, affectedId)
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.restored, affected)
     } else {
-      pushSelfEvent(events, RESOURCE_EVENT_TYPE.moved, affectedId)
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.moved, affected)
     }
   }
 
-  for (const sourceItemId of rootSourceIds) {
-    if (!operationSourceIds.has(sourceItemId)) {
-      pushSelfEvent(events, RESOURCE_EVENT_TYPE.noop, sourceItemId)
+  for (const source of rootSources) {
+    if (!operationSourceIds.has(source._id)) {
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.noop, source)
     }
   }
   return events
@@ -302,10 +308,10 @@ async function executeMoveOperations(
 
 async function executeMoveOperation(
   ctx: CampaignMutationCtx,
-  operation: TransferOperation,
+  operation: TransferOperation<Id<'sidebarItems'>>,
   action: MoveCommandAction,
   session: FileSystemWriteSession,
-): Promise<Id<'sidebarItems'> | null> {
+): Promise<AccessibleSidebarItemRow | null> {
   const source = await loadMovableSource(ctx, operation.sourceItemId)
 
   if (action === 'restore') {
@@ -329,7 +335,7 @@ async function executeMoveOperation(
       session,
     })
   }
-  return source._id
+  return source
 }
 
 async function loadMovableSources(
@@ -372,11 +378,11 @@ async function trashSidebarItems(
 
   for (const item of rootItems) {
     if (isTrashedSidebarItem(item)) {
-      pushSelfEvent(events, RESOURCE_EVENT_TYPE.noop, item._id)
+      pushSelfEvent(events, RESOURCE_EVENT_TYPE.noop, item)
       continue
     }
     await session.trashSidebarTree(item)
-    pushSelfEvent(events, RESOURCE_EVENT_TYPE.trashed, item._id)
+    pushSelfEvent(events, RESOURCE_EVENT_TYPE.trashed, item)
   }
 
   return events
@@ -463,7 +469,7 @@ async function executeMovePlan(
     ctx,
     operations,
     action,
-    rootSourceItems.map((item) => item.id),
+    rootSourceItems.map((item) => sourceItems.find((source) => source._id === item.id)!),
     session,
   )
   return events
@@ -480,9 +486,14 @@ export async function executeMoveCommand(
   },
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
+  const sourceRows = await requireSidebarItemRows(ctx, command.itemIds)
+  const targetParentRow =
+    command.type === 'trash' || command.targetParentId === null
+      ? null
+      : await requireSidebarItemRow(ctx, command.targetParentId)
   const events = await executeMovePlan(ctx, {
-    sourceItemIds: command.itemIds,
-    targetParentId: command.type === 'trash' ? null : command.targetParentId,
+    sourceItemIds: sourceRows.map((row) => row._id),
+    targetParentId: targetParentRow?._id ?? null,
     action,
     session,
   })

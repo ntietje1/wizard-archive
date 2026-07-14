@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { createCanvasNodePlacement } from '../canvas-node-modules'
 import type { CanvasPosition } from '../../types/canvas-domain-types'
 import type { CanvasDocumentNode } from '../../document-contract'
 import type { EmbedTarget } from '../../../../../../shared/embeds/embedTargets'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 const EMBED_SIZE = { width: 320, height: 240 } as const
 
 export function createEmbedCanvasNode(
@@ -17,7 +18,7 @@ export function createEmbedCanvasNode(
 }
 
 export function createResourceEmbedCanvasNode(
-  resourceId: SidebarItemId,
+  resourceId: ResourceId,
   position: CanvasPosition,
 ): CanvasDocumentNode {
   return createEmbedCanvasNode({ kind: 'resource', resourceId }, position)

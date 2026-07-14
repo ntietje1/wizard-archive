@@ -1,5 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
-
+import type { ResourceId } from '../resources/domain-id'
 interface FileWithPath {
   file: File
   relativePath: string
@@ -18,7 +17,7 @@ export interface DropResult {
 }
 
 export type FileDropDestination =
-  | { kind: 'direct'; parentId: SidebarItemId | null }
+  | { kind: 'direct'; parentId: ResourceId | null }
   | { kind: 'assets' }
 
 export interface FileDropOptions {

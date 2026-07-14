@@ -10,7 +10,7 @@ import {
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import { testId } from '../../_test/test-id.helper'
+import { testResourceId } from '../../../shared/test/resource-id'
 import {
   canonicalizeResourceItemTitle,
   validateResourceTitle,
@@ -21,9 +21,8 @@ import {
   RESOURCE_STATUS,
   RESOURCE_TYPES,
 } from '@wizard-archive/editor/resources/items-persistence-contract'
-import type { Id } from '../../_generated/dataModel'
 import { requireCreateParentTarget } from '../validation/parent'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 describe('validateResourceTitle', () => {
   it('canonicalizes blank titles to Untitled', () => {
@@ -62,16 +61,16 @@ describe('sidebar item lifecycle schema invariants', () => {
 
   it('rejects lifecycle patches that omit required trash metadata', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expect(
       t.run(async (dbCtx) =>
-        dbCtx.db.patch('sidebarItems', noteId, { status: RESOURCE_STATUS.trashed } as never),
+        dbCtx.db.patch('sidebarItems', noteRowId, { status: RESOURCE_STATUS.trashed } as never),
       ),
     ).rejects.toThrow('Validator error')
 
     await t.run(async (dbCtx) => {
-      await expect(dbCtx.db.get('sidebarItems', noteId)).resolves.toMatchObject({
+      await expect(dbCtx.db.get('sidebarItems', noteRowId)).resolves.toMatchObject({
         status: RESOURCE_STATUS.active,
         deletionTime: null,
         deletedBy: null,
@@ -130,62 +129,58 @@ describe('validateSidebarItemSlug', () => {
 
 describe('validateNoCircularParent', () => {
   const folder = (parentId: string | null) => ({
-    parentId: parentId ? testId<'sidebarItems'>(parentId) : null,
+    parentId: parentId ? testResourceId(parentId) : null,
   })
 
   it('returns valid for null parent', async () => {
-    const result = await validateNoCircularParentAsync(
-      testId<'sidebarItems'>('f1'),
-      null,
-      () => undefined,
-    )
+    const result = await validateNoCircularParentAsync(testResourceId('f1'), null, () => undefined)
     expect(result).toEqual({ valid: true })
   })
 
   it('rejects item as its own parent', async () => {
     const result = await validateNoCircularParentAsync(
-      testId<'sidebarItems'>('f1'),
-      testId<'sidebarItems'>('f1'),
+      testResourceId('f1'),
+      testResourceId('f1'),
       () => undefined,
     )
     expect(result.valid).toBe(false)
   })
 
   it('detects ancestor cycle', async () => {
-    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
-      f2: folder('f3'),
-      f3: folder('f1'),
+    const tree: Record<string, { parentId: ResourceId | null }> = {
+      [testResourceId('f2')]: folder('f3'),
+      [testResourceId('f3')]: folder('f1'),
     }
     const result = await validateNoCircularParentAsync(
-      testId<'sidebarItems'>('f1'),
-      testId<'sidebarItems'>('f2'),
+      testResourceId('f1'),
+      testResourceId('f2'),
       (id) => tree[id],
     )
     expect(result.valid).toBe(false)
   })
 
   it('allows deep chain with no cycle', async () => {
-    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
-      f2: folder('f3'),
-      f3: folder('f4'),
-      f4: folder(null),
+    const tree: Record<string, { parentId: ResourceId | null }> = {
+      [testResourceId('f2')]: folder('f3'),
+      [testResourceId('f3')]: folder('f4'),
+      [testResourceId('f4')]: folder(null),
     }
     const result = await validateNoCircularParentAsync(
-      testId<'sidebarItems'>('f1'),
-      testId<'sidebarItems'>('f2'),
+      testResourceId('f1'),
+      testResourceId('f2'),
       (id) => tree[id],
     )
     expect(result).toEqual({ valid: true })
   })
 
   it('rejects circular source data through the seen set', async () => {
-    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
-      f2: folder('f3'),
-      f3: folder('f2'),
+    const tree: Record<string, { parentId: ResourceId | null }> = {
+      [testResourceId('f2')]: folder('f3'),
+      [testResourceId('f3')]: folder('f2'),
     }
     const result = await validateNoCircularParentAsync(
-      testId<'sidebarItems'>('f1'),
-      testId<'sidebarItems'>('f2'),
+      testResourceId('f1'),
+      testResourceId('f2'),
       (id) => tree[id],
     )
     expect(result).toEqual({
@@ -195,13 +190,13 @@ describe('validateNoCircularParent', () => {
   })
 
   it('supports async parent lookups with the same behavior', async () => {
-    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
-      f2: folder('f3'),
-      f3: folder('f1'),
+    const tree: Record<string, { parentId: ResourceId | null }> = {
+      [testResourceId('f2')]: folder('f3'),
+      [testResourceId('f3')]: folder('f1'),
     }
     const result = await validateNoCircularParentAsync(
-      testId<'sidebarItems'>('f1'),
-      testId<'sidebarItems'>('f2'),
+      testResourceId('f1'),
+      testResourceId('f2'),
       (id) => Promise.resolve(tree[id]),
     )
     expect(result.valid).toBe(false)
@@ -210,7 +205,7 @@ describe('validateNoCircularParent', () => {
 
 describe('requireCreateParentTarget', () => {
   it('preserves direct parent targets for command execution', () => {
-    const parentId = testId<'sidebarItems'>('direct-parent')
+    const parentId = testResourceId('direct-parent')
 
     expect(requireCreateParentTarget({ kind: 'direct', parentId })).toEqual({
       kind: 'direct',
@@ -488,7 +483,7 @@ describe('folder share inheritance defaults', () => {
   async function getFolderInheritShares(
     client: ReturnType<typeof asDm>,
     campaignId: CampaignId,
-    folderId: Id<'sidebarItems'>,
+    folderId: ResourceId,
   ) {
     const item = await client.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId,

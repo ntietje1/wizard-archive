@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { NOTE_EDITOR_DROP_TYPE } from '../drop-target-data'
 import {
@@ -12,13 +13,13 @@ import {
 } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
 import type { ResourceStatus } from '../../workspace/resource-contract'
-import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { CampaignId } from '../../../../../shared/common/ids'
 import type { SurfaceDropCommandEffects } from '../surface-command-effects'
 
 const campaignId = 'campaign_1' as CampaignId
 
 function sidebarItemId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }
 
 function createNote(

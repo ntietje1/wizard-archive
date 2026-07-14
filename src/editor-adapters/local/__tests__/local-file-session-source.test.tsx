@@ -1,3 +1,4 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { WizardEditorItemWithContent } from '@wizard-archive/editor/adapter'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
@@ -12,7 +13,6 @@ import {
   createTestNoteSessionPorts,
   createTestNoteValueSessionPorts,
 } from './helpers/session-sources'
-import type { SidebarItemId } from 'shared/common/ids'
 
 type LocalFileItemWithContent = Extract<WizardEditorItemWithContent, { type: 'file' }>
 
@@ -35,7 +35,7 @@ describe('local demo filesystem file session source', () => {
       setWorkspaceMode: vi.fn(),
     })
     const filesystem = runtime.resources
-    const file = filesystem.catalog.getKnownItemById('file-handout' as SidebarItemId)
+    const file = filesystem.catalog.getKnownItemById('file-handout' as ResourceId)
     if (!file || file.type !== 'file') {
       throw new Error('Expected the seeded demo file to exist in the filesystem catalog')
     }

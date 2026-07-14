@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import {
   RESOURCE_LOCATION,
@@ -5,7 +6,7 @@ import {
   RESOURCE_TYPES,
 } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
-import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { CampaignId } from '../../../../../shared/common/ids'
 import type { DropResult } from '../file-drop'
 import type { PlannedDropCommand } from '../drop-command'
 import {
@@ -18,7 +19,7 @@ import { CANVAS_DROP_ZONE_TYPE } from '../drop-target-data'
 const campaignId = 'campaign_1' as CampaignId
 
 function sidebarItemId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }
 
 function createNote(overrides: Partial<AnyItem> = {}): AnyItem {

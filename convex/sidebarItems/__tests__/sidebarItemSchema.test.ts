@@ -8,11 +8,11 @@ describe('sidebar item schema', () => {
 
   it('rejects unsupported stored icon names', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expect(
       t.run(async (dbCtx) => {
-        await dbCtx.db.patch('sidebarItems', noteId, {
+        await dbCtx.db.patch('sidebarItems', noteRowId, {
           iconName: 'NotAStoredIcon' as never,
         })
       }),
@@ -21,15 +21,15 @@ describe('sidebar item schema', () => {
 
   it('accepts supported stored icon names', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', noteId, {
+      await dbCtx.db.patch('sidebarItems', noteRowId, {
         iconName: 'Folder',
       })
     })
 
-    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
+    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteRowId))
     expect(note?.iconName).toBe('Folder')
   })
 })

@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasResourceEmbedSurface } from '../canvas-resource-embed-surface'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { canonicalizeResourceItemTitle } from '../../../workspace/items'
 import {
   RESOURCE_LOCATION,
@@ -192,10 +193,10 @@ function createSidebarItem({
   parentId,
   type,
 }: {
-  id: SidebarItemId
+  id: ResourceId
   imageUrl?: string | null
   name: string
-  parentId: SidebarItemId | null
+  parentId: ResourceId | null
   type: AnyItem['type']
 }): AnyItem {
   const item = {
@@ -262,5 +263,5 @@ function createSidebarItemWithContent(args: Parameters<typeof createSidebarItem>
 }
 
 function createSidebarItemId(value: string) {
-  return value as SidebarItemId
+  return value as ResourceId
 }

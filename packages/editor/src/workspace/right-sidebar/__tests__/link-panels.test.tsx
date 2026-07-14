@@ -1,7 +1,9 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../../resources/domain-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { AnyItem } from '../../items'
 import { createWorkspaceResource } from '../../runtime'
 import type { BuiltContextMenu } from '../../../context-menu/types'
@@ -12,7 +14,6 @@ import { WorkspaceContextMenuModelSourceProvider } from '../../context-menu-mode
 import type { WorkspaceContextMenuModelSource } from '../../context-menu-model-source'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
-import { testId } from '../../../test/id'
 import { createAvailableSearch } from './test-helpers'
 import { RightSidebarPanel } from '../panels'
 
@@ -20,8 +21,8 @@ const { openItemMock } = vi.hoisted(() => ({
   openItemMock: vi.fn(),
 }))
 
-function sidebarItemId(id: string): SidebarItemId {
-  return testId<'sidebarItems'>(id)
+function sidebarItemId(id: string): ResourceId {
+  return testResourceId(id)
 }
 
 const resolvedRow = {
@@ -143,7 +144,7 @@ function renderLinkPanel({
   search,
 }: {
   activeItems?: Array<AnyItem>
-  itemId?: SidebarItemId
+  itemId?: ResourceId
   panelId: typeof RIGHT_SIDEBAR_CONTENT.backlinks | typeof RIGHT_SIDEBAR_CONTENT.outgoing
   search: ReturnType<typeof createAvailableSearch>
 }) {

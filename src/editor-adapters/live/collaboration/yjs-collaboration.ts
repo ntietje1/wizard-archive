@@ -2,22 +2,23 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
 import { logger } from '~/shared/utils/logger'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { useWizardEditorYjsCollaborationSession } from '@wizard-archive/editor/adapter'
 import type { YjsCollaborationProvider } from '@wizard-archive/editor/collaboration/yjs-provider'
 import type { Doc } from 'yjs'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 const YJS_SYNC_PAGE_SIZE = 100
 
 export function useConvexYjsCollaboration(
   initialSourceId: string | null,
-  documentId: SidebarItemId,
+  documentId: ResourceId,
   user: { name: string; color: string },
   canEdit: boolean,
   options?: {
     onBeforeDestroy?: (state: {
-      documentId: SidebarItemId
+      documentId: ResourceId
       sourceId: CampaignId
       doc: Doc
       provider: YjsCollaborationProvider
@@ -60,7 +61,7 @@ export function useConvexYjsCollaboration(
           campaignId: yjsWorkspaceRecordId(sourceId),
           clientId,
           documentId: awarenessDocumentId,
-          sessionId,
+          sessionId: yjsSessionId(sessionId),
           state,
         })
       },
@@ -74,7 +75,7 @@ export function useConvexYjsCollaboration(
           campaignId: yjsWorkspaceRecordId(sourceId),
           clientId,
           documentId: awarenessDocumentId,
-          sessionId,
+          sessionId: yjsSessionId(sessionId),
         })
       },
       reportError: (message, err) => logger.error(`[YJS] ${message}`, err),
@@ -92,13 +93,17 @@ function yjsWorkspaceRecordId(sourceId: string | null | undefined): CampaignId {
   return sourceId as CampaignId
 }
 
+function yjsSessionId(sessionId: string | undefined) {
+  return sessionId ? assertDomainId(DOMAIN_ID_KIND.session, sessionId) : undefined
+}
+
 function useConvexYjsUpdates({
   afterSeq,
   documentId,
   sourceId,
 }: {
   afterSeq?: number
-  documentId: SidebarItemId
+  documentId: ResourceId
   sourceId: string | null | undefined
 }) {
   const query = useAuthPaginatedQuery(
@@ -122,7 +127,7 @@ function useConvexYjsAwareness({
   sourceId,
 }: {
   afterSeq?: number
-  documentId: SidebarItemId
+  documentId: ResourceId
   sourceId: string | null | undefined
 }) {
   const query = useAuthPaginatedQuery(

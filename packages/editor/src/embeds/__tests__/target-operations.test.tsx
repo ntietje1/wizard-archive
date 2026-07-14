@@ -1,8 +1,8 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { act, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { toast } from 'sonner'
 import { createFolder } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { createWorkspaceEmbedTargetOperations } from '../target-operations'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
 import type { FileSystemLoadState } from '../../filesystem/load-state'
@@ -39,7 +39,7 @@ describe('createWorkspaceEmbedTargetOperations', () => {
       kind: 'file',
       fileName: 'portrait.png',
       result: {
-        id: testId<'sidebarItems'>('file-1'),
+        id: testResourceId('file-1'),
         slug: 'portrait',
       },
     })
@@ -65,11 +65,11 @@ describe('createWorkspaceEmbedTargetOperations', () => {
         name: 'portrait.png',
         size: 5,
       }),
-      parentId: testId<'sidebarItems'>('assets'),
+      parentId: testResourceId('assets'),
       acceptedKinds: ['file'],
       onProgress: expect.any(Function),
     })
-    expect(uploaded).toEqual({ status: 'completed', itemId: testId<'sidebarItems'>('file-1') })
+    expect(uploaded).toEqual({ status: 'completed', itemId: testResourceId('file-1') })
   })
 
   it('does not expose upload operations when the filesystem cannot edit', () => {
@@ -163,7 +163,7 @@ describe('createWorkspaceEmbedTargetOperations', () => {
       kind: 'folder',
       fileName: 'reference-folder',
       result: {
-        id: testId<'sidebarItems'>('folder-1'),
+        id: testResourceId('folder-1'),
         slug: 'reference-folder',
       },
     })
@@ -190,7 +190,7 @@ describe('createWorkspaceEmbedTargetOperations', () => {
                 kind: 'file',
                 fileName: 'portrait.png',
                 result: {
-                  id: testId<'sidebarItems'>('file-1'),
+                  id: testResourceId('file-1'),
                   slug: 'portrait',
                 },
               }),
@@ -239,7 +239,7 @@ function getToastContentMessage() {
 
 function createFileSystem({ canEdit = true }: { canEdit?: boolean } = {}) {
   const assets = createFolder({
-    id: testId<'sidebarItems'>('assets'),
+    id: testResourceId('assets'),
     name: 'Assets',
     parentId: null,
   })

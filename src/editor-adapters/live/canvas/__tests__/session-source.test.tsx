@@ -1,3 +1,5 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
@@ -8,7 +10,6 @@ import {
 } from '~/editor-adapters/live/canvas/session-source'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
-import type { SidebarItemId } from 'shared/common/ids'
 
 const doc = vi.hoisted(() => ({
   getMap: vi.fn(() => new Map()),
@@ -194,7 +195,7 @@ describe('useLiveCanvasSessionSource', () => {
   })
 
   it('skips live Yjs update reads for non-persisted embedded canvas ids', () => {
-    const canvasId = 'optimistic-canvas-1' as SidebarItemId
+    const canvasId = 'optimistic-canvas-1' as ResourceId
 
     const { result } = renderHook(() => {
       const source = useTestLiveCanvasEmbeddedSessionSource()
@@ -279,7 +280,7 @@ function createCanvas(
   overrides: Partial<TestCanvasItemWithContent> = {},
 ): TestCanvasItemWithContent {
   const { type: _type, ...baseItem } = createNote({
-    id: testId<'sidebarItems'>('canvas_1'),
+    id: testResourceId('canvas_1'),
     name: 'Canvas',
     myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
@@ -292,6 +293,6 @@ function createCanvas(
   }
 }
 
-function createTestCanvasId(value: string): SidebarItemId {
-  return testId<'sidebarItems'>(value)
+function createTestCanvasId(value: string): ResourceId {
+  return testResourceId(value)
 }

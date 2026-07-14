@@ -1,7 +1,8 @@
+import type { ResourceId, OperationId } from '../resources/domain-id'
 import type { ReactNode } from 'react'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
-import type { OperationId } from '../resources/domain-id'
+import type { UserProfileId } from '../../../../shared/common/ids'
+
 import type { ResourceColor, ResourceIconName, ResourceKind } from '../workspace/resource-contract'
 import type { ResourceTitle } from '../resources/resource-contract'
 import type { CreateParentTarget } from '../workspace/items'
@@ -40,17 +41,17 @@ export type ResourceOperationDriver = {
     initialize?: CreateFileSystemHostItemInitializer,
   ) => MaybePromise<CreatedFileSystemHostItem>
   renameItem: (input: RenameFileSystemHostItemInput) => MaybePromise<RenamedFileSystemHostItem>
-  toggleBookmarks: (itemIds: Array<SidebarItemId>) => MaybePromise<ResourceCommandResult>
+  toggleBookmarks: (itemIds: Array<ResourceId>) => MaybePromise<ResourceCommandResult>
 }
 
 export type ResourceTrashDriver = {
-  requestTrashItems: (itemIds: Array<SidebarItemId>) => MaybePromise<ResourceTrashRequestResult>
+  requestTrashItems: (itemIds: Array<ResourceId>) => MaybePromise<ResourceTrashRequestResult>
   restoreItems: (
-    itemIds: Array<SidebarItemId>,
-    targetParentId?: SidebarItemId | null,
+    itemIds: Array<ResourceId>,
+    targetParentId?: ResourceId | null,
   ) => MaybePromise<ResourceCommandResult>
   confirmEmptyTrash: () => void
-  confirmDeleteForever: (itemIds: Array<SidebarItemId>) => void
+  confirmDeleteForever: (itemIds: Array<ResourceId>) => void
 }
 
 export type ResourceTrashRequestResult =
@@ -59,12 +60,12 @@ export type ResourceTrashRequestResult =
   | { status: 'noop'; reason: 'no_items' }
 
 export type ResourceClipboardDriver = {
-  copy: (itemIds: Array<SidebarItemId>) => void
-  cut: (itemIds: Array<SidebarItemId>) => void
+  copy: (itemIds: Array<ResourceId>) => void
+  cut: (itemIds: Array<ResourceId>) => void
   canUseClipboardOperations: boolean
   cancelClipboard: () => boolean
-  canPaste: (targetParentId?: SidebarItemId | null) => boolean
-  paste: (targetParentId?: SidebarItemId | null) => MaybePromise<ResourceCommandResult>
+  canPaste: (targetParentId?: ResourceId | null) => boolean
+  paste: (targetParentId?: ResourceId | null) => MaybePromise<ResourceCommandResult>
 }
 
 export type ResourceDropDriver = {

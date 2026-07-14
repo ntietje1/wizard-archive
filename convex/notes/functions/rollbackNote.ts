@@ -23,10 +23,10 @@ export async function rollbackNote(
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
 
-  const restored = await rollbackYjsDocument(ctx, rawItem.id, snapshotData, expected)
+  const restored = await rollbackYjsDocument(ctx, itemId, snapshotData, expected)
   if (!restored) return false
   await ctx.scheduler.runAfter(0, internal.notes.internalActions.persistNoteBlocksFromYjs, {
-    documentId: rawItem.id,
+    documentId: itemId,
     campaignMemberId: ctx.membership._id,
   })
   return true

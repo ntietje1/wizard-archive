@@ -1,4 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 const PREVIEW_UPLOAD_TIMEOUT_MS = 30_000
 const PREVIEW_UPLOAD_TIMEOUT_SECONDS = PREVIEW_UPLOAD_TIMEOUT_MS / 1000
@@ -112,9 +113,9 @@ async function parsePreviewStorageId(response: Response) {
 
 async function publishPreviewUpload(args: {
   claimToken: string
-  itemId: Id<'sidebarItems'>
+  itemId: ResourceId
   setPreviewImage: (args: {
-    itemId: Id<'sidebarItems'>
+    itemId: ResourceId
     claimToken: string
     uploadSessionId: Id<'fileStorage'>
   }) => Promise<PreviewPublicationResult>
@@ -156,11 +157,11 @@ export async function uploadPreviewBlob(
     uploadUrl: string
   }>,
   setPreviewImage: (args: {
-    itemId: Id<'sidebarItems'>
+    itemId: ResourceId
     claimToken: string
     uploadSessionId: Id<'fileStorage'>
   }) => Promise<PreviewPublicationResult>,
-  itemId: Id<'sidebarItems'>,
+  itemId: ResourceId,
   claimToken: string,
   options: PreviewUploadOptions = {},
 ): Promise<PreviewPublicationResult> {

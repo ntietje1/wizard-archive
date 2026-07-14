@@ -1,12 +1,11 @@
 import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
-import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 type SharePermissionLevel = Extract<
   ResourceCommand,
@@ -16,7 +15,7 @@ type SharePermissionLevel = Extract<
 async function getShareInfo(
   dmAuth: ReturnType<typeof asDm>,
   campaignId: CampaignId,
-  sidebarItemId: Id<'sidebarItems'>,
+  sidebarItemId: ResourceId,
 ) {
   const [result] = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
     campaignId,

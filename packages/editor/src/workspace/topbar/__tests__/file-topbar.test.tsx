@@ -7,9 +7,9 @@ import { createRuntimeFileTopbarSource } from '../source'
 import type { CurrentItemState, WorkspaceNavigationState, WorkspaceRuntime } from '../../runtime'
 import type { AnyItemWithContent } from '../../items'
 import type { ResourceHistory } from '../../../filesystem/history-types'
+import type { ResourceId } from '../../../resources/domain-id'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
-import { testId } from '../../../test/id'
 
 const currentItemState = vi.hoisted(() => ({
   item: null as ReturnType<typeof createNote> | null,
@@ -125,7 +125,7 @@ describe('FileTopbar', () => {
 
   it('keeps more actions disabled for a pending optimistic item', () => {
     currentItemState.item = createNote({
-      id: testId<'sidebarItems'>('optimistic-create-1'),
+      id: 'optimistic-create-1' as ResourceId,
       myPermissionLevel: PERMISSION_LEVEL.EDIT,
     })
 

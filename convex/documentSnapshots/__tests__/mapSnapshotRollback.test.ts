@@ -30,7 +30,7 @@ describe('game map operations are rollbackable after every operation', () => {
   })
 
   it('every pin operation should be rollbackable', async () => {
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: n3 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
@@ -62,7 +62,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.run(async (dbCtx) => {
       const history = await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item', (q) => q.eq('itemId', mapId))
+        .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
         .collect()
 
       const pinAddEntries = history.filter((h) => h.action === 'map_pin_added')
@@ -75,7 +75,7 @@ describe('game map operations are rollbackable after every operation', () => {
   })
 
   it('each pin operation should have a corresponding snapshot', async () => {
-    const { mapId } = await createMapWithTwoSnapshotPins(t, dmAuth, {
+    const { mapRowId } = await createMapWithTwoSnapshotPins(t, dmAuth, {
       campaignId: ctx.campaignId,
       campaignDomainId: ctx.campaignDomainId,
       ownerId: ctx.dm.profile._id,
@@ -84,7 +84,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.run(async (dbCtx) => {
       const snapshots = await dbCtx.db
         .query('documentSnapshots')
-        .withIndex('by_item', (q) => q.eq('itemId', mapId))
+        .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
         .collect()
 
       // There should be 2 snapshots — one per pin operation
@@ -101,7 +101,7 @@ describe('game map operations are rollbackable after every operation', () => {
   })
 
   it('pin move should be rollbackable', async () => {
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinIds = await createSnapshotPin(t, dmAuth, {
@@ -124,7 +124,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await t.run(async (dbCtx) => {
-      const moveEntry = await getEditHistoryEntryByItemAction(dbCtx.db, mapId, 'map_pin_moved')
+      const moveEntry = await getEditHistoryEntryByItemAction(dbCtx.db, mapRowId, 'map_pin_moved')
 
       expect(moveEntry).not.toBeNull()
       expect(moveEntry!.hasSnapshot).toBe(true)
@@ -136,7 +136,7 @@ describe('game map operations are rollbackable after every operation', () => {
   })
 
   it('pin removal should be rollbackable', async () => {
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinIds = await createSnapshotPin(t, dmAuth, {
@@ -156,7 +156,11 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await t.run(async (dbCtx) => {
-      const removeEntry = await getEditHistoryEntryByItemAction(dbCtx.db, mapId, 'map_pin_removed')
+      const removeEntry = await getEditHistoryEntryByItemAction(
+        dbCtx.db,
+        mapRowId,
+        'map_pin_removed',
+      )
 
       expect(removeEntry).not.toBeNull()
       expect(removeEntry!.hasSnapshot).toBe(true)
@@ -167,7 +171,7 @@ describe('game map operations are rollbackable after every operation', () => {
   })
 
   it('visibility toggle should be rollbackable', async () => {
-    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinIds = await createSnapshotPin(t, dmAuth, {
@@ -190,7 +194,7 @@ describe('game map operations are rollbackable after every operation', () => {
     await t.run(async (dbCtx) => {
       const visEntry = await getEditHistoryEntryByItemAction(
         dbCtx.db,
-        mapId,
+        mapRowId,
         'map_pin_visibility_changed',
       )
 
@@ -212,7 +216,7 @@ describe('rollback data integrity', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Add pin at original position
@@ -228,7 +232,7 @@ describe('rollback data integrity', () => {
 
       // Get the history entry for the pin add
       const addEntry = await t.run(
-        async (dbCtx) => await getEditHistoryEntryByItemAction(dbCtx.db, mapId, 'map_pin_added'),
+        async (dbCtx) => await getEditHistoryEntryByItemAction(dbCtx.db, mapRowId, 'map_pin_added'),
       )
       expect(addEntry!.hasSnapshot).toBe(true)
 
@@ -251,7 +255,7 @@ describe('rollback data integrity', () => {
       await t.run(async (dbCtx) => {
         const activePins = await dbCtx.db
           .query('mapPins')
-          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapRowId))
           .collect()
 
         expect(activePins).toHaveLength(1)
@@ -274,12 +278,13 @@ describe('rollback of game map pin with non-note itemId', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Create a folder and pin it to the map (pins can reference any sidebar item)
-      const { folderId } = await t.run(async (dbCtx) => {
-        const id = await dbCtx.db.insert('sidebarItems', {
-          resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
+      const { folderId, folderRowId } = await t.run(async (dbCtx) => {
+        const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+        const rowId = await dbCtx.db.insert('sidebarItems', {
+          resourceUuid: resourceId,
           campaignId: ctx.campaignId,
           name: 'Pinned Folder',
           normalizedName: 'pinned folder',
@@ -299,7 +304,7 @@ describe('rollback of game map pin with non-note itemId', () => {
           deletionTime: null,
           deletedBy: null,
         })
-        return { folderId: id }
+        return { folderId: resourceId, folderRowId: rowId }
       })
 
       // Add a pin for the folder
@@ -311,7 +316,7 @@ describe('rollback of game map pin with non-note itemId', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       const addEntry = await t.run(
-        async (dbCtx) => await getEditHistoryEntryByItemAction(dbCtx.db, mapId, 'map_pin_added'),
+        async (dbCtx) => await getEditHistoryEntryByItemAction(dbCtx.db, mapRowId, 'map_pin_added'),
       )
       expect(addEntry).not.toBeNull()
       expect(addEntry!.hasSnapshot).toBe(true)
@@ -321,7 +326,7 @@ describe('rollback of game map pin with non-note itemId', () => {
       const pinId = await t.run(async (dbCtx) => {
         const pin = await dbCtx.db
           .query('mapPins')
-          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapRowId))
           .first()
         expect(pin).not.toBeNull()
         return pin!.mapPinUuid
@@ -343,12 +348,12 @@ describe('rollback of game map pin with non-note itemId', () => {
       await t.run(async (dbCtx) => {
         const activePins = await dbCtx.db
           .query('mapPins')
-          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapRowId))
           .collect()
 
         expect(activePins).toHaveLength(1)
         // The itemId should be the folder, not miscast to a note
-        expect(activePins[0].itemId).toBe(folderId)
+        expect(activePins[0].itemId).toBe(folderRowId)
         expect(activePins[0].x).toBe(25)
         expect(activePins[0].y).toBe(75)
       })
@@ -367,7 +372,7 @@ describe('snapshot captures state at time of mutation', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Add a pin at position (10, 20)
@@ -382,7 +387,9 @@ describe('snapshot captures state at time of mutation', () => {
       const addEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .first()
       })
 

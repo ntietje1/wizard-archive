@@ -1,9 +1,10 @@
+import type { ResourceId } from '../resources/domain-id'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { generatePdfPreview } from '../previews/generate'
 import type { PreviewUpload } from './preview-upload-contract'
 
-export const MAX_PDF_PREVIEW_SIZE = 50 * 1024 * 1024
+const MAX_PDF_PREVIEW_SIZE = 50 * 1024 * 1024
 
 type PdfPreviewGenerationResult =
   | { status: 'unsupported' }
@@ -37,7 +38,7 @@ export async function runPdfPreviewGeneration({
   options,
 }: {
   file: PdfPreviewFileSource
-  fileId: SidebarItemId
+  fileId: ResourceId
   claimAndUpload: PreviewUpload
   renderPdfPreview?: (source: ArrayBuffer, options?: { signal?: AbortSignal }) => Promise<Blob>
   options?: { signal?: AbortSignal }

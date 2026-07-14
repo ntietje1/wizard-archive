@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { SidebarItem } from './sidebar-item/sidebar-item'
 import { useSidebarWorkspaceState } from '../workspace-state'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { SidebarTreeSource } from './sidebar-tree-source'
 import { SidebarSurfaceScrollArea } from './sidebar-surface-scroll-area'
 
@@ -12,12 +13,12 @@ export function SidebarList({ source }: { source: SidebarTreeSource }) {
   const isActive = source.activeStatus === 'success'
 
   const rootItems = isActive ? source.getVisibleRoots({ sortOptions }) : []
-  const getChildren = (parentId: SidebarItemId) =>
+  const getChildren = (parentId: ResourceId) =>
     isActive ? source.getVisibleChildren({ parentId, sortOptions }) : []
-  const expandedFolderIds = new Set<SidebarItemId>()
+  const expandedFolderIds = new Set<ResourceId>()
   if (!closeAllFoldersMode) {
     for (const [id, isOpen] of Object.entries(folderStates)) {
-      if (isOpen) expandedFolderIds.add(id as SidebarItemId)
+      if (isOpen) expandedFolderIds.add(id as ResourceId)
     }
   }
   const visibleItemIds = isActive

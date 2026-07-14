@@ -1,5 +1,10 @@
-import type { CampaignId, CampaignMemberId, HistoryEntryId } from '../resources/domain-id'
-import type { ResourceId, ResourceKind } from '../workspace/resource-contract'
+import type {
+  CampaignId,
+  CampaignMemberId,
+  HistoryEntryId,
+  ResourceId,
+} from '../resources/domain-id'
+import type { ResourceKind } from '../workspace/resource-contract'
 
 const SHARED_HISTORY_ACTION = {
   created: 'created',

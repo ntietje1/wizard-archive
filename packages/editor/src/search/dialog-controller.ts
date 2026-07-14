@@ -1,7 +1,8 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, RefObject } from 'react'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceKind } from '../workspace/resource-contract'
 import type { WorkspaceNavigation } from '../workspace/runtime'
 import type { SidebarItemCreationCommand } from '../workspace/sidebar/creation-catalog'
@@ -14,7 +15,7 @@ import type { SearchDisplayItem } from './dialog-model'
 export interface SearchDialogActions {
   createItem: (input: {
     name?: string
-    parentId: SidebarItemId | null
+    parentId: ResourceId | null
     type: ResourceKind
   }) => MaybePromise<FileSystemCreateItemResult>
   openItem: WorkspaceNavigation['openItem']

@@ -12,6 +12,7 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
+import { findSidebarItemRow } from '../../sidebarItems/functions/sidebarItemIdentity'
 
 export async function rollbackGameMap(
   ctx: CampaignMutationCtx,
@@ -32,9 +33,9 @@ export async function rollbackGameMap(
     throw new Error(`rollbackMap: expected a map but got ${String(map.type)}`)
   }
 
-  await restoreMapImages(ctx, map.id, parsed)
-  await ctx.db.patch('sidebarItems', map.id, { previewStorageId: null })
-  await replaceMapPins(ctx, map.id, parsed.pins)
+  await restoreMapImages(ctx, itemId, parsed)
+  await ctx.db.patch('sidebarItems', itemId, { previewStorageId: null })
+  await replaceMapPins(ctx, itemId, parsed.pins)
 }
 
 async function restoreMapImages(
@@ -76,27 +77,23 @@ async function replaceMapPins(
   await asyncMap(existingPins, (pin) => ctx.db.delete('mapPins', pin._id))
 
   const pinTargetChecks = await asyncMap(pins, async (pin) => {
-    try {
-      const item = await ctx.db.get('sidebarItems', pin.itemId)
-      return { pin, exists: item !== null && isActiveSidebarItem(item) }
-    } catch {
-      return { pin, exists: false }
-    }
+    const item = await findSidebarItemRow(ctx, pin.itemId)
+    return { pin, item: item && isActiveSidebarItem(item) ? item : null }
   })
-  const validPins = pinTargetChecks.filter((p) => p.exists).map((p) => p.pin)
+  const validPins = pinTargetChecks.flatMap(({ pin, item }) => (item ? [{ pin, item }] : []))
   const skippedCount = pinTargetChecks.length - validPins.length
   if (skippedCount > 0) {
-    const skippedIds = pinTargetChecks.filter((p) => !p.exists).map((p) => p.pin.itemId)
+    const skippedIds = pinTargetChecks.flatMap(({ pin, item }) => (item ? [] : [pin.itemId]))
     logger.warn(
       `rollbackGameMap: skipped ${skippedCount} pins with missing targets: ${skippedIds.join(', ')}`,
     )
   }
 
-  await asyncMap(validPins, (pin) =>
+  await asyncMap(validPins, ({ pin, item }) =>
     ctx.db.insert('mapPins', {
       mapPinUuid: pin.id,
       mapId,
-      itemId: pin.itemId,
+      itemId: item._id,
       layerId: pin.layerId ?? null,
       x: pin.x,
       y: pin.y,

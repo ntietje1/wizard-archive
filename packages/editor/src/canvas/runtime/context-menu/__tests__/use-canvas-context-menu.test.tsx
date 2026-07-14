@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../../shared/test/resource-id'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useCanvasContextMenu } from '../use-canvas-context-menu'
@@ -68,7 +69,7 @@ function createContextMenuEvent(clientX: number, clientY: number) {
 
 function createMockSidebarItem(overrides: Partial<AnyItem> = {}): AnyItem {
   return {
-    id: testId<'sidebarItems'>('sidebar-item-1'),
+    id: testResourceId('sidebar-item-1'),
     createdAt: 0,
     campaignId: testId<'campaigns'>('campaign-1'),
     parentId: null,
@@ -154,7 +155,7 @@ describe('useCanvasContextMenu', () => {
     vi.clearAllMocks()
     sidebarItemsState.itemsMap = new Map()
     sidebarItemsState.createItem.mockResolvedValue({
-      id: testId<'sidebarItems'>('created-sidebar-item'),
+      id: testResourceId('created-sidebar-item'),
     })
   })
 
@@ -573,7 +574,7 @@ describe('useCanvasContextMenu', () => {
     sidebarItemsState.itemsMap.set(
       'note-1',
       createMockSidebarItem({
-        id: testId<'sidebarItems'>('note-1'),
+        id: testResourceId('note-1'),
         slug: 'note-1' as AnyItem['slug'],
       }),
     )
@@ -623,7 +624,7 @@ describe('useCanvasContextMenu', () => {
     sidebarItemsState.itemsMap.set(
       'note-1',
       createMockSidebarItem({
-        id: testId<'sidebarItems'>('note-1'),
+        id: testResourceId('note-1'),
         slug: 'note-1' as AnyItem['slug'],
       }),
     )

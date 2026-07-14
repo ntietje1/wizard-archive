@@ -6,27 +6,28 @@ import {
   createNoteViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { executeMoveCommand, createFolder } from '../../_test/factories.helper'
+import { executeMoveCommand, createFolder, getSidebarItemRowId } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
+import { testSessionId } from '../../../shared/test/session-id'
 import type { Id } from '../../_generated/dataModel'
 
 describe('hard delete YJS cleanup', () => {
   const t = createTestContext()
 
-  async function queryYjsUpdates(noteId: Id<'sidebarItems'>) {
+  async function queryYjsUpdates(noteRowId: Id<'sidebarItems'>) {
     return await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
         .collect()
     })
   }
 
-  async function queryYjsAwareness(noteId: Id<'sidebarItems'>) {
+  async function queryYjsAwareness(noteRowId: Id<'sidebarItems'>) {
     return await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('yjsAwareness')
-        .withIndex('by_document', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document', (q) => q.eq('documentId', noteRowId))
         .collect()
     })
   }
@@ -40,8 +41,9 @@ describe('hard delete YJS cleanup', () => {
       name: 'Doomed Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
-    expect(await queryYjsUpdates(noteId)).toHaveLength(1)
+    expect(await queryYjsUpdates(noteRowId)).toHaveLength(1)
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -55,7 +57,7 @@ describe('hard delete YJS cleanup', () => {
       command: { type: 'emptyTrash' },
     })
 
-    expect(await queryYjsUpdates(noteId)).toHaveLength(0)
+    expect(await queryYjsUpdates(noteRowId)).toHaveLength(0)
   })
 
   it('hard-deleting a note removes its yjsAwareness entries', async () => {
@@ -67,16 +69,17 @@ describe('hard delete YJS cleanup', () => {
       name: 'Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
-      sessionId: 'note-session',
+      sessionId: testSessionId('note-session'),
       state: new ArrayBuffer(4),
     })
 
-    expect(await queryYjsAwareness(noteId)).toHaveLength(1)
+    expect(await queryYjsAwareness(noteRowId)).toHaveLength(1)
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -90,7 +93,7 @@ describe('hard delete YJS cleanup', () => {
       command: { type: 'emptyTrash' },
     })
 
-    expect(await queryYjsAwareness(noteId)).toHaveLength(0)
+    expect(await queryYjsAwareness(noteRowId)).toHaveLength(0)
   })
 
   it('hard-deleting a canvas removes its Yjs rows', async () => {
@@ -102,17 +105,18 @@ describe('hard delete YJS cleanup', () => {
       name: 'Doomed Canvas',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const canvasRowId = await getSidebarItemRowId(t, canvasId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
       campaignId: ctx.campaignDomainId,
       documentId: canvasId,
       clientId: 42,
-      sessionId: 'canvas-session',
+      sessionId: testSessionId('canvas-session'),
       state: new ArrayBuffer(4),
     })
 
-    expect(await queryYjsUpdates(canvasId)).toHaveLength(1)
-    expect(await queryYjsAwareness(canvasId)).toHaveLength(1)
+    expect(await queryYjsUpdates(canvasRowId)).toHaveLength(1)
+    expect(await queryYjsAwareness(canvasRowId)).toHaveLength(1)
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -126,8 +130,8 @@ describe('hard delete YJS cleanup', () => {
       command: { type: 'emptyTrash' },
     })
 
-    expect(await queryYjsUpdates(canvasId)).toHaveLength(0)
-    expect(await queryYjsAwareness(canvasId)).toHaveLength(0)
+    expect(await queryYjsUpdates(canvasRowId)).toHaveLength(0)
+    expect(await queryYjsAwareness(canvasRowId)).toHaveLength(0)
   })
 
   it('hard-deleting a folder cascades YJS cleanup for contained notes', async () => {
@@ -141,18 +145,19 @@ describe('hard delete YJS cleanup', () => {
       name: 'Nested Note',
       parentTarget: { kind: 'direct', parentId: folderId },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
-    expect(await queryYjsUpdates(noteId)).toHaveLength(1)
+    expect(await queryYjsUpdates(noteRowId)).toHaveLength(1)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
-      sessionId: 'nested-note-session',
+      sessionId: testSessionId('nested-note-session'),
       state: new ArrayBuffer(4),
     })
 
-    expect(await queryYjsAwareness(noteId)).toHaveLength(1)
+    expect(await queryYjsAwareness(noteRowId)).toHaveLength(1)
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -166,7 +171,7 @@ describe('hard delete YJS cleanup', () => {
       command: { type: 'emptyTrash' },
     })
 
-    expect(await queryYjsUpdates(noteId)).toHaveLength(0)
-    expect(await queryYjsAwareness(noteId)).toHaveLength(0)
+    expect(await queryYjsUpdates(noteRowId)).toHaveLength(0)
+    expect(await queryYjsAwareness(noteRowId)).toHaveLength(0)
   })
 })

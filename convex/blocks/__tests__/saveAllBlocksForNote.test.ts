@@ -7,21 +7,21 @@ import {
   createBlock,
   createNote as createNoteRecord,
   createCanvas,
+  getSidebarItemRowId,
   testBlock,
   testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import type { Id } from '../../_generated/dataModel'
 import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { saveAllBlocksForNote } from '../functions/saveAllBlocksForNote'
 import type { CampaignMutationCtx } from '../../functions'
 import type { TableContent } from '@wizard-archive/editor/notes/document-contract'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,
   campaignId: CampaignId,
-  noteId: Id<'sidebarItems'>,
+  noteId: ResourceId,
   blocks: Parameters<typeof makeYjsUpdateWithBlocks>[0],
 ) {
   await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -40,7 +40,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
   it('persists table content when inserting a new block', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteRowId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Table Insert Test',
     })
     const tableContent: TableContent = {
@@ -57,7 +57,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     const persistedBlocks = await t.run(async (dbCtx) => {
       return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
-        noteId,
+        noteId: noteRowId,
         content: [
           testBlock('table-block', {
             type: 'table',
@@ -75,7 +75,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
   it('returns final persisted rows in document order and excludes deleted blocks', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Return Rows Test',
     })
 
@@ -90,7 +90,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     const persistedBlocks = await t.run(async (dbCtx) => {
       return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
-        noteId,
+        noteId: noteRowId,
         content: [
           testBlock('kept', {
             content: [{ type: 'text', text: 'Updated kept text', styles: {} }],
@@ -114,7 +114,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(2)
       expect(
@@ -131,6 +131,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Update Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
@@ -145,7 +146,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const originalBlock = await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       return blocks.find((b) => b.blockNoteId === testBlockNoteId('block-a'))!
     })
@@ -158,7 +159,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(1)
       const block = blocks[0]
@@ -174,6 +175,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Delete Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const { blockDbId: removedBlockId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('remove'),
@@ -186,7 +188,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(1)
       expect(blocks[0].blockNoteId).toBe(testBlockNoteId('keep'))
@@ -203,6 +205,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Share Cascade Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('shared-block'),
@@ -212,7 +215,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const shareId = await t.run(async (dbCtx) => {
       return await dbCtx.db.insert('blockShares', {
         campaignId: ctx.campaignId,
-        noteId,
+        noteId: noteRowId,
         blockId: blockDbId,
         campaignMemberId: ctx.player.memberId,
         sessionId: null,
@@ -240,6 +243,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Preserve Share Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
@@ -254,7 +258,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       await dbCtx.db.patch('blocks', blocks[0]._id, { shareStatus: 'all_shared' })
     })
@@ -267,7 +271,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(1)
       expect(blocks[0].shareStatus).toBe('all_shared')
@@ -282,6 +286,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Soft Delete Guard',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
@@ -296,7 +301,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     await t.run(async (dbCtx) => {
       await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
-        noteId,
+        noteId: noteRowId,
         content: [
           { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
           { id: testBlockNoteId('block-b'), type: 'paragraph', props: {}, children: [] },
@@ -307,7 +312,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(1)
       expect(blocks[0].blockNoteId).toBe(testBlockNoteId('block-a'))
@@ -316,14 +321,14 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
   it('rejects sidebar item embeds that target the same note', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Self Embed Guard',
     })
 
     await expect(
       t.run(async (dbCtx) => {
         return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
-          noteId,
+          noteId: noteRowId,
           content: [
             testBlock('self-embed', {
               type: 'embed',
@@ -338,7 +343,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       const blocks = await dbCtx.db
         .query('blocks')
         .withIndex('by_campaign_note_block', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .collect()
       expect(blocks).toHaveLength(0)
@@ -347,14 +352,14 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
   it('rejects malformed resource embed target ids before database lookup', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteRowId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Malformed Embed Target Guard',
     })
 
     await expect(
       t.run(async (dbCtx) => {
         return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
-          noteId,
+          noteId: noteRowId,
           content: [
             testBlock('malformed-embed', {
               type: 'embed',
@@ -369,13 +374,13 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('rejects sidebar item embeds that target missing, inactive, or other-campaign items', async () => {
     const ctx = await setupCampaignContext(t)
     const otherCtx = await setupCampaignContext(t)
-    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteRowId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Embed Target Guard',
     })
     const { canvasId: activeCanvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Active Canvas',
     })
-    const { canvasId: deletedCanvasId } = await createCanvas(
+    const { canvasId: deletedCanvasId, canvasRowId: deletedCanvasRowId } = await createCanvas(
       t,
       ctx.campaignId,
       ctx.dm.profile._id,
@@ -406,18 +411,18 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       action: 'trash',
     })
     await t.run(async (dbCtx) => {
-      await dbCtx.db.delete('sidebarItems', deletedCanvasId)
+      await dbCtx.db.delete('sidebarItems', deletedCanvasRowId)
     })
 
-    async function expectRejectedTarget(sidebarItemId: Id<'sidebarItems'>, message: RegExp) {
+    async function expectRejectedTarget(resourceId: ResourceId, message: RegExp) {
       await expect(
         t.run(async (dbCtx) => {
           return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
-            noteId,
+            noteId: noteRowId,
             content: [
-              testBlock(`embed-${sidebarItemId}`, {
+              testBlock(`embed-${resourceId}`, {
                 type: 'embed',
-                props: { targetKind: 'resource', resourceId: sidebarItemId },
+                props: { targetKind: 'resource', resourceId },
               }),
             ],
           })
@@ -431,7 +436,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     const persistedBlocks = await t.run(async (dbCtx) => {
       return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
-        noteId,
+        noteId: noteRowId,
         content: [
           testBlock('valid-embed', {
             type: 'embed',
@@ -456,6 +461,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Empty Content Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('a'),
@@ -477,7 +483,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(0)
     })
@@ -491,6 +497,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Nested Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
@@ -521,7 +528,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(3)
 
@@ -553,6 +560,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Coexist Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('existing'),
@@ -571,7 +579,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       const newBlock = blocks.find((b) => b.blockNoteId === testBlockNoteId('new-block'))
       expect(newBlock).toBeDefined()
@@ -590,6 +598,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Deep Nesting',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
@@ -636,7 +645,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(5)
 
@@ -657,6 +666,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       name: 'Mixed Ops',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('will-update'),
@@ -686,7 +696,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(2)
 

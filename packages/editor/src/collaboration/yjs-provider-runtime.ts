@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import type * as Y from 'yjs'
 import { ObservableV2 } from 'lib0/observable'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { YjsProviderUser } from './yjs-provider'
 import { YjsAwarenessController } from './yjs-awareness-controller'
 import type { YjsAwarenessEntry, YjsAwarenessTransport } from './yjs-awareness-controller'
@@ -25,7 +26,7 @@ export class YjsProvider extends ObservableV2<YjsProviderEvents> {
   private readonly reportError: YjsProviderConfig['reportError']
   private destroyed = false
 
-  constructor(doc: Y.Doc, documentId: SidebarItemId, config: YjsProviderConfig) {
+  constructor(doc: Y.Doc, documentId: ResourceId, config: YjsProviderConfig) {
     super()
     this.reportError = config.reportError
     this.doc = doc

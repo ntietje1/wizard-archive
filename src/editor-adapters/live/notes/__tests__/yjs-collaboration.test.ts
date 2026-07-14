@@ -1,14 +1,15 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { useNoteYjsCollaboration } from '~/editor-adapters/live/notes/yjs-collaboration'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { flushMicrotasks } from '~/test/helpers/async'
 import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
 
-const NOTE_ID = 'test-note-id' as Id<'sidebarItems'>
-const OTHER_NOTE_ID = 'other-test-note-id' as Id<'sidebarItems'>
+const NOTE_ID = 'test-note-id' as ResourceId
+const OTHER_NOTE_ID = 'other-test-note-id' as ResourceId
 const CAMPAIGN_ID = 'test-campaign-id' as Id<'campaigns'>
 const USER = { name: 'Test User', color: '#ff0000' }
 const PROVIDER = { awareness: {} }
@@ -90,7 +91,7 @@ describe('useNoteYjsCollaboration', () => {
     mockIsApplyingRemoteUpdate.mockReturnValue(false)
     mockUseConvexYjsCollaboration.mockReset()
     mockUseConvexYjsCollaboration.mockImplementation(
-      (_sourceId: Id<'campaigns'>, noteId: Id<'sidebarItems'>) => ({
+      (_sourceId: Id<'campaigns'>, noteId: ResourceId) => ({
         doc: createSessionDoc(noteId),
         provider: PROVIDER,
         instanceId: noteId,
@@ -217,13 +218,13 @@ describe('useNoteYjsCollaboration', () => {
   })
 })
 
-function useTestNoteYjsCollaboration(noteId: Id<'sidebarItems'>, canEdit: boolean) {
+function useTestNoteYjsCollaboration(noteId: ResourceId, canEdit: boolean) {
   return useNoteYjsCollaboration(CAMPAIGN_ID, noteId, USER, canEdit, {
     getNoteSlugById: (id) => (id === NOTE_ID ? TEST_NOTE_SLUG : null),
   })
 }
 
-function createSessionDoc(noteId: SidebarItemId) {
+function createSessionDoc(noteId: ResourceId) {
   const doc = new Y.Doc()
   doc.getMap('document-test').set('noteId', noteId)
   return doc

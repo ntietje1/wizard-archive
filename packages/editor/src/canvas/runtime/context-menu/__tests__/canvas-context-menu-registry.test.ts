@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../../shared/test/resource-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { createEmbedNodeContextMenuContributor } from '../../../nodes/embed/embed-node-context-menu'
 import { buildCanvasContextMenu } from '../canvas-context-menu-registry'
@@ -6,7 +7,6 @@ import type {
   CanvasContextMenuItem,
   CanvasContextMenuServices,
 } from '../canvas-context-menu-types'
-import { testId } from '../../../../test/id'
 import { createCommands } from './canvas-context-menu-test-utils'
 
 function createServices(
@@ -283,7 +283,7 @@ describe('buildCanvasContextMenu', () => {
           nodeType: 'embed',
           target: {
             kind: 'resource',
-            resourceId: testId<'sidebarItems'>('sidebar-1'),
+            resourceId: testResourceId('sidebar-1'),
           },
         },
       }),
@@ -309,7 +309,7 @@ describe('buildCanvasContextMenu', () => {
       nodeType: 'embed',
       target: {
         kind: 'resource',
-        resourceId: testId<'sidebarItems'>('sidebar-1'),
+        resourceId: testResourceId('sidebar-1'),
       },
     })
   })

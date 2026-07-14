@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { FolderItem } from '../../../workspace/items'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
 import { DroppableFolderZone } from '../droppable-folder-zone'
@@ -35,7 +36,7 @@ describe('DroppableFolderZone', () => {
 
 function createFolderItem(): FolderItem {
   return {
-    id: 'folder-1' as SidebarItemId,
+    id: 'folder-1' as ResourceId,
     name: 'Session Prep',
     type: RESOURCE_TYPES.folders,
     isTrashed: false,

@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { MAX_PDF_PREVIEW_SIZE, runPdfPreviewGeneration } from '../../files/pdf-preview-generation'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { runPdfPreviewGeneration } from '../../files/pdf-preview-generation'
 
-const fileId = 'file-id' as SidebarItemId
+const MAX_PDF_PREVIEW_SIZE = 50 * 1024 * 1024
+const fileId = 'file-id' as ResourceId
 
 function pdfFile(name = 'file.pdf') {
   return new File(['%PDF-1.4'], name, { type: 'application/pdf' })

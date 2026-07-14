@@ -1,3 +1,4 @@
+import type { ResourceId } from '../resources/domain-id'
 import { normalizeSelectedRoots } from './domain/selection-roots'
 import { planTransferOperations } from './operation-contract'
 import type {
@@ -18,7 +19,7 @@ import { CREATE_PARENT_TARGET_KIND, canonicalizeResourceItemTitle } from '../wor
 import type { AnyItem, WorkspaceResourceReadModel } from '../workspace/items'
 import { planCreateParentTarget } from '../workspace/items/create-parent-target'
 import { isTrashedSidebarItem } from '../workspace/items/status'
-import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
+import type { UserProfileId } from '../../../../shared/common/ids'
 import {
   buildOptimisticCreatePreview,
   buildOptimisticRenamePreview,
@@ -42,7 +43,7 @@ type PlannerArgs = {
   createParentPlan?: ResourceCreateParentPlan
   snapshot: SidebarCacheSnapshot
   readModel: WorkspaceResourceReadModel<AnyItem>
-  activeItemSurface: { parentId: SidebarItemId | null } | null
+  activeItemSurface: { parentId: ResourceId | null } | null
   currentUserId: UserProfileId | null
   workspaceId: string
 }
@@ -78,7 +79,7 @@ function unavailable(): FileSystemOptimisticPlan {
 
 function resolveCommandItems(
   readModel: WorkspaceResourceReadModel<AnyItem>,
-  itemIds: Array<SidebarItemId>,
+  itemIds: Array<ResourceId>,
 ) {
   const items = readModel.getItems(itemIds)
   return items.length === itemIds.length ? items : null
@@ -125,7 +126,7 @@ function groupMoveItemsByTarget(
   loadedItems: Array<AnyItem>,
 ) {
   const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
-  const groups = new Map<SidebarItemId | null, Array<AnyItem>>()
+  const groups = new Map<ResourceId | null, Array<AnyItem>>()
 
   for (const item of items) {
     const targetParentId = resolveMoveTargetParentId(args)
@@ -152,10 +153,10 @@ function resolveMoveTargetParentId(
 }
 
 function getRestoreTargetParentId(
-  activeItemSurface: { parentId: SidebarItemId | null } | null,
-  itemsMap: ReadonlyMap<SidebarItemId, AnyItem>,
-  targetParentId?: SidebarItemId | null,
-): SidebarItemId | null {
+  activeItemSurface: { parentId: ResourceId | null } | null,
+  itemsMap: ReadonlyMap<ResourceId, AnyItem>,
+  targetParentId?: ResourceId | null,
+): ResourceId | null {
   const resolvedParentId =
     targetParentId === undefined ? (activeItemSurface?.parentId ?? null) : targetParentId
   if (!resolvedParentId) return null
@@ -232,7 +233,7 @@ function getReservedSlugs(args: CommandPlannerArgs<ResourceCreateCommand>) {
 
 function getCreatePreviewParentId(
   plan: NonNullable<ReturnType<typeof planCreateParentTarget>>,
-): SidebarItemId | null | undefined {
+): ResourceId | null | undefined {
   if (plan.kind === CREATE_PARENT_TARGET_KIND.direct) return plan.parentId
   const finalFolder = plan.folders[plan.folders.length - 1]
   if (!finalFolder) return null

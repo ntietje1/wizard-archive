@@ -1,14 +1,14 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import type { ResourceSlug } from '../../workspace/resource-contract'
 import { createNote } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { createEditFileSystemItem } from '../edit-item'
 import type { FileSystemItemMetadataUpdateOperations } from '../item-operation-contracts'
 import type { FileSystemPermissions } from '../permissions'
 
 const item = createNote({
-  id: testId<'sidebarItems'>('note-1'),
+  id: testResourceId('note-1'),
   name: 'Old name',
   slug: 'old-name',
 })

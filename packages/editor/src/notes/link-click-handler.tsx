@@ -1,10 +1,11 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useEffect, useReducer, useRef } from 'react'
 import type { CustomBlockNoteEditor } from './editor-schema'
 import { getLinkAt } from './links/hit-testing'
 import { useEditorDomElement } from '../rich-text/blocknote/use-editor-dom-element'
 import { CREATE_PARENT_TARGET_KIND } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { toast } from 'sonner'
 import type {
   LinkClickCreateItemArgs,
@@ -31,7 +32,7 @@ function hasCreatableLinkTarget(
 
 function buildGhostCreateArgs(
   link: ReturnType<typeof getLinkAt>,
-  sourceParentId: SidebarItemId | null | undefined,
+  sourceParentId: ResourceId | null | undefined,
 ): LinkClickCreateItemArgs | null {
   if (!hasCreatableLinkTarget(link)) {
     return null
@@ -69,7 +70,7 @@ function getGhostLinkFeedback({
 }: {
   linkCreation: NoteLinkCreationSource | null | undefined
   link: ReturnType<typeof getLinkAt>
-  sourceParentId: SidebarItemId | null | undefined
+  sourceParentId: ResourceId | null | undefined
 }): { createArgs: LinkClickCreateItemArgs; tooltipText: string; isValid: boolean } | null {
   if (!linkCreation || !link || link.exists || link.type === 'md-external') {
     return null
@@ -99,7 +100,7 @@ function getHoverFeedback({
   linkCreation: NoteLinkCreationSource | null | undefined
   link: ReturnType<typeof getLinkAt>
   editorMode: 'editor' | 'viewer'
-  sourceParentId: SidebarItemId | null | undefined
+  sourceParentId: ResourceId | null | undefined
 }): { tooltipText: string } | null {
   if (link?.status === 'rejected') {
     return { tooltipText: 'Blocked unsafe link' }
@@ -269,7 +270,7 @@ export function LinkClickHandlerSurface({
   forceOpenLinkPopover?: () => void
   linkCreation: NoteLinkCreationSource | null
   linkNavigation: NoteLinkNavigationSource | null
-  sourceParentId: SidebarItemId | null | undefined
+  sourceParentId: ResourceId | null | undefined
 }) {
   const editorEl = useEditorDomElement(editor)
 

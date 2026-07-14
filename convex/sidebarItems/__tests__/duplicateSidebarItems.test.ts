@@ -12,6 +12,7 @@ import {
   createNote,
   createBlock,
   filesystemEventItemIds,
+  getSidebarItemRowId,
 } from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
@@ -66,6 +67,10 @@ describe('executeCopyCommand', () => {
     if (!copiedFileItemId || !copiedMapItemId) {
       throw new Error('Expected duplicated file and map ids')
     }
+    const [copiedFileItemRowId, copiedMapItemRowId] = await Promise.all([
+      getSidebarItemRowId(t, copiedFileItemId),
+      getSidebarItemRowId(t, copiedMapItemId),
+    ])
 
     return {
       ctx,
@@ -75,8 +80,8 @@ describe('executeCopyCommand', () => {
       fileStorageId,
       mapStorageId,
       previewStorageId,
-      copiedFileItemId,
-      copiedMapItemId,
+      copiedFileItemRowId,
+      copiedMapItemRowId,
     }
   }
 
@@ -96,11 +101,12 @@ describe('executeCopyCommand', () => {
       targetParentId: null,
     })
 
-    const copiedItems = await t.run(async (dbCtx) => {
-      return await Promise.all(
-        copiedRootItemIds(result).map((itemId) => dbCtx.db.get('sidebarItems', itemId)),
-      )
-    })
+    const copiedRowIds = await Promise.all(
+      copiedRootItemIds(result).map((itemId) => getSidebarItemRowId(t, itemId)),
+    )
+    const copiedItems = await t.run(async (dbCtx) =>
+      Promise.all(copiedRowIds.map((itemId) => dbCtx.db.get('sidebarItems', itemId))),
+    )
 
     expect(copiedItems.map((item) => item?.name)).toEqual(['Scene A', 'Scene B'])
     expect(copiedItems.map((item) => item?.parentId)).toEqual([null, null])
@@ -109,7 +115,7 @@ describe('executeCopyCommand', () => {
   it('allows duplicate titles in the same parent', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scenes',
     })
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -129,10 +135,11 @@ describe('executeCopyCommand', () => {
 
     const [copiedId] = copiedRootItemIds(result)
     if (!copiedId) throw new Error('Expected copied item')
-    const copied = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', copiedId))
+    const copiedRowId = await getSidebarItemRowId(t, copiedId)
+    const copied = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', copiedRowId))
 
     expect(copied?.name).toBe('Ambush')
-    expect(copied?.parentId).toBe(folderId)
+    expect(copied?.parentId).toBe(folderRowId)
   })
 
   it('recursively duplicates folders and writes one copied history entry per duplicate', async () => {
@@ -156,15 +163,19 @@ describe('executeCopyCommand', () => {
 
     expect(filesystemEventItemIds(result, 'copied')).toHaveLength(1)
     expect(copiedRootItemIds(result)).toHaveLength(1)
+    const [copiedFolderId] = filesystemEventItemIds(result, 'copied')
+    if (!copiedFolderId) throw new Error('Expected copied folder')
+    const copiedFolderRowId = await getSidebarItemRowId(t, copiedFolderId)
 
     const rows = await t.run(async (dbCtx) => {
-      const [copiedFolderId] = filesystemEventItemIds(result, 'copied')
-      if (!copiedFolderId) throw new Error('Expected copied folder')
-      const copiedFolder = await dbCtx.db.get('sidebarItems', copiedFolderId)
+      const copiedFolder = await dbCtx.db.get('sidebarItems', copiedFolderRowId)
       const copiedNote = await dbCtx.db
         .query('sidebarItems')
         .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('status', 'active').eq('parentId', copiedFolderId),
+          q
+            .eq('campaignId', ctx.campaignId)
+            .eq('status', 'active')
+            .eq('parentId', copiedFolderRowId),
         )
         .unique()
       if (!copiedNote) throw new Error('Expected copied note')
@@ -181,7 +192,7 @@ describe('executeCopyCommand', () => {
 
     expect(rows.copiedFolder?.name).toBe('Encounters')
     expect(rows.copiedNote?.name).toBe('Ambush')
-    expect(rows.copiedNote?.parentId).toBe(copiedRootItemIds(result)[0])
+    expect(rows.copiedNote?.parentId).toBe(copiedFolderRowId)
     expect(rows.copiedBlocks.map((block) => block.plainText)).toEqual(['Hidden archers'])
     const copiedFromIds = rows.history
       .flatMap((entry) =>
@@ -208,15 +219,11 @@ describe('executeCopyCommand', () => {
       name: 'Hidden Note',
       parentId: folderId,
     })
-    const { folderId: destinationFolderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
+    const { folderId: destinationFolderId, folderRowId: destinationFolderRowId } =
+      await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
         name: 'Destination',
         allPermissionLevel: 'full_access',
-      },
-    )
+      })
 
     await expectPermissionDenied(
       executeCopyCommand(playerAuth, {
@@ -233,7 +240,7 @@ describe('executeCopyCommand', () => {
           q
             .eq('campaignId', ctx.campaignId)
             .eq('status', 'active')
-            .eq('parentId', destinationFolderId)
+            .eq('parentId', destinationFolderRowId)
             .eq('name', 'Shared Folder'),
         )
         .collect()
@@ -242,18 +249,23 @@ describe('executeCopyCommand', () => {
   })
 
   it('shares immutable file, map, and preview storage ids when duplicating', async () => {
-    const { copiedFileItemId, copiedMapItemId, fileStorageId, mapStorageId, previewStorageId } =
-      await setupImmutableStorageDuplicate()
+    const {
+      copiedFileItemRowId,
+      copiedMapItemRowId,
+      fileStorageId,
+      mapStorageId,
+      previewStorageId,
+    } = await setupImmutableStorageDuplicate()
 
     const rows = await t.run(async (dbCtx) => {
       const copiedFile = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', copiedFileItemId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', copiedFileItemRowId))
         .unique()
-      const copiedFileItem = await dbCtx.db.get('sidebarItems', copiedFileItemId)
+      const copiedFileItem = await dbCtx.db.get('sidebarItems', copiedFileItemRowId)
       const copiedMap = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', copiedMapItemId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', copiedMapItemRowId))
         .unique()
       return { copiedFile, copiedFileItem, copiedMap }
     })
@@ -272,8 +284,8 @@ describe('executeCopyCommand', () => {
       fileStorageId,
       previewStorageId,
       mapStorageId,
-      copiedFileItemId,
-      copiedMapItemId,
+      copiedFileItemRowId,
+      copiedMapItemRowId,
     } = await setupImmutableStorageDuplicate()
 
     await executeMoveCommand(dmAuth, {
@@ -288,15 +300,15 @@ describe('executeCopyCommand', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const copiedFileItem = await dbCtx.db.get('sidebarItems', copiedFileItemId)
-      const copiedMapItem = await dbCtx.db.get('sidebarItems', copiedMapItemId)
+      const copiedFileItem = await dbCtx.db.get('sidebarItems', copiedFileItemRowId)
+      const copiedMapItem = await dbCtx.db.get('sidebarItems', copiedMapItemRowId)
       const copiedFile = await dbCtx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', copiedFileItemId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', copiedFileItemRowId))
         .unique()
       const copiedMap = await dbCtx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', copiedMapItemId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', copiedMapItemRowId))
         .unique()
 
       expect(copiedFileItem?.previewStorageId).toBe(previewStorageId)

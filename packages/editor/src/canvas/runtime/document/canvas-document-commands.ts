@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import { createCanvasNodePlacement, resizeCanvasNode } from '../../nodes/canvas-node-modules'
 import type { CanvasNodeDataPatch } from '../../nodes/canvas-node-modules'
@@ -8,7 +9,7 @@ import type { CanvasEdgePatch } from '../../edges/canvas-edge-types'
 import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
 import type { CanvasReorderPlan } from './canvas-reorder-plan'
 import type { CanvasContextMenuPoint } from '../context-menu/canvas-context-menu-types'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { EmbedTarget } from '../../../../../../shared/embeds/embedTargets'
 import type {
   CanvasConnection as Connection,
@@ -490,7 +491,7 @@ export function createAndSelectResourceCanvasNode({
   createNode,
   setSelection,
 }: {
-  resourceId: SidebarItemId
+  resourceId: ResourceId
   pointerPosition: CanvasContextMenuPoint
   screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   createNode: (node: CanvasDocumentNode) => void

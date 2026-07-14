@@ -1,13 +1,14 @@
+import { testResourceId } from '../../../../../../../../shared/test/resource-id'
 import { useState } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { FileText } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createFolder, createNote } from '../../../../../test/sidebar-item-factory'
-import { testId } from '../../../../../test/id'
 import { createWorkspaceResource } from '../../../../runtime'
 import { SidebarItem } from '../sidebar-item'
 import { SidebarItemButton } from '../sidebar-item-button'
 import type { SidebarItemSource } from '../../sidebar-tree-source'
+import type { ResourceId } from '../../../../../resources/domain-id'
 import type { ComponentProps, ReactNode } from 'react'
 
 const scrollIntoViewMock = vi.fn()
@@ -116,7 +117,7 @@ describe('SidebarItem', () => {
 
   it('scrolls optimistic created items into view when they render', async () => {
     const item = createNote({
-      id: testId<'sidebarItems'>('optimistic-create-1'),
+      id: 'optimistic-create-1' as ResourceId,
       name: 'New Scene',
       slug: 'new-scene',
     })
@@ -133,12 +134,12 @@ describe('SidebarItem', () => {
 
   it('scrolls every rendered optimistic item included in the visible item list', async () => {
     const first = createNote({
-      id: testId<'sidebarItems'>('optimistic-create-1'),
+      id: 'optimistic-create-1' as ResourceId,
       name: 'First Scene',
       slug: 'first-scene',
     })
     const second = createNote({
-      id: testId<'sidebarItems'>('optimistic-create-2'),
+      id: 'optimistic-create-2' as ResourceId,
       name: 'Second Scene',
       slug: 'second-scene',
     })
@@ -165,7 +166,7 @@ describe('SidebarItem', () => {
 
   it('opens the sidebar item through the item source when clicked', () => {
     const item = createNote({
-      id: testId<'sidebarItems'>('note_1'),
+      id: testResourceId('note_1'),
       name: 'Existing Scene',
       slug: 'existing-scene',
     })
@@ -181,7 +182,7 @@ describe('SidebarItem', () => {
 
   it('restores the original row when a filesystem rename fails', async () => {
     const item = createNote({
-      id: testId<'sidebarItems'>('note_1'),
+      id: testResourceId('note_1'),
       name: 'Session Notes',
       slug: 'session-notes',
     })
@@ -206,12 +207,12 @@ describe('SidebarItem', () => {
   it('renders expanded folder children inside the folder drop wrapper', () => {
     folderStateMock.isExpanded = true
     const folder = createFolder({
-      id: testId<'sidebarItems'>('folder_1'),
+      id: testResourceId('folder_1'),
       name: 'Quests',
       slug: 'quests',
     })
     const child = createNote({
-      id: testId<'sidebarItems'>('note_1'),
+      id: testResourceId('note_1'),
       name: 'Forest Ambush',
       parentId: folder.id,
       slug: 'forest-ambush',
@@ -229,7 +230,7 @@ describe('SidebarItem', () => {
 
   it('renders collapsed folders without materializing child rows', () => {
     const folder = createFolder({
-      id: testId<'sidebarItems'>('folder_1'),
+      id: testResourceId('folder_1'),
       name: 'Quests',
       slug: 'quests',
     })

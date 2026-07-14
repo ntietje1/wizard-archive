@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import type { MaybePromise } from '../../../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { ResourceCatalog } from '../../../filesystem/catalog'
 import type { FileSystemItemCreateOperations } from '../../../filesystem/item-operation-contracts'
 import type { FileSystemPermissions } from '../../../filesystem/permissions'
@@ -12,7 +13,7 @@ export interface CanvasContextMenuRuntime {
   }
   navigation: {
     openItem: (
-      itemId: SidebarItemId,
+      itemId: ResourceId,
       options?: { heading?: string; replace?: boolean; target?: 'current' | 'separate' },
     ) => MaybePromise<void>
     openExternalUrl: (url: string) => MaybePromise<void>

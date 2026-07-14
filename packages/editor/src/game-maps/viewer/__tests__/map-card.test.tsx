@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import type { ReactNode } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { MapItem } from '../../../game-maps/item-contract'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
 import { MapCard } from '../card'
@@ -60,7 +61,7 @@ describe('MapCard', () => {
 
 function createMapItem(): MapItem {
   return {
-    id: 'map-1' as SidebarItemId,
+    id: 'map-1' as ResourceId,
     name: 'Lost Mine',
     previewUrl: 'https://example.com/map.png',
     type: RESOURCE_TYPES.gameMaps,

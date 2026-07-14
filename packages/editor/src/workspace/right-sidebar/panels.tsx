@@ -1,5 +1,6 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { RIGHT_SIDEBAR_CONTENT } from './content'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { RightSidebarContentId } from './content'
 import { HistoryPanel } from './components/history'
 import { LinkListPanel, LinkPanelError, LinkPanelLoading } from './components/link-list'
@@ -15,7 +16,7 @@ export function RightSidebarPanel({
   source,
 }: {
   contentId: RightSidebarContentId
-  itemId: SidebarItemId
+  itemId: ResourceId
   source: RightSidebarSource
 }) {
   if (contentId === RIGHT_SIDEBAR_CONTENT.history && source.history.status === 'available') {
@@ -60,7 +61,7 @@ function RightSidebarItemLinksPanel({
   onNavigate,
   resourceContent,
 }: {
-  itemId: SidebarItemId
+  itemId: ResourceId
   itemLinks: AvailableItemLinks
   kind: ItemLinksKind
   onNavigate: RightSidebarSource['navigation']['openItem']
@@ -101,7 +102,7 @@ function RightSidebarHistoryPanel({
   itemId,
 }: {
   history: Extract<RightSidebarSource['history'], { status: 'available' }>
-  itemId: SidebarItemId
+  itemId: ResourceId
 }) {
   if (history.itemId !== itemId) return null
 
@@ -119,7 +120,7 @@ function RightSidebarOutlinePanel({
   itemId,
   outline,
 }: {
-  itemId: SidebarItemId
+  itemId: ResourceId
   outline: RightSidebarSource['outline']
 }) {
   return (

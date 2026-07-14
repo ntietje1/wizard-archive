@@ -1,7 +1,7 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import { useItemSurfaceRegistration } from '../use-item-surface-registration'
-import { testId } from '../../../test/id'
 import {
   createSidebarWorkspaceStateHarness,
   createSidebarWorkspaceStateWrapper,
@@ -10,7 +10,7 @@ import {
 describe('useItemSurfaceRegistration', () => {
   it('activates the registered surface on request', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
+    const noteId = testResourceId('note_1')
 
     const { result } = renderHook(
       () =>
@@ -40,8 +40,8 @@ describe('useItemSurfaceRegistration', () => {
 
   it('updates the active surface when visible ids change', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const first = testId<'sidebarItems'>('note_1')
-    const second = testId<'sidebarItems'>('note_2')
+    const first = testResourceId('note_1')
+    const second = testResourceId('note_2')
 
     const { result, rerender } = renderHook(
       ({ visibleItemIds }) =>
@@ -73,8 +73,8 @@ describe('useItemSurfaceRegistration', () => {
 
   it('keeps the existing active surface owner until explicit activation', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
-    const folderId = testId<'sidebarItems'>('folder_1')
+    const noteId = testResourceId('note_1')
+    const folderId = testResourceId('folder_1')
 
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -108,7 +108,7 @@ describe('useItemSurfaceRegistration', () => {
 
   it('clears the active surface when the owning registration unmounts', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const noteId = testId<'sidebarItems'>('note_1')
+    const noteId = testResourceId('note_1')
     const { result, unmount } = renderHook(
       () =>
         useItemSurfaceRegistration({

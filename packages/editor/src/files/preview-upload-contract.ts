@@ -1,5 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
-
+import type { ResourceId } from '../resources/domain-id'
 type PreviewUploadResult =
   | { status: 'success' }
   | { status: 'not-claimed' }
@@ -7,7 +6,7 @@ type PreviewUploadResult =
   | { status: 'error'; error: unknown }
 
 export type PreviewUpload = (
-  itemId: SidebarItemId,
+  itemId: ResourceId,
   generate: () => Promise<Blob>,
   options?: { signal?: AbortSignal },
 ) => Promise<PreviewUploadResult>

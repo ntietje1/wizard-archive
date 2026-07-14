@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
 import { canonicalizeResourceItemTitle } from '../../workspace/items'
@@ -6,12 +7,12 @@ import { createNote } from '../../test/sidebar-item-factory'
 import type { SidebarCacheSnapshot } from '../cache-patches'
 import { executeFileSystemHistoryLifecycle } from '../history-lifecycle'
 import { createReadWriteTestCache } from './cache-test-utils'
-import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { CampaignId } from '../../../../../shared/common/ids'
 import { createFileSystemReceipt } from './receipt-factory'
 import { testOperationId } from '../../test/operation-id'
 
 function createUndoRenameReceipt(): ResourceTransactionReceipt {
-  const itemId = 'renamed_item' as SidebarItemId
+  const itemId = 'renamed_item' as ResourceId
   return createFileSystemReceipt({
     transactionId: testOperationId('transaction_1'),
     direction: 'undo',
@@ -42,7 +43,7 @@ function createUndoRenameReceipt(): ResourceTransactionReceipt {
 describe('filesystem history lifecycle', () => {
   it('runs undo through the shared optimistic mutation lifecycle', async () => {
     const item = createNote({
-      id: 'renamed_item' as SidebarItemId,
+      id: 'renamed_item' as ResourceId,
       name: 'New Name',
       status: RESOURCE_STATUS.active,
     })
@@ -88,7 +89,7 @@ describe('filesystem history lifecycle', () => {
 
   it('keeps completed history receipts successful when receipt feedback fails', async () => {
     const item = createNote({
-      id: 'renamed_item' as SidebarItemId,
+      id: 'renamed_item' as ResourceId,
       name: 'New Name',
       status: RESOURCE_STATUS.active,
     })
@@ -131,7 +132,7 @@ describe('filesystem history lifecycle', () => {
 
   it('rejects stale history entries before running the mutation', async () => {
     const item = createNote({
-      id: 'renamed_item' as SidebarItemId,
+      id: 'renamed_item' as ResourceId,
       name: 'New Name',
       status: RESOURCE_STATUS.active,
     })

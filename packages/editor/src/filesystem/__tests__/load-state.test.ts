@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { createItemContentLoadState } from '../load-state'
 
-const itemId = 'item-1' as SidebarItemId
+const itemId = 'item-1' as ResourceId
 
 describe('createItemContentLoadState', () => {
   it('preserves falsy loaded item values as ready content', () => {

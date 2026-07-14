@@ -8,6 +8,7 @@ import {
   createBlockShare,
   createNote,
   createSidebarShare,
+  getSidebarItemRowId,
   syncBlocksToYjs,
   testBlockNoteId,
 } from '../../_test/factories.helper'
@@ -189,6 +190,7 @@ describe('share mutations with nested blocks', () => {
       name: 'Cascade Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('root'),
@@ -205,7 +207,7 @@ describe('share mutations with nested blocks', () => {
     const shareId = await t.run(async (dbCtx) => {
       return await dbCtx.db.insert('blockShares', {
         campaignId: ctx.campaignId,
-        noteId,
+        noteId: noteRowId,
         blockId: childDbId,
         campaignMemberId: ctx.player.memberId,
         sessionId: null,
@@ -230,7 +232,7 @@ describe('share mutations with nested blocks', () => {
         .query('blocks')
         .filter((q) =>
           q.and(
-            q.eq(q.field('noteId'), noteId),
+            q.eq(q.field('noteId'), noteRowId),
             q.eq(q.field('blockNoteId'), testBlockNoteId('root')),
           ),
         )

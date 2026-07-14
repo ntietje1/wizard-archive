@@ -8,6 +8,7 @@ import { isUndoHiddenSidebarItem } from '../types/status'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 import { getAssetIdByStorageId } from '../../storage/functions/assetIdentity'
+import { sidebarItemParentResourceId, sidebarItemResourceId } from './sidebarItemIdentity'
 type GetSidebarItemCtx = Pick<QueryCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id' | 'campaignUuid'>
 }
@@ -94,13 +95,16 @@ async function toEditorResourceRow(ctx: GetSidebarItemCtx, row: Doc<'sidebarItem
     _id,
     _creationTime,
     resourceUuid: _resourceUuid,
+    normalizedName: _normalizedName,
+    parentId,
     previewStorageId,
     previewUpdatedAt: _previewUpdatedAt,
     ...fields
   } = row
   return {
     ...fields,
-    id: _id,
+    id: sidebarItemResourceId(row),
+    parentId: await sidebarItemParentResourceId(ctx, parentId),
     campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid),
     createdAt: _creationTime,
     previewAssetId: await getAssetIdByStorageId(ctx.db, previewStorageId),

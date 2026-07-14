@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../../shared/test/resource-id'
 import { act } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../../shared/permissions/types'
@@ -29,9 +30,9 @@ vi.mock('sonner', () => ({
   },
 }))
 
-const canvasId = testId<'sidebarItems'>('canvas-1')
-const canvasParentId = testId<'sidebarItems'>('canvas-parent')
-const createdItemId = testId<'sidebarItems'>('created-item')
+const canvasId = testResourceId('canvas-1')
+const canvasParentId = testResourceId('canvas-parent')
+const createdItemId = testResourceId('created-item')
 
 describe('createWorkspaceCanvasContextMenuSource', () => {
   beforeEach(() => {
@@ -156,7 +157,7 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
 
   it('opens sidebar embed targets through runtime navigation', async () => {
     const embeddedItem = createSidebarItem({
-      id: testId<'sidebarItems'>('note-1'),
+      id: testResourceId('note-1'),
       slug: 'note-1' as ResourceSlug,
     })
     const openItem = vi.fn()
@@ -193,7 +194,7 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
 
   it('reports a stale sidebar embed target when it disappears before opening', async () => {
     const embeddedItem = createSidebarItem({
-      id: testId<'sidebarItems'>('note-1'),
+      id: testResourceId('note-1'),
       slug: 'note-1' as ResourceSlug,
     })
     const openItem = vi.fn()
@@ -234,7 +235,7 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
 
   it('opens sidebar embed targets that are hidden from the visible catalog', async () => {
     const hiddenItem = createSidebarItem({
-      id: testId<'sidebarItems'>('hidden-note'),
+      id: testResourceId('hidden-note'),
       slug: 'hidden-note' as ResourceSlug,
     })
     const openItem = vi.fn()
@@ -271,7 +272,7 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
 
   it('reveals sidebar embed targets through the workspace sidebar action', async () => {
     const embeddedItem = createSidebarItem({
-      id: testId<'sidebarItems'>('note-1'),
+      id: testResourceId('note-1'),
       slug: 'note-1' as ResourceSlug,
     })
     const showItemInSidebar = vi.fn()
@@ -315,7 +316,7 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
 
   it('opens sidebar embed targets separately through runtime navigation', async () => {
     const embeddedItem = createSidebarItem({
-      id: testId<'sidebarItems'>('note-1'),
+      id: testResourceId('note-1'),
       slug: 'note-1' as ResourceSlug,
     })
     const openItem = vi.fn()
@@ -419,7 +420,7 @@ function createRuntime({
 
 function createSidebarItem(overrides: Partial<AnyItem> = {}): AnyItem {
   return {
-    id: testId<'sidebarItems'>('note-1'),
+    id: testResourceId('note-1'),
     createdAt: 0,
     campaignId: testId<'campaigns'>('campaign-1'),
     type: RESOURCE_TYPES.notes,

@@ -8,6 +8,7 @@ import {
   createNote,
   createSidebarShare,
   executeCopyCommand,
+  getSidebarItemRowId,
 } from '../../_test/factories.helper'
 import { api, internal } from '../../_generated/api'
 import { SHARE_STATUS } from '../../../shared/block-shares/share-status'
@@ -26,9 +27,14 @@ describe('note value lifecycle', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: sourceId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Stats',
-    })
+    const { noteId: sourceId, noteRowId: sourceRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Stats',
+      },
+    )
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -46,7 +52,7 @@ describe('note value lifecycle', () => {
       dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', sourceId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', sourceRowId),
         )
         .collect(),
     )
@@ -58,19 +64,20 @@ describe('note value lifecycle', () => {
     })
     const [copiedId] = copiedRootItemIds(receipt)
     expect(copiedId).toBeDefined()
+    const copiedRowId = await getSidebarItemRowId(t, copiedId!)
 
     const rows = await t.run(async (dbCtx) =>
       dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', copiedId!),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', copiedRowId),
         )
         .collect(),
     )
 
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({
-      noteId: copiedId,
+      noteId: copiedRowId,
       slug: 'strength',
       expressionSource: '16',
       compile: { status: 'ok' },
@@ -83,7 +90,7 @@ describe('note value lifecycle', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Private Values',
     })
 
@@ -125,7 +132,7 @@ describe('note value lifecycle', () => {
       dbCtx.db
         .query('blocks')
         .withIndex('by_campaign_note_block', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .first(),
     )
@@ -154,7 +161,7 @@ describe('note value lifecycle', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Lifecycle Remove',
     })
 
@@ -175,7 +182,7 @@ describe('note value lifecycle', () => {
       const rows = await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .collect()
       expect(rows).toHaveLength(1)
@@ -191,7 +198,7 @@ describe('note value lifecycle', () => {
       const rows = await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .collect()
       expect(rows).toHaveLength(0)
@@ -204,7 +211,7 @@ describe('note value lifecycle', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
         name: 'Rollback Value Note',
       })
 
@@ -230,7 +237,9 @@ describe('note value lifecycle', () => {
       const snapshotEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .first()
       })
       expect(snapshotEntry).not.toBeNull()
@@ -271,7 +280,7 @@ describe('note value lifecycle', () => {
         editHistoryId: snapshotEntry!.historyEntryUuid,
       })
       await t.action(internal.notes.internalActions.persistNoteBlocksFromYjs, {
-        documentId: noteId,
+        documentId: noteRowId,
       })
 
       states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
@@ -289,7 +298,7 @@ describe('note value lifecycle', () => {
         const rows = await dbCtx.db
           .query('noteValues')
           .withIndex('by_campaign_note', (q) =>
-            q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+            q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
           )
           .collect()
 
@@ -302,7 +311,7 @@ describe('note value lifecycle', () => {
 
         const updates = await dbCtx.db
           .query('yjsUpdates')
-          .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+          .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
           .collect()
         expect(updates).toHaveLength(1)
         expect(updates[0].isSnapshot).toBe(true)
@@ -323,7 +332,7 @@ describe('note value lifecycle', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Hard Delete Values',
     })
 
@@ -346,13 +355,13 @@ describe('note value lifecycle', () => {
     })
 
     await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', noteId)
+      const note = await dbCtx.db.get('sidebarItems', noteRowId)
       expect(note).toBeNull()
 
       const rows = await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .collect()
       expect(rows).toHaveLength(0)
@@ -363,9 +372,12 @@ describe('note value lifecycle', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: sourceNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Lifecycle Source',
-    })
+    const { noteId: sourceNoteId, noteRowId: sourceNoteRowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Lifecycle Source' },
+    )
     const { noteId: targetNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Lifecycle Target',
     })
@@ -407,13 +419,13 @@ describe('note value lifecycle', () => {
     await t.run(async (dbCtx) => {
       const existingUpdates = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', sourceNoteId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', sourceNoteRowId))
         .collect()
       for (const row of existingUpdates) {
         await dbCtx.db.delete('yjsUpdates', row._id)
       }
       await dbCtx.db.insert('yjsUpdates', {
-        documentId: sourceNoteId,
+        documentId: sourceNoteRowId,
         update: makeYjsUpdateWithBlocks([
           valueBlockWithGeneratedId({
             idSeed: 'lifecycle-source-base',
@@ -455,7 +467,7 @@ describe('note value lifecycle', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Undo Hidden Values',
     })
 
@@ -473,7 +485,7 @@ describe('note value lifecycle', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sidebarItems', noteId, { status: 'undoHidden' })
+      await dbCtx.db.patch('sidebarItems', noteRowId, { status: 'undoHidden' })
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
@@ -487,7 +499,7 @@ describe('note value lifecycle', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Idempotent Persist',
     })
 
@@ -516,7 +528,7 @@ describe('note value lifecycle', () => {
       const rows = await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .collect()
 
@@ -540,7 +552,7 @@ describe('note value lifecycle', () => {
       const rows = await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .collect()
 

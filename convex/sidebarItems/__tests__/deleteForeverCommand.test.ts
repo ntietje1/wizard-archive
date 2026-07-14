@@ -31,7 +31,7 @@ describe('executeDeleteForeverCommand', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -46,7 +46,7 @@ describe('executeDeleteForeverCommand', () => {
     })
 
     const deleted = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get('sidebarItems', noteId)
+      return await dbCtx.db.get('sidebarItems', noteRowId)
     })
     expect(deleted).toBeNull()
   })
@@ -80,7 +80,7 @@ describe('executeDeleteForeverCommand', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
@@ -102,7 +102,7 @@ describe('executeDeleteForeverCommand', () => {
       sourceItemIds: [noteId],
     })
 
-    const deleted = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', noteId))
+    const deleted = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', noteRowId))
     expect(deleted).toBeNull()
   })
 })

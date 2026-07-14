@@ -1,10 +1,11 @@
+import type { ResourceId } from '../resources/domain-id'
 import { BlockNoteEditor } from '@blocknote/core'
 import { createEditorSchema } from './editor-specs'
 import { destroyBlockNoteEditor } from '../rich-text/blocknote/destroy-blocknote-editor'
 import { useOwnedBlockNoteEditor } from '../rich-text/blocknote/use-owned-blocknote-editor'
 import { useRef } from 'react'
 import type { CustomBlockNoteEditor } from './editor-schema'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { NoteBlock } from './document/model'
 
 export type StaticNoteEditorChangeHandler = (editor: CustomBlockNoteEditor | null) => void
@@ -15,7 +16,7 @@ export function useStaticNoteContentEditor({
   onEditorChange,
 }: {
   content: Array<NoteBlock>
-  noteId: SidebarItemId | undefined
+  noteId: ResourceId | undefined
   onEditorChange?: StaticNoteEditorChangeHandler
 }) {
   const editorIdentity = useStaticNoteContentIdentity(noteId, content)
@@ -38,14 +39,11 @@ export function useStaticNoteContentEditor({
   })
 }
 
-function useStaticNoteContentIdentity(
-  noteId: SidebarItemId | undefined,
-  content: Array<NoteBlock>,
-) {
+function useStaticNoteContentIdentity(noteId: ResourceId | undefined, content: Array<NoteBlock>) {
   const identityRef = useRef<{
     content: Array<NoteBlock>
     identity: string
-    noteId: SidebarItemId | undefined
+    noteId: ResourceId | undefined
   } | null>(null)
 
   if (

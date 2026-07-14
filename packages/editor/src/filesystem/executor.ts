@@ -1,12 +1,13 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useRef, useSyncExternalStore } from 'react'
 
 import { createFileSystemExecutorRuntime } from './executor-runtime'
 import type { FileSystemExecutorRuntimeArgs } from './executor-runtime'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { AnyItem } from '../workspace/items'
 
 export interface FileSystemNavigationEffects {
-  getCurrentResourceId: () => SidebarItemId | null
+  getCurrentResourceId: () => ResourceId | null
   clearWorkspaceContent: () => Promise<void>
   openResource: (
     resource: AnyItem,

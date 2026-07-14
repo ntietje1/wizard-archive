@@ -2,7 +2,6 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/ca
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
 import { resolveInheritedPermissions } from '../../sidebarShares/functions/sidebarItemPermissions'
-import type { NoteItemRow } from '@wizard-archive/editor/notes/item-contract'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 import type { PermissionLevel } from '../../../shared/permissions/types'
@@ -22,7 +21,7 @@ async function getNotePermissionLevelsByMemberId(
     note,
     candidateMemberIds,
   }: {
-    note: NoteItemRow
+    note: Doc<'sidebarItems'>
     candidateMemberIds: Array<Id<'campaignMembers'>>
   },
 ): Promise<Map<Id<'campaignMembers'>, PermissionLevel>> {
@@ -32,7 +31,7 @@ async function getNotePermissionLevelsByMemberId(
   const directShares = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
-      q.eq('campaignId', ctx.campaign._id).eq('sidebarItemId', note.id),
+      q.eq('campaignId', ctx.campaign._id).eq('sidebarItemId', note._id),
     )
     .collect()
 
@@ -69,7 +68,7 @@ export async function getBlockSharePlayerNoteAccess(
     note,
     candidateMemberIds,
   }: {
-    note: NoteItemRow
+    note: Doc<'sidebarItems'>
     candidateMemberIds: Array<Id<'campaignMembers'>>
   },
 ): Promise<Array<BlockSharePlayerNoteAccess>> {

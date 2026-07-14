@@ -11,18 +11,19 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import type { AssetId, CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { assertConvexResourceTitle } from '../validation/name'
 import { assertConvexSidebarItemSlug } from '../validation/slug'
-import { getAssetIdByStorageId, getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
+import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 import { isActiveSidebarItem, isTrashedSidebarItem } from '../types/status'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Id } from '../../_generated/dataModel'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import {
   loadSidebarItemShareIdentityProjection,
   projectSidebarItemShare,
 } from '../../sidebarShares/functions/projectSidebarItemShare'
+import { findSidebarItemRow } from './sidebarItemIdentity'
 
-type SidebarItemEnhancementRow = AnyResourceRow | (Doc<'sidebarItems'> & { previewAssetId?: never })
+type SidebarItemEnhancementRow = AnyResourceRow
 
 export type SidebarItemEnhancement = {
   shares: Array<ResourceShare>
@@ -35,29 +36,9 @@ function normalizeSidebarItemFields<T extends SidebarItemEnhancementRow>(
   previewAssetId: AssetId | null,
   campaignId: CampaignId,
 ) {
-  const normalizedId = 'id' in item ? item.id : item._id
-  const normalizedCreatedAt = 'createdAt' in item ? item.createdAt : item._creationTime
-  const {
-    _id: _rawId,
-    _creationTime: _rawCreationTime,
-    resourceUuid: _resourceUuid,
-    normalizedName: _normalizedName,
-    previewStorageId: _previewStorageId,
-    previewUpdatedAt: _previewUpdatedAt,
-    ...publicFields
-  } = item as T & {
-    _id?: Id<'sidebarItems'>
-    _creationTime?: number
-    resourceUuid?: string
-    normalizedName?: string
-    previewStorageId?: Id<'_storage'> | null
-    previewUpdatedAt?: number | null
-  }
   return {
-    ...publicFields,
-    id: normalizedId,
+    ...item,
     campaignId,
-    createdAt: normalizedCreatedAt,
     name: assertConvexResourceTitle(item.name),
     iconName: item.iconName === null ? null : assertResourceIconName(item.iconName),
     color: item.color === null ? null : assertResourceColor(item.color),
@@ -74,12 +55,14 @@ export async function enhanceBase<T extends SidebarItemEnhancementRow>(
   const previewIdentity = await resolvePreviewIdentity(ctx, item)
   const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid)
   const normalizedItem = normalizeSidebarItemFields(item, previewIdentity.assetId, campaignId)
+  const providerItem = enhancement ? null : await findSidebarItemRow(ctx, normalizedItem.id)
+  if (!enhancement && !providerItem) throw new Error('Resource provider row is missing')
 
   const [shares, isBookmarked, myPermissionLevel, previewUrl] = await Promise.all([
     enhancement
       ? enhancement.shares
       : membership.role === CAMPAIGN_MEMBER_ROLE.DM
-        ? getResourceShares(ctx, normalizedItem.id)
+        ? getResourceShares(ctx, providerItem!._id, normalizedItem.id)
         : [],
     enhancement
       ? enhancement.isBookmarked
@@ -89,11 +72,18 @@ export async function enhanceBase<T extends SidebarItemEnhancementRow>(
             q
               .eq('campaignId', ctx.campaign._id)
               .eq('campaignMemberId', membership._id)
-              .eq('sidebarItemId', normalizedItem.id),
+              .eq('sidebarItemId', providerItem!._id),
           )
           .unique()
           .then((bookmark) => bookmark !== null),
-    enhancement?.myPermissionLevel ?? getSidebarItemPermissionLevel(ctx, { item: normalizedItem }),
+    enhancement?.myPermissionLevel ??
+      getSidebarItemPermissionLevel(ctx, {
+        item: {
+          id: providerItem!._id,
+          parentId: providerItem!.parentId,
+          allPermissionLevel: providerItem!.allPermissionLevel,
+        },
+      }),
     previewIdentity.storageId ? ctx.storage.getUrl(previewIdentity.storageId) : null,
   ])
 
@@ -111,6 +101,7 @@ export async function enhanceBase<T extends SidebarItemEnhancementRow>(
 async function getResourceShares(
   ctx: CampaignQueryCtx,
   sidebarItemId: Id<'sidebarItems'>,
+  resourceId: SidebarItemEnhancementRow['id'],
 ): Promise<Array<ResourceShare>> {
   const [shares, projection] = await Promise.all([
     ctx.db
@@ -121,17 +112,13 @@ async function getResourceShares(
       .collect(),
     loadSidebarItemShareIdentityProjection(ctx),
   ])
-  return shares.map((share) => projectSidebarItemShare(share, projection.identities))
+  return shares.map((share) => projectSidebarItemShare(share, projection.identities, resourceId))
 }
 
 async function resolvePreviewIdentity(
   ctx: CampaignQueryCtx,
   item: SidebarItemEnhancementRow,
 ): Promise<{ assetId: AssetId | null; storageId: Id<'_storage'> | null }> {
-  if ('previewStorageId' in item) {
-    const storageId = item.previewStorageId ?? null
-    return { assetId: await getAssetIdByStorageId(ctx.db, storageId), storageId }
-  }
   const assetId = item.previewAssetId ?? null
   return { assetId, storageId: await getStorageIdByAssetId(ctx.db, assetId) }
 }

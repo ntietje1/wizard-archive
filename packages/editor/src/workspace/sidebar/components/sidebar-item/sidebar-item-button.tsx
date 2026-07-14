@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../../../resources/domain-id'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import { EditableName } from './editable-item-name'
 import { SidebarShareButton } from './sidebar-item-share-button'
-import type { SidebarItemId } from '../../../../../../../shared/common/ids'
+
 import type { AnyItem } from '../../../items'
 import { useContextMenu } from '../../../../context-menu/hooks/use-context-menu'
 import { useSidebarItemVisualState } from '../../use-sidebar-item-visual-state'
@@ -21,14 +22,14 @@ interface SidebarItemButtonContainerProps {
   expanded: boolean
   indentLevel?: number
   onToggleExpanded?: (event: MouseEvent) => void
-  renamingId: SidebarItemId | null
+  renamingId: ResourceId | null
   rowRef?: Ref<HTMLDivElement>
-  setRenamingId: (id: SidebarItemId | null) => void
+  setRenamingId: (id: ResourceId | null) => void
   showChevron: boolean
   showShareButton?: boolean
   source: SidebarItemSource
   surface: SidebarWorkspaceItemSurfaceName
-  visibleItemIds: ReadonlyArray<SidebarItemId>
+  visibleItemIds: ReadonlyArray<ResourceId>
 }
 
 export function SidebarItemButton({

@@ -3,9 +3,15 @@ import { throwClientError } from '../../errors'
 import { getSidebarItemRow } from './sidebarItemRows'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnyResource } from '@wizard-archive/editor/resources/resource-contract'
 
-export async function loadSidebarItemAncestorMap<T extends Pick<AnyResource, 'id' | 'parentId'>>(
+type SidebarOperationNode = {
+  id: Id<'sidebarItems'>
+  parentId: Id<'sidebarItems'> | null
+}
+
+export async function loadSidebarItemAncestorMap<
+  T extends { _id: Id<'sidebarItems'>; parentId: Id<'sidebarItems'> | null },
+>(
   ctx: CampaignQueryCtx,
   {
     items,
@@ -13,10 +19,10 @@ export async function loadSidebarItemAncestorMap<T extends Pick<AnyResource, 'id
     maxDepth,
   }: {
     items: ReadonlyArray<T>
-    itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<AnyResource, 'id' | 'parentId'>>
+    itemsById: ReadonlyMap<Id<'sidebarItems'>, SidebarOperationNode>
     maxDepth: number
   },
-): Promise<Map<Id<'sidebarItems'>, Pick<AnyResource, 'id' | 'parentId'>>> {
+): Promise<Map<Id<'sidebarItems'>, SidebarOperationNode>> {
   const ancestorItemsById = new Map(itemsById)
 
   for (const item of items) {

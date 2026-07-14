@@ -1,12 +1,13 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
 import type { SyntheticEvent } from 'react'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { useMapImageStatus } from '../use-map-image-status'
 
 describe('useMapImageStatus', () => {
   it('ignores stale and mismatched image events', () => {
-    const mapId = 'map-1' as SidebarItemId
+    const mapId = 'map-1' as ResourceId
     const { result, rerender } = renderHook(({ imageUrl }) => useMapImageStatus(mapId, imageUrl), {
       initialProps: { imageUrl: 'first.png' },
     })
@@ -28,7 +29,7 @@ describe('useMapImageStatus', () => {
   })
 
   it('accepts only the active image error event', () => {
-    const { result } = renderHook(() => useMapImageStatus('map-1' as SidebarItemId, 'active.png'))
+    const { result } = renderHook(() => useMapImageStatus('map-1' as ResourceId, 'active.png'))
 
     act(() => {
       result.current.handleImageError(imageEvent('stale.png'))

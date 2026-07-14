@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
 import { createNote } from '../../test/sidebar-item-factory'
@@ -8,7 +9,6 @@ import { planFileSystemReceiptEffects } from '../receipt-effect-planner'
 import { createCreatedItemReceipt, createFileSystemReceipt } from './receipt-factory'
 import { RESOURCE_COMMAND_TYPE, RESOURCE_EVENT_TYPE } from '../transaction-contract'
 import type { ResourceCommand } from '../transaction-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 function createReadModel(snapshot: SidebarCacheSnapshot) {
   return createFileSystemCacheAdapter({
@@ -20,7 +20,7 @@ function createReadModel(snapshot: SidebarCacheSnapshot) {
 describe('filesystem receipt effects', () => {
   it('plans committed create selection for the created item', () => {
     const item = createNote({
-      id: 'item_1' as SidebarItemId,
+      id: 'item_1' as ResourceId,
       name: 'Scene',
       slug: 'scene',
       status: RESOURCE_STATUS.active,
@@ -38,23 +38,23 @@ describe('filesystem receipt effects', () => {
         currentResourceId: null,
         selectedItemIds: [],
       }),
-    ).toEqual([{ type: 'selectItems', itemIds: ['item_1' as SidebarItemId] }])
+    ).toEqual([{ type: 'selectItems', itemIds: ['item_1' as ResourceId] }])
   })
 
   it('keeps receipt-selected roots as the single final selection when removing old selections', () => {
     const copiedItem = createNote({
-      id: 'copied_item' as SidebarItemId,
+      id: 'copied_item' as ResourceId,
       name: 'Scene Copy',
       slug: 'scene-copy',
       status: RESOURCE_STATUS.active,
     })
     const replacedItem = createNote({
-      id: 'replaced_item' as SidebarItemId,
+      id: 'replaced_item' as ResourceId,
       name: 'Scene',
       slug: 'scene',
       status: RESOURCE_STATUS.active,
     })
-    const sourceItemId = 'source_item' as SidebarItemId
+    const sourceItemId = 'source_item' as ResourceId
     const command = {
       type: 'copy',
       itemIds: [sourceItemId],
@@ -84,7 +84,7 @@ describe('filesystem receipt effects', () => {
 
   it('plans rename navigation from the current resource id', () => {
     const item = createNote({
-      id: 'renamed_item' as SidebarItemId,
+      id: 'renamed_item' as ResourceId,
       name: 'Renamed Scene',
       slug: 'renamed-scene',
       status: RESOURCE_STATUS.active,
@@ -136,7 +136,7 @@ describe('filesystem receipt effects', () => {
       planFileSystemReceiptEffects({
         receipt: malformedReceipt,
         readModel,
-        currentResourceId: 'other_item' as SidebarItemId,
+        currentResourceId: 'other_item' as ResourceId,
         selectedItemIds: [],
       }),
     ).toEqual([])
@@ -144,7 +144,7 @@ describe('filesystem receipt effects', () => {
 
   it('clears the editor when the current resource is removed by a receipt snapshot', () => {
     const item = createNote({
-      id: 'removed_item' as SidebarItemId,
+      id: 'removed_item' as ResourceId,
       name: 'Removed Scene',
       slug: 'removed-scene',
       status: RESOURCE_STATUS.active,

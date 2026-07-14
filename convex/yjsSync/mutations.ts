@@ -1,7 +1,6 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
 import { internal } from '../_generated/api'
-import { yjsDocumentIdValidator } from './schema'
 import { checkYjsReadAccess, checkYjsWriteAccess } from './functions/checkYjsAccess'
 import { shouldCompact, SNAPSHOT_IDLE_MS } from './constants'
 import { editorBlockInputValidator } from '../blocks/schema'
@@ -16,6 +15,8 @@ import { getYjsDocumentRevision } from './functions/documentRevision'
 import { awarenessLeaseResultValidator, awarenessReleaseResultValidator } from './awareness'
 import { AWARENESS_REJECTION_REASON, AWARENESS_TTL_MS } from '../../shared/yjs-sync/awareness'
 import type { AwarenessLeaseResult, AwarenessReleaseResult } from '../../shared/yjs-sync/awareness'
+import { resourceIdValidator } from '../resources/validators'
+import { sessionIdValidator } from '../sessions/schema'
 
 const pushUpdateResultValidator = v.union(
   v.object({ status: v.literal('accepted'), seq: v.number() }),
@@ -96,33 +97,37 @@ async function getYjsAwarenessForClient(
 
 export const pushUpdate = campaignMutation({
   args: {
-    documentId: yjsDocumentIdValidator,
+    documentId: resourceIdValidator,
     revision: v.optional(v.number()),
     update: v.bytes(),
   },
   returns: pushUpdateResultValidator,
   handler: async (ctx, { documentId, revision, update }) => {
-    await checkYjsWriteAccess(ctx, documentId)
-    return await insertYjsUpdate(ctx, { documentId, revision, update })
+    const providerDocumentId = await checkYjsWriteAccess(ctx, documentId)
+    return await insertYjsUpdate(ctx, { documentId: providerDocumentId, revision, update })
   },
 })
 
 export const pushImportedTextNoteUpdate = campaignMutation({
   args: {
-    documentId: yjsDocumentIdValidator,
+    documentId: resourceIdValidator,
     revision: v.optional(v.number()),
     update: v.bytes(),
     content: v.array(editorBlockInputValidator),
   },
   returns: pushUpdateResultValidator,
   handler: async (ctx, { content, documentId, revision, update }) => {
-    await checkYjsWriteAccess(ctx, documentId)
-    await checkImportedTextNoteTarget(ctx, documentId)
+    const providerDocumentId = await checkYjsWriteAccess(ctx, documentId)
+    await checkImportedTextNoteTarget(ctx, providerDocumentId)
     const parsedContent = parseBlockNoteBlocks(content)
-    const result = await insertYjsUpdate(ctx, { documentId, revision, update })
+    const result = await insertYjsUpdate(ctx, {
+      documentId: providerDocumentId,
+      revision,
+      update,
+    })
     if (result.status === 'rejected') return result
     await syncNoteIndexesFromBlocks(ctx, {
-      noteId: documentId,
+      noteId: providerDocumentId,
       content: parsedContent,
     })
     return result
@@ -131,17 +136,17 @@ export const pushImportedTextNoteUpdate = campaignMutation({
 
 export const pushAwareness = campaignMutation({
   args: {
-    documentId: yjsDocumentIdValidator,
+    documentId: resourceIdValidator,
     clientId: v.number(),
-    sessionId: v.optional(v.string()),
+    sessionId: v.optional(sessionIdValidator),
     state: v.bytes(),
   },
   returns: awarenessLeaseResultValidator,
   handler: async (ctx, { documentId, clientId, sessionId, state }) => {
-    await checkYjsReadAccess(ctx, documentId)
+    const providerDocumentId = await checkYjsReadAccess(ctx, documentId)
     if (!sessionId) return rejectedAwarenessLease(AWARENESS_REJECTION_REASON.sessionRequired)
 
-    const existing = await getYjsAwarenessForClient(ctx, documentId, clientId)
+    const existing = await getYjsAwarenessForClient(ctx, providerDocumentId, clientId)
     if (
       existing &&
       (existing.userId !== ctx.membership.userId || existing.sessionId !== sessionId)
@@ -158,7 +163,7 @@ export const pushAwareness = campaignMutation({
       })
     } else {
       await ctx.db.insert('yjsAwareness', {
-        documentId: documentId,
+        documentId: providerDocumentId,
         clientId,
         userId: ctx.membership.userId,
         sessionId,
@@ -173,16 +178,16 @@ export const pushAwareness = campaignMutation({
 
 export const removeAwareness = campaignMutation({
   args: {
-    documentId: yjsDocumentIdValidator,
+    documentId: resourceIdValidator,
     clientId: v.number(),
-    sessionId: v.optional(v.string()),
+    sessionId: v.optional(sessionIdValidator),
   },
   returns: awarenessReleaseResultValidator,
   handler: async (ctx, { documentId, clientId, sessionId }) => {
-    await checkYjsReadAccess(ctx, documentId)
+    const providerDocumentId = await checkYjsReadAccess(ctx, documentId)
     if (!sessionId) return rejectedAwarenessRelease(AWARENESS_REJECTION_REASON.sessionRequired)
 
-    const existing = await getYjsAwarenessForClient(ctx, documentId, clientId)
+    const existing = await getYjsAwarenessForClient(ctx, providerDocumentId, clientId)
     if (!existing) return { status: 'unavailable' as const }
     if (existing.userId !== ctx.membership.userId || existing.sessionId !== sessionId) {
       return rejectedAwarenessRelease(AWARENESS_REJECTION_REASON.sessionConflict)

@@ -1,8 +1,9 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import { filterVisibleResourcesForActor } from '../visibility-filter'
 import type { EditorWorkspaceActor } from '../permission-resolution'
 import { createPermissionLookup } from './permission-test-utils'
@@ -54,6 +55,6 @@ describe('resource visibility filter domain', () => {
   })
 })
 
-function resourceId(id: string): SidebarItemId {
-  return testId<'sidebarItems'>(id)
+function resourceId(id: string): ResourceId {
+  return testResourceId(id)
 }

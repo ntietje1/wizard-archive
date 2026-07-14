@@ -1,5 +1,6 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { useEffect, useRef } from 'react'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import {
   createWizardEditorCanvasDocumentDoc,
   createWizardEditorCanvasEmbeddedSessionPorts,
@@ -18,7 +19,7 @@ type StaticCanvasDocumentPayload = Pick<
   'edges' | 'nodes'
 >
 type CanvasContentChangeHandler = (input: {
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   payload: StaticCanvasDocumentPayload
 }) => void
 
@@ -30,7 +31,7 @@ export function useInMemoryCanvasSessionSource({
   workspaceId,
 }: {
   canEdit: boolean
-  getCanvasPayload: (canvasId: SidebarItemId) => StaticCanvasDocumentPayload
+  getCanvasPayload: (canvasId: ResourceId) => StaticCanvasDocumentPayload
   onCanvasContentChange?: CanvasContentChangeHandler
   user: { color: string; name: string }
   workspaceId: string
@@ -84,7 +85,7 @@ export function useInMemoryCanvasSessionSource({
 export function useInMemoryCanvasEmbeddedSessionSource({
   getEmbeddedCanvasPayload,
 }: {
-  getEmbeddedCanvasPayload: (canvasId: SidebarItemId) => StaticCanvasDocumentPayload
+  getEmbeddedCanvasPayload: (canvasId: ResourceId) => StaticCanvasDocumentPayload
 }): WizardEditorCanvasEmbeddedSessionPorts {
   const getEmbeddedCanvasPayloadRef = useRef(getEmbeddedCanvasPayload)
   const sourceRef = useRef<WizardEditorCanvasEmbeddedSessionPorts | null>(null)
@@ -116,7 +117,7 @@ function useInMemoryCanvasDocumentSession({
   canEdit: boolean
   canvas: Parameters<WizardEditorCanvasSessionPorts['document']['useCanvasDocumentSession']>[0]
   documentCache: Map<string, ReturnType<typeof createWizardEditorCanvasDocumentDoc>>
-  getCanvasPayload: (canvasId: SidebarItemId) => StaticCanvasDocumentPayload
+  getCanvasPayload: (canvasId: ResourceId) => StaticCanvasDocumentPayload
   onContentChange: CanvasContentChangeHandler
   user: { color: string; name: string }
   workspaceId: string
@@ -159,7 +160,7 @@ function getStaticCanvasDocument({
   workspaceId,
 }: {
   cache: Map<string, ReturnType<typeof createWizardEditorCanvasDocumentDoc>>
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   payload: StaticCanvasDocumentPayload
   workspaceId: string
 }): ReturnType<typeof createWizardEditorCanvasDocumentDoc> {

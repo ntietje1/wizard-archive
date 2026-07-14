@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vite-plus/test'
 import { act, renderHook } from '@testing-library/react'
 import * as Y from 'yjs'
@@ -6,10 +7,10 @@ import { YjsProvider } from '../yjs-provider-runtime'
 import { createYjsProviderUser } from '../yjs-provider'
 import { useYjsCollaborationSession } from '../yjs-session'
 import type { YjsCollaborationProvider } from '../yjs-provider'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { AWARENESS_HEARTBEAT_MS } from '../../../../../shared/yjs-sync/awareness'
 
-const DOCUMENT_ID = 'test-doc-id' as SidebarItemId
+const DOCUMENT_ID = 'test-doc-id' as ResourceId
 type YjsProviderConfig = ConstructorParameters<typeof YjsProvider>[2]
 type YjsCollaborationSessionInput = Parameters<typeof useYjsCollaborationSession>[0]
 type YjsAwarenessData = NonNullable<

@@ -1,5 +1,6 @@
+import type { ResourceId } from '../resources/domain-id'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceImportFile } from '../files/import-contract'
 import { completedResourceOperation } from '../filesystem/transaction-contract'
 import type { ResourceOperationResult } from '../filesystem/transaction-contract'
@@ -17,7 +18,7 @@ type MapImageReplacementStageResult<TImage> =
 type MapImageReplacementInput<TImage> = {
   file: ResourceImportFile
   layerId?: string | null
-  mapId: SidebarItemId
+  mapId: ResourceId
   stageImage: (
     input: MapImageReplacementFileInput,
   ) => MaybePromise<MapImageReplacementStageResult<TImage>>
@@ -29,13 +30,13 @@ type MapImageReplacementInput<TImage> = {
 type MapImageReplacementFileInput = {
   file: ResourceImportFile
   layerId: string | null
-  mapId: SidebarItemId
+  mapId: ResourceId
 }
 
 type MapImageReplacementImageInput<TImage> = {
   image: TImage
   layerId: string | null
-  mapId: SidebarItemId
+  mapId: ResourceId
 }
 
 export async function replaceMapImage<TImage>({
@@ -76,7 +77,7 @@ export async function replaceMapImage<TImage>({
 async function cancelStagedImage<TImage>(
   staged: StagedMapImageReplacement<TImage>,
   layerId: string | null,
-  mapId: SidebarItemId,
+  mapId: ResourceId,
   commitError: unknown,
 ) {
   try {

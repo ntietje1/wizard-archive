@@ -1,17 +1,18 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { ResourceKind } from '../../workspace/resource-contract'
 
 type SidebarTreeItem = {
-  id: SidebarItemId
-  parentId: SidebarItemId | null
+  id: ResourceId
+  parentId: ResourceId | null
   type: ResourceKind
 }
 
 export const MAX_SIDEBAR_TREE_DEPTH = 50
 
 function indexChildrenByParent(items: Array<SidebarTreeItem>) {
-  const childrenByParent = new Map<SidebarItemId, Array<SidebarTreeItem>>()
+  const childrenByParent = new Map<ResourceId, Array<SidebarTreeItem>>()
   for (const item of items) {
     if (!item.parentId) continue
     const siblings = childrenByParent.get(item.parentId)
@@ -26,11 +27,11 @@ function indexChildrenByParent(items: Array<SidebarTreeItem>) {
 
 function addChildDescendant(
   child: SidebarTreeItem,
-  rootFolderId: SidebarItemId,
-  descendants: Set<SidebarItemId>,
-  stack: Array<{ id: SidebarItemId; depth: number; ancestors: Set<SidebarItemId> }>,
+  rootFolderId: ResourceId,
+  descendants: Set<ResourceId>,
+  stack: Array<{ id: ResourceId; depth: number; ancestors: Set<ResourceId> }>,
   depth: number,
-  ancestors: Set<SidebarItemId>,
+  ancestors: Set<ResourceId>,
 ) {
   if (child.id === rootFolderId || ancestors.has(child.id)) {
     throw new Error(`Folder ${child.id} appears as its own descendant`)
@@ -44,10 +45,10 @@ function addChildDescendant(
 }
 
 export function collectDescendantIdsFromItems(
-  folderId: SidebarItemId,
+  folderId: ResourceId,
   items: Array<SidebarTreeItem>,
   { maxDepth = MAX_SIDEBAR_TREE_DEPTH }: { maxDepth?: number } = {},
-): Set<SidebarItemId> {
+): Set<ResourceId> {
   if (!Number.isInteger(maxDepth) || maxDepth < 1) {
     throw new Error('maxDepth must be an integer greater than or equal to 1')
   }
@@ -57,11 +58,11 @@ export function collectDescendantIdsFromItems(
 
   const childrenByParent = indexChildrenByParent(items)
 
-  const result = new Set<SidebarItemId>()
+  const result = new Set<ResourceId>()
   const stack: Array<{
-    id: SidebarItemId
+    id: ResourceId
     depth: number
-    ancestors: Set<SidebarItemId>
+    ancestors: Set<ResourceId>
   }> = [{ id: folderId, depth: 0, ancestors: new Set([folderId]) }]
 
   while (stack.length > 0) {

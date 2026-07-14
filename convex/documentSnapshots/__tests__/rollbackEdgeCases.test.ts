@@ -8,6 +8,7 @@ import {
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import {
   createGameMap,
+  getSidebarItemRowId,
   createNote,
   createSidebarShare,
   testBlockNoteId,
@@ -36,6 +37,7 @@ describe('rollback permission checks', () => {
         name: 'Protected Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await createSidebarShare(t, {
         campaignId: ctx.campaignId,
@@ -55,7 +57,9 @@ describe('rollback permission checks', () => {
       const historyEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .first()
       })
 
@@ -82,6 +86,7 @@ describe('rollback permission checks', () => {
         name: 'Private Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -93,7 +98,9 @@ describe('rollback permission checks', () => {
       const historyEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .first()
       })
 
@@ -116,13 +123,13 @@ describe('rollback error handling', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const fakeId = await t.run(async (dbCtx) => {
       const historyEntryUuid = generateDomainId(DOMAIN_ID_KIND.historyEntry)
       const id = await dbCtx.db.insert('editHistory', {
         historyEntryUuid,
-        itemId: noteId,
+        itemId: noteRowId,
         itemType: 'note',
         campaignId: ctx.campaignId,
         campaignMemberId: ctx.dm.memberId,
@@ -152,11 +159,12 @@ describe('rollback error handling', () => {
         name: 'No Snapshot Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       const historyEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'created'))
+          .withIndex('by_item_action', (q) => q.eq('itemId', noteRowId).eq('action', 'created'))
           .first()
       })
 
@@ -188,6 +196,7 @@ describe('note rollback data integrity', () => {
         name: 'Rollback Content Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       const originalBlocks: Array<PartialNoteBlock> = [
         {
@@ -210,7 +219,9 @@ describe('note rollback data integrity', () => {
       const snapshotEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .first()
       })
       expect(snapshotEntry!.hasSnapshot).toBe(true)
@@ -238,7 +249,7 @@ describe('note rollback data integrity', () => {
       const lastSeqBeforeRollback = await t.run(async (dbCtx) => {
         const latest = await dbCtx.db
           .query('yjsUpdates')
-          .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+          .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
           .order('desc')
           .first()
         return latest?.seq ?? -1
@@ -261,7 +272,7 @@ describe('note rollback data integrity', () => {
       await t.run(async (dbCtx) => {
         const updates = await dbCtx.db
           .query('yjsUpdates')
-          .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+          .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
           .collect()
 
         expect(updates).toHaveLength(1)
@@ -270,7 +281,7 @@ describe('note rollback data integrity', () => {
 
         const state = await dbCtx.db
           .query('yjsDocumentStates')
-          .withIndex('by_document', (q) => q.eq('documentId', noteId))
+          .withIndex('by_document', (q) => q.eq('documentId', noteRowId))
           .unique()
         expect(state?.revision).toBe(1)
 
@@ -316,6 +327,7 @@ describe('canvas rollback data integrity', () => {
         name: 'Rollback Canvas',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const canvasRowId = await getSidebarItemRowId(t, canvasId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -328,7 +340,7 @@ describe('canvas rollback data integrity', () => {
         return await dbCtx.db
           .query('editHistory')
           .withIndex('by_item_action', (q) =>
-            q.eq('itemId', canvasId).eq('action', 'content_edited'),
+            q.eq('itemId', canvasRowId).eq('action', 'content_edited'),
           )
           .first()
       })
@@ -338,7 +350,7 @@ describe('canvas rollback data integrity', () => {
       await t.run(async (dbCtx) => {
         const updates = await dbCtx.db
           .query('yjsUpdates')
-          .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+          .withIndex('by_document_seq', (q) => q.eq('documentId', canvasRowId))
           .collect()
         for (const u of updates) {
           Y.applyUpdate(originalDoc, new Uint8Array(u.update))
@@ -368,7 +380,7 @@ describe('canvas rollback data integrity', () => {
       const lastSeqBeforeRollback = await t.run(async (dbCtx) => {
         const latest = await dbCtx.db
           .query('yjsUpdates')
-          .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+          .withIndex('by_document_seq', (q) => q.eq('documentId', canvasRowId))
           .order('desc')
           .first()
         return latest?.seq ?? -1
@@ -381,7 +393,7 @@ describe('canvas rollback data integrity', () => {
       await t.run(async (dbCtx) => {
         const updates = await dbCtx.db
           .query('yjsUpdates')
-          .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+          .withIndex('by_document_seq', (q) => q.eq('documentId', canvasRowId))
           .collect()
 
         expect(updates).toHaveLength(1)
@@ -412,7 +424,7 @@ describe('rollback metadata integrity', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -425,7 +437,9 @@ describe('rollback metadata integrity', () => {
       const sourceEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .first()
       })
 
@@ -437,7 +451,7 @@ describe('rollback metadata integrity', () => {
       await t.run(async (dbCtx) => {
         const rollbackEntry = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'rolled_back'))
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapRowId).eq('action', 'rolled_back'))
           .first()
 
         expect(rollbackEntry).not.toBeNull()
@@ -462,6 +476,7 @@ describe('rollback metadata integrity', () => {
         name: 'Timestamp Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -473,12 +488,14 @@ describe('rollback metadata integrity', () => {
       const historyEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .first()
       })
 
       const beforeRollback = await t.run(async (dbCtx) => {
-        return await dbCtx.db.get('sidebarItems', noteId)
+        return await dbCtx.db.get('sidebarItems', noteRowId)
       })
 
       vi.advanceTimersByTime(1000)
@@ -489,7 +506,7 @@ describe('rollback metadata integrity', () => {
       })
 
       await t.run(async (dbCtx) => {
-        const afterRollback = await dbCtx.db.get('sidebarItems', noteId)
+        const afterRollback = await dbCtx.db.get('sidebarItems', noteRowId)
         expect(afterRollback!.updatedTime).toBeGreaterThan(beforeRollback!.updatedTime ?? 0)
         expect(afterRollback!.updatedBy).toBe(ctx.dm.profile._id)
       })
@@ -508,9 +525,17 @@ describe('map rollback with deleted pin targets', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-      const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n1, noteRowId: n1RowId } = await createNote(
+        t,
+        ctx.campaignId,
+        ctx.dm.profile._id,
+      )
+      const { noteId: n2, noteRowId: n2RowId } = await createNote(
+        t,
+        ctx.campaignId,
+        ctx.dm.profile._id,
+      )
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignDomainId,
@@ -529,14 +554,16 @@ describe('map rollback with deleted pin targets', () => {
       const secondPinEntry = await t.run(async (dbCtx) => {
         const entries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .order('desc')
           .collect()
         return entries[0]
       })
 
       await t.run(async (dbCtx) => {
-        await dbCtx.db.delete('sidebarItems', n1)
+        await dbCtx.db.delete('sidebarItems', n1RowId)
       })
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
@@ -547,11 +574,11 @@ describe('map rollback with deleted pin targets', () => {
       await t.run(async (dbCtx) => {
         const pins = await dbCtx.db
           .query('mapPins')
-          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapRowId))
           .collect()
 
         expect(pins).toHaveLength(1)
-        expect(pins[0].itemId).toBe(n2)
+        expect(pins[0].itemId).toBe(n2RowId)
       })
     } finally {
       vi.useRealTimers()
@@ -568,8 +595,12 @@ describe('sequential rollbacks', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-      const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n1, noteRowId: n1RowId } = await createNote(
+        t,
+        ctx.campaignId,
+        ctx.dm.profile._id,
+      )
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -582,7 +613,9 @@ describe('sequential rollbacks', () => {
       const firstEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .first()
       })
 
@@ -596,7 +629,9 @@ describe('sequential rollbacks', () => {
       const secondEntry = await t.run(async (dbCtx) => {
         const entries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .order('desc')
           .collect()
         return entries[0]
@@ -610,7 +645,7 @@ describe('sequential rollbacks', () => {
       await t.run(async (dbCtx) => {
         const pins = await dbCtx.db
           .query('mapPins')
-          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapRowId))
           .collect()
         expect(pins).toHaveLength(2)
       })
@@ -623,10 +658,10 @@ describe('sequential rollbacks', () => {
       await t.run(async (dbCtx) => {
         const pins = await dbCtx.db
           .query('mapPins')
-          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapRowId))
           .collect()
         expect(pins).toHaveLength(1)
-        expect(pins[0].itemId).toBe(n1)
+        expect(pins[0].itemId).toBe(n1RowId)
         expect(pins[0].x).toBe(10)
         expect(pins[0].y).toBe(20)
       })
@@ -641,7 +676,7 @@ describe('sequential rollbacks', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -654,7 +689,9 @@ describe('sequential rollbacks', () => {
       const entry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .first()
       })
 
@@ -670,7 +707,7 @@ describe('sequential rollbacks', () => {
       await t.run(async (dbCtx) => {
         const rollbackEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'rolled_back'))
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapRowId).eq('action', 'rolled_back'))
           .collect()
 
         expect(rollbackEntries).toHaveLength(2)
@@ -695,7 +732,7 @@ describe('map rollback restores image state', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -708,7 +745,9 @@ describe('map rollback restores image state', () => {
       const snapshotEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .first()
       })
 
@@ -742,7 +781,7 @@ describe('map rollback restores image state', () => {
       await t.run(async (dbCtx) => {
         const ext = await dbCtx.db
           .query('gameMaps')
-          .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+          .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
           .first()
         expect(ext!.imageStorageId).not.toBe(snapshotData.imageAssetId ?? null)
       })
@@ -755,7 +794,7 @@ describe('map rollback restores image state', () => {
       await t.run(async (dbCtx) => {
         const ext = await dbCtx.db
           .query('gameMaps')
-          .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+          .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
           .first()
         expect(ext!.imageStorageId).toBe(snapshotData.imageAssetId ?? null)
       })

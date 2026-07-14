@@ -28,7 +28,7 @@ import {
   withValidLocalViewAsPlayerSelection,
 } from './local-workspace-model'
 import type { LocalWorkspaceState } from './local-workspace-model'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import {
   DOMAIN_ID_KIND,
   generateDomainId,
@@ -38,6 +38,7 @@ import type {
   CampaignId,
   CampaignMemberId as CanonicalCampaignMemberId,
   ResourceShareId,
+  ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 
 export type LocalFileSystemSnapshot = Omit<WizardEditorCatalogSnapshot, 'current'> & {
@@ -153,12 +154,12 @@ export function createLocalWorkspaceInitialNavigation(
   if (itemId) {
     return {
       kind: 'resource',
-      resource: createWizardEditorResource(itemId as SidebarItemId),
+      resource: createWizardEditorResource(itemId as ResourceId),
     }
   }
   const initialItem = workspace.items.find((item) => localWorkspaceItemIsVisible(workspace, item))
   return initialItem
-    ? { kind: 'resource', resource: createWizardEditorResource(initialItem.id as SidebarItemId) }
+    ? { kind: 'resource', resource: createWizardEditorResource(initialItem.id as ResourceId) }
     : { kind: 'create' }
 }
 
@@ -231,8 +232,8 @@ function createLocalMapPins(
       {
         id: pin.id,
         createdAt: pin.creationTime,
-        mapId: map.id as SidebarItemId,
-        itemId: pin.itemId as SidebarItemId,
+        mapId: map.id as ResourceId,
+        itemId: pin.itemId as ResourceId,
         layerId: pin.layerId ?? null,
         x: pin.x,
         y: pin.y,
@@ -323,7 +324,7 @@ function localSidebarItemBaseFields(
   const isTrashed = item.status === 'trash'
   const myPermissionLevel = localItemPermissionLevel(state, item.id)
   return {
-    id: item.id as SidebarItemId,
+    id: item.id as ResourceId,
     createdAt: item.createdAt,
     name: requireLocalResourceTitle(item.title || 'Untitled'),
     iconName: item.iconName ?? null,
@@ -355,7 +356,7 @@ function localSidebarItemShares(state: LocalWorkspaceState, item: LocalWorkspace
       id: getLocalResourceShareId(state.workspaceId, item.id, campaignMemberId),
       createdAt: item.createdAt,
       campaignId: getLocalCampaignId(state.workspaceId),
-      sidebarItemId: item.id as SidebarItemId,
+      sidebarItemId: item.id as ResourceId,
       sidebarItemType: localSidebarItemType(item.type),
       campaignMemberId: getLocalCampaignMemberId(campaignMemberId),
       sessionId: null,
@@ -456,9 +457,7 @@ function localVisibleParentId(
 ) {
   if (!item.parentId) return null
   const parent = itemsById.get(item.parentId)
-  return parent && localWorkspaceItemIsVisible(state, parent)
-    ? (item.parentId as SidebarItemId)
-    : null
+  return parent && localWorkspaceItemIsVisible(state, parent) ? (item.parentId as ResourceId) : null
 }
 
 function createLocalNoteContent(state: LocalWorkspaceState, item: LocalWorkspaceItem) {

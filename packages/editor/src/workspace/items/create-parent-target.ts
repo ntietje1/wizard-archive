@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
 import type { AnyItem, CreateParentTarget, ValidationResult } from '../items'
 import {
   CREATE_PARENT_TARGET_KIND,
@@ -10,49 +10,49 @@ import { RESOURCE_TYPES } from '../items-persistence-contract'
 
 const VIRTUAL_PARENT = Symbol('virtual-parent')
 
-type ParentRef = SidebarItemId | null | typeof VIRTUAL_PARENT
+type ParentRef = ResourceId | null | typeof VIRTUAL_PARENT
 type CreateParentTargetItem = Pick<AnyItem, 'id' | 'name' | 'parentId' | 'status' | 'type'>
 
 export type CreateParentTargetValidationSource<TItem extends CreateParentTargetItem = AnyItem> = {
-  getItemById: (itemId: SidebarItemId) => TItem | null | undefined
-  getActiveChildren: (parentId: SidebarItemId | null) => ReadonlyArray<TItem>
+  getItemById: (itemId: ResourceId) => TItem | null | undefined
+  getActiveChildren: (parentId: ResourceId | null) => ReadonlyArray<TItem>
 }
 
 type ParentTargetValidationResult<TItem extends CreateParentTargetItem = AnyItem> =
   | {
       valid: true
-      parentId: SidebarItemId | null
+      parentId: ResourceId | null
       siblings: ReadonlyArray<TItem>
     }
   | ({ valid: false } & Pick<Exclude<ValidationResult, { valid: true }>, 'error'>)
 
 type CreateParentPathPlanEntry =
-  | { kind: 'existing'; id: SidebarItemId }
+  | { kind: 'existing'; id: ResourceId }
   | { kind: 'virtual'; name: string }
 
 type CreateParentTargetPlan =
-  | { kind: typeof CREATE_PARENT_TARGET_KIND.direct; parentId: SidebarItemId | null }
+  | { kind: typeof CREATE_PARENT_TARGET_KIND.direct; parentId: ResourceId | null }
   | { kind: typeof CREATE_PARENT_TARGET_KIND.path; folders: Array<CreateParentPathPlanEntry> }
 
 type PendingCreateParentFolderResolver = (input: {
   name: string
-  parentId: SidebarItemId | null
-}) => SidebarItemId | null | undefined
+  parentId: ResourceId | null
+}) => ResourceId | null | undefined
 
 type ParentStackResult =
-  | { valid: true; stack: Array<SidebarItemId | null> }
+  | { valid: true; stack: Array<ResourceId | null> }
   | { valid: false; error: string }
 
 function buildParentStack(
-  parentId: SidebarItemId | null,
+  parentId: ResourceId | null,
   source: CreateParentTargetValidationSource,
 ): ParentStackResult {
-  const stack: Array<SidebarItemId | null> = [null]
+  const stack: Array<ResourceId | null> = [null]
   if (parentId === null) return { valid: true, stack }
 
-  const chain: Array<SidebarItemId> = []
-  const seen = new Set<SidebarItemId>()
-  let currentId: SidebarItemId | null = parentId
+  const chain: Array<ResourceId> = []
+  const seen = new Set<ResourceId>()
+  let currentId: ResourceId | null = parentId
 
   while (currentId !== null) {
     if (seen.has(currentId)) return { valid: false, error: 'Parent not found' }
@@ -75,7 +75,7 @@ function buildParentStack(
 }
 
 function findSidebarChildByName(
-  parentId: SidebarItemId | null,
+  parentId: ResourceId | null,
   name: string,
   source: CreateParentTargetValidationSource,
 ): CreateParentTargetItem | undefined {
@@ -99,7 +99,7 @@ export function planCreateParentTarget(
   parentTarget: CreateParentTarget,
   source: CreateParentTargetValidationSource,
   options: {
-    createdFolderIds?: ReadonlySet<SidebarItemId>
+    createdFolderIds?: ReadonlySet<ResourceId>
     resolvePendingFolder?: PendingCreateParentFolderResolver
   } = {},
 ): CreateParentTargetPlan | null {
@@ -191,7 +191,7 @@ function validatePathCreateParentTarget(
 }
 
 function validatePathBaseParent(
-  baseParentId: SidebarItemId | null,
+  baseParentId: ResourceId | null,
   source: CreateParentTargetValidationSource,
 ): ValidationResult {
   if (baseParentId === null) return { valid: true }
@@ -209,7 +209,7 @@ function planCreateParentPath(
   parentTarget: Extract<CreateParentTarget, { kind: typeof CREATE_PARENT_TARGET_KIND.path }>,
   source: CreateParentTargetValidationSource,
   options: {
-    createdFolderIds: ReadonlySet<SidebarItemId> | undefined
+    createdFolderIds: ReadonlySet<ResourceId> | undefined
     resolvePendingFolder: PendingCreateParentFolderResolver | undefined
   },
 ): Array<CreateParentPathPlanEntry> | null {
@@ -232,7 +232,7 @@ function planCreateParentPath(
 function planBaseCreateParentPath(
   parentTarget: Extract<CreateParentTarget, { kind: typeof CREATE_PARENT_TARGET_KIND.path }>,
   source: CreateParentTargetValidationSource,
-  createdFolderIds: ReadonlySet<SidebarItemId> | undefined,
+  createdFolderIds: ReadonlySet<ResourceId> | undefined,
 ): Array<CreateParentPathPlanEntry> | null {
   if (parentTarget.baseParentId !== null && createdFolderIds?.has(parentTarget.baseParentId)) {
     return [{ kind: 'existing', id: parentTarget.baseParentId }]

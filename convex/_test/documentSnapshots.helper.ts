@@ -4,7 +4,11 @@ import { createGameMap, createNote } from './factories.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type { DataModel, Doc, Id } from '../_generated/dataModel'
 import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
-import type { CampaignId, HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  HistoryEntryId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type schema from '../schema'
 
 type T = TestConvex<typeof schema>
@@ -16,8 +20,8 @@ export async function createSnapshotPin(
   client: AuthedContext,
   args: {
     campaignId: CampaignId
-    mapId: Id<'sidebarItems'>
-    itemId: Id<'sidebarItems'>
+    mapId: ResourceId
+    itemId: ResourceId
     x: number
     y: number
     flushScheduledFunctions?: boolean
@@ -45,9 +49,14 @@ export async function createMapWithTwoSnapshotPins(
     ownerId: Id<'userProfiles'>
   },
 ) {
-  const { mapId } = await createGameMap(t, args.campaignId, args.ownerId)
-  const { noteId: firstNoteId } = await createNote(t, args.campaignId, args.ownerId)
-  const { noteId: secondNoteId } = await createNote(t, args.campaignId, args.ownerId)
+  const [gameMap, firstNote, secondNote] = await Promise.all([
+    createGameMap(t, args.campaignId, args.ownerId),
+    createNote(t, args.campaignId, args.ownerId),
+    createNote(t, args.campaignId, args.ownerId),
+  ])
+  const { mapId, mapRowId } = gameMap
+  const { noteId: firstNoteId, noteRowId: firstNoteRowId } = firstNote
+  const { noteId: secondNoteId, noteRowId: secondNoteRowId } = secondNote
 
   await createSnapshotPin(t, client, {
     campaignId: args.campaignDomainId,
@@ -65,7 +74,14 @@ export async function createMapWithTwoSnapshotPins(
     y: 40,
   })
 
-  return { mapId, firstNoteId, secondNoteId }
+  return {
+    mapId,
+    mapRowId,
+    firstNoteId,
+    firstNoteRowId,
+    secondNoteId,
+    secondNoteRowId,
+  }
 }
 
 export async function getEditHistoryEntryByItemAction(

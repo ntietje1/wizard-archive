@@ -1,5 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-
+import type { ResourceId } from '../../resources/domain-id'
 export interface MapTransformState {
   scale: number
   positionX: number
@@ -13,6 +12,6 @@ export const DEFAULT_MAP_TRANSFORM = {
 } satisfies MapTransformState
 
 export interface MapTransformStore {
-  loadMapTransform: (mapId: SidebarItemId) => MapTransformState
-  saveMapTransform: (mapId: SidebarItemId, value: MapTransformState) => void
+  loadMapTransform: (mapId: ResourceId) => MapTransformState
+  saveMapTransform: (mapId: ResourceId, value: MapTransformState) => void
 }

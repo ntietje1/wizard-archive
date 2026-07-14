@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { Heading } from './document/model'
 import type { NoteItemWithContent } from './item-contract'
 import type { NoteCollaborationPlayback } from './playback-contract'
@@ -31,11 +31,11 @@ interface NoteDocumentSessionSource {
 }
 
 interface NotePlaybackSource {
-  getCollaborationPlayback?: (noteId: SidebarItemId) => NoteCollaborationPlayback | undefined
+  getCollaborationPlayback?: (noteId: ResourceId) => NoteCollaborationPlayback | undefined
 }
 
 interface NoteHeadingSource {
-  useNoteHeadings: (noteId: SidebarItemId | null) => NoteHeadingsLoad
+  useNoteHeadings: (noteId: ResourceId | null) => NoteHeadingsLoad
 }
 
 type NoteHeadingsLoadStatus = 'pending' | 'success' | 'error'

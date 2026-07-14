@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { useEffect, useRef, useState } from 'react'
 import type { MutableRefObject, RefObject } from 'react'
 import type { EmbedTarget } from '../../../../../../shared/embeds/embedTargets'
@@ -54,7 +55,7 @@ import {
   shouldCanvasSidebarItemEmbedUseFreeformResize,
   shouldClearDefaultCanvasSidebarItemEmbedAspectRatio,
 } from '../../../embeds/utils/canvas-resource-capabilities'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { CanvasNoteContentSources } from '../../note-content-sources'
 
 const EMBED_FLOATING_LABEL_GAP_PX = 6
@@ -585,7 +586,7 @@ function EmbedNodeSurface({
   target,
 }: {
   allowInnerScroll: boolean
-  canvasId: SidebarItemId | null
+  canvasId: ResourceId | null
   contentItem: AnyItemWithContent | undefined
   editableSession: ReturnType<typeof useCanvasEditableNodeSession>
   interactiveRenderMode: boolean
@@ -663,7 +664,7 @@ function EditableCanvasEmbedContent({
 }: {
   embedBlockId: string
   rootRef: RefObject<HTMLElement | null>
-  sourceCanvasId: SidebarItemId | null
+  sourceCanvasId: ResourceId | null
   target: EmbedTarget
   setTarget: (target: EmbedTarget) => Promise<void>
   onMediaLayout: (layout: EmbedMediaLayout) => void
@@ -758,7 +759,7 @@ function CanvasEmbedContent({
   onMediaLayout: (layout: EmbedMediaLayout) => void
   onUpload?: () => void
   richContentRuntime: CanvasSidebarItemEmbedRuntime
-  sourceCanvasId: SidebarItemId | null
+  sourceCanvasId: ResourceId | null
   target: EmbedTarget
   resolvedResourceContentState?: ResourceContentState
 }) {

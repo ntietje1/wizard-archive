@@ -2,6 +2,7 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import type {
   CampaignId,
   CampaignMemberId,
+  ResourceId,
   SessionId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceShare } from '@wizard-archive/editor/resources/resource-contract'
@@ -69,6 +70,7 @@ export async function loadSidebarItemShareIdentityProjection(ctx: CampaignQueryC
 export function projectSidebarItemShare(
   share: Doc<'sidebarItemShares'>,
   identities: SidebarItemShareIdentityProjection,
+  resourceId: ResourceId,
 ): ResourceShare {
   if (share.campaignId !== identities.campaignRowId) {
     throw new Error('Resource share belongs to another campaign')
@@ -83,7 +85,7 @@ export function projectSidebarItemShare(
     id: share.resourceShareUuid,
     createdAt: share._creationTime,
     campaignId: identities.campaignId,
-    sidebarItemId: share.sidebarItemId,
+    sidebarItemId: resourceId,
     sidebarItemType: share.sidebarItemType,
     campaignMemberId,
     sessionId,

@@ -13,21 +13,18 @@ import type {
   MapItemWithContent as MapItemWithContentContract,
 } from '../game-maps/item-contract'
 import type { NoteItem, NoteItemRow, NoteItemWithContent } from '../notes/item-contract'
-import { isOptimisticSidebarItemId } from './items/optimistic'
 import { RESOURCE_ICON_NAMES, RESOURCE_STATUS } from './items-persistence-contract'
 import type { RESOURCE_TYPES } from './items-persistence-contract'
 import type {
   AssetId,
   CampaignId,
   CampaignMemberId,
+  ResourceId,
   ResourceShareId,
   SessionId,
 } from '../resources/domain-id'
+import { isUuidV7 } from '../resources/domain-id'
 import type { ResourceTitle } from '../resources/resource-contract'
-
-type ResourceTableId<TableName extends string> = string & { __tableName: TableName }
-
-export type ResourceId = ResourceTableId<'sidebarItems'>
 export type ResourceKind = (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES]
 export type ResourceStatus = (typeof RESOURCE_STATUS)[keyof typeof RESOURCE_STATUS]
 export type ResourceLocation = 'sidebar'
@@ -41,12 +38,10 @@ export function isActiveResource(resource: { status: ResourceStatus }): boolean 
   return resource.status === RESOURCE_STATUS.active
 }
 
-export function isPersistedResourceId(resourceId: string | null | undefined): resourceId is string {
-  return (
-    typeof resourceId === 'string' &&
-    resourceId.length > 0 &&
-    !isOptimisticSidebarItemId(resourceId)
-  )
+export function isPersistedResourceId(
+  resourceId: string | null | undefined,
+): resourceId is ResourceId {
+  return typeof resourceId === 'string' && isUuidV7(resourceId)
 }
 
 type ResourceReadModelResource = {
@@ -317,12 +312,12 @@ export type ResourceParentTarget =
       pathSegments: Array<string>
     }
 
-type ResourceParentLookup = { parentId: ResourceId | null } | null | undefined
+type ResourceParentLookup<TId extends string> = { parentId: TId | null } | null | undefined
 
-function validateNoCircularResourceParentInternal(
-  resourceId: ResourceId,
-  newParentId: ResourceId | null,
-  getParent: (id: ResourceId) => MaybePromise<ResourceParentLookup>,
+function validateNoCircularResourceParentInternal<TId extends string>(
+  resourceId: TId,
+  newParentId: TId | null,
+  getParent: (id: TId) => MaybePromise<ResourceParentLookup<TId>>,
 ): MaybePromise<ResourceValidationResult> {
   if (!newParentId) {
     return { valid: true }
@@ -335,9 +330,9 @@ function validateNoCircularResourceParentInternal(
     }
   }
 
-  const seen = new Set<ResourceId>()
+  const seen = new Set<TId>()
 
-  const visit = (currentId: ResourceId | null): MaybePromise<ResourceValidationResult> => {
+  const visit = (currentId: TId | null): MaybePromise<ResourceValidationResult> => {
     if (!currentId) {
       return { valid: true }
     }
@@ -368,10 +363,10 @@ function validateNoCircularResourceParentInternal(
   return visit(newParentId)
 }
 
-export async function validateNoCircularResourceParentAsync(
-  resourceId: ResourceId,
-  newParentId: ResourceId | null,
-  getParent: (id: ResourceId) => MaybePromise<ResourceParentLookup>,
+export async function validateNoCircularResourceParentAsync<TId extends string = ResourceId>(
+  resourceId: TId,
+  newParentId: TId | null,
+  getParent: (id: TId) => MaybePromise<ResourceParentLookup<TId>>,
 ): Promise<ResourceValidationResult> {
   return await validateNoCircularResourceParentInternal(resourceId, newParentId, getParent)
 }

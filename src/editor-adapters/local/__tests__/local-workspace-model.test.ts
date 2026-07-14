@@ -1,6 +1,7 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { CampaignMemberId, SidebarItemId } from 'shared/common/ids'
+import type { CampaignMemberId } from 'shared/common/ids'
 import {
   completeWizardEditorResourceCommand,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
@@ -220,13 +221,13 @@ function applyLocalCopyReceipt(
   const result = completeWizardEditorResourceCommand(
     {
       type: WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.copy,
-      itemIds: itemIds as Array<SidebarItemId>,
-      targetParentId: targetParentId as SidebarItemId | null,
+      itemIds: itemIds as Array<ResourceId>,
+      targetParentId: targetParentId as ResourceId | null,
     },
     copies.map(([sourceItemId, itemId]) => ({
       type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.copied,
-      sourceItemId: sourceItemId as SidebarItemId,
-      itemId: itemId as SidebarItemId,
+      sourceItemId: sourceItemId as ResourceId,
+      itemId: itemId as ResourceId,
     })),
   )
   if (result.status !== 'completed') throw new Error('Expected completed local copy receipt')

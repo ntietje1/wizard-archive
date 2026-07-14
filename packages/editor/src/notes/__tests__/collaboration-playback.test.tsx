@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { act } from 'react'
 import * as Y from 'yjs'
@@ -5,7 +6,7 @@ import { Awareness } from 'y-protocols/awareness'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { CustomBlockNoteEditor } from '../editor-schema'
 import type { YjsCollaborationProvider } from '../../collaboration/yjs-provider'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { useNoteCollaborationPlayback } from '../use-collaboration-playback'
 
 type PlaybackEditor = CustomBlockNoteEditor
@@ -25,7 +26,7 @@ describe('useNoteCollaborationPlayback', () => {
         ],
         updateBlock,
       )
-      const noteId = 'note-market' as SidebarItemId
+      const noteId = 'note-market' as ResourceId
       const playbackSession = createPlaybackProvider()
       destroy = playbackSession.destroy
       const view = renderHook(() =>

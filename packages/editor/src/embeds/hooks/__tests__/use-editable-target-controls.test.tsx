@@ -1,7 +1,8 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import type { EmbedTarget } from 'shared/embeds/embedTargets'
 import {
   EditableEmbedLinkDraftForm,
@@ -193,6 +194,6 @@ function EditableTargetControlsHarness({
   )
 }
 
-function sidebarItemId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function sidebarItemId(value: string): ResourceId {
+  return value as ResourceId
 }

@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { FileSystemDropOptions } from '../filesystem/domain/intent-planning'
 import type { AnyItem } from '../workspace/items'
 import type { DragOverlayState } from './drag-overlay'
@@ -22,7 +22,7 @@ type ElementDragFeedbackResult = {
 }
 
 type ElementDragStartPlan = {
-  dragPreviewItemIds: Array<SidebarItemId>
+  dragPreviewItemIds: Array<ResourceId>
   dragState: DragOverlayState
 }
 

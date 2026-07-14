@@ -1,19 +1,19 @@
+import type { ResourceId, MapPinId } from '../resources/domain-id'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourceImportFile } from '../files/import-contract'
 import type { ResourceOperationResult } from '../filesystem/transaction-contract'
-import type { MapPinId } from '../resources/domain-id'
 
 interface MapSessionUpdateImageInput {
   file: ResourceImportFile
   layerId?: string | null
-  mapId: SidebarItemId
+  mapId: ResourceId
 }
 
 interface MapSessionCreatePinsInput {
-  mapId: SidebarItemId
+  mapId: ResourceId
   pins: Array<{
-    itemId: SidebarItemId
+    itemId: ResourceId
     layerId?: string | null
     x: number
     y: number
@@ -21,27 +21,27 @@ interface MapSessionCreatePinsInput {
 }
 
 interface MapSessionUpdatePinInput {
-  mapId: SidebarItemId
+  mapId: ResourceId
   mapPinId: MapPinId
   x: number
   y: number
 }
 
 interface MapSessionSetPinVisibilityInput {
-  mapId: SidebarItemId
+  mapId: ResourceId
   mapPinId: MapPinId
   isVisible: boolean
 }
 
 interface MapSessionRemovePinInput {
-  mapId: SidebarItemId
+  mapId: ResourceId
   mapPinId: MapPinId
 }
 
 type MapPinsCreatedReceipt = {
   kind: 'mapPinsCreated'
   affectedCount: number
-  itemId: SidebarItemId
+  itemId: ResourceId
   pinIds: Array<MapPinId>
 }
 

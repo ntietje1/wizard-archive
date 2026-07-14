@@ -1,11 +1,12 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { AnyItem } from '../../workspace/items'
 import type { ElementDragMonitorContext } from '../monitor-context'
 import { useElementDragMonitor } from '../use-element-drag-monitor'
-import { defaultDndStoreApi as useDndStore } from '../store'
-import { resetDndStore } from './store-test-utils'
+import { defaultDndStoreApi as useDndStore, resetDndStore } from './store-test-utils'
 import {
   EMPTY_EMBED_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
@@ -16,7 +17,6 @@ import {
   createFolder as createFolderFixture,
   createNote as createNoteFixture,
 } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { registerSurfaceDropExecutor } from '../surface-command'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
@@ -92,9 +92,9 @@ function getElementMonitor(): ElementMonitor {
 }
 
 function createSidebarSource(
-  itemId: SidebarItemId,
-  itemIds: Array<SidebarItemId>,
-  previewItemIds?: Array<SidebarItemId>,
+  itemId: ResourceId,
+  itemIds: Array<ResourceId>,
+  previewItemIds?: Array<ResourceId>,
 ): DragSource {
   return {
     data: {
@@ -209,7 +209,7 @@ describe('useElementDragMonitor', () => {
         {
           data: {
             type: MAP_DROP_ZONE_TYPE,
-            mapId: testId<'sidebarItems'>('map_1'),
+            mapId: testResourceId('map_1'),
             mapName: 'World Map',
             pinnedItemIds: [],
           },
@@ -236,7 +236,7 @@ describe('useElementDragMonitor', () => {
     const source = createSidebarSource(first.id, [first.id, second.id])
     const mapTarget = {
       type: MAP_DROP_ZONE_TYPE,
-      mapId: testId<'sidebarItems'>('map_1'),
+      mapId: testResourceId('map_1'),
       mapName: 'World Map',
       pinnedItemIds: [],
     }
@@ -333,7 +333,7 @@ describe('useElementDragMonitor', () => {
         {
           data: {
             type: MAP_DROP_ZONE_TYPE,
-            mapId: testId<'sidebarItems'>('map_1'),
+            mapId: testResourceId('map_1'),
             mapName: 'World Map',
             pinnedItemIds: [second.id],
           },
@@ -470,7 +470,7 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<ElementDragMonitorContext>
     const target = {
       type: MAP_DROP_ZONE_TYPE,
-      mapId: testId<'sidebarItems'>('map_1'),
+      mapId: testResourceId('map_1'),
       mapName: 'World Map',
       pinnedItemIds: [],
       __wizardArchiveDndRuntimeId: 'runtime-a',
@@ -523,7 +523,7 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<ElementDragMonitorContext>
     const target = {
       type: MAP_DROP_ZONE_TYPE,
-      mapId: testId<'sidebarItems'>('map_1'),
+      mapId: testResourceId('map_1'),
       mapName: 'World Map',
       pinnedItemIds: [],
       __wizardArchiveDndRuntimeId: 'runtime-a',
@@ -616,7 +616,7 @@ describe('useElementDragMonitor', () => {
   it('does not execute filesystem drops for partially resolved drag selections', async () => {
     const note = createNote()
     const target = createFolder()
-    const missingItemId = testId<'sidebarItems'>('missing_note')
+    const missingItemId = testResourceId('missing_note')
     const ctx = createMonitorCtx([note, target])
     const ctxRef = {
       current: ctx,
@@ -647,7 +647,7 @@ describe('useElementDragMonitor', () => {
   it('does not show successful feedback for partially resolved drag selections', () => {
     const note = createNote()
     const target = createFolder()
-    const missingItemId = testId<'sidebarItems'>('missing_note')
+    const missingItemId = testResourceId('missing_note')
     const ctx = createMonitorCtx([note, target])
     const ctxRef = {
       current: ctx,

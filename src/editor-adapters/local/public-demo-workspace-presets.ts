@@ -9,10 +9,14 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/t
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 import { assertUsername } from 'shared/users/validation'
-import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMemberId, NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignMemberId,
+  NoteBlockId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 
 const PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID = 'note-market'
 type PublicDemoAdditionalBlock = LocalWorkspaceState['noteAdditionalBlocksById'][string][number]
@@ -89,7 +93,7 @@ const PUBLIC_DEMO_COLLABORATION_PLAYBACK = {
     },
   ],
   initialTypingStep: PUBLIC_DEMO_COLLABORATION_INITIAL_TYPING_STEP,
-  noteId: PUBLIC_DEMO_COLLABORATION_NOTE_ID as SidebarItemId,
+  noteId: PUBLIC_DEMO_COLLABORATION_NOTE_ID as ResourceId,
   typingBlockIndex: PUBLIC_DEMO_COLLABORATION_TYPING_BLOCK_INDEX,
   typingText: PUBLIC_DEMO_COLLABORATION_TYPING_TEXT,
 } as const satisfies WizardEditorNoteCollaborationPlayback

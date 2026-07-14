@@ -3,10 +3,11 @@ import { campaignQuery } from '../functions'
 import { noteWithContentValidator } from './schema'
 import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { resourceIdValidator } from '../resources/validators'
 
 export const getNote = campaignQuery({
   args: {
-    noteId: v.id('sidebarItems'),
+    noteId: resourceIdValidator,
   },
   returns: v.nullable(noteWithContentValidator),
   handler: async (ctx, args) => {

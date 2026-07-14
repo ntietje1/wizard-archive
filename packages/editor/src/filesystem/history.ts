@@ -1,5 +1,5 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
-import type { HistoryEntryId } from '../resources/domain-id'
+import type { ResourceId, HistoryEntryId } from '../resources/domain-id'
+
 import { isPersistedResourceItemId } from '../workspace/items'
 import type { EditHistoryEntry, HistoryRollbackResult } from './history-contract'
 import type {
@@ -15,7 +15,7 @@ import type {
 
 interface ResourceHistoryScopeInput {
   canEdit: boolean
-  itemId: SidebarItemId | null
+  itemId: ResourceId | null
   previewingEntryId: HistoryEntryId | null
   rollbackEntryId: HistoryEntryId | null
 }
@@ -23,7 +23,7 @@ interface ResourceHistoryScopeInput {
 interface ResourceHistoryScope {
   activePreviewingEntryId: HistoryEntryId | null
   activeRollbackEntryId: HistoryEntryId | null
-  persistedItemId: SidebarItemId | null
+  persistedItemId: ResourceId | null
 }
 
 interface ResourceHistoryEntriesInput {
@@ -59,7 +59,7 @@ interface ResourceFileSystemHistoryInput {
   clearPreview: () => void
   clearRollback: () => void
   entries: ResourceHistoryEntriesInput
-  itemId: SidebarItemId | null
+  itemId: ResourceId | null
   previewEntry: (entryId: HistoryEntryId | null) => void
   preview: ResourceHistoryPreviewInput
   requestRollback: (entryId: HistoryEntryId | null) => void

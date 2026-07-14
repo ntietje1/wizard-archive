@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../../resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
@@ -11,7 +12,6 @@ import type {
   CanvasSelectionController,
 } from '../../../tools/canvas-tool-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../../document-contract'
-import type { SidebarItemId } from '../../../../../../../shared/common/ids'
 
 describe('useCanvasPerformanceProbeRuntime', () => {
   beforeEach(() => {
@@ -86,7 +86,7 @@ function createPerformanceHarness({
   } as unknown as CanvasViewportController
 
   return {
-    canvasId: 'canvas-id' as SidebarItemId,
+    canvasId: 'canvas-id' as ResourceId,
     canvasEngine: {
       getSnapshot: () => ({ nodeLookup: new Map() }),
     } as unknown as CanvasEngine,

@@ -1,8 +1,9 @@
+import type { ResourceId } from '../resources/domain-id'
 import { NoteDocumentRuntime, NoteLinkClickHandler } from './document-runtime'
 import { NoteView } from './view'
 import type { CustomBlockNoteEditor } from './editor-schema'
 import type { CSSProperties, ReactNode } from 'react'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { NoteItemWithContent } from '../notes/item-contract'
 import type {
   NoteEmbedTargetContentSource,
@@ -33,7 +34,7 @@ export function StaticNoteRuntimeSurface({
   linkNavigationSource: NoteLinkNavigationSource | null
   linkResolutionSource: NoteLinkResolutionSource
   note?: NoteItemWithContent
-  noteId?: SidebarItemId
+  noteId?: ResourceId
   noteValueReferences: NoteValueReferences
   noteValueStateSource: NoteValueRuntimeStateSource
   renderEmbeddedNotePreview?: EmbeddedNotePreviewRenderer

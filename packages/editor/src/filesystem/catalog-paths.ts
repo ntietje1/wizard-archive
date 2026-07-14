@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import {
   getMinDisambiguationPath,
   parseResolvableWikiItemPath,
@@ -14,17 +14,17 @@ import type { FileSystemCatalogIndex } from './catalog-index'
 interface FileSystemItemPathInput {
   pathKind: LinkPathKind
   pathSegments: Array<string>
-  sourceItemId?: SidebarItemId
+  sourceItemId?: ResourceId
 }
 
 interface FileSystemNotePathInput {
   text: string | null
-  sourceItemId?: SidebarItemId
+  sourceItemId?: ResourceId
 }
 
 export interface FileSystemPaths {
   getVisibleItemLinkPath: (item: AnyItem) => ReadonlyArray<string>
-  resolveVisibleFolderPath: (input: FileSystemItemPathInput) => SidebarItemId | null | undefined
+  resolveVisibleFolderPath: (input: FileSystemItemPathInput) => ResourceId | null | undefined
   resolveVisibleNotePath: (input: FileSystemNotePathInput) => NoteItem | null
   resolveVisibleItemPath: (input: FileSystemItemPathInput) => AnyItem | null
 }
@@ -99,7 +99,7 @@ function resolveCatalogFolderPath(
 }
 
 function getRelativePathStartParentId(
-  sourceItemId: SidebarItemId | undefined,
+  sourceItemId: ResourceId | undefined,
   index: FileSystemCatalogIndex,
 ) {
   if (!sourceItemId) return undefined
@@ -128,9 +128,9 @@ function resolveCatalogNotePath(
 
 function resolveVisibleFolderSegment(
   segment: string,
-  currentParentId: SidebarItemId | null,
-  childrenByParent: ReadonlyMap<SidebarItemId | null, ReadonlyArray<AnyItem>>,
-  itemsById: ReadonlyMap<SidebarItemId, AnyItem>,
+  currentParentId: ResourceId | null,
+  childrenByParent: ReadonlyMap<ResourceId | null, ReadonlyArray<AnyItem>>,
+  itemsById: ReadonlyMap<ResourceId, AnyItem>,
 ) {
   const title = canonicalizeResourceItemTitle(segment)
   if (title === '.') return currentParentId

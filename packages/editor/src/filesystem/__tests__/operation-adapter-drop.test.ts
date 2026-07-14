@@ -1,9 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceCommandRuntimeArgs } from '../operation-runtime-contract'
 import type { FileSystemIntentCommand } from '../domain/intent-planning'
 import { useWorkspaceResourceCommandRuntime } from '../operation-adapter'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 type TestUndoState = {
   undoStack: []
@@ -102,8 +102,8 @@ vi.mock('../undo-store', () => ({
   },
 }))
 
-function sidebarItemId(id: string): SidebarItemId {
-  return id as SidebarItemId
+function sidebarItemId(id: string): ResourceId {
+  return id as ResourceId
 }
 
 function createRuntimeArgs(): ResourceCommandRuntimeArgs {

@@ -1,9 +1,11 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { RESOURCE_STATUS } from '../../../workspace/items-persistence-contract'
 import { createResourceCatalogModel } from '../../catalog'
 import type { AnyItem } from '../../../workspace/items'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { NoteItemWithContent } from '../../../notes/item-contract'
 import {
   createResourceAvailabilityMetadataSource,
@@ -11,7 +13,6 @@ import {
 } from '../availability-state'
 import type { EditorWorkspaceActor } from '../permission-resolution'
 import { createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import { testDomainId } from '../../../test/domain-id'
 import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
 
@@ -306,14 +307,14 @@ function createReadableNote(overrides: Parameters<typeof createNote>[0] = {}): N
 }
 
 function noteId(value: string) {
-  return testId<'sidebarItems'>(value)
+  return testResourceId(value)
 }
 
 function createMetadataSource(
   items: Array<AnyItem>,
   status: ResourceAvailabilityMetadataSource['status'] = 'success',
 ): ResourceAvailabilityMetadataSource {
-  const itemsById = new Map<SidebarItemId, AnyItem>(items.map((item) => [item.id, item]))
+  const itemsById = new Map<ResourceId, AnyItem>(items.map((item) => [item.id, item]))
   return {
     directMessage: {
       getItemById: (itemId) => itemsById.get(itemId) ?? null,

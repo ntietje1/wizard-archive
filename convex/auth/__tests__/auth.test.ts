@@ -319,13 +319,13 @@ describe('onDeleteUser', () => {
       storeCommittedTestUpload(t, player.profile._id, new Blob(['preview']), 'preview.png'),
     ])
 
-    const { fileId } = await createFile(t, campaignId, dm.profile._id, {
+    const { fileRowId } = await createFile(t, campaignId, dm.profile._id, {
       storageId: fileStorageId,
     })
-    const { mapId } = await createGameMap(t, campaignId, dm.profile._id, {
+    const { mapRowId } = await createGameMap(t, campaignId, dm.profile._id, {
       imageStorageId: mapStorageId,
     })
-    const { noteId } = await createNote(t, campaignId, dm.profile._id, {
+    const { noteRowId } = await createNote(t, campaignId, dm.profile._id, {
       previewStorageId,
     })
 
@@ -343,13 +343,13 @@ describe('onDeleteUser', () => {
         .collect()
       const file = await ctx.db
         .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileRowId))
         .unique()
       const map = await ctx.db
         .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapRowId))
         .unique()
-      const note = await ctx.db.get('sidebarItems', noteId)
+      const note = await ctx.db.get('sidebarItems', noteRowId)
 
       return {
         file,

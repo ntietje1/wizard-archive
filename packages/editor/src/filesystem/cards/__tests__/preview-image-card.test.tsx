@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import type { ReactNode } from 'react'
 import { Image } from 'lucide-react'
 import { render, screen } from '@testing-library/react'
@@ -6,7 +7,6 @@ import { PreviewImageResourceItemCard } from '../preview-image-card'
 import type { ResourceItemCardProps } from '../shell'
 import type { AnyItem } from '../../../workspace/items'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
 vi.mock('../../../workspace/context-menu/context-menu', () => ({
   WorkspaceContextMenu: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
@@ -90,7 +90,7 @@ function createSource(): ResourceItemCardProps<AnyItem>['source'] {
 
 function createItem(): AnyItem {
   return {
-    id: 'canvas-1' as SidebarItemId,
+    id: 'canvas-1' as ResourceId,
     name: 'Canvas',
     type: RESOURCE_TYPES.canvases,
     previewUrl: 'https://example.com/canvas.png',

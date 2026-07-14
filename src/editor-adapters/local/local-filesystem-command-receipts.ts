@@ -1,4 +1,4 @@
-import type { SidebarItemId } from 'shared/common/ids'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import {
   completeWizardEditorResourceCommand,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
@@ -78,7 +78,7 @@ function planLocalFileSystemCommandEvents(
 
 function isActiveFolderTarget(
   catalog: WizardEditorResourceCatalog,
-  targetParentId: SidebarItemId | null,
+  targetParentId: ResourceId | null,
 ) {
   if (targetParentId === null) return true
   const target = catalog.getVisibleItemById(targetParentId)
@@ -87,7 +87,7 @@ function isActiveFolderTarget(
 
 function collectLocalOperationTree(
   catalog: WizardEditorResourceCatalog,
-  itemIds: Array<SidebarItemId>,
+  itemIds: Array<ResourceId>,
   status: 'active' | 'trash',
 ) {
   const roots = collectLocalOperationRoots(catalog, itemIds, { status })
@@ -96,8 +96,8 @@ function collectLocalOperationTree(
 
 function collectLocalMoveEvents(
   catalog: WizardEditorResourceCatalog,
-  itemIds: Array<SidebarItemId>,
-  targetParentId: SidebarItemId | null,
+  itemIds: Array<ResourceId>,
+  targetParentId: ResourceId | null,
 ): Array<WizardEditorResourceEvent> {
   const roots = collectLocalOperationRoots(catalog, itemIds, { status: 'active' })
   if (targetParentId) {
@@ -117,7 +117,7 @@ function collectLocalMoveEvents(
 
 function collectLocalOperationRoots(
   catalog: WizardEditorResourceCatalog,
-  itemIds: Array<SidebarItemId>,
+  itemIds: Array<ResourceId>,
   { status }: { status: 'active' | 'trash' },
 ) {
   const selectedItems = itemIds.flatMap((itemId) => {
@@ -127,7 +127,7 @@ function collectLocalOperationRoots(
     return [item]
   })
   const selectedIds = new Set(selectedItems.map((item) => item.id))
-  const rootIds = new Set<SidebarItemId>()
+  const rootIds = new Set<ResourceId>()
   const roots: Array<WizardEditorItem> = []
   for (const item of selectedItems) {
     let parentId = item.parentId
@@ -149,7 +149,7 @@ function collectLocalOperationRoots(
 
 function collectLocalDescendants(
   catalog: WizardEditorResourceCatalog,
-  itemId: SidebarItemId,
+  itemId: ResourceId,
   status: 'active' | 'trash',
 ): Array<WizardEditorItem> {
   const children =
@@ -159,7 +159,7 @@ function collectLocalDescendants(
 
 function collectLocalCopyEvents(
   catalog: WizardEditorResourceCatalog,
-  itemIds: Array<SidebarItemId>,
+  itemIds: Array<ResourceId>,
   claimNextIndex: () => number,
 ): Array<WizardEditorResourceEvent> {
   const roots = collectLocalOperationRoots(catalog, itemIds, { status: 'active' })
@@ -172,7 +172,7 @@ function collectLocalCopyTreeEvents(
   claimNextIndex: () => number,
 ): Array<WizardEditorResourceEvent> {
   const localType = localItemTypeForSidebarItemType(item.type)
-  const copiedItemId = `local-${localType}-${claimNextIndex()}` as SidebarItemId
+  const copiedItemId = `local-${localType}-${claimNextIndex()}` as ResourceId
   return [
     {
       type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.copied,

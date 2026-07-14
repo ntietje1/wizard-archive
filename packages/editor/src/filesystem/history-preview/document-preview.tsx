@@ -1,10 +1,11 @@
+import type { ResourceId } from '../../resources/domain-id'
 import * as Y from 'yjs'
 import { Loader2 } from 'lucide-react'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
 } from '../../workspace/items/appearance'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { GameMapSnapshotData } from '../../game-maps/document-contract'
 import type { HistoryPreviewImageUrlState, HistoryPreviewSnapshot } from '../history-types'
 import { CanvasReadOnlyPreview } from '../../canvas/preview/read-only-preview'
@@ -80,7 +81,7 @@ export function HistoryDocumentPreview({ snapshot }: { snapshot: HistoryPreviewS
   return assertNeverHistoryPreviewSnapshot(snapshot)
 }
 
-function NoteYjsSnapshotPreview({ data, noteId }: { data: ArrayBuffer; noteId: SidebarItemId }) {
+function NoteYjsSnapshotPreview({ data, noteId }: { data: ArrayBuffer; noteId: ResourceId }) {
   const result = readCachedYjsSnapshot(data, noteSnapshotCache, readNoteYDocContent)
 
   if (result.status === 'corrupted') {
@@ -104,7 +105,7 @@ function NoteYjsSnapshotPreview({ data, noteId }: { data: ArrayBuffer; noteId: S
   )
 }
 
-function CanvasSnapshotPreview({ canvasId, data }: { canvasId: SidebarItemId; data: ArrayBuffer }) {
+function CanvasSnapshotPreview({ canvasId, data }: { canvasId: ResourceId; data: ArrayBuffer }) {
   const result = readCachedYjsSnapshot(data, canvasSnapshotCache, readCanvasDocumentContent)
 
   if (result.status === 'corrupted') {

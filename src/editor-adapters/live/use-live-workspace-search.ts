@@ -1,7 +1,10 @@
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
-import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+
+import type {
+  CampaignId,
+  CampaignMemberId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import {
   createWizardEditorCatalogItemSearchResult,
   createWizardEditorCatalogItemLink,
@@ -85,10 +88,10 @@ export function useLiveWorkspaceSearch(
   const resourceContent = useWizardEditorHydratedCatalogResourceContentSource({
     catalog,
     current,
-    loadItemContent: async (itemId: SidebarItemId) => {
+    loadItemContent: async (itemId: ResourceId) => {
       const result = await convex.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
         campaignId: workspaceRecordId,
-        lookup: { kind: 'id', id: itemId as Id<'sidebarItems'> },
+        lookup: { kind: 'id', id: itemId },
       })
       return result.status === 'available' ? result.item : null
     },
@@ -117,7 +120,7 @@ function useLiveItemLinksState({
   itemId,
   kind,
 }: {
-  itemId: SidebarItemId | null
+  itemId: ResourceId | null
   kind: LiveItemLinkKind
 }): LiveItemLinksState {
   const persistedItemId = isPersistedWizardEditorItemId(itemId) ? itemId : null

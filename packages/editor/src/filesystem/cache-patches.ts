@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import { RESOURCE_STATUS } from '../workspace/items-persistence-contract'
 import type { AnyItem } from '../workspace/items'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import type { ResourcePatch, ResourcePatchRow } from './patch-contract'
 import { applyFileSystemPatchesToSnapshot as applyPatchesToItemSnapshot } from './domain/patch-projection'
 import { applyBookmarkPatchState } from './bookmark-cache-patches'
@@ -160,12 +161,12 @@ function materializeView({
   itemsById,
   status,
 }: {
-  originalOrder: Array<SidebarItemId>
-  patchedOrder: Array<SidebarItemId>
-  itemsById: ReadonlyMap<SidebarItemId, AnyItem>
+  originalOrder: Array<ResourceId>
+  patchedOrder: Array<ResourceId>
+  itemsById: ReadonlyMap<ResourceId, AnyItem>
   status: typeof RESOURCE_STATUS.active | typeof RESOURCE_STATUS.trashed
 }): Array<AnyItem> {
-  const seen = new Set<SidebarItemId>()
+  const seen = new Set<ResourceId>()
   const result: Array<AnyItem> = []
   for (const itemId of [...originalOrder, ...patchedOrder]) {
     if (seen.has(itemId)) continue
@@ -181,8 +182,8 @@ function materializeHiddenView({
   patchedOrder,
   itemsById,
 }: {
-  patchedOrder: Array<SidebarItemId>
-  itemsById: ReadonlyMap<SidebarItemId, AnyItem>
+  patchedOrder: Array<ResourceId>
+  itemsById: ReadonlyMap<ResourceId, AnyItem>
 }): Array<AnyItem> {
   const result: Array<AnyItem> = []
   for (const itemId of patchedOrder) {
@@ -194,17 +195,14 @@ function materializeHiddenView({
 
 function patchIsAlreadyReconciledByVisibleQueries(
   patch: ResourcePatch,
-  cacheItemIds: ReadonlySet<SidebarItemId>,
+  cacheItemIds: ReadonlySet<ResourceId>,
 ) {
   if (patch.type !== 'updateResource') return false
   if (patch.fields.status !== RESOURCE_STATUS.undoHidden) return false
   return !cacheItemIds.has(patch.itemId)
 }
 
-function patchCanApplyToSidebarCache(
-  patch: ResourcePatch,
-  cacheItemIds: ReadonlySet<SidebarItemId>,
-) {
+function patchCanApplyToSidebarCache(patch: ResourcePatch, cacheItemIds: ReadonlySet<ResourceId>) {
   if (patch.type === 'upsertResource') {
     if (cacheItemIds.has(patch.item.id)) return true
     return hasSidebarCacheFields(patch.item)

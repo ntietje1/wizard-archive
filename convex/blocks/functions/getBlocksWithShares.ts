@@ -39,8 +39,11 @@ export const getBlocksWithShares = async (
   playerMembers: Array<CampaignMemberSummary>
   notePermissionsByMemberId: Record<CampaignMemberId, PermissionLevel>
 }> => {
-  const note = await getSidebarItem(ctx, noteId)
-  if (!note || note.type !== RESOURCE_TYPES.notes) {
+  const [note, noteRow] = await Promise.all([
+    getSidebarItem(ctx, noteId),
+    ctx.db.get('sidebarItems', noteId),
+  ])
+  if (!note || !noteRow || note.type !== RESOURCE_TYPES.notes) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   }
   await checkItemAccess(ctx, {
@@ -49,7 +52,7 @@ export const getBlocksWithShares = async (
   })
 
   const [sharePlayers, allNoteShares] = await Promise.all([
-    getBlockSharePlayers(ctx, note),
+    getBlockSharePlayers(ctx, noteRow),
     ctx.db
       .query('blockShares')
       .withIndex('by_campaign_note', (q) =>

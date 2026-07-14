@@ -1,5 +1,6 @@
+import type { ResourceId } from '../resources/domain-id'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { validateFileUpload } from '../../../../shared/storage/validation'
 import type { ResourceOperationResult } from '../filesystem/transaction-contract'
 import { completedResourceOperation } from '../filesystem/transaction-contract'
@@ -8,7 +9,7 @@ import type { ResourceImportFile } from './import-contract'
 
 type FileIoCommandWriteInput = {
   file: ResourceImportFile
-  fileId: SidebarItemId
+  fileId: ResourceId
   onProgress?: (percentage: number) => void
 }
 
@@ -16,18 +17,18 @@ type FileIoCommand =
   | {
       type: 'importFile'
       file: ResourceImportFile
-      fileId: SidebarItemId
+      fileId: ResourceId
       onProgress?: (percentage: number) => void
     }
   | {
       type: 'replaceFile'
       file: ResourceImportFile
-      fileId: SidebarItemId
+      fileId: ResourceId
     }
 
 interface FileIoCommandExecutor {
   canReplaceFile: (file: FileItem) => boolean
-  getFileTargetById: (fileId: SidebarItemId) => FileItem | null
+  getFileTargetById: (fileId: ResourceId) => FileItem | null
   maxUploadBytes?: number
   readOnlyErrorMessage?: string
   writeFile: (input: FileIoCommandWriteInput) => MaybePromise<void>

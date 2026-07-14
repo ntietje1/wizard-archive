@@ -1,9 +1,10 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { useScrollPersistence } from '../use-scroll-persistence'
 
-const NOTE_ID = 'note-1' as SidebarItemId
+const NOTE_ID = 'note-1' as ResourceId
 
 describe('useScrollPersistence', () => {
   beforeEach(() => {

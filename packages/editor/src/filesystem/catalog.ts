@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { BlockSearchResult } from '../../../../shared/search/types'
 import type { AnyItem } from '../workspace/items'
 import type { ResourceSlug } from '../workspace/resource-contract'
@@ -15,23 +15,23 @@ import { normalizeSelectedRoots } from './domain/selection-roots'
 import type { FileSystemSearch, ItemLinksCapability } from './search'
 
 export interface ResourceCatalog {
-  getKnownItemById: (itemId: SidebarItemId) => AnyItem | null
+  getKnownItemById: (itemId: ResourceId) => AnyItem | null
   getKnownItemBySlug: (slug: ResourceSlug) => AnyItem | null
-  getVisibleItemById: (itemId: SidebarItemId) => AnyItem | null
+  getVisibleItemById: (itemId: ResourceId) => AnyItem | null
   getVisibleItemBySlug: (slug: ResourceSlug) => AnyItem | null
-  getVisibleAncestors: (itemId: SidebarItemId) => ReadonlyArray<AnyItem>
+  getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<AnyItem>
   getVisibleItems: () => ReadonlyArray<AnyItem>
   getVisibleRoots: () => ReadonlyArray<AnyItem>
   getTrashedItems: () => ReadonlyArray<AnyItem>
   getTrashedRoots: () => ReadonlyArray<AnyItem>
-  getVisibleChildren: (parentId: SidebarItemId | null) => ReadonlyArray<AnyItem>
-  getTrashedChildren: (parentId: SidebarItemId | null) => ReadonlyArray<AnyItem>
+  getVisibleChildren: (parentId: ResourceId | null) => ReadonlyArray<AnyItem>
+  getTrashedChildren: (parentId: ResourceId | null) => ReadonlyArray<AnyItem>
   queryVisibleItems: (input?: FileSystemCatalogVisibleItemsInput) => ReadonlyArray<AnyItem>
 }
 
 interface ResourceOperationItemsInput {
-  itemIds: ReadonlyArray<SidebarItemId>
-  excludeItemIds?: ReadonlyArray<SidebarItemId>
+  itemIds: ReadonlyArray<ResourceId>
+  excludeItemIds?: ReadonlyArray<ResourceId>
   includeTrashed?: boolean
 }
 
@@ -92,7 +92,7 @@ export function createResourceCatalogModel({
 function createResourceOperationItems({
   getKnownItemById,
 }: {
-  getKnownItemById: (itemId: SidebarItemId) => AnyItem | null
+  getKnownItemById: (itemId: ResourceId) => AnyItem | null
 }): ResourceOperationItems {
   return {
     resolveItems: (input) => resolveResourceOperationItems(input, { getKnownItemById }),
@@ -101,14 +101,14 @@ function createResourceOperationItems({
 
 function resolveResourceOperationItems(
   { itemIds, excludeItemIds = [], includeTrashed = true }: ResourceOperationItemsInput,
-  { getKnownItemById }: { getKnownItemById: (itemId: SidebarItemId) => AnyItem | null },
+  { getKnownItemById }: { getKnownItemById: (itemId: ResourceId) => AnyItem | null },
 ) {
   const excluded = new Set(excludeItemIds)
-  const seen = new Set<SidebarItemId>()
-  const itemsById = new Map<SidebarItemId, AnyItem>()
+  const seen = new Set<ResourceId>()
+  const itemsById = new Map<ResourceId, AnyItem>()
   const items: Array<AnyItem> = []
 
-  const rememberKnownItem = (itemId: SidebarItemId) => {
+  const rememberKnownItem = (itemId: ResourceId) => {
     const existing = itemsById.get(itemId)
     if (existing) return existing
     const item = getKnownItemById(itemId)
@@ -118,7 +118,7 @@ function resolveResourceOperationItems(
 
   const rememberKnownAncestors = (item: AnyItem) => {
     let parentId = item.parentId
-    const ancestorsSeen = new Set<SidebarItemId>()
+    const ancestorsSeen = new Set<ResourceId>()
     while (parentId) {
       if (ancestorsSeen.has(parentId)) break
       ancestorsSeen.add(parentId)

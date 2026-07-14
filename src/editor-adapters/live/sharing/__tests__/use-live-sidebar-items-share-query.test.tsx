@@ -1,6 +1,6 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { Id } from 'convex/_generated/dataModel'
 import { useLiveSidebarItemsShareQuery } from '../use-live-sidebar-items-share-query'
 
 const useQueriesMock = vi.hoisted(() => vi.fn())
@@ -35,7 +35,7 @@ describe('useLiveSidebarItemsShareQuery', () => {
   it('batches 101 item ids across the production query hook', () => {
     const sidebarItemIds = Array.from(
       { length: 101 },
-      (_, index) => `item_${index + 1}` as Id<'sidebarItems'>,
+      (_, index) => `item_${index + 1}` as ResourceId,
     )
 
     const { result } = renderHook(() => useLiveSidebarItemsShareQuery(sidebarItemIds))

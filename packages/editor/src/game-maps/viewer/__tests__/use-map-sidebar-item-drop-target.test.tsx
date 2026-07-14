@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { testCampaignId } from '../../../../../../shared/test/campaign-id'
 import { MAP_DROP_ZONE_TYPE } from '../../../drag-drop/drop-target-data'
 import { executeRegisteredSurfaceDropCommand } from '../../../drag-drop/surface-command'
@@ -156,8 +157,8 @@ function createNote(): AnyItem {
   } as AnyItem
 }
 
-function itemId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function itemId(value: string): ResourceId {
+  return value as ResourceId
 }
 
 function createImageWithRect(rect: {

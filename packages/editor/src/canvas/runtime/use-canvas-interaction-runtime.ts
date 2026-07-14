@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 import type * as Y from 'yjs'
@@ -19,7 +20,7 @@ import type { CanvasToolHandlers, CanvasToolId } from '../tools/canvas-tool-type
 import type { CanvasSelectionSnapshot } from '../system/canvas-selection'
 import type { CanvasCollaborationProvider } from '../session-contract'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 const SELECTION_INCOMPATIBLE_TOOLS = new Set<CanvasToolId>(['draw', 'erase', 'text', 'edge'])
 
 function assertNever(value: never): never {
@@ -28,7 +29,7 @@ function assertNever(value: never): never {
 
 interface UseCanvasSelectionRuntimeOptions {
   canvasEngine: ReturnType<typeof createCanvasEngine>
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   setLocalSelection: (selection: CanvasSelectionSnapshot | null) => void
 }
 
@@ -66,7 +67,7 @@ interface UseCanvasInteractionRuntimeOptions {
   activeTool: CanvasToolId
   activeToolHandlers: CanvasToolHandlers
   canvasEngine: ReturnType<typeof createCanvasEngine>
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   canvasSurfaceRef: RefObject<HTMLDivElement | null>
   canEdit: boolean
   doc: Y.Doc

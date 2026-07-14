@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import { useMapTransformControls } from '../use-map-transform-controls'
 import { DEFAULT_MAP_TRANSFORM } from '../transform-state'
 import { createMemoryMapTransformStore } from '../../../test/view-state-store-factory'
@@ -12,8 +13,8 @@ describe('useMapTransformControls', () => {
 
   it('loads the persisted transform for the current map id', () => {
     const transformStore = createMemoryMapTransformStore()
-    const mapA = 'map-a' as SidebarItemId
-    const mapB = 'map-b' as SidebarItemId
+    const mapA = 'map-a' as ResourceId
+    const mapB = 'map-b' as ResourceId
     transformStore.saveMapTransform(mapA, { scale: 1.5, positionX: 20, positionY: -4 })
     transformStore.saveMapTransform(mapB, { scale: 2, positionX: 80, positionY: 12 })
 
@@ -37,7 +38,7 @@ describe('useMapTransformControls', () => {
   it('keeps reset as the final persisted transform when a debounced save was pending', () => {
     vi.useFakeTimers()
     const transformStore = createMemoryMapTransformStore()
-    const mapId = 'map-1' as SidebarItemId
+    const mapId = 'map-1' as ResourceId
     const resetTransform = vi.fn()
     const { result, unmount } = renderHook(() =>
       useMapTransformControls({
@@ -65,8 +66,8 @@ describe('useMapTransformControls', () => {
   it('flushes the latest transform before switching maps', () => {
     vi.useFakeTimers()
     const transformStore = createMemoryMapTransformStore()
-    const mapA = 'map-a' as SidebarItemId
-    const mapB = 'map-b' as SidebarItemId
+    const mapA = 'map-a' as ResourceId
+    const mapB = 'map-b' as ResourceId
     transformStore.saveMapTransform(mapB, { scale: 1.25, positionX: 8, positionY: 4 })
     const { result, rerender, unmount } = renderHook(
       ({ mapId }) =>

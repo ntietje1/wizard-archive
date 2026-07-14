@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../../shared/test/resource-id'
 import { render, screen } from '@testing-library/react'
 import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
@@ -14,7 +15,6 @@ import {
   createMemoryWorkspaceViewStateStores,
   createTestWorkspaceRuntime,
 } from '../../../../test/workspace-runtime-factory'
-import { testId } from '../../../../test/id'
 import { testHistoryEntryId } from '../../../../test/history-entry-id'
 import { createRuntimeSidebarItemViewerSource } from '../runtime-source'
 import { SidebarItemViewer } from '../sidebar-item-viewer'
@@ -119,7 +119,7 @@ describe('SidebarItemContent', () => {
   it('reports unsupported viewer item type without dumping item content', () => {
     const item = {
       ...createNote({
-        id: testId<'sidebarItems'>('unsupported-1'),
+        id: testResourceId('unsupported-1'),
         name: 'Secret Note',
       }),
       ancestors: [],
@@ -136,7 +136,9 @@ describe('SidebarItemContent', () => {
       resolveNote: vi.fn(),
     }
 
-    expect(() => render(<SidebarItemViewer item={item} source={source} />)).toThrow(/unsupported-1/)
+    expect(() => render(<SidebarItemViewer item={item} source={source} />)).toThrow(
+      new RegExp(item.id),
+    )
     expect(() => render(<SidebarItemViewer item={item} source={source} />)).not.toThrow(
       /Secret Note|secret-block/,
     )
@@ -214,7 +216,7 @@ describe('SidebarItemContent', () => {
 
   it('renders the source-provided history preview when present', () => {
     const item: NoteItemWithContent = {
-      ...createNote({ id: testId<'sidebarItems'>('note-1') }),
+      ...createNote({ id: testResourceId('note-1') }),
       ancestors: [],
       content: [],
       blockMeta: {},
@@ -240,7 +242,7 @@ describe('SidebarItemContent', () => {
 
   it('renders the runtime rollback dialog while item content is visible', () => {
     const item: NoteItemWithContent = {
-      ...createNote({ id: testId<'sidebarItems'>('note-1') }),
+      ...createNote({ id: testResourceId('note-1') }),
       ancestors: [],
       content: [],
       blockMeta: {},
@@ -271,7 +273,7 @@ describe('SidebarItemContent', () => {
 
   it('clears the editor-owned history session when the item unmounts', () => {
     const item: NoteItemWithContent = {
-      ...createNote({ id: testId<'sidebarItems'>('note-1') }),
+      ...createNote({ id: testResourceId('note-1') }),
       ancestors: [],
       content: [],
       blockMeta: {},

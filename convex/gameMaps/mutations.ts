@@ -11,8 +11,12 @@ import { removeItemPin as removeItemPinFn } from './functions/removeItemPin'
 import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
-import type { Id } from '../_generated/dataModel'
-import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
+import type { MapPinId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { resourceIdValidator } from '../resources/validators'
+import {
+  requireSidebarItemRow,
+  requireSidebarItemRows,
+} from '../sidebarItems/functions/sidebarItemIdentity'
 
 const mapPinIdValidator = v.string()
 
@@ -26,40 +30,43 @@ function parseMapPinId(value: string): MapPinId {
 
 export const beginMapImageReplacement = campaignMutation({
   args: {
-    mapId: v.id('sidebarItems'),
+    mapId: resourceIdValidator,
   },
   returns: v.string(),
   handler: async (ctx, args): Promise<string> => {
-    return await beginMapImageReplacementFn(ctx, { mapId: args.mapId })
+    const map = await requireSidebarItemRow(ctx, args.mapId)
+    return await beginMapImageReplacementFn(ctx, { mapId: map._id })
   },
 })
 
 export const updateMapImage = campaignMutation({
   args: {
     layerId: v.optional(v.nullable(v.string())),
-    mapId: v.id('sidebarItems'),
+    mapId: resourceIdValidator,
     replacementToken: v.nullable(v.string()),
     uploadSessionId: v.nullable(v.id('fileStorage')),
   },
   returns: v.object({
-    mapId: v.id('sidebarItems'),
+    mapId: resourceIdValidator,
   }),
-  handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'> }> => {
-    return await updateMapImageFn(ctx, {
-      mapId: args.mapId,
+  handler: async (ctx, args): Promise<{ mapId: ResourceId }> => {
+    const map = await requireSidebarItemRow(ctx, args.mapId)
+    await updateMapImageFn(ctx, {
+      mapId: map._id,
       layerId: args.layerId ?? null,
       replacementToken: args.replacementToken,
       uploadSessionId: args.uploadSessionId,
     })
+    return { mapId: args.mapId }
   },
 })
 
 export const createItemPins = campaignMutation({
   args: {
-    mapId: v.id('sidebarItems'),
+    mapId: resourceIdValidator,
     pins: v.array(
       v.object({
-        itemId: v.id('sidebarItems'),
+        itemId: resourceIdValidator,
         layerId: v.optional(v.nullable(v.string())),
         x: v.number(),
         y: v.number(),
@@ -68,9 +75,20 @@ export const createItemPins = campaignMutation({
   },
   returns: v.array(mapPinIdValidator),
   handler: async (ctx, args): Promise<Array<MapPinId>> => {
+    const [map, items] = await Promise.all([
+      requireSidebarItemRow(ctx, args.mapId),
+      requireSidebarItemRows(
+        ctx,
+        args.pins.map((pin) => pin.itemId),
+      ),
+    ])
     return await createItemPinsFn(ctx, {
-      mapId: args.mapId,
-      pins: args.pins,
+      mapId: map._id,
+      pins: args.pins.map((pin, index) => {
+        const item = items[index]
+        if (!item) throw new Error('Resolved pin items do not match the request')
+        return { ...pin, itemId: item._id }
+      }),
     })
   },
 })

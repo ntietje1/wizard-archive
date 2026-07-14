@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type {
   EmbeddedNoteContentSource,
   NoteEmbedTargetContentSource,
@@ -8,7 +8,7 @@ import type {
 import type { NoteValueReferences, NoteValueRuntimeStateSource } from './value-runtime-model'
 import type { NoteValueRuntimeState } from './values/state-contract'
 
-const EMPTY_VALUE_STATES: Array<NoteValueRuntimeState<SidebarItemId>> = []
+const EMPTY_VALUE_STATES: Array<NoteValueRuntimeState<ResourceId>> = []
 
 export const standaloneEmbeddedNoteContentSource: EmbeddedNoteContentSource = {}
 

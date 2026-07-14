@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { use, useEffect, useRef, useState } from 'react'
 import { WORKSPACE_MODE } from '../../../../../shared/workspace/workspace-mode'
 import { ClientOnly } from '@wizard-archive/ui/components/client-only'
@@ -17,7 +18,7 @@ import { getBlockNoteContextFromTarget } from '../context-menu/target-context'
 import type { Doc } from 'yjs'
 import type { WorkspaceMode } from '../../../../../shared/workspace/workspace-mode'
 import type { YjsCollaborationProvider } from '../../collaboration/yjs-provider'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { NoteEditorSource } from './note-editor-source'
 
 type NoteEditorChangeHandler = (
@@ -316,7 +317,7 @@ function NoteEditorContextMenuSurface({
   )
 }
 
-function useSourceNoteEditorState(noteId: SidebarItemId): NoteEditorState {
+function useSourceNoteEditorState(noteId: ResourceId): NoteEditorState {
   const claimEditor = useScopedNoteEditorStore((s) => s.claimEditor)
   const [releaseEditor, setReleaseEditor] = useState<(() => void) | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)

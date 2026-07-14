@@ -1,6 +1,7 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { MapTransformState, MapTransformStore } from './transform-state'
 import { DEFAULT_MAP_TRANSFORM } from './transform-state'
 
@@ -17,7 +18,7 @@ function clearPendingTransformSave(
 }
 
 function usePersistedMapTransformState(
-  mapId: SidebarItemId,
+  mapId: ResourceId,
   transformStore: MapTransformStore,
 ): [MapTransformState, (value: MapTransformState) => void] {
   const [transform, setTransform] = useState(() => transformStore.loadMapTransform(mapId))
@@ -39,7 +40,7 @@ export function useMapTransformControls({
   pinsContainerRef,
   transformStore,
 }: {
-  mapId: SidebarItemId
+  mapId: ResourceId
   pinsContainerRef: PinScaleRef
   transformStore: MapTransformStore
 }) {
@@ -47,7 +48,7 @@ export function useMapTransformControls({
   const [savedTransform, setSavedTransform] = usePersistedMapTransformState(mapId, transformStore)
   const transformDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastTransformRef = useRef<MapTransformState | null>(null)
-  const pendingTransformMapIdRef = useRef<SidebarItemId | null>(null)
+  const pendingTransformMapIdRef = useRef<ResourceId | null>(null)
   const previousMapIdRef = useRef(mapId)
   const currentMapIdRef = useRef(mapId)
   currentMapIdRef.current = mapId

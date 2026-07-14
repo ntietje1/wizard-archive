@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { ResourceId } from '../resources/domain-id'
 import type { ResourceTransactionReceipt } from './transaction-contract'
 import type { FileSystemLifecycleIntent } from './domain/lifecycle'
 import type { AnyItem, WorkspaceResourceReadModel } from '../workspace/items'
@@ -14,12 +14,12 @@ type ReceiptEffectItem = Pick<AnyItem, 'id' | 'parentId'>
 
 function isItemOrDescendantOfRoot(
   item: ReceiptEffectItem,
-  rootIds: ReadonlySet<SidebarItemId>,
-  allItemsMap: ReadonlyMap<SidebarItemId, ReceiptEffectItem>,
+  rootIds: ReadonlySet<ResourceId>,
+  allItemsMap: ReadonlyMap<ResourceId, ReceiptEffectItem>,
 ) {
   if (rootIds.has(item.id)) return true
   let parentId = item.parentId
-  const seen = new Set<SidebarItemId>([item.id])
+  const seen = new Set<ResourceId>([item.id])
   while (parentId && !seen.has(parentId)) {
     if (rootIds.has(parentId)) return true
     seen.add(parentId)
@@ -33,9 +33,9 @@ function removeItemsUnderRootsFromSelection({
   rootItems,
   allItemsMap,
 }: {
-  selectedItemIds: ReadonlyArray<SidebarItemId>
+  selectedItemIds: ReadonlyArray<ResourceId>
   rootItems: Array<ReceiptEffectItem>
-  allItemsMap: ReadonlyMap<SidebarItemId, ReceiptEffectItem>
+  allItemsMap: ReadonlyMap<ResourceId, ReceiptEffectItem>
 }) {
   const rootIds = new Set(rootItems.map((item) => item.id))
   return selectedItemIds.filter((selectedId) => {
@@ -50,8 +50,8 @@ function shouldClearEditorForDeletedRoots({
   allItemsMap,
 }: {
   deletedItems: Array<ReceiptEffectItem>
-  currentResourceId: SidebarItemId | null
-  allItemsMap: ReadonlyMap<SidebarItemId, ReceiptEffectItem>
+  currentResourceId: ResourceId | null
+  allItemsMap: ReadonlyMap<ResourceId, ReceiptEffectItem>
 }) {
   if (!currentResourceId) return false
   const currentItem = allItemsMap.get(currentResourceId)
@@ -65,14 +65,14 @@ function mergeRemovedItems({
   readModel,
   removedSnapshots,
 }: {
-  rootIds: Array<SidebarItemId>
+  rootIds: Array<ResourceId>
   readModel: WorkspaceResourceReadModel<AnyItem>
   removedSnapshots: Array<ReceiptRemovedItemSnapshot>
 }): {
   rootItems: Array<ReceiptEffectItem>
-  allItemsMap: ReadonlyMap<SidebarItemId, ReceiptEffectItem>
+  allItemsMap: ReadonlyMap<ResourceId, ReceiptEffectItem>
 } {
-  const allItemsMap = new Map<SidebarItemId, ReceiptEffectItem>(readModel.itemsById)
+  const allItemsMap = new Map<ResourceId, ReceiptEffectItem>(readModel.itemsById)
   for (const snapshot of removedSnapshots) {
     allItemsMap.set(snapshot.id, snapshot)
   }
@@ -93,12 +93,12 @@ export function planFileSystemReceiptEffects({
 }: {
   receipt: ResourceTransactionReceipt
   readModel: WorkspaceResourceReadModel<AnyItem>
-  currentResourceId: SidebarItemId | null
-  selectedItemIds: ReadonlyArray<SidebarItemId>
+  currentResourceId: ResourceId | null
+  selectedItemIds: ReadonlyArray<ResourceId>
 }): Array<FileSystemLifecycleIntent> {
   const intents: Array<FileSystemLifecycleIntent> = []
   const selectedRootIds = getReceiptSelectedRootIds(receipt)
-  let plannedSelection: ReadonlyArray<SidebarItemId> =
+  let plannedSelection: ReadonlyArray<ResourceId> =
     selectedRootIds.length > 0 ? selectedRootIds : selectedItemIds
   let selectionChanged = selectedRootIds.length > 0
 

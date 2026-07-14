@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { vi } from 'vite-plus/test'
 import type {
   CanvasDocumentWriter,
@@ -13,7 +14,7 @@ import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type {
   NoteDocumentContentSource,
   EmbeddedNoteContentSource,
@@ -228,7 +229,7 @@ export function createCanvasRuntime(
     domRuntime: CanvasDomRuntime
     viewportController: CanvasViewportController
     commands: CanvasCommands
-    isSidebarItemEmbedRichTextEditable: (itemId: SidebarItemId) => boolean
+    isSidebarItemEmbedRichTextEditable: (itemId: ResourceId) => boolean
     noteDocumentSource: NoteDocumentContentSource
     noteEmbeddedNoteContentSource: EmbeddedNoteContentSource
     noteEmbedTargetSource: NoteEmbedTargetContentSource
@@ -249,7 +250,7 @@ export function createCanvasRuntime(
   documentWriter: CanvasDocumentWriter
   domRuntime: CanvasDomRuntime
   history: CanvasHistoryController
-  isSidebarItemEmbedRichTextEditable: (itemId: SidebarItemId) => boolean
+  isSidebarItemEmbedRichTextEditable: (itemId: ResourceId) => boolean
   noteDocumentSource: NoteDocumentContentSource
   noteEmbeddedNoteContentSource: EmbeddedNoteContentSource
   noteEmbedTargetSource: NoteEmbedTargetContentSource

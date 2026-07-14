@@ -1,9 +1,11 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
 import { createWorkspaceResourceReadModel } from '../../workspace/items'
 import type { AnyItem } from '../../workspace/items'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { WORKSPACE_MODE } from '../../../../../shared/workspace/workspace-mode'
 import {
   createActorFileSystemPermissions,
@@ -12,7 +14,6 @@ import {
 } from '../access'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { testResourceShareId } from '../../test/resource-share-id'
-import { testId } from '../../test/id'
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
 
@@ -48,7 +49,7 @@ function createShare(
 }
 
 function buildItemLookup(items: Array<AnyItem>) {
-  const map = new Map<SidebarItemId, AnyItem>()
+  const map = new Map<ResourceId, AnyItem>()
   for (const item of items) map.set(item.id, item)
   return map.get.bind(map)
 }
@@ -87,7 +88,7 @@ describe('actor filesystem permissions', () => {
 
   it('does not inherit view-as permission through folders with inheritShares disabled', () => {
     const folder = createFolder({
-      id: testId<'sidebarItems'>('folder_parent'),
+      id: testResourceId('folder_parent'),
       inheritShares: false,
       allPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
@@ -103,12 +104,12 @@ describe('actor filesystem permissions', () => {
 
   it('stops inherited view-as permission at the first folder with inheritShares disabled', () => {
     const grandparent = createFolder({
-      id: testId<'sidebarItems'>('folder_grandparent'),
+      id: testResourceId('folder_grandparent'),
       inheritShares: true,
       allPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     const parent = createFolder({
-      id: testId<'sidebarItems'>('folder_parent_no_inherit'),
+      id: testResourceId('folder_parent_no_inherit'),
       parentId: grandparent.id,
       inheritShares: false,
       allPermissionLevel: null,
@@ -287,7 +288,7 @@ describe('resolveWorkspaceModeForItem', () => {
 })
 
 function noteId(value: string) {
-  return testId<'sidebarItems'>(value)
+  return testResourceId(value)
 }
 
 function createReadState(items: Array<AnyItem>): FileSystemItemsReadState {

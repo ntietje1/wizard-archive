@@ -21,6 +21,7 @@ import type {
 } from '@wizard-archive/editor/resources/resource-contract'
 import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { normalizeLegacyResourcePathSegment } from '../sidebarItems/resourcePathSegment'
+import { requireSidebarItemRow } from '../sidebarItems/functions/sidebarItemIdentity'
 
 import { SHARE_STATUS } from '../../shared/block-shares/share-status'
 import { slugify } from '../../shared/slugs'
@@ -59,6 +60,10 @@ export async function getCampaignRowId(t: T, campaignId: CampaignId) {
   if (!campaign) throw new Error('Campaign not found')
   return campaign._id
 }
+
+export async function getSidebarItemRowId(t: T, resourceId: ResourceId) {
+  return await t.run(async (ctx) => (await requireSidebarItemRow(ctx, resourceId))._id)
+}
 type AuthedContext = TestConvexForDataModel<DataModel>
 type BlockProps = NoteBlock['props']
 type FileSystemEventType = ResourceEvent['type']
@@ -67,8 +72,8 @@ export async function executeMoveCommand(
   client: AuthedContext,
   args: {
     campaignId: CampaignId
-    sourceItemIds: Array<Id<'sidebarItems'>>
-    targetParentId: Id<'sidebarItems'> | null
+    sourceItemIds: Array<ResourceId>
+    targetParentId: ResourceId | null
     action?: 'move' | 'restore' | 'trash'
   },
 ): Promise<ResourceTransactionReceipt> {
@@ -94,8 +99,8 @@ export async function executeCopyCommand(
   client: AuthedContext,
   args: {
     campaignId: CampaignId
-    sourceItemIds: Array<Id<'sidebarItems'>>
-    targetParentId: Id<'sidebarItems'> | null
+    sourceItemIds: Array<ResourceId>
+    targetParentId: ResourceId | null
   },
 ): Promise<ResourceTransactionReceipt> {
   return await executeTestFileSystemCommand(client, {
@@ -112,7 +117,7 @@ export async function executeDeleteForeverCommand(
   client: AuthedContext,
   args: {
     campaignId: CampaignId
-    sourceItemIds: Array<Id<'sidebarItems'>>
+    sourceItemIds: Array<ResourceId>
   },
 ): Promise<ResourceTransactionReceipt> {
   return await executeTestFileSystemCommand(client, {
@@ -213,10 +218,10 @@ export async function createUserProfile(
     ...rest,
     ...(username !== undefined ? { username: assertUsername(username) } : {}),
   }
-  const id = await t.run(async (ctx) => {
+  const rowId = await t.run(async (ctx) => {
     return await ctx.db.insert('userProfiles', data)
   })
-  return { _id: id, ...data }
+  return { _id: rowId, ...data }
 }
 
 export async function createCampaignWithDm(
@@ -333,7 +338,7 @@ type CommonSidebarItemOverrides = Partial<{
   resourceUuid: ResourceId
   name: string
   slug: string
-  parentId: Id<'sidebarItems'> | null
+  parentId: ResourceId | null
   allPermissionLevel: PermissionLevel | null
   location: ResourceLocation
   status: ResourceStatus
@@ -366,6 +371,7 @@ async function insertResource(
     storageId,
     slug,
     name: _name,
+    parentId: parentResourceId,
     ...sidebarOverrides
   } = overrides ?? {}
   const validatedSlug =
@@ -378,16 +384,6 @@ async function insertResource(
       ? RESOURCE_STATUS.trashed
       : RESOURCE_STATUS.active)
 
-  const sharedData = {
-    ...sidebarItemBase(campaignId, creatorProfileId, name),
-    type,
-    ...sidebarOverrides,
-    location: sidebarOverrides.location ?? RESOURCE_LOCATION.sidebar,
-    status: requestedStatus,
-    slug: validatedSlug,
-  }
-  assertSidebarItemLifecycleConsistency(sharedData)
-
   const extensionFields: Record<string, unknown> = {}
   if (inheritShares !== undefined) extensionFields.inheritShares = inheritShares
   if (imageStorageId !== undefined) extensionFields.imageStorageId = imageStorageId
@@ -395,16 +391,35 @@ async function insertResource(
 
   const extensionDefaults: Record<string, unknown> = { ...extraDefaults }
 
-  const id = await t.run(async (ctx) => {
+  return await t.run(async (ctx) => {
+    const parent =
+      parentResourceId === undefined || parentResourceId === null
+        ? null
+        : await requireSidebarItemRow(ctx, parentResourceId)
+    const sharedData = {
+      ...sidebarItemBase(campaignId, creatorProfileId, name),
+      type,
+      ...sidebarOverrides,
+      parentId: parent?._id ?? null,
+      location: sidebarOverrides.location ?? RESOURCE_LOCATION.sidebar,
+      status: requestedStatus,
+      slug: validatedSlug,
+    }
+    assertSidebarItemLifecycleConsistency(sharedData)
     const itemId = await ctx.db.insert('sidebarItems', sharedData)
     await ctx.db.insert(extensionTable, {
       sidebarItemId: itemId,
       ...extensionDefaults,
       ...extensionFields,
     })
-    return itemId
+    return {
+      rowId: itemId,
+      ...sharedData,
+      parentId: parentResourceId ?? null,
+      ...extensionDefaults,
+      ...extensionFields,
+    }
   })
-  return { id, ...sharedData, ...extensionDefaults, ...extensionFields }
 }
 
 export async function createNote(
@@ -413,7 +428,7 @@ export async function createNote(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides,
 ) {
-  const { id: noteId, ...data } = await insertResource(
+  const { rowId: noteRowId, ...data } = await insertResource(
     t,
     'notes',
     campaignId,
@@ -423,7 +438,7 @@ export async function createNote(
     {},
     overrides,
   )
-  return { noteId, ...data }
+  return { noteId: data.resourceUuid, noteRowId, ...data }
 }
 
 export async function createFolder(
@@ -432,7 +447,7 @@ export async function createFolder(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides & Partial<{ inheritShares: boolean }>,
 ) {
-  const { id: folderId, ...data } = await insertResource(
+  const { rowId: folderRowId, ...data } = await insertResource(
     t,
     'folders',
     campaignId,
@@ -442,7 +457,7 @@ export async function createFolder(
     { inheritShares: false },
     overrides,
   )
-  return { folderId, ...data }
+  return { folderId: data.resourceUuid, folderRowId, ...data }
 }
 
 export async function createFile(
@@ -451,7 +466,7 @@ export async function createFile(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides & Partial<{ storageId: Id<'_storage'> | null }>,
 ) {
-  const { id: fileId, ...data } = await insertResource(
+  const { rowId: fileRowId, ...data } = await insertResource(
     t,
     'files',
     campaignId,
@@ -461,7 +476,7 @@ export async function createFile(
     { storageId: null },
     overrides,
   )
-  return { fileId, ...data }
+  return { fileId: data.resourceUuid, fileRowId, ...data }
 }
 
 export async function createGameMap(
@@ -470,7 +485,7 @@ export async function createGameMap(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides & Partial<{ imageStorageId: Id<'_storage'> | null }>,
 ) {
-  const { id: mapId, ...data } = await insertResource(
+  const { rowId: mapRowId, ...data } = await insertResource(
     t,
     'gameMaps',
     campaignId,
@@ -480,7 +495,7 @@ export async function createGameMap(
     { imageStorageId: null },
     overrides,
   )
-  return { mapId, ...data }
+  return { mapId: data.resourceUuid, mapRowId, ...data }
 }
 
 export async function createCanvas(
@@ -489,7 +504,7 @@ export async function createCanvas(
   creatorProfileId: Id<'userProfiles'>,
   overrides?: CommonSidebarItemOverrides,
 ) {
-  const { id: canvasId, ...data } = await insertResource(
+  const { rowId: canvasRowId, ...data } = await insertResource(
     t,
     'canvases',
     campaignId,
@@ -499,7 +514,7 @@ export async function createCanvas(
     {},
     overrides,
   )
-  return { canvasId, ...data }
+  return { canvasId: data.resourceUuid, canvasRowId, ...data }
 }
 
 export async function createSession(
@@ -527,7 +542,7 @@ export async function createSession(
 
 export async function createBlock(
   t: T,
-  noteId: Id<'sidebarItems'>,
+  noteId: ResourceId,
   campaignId: Id<'campaigns'>,
   overrides?: Partial<{
     blockNoteId: NoteBlockId
@@ -545,7 +560,6 @@ export async function createBlock(
   const shareStatus: ShareStatus | null = SHARE_STATUS.NOT_SHARED
   const type = overrides?.type ?? 'paragraph'
   const defaults = {
-    noteId: noteId,
     blockNoteId: testBlockNoteId(`block-${n}`),
     position: null,
     parentBlockId: null,
@@ -557,21 +571,26 @@ export async function createBlock(
     campaignId,
     shareStatus,
   }
-  const data = { ...defaults, ...overrides } as BlockInsert
-  if (data.parentBlockId !== null && overrides?.depth === undefined) {
+  if (
+    overrides?.parentBlockId !== undefined &&
+    overrides.parentBlockId !== null &&
+    overrides.depth === undefined
+  ) {
     throw new Error('createBlock: depth must be explicitly provided when parentBlockId is set')
   }
-  const blockDbId = await t.run(async (ctx) => {
-    return await ctx.db.insert('blocks', data)
+  return await t.run(async (ctx) => {
+    const note = await requireSidebarItemRow(ctx, noteId)
+    const data = { ...defaults, noteId: note._id, ...overrides } as BlockInsert
+    const blockDbId = await ctx.db.insert('blocks', data)
+    return { blockDbId, ...data, noteId, noteRowId: note._id }
   })
-  return { blockDbId, ...data }
 }
 
 export async function createSidebarShare(
   t: T,
   overrides: {
     campaignId: Id<'campaigns'>
-    sidebarItemId: Id<'sidebarItems'>
+    sidebarItemId: ResourceId
     sidebarItemType: ResourceKind
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel?: PermissionLevel | null
@@ -584,19 +603,26 @@ export async function createSidebarShare(
     permissionLevel,
     sessionId,
   }
-  const data = { ...defaults, ...overrides }
   const resourceShareUuid = generateDomainId(DOMAIN_ID_KIND.resourceShare)
-  const shareId = await t.run(async (ctx) => {
-    return await ctx.db.insert('sidebarItemShares', { ...data, resourceShareUuid })
+  return await t.run(async (ctx) => {
+    const item = await requireSidebarItemRow(ctx, overrides.sidebarItemId)
+    const data = { ...defaults, ...overrides, sidebarItemId: item._id }
+    const shareId = await ctx.db.insert('sidebarItemShares', { ...data, resourceShareUuid })
+    return {
+      shareId,
+      resourceShareUuid,
+      ...data,
+      sidebarItemId: overrides.sidebarItemId,
+      sidebarItemRowId: item._id,
+    }
   })
-  return { shareId, resourceShareUuid, ...data }
 }
 
 export async function createBlockShare(
   t: T,
   overrides: {
     campaignId: Id<'campaigns'>
-    noteId: Id<'sidebarItems'>
+    noteId: ResourceId
     blockId: Id<'blocks'>
     campaignMemberId: Id<'campaignMembers'>
     sessionId?: Id<'sessions'> | null
@@ -608,49 +634,70 @@ export async function createBlockShare(
     permissionLevel: 'view' as const,
     sessionId,
   }
-  const data = { ...defaults, ...overrides }
-  const blockShareId = await t.run(async (ctx) => {
-    return await ctx.db.insert('blockShares', data)
+  return await t.run(async (ctx) => {
+    const note = await requireSidebarItemRow(ctx, overrides.noteId)
+    const data = { ...defaults, ...overrides, noteId: note._id }
+    const blockShareId = await ctx.db.insert('blockShares', data)
+    return {
+      blockShareId,
+      ...data,
+      noteId: overrides.noteId,
+      noteRowId: note._id,
+    }
   })
-  return { blockShareId, ...data }
 }
 
 export async function createBookmark(
   t: T,
   overrides: {
     campaignId: Id<'campaigns'>
-    sidebarItemId: Id<'sidebarItems'>
+    sidebarItemId: ResourceId
     campaignMemberId: Id<'campaignMembers'>
   },
 ) {
-  const bookmarkId = await t.run(async (ctx) => {
-    return await ctx.db.insert('bookmarks', overrides)
+  return await t.run(async (ctx) => {
+    const item = await requireSidebarItemRow(ctx, overrides.sidebarItemId)
+    const bookmarkId = await ctx.db.insert('bookmarks', {
+      ...overrides,
+      sidebarItemId: item._id,
+    })
+    return { bookmarkId, ...overrides, sidebarItemRowId: item._id }
   })
-  return { bookmarkId, ...overrides }
 }
 
 export async function createMapPin(
   t: T,
-  mapId: Id<'sidebarItems'>,
+  mapId: ResourceId,
   overrides: {
-    itemId: Id<'sidebarItems'>
+    itemId: ResourceId
     x?: number
     y?: number
     visible?: boolean
   },
 ) {
   const defaults = {
-    mapId,
     x: 0,
     y: 0,
     visible: true,
   }
-  const data = { ...defaults, ...overrides }
   const mapPinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
-  const pinId = await t.run(async (ctx) => {
-    return await ctx.db.insert('mapPins', { ...data, mapPinUuid: mapPinId })
+  return await t.run(async (ctx) => {
+    const [map, item] = await Promise.all([
+      requireSidebarItemRow(ctx, mapId),
+      requireSidebarItemRow(ctx, overrides.itemId),
+    ])
+    const data = { ...defaults, mapId: map._id, ...overrides, itemId: item._id }
+    const pinId = await ctx.db.insert('mapPins', { ...data, mapPinUuid: mapPinId })
+    return {
+      pinId,
+      mapPinId,
+      ...data,
+      mapId,
+      mapRowId: map._id,
+      itemId: overrides.itemId,
+      itemRowId: item._id,
+    }
   })
-  return { pinId, mapPinId, ...data }
 }
 
 export async function setupFolderTree(
@@ -664,39 +711,41 @@ export async function setupFolderTree(
   },
 ) {
   const { depth, inheritShares = [], leafType = 'note' } = opts
-  const folders: Array<Id<'sidebarItems'>> = []
+  const folders: Array<ResourceId> = []
+  const folderRowIds: Array<Id<'sidebarItems'>> = []
 
   for (let i = 0; i < depth; i++) {
     const parentId = i === 0 ? null : folders[i - 1]!
     const inherit = inheritShares[i] ?? false
-    const { folderId } = await createFolder(t, campaignId, creatorProfileId, {
+    const { folderId, folderRowId } = await createFolder(t, campaignId, creatorProfileId, {
       name: `Folder-L${i}`,
       parentId,
       inheritShares: inherit,
     })
     folders.push(folderId)
+    folderRowIds.push(folderRowId)
   }
 
   const leafParent = folders[folders.length - 1] ?? null
 
   switch (leafType) {
     case 'note': {
-      const { noteId } = await createNote(t, campaignId, creatorProfileId, {
+      const { noteId, noteRowId } = await createNote(t, campaignId, creatorProfileId, {
         parentId: leafParent,
       })
-      return { folders, leaf: noteId }
+      return { folders, folderRowIds, leaf: noteId, leafRowId: noteRowId }
     }
     case 'file': {
-      const { fileId } = await createFile(t, campaignId, creatorProfileId, {
+      const { fileId, fileRowId } = await createFile(t, campaignId, creatorProfileId, {
         parentId: leafParent,
       })
-      return { folders, leaf: fileId }
+      return { folders, folderRowIds, leaf: fileId, leafRowId: fileRowId }
     }
     case 'gameMap': {
-      const { mapId } = await createGameMap(t, campaignId, creatorProfileId, {
+      const { mapId, mapRowId } = await createGameMap(t, campaignId, creatorProfileId, {
         parentId: leafParent,
       })
-      return { folders, leaf: mapId }
+      return { folders, folderRowIds, leaf: mapId, leafRowId: mapRowId }
     }
     default: {
       const _exhaustive: never = leafType
@@ -707,19 +756,20 @@ export async function setupFolderTree(
 
 export async function syncBlocksToYjs(
   t: T,
-  noteId: Id<'sidebarItems'>,
+  noteId: ResourceId,
   blocks: Array<PartialNoteBlock>,
 ): Promise<void> {
   const update = makeYjsUpdateWithBlocks(blocks)
   await t.run(async (ctx) => {
+    const note = await requireSidebarItemRow(ctx, noteId)
     const latest = await ctx.db
       .query('yjsUpdates')
-      .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+      .withIndex('by_document_seq', (q) => q.eq('documentId', note._id))
       .order('desc')
       .first()
     const seq = (latest?.seq ?? -1) + 1
     await ctx.db.insert('yjsUpdates', {
-      documentId: noteId,
+      documentId: note._id,
       update,
       seq,
       isSnapshot: false,

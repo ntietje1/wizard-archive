@@ -1,7 +1,8 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { applyUpdate, encodeStateAsUpdate } from 'yjs'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import { createWizardEditorNoteYDocFromContent } from '@wizard-archive/editor/adapter'
 import type {
   WizardEditorNoteCollaborationSessionRequest,
@@ -154,7 +155,7 @@ describe('useInMemoryNoteSessionSource', () => {
 
 function createContentNote(id: string): TestNoteItemWithContent {
   return {
-    ...createNote({ id: id as SidebarItemId }),
+    ...createNote({ id: id as ResourceId }),
     ancestors: [],
     blockMeta: {},
     blockShareAccessWarnings: [],

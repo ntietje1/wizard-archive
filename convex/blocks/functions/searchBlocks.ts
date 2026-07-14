@@ -81,7 +81,7 @@ async function toVisibleBlockSearchResult(
 
   return {
     blockNoteId: block.blockNoteId,
-    noteId: block.noteId,
+    noteId: note.note.id,
     plainText: block.plainText,
     type: block.type as NoteBlockType,
   }
@@ -103,10 +103,16 @@ async function getVisibleSearchNote(
   ctx: CampaignQueryCtx,
   { membership, noteId }: { membership: CampaignMemberRow; noteId: Block['noteId'] },
 ) {
+  const rawNote = await ctx.db.get('sidebarItems', noteId)
+  if (!rawNote || rawNote.type !== 'note') return null
   const note = await getSidebarItem(ctx, noteId)
   if (!note || note.type !== 'note') return null
   const permissionLevel = await getSidebarItemPermissionLevelForMembership(ctx, {
-    item: note,
+    item: {
+      id: rawNote._id,
+      parentId: rawNote.parentId,
+      allPermissionLevel: rawNote.allPermissionLevel,
+    },
     membership,
   })
   if (!hasAtLeastPermissionLevel(permissionLevel, PERMISSION_LEVEL.VIEW)) return null

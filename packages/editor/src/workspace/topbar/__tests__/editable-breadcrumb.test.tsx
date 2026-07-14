@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
@@ -5,7 +6,6 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { SidebarItemBreadcrumb } from '../editable-breadcrumb'
 import { canonicalizeResourceItemTitle } from '../../items'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 
 const nameValidationState = vi.hoisted(() => ({
   hasError: false,
@@ -30,18 +30,18 @@ describe('SidebarItemBreadcrumb', () => {
 
   it('renders the full ancestor trail for pending items', () => {
     const grandparent = createFolder({
-      id: testId<'sidebarItems'>('folder_grandparent'),
+      id: testResourceId('folder_grandparent'),
       name: 'World',
       slug: 'world',
     })
     const parent = createFolder({
-      id: testId<'sidebarItems'>('folder_parent'),
+      id: testResourceId('folder_parent'),
       name: 'Places',
       slug: 'places',
       parentId: grandparent.id,
     })
     const child = createNote({
-      id: testId<'sidebarItems'>('optimistic-create-1'),
+      id: testResourceId('optimistic-create-1'),
       name: 'Tavern',
       slug: 'tavern-optimistic-1',
       parentId: parent.id,
@@ -63,7 +63,7 @@ describe('SidebarItemBreadcrumb', () => {
 
   it('renders the root item name', () => {
     const item = createNote({
-      id: testId<'sidebarItems'>('note_root'),
+      id: testResourceId('note_root'),
       name: 'Root Note',
       slug: 'root-note',
       parentId: null,
@@ -76,12 +76,12 @@ describe('SidebarItemBreadcrumb', () => {
 
   it('renders the same ancestor trail for non-pending items', () => {
     const parent = createFolder({
-      id: testId<'sidebarItems'>('folder_parent'),
+      id: testResourceId('folder_parent'),
       name: 'Places',
       slug: 'places',
     })
     const child = createNote({
-      id: testId<'sidebarItems'>('note_child'),
+      id: testResourceId('note_child'),
       name: 'Tavern',
       slug: 'tavern',
       parentId: parent.id,

@@ -1,10 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import {
   deriveExternalEmbedName,
   parseEmbedTarget,
 } from '../../../../../shared/embeds/embedTargets'
 import type { EmbedTarget } from '../../../../../shared/embeds/embedTargets'
-import type { ResourceId } from '../../workspace/resource-contract'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
 export function externalEmbedTargetFromUrl(rawUrl: string): EmbedTarget | null {
   const url = rawUrl.trim()
@@ -21,9 +20,9 @@ export function resourceEmbedTarget(resourceId: ResourceId): EmbedTarget {
 
 export function getSidebarItemIdFromDragData(
   data: Record<string | symbol, unknown>,
-): SidebarItemId | null {
+): ResourceId | null {
   const id = data.sidebarItemId
   // This payload is produced by app-owned drag sources. Sidebar item ids are opaque
   // strings, so the frontend can only reject missing or malformed payload shape.
-  return typeof id === 'string' && id.length > 0 ? (id as SidebarItemId) : null
+  return typeof id === 'string' && id.length > 0 ? (id as ResourceId) : null
 }

@@ -7,7 +7,7 @@ import {
 } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
-import { createGameMap, createNote } from '../../_test/factories.helper'
+import { createGameMap, createNote, getSidebarItemRowId } from '../../_test/factories.helper'
 import { createMapWithTwoSnapshotPins } from '../../_test/documentSnapshots.helper'
 import { api } from '../../_generated/api'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
@@ -30,6 +30,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         name: 'Snapshot Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -42,7 +43,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', noteId))
+          .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
           .collect()
 
         expect(snapshots).toHaveLength(1)
@@ -65,6 +66,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         name: 'History Entry Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -77,7 +79,9 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .collect()
 
         expect(historyEntries).toHaveLength(1)
@@ -99,6 +103,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         name: 'Rapid Edit Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -119,7 +124,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', noteId))
+          .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
           .collect()
 
         // Only the second push's scheduled function should have created a snapshot
@@ -127,7 +132,9 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .collect()
 
         expect(historyEntries).toHaveLength(1)
@@ -148,6 +155,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         name: 'Interval Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       // First push — will create snapshot after idle
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -173,7 +181,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', noteId))
+          .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
           .collect()
 
         expect(snapshots).toHaveLength(1)
@@ -194,14 +202,16 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', noteId))
+          .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
           .collect()
 
         expect(snapshots).toHaveLength(2)
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .collect()
 
         expect(historyEntries).toHaveLength(2)
@@ -222,6 +232,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         name: 'Burst Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       for (let i = 0; i < 5; i++) {
         await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -236,14 +247,16 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', noteId))
+          .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
           .collect()
 
         expect(snapshots).toHaveLength(1)
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .collect()
 
         expect(historyEntries).toHaveLength(1)
@@ -264,9 +277,10 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         name: 'Updated Time Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       const beforeNote = await t.run(async (dbCtx) => {
-        return await dbCtx.db.get('sidebarItems', noteId)
+        return await dbCtx.db.get('sidebarItems', noteRowId)
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -278,7 +292,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await t.run(async (dbCtx) => {
-        const note = await dbCtx.db.get('sidebarItems', noteId)
+        const note = await dbCtx.db.get('sidebarItems', noteRowId)
         expect(note!.updatedBy).toBe(ctx.dm.profile._id)
         expect(note!.updatedTime).not.toBeNull()
         expect(note!.updatedTime).toBeGreaterThan(beforeNote!.updatedTime ?? 0)
@@ -299,6 +313,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         name: 'Snapshot Canvas',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const canvasRowId = await getSidebarItemRowId(t, canvasId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -311,7 +326,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', canvasId))
+          .withIndex('by_item', (q) => q.eq('itemId', canvasRowId))
           .collect()
 
         expect(snapshots).toHaveLength(1)
@@ -321,7 +336,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         const historyEntries = await dbCtx.db
           .query('editHistory')
           .withIndex('by_item_action', (q) =>
-            q.eq('itemId', canvasId).eq('action', 'content_edited'),
+            q.eq('itemId', canvasRowId).eq('action', 'content_edited'),
           )
           .collect()
 
@@ -344,6 +359,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
         name: 'Deleted Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
+      const noteRowId = await getSidebarItemRowId(t, noteId)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignDomainId,
@@ -353,7 +369,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
       // Hard-delete the document before the scheduled function fires
       await t.run(async (dbCtx) => {
-        await dbCtx.db.delete('sidebarItems', noteId)
+        await dbCtx.db.delete('sidebarItems', noteRowId)
       })
 
       await t.finishAllScheduledFunctions(vi.runAllTimers)
@@ -361,14 +377,16 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', noteId))
+          .withIndex('by_item', (q) => q.eq('itemId', noteRowId))
           .collect()
 
         expect(snapshots).toHaveLength(0)
 
         const historyEntries = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'content_edited'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', noteRowId).eq('action', 'content_edited'),
+          )
           .collect()
 
         expect(historyEntries).toHaveLength(0)
@@ -388,7 +406,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -402,7 +420,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
 
         expect(snapshots).toHaveLength(1)
@@ -415,7 +433,9 @@ describe('game map pin mutations — snapshot scheduling', () => {
 
         const history = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .collect()
         expect(history).toHaveLength(1)
         expect(history[0].hasSnapshot).toBe(true)
@@ -431,7 +451,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createMapWithTwoSnapshotPins(t, dmAuth, {
+      const { mapRowId } = await createMapWithTwoSnapshotPins(t, dmAuth, {
         campaignId: ctx.campaignId,
         campaignDomainId: ctx.campaignDomainId,
         ownerId: ctx.dm.profile._id,
@@ -440,14 +460,14 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
 
         expect(snapshots).toHaveLength(2)
 
         const history = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
 
         expect(history).toHaveLength(2)
@@ -467,7 +487,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -488,14 +508,16 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
 
         expect(snapshots).toHaveLength(2)
 
         const removeHistory = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_removed'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_removed'),
+          )
           .first()
         expect(removeHistory).not.toBeNull()
         expect(removeHistory!.hasSnapshot).toBe(true)
@@ -511,7 +533,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -534,14 +556,16 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
 
         expect(snapshots).toHaveLength(2)
 
         const moveHistory = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_moved'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_moved'),
+          )
           .first()
         expect(moveHistory).not.toBeNull()
         expect(moveHistory!.hasSnapshot).toBe(true)
@@ -557,7 +581,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -579,7 +603,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
 
         expect(snapshots).toHaveLength(2)
@@ -587,7 +611,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
         const visHistory = await dbCtx.db
           .query('editHistory')
           .withIndex('by_item_action', (q) =>
-            q.eq('itemId', mapId).eq('action', 'map_pin_visibility_changed'),
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_visibility_changed'),
           )
           .first()
         expect(visHistory).not.toBeNull()
@@ -617,6 +641,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
         parentTarget: { kind: 'direct', parentId: null },
         uploadSessionId: sessionId,
       })
+      const mapRowId = await getSidebarItemRowId(t, result.mapId)
 
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
         campaignId: ctx.campaignDomainId,
@@ -630,7 +655,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
         const history = await dbCtx.db
           .query('editHistory')
           .withIndex('by_item_action', (q) =>
-            q.eq('itemId', result.mapId).eq('action', 'map_image_removed'),
+            q.eq('itemId', mapRowId).eq('action', 'map_image_removed'),
           )
           .collect()
 
@@ -648,8 +673,16 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId: map1 } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
-      const { mapId: map2 } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId: map1, mapRowId: map1RowId } = await createGameMap(
+        t,
+        ctx.campaignId,
+        ctx.dm.profile._id,
+      )
+      const { mapId: map2, mapRowId: map2RowId } = await createGameMap(
+        t,
+        ctx.campaignId,
+        ctx.dm.profile._id,
+      )
       const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
@@ -672,11 +705,11 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.run(async (dbCtx) => {
         const snap1 = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', map1))
+          .withIndex('by_item', (q) => q.eq('itemId', map1RowId))
           .collect()
         const snap2 = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', map2))
+          .withIndex('by_item', (q) => q.eq('itemId', map2RowId))
           .collect()
 
         expect(snap1).toHaveLength(1)
@@ -697,7 +730,7 @@ describe('rollbackToSnapshot', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { mapId, mapRowId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
@@ -710,7 +743,9 @@ describe('rollbackToSnapshot', () => {
       const historyEntry = await t.run(async (dbCtx) => {
         return await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .withIndex('by_item_action', (q) =>
+            q.eq('itemId', mapRowId).eq('action', 'map_pin_added'),
+          )
           .first()
       })
       expect(historyEntry).not.toBeNull()
@@ -723,21 +758,21 @@ describe('rollbackToSnapshot', () => {
       await t.run(async (dbCtx) => {
         const allSnapshots = await dbCtx.db
           .query('documentSnapshots')
-          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .withIndex('by_item', (q) => q.eq('itemId', mapRowId))
           .collect()
 
         expect(allSnapshots).toHaveLength(3)
 
         const rolledBackHistory = await dbCtx.db
           .query('editHistory')
-          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'rolled_back'))
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapRowId).eq('action', 'rolled_back'))
           .first()
         expect(rolledBackHistory).not.toBeNull()
         expect(rolledBackHistory!.hasSnapshot).toBe(true)
 
         const activePins = await dbCtx.db
           .query('mapPins')
-          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapRowId))
           .collect()
         expect(activePins).toHaveLength(1)
         expect(activePins[0].x).toBe(10)

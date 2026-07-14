@@ -1,19 +1,20 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { createContext, createElement, useContext, useMemo, useState } from 'react'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { FileSystemSelection } from '../../filesystem/selection'
 import { DEFAULT_SORT_OPTIONS } from '../items-persistence-contract'
 import type { SortOptions } from '../items-persistence-contract'
 import { useClearSidebarWorkspaceStateOnUnmount, useStoredSidebarWorkspaceState } from './ui-store'
 
 interface SidebarWorkspaceUiState {
-  folderStates: Partial<Record<SidebarItemId, boolean>>
+  folderStates: Partial<Record<ResourceId, boolean>>
   closeAllFoldersMode: boolean
   bookmarksOnlyMode: boolean
 }
 
 interface SidebarWorkspaceUiCommands {
-  setFolderState: (folderId: SidebarItemId, isOpen: boolean) => void
-  toggleFolderState: (folderId: SidebarItemId) => void
+  setFolderState: (folderId: ResourceId, isOpen: boolean) => void
+  toggleFolderState: (folderId: ResourceId) => void
   clearAllFolderStates: () => void
   toggleCloseAllFoldersMode: () => void
   exitCloseAllMode: () => void
@@ -26,26 +27,26 @@ export interface SidebarWorkspaceSort {
 }
 
 interface SidebarWorkspaceEditing {
-  renamingItemId: SidebarItemId | null
-  setRenamingItemId: (itemId: SidebarItemId | null) => void
+  renamingItemId: ResourceId | null
+  setRenamingItemId: (itemId: ResourceId | null) => void
 }
 
 export type SidebarWorkspaceItemSurfaceName = 'sidebar' | 'folder-view' | 'bookmarks' | 'trash'
 
 export interface SidebarWorkspaceItemSurface {
   surface: SidebarWorkspaceItemSurfaceName
-  parentId: SidebarItemId | null
-  visibleItemIds: ReadonlyArray<SidebarItemId>
+  parentId: ResourceId | null
+  visibleItemIds: ReadonlyArray<ResourceId>
 }
 
 export interface SidebarWorkspaceSelection {
-  selectedItemIds: ReadonlyArray<SidebarItemId>
-  focusedItemId: SidebarItemId | null
+  selectedItemIds: ReadonlyArray<ResourceId>
+  focusedItemId: ResourceId | null
   activeItemSurface: SidebarWorkspaceItemSurface | null
 }
 
 export interface SidebarWorkspaceSelectionSnapshot extends SidebarWorkspaceSelection {
-  anchorItemId: SidebarItemId | null
+  anchorItemId: ResourceId | null
 }
 
 type SidebarWorkspaceSelectionCommands = Pick<

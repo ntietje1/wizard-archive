@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { useEffect } from 'react'
 import { createCanvasNodePlacement } from '../../nodes/canvas-node-modules'
 import {
@@ -15,7 +16,6 @@ import type * as Y from 'yjs'
 import type { CanvasCollaborationProvider } from '../../session-contract'
 import { DOMAIN_ID_KIND, generateDomainId, parseDomainId } from '../../../resources/domain-id'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../document-contract'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
 const PERFORMANCE_STROKE_WIDTH = 160
 const PERFORMANCE_STROKE_AMPLITUDE = 28
@@ -29,7 +29,7 @@ type SeedCoordinateProbeNodeOptions = Parameters<
 type SeedEdgeOptions = Parameters<CanvasPerformanceRuntime['seedEdge']>[0]
 type SeedEmbedNodeOptions = Parameters<CanvasPerformanceRuntime['seedEmbedNode']>[0]
 type CanvasPerformanceRuntimeDependencies = {
-  canvasId: SidebarItemId
+  canvasId: ResourceId
   canvasEngine: CanvasEngine
   canEdit: boolean
   documentWriter: CanvasDocumentWriter

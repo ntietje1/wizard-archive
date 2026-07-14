@@ -1,5 +1,4 @@
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
-
+import type { ResourceId } from '../../../resources/domain-id'
 export interface PersistedCanvasViewport {
   x: number
   y: number
@@ -7,6 +6,6 @@ export interface PersistedCanvasViewport {
 }
 
 export interface CanvasViewportStore {
-  loadCanvasViewport: (canvasId: SidebarItemId) => PersistedCanvasViewport
-  saveCanvasViewport: (canvasId: SidebarItemId, viewport: PersistedCanvasViewport) => void
+  loadCanvasViewport: (canvasId: ResourceId) => PersistedCanvasViewport
+  saveCanvasViewport: (canvasId: ResourceId, viewport: PersistedCanvasViewport) => void
 }

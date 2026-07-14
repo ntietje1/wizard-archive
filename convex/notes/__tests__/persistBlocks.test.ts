@@ -5,7 +5,12 @@ import {
   createNoteViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createNote, createSidebarShare, testBlockNoteId } from '../../_test/factories.helper'
+import {
+  createNote,
+  createSidebarShare,
+  getSidebarItemRowId,
+  testBlockNoteId,
+} from '../../_test/factories.helper'
 import {
   expectNotAuthenticated,
   expectPermissionDenied,
@@ -84,6 +89,7 @@ describe('persistBlocks', () => {
       name: 'Empty Doc Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const result = await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignDomainId,
@@ -95,7 +101,7 @@ describe('persistBlocks', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
 
       expect(blocks.length).toBe(0)
@@ -111,6 +117,7 @@ describe('persistBlocks', () => {
       name: 'Persist Blocks Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
       campaignId: ctx.campaignDomainId,
@@ -128,7 +135,7 @@ describe('persistBlocks', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
 
       expect(blocks.length).toBe(0)
@@ -144,6 +151,7 @@ describe('persistBlocks', () => {
       name: 'Content Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const blockIds = {
       heading: testBlockNoteId('heading-block-1'),
@@ -181,7 +189,7 @@ describe('persistBlocks', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
 
       expect(blocks.length).toBe(2)
@@ -217,11 +225,12 @@ describe('persistBlocks', () => {
       name: 'Imported Text Canvas',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const canvasRowId = await getSidebarItemRowId(t, canvasId)
 
     const beforeUpdateCount = await t.run(async (dbCtx) => {
       const updates = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', canvasRowId))
         .collect()
       return updates.length
     })
@@ -238,11 +247,11 @@ describe('persistBlocks', () => {
     await t.run(async (dbCtx) => {
       const updates = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', canvasId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', canvasRowId))
         .collect()
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), canvasId))
+        .filter((q) => q.eq(q.field('noteId'), canvasRowId))
         .collect()
 
       expect(updates).toHaveLength(beforeUpdateCount)
@@ -259,6 +268,7 @@ describe('persistBlocks', () => {
       name: 'Imported Text Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     const content: Array<PartialNoteBlock> = [
       {
@@ -280,7 +290,7 @@ describe('persistBlocks', () => {
     const beforeUpdateCount = await t.run(async (dbCtx) => {
       const updates = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
         .collect()
       return updates.length
     })
@@ -295,11 +305,11 @@ describe('persistBlocks', () => {
     await t.run(async (dbCtx) => {
       const updates = await dbCtx.db
         .query('yjsUpdates')
-        .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
+        .withIndex('by_document_seq', (q) => q.eq('documentId', noteRowId))
         .collect()
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
 
       expect(updates).toHaveLength(beforeUpdateCount + 1)
@@ -311,11 +321,11 @@ describe('persistBlocks', () => {
 
   it('rejects malformed nested blocks before syncing derived data', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expect(
       t.mutation(internal.notes.internalMutations.syncDerivedDataFromBlocks, {
-        noteId,
+        noteId: noteRowId,
         content: [
           {
             id: testBlockNoteId('root'),
@@ -333,11 +343,11 @@ describe('persistBlocks', () => {
 
   it('rejects malformed table content before syncing derived data', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expect(
       t.mutation(internal.notes.internalMutations.syncDerivedDataFromBlocks, {
-        noteId,
+        noteId: noteRowId,
         content: [
           {
             id: testBlockNoteId('table'),
@@ -363,6 +373,7 @@ describe('persistBlocks', () => {
       name: 'Embed Aspect Ratio Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
       campaignId: ctx.campaignDomainId,
@@ -394,7 +405,7 @@ describe('persistBlocks', () => {
         .withIndex('by_campaign_note_block', (q) =>
           q
             .eq('campaignId', ctx.campaignId)
-            .eq('noteId', noteId)
+            .eq('noteId', noteRowId)
             .eq('blockNoteId', testBlockNoteId('embed-block-1')),
         )
         .first()
@@ -415,6 +426,7 @@ describe('persistBlocks', () => {
       name: 'Value Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
       campaignId: ctx.campaignDomainId,
@@ -447,7 +459,7 @@ describe('persistBlocks', () => {
       const rows = await dbCtx.db
         .query('noteValues')
         .withIndex('by_campaign_note', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteRowId),
         )
         .collect()
 

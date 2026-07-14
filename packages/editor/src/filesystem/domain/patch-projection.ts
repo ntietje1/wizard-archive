@@ -1,4 +1,5 @@
-import type { SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import type { ResourceId } from '../../resources/domain-id'
+import type { UserProfileId } from '../../../../../shared/common/ids'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import { diffResourceFields, hasMismatchedPrecondition } from '../patch-contract'
 import type { ResourcePatch, ResourcePatchRow } from '../patch-contract'
@@ -46,7 +47,7 @@ function pushRemove<T extends ResourcePatchRow>(patches: OptimisticPatchPair, it
   patches.inversePatches.push({ type: 'upsertResource', item })
 }
 
-function treeItems<T extends ResourcePatchRow>(items: Array<T>, rootId: SidebarItemId) {
+function treeItems<T extends ResourcePatchRow>(items: Array<T>, rootId: ResourceId) {
   const itemsById = new Map(items.map((item) => [item.id, item]))
   const root = itemsById.get(rootId)
   if (!root) return []
@@ -61,7 +62,7 @@ function treeItems<T extends ResourcePatchRow>(items: Array<T>, rootId: SidebarI
 
 export function projectTrashRoots<T extends ResourcePatchRow>(
   items: Array<T>,
-  rootIds: Array<SidebarItemId>,
+  rootIds: Array<ResourceId>,
   metadata: { now: number; userId: UserProfileId | null },
 ): OptimisticPatchPair {
   const patches = emptyPatchPair()
@@ -80,8 +81,8 @@ export function projectTrashRoots<T extends ResourcePatchRow>(
 
 function projectRestoreRoots<T extends ResourcePatchRow>(
   items: Array<T>,
-  rootIds: Array<SidebarItemId>,
-  targetParentId: SidebarItemId | null,
+  rootIds: Array<ResourceId>,
+  targetParentId: ResourceId | null,
   rootFields: Partial<T> = {},
 ): OptimisticPatchPair {
   const patches = emptyPatchPair()
@@ -102,7 +103,7 @@ function projectRestoreRoots<T extends ResourcePatchRow>(
 
 export function projectDeleteForeverRoots<T extends ResourcePatchRow>(
   items: Array<T>,
-  rootIds: Array<SidebarItemId>,
+  rootIds: Array<ResourceId>,
 ): OptimisticPatchPair {
   const patches = emptyPatchPair()
   for (const rootId of rootIds) {
@@ -126,9 +127,9 @@ function projectMoveOrRestoreOperation<T extends ResourcePatchRow>({
   operation,
 }: {
   patches: OptimisticPatchPair
-  activeItemsById: ReadonlyMap<SidebarItemId, T>
+  activeItemsById: ReadonlyMap<ResourceId, T>
   trashItems: Array<T>
-  trashItemsById: ReadonlyMap<SidebarItemId, T>
+  trashItemsById: ReadonlyMap<ResourceId, T>
   operation: TransferOperation
 }) {
   const source = activeItemsById.get(operation.sourceItemId)
@@ -209,16 +210,16 @@ export function projectMoveOperations<T extends ResourcePatchRow>({
   return patches
 }
 
-export function applyFileSystemPatchesToSnapshot<T extends { id: SidebarItemId }>(
+export function applyFileSystemPatchesToSnapshot<T extends { id: ResourceId }>(
   snapshot: FileSystemPatchSnapshot<T>,
   patches: Array<ResourcePatch>,
 ): FileSystemPatchSnapshot<T | PatchProjectionItem> {
-  const itemsById = new Map<SidebarItemId, T | PatchProjectionItem>(
+  const itemsById = new Map<ResourceId, T | PatchProjectionItem>(
     snapshot.items.map((item) => [item.id, item]),
   )
   const order = snapshot.items.map((item) => item.id)
   const orderIds = new Set(order)
-  const removedIds = new Set<SidebarItemId>()
+  const removedIds = new Set<ResourceId>()
 
   for (const patch of patches) {
     if (patch.type === 'removeResource') {

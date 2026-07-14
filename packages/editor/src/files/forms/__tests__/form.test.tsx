@@ -1,14 +1,14 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../../resources/domain-id'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { assertResourceItemColor, assertResourceItemSlug } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import { FileForm } from '../form'
 import type { FileUploadControl } from '@wizard-archive/ui/file-upload/control'
 import type { FileFormEditState, FileFormSource } from '../source'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
 const { toastError, toastSuccess } = vi.hoisted(() => ({
   toastError: vi.fn(),
@@ -36,7 +36,7 @@ describe('FileForm', () => {
 
   it('treats an edit load as pending file state instead of missing upload state', () => {
     renderFileForm({
-      fileId: testId('file_1'),
+      fileId: testResourceId('file_1'),
       fileState: { status: 'loading', item: null, isPending: true, error: null },
     })
 
@@ -48,7 +48,7 @@ describe('FileForm', () => {
     const source = createFileFormSource()
     const upload = createUploadControl()
     const file = createFile({
-      id: testId('file_1'),
+      id: testResourceId('file_1'),
       color: assertResourceItemColor('#3366ff'),
       iconName: 'FileText',
       name: 'Loaded handout',
@@ -93,7 +93,7 @@ describe('FileForm', () => {
     const source = createFileFormSource()
 
     renderFileForm({
-      fileId: testId('file_1'),
+      fileId: testResourceId('file_1'),
       fileState: { status: 'not_found', item: null, isPending: false, error: null },
       source,
     })
@@ -105,7 +105,7 @@ describe('FileForm', () => {
   })
 
   it('accepts the effective uploaded filename when the optional name is blank', () => {
-    const parentId: SidebarItemId = testId<'sidebarItems'>('parent_folder')
+    const parentId: ResourceId = testResourceId('parent_folder')
     const uploadedFile = new File(['duplicate'], 'duplicate.pdf', { type: 'application/pdf' })
     const source = createFileFormSource()
 
@@ -124,7 +124,7 @@ describe('FileForm', () => {
 
   it('updates existing file metadata when the stored file is still present', async () => {
     const file = createFile({
-      id: testId('file_1'),
+      id: testResourceId('file_1'),
       name: 'Handout',
       slug: 'handout',
       assetId: generateDomainId(DOMAIN_ID_KIND.asset),
@@ -157,7 +157,7 @@ describe('FileForm', () => {
   it('reports replacement upload failures after existing file metadata is saved', async () => {
     const replacement = new File(['updated'], 'updated.txt', { type: 'text/plain' })
     const file = createFile({
-      id: testId('file_1'),
+      id: testResourceId('file_1'),
       name: 'Handout',
       slug: 'handout',
       assetId: generateDomainId(DOMAIN_ID_KIND.asset),
@@ -198,7 +198,7 @@ describe('FileForm', () => {
   it('reports receipt-level replacement failures after existing file metadata is saved', async () => {
     const replacement = new File(['updated'], 'updated.txt', { type: 'text/plain' })
     const file = createFile({
-      id: testId('file_1'),
+      id: testResourceId('file_1'),
       name: 'Handout',
       slug: 'handout',
       assetId: generateDomainId(DOMAIN_ID_KIND.asset),
@@ -248,7 +248,7 @@ describe('FileForm', () => {
 
     await waitFor(() => {
       expect(source.replaceFile).toHaveBeenCalledWith({
-        fileId: testId<'sidebarItems'>('created_file'),
+        fileId: testResourceId('created_file'),
         file: expect.objectContaining({
           contentType: 'text/plain',
           name: 'handout.txt',
@@ -257,7 +257,7 @@ describe('FileForm', () => {
       })
     })
     expect(source.createItem).toHaveBeenCalled()
-    expect(source.openItem).toHaveBeenCalledWith(testId<'sidebarItems'>('created_file'))
+    expect(source.openItem).toHaveBeenCalledWith(testResourceId('created_file'))
     expect(toastSuccess).toHaveBeenCalledWith('File created')
     expect(onSuccess).toHaveBeenCalledWith(assertResourceItemSlug('created-file'))
     expect(onClose).toHaveBeenCalled()
@@ -355,11 +355,11 @@ function renderFileForm({
   source = createFileFormSource(),
   upload = createUploadControl(),
 }: {
-  fileId?: SidebarItemId
+  fileId?: ResourceId
   fileState?: FileFormEditState
   onClose?: () => void
   onSuccess?: (fileSlug?: string) => void
-  parentId?: SidebarItemId | null
+  parentId?: ResourceId | null
   source?: FileFormSource
   upload?: FileUploadControl
 } = {}) {
@@ -381,7 +381,7 @@ function createFileFormSource(overrides: Partial<FileFormSource> = {}): FileForm
     createItem: vi.fn(async (_values, attachFile) => {
       const created = {
         status: 'completed' as const,
-        id: testId<'sidebarItems'>('created_file'),
+        id: testResourceId('created_file'),
         slug: assertResourceItemSlug('created-file'),
       }
       await attachFile(created)

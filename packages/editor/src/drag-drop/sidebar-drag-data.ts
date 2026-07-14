@@ -1,6 +1,7 @@
+import type { ResourceId } from '../resources/domain-id'
 import { useMemo } from 'react'
 import type { AnyItem } from '../workspace/items'
-import type { SidebarItemId } from '../../../../shared/common/ids'
+
 import { selectionBelongsToSurface } from '../filesystem/selection'
 import type { ResourceOperationItems } from '../filesystem/catalog'
 import { useSidebarWorkspaceState } from '../workspace/sidebar/workspace-state'
@@ -12,7 +13,7 @@ type SidebarDragSelection = Pick<
 >
 
 interface SidebarDragCatalog {
-  getKnownItemById: (id: SidebarItemId) => AnyItem | null | undefined
+  getKnownItemById: (id: ResourceId) => AnyItem | null | undefined
 }
 
 interface SidebarDragDataSourceInput {
@@ -25,9 +26,9 @@ export interface SidebarDragDataSource {
     item: AnyItem,
     selection: SidebarDragSelection,
   ) => {
-    sidebarItemId: SidebarItemId
-    sidebarItemIds: Array<SidebarItemId>
-    dragPreviewItemIds: Array<SidebarItemId>
+    sidebarItemId: ResourceId
+    sidebarItemIds: Array<ResourceId>
+    dragPreviewItemIds: Array<ResourceId>
   }
 }
 

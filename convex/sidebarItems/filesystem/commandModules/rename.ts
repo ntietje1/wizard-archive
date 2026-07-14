@@ -11,14 +11,17 @@ import type { EditHistoryChange } from '@wizard-archive/editor/resources/history
 import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
 import type { ResourcePatch } from '@wizard-archive/editor/resources/patch-contract'
 import { createFileSystemWriteSession } from '../deltas'
-import { getSidebarItemRow } from '../sidebarItemRows'
 import { requireSidebarItemRowOperationAccess } from '../access'
 import { isActiveSidebarItem } from '../../types/status'
 import type { AccessibleSidebarItemRow } from '../access'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { StoredResourceDelta } from '../deltas'
+import { requireSidebarItemRow, sidebarItemResourceId } from '../../functions/sidebarItemIdentity'
 type RenameFileSystemCommand = Extract<ResourceCommand, { type: 'rename' }>
-type SidebarItemUpdates = Extract<ResourcePatch, { type: 'updateResource' }>['fields']
+type SidebarItemUpdates = Pick<
+  Extract<ResourcePatch, { type: 'updateResource' }>['fields'],
+  'name' | 'slug' | 'iconName' | 'color'
+>
 
 type RenameChangeSet = {
   updates: SidebarItemUpdates
@@ -34,8 +37,7 @@ export async function executeRenameCommand(
   },
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
-  const rawItem = await getSidebarItemRow(ctx, command.itemId)
-  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
+  const rawItem = await requireSidebarItemRow(ctx, command.itemId)
   const item = await requireSidebarItemRowOperationAccess(ctx, {
     rawItem,
     operation: PERMISSION_OPERATION.RENAME_SIDEBAR_ITEM,
@@ -47,7 +49,7 @@ export async function executeRenameCommand(
   const { updates, changes } = await collectRenameChanges(ctx, item, command)
 
   if (changes.length === 0) {
-    const events = [{ type: RESOURCE_EVENT_TYPE.noop, itemId: item._id }]
+    const events = [{ type: RESOURCE_EVENT_TYPE.noop, itemId: sidebarItemResourceId(item) }]
     return await session.build({
       command,
       events,
@@ -125,12 +127,12 @@ async function collectSidebarMetadataChanges(
 
 function buildRenameEvents(item: AccessibleSidebarItemRow, updates: SidebarItemUpdates) {
   if (typeof updates.slug !== 'string') {
-    return [{ type: RESOURCE_EVENT_TYPE.updated, itemId: item._id }]
+    return [{ type: RESOURCE_EVENT_TYPE.updated, itemId: sidebarItemResourceId(item) }]
   }
   return [
     {
       type: RESOURCE_EVENT_TYPE.renamed,
-      itemId: item._id,
+      itemId: sidebarItemResourceId(item),
       slug: updates.slug,
       previousSlug: item.slug,
     },

@@ -1,14 +1,14 @@
+import type { ResourceId, MapPinId } from '../../resources/domain-id'
 import type { AnyItem } from '../../workspace/items'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-import type { MapPinId } from '../../resources/domain-id'
+
 import type { MaybePromise } from '../../../../../shared/common/async'
 import type { WorkspaceMenuContext } from '../../workspace/menu-context'
 import type { MapPinInteractionRequests } from '../viewer/map-pin-operations'
 import type { ResourceOperationResult } from '../../filesystem/transaction-contract'
 
 interface WorkspaceMapPinActiveMapState {
-  id: SidebarItemId
-  pinnedItemIds: ReadonlySet<SidebarItemId>
+  id: ResourceId
+  pinnedItemIds: ReadonlySet<ResourceId>
 }
 
 interface WorkspaceMapPinActivePinState {
@@ -19,12 +19,12 @@ interface WorkspaceMapPinActivePinState {
 
 interface WorkspaceMapPinOperations {
   removeMapPin: (input: {
-    mapId: SidebarItemId
+    mapId: ResourceId
     mapPinId: MapPinId
   }) => MaybePromise<ResourceOperationResult>
   updateMapPinVisibility: (input: {
     isVisible: boolean
-    mapId: SidebarItemId
+    mapId: ResourceId
     mapPinId: MapPinId
   }) => MaybePromise<ResourceOperationResult>
 }

@@ -1,10 +1,11 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it } from 'vite-plus/test'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
 import { planMapPinCreations, validatePinDropTarget, validatePinTarget } from '../document-contract'
 
-function itemId(value: string): SidebarItemId {
-  return value as SidebarItemId
+function itemId(value: string): ResourceId {
+  return value as ResourceId
 }
 
 describe('planMapPinCreations', () => {

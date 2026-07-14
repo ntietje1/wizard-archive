@@ -1,3 +1,4 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useLiveFileSessionAdapter } from '../session-source'
@@ -59,7 +60,7 @@ function createLiveFileAdapterInput(overrides: { canReplaceFile?: boolean } = {}
     canReplaceFile: () => overrides.canReplaceFile ?? true,
     getItemById: (itemId: string) =>
       createFile({
-        id: itemId as Id<'sidebarItems'>,
+        id: itemId as ResourceId,
         downloadUrl: `https://download/${itemId}`,
         name: 'Current File',
       }),
@@ -92,7 +93,7 @@ describe('useLiveFileSessionAdapter', () => {
     await expect(
       result.current.session.replaceFile({
         file,
-        fileId: 'file-1' as Id<'sidebarItems'>,
+        fileId: 'file-1' as ResourceId,
       }),
     ).resolves.toEqual({
       status: 'completed',
@@ -137,7 +138,7 @@ describe('useLiveFileSessionAdapter', () => {
 
     await result.current.session.replaceFile({
       file,
-      fileId: 'file-1' as Id<'sidebarItems'>,
+      fileId: 'file-1' as ResourceId,
     })
     await vi.waitFor(() => expect(handleErrorMock).toHaveBeenCalled())
 
@@ -162,7 +163,7 @@ describe('useLiveFileSessionAdapter', () => {
 
     await result.current.initializeImportedFile({
       file,
-      fileId: 'file-2' as Id<'sidebarItems'>,
+      fileId: 'file-2' as ResourceId,
       onProgress,
     })
 
@@ -200,7 +201,7 @@ describe('useLiveFileSessionAdapter', () => {
     await expect(
       result.current.session.replaceFile({
         file,
-        fileId: 'file-3' as Id<'sidebarItems'>,
+        fileId: 'file-3' as ResourceId,
       }),
     ).resolves.toEqual({ status: 'error', error: updateError })
 
@@ -219,7 +220,7 @@ describe('useLiveFileSessionAdapter', () => {
     await expect(
       result.current.session.replaceFile({
         file,
-        fileId: 'file-4' as Id<'sidebarItems'>,
+        fileId: 'file-4' as ResourceId,
       }),
     ).resolves.toMatchObject({
       status: 'error',
@@ -236,7 +237,7 @@ describe('useLiveFileSessionAdapter', () => {
     expect(
       result.current.session.resolveFile(
         createFile({
-          id: 'file-attached' as Id<'sidebarItems'>,
+          id: 'file-attached' as ResourceId,
           assetId: generateDomainId(DOMAIN_ID_KIND.asset),
           downloadUrl: null,
           name: 'Broken handout',
@@ -249,7 +250,7 @@ describe('useLiveFileSessionAdapter', () => {
     expect(
       result.current.session.resolveFile(
         createFile({
-          id: 'file-empty' as Id<'sidebarItems'>,
+          id: 'file-empty' as ResourceId,
           assetId: null,
           downloadUrl: null,
           name: 'Empty handout',

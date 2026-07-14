@@ -1,8 +1,9 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { NewItemCard } from '../new-item-card'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 
 type NewItemCardSource = Parameters<typeof NewItemCard>[0]['source']
@@ -15,7 +16,7 @@ describe('NewItemCard', () => {
   })
 
   it('names the create trigger as a menu button', () => {
-    render(<NewItemCard parentId={'folder_1' as SidebarItemId} source={createTestSource()} />)
+    render(<NewItemCard parentId={'folder_1' as ResourceId} source={createTestSource()} />)
 
     const trigger = screen.getByRole('button', { name: 'Create item in this folder' })
 
@@ -25,7 +26,7 @@ describe('NewItemCard', () => {
 
   it('opens from the keyboard and includes Canvas creation', async () => {
     const user = userEvent.setup()
-    render(<NewItemCard parentId={'folder_1' as SidebarItemId} source={createTestSource()} />)
+    render(<NewItemCard parentId={'folder_1' as ResourceId} source={createTestSource()} />)
 
     const trigger = screen.getByRole('button', { name: 'Create item in this folder' })
     trigger.focus()
@@ -38,7 +39,7 @@ describe('NewItemCard', () => {
   it('creates a canvas in the current folder', async () => {
     const user = userEvent.setup()
     createItemMock.mockResolvedValue({ status: 'completed', id: 'canvas_1', slug: 'canvas-1' })
-    render(<NewItemCard parentId={'folder_1' as SidebarItemId} source={createTestSource()} />)
+    render(<NewItemCard parentId={'folder_1' as ResourceId} source={createTestSource()} />)
 
     await user.click(screen.getByRole('button', { name: 'Create item in this folder' }))
     await user.click(await screen.findByText('New Canvas'))
@@ -55,7 +56,7 @@ describe('NewItemCard', () => {
   it('creates a canvas from keyboard menu selection', async () => {
     const user = userEvent.setup()
     createItemMock.mockResolvedValue({ status: 'completed', id: 'canvas_1', slug: 'canvas-1' })
-    render(<NewItemCard parentId={'folder_1' as SidebarItemId} source={createTestSource()} />)
+    render(<NewItemCard parentId={'folder_1' as ResourceId} source={createTestSource()} />)
 
     await user.click(screen.getByRole('button', { name: 'Create item in this folder' }))
     const canvasItem = await screen.findByRole('menuitem', { name: 'New Canvas' })
@@ -74,7 +75,7 @@ describe('NewItemCard', () => {
   it('ignores duplicate create requests while creation is pending', async () => {
     const user = userEvent.setup()
     createItemMock.mockImplementation(() => new Promise(() => undefined))
-    render(<NewItemCard parentId={'folder_1' as SidebarItemId} source={createTestSource()} />)
+    render(<NewItemCard parentId={'folder_1' as ResourceId} source={createTestSource()} />)
 
     const trigger = screen.getByRole('button', { name: 'Create item in this folder' })
     await user.click(trigger)

@@ -1,5 +1,5 @@
-import type { SidebarItemId } from '../../../../shared/common/ids'
-import type { CampaignMemberId } from '../resources/domain-id'
+import type { ResourceId, CampaignMemberId } from '../resources/domain-id'
+
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { AnyItem, ValidationResult, CreateParentTarget } from '../workspace/items'
 import type { ResourceKind } from '../workspace/resource-contract'
@@ -23,7 +23,7 @@ export interface NoteLinkResolutionSource {
   resolveItemPath: (input: {
     pathKind: LinkPathKind
     pathSegments: Array<string>
-    sourceNoteId: SidebarItemId | undefined
+    sourceNoteId: ResourceId | undefined
   }) => AnyItem | null
 }
 
@@ -37,7 +37,7 @@ export interface LinkClickCreateItemArgs {
 
 export interface OpenInternalLinkInput {
   heading?: string
-  itemId: SidebarItemId
+  itemId: ResourceId
 }
 
 export interface RuntimeNoteContentSource {
@@ -69,7 +69,7 @@ export interface NoteSharingContentSource {
 }
 
 export interface NotePlaybackContentSource {
-  getNoteCollaborationPlayback?: (noteId: SidebarItemId) => NoteCollaborationPlayback | undefined
+  getNoteCollaborationPlayback?: (noteId: ResourceId) => NoteCollaborationPlayback | undefined
 }
 
 export interface NoteDocumentContentSource {
@@ -91,7 +91,7 @@ export interface EmbeddedNoteContentSource {
 }
 
 export interface NoteLinkNavigationSource {
-  getSourceParentId: (sourceNoteId: SidebarItemId) => SidebarItemId | null | undefined
+  getSourceParentId: (sourceNoteId: ResourceId) => ResourceId | null | undefined
   openExternalLink: (url: string) => unknown
   openInternalLink: (input: OpenInternalLinkInput) => unknown
   openInternalLinkSeparately: (input: OpenInternalLinkInput) => unknown

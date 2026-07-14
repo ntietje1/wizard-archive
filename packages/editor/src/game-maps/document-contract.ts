@@ -1,7 +1,7 @@
 import { DOMAIN_ID_KIND, isUuidV7, parseDomainId } from '../resources/domain-id'
-import type { AssetId, MapPinId } from '../resources/domain-id'
+import type { AssetId, MapPinId, ResourceId } from '../resources/domain-id'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../workspace/items-persistence-contract'
-import type { ResourceId, ResourceStatus, ResourceKind } from '../workspace/resource-contract'
+import type { ResourceStatus, ResourceKind } from '../workspace/resource-contract'
 
 export type PinDropValidationCode =
   | 'self_pin'

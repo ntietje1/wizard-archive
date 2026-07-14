@@ -13,8 +13,16 @@ describe('emptyTrash filesystem command', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId: n1, noteRowId: n1RowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+    )
+    const { noteId: n2, noteRowId: n2RowId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+    )
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -33,8 +41,8 @@ describe('emptyTrash filesystem command', () => {
     })
     expect(trashItems.length).toBe(0)
 
-    const d1 = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', n1))
-    const d2 = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', n2))
+    const d1 = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', n1RowId))
+    const d2 = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', n2RowId))
     expect(d1).toBeNull()
     expect(d2).toBeNull()
   })

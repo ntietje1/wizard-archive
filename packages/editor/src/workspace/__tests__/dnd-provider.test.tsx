@@ -1,3 +1,4 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { ComponentProps, ReactElement } from 'react'
@@ -12,7 +13,6 @@ import type { WorkspaceNavigation } from '../runtime'
 import type { SidebarWorkspaceState } from '../sidebar/workspace-state'
 import { SidebarWorkspaceStateProvider } from '../sidebar/workspace-state'
 import { createWorkspaceResource } from '../runtime'
-import { testId } from '../../test/id'
 
 type DndRuntimeProviderProps = ComponentProps<typeof DndRuntimeProvider>
 
@@ -72,9 +72,9 @@ describe('WorkspaceRuntimeDndProvider', () => {
       status: 'unsupported',
       reason: 'external_file_drops_disabled',
     })
-    const noteId = testId<'sidebarItems'>('note_market')
-    const childNoteId = testId<'sidebarItems'>('note_clues')
-    const canvasId = testId<'sidebarItems'>('canvas_heist')
+    const noteId = testResourceId('note_market')
+    const childNoteId = testResourceId('note_clues')
+    const canvasId = testResourceId('canvas_heist')
 
     expect(props?.catalog.getKnownItemById(noteId)).toBe(
       runtime.filesystem.catalog.getKnownItemById(noteId),
@@ -148,7 +148,7 @@ describe('WorkspaceRuntimeDndProvider', () => {
       kind: 'note',
       fileName: 'notes.txt',
       result: {
-        id: testId<'sidebarItems'>('note_clues'),
+        id: testResourceId('note_clues'),
         slug: 'note-clues',
       },
     })
@@ -184,20 +184,17 @@ describe('WorkspaceRuntimeDndProvider', () => {
       ).resolves.toEqual({
         status: 'completed',
         receipt: {
-          id: 'note_clues',
+          id: testResourceId('note_clues'),
           slug: 'note-clues',
         },
       })
     }
 
     expect(importFile).toHaveBeenCalled()
-    expect(setFolderState).toHaveBeenCalledWith('folder_clues', true)
-    expect(openItem).toHaveBeenCalledWith(
-      createWorkspaceResource(testId<'sidebarItems'>('note_clues')),
-      {
-        replace: true,
-      },
-    )
+    expect(setFolderState).toHaveBeenCalledWith(testResourceId('folder_clues'), true)
+    expect(openItem).toHaveBeenCalledWith(createWorkspaceResource(testResourceId('note_clues')), {
+      replace: true,
+    })
   })
 })
 
@@ -229,20 +226,20 @@ function createRuntime({
   openItem: WorkspaceNavigation['openItem']
 }): WorkspaceRuntimeDndProviderRuntime {
   const folder = createFolder({
-    id: testId<'sidebarItems'>('folder_clues'),
+    id: testResourceId('folder_clues'),
     name: 'Clues',
   })
   const note = createNote({
-    id: testId<'sidebarItems'>('note_market'),
+    id: testResourceId('note_market'),
     name: 'The Lantern Market',
   })
   const childNote = createNote({
-    id: testId<'sidebarItems'>('note_clues'),
+    id: testResourceId('note_clues'),
     name: 'Clue Board',
     parentId: folder.id,
   })
   const canvas = createGameMap({
-    id: testId<'sidebarItems'>('canvas_heist'),
+    id: testResourceId('canvas_heist'),
     name: 'Harbor Heist Board',
   })
   const operations = {

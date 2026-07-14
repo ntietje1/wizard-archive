@@ -1,8 +1,9 @@
+import type { ResourceId, HistoryEntryId, NoteBlockId } from '../../resources/domain-id'
 import { RIGHT_SIDEBAR_CONTENT } from './content'
 import type { RightSidebarContentId } from './content'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { Heading } from '../../notes/document/model'
-import type { HistoryEntryId, NoteBlockId } from '../../resources/domain-id'
+
 import type { WorkspaceNavigation } from '../runtime'
 import type { ResourceHistory } from '../../filesystem/history-types'
 import type { ItemLinksCapability } from '../../filesystem/search'
@@ -17,7 +18,7 @@ type UnavailableOutlineAvailabilityState = Exclude<
 type RightSidebarHistorySource =
   | {
       status: 'available'
-      itemId: SidebarItemId
+      itemId: ResourceId
       entries: Extract<ResourceHistory, { status: 'available' }>['entries']
       previewEntry: (entryId: HistoryEntryId | null) => void
       requestRollback: (entryId: HistoryEntryId) => void
@@ -33,7 +34,7 @@ export type RightSidebarOutlineState =
   | { status: 'success'; headings: Array<Heading> }
 
 export interface RightSidebarOutlineSource {
-  getOutlineState: (itemId: SidebarItemId) => RightSidebarOutlineState
+  getOutlineState: (itemId: ResourceId) => RightSidebarOutlineState
   navigateToHeading: (noteBlockId: NoteBlockId) => void
 }
 

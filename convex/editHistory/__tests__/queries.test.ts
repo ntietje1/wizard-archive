@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createNote, createSidebarShare } from '../../_test/factories.helper'
+import { createNote, createSidebarShare, getSidebarItemRowId } from '../../_test/factories.helper'
 import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import {
@@ -22,10 +22,11 @@ describe('edit history queries', () => {
       name: 'Canonical history note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
     const historyEntry = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'created'))
+        .withIndex('by_item_action', (q) => q.eq('itemId', noteRowId).eq('action', 'created'))
         .unique()
     })
 
@@ -73,6 +74,7 @@ describe('edit history queries', () => {
       name: 'Shared history note',
       parentTarget: { kind: 'direct', parentId: null },
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
     await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
@@ -84,7 +86,7 @@ describe('edit history queries', () => {
     const historyEntry = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('editHistory')
-        .withIndex('by_item_action', (q) => q.eq('itemId', noteId).eq('action', 'created'))
+        .withIndex('by_item_action', (q) => q.eq('itemId', noteRowId).eq('action', 'created'))
         .first()
     })
     expect(historyEntry).not.toBeNull()

@@ -10,12 +10,14 @@ import { assertSidebarOperationAllowed, operationActorFromRole } from '../capabi
 import { evaluateCreateItem } from '@wizard-archive/editor/resources/operation-capabilities'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
 
 type CreateFileSystemCommand = Extract<ResourceCommand, { type: 'create' }>
 
 type CreatedItem = {
   itemId: Id<'sidebarItems'>
+  resourceId: ResourceId
   slug: string
 }
 
@@ -33,7 +35,7 @@ async function createSidebarItem(
   const color = requireOptionalSidebarItemColor(command.color)
   const parentId = await resolveCreateCommandParentId(ctx, session, { parentTarget })
 
-  const { itemId, slug } = await session.insertResource({
+  const { itemId, resourceId, slug } = await session.insertResource({
     type: command.itemType,
     name,
     parentId,
@@ -42,7 +44,7 @@ async function createSidebarItem(
   })
 
   await initializeEmptySidebarItemCompanion(ctx, { itemId, itemType: command.itemType })
-  return { itemId, slug }
+  return { itemId, resourceId, slug }
 }
 
 export async function executeCreateCommand(
@@ -55,7 +57,9 @@ export async function executeCreateCommand(
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
   const created = await createSidebarItem(ctx, session, command)
-  const events = [{ type: RESOURCE_EVENT_TYPE.created, itemId: created.itemId, slug: created.slug }]
+  const events = [
+    { type: RESOURCE_EVENT_TYPE.created, itemId: created.resourceId, slug: created.slug },
+  ]
   return await session.build({
     command,
     events,

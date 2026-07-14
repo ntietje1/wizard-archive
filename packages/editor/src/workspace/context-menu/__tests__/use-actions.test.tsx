@@ -1,9 +1,9 @@
+import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
-import { testId } from '../../../test/id'
 import { useWorkspaceContextMenuActions } from '../use-actions'
 import { createWorkspaceResource } from '../../runtime'
 import { createWorkspaceFilesystemContextMenuTarget } from '../filesystem-target'
@@ -96,8 +96,8 @@ describe('useWorkspaceContextMenuActions', () => {
   })
 
   it('routes general access changes through filesystem sharing operations', async () => {
-    const first = createNote({ id: testId<'sidebarItems'>('note_1') })
-    const second = createNote({ id: testId<'sidebarItems'>('note_2') })
+    const first = createNote({ id: testResourceId('note_1') })
+    const second = createNote({ id: testResourceId('note_2') })
     const { result } = renderContextMenuActions(runtime)
 
     await result.current.sharing.setGeneralAccessLevel(
@@ -117,8 +117,8 @@ describe('useWorkspaceContextMenuActions', () => {
   })
 
   it('reports failed access changes once with the selected item count', async () => {
-    const first = createNote({ id: testId<'sidebarItems'>('note_1') })
-    const second = createNote({ id: testId<'sidebarItems'>('note_2') })
+    const first = createNote({ id: testResourceId('note_1') })
+    const second = createNote({ id: testResourceId('note_2') })
     setDefaultPermissionMock.mockRejectedValue(new Error('Share failed'))
     const { result } = renderContextMenuActions(runtime)
 
@@ -137,7 +137,7 @@ describe('useWorkspaceContextMenuActions', () => {
   })
 
   it('does not report success for non-completed access results', async () => {
-    const first = createNote({ id: testId<'sidebarItems'>('note_1') })
+    const first = createNote({ id: testResourceId('note_1') })
     setDefaultPermissionMock.mockResolvedValue({ status: 'blocked', reason: 'not_mutable' })
     const { result } = renderContextMenuActions(runtime)
 
@@ -155,7 +155,7 @@ describe('useWorkspaceContextMenuActions', () => {
   })
 
   it('does not require panel projection state to run access mutations', async () => {
-    const first = createNote({ id: testId<'sidebarItems'>('note_1') })
+    const first = createNote({ id: testResourceId('note_1') })
     const { result } = renderContextMenuActions(runtime)
 
     await result.current.sharing.setGeneralAccessLevel(
@@ -173,8 +173,8 @@ describe('useWorkspaceContextMenuActions', () => {
   })
 
   it('routes bookmark changes through the labeled context item', async () => {
-    const first = createNote({ id: testId<'sidebarItems'>('note_1') })
-    const second = createNote({ id: testId<'sidebarItems'>('note_2') })
+    const first = createNote({ id: testResourceId('note_1') })
+    const second = createNote({ id: testResourceId('note_2') })
     const { result } = renderContextMenuActions(runtime)
 
     await result.current.sidebarItem.toggleBookmark({
@@ -183,11 +183,11 @@ describe('useWorkspaceContextMenuActions', () => {
       selectedItems: [first, second],
     })
 
-    expect(toggleBookmarksMock).toHaveBeenCalledExactlyOnceWith(['note_1'])
+    expect(toggleBookmarksMock).toHaveBeenCalledExactlyOnceWith([first.id])
   })
 
   it('does not report bookmark success for non-completed command results', async () => {
-    const note = createNote({ id: testId<'sidebarItems'>('note_1') })
+    const note = createNote({ id: testResourceId('note_1') })
     toggleBookmarksMock.mockResolvedValue({ status: 'error' })
     const { result } = renderContextMenuActions(runtime)
 
@@ -214,7 +214,7 @@ describe('useWorkspaceContextMenuActions', () => {
   })
 
   it('opens sidebar items through workspace runtime selection', async () => {
-    const note = createNote({ id: testId<'sidebarItems'>('note_1') })
+    const note = createNote({ id: testResourceId('note_1') })
     runtime = createTestWorkspaceRuntime({
       activeItems: [note],
       item: note,
@@ -234,7 +234,7 @@ describe('useWorkspaceContextMenuActions', () => {
   })
 
   it('opens sidebar items separately through workspace runtime navigation', async () => {
-    const note = createNote({ id: testId<'sidebarItems'>('note_1') })
+    const note = createNote({ id: testResourceId('note_1') })
     runtime = createTestWorkspaceRuntime({
       activeItems: [note],
       item: note,

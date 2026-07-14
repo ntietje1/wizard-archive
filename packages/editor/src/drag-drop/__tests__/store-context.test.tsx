@@ -1,11 +1,11 @@
+import { testResourceId } from '../../../../../shared/test/resource-id'
+import type { ResourceId } from '../../resources/domain-id'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vite-plus/test'
 import { DndStoreContext, createDndStore, useDndStore } from '../store'
-import { testId } from '../../test/id'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
 
-function DragPreviewProbe({ itemId, label }: { itemId: SidebarItemId; label: string }) {
+function DragPreviewProbe({ itemId, label }: { itemId: ResourceId; label: string }) {
   const previewItemIds = useDndStore((state) => state.dragPreviewItemIds)
   const setDragPreviewItemIds = useDndStore((state) => state.setDragPreviewItemIds)
 
@@ -20,8 +20,8 @@ describe('drag-drop store context', () => {
   it('scopes drag state to the nearest runtime store', async () => {
     const firstStore = createDndStore()
     const secondStore = createDndStore()
-    const firstItemId = testId<'sidebarItems'>('note_first')
-    const secondItemId = testId<'sidebarItems'>('note_second')
+    const firstItemId = testResourceId('note_first')
+    const secondItemId = testResourceId('note_second')
 
     render(
       <>

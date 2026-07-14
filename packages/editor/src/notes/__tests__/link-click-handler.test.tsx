@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../resources/domain-id'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { CustomBlockNoteEditor } from '../editor-schema'
@@ -8,7 +9,7 @@ import { NoteLinkClickHandler as LinkClickHandler } from '../document-runtime'
 import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory'
 import { createRuntimeNoteContentSource } from '../runtime-content-source'
 import type { LinkStatus, LinkType } from '../links/decoration'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { FileSystemOperations } from '../../filesystem/operations'
 import type { WorkspaceNavigation, WorkspaceRuntime } from '../../workspace/runtime'
 import { getWorkspaceResourceId } from '../../workspace/runtime'
@@ -62,7 +63,7 @@ function createLink({
   pathKind?: 'global' | 'relative'
   href?: string | null
   itemPath?: Array<string>
-  itemId?: SidebarItemId | null
+  itemId?: ResourceId | null
   itemName?: string | null
   itemSlug?: string | null
   heading?: string | null
@@ -128,7 +129,7 @@ describe('LinkClickHandler', () => {
         exists: true,
         type: 'wiki',
         href: '/dest?item=lore',
-        itemId: 'lore-id' as SidebarItemId,
+        itemId: 'lore-id' as ResourceId,
         itemSlug: 'lore',
       }),
     )
@@ -157,7 +158,7 @@ describe('LinkClickHandler', () => {
         exists: true,
         type: 'wiki',
         href: '/dest?item=lore',
-        itemId: 'lore-id' as SidebarItemId,
+        itemId: 'lore-id' as ResourceId,
         itemSlug: 'lore',
       }),
     )
@@ -176,7 +177,7 @@ describe('LinkClickHandler', () => {
         exists: true,
         type: 'wiki',
         href: '/dest?item=lore',
-        itemId: 'lore-id' as SidebarItemId,
+        itemId: 'lore-id' as ResourceId,
         itemSlug: 'lore',
       }),
     )
@@ -489,7 +490,7 @@ describe('LinkClickHandler', () => {
       }),
     )
 
-    renderLinkClickHandler({ sourceNoteId: 'note-source' as SidebarItemId })
+    renderLinkClickHandler({ sourceNoteId: 'note-source' as ResourceId })
 
     fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
 
@@ -621,7 +622,7 @@ describe('LinkClickHandler', () => {
         exists: true,
         type: 'wiki',
         href: null,
-        itemId: 'capital-id' as SidebarItemId,
+        itemId: 'capital-id' as ResourceId,
         itemSlug: 'capital',
         heading: 'Overview',
       }),
@@ -640,7 +641,7 @@ describe('LinkClickHandler', () => {
         exists: true,
         type: 'wiki',
         href: null,
-        itemId: 'capital-id' as SidebarItemId,
+        itemId: 'capital-id' as ResourceId,
         itemSlug: 'capital',
         heading: 'Overview',
       }),
@@ -680,7 +681,7 @@ function renderLinkClickHandler({
   canEdit?: boolean
   editorMode?: 'editor' | 'viewer'
   forceOpenLinkPopover?: () => void
-  sourceNoteId?: SidebarItemId
+  sourceNoteId?: ResourceId
 } = {}) {
   const runtime = createWorkspaceRuntime({ canEdit })
   const source = createNoteContentSource(runtime)
@@ -742,7 +743,7 @@ function createWorkspaceRuntime({ canEdit }: { canEdit: boolean }): WorkspaceRun
 
 function buildCreateValidationSource(items: Array<AnyItem>) {
   const itemsById = new Map(items.map((item) => [item.id, item] as const))
-  const parentItemsMap = new Map<SidebarItemId | null, Array<AnyItem>>()
+  const parentItemsMap = new Map<ResourceId | null, Array<AnyItem>>()
 
   for (const item of items) {
     const parentId = item.parentId ?? null
@@ -750,8 +751,8 @@ function buildCreateValidationSource(items: Array<AnyItem>) {
   }
 
   return {
-    getItemById: (itemId: SidebarItemId) => itemsById.get(itemId),
-    getActiveChildren: (parentId: SidebarItemId | null) => parentItemsMap.get(parentId) ?? [],
+    getItemById: (itemId: ResourceId) => itemsById.get(itemId),
+    getActiveChildren: (parentId: ResourceId | null) => parentItemsMap.get(parentId) ?? [],
   }
 }
 
@@ -768,9 +769,9 @@ function sidebarItem({
 }): AnyItem {
   return {
     createdAt: 1,
-    id: id as SidebarItemId,
+    id: id as ResourceId,
     name,
-    parentId: parentId as SidebarItemId | null,
+    parentId: parentId as ResourceId | null,
     slug: id,
     status: RESOURCE_STATUS.active,
     type,

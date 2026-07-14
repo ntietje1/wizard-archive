@@ -3,10 +3,11 @@ import { campaignQuery } from '../functions'
 import { mapWithContentValidator } from './schema'
 import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { resourceIdValidator } from '../resources/validators'
 
 export const getMap = campaignQuery({
   args: {
-    mapId: v.id('sidebarItems'),
+    mapId: resourceIdValidator,
   },
   returns: v.nullable(mapWithContentValidator),
   handler: async (ctx, args) => {

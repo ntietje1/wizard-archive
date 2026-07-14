@@ -1,5 +1,4 @@
-import type { SidebarItemId } from '../../../../../shared/common/ids'
-
+import type { ResourceId } from '../../resources/domain-id'
 export interface PinPosition {
   x: number
   y: number
@@ -11,7 +10,7 @@ export interface ScreenPosition {
 }
 
 export interface MapPinPlacementInput extends PinPosition {
-  itemId: SidebarItemId
+  itemId: ResourceId
   layerId?: string | null
 }
 
@@ -24,7 +23,7 @@ function clampPercent(value: number) {
 }
 
 export function buildMapPinPlacementInputs(
-  itemIds: Array<SidebarItemId>,
+  itemIds: Array<ResourceId>,
   position: PinPosition,
 ): Array<MapPinPlacementInput> {
   return itemIds.map((itemId, index) => {

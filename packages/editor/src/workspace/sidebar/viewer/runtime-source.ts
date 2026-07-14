@@ -1,3 +1,4 @@
+import type { ResourceId } from '../../../resources/domain-id'
 import { createWorkspaceResource } from '../../runtime'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { FileSession } from '../../../files/session-contract'
@@ -9,7 +10,7 @@ import type { RuntimeNoteContentSourceInput } from '../../../notes/runtime-conte
 import type { WorkspaceNavigation } from '../../runtime'
 import type { WorkspaceViewStateStores } from '../../runtime-host'
 import type { NoteScrollRequest, RuntimeNoteContentSource } from '../../../notes/runtime'
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+
 import type { NoteEditorSetParticipantPermission } from '../../../notes/viewer/note-editor-source'
 import type { EmbedTargetOperationFileSystem } from '../../../embeds/target-operations'
 import { isCanvasSidebarItemEmbedRichTextEditable } from '../../../embeds/utils/canvas-resource-capabilities'
@@ -103,7 +104,7 @@ export function createRuntimeSidebarItemViewerSource(
   runtime: RuntimeSidebarItemViewerSourceInput,
   options: {
     noteScrollRequest: NoteScrollRequest
-    showItemInSidebar: (itemId: SidebarItemId) => void
+    showItemInSidebar: (itemId: ResourceId) => void
     viewStateStores: WorkspaceViewStateStores
   },
 ): SidebarItemViewerSource {
@@ -127,7 +128,7 @@ export function createRuntimeSidebarItemViewerSource(
 function createRuntimeCanvasViewerSource(
   runtime: RuntimeSidebarItemViewerSourceInput,
   options: {
-    showItemInSidebar: (itemId: SidebarItemId) => void
+    showItemInSidebar: (itemId: ResourceId) => void
     viewStateStores: WorkspaceViewStateStores
   },
 ): ReturnType<SidebarItemViewerSource['resolveCanvas']> {

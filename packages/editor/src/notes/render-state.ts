@@ -1,7 +1,7 @@
+import type { ResourceId, CampaignMemberId } from '../resources/domain-id'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { getVisibleNoteBlocks } from './visibility'
-import type { SidebarItemId } from '../../../../shared/common/ids'
-import type { CampaignMemberId } from '../resources/domain-id'
+
 import type { NoteBlock } from './document/model'
 import type { NoteItemWithContent } from '../notes/item-contract'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
@@ -11,7 +11,7 @@ type NoteRenderState =
   | {
       kind: 'static'
       note?: NoteItemWithContent
-      noteId?: SidebarItemId
+      noteId?: ResourceId
       content: Array<NoteBlock>
       evaluateValuesFromEditor: boolean
     }

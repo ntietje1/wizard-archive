@@ -7,6 +7,7 @@ import {
   createBlock,
   createBlockShare,
   createNote,
+  getSidebarItemRowId,
   testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
@@ -18,7 +19,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
   it('soft-deleting a note does not touch blocks', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('root'),
@@ -41,7 +42,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
 
       expect(blocks).toHaveLength(2)
@@ -54,7 +55,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
   it('soft-deleting a note does not touch blockShares', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('shared'),
@@ -77,7 +78,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     await t.run(async (dbCtx) => {
       const shares = await dbCtx.db
         .query('blockShares')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
 
       expect(shares).toHaveLength(1)
@@ -88,7 +89,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
   it('restoring a note does not need to touch blocks or blockShares', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('root'),
@@ -123,7 +124,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(blocks).toHaveLength(2)
       for (const block of blocks) {
@@ -132,7 +133,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
 
       const shares = await dbCtx.db
         .query('blockShares')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
       expect(shares).toHaveLength(1)
       expect(shares[0]).not.toHaveProperty('deletionTime')
@@ -159,6 +160,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
+    const noteRowId = await getSidebarItemRowId(t, noteId)
 
     await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -180,7 +182,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     await t.run(async (dbCtx) => {
       const blocks = await dbCtx.db
         .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .filter((q) => q.eq(q.field('noteId'), noteRowId))
         .collect()
 
       const blockB = blocks.find((b) => b.blockNoteId === testBlockNoteId('block-b'))

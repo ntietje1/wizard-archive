@@ -5,6 +5,7 @@ import { toggleItemBookmark } from '../../../bookmarks/functions/toggleItemBookm
 import type { Bookmark } from '../../../bookmarks/types'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { StoredResourceDelta } from '../deltas'
+import { requireSidebarItemRows } from '../../functions/sidebarItemIdentity'
 
 type ToggleBookmarksFileSystemCommand = Extract<ResourceCommand, { type: 'toggleBookmarks' }>
 type BookmarkStateChangeRow = {
@@ -25,8 +26,9 @@ export async function executeToggleBookmarksCommand(
   { command }: { command: ToggleBookmarksFileSystemCommand },
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
+  const items = await requireSidebarItemRows(ctx, command.itemIds)
   const changes = await Promise.all(
-    command.itemIds.map((itemId) => toggleItemBookmark(ctx, { sidebarItemId: itemId })),
+    items.map((item) => toggleItemBookmark(ctx, { sidebarItemId: item._id })),
   )
 
   for (const { before, after } of changes) {

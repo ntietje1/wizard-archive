@@ -1,7 +1,8 @@
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { api } from 'convex/_generated/api'
 import { useNoteYjsCollaboration } from './yjs-collaboration'
 import { useLiveCollaborationUser } from '~/editor-adapters/live/collaboration/use-live-collaboration-user'
-import type { SidebarItemId } from 'shared/common/ids'
+
 import {
   createWizardEditorImportedTextNotePayload,
   isPersistedWizardEditorItemId,
@@ -19,7 +20,6 @@ import type {
 } from '@wizard-archive/editor/adapter'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
-import type { Id } from 'convex/_generated/dataModel'
 
 type LiveNoteItemWithContent = WizardEditorNoteCollaborationSessionRequest['note']
 
@@ -27,12 +27,10 @@ function useLiveNoteCollaborationSession(
   workspaceId: string,
   canEditNote: (note: LiveNoteItemWithContent) => boolean,
   request: WizardEditorNoteCollaborationSessionRequest,
-  getNoteSlugById: (noteId: SidebarItemId) => WizardEditorResourceSlug | null | undefined,
+  getNoteSlugById: (noteId: ResourceId) => WizardEditorResourceSlug | null | undefined,
 ): WizardEditorNoteEditorSession {
   const { isLoading: userLoading, user } = useLiveCollaborationUser()
-  const persistedNoteId = isPersistedWizardEditorItemId(request.note.id)
-    ? toLiveSidebarItemId(request.note.id)
-    : null
+  const persistedNoteId = isPersistedWizardEditorItemId(request.note.id) ? request.note.id : null
   const sessionCanEdit =
     persistedNoteId !== null && request.mode === 'editable' && canEditNote(request.note)
   const session = useNoteYjsCollaboration(
@@ -73,7 +71,7 @@ export function useLiveNoteSessionPorts({
   workspaceId,
 }: {
   canEditNote: (note: LiveNoteItemWithContent) => boolean
-  getNoteSlugById: (noteId: SidebarItemId) => WizardEditorResourceSlug | null | undefined
+  getNoteSlugById: (noteId: ResourceId) => WizardEditorResourceSlug | null | undefined
   workspaceId: string
 }): WizardEditorNoteSessionPorts {
   return {
@@ -118,8 +116,8 @@ export function useLiveImportedTextFileInitializer(): WizardEditorCommandSourceI
     })
 }
 
-function useLiveNoteValueStates(noteIds: Array<SidebarItemId>) {
-  const persistedNoteIds = noteIds.filter(isPersistedWizardEditorItemId).map(toLiveSidebarItemId)
+function useLiveNoteValueStates(noteIds: Array<ResourceId>) {
+  const persistedNoteIds = noteIds.filter(isPersistedWizardEditorItemId)
   const query = useCampaignQuery(
     api.noteValues.queries.getNoteValueStatesByNotes,
     persistedNoteIds.length > 0 ? { noteIds: persistedNoteIds } : 'skip',
@@ -130,14 +128,10 @@ function useLiveNoteValueStates(noteIds: Array<SidebarItemId>) {
   }
 }
 
-function toLiveSidebarItemId(noteId: SidebarItemId): Id<'sidebarItems'> {
-  return noteId as Id<'sidebarItems'>
-}
-
 const useLiveNoteHeadings: WizardEditorNoteHeadingSessionPorts['headings']['useNoteHeadings'] = (
   noteId,
 ) => {
-  const persistedNoteId = isPersistedWizardEditorItemId(noteId) ? toLiveSidebarItemId(noteId) : null
+  const persistedNoteId = isPersistedWizardEditorItemId(noteId) ? noteId : null
   const query = useCampaignQuery(
     api.blocks.queries.getHeadingsByNote,
     persistedNoteId ? { noteId: persistedNoteId } : 'skip',

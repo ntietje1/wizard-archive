@@ -1,4 +1,4 @@
-import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import type { ResourceId } from '../../../resources/domain-id'
 import type { AnyItem, FolderItem } from '../../items'
 import type { WorkspaceNavigation } from '../../runtime'
 import type { SortOptions } from '../../items-persistence-contract'
@@ -16,7 +16,7 @@ export interface SidebarItemSource extends SidebarDragDataSource {
   canDragItem: (item: AnyItem) => boolean
   canDropOnFolder: (folder: FolderItem) => boolean
   canUseItemActions: (item: AnyItem) => boolean
-  currentItemId: SidebarItemId | null
+  currentItemId: ResourceId | null
   editItem: (input: SidebarItemEditInput) => Promise<unknown>
   openItem: WorkspaceNavigation['openItem']
   shareButtonSource?: SidebarShareButtonSource
@@ -27,15 +27,15 @@ export interface SidebarTreeSource {
   activeStatus: 'pending' | 'error' | 'success'
   canDropOnRoot: boolean
   getVisibleChildren: (input: {
-    parentId: SidebarItemId
+    parentId: ResourceId
     sortOptions: SortOptions
   }) => ReadonlyArray<AnyItem>
   getVisibleRoots: (input: { sortOptions: SortOptions }) => ReadonlyArray<AnyItem>
   getBookmarkedItems: (input: { sortOptions: SortOptions }) => ReadonlyArray<AnyItem>
   getVisibleItemIds: (input: {
-    expandedFolderIds: ReadonlySet<SidebarItemId>
+    expandedFolderIds: ReadonlySet<ResourceId>
     sortOptions: SortOptions
-  }) => ReadonlyArray<SidebarItemId>
+  }) => ReadonlyArray<ResourceId>
   item: SidebarItemSource
   refreshActive: () => unknown
 }

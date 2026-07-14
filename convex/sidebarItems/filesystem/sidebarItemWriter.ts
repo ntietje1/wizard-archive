@@ -11,6 +11,7 @@ import type {
 } from '@wizard-archive/editor/resources/resource-contract'
 import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { normalizeLegacyResourcePathSegment } from '../resourcePathSegment'
 
 import { assertSidebarItemLifecycleConsistency } from '../types/status'
@@ -37,14 +38,15 @@ export async function insertFilesystemSidebarItem(
     previewStorageId,
     previewUpdatedAt,
   }: InsertFilesystemSidebarItemArgs,
-): Promise<{ itemId: Id<'sidebarItems'>; slug: ResourceSlug }> {
+): Promise<{ itemId: Id<'sidebarItems'>; resourceId: ResourceId; slug: ResourceSlug }> {
   const prepared = await prepareSidebarItemCreate(ctx, {
     parentId,
     name,
   })
 
+  const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
   const row = {
-    resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
+    resourceUuid: resourceId,
     campaignId: ctx.campaign._id,
     name: prepared.name,
     normalizedName: normalizeLegacyResourcePathSegment(prepared.name),
@@ -67,5 +69,5 @@ export async function insertFilesystemSidebarItem(
   assertSidebarItemLifecycleConsistency(row)
   const itemId = await ctx.db.insert('sidebarItems', row)
 
-  return { itemId, slug: prepared.slug }
+  return { itemId, resourceId, slug: prepared.slug }
 }

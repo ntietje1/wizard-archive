@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { runWizardEditorPdfPreviewGeneration } from '@wizard-archive/editor/adapter'
-import type { WizardEditorFileSessionReplaceInput } from '@wizard-archive/editor/adapter'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { logger } from '~/shared/utils/logger'
 import { usePdfPreviewUpload } from '../use-pdf-preview-upload'
 
@@ -41,7 +41,7 @@ describe('usePdfPreviewUpload', () => {
     await result.current.generatePdfPreviewIfNeeded(createPdfFile(), fileSessionId('file-1'))
 
     expect(logger.debug).toHaveBeenCalledExactlyOnceWith(
-      'Skipping PDF preview for fileId=file-1: file too large (42 bytes)',
+      `Skipping PDF preview for fileId=${fileSessionId('file-1')}: file too large (42 bytes)`,
     )
   })
 
@@ -56,7 +56,7 @@ describe('usePdfPreviewUpload', () => {
     await result.current.generatePdfPreviewIfNeeded(createPdfFile(), fileSessionId('file-1'))
 
     expect(logger.error).toHaveBeenCalledExactlyOnceWith(
-      'PDF preview generation failed for fileId=file-1:',
+      `PDF preview generation failed for fileId=${fileSessionId('file-1')}:`,
       error,
     )
   })
@@ -70,7 +70,7 @@ describe('usePdfPreviewUpload', () => {
       result.current.generatePdfPreviewIfNeeded(createPdfFile(), fileSessionId('file-1')),
     ).resolves.toEqual({ status: 'failed', error })
     expect(logger.error).toHaveBeenCalledExactlyOnceWith(
-      'PDF preview generation failed for fileId=file-1:',
+      `PDF preview generation failed for fileId=${fileSessionId('file-1')}:`,
       error,
     )
   })
@@ -94,6 +94,6 @@ function createPdfFile() {
   return new File(['pdf'], 'private-session-notes.pdf', { type: 'application/pdf' })
 }
 
-function fileSessionId(value: string): WizardEditorFileSessionReplaceInput['fileId'] {
-  return value as WizardEditorFileSessionReplaceInput['fileId']
+function fileSessionId(value: string) {
+  return testResourceId(value)
 }

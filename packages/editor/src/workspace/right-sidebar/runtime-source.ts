@@ -1,9 +1,10 @@
+import type { ResourceId, NoteBlockId } from '../../resources/domain-id'
 import { getProjectedNoteOutlineHeadings } from '../../notes/outline/note-outline'
 import type { Heading } from '../../notes/document/model'
-import type { NoteBlockId } from '../../resources/domain-id'
+
 import * as rightSidebarSource from './source'
 import type { CurrentItemState, WorkspaceNavigation } from '../runtime'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+
 import type { AnyItemWithContent } from '../items'
 import type { ResourceHistory } from '../../filesystem/history-types'
 import type { ItemLinksCapability } from '../../filesystem/search'
@@ -24,7 +25,7 @@ interface RuntimeRightSidebarOutlineBehavior {
 }
 
 type RuntimeRightSidebarCatalogSource = {
-  getKnownItemById: (itemId: SidebarItemId) => unknown
+  getKnownItemById: (itemId: ResourceId) => unknown
 }
 
 type RuntimeRightSidebarSearchSource =
@@ -145,7 +146,7 @@ function createRightSidebarOutlineSource({
   navigateToHeading,
 }: {
   getOutlineHeadings: (item: AnyItemWithContent) => Array<Heading>
-  getResourceContentState: (itemId: SidebarItemId) => ResourceContentState
+  getResourceContentState: (itemId: ResourceId) => ResourceContentState
   navigateToHeading: RuntimeRightSidebarOutlineBehavior['navigateToHeading']
 }): RightSidebarOutlineSource {
   return {
