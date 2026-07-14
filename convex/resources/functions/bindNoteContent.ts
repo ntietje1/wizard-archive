@@ -7,6 +7,8 @@ import {
   decodeNoteYjsUpdatesToBlocks,
 } from '@wizard-archive/editor/notes/document-yjs'
 import type { CampaignMutationCtx } from '../../functions'
+import { findCanonicalResource } from './findCanonicalResource'
+import { findNoteContent } from './noteContent'
 
 export type BindNoteContentResult =
   | {
@@ -41,10 +43,7 @@ export async function bindNoteContent(
   }
 
   const campaignId = ctx.resourceScope.campaignId
-  const resource = await ctx.db
-    .query('resources')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .unique()
+  const resource = await findCanonicalResource(ctx.db, resourceId)
   if (!resource) return { status: 'rejected', reason: 'resource_missing' }
   if (resource.campaignUuid !== campaignId) {
     return { status: 'rejected', reason: 'ownership_mismatch' }
@@ -66,10 +65,7 @@ export async function bindNoteContent(
     return { status: 'rejected', reason: 'operation_mismatch' }
   }
 
-  const content = await ctx.db
-    .query('resourceNoteContents')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .unique()
+  const content = await findNoteContent(ctx.db, resourceId)
   if (!content) return { status: 'rejected', reason: 'content_missing' }
   if (content.initializationOperationUuid !== operationId) {
     return { status: 'rejected', reason: 'operation_mismatch' }

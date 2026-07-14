@@ -41,6 +41,7 @@ import { createFileContent } from './fileContent'
 import { createMapContent } from './mapContent'
 import { createNoteContent } from './noteContent'
 import { applyResourceDeletion, planResourceDeletion } from './resourceDeletion'
+import { findCanonicalResource } from './findCanonicalResource'
 
 type ExecuteStructureCommandArgs = {
   operationId: string
@@ -67,19 +68,12 @@ class CatalogRejection extends Error {
   }
 }
 
-async function getResource(ctx: CampaignMutationCtx, resourceId: ResourceId) {
-  return await ctx.db
-    .query('resources')
-    .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
-    .unique()
-}
-
 async function requireResource(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   resourceId: ResourceId,
 ): Promise<Doc<'resources'>> {
-  const resource = await getResource(ctx, resourceId)
+  const resource = await findCanonicalResource(ctx.db, resourceId)
   if (!resource) throw new CatalogRejection('resource_missing')
   if (resource.campaignUuid !== campaignId) throw new CatalogRejection('ownership_mismatch')
   return resource
@@ -91,7 +85,7 @@ async function validateParent(
   parentId: ResourceId | null,
 ): Promise<Doc<'resources'> | null> {
   if (parentId === null) return null
-  const parent = await getResource(ctx, parentId)
+  const parent = await findCanonicalResource(ctx.db, parentId)
   if (!parent) throw new CatalogRejection('invalid_parent')
   if (parent.campaignUuid !== campaignId) throw new CatalogRejection('ownership_mismatch')
   if (parent.kind !== 'folder') throw new CatalogRejection('invalid_parent_kind')
@@ -192,7 +186,7 @@ async function createResource(
   operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'create' }>,
 ): Promise<ResourceStructureCommandResult> {
-  const existing = await getResource(ctx, command.resourceId)
+  const existing = await findCanonicalResource(ctx.db, command.resourceId)
   if (existing) {
     throw new CatalogRejection(
       existing.campaignUuid === campaignId ? 'invalid_command' : 'ownership_mismatch',
@@ -433,7 +427,7 @@ async function changeLifecycle(
   for (const resource of closure) {
     let parentId = resource.parentResourceUuid as ResourceId | null
     if (restoring && rootIds.has(resource.resourceUuid) && parentId !== null) {
-      const parent = await getResource(ctx, parentId)
+      const parent = await findCanonicalResource(ctx.db, parentId)
       if (!parent || parent.campaignUuid !== campaignId || parent.lifecycle !== 'active') {
         parentId = null
       }
@@ -465,11 +459,15 @@ async function permanentlyDeleteResources(
   command: Extract<ResourceStructureCommand, { type: 'permanentlyDelete' }>,
 ): Promise<ResourceStructureCommandResult> {
   const roots = await operationRoots(ctx, campaignId, command.resourceIds)
-  for (const root of roots) {
-    const parent =
+  const parents = await Promise.all(
+    roots.map(async (root) =>
       root.parentResourceUuid === null
         ? null
-        : await getResource(ctx, root.parentResourceUuid as ResourceId)
+        : await findCanonicalResource(ctx.db, root.parentResourceUuid as ResourceId),
+    ),
+  )
+  for (const [index, root] of roots.entries()) {
+    const parent = parents[index]
     if (
       root.lifecycle !== 'trashed' ||
       (parent?.campaignUuid === campaignId && parent.lifecycle === 'trashed')

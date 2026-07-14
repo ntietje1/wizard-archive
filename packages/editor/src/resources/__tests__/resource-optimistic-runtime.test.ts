@@ -123,6 +123,40 @@ describe('optimistic resource structure runtime', () => {
     ])
   })
 
+  it('notifies content after the resource overlay and before authoritative delivery', async () => {
+    const order: Array<string> = []
+    const authoritative = gateway(() => {
+      order.push('authoritative')
+      return {
+        status: 'indeterminate' as const,
+        retryable: true as const,
+        reason: 'response_lost' as const,
+      }
+    })
+    let runtime: ReturnType<typeof createOptimisticResourceStructureRuntime>
+    runtime = createOptimisticResourceStructureRuntime(baseIndex(), authoritative, () => 10, {
+      applied: ({ command }) => {
+        const resource =
+          command.type === 'create' && runtime.index.getSnapshot().lookup(command.resourceId)
+        order.push(resource && resource.state === 'known' ? 'overlay' : 'missing')
+      },
+    })
+
+    await runtime.structure.execute(
+      envelope({
+        type: 'create',
+        resourceId: createdId,
+        kind: 'note',
+        parentId: resourceId,
+        title: canonicalizeResourceTitle('Created'),
+        icon: null,
+        color: null,
+      }),
+    )
+
+    expect(order).toEqual(['overlay', 'authoritative'])
+  })
+
   it('retains indeterminate delivery and retries the same overlay and operation', async () => {
     const command = {
       type: 'updateMetadata' as const,

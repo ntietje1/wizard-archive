@@ -7,6 +7,7 @@ import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
+import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -119,6 +120,74 @@ describe('authorized resource projection', () => {
 
     expect(snapshot.resources).toEqual([])
     expect(snapshot.missingResourceIds).toEqual([foreignId])
+  })
+
+  it('distinguishes initializing, ready, unauthorized, and missing note content', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Note',
+        icon: null,
+        color: null,
+      },
+    })
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'initializing', operationId })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
+
+    const update = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Ready' }],
+      },
+    ])
+    const bound = await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
+      campaignId: campaignUuid,
+      operationId,
+      resourceId,
+      update,
+    })
+    if (bound.status !== 'completed') throw new Error('Expected note content to bind')
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'ready', update, version: bound.version })
+
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      await ctx.db.delete(content!._id)
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteContent, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'integrity_error', issue: 'content_missing' })
   })
 
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {

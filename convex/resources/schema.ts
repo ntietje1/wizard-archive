@@ -210,6 +210,19 @@ export const bindNoteContentResultValidator = v.union(
   }),
 )
 
+export const noteContentSnapshotValidator = v.union(
+  v.object({ status: v.literal('initializing'), operationId: v.string() }),
+  v.object({ status: v.literal('ready'), update: v.bytes(), version: versionStampValidator }),
+  v.object({
+    status: v.literal('unavailable'),
+    reason: literals('capability_not_supported', 'unauthorized'),
+  }),
+  v.object({
+    status: v.literal('integrity_error'),
+    issue: literals('content_missing', 'version_mismatch'),
+  }),
+)
+
 export const resourceTables = {
   resources: defineTable(resourceTableValidator)
     .index('by_resourceUuid', ['resourceUuid'])

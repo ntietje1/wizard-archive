@@ -1,4 +1,5 @@
 import type {
+  CommandEnvelope,
   CommandDelivery,
   ResourceStructureCommand,
   ResourceStructureCommandGateway,
@@ -45,15 +46,18 @@ function rejectedSubmission(
 function createOptimisticStructureGateway(
   index: OptimisticWorkspaceResourceIndex,
   authoritative: ResourceStructureCommandGateway,
+  observer?: ResourceOptimisticObserver,
 ): ResourceStructureCommandGateway {
   return {
     execute: async (envelope) => {
-      if (!isOptimisticCommand(envelope.command)) {
+      const command = envelope.command
+      if (!isOptimisticCommand(command)) {
         return await authoritative.execute(envelope)
       }
 
-      const submission = await index.submit(envelope.operationId, envelope.command)
+      const submission = await index.submit(envelope.operationId, command)
       if (submission.status === 'rejected') return rejectedSubmission(submission)
+      observer?.applied({ ...envelope, command })
 
       const delivery = await authoritative.execute(envelope)
       index.reconcile(envelope.operationId, delivery)
@@ -62,14 +66,20 @@ function createOptimisticStructureGateway(
   }
 }
 
+export interface ResourceOptimisticObserver {
+  applied(envelope: CommandEnvelope<OptimisticResourceCommand>): void
+}
+
 export function createOptimisticResourceStructureRuntime(
   baseIndex: WorkspaceResourceIndex,
   authoritativeGateway: ResourceStructureCommandGateway,
   now: () => number = Date.now,
+  observer?: ResourceOptimisticObserver,
 ) {
   const index = new OptimisticWorkspaceResourceIndex(baseIndex, now)
   return {
+    dispose: () => index.dispose(),
     index,
-    structure: createOptimisticStructureGateway(index, authoritativeGateway),
+    structure: createOptimisticStructureGateway(index, authoritativeGateway, observer),
   }
 }

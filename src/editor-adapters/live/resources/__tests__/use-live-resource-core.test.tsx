@@ -23,7 +23,7 @@ describe('useLiveResourceCore', () => {
     convex.mutation.mockReset()
   })
 
-  it('preserves index, loader, and gateway identity within one authoritative scope', () => {
+  it('preserves every capability identity within one authoritative scope', () => {
     const { result, rerender } = renderHook(
       ({ currentScope }) => useLiveResourceCore(currentScope),
       { initialProps: { currentScope: scope } },
@@ -35,6 +35,7 @@ describe('useLiveResourceCore', () => {
     expect(result.current.index).toBe(initial.index)
     expect(result.current.loader).toBe(initial.loader)
     expect(result.current.structure).toBe(initial.structure)
+    expect(result.current.content.notes).toBe(initial.content.notes)
   })
 
   it('replaces every scoped capability when the actor projection changes', () => {
@@ -55,5 +56,6 @@ describe('useLiveResourceCore', () => {
     expect(result.current.index).not.toBe(initial.index)
     expect(result.current.loader).not.toBe(initial.loader)
     expect(result.current.structure).not.toBe(initial.structure)
+    expect(result.current.content.notes).not.toBe(initial.content.notes)
   })
 })

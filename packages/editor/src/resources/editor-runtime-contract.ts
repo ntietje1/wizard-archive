@@ -1,4 +1,4 @@
-import type { ContentSessionState } from './content-session-contract'
+import type { ContentSessionState, NoteContentSource } from './content-session-contract'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
 import type {
   ResourceAccessCommandGateway,
@@ -56,7 +56,7 @@ export interface WizardEditorRuntime {
     readonly previews: ResourcePreviewSource
   }
   readonly content: {
-    readonly notes: ResourceSessionSource
+    readonly notes: NoteContentSource<unknown, unknown>
     readonly files: ResourceSessionSource
     readonly maps: ResourceSessionSource
     readonly canvases: ResourceSessionSource
