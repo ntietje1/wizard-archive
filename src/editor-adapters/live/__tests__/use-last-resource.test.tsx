@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testResourceId } from '../../../../shared/test/resource-id'
-import { useLastWorkspaceItem } from '../use-last-workspace-item'
+import { useLastResource } from '../use-last-resource'
 
 const workspaceState = vi.hoisted(() => ({
   workspaceRecordId: 'campaign_1' as string | undefined,
@@ -23,7 +23,7 @@ vi.mock('@wizard-archive/ui/hooks/use-persisted-state', () => ({
   },
 }))
 
-describe('useLastWorkspaceItem', () => {
+describe('useLastResource', () => {
   const resourceId = testResourceId('last-note')
   beforeEach(() => {
     workspaceState.workspaceRecordId = 'campaign_1'
@@ -36,7 +36,7 @@ describe('useLastWorkspaceItem', () => {
   })
 
   it('uses the current workspace scoped persistence key', () => {
-    renderHook(() => useLastWorkspaceItem())
+    renderHook(() => useLastResource())
 
     expect(persistedState.key).toBe('last-editor-resource-v1-campaign_1')
   })
@@ -44,34 +44,34 @@ describe('useLastWorkspaceItem', () => {
   it('projects the stored resource UUID into workspace search', () => {
     persistedState.value = resourceId
 
-    const { result } = renderHook(() => useLastWorkspaceItem())
+    const { result } = renderHook(() => useLastResource())
 
-    expect(result.current.lastSelectedItem).toBe(resourceId)
-    expect(result.current.lastSelectedWorkspaceItemSearch).toEqual({ item: resourceId })
+    expect(result.current.lastSelectedResource).toBe(resourceId)
+    expect(result.current.lastSelectedResourceSearch).toEqual({ item: resourceId })
   })
 
   it('drops pre-cutover stored slugs', () => {
     persistedState.value = '../private-note'
 
-    const { result } = renderHook(() => useLastWorkspaceItem())
+    const { result } = renderHook(() => useLastResource())
 
-    expect(result.current.lastSelectedItem).toBeNull()
-    expect(result.current.lastSelectedWorkspaceItemSearch).toBeUndefined()
+    expect(result.current.lastSelectedResource).toBeNull()
+    expect(result.current.lastSelectedResourceSearch).toBeUndefined()
   })
 
   it('does not read a workspace scoped key without a workspace context', () => {
     workspaceState.workspaceRecordId = undefined
 
-    renderHook(() => useLastWorkspaceItem())
+    renderHook(() => useLastResource())
 
     expect(persistedState.key).toBeNull()
   })
 
   it('stores the selected resource UUID', () => {
-    const { result } = renderHook(() => useLastWorkspaceItem())
+    const { result } = renderHook(() => useLastResource())
 
     act(() => {
-      result.current.setLastSelectedItem(resourceId)
+      result.current.setLastSelectedResource(resourceId)
     })
 
     expect(persistedState.setValue).toHaveBeenCalledExactlyOnceWith(resourceId)

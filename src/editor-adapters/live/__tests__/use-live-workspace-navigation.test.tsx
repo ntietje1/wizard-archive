@@ -10,9 +10,9 @@ import {
 const navigateMock = vi.hoisted(() => vi.fn())
 const useMatchMock = vi.hoisted(() => vi.fn())
 const campaignId = vi.hoisted(() => '018f2e40-7c00-7000-8000-000000000001')
-const lastWorkspaceItemState = vi.hoisted(() => ({
-  lastSelectedWorkspaceItemSearch: null as Record<string, unknown> | null,
-  setLastSelectedItem: vi.fn(),
+const lastResourceState = vi.hoisted(() => ({
+  lastSelectedResourceSearch: null as Record<string, unknown> | null,
+  setLastSelectedResource: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -26,8 +26,8 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   }),
 }))
 
-vi.mock('~/editor-adapters/live/use-last-workspace-item', () => ({
-  useLastWorkspaceItem: () => lastWorkspaceItemState,
+vi.mock('~/editor-adapters/live/use-last-resource', () => ({
+  useLastResource: () => lastResourceState,
 }))
 
 describe('useLiveWorkspaceNavigation', () => {
@@ -35,8 +35,8 @@ describe('useLiveWorkspaceNavigation', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     useMatchMock.mockReset()
-    lastWorkspaceItemState.lastSelectedWorkspaceItemSearch = null
-    lastWorkspaceItemState.setLastSelectedItem.mockReset()
+    lastResourceState.lastSelectedResourceSearch = null
+    lastResourceState.setLastSelectedResource.mockReset()
     vi.restoreAllMocks()
   })
 
@@ -62,7 +62,7 @@ describe('useLiveWorkspaceNavigation', () => {
       })
     })
 
-    expect(lastWorkspaceItemState.setLastSelectedItem).toHaveBeenCalledExactlyOnceWith(resourceId)
+    expect(lastResourceState.setLastSelectedResource).toHaveBeenCalledExactlyOnceWith(resourceId)
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
       params: { campaignId },
@@ -87,12 +87,12 @@ describe('useLiveWorkspaceNavigation', () => {
   })
 
   it('opens the last editor item using the stored route search', async () => {
-    lastWorkspaceItemState.lastSelectedWorkspaceItemSearch = { item: resourceId, heading: 'scene' }
+    lastResourceState.lastSelectedResourceSearch = { item: resourceId, heading: 'scene' }
 
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {
-      await result.current.openLastWorkspaceItem()
+      await result.current.openLastResource()
     })
 
     expect(navigateMock).toHaveBeenCalledWith({
@@ -107,7 +107,7 @@ describe('useLiveWorkspaceNavigation', () => {
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {
-      await result.current.openLastWorkspaceItem()
+      await result.current.openLastResource()
     })
 
     expect(navigateMock).toHaveBeenCalledWith({
@@ -119,7 +119,7 @@ describe('useLiveWorkspaceNavigation', () => {
   })
 
   it('keeps the last selected item when opening the create dashboard', async () => {
-    lastWorkspaceItemState.lastSelectedWorkspaceItemSearch = { item: resourceId }
+    lastResourceState.lastSelectedResourceSearch = { item: resourceId }
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {
@@ -132,7 +132,7 @@ describe('useLiveWorkspaceNavigation', () => {
       search: {},
       replace: undefined,
     })
-    expect(lastWorkspaceItemState.setLastSelectedItem).not.toHaveBeenCalled()
+    expect(lastResourceState.setLastSelectedResource).not.toHaveBeenCalled()
   })
 
   it('opens the campaign dashboard through the live navigation adapter', async () => {

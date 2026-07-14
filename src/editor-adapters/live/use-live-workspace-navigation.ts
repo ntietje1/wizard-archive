@@ -2,7 +2,7 @@ import { useMatch, useNavigate } from '@tanstack/react-router'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { WorkspaceRouteSearch } from '~/editor-adapters/workspace-route-search'
 import { EDITOR_ROUTE, EDITOR_ROUTE_ID } from '~/editor-adapters/live/editor-route'
-import { useLastWorkspaceItem } from '~/editor-adapters/live/use-last-workspace-item'
+import { useLastResource } from '~/editor-adapters/live/use-last-resource'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
 export function useLiveWorkspaceSelectedResourceId(): ResourceId | null {
@@ -16,7 +16,7 @@ export function useLiveWorkspaceSelectedResourceId(): ResourceId | null {
 export const useLiveWorkspaceNavigation = () => {
   const navigate = useNavigate()
   const { campaignId } = useCampaign()
-  const { lastSelectedWorkspaceItemSearch, setLastSelectedItem } = useLastWorkspaceItem()
+  const { lastSelectedResourceSearch, setLastSelectedResource } = useLastResource()
 
   const routeParams = { campaignId }
 
@@ -33,7 +33,7 @@ export const useLiveWorkspaceNavigation = () => {
     resourceId: ResourceId,
     options: { heading?: string; replace?: boolean } = {},
   ) => {
-    setLastSelectedItem(resourceId)
+    setLastSelectedResource(resourceId)
     await navigateToWorkspaceRoute(
       options.heading ? { item: resourceId, heading: options.heading } : { item: resourceId },
       options.replace,
@@ -48,8 +48,8 @@ export const useLiveWorkspaceNavigation = () => {
     await navigateToWorkspaceRoute({ trash: true })
   }
 
-  const openLastWorkspaceItem = async () => {
-    await navigateToWorkspaceRoute(lastSelectedWorkspaceItemSearch ?? {})
+  const openLastResource = async () => {
+    await navigateToWorkspaceRoute(lastSelectedResourceSearch ?? {})
   }
 
   const openCampaignsDashboard = async () => {
@@ -59,7 +59,7 @@ export const useLiveWorkspaceNavigation = () => {
   return {
     navigateToItem,
     clearWorkspaceContent,
-    openLastWorkspaceItem,
+    openLastResource,
     openCampaignsDashboard,
     navigateToTrash,
   }
