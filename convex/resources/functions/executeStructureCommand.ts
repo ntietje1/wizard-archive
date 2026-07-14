@@ -36,6 +36,11 @@ import type { WithoutSystemFields } from 'convex/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
+import { createCanvasContent } from './canvasContent'
+import { createFileContent } from './fileContent'
+import { createMapContent } from './mapContent'
+import { createNoteContent } from './noteContent'
+import { applyResourceDeletion, planResourceDeletion } from './resourceDeletion'
 
 type ExecuteStructureCommandArgs = {
   operationId: string
@@ -230,6 +235,22 @@ async function createResource(
     updatedAt: now,
     updatedByMemberUuid: actorId,
   })
+  switch (command.kind) {
+    case 'folder':
+      break
+    case 'note':
+      await createNoteContent(ctx, campaignId, command.resourceId, operationId, now)
+      break
+    case 'file':
+      await createFileContent(ctx, campaignId, command.resourceId)
+      break
+    case 'map':
+      await createMapContent(ctx, campaignId, command.resourceId)
+      break
+    case 'canvas':
+      await createCanvasContent(ctx, campaignId, command.resourceId)
+      break
+  }
   return completed(campaignId, operationId, { type: 'created', resourceId: command.resourceId }, [
     presentPostcondition(command.resourceId, metadataVersion),
   ])
@@ -460,42 +481,8 @@ async function permanentlyDeleteResources(
   if (closure.some((resource) => resource.lifecycle !== 'trashed')) {
     throw new CatalogRejection('invalid_lifecycle')
   }
-
-  const aliases: Array<Doc<'resourceSourcePathAliases'>> = []
-  const roles: Array<Doc<'resourceRoles'>> = []
-  const contentVersions: Array<Doc<'resourceContentVersions'>> = []
-  for (const resource of closure) {
-    const remaining =
-      MAX_SYNCHRONOUS_RESOURCE_CLOSURE - aliases.length - roles.length - contentVersions.length
-    if (remaining < 0) throw new CatalogRejection('closure_too_large')
-    aliases.push(
-      ...(await ctx.db
-        .query('resourceSourcePathAliases')
-        .withIndex('by_campaign_and_resource_and_normalizedPath', (query) =>
-          query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
-        )
-        .take(remaining + 1)),
-    )
-    roles.push(
-      ...(await ctx.db
-        .query('resourceRoles')
-        .withIndex('by_campaign_and_resource', (query) =>
-          query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
-        )
-        .take(remaining + 1)),
-    )
-    contentVersions.push(
-      ...(await ctx.db
-        .query('resourceContentVersions')
-        .withIndex('by_resource_and_component', (query) =>
-          query.eq('resourceUuid', resource.resourceUuid),
-        )
-        .take(remaining + 1)),
-    )
-    if (aliases.length + roles.length + contentVersions.length > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) {
-      throw new CatalogRejection('closure_too_large')
-    }
-  }
+  const deletion = await planResourceDeletion(ctx, campaignId, closure)
+  if (!deletion) throw new CatalogRejection('closure_too_large')
 
   const deletedAt = Date.now()
   const tombstones = await Promise.all(
@@ -508,7 +495,7 @@ async function permanentlyDeleteResources(
       )
     }),
   )
-  for (const row of [...aliases, ...roles, ...contentVersions]) await ctx.db.delete(row._id)
+  await applyResourceDeletion(ctx, deletion)
   for (let index = 0; index < closure.length; index += 1) {
     const resource = closure[index]!
     const tombstone = tombstones[index]!

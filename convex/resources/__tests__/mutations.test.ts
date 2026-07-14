@@ -8,6 +8,7 @@ import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
+import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -66,6 +67,128 @@ describe('resource structure commands', () => {
         )
         .take(2)
       expect(operations).toHaveLength(1)
+      expect(
+        await ctx.db
+          .query('resourceNoteContents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .unique(),
+      ).toEqual(
+        expect.objectContaining({
+          initializationOperationUuid: operationId,
+          state: 'initializing',
+        }),
+      )
+      expect(
+        await ctx.db
+          .query('resourceNoteInitializationIntents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .unique(),
+      ).toEqual(expect.objectContaining({ operationUuid: operationId, status: 'pending' }))
+    })
+  })
+
+  it('binds the creating note document idempotently and rejects replacement content', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Note',
+        icon: null,
+        color: null,
+      },
+    })
+    const update = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Local edit' }],
+      },
+    ])
+    const args = { campaignId: campaignUuid, operationId, resourceId, update }
+
+    const first = await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, args)
+    const replay = await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, args)
+
+    expect(first).toEqual(
+      expect.objectContaining({
+        status: 'completed',
+        resourceId,
+        version: expect.objectContaining({ revision: 1 }),
+      }),
+    )
+    expect(replay).toEqual(first)
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
+        ...args,
+        update: makeYjsUpdateWithBlocks([
+          {
+            id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Replacement' }],
+          },
+        ]),
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'already_initialized' })
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      expect(content).toEqual(
+        expect.objectContaining({
+          state: 'ready',
+          version: expect.objectContaining({ revision: 1 }),
+        }),
+      )
+      expect(
+        await ctx.db
+          .query('resourceNoteInitializationIntents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+          .take(1),
+      ).toHaveLength(0)
+    })
+  })
+
+  it('creates ready revision-1 content for files, maps, and canvases', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const fileId = await createResource(campaign, campaignUuid, 'file', null, 'File')
+    const mapId = await createResource(campaign, campaignUuid, 'map', null, 'Map')
+    const canvasId = await createResource(campaign, campaignUuid, 'canvas', null, 'Canvas')
+
+    await t.run(async (ctx) => {
+      const file = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', fileId))
+        .unique()
+      const map = await ctx.db
+        .query('resourceMapContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', mapId))
+        .unique()
+      const canvas = await ctx.db
+        .query('resourceCanvasContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', canvasId))
+        .unique()
+      expect(file).toEqual(
+        expect.objectContaining({
+          assetUuid: null,
+          version: expect.objectContaining({ revision: 1 }),
+        }),
+      )
+      expect(map).toEqual(
+        expect.objectContaining({ layers: [], version: expect.objectContaining({ revision: 1 }) }),
+      )
+      expect(canvas).toEqual(
+        expect.objectContaining({ version: expect.objectContaining({ revision: 1 }) }),
+      )
     })
   })
 
@@ -354,10 +477,6 @@ describe('resource structure commands', () => {
       'Delete child',
     )
     await t.run(async (ctx) => {
-      const child = await ctx.db
-        .query('resources')
-        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', deleteChildId))
-        .unique()
       await ctx.db.insert('resourceSourcePathAliases', {
         campaignUuid,
         resourceUuid: deleteChildId,
@@ -370,12 +489,6 @@ describe('resource structure commands', () => {
         campaignUuid,
         resourceUuid: deleteChildId,
         role: 'campaign-home',
-      })
-      await ctx.db.insert('resourceContentVersions', {
-        campaignUuid,
-        resourceUuid: deleteChildId,
-        component: 'note',
-        version: child!.metadataVersion,
       })
     })
     await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [deleteRootId] })
@@ -427,10 +540,14 @@ describe('resource structure commands', () => {
       ).toHaveLength(0)
       expect(
         await ctx.db
-          .query('resourceContentVersions')
-          .withIndex('by_resource_and_component', (query) =>
-            query.eq('resourceUuid', deleteChildId),
-          )
+          .query('resourceNoteContents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', deleteChildId))
+          .take(1),
+      ).toHaveLength(0)
+      expect(
+        await ctx.db
+          .query('resourceNoteInitializationIntents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', deleteChildId))
           .take(1),
       ).toHaveLength(0)
     })
@@ -535,7 +652,7 @@ describe('resource structure commands', () => {
   async function createResource(
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     campaignUuid: string,
-    kind: 'folder' | 'note',
+    kind: 'canvas' | 'file' | 'folder' | 'map' | 'note',
     parentId: ResourceId | null,
     title: string,
   ) {

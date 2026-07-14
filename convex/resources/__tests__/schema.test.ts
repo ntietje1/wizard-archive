@@ -13,7 +13,12 @@ describe('canonical resource schema', () => {
         resourceSourcePathAliases: expect.anything(),
         resourceRoles: expect.anything(),
         resourceOperations: expect.anything(),
-        resourceContentVersions: expect.anything(),
+        resourceCanvasContents: expect.anything(),
+        resourceFileContents: expect.anything(),
+        resourceMapContents: expect.anything(),
+        resourceMapPins: expect.anything(),
+        resourceNoteContents: expect.anything(),
+        resourceNoteInitializationIntents: expect.anything(),
       }),
     )
     expect(versionStampValidator).toBeTruthy()

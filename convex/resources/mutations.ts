@@ -4,9 +4,11 @@ import type { Infer } from 'convex/values'
 import { campaignMutation } from '../functions'
 import { executeStructureCommand as executeStructureCommandFn } from './functions/executeStructureCommand'
 import {
+  bindNoteContentResultValidator,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
 } from './schema'
+import { bindNoteContent as bindNoteContentFn } from './functions/bindNoteContent'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 
@@ -23,4 +25,14 @@ export const executeStructureCommand = campaignMutation({
     })
     return result as unknown as StoredResourceStructureCommandResult
   },
+})
+
+export const bindNoteContent = campaignMutation({
+  args: {
+    resourceId: v.string(),
+    operationId: v.string(),
+    update: v.bytes(),
+  },
+  returns: bindNoteContentResultValidator,
+  handler: async (ctx, args) => await bindNoteContentFn(ctx, args),
 })

@@ -189,6 +189,27 @@ export const resourceStructureCommandResultValidator = v.union(
   }),
 )
 
+export const bindNoteContentResultValidator = v.union(
+  v.object({
+    status: v.literal('completed'),
+    resourceId: resourceUuidValidator,
+    version: versionStampValidator,
+  }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'invalid_uuid',
+      'resource_missing',
+      'ownership_mismatch',
+      'wrong_kind',
+      'operation_mismatch',
+      'content_missing',
+      'content_corrupt',
+      'already_initialized',
+    ),
+  }),
+)
+
 export const resourceTables = {
   resources: defineTable(resourceTableValidator)
     .index('by_resourceUuid', ['resourceUuid'])
@@ -242,15 +263,79 @@ export const resourceTables = {
     .index('by_campaign_and_operation', ['campaignUuid', 'operationUuid'])
     .index('by_campaign_and_actor', ['campaignUuid', 'actorMemberUuid']),
 
-  resourceContentVersions: defineTable({
+  resourceNoteContents: defineTable(
+    v.union(
+      v.object({
+        campaignUuid: campaignUuidValidator,
+        resourceUuid: resourceUuidValidator,
+        state: v.literal('initializing'),
+        initializationOperationUuid: v.string(),
+      }),
+      v.object({
+        campaignUuid: campaignUuidValidator,
+        resourceUuid: resourceUuidValidator,
+        state: v.literal('ready'),
+        initializationOperationUuid: v.string(),
+        update: v.bytes(),
+        version: versionStampValidator,
+      }),
+    ),
+  ).index('by_resourceUuid', ['resourceUuid']),
+
+  resourceNoteInitializationIntents: defineTable({
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
-    component: literals(
-      RESOURCE_KIND.note,
-      RESOURCE_KIND.file,
-      RESOURCE_KIND.map,
-      RESOURCE_KIND.canvas,
+    operationUuid: v.string(),
+    status: literals('pending', 'failed'),
+    attempts: v.number(),
+    lastAttemptAt: v.nullable(v.number()),
+    lastError: v.nullable(v.string()),
+    createdAt: v.number(),
+  })
+    .index('by_resourceUuid', ['resourceUuid'])
+    .index('by_status_and_createdAt', ['status', 'createdAt']),
+
+  resourceFileContents: defineTable({
+    campaignUuid: campaignUuidValidator,
+    resourceUuid: resourceUuidValidator,
+    assetUuid: v.nullable(v.string()),
+    extension: v.nullable(v.string()),
+    mediaType: v.string(),
+    originalName: v.nullable(v.string()),
+    version: versionStampValidator,
+  }).index('by_resourceUuid', ['resourceUuid']),
+
+  resourceMapContents: defineTable({
+    campaignUuid: campaignUuidValidator,
+    resourceUuid: resourceUuidValidator,
+    imageAssetUuid: v.nullable(v.string()),
+    layers: v.array(
+      v.object({
+        id: v.string(),
+        imageAssetUuid: v.nullable(v.string()),
+        name: v.string(),
+      }),
     ),
     version: versionStampValidator,
-  }).index('by_resource_and_component', ['resourceUuid', 'component']),
+  }).index('by_resourceUuid', ['resourceUuid']),
+
+  resourceMapPins: defineTable({
+    campaignUuid: campaignUuidValidator,
+    mapResourceUuid: resourceUuidValidator,
+    mapPinUuid: v.string(),
+    targetResourceUuid: resourceUuidValidator,
+    layerId: v.nullable(v.string()),
+    x: v.number(),
+    y: v.number(),
+    visible: v.boolean(),
+  })
+    .index('by_mapResourceUuid', ['mapResourceUuid'])
+    .index('by_mapPinUuid', ['mapPinUuid']),
+
+  resourceCanvasContents: defineTable({
+    campaignUuid: campaignUuidValidator,
+    resourceUuid: resourceUuidValidator,
+    update: v.bytes(),
+    version: versionStampValidator,
+  }).index('by_resourceUuid', ['resourceUuid']),
 }
