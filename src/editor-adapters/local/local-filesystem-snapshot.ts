@@ -28,8 +28,9 @@ import {
   withValidLocalViewAsPlayerSelection,
 } from './local-workspace-model'
 import type { LocalWorkspaceState } from './local-workspace-model'
-import type { CampaignMemberId, SidebarItemId, SidebarItemShareId } from 'shared/common/ids'
-import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, SidebarItemId } from 'shared/common/ids'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { MapPinId, ResourceShareId } from '@wizard-archive/editor/resources/domain-id'
 
 export type LocalFileSystemSnapshot = Omit<WizardEditorCatalogSnapshot, 'current'> & {
   workspace: LocalWorkspaceState
@@ -42,6 +43,7 @@ type LocalWorkspaceItem = LocalWorkspaceState['items'][number]
 type LocalItemName = WizardEditorItemWithContent['name']
 type LocalItemSlug = WizardEditorItemWithContent['slug']
 type LocalSidebarItemShareType = WizardEditorItemWithContent['shares'][number]['sidebarItemType']
+const localResourceShareIds = new Map<string, ResourceShareId>()
 type LocalSidebarItemBaseFields = Pick<
   WizardEditorItemWithContent,
   | 'id'
@@ -339,7 +341,7 @@ function localSidebarItemBaseFields(
 function localSidebarItemShares(state: LocalWorkspaceState, item: LocalWorkspaceItem) {
   return Object.entries(state.memberItemPermissionsById?.[item.id] ?? {}).map(
     ([campaignMemberId, permissionLevel]) => ({
-      id: `${item.id}:${campaignMemberId}` as SidebarItemShareId,
+      id: getLocalResourceShareId(state.workspaceId, item.id, campaignMemberId),
       createdAt: item.createdAt,
       campaignId: state.workspaceId as LocalItemShareWorkspaceRecordId,
       sidebarItemId: item.id as SidebarItemId,
@@ -349,6 +351,15 @@ function localSidebarItemShares(state: LocalWorkspaceState, item: LocalWorkspace
       permissionLevel,
     }),
   )
+}
+
+function getLocalResourceShareId(workspaceId: string, itemId: string, memberId: string) {
+  const key = `${workspaceId}\0${itemId}\0${memberId}`
+  const existing = localResourceShareIds.get(key)
+  if (existing) return existing
+  const id = generateDomainId(DOMAIN_ID_KIND.resourceShare)
+  localResourceShareIds.set(key, id)
+  return id
 }
 
 function localSidebarItemType(itemType: LocalWorkspaceItem['type']): LocalSidebarItemShareType {

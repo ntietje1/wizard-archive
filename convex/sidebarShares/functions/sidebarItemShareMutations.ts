@@ -14,6 +14,7 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { AnyResource } from '@wizard-archive/editor/resources/resource-contract'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 type ExistingShare = Doc<'sidebarItemShares'> | null
 const MAX_SHARE_ITEMS_PER_REQUEST = 100
@@ -119,13 +120,11 @@ export async function setResourcesMemberPermission(
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel: PermissionLevel
   },
-): Promise<Array<Id<'sidebarItemShares'>>> {
+): Promise<void> {
   assertShareBatchSize(sidebarItemIds)
   const memberName = await getTargetMemberName(ctx, campaignMemberId, 'accepted_player')
   const currentSessionId = ctx.campaign.currentSessionId
   const currentSession = currentSessionId ? await ctx.db.get('sessions', currentSessionId) : null
-  const shareIds: Array<Id<'sidebarItemShares'>> = []
-
   for (const sidebarItemId of sidebarItemIds) {
     const item = await getShareTargetItem(ctx, sidebarItemId)
     const existingShare = await getExistingMemberShare(ctx, { item, campaignMemberId })
@@ -143,11 +142,11 @@ export async function setResourcesMemberPermission(
           previousLevel,
         })
       }
-      shareIds.push(existingShare._id)
       continue
     }
 
-    const shareId = await ctx.db.insert('sidebarItemShares', {
+    await ctx.db.insert('sidebarItemShares', {
+      resourceShareUuid: generateDomainId(DOMAIN_ID_KIND.resourceShare),
       campaignId: item.campaignId,
       sidebarItemId: item.id,
       sidebarItemType: item.type,
@@ -161,10 +160,7 @@ export async function setResourcesMemberPermission(
       level: permissionLevel,
       previousLevel: null,
     })
-    shareIds.push(shareId)
   }
-
-  return shareIds
 }
 
 export async function clearResourcesMemberPermission(

@@ -12,7 +12,8 @@ import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../../workspace/items/optimis
 import { projectMoveOperations, projectTrashRoots } from '../domain/patch-projection'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import type { ResourcePatch } from '../patch-contract'
-import type { SidebarItemShareId, WorkspaceMemberId } from '../../../../../shared/common/ids'
+import type { WorkspaceMemberId } from '../../../../../shared/common/ids'
+import { testResourceShareId } from '../../test/resource-share-id'
 
 const NOW = 1000
 
@@ -36,7 +37,7 @@ function createShare(
   overrides?: Partial<SidebarItemSharePatchRow>,
 ): SidebarItemSharePatchRow {
   return {
-    id: `share_${item.id}` as SidebarItemShareId,
+    id: testResourceShareId(`share_${item.id}`),
     createdAt: 1,
     workspaceId: item.campaignId,
     resourceId: item.id,

@@ -22,11 +22,11 @@ import { deduplicateNumericSuffix } from './items/deduplicate-numeric-suffix'
 import { isOptimisticSidebarItemId } from './items/optimistic'
 import { RESOURCE_ICON_NAMES, RESOURCE_STATUS } from './items-persistence-contract'
 import type { RESOURCE_TYPES } from './items-persistence-contract'
+import type { ResourceShareId } from '../resources/domain-id'
 
 type ResourceTableId<TableName extends string> = string & { __tableName: TableName }
 
 export type ResourceId = ResourceTableId<'sidebarItems'>
-export type ResourceShareId = ResourceTableId<'sidebarItemShares'>
 export type ResourceTransactionId = ResourceTableId<'filesystemTransactions'>
 export type ResourceKind = (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES]
 export type ResourceStatus = (typeof RESOURCE_STATUS)[keyof typeof RESOURCE_STATUS]

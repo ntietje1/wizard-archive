@@ -3,6 +3,7 @@ import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { WORKSPACE_MODE } from '../../../../../../shared/workspace/workspace-mode'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
+import { testResourceShareId } from '../../../test/resource-share-id'
 import { RESOURCE_STATUS } from '../../../workspace/items-persistence-contract'
 import { resolveResourceWorkspaceModePolicy } from '../workspace-mode-policy'
 import type { EditorWorkspaceActor } from '../permission-resolution'
@@ -36,7 +37,7 @@ describe('resource workspace mode policy', () => {
       campaignId: noteBase.campaignId,
       shares: [
         {
-          id: testId<'sidebarItemShares'>('workspace_mode_share'),
+          id: testResourceShareId('workspace_mode_share'),
           createdAt: 1,
           campaignId: noteBase.campaignId,
           sidebarItemId: noteBase.id,

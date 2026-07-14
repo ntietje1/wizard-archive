@@ -15,6 +15,7 @@ import {
 import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { LOCAL_WORKSPACE_INITIAL_TIMESTAMP } from '../local-workspace-model'
 import { testNoteBlockId } from 'shared/test/note-block-id'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 
 type LocalMapItemWithContent = Extract<WizardEditorItemWithContent, { type: 'gameMap' }>
 type LocalNoteItemWithContent = Extract<WizardEditorItemWithContent, { type: 'note' }>
@@ -86,8 +87,12 @@ describe('local filesystem snapshot', () => {
     }
 
     const snapshot = createLocalFileSystemSnapshot(workspace)
+    const repeatedSnapshot = createLocalFileSystemSnapshot(workspace)
     const noteId = 'visible-note' as SidebarItemId
+    const share = snapshot.catalog.getKnownItemById(noteId)?.shares[0]
 
+    expect(isUuidV7(share!.id)).toBe(true)
+    expect(repeatedSnapshot.catalog.getKnownItemById(noteId)?.shares[0].id).toBe(share!.id)
     expect(snapshot.catalog.getKnownItemById(noteId)?.parentId).toBeNull()
     expect(snapshot.catalog.getVisibleItemById(noteId)?.parentId).toBeNull()
     expect(snapshot.catalog.getVisibleRoots().map((item) => item.id)).toEqual([noteId])

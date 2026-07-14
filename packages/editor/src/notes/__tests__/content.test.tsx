@@ -16,6 +16,7 @@ import {
   createTestNoteValueSessionPorts,
 } from '../../test/workspace-note-session-source-factory'
 import { testId } from '../../test/id'
+import { testResourceShareId } from '../../test/resource-share-id'
 import { createRuntimeNoteContentSource } from '../runtime-content-source'
 import type * as BlockNoteCore from '@blocknote/core'
 import type { Doc } from 'yjs'
@@ -457,7 +458,7 @@ describe('NoteContent', () => {
       ...baseNote,
       shares: [
         {
-          id: testId<'sidebarItemShares'>('note-share-1'),
+          id: testResourceShareId('note-share-1'),
           createdAt: 1,
           campaignId: baseNote.campaignId,
           sidebarItemId: baseNote.id,

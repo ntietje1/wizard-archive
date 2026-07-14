@@ -9,9 +9,13 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
+import type { ResourceShareId } from '@wizard-archive/editor/resources/domain-id'
 
-type SidebarItemShare = Omit<Doc<'sidebarItemShares'>, '_id' | '_creationTime'> & {
-  id: Id<'sidebarItemShares'>
+type SidebarItemShare = Omit<
+  Doc<'sidebarItemShares'>,
+  '_id' | '_creationTime' | 'resourceShareUuid'
+> & {
+  id: ResourceShareId
   createdAt: number
 }
 
@@ -27,10 +31,10 @@ export interface SidebarItemWithShares {
 }
 
 function toSidebarItemShare(share: Doc<'sidebarItemShares'>): SidebarItemShare {
-  const { _id, _creationTime, ...fields } = share
+  const { _id: _rowId, _creationTime, resourceShareUuid, ...fields } = share
   return {
     ...fields,
-    id: _id,
+    id: resourceShareUuid,
     createdAt: _creationTime,
   }
 }

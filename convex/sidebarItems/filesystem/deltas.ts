@@ -152,10 +152,18 @@ export function storedSidebarItemPatchFields(fields: SidebarItemFieldPatch) {
 function sidebarItemSharePatchRowFromStored(
   row: StoredSidebarItemSharePatchRow,
 ): SidebarItemSharePatchRow {
-  const { _id, _creationTime, campaignId, campaignMemberId, sidebarItemId, ...fields } = row
+  const {
+    _id: _rowId,
+    _creationTime,
+    resourceShareUuid,
+    campaignId,
+    campaignMemberId,
+    sidebarItemId,
+    ...fields
+  } = row
   return {
     ...fields,
-    id: _id,
+    id: resourceShareUuid,
     createdAt: _creationTime,
     workspaceId: campaignId,
     memberId: campaignMemberId,

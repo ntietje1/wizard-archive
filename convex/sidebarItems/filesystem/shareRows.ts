@@ -25,6 +25,7 @@ export async function getSidebarItemShareRow(
   return {
     _id: share._id,
     _creationTime: share._creationTime,
+    resourceShareUuid: share.resourceShareUuid,
     campaignId: share.campaignId,
     sidebarItemId: share.sidebarItemId,
     sidebarItemType: share.sidebarItemType,

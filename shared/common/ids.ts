@@ -8,5 +8,4 @@ export type WorkspaceMemberId = SharedId<'campaignMembers'>
 export type FileSystemTransactionId = SharedId<'filesystemTransactions'>
 export type SessionRowId = SharedId<'sessions'>
 export type SidebarItemId = SharedId<'sidebarItems'>
-export type SidebarItemShareId = SharedId<'sidebarItemShares'>
 export type UserProfileId = SharedId<'userProfiles'>

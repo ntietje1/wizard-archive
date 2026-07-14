@@ -422,6 +422,7 @@ async function applySidebarItemShareUpsert(
     return
   }
   await ctx.db.insert('sidebarItemShares', {
+    resourceShareUuid: patch.share.id,
     campaignId: ctx.campaign._id,
     sidebarItemId: patch.share.resourceId,
     sidebarItemType: patch.share.sidebarItemType,

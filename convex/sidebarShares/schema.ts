@@ -1,10 +1,10 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { domainValidatorFields } from '../common/schema'
 import {
   permissionLevelValidator,
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/validators'
+import { resourceShareIdValidator } from './validators'
 
 const sidebarItemShareTableFields = {
   campaignId: v.id('campaigns'),
@@ -17,15 +17,16 @@ const sidebarItemShareTableFields = {
 
 export const sidebarShareTables = {
   sidebarItemShares: defineTable({
+    resourceShareUuid: resourceShareIdValidator,
     ...sidebarItemShareTableFields,
   })
+    .index('by_resourceShareUuid', ['resourceShareUuid'])
     .index('by_campaign_member', ['campaignId', 'campaignMemberId'])
     .index('by_campaign_item_member', ['campaignId', 'sidebarItemId', 'campaignMemberId']),
 }
 
-const sidebarItemShareValidatorFields = {
-  ...domainValidatorFields('sidebarItemShares'),
+export const sidebarItemShareValidator = v.object({
+  id: resourceShareIdValidator,
+  createdAt: v.number(),
   ...sidebarItemShareTableFields,
-}
-
-export const sidebarItemShareValidator = v.object(sidebarItemShareValidatorFields)
+})

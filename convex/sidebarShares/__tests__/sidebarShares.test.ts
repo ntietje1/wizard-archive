@@ -9,6 +9,7 @@ import {
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 
 async function getShareInfo(
   dmAuth: ReturnType<typeof asDm>,
@@ -52,8 +53,19 @@ describe('setResourcesMemberPermission', () => {
 
     const result = await getShareInfo(dmAuth, ctx.campaignId, noteId)
     expect(result.shares).toHaveLength(1)
+    expect(isUuidV7(result.shares[0].id)).toBe(true)
+    expect(result.shares[0]).not.toHaveProperty('_id')
+    expect(result.shares[0]).not.toHaveProperty('resourceShareUuid')
     expect(result.shares[0].campaignMemberId).toBe(ctx.player.memberId)
     expect(result.shares[0].permissionLevel).toBe('view')
+
+    await t.run(async (dbCtx) => {
+      const share = await dbCtx.db
+        .query('sidebarItemShares')
+        .withIndex('by_resourceShareUuid', (q) => q.eq('resourceShareUuid', result.shares[0].id))
+        .unique()
+      expect(share?.resourceShareUuid).toBe(result.shares[0].id)
+    })
   })
 
   it('sets permissions for multiple items in one mutation', async () => {
@@ -112,10 +124,12 @@ describe('setResourcesMemberPermission', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId, 'view')
+    const before = await getShareInfo(dmAuth, ctx.campaignId, noteId)
     await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId, 'edit')
 
     const result = await getShareInfo(dmAuth, ctx.campaignId, noteId)
     expect(result.shares).toHaveLength(1)
+    expect(result.shares[0].id).toBe(before.shares[0].id)
     expect(result.shares[0].permissionLevel).toBe('edit')
   })
 

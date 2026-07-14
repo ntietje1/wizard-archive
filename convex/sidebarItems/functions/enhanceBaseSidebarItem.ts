@@ -106,10 +106,10 @@ export async function enhanceBase<T extends SidebarItemEnhancementRow>(
 }
 
 export function toResourceShare(share: Doc<'sidebarItemShares'>): ResourceShare {
-  const { _id, _creationTime, ...fields } = share
+  const { _id: _rowId, _creationTime, resourceShareUuid, ...fields } = share
   return {
     ...fields,
-    id: _id,
+    id: resourceShareUuid,
     createdAt: _creationTime,
   }
 }

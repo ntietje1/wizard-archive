@@ -15,6 +15,7 @@ import {
   setBlocksShareStatusCommandValidator,
 } from '../../blockShares/commandValidators'
 import { createParentTargetValidator } from '../validation/parent'
+import { resourceShareIdValidator } from '../../sidebarShares/validators'
 
 const createCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.create),
@@ -273,7 +274,7 @@ const sidebarItemPatchPreconditionValidator = v.object({
 })
 
 const sidebarItemShareSnapshotValidator = v.object({
-  id: v.id('sidebarItemShares'),
+  id: resourceShareIdValidator,
   createdAt: v.number(),
   workspaceId: v.id('campaigns'),
   resourceId: v.id('sidebarItems'),
@@ -286,6 +287,7 @@ const sidebarItemShareSnapshotValidator = v.object({
 const storedSidebarItemShareSnapshotValidator = v.object({
   _id: v.id('sidebarItemShares'),
   _creationTime: v.number(),
+  resourceShareUuid: resourceShareIdValidator,
   campaignId: v.id('campaigns'),
   sidebarItemId: v.id('sidebarItems'),
   sidebarItemType: sidebarItemTypeValidator,

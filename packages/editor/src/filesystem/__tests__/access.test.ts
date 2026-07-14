@@ -12,6 +12,7 @@ import {
 } from '../access'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
+import { testResourceShareId } from '../../test/resource-share-id'
 
 type FileSystemItemsReadState = Parameters<typeof filterFileSystemItemsForActor>[0]
 type EditorWorkspaceActor = NonNullable<Parameters<typeof filterFileSystemItemsForActor>[1]>
@@ -29,7 +30,7 @@ function createShare(
   permissionLevel: SidebarItemShare['permissionLevel'],
 ): SidebarItemShare {
   return {
-    id: testId<'sidebarItemShares'>(id),
+    id: testResourceShareId(id),
     createdAt: 1,
     campaignId: note.campaignId,
     sidebarItemId: note.id,

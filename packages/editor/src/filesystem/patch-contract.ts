@@ -8,12 +8,12 @@ import type {
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type {
   ResourceId,
-  ResourceShareId,
   ResourceIconName,
   ResourceLocation,
   ResourceStatus,
   ResourceKind,
 } from '../workspace/resource-contract'
+import type { ResourceShareId } from '../resources/domain-id'
 
 export type ResourcePatchRow = {
   id: ResourceId

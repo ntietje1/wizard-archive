@@ -566,10 +566,11 @@ export async function createSidebarShare(
     sessionId,
   }
   const data = { ...defaults, ...overrides }
+  const resourceShareUuid = generateDomainId(DOMAIN_ID_KIND.resourceShare)
   const shareId = await t.run(async (ctx) => {
-    return await ctx.db.insert('sidebarItemShares', data)
+    return await ctx.db.insert('sidebarItemShares', { ...data, resourceShareUuid })
   })
-  return { shareId, ...data }
+  return { shareId, resourceShareUuid, ...data }
 }
 
 export async function createBlockShare(

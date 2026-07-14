@@ -1138,6 +1138,7 @@ function createContentNote(
   const note = {
     ...createNote(overrides),
     ancestors: [],
+    shares: [],
     blockMeta: {},
     blockShareAccessWarnings: [],
     content: [],
@@ -1162,6 +1163,7 @@ function createContentFile(
   return {
     ...createFile(overrides),
     ancestors: [],
+    shares: [],
   }
 }
 
