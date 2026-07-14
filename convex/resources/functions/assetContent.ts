@@ -5,6 +5,7 @@ import {
 } from '@wizard-archive/editor/resources/domain-id'
 import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
+import { internal } from '../../_generated/api'
 
 export type PreparedAssetCopies = Readonly<{
   initializing: boolean
@@ -50,6 +51,15 @@ export async function prepareAssetCopies(
     commit: async () => {
       const createdAt = Date.now()
       await Promise.all(
+        [...assetMap.values()].map((assetUuid) =>
+          ctx.db.insert('resourceAssetOwners', {
+            campaignUuid: campaignId,
+            resourceUuid: resourceId,
+            assetUuid,
+          }),
+        ),
+      )
+      const intentIds = await Promise.all(
         [...assetMap].map(([sourceAssetUuid, destinationAssetUuid]) =>
           ctx.db.insert('resourceAssetCopyIntents', {
             campaignUuid: campaignId,
@@ -64,19 +74,26 @@ export async function prepareAssetCopies(
           }),
         ),
       )
+      await Promise.all(
+        intentIds.map((intentId) =>
+          ctx.scheduler.runAfter(0, internal.resources.internalActions.processAssetCopy, {
+            intentId,
+          }),
+        ),
+      )
     },
   }
 }
 
-export function fileAssetIds(content: { assetUuid: string | null }): Array<string> {
+export function fileAssetIds(content: { assetUuid: AssetId | null }): Array<AssetId> {
   return content.assetUuid === null ? [] : [content.assetUuid]
 }
 
 export function mapAssetIds(content: {
-  imageAssetUuid: string | null
-  layers: ReadonlyArray<{ imageAssetUuid: string | null }>
-}): Array<string> {
+  imageAssetUuid: AssetId | null
+  layers: ReadonlyArray<{ imageAssetUuid: AssetId | null }>
+}): Array<AssetId> {
   return [content.imageAssetUuid, ...content.layers.map((layer) => layer.imageAssetUuid)].filter(
-    (assetUuid): assetUuid is string => assetUuid !== null,
+    (assetUuid): assetUuid is AssetId => assetUuid !== null,
   )
 }

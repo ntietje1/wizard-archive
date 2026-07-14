@@ -4,6 +4,7 @@ import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-versi
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
+import { assetIdValidator } from './validators'
 
 export const resourceUuidValidator = v.string()
 export const campaignUuidValidator = v.string()
@@ -223,8 +224,7 @@ export const noteContentSnapshotValidator = v.union(
   }),
 )
 
-const externalEffectIntentFields = {
-  status: literals('pending', 'failed'),
+const externalEffectAttemptFields = {
   attempts: v.number(),
   lastAttemptAt: v.nullable(v.number()),
   lastError: v.nullable(v.string()),
@@ -307,7 +307,8 @@ export const resourceTables = {
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
     operationUuid: v.string(),
-    ...externalEffectIntentFields,
+    status: literals('pending', 'failed'),
+    ...externalEffectAttemptFields,
   })
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_status_and_createdAt', ['status', 'createdAt']),
@@ -316,7 +317,7 @@ export const resourceTables = {
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
     state: literals('initializing', 'ready', 'failed'),
-    assetUuid: v.nullable(v.string()),
+    assetUuid: v.nullable(assetIdValidator),
     extension: v.nullable(v.string()),
     mediaType: v.string(),
     originalName: v.nullable(v.string()),
@@ -327,11 +328,11 @@ export const resourceTables = {
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
     state: literals('initializing', 'ready', 'failed'),
-    imageAssetUuid: v.nullable(v.string()),
+    imageAssetUuid: v.nullable(assetIdValidator),
     layers: v.array(
       v.object({
         id: v.string(),
-        imageAssetUuid: v.nullable(v.string()),
+        imageAssetUuid: v.nullable(assetIdValidator),
         name: v.string(),
       }),
     ),
@@ -361,18 +362,29 @@ export const resourceTables = {
   resourceAssetCopyIntents: defineTable({
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
-    sourceAssetUuid: v.string(),
-    destinationAssetUuid: v.string(),
-    ...externalEffectIntentFields,
+    sourceAssetUuid: assetIdValidator,
+    destinationAssetUuid: assetIdValidator,
+    status: literals('pending', 'processing', 'failed'),
+    ...externalEffectAttemptFields,
   })
     .index('by_resourceUuid', ['resourceUuid'])
+    .index('by_sourceAssetUuid', ['sourceAssetUuid'])
     .index('by_destinationAssetUuid', ['destinationAssetUuid'])
     .index('by_status_and_createdAt', ['status', 'createdAt']),
 
   resourceAssetRetirementCandidates: defineTable({
-    assetUuid: v.string(),
-    ...externalEffectIntentFields,
+    assetUuid: assetIdValidator,
+    status: literals('pending', 'processing', 'failed'),
+    ...externalEffectAttemptFields,
   })
     .index('by_assetUuid', ['assetUuid'])
     .index('by_status_and_createdAt', ['status', 'createdAt']),
+
+  resourceAssetOwners: defineTable({
+    campaignUuid: campaignUuidValidator,
+    resourceUuid: resourceUuidValidator,
+    assetUuid: assetIdValidator,
+  })
+    .index('by_resourceUuid', ['resourceUuid'])
+    .index('by_assetUuid', ['assetUuid']),
 }

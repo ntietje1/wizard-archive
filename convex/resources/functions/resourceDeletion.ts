@@ -1,4 +1,4 @@
-import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
@@ -7,6 +7,7 @@ import { loadFileContentDeletion } from './fileContent'
 import { loadMapContentDeletion } from './mapContent'
 import { loadNoteContentDeletion } from './noteContent'
 import { fileAssetIds, mapAssetIds } from './assetContent'
+import { internal } from '../../_generated/api'
 
 type ResourceDeletionPlan = {
   aliases: Array<Doc<'resourceSourcePathAliases'>>
@@ -18,7 +19,8 @@ type ResourceDeletionPlan = {
   mapPins: Array<Doc<'resourceMapPins'>>
   canvasContents: Array<Doc<'resourceCanvasContents'>>
   assetCopyIntents: Array<Doc<'resourceAssetCopyIntents'>>
-  retirementAssetUuids: Set<string>
+  assetOwners: Array<Doc<'resourceAssetOwners'>>
+  retirementAssetUuids: Set<AssetId>
 }
 
 function createPlan(): ResourceDeletionPlan {
@@ -32,6 +34,7 @@ function createPlan(): ResourceDeletionPlan {
     mapPins: [],
     canvasContents: [],
     assetCopyIntents: [],
+    assetOwners: [],
     retirementAssetUuids: new Set(),
   }
 }
@@ -51,6 +54,7 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.mapPins,
     plan.canvasContents,
     plan.assetCopyIntents,
+    plan.assetOwners,
   ]
 }
 
@@ -124,6 +128,12 @@ export async function planResourceDeletion(
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resource.resourceUuid))
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
+    plan.assetOwners.push(
+      ...(await ctx.db
+        .query('resourceAssetOwners')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resource.resourceUuid))
+        .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
+    )
     await addContent(ctx, plan, resource)
     if (rowCount(plan) > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) return null
   }
@@ -145,20 +155,25 @@ export async function applyResourceDeletion(
         .unique(),
     ),
   )
+  const candidateIds = await Promise.all(
+    assets.map(
+      async (assetUuid, index) =>
+        existing[index]?._id ??
+        (await ctx.db.insert('resourceAssetRetirementCandidates', {
+          assetUuid,
+          status: 'pending',
+          attempts: 0,
+          lastAttemptAt: null,
+          lastError: null,
+          createdAt,
+        })),
+    ),
+  )
   await Promise.all(
-    assets.flatMap((assetUuid, index) =>
-      existing[index]
-        ? []
-        : [
-            ctx.db.insert('resourceAssetRetirementCandidates', {
-              assetUuid,
-              status: 'pending',
-              attempts: 0,
-              lastAttemptAt: null,
-              lastError: null,
-              createdAt,
-            }),
-          ],
+    candidateIds.map((candidateId) =>
+      ctx.scheduler.runAfter(0, internal.resources.internalActions.processAssetRetirement, {
+        candidateId,
+      }),
     ),
   )
 }

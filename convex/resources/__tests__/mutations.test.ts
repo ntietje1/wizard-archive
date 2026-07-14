@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vite-plus/test'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 import type { FunctionArgs } from 'convex/server'
-import { api } from '../../_generated/api'
+import { api, internal } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
@@ -27,6 +27,8 @@ type StoredResourceStructureCommand = FunctionArgs<
 
 describe('resource structure commands', () => {
   const t = createTestContext()
+
+  afterEach(() => vi.useRealTimers())
 
   it('creates a canonical resource and stores an actor-bound replay receipt', async () => {
     const campaign = await setupCampaignContext(t)
@@ -628,7 +630,8 @@ describe('resource structure commands', () => {
     })
   })
 
-  it('commits asset copy intents and retirement candidates without provider identity', async () => {
+  it('copies and retires content assets through authoritative lifecycle work', async () => {
+    vi.useFakeTimers()
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const sourceFileId = await createResource(campaign, campaignUuid, 'file', null, 'Asset')
@@ -667,7 +670,7 @@ describe('resource structure commands', () => {
       throw new Error('Expected completed deep copy')
     }
     const destinationFileId = copy.receipt.result.roots[0]!.destinationRootId
-    const destinationAssetId = await t.run(async (ctx) => {
+    const pendingCopy = await t.run(async (ctx) => {
       const content = await ctx.db
         .query('resourceFileContents')
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', destinationFileId))
@@ -691,7 +694,84 @@ describe('resource structure commands', () => {
         }),
       )
       expect(intent).not.toHaveProperty('storageId')
-      return content!.assetUuid!
+      return { assetId: content!.assetUuid!, intentId: intent!._id }
+    })
+
+    await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [sourceFileId] })
+    await execute(campaign, campaignUuid, {
+      type: 'permanentlyDelete',
+      resourceIds: [sourceFileId],
+    })
+    const sourceRetirementCandidateId = await t.run(async (ctx) => {
+      const candidate = await ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', sourceAsset.assetId))
+        .unique()
+      return candidate!._id
+    })
+    await t.mutation(internal.resources.internalMutations.claimAssetRetirement, {
+      candidateId: sourceRetirementCandidateId,
+    })
+    await expect(
+      t.mutation(internal.resources.internalMutations.authorizeAssetRetirement, {
+        candidateId: sourceRetirementCandidateId,
+      }),
+    ).resolves.toEqual({ status: 'deferred' })
+    await t.action(internal.resources.internalActions.processAssetCopy, {
+      intentId: pendingCopy.intentId,
+    })
+    await t.action(internal.resources.internalActions.processAssetRetirement, {
+      candidateId: sourceRetirementCandidateId,
+    })
+    const destinationStorageId = await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', destinationFileId))
+        .unique()
+      expect(content?.state).toBe('ready')
+      expect(
+        await ctx.db
+          .query('resourceAssetCopyIntents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', destinationFileId))
+          .unique(),
+      ).toBeNull()
+      expect(
+        await ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', pendingCopy.assetId))
+          .unique(),
+      ).toEqual(expect.objectContaining({ resourceUuid: destinationFileId }))
+      const storage = await ctx.db
+        .query('fileStorage')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', pendingCopy.assetId))
+        .unique()
+      expect(await (await ctx.storage.get(storage!.storageId!))!.text()).toBe('asset bytes')
+      expect(
+        await ctx.db
+          .query('fileStorage')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', sourceAsset.assetId))
+          .unique(),
+      ).toBeNull()
+      expect(await ctx.storage.get(sourceAsset.storageId)).toBeNull()
+      return storage!.storageId!
+    })
+
+    const staleCandidateId = await t.run((ctx) =>
+      ctx.db.insert('resourceAssetRetirementCandidates', {
+        assetUuid: pendingCopy.assetId,
+        status: 'pending',
+        attempts: 0,
+        lastAttemptAt: null,
+        lastError: null,
+        createdAt: Date.now(),
+      }),
+    )
+    await t.action(internal.resources.internalActions.processAssetRetirement, {
+      candidateId: staleCandidateId,
+    })
+    await t.run(async (ctx) => {
+      expect(await ctx.db.get(staleCandidateId)).toBeNull()
+      expect(await ctx.storage.get(destinationStorageId)).not.toBeNull()
     })
 
     await execute(campaign, campaignUuid, {
@@ -701,6 +781,16 @@ describe('resource structure commands', () => {
     await execute(campaign, campaignUuid, {
       type: 'permanentlyDelete',
       resourceIds: [destinationFileId],
+    })
+    const destinationRetirementCandidateId = await t.run(async (ctx) => {
+      const candidate = await ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', pendingCopy.assetId))
+        .unique()
+      return candidate!._id
+    })
+    await t.action(internal.resources.internalActions.processAssetRetirement, {
+      candidateId: destinationRetirementCandidateId,
     })
     await t.run(async (ctx) => {
       expect(
@@ -712,9 +802,22 @@ describe('resource structure commands', () => {
       expect(
         await ctx.db
           .query('resourceAssetRetirementCandidates')
-          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', destinationAssetId))
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', pendingCopy.assetId))
           .unique(),
-      ).toEqual(expect.objectContaining({ status: 'pending' }))
+      ).toBeNull()
+      expect(
+        await ctx.db
+          .query('resourceAssetOwners')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', pendingCopy.assetId))
+          .unique(),
+      ).toBeNull()
+      expect(
+        await ctx.db
+          .query('fileStorage')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', pendingCopy.assetId))
+          .unique(),
+      ).toBeNull()
+      expect(await ctx.storage.get(destinationStorageId)).toBeNull()
     })
   })
 
