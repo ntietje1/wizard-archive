@@ -15,6 +15,7 @@ import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
+  CampaignId,
   CampaignMemberId,
   MapPinId,
   ResourceId,
@@ -107,10 +108,10 @@ interface LocalNoteBlockVisibilityRule extends Partial<
 
 export interface LocalWorkspaceState {
   localUser: LocalWorkspaceUser
-  workspaceId: string
+  workspaceId: CampaignId
   nextLocalItemIndex: number
   items: Array<LocalWorkspaceItem>
-  memberItemPermissionsById?: Record<string, Record<string, PermissionLevel>>
+  memberItemPermissionsById?: Record<string, Partial<Record<CampaignMemberId, PermissionLevel>>>
   noteBlockVisibilityById?: Record<string, Array<LocalNoteBlockVisibilityRule>>
   noteAdditionalBlocksById: Record<string, Array<LocalNoteBlock>>
   noteBodiesById: Record<string, string>

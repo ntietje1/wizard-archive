@@ -30,13 +30,13 @@ import {
 import type { LocalWorkspaceState } from './local-workspace-model'
 
 import {
+  assertDomainId,
   DOMAIN_ID_KIND,
   generateDomainId,
-  parseDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CampaignId,
-  CampaignMemberId as CanonicalCampaignMemberId,
+  CampaignMemberId,
   ResourceShareId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
@@ -53,8 +53,6 @@ type LocalItemName = WizardEditorItemWithContent['name']
 type LocalItemSlug = WizardEditorItemWithContent['slug']
 type LocalSidebarItemShareType = WizardEditorItemWithContent['shares'][number]['sidebarItemType']
 const localResourceShareIds = new Map<string, ResourceShareId>()
-const localCampaignIds = new Map<string, CampaignId>()
-const localCampaignMemberIds = new Map<string, CanonicalCampaignMemberId>()
 type LocalSidebarItemBaseFields = Pick<
   WizardEditorItemWithContent,
   | 'id'
@@ -88,7 +86,6 @@ type LocalNoteItemWithContent = Extract<WizardEditorItemWithContent, { type: 'no
 type LocalNoteContent = Pick<LocalNoteItemWithContent, 'blockMeta' | 'content'>
 type LocalNoteBlock = LocalNoteContent['content'][number]
 type LocalNoteBlockMeta = LocalNoteContent['blockMeta'][string]
-type LocalItemWorkspaceRecordId = WizardEditorItemWithContent['campaignId']
 type LocalNoteBlockVisibilityRules = NonNullable<
   LocalWorkspaceState['noteBlockVisibilityById']
 >[string]
@@ -133,7 +130,7 @@ export function createLocalWorkspaceActor(
   return workspace.selectedViewAsPlayerId
     ? {
         kind: 'owner_view_as',
-        participantId: getLocalCampaignMemberId(workspace.selectedViewAsPlayerId),
+        participantId: workspace.selectedViewAsPlayerId,
       }
     : { kind: 'owner' }
 }
@@ -330,7 +327,7 @@ function localSidebarItemBaseFields(
     iconName: item.iconName ?? null,
     color: item.color ?? null,
     slug: item.slug ?? requireLocalResourceSlug(item.id),
-    campaignId: state.workspaceId as LocalItemWorkspaceRecordId,
+    campaignId: state.workspaceId,
     parentId: localVisibleParentId(state, item, localItemsById),
     allPermissionLevel: state.selectedViewAsPlayerId ? null : PERMISSION_LEVEL.FULL_ACCESS,
     location: 'sidebar',
@@ -351,44 +348,36 @@ function localSidebarItemBaseFields(
 }
 
 function localSidebarItemShares(state: LocalWorkspaceState, item: LocalWorkspaceItem) {
-  return Object.entries(state.memberItemPermissionsById?.[item.id] ?? {}).map(
-    ([campaignMemberId, permissionLevel]) => ({
-      id: getLocalResourceShareId(state.workspaceId, item.id, campaignMemberId),
-      createdAt: item.createdAt,
-      campaignId: getLocalCampaignId(state.workspaceId),
-      sidebarItemId: item.id as ResourceId,
-      sidebarItemType: localSidebarItemType(item.type),
-      campaignMemberId: getLocalCampaignMemberId(campaignMemberId),
-      sessionId: null,
-      permissionLevel,
-    }),
+  return Object.entries(state.memberItemPermissionsById?.[item.id] ?? {}).flatMap(
+    ([candidateMemberId, permissionLevel]) => {
+      if (!permissionLevel) return []
+      const campaignMemberId = assertDomainId(DOMAIN_ID_KIND.campaignMember, candidateMemberId)
+      return [
+        {
+          id: getLocalResourceShareId(state.workspaceId, item.id, campaignMemberId),
+          createdAt: item.createdAt,
+          campaignId: state.workspaceId,
+          sidebarItemId: item.id as ResourceId,
+          sidebarItemType: localSidebarItemType(item.type),
+          campaignMemberId,
+          sessionId: null,
+          permissionLevel,
+        },
+      ]
+    },
   )
 }
 
-function getLocalResourceShareId(workspaceId: string, itemId: string, memberId: string) {
+function getLocalResourceShareId(
+  workspaceId: CampaignId,
+  itemId: string,
+  memberId: CampaignMemberId,
+) {
   const key = `${workspaceId}\0${itemId}\0${memberId}`
   const existing = localResourceShareIds.get(key)
   if (existing) return existing
   const id = generateDomainId(DOMAIN_ID_KIND.resourceShare)
   localResourceShareIds.set(key, id)
-  return id
-}
-
-function getLocalCampaignId(workspaceId: string) {
-  const existing = localCampaignIds.get(workspaceId)
-  if (existing) return existing
-  const id = generateDomainId(DOMAIN_ID_KIND.campaign)
-  localCampaignIds.set(workspaceId, id)
-  return id
-}
-
-export function getLocalCampaignMemberId(memberId: string) {
-  const canonicalId = parseDomainId(DOMAIN_ID_KIND.campaignMember, memberId)
-  if (canonicalId) return canonicalId
-  const existing = localCampaignMemberIds.get(memberId)
-  if (existing) return existing
-  const id = generateDomainId(DOMAIN_ID_KIND.campaignMember)
-  localCampaignMemberIds.set(memberId, id)
   return id
 }
 

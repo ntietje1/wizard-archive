@@ -20,7 +20,6 @@ import type {
 
 const PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID = 'note-market'
 type PublicDemoAdditionalBlock = LocalWorkspaceState['noteAdditionalBlocksById'][string][number]
-type PublicDemoMemberWorkspaceRecordId = CampaignMemberSummary['campaignId']
 const PUBLIC_DEMO_SESSION_NOTE_ID = 'note-session'
 const PUBLIC_DEMO_SESSION_REVEAL_EMBED_BLOCK_ID = assertDomainId(
   DOMAIN_ID_KIND.noteBlock,
@@ -60,7 +59,7 @@ const PUBLIC_DEMO_PLAYER_MEMBERS: Array<CampaignMemberSummary> = [
   {
     id: PUBLIC_DEMO_PLAYER_MEMBER_ID,
     createdAt: 1,
-    campaignId: SAMPLE_LOCAL_WORKSPACE.workspaceId as PublicDemoMemberWorkspaceRecordId,
+    campaignId: SAMPLE_LOCAL_WORKSPACE.workspaceId,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
     userId: PUBLIC_DEMO_PLAYER_USER_ID,

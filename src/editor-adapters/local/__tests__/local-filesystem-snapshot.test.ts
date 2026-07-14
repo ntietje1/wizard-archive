@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 
-import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { createWizardEditorResource } from '@wizard-archive/editor/adapter'
 import type { WizardEditorItemWithContent } from '@wizard-archive/editor/adapter'
 import {
@@ -17,6 +17,7 @@ import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { LOCAL_WORKSPACE_INITIAL_TIMESTAMP } from '../local-workspace-model'
 import { testMapPinId } from 'shared/test/map-pin-id'
 import { testNoteBlockId } from 'shared/test/note-block-id'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 
 type LocalMapItemWithContent = Extract<WizardEditorItemWithContent, { type: 'gameMap' }>
@@ -60,7 +61,7 @@ describe('local filesystem snapshot', () => {
   })
 
   it('projects visible local children as roots when their parent is hidden from the viewed player', () => {
-    const playerId = 'player-hidden-parent' as CampaignMemberId
+    const playerId = testCampaignMemberId('player-hidden-parent')
     const workspace = structuredClone(SAMPLE_LOCAL_WORKSPACE)
     workspace.selectedViewAsPlayerId = playerId
     workspace.items = [
@@ -104,7 +105,7 @@ describe('local filesystem snapshot', () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.privatePrep)
     const snapshot = createLocalFileSystemSnapshot({
       ...scenario.workspace,
-      selectedViewAsPlayerId: 'missing-player' as CampaignMemberId,
+      selectedViewAsPlayerId: testCampaignMemberId('missing-player'),
     })
     const note = snapshot.catalog.getKnownItemById('note-market' as ResourceId)
 
@@ -144,7 +145,7 @@ describe('local filesystem snapshot', () => {
   })
 
   it('omits local map pins whose target item is hidden from the viewed player', () => {
-    const playerId = 'player-hidden-pin' as CampaignMemberId
+    const playerId = testCampaignMemberId('player-hidden-pin')
     const workspace = structuredClone(SAMPLE_LOCAL_WORKSPACE)
     workspace.selectedViewAsPlayerId = playerId
     workspace.items = [

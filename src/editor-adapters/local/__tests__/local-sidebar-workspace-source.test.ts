@@ -10,6 +10,7 @@ import type { createLocalRuntimeFileSystem } from './helpers/local-runtime'
 import { createLocalWorkspaceRuntime } from './helpers/local-runtime'
 import type { WizardEditorItem, WizardEditorNavigationState } from '@wizard-archive/editor/adapter'
 import type { Dispatch } from 'react'
+import { testCampaignId } from 'shared/test/campaign-id'
 
 const TEST_RESOURCE_TYPES = {
   notes: 'note',
@@ -318,7 +319,7 @@ function createTestLocalWorkspace(): LocalWorkspaceState {
   testWorkspaceIndex += 1
   return {
     ...SAMPLE_LOCAL_WORKSPACE,
-    workspaceId: `local-test-${testWorkspaceIndex}`,
+    workspaceId: testCampaignId(`local-test-${testWorkspaceIndex}`),
   }
 }
 

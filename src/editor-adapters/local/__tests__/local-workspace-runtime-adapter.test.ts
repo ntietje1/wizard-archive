@@ -28,7 +28,7 @@ import {
   createTestNoteValueSessionPorts,
 } from './helpers/session-sources'
 
-import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import {
   completeWizardEditorResourceCommand,
   createWizardEditorResource,
@@ -887,7 +887,7 @@ describe('createLocalRuntimeFileSystem', () => {
   })
 
   it('does not synthesize selected-player access for unshared local items', () => {
-    const selectedParticipantId = 'demo-member-unshared' as CampaignMemberId
+    const selectedParticipantId = testCampaignMemberId('demo-member-unshared')
     const filesystem = createLocalRuntimeFileSystem({
       dispatch: vi.fn(),
       workspace: {
@@ -907,7 +907,7 @@ describe('createLocalRuntimeFileSystem', () => {
   })
 
   it('omits hidden ancestors from selected-player visible local items', () => {
-    const selectedParticipantId = 'demo-member-mira' as CampaignMemberId
+    const selectedParticipantId = testCampaignMemberId('demo-member-mira')
     const folderId = 'folder-gm-only'
     const noteId = 'note-player-clue'
     const filesystem = createLocalRuntimeFileSystem({
@@ -992,7 +992,7 @@ describe('createLocalRuntimeFileSystem', () => {
   })
 
   it('starts selected-player local navigation on a visible item', () => {
-    const selectedParticipantId = 'demo-member-mira' as CampaignMemberId
+    const selectedParticipantId = testCampaignMemberId('demo-member-mira')
     const filesystem = createLocalRuntimeFileSystem({
       dispatch: vi.fn(),
       setSelectedViewAsPlayerId: vi.fn(),
@@ -1543,7 +1543,7 @@ describe('createLocalRuntimeFileSystem', () => {
   })
 
   it('filters locally trashed items by selected-player visibility', () => {
-    const playerId = 'player-mira' as CampaignMemberId
+    const playerId = testCampaignMemberId('player-mira')
     const workspace = localWorkspaceReducer(
       {
         ...SAMPLE_LOCAL_WORKSPACE,

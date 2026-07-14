@@ -27,6 +27,10 @@ const SAMPLE_CLOCK_NODE_ID = assertDomainId(
   DOMAIN_ID_KIND.canvasNode,
   '01980c1a-5e70-7000-8000-000000000203',
 )
+const SAMPLE_LOCAL_CAMPAIGN_ID = assertDomainId(
+  DOMAIN_ID_KIND.campaign,
+  '01980c1a-5e70-7000-8000-000000000301',
+)
 
 const INITIAL_NOTE_BODY = [
   'A waterfront bazaar where every stall hides a second ledger.',
@@ -64,7 +68,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     id: 'demo-user' as UserProfileId,
     name: 'Demo',
   },
-  workspaceId: 'demo-campaign',
+  workspaceId: SAMPLE_LOCAL_CAMPAIGN_ID,
   nextLocalItemIndex: 2,
   items: [
     {

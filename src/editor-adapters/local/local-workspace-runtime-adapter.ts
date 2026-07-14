@@ -26,7 +26,7 @@ import type { WorkspaceMode } from 'shared/workspace/workspace-mode'
 import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceAction } from './local-workspace-model'
 import { requireLocalCanvasPayload, requireLocalFilePayloadForItem } from './local-workspace-model'
-import { createLocalWorkspaceActor, getLocalCampaignMemberId } from './local-filesystem-snapshot'
+import { createLocalWorkspaceActor } from './local-filesystem-snapshot'
 import type { LocalFileSystemSnapshot } from './local-filesystem-snapshot'
 import { createLocalGameMapSessionSource } from './local-game-map-session-source'
 import { createLocalFileSystemHost } from './local-filesystem-operations'
@@ -84,10 +84,7 @@ export function createLocalWorkspaceRuntime({
   const { catalog, current, workspace } = snapshot
   const actor = createLocalWorkspaceActor(workspace)
   const playerMembers = workspace.playerMembers ?? []
-  const participants = playerMembers.map((member) => ({
-    ...toEditorShareParticipant(member),
-    id: getLocalCampaignMemberId(member.id),
-  }))
+  const participants = playerMembers.map(toEditorShareParticipant)
   const canMutateWorkspace = canMutateLocalWorkspace({
     canEdit,
     selectedViewAsPlayerId: workspace.selectedViewAsPlayerId,
@@ -161,14 +158,10 @@ export function createLocalWorkspaceRuntime({
         canUse: playerMembers.length > 0,
         isPending: false,
         participants,
-        selectedParticipantId: workspace.selectedViewAsPlayerId
-          ? getLocalCampaignMemberId(workspace.selectedViewAsPlayerId)
-          : undefined,
+        selectedParticipantId: workspace.selectedViewAsPlayerId,
         setSelectedParticipantId: setSelectedViewAsPlayerId
           ? (participantId) => {
-              const member = playerMembers.find(
-                ({ id }) => getLocalCampaignMemberId(id) === participantId,
-              )
+              const member = playerMembers.find(({ id }) => id === participantId)
               setSelectedViewAsPlayerId(member?.id)
             }
           : undefined,
