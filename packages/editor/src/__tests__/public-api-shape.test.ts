@@ -1215,6 +1215,10 @@ describe('editor package public API shape', () => {
       'WizardEditorViewStateStores',
       'createBrowserWizardEditorViewStateStores',
     ])
+
+    const source = readFileSync('packages/editor/src/index.ts', 'utf8')
+    expect(source).toContain("import type { ResourceId } from './resources/domain-id'")
+    expect(source).not.toContain('WizardEditorResourceId')
   })
 
   it('keeps the adapter contract explicit and source-neutral', () => {

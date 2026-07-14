@@ -3,8 +3,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { WorkspaceRuntimeHost } from './workspace/runtime-host'
 import type { WorkspaceRuntime } from './workspace/runtime'
 import type { SortOptions } from './workspace/items-persistence-contract'
-
-type WizardEditorResourceId = string
+import type { ResourceId } from './resources/domain-id'
 
 export interface WizardEditorCanvasViewport {
   x: number
@@ -51,19 +50,16 @@ export interface WizardEditorProps {
 
 export interface WizardEditorViewStateStores {
   canvasViewport: {
-    loadCanvasViewport: (canvasId: WizardEditorResourceId) => WizardEditorCanvasViewport
-    saveCanvasViewport: (
-      canvasId: WizardEditorResourceId,
-      viewport: WizardEditorCanvasViewport,
-    ) => void
+    loadCanvasViewport: (canvasId: ResourceId) => WizardEditorCanvasViewport
+    saveCanvasViewport: (canvasId: ResourceId, viewport: WizardEditorCanvasViewport) => void
   }
   mapTransform: {
-    loadMapTransform: (mapId: WizardEditorResourceId) => WizardEditorMapTransform
-    saveMapTransform: (mapId: WizardEditorResourceId, value: WizardEditorMapTransform) => void
+    loadMapTransform: (mapId: ResourceId) => WizardEditorMapTransform
+    saveMapTransform: (mapId: ResourceId, value: WizardEditorMapTransform) => void
   }
   noteScroll: {
-    loadNoteScrollTop: (noteId: WizardEditorResourceId) => number
-    saveNoteScrollTop: (noteId: WizardEditorResourceId, scrollTop: number) => void
+    loadNoteScrollTop: (noteId: ResourceId) => number
+    saveNoteScrollTop: (noteId: ResourceId, scrollTop: number) => void
   }
 }
 
@@ -138,7 +134,7 @@ function loadBrowserViewState<TValue>(
     parse: (value: unknown) => TValue | null
   },
   namespace: string,
-  itemId: WizardEditorResourceId,
+  itemId: ResourceId,
 ): TValue {
   if (typeof window === 'undefined') return storage.createDefaultValue()
 
@@ -156,7 +152,7 @@ function loadBrowserViewState<TValue>(
 function saveBrowserViewState<TValue>(
   keyPrefix: string,
   namespace: string,
-  itemId: WizardEditorResourceId,
+  itemId: ResourceId,
   value: TValue,
 ) {
   if (typeof window === 'undefined') return
@@ -177,11 +173,7 @@ function saveBrowserViewState<TValue>(
   }
 }
 
-function getViewStateStorageKey(
-  keyPrefix: string,
-  namespace: string,
-  itemId: WizardEditorResourceId,
-): string {
+function getViewStateStorageKey(keyPrefix: string, namespace: string, itemId: ResourceId): string {
   return `wizard-editor-view-state:${encodeURIComponent(namespace)}:${keyPrefix}:${encodeURIComponent(
     String(itemId),
   )}`
