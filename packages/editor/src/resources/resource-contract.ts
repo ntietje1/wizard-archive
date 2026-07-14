@@ -1,8 +1,6 @@
 import type { VersionStamp } from './component-version'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
 
-declare const resourceTitleBrand: unique symbol
-
 export const MAX_SYNCHRONOUS_RESOURCE_CLOSURE = 500
 
 export const RESOURCE_KIND = {
@@ -16,7 +14,7 @@ export const RESOURCE_KIND = {
 export type ResourceKind = (typeof RESOURCE_KIND)[keyof typeof RESOURCE_KIND]
 export type ResourceColor = string
 export type ResourceIcon = string
-export type ResourceTitle = string & { readonly [resourceTitleBrand]: true }
+export type ResourceTitle = string & { readonly __resourceTitle: true }
 
 export type ResourceLifecycle =
   | { readonly state: 'active' }

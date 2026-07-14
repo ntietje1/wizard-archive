@@ -1,4 +1,4 @@
-import { assertResourceItemName, assertResourceItemSlug } from '../workspace/items'
+import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -27,7 +27,7 @@ function baseFields() {
   itemCounter++
   return {
     createdAt: itemCounter,
-    name: assertResourceItemName(`Test Item ${itemCounter}`),
+    name: canonicalizeResourceItemTitle(`Test Item ${itemCounter}`),
     iconName: null,
     color: null,
     slug: assertResourceItemSlug(`test-item-${itemCounter}`),
@@ -77,7 +77,7 @@ function createSidebarItem<T extends AnyItem>(
     id: `${idPrefix}_${itemCounter}` as T['id'],
     type,
     ...staticFields,
-    ...(name !== undefined ? { name: assertResourceItemName(name) } : {}),
+    ...(name !== undefined ? { name: canonicalizeResourceItemTitle(name) } : {}),
     ...(slug !== undefined ? { slug: assertResourceItemSlug(slug) } : {}),
     ...rest,
   } as unknown as T)

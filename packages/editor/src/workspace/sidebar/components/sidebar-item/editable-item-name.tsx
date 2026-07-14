@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { SidebarItemId } from '../../../../../../../shared/common/ids'
-import type { ResourceName } from '../../../resource-contract'
+import type { ResourceTitle } from '../../../../resources/resource-contract'
 import { handleError } from '../../../../errors/handle-error'
 import { useNameValidation } from '../../../../filesystem/use-name-validation'
 import { NameValidationFeedback } from '@wizard-archive/ui/components/name-validation-feedback'
@@ -9,7 +9,7 @@ import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import { useSidebarNameValidator } from '../../hooks/use-sidebar-name-validator'
 
 interface EditableNameProps {
-  initialName: ResourceName
+  initialName: ResourceTitle
   isRenaming: boolean
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void

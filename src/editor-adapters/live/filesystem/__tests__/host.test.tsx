@@ -50,7 +50,7 @@ type ResourcePatchRow = Extract<
   ResourceTransactionReceipt['patches'][number],
   { type: 'upsertResource' }
 >['item']
-type TestResourceName = WizardEditorItem['name']
+type TestResourceTitle = WizardEditorItem['name']
 const TEST_RESOURCE_STATUS = {
   active: 'active',
   trashed: 'trashed',
@@ -65,9 +65,9 @@ const TestFileSystemDropContext = createContext<FileSystemDropOperations | null>
 const TestFileSystemTrashContext = createContext<FileSystemTrashOperations | null>(null)
 const TestFileSystemHistoryContext = createContext<FileSystemHistoryOperations | null>(null)
 
-function testResourceName(name: string): TestResourceName {
+function testResourceTitle(name: string): TestResourceTitle {
   if (name.trim().length === 0) throw new Error('Expected non-empty test resource name')
-  return name as TestResourceName
+  return name as TestResourceTitle
 }
 
 function patchRow(item: WizardEditorItem): ResourcePatchRow {
@@ -186,7 +186,7 @@ function createReceipt(transactionId: OperationId = TRANSACTION_1): ResourceTran
     command: {
       type: 'create',
       itemType: TEST_RESOURCE_TYPES.notes,
-      name: testResourceName('Scene'),
+      name: testResourceTitle('Scene'),
       parentTarget: { kind: 'direct', parentId: null },
     },
     events: [
@@ -238,8 +238,8 @@ function createRenameReceipt({
   after?: string
 } = {}): ResourceTransactionReceipt {
   const itemId = 'rename_item' as Id<'sidebarItems'>
-  const beforeName = testResourceName(before)
-  const afterName = testResourceName(after)
+  const beforeName = testResourceTitle(before)
+  const afterName = testResourceTitle(after)
   return {
     transactionId,
     direction,
@@ -361,7 +361,7 @@ function CreateButton() {
         void Promise.resolve(
           filesystem.createItem({
             itemType: TEST_RESOURCE_TYPES.notes,
-            name: testResourceName('Scene'),
+            name: testResourceTitle('Scene'),
             parentTarget: { kind: 'direct', parentId: null },
           }),
         ).catch(() => undefined)
@@ -382,7 +382,7 @@ function FileSystemButtons() {
         onClick={() => {
           void filesystem.createItem({
             itemType: TEST_RESOURCE_TYPES.notes,
-            name: testResourceName('Scene'),
+            name: testResourceTitle('Scene'),
             parentTarget: { kind: 'direct', parentId: null },
           })
         }}
@@ -426,7 +426,7 @@ function RenameButton({
       onClick={() => {
         void filesystem.renameItem({
           itemId,
-          name: testResourceName(name),
+          name: testResourceTitle(name),
         })
       }}
     >
@@ -953,7 +953,7 @@ describe('useLiveFileSystemRuntime', () => {
     )
   })
 
-  it('keeps a cut clipboard when conflict resolution is cancelled', async () => {
+  it('moves a cut item into a duplicate-title destination without prompting', async () => {
     const source = createNote({
       id: 'cut_source' as Id<'sidebarItems'>,
       name: 'Shared Name',
@@ -978,14 +978,6 @@ describe('useLiveFileSystemRuntime', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cut' }))
     fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
 
-    await screen.findByRole('dialog', { name: 'Resolve Name Conflict' })
-
-    fireEvent.keyDown(document, { key: 'Escape' })
-
-    fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
-    await screen.findByRole('dialog', { name: 'Resolve Name Conflict' })
-    fireEvent.click(screen.getByRole('button', { name: 'Keep both items' }))
-
     await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
     expect(executeMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -994,12 +986,12 @@ describe('useLiveFileSystemRuntime', () => {
           itemIds: [source.id],
           targetParentId: target.id,
         },
-        decisions: [{ sourceItemId: source.id, action: 'keepBoth' }],
+        decisions: undefined,
       }),
     )
   })
 
-  it('runs a conflicted drop after decisions are applied', async () => {
+  it('runs a duplicate-title drop without conflict decisions', async () => {
     const sourceParent = createFolder({
       id: 'source_parent' as Id<'sidebarItems'>,
       name: 'Source Folder',
@@ -1033,14 +1025,10 @@ describe('useLiveFileSystemRuntime', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Drop' }))
 
-    await screen.findByRole('dialog', { name: 'Resolve Name Conflict' })
-
-    fireEvent.click(screen.getByRole('button', { name: 'Keep both items' }))
-
     await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
     expect(executeMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
-        decisions: [{ sourceItemId: source.id, action: 'keepBoth' }],
+        decisions: undefined,
       }),
     )
   })

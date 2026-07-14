@@ -8,7 +8,7 @@ import type {
 } from '../../../../shared/common/ids'
 import { brandString } from '../../../../shared/branded'
 import type { BrandedString } from '../../../../shared/branded'
-import { parseSlug, slugify, validateSlug } from '../../../../shared/slugs'
+import { parseSlug, validateSlug } from '../../../../shared/slugs'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { CanvasItem, CanvasItemRow, CanvasItemWithContent } from '../canvas/item-contract'
 import type { FileItem, FileItemRow, FileItemWithContent } from '../files/item-contract'
@@ -18,11 +18,11 @@ import type {
   MapItemWithContent as MapItemWithContentContract,
 } from '../game-maps/item-contract'
 import type { NoteItem, NoteItemRow, NoteItemWithContent } from '../notes/item-contract'
-import { deduplicateNumericSuffix } from './items/deduplicate-numeric-suffix'
 import { isOptimisticSidebarItemId } from './items/optimistic'
 import { RESOURCE_ICON_NAMES, RESOURCE_STATUS } from './items-persistence-contract'
 import type { RESOURCE_TYPES } from './items-persistence-contract'
 import type { ResourceShareId } from '../resources/domain-id'
+import type { ResourceTitle } from '../resources/resource-contract'
 
 type ResourceTableId<TableName extends string> = string & { __tableName: TableName }
 
@@ -31,7 +31,6 @@ export type ResourceKind = (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES]
 export type ResourceStatus = (typeof RESOURCE_STATUS)[keyof typeof RESOURCE_STATUS]
 export type ResourceLocation = 'sidebar'
 export type ResourceIconName = (typeof RESOURCE_ICON_NAMES)[number]
-export type ResourceName = BrandedString<'ResourceName'>
 export type ResourceSlug = BrandedString<'ResourceSlug'>
 export type ResourceColor = BrandedString<'ResourceColor'>
 export type ResourceWorkspaceId = ResourceTableId<'campaigns'>
@@ -163,125 +162,6 @@ export function createResourceReadModel<T extends ResourceReadModelResource>(
   }
 }
 
-const RESOURCE_NAME_MAX_LENGTH = 255
-const RESOURCE_FORBIDDEN_NAME_CHARS = /[/\\:*?"<>[\]#|]/
-const RESOURCE_FORBIDDEN_NAME_CHARS_DISPLAY = '/ \\ : * ? " < > [ ] # |'
-
-function hasResourceControlChars(value: string): boolean {
-  for (const char of value) {
-    const codePoint = char.codePointAt(0)
-    if (
-      codePoint !== undefined &&
-      (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f))
-    ) {
-      return true
-    }
-  }
-
-  return false
-}
-
-export function validateResourceName(name: string): ResourceValidationResult {
-  if (name.trim().length === 0) {
-    return { valid: false, error: 'Name is required' }
-  }
-  if (name !== name.trim()) {
-    return { valid: false, error: 'Name cannot start or end with whitespace' }
-  }
-  if (name.length > RESOURCE_NAME_MAX_LENGTH) {
-    return {
-      valid: false,
-      error: `Name must be ${RESOURCE_NAME_MAX_LENGTH} characters or fewer`,
-    }
-  }
-  if (RESOURCE_FORBIDDEN_NAME_CHARS.test(name)) {
-    return {
-      valid: false,
-      error: `Name cannot contain any of: ${RESOURCE_FORBIDDEN_NAME_CHARS_DISPLAY}`,
-    }
-  }
-  if (hasResourceControlChars(name)) {
-    return { valid: false, error: 'Name cannot contain control characters' }
-  }
-  if (name.startsWith('.') || name.endsWith('.')) {
-    return { valid: false, error: 'Name cannot start or end with a dot' }
-  }
-  if (slugify(name).length === 0) {
-    return { valid: false, error: 'Name must contain at least one letter or number' }
-  }
-  return { valid: true }
-}
-
-function parseResourceName(name: string): ResourceName | null {
-  return validateResourceName(name).valid ? (name as ResourceName) : null
-}
-
-export function assertResourceName(name: string): ResourceName {
-  const result = validateResourceName(name)
-  if (!result.valid) {
-    throw new Error(result.error)
-  }
-
-  const parsed = parseResourceName(name)
-  if (!parsed) {
-    throw new Error('Validated resource name could not be parsed')
-  }
-
-  return parsed
-}
-
-export function normalizeResourceNameForComparison(name: string): string {
-  return name.trim().toLowerCase()
-}
-
-export function checkResourceNameConflict<TId extends string = string>(
-  name: string,
-  siblings: ReadonlyArray<{ id: TId; name: string }>,
-  excludeId?: TId,
-): ResourceValidationResult {
-  const normalizedName = normalizeResourceNameForComparison(name)
-  const conflict = siblings.find(
-    (resource) =>
-      normalizeResourceNameForComparison(resource.name) === normalizedName &&
-      resource.id !== excludeId,
-  )
-
-  if (conflict) {
-    return {
-      valid: false,
-      error: 'An item with this name already exists here',
-    }
-  }
-  return { valid: true }
-}
-
-export function validateResourceNameWithSiblings<TId extends string = string>(
-  name: string,
-  siblings?: ReadonlyArray<{ id: TId; name: string }>,
-  excludeId?: TId,
-): ResourceValidationResult {
-  const nameResult = validateResourceName(name)
-  if (!nameResult.valid) {
-    return nameResult
-  }
-
-  if (!siblings) {
-    return { valid: true }
-  }
-
-  return checkResourceNameConflict(name, siblings, excludeId)
-}
-
-export function deduplicateResourceName(base: string, siblingNames: Array<string>): string {
-  const normalizedBase = base.trimEnd()
-  return deduplicateNumericSuffix(normalizedBase, siblingNames, {
-    separator: ' ',
-    normalize: (value) => value.toLowerCase(),
-    maxLength: RESOURCE_NAME_MAX_LENGTH,
-    errorLabel: 'resource name',
-  })
-}
-
 export const RESOURCE_SLUG_MAX_LENGTH = 255
 
 const RESOURCE_SLUG_OPTIONS = {
@@ -332,7 +212,7 @@ export function assertResourceIconName(iconName: string): ResourceIconName {
 }
 
 type ResourceNormalizedFields = {
-  name: ResourceName
+  name: ResourceTitle
   iconName: ResourceIconName | null
   color: ResourceColor | null
   slug: ResourceSlug

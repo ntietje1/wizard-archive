@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
-import { assertResourceItemName, assertResourceItemSlug } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
 import type { AnyItem } from '../../../workspace/items'
 import { createResourceCatalogModel } from '../../../filesystem/catalog'
 import { createLinkResolver } from '../resolver'
@@ -70,19 +70,19 @@ describe('createLinkResolver', () => {
     mockWorkspaceItems([
       {
         id: 'folder-1' as SidebarItemId,
-        name: assertResourceItemName('Lore'),
+        name: canonicalizeResourceItemTitle('Lore'),
         parentId: null,
         slug: assertResourceItemSlug('lore'),
       },
       {
         id: 'note-1' as SidebarItemId,
-        name: assertResourceItemName('Current Note'),
+        name: canonicalizeResourceItemTitle('Current Note'),
         parentId: 'folder-1' as SidebarItemId,
         slug: assertResourceItemSlug('current-note'),
       },
       {
         id: 'note-2' as SidebarItemId,
-        name: assertResourceItemName('Sibling Note'),
+        name: canonicalizeResourceItemTitle('Sibling Note'),
         parentId: 'folder-1' as SidebarItemId,
         slug: assertResourceItemSlug('sibling-note'),
       },
@@ -115,13 +115,13 @@ describe('createLinkResolver', () => {
     mockWorkspaceItems([
       {
         id: 'note-1' as SidebarItemId,
-        name: assertResourceItemName('Current Note'),
+        name: canonicalizeResourceItemTitle('Current Note'),
         parentId: null,
         slug: assertResourceItemSlug('current-note'),
       },
       {
         id: 'note-2' as SidebarItemId,
-        name: assertResourceItemName('Sibling Note'),
+        name: canonicalizeResourceItemTitle('Sibling Note'),
         parentId: null,
         slug: assertResourceItemSlug('sibling-note'),
       },
@@ -153,7 +153,7 @@ describe('createLinkResolver', () => {
     mockWorkspaceItems([
       {
         id: 'note-1' as SidebarItemId,
-        name: assertResourceItemName('Current Note'),
+        name: canonicalizeResourceItemTitle('Current Note'),
         parentId: null,
         slug: assertResourceItemSlug('current-note'),
       },

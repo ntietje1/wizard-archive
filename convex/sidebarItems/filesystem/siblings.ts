@@ -1,5 +1,5 @@
-import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
-import type { ResourceName } from '@wizard-archive/editor/resources/resource-contract'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { getActiveSidebarItemRowsByParent } from '../functions/getSidebarItemsByParent'
@@ -11,14 +11,10 @@ export async function findActiveSidebarChildByName(
     name,
   }: {
     parentId: Id<'sidebarItems'> | null
-    name: ResourceName
+    name: ResourceTitle
   },
 ): Promise<Doc<'sidebarItems'> | null> {
-  const normalizedName = normalizeResourceNameForComparison(name)
   const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
 
-  return (
-    siblings.find((item) => normalizeResourceNameForComparison(item.name) === normalizedName) ??
-    null
-  )
+  return siblings.find((item) => canonicalizeResourceTitle(item.name) === name) ?? null
 }

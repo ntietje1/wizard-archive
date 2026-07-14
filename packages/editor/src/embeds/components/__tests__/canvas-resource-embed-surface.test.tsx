@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasResourceEmbedSurface } from '../canvas-resource-embed-surface'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
-import { assertResourceItemName } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -201,7 +201,7 @@ function createSidebarItem({
   const item = {
     id,
     createdAt: 0,
-    name: assertResourceItemName(name),
+    name: canonicalizeResourceItemTitle(name),
     iconName: null,
     color: null,
     slug: name.toLowerCase(),

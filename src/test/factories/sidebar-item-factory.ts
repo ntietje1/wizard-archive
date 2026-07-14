@@ -32,7 +32,7 @@ function baseFields() {
   itemCounter++
   return {
     createdAt: itemCounter,
-    name: testResourceName(`Test Item ${itemCounter}`),
+    name: testResourceTitle(`Test Item ${itemCounter}`),
     iconName: null,
     color: null,
     slug: testResourceSlug(`test-item-${itemCounter}`),
@@ -75,7 +75,7 @@ export function createNote(overrides?: SidebarItemOverrides<NoteItem>): NoteItem
     ...base,
     id: `note_${itemCounter}` as SidebarItemId,
     type: TEST_ITEM_TYPES.notes,
-    ...(name !== undefined ? { name: testResourceName(name) } : {}),
+    ...(name !== undefined ? { name: testResourceTitle(name) } : {}),
     ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),
     ...rest,
   })
@@ -91,7 +91,7 @@ export function createFolder(
     id: `folder_${itemCounter}` as WizardEditorFolderItem['id'],
     type: TEST_ITEM_TYPES.folders,
     inheritShares: true,
-    ...(name !== undefined ? { name: testResourceName(name) } : {}),
+    ...(name !== undefined ? { name: testResourceTitle(name) } : {}),
     ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),
     ...rest,
   })
@@ -106,7 +106,7 @@ export function createGameMap(overrides?: SidebarItemOverrides<MapItem>): MapIte
     type: TEST_ITEM_TYPES.gameMaps,
     imageAssetId: null,
     imageUrl: null,
-    ...(name !== undefined ? { name: testResourceName(name) } : {}),
+    ...(name !== undefined ? { name: testResourceTitle(name) } : {}),
     ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),
     ...rest,
   })
@@ -122,13 +122,13 @@ export function createFile(overrides?: SidebarItemOverrides<FileItem>): FileItem
     assetId: null,
     downloadUrl: null,
     contentType: null,
-    ...(name !== undefined ? { name: testResourceName(name) } : {}),
+    ...(name !== undefined ? { name: testResourceTitle(name) } : {}),
     ...(slug !== undefined ? { slug: testResourceSlug(slug) } : {}),
     ...rest,
   })
 }
 
-function testResourceName(name: string): WizardEditorItem['name'] {
+function testResourceTitle(name: string): WizardEditorItem['name'] {
   return name as WizardEditorItem['name']
 }
 

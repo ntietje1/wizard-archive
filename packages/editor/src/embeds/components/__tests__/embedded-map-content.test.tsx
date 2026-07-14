@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import type { MapItemWithContent } from '../../../game-maps/item-contract'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
 import type { ReactNode } from 'react'
-import { assertResourceItemName } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -103,7 +103,7 @@ function createMap(overrides: Partial<MapItemWithContent> = {}): MapItemWithCont
   const map = {
     id: 'map-id' as SidebarItemId,
     createdAt: 0,
-    name: assertResourceItemName('Dungeon'),
+    name: canonicalizeResourceItemTitle('Dungeon'),
     iconName: null,
     color: null,
     slug: 'dungeon',
@@ -143,7 +143,7 @@ function createPin({
 }): MapItemWithContent['pins'][number] {
   const item = {
     id: 'note-id' as SidebarItemId,
-    name: assertResourceItemName('Pinned Note'),
+    name: canonicalizeResourceItemTitle('Pinned Note'),
     type: RESOURCE_TYPES.notes,
     color: null,
     iconName: null,

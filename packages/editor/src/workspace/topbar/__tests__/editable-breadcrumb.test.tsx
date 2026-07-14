@@ -3,7 +3,7 @@ import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { SidebarItemBreadcrumb } from '../editable-breadcrumb'
-import { assertResourceItemName } from '../../items'
+import { canonicalizeResourceItemTitle } from '../../items'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
 
@@ -181,7 +181,7 @@ describe('SidebarItemBreadcrumb', () => {
           ancestors={[]}
           canRename={true}
           onRename={(renamedItem, name) => {
-            setItem({ ...renamedItem, name: assertResourceItemName(name) })
+            setItem({ ...renamedItem, name: canonicalizeResourceItemTitle(name) })
           }}
         />
       )

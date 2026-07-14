@@ -2,16 +2,12 @@ import { v } from 'convex/values'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import type { SidebarItemId } from '../../../shared/common/ids'
 import { throwClientError } from '../../errors'
-import type {
-  ResourceParentTarget,
-  ResourceName,
-} from '@wizard-archive/editor/resources/resource-contract'
-import {
-  assertResourceName,
-  RESOURCE_PARENT_TARGET_KIND,
-} from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceParentTarget } from '@wizard-archive/editor/resources/resource-contract'
+import { RESOURCE_PARENT_TARGET_KIND } from '@wizard-archive/editor/resources/resource-contract'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 
-type ParentPathSegment = ResourceName | '.' | '..'
+type ParentPathSegment = ResourceTitle | '.' | '..'
 
 export type ParsedCreateParentTarget =
   | {
@@ -51,7 +47,7 @@ function requireParentPathSegment(segment: string): ParentPathSegment {
     return trimmedSegment
   }
 
-  return assertResourceName(trimmedSegment)
+  return canonicalizeResourceTitle(trimmedSegment)
 }
 
 export function requireCreateParentTarget(

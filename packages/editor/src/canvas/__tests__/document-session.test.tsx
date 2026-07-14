@@ -6,7 +6,8 @@ import {
   RESOURCE_STATUS,
   RESOURCE_TYPES,
 } from '../../workspace/items-persistence-contract'
-import type { ResourceName, ResourceSlug } from '../../workspace/resource-contract'
+import type { ResourceSlug } from '../../workspace/resource-contract'
+import type { ResourceTitle } from '../../resources/resource-contract'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contract'
 import type { CanvasItemWithContent } from '../item-contract'
 import { createCanvasDocumentDoc } from '../document-contract'
@@ -140,7 +141,7 @@ function createCanvas(overrides: Partial<CanvasItemWithContent> = {}): CanvasIte
     createdAt: 1,
     type: RESOURCE_TYPES.canvases,
     campaignId: 'campaign-1' as CampaignId,
-    name: 'Canvas' as ResourceName,
+    name: 'Canvas' as ResourceTitle,
     parentId: 'folder-1' as SidebarItemId,
     iconName: null,
     color: null,

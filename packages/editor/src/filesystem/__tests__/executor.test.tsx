@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
 import { testOperationId } from '../../test/operation-id'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
-import type { ResourceName } from '../../workspace/resource-contract'
+import type { ResourceTitle } from '../../resources/resource-contract'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { SidebarCacheSnapshot } from '../cache-patches'
 import { useFileSystemExecutor } from '../executor'
@@ -90,7 +90,7 @@ describe('useFileSystemExecutor', () => {
       createPromise = result.current.executeCommand({
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: 'Scene' as ResourceName,
+        name: 'Scene' as ResourceTitle,
         parentTarget: { kind: 'direct', parentId: parent.id },
       })
       await Promise.resolve()
@@ -113,92 +113,13 @@ describe('useFileSystemExecutor', () => {
     expect(undoMutation).toHaveBeenCalledWith(testOperationId('discard_transaction'))
   })
 
-  it('rejects pending conflict resolution when the conflict context has changed', async () => {
-    const sourceParent = createFolder({
-      id: 'source_parent' as SidebarItemId,
-      name: 'Source',
-    })
-    const targetParent = createFolder({
-      id: 'target_parent' as SidebarItemId,
-      name: 'Target',
-    })
-    const source = createNote({
-      id: 'source_item' as SidebarItemId,
-      name: 'Scene',
-      parentId: sourceParent.id,
-    })
-    const existing = createNote({
-      id: 'existing_item' as SidebarItemId,
-      name: 'Scene',
-      parentId: targetParent.id,
-    })
-    const snapshot: SidebarCacheSnapshot = {
-      sidebar: [sourceParent, targetParent, source, existing],
-      trash: [],
-    }
-    const executeMutation = vi.fn()
-    const undoStore = createFileSystemUndoStore()
-    undoStore.getState().setWorkspace(campaignId)
-
-    const { result } = renderHook(() =>
-      useFileSystemExecutor({
-        workspaceId: campaignId,
-        currentUserId: null,
-        activeItemSurface: { parentId: null },
-        cacheAdapter: createReadWriteTestCache(snapshot),
-        navigation: {
-          getCurrentResourceId: () => null,
-          clearWorkspaceContent: vi.fn(),
-          openResource: vi.fn(),
-        },
-        selectionCommands: {
-          clearItemSelection: vi.fn(),
-          getSelectionSnapshot: () => ({ selectedItemIds: [] }),
-          setSelectedItemIds: vi.fn(),
-        },
-        uiCommands: {
-          setFolderState: vi.fn(),
-        },
-        executeMutation,
-        undoMutation: vi.fn(),
-        redoMutation: vi.fn(),
-        undoStore,
-        effects: executorEffects,
-      }),
-    )
-
-    await act(async () => {
-      const commandResult = await result.current.executeCommand({
-        type: 'copy',
-        itemIds: [source.id],
-        targetParentId: targetParent.id,
-      })
-
-      expect(commandResult.status).toBe('needsDecision')
-    })
-
-    snapshot.sidebar = snapshot.sidebar.map((item) =>
-      item.id === existing.id ? { ...item, name: 'Changed Scene' as typeof item.name } : item,
-    )
-
-    let rejected!: Awaited<ReturnType<typeof result.current.resolvePendingConflict>>
-    await act(async () => {
-      rejected = await result.current.resolvePendingConflict({
-        [source.id]: { action: 'replace' },
-      })
-    })
-
-    expect(rejected).toEqual({ status: 'rejected', reason: 'stale-conflict' })
-    expect(executeMutation).not.toHaveBeenCalled()
-  })
-
   it('rejects undo replay when the recorded graph fingerprint is stale', async () => {
     const item = createNote({
       id: 'renamed_item' as SidebarItemId,
       name: 'Old Name',
       slug: 'old-name',
     })
-    const nextName = 'New Name' as ResourceName
+    const nextName = 'New Name' as ResourceTitle
     const snapshot: SidebarCacheSnapshot = { sidebar: [item], trash: [] }
     const renameReceipt = createFileSystemReceipt({
       transactionId: testOperationId('rename_transaction'),
@@ -268,7 +189,7 @@ describe('useFileSystemExecutor', () => {
 
     snapshot.sidebar = snapshot.sidebar.map((currentItem) =>
       currentItem.id === item.id
-        ? { ...currentItem, name: 'Externally Changed' as ResourceName }
+        ? { ...currentItem, name: 'Externally Changed' as ResourceTitle }
         : currentItem,
     )
 

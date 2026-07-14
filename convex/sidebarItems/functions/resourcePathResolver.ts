@@ -1,4 +1,4 @@
-import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+import { normalizeLegacyResourcePathSegment } from '../resourcePathSegment'
 import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
@@ -97,7 +97,7 @@ export function createAccessibleResourcePathResolver(
   }
 
   const resolvePath: AccessibleResourcePathResolver['resolvePath'] = (input) => {
-    const normalizedSegments = input.pathSegments.map(normalizeResourceNameForComparison)
+    const normalizedSegments = input.pathSegments.map(normalizeLegacyResourcePathSegment)
     const cacheKey = JSON.stringify([
       input.pathKind,
       normalizedSegments,

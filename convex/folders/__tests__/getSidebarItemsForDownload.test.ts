@@ -582,7 +582,7 @@ describe('getSidebarItemsForDownload', () => {
     )
   })
 
-  it('deduplicates same-named direct download paths like keep-both naming', async () => {
+  it('projects duplicate direct download paths with stable identity suffixes', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { folderId: firstFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -606,7 +606,7 @@ describe('getSidebarItemsForDownload', () => {
     })
 
     expect(result.items.map((item: DownloadItem) => item.path).sort()).toEqual(
-      ['Shared Name.md', 'Shared Name 1.md'].sort(),
+      ['Shared Name.md', `Shared Name~${secondNoteId.slice(-8)}.md`].sort(),
     )
   })
 })

@@ -2,7 +2,7 @@ import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persiste
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { WithoutSystemFields } from 'convex/server'
 import type { ResourceStatus } from '@wizard-archive/editor/resources/resource-contract'
-import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+import { normalizeLegacyResourcePathSegment } from '../resourcePathSegment'
 
 export type SidebarItemLifecycleFields = {
   status: ResourceStatus
@@ -54,7 +54,7 @@ export function toSidebarItemReplacement<T extends SidebarItemLifecycleFields>(i
   const document = toSidebarItemDocument(item)
   const common = {
     name: document.name,
-    normalizedName: normalizeResourceNameForComparison(document.name),
+    normalizedName: normalizeLegacyResourcePathSegment(document.name),
     slug: document.slug,
     campaignId: document.campaignId,
     iconName: document.iconName,

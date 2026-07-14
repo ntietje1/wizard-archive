@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { assertResourceItemName } from '../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceCommand } from '../transaction-contract'
 import { getCommandProgressToastText, getHistoryProgressToastText } from '../progress-messages'
@@ -25,13 +25,17 @@ describe('filesystem progress messages', () => {
       {
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: assertResourceItemName('Scene'),
+        name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'direct', parentId: null },
       },
       'Creating item...',
     ],
     [
-      { type: 'rename', itemId: itemId('rename_item'), name: assertResourceItemName('Renamed') },
+      {
+        type: 'rename',
+        itemId: itemId('rename_item'),
+        name: canonicalizeResourceItemTitle('Renamed'),
+      },
       'Renaming item...',
     ],
     [{ type: 'rename', itemId: itemId('metadata_item'), color: null }, 'Updating item...'],

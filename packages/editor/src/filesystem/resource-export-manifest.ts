@@ -2,7 +2,7 @@ import type { CanvasDocumentContent } from '../canvas/document-contract'
 import type { CanvasItemWithContent } from '../canvas/item-contract'
 import type { FileItemWithContent } from '../files/item-contract'
 import type { MapItemWithContent } from '../game-maps/item-contract'
-import { deduplicateName, isResourceItemWithContent } from '../workspace/items'
+import { isResourceItemWithContent } from '../workspace/items'
 import type { AnyItem, AnyItemWithContent } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { SidebarItemId } from '../../../../shared/common/ids'
@@ -32,8 +32,6 @@ type ResourceExportBuildContext = {
 type ResourceExportEntry =
   | { status: 'included'; item: FileSystemDownloadItem }
   | { status: 'skipped'; item: FileSystemDownloadSkippedItem }
-
-const MAX_DEDUP_ATTEMPTS = 100
 
 export function buildResourceExportManifest({
   catalog,
@@ -126,9 +124,7 @@ function appendFolderExportEntries({
     return
   }
 
-  const triedNames: Array<string> = []
-  for (let attempt = 0; attempt < MAX_DEDUP_ATTEMPTS; attempt += 1) {
-    const candidateName = deduplicateName(item.name, triedNames)
+  for (const candidateName of projectedNameCandidates(item)) {
     const candidatePath = buildExportPath(currentPath, candidateName)
     const candidateContext = { reservedPaths: new Set(context.reservedPaths) }
     const candidateManifest: ResourceExportManifest = { items: [], skippedItems: [] }
@@ -151,7 +147,6 @@ function appendFolderExportEntries({
       manifest.skippedItems.push(...candidateManifest.skippedItems)
       return
     }
-    triedNames.push(candidateName)
   }
 
   manifest.skippedItems.push(createPathConflictSkippedItem(item, currentPath))
@@ -195,9 +190,7 @@ function appendNonFolderExportEntry({
   manifest: ResourceExportManifest
   source: ResourceExportManifestSource
 }) {
-  const triedNames: Array<string> = []
-  for (let attempt = 0; attempt < MAX_DEDUP_ATTEMPTS; attempt += 1) {
-    const candidateName = deduplicateName(item.name, triedNames)
+  for (const candidateName of projectedNameCandidates(item)) {
     const entry = createResourceExportEntry({
       item,
       path: buildExportPath(currentPath, candidateName),
@@ -213,10 +206,13 @@ function appendNonFolderExportEntry({
       }
       return
     }
-    triedNames.push(candidateName)
   }
 
   manifest.skippedItems.push(createPathConflictSkippedItem(item, currentPath))
+}
+
+function projectedNameCandidates(item: AnyItem): [string, string] {
+  return [item.name, `${item.name}~${item.id.slice(-8)}`]
 }
 
 function createPathConflictSkippedItem(

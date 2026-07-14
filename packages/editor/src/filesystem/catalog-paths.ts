@@ -5,7 +5,7 @@ import {
   resolveParsedItemPath,
 } from '../../../../shared/links/resolution'
 import type { LinkPathKind } from '../../../../shared/links/types'
-import { normalizeResourceItemNameForComparison } from '../workspace/items'
+import { canonicalizeResourceItemTitle } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { AnyItem } from '../workspace/items'
 import type { NoteItem } from '../notes/item-contract'
@@ -132,17 +132,15 @@ function resolveVisibleFolderSegment(
   childrenByParent: ReadonlyMap<SidebarItemId | null, ReadonlyArray<AnyItem>>,
   itemsById: ReadonlyMap<SidebarItemId, AnyItem>,
 ) {
-  const normalizedSegment = normalizeResourceItemNameForComparison(segment)
-  if (!normalizedSegment) return undefined
-  if (normalizedSegment === '.') return currentParentId
-  if (normalizedSegment === '..') {
+  const title = canonicalizeResourceItemTitle(segment)
+  if (title === '.') return currentParentId
+  if (title === '..') {
     return currentParentId === null ? undefined : itemsById.get(currentParentId)?.parentId
   }
 
   return childrenByParent.get(currentParentId)?.find((item) => {
     return (
-      item.type === RESOURCE_TYPES.folders &&
-      normalizeResourceItemNameForComparison(item.name) === normalizedSegment
+      item.type === RESOURCE_TYPES.folders && canonicalizeResourceItemTitle(item.name) === title
     )
   })?.id
 }

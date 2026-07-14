@@ -1,4 +1,3 @@
-import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
@@ -7,7 +6,6 @@ import {
   createNote,
   createSidebarShare,
   executeMoveCommand,
-  filesystemEventItemIds,
 } from '../../_test/factories.helper'
 import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
@@ -42,7 +40,7 @@ describe('executeMoveCommand', () => {
     expect(item.parentId).toBe(folderB)
   })
 
-  it('moves and renames an item atomically using destination-parent validation', async () => {
+  it('moves into a duplicate-title destination without changing the title', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -77,7 +75,6 @@ describe('executeMoveCommand', () => {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceNote],
       targetParentId: destinationFolder,
-      decisions: [{ sourceItemId: sourceNote, action: 'keepBoth' }],
     })
 
     const rows = await t.run(async (dbCtx) => ({
@@ -86,210 +83,9 @@ describe('executeMoveCommand', () => {
     }))
 
     expect(rows.moved?.parentId).toBe(destinationFolder)
-    expect(rows.moved?.name).toBe('Scene 1')
+    expect(rows.moved?.name).toBe('Scene')
     expect(rows.sourceSibling?.parentId).toBe(sourceFolder)
     expect(rows.sourceSibling?.name).toBe('Scene 2')
-  })
-
-  it('batch-replaces by trashing the destination and moving the source into place', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { folderId: sourceFolder } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Source',
-    })
-    const { folderId: destinationFolder } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'Destination',
-      },
-    )
-    const { noteId: sourceNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-      slug: 'batch-scene-source',
-      parentId: sourceFolder,
-    })
-    const { noteId: destinationNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-      slug: 'batch-scene-destination',
-      parentId: destinationFolder,
-    })
-
-    await expectValidationFailed(
-      executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
-        sourceItemIds: [sourceNote],
-        targetParentId: destinationFolder,
-      }),
-    )
-
-    await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      sourceItemIds: [sourceNote],
-      targetParentId: destinationFolder,
-      decisions: [{ sourceItemId: sourceNote, action: 'replace' }],
-    })
-
-    const rows = await t.run(async (dbCtx) => ({
-      source: await dbCtx.db.get('sidebarItems', sourceNote),
-      destination: await dbCtx.db.get('sidebarItems', destinationNote),
-    }))
-
-    expect(rows.source?.parentId).toBe(destinationFolder)
-    expect(rows.source?.location).toBe('sidebar')
-    expect(rows.source?.name).toBe('Scene')
-    expect(rows.destination?.status).toBe('trashed')
-    expect(rows.destination?.deletionTime).toEqual(expect.any(Number))
-  })
-
-  it('records move replace receipts as undoable transactions', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { folderId: destinationFolder } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Destination' },
-    )
-    const { noteId: sourceNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-    })
-    const { noteId: replacedDestinationId } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'Scene',
-        parentId: destinationFolder,
-      },
-    )
-
-    const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      command: { type: 'move', itemIds: [sourceNote], targetParentId: destinationFolder },
-      decisions: [{ sourceItemId: sourceNote, action: 'replace' }],
-    })
-
-    expect(
-      receipt.events.filter((event) => event.type === 'replaced').map((event) => event.itemId),
-    ).toEqual([replacedDestinationId])
-    expect(receipt.undoable).toBe(true)
-  })
-
-  it('batch folder merge leaves non-empty skipped source folders in sidebar', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { folderId: sourceFolder } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scenes',
-      slug: 'merge-source',
-    })
-    const { folderId: destinationFolder } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'Scenes',
-        slug: 'merge-destination',
-      },
-    )
-    const { noteId: skippedChild } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Skipped',
-      parentId: sourceFolder,
-    })
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Skipped',
-      parentId: destinationFolder,
-    })
-
-    const movedIds = await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      sourceItemIds: [sourceFolder],
-      targetParentId: null,
-      decisions: [
-        { sourceItemId: sourceFolder, action: 'mergeFolder' },
-        { sourceItemId: skippedChild, action: 'skip' },
-      ],
-    })
-
-    const rows = await t.run(async (dbCtx) => ({
-      sourceFolder: await dbCtx.db.get('sidebarItems', sourceFolder),
-      skippedChild: await dbCtx.db.get('sidebarItems', skippedChild),
-    }))
-
-    expect(filesystemEventItemIds(movedIds, 'moved')).toEqual([])
-    expect(filesystemEventItemIds(movedIds, 'mergedFolder')).toEqual([destinationFolder])
-    expect(filesystemEventItemIds(movedIds, 'skipped')).toEqual([skippedChild])
-    expect(rows.sourceFolder?.location).toBe('sidebar')
-    expect(rows.skippedChild?.location).toBe('sidebar')
-    expect(rows.skippedChild?.parentId).toBe(sourceFolder)
-  })
-
-  it('records move folder merge receipts as undoable transactions', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { folderId: sourceFolder } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scenes',
-    })
-    const { folderId: destinationFolder } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Scenes' },
-    )
-
-    const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      command: { type: 'move', itemIds: [sourceFolder], targetParentId: null },
-      decisions: [{ sourceItemId: sourceFolder, action: 'mergeFolder' }],
-    })
-
-    expect(
-      receipt.events.filter((event) => event.type === 'mergedFolder').map((event) => event.itemId),
-    ).toEqual([destinationFolder])
-    expect(receipt.undoable).toBe(true)
-  })
-
-  it('batch folder merge trashes empty source folders after all children move', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { folderId: sourceFolder } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scenes',
-      slug: 'empty-merge-source',
-    })
-    const { folderId: destinationFolder } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'Scenes',
-        slug: 'empty-merge-destination',
-      },
-    )
-    const { noteId: movedChild } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Ambush',
-      parentId: sourceFolder,
-    })
-
-    await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      sourceItemIds: [sourceFolder],
-      targetParentId: null,
-      decisions: [{ sourceItemId: sourceFolder, action: 'mergeFolder' }],
-    })
-
-    const rows = await t.run(async (dbCtx) => ({
-      sourceFolder: await dbCtx.db.get('sidebarItems', sourceFolder),
-      movedChild: await dbCtx.db.get('sidebarItems', movedChild),
-    }))
-
-    expect(rows.movedChild?.parentId).toBe(destinationFolder)
-    expect(rows.movedChild?.location).toBe('sidebar')
-    expect(rows.sourceFolder?.status).toBe('trashed')
-    expect(rows.sourceFolder?.deletionTime).toEqual(expect.any(Number))
   })
 
   it('moves item to trash', async () => {

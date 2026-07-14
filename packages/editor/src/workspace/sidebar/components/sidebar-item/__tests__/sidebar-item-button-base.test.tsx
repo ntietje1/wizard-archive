@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { Folder } from 'lucide-react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { SidebarItemId } from '../../../../../../../../shared/common/ids'
-import { assertResourceItemName } from '../../../../items'
+import { canonicalizeResourceItemTitle } from '../../../../items'
 import { SidebarItemButtonBase } from '../sidebar-item-button-base'
 
 const questFolderId = 'quest-folder' as SidebarItemId
@@ -15,7 +15,7 @@ describe('SidebarItemButtonBase', () => {
       <SidebarItemButtonBase
         icon={Folder}
         itemId={questFolderId}
-        name={assertResourceItemName('Quests')}
+        name={canonicalizeResourceItemTitle('Quests')}
         nameContent={<input aria-label="Rename item" aria-invalid="true" defaultValue="Quests" />}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
@@ -37,7 +37,7 @@ describe('SidebarItemButtonBase', () => {
       <SidebarItemButtonBase
         icon={Folder}
         itemId={questFolderId}
-        name={assertResourceItemName('Quests')}
+        name={canonicalizeResourceItemTitle('Quests')}
         nameContent={<input aria-label="Rename item" defaultValue="Quests" />}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
@@ -58,7 +58,7 @@ describe('SidebarItemButtonBase', () => {
       <SidebarItemButtonBase
         icon={Folder}
         itemId={creatingQuestId}
-        name={assertResourceItemName('Creating Quest')}
+        name={canonicalizeResourceItemTitle('Creating Quest')}
         presentation={{
           visualState: { isSelected: true, isViewing: true, isMultiSelected: false },
           renaming: false,
@@ -77,7 +77,7 @@ describe('SidebarItemButtonBase', () => {
       <SidebarItemButtonBase
         icon={Folder}
         itemId={questNoteId}
-        name={assertResourceItemName('Quest Note')}
+        name={canonicalizeResourceItemTitle('Quest Note')}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
           renaming: false,
@@ -96,7 +96,7 @@ describe('SidebarItemButtonBase', () => {
       <SidebarItemButtonBase
         icon={Folder}
         itemId={questFolderId}
-        name={assertResourceItemName('Quests')}
+        name={canonicalizeResourceItemTitle('Quests')}
         presentation={{
           visualState: { isSelected: true, isViewing: true, isMultiSelected: false },
           renaming: false,
@@ -115,7 +115,7 @@ describe('SidebarItemButtonBase', () => {
       <SidebarItemButtonBase
         icon={Folder}
         itemId={questFolderId}
-        name={assertResourceItemName('Quests')}
+        name={canonicalizeResourceItemTitle('Quests')}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
           renaming: false,
@@ -135,7 +135,7 @@ describe('SidebarItemButtonBase', () => {
       <SidebarItemButtonBase
         icon={Folder}
         itemId={questFolderId}
-        name={assertResourceItemName('Quests')}
+        name={canonicalizeResourceItemTitle('Quests')}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
           renaming: false,
@@ -157,7 +157,7 @@ describe('SidebarItemButtonBase', () => {
       <SidebarItemButtonBase
         icon={Folder}
         itemId={questFolderId}
-        name={assertResourceItemName('Quests')}
+        name={canonicalizeResourceItemTitle('Quests')}
         presentation={{
           visualState: { isSelected: false, isViewing: false, isMultiSelected: false },
           renaming: false,

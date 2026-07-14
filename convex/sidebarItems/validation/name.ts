@@ -1,10 +1,10 @@
-import { assertResourceName } from '@wizard-archive/editor/resources/resource-contract'
-import type { ResourceName } from '@wizard-archive/editor/resources/resource-contract'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-export function assertConvexSidebarItemName(name: string): ResourceName {
+export function assertConvexSidebarItemName(name: string): ResourceTitle {
   try {
-    return assertResourceName(name)
+    return canonicalizeResourceTitle(name)
   } catch (error) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,

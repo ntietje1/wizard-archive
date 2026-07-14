@@ -6,7 +6,7 @@ import {
   getReceiptRemovedRootIds,
   getReceiptSelectedRootIds,
 } from '../receipt-selectors'
-import { assertResourceItemName } from '../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { createFileSystemReceipt } from './receipt-factory'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 
@@ -150,7 +150,7 @@ describe('filesystem receipt selectors', () => {
     const command = {
       type: 'rename',
       itemId,
-      name: assertResourceItemName('New Scene'),
+      name: canonicalizeResourceItemTitle('New Scene'),
     } satisfies ResourceCommand
 
     expect(

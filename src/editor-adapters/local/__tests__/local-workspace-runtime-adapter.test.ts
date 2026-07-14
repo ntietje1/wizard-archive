@@ -1124,7 +1124,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(child).toMatchObject({
       parentId: folderId,
-      ancestors: [expect.objectContaining({ id: folderId, name: 'Untitled Folder' })],
+      ancestors: [expect.objectContaining({ id: folderId, name: 'Untitled' })],
     })
   })
 
@@ -1633,7 +1633,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(duplicate).toMatchObject({
       id: 'local-note-3',
-      name: 'The Lantern Market Copy',
+      name: 'The Lantern Market',
       parentId: folderId,
       ancestors: [expect.objectContaining({ id: folderId })],
     })
@@ -1700,7 +1700,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(duplicate).toMatchObject({
       id: 'local-file-3',
-      name: 'Blue-glass Invoice Copy',
+      name: 'Blue-glass Invoice',
       parentId: folderId,
       type: TEST_RESOURCE_TYPES.files,
     })
@@ -1740,7 +1740,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(nextFilesystem.catalog.getKnownItemById('local-note-3' as SidebarItemId)).toMatchObject({
       id: 'local-note-3',
-      name: 'Untitled Note 3 Copy',
+      name: 'Untitled Note 3',
       parentId: folderId,
     })
   })
@@ -1819,7 +1819,7 @@ describe('createLocalRuntimeFileSystem', () => {
     })
   })
 
-  it('copies local folder trees with the copy suffix only on copied roots', async () => {
+  it('copies local folder trees without changing titles', async () => {
     const workspaceWithFolder = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
     const folderId = 'local-folder-2' as SidebarItemId
     const workspace = createLocalTestItem(workspaceWithFolder, 'note', folderId)
@@ -1849,7 +1849,7 @@ describe('createLocalRuntimeFileSystem', () => {
       nextFilesystem.catalog.getKnownItemById('local-folder-4' as SidebarItemId),
     ).toMatchObject({
       id: 'local-folder-4',
-      name: `${sourceFolder.title} Copy`,
+      name: sourceFolder.title,
       parentId: null,
     })
     expect(nextFilesystem.catalog.getKnownItemById('local-note-5' as SidebarItemId)).toMatchObject({
@@ -1920,7 +1920,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(nextFilesystem.catalog.getKnownItemById('local-note-3' as SidebarItemId)).toMatchObject({
       id: 'local-note-3',
-      name: 'The Lantern Market Copy',
+      name: 'The Lantern Market',
       parentId: folderId,
     })
   })
@@ -2203,7 +2203,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(folderCopy).toMatchObject({
       id: 'local-folder-4',
-      name: 'Untitled Folder Copy',
+      name: 'Untitled',
     })
     expect(nextFilesystem.catalog.getTrashedItems()).toEqual([
       expect.objectContaining({ id: 'local-note-3' }),

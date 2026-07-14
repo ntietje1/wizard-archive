@@ -175,36 +175,4 @@ describe('filesystem command lifecycle boundaries', () => {
     const folder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folderId))
     expect(folder?.status).toBe('trashed')
   })
-
-  it('rejects copy and move decisions that do not correspond to actual conflicts', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Source',
-    })
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Destination',
-    })
-
-    for (const action of ['skip', 'replace', 'keepBoth'] as const) {
-      await expect(
-        executeTestFileSystemCommand(dmAuth, {
-          campaignId: ctx.campaignId,
-          command: { type: 'copy', itemIds: [noteId], targetParentId: folderId },
-          decisions: [{ sourceItemId: noteId, action }],
-        }),
-      ).rejects.toThrow('Conflict decision does not match an item with a conflict')
-
-      await expect(
-        executeTestFileSystemCommand(dmAuth, {
-          campaignId: ctx.campaignId,
-          command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
-          decisions: [{ sourceItemId: noteId, action }],
-        }),
-      ).rejects.toThrow('Conflict decision does not match an item with a conflict')
-    }
-
-    const note = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', noteId))
-    expect(note?.parentId).toBeNull()
-  })
 })

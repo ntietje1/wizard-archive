@@ -1,9 +1,9 @@
-import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+import { normalizeLegacyResourcePathSegment } from './resourcePathSegment'
 
 export function getSidebarItemNormalizedNameMigrationPatch(item: {
   name: string
   normalizedName?: string
 }): { normalizedName: string } | undefined {
-  const normalizedName = normalizeResourceNameForComparison(item.name)
+  const normalizedName = normalizeLegacyResourcePathSegment(item.name)
   return item.normalizedName === normalizedName ? undefined : { normalizedName }
 }

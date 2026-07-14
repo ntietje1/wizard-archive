@@ -314,7 +314,7 @@ function localSidebarItemBaseFields(
   return {
     id: item.id as SidebarItemId,
     createdAt: item.createdAt,
-    name: requireLocalResourceName(item.title || 'Untitled'),
+    name: requireLocalResourceTitle(item.title || 'Untitled'),
     iconName: item.iconName ?? null,
     color: item.color ?? null,
     slug: item.slug ?? requireLocalResourceSlug(item.id),
@@ -410,7 +410,7 @@ function localItemAncestors(
   return ancestors
 }
 
-function requireLocalResourceName(value: string): LocalItemName {
+function requireLocalResourceTitle(value: string): LocalItemName {
   return value as LocalItemName
 }
 

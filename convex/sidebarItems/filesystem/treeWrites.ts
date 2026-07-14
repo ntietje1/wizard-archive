@@ -2,7 +2,7 @@ import {
   RESOURCE_STATUS,
   RESOURCE_TYPES,
 } from '@wizard-archive/editor/resources/items-persistence-contract'
-import type { ResourceName } from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { findUniqueSidebarItemSlug } from '../validation/orchestration'
 import { collectDescendants } from '../functions/collectDescendants'
 import {
@@ -72,7 +72,7 @@ export async function restoreTreeDescendants(
     if (i._id === item._id) return
     if (!isTrashedSidebarItem(i)) return
 
-    const name = i.name as ResourceName
+    const name = i.name as ResourceTitle
     const slug = await findUniqueSidebarItemSlug(ctx, {
       itemId: i._id,
       name,

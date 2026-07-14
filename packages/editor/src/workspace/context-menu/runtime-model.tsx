@@ -188,7 +188,6 @@ export function useWorkspaceRuntimeContextMenuModel(
   const editDialogs = useRuntimeItemEditDialogs(
     {
       editItem: createEditFileSystemItem({
-        catalog: { getVisibleChildren: catalog.getVisibleChildren },
         operations: { updateItemMetadata: operations.updateItemMetadata },
         permissions: { canMutateItem: permissions.canMutateItem },
       }),

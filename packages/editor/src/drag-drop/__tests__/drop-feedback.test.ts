@@ -10,7 +10,7 @@ import {
 } from '../drop-target-data'
 import type { ResolvedSidebarItemDropData } from '../drop-target-data'
 import type { AnyItem } from '../../workspace/items'
-import type { ResourceName } from '../../workspace/resource-contract'
+import type { ResourceTitle } from '../../resources/resource-contract'
 import { resolveDropCommand, resolveDropCommandFeedback } from '../drop-command-planner'
 import {
   createFolder as createFolderFixture,
@@ -132,7 +132,7 @@ describe('resolveDropFeedback', () => {
     const note = createNote()
     const folder: ResolvedSidebarItemDropData = {
       ...createFolderDropData(),
-      name: '' as ResourceName,
+      name: '' as ResourceTitle,
     }
 
     expect(resolveDropFeedback([note], folder, planningContext(), { copy: true })).toMatchObject({

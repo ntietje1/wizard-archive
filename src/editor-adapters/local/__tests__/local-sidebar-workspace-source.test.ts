@@ -21,7 +21,7 @@ const TEST_PARENT_TARGET_KIND = {
   direct: 'direct',
 } as const
 
-function testResourceName(name: string): WizardEditorItem['name'] {
+function testResourceTitle(name: string): WizardEditorItem['name'] {
   if (name.trim().length === 0) throw new Error('Expected non-empty test resource name')
   return name as WizardEditorItem['name']
 }
@@ -44,7 +44,7 @@ describe('local demo workspace runtime', () => {
     await act(async () => {
       await source.commands.operations.updateItemMetadata({
         item,
-        name: testResourceName('Renamed note'),
+        name: testResourceTitle('Renamed note'),
       })
     })
 
@@ -63,7 +63,7 @@ describe('local demo workspace runtime', () => {
     await expect(
       source.commands.operations.updateItemMetadata({
         item: { ...item, id: 'missing-local-item' as SidebarItemId },
-        name: testResourceName('Renamed note'),
+        name: testResourceTitle('Renamed note'),
       }),
     ).rejects.toThrow('Failed to update item metadata')
   })

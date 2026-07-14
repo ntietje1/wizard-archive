@@ -1,4 +1,3 @@
-import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
@@ -14,8 +13,7 @@ import {
   createBlock,
   filesystemEventItemIds,
 } from '../../_test/factories.helper'
-import { expectPermissionDenied, expectValidationFailed } from '../../_test/assertions.helper'
-import type { Id } from '../../_generated/dataModel'
+import { expectPermissionDenied } from '../../_test/assertions.helper'
 
 describe('executeCopyCommand', () => {
   const t = createTestContext()
@@ -64,7 +62,7 @@ describe('executeCopyCommand', () => {
     }
   }
 
-  it('duplicates multiple root items into the same parent with automatic keep-both names', async () => {
+  it('preserves natural titles when duplicating multiple root items', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId: firstId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -86,11 +84,11 @@ describe('executeCopyCommand', () => {
       )
     })
 
-    expect(copiedItems.map((item) => item?.name)).toEqual(['Scene A 1', 'Scene B 1'])
+    expect(copiedItems.map((item) => item?.name)).toEqual(['Scene A', 'Scene B'])
     expect(copiedItems.map((item) => item?.parentId)).toEqual([null, null])
   })
 
-  it('auto keeps both when duplicating into the same parent without decisions', async () => {
+  it('allows duplicate titles in the same parent', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -115,7 +113,7 @@ describe('executeCopyCommand', () => {
     if (!copiedId) throw new Error('Expected copied item')
     const copied = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', copiedId))
 
-    expect(copied?.name).toBe('Ambush 1')
+    expect(copied?.name).toBe('Ambush')
     expect(copied?.parentId).toBe(folderId)
   })
 
@@ -163,8 +161,7 @@ describe('executeCopyCommand', () => {
       return { copiedFolder, copiedNote, copiedBlocks, history }
     })
 
-    expect(rows.copiedFolder?.name).toBe('Encounters 1')
-    // Nested items keep their names because the copied folder creates a conflict-free parent.
+    expect(rows.copiedFolder?.name).toBe('Encounters')
     expect(rows.copiedNote?.name).toBe('Ambush')
     expect(rows.copiedNote?.parentId).toBe(copiedRootItemIds(result)[0])
     expect(rows.copiedBlocks.map((block) => block.plainText)).toEqual(['Hidden archers'])
@@ -219,207 +216,11 @@ describe('executeCopyCommand', () => {
             .eq('campaignId', ctx.campaignId)
             .eq('status', 'active')
             .eq('parentId', destinationFolderId)
-            .eq('name', 'Shared Folder 1'),
+            .eq('name', 'Shared Folder'),
         )
         .collect()
     })
     expect(copiedRows).toEqual([])
-  })
-
-  it('replaces a conflicting item by moving the destination to trash before copying', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { noteId: sourceId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-    })
-    const { folderId: destinationFolderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Destination' },
-    )
-    const { noteId: destinationId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-      parentId: destinationFolderId,
-    })
-
-    await expectValidationFailed(
-      executeCopyCommand(dmAuth, {
-        campaignId: ctx.campaignId,
-        sourceItemIds: [sourceId],
-        targetParentId: destinationFolderId,
-      }),
-    )
-
-    const result = await executeCopyCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      sourceItemIds: [sourceId],
-      targetParentId: destinationFolderId,
-      decisions: [{ sourceItemId: sourceId, action: 'replace' }],
-    })
-
-    const rows = await t.run(async (dbCtx) => {
-      const [copiedId] = copiedRootItemIds(result)
-      if (!copiedId) throw new Error('Expected copied item')
-      return {
-        replaced: await dbCtx.db.get('sidebarItems', destinationId),
-        copied: await dbCtx.db.get('sidebarItems', copiedId),
-      }
-    })
-
-    expect(rows.replaced?.status).toBe('trashed')
-    expect(rows.replaced?.deletionTime).toEqual(expect.any(Number))
-    expect(rows.copied?.location).toBe('sidebar')
-    expect(rows.copied?.parentId).toBe(destinationFolderId)
-    expect(rows.copied?.name).toBe('Scene')
-  })
-
-  it('records copy replace receipts as undoable transactions', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { noteId: sourceId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-    })
-    const { folderId: destinationFolderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Destination' },
-    )
-    const { noteId: replacedDestinationId } = await createNote(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'Scene',
-        parentId: destinationFolderId,
-      },
-    )
-
-    const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      command: { type: 'copy', itemIds: [sourceId], targetParentId: destinationFolderId },
-      decisions: [{ sourceItemId: sourceId, action: 'replace' }],
-    })
-
-    expect(
-      receipt.events.filter((event) => event.type === 'replaced').map((event) => event.itemId),
-    ).toEqual([replacedDestinationId])
-    expect(receipt.undoable).toBe(true)
-  })
-
-  it('reports skipped and replaced conflicting roots separately', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { folderId: destinationFolderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { name: 'Destination' },
-    )
-    const sourceIds: Array<Id<'sidebarItems'>> = []
-    const destinationIds: Array<Id<'sidebarItems'>> = []
-
-    for (let index = 1; index <= 9; index += 1) {
-      const name = `Scene ${index}`
-      const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name })
-      const { noteId: destinationId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-        name,
-        parentId: destinationFolderId,
-      })
-      sourceIds.push(noteId)
-      destinationIds.push(destinationId)
-    }
-
-    const result = await executeCopyCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      sourceItemIds: sourceIds,
-      targetParentId: destinationFolderId,
-      decisions: sourceIds.map((sourceItemId, index) => ({
-        sourceItemId,
-        action: index === 0 ? ('replace' as const) : ('skip' as const),
-      })),
-    })
-
-    expect(copiedRootItemIds(result)).toHaveLength(1)
-    expect(filesystemEventItemIds(result, 'replaced')).toEqual([destinationIds[0]])
-    expect(filesystemEventItemIds(result, 'skipped')).toEqual(sourceIds.slice(1))
-  })
-
-  it('propagates folder merge decisions through descendant duplicate conflicts', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { folderId: sourceFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scenes',
-    })
-    const { folderId: targetFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Archive',
-    })
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Encounter',
-      parentId: sourceFolderId,
-    })
-    const { folderId: destinationFolderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'Scenes',
-        parentId: targetFolderId,
-      },
-    )
-    const { noteId: destinationChildId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Encounter',
-      parentId: destinationFolderId,
-    })
-
-    const result = await executeCopyCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      sourceItemIds: [sourceFolderId],
-      targetParentId: targetFolderId,
-      decisions: [{ sourceItemId: sourceFolderId, action: 'mergeFolder' }],
-    })
-
-    expect(copiedRootItemIds(result)).toEqual([])
-    expect(filesystemEventItemIds(result, 'copied')).toHaveLength(0)
-    expect(filesystemEventItemIds(result, 'replaced')).toEqual([destinationChildId])
-    expect(filesystemEventItemIds(result, 'mergedFolder')).toEqual([destinationFolderId])
-  })
-
-  it('records copy folder merge receipts as undoable transactions', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { folderId: sourceFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scenes',
-    })
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Encounter',
-      parentId: sourceFolderId,
-    })
-    const { folderId: targetFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Archive',
-    })
-    const { folderId: destinationFolderId } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'Scenes',
-        parentId: targetFolderId,
-      },
-    )
-
-    const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      command: { type: 'copy', itemIds: [sourceFolderId], targetParentId: targetFolderId },
-      decisions: [{ sourceItemId: sourceFolderId, action: 'mergeFolder' }],
-    })
-
-    expect(
-      receipt.events.filter((event) => event.type === 'mergedFolder').map((event) => event.itemId),
-    ).toEqual([destinationFolderId])
-    expect(receipt.undoable).toBe(true)
   })
 
   it('shares immutable file, map, and preview storage ids when duplicating', async () => {
@@ -488,28 +289,5 @@ describe('executeCopyCommand', () => {
       await expect(dbCtx.storage.getUrl(previewStorageId)).resolves.not.toBeNull()
       await expect(dbCtx.storage.getUrl(mapStorageId)).resolves.not.toBeNull()
     })
-  })
-
-  it('rejects missing decisions when backend planning finds a duplicate conflict', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Destination',
-    })
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-    })
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-      parentId: folderId,
-    })
-
-    await expectValidationFailed(
-      executeCopyCommand(dmAuth, {
-        campaignId: ctx.campaignId,
-        sourceItemIds: [noteId],
-        targetParentId: folderId,
-      }),
-    )
   })
 })

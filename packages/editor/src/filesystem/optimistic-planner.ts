@@ -9,18 +9,13 @@ import type {
 } from './transaction-contract'
 import type { ResourcePatch } from './patch-contract'
 import type { TransferOperation } from './operation-contract'
-import type { ItemOperationConflict } from './operation-planner'
 import {
   projectDeleteForeverRoots,
   projectMoveOperations,
   projectTrashRoots,
 } from './domain/patch-projection'
 import type { FileSystemOptimisticPreview } from './domain/lifecycle'
-import {
-  CREATE_PARENT_TARGET_KIND,
-  deduplicateName,
-  assertResourceItemName,
-} from '../workspace/items'
+import { CREATE_PARENT_TARGET_KIND, canonicalizeResourceItemTitle } from '../workspace/items'
 import type { AnyItem, WorkspaceResourceReadModel } from '../workspace/items'
 import { planCreateParentTarget } from '../workspace/items/create-parent-target'
 import { isTrashedSidebarItem } from '../workspace/items/status'
@@ -41,7 +36,6 @@ type TrashFileSystemCommand = Extract<ResourceCommand, { type: 'trash' }>
 
 type FileSystemOptimisticPlan =
   | { status: 'ready'; preview: FileSystemOptimisticPreview }
-  | { status: 'needsDecision'; conflicts: Array<ItemOperationConflict> }
   | { status: 'unavailable'; reason: 'resources_missing' }
 
 type PlannerArgs = {
@@ -95,19 +89,6 @@ function resolveCommandItems(
 function planCopy(args: CommandPlannerArgs<CopyFileSystemCommand>) {
   const loadedItems = resolveCommandItems(args.readModel, args.command.itemIds)
   if (!loadedItems) return unavailable()
-  const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
-  const plan = planTransferOperations({
-    mode: 'copy',
-    items,
-    itemsById: args.readModel.itemsById,
-    targetParentId: args.command.targetParentId,
-    targetItems: args.readModel.getActiveChildren(args.command.targetParentId),
-    decisions: args.decisions,
-    getChildren: args.readModel.getActiveChildren,
-  })
-  if (plan.status === 'needs-decision')
-    return { status: 'needsDecision' as const, conflicts: plan.conflicts }
-
   return ready()
 }
 
@@ -118,7 +99,6 @@ function planMoveOrRestore(
   if (!loadedItems) return unavailable()
   const groups = groupMoveItemsByTarget(args, loadedItems)
   const operations: Array<TransferOperation> = []
-  const conflicts: Array<ItemOperationConflict> = []
 
   for (const [targetParentId, groupItems] of groups) {
     const plan = planTransferOperations({
@@ -130,13 +110,8 @@ function planMoveOrRestore(
       decisions: args.decisions,
       getChildren: args.readModel.getActiveChildren,
     })
-    if (plan.status === 'needs-decision') {
-      conflicts.push(...plan.conflicts)
-      continue
-    }
     operations.push(...plan.operations)
   }
-  if (conflicts.length > 0) return { status: 'needsDecision' as const, conflicts }
 
   return ready(
     projectMoveOperations({
@@ -230,9 +205,7 @@ function planCreate(args: CommandPlannerArgs<ResourceCreateCommand>): FileSystem
   if (!parentPlan) return ready()
   const parentId = getCreatePreviewParentId(parentPlan)
   if (parentId === undefined) return ready()
-  const name = assertResourceItemName(
-    deduplicateName(args.command.name, getCreateSiblingNames(args, parentId)),
-  )
+  const name = canonicalizeResourceItemTitle(args.command.name)
   const slug = expectedOptimisticCreateSlug(name, getReservedSlugs(args))
   return {
     status: 'ready',
@@ -245,24 +218,6 @@ function planCreate(args: CommandPlannerArgs<ResourceCreateCommand>): FileSystem
       slug,
     }),
   }
-}
-
-function getCreateSiblingNames(
-  args: CommandPlannerArgs<ResourceCreateCommand>,
-  parentId: SidebarItemId | null,
-) {
-  const siblingNames: Array<string> = []
-  const seen = new Set<SidebarItemId>()
-  for (const item of args.readModel.getActiveChildren(parentId)) {
-    seen.add(item.id)
-    siblingNames.push(item.name)
-  }
-  for (const item of args.snapshot.sidebar) {
-    if (seen.has(item.id) || item.parentId !== parentId || isTrashedSidebarItem(item)) continue
-    seen.add(item.id)
-    siblingNames.push(item.name)
-  }
-  return siblingNames
 }
 
 function getReservedSlugs(args: CommandPlannerArgs<ResourceCreateCommand>) {

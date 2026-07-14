@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
 import type { ResourcePatch } from '../patch-contract'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import type { ResourceName } from '../../workspace/resource-contract'
+import type { ResourceTitle } from '../../resources/resource-contract'
 import type { FileSystemCacheAdapter } from '../cache'
 import { runFileSystemOptimisticMutation } from '../optimistic-mutation'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
@@ -14,7 +14,7 @@ const receipt: ResourceTransactionReceipt = {
   command: {
     type: 'create',
     itemType: RESOURCE_TYPES.notes,
-    name: 'Scene' as ResourceName,
+    name: 'Scene' as ResourceTitle,
     parentTarget: { kind: 'direct', parentId: null },
   },
   events: [],
@@ -40,15 +40,15 @@ function createCacheAdapter(): FileSystemCacheAdapter {
 const optimisticPatch = {
   type: 'updateResource',
   itemId: 'item_1' as SidebarItemId,
-  before: { name: 'Before' as ResourceName },
-  fields: { name: 'Optimistic' as ResourceName },
+  before: { name: 'Before' as ResourceTitle },
+  fields: { name: 'Optimistic' as ResourceTitle },
 } satisfies ResourcePatch
 
 const rollbackPatch = {
   type: 'updateResource',
   itemId: 'item_1' as SidebarItemId,
-  before: { name: 'Optimistic' as ResourceName },
-  fields: { name: 'Before' as ResourceName },
+  before: { name: 'Optimistic' as ResourceTitle },
+  fields: { name: 'Before' as ResourceTitle },
 } satisfies ResourcePatch
 
 function isRollbackPatchSet(patches: Array<ResourcePatch>) {

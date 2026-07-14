@@ -1,5 +1,5 @@
 import type { CampaignMemberId, SidebarItemId } from '../../../../../shared/common/ids'
-import { assertResourceItemName } from '../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import { RESOURCE_COMMAND_TYPE, RESOURCE_EVENT_TYPE } from '../transaction-contract'
 import type { ResourceCommand, ResourceEvent } from '../transaction-contract'
@@ -17,13 +17,13 @@ export const fileSystemCommandFixtures = {
   [RESOURCE_COMMAND_TYPE.create]: {
     type: RESOURCE_COMMAND_TYPE.create,
     itemType: RESOURCE_TYPES.notes,
-    name: assertResourceItemName('Created note'),
+    name: canonicalizeResourceItemTitle('Created note'),
     parentTarget: { kind: 'direct', parentId: null },
   },
   [RESOURCE_COMMAND_TYPE.rename]: {
     type: RESOURCE_COMMAND_TYPE.rename,
     itemId: commandFixtureItemIds.item,
-    name: assertResourceItemName('Renamed note'),
+    name: canonicalizeResourceItemTitle('Renamed note'),
   },
   [RESOURCE_COMMAND_TYPE.move]: {
     type: RESOURCE_COMMAND_TYPE.move,

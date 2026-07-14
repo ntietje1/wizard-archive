@@ -247,7 +247,7 @@ describe('planCreateParentTarget', () => {
 })
 
 describe('validateCreateItemLocally', () => {
-  it('rejects names with leading or trailing whitespace', () => {
+  it('accepts titles with canonicalizable surrounding whitespace', () => {
     const result = validateCreateItemLocally(
       {
         name: ' New note ',
@@ -259,10 +259,7 @@ describe('validateCreateItemLocally', () => {
       buildValidationSource([]),
     )
 
-    expect(result).toEqual({
-      valid: false,
-      error: 'Name cannot start or end with whitespace',
-    })
+    expect(result).toEqual({ valid: true })
   })
 
   it('rejects traversal-only names through the same local create validation', () => {
@@ -284,7 +281,7 @@ describe('validateCreateItemLocally', () => {
     })
   })
 
-  it('checks sibling conflicts once the parent path resolves locally', () => {
+  it('accepts duplicate titles once the parent path resolves locally', () => {
     const folder = createFolder({
       id: testId('folder_world'),
       name: 'World',
@@ -308,9 +305,6 @@ describe('validateCreateItemLocally', () => {
       buildValidationSource([folder, existingNote]),
     )
 
-    expect(result).toEqual({
-      valid: false,
-      error: 'An item with this name already exists here',
-    })
+    expect(result).toEqual({ valid: true })
   })
 })

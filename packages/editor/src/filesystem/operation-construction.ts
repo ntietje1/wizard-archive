@@ -1,20 +1,15 @@
 import { isPromiseLike } from '../../../../shared/common/async'
 import type { SidebarItemId } from '../../../../shared/common/ids'
 import type { ResourceImportContentInitializers } from '../files/import-contract'
-import {
-  assertResourceItemName,
-  deduplicateName,
-  normalizeResourceItemNameForComparison,
-  validateResourceItemNameWithSiblings,
-} from '../workspace/items'
+import { canonicalizeResourceItemTitle, validateItemName } from '../workspace/items'
 import type { AnyItem, ValidationResult } from '../workspace/items'
 import type {
   ResourceColor,
-  ResourceName,
   ResourceSlug,
   ResourceIconName,
   ResourceKind,
 } from '../workspace/resource-contract'
+import type { ResourceTitle } from '../resources/resource-contract'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 
 import {
@@ -25,7 +20,6 @@ import {
   planCreateParentTarget,
   validateCreateParentTarget,
 } from '../workspace/items/create-parent-target'
-import { findUniqueDefaultName } from '../workspace/items/default-names'
 import { validateCreateItemLocally } from '../workspace/items/local-create-validation'
 import type { ResourceCatalog } from './catalog'
 import { evaluateCreateItem } from './domain/operation-capabilities'
@@ -79,7 +73,7 @@ type OptimisticCreatedItems = {
   itemsById: Map<
     SidebarItemId,
     {
-      name: ResourceName
+      name: ResourceTitle
       parentKey: string
       type: ResourceKind
     }
@@ -122,7 +116,6 @@ export function createWorkspaceFileSystemOperations({
     reportCreateItemError,
   })
   const updateItemMetadata = createWorkspaceUpdateItemMetadataOperation({
-    catalog,
     currentItem,
     filesystem: operationDriver,
     navigateToItem,
@@ -370,7 +363,7 @@ function createCreatedItemRecorder({
   scope,
   type,
 }: {
-  name: ResourceName
+  name: ResourceTitle
   onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange']
   optimisticCreatedItems: OptimisticCreatedItems
   parentKey: string
@@ -426,7 +419,7 @@ function recordOptimisticCreatedItem(
     type,
   }: {
     createdItemId: SidebarItemId
-    name: ResourceName
+    name: ResourceTitle
     parentKey: string
     type: ResourceKind
   },
@@ -451,14 +444,12 @@ function removeOptimisticCreatedItem(
 }
 
 function createWorkspaceUpdateItemMetadataOperation({
-  catalog,
   currentItem,
   filesystem,
   navigateToItem,
   onItemSlugChange,
   setLastSelectedItem,
 }: {
-  catalog: ResourceCatalog
   currentItem: AnyItem | null
   filesystem: ResourceOperationDriver
   navigateToItem: WorkspaceFileSystemOperationsInput['navigateToItem']
@@ -466,12 +457,7 @@ function createWorkspaceUpdateItemMetadataOperation({
   setLastSelectedItem: WorkspaceFileSystemOperationsInput['setLastSelectedItem']
 }): FileSystemUpdateItemMetadata {
   return async ({ color, iconName, item, name }) => {
-    const trimmedName = name === undefined ? undefined : name.trim()
-    if (trimmedName !== undefined) {
-      const result = validateRuntimeItemName(catalog, trimmedName, item.parentId, item.id)
-      if (!result.valid) throw new Error(result.error)
-    }
-    const metadataUpdate = normalizeRuntimeMetadataUpdate({ color, iconName, name: trimmedName })
+    const metadataUpdate = normalizeRuntimeMetadataUpdate({ color, iconName, name })
     if (!metadataUpdate || !hasRuntimeMetadataChange(item, metadataUpdate)) {
       return { slug: item.slug }
     }
@@ -506,7 +492,7 @@ type RuntimeMetadataUpdateInput = {
 }
 
 type NormalizedRuntimeMetadataUpdate = {
-  name?: ResourceName
+  name?: ResourceTitle
   iconName?: ResourceIconName | null
   color?: ResourceColor | null
 }
@@ -518,7 +504,7 @@ function normalizeRuntimeMetadataUpdate({
 }: RuntimeMetadataUpdateInput): NormalizedRuntimeMetadataUpdate | null {
   if (name === undefined && iconName === undefined && color === undefined) return null
   return {
-    name: name === undefined ? undefined : assertResourceItemName(name),
+    name: name === undefined ? undefined : canonicalizeResourceItemTitle(name),
     iconName:
       iconName === undefined || iconName === null
         ? iconName
@@ -649,12 +635,12 @@ function getContextMenuPasteParentId({
 }
 
 function validateRuntimeItemName(
-  catalog: ResourceCatalog,
+  _catalog: ResourceCatalog,
   name: string,
-  parentId: Parameters<FileSystemItemNameValidation>[1],
-  excludeId?: Parameters<FileSystemItemNameValidation>[2],
+  _parentId: Parameters<FileSystemItemNameValidation>[1],
+  _excludeId?: Parameters<FileSystemItemNameValidation>[2],
 ): ValidationResult {
-  return validateResourceItemNameWithSiblings(name, catalog.getVisibleChildren(parentId), excludeId)
+  return validateItemName(name)
 }
 
 function resolveCreateItemName({
@@ -662,12 +648,11 @@ function resolveCreateItemName({
   name,
   optimisticCreatedItems,
   parentTarget,
-  type,
 }: FileSystemCreateItemInput & {
   catalog: ResourceCatalog
   optimisticCreatedItems: OptimisticCreatedItems
 }): {
-  name: ResourceName
+  name: ResourceTitle
   parentKey: string
   parentPlan: NonNullable<ReturnType<typeof planCreateParentTarget>>
 } {
@@ -683,32 +668,7 @@ function resolveCreateItemName({
     throw new Error(parentResult.valid ? 'Parent not found' : parentResult.error)
   }
   const parentKey = createOptimisticParentKey(parentPlan)
-  const parentId = getPlannedExistingParentId(parentPlan)
-  const existingSiblingNames =
-    parentId === undefined
-      ? []
-      : validationSource.getActiveChildren(parentId).map((item) => item.name)
-  const optimisticSiblingNames = Array.from(optimisticCreatedItems.itemsById.values())
-    .filter((item) => item.parentKey === parentKey)
-    .map((item) => item.name)
-  const siblingNames = [...existingSiblingNames, ...optimisticSiblingNames]
-  const candidateName =
-    name?.trim() ||
-    findUniqueDefaultName(
-      type,
-      siblingNames.map((siblingName) => ({ name: assertResourceItemName(siblingName) })),
-    )
-  const dedupedName = deduplicateName(candidateName, siblingNames)
-  return { name: assertResourceItemName(dedupedName), parentKey, parentPlan }
-}
-
-function getPlannedExistingParentId(
-  plan: NonNullable<ReturnType<typeof planCreateParentTarget>>,
-): SidebarItemId | null | undefined {
-  if (plan.kind === 'direct') return plan.parentId
-  const finalFolder = plan.folders.at(-1)
-  if (!finalFolder) return null
-  return finalFolder.kind === 'existing' ? finalFolder.id : undefined
+  return { name: canonicalizeResourceItemTitle(name ?? ''), parentKey, parentPlan }
 }
 
 function createOptimisticParentKey(plan: NonNullable<ReturnType<typeof planCreateParentTarget>>) {
@@ -717,9 +677,7 @@ function createOptimisticParentKey(plan: NonNullable<ReturnType<typeof planCreat
   let key = createExistingParentKey(null)
   for (const folder of plan.folders) {
     key =
-      folder.kind === 'existing'
-        ? createExistingParentKey(folder.id)
-        : `${key}/path:${normalizeResourceItemNameForComparison(folder.name)}`
+      folder.kind === 'existing' ? createExistingParentKey(folder.id) : `${key}/path:${folder.name}`
   }
   return key
 }

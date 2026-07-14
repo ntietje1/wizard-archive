@@ -3,7 +3,7 @@ import { shouldRecordFileSystemUndo } from '../undo-recording'
 import { createFileSystemUndoStore } from '../undo-store'
 import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
-import { assertResourceItemName } from '../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { createNote } from '../../test/sidebar-item-factory'
 import { createFileSystemReceipt } from './receipt-factory'
 import { resourcePatchRowFromCacheItem } from '../cache-patches'
@@ -29,11 +29,11 @@ describe('filesystem undo recording', () => {
     name: string
     direction?: ResourceTransactionReceipt['direction']
   }): ResourceTransactionReceipt => {
-    const sidebarItemName = assertResourceItemName(name)
+    const sidebarItemName = canonicalizeResourceItemTitle(name)
     const forwardPatch = {
       type: 'updateResource' as const,
       itemId,
-      before: { name: assertResourceItemName('previous') },
+      before: { name: canonicalizeResourceItemTitle('previous') },
       fields: { name: sidebarItemName },
     }
     return createFileSystemReceipt({

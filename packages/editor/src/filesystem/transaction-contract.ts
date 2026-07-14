@@ -5,10 +5,10 @@ import type { CreateParentTarget } from '../workspace/items'
 import type {
   ResourceColor,
   ResourceId,
-  ResourceName,
   ResourceIconName,
   ResourceKind,
 } from '../workspace/resource-contract'
+import type { ResourceTitle } from '../resources/resource-contract'
 import type { OperationId } from '../resources/domain-id'
 
 import type { ResourceChange, ResourcePatch } from './patch-contract'
@@ -34,7 +34,7 @@ export const RESOURCE_COMMAND_TYPE = {
 export type ResourceCreateCommand = {
   type: typeof RESOURCE_COMMAND_TYPE.create
   itemType: ResourceKind
-  name: ResourceName
+  name: ResourceTitle
   parentTarget: CreateParentTarget
   iconName?: ResourceIconName
   color?: ResourceColor
@@ -50,7 +50,7 @@ export type ResourceCreateParentPlan =
 export type ResourceRenameCommand = {
   type: typeof RESOURCE_COMMAND_TYPE.rename
   itemId: ResourceId
-  name?: ResourceName
+  name?: ResourceTitle
   iconName?: ResourceIconName | null
   color?: ResourceColor | null
 }

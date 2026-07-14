@@ -90,7 +90,7 @@ describe('create item with parentTarget paths', () => {
     )
   })
 
-  it('rolls back created parent folders when note creation fails after path resolution', async () => {
+  it('rolls back created parent folders when path resolution later fails', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -100,11 +100,11 @@ describe('create item with parentTarget paths', () => {
         command: {
           type: 'create',
           itemType: 'note',
-          name: '   ' as never,
+          name: 'Leaf Note',
           parentTarget: {
             kind: 'path',
             baseParentId: null,
-            pathSegments: ['Arc One', 'Arc Two'],
+            pathSegments: ['Arc One', '..', '..'],
           },
         },
       }),

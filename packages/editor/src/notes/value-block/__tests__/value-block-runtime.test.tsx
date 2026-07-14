@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import { use, useState } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { assertResourceItemName, assertResourceItemSlug } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
 import type { AnyItem } from '../../../workspace/items'
 import type { NoteItem } from '../../../notes/item-contract'
 import {
@@ -54,7 +54,7 @@ function noteItem(id: SidebarItemId, name: string): NoteItem {
   return {
     id: id,
     createdAt: 1,
-    name: assertResourceItemName(name),
+    name: canonicalizeResourceItemTitle(name),
     iconName: null,
     color: null,
     slug: assertResourceItemSlug(name.toLowerCase().replaceAll(' ', '-')),

@@ -10,7 +10,7 @@ import type { NoteItem } from '../../../notes/item-contract'
 import type { AnyItem } from '../../../workspace/items'
 import {
   assertResourceItemColor,
-  assertResourceItemName,
+  canonicalizeResourceItemTitle,
   assertResourceItemSlug,
 } from '../../../workspace/items'
 import {
@@ -158,7 +158,7 @@ function createBaseResourceItem({
     isTrashed: false,
     location: RESOURCE_LOCATION.sidebar,
     myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
-    name: assertResourceItemName(name),
+    name: canonicalizeResourceItemTitle(name),
     parentId: null,
     previewAssetId: null,
     previewUrl: null,

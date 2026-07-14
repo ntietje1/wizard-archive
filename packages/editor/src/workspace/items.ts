@@ -1,16 +1,11 @@
 import {
   assertResourceColor,
   assertResourceIconName,
-  assertResourceName,
   assertResourceSlug,
-  checkResourceNameConflict,
   createResourceReadModel,
   isActiveResource,
-  normalizeResourceNameForComparison,
   parseResourceSlug,
   validateNoCircularResourceParentAsync,
-  validateResourceName,
-  validateResourceNameWithSiblings,
 } from './resource-contract'
 import type {
   BaseResource,
@@ -19,7 +14,6 @@ import type {
   EnhancedResource,
   ResourceByKind,
   ResourceColor,
-  ResourceName,
   ResourceRow,
   ResourceRowByKind,
   ResourceReadModel,
@@ -30,8 +24,9 @@ import type {
   ResourceKind,
   ResourceId,
 } from './resource-contract'
+import { canonicalizeResourceTitle } from '../resources/resource-contract'
+import type { ResourceTitle } from '../resources/resource-contract'
 import type { RESOURCE_TYPES } from './items-persistence-contract'
-import { deduplicateNumericSuffix } from './items/deduplicate-numeric-suffix'
 import { isOptimisticSidebarItem, isOptimisticSidebarItemId } from './items/optimistic'
 
 export type FolderItem = ResourceByKind<typeof RESOURCE_TYPES.folders>
@@ -112,31 +107,16 @@ export type WithContentResourceItem<T extends AnyItem> = WithContentResource<T>
 export type ValidationResult = { valid: true } | { valid: false; error: string }
 
 export function validateItemName(name: string): ValidationResult {
-  return validateResourceName(name)
+  try {
+    canonicalizeResourceTitle(name)
+    return { valid: true }
+  } catch (error) {
+    return { valid: false, error: error instanceof Error ? error.message : 'Invalid title' }
+  }
 }
 
-export function assertResourceItemName(name: string): ResourceName {
-  return assertResourceName(name)
-}
-
-export function normalizeResourceItemNameForComparison(name: string): string {
-  return normalizeResourceNameForComparison(name)
-}
-
-export function checkNameConflict<TId extends string = string>(
-  name: string,
-  siblings: ReadonlyArray<{ id: TId; name: string }>,
-  excludeId?: TId,
-): ValidationResult {
-  return checkResourceNameConflict(name, siblings, excludeId)
-}
-
-export function validateResourceItemNameWithSiblings<TId extends string = string>(
-  name: string,
-  siblings?: ReadonlyArray<{ id: TId; name: string }>,
-  excludeId?: TId,
-): ValidationResult {
-  return validateResourceNameWithSiblings(name, siblings, excludeId)
+export function canonicalizeResourceItemTitle(name: string): ResourceTitle {
+  return canonicalizeResourceTitle(name)
 }
 
 export const RESOURCE_SLUG_MAX_LENGTH = 255
@@ -155,16 +135,6 @@ export function assertResourceItemColor(color: string): ResourceColor {
 
 export function assertResourceItemIconName(iconName: string) {
   return assertResourceIconName(iconName)
-}
-
-export function deduplicateName(base: string, siblingNames: Array<string>): string {
-  const normalizedBase = base.trimEnd()
-  return deduplicateNumericSuffix(normalizedBase, siblingNames, {
-    separator: ' ',
-    normalize: (value) => value.toLowerCase(),
-    maxLength: RESOURCE_SLUG_MAX_LENGTH,
-    errorLabel: 'sidebar item name',
-  })
 }
 
 export const CREATE_PARENT_TARGET_KIND = {

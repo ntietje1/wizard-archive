@@ -357,7 +357,7 @@ describe('createCatalogFileSystemDownload', () => {
             type: RESOURCE_TYPES.files,
             downloadUrl: 'shared-file-url',
             name: 'Shared',
-            path: 'Shared 1',
+            path: `Shared~${file.id.slice(-8)}`,
           },
         ],
       },

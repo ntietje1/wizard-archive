@@ -3,7 +3,10 @@ import { planFileSystemOptimisticCommand } from '../optimistic-planner'
 import { applyFileSystemPatchesToSidebarCache } from '../cache-patches'
 import { createFileSystemCacheAdapter } from '../cache'
 import type { SidebarCacheSnapshot } from '../cache-patches'
-import { assertResourceItemName, createWorkspaceResourceReadModel } from '../../workspace/items'
+import {
+  canonicalizeResourceItemTitle,
+  createWorkspaceResourceReadModel,
+} from '../../workspace/items'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { CampaignId, UserProfileId } from '../../../../../shared/common/ids'
@@ -32,7 +35,7 @@ describe('filesystem optimistic planning', () => {
       command: {
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: assertResourceItemName('Scene'),
+        name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       snapshot: cache.snapshot,
@@ -62,7 +65,7 @@ describe('filesystem optimistic planning', () => {
       command: {
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: assertResourceItemName('Scene'),
+        name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'path', baseParentId: null, pathSegments: ['Scenes'] },
       },
       snapshot: cache.snapshot,
@@ -80,7 +83,7 @@ describe('filesystem optimistic planning', () => {
       ...applied.trash,
     ])
     const children = appliedReadModel.getActiveChildren(parent.id)
-    expect(children.map((item) => item.name)).toEqual(['Scene', 'Scene 1'])
+    expect(children.map((item) => item.name)).toEqual(['Scene', 'Scene'])
     expect(plan.preview.optimisticIntents).toEqual([
       { type: 'openFolder', workspaceId: campaignId, folderId: parent.id },
     ])
@@ -95,7 +98,7 @@ describe('filesystem optimistic planning', () => {
       command: {
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: assertResourceItemName('Scene'),
+        name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'path', baseParentId: null, pathSegments: ['Pending parent'] },
       },
       createParentPlan: { kind: 'path', folders: [{ kind: 'existing', id: parent.id }] },
@@ -116,7 +119,7 @@ describe('filesystem optimistic planning', () => {
     ])
   })
 
-  it('reserves names and slugs from pending optimistic creates', () => {
+  it('reserves route slugs without changing duplicate titles', () => {
     const parent = createFolder({ name: 'Scenes' })
     const pending = createNote({ name: 'Scene', slug: 'scene', parentId: parent.id })
     const snapshot: SidebarCacheSnapshot = { sidebar: [parent, pending], trash: [] }
@@ -126,7 +129,7 @@ describe('filesystem optimistic planning', () => {
       command: {
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: assertResourceItemName('Scene'),
+        name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       snapshot: cache.snapshot,
@@ -141,7 +144,7 @@ describe('filesystem optimistic planning', () => {
     const upsert = plan.preview.receiptPatches[0]
     expect(upsert?.type).toBe('upsertResource')
     if (upsert?.type !== 'upsertResource') return
-    expect(upsert.item).toEqual(expect.objectContaining({ name: 'Scene 1', slug: 'scene-1' }))
+    expect(upsert.item).toEqual(expect.objectContaining({ name: 'Scene', slug: 'scene-1' }))
   })
 
   it('populates concrete type fields for optimistic create previews', () => {
@@ -158,7 +161,7 @@ describe('filesystem optimistic planning', () => {
         command: {
           type: 'create',
           itemType,
-          name: assertResourceItemName('Created'),
+          name: canonicalizeResourceItemTitle('Created'),
           parentTarget: { kind: 'direct', parentId: null },
         },
         snapshot: cache.snapshot,
@@ -207,42 +210,6 @@ describe('filesystem optimistic planning', () => {
     expect(appliedReadModel.getActiveChildren(left.id).map((item) => item.id)).toEqual([
       first.id,
       second.id,
-    ])
-  })
-
-  it('attributes implicitly trashed replace destinations to the current user', () => {
-    const sourceFolder = createFolder({ name: 'Source' })
-    const source = createNote({ name: 'Scene', parentId: sourceFolder.id })
-    const destination = createNote({ name: 'Scene' })
-    const snapshot: SidebarCacheSnapshot = {
-      sidebar: [sourceFolder, source, destination],
-      trash: [],
-    }
-    const cache = createTestCache(snapshot)
-
-    const plan = planFileSystemOptimisticCommand({
-      command: {
-        type: 'move',
-        itemIds: [source.id],
-        targetParentId: null,
-      },
-      decisions: [{ sourceItemId: source.id, action: 'replace' }],
-      snapshot: cache.snapshot,
-      readModel: cache.readModel,
-      activeItemSurface: { parentId: null },
-      currentUserId: userId,
-      workspaceId: campaignId,
-    })
-
-    expect(plan.status).toBe('ready')
-    if (plan.status !== 'ready') return
-    const applied = applyFileSystemPatchesToSidebarCache(snapshot, plan.preview.receiptPatches)
-    expect(applied.trash).toEqual([
-      expect.objectContaining({
-        id: destination.id,
-        status: RESOURCE_STATUS.trashed,
-        deletedBy: userId,
-      }),
     ])
   })
 

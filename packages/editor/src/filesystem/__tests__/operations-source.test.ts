@@ -96,9 +96,9 @@ function createTrashDriver(
 }
 
 describe('filesystem operations source', () => {
-  it('deduplicates created item names against the target siblings and records the created slug', async () => {
+  it('preserves a created title that duplicates a target sibling', async () => {
     const existing = createNote({ name: 'Scene' })
-    const created = createNote({ name: 'Scene 1', slug: 'scene-1' })
+    const created = createNote({ name: 'Scene', slug: 'scene-1' })
     const catalog = createResourceCatalogModel({
       activeItems: [existing],
       trashItems: [],
@@ -122,7 +122,7 @@ describe('filesystem operations source', () => {
 
     expect(operationDriver.createItem).toHaveBeenCalledWith({
       itemType: RESOURCE_TYPES.notes,
-      name: 'Scene 1',
+      name: 'Scene',
       parentTarget: { kind: 'direct', parentId: null },
     })
     expect(response).toEqual({ status: 'completed', id: created.id, slug: created.slug })
@@ -215,7 +215,7 @@ describe('filesystem operations source', () => {
     ).resolves.toEqual({ status: 'completed', id: created.id, slug: created.slug })
   })
 
-  it('uses type-specific default names for unnamed created items', async () => {
+  it('uses the canonical Untitled title for unnamed resources', async () => {
     const catalog = createResourceCatalogModel({
       activeItems: [],
       trashItems: [],
@@ -237,11 +237,11 @@ describe('filesystem operations source', () => {
       operationDriver,
     })
     const cases = [
-      [RESOURCE_TYPES.notes, 'Untitled Note'],
-      [RESOURCE_TYPES.folders, 'Untitled Folder'],
-      [RESOURCE_TYPES.gameMaps, 'Untitled Map'],
-      [RESOURCE_TYPES.files, 'Untitled File'],
-      [RESOURCE_TYPES.canvases, 'Untitled Canvas'],
+      [RESOURCE_TYPES.notes, 'Untitled'],
+      [RESOURCE_TYPES.folders, 'Untitled'],
+      [RESOURCE_TYPES.gameMaps, 'Untitled'],
+      [RESOURCE_TYPES.files, 'Untitled'],
+      [RESOURCE_TYPES.canvases, 'Untitled'],
     ] as const
 
     for (const [type] of cases) {
@@ -260,7 +260,7 @@ describe('filesystem operations source', () => {
     )
   })
 
-  it('fills gaps in unnamed item suffixes against the target siblings', async () => {
+  it('does not inspect siblings when creating an unnamed item', async () => {
     const catalog = createResourceCatalogModel({
       activeItems: [
         createNote({ name: 'Untitled Note' }),
@@ -288,7 +288,7 @@ describe('filesystem operations source', () => {
 
     expect(createItem).toHaveBeenCalledWith({
       itemType: RESOURCE_TYPES.notes,
-      name: 'Untitled Note 2',
+      name: 'Untitled',
       parentTarget: { kind: 'direct', parentId: null },
     })
   })
@@ -409,7 +409,7 @@ describe('filesystem operations source', () => {
     ).toHaveLength(1)
   })
 
-  it('deduplicates children created inside the same new folder before catalog refresh', async () => {
+  it('preserves duplicate child titles before catalog refresh', async () => {
     const catalog = createResourceCatalogModel({
       activeItems: [],
       trashItems: [],
@@ -468,7 +468,7 @@ describe('filesystem operations source', () => {
     })
     expect(createItem).toHaveBeenNthCalledWith(3, {
       itemType: RESOURCE_TYPES.notes,
-      name: 'Scene 1',
+      name: 'Scene',
       parentTarget: { kind: 'direct', parentId: createdFolder.id },
     })
   })
@@ -584,7 +584,7 @@ describe('filesystem operations source', () => {
     expect(createItem.mock.calls.map(([input]) => input.name)).toEqual(['Assets', 'Nested'])
   })
 
-  it('deduplicates unnamed children created in the same path before catalog refresh', async () => {
+  it('allows duplicate Untitled children in the same path before catalog refresh', async () => {
     const catalog = createResourceCatalogModel({
       activeItems: [],
       trashItems: [],
@@ -619,10 +619,7 @@ describe('filesystem operations source', () => {
       parentTarget,
     })
 
-    expect(createItem.mock.calls.map(([input]) => input.name)).toEqual([
-      'Untitled Note',
-      'Untitled Note 1',
-    ])
+    expect(createItem.mock.calls.map(([input]) => input.name)).toEqual(['Untitled', 'Untitled'])
   })
 
   it('derives folder paste targets from the clicked destination item', async () => {

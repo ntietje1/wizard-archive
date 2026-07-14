@@ -2,12 +2,8 @@ import type { ReactNode } from 'react'
 import type { MaybePromise } from '../../../../shared/common/async'
 import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
 import type { OperationId } from '../resources/domain-id'
-import type {
-  ResourceColor,
-  ResourceIconName,
-  ResourceKind,
-  ResourceName,
-} from '../workspace/resource-contract'
+import type { ResourceColor, ResourceIconName, ResourceKind } from '../workspace/resource-contract'
+import type { ResourceTitle } from '../resources/resource-contract'
 import type { CreateParentTarget } from '../workspace/items'
 import type { ResourceShareOperations } from '../sharing/contracts'
 import type {
@@ -31,7 +27,7 @@ import type { FileSystemTrashDialogState } from './trash/dialogs'
 
 type ResourceOperationDriverCreateItemInput = {
   itemType: ResourceKind
-  name: ResourceName
+  name: ResourceTitle
   parentTarget: CreateParentTarget
   parentPlan?: ResourceCreateParentPlan
   iconName?: ResourceIconName

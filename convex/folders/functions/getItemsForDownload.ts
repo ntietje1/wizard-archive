@@ -6,7 +6,6 @@ import { getNoteForDownload } from '../../notes/functions/getNoteForDownload'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebarItemsByParent'
-import { deduplicateResourceName } from '@wizard-archive/editor/resources/resource-contract'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type {
   AnyResource,
@@ -30,7 +29,6 @@ type DownloadBuildContext = {
 
 type DownloadableSidebarItem = Exclude<AnyResource, FolderResource>
 
-const MAX_DEDUP_ATTEMPTS = 100
 const MAX_DOWNLOAD_ANCESTOR_DEPTH = 50
 
 function buildPath(currentPath: string, name: string) {
@@ -78,10 +76,7 @@ async function collectNonFolderDownloadItem(
     downloadContext: DownloadBuildContext
   },
 ): Promise<Array<DownloadItem>> {
-  const triedNames: Array<string> = []
-
-  for (let attempt = 0; attempt < MAX_DEDUP_ATTEMPTS; attempt += 1) {
-    const candidateName = deduplicateResourceName(item.name, triedNames)
+  for (const candidateName of projectedNameCandidates(item)) {
     const downloadItem = await buildDownloadItemForSidebarItem(
       ctx,
       item,
@@ -91,7 +86,6 @@ async function collectNonFolderDownloadItem(
       downloadContext.reservedPaths.add(downloadItem.path)
       return [downloadItem]
     }
-    triedNames.push(candidateName)
   }
   throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Could not generate a unique download path')
 }
@@ -118,9 +112,7 @@ async function collectFolderDownloadItems(
     })
   }
 
-  const triedNames: Array<string> = []
-  for (let attempt = 0; attempt < MAX_DEDUP_ATTEMPTS; attempt += 1) {
-    const candidateName = deduplicateResourceName(item.name, triedNames)
+  for (const candidateName of projectedNameCandidates(item)) {
     const items = await collectItemsRecursively(ctx, {
       parentId: item.id,
       currentPath: buildPath(currentPath, candidateName),
@@ -130,9 +122,12 @@ async function collectFolderDownloadItems(
       reserveDownloadPaths(items, downloadContext.reservedPaths)
       return items
     }
-    triedNames.push(candidateName)
   }
   throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Could not generate a unique folder download path')
+}
+
+function projectedNameCandidates(item: AnyResource): [string, string] {
+  return [item.name, `${item.name}~${item.id.slice(-8)}`]
 }
 
 async function collectItemsRecursively(

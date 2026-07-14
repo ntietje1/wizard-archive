@@ -104,7 +104,7 @@ describe('FileForm', () => {
     expect(toastError).not.toHaveBeenCalled()
   })
 
-  it('validates the effective uploaded filename when the optional name is blank', () => {
+  it('accepts the effective uploaded filename when the optional name is blank', () => {
     const parentId: SidebarItemId = testId<'sidebarItems'>('parent_folder')
     const uploadedFile = new File(['duplicate'], 'duplicate.pdf', { type: 'application/pdf' })
     const source = createFileFormSource({
@@ -121,9 +121,9 @@ describe('FileForm', () => {
       }),
     })
 
-    expect(source.validateItemName).toHaveBeenCalledWith('duplicate.pdf', parentId, undefined)
-    expect(screen.getByText('Name already exists')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
+    expect(source.validateItemName).not.toHaveBeenCalled()
+    expect(screen.queryByText('Name already exists')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled()
   })
 
   it('updates existing file metadata when the stored file is still present', async () => {

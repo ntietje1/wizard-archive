@@ -789,7 +789,6 @@ function copyItemTree({
   }
   nextIndexRef.value += 1
   idMap.set(item.id, copiedId)
-  const isRootCopy = item.parentId === sourceParentId
   const copiedParentId =
     item.parentId === sourceParentId ? targetParentId : (idMap.get(item.parentId ?? '') ?? null)
   const copiedItem: LocalWorkspaceItem = {
@@ -800,7 +799,7 @@ function copyItemTree({
     slug: requireLocalResourceSlug(copiedId),
     status: 'active',
     trashedAt: null,
-    title: isRootCopy ? `${item.title || localItemTitle(item.type, copiedIndex)} Copy` : item.title,
+    title: item.title || localItemTitle(item.type, copiedIndex),
     updatedAt: copiedAt,
   }
   copiedItems.push(copiedItem)

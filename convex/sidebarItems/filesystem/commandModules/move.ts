@@ -9,7 +9,6 @@ import {
 import type { ResourceStatus } from '@wizard-archive/editor/resources/resource-contract'
 
 import {
-  ensureSidebarItemNameAvailable,
   findUniqueSidebarItemSlug,
   validateSidebarMove,
   validateNoCircularSidebarParentChange,
@@ -45,15 +44,11 @@ import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
 const clearDeletion = { deletionTime: null, deletedBy: null }
 type StoredSidebarItemRow = Doc<'sidebarItems'>
 
-type MoveMergeFolderOperation = Extract<TransferOperation, { action: 'mergeFolder' }>
 type MoveCommandAction = 'move' | 'restore' | 'trash'
 type MoveSelfEventType =
   | typeof RESOURCE_EVENT_TYPE.moved
   | typeof RESOURCE_EVENT_TYPE.trashed
   | typeof RESOURCE_EVENT_TYPE.restored
-  | typeof RESOURCE_EVENT_TYPE.skipped
-  | typeof RESOURCE_EVENT_TYPE.replaced
-  | typeof RESOURCE_EVENT_TYPE.mergedFolder
   | typeof RESOURCE_EVENT_TYPE.noop
 
 type MoveFileSystemCommand = Extract<ResourceCommand, { type: 'move' }>
@@ -67,24 +62,7 @@ function pushSelfEvent(
   type: MoveSelfEventType,
   itemId: Id<'sidebarItems'>,
 ) {
-  if (
-    type === RESOURCE_EVENT_TYPE.skipped ||
-    type === RESOURCE_EVENT_TYPE.replaced ||
-    type === RESOURCE_EVENT_TYPE.mergedFolder
-  ) {
-    events.push({ type, itemId, sourceItemId: itemId })
-    return
-  }
   events.push({ type, itemId })
-}
-
-function pushPairedEvent(
-  events: Array<ResourceEvent>,
-  type: typeof RESOURCE_EVENT_TYPE.replaced | typeof RESOURCE_EVENT_TYPE.mergedFolder,
-  itemId: Id<'sidebarItems'>,
-  sourceItemId: Id<'sidebarItems'>,
-) {
-  events.push({ type, itemId, sourceItemId })
 }
 
 async function resyncRelativeLinksForMovedItems(
@@ -209,13 +187,6 @@ async function executeRestore(
     newParentId: restoreParentId,
   })
 
-  if (requestedName) {
-    await ensureSidebarItemNameAvailable(ctx, {
-      parentId: restoreParentId,
-      name: requestedName,
-      excludeId: item._id,
-    })
-  }
   const conflictPatch = requestedName
     ? {
         name: requestedName,
@@ -369,21 +340,7 @@ async function executeMoveOperations(
     const affectedId = await executeMoveOperation(ctx, operation, action, session)
     if (!affectedId) continue
 
-    if (operation.action === 'replace') {
-      pushSelfEvent(events, RESOURCE_EVENT_TYPE.moved, affectedId)
-      if (!operation.destinationItemId) {
-        throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Replace requires a destination item')
-      }
-      pushPairedEvent(
-        events,
-        RESOURCE_EVENT_TYPE.replaced,
-        operation.destinationItemId,
-        operation.sourceItemId,
-      )
-      continue
-    } else if (operation.action === 'mergeFolder') {
-      pushPairedEvent(events, RESOURCE_EVENT_TYPE.mergedFolder, affectedId, operation.sourceItemId)
-    } else if (action === 'restore') {
+    if (action === 'restore') {
       pushSelfEvent(events, RESOURCE_EVENT_TYPE.restored, affectedId)
     } else {
       pushSelfEvent(events, RESOURCE_EVENT_TYPE.moved, affectedId)
@@ -405,14 +362,6 @@ async function executeMoveOperation(
   session: FileSystemWriteSession,
 ): Promise<Id<'sidebarItems'> | null> {
   const source = await loadMovableSource(ctx, operation.sourceItemId)
-
-  if (operation.action === 'mergeFolder') {
-    return await executeMergeFolderMove(ctx, source, operation, session)
-  }
-
-  if (operation.action === 'replace') {
-    await trashMoveReplacement(ctx, operation.destinationItemId, session)
-  }
 
   if (action === 'restore') {
     if (!isTrashedSidebarItem(source)) {
@@ -436,54 +385,6 @@ async function executeMoveOperation(
     })
   }
   return source._id
-}
-
-async function executeMergeFolderMove(
-  ctx: CampaignMutationCtx,
-  source: AccessibleSidebarItemRow,
-  operation: MoveMergeFolderOperation,
-  session: FileSystemWriteSession,
-): Promise<Id<'sidebarItems'>> {
-  if (source.type !== RESOURCE_TYPES.folders || !operation.destinationItemId) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only folders can be merged')
-  }
-
-  const rawDestination = await getSidebarItemRow(ctx, operation.destinationItemId)
-  const destination = await requireSidebarItemRowOperationAccess(ctx, {
-    rawItem: rawDestination,
-    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
-  })
-  if (destination.type !== RESOURCE_TYPES.folders) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Destination folder not found')
-  }
-
-  // Merge-folder plans move children before this operation; the source can be trashed only once empty.
-  const remainingChildren = await getActiveSidebarItemRowsByParent(ctx, { parentId: source._id })
-  if (remainingChildren.length === 0) {
-    await session.trashSidebarTree(source)
-  }
-  return destination._id
-}
-
-async function trashMoveReplacement(
-  ctx: CampaignMutationCtx,
-  destinationItemId: Id<'sidebarItems'> | undefined,
-  session: FileSystemWriteSession,
-) {
-  if (!destinationItemId) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Replace requires a destination item')
-  }
-
-  const rawDestination = await getSidebarItemRow(ctx, destinationItemId)
-  const destination = await requireSidebarItemRowOperationAccess(ctx, {
-    rawItem: rawDestination,
-    operation: PERMISSION_OPERATION.TRASH_SIDEBAR_ITEM,
-  })
-  if (destination.type === RESOURCE_TYPES.folders) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders are merged instead of replaced')
-  }
-
-  await session.trashSidebarTree(destination)
 }
 
 async function loadMovableSources(
@@ -623,16 +524,6 @@ async function executeMovePlan(
     getChildren: (parentId) => toSidebarOperationItems(childrenMap.get(parentId) ?? []),
   })
 
-  if (plan.status === 'needs-decision') {
-    const conflictSummary = plan.conflicts
-      .map((conflict) => `${conflict.sourceName} -> ${conflict.destinationName}`)
-      .join(', ')
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      `Operation requires conflict decisions: ${conflictSummary}`,
-    )
-  }
-
   const rootSourceItems = normalizeSelectedRoots(
     toSidebarOperationItems(sourceItems),
     ancestorItemsById,
@@ -644,13 +535,6 @@ async function executeMovePlan(
     rootSourceItems.map((item) => item.id),
     session,
   )
-  for (const sourceItemId of plan.skippedSourceItemIds ?? []) {
-    events.push({
-      type: RESOURCE_EVENT_TYPE.skipped,
-      itemId: sourceItemId,
-      sourceItemId,
-    })
-  }
   return events
 }
 

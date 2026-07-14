@@ -5,19 +5,19 @@ import {
 } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type {
   ResourceColor,
-  ResourceName,
   ResourceSlug,
   ResourceIconName,
   ResourceKind,
 } from '@wizard-archive/editor/resources/resource-contract'
-import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { normalizeLegacyResourcePathSegment } from '../resourcePathSegment'
 
 import { assertSidebarItemLifecycleConsistency } from '../types/status'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 export type InsertFilesystemSidebarItemArgs = {
   type: ResourceKind
-  name: ResourceName
+  name: ResourceTitle
   parentId: Id<'sidebarItems'> | null
   iconName?: ResourceIconName
   color?: ResourceColor
@@ -45,7 +45,7 @@ export async function insertFilesystemSidebarItem(
   const row = {
     campaignId: ctx.campaign._id,
     name: prepared.name,
-    normalizedName: normalizeResourceNameForComparison(prepared.name),
+    normalizedName: normalizeLegacyResourcePathSegment(prepared.name),
     slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,

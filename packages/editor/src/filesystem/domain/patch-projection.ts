@@ -118,46 +118,6 @@ function appendPatchPair(target: OptimisticPatchPair, source: OptimisticPatchPai
   target.inversePatches.push(...source.inversePatches)
 }
 
-function projectReplacementDestination<T extends ResourcePatchRow>({
-  patches,
-  activeItems,
-  operation,
-  now,
-  userId,
-}: {
-  patches: OptimisticPatchPair
-  activeItems: Array<T>
-  operation: TransferOperation
-  now: number
-  userId: UserProfileId | null
-}) {
-  if (operation.action !== 'replace' || !operation.destinationItemId) return
-  appendPatchPair(
-    patches,
-    projectTrashRoots(activeItems, [operation.destinationItemId], { now, userId }),
-  )
-}
-
-function projectMergeFolderOperation<T extends ResourcePatchRow>({
-  patches,
-  activeItems,
-  activeItemsById,
-  operation,
-  now,
-  userId,
-}: {
-  patches: OptimisticPatchPair
-  activeItems: Array<T>
-  activeItemsById: ReadonlyMap<SidebarItemId, T>
-  operation: Extract<TransferOperation, { action: 'mergeFolder' }>
-  now: number
-  userId: UserProfileId | null
-}) {
-  const source = activeItemsById.get(operation.sourceItemId)
-  if (!source || activeItems.some((item) => item.parentId === source.id)) return
-  appendPatchPair(patches, projectTrashRoots(activeItems, [source.id], { now, userId }))
-}
-
 function projectMoveOrRestoreOperation<T extends ResourcePatchRow>({
   patches,
   activeItemsById,
@@ -169,7 +129,7 @@ function projectMoveOrRestoreOperation<T extends ResourcePatchRow>({
   activeItemsById: ReadonlyMap<SidebarItemId, T>
   trashItems: Array<T>
   trashItemsById: ReadonlyMap<SidebarItemId, T>
-  operation: Extract<TransferOperation, { action: 'place' | 'replace' }>
+  operation: TransferOperation
 }) {
   const source = activeItemsById.get(operation.sourceItemId)
   if (source) {
@@ -208,8 +168,8 @@ export function projectMoveOperations<T extends ResourcePatchRow>({
   activeItems,
   trashItems,
   operations,
-  now,
-  userId,
+  now: _now,
+  userId: _userId,
 }: {
   activeItems: Array<T>
   trashItems: Array<T>
@@ -227,32 +187,13 @@ export function projectMoveOperations<T extends ResourcePatchRow>({
     const activeItemsById = new Map(current.activeItems.map((item) => [item.id, item]))
     const trashItemsById = new Map(current.trashItems.map((item) => [item.id, item]))
 
-    projectReplacementDestination({
+    projectMoveOrRestoreOperation({
       patches,
-      activeItems: current.activeItems,
+      activeItemsById,
+      trashItems: current.trashItems,
+      trashItemsById,
       operation,
-      now,
-      userId,
     })
-
-    if (operation.action === 'mergeFolder') {
-      projectMergeFolderOperation({
-        patches,
-        activeItems: current.activeItems,
-        activeItemsById,
-        operation,
-        now,
-        userId,
-      })
-    } else {
-      projectMoveOrRestoreOperation({
-        patches,
-        activeItemsById,
-        trashItems: current.trashItems,
-        trashItemsById,
-        operation,
-      })
-    }
 
     const operationInversePatches = patches.inversePatches.splice(inversePatchStart)
     patches.inversePatches.unshift(...operationInversePatches)

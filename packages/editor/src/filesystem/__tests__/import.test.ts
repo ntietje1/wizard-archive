@@ -22,7 +22,7 @@ describe('importWorkspaceFile', () => {
     })
   }
 
-  it('validates, dedupes, and routes text files through note import', async () => {
+  it('validates and routes text files without changing duplicate titles', async () => {
     const parentId = testId<'sidebarItems'>('parent')
     const parent = createFolder({ id: parentId, name: 'Session' })
     const existingText = createFile({ name: 'notes.txt', parentId })
@@ -54,22 +54,22 @@ describe('importWorkspaceFile', () => {
       {
         type: RESOURCE_TYPES.notes,
         parentTarget: { kind: 'direct', parentId },
-        name: 'notes.txt 1',
+        name: 'notes.txt',
       },
       expect.any(Function),
     )
     expect(initializeImportedTextFile).toHaveBeenCalledWith({
       file: text,
-      noteId: testId<'sidebarItems'>('note-notes.txt 1'),
+      noteId: testId<'sidebarItems'>('note-notes.txt'),
     })
     expect(result).toEqual({
       status: 'imported',
       kind: 'note',
-      fileName: 'notes.txt 1',
+      fileName: 'notes.txt',
       result: {
         status: 'completed',
-        id: testId<'sidebarItems'>('note-notes.txt 1'),
-        slug: 'note-notes.txt 1',
+        id: testId<'sidebarItems'>('note-notes.txt'),
+        slug: 'note-notes.txt',
       },
     })
   })
@@ -459,7 +459,7 @@ describe('importWorkspaceFileDrop', () => {
     })
   })
 
-  it('deduplicates dropped folder names against visible and same-drop siblings', async () => {
+  it('preserves duplicate dropped folder titles', async () => {
     const existingAssets = createFolder({ name: 'Assets' })
     const catalog = createResourceCatalogModel({
       activeItems: [existingAssets],
@@ -498,7 +498,7 @@ describe('importWorkspaceFileDrop', () => {
 
     expect(createItem).toHaveBeenNthCalledWith(1, {
       type: RESOURCE_TYPES.folders,
-      name: 'Assets 1',
+      name: 'Assets',
       parentTarget: { kind: 'direct', parentId: null },
     })
     expect(createItem).toHaveBeenNthCalledWith(2, {
@@ -508,12 +508,12 @@ describe('importWorkspaceFileDrop', () => {
     })
     expect(createItem).toHaveBeenNthCalledWith(3, {
       type: RESOURCE_TYPES.folders,
-      name: 'Scenes 1',
+      name: 'Scenes',
       parentTarget: { kind: 'direct', parentId: testId<'sidebarItems'>('created-1') },
     })
     expect(createItem).toHaveBeenNthCalledWith(4, {
       type: RESOURCE_TYPES.folders,
-      name: 'Assets 2',
+      name: 'Assets',
       parentTarget: { kind: 'direct', parentId: null },
     })
     expect(receipt).toMatchObject({
@@ -523,7 +523,7 @@ describe('importWorkspaceFileDrop', () => {
     })
   })
 
-  it('reserves deduplicated file names before importing the next same-drop file', async () => {
+  it('preserves duplicate file titles within one drop', async () => {
     const catalog = createResourceCatalogModel({ activeItems: [], trashItems: [] }).catalog
     const files = [
       createImportFile(['first'], 'notes.txt', { type: 'text/plain' }),
@@ -550,6 +550,6 @@ describe('importWorkspaceFileDrop', () => {
       operations: { createItem: vi.fn(), importFile },
     })
 
-    expect(importFile.mock.calls.map(([input]) => input.name)).toEqual(['notes.txt', 'notes.txt 1'])
+    expect(importFile.mock.calls.map(([input]) => input.name)).toEqual(['notes.txt', 'notes.txt'])
   })
 })

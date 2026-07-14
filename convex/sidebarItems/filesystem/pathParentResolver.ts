@@ -3,7 +3,7 @@ import { throwClientError } from '../../errors'
 import { validateSidebarCreateParent } from '../validation/orchestration'
 import { RESOURCE_PARENT_TARGET_KIND } from '@wizard-archive/editor/resources/resource-contract'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
-import type { ResourceName } from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { assertSidebarItemLifecycleConsistency, isActiveSidebarItem } from '../types/status'
 import type { ParsedCreateParentTarget } from '../validation/parent'
 import { initializeEmptySidebarItemCompanion } from './companionInitialization'
@@ -36,7 +36,7 @@ async function resolveOrCreateChildFolder(
     segment,
   }: {
     parentId: Id<'sidebarItems'> | null
-    segment: ResourceName
+    segment: ResourceTitle
   },
 ): Promise<Id<'sidebarItems'>> {
   const existing = await findActiveSidebarChildByName(ctx, {

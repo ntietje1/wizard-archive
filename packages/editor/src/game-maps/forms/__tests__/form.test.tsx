@@ -40,7 +40,7 @@ describe('MapForm', () => {
     vi.clearAllMocks()
   })
 
-  it('validates edited map names against the map parent', async () => {
+  it('does not reject an edited map title because a sibling uses it', async () => {
     const parentId = 'folder-1' as SidebarItemId
     const mapId = 'map-1' as SidebarItemId
     const map = createExistingMap(mapId, { parentId })
@@ -58,10 +58,9 @@ describe('MapForm', () => {
 
     fireEvent.change(screen.getByLabelText('Map Name'), { target: { value: 'Cavern' } })
 
-    await waitFor(() => {
-      expect(validateItemName).toHaveBeenCalledExactlyOnceWith('Cavern', parentId, mapId)
-    })
-    expect(screen.getByText('Name already exists')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByDisplayValue('Cavern')).toBeInTheDocument())
+    expect(validateItemName).not.toHaveBeenCalled()
+    expect(screen.queryByText('Name already exists')).not.toBeInTheDocument()
   })
 
   it('keeps edit controls disabled when the backing map is missing', () => {

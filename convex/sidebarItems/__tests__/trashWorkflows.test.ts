@@ -13,13 +13,12 @@ import {
   createNote,
   createSidebarShare,
 } from '../../_test/factories.helper'
-import { expectValidationFailed } from '../../_test/assertions.helper'
 
 describe('trash workflows', () => {
   const t = createTestContext()
 
-  describe('trash and restore with name conflicts', () => {
-    it('requires a conflict decision when restoring a note whose name is now taken', async () => {
+  describe('trash and restore with duplicate titles', () => {
+    it('restores a note when another note now has the same title', async () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
@@ -38,33 +37,17 @@ describe('trash workflows', () => {
         name: 'Meeting Notes',
       })
 
-      await expectValidationFailed(
-        executeMoveCommand(dmAuth, {
-          campaignId: ctx.campaignId,
-          sourceItemIds: [original.noteId],
-          targetParentId: null,
-          action: 'restore',
-        }),
-      )
-
-      const stillTrashed = await t.run(async (dbCtx) =>
-        dbCtx.db.get('sidebarItems', original.noteId),
-      )
-      expect(stillTrashed?.status).toBe('trashed')
-
       await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [original.noteId],
         targetParentId: null,
         action: 'restore',
-        decisions: [{ sourceItemId: original.noteId, action: 'keepBoth' }],
       })
 
       const restored = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', original.noteId))
       expect(restored).not.toBeNull()
       expect(restored!.location).toBe('sidebar')
-      expect(restored!.name).not.toBe('Meeting Notes')
-      expect(restored!.name).toContain('Meeting Notes')
+      expect(restored!.name).toBe('Meeting Notes')
       expect(restored!.deletionTime).toBeNull()
     })
   })

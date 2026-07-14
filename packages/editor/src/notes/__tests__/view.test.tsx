@@ -6,7 +6,7 @@ import type { NoteItemWithContent } from '../../notes/item-contract'
 import type { ReactNode } from 'react'
 import type { NoteValueRuntimeSource } from '../value-runtime-model'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import type { ResourceName } from '../../workspace/resource-contract'
+import type { ResourceTitle } from '../../resources/resource-contract'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 import {
   clearInternalNativeDrag,
@@ -257,7 +257,7 @@ function createLinkResolver() {
 function createNote(overrides: Partial<NoteItemWithContent> = {}): NoteItemWithContent {
   return {
     id: sidebarItemId('note-id'),
-    name: 'Note' as ResourceName,
+    name: 'Note' as ResourceTitle,
     type: RESOURCE_TYPES.notes,
     ancestors: [],
     content: [],

@@ -4,13 +4,12 @@ import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
 import { logEditHistory } from '../../../editHistory/log'
 import { assertConvexSidebarItemName } from '../../validation/name'
-import { deduplicateResourceName } from '@wizard-archive/editor/resources/resource-contract'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type {
   ResourceColor,
-  ResourceName,
   ResourceIconName,
 } from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 
 import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
 import { evaluateCopy } from '@wizard-archive/editor/resources/operation-capabilities'
@@ -46,7 +45,6 @@ import type { Id } from '../../../_generated/dataModel'
 import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
 const MAX_COPY_DEPTH = 50
 type CopyFileSystemCommand = Extract<ResourceCommand, { type: 'copy' }>
-type CopyOrReplaceOperation = Extract<TransferOperation, { action: 'place' | 'replace' }>
 
 type CopyCommandContext = {
   events: Array<ResourceEvent>
@@ -79,20 +77,6 @@ async function copySidebarItemContent(
   }
 }
 
-async function getUniqueName(
-  ctx: CampaignMutationCtx,
-  parentId: Id<'sidebarItems'> | null,
-  requestedName: string,
-): Promise<ResourceName> {
-  const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
-  return assertConvexSidebarItemName(
-    deduplicateResourceName(
-      requestedName,
-      siblings.map((sibling) => sibling.name),
-    ),
-  )
-}
-
 async function insertCopiedSidebarItem(
   ctx: CampaignMutationCtx,
   {
@@ -104,7 +88,7 @@ async function insertCopiedSidebarItem(
   }: {
     source: AccessibleSidebarItemRow
     parentId: Id<'sidebarItems'> | null
-    name: ResourceName
+    name: ResourceTitle
     copyContext: CopyCommandContext
     isRoot?: boolean
   },
@@ -162,7 +146,7 @@ async function copyChildrenIntoFolder(
   const children = await getActiveSidebarItemRowsByParent(ctx, { parentId: sourceFolderId })
   for (const child of children) {
     const source = await validateSidebarItemCopyable(ctx, child._id)
-    const name = await getUniqueName(ctx, targetFolderId, source.name)
+    const name = assertConvexSidebarItemName(source.name)
     const copiedChildId = await insertCopiedSidebarItem(ctx, {
       source,
       parentId: targetFolderId,
@@ -223,38 +207,14 @@ async function executeCopyOperation(
 ) {
   const source = await validateSidebarItemCopyable(ctx, operation.sourceItemId)
 
-  if (operation.action === 'mergeFolder') {
-    const destinationId = await logCopyFolderMerge(ctx, source, operation.destinationItemId)
-    copyContext.events.push({
-      type: RESOURCE_EVENT_TYPE.mergedFolder,
-      itemId: destinationId,
-      sourceItemId: source._id,
-    })
-    return
-  }
-
   const parentId = operation.targetParentId ?? null
-  let replacementDestinationId: Id<'sidebarItems'> | null = null
-  if (operation.action === 'replace') {
-    replacementDestinationId = operation.destinationItemId
-    await trashCopyReplacement(ctx, operation.destinationItemId, copyContext.session)
-  }
-
   const copiedId = await insertCopiedSidebarItem(ctx, {
     source,
     parentId,
-    name: await resolveCopyName(ctx, operation, source, parentId),
+    name: assertConvexSidebarItemName(operation.name ?? source.name),
     copyContext,
     isRoot: rootSourceIds.has(source._id),
   })
-  if (replacementDestinationId) {
-    copyContext.events.push({
-      type: RESOURCE_EVENT_TYPE.replaced,
-      itemId: replacementDestinationId,
-      sourceItemId: source._id,
-    })
-  }
-
   if (source.type === RESOURCE_TYPES.folders) {
     await copyChildrenIntoFolder(ctx, {
       sourceFolderId: source._id,
@@ -295,67 +255,6 @@ async function assertCopyableDescendants(
     const copyableChild = await validateSidebarItemCopyable(ctx, child._id)
     await assertCopyableDescendants(ctx, copyableChild, depth + 1)
   }
-}
-
-async function logCopyFolderMerge(
-  ctx: CampaignMutationCtx,
-  source: AccessibleSidebarItemRow,
-  destinationItemId: Id<'sidebarItems'> | undefined,
-): Promise<Id<'sidebarItems'>> {
-  if (source.type !== RESOURCE_TYPES.folders || !destinationItemId) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only folders can be merged')
-  }
-
-  const destination = await getSidebarItemRow(ctx, destinationItemId)
-  if (!destination || destination.type !== RESOURCE_TYPES.folders) {
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Destination folder not found')
-  }
-  await requireSidebarItemRowOperationAccess(ctx, {
-    rawItem: destination,
-    operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
-  })
-  await logEditHistory(ctx, {
-    itemId: destination._id,
-    itemType: destination.type,
-    action: EDIT_HISTORY_ACTION.copied,
-    metadata: {
-      copiedFromItemId: source._id,
-      copiedFromName: source.name,
-    },
-  })
-  return destination._id
-}
-
-async function trashCopyReplacement(
-  ctx: CampaignMutationCtx,
-  destinationItemId: Id<'sidebarItems'>,
-  session: FileSystemWriteSession,
-) {
-  const destination = await getSidebarItemRow(ctx, destinationItemId)
-  if (!destination) {
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Destination item not found')
-  }
-  if (destination.type === RESOURCE_TYPES.folders) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders are merged instead of replaced')
-  }
-  const trashableDestination = await requireSidebarItemRowOperationAccess(ctx, {
-    rawItem: destination,
-    operation: PERMISSION_OPERATION.TRASH_SIDEBAR_ITEM,
-  })
-  await session.trashSidebarTree(trashableDestination)
-}
-
-async function resolveCopyName(
-  ctx: CampaignMutationCtx,
-  operation: CopyOrReplaceOperation,
-  source: AccessibleSidebarItemRow,
-  parentId: Id<'sidebarItems'> | null,
-) {
-  if (operation.name) return assertConvexSidebarItemName(operation.name)
-  if (operation.action === 'replace') {
-    return assertConvexSidebarItemName(source.name)
-  }
-  return await getUniqueName(ctx, parentId, source.name)
 }
 
 async function loadCopyableSources(
@@ -498,18 +397,7 @@ async function executeCopyPlan(
     itemsById: ancestorItemsById,
   })
 
-  if (plan.status === 'needs-decision') {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Operation requires conflict decisions')
-  }
-
   const events = await executeCopyOperations(ctx, plan.operations, rootSourceIds, session)
-  for (const sourceItemId of plan.skippedSourceItemIds ?? []) {
-    events.push({
-      type: RESOURCE_EVENT_TYPE.skipped,
-      itemId: sourceItemId,
-      sourceItemId,
-    })
-  }
   return events
 }
 

@@ -42,7 +42,6 @@ export function createRuntimeSidebarTreeSource(
     sidebarSelection,
   } = runtime
   const editItem = createEditFileSystemItem({
-    catalog,
     operations: runtime.filesystem.operations,
     permissions: { canMutateItem: permissions.canMutateItem },
   })

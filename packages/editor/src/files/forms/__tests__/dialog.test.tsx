@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { ValidationResult } from '../../../workspace/items'
-import { assertResourceItemName, assertResourceItemSlug } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
 import { FileDialog } from '../dialog'
@@ -32,7 +32,7 @@ describe('FileDialog', () => {
       name: 'Original handout',
       assetId: testId('storage_1'),
     })
-    const refreshed = { ...first, name: assertResourceItemName('Remote handout update') }
+    const refreshed = { ...first, name: canonicalizeResourceItemTitle('Remote handout update') }
     const props = {
       fileId: first.id,
       isOpen: true,

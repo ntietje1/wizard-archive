@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
-import { assertResourceItemName } from '../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
 import { createNote } from '../../test/sidebar-item-factory'
 import type { SidebarCacheSnapshot } from '../cache-patches'
@@ -18,7 +18,7 @@ function createUndoRenameReceipt(): ResourceTransactionReceipt {
     command: {
       type: 'rename',
       itemId,
-      name: assertResourceItemName('New Name'),
+      name: canonicalizeResourceItemTitle('New Name'),
     },
     events: [
       {
@@ -32,8 +32,8 @@ function createUndoRenameReceipt(): ResourceTransactionReceipt {
       {
         type: 'updateResource',
         itemId,
-        before: { name: assertResourceItemName('New Name') },
-        fields: { name: assertResourceItemName('Old Name') },
+        before: { name: canonicalizeResourceItemTitle('New Name') },
+        fields: { name: canonicalizeResourceItemTitle('Old Name') },
       },
     ],
   })

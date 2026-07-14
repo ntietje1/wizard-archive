@@ -12,9 +12,8 @@ import { createFolder, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { testId } from '../../_test/test-id.helper'
 import {
-  checkNameConflict,
+  canonicalizeResourceItemTitle,
   validateItemName,
-  validateResourceItemNameWithSiblings,
   validateNoCircularParentAsync,
   parseResourceItemSlug,
 } from '@wizard-archive/editor/resources/items'
@@ -26,18 +25,9 @@ import type { Id } from '../../_generated/dataModel'
 import { requireCreateParentTarget } from '../validation/parent'
 
 describe('validateItemName', () => {
-  it('accepts a valid name', () => {
-    expect(validateItemName('My Note')).toEqual({ valid: true })
-  })
-
-  it('rejects empty string', () => {
-    const result = validateItemName('')
-    expect(result.valid).toBe(false)
-  })
-
-  it('rejects whitespace-only string', () => {
-    const result = validateItemName('   ')
-    expect(result.valid).toBe(false)
+  it('canonicalizes blank titles to Untitled', () => {
+    expect(validateItemName('')).toEqual({ valid: true })
+    expect(canonicalizeResourceItemTitle('   ')).toBe('Untitled')
   })
 
   it('accepts exactly 255 characters', () => {
@@ -51,67 +41,18 @@ describe('validateItemName', () => {
     expect(result.valid).toBe(false)
   })
 
-  it('rejects forward slash', () => {
-    expect(validateItemName('a/b').valid).toBe(false)
+  it('accepts natural Unicode and filesystem-reserved characters', () => {
+    expect(validateItemName('./a\\b:*?"<>[]#|. 🎉')).toEqual({ valid: true })
   })
 
-  it('rejects backslash', () => {
-    expect(validateItemName('a\\b').valid).toBe(false)
+  it('normalizes Unicode and control runs', () => {
+    expect(canonicalizeResourceItemTitle('  e\u0301\r\n\tTitle  ')).toBe('é Title')
   })
 
-  it('rejects colon', () => {
-    expect(validateItemName('a:b').valid).toBe(false)
-  })
-
-  it('rejects asterisk', () => {
-    expect(validateItemName('a*b').valid).toBe(false)
-  })
-
-  it('rejects question mark', () => {
-    expect(validateItemName('a?b').valid).toBe(false)
-  })
-
-  it('rejects double quote', () => {
-    expect(validateItemName('a"b').valid).toBe(false)
-  })
-
-  it('rejects angle brackets', () => {
-    expect(validateItemName('a<b').valid).toBe(false)
-    expect(validateItemName('a>b').valid).toBe(false)
-  })
-
-  it('rejects square brackets', () => {
-    expect(validateItemName('a[b').valid).toBe(false)
-    expect(validateItemName('a]b').valid).toBe(false)
-  })
-
-  it('rejects hash', () => {
-    expect(validateItemName('a#b').valid).toBe(false)
-  })
-
-  it('rejects pipe', () => {
-    expect(validateItemName('a|b').valid).toBe(false)
-  })
-
-  it('rejects leading dot', () => {
-    expect(validateItemName('.hidden').valid).toBe(false)
-  })
-
-  it('rejects trailing dot', () => {
-    expect(validateItemName('file.').valid).toBe(false)
-  })
-
-  it('rejects names that start or end with whitespace', () => {
-    expect(validateItemName(' name').valid).toBe(false)
-    expect(validateItemName('name ').valid).toBe(false)
-  })
-
-  it('rejects control characters', () => {
-    expect(validateItemName('line\nbreak').valid).toBe(false)
-  })
-
-  it('rejects names that would produce an empty slug', () => {
-    expect(validateItemName('🎉🎊').valid).toBe(false)
+  it('counts Unicode scalars and rejects malformed UTF-16', () => {
+    expect(validateItemName('🎉'.repeat(255))).toEqual({ valid: true })
+    expect(validateItemName('🎉'.repeat(256)).valid).toBe(false)
+    expect(validateItemName('\ud800').valid).toBe(false)
   })
 })
 
@@ -183,49 +124,6 @@ describe('validateSidebarItemSlug', () => {
   it('rejects 256 characters', () => {
     const slug = 'a'.repeat(256)
     expect(parseResourceItemSlug(slug)).toBeNull()
-  })
-})
-
-describe('checkNameConflict', () => {
-  const siblings = [
-    { id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
-    { id: testId<'sidebarItems'>('id2'), name: 'Beta' },
-  ]
-
-  it('returns valid when no conflict', () => {
-    expect(checkNameConflict('Gamma', siblings)).toEqual({ valid: true })
-  })
-
-  it('detects case-insensitive match', () => {
-    const result = checkNameConflict('alpha', siblings)
-    expect(result.valid).toBe(false)
-  })
-
-  it('excludes self from conflict check', () => {
-    const result = checkNameConflict('Alpha', siblings, testId<'sidebarItems'>('id1'))
-    expect(result).toEqual({ valid: true })
-  })
-})
-
-describe('validateResourceItemNameWithSiblings', () => {
-  const siblings = [
-    { id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
-    { id: testId<'sidebarItems'>('id2'), name: 'Beta' },
-  ]
-
-  it('validates format-only names when no siblings are provided', () => {
-    expect(validateResourceItemNameWithSiblings('Gamma')).toEqual({ valid: true })
-  })
-
-  it('checks sibling conflicts after trimming', () => {
-    const result = validateResourceItemNameWithSiblings(' alpha ', siblings)
-    expect(result.valid).toBe(false)
-  })
-
-  it('ignores the excluded item when checking conflicts', () => {
-    expect(
-      validateResourceItemNameWithSiblings('Alpha', siblings, testId<'sidebarItems'>('id1')),
-    ).toEqual({ valid: true })
   })
 })
 
@@ -422,18 +320,18 @@ describe('cross-table slug uniqueness', () => {
     ).rejects.toThrow('Slug cannot contain spaces')
   })
 
-  it('rejects create requests whose names cannot produce a valid slug', async () => {
+  it('accepts titles that do not produce a textual route slug', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    await expect(
-      createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
-        name: '🎉🎊',
-        parentTarget: { kind: 'direct', parentId: null },
-        content: [],
-      }),
-    ).rejects.toThrow('Name must contain at least one letter or number')
+    const created = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: '🎉🎊',
+      parentTarget: { kind: 'direct', parentId: null },
+      content: [],
+    })
+
+    expect(created.slug).toBe('item')
   })
 
   it('keeps generated slugs valid for max-length names', async () => {

@@ -87,9 +87,6 @@ export async function executeFileSystemCommandLifecycle({
       reportError(error, 'Filesystem operation failed')
       return { status: 'error' }
     }
-    if (plan.status === 'needsDecision') {
-      return { status: 'needsDecision', conflicts: plan.conflicts }
-    }
     if (plan.status === 'unavailable') return plan
 
     const previousResourceId = getCurrentResourceId()

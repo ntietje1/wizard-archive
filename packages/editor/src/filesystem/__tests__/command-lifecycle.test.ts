@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import type { ResourceName } from '../../workspace/resource-contract'
+import type { ResourceTitle } from '../../resources/resource-contract'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import type { SidebarCacheSnapshot } from '../cache-patches'
 import { executeFileSystemCommandLifecycle } from '../command-lifecycle'
@@ -41,7 +41,7 @@ describe('filesystem command lifecycle', () => {
       command: {
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: 'Scene' as ResourceName,
+        name: 'Scene' as ResourceTitle,
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       workspaceId: campaignId,
@@ -120,7 +120,7 @@ describe('filesystem command lifecycle', () => {
       command: {
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: 'Scene' as ResourceName,
+        name: 'Scene' as ResourceTitle,
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       workspaceId: campaignId,
@@ -186,7 +186,7 @@ describe('filesystem command lifecycle', () => {
     )
   })
 
-  it('returns conflicts before starting provider mutation work', async () => {
+  it('starts provider mutation work for duplicate destination titles', async () => {
     const sourceParent = createFolder({
       id: 'source_parent' as SidebarItemId,
       name: 'Source',
@@ -235,22 +235,8 @@ describe('filesystem command lifecycle', () => {
       showReceiptToast: vi.fn(),
     })
 
-    expect(executeMutation).not.toHaveBeenCalled()
-    expect(result).toEqual({
-      status: 'needsDecision',
-      conflicts: [
-        {
-          kind: 'name-conflict',
-          sourceItemId: source.id,
-          destinationItemId: existing.id,
-          sourceName: 'Scene',
-          destinationName: 'Scene',
-          sourceType: source.type,
-          destinationType: existing.type,
-        },
-      ],
-    })
-    expect(snapshot.sidebar).toEqual([sourceParent, targetParent, source, existing])
+    expect(executeMutation).toHaveBeenCalledOnce()
+    expect(result.status).toBe('completed')
   })
 
   it('returns unavailable instead of throwing when selected resources disappear before planning', async () => {
@@ -336,11 +322,8 @@ describe('filesystem command lifecycle', () => {
       showReceiptToast: vi.fn(),
     })
 
-    expect(executeMutation).not.toHaveBeenCalled()
-    expect(result).toMatchObject({
-      status: 'needsDecision',
-      conflicts: [{ sourceItemId: source.id, destinationItemId: existing.id }],
-    })
+    expect(executeMutation).toHaveBeenCalledOnce()
+    expect(result.status).toBe('completed')
   })
 
   it('rolls back optimistic patches and lifecycle intents when the mutation fails', async () => {
@@ -361,7 +344,7 @@ describe('filesystem command lifecycle', () => {
       command: {
         type: 'create',
         itemType: RESOURCE_TYPES.notes,
-        name: 'Scene' as ResourceName,
+        name: 'Scene' as ResourceTitle,
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       workspaceId: campaignId,

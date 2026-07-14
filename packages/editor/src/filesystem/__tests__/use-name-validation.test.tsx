@@ -1,184 +1,30 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { act, renderHook } from '@testing-library/react'
+import { describe, expect, it } from 'vite-plus/test'
+import { renderHook } from '@testing-library/react'
 import { useNameValidation } from '../use-name-validation'
 
-const mockValidateName = vi.fn()
-
-function renderNameValidation(overrides = {}) {
+function renderNameValidation(name: string, isActive = true) {
   return renderHook(() =>
-    useNameValidation({
-      name: 'Test',
-      initialName: 'Initial',
-      isActive: true,
-      parentId: null,
-      validateName: mockValidateName,
-      ...overrides,
-    }),
+    useNameValidation({ name, initialName: 'Initial', isActive, parentId: null }),
   )
 }
 
 describe('useNameValidation', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    mockValidateName.mockClear()
-    mockValidateName.mockReturnValue({ valid: true })
+  it('accepts blank and filesystem-reserved natural titles', () => {
+    expect(renderNameValidation('   ').result.current.hasError).toBe(false)
+    expect(renderNameValidation('./a\\b:*?"<>[]#|').result.current.hasError).toBe(false)
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
+  it('rejects titles over 255 Unicode scalars', () => {
+    const result = renderNameValidation('🎉'.repeat(256)).result.current
+    expect(result.hasError).toBe(true)
+    expect(result.validationError).toMatch(/255 scalars/)
   })
 
-  it('returns no error when name matches initial name', () => {
-    const { result } = renderNameValidation({
-      name: 'Same Name',
-      initialName: 'Same Name',
-    })
-
-    expect(result.current.hasError).toBe(false)
-    expect(result.current.validationError).toBeUndefined()
+  it('rejects malformed UTF-16', () => {
+    expect(renderNameValidation('\ud800').result.current.hasError).toBe(true)
   })
 
-  it('returns error for empty name', () => {
-    const { result } = renderNameValidation({
-      name: '   ',
-      initialName: 'Original',
-    })
-
-    expect(result.current.hasError).toBe(true)
-    expect(result.current.validationError).toBe('Name is required')
-  })
-
-  it('returns error for name with forbidden characters', () => {
-    const { result } = renderNameValidation({
-      name: 'bad/name',
-      initialName: 'Original',
-    })
-
-    expect(result.current.hasError).toBe(true)
-    expect(result.current.validationError).toMatch(/cannot contain/)
-  })
-
-  it('does not report invalid names as unique', () => {
-    mockValidateName.mockReturnValue({ valid: true })
-
-    const { result } = renderNameValidation({
-      name: 'bad/name',
-      initialName: 'Original',
-    })
-
-    expect(result.current.hasError).toBe(true)
-    expect(result.current.isUnique).toBe(false)
-    expect(result.current.isNotUnique).toBe(false)
-  })
-
-  it('returns error for name exceeding 255 characters', () => {
-    const { result } = renderNameValidation({
-      name: 'a'.repeat(256),
-      initialName: 'Original',
-    })
-
-    expect(result.current.hasError).toBe(true)
-    expect(result.current.validationError).toMatch(/255 characters/)
-  })
-
-  it('returns error for name starting with dot', () => {
-    const { result } = renderNameValidation({
-      name: '.hidden',
-      initialName: 'Original',
-    })
-
-    expect(result.current.hasError).toBe(true)
-    expect(result.current.validationError).toMatch(/dot/)
-  })
-
-  it('debounces uniqueness check', () => {
-    const { result, rerender } = renderHook(
-      ({ name }: { name: string }) =>
-        useNameValidation({
-          name,
-          initialName: 'Original',
-          isActive: true,
-          parentId: null,
-          validateName: mockValidateName,
-        }),
-      { initialProps: { name: 'Original' } },
-    )
-
-    mockValidateName.mockReturnValue({
-      valid: false,
-      error: 'An item with this name already exists here',
-    })
-
-    rerender({ name: 'Duplicate' })
-
-    expect(result.current.isNotUnique).toBe(false)
-
-    act(() => {
-      vi.runOnlyPendingTimers()
-    })
-
-    expect(result.current.isNotUnique).toBe(true)
-    expect(result.current.hasError).toBe(true)
-    expect(result.current.validationError).toBe('An item with this name already exists here')
-  })
-
-  it('validates each debounced current name once', () => {
-    const { rerender } = renderHook(
-      ({ name }: { name: string }) =>
-        useNameValidation({
-          name,
-          initialName: 'Original',
-          isActive: true,
-          parentId: null,
-          validateName: mockValidateName,
-        }),
-      { initialProps: { name: 'Original' } },
-    )
-
-    rerender({ name: 'First' })
-
-    act(() => {
-      vi.runOnlyPendingTimers()
-    })
-
-    rerender({ name: 'Second' })
-
-    act(() => {
-      vi.runOnlyPendingTimers()
-    })
-
-    expect(mockValidateName.mock.calls.map(([name]) => name)).toEqual(['First', 'Second'])
-  })
-
-  it('returns no errors when not active', () => {
-    const { result } = renderNameValidation({
-      name: 'bad/name',
-      initialName: 'Original',
-      isActive: false,
-    })
-
-    expect(result.current.hasError).toBe(false)
-    expect(result.current.validationError).toBeUndefined()
-  })
-
-  it('checkNameUnique returns undefined for valid unique names', () => {
-    mockValidateName.mockReturnValue({ valid: true })
-
-    const { result } = renderNameValidation()
-
-    expect(result.current.checkNameUnique('Valid Name')).toBeUndefined()
-  })
-
-  it('checkNameUnique returns error for duplicate names', () => {
-    mockValidateName.mockReturnValue({
-      valid: false,
-      error: 'An item with this name already exists here',
-    })
-
-    const { result } = renderNameValidation()
-
-    expect(result.current.checkNameUnique('Duplicate')).toBe(
-      'An item with this name already exists here',
-    )
+  it('does not validate an inactive editor', () => {
+    expect(renderNameValidation('\ud800', false).result.current.hasError).toBe(false)
   })
 })

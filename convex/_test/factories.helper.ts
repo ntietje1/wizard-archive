@@ -10,13 +10,13 @@ import {
 } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type {
   ResourceColor,
-  ResourceName,
   ResourceIconName,
   ResourceLocation,
   ResourceStatus,
   ResourceKind,
 } from '@wizard-archive/editor/resources/resource-contract'
-import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { normalizeLegacyResourcePathSegment } from '../sidebarItems/resourcePathSegment'
 
 import { SHARE_STATUS } from '../../shared/block-shares/share-status'
 import { slugify } from '../../shared/slugs'
@@ -281,9 +281,9 @@ export async function addPlayerToCampaign(
 const sidebarItemBase = (
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  name: ResourceName,
+  name: ResourceTitle,
 ): {
-  name: ResourceName
+  name: ResourceTitle
   normalizedName: string
   slug: string
   campaignId: Id<'campaigns'>
@@ -297,7 +297,7 @@ const sidebarItemBase = (
   previewUpdatedAt: null
 } & ReturnType<typeof commonFields> => ({
   name,
-  normalizedName: normalizeResourceNameForComparison(name),
+  normalizedName: normalizeLegacyResourcePathSegment(name),
   slug: assertConvexSidebarItemSlug(slugify(name)),
   campaignId,
   iconName: null,

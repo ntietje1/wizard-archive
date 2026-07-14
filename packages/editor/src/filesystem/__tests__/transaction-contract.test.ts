@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 
 import type { SidebarItemId } from '../../../../../shared/common/ids'
-import { assertResourceItemName } from '../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import {
   RESOURCE_COMMAND_TYPE,
@@ -73,7 +73,7 @@ describe('summarizeResourceReceipt', () => {
       {
         type: RESOURCE_COMMAND_TYPE.create,
         itemType: RESOURCE_TYPES.notes,
-        name: assertResourceItemName('New note'),
+        name: canonicalizeResourceItemTitle('New note'),
         parentTarget: { kind: 'direct', parentId: null },
       },
       {
@@ -112,7 +112,7 @@ describe('summarizeResourceReceipt', () => {
         {
           type: RESOURCE_COMMAND_TYPE.rename,
           itemId,
-          name: assertResourceItemName('New name'),
+          name: canonicalizeResourceItemTitle('New name'),
         },
         [
           {

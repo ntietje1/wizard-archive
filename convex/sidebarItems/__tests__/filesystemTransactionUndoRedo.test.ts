@@ -30,7 +30,7 @@ describe('filesystem transaction undo and redo', () => {
     const { active: afterCopy } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
-    expect(afterCopy.map((item) => item.name).sort()).toEqual(['Scene', 'Scene 1'])
+    expect(afterCopy.map((item) => item.name).sort()).toEqual(['Scene', 'Scene'])
 
     const undoReceipt = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.undoFileSystemTransaction,
@@ -56,11 +56,11 @@ describe('filesystem transaction undo and redo', () => {
     const { active: afterRedo } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
-    expect(afterRedo.map((item) => item.name).sort()).toEqual(['Scene', 'Scene 1'])
+    expect(afterRedo.map((item) => item.name).sort()).toEqual(['Scene', 'Scene'])
     expect(afterRedo.map((item) => item.id).sort()).toEqual(afterCopy.map((item) => item.id).sort())
   })
 
-  it('rejects stale redo when an undo-hidden created item name was reused', async () => {
+  it('redoes a create when another item now has the same title', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -79,17 +79,15 @@ describe('filesystem transaction undo and redo', () => {
     })
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'Draft' })
 
-    await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-        campaignId: ctx.campaignId,
-        transactionId: receipt.transactionId!,
-      }),
-    ).rejects.toThrow('Filesystem transaction can no longer be applied cleanly')
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
+      campaignId: ctx.campaignId,
+      transactionId: receipt.transactionId!,
+    })
 
     const { active } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
     })
-    expect(active.filter((item) => item.name === 'Draft')).toHaveLength(1)
+    expect(active.filter((item) => item.name === 'Draft')).toHaveLength(2)
   })
 
   it('rejects stale undo after the actor loses current item access', async () => {
@@ -358,66 +356,5 @@ describe('filesystem transaction undo and redo', () => {
     })
     links = await getNoteLinksForSource(t, ctx.campaignId, sourceId)
     expect(links[0]?.targetItemId).toBeNull()
-  })
-
-  it('undoes and redoes a replace conflict without a second planning pass', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Destination',
-    })
-    const { noteId: sourceId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-    })
-    const { noteId: destinationId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-      parentId: folderId,
-    })
-
-    const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
-      command: { type: 'copy', itemIds: [sourceId], targetParentId: folderId },
-      decisions: [{ sourceItemId: sourceId, action: 'replace' }],
-    })
-
-    expect(receipt.undoable).toBe(true)
-    expect(receipt.events).toContainEqual(
-      expect.objectContaining({ type: 'replaced', sourceItemId: sourceId }),
-    )
-    let { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
-    })
-    expect(
-      items.filter((item) => item.name === 'Scene' && item.parentId === folderId),
-    ).toHaveLength(1)
-    expect(items.find((item) => item.id === destinationId)?.status).toBeUndefined()
-
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
-      transactionId: receipt.transactionId!,
-    })
-    items = (
-      await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-        campaignId: ctx.campaignId,
-      })
-    ).active
-    expect(items.find((item) => item.id === destinationId)?.status).toBe('active')
-    expect(
-      items.filter((item) => item.name === 'Scene' && item.parentId === folderId),
-    ).toHaveLength(1)
-
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
-      transactionId: receipt.transactionId!,
-    })
-    items = (
-      await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-        campaignId: ctx.campaignId,
-      })
-    ).active
-    expect(items.find((item) => item.id === destinationId)).toBeUndefined()
-    expect(
-      items.filter((item) => item.name === 'Scene' && item.parentId === folderId),
-    ).toHaveLength(1)
   })
 })

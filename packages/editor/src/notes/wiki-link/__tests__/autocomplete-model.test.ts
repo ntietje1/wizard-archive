@@ -13,7 +13,7 @@ import type {
   WikiLinkAutocompleteItemSource,
 } from '../autocomplete-model'
 import type { Heading } from '../../document/model'
-import { assertResourceItemName, assertResourceItemSlug } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -82,7 +82,7 @@ function createBaseItem({
     isTrashed: false,
     location: RESOURCE_LOCATION.sidebar,
     myPermissionLevel: PERMISSION_LEVEL.VIEW,
-    name: assertResourceItemName(name),
+    name: canonicalizeResourceItemTitle(name),
     parentId,
     previewAssetId: null,
     previewUrl: null,

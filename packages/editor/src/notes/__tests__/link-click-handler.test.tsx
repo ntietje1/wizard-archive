@@ -527,7 +527,7 @@ describe('LinkClickHandler', () => {
     expect(screen.getByText('Path cannot traverse above the workspace root')).toBeInTheDocument()
   })
 
-  it('shows sibling conflict validation feedback on ctrl hover', () => {
+  it('allows creating a note whose title duplicates a sibling', () => {
     getLinkAtMock.mockReturnValue(
       createLink({
         exists: false,
@@ -542,7 +542,7 @@ describe('LinkClickHandler', () => {
     fireEvent.mouseMove(editorEl, { clientX: 10, clientY: 20 })
     fireEvent.keyDown(document, { key: 'Control' })
 
-    expect(screen.getByText('An item with this name already exists here')).toBeInTheDocument()
+    expect(screen.getByText('Click to create note: "Capital"')).toBeInTheDocument()
   })
 
   it('uses create-note feedback for valid ghost links', () => {

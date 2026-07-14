@@ -122,8 +122,11 @@ describe('filesystem operation domain', () => {
     })
   })
 
-  it('uses target items to surface name conflicts', () => {
-    const source = createSidebarItem('note-1', 'Conflict')
+  it('ignores duplicate titles in the target collection', () => {
+    const parent = createSidebarItem('folder-1', 'Parent', RESOURCE_TYPES.folders)
+    const source = createSidebarItem('note-1', 'Conflict', RESOURCE_TYPES.notes, {
+      parentId: parent.id,
+    })
     const target = createSidebarItem('note-2', 'Conflict')
 
     expect(
@@ -131,21 +134,12 @@ describe('filesystem operation domain', () => {
         items: [source],
         targetParentId: null,
         targetItems: [target],
+        graphItems: [parent],
       }),
     ).toEqual({
-      status: 'needs-decision',
-      conflicts: [
-        {
-          kind: 'name-conflict',
-          sourceItemId: source.id,
-          destinationItemId: target.id,
-          sourceName: source.name,
-          destinationName: target.name,
-          sourceType: source.type,
-          destinationType: target.type,
-        },
-      ],
-      operations: [],
+      status: 'ready',
+      conflicts: [],
+      operations: [{ action: 'place', sourceItemId: source.id, targetParentId: null }],
     })
   })
 

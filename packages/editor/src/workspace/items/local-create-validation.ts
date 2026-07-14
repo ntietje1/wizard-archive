@@ -1,4 +1,4 @@
-import { checkNameConflict, validateItemName } from '../items'
+import { validateItemName } from '../items'
 import type { CreateParentTarget, ValidationResult } from '../items'
 import type { CreateParentTargetValidationSource } from './create-parent-target'
 import { validateCreateParentTarget } from './create-parent-target'
@@ -23,5 +23,5 @@ export function validateCreateItemLocally(
     return nameResult
   }
 
-  return checkNameConflict(name, parentResult.siblings)
+  return { valid: true }
 }

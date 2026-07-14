@@ -22,9 +22,7 @@ import {
   RESOURCE_STATUS,
   RESOURCE_TYPES,
 } from '@wizard-archive/editor/resources/items-persistence-contract'
-import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
 import { collectDescendants } from '../functions/collectDescendants'
-import { getActiveSidebarItemRowsByParent } from '../functions/getSidebarItemsByParent'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
 import { hardDeleteTree } from './treeWrites'
 import { getSidebarItemShareRow } from './shareRows'
@@ -499,104 +497,11 @@ async function applyBookmarkStatePatch(
   })
 }
 
-function patchRestoresActiveItem(
-  patch: ResourcePatch,
-): patch is Extract<ResourcePatch, { type: 'updateResource' }> {
-  return (
-    patch.type === 'updateResource' &&
-    patch.before.status === RESOURCE_STATUS.undoHidden &&
-    patch.fields.status === RESOURCE_STATUS.active
-  )
-}
-
-function patchClearsActiveName(
-  patch: ResourcePatch,
-): patch is Extract<ResourcePatch, { type: 'updateResource' }> {
-  return (
-    patch.type === 'updateResource' &&
-    patch.before.status === RESOURCE_STATUS.active &&
-    (patch.fields.status !== undefined || patch.fields.parentId !== undefined)
-  )
-}
-
-async function collectRedoNameCheckInputs(ctx: CampaignMutationCtx, patches: Array<ResourcePatch>) {
-  const restoredItems: Array<Doc<'sidebarItems'>> = []
-  const clearedActiveItemIds = new Set<Id<'sidebarItems'>>()
-  for (const patch of patches) {
-    if (patchClearsActiveName(patch)) {
-      clearedActiveItemIds.add(patch.itemId)
-    }
-    if (!patchRestoresActiveItem(patch)) continue
-    const item = await ctx.db.get('sidebarItems', patch.itemId)
-    if (!item || item.campaignId !== ctx.campaign._id) {
-      throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
-    }
-    restoredItems.push(
-      toSidebarItemDocument({ ...item, ...storedSidebarItemPatchFields(patch.fields) }),
-    )
-  }
-  return { restoredItems, clearedActiveItemIds }
-}
-
-function assertNoDuplicateRestoredNames(restoredItems: Array<Doc<'sidebarItems'>>) {
-  const plannedNamesByParent = new Map<string, Set<string>>()
-  for (const item of restoredItems) {
-    const parentKey = item.parentId ?? '__root__'
-    const plannedNames = plannedNamesByParent.get(parentKey) ?? new Set<string>()
-    const name = normalizeResourceNameForComparison(item.name)
-    if (plannedNames.has(name)) {
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        'Filesystem transaction can no longer be applied cleanly',
-      )
-    }
-    plannedNames.add(name)
-    plannedNamesByParent.set(parentKey, plannedNames)
-  }
-}
-
-async function assertNoActiveSiblingNameConflicts(
-  ctx: CampaignMutationCtx,
-  restoredItems: Array<Doc<'sidebarItems'>>,
-  clearedActiveItemIds: Set<Id<'sidebarItems'>>,
-) {
-  const restoredItemIds = new Set(restoredItems.map((item) => item._id))
-  for (const item of restoredItems) {
-    const restoredName = normalizeResourceNameForComparison(item.name)
-    const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId: item.parentId })
-    if (
-      siblings.some(
-        (sibling) =>
-          !restoredItemIds.has(sibling._id) &&
-          !clearedActiveItemIds.has(sibling._id) &&
-          normalizeResourceNameForComparison(sibling.name) === restoredName,
-      )
-    ) {
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        'Filesystem transaction can no longer be applied cleanly',
-      )
-    }
-  }
-}
-
-async function assertActiveRedoNamesAreAvailable(
-  ctx: CampaignMutationCtx,
-  patches: Array<ResourcePatch>,
-) {
-  const { restoredItems, clearedActiveItemIds } = await collectRedoNameCheckInputs(ctx, patches)
-  assertNoDuplicateRestoredNames(restoredItems)
-  await assertNoActiveSiblingNameConflicts(ctx, restoredItems, clearedActiveItemIds)
-}
-
 async function applyPatches(
   ctx: CampaignMutationCtx,
   patches: Array<ResourcePatch>,
-  direction?: 'undo' | 'redo',
+  _direction?: 'undo' | 'redo',
 ) {
-  if (direction === 'redo') {
-    await assertActiveRedoNamesAreAvailable(ctx, patches)
-  }
   for (const patch of patches) {
     await applyPatch(ctx, patch)
   }

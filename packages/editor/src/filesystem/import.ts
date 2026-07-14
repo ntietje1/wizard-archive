@@ -1,5 +1,4 @@
 import { isMediaFile, isTextFile } from '../../../../shared/storage/validation'
-import { deduplicateName } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import { validateFileIoInput } from '../files/io-command'
 import type { ResourceCatalog } from './catalog'
@@ -24,7 +23,6 @@ type ImportFolderEntry = ImportDropInput['rootFolders'][number]
 type CreateItemResult = Awaited<ReturnType<FileSystemItemCreateOperations['createItem']>>
 
 export async function importWorkspaceFile({
-  catalog,
   createItem,
   initializers,
   input,
@@ -36,12 +34,7 @@ export async function importWorkspaceFile({
   input: ImportFileInput
   maxUploadBytes?: number
 }): Promise<ImportFileResult> {
-  const fileName =
-    input.name ??
-    deduplicateName(
-      input.file.name,
-      catalog.getVisibleChildren(input.parentId).map((sibling) => sibling.name),
-    )
+  const fileName = input.name ?? input.file.name
   const validation = validateFileIoInput(input.file, maxUploadBytes)
   if (validation.status === 'invalid') {
     return { status: 'skipped', fileName, reason: 'invalid', error: validation.error }
@@ -324,10 +317,8 @@ function reserveImportDropSiblingName({
   parentId: SidebarItemId | null
   state: ReturnType<typeof createImportDropState>
 }) {
-  const names = getImportDropSiblingNames({ catalog, parentId, state })
-  const reservedName = deduplicateName(name, names)
-  names.push(reservedName)
-  return reservedName
+  getImportDropSiblingNames({ catalog, parentId, state }).push(name)
+  return name
 }
 
 function countImportFolderItems(folder: ImportFolderEntry): number {

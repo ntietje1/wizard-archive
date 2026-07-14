@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { EditableName } from '../editable-item-name'
-import { assertResourceItemName } from '../../../../items'
+import { canonicalizeResourceItemTitle } from '../../../../items'
 
 const checkNameUniqueMock = vi.hoisted(() => vi.fn())
 const toastErrorMock = vi.hoisted(() => vi.fn())
@@ -39,7 +39,7 @@ describe('EditableName', () => {
   it('renders display text while not renaming', () => {
     render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={false}
         displayClassName="text-muted-foreground"
         onFinishRename={vi.fn()}
@@ -57,7 +57,7 @@ describe('EditableName', () => {
     const onCancelRename = vi.fn()
     render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={true}
         displayClassName="text-muted-foreground"
         onFinishRename={onFinishRename}
@@ -83,7 +83,7 @@ describe('EditableName', () => {
     const onCancelRename = vi.fn()
     render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={true}
         displayClassName="text-muted-foreground"
         onFinishRename={onFinishRename}
@@ -113,7 +113,7 @@ describe('EditableName', () => {
     const onCancelRename = vi.fn()
     render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
@@ -131,7 +131,7 @@ describe('EditableName', () => {
     const onCancelRename = vi.fn()
     render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
@@ -153,7 +153,7 @@ describe('EditableName', () => {
     const onCancelRename = vi.fn()
     render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
@@ -173,7 +173,7 @@ describe('EditableName', () => {
     const onCancelRename = vi.fn()
     const { rerender } = render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
@@ -186,7 +186,7 @@ describe('EditableName', () => {
 
     rerender(
       <EditableName
-        initialName={assertResourceItemName('Session Notes from Server')}
+        initialName={canonicalizeResourceItemTitle('Session Notes from Server')}
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
@@ -203,7 +203,7 @@ describe('EditableName', () => {
     const onCancelRename = vi.fn()
     render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
@@ -229,7 +229,7 @@ describe('EditableName', () => {
     const onCancelRename = vi.fn()
     render(
       <EditableName
-        initialName={assertResourceItemName('Session Notes')}
+        initialName={canonicalizeResourceItemTitle('Session Notes')}
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}

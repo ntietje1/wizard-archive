@@ -2,8 +2,8 @@ import type { SidebarItemId } from '../../../../../shared/common/ids'
 import type { AnyItem, CreateParentTarget, ValidationResult } from '../items'
 import {
   CREATE_PARENT_TARGET_KIND,
+  canonicalizeResourceItemTitle,
   isActiveResourceItem,
-  normalizeResourceItemNameForComparison,
   validateItemName,
 } from '../items'
 import { RESOURCE_TYPES } from '../items-persistence-contract'
@@ -79,13 +79,10 @@ function findSidebarChildByName(
   name: string,
   source: CreateParentTargetValidationSource,
 ): CreateParentTargetItem | undefined {
-  const normalizedName = normalizeResourceItemNameForComparison(name)
+  const title = canonicalizeResourceItemTitle(name)
 
   return source.getActiveChildren(parentId).find((item) => {
-    return (
-      isActiveResourceItem(item) &&
-      normalizeResourceItemNameForComparison(item.name) === normalizedName
-    )
+    return isActiveResourceItem(item) && canonicalizeResourceItemTitle(item.name) === title
   })
 }
 

@@ -1,4 +1,4 @@
-import { normalizeResourceNameForComparison } from '@wizard-archive/editor/resources/resource-contract'
+import { normalizeLegacyResourcePathSegment } from '../resourcePathSegment'
 
 type StoredResourceSnapshot = {
   name: string
@@ -52,6 +52,6 @@ function normalizeSnapshot(value: unknown): StoredResourceSnapshot | null {
     return null
   }
   const snapshot = value as StoredResourceSnapshot
-  const normalizedName = normalizeResourceNameForComparison(snapshot.name)
+  const normalizedName = normalizeLegacyResourcePathSegment(snapshot.name)
   return snapshot.normalizedName === normalizedName ? null : { ...snapshot, normalizedName }
 }
