@@ -1,4 +1,4 @@
-import { DOMAIN_ID_KIND, assertDomainId } from './domain-id'
+import { DOMAIN_ID_KIND, assertDomainId, generateDomainId } from './domain-id'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
 import type {
   ApplicationResourceRole,
@@ -26,7 +26,11 @@ import {
   resourceStructureInputRejection,
 } from './resource-command-protocol'
 import type { AuditStamp, ResourceRecord } from './resource-contract'
-import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE, resourceMetadataValue } from './resource-contract'
+import {
+  MAX_SYNCHRONOUS_RESOURCE_CLOSURE,
+  canonicalizeResourceTitle,
+  resourceMetadataValue,
+} from './resource-contract'
 import {
   advanceResourceMetadataVersion,
   createResourceTombstone,
@@ -34,6 +38,11 @@ import {
 } from './resource-metadata-version'
 import type { ResourceTombstone } from './resource-metadata-version'
 import { InMemoryResourceOperationLedger } from './resource-operation-ledger'
+import type {
+  CanonicalTargetMapEntry,
+  ContentCopyPlanner,
+  ResourceCopyMapEntry,
+} from './content-copy-contract'
 
 export type ResourceOperationAuthorizer = (
   actorId: CampaignMemberId,
@@ -44,8 +53,9 @@ export type InMemoryResourceCatalogOptions = Readonly<{
   initialSnapshot?: ResourceCatalogSnapshot
 }>
 
-export type InMemoryResourceOperationExecutorOptions = Readonly<{
+export type InMemoryResourceOperationExecutorOptions<TContentCopyPlan = never> = Readonly<{
   authorize: ResourceOperationAuthorizer
+  contentCopy?: ContentCopyPlanner<TContentCopyPlan, () => void>
   now?: () => number
 }>
 
@@ -320,6 +330,11 @@ function completed(
   }
 }
 
+type PreparedDeepCopy = Readonly<{
+  result: ResourceStructureCommandResult
+  commitContent: () => void
+}>
+
 export class InMemoryResourceCatalog
   implements ResourceCatalogReader, ResourceCatalogSnapshotSource
 {
@@ -449,15 +464,22 @@ export class InMemoryResourceCatalog
   }
 }
 
-export class InMemoryResourceOperationExecutor implements AuthoritativeResourceOperationExecutor {
+export class InMemoryResourceOperationExecutor<
+  TContentCopyPlan = never,
+> implements AuthoritativeResourceOperationExecutor {
   readonly #backend: InMemoryResourceCatalogBackend
   readonly #ledger = new InMemoryResourceOperationLedger<ResourceCommandReceipt>()
   readonly #authorize: ResourceOperationAuthorizer
+  readonly #contentCopy: ContentCopyPlanner<TContentCopyPlan, () => void> | undefined
   readonly #now: () => number
 
-  constructor(catalog: InMemoryResourceCatalog, options: InMemoryResourceOperationExecutorOptions) {
+  constructor(
+    catalog: InMemoryResourceCatalog,
+    options: InMemoryResourceOperationExecutorOptions<TContentCopyPlan>,
+  ) {
     this.#backend = requireCatalogBackend(catalog)
     this.#authorize = options.authorize
+    this.#contentCopy = options.contentCopy
     this.#now = options.now ?? Date.now
   }
 
@@ -527,10 +549,6 @@ export class InMemoryResourceOperationExecutor implements AuthoritativeResourceO
     if (!(await this.#authorize(actorId, normalizedEnvelope))) {
       return { status: 'rejected', reason: 'unauthorized' }
     }
-    if (normalizedEnvelope.command.type === 'deepCopy') {
-      return { status: 'unavailable', reason: 'capability_not_supported' }
-    }
-
     const fingerprint = await fingerprintResourceStructureCommand(normalizedEnvelope.command)
     const lookup = this.#ledger.lookup(
       normalizedEnvelope.campaignId,
@@ -543,8 +561,18 @@ export class InMemoryResourceOperationExecutor implements AuthoritativeResourceO
 
     const draft = cloneCatalogState(this.#backend.state)
     let result: ResourceStructureCommandResult
+    let preparedDeepCopy: PreparedDeepCopy | undefined
     try {
-      result = await this.#apply(actorId, normalizedEnvelope, draft)
+      if (normalizedEnvelope.command.type === 'deepCopy') {
+        preparedDeepCopy = await this.#deepCopy(
+          { ...normalizedEnvelope, command: normalizedEnvelope.command },
+          draft,
+          { at: this.#now(), by: actorId },
+        )
+        result = preparedDeepCopy.result
+      } else {
+        result = await this.#apply(actorId, normalizedEnvelope, draft)
+      }
     } catch (error) {
       if (error instanceof CatalogRejection) return { status: 'rejected', reason: error.reason }
       if (error instanceof RangeError && error.message === 'version_exhausted') {
@@ -554,6 +582,7 @@ export class InMemoryResourceOperationExecutor implements AuthoritativeResourceO
     }
     if (result.status !== 'completed') return result
 
+    preparedDeepCopy?.commitContent()
     this.#ledger.record({
       campaignId: normalizedEnvelope.campaignId,
       actorId,
@@ -575,6 +604,95 @@ export class InMemoryResourceOperationExecutor implements AuthoritativeResourceO
       } catch {
         // Observers cannot change the outcome of an already committed catalog operation.
       }
+    }
+  }
+
+  async #deepCopy(
+    envelope: CommandEnvelope<Extract<ResourceStructureCommand, { type: 'deepCopy' }>>,
+    state: CatalogState,
+    audit: AuditStamp,
+  ): Promise<PreparedDeepCopy> {
+    if (!this.#contentCopy) {
+      return {
+        result: { status: 'unavailable', reason: 'capability_not_supported' },
+        commitContent: () => undefined,
+      }
+    }
+    const { campaignId, command, operationId } = envelope
+    activeFolder(state, campaignId, command.destinationParentId)
+    const { roots, closure } = lifecycleClosure(state, campaignId, command.sourceRootIds, 'active')
+    const rootIds = new Set(roots.map((resource) => resource.id))
+    const resourceMap: Array<ResourceCopyMapEntry> = closure.map((resource) => ({
+      sourceId: resource.id,
+      destinationId: generateDomainId(DOMAIN_ID_KIND.resource),
+    }))
+    const destinationIdBySourceId = new Map(
+      resourceMap.map((entry) => [entry.sourceId, entry.destinationId]),
+    )
+    const copies = await Promise.all(
+      closure.map(async (source) => {
+        const id = destinationIdBySourceId.get(source.id)!
+        const parentId = rootIds.has(source.id)
+          ? command.destinationParentId
+          : destinationIdBySourceId.get(source.parentId!)!
+        const title = canonicalizeResourceTitle(source.title)
+        if (title !== source.title) throw new CatalogRejection('content_integrity_failure')
+        const metadata = {
+          parentId,
+          kind: source.kind,
+          title,
+          icon: source.icon,
+          color: source.color,
+          lifecycle: 'active' as const,
+        }
+        return {
+          source,
+          destination: {
+            id,
+            campaignId,
+            ...metadata,
+            lifecycle: { state: 'active' as const },
+            metadataVersion: await initialResourceMetadataVersion(metadata),
+            created: audit,
+            updated: audit,
+          } satisfies ResourceRecord,
+        }
+      }),
+    )
+
+    let commitContent: () => void
+    try {
+      const plan = await this.#contentCopy.prepare({
+        sourceResourceIds: closure.map((resource) => resource.id),
+        resourceMap,
+      })
+      const resourceTargets: Array<CanonicalTargetMapEntry> = resourceMap.map((entry) => ({
+        source: { kind: 'resource', resourceId: entry.sourceId },
+        destination: { kind: 'resource', resourceId: entry.destinationId },
+      }))
+      commitContent = await this.#contentCopy.finalize(plan, [
+        ...resourceTargets,
+        ...this.#contentCopy.referenceableTargets(plan),
+      ])
+    } catch {
+      throw new CatalogRejection('content_integrity_failure')
+    }
+
+    for (const copy of copies) state.resources.set(copy.destination.id, copy.destination)
+    return {
+      result: completed(
+        campaignId,
+        operationId,
+        {
+          type: 'deepCopied',
+          roots: roots.map((root) => ({
+            sourceRootId: root.id,
+            destinationRootId: destinationIdBySourceId.get(root.id)!,
+          })),
+        },
+        postconditions(copies.map((copy) => copy.destination)),
+      ),
+      commitContent,
     }
   }
 

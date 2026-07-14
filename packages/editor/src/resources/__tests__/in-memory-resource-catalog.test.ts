@@ -6,6 +6,7 @@ import {
 import { defineResourceCatalogConformance } from './resource-catalog-conformance'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import { canonicalizeResourceTitle } from '../resource-contract'
+import type { AuthoritativeResourceOperationExecutor } from '../resource-command-contract'
 
 defineResourceCatalogConformance('in-memory', (options) => {
   const catalog = new InMemoryResourceCatalog()
@@ -124,3 +125,187 @@ describe('InMemoryResourceCatalog snapshots', () => {
     ).toThrow('snapshot')
   })
 })
+
+describe('InMemoryResourceOperationExecutor deep copy', () => {
+  it('copies a bounded closure with final IDs and one content-owned target map', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const committedResourceMaps: Array<ReadonlyArray<{ sourceId: string; destinationId: string }>> =
+      []
+    const contentCopy = {
+      prepare: vi.fn((context) => Promise.resolve(context)),
+      referenceableTargets: vi.fn(() => []),
+      finalize: vi.fn((plan) =>
+        Promise.resolve(() => committedResourceMaps.push(plan.resourceMap)),
+      ),
+    }
+    const operations = new InMemoryResourceOperationExecutor(catalog, {
+      authorize: () => true,
+      contentCopy,
+      now: () => 30,
+    })
+    const sourceRootId = resourceDomainId(20)
+    const sourceChildId = resourceDomainId(21)
+    const destinationId = resourceDomainId(22)
+    await createResource(operations, sourceRootId, operationDomainId(20), null, 'folder')
+    await createResource(operations, sourceChildId, operationDomainId(21), sourceRootId, 'note')
+    await createResource(operations, destinationId, operationDomainId(22), null, 'folder')
+    await operations.appendAlias({
+      campaignId,
+      resourceId: sourceChildId,
+      firstSeenImportJobId: assertDomainId(
+        DOMAIN_ID_KIND.importJob,
+        '01890f47-f6c8-7a5b-8c9d-000000000023',
+      ),
+      sourceRootId: 'upload',
+      value: { rawPath: 'Note.md', normalizedPath: 'note.md' },
+    })
+    await operations.setRole(campaignId, { role: 'campaign-home', resourceId: sourceRootId })
+    const listener = vi.fn()
+    catalog.subscribe(campaignId, listener)
+
+    const result = await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(24),
+      command: {
+        type: 'deepCopy',
+        sourceRootIds: [sourceRootId],
+        destinationParentId: destinationId,
+      },
+    })
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      receipt: {
+        result: {
+          type: 'deepCopied',
+          roots: [{ sourceRootId, destinationRootId: expect.any(String) }],
+        },
+        postconditions: [
+          { state: 'present', metadataVersion: { revision: 1 } },
+          { state: 'present', metadataVersion: { revision: 1 } },
+        ],
+      },
+    })
+    if (result.status !== 'completed' || result.receipt.result.type !== 'deepCopied') {
+      throw new TypeError('Expected deep copy completion')
+    }
+    const copiedRootId = result.receipt.result.roots[0]!.destinationRootId
+    const copiedResources = catalog
+      .getSnapshot(campaignId)
+      .resources.filter(
+        (resource) => ![sourceRootId, sourceChildId, destinationId].includes(resource.id),
+      )
+    const copiedRoot = copiedResources.find((resource) => resource.id === copiedRootId)
+    const copiedChild = copiedResources.find((resource) => resource.parentId === copiedRootId)
+
+    expect(copiedRoot).toMatchObject({
+      parentId: destinationId,
+      kind: 'folder',
+      title: 'Resource 20',
+      created: { at: 30, by: actorId },
+      updated: { at: 30, by: actorId },
+    })
+    expect(copiedChild).toMatchObject({ kind: 'note', title: 'Resource 21' })
+    expect(committedResourceMaps).toEqual([
+      expect.arrayContaining([
+        { sourceId: sourceRootId, destinationId: copiedRootId },
+        { sourceId: sourceChildId, destinationId: copiedChild?.id },
+      ]),
+    ])
+    expect(contentCopy.finalize).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.arrayContaining([
+        {
+          source: { kind: 'resource', resourceId: sourceRootId },
+          destination: { kind: 'resource', resourceId: copiedRootId },
+        },
+      ]),
+    )
+    expect(await catalog.listAliases(campaignId, copiedChild!.id)).toEqual([])
+    expect(await catalog.listRoles(campaignId)).toEqual([
+      { role: 'campaign-home', resourceId: sourceRootId },
+    ])
+    expect(listener).toHaveBeenCalledOnce()
+  })
+
+  it('rejects content planning failures without committing metadata', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = new InMemoryResourceOperationExecutor(catalog, {
+      authorize: () => true,
+      contentCopy: {
+        prepare: () => Promise.reject(new Error('invalid content')),
+        referenceableTargets: () => [],
+        finalize: () => Promise.resolve(() => undefined),
+      },
+    })
+    const sourceId = resourceDomainId(30)
+    await createResource(operations, sourceId, operationDomainId(30), null, 'note')
+    const before = catalog.getSnapshot(campaignId)
+
+    await expect(
+      operations.execute(actorId, {
+        campaignId,
+        operationId: operationDomainId(31),
+        command: { type: 'deepCopy', sourceRootIds: [sourceId], destinationParentId: null },
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'content_integrity_failure' })
+    expect(catalog.getSnapshot(campaignId)).toBe(before)
+  })
+
+  it('reports deep copy as unavailable without a content owner', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = new InMemoryResourceOperationExecutor(catalog, {
+      authorize: () => true,
+    })
+
+    await expect(
+      operations.execute(actorId, {
+        campaignId,
+        operationId: operationDomainId(40),
+        command: {
+          type: 'deepCopy',
+          sourceRootIds: [resourceDomainId(40)],
+          destinationParentId: null,
+        },
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'capability_not_supported' })
+  })
+})
+
+function resourceDomainId(sequence: number) {
+  return assertDomainId(
+    DOMAIN_ID_KIND.resource,
+    `01890f47-f6c8-7a5b-8c9d-${sequence.toString(16).padStart(12, '0')}`,
+  )
+}
+
+function operationDomainId(sequence: number) {
+  return assertDomainId(
+    DOMAIN_ID_KIND.operation,
+    `01890f47-f6c8-7a5b-8c9d-${sequence.toString(16).padStart(12, '0')}`,
+  )
+}
+
+async function createResource(
+  operations: AuthoritativeResourceOperationExecutor,
+  createdResourceId: ReturnType<typeof resourceDomainId>,
+  operationId: ReturnType<typeof operationDomainId>,
+  parentId: ReturnType<typeof resourceDomainId> | null,
+  kind: 'folder' | 'note',
+) {
+  return await operations.execute(actorId, {
+    campaignId,
+    operationId,
+    command: {
+      type: 'create',
+      resourceId: createdResourceId,
+      parentId,
+      kind,
+      title: canonicalizeResourceTitle(
+        `Resource ${Number.parseInt(createdResourceId.slice(-2), 16)}`,
+      ),
+      icon: null,
+      color: null,
+    },
+  })
+}
