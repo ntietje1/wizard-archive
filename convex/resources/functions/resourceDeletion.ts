@@ -9,6 +9,8 @@ import { loadNoteContentDeletion } from './noteContent'
 import { fileAssetIds, mapAssetIds } from './assetContent'
 import { internal } from '../../_generated/api'
 
+type ResourceDeletionCtx = Pick<CampaignMutationCtx, 'db' | 'scheduler'>
+
 type ResourceDeletionPlan = {
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   roles: Array<Doc<'resourceRoles'>>
@@ -145,8 +147,15 @@ export async function applyResourceDeletion(
   plan: ResourceDeletionPlan,
 ): Promise<void> {
   await Promise.all(rowGroups(plan).flatMap((rows) => rows.map((row) => ctx.db.delete(row._id))))
+  await queueAssetRetirements(ctx, plan.retirementAssetUuids)
+}
+
+async function queueAssetRetirements(
+  ctx: ResourceDeletionCtx,
+  retirementAssetUuids: ReadonlySet<AssetId>,
+) {
   const createdAt = Date.now()
-  const assets = [...plan.retirementAssetUuids]
+  const assets = [...retirementAssetUuids]
   const existing = await Promise.all(
     assets.map((assetUuid) =>
       ctx.db
@@ -176,4 +185,95 @@ export async function applyResourceDeletion(
       }),
     ),
   )
+}
+
+export async function deleteCampaignResources(
+  ctx: ResourceDeletionCtx,
+  campaignId: CampaignId,
+): Promise<void> {
+  const [
+    resources,
+    tombstones,
+    aliases,
+    roles,
+    operations,
+    noteContents,
+    noteIntents,
+    fileContents,
+    mapContents,
+    mapPins,
+    canvasContents,
+    assetCopyIntents,
+    assetOwners,
+  ] = await Promise.all([
+    ctx.db
+      .query('resources')
+      .withIndex('by_campaign_and_parent', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceTombstones')
+      .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceSourcePathAliases')
+      .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceRoles')
+      .withIndex('by_campaign_and_role', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceOperations')
+      .withIndex('by_campaign_and_actor', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceNoteContents')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceNoteInitializationIntents')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceFileContents')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceMapContents')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceMapPins')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceCanvasContents')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceAssetCopyIntents')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
+      .query('resourceAssetOwners')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+  ])
+
+  await Promise.all([
+    ...resources.map((row) => ctx.db.delete(row._id)),
+    ...tombstones.map((row) => ctx.db.delete(row._id)),
+    ...aliases.map((row) => ctx.db.delete(row._id)),
+    ...roles.map((row) => ctx.db.delete(row._id)),
+    ...operations.map((row) => ctx.db.delete(row._id)),
+    ...noteContents.map((row) => ctx.db.delete(row._id)),
+    ...noteIntents.map((row) => ctx.db.delete(row._id)),
+    ...fileContents.map((row) => ctx.db.delete(row._id)),
+    ...mapContents.map((row) => ctx.db.delete(row._id)),
+    ...mapPins.map((row) => ctx.db.delete(row._id)),
+    ...canvasContents.map((row) => ctx.db.delete(row._id)),
+    ...assetCopyIntents.map((row) => ctx.db.delete(row._id)),
+    ...assetOwners.map((row) => ctx.db.delete(row._id)),
+  ])
+  await queueAssetRetirements(ctx, new Set(assetOwners.map((owner) => owner.assetUuid as AssetId)))
 }

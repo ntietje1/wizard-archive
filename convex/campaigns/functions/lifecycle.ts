@@ -1,66 +1,35 @@
 import { asyncMap } from 'convex-helpers'
 import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../../shared/campaigns/types'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
+import { deleteCampaignResources } from '../../resources/functions/resourceDeletion'
 
-type CampaignLifecycleCtx = Pick<MutationCtx, 'db'>
+type CampaignLifecycleCtx = Pick<MutationCtx, 'db' | 'scheduler'>
 
 export async function hardDeleteCampaign(
   ctx: CampaignLifecycleCtx,
-  campaignId: Id<'campaigns'>,
+  campaignRowId: Id<'campaigns'>,
+  campaignId: CampaignId,
 ): Promise<void> {
-  const [
-    allItems,
-    sessions,
-    campaignMembers,
-    editors,
-    editHistory,
-    documentSnapshots,
-    filesystemTransactions,
-  ] = await Promise.all([
-    ctx.db
-      .query('sidebarItems')
-      .withIndex('by_campaign_deletionTime', (q) => q.eq('campaignId', campaignId))
-      .collect(),
+  const [sessions, campaignMembers] = await Promise.all([
     ctx.db
       .query('sessions')
-      .withIndex('by_campaign_startedAt', (q) => q.eq('campaignId', campaignId))
+      .withIndex('by_campaign_startedAt', (q) => q.eq('campaignId', campaignRowId))
       .collect(),
     ctx.db
       .query('campaignMembers')
-      .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
-      .collect(),
-    ctx.db
-      .query('editor')
-      .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
-      .collect(),
-    ctx.db
-      .query('editHistory')
-      .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
-      .collect(),
-    ctx.db
-      .query('documentSnapshots')
-      .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
-      .collect(),
-    ctx.db
-      .query('filesystemTransactions')
-      .withIndex('by_campaign_actor', (q) => q.eq('campaignId', campaignId))
+      .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignRowId))
       .collect(),
   ])
 
+  await deleteCampaignResources(ctx, campaignId)
   await Promise.all([
-    asyncMap(documentSnapshots, (snapshot) => ctx.db.delete('documentSnapshots', snapshot._id)),
-    asyncMap(editHistory, (entry) => ctx.db.delete('editHistory', entry._id)),
-    asyncMap(filesystemTransactions, (transaction) =>
-      ctx.db.delete('filesystemTransactions', transaction._id),
-    ),
-    asyncMap(allItems, (item) => ctx.db.delete('sidebarItems', item._id)),
     asyncMap(sessions, (session) => ctx.db.delete('sessions', session._id)),
     asyncMap(campaignMembers, (member) => ctx.db.delete('campaignMembers', member._id)),
-    asyncMap(editors, (editor) => ctx.db.delete('editor', editor._id)),
   ])
 
-  await ctx.db.delete('campaigns', campaignId)
+  await ctx.db.delete('campaigns', campaignRowId)
 }
 
 async function retireCampaignForDeletedDm(
@@ -95,25 +64,6 @@ export async function removeCampaignMemberForDeletedUser(
     })
   }
 
-  const [sidebarShares, blockShares] = await Promise.all([
-    ctx.db
-      .query('sidebarItemShares')
-      .withIndex('by_campaign_member', (q) =>
-        q.eq('campaignId', member.campaignId).eq('campaignMemberId', member._id),
-      )
-      .collect(),
-    ctx.db
-      .query('blockShares')
-      .withIndex('by_campaign_member', (q) =>
-        q.eq('campaignId', member.campaignId).eq('campaignMemberId', member._id),
-      )
-      .collect(),
-  ])
-
-  await Promise.all([
-    asyncMap(sidebarShares, (share) => ctx.db.delete('sidebarItemShares', share._id)),
-    asyncMap(blockShares, (share) => ctx.db.delete('blockShares', share._id)),
-  ])
   await ctx.db.patch('campaignMembers', member._id, {
     status: CAMPAIGN_MEMBER_STATUS.Removed,
   })

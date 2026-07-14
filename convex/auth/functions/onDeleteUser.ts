@@ -1,6 +1,6 @@
 import { asyncMap } from 'convex-helpers'
 import { removeCampaignMemberForDeletedUser } from '../../campaigns/functions/lifecycle'
-import { isStorageReferencedByCampaignContent } from '../../storage/functions/storageReferences'
+import { isAssetOwnedByResource } from '../../storage/functions/storageReferences'
 import type { MutationCtx } from '../../_generated/server'
 
 type AuthUserDoc = {
@@ -17,13 +17,9 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
 
   const profileId = profile._id
 
-  const [prefs, editors, files] = await Promise.all([
+  const [prefs, files] = await Promise.all([
     ctx.db
       .query('userPreferences')
-      .withIndex('by_user', (q) => q.eq('userId', profileId))
-      .collect(),
-    ctx.db
-      .query('editor')
       .withIndex('by_user', (q) => q.eq('userId', profileId))
       .collect(),
     ctx.db
@@ -33,11 +29,9 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
   ])
 
   await asyncMap(prefs, (p) => ctx.db.delete('userPreferences', p._id))
-  await asyncMap(editors, (e) => ctx.db.delete('editor', e._id))
   await asyncMap(files, async (f) => {
-    if (f.storageId && !(await isStorageReferencedByCampaignContent(ctx.db, f.storageId))) {
-      await ctx.storage.delete(f.storageId)
-    }
+    if (f.assetUuid && (await isAssetOwnedByResource(ctx.db, f.assetUuid))) return
+    if (f.storageId) await ctx.storage.delete(f.storageId)
     await ctx.db.delete('fileStorage', f._id)
   })
 

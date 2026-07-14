@@ -4,9 +4,7 @@ import { asDm, asPlayer, setupCampaignContext, setupUser } from '../../_test/ide
 import {
   addPlayerToCampaign,
   createCampaignWithDm,
-  createFolder,
   getCampaignRowId,
-  createNote,
   createSession,
 } from '../../_test/factories.helper'
 import {
@@ -17,7 +15,12 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  generateDomainId,
+  isUuidV7,
+} from '@wizard-archive/editor/resources/domain-id'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 
 describe('createCampaign', () => {
   const t = createTestContext()
@@ -1031,8 +1034,21 @@ describe('deleteCampaign', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
+    for (const kind of ['note', 'folder'] as const) {
+      await dmAuth.mutation(api.resources.mutations.executeStructureCommand, {
+        campaignId: ctx.campaignDomainId,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'create',
+          resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
+          kind,
+          parentId: null,
+          title: canonicalizeResourceTitle(kind),
+          icon: null,
+          color: null,
+        },
+      })
+    }
     await createSession(t, ctx.campaignId)
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
@@ -1049,11 +1065,17 @@ describe('deleteCampaign', () => {
         .collect()
       expect(members).toHaveLength(0)
 
-      const sidebarItems = await dbCtx.db
-        .query('sidebarItems')
-        .withIndex('by_campaign_deletionTime', (q) => q.eq('campaignId', ctx.campaignId))
+      const resources = await dbCtx.db
+        .query('resources')
+        .withIndex('by_campaign_and_parent', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
         .collect()
-      expect(sidebarItems).toHaveLength(0)
+      expect(resources).toHaveLength(0)
+
+      const operations = await dbCtx.db
+        .query('resourceOperations')
+        .withIndex('by_campaign_and_actor', (q) => q.eq('campaignUuid', ctx.campaignDomainId))
+        .collect()
+      expect(operations).toHaveLength(0)
 
       const sessions = await dbCtx.db
         .query('sessions')

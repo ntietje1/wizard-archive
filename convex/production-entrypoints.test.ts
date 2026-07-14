@@ -33,9 +33,7 @@ describe('production Convex entrypoints', () => {
     const cronExport = crons as unknown as { export: () => string }
     const registeredCrons = JSON.parse(cronExport.export()) as Record<string, unknown>
     expect(Object.keys(registeredCrons)).toEqual([
-      'purge expired trash items',
       'purge expired auth sessions and verification tokens',
-      'cleanup stale Yjs awareness entries',
     ])
   })
 

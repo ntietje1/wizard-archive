@@ -372,7 +372,9 @@ export const resourceTables = {
         version: versionStampValidator,
       }),
     ),
-  ).index('by_resourceUuid', ['resourceUuid']),
+  )
+    .index('by_campaignUuid', ['campaignUuid'])
+    .index('by_resourceUuid', ['resourceUuid']),
 
   resourceNoteInitializationIntents: defineTable({
     campaignUuid: campaignUuidValidator,
@@ -381,6 +383,7 @@ export const resourceTables = {
     status: literals('pending', 'failed'),
     ...externalEffectAttemptFields,
   })
+    .index('by_campaignUuid', ['campaignUuid'])
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_status_and_createdAt', ['status', 'createdAt']),
 
@@ -391,7 +394,9 @@ export const resourceTables = {
     assetUuid: v.nullable(assetIdValidator),
     ...fileOwnedMetadataValidators,
     version: versionStampValidator,
-  }).index('by_resourceUuid', ['resourceUuid']),
+  })
+    .index('by_campaignUuid', ['campaignUuid'])
+    .index('by_resourceUuid', ['resourceUuid']),
 
   resourceMapContents: defineTable({
     campaignUuid: campaignUuidValidator,
@@ -406,7 +411,9 @@ export const resourceTables = {
       }),
     ),
     version: versionStampValidator,
-  }).index('by_resourceUuid', ['resourceUuid']),
+  })
+    .index('by_campaignUuid', ['campaignUuid'])
+    .index('by_resourceUuid', ['resourceUuid']),
 
   resourceMapPins: defineTable({
     campaignUuid: campaignUuidValidator,
@@ -418,6 +425,7 @@ export const resourceTables = {
     y: v.number(),
     visible: v.boolean(),
   })
+    .index('by_campaignUuid', ['campaignUuid'])
     .index('by_mapResourceUuid', ['mapResourceUuid'])
     .index('by_mapPinUuid', ['mapPinUuid']),
 
@@ -426,7 +434,9 @@ export const resourceTables = {
     resourceUuid: resourceUuidValidator,
     update: v.bytes(),
     version: versionStampValidator,
-  }).index('by_resourceUuid', ['resourceUuid']),
+  })
+    .index('by_campaignUuid', ['campaignUuid'])
+    .index('by_resourceUuid', ['resourceUuid']),
 
   resourceAssetCopyIntents: defineTable({
     campaignUuid: campaignUuidValidator,
@@ -437,6 +447,7 @@ export const resourceTables = {
     status: literals('pending', 'processing', 'failed'),
     ...externalEffectAttemptFields,
   })
+    .index('by_campaignUuid', ['campaignUuid'])
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_sourceAssetUuid', ['sourceAssetUuid'])
     .index('by_destinationAssetUuid', ['destinationAssetUuid'])
@@ -455,6 +466,7 @@ export const resourceTables = {
     resourceUuid: resourceUuidValidator,
     assetUuid: assetIdValidator,
   })
+    .index('by_campaignUuid', ['campaignUuid'])
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_assetUuid', ['assetUuid']),
 }

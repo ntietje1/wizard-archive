@@ -26,24 +26,6 @@ export async function getCampaignInvitationRoute(campaignId: CampaignId) {
   return { dmUsername, campaignSlug: campaign.slug }
 }
 
-export async function getSidebarItemByName({
-  campaignId,
-  name,
-}: {
-  campaignId: CampaignId
-  name: string
-}) {
-  const client = await createE2EConvexClient()
-  const { active: items } = await client.query(api.sidebarItems.queries.getSidebarItems, {
-    campaignId,
-  })
-  const item = items.find((candidate) => candidate.name === name)
-  if (!item) {
-    throw new Error(`Unable to find active sidebar item named "${name}"`)
-  }
-  return item
-}
-
 export async function ensureAcceptedPlayerMember({
   campaignId,
 }: {
