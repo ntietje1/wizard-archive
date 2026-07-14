@@ -70,7 +70,7 @@ describe('LocalDemoRouteContent', () => {
   it('mounts the local workspace from item URL state', () => {
     clientOnlyState.renderClient = true
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
-    const resourceId = scenario.workspace.items[0].id
+    const resourceId = scenario.workspace.snapshot.resources[0]!.id
     window.history.replaceState(null, '', `/demo?item=${resourceId}&heading=Intro`)
 
     render(<LocalDemoRouteContent />)
@@ -79,7 +79,10 @@ describe('LocalDemoRouteContent', () => {
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
         initialItemId: resourceId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
     expect(workspaceRuntimeHostProps.current).toMatchObject({
@@ -97,7 +100,10 @@ describe('LocalDemoRouteContent', () => {
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
   })
@@ -112,7 +118,10 @@ describe('LocalDemoRouteContent', () => {
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
   })
@@ -131,7 +140,10 @@ describe('LocalDemoRouteContent', () => {
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
   })
@@ -146,7 +158,10 @@ describe('LocalDemoRouteContent', () => {
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
         initialItemId: null,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
     expect(workspaceRuntimeHostProps.current).toMatchObject({

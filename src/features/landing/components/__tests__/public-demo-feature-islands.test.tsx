@@ -63,7 +63,10 @@ describe('public demo feature islands', () => {
       expect.objectContaining({
         canEdit: false,
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -88,7 +91,10 @@ describe('public demo feature islands', () => {
       expect.objectContaining({
         canEdit: true,
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -108,7 +114,10 @@ describe('public demo feature islands', () => {
     expect(localRuntimeInputMock).toHaveBeenCalledWith(
       expect.objectContaining({
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -128,7 +137,10 @@ describe('public demo feature islands', () => {
     expect(localRuntimeInputMock).toHaveBeenCalledWith(
       expect.objectContaining({
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -149,7 +161,10 @@ describe('public demo feature islands', () => {
       expect.objectContaining({
         canEdit: true,
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -170,7 +185,10 @@ describe('public demo feature islands', () => {
       expect.objectContaining({
         canEdit: true,
         initialItemId: scenario.initialItemId,
-        initialWorkspace: scenario.workspace,
+        initialWorkspace: expect.objectContaining({
+          scope: scenario.workspace.scope,
+          snapshot: scenario.workspace.snapshot,
+        }),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
