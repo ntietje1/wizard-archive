@@ -6,9 +6,9 @@ import { createReadWriteTestCache } from './cache-test-utils'
 import { commandFixtureItemIds, fileSystemCommandFixtures } from './command-fixtures'
 import { RESOURCE_COMMAND_TYPE } from '../transaction-contract'
 import { planFileSystemOptimisticCommand } from '../optimistic-planner'
-import type { CampaignId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
-const campaignId = 'campaign_1' as CampaignId
+const campaignId = testCampaignId('campaign_1')
 
 describe('filesystem command exhaustiveness', () => {
   it('keeps optimistic planning covered for every command type', () => {
@@ -30,7 +30,7 @@ describe('filesystem command exhaustiveness', () => {
           snapshot,
           readModel: cacheAdapter.getReadModel(),
           activeItemSurface: { parentId: null },
-          currentUserId: null,
+          currentActorId: null,
           workspaceId: campaignId,
         }),
       ).not.toThrow()

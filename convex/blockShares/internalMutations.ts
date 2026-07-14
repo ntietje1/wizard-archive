@@ -27,7 +27,7 @@ import type {
   ResourceCommand,
   ResourceTransactionReceipt,
 } from '@wizard-archive/editor/resources/transaction-contract'
-import type { CampaignMemberRow, CampaignRow } from '../../shared/campaigns/types'
+import type { CampaignMemberRow, CampaignRow } from '../campaigns/rows'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import { requireCampaignMemberRowForCampaign } from '../campaigns/functions/campaignIdentity'

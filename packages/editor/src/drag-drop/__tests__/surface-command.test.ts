@@ -13,10 +13,10 @@ import {
 } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
 import type { ResourceStatus } from '../../workspace/resource-contract'
-import type { CampaignId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import type { SurfaceDropCommandEffects } from '../surface-command-effects'
 
-const campaignId = 'campaign_1' as CampaignId
+const campaignId = testCampaignId('campaign_1')
 
 function sidebarItemId(value: string) {
   return value as ResourceId

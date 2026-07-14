@@ -1,4 +1,4 @@
-import type { ResourceId } from '../resources/domain-id'
+import type { ResourceId, CampaignMemberId } from '../resources/domain-id'
 import { normalizeSelectedRoots } from './domain/selection-roots'
 import { planTransferOperations } from './operation-contract'
 import type {
@@ -19,7 +19,6 @@ import { CREATE_PARENT_TARGET_KIND, canonicalizeResourceItemTitle } from '../wor
 import type { AnyItem, WorkspaceResourceReadModel } from '../workspace/items'
 import { planCreateParentTarget } from '../workspace/items/create-parent-target'
 import { isTrashedSidebarItem } from '../workspace/items/status'
-import type { UserProfileId } from '../../../../shared/common/ids'
 import { buildOptimisticCreatePreview, buildOptimisticRenamePreview } from './optimistic-patches'
 import { resourcePatchRowFromCacheItem } from './cache-patches'
 import type { SidebarCacheSnapshot } from './cache-patches'
@@ -40,7 +39,7 @@ type PlannerArgs = {
   snapshot: SidebarCacheSnapshot
   readModel: WorkspaceResourceReadModel<AnyItem>
   activeItemSurface: { parentId: ResourceId | null } | null
-  currentUserId: UserProfileId | null
+  currentActorId: CampaignMemberId | null
   workspaceId: string
 }
 
@@ -112,7 +111,7 @@ function planMoveOrRestore(
       trashItems: args.snapshot.trash.map(resourcePatchRowFromCacheItem),
       operations,
       now: Date.now(),
-      userId: args.currentUserId,
+      userId: args.currentActorId,
     }),
   )
 }
@@ -166,7 +165,7 @@ function planTrash(args: CommandPlannerArgs<TrashFileSystemCommand>) {
   return ready(
     projectTrashRoots(args.snapshot.sidebar.map(resourcePatchRowFromCacheItem), rootIds, {
       now: Date.now(),
-      userId: args.currentUserId,
+      userId: args.currentActorId,
     }),
   )
 }
@@ -204,7 +203,7 @@ function planCreate(args: CommandPlannerArgs<ResourceCreateCommand>): FileSystem
     preview: buildOptimisticCreatePreview({
       command: args.command,
       parentId,
-      currentUserId: args.currentUserId,
+      currentActorId: args.currentActorId,
       workspaceId: args.workspaceId,
       name,
     }),

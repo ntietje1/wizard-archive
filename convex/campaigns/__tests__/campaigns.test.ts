@@ -447,7 +447,7 @@ describe('getMembersByCampaign', () => {
       campaignId: ctx.campaignDomainId,
     })
 
-    expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
+    expect(members.find((m) => m.userId === newPlayer.profile.userProfileUuid)).toBeUndefined()
   })
 
   it('excludes Rejected members', async () => {
@@ -460,7 +460,7 @@ describe('getMembersByCampaign', () => {
       campaignId: ctx.campaignDomainId,
     })
 
-    expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
+    expect(members.find((m) => m.userId === newPlayer.profile.userProfileUuid)).toBeUndefined()
   })
 
   it('excludes Removed members', async () => {
@@ -473,7 +473,7 @@ describe('getMembersByCampaign', () => {
       campaignId: ctx.campaignDomainId,
     })
 
-    expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
+    expect(members.find((m) => m.userId === newPlayer.profile.userProfileUuid)).toBeUndefined()
   })
 
   it('requires membership', async () => {
@@ -518,10 +518,16 @@ describe('getCampaignRequests', () => {
     for (const member of members) {
       expect(member.userProfile).toBeDefined()
     }
-    expect(members.find((m) => m.userId === pending.profile._id)?.status).toBe('Pending')
-    expect(members.find((m) => m.userId === rejected.profile._id)?.status).toBe('Rejected')
-    expect(members.find((m) => m.userId === removed.profile._id)?.status).toBe('Removed')
-    expect(members.find((m) => m.userId === ctx.player.profile._id)).toBeUndefined()
+    expect(members.find((m) => m.userId === pending.profile.userProfileUuid)?.status).toBe(
+      'Pending',
+    )
+    expect(members.find((m) => m.userId === rejected.profile.userProfileUuid)?.status).toBe(
+      'Rejected',
+    )
+    expect(members.find((m) => m.userId === removed.profile.userProfileUuid)?.status).toBe(
+      'Removed',
+    )
+    expect(members.find((m) => m.userId === ctx.player.profile.userProfileUuid)).toBeUndefined()
   })
 
   it('requires DM role', async () => {
@@ -926,29 +932,6 @@ describe('updateCampaign', () => {
       const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       expect(campaign!.description).toBe('New description')
     })
-  })
-
-  it('normalizes nullable folder inheritance defaults for existing campaigns', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('campaigns', ctx.campaignId, { defaultFolderInheritShares: null })
-    })
-
-    const campaigns = await dmAuth.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.find((campaign) => campaign.id === ctx.campaignDomainId)).toMatchObject({
-      defaultFolderInheritShares: false,
-    })
-
-    const { folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
-    const folder = await t.run(async (dbCtx) =>
-      dbCtx.db
-        .query('folders')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderRowId))
-        .unique(),
-    )
-    expect(folder?.inheritShares).toBe(false)
   })
 
   it('updates slug', async () => {

@@ -3,7 +3,7 @@ import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeas
 import { getSidebarItemPermissionLevelForMembership } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { isActiveSidebarItem, isUndoHiddenSidebarItem } from '../types/status'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { CampaignMemberRow } from '../../campaigns/rows'
 import type { Doc } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 

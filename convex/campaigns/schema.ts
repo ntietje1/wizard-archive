@@ -2,7 +2,11 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import type { Validator } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
-import { userProfileSummaryValidator, userProfileValidator } from '../users/schema'
+import {
+  userProfileIdValidator,
+  userProfileSummaryValidator,
+  userProfileValidator,
+} from '../users/schema'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 export const campaignStatusValidator = literals('Active', 'Inactive', 'Deleted')
@@ -15,14 +19,13 @@ export const campaignIdValidator = v.string() as Validator<CampaignId>
 export const campaignMemberIdValidator = v.string() as Validator<CampaignMemberId>
 
 const campaignFields = {
-  campaignUuid: v.string(),
+  campaignUuid: campaignIdValidator,
   name: v.string(),
   description: v.string(),
   dmUserId: v.id('userProfiles'),
   slug: v.string(),
   status: campaignStatusValidator,
-  // Temporary widen-migrate-narrow shape; read paths normalize missing/null to false.
-  defaultFolderInheritShares: v.optional(v.union(v.boolean(), v.null())),
+  defaultFolderInheritShares: v.boolean(),
 }
 
 const campaignTableFields = {
@@ -31,7 +34,7 @@ const campaignTableFields = {
 }
 
 const campaignMemberTableFields = {
-  campaignMemberUuid: v.string(),
+  campaignMemberUuid: campaignMemberIdValidator,
   userId: v.id('userProfiles'),
   campaignId: v.id('campaigns'),
   role: campaignMemberRoleValidator,
@@ -56,7 +59,7 @@ export const campaignTables = {
 const publicCampaignMemberFields = {
   id: campaignMemberIdValidator,
   campaignId: campaignIdValidator,
-  userId: v.id('userProfiles'),
+  userId: userProfileIdValidator,
   createdAt: v.number(),
   role: campaignMemberRoleValidator,
   status: campaignMemberStatusValidator,

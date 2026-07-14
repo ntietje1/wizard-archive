@@ -1,4 +1,3 @@
-import type { UserProfileId, WorkspaceMemberId } from '../../../../shared/common/ids'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type {
   ResourceIconName,
@@ -28,10 +27,10 @@ export type ResourcePatchRow = {
   status: ResourceStatus
   allPermissionLevel: PermissionLevel | null
   updatedTime: number | null
-  updatedBy: UserProfileId | null
-  createdBy: UserProfileId
+  updatedBy: CampaignMemberId | null
+  createdBy: CampaignMemberId
   deletionTime: number | null
-  deletedBy: UserProfileId | null
+  deletedBy: CampaignMemberId | null
   previewAssetId: AssetId | null
 }
 
@@ -44,9 +43,9 @@ type ResourcePatchFields = {
   allPermissionLevel: PermissionLevel | null
   previewAssetId: AssetId | null
   updatedTime: number | null
-  updatedBy: UserProfileId | null
+  updatedBy: CampaignMemberId | null
   deletionTime: number | null
-  deletedBy: UserProfileId | null
+  deletedBy: CampaignMemberId | null
 }
 type ResourceFieldPatch = Partial<ResourcePatchFields>
 type ResourcePatchPrecondition = ResourceFieldPatch &
@@ -190,7 +189,7 @@ export type ResourceChange =
   | {
       type: 'updateResourceBookmarkState'
       itemId: ResourceId
-      memberId: WorkspaceMemberId
+      memberId: CampaignMemberId
       before: boolean
       after: boolean
     }

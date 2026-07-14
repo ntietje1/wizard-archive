@@ -37,7 +37,7 @@ describe('campaign lifecycle', () => {
       campaignId,
     })
     const pendingMember = membersBeforeAccept.find(
-      (m) => m.userId === player.profile._id && m.status === 'Pending',
+      (m) => m.userId === player.profile.userProfileUuid && m.status === 'Pending',
     )
     expect(pendingMember).toBeDefined()
 
@@ -203,9 +203,9 @@ describe('campaign lifecycle', () => {
     const pendingPlayers = members.filter((m) => m.status === 'Pending')
     expect(pendingPlayers).toHaveLength(3)
 
-    const p1Member = members.find((m) => m.userId === p1.profile._id)
-    const p2Member = members.find((m) => m.userId === p2.profile._id)
-    const p3Member = members.find((m) => m.userId === p3.profile._id)
+    const p1Member = members.find((m) => m.userId === p1.profile.userProfileUuid)
+    const p2Member = members.find((m) => m.userId === p2.profile.userProfileUuid)
+    const p3Member = members.find((m) => m.userId === p3.profile.userProfileUuid)
     expect(p1Member).toBeDefined()
     expect(p2Member).toBeDefined()
     expect(p3Member).toBeDefined()
@@ -254,18 +254,18 @@ describe('campaign lifecycle', () => {
     const finalRequests = await dm.authed.query(api.campaigns.queries.getCampaignRequests, {
       campaignId,
     })
-    const p1Final = finalRequests.find((m) => m.userId === p1.profile._id)
-    const p3Final = finalRequests.find((m) => m.userId === p3.profile._id)
+    const p1Final = finalRequests.find((m) => m.userId === p1.profile.userProfileUuid)
+    const p3Final = finalRequests.find((m) => m.userId === p3.profile.userProfileUuid)
     expect(p1Final).toBeDefined()
     expect(p1Final!.status).toBe('Removed')
     expect(p3Final).toBeDefined()
     expect(p3Final!.status).toBe('Pending')
-    expect(finalRequests.find((m) => m.userId === p2.profile._id)).toBeUndefined()
+    expect(finalRequests.find((m) => m.userId === p2.profile.userProfileUuid)).toBeUndefined()
 
     const finalPlayers = await dm.authed.query(api.campaigns.queries.getMembersByCampaign, {
       campaignId,
     })
-    const p2Final = finalPlayers.find((m) => m.userId === p2.profile._id)
+    const p2Final = finalPlayers.find((m) => m.userId === p2.profile.userProfileUuid)
     expect(p2Final).toBeDefined()
     expect(p2Final!.status).toBe('Accepted')
   })

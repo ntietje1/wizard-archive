@@ -9,8 +9,9 @@ import {
   toSidebarItemReplacement,
 } from '../types/status'
 import type { CampaignMutationCtx } from '../../functions'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Doc } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 type StoredSidebarItemRow = Doc<'sidebarItems'>
 type ItemOperation = (ctx: MutationCtx, item: StoredSidebarItemRow) => Promise<void>
@@ -45,7 +46,7 @@ async function applyToTree(
 export async function trashTree(
   ctx: MutationCtx,
   item: StoredSidebarItemRow,
-  deletion: { deletionTime: number; deletedBy: Id<'userProfiles'> },
+  deletion: { deletionTime: number; deletedBy: CampaignMemberId },
 ): Promise<number> {
   return applyToTree(ctx, item, async (_, i) => {
     const patch: TrashTreePatch = {

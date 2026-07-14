@@ -236,9 +236,9 @@ const sidebarItemPatchCommonFields = {
   allPermissionLevel: v.optional(v.nullable(permissionLevelValidator)),
   previewAssetId: v.optional(v.nullable(assetIdValidator)),
   updatedTime: v.optional(v.nullable(v.number())),
-  updatedBy: v.optional(v.nullable(v.id('userProfiles'))),
+  updatedBy: v.optional(sidebarItemTableFields.updatedBy),
   deletionTime: v.optional(v.nullable(v.number())),
-  deletedBy: v.optional(v.nullable(v.id('userProfiles'))),
+  deletedBy: v.optional(sidebarItemTableFields.deletedBy),
 }
 
 const sidebarItemPatchFieldsValidator = v.object(sidebarItemPatchCommonFields)
@@ -246,7 +246,7 @@ const sidebarItemPatchFieldsValidator = v.object(sidebarItemPatchCommonFields)
 const sidebarItemPatchPreconditionValidator = v.object({
   ...sidebarItemPatchCommonFields,
   type: v.optional(sidebarItemTypeValidator),
-  createdBy: v.optional(v.id('userProfiles')),
+  createdBy: v.optional(sidebarItemTableFields.createdBy),
 })
 
 const sidebarItemShareSnapshotValidator = v.object({

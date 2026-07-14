@@ -28,7 +28,7 @@ describe('filesystem transaction semantics', () => {
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', noteRowId, {
         updatedTime: CONTENT_UPDATED_TIMESTAMP,
-        updatedBy: ctx.dm.profile._id,
+        updatedBy: ctx.dm.memberDomainId,
       })
     })
 

@@ -1,13 +1,14 @@
 import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Doc } from '../../_generated/dataModel'
 import type { WithoutSystemFields } from 'convex/server'
 import type { ResourceStatus } from '@wizard-archive/editor/resources/resource-contract'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { normalizeLegacyResourcePathSegment } from '../resourcePathSegment'
 
 export type SidebarItemLifecycleFields = {
   status: ResourceStatus
   deletionTime?: number | null
-  deletedBy?: Id<'userProfiles'> | null
+  deletedBy?: CampaignMemberId | null
 }
 
 type ConsistentSidebarItemLifecycle =
@@ -19,7 +20,7 @@ type ConsistentSidebarItemLifecycle =
   | {
       status: typeof RESOURCE_STATUS.trashed
       deletionTime: number
-      deletedBy: Id<'userProfiles'>
+      deletedBy: CampaignMemberId
     }
 
 export function assertSidebarItemLifecycleConsistency<T extends SidebarItemLifecycleFields>(

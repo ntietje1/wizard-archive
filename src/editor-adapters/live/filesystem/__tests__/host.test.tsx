@@ -1,13 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'
-import type { Id } from 'convex/_generated/dataModel'
 import type {
   WizardEditorItem,
   WizardEditorResourceCreateCommand,
   useWizardEditorResourceCommandRuntime,
 } from '@wizard-archive/editor/adapter'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import { createContext, use } from 'react'
 import type { ReactNode } from 'react'
@@ -133,7 +133,7 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
     campaign: {
       data: {
         myMembership: {
-          userId: 'user_1' as Id<'userProfiles'>,
+          id: testCampaignMemberId('member_1'),
         },
       },
     },

@@ -7,7 +7,7 @@ import type { CampaignQueryCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { CampaignMemberRow } from '../../campaigns/rows'
 type SidebarPermissionCtx = Pick<QueryCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>
 }

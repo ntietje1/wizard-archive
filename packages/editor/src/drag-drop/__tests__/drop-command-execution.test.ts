@@ -6,7 +6,7 @@ import {
   RESOURCE_TYPES,
 } from '../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../workspace/items'
-import type { CampaignId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import type { DropResult } from '../file-drop'
 import type { PlannedDropCommand } from '../drop-command'
 import {
@@ -16,7 +16,7 @@ import {
 } from '../drop-command-execution'
 import { CANVAS_DROP_ZONE_TYPE } from '../drop-target-data'
 
-const campaignId = 'campaign_1' as CampaignId
+const campaignId = testCampaignId('campaign_1')
 
 function sidebarItemId(value: string) {
   return value as ResourceId

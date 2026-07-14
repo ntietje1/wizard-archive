@@ -330,7 +330,7 @@ describe('rollback edge cases', () => {
       await dbCtx.db.patch('sidebarItems', mapRowId, {
         status: 'trashed',
         deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
+        deletedBy: ctx.dm.memberDomainId,
       })
     })
 

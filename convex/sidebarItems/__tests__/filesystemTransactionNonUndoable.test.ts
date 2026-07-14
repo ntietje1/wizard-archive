@@ -16,7 +16,7 @@ describe('non-undoable filesystem transactions', () => {
       name: 'Archive',
       status: 'trashed',
       deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     const operationId = testOperationId('delete-folder-forever')
@@ -54,7 +54,7 @@ describe('non-undoable filesystem transactions', () => {
         name: `Trash ${index}`,
         status: 'trashed',
         deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
+        deletedBy: ctx.dm.memberDomainId,
       })
     }
 

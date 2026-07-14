@@ -4,6 +4,7 @@ import { parseUsername, USERNAME_SLUG_OPTIONS } from '../../../shared/users/vali
 import { USERNAME_MAX_LENGTH } from '../../users/constants'
 import type { MutationCtx } from '../../_generated/server'
 import type { Username } from '../../../shared/users/validation'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 type AuthUserDoc = {
   _id: string
@@ -49,6 +50,7 @@ function getValidBaseUsernameSlug(user: AuthUserDoc): string {
 
 async function insertUserProfile(ctx: MutationCtx, user: AuthUserDoc, username: Username) {
   await ctx.db.insert('userProfiles', {
+    userProfileUuid: generateDomainId(DOMAIN_ID_KIND.userProfile),
     authUserId: String(user._id),
     username,
     email: user.email ?? null,

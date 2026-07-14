@@ -1,24 +1,14 @@
-import type { UserProfileId } from '../common/ids'
-import type { AssetId } from '@wizard-archive/editor/resources/domain-id'
+import type { UserProfileId } from '@wizard-archive/editor/resources/domain-id'
 import type { Username } from './validation'
 
-type ProfileImage = { type: 'external'; url: string } | { type: 'asset'; assetId: AssetId }
-
-export type UserProfileRow = {
-  _id: UserProfileId
-  _creationTime: number
-  authUserId: string
+export type UserProfile = {
+  id: UserProfileId
+  createdAt: number
   username: Username
   email: string | null
   emailVerified: boolean | null
   name: string | null
-  profileImage: ProfileImage | null
   twoFactorEnabled: boolean | null
-}
-
-export type UserProfile = Omit<UserProfileRow, '_id' | '_creationTime' | 'profileImage'> & {
-  id: UserProfileId
-  createdAt: number
   imageUrl: string | null
 }
 

@@ -66,7 +66,7 @@ async function insertYjsUpdate(
       triggerSeq: seq,
       campaignId: ctx.campaign._id,
       campaignMemberId: ctx.membership._id,
-      userId: ctx.membership.userId,
+      actorId: ctx.membership.campaignMemberUuid,
     },
   )
 

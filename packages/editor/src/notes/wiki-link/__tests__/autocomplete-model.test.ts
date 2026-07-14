@@ -21,7 +21,7 @@ import {
   RESOURCE_TYPES,
 } from '../../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../../workspace/items'
-import type { UserProfileId } from '../../../../../../shared/common/ids'
+import { testCampaignMemberId } from '../../../../../../shared/test/campaign-member-id'
 import { testCampaignId } from '../../../../../../shared/test/campaign-id'
 import { createResourceCatalogModel } from '../../../filesystem/catalog'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
@@ -54,10 +54,6 @@ function createCampaignId() {
   return testCampaignId('campaign-1')
 }
 
-function createUserProfileId(): UserProfileId {
-  return 'user-1' as UserProfileId
-}
-
 function createBaseItem({
   name,
   parentId = null,
@@ -74,7 +70,7 @@ function createBaseItem({
     allPermissionLevel: null,
     campaignId: createCampaignId(),
     color: null,
-    createdBy: createUserProfileId(),
+    createdBy: testCampaignMemberId('user-1'),
     deletedBy: null,
     deletionTime: null,
     iconName: null,

@@ -1,8 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, test, vi } from 'vite-plus/test'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
-import type { UserProfileId } from 'shared/common/ids'
 import { testCampaignId } from 'shared/test/campaign-id'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 import { testResourceId } from 'shared/test/resource-id'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type {
@@ -250,7 +250,7 @@ function createCanvasItem({
     allPermissionLevel: null,
     color: null,
     campaignId: testCampaignId(itemWorkspaceId),
-    createdBy: 'user-1' as UserProfileId,
+    createdBy: testCampaignMemberId('user-1'),
     deletedBy: null,
     deletionTime: null,
     iconName: null,

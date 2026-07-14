@@ -2,9 +2,9 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { useCampaignActor } from '../useCampaignActor'
-import { testId } from '~/test/helpers/test-id'
 import { testCampaignId } from 'shared/test/campaign-id'
 import { testCampaignMemberId } from 'shared/test/campaign-member-id'
+import { testUserProfileId } from 'shared/test/user-profile-id'
 import type { CampaignViewAsSelection } from 'shared/campaigns/actor'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
@@ -74,7 +74,7 @@ function campaignMember(
   return {
     id,
     createdAt: 1,
-    userId: testId<'userProfiles'>('user_1'),
+    userId: testUserProfileId('user_1'),
     campaignId: memberCampaignId,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,

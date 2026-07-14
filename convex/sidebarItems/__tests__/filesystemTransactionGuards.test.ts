@@ -26,7 +26,7 @@ describe('filesystem transaction guards', () => {
       name: 'Trashed',
       status: 'trashed',
       deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     const { active, trash: trashed } = await dmAuth.query(
@@ -338,7 +338,7 @@ describe('filesystem transaction guards', () => {
         name: 'Other Trash',
         status: 'trashed',
         deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
+        deletedBy: ctx.dm.memberDomainId,
       },
     )
 

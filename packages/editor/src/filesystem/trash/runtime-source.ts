@@ -1,5 +1,5 @@
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
-import type { UserProfileId } from '../../../../../shared/common/ids'
+import type { CampaignMemberId } from '../../resources/domain-id'
 import type { AnyItem } from '../../workspace/items'
 import type { TrashSource } from './source'
 import { createRuntimeItemCardSource } from '../cards/runtime-source'
@@ -45,13 +45,13 @@ export function createRuntimeTrashSource(runtime: RuntimeTrashSourceInput): Tras
       permissions.canMutateItem(item, PERMISSION_LEVEL.FULL_ACCESS),
     canEmptyTrash: () => permissions.canEmptyTrash && getTrashItemCount() > 0,
     canRestoreItem: (item: AnyItem) => getSidebarFilesystemCapabilities(actor, [item]).canRestore,
-    getDeletedByName: (deletedById: UserProfileId | null) => {
+    getDeletedByName: (deletedById: CampaignMemberId | null) => {
       if (!deletedById) return undefined
 
       const viewAsParticipant = runtime.filesystem.sharing.viewAsParticipant
       const participant =
         viewAsParticipant.status === 'available'
-          ? viewAsParticipant.participants.find((candidate) => candidate.profileId === deletedById)
+          ? viewAsParticipant.participants.find((candidate) => candidate.id === deletedById)
           : undefined
       if (participant) {
         return participant.displayName

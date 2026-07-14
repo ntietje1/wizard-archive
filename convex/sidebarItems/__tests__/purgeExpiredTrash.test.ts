@@ -17,7 +17,7 @@ describe('purgeExpiredTrash', () => {
     const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: expiredTime,
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
@@ -35,7 +35,7 @@ describe('purgeExpiredTrash', () => {
     const { noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: recentTime,
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
@@ -53,7 +53,7 @@ describe('purgeExpiredTrash', () => {
     const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: expiredTime,
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     const recentTime = Date.now() - TWENTY_NINE_DAYS_MS
@@ -62,7 +62,7 @@ describe('purgeExpiredTrash', () => {
       parentId: folderId,
       status: 'trashed',
       deletionTime: recentTime,
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})
@@ -88,14 +88,14 @@ describe('purgeExpiredTrash', () => {
       {
         status: 'trashed',
         deletionTime: expiredTime,
-        deletedBy: ctx.dm.profile._id,
+        deletedBy: ctx.dm.memberDomainId,
       },
     )
 
     const { noteRowId: recentNoteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: recentTime,
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     await t.mutation(internal.sidebarItems.internalMutations.purgeExpiredTrash, {})

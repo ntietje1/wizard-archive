@@ -508,7 +508,7 @@ describe('rollback metadata integrity', () => {
       await t.run(async (dbCtx) => {
         const afterRollback = await dbCtx.db.get('sidebarItems', noteRowId)
         expect(afterRollback!.updatedTime).toBeGreaterThan(beforeRollback!.updatedTime ?? 0)
-        expect(afterRollback!.updatedBy).toBe(ctx.dm.profile._id)
+        expect(afterRollback!.updatedBy).toBe(ctx.dm.memberDomainId)
       })
     } finally {
       vi.useRealTimers()

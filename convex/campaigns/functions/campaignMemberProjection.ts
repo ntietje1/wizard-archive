@@ -1,24 +1,20 @@
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { CampaignId, UserProfileId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberRow } from '../rows'
 
 export function toCampaignMemberProjection<TProfile>(
   member: CampaignMemberRow,
   campaignId: CampaignId,
+  userId: UserProfileId,
   userProfile: TProfile,
 ) {
-  const {
-    _id: _rowId,
-    _creationTime,
-    campaignMemberUuid,
-    campaignId: _campaignRowId,
-    ...fields
-  } = member
   return {
-    ...fields,
-    id: assertDomainId(DOMAIN_ID_KIND.campaignMember, campaignMemberUuid),
+    id: assertDomainId(DOMAIN_ID_KIND.campaignMember, member.campaignMemberUuid),
     campaignId,
-    createdAt: _creationTime,
+    userId,
+    createdAt: member._creationTime,
+    role: member.role,
+    status: member.status,
     userProfile,
   }
 }

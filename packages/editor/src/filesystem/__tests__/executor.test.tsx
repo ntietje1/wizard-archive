@@ -2,7 +2,7 @@ import type { ResourceId } from '../../resources/domain-id'
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 
-import type { CampaignId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { testOperationId } from '../../test/operation-id'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import type { ResourceTitle } from '../../resources/resource-contract'
@@ -15,7 +15,7 @@ import { createFileSystemUndoStore } from '../undo-store'
 import { createReadWriteTestCache } from './cache-test-utils'
 import { createCreatedItemReceipt, createFileSystemReceipt } from './receipt-factory'
 
-const campaignId = 'campaign_1' as CampaignId
+const campaignId = testCampaignId('campaign_1')
 const executorEffects = {
   reportError: vi.fn(),
   reportReceiptEffectError: vi.fn(),
@@ -62,7 +62,7 @@ describe('useFileSystemExecutor', () => {
     const { result } = renderHook(() =>
       useFileSystemExecutor({
         workspaceId: campaignId,
-        currentUserId: null,
+        currentActorId: null,
         activeItemSurface: { parentId: null },
         cacheAdapter,
         navigation: {
@@ -153,7 +153,7 @@ describe('useFileSystemExecutor', () => {
     const { result } = renderHook(() =>
       useFileSystemExecutor({
         workspaceId: campaignId,
-        currentUserId: null,
+        currentActorId: null,
         activeItemSurface: { parentId: null },
         cacheAdapter: createReadWriteTestCache(snapshot),
         navigation: {

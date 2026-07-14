@@ -2,7 +2,7 @@ import { asyncMap } from 'convex-helpers'
 import { getUserProfileById } from '../../users/functions/getUserProfile'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { CampaignMemberRow } from '../rows'
 import type { UserProfile } from '../../../shared/users/types'
 
 type CampaignMemberProfileCtx = CampaignQueryCtx
@@ -16,15 +16,14 @@ export async function getCampaignMemberRows(
     .collect()
 }
 
-export async function loadProfilesByMemberUserId<Profile>(
+export async function loadProfilesByMemberUserId(
   ctx: CampaignMemberProfileCtx,
   members: Array<CampaignMemberRow>,
-  mapProfile: (profile: UserProfile) => Profile,
-): Promise<Map<Id<'userProfiles'>, Profile>> {
-  const profilesByUserId = new Map<Id<'userProfiles'>, Profile>()
+): Promise<Map<Id<'userProfiles'>, UserProfile>> {
+  const profilesByUserId = new Map<Id<'userProfiles'>, UserProfile>()
   await asyncMap(members, async (member) => {
     const profile = await getUserProfileById(ctx, { profileId: member.userId })
-    if (profile) profilesByUserId.set(member.userId, mapProfile(profile))
+    if (profile) profilesByUserId.set(member.userId, profile)
   })
   return profilesByUserId
 }

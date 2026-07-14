@@ -6,17 +6,13 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../../shared/campaigns/types'
 import {
-  getUserProfileByAuthProfileKey,
+  getUserProfileDocByAuthProfileKey,
+  getUserProfileDocByUsername,
   getUserProfileById,
-  getUserProfileByUsername,
 } from '../../users/functions/getUserProfile'
 import { toUserProfileSummary } from '../../users/functions/profileSummary'
-import type {
-  Campaign,
-  CampaignRow,
-  CampaignMemberSummary,
-  CampaignMemberRow,
-} from '../../../shared/campaigns/types'
+import type { Campaign, CampaignMemberSummary } from '../../../shared/campaigns/types'
+import type { CampaignMemberRow, CampaignRow } from '../rows'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
@@ -71,21 +67,24 @@ async function enhanceCampaign(
   const identity = await ctx.auth.getUserIdentity()
   let myMembership: CampaignMemberSummary | null = null
   if (identity) {
-    const profile = await getUserProfileByAuthProfileKey(ctx, {
+    const profileRow = await getUserProfileDocByAuthProfileKey(ctx, {
       authProfileKey: getAuthProfileKey(identity),
     })
-    if (!profile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'User profile not found')
+    if (!profileRow) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'User profile not found')
     const member: CampaignMemberRow | null = await ctx.db
       .query('campaignMembers')
       .withIndex('by_campaign_user', (q) =>
-        q.eq('campaignId', campaign._id).eq('userId', profile.id),
+        q.eq('campaignId', campaign._id).eq('userId', profileRow._id),
       )
       .unique()
 
     if (member && member.status !== CAMPAIGN_MEMBER_STATUS.Removed) {
+      const profile = await getUserProfileById(ctx, { profileId: profileRow._id })
+      if (!profile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'User profile not found')
       myMembership = toCampaignMemberProjection(
         member,
         assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid),
+        profile.id,
         toUserProfileSummary(profile),
       )
     }
@@ -122,13 +121,13 @@ export async function getCampaignRowBySlug(
   ctx: QueryCtx,
   { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
 ): Promise<CampaignRow> {
-  const dmUserProfile = await getUserProfileByUsername(ctx, {
+  const dmUserProfile = await getUserProfileDocByUsername(ctx, {
     username: dmUsername,
   })
   if (!dmUserProfile) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   const campaign = await ctx.db
     .query('campaigns')
-    .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', dmUserProfile.id))
+    .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', dmUserProfile._id))
     .unique()
   if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')

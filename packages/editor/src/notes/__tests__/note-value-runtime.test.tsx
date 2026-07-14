@@ -14,7 +14,7 @@ import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory
 import { useNoteValueRuntimeSource } from '../value-runtime'
 import type { NoteValueReferences } from '../value-runtime-model'
 import type { CustomBlockNoteEditor } from '../editor-schema'
-import type { UserProfileId } from '../../../../../shared/common/ids'
+import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import type { NoteValueRuntimeState } from '../values/state-contract'
 import type { FolderItem } from '../../workspace/items'
@@ -271,7 +271,7 @@ function baseItem(id: ResourceId, name: string) {
     previewAssetId: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: userProfileId('user-1'),
+    createdBy: testCampaignMemberId('user-1'),
     deletionTime: null,
     deletedBy: null,
     shares: [],
@@ -304,8 +304,4 @@ function sidebarItemId(id: string): ResourceId {
 
 function campaignId(id: string) {
   return testCampaignId(id)
-}
-
-function userProfileId(id: string): UserProfileId {
-  return id as UserProfileId
 }

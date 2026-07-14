@@ -9,7 +9,6 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/t
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 import { assertUsername } from 'shared/users/validation'
-import type { UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
@@ -65,7 +64,10 @@ const PUBLIC_DEMO_PLAYER_MEMBER_ID = assertDomainId(
   DOMAIN_ID_KIND.campaignMember,
   '01980c1a-5e70-7000-8000-000000000105',
 )
-const PUBLIC_DEMO_PLAYER_USER_ID = 'demo-user-mira' as UserProfileId
+const PUBLIC_DEMO_PLAYER_USER_ID = assertDomainId(
+  DOMAIN_ID_KIND.userProfile,
+  '01980c1a-5e70-7000-8000-000000000302',
+)
 const PUBLIC_DEMO_PLAYER_MEMBERS: Array<CampaignMemberSummary> = [
   {
     id: PUBLIC_DEMO_PLAYER_MEMBER_ID,

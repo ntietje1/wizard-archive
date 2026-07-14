@@ -10,7 +10,7 @@ import type { CampaignQueryCtx } from '../../functions'
 import type { Block } from '../../blocks/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { CampaignMemberRow } from '../../campaigns/rows'
 
 async function getBlockPermissionLevel(
   ctx: CampaignQueryCtx,

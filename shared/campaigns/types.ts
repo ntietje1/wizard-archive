@@ -1,10 +1,8 @@
-import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import type {
-  CampaignId as CampaignRowId,
-  CampaignMemberId as CampaignMemberRowId,
-  SessionRowId,
+  CampaignId,
+  CampaignMemberId,
   UserProfileId,
-} from '../common/ids'
+} from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignSlug } from './validation'
 import type { UserProfile, UserProfileSummary } from '../users/types'
 
@@ -33,47 +31,26 @@ export const CAMPAIGN_MEMBER_STATUS = {
 export type CampaignMemberStatus =
   (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS]
 
-export type CampaignRow = {
-  campaignUuid: string
-  _id: CampaignRowId
-  _creationTime: number
-  dmUserId: UserProfileId
+export type Campaign = {
+  id: CampaignId
+  createdAt: number
   name: string
   description: string
   slug: CampaignSlug
   status: CampaignStatus
-  currentSessionId: SessionRowId | null
   defaultFolderInheritShares: boolean
-}
-
-export type Campaign = Omit<
-  CampaignRow,
-  '_id' | '_creationTime' | 'campaignUuid' | 'currentSessionId' | 'dmUserId'
-> & {
-  id: CampaignId
-  createdAt: number
   dmUserProfile: UserProfileSummary
   myMembership: CampaignMemberSummary | null
   acceptedMemberCount: number
 }
 
-export type CampaignMemberRow = {
-  campaignMemberUuid: string
-  _id: CampaignMemberRowId
-  _creationTime: number
+type PublicCampaignMember = {
+  id: CampaignMemberId
+  createdAt: number
   userId: UserProfileId
-  campaignId: CampaignRowId
+  campaignId: CampaignId
   role: CampaignMemberRole
   status: CampaignMemberStatus
-}
-
-type PublicCampaignMember = Omit<
-  CampaignMemberRow,
-  '_id' | '_creationTime' | 'campaignMemberUuid' | 'campaignId'
-> & {
-  id: CampaignMemberId
-  campaignId: CampaignId
-  createdAt: number
 }
 
 export type CampaignMember = PublicCampaignMember & {

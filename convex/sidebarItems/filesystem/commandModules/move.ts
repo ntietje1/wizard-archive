@@ -238,7 +238,7 @@ async function executeParentMove(
     parentId,
     ...renamePatch,
     updatedTime: Date.now(),
-    updatedBy: ctx.membership.userId,
+    updatedBy: ctx.membership.campaignMemberUuid,
   })
 
   await logEditHistory(ctx, {

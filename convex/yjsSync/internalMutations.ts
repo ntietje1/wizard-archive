@@ -20,6 +20,7 @@ import {
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import type { SnapshotCaptureResult } from './snapshotCapture'
+import { campaignMemberIdValidator } from '../campaigns/schema'
 
 export const replaceWithSnapshotUpdate = internalMutation({
   args: {
@@ -203,7 +204,7 @@ export const maybeCreateSnapshot = internalMutation({
     triggerSeq: v.number(),
     campaignId: v.id('campaigns'),
     campaignMemberId: v.id('campaignMembers'),
-    userId: v.id('userProfiles'),
+    actorId: campaignMemberIdValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -240,7 +241,7 @@ export const maybeCreateSnapshot = internalMutation({
 
     await ctx.db.patch('sidebarItems', args.documentId, {
       updatedTime: Date.now(),
-      updatedBy: args.userId,
+      updatedBy: args.actorId,
     })
 
     const historyEntry = await logEditHistory(

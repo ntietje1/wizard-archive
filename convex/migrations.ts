@@ -3,7 +3,6 @@ import { components, internal } from './_generated/api'
 import type { DataModel } from './_generated/dataModel'
 import { getBlockSharePermissionLevelMigrationPatch } from './blockShares/permissionLevelMigration'
 import { getDeleteBlockInlineContentProjectionFieldPatch } from './blocks/inlineContentMigration'
-import { getCampaignDefaultFolderInheritSharesMigrationPatch } from './campaigns/defaultFolderInheritSharesMigration'
 import { getFolderInheritSharesMigrationPatch } from './folders/inheritSharesMigration'
 import {
   getLegacyNoteValueCompileFieldsCleanupPatch,
@@ -45,18 +44,6 @@ export const backfillFolderInheritShares = migrations.define({
   batchSize: 100,
   migrateOne: (_ctx, folder) => {
     return getFolderInheritSharesMigrationPatch(folder as { inheritShares?: boolean }) ?? undefined
-  },
-})
-
-export const backfillCampaignDefaultFolderInheritShares = migrations.define({
-  table: 'campaigns',
-  batchSize: 100,
-  migrateOne: (_ctx, campaign) => {
-    return (
-      getCampaignDefaultFolderInheritSharesMigrationPatch(
-        campaign as { defaultFolderInheritShares?: boolean | null },
-      ) ?? undefined
-    )
   },
 })
 
@@ -109,10 +96,6 @@ export const runBackfillFolderInheritSharesMigration = migrations.runner(
   internal.migrations.backfillFolderInheritShares,
 )
 
-export const runBackfillCampaignDefaultFolderInheritSharesMigration = migrations.runner(
-  internal.migrations.backfillCampaignDefaultFolderInheritShares,
-)
-
 export const runBackfillNoteValueCompileStateMigration = migrations.runner(
   internal.migrations.backfillNoteValueCompileState,
 )
@@ -137,7 +120,6 @@ export const runAll = migrations.runner([
   internal.migrations.migrateSidebarItemLifecycleStatus,
   internal.migrations.migrateBlockSharePermissionLevel,
   internal.migrations.deleteBlockInlineContentProjectionField,
-  internal.migrations.backfillCampaignDefaultFolderInheritShares,
   internal.migrations.backfillFolderInheritShares,
   internal.migrations.backfillNoteValueCompileState,
   internal.migrations.migrateFileSystemTransactionVocabulary,

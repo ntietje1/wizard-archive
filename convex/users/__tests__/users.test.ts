@@ -29,7 +29,7 @@ describe('getUserProfile', () => {
     const result = await authed.query(api.users.queries.getUserProfile, {})
 
     expect(result).not.toBeNull()
-    expect(result!.id).toBe(profile._id)
+    expect(result!.id).toBe(profile.userProfileUuid)
     expect(result!.username).toBe(profile.username)
     expect(result!.email).toBe(profile.email)
     expect(result!.name).toBe(profile.name)
@@ -53,7 +53,7 @@ describe('getUserProfile', () => {
 
     expect(result).toHaveProperty('id')
     expect(result).toHaveProperty('createdAt')
-    expect(result).toHaveProperty('authUserId')
+    expect(result).not.toHaveProperty('authUserId')
     expect(result).toHaveProperty('username')
     expect(result).toHaveProperty('email')
     expect(result).toHaveProperty('name')

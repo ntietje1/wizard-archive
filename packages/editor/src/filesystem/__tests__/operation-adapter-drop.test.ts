@@ -109,7 +109,7 @@ function sidebarItemId(id: string): ResourceId {
 function createRuntimeArgs(): ResourceCommandRuntimeArgs {
   return {
     workspaceId: 'workspace-1',
-    currentUserId: null,
+    currentActorId: null,
     cache: {} as ResourceCommandRuntimeArgs['cache'],
     navigation: {} as ResourceCommandRuntimeArgs['navigation'],
     trashState: {} as ResourceCommandRuntimeArgs['trashState'],

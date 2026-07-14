@@ -12,11 +12,7 @@ export async function getCampaignMembers(
 ): Promise<Array<CampaignMemberSummary>> {
   const members = await getCampaignMemberRows(ctx)
   const activeMembers = members.filter((m) => m.status === CAMPAIGN_MEMBER_STATUS.Accepted)
-  const profilesByUserId = await loadProfilesByMemberUserId(
-    ctx,
-    activeMembers,
-    toUserProfileSummary,
-  )
+  const profilesByUserId = await loadProfilesByMemberUserId(ctx, activeMembers)
   const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid)
   return activeMembers.flatMap((member) => {
     const profile = profilesByUserId.get(member.userId)
@@ -24,6 +20,8 @@ export async function getCampaignMembers(
       logger.warn(`User profile not found for userId: ${member.userId}`)
       return []
     }
-    return [toCampaignMemberProjection(member, campaignId, profile)]
+    return [
+      toCampaignMemberProjection(member, campaignId, profile.id, toUserProfileSummary(profile)),
+    ]
   })
 }

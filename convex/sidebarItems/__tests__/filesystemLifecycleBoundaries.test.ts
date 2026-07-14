@@ -33,7 +33,7 @@ describe('filesystem command lifecycle boundaries', () => {
         name: 'Trashed Note',
         status: 'trashed',
         deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
+        deletedBy: ctx.dm.memberDomainId,
       },
     )
 
@@ -141,7 +141,7 @@ describe('filesystem command lifecycle boundaries', () => {
       name: 'Large Trash Folder',
       status: 'trashed',
       deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
     for (let index = 0; index < 100; index += 1) {
       await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -149,7 +149,7 @@ describe('filesystem command lifecycle boundaries', () => {
         parentId: folderId,
         status: 'trashed',
         deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
+        deletedBy: ctx.dm.memberDomainId,
       })
     }
 
@@ -171,7 +171,7 @@ describe('filesystem command lifecycle boundaries', () => {
       name: 'Large Trash Folder',
       status: 'trashed',
       deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
     for (let index = 0; index < 100; index += 1) {
       await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -179,7 +179,7 @@ describe('filesystem command lifecycle boundaries', () => {
         parentId: folderId,
         status: 'trashed',
         deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
+        deletedBy: ctx.dm.memberDomainId,
       })
     }
 

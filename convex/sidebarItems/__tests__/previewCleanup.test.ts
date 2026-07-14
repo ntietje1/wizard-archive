@@ -11,13 +11,14 @@ import {
 import type { TestConvex } from 'convex-test'
 import type schema from '../../schema'
 import type { Id } from '../../_generated/dataModel'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { getPreviewLease } from '../previewLease'
 import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 
 async function trashItem(
   t: TestConvex<typeof schema>,
   itemId: Id<'sidebarItems'>,
-  deletedBy: Id<'userProfiles'>,
+  deletedBy: CampaignMemberId,
   patches?: Record<string, unknown>,
 ) {
   await t.run(async (dbCtx) => {
@@ -57,7 +58,7 @@ describe('preview cleanup on hard delete', () => {
     })
     const storageId = await storeTestAsset(t, ctx.dm.profile._id, 'preview')
 
-    await trashItem(t, noteRowId, ctx.dm.profile._id, {
+    await trashItem(t, noteRowId, ctx.dm.memberDomainId, {
       previewStorageId: storageId,
     })
 
@@ -92,7 +93,7 @@ describe('preview cleanup on hard delete', () => {
         .unique()
       if (ext) await dbCtx.db.patch('files', ext._id, { storageId: fileBlob })
     })
-    await trashItem(t, fileRowId, ctx.dm.profile._id, {
+    await trashItem(t, fileRowId, ctx.dm.memberDomainId, {
       previewStorageId: previewBlob,
     })
 
@@ -133,7 +134,7 @@ describe('preview cleanup on hard delete', () => {
       if (fileExt) await dbCtx.db.patch('files', fileExt._id, { storageId: sharedBlob })
       if (mapExt) await dbCtx.db.patch('gameMaps', mapExt._id, { imageStorageId: sharedBlob })
     })
-    await trashItem(t, fileRowId, ctx.dm.profile._id)
+    await trashItem(t, fileRowId, ctx.dm.memberDomainId)
 
     await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -169,7 +170,7 @@ describe('preview cleanup on hard delete', () => {
         .unique()
       if (ext) await dbCtx.db.patch('gameMaps', ext._id, { imageStorageId: sharedBlob })
     })
-    await trashItem(t, mapRowId, ctx.dm.profile._id, {
+    await trashItem(t, mapRowId, ctx.dm.memberDomainId, {
       previewStorageId: sharedBlob,
     })
 
@@ -203,7 +204,7 @@ describe('preview cleanup on hard delete', () => {
         .unique()
       if (ext) await dbCtx.db.patch('gameMaps', ext._id, { imageStorageId: imageBlob })
     })
-    await trashItem(t, mapRowId, ctx.dm.profile._id, {
+    await trashItem(t, mapRowId, ctx.dm.memberDomainId, {
       previewStorageId: previewBlob,
     })
 
@@ -247,7 +248,7 @@ describe('preview cleanup on hard delete', () => {
       if (fileExt) await dbCtx.db.patch('files', fileExt._id, { storageId: sharedBlob })
       if (mapExt) await dbCtx.db.patch('gameMaps', mapExt._id, { imageStorageId: sharedBlob })
     })
-    await trashItem(t, mapRowId, ctx.dm.profile._id)
+    await trashItem(t, mapRowId, ctx.dm.memberDomainId)
 
     await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -275,7 +276,7 @@ describe('preview cleanup on hard delete', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId, noteRowId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    await trashItem(t, noteRowId, ctx.dm.profile._id)
+    await trashItem(t, noteRowId, ctx.dm.memberDomainId)
 
     await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
@@ -293,7 +294,7 @@ describe('preview cleanup on hard delete', () => {
     const dmAuth = asDm(ctx)
 
     const { folderId, folderRowId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
-    await trashItem(t, folderRowId, ctx.dm.profile._id)
+    await trashItem(t, folderRowId, ctx.dm.memberDomainId)
 
     await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,

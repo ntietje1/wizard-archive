@@ -52,7 +52,6 @@ import type * as bookmarks_functions_getItemBookmark from "../bookmarks/function
 import type * as bookmarks_functions_toggleItemBookmark from "../bookmarks/functions/toggleItemBookmark.js";
 import type * as bookmarks_types from "../bookmarks/types.js";
 import type * as campaigns_constants from "../campaigns/constants.js";
-import type * as campaigns_defaultFolderInheritSharesMigration from "../campaigns/defaultFolderInheritSharesMigration.js";
 import type * as campaigns_functions_acceptedPlayerMember from "../campaigns/functions/acceptedPlayerMember.js";
 import type * as campaigns_functions_campaignIdentity from "../campaigns/functions/campaignIdentity.js";
 import type * as campaigns_functions_campaignMemberProfiles from "../campaigns/functions/campaignMemberProfiles.js";
@@ -69,6 +68,7 @@ import type * as campaigns_functions_updateCampaignMemberStatus from "../campaig
 import type * as campaigns_internalQueries from "../campaigns/internalQueries.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
+import type * as campaigns_rows from "../campaigns/rows.js";
 import type * as campaigns_validation from "../campaigns/validation.js";
 import type * as canvases_baseSchema from "../canvases/baseSchema.js";
 import type * as canvases_functions_canvasCompanion from "../canvases/functions/canvasCompanion.js";
@@ -258,7 +258,6 @@ import type * as sidebarItems_validation_access from "../sidebarItems/validation
 import type * as sidebarItems_validation_name from "../sidebarItems/validation/name.js";
 import type * as sidebarItems_validation_orchestration from "../sidebarItems/validation/orchestration.js";
 import type * as sidebarItems_validation_parent from "../sidebarItems/validation/parent.js";
-import type * as sidebarItems_validation_slug from "../sidebarItems/validation/slug.js";
 import type * as sidebarShares_functions_getSidebarItemsWithShares from "../sidebarShares/functions/getSidebarItemsWithShares.js";
 import type * as sidebarShares_functions_projectSidebarItemShare from "../sidebarShares/functions/projectSidebarItemShare.js";
 import type * as sidebarShares_functions_setFolderInheritShares from "../sidebarShares/functions/setFolderInheritShares.js";
@@ -360,7 +359,6 @@ declare const fullApi: ApiFromModules<{
   "bookmarks/functions/toggleItemBookmark": typeof bookmarks_functions_toggleItemBookmark;
   "bookmarks/types": typeof bookmarks_types;
   "campaigns/constants": typeof campaigns_constants;
-  "campaigns/defaultFolderInheritSharesMigration": typeof campaigns_defaultFolderInheritSharesMigration;
   "campaigns/functions/acceptedPlayerMember": typeof campaigns_functions_acceptedPlayerMember;
   "campaigns/functions/campaignIdentity": typeof campaigns_functions_campaignIdentity;
   "campaigns/functions/campaignMemberProfiles": typeof campaigns_functions_campaignMemberProfiles;
@@ -377,6 +375,7 @@ declare const fullApi: ApiFromModules<{
   "campaigns/internalQueries": typeof campaigns_internalQueries;
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
+  "campaigns/rows": typeof campaigns_rows;
   "campaigns/validation": typeof campaigns_validation;
   "canvases/baseSchema": typeof canvases_baseSchema;
   "canvases/functions/canvasCompanion": typeof canvases_functions_canvasCompanion;
@@ -566,7 +565,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/validation/name": typeof sidebarItems_validation_name;
   "sidebarItems/validation/orchestration": typeof sidebarItems_validation_orchestration;
   "sidebarItems/validation/parent": typeof sidebarItems_validation_parent;
-  "sidebarItems/validation/slug": typeof sidebarItems_validation_slug;
   "sidebarShares/functions/getSidebarItemsWithShares": typeof sidebarShares_functions_getSidebarItemsWithShares;
   "sidebarShares/functions/projectSidebarItemShare": typeof sidebarShares_functions_projectSidebarItemShare;
   "sidebarShares/functions/setFolderInheritShares": typeof sidebarShares_functions_setFolderInheritShares;

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
 import { getDeleteBlockInlineContentProjectionFieldPatch } from '../blocks/inlineContentMigration'
-import { getCampaignDefaultFolderInheritSharesMigrationPatch } from '../campaigns/defaultFolderInheritSharesMigration'
 import { getFolderInheritSharesMigrationPatch } from '../folders/inheritSharesMigration'
 import { getFileSystemTransactionVocabularyMigrationPatch } from '../sidebarItems/filesystem/transactionVocabularyMigration'
 import { getFileSystemSnapshotNormalizedNameMigrationPatch } from '../sidebarItems/filesystem/snapshotNormalizedNameMigration'
@@ -98,32 +97,6 @@ describe('migrations', () => {
     it('preserves existing inheritShares values', () => {
       expect(getFolderInheritSharesMigrationPatch({ inheritShares: false })).toBeNull()
       expect(getFolderInheritSharesMigrationPatch({ inheritShares: true })).toBeNull()
-    })
-  })
-
-  describe('getCampaignDefaultFolderInheritSharesMigrationPatch', () => {
-    it('materializes missing campaign defaults as nullable legacy values', () => {
-      expect(getCampaignDefaultFolderInheritSharesMigrationPatch({})).toEqual({
-        defaultFolderInheritShares: null,
-      })
-    })
-
-    it('preserves migrated nullable and boolean campaign defaults', () => {
-      expect(
-        getCampaignDefaultFolderInheritSharesMigrationPatch({
-          defaultFolderInheritShares: null,
-        }),
-      ).toBeNull()
-      expect(
-        getCampaignDefaultFolderInheritSharesMigrationPatch({
-          defaultFolderInheritShares: false,
-        }),
-      ).toBeNull()
-      expect(
-        getCampaignDefaultFolderInheritSharesMigrationPatch({
-          defaultFolderInheritShares: true,
-        }),
-      ).toBeNull()
     })
   })
 

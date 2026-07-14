@@ -156,7 +156,7 @@ describe('campaign deletion cascade', () => {
       name: 'Trashed Note',
       status: 'trashed',
       deletionTime: Date.now(),
-      deletedBy: dmId,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {

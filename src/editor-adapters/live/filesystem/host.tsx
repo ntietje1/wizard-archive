@@ -52,7 +52,7 @@ export function useLiveFileSystemRuntime(
   }
   return useWizardEditorResourceCommandRuntime({
     workspaceId,
-    currentUserId: campaign.data?.myMembership?.userId ?? null,
+    currentActorId: campaign.data?.myMembership?.id ?? null,
     cache,
     navigation,
     trashState: trashDialogState,

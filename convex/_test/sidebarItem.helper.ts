@@ -9,8 +9,8 @@ import type { FileItem } from '@wizard-archive/editor/files/item-contract'
 import type { MapItem } from '@wizard-archive/editor/game-maps/item-contract'
 import type { NoteItem } from '@wizard-archive/editor/notes/item-contract'
 import type { AnyItem, FolderItem } from '@wizard-archive/editor/resources/items'
-import type { Id } from '../_generated/dataModel'
 import { testCampaignId } from '../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../shared/test/campaign-member-id'
 import { testResourceId } from '../../shared/test/resource-id'
 
 function assertNeverSidebarItemType(type: never): never {
@@ -38,7 +38,7 @@ export function createSidebarItem(
     previewUpdatedAt: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: 'user' as Id<'userProfiles'>,
+    createdBy: testCampaignMemberId('user'),
     deletionTime: null,
     deletedBy: null,
     isActive: true,

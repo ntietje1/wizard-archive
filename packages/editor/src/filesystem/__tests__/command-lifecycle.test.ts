@@ -7,13 +7,14 @@ import type { SidebarCacheSnapshot } from '../cache-patches'
 import { executeFileSystemCommandLifecycle } from '../command-lifecycle'
 import { createCreatedItemReceipt } from './receipt-factory'
 import { createReadWriteTestCache } from './cache-test-utils'
-import type { CampaignId, UserProfileId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
 import { testOperationId } from '../../test/operation-id'
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
 
-const campaignId = 'campaign_1' as CampaignId
-const currentUserId = 'user_1' as UserProfileId
+const campaignId = testCampaignId('campaign_1')
+const currentActorId = testCampaignMemberId('user_1')
 
 describe('filesystem command lifecycle', () => {
   it('executes create lifecycle through injected provider adapters', async () => {
@@ -48,7 +49,7 @@ describe('filesystem command lifecycle', () => {
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       workspaceId: campaignId,
-      currentUserId,
+      currentActorId,
       activeItemSurface: { parentId: null },
       cacheAdapter,
       createOperationId: () => testOperationId('operation-1'),
@@ -127,7 +128,7 @@ describe('filesystem command lifecycle', () => {
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       workspaceId: campaignId,
-      currentUserId,
+      currentActorId,
       activeItemSurface: { parentId: null },
       cacheAdapter,
       createOperationId: () => testOperationId('operation-1'),
@@ -165,7 +166,7 @@ describe('filesystem command lifecycle', () => {
     const result = await executeFileSystemCommandLifecycle({
       command: { type: 'emptyTrash' },
       workspaceId: campaignId,
-      currentUserId,
+      currentActorId,
       activeItemSurface: null,
       cacheAdapter,
       createOperationId: () => testOperationId('operation-1'),
@@ -222,7 +223,7 @@ describe('filesystem command lifecycle', () => {
         targetParentId: targetParent.id,
       },
       workspaceId: campaignId,
-      currentUserId: null,
+      currentActorId: null,
       activeItemSurface: { parentId: null },
       cacheAdapter,
       createOperationId: () => testOperationId('operation-1'),
@@ -253,7 +254,7 @@ describe('filesystem command lifecycle', () => {
         itemIds: ['removed-item' as ResourceId],
       },
       workspaceId: campaignId,
-      currentUserId,
+      currentActorId,
       activeItemSurface: { parentId: null },
       cacheAdapter,
       createOperationId: () => testOperationId('operation-1'),
@@ -306,7 +307,7 @@ describe('filesystem command lifecycle', () => {
         targetParentId: targetParent.id,
       },
       workspaceId: campaignId,
-      currentUserId: null,
+      currentActorId: null,
       activeItemSurface: { parentId: null },
       cacheAdapter,
       createOperationId: () => testOperationId('operation-1'),
@@ -352,7 +353,7 @@ describe('filesystem command lifecycle', () => {
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       workspaceId: campaignId,
-      currentUserId,
+      currentActorId,
       activeItemSurface: { parentId: null },
       cacheAdapter,
       createOperationId: () => testOperationId('operation-1'),

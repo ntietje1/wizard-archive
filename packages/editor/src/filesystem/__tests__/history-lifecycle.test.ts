@@ -1,4 +1,3 @@
-import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
 import { canonicalizeResourceItemTitle } from '../../workspace/items'
@@ -7,12 +6,13 @@ import { createNote } from '../../test/sidebar-item-factory'
 import type { SidebarCacheSnapshot } from '../cache-patches'
 import { executeFileSystemHistoryLifecycle } from '../history-lifecycle'
 import { createReadWriteTestCache } from './cache-test-utils'
-import type { CampaignId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
+import { testResourceId } from '../../../../../shared/test/resource-id'
 import { createFileSystemReceipt } from './receipt-factory'
 import { testOperationId } from '../../test/operation-id'
 
 function createUndoRenameReceipt(): ResourceTransactionReceipt {
-  const itemId = 'renamed_item' as ResourceId
+  const itemId = testResourceId('renamed_item')
   return createFileSystemReceipt({
     transactionId: testOperationId('transaction_1'),
     direction: 'undo',
@@ -39,9 +39,11 @@ function createUndoRenameReceipt(): ResourceTransactionReceipt {
 }
 
 describe('filesystem history lifecycle', () => {
+  const campaignId = testCampaignId('campaign_1')
+
   it('runs undo through the shared optimistic mutation lifecycle', async () => {
     const item = createNote({
-      id: 'renamed_item' as ResourceId,
+      id: testResourceId('renamed_item'),
       name: 'New Name',
       status: RESOURCE_STATUS.active,
     })
@@ -58,7 +60,7 @@ describe('filesystem history lifecycle', () => {
     const result = await executeFileSystemHistoryLifecycle({
       direction: 'undo',
       entry: {
-        workspaceId: 'campaign_1' as CampaignId,
+        workspaceId: campaignId,
         transactionId: testOperationId('transaction_1'),
       },
       cacheAdapter,
@@ -76,7 +78,7 @@ describe('filesystem history lifecycle', () => {
     expect(executeMutation).toHaveBeenCalledWith(testOperationId('transaction_1'))
     expect(snapshot.sidebar[0]?.name).toBe('Old Name')
     expect(recordHistorySuccess).toHaveBeenCalledWith({
-      workspaceId: 'campaign_1',
+      workspaceId: campaignId,
       transactionId: testOperationId('transaction_1'),
     })
     expect(applyReceiptSideEffects).toHaveBeenCalledWith(receipt)
@@ -87,7 +89,7 @@ describe('filesystem history lifecycle', () => {
 
   it('keeps completed history receipts successful when receipt feedback fails', async () => {
     const item = createNote({
-      id: 'renamed_item' as ResourceId,
+      id: testResourceId('renamed_item'),
       name: 'New Name',
       status: RESOURCE_STATUS.active,
     })
@@ -103,7 +105,7 @@ describe('filesystem history lifecycle', () => {
     const result = await executeFileSystemHistoryLifecycle({
       direction: 'undo',
       entry: {
-        workspaceId: 'campaign_1' as CampaignId,
+        workspaceId: campaignId,
         transactionId: testOperationId('transaction_1'),
       },
       cacheAdapter,
@@ -122,7 +124,7 @@ describe('filesystem history lifecycle', () => {
     expect(result).toEqual({ status: 'completed', receipt })
     expect(snapshot.sidebar[0]?.name).toBe('Old Name')
     expect(recordHistorySuccess).toHaveBeenCalledWith({
-      workspaceId: 'campaign_1',
+      workspaceId: campaignId,
       transactionId: testOperationId('transaction_1'),
     })
     expect(reportError).toHaveBeenCalledWith(toastError, 'Failed to show filesystem receipt')
@@ -130,7 +132,7 @@ describe('filesystem history lifecycle', () => {
 
   it('rejects stale history entries before running the mutation', async () => {
     const item = createNote({
-      id: 'renamed_item' as ResourceId,
+      id: testResourceId('renamed_item'),
       name: 'New Name',
       status: RESOURCE_STATUS.active,
     })
@@ -142,7 +144,7 @@ describe('filesystem history lifecycle', () => {
     const result = await executeFileSystemHistoryLifecycle({
       direction: 'undo',
       entry: {
-        workspaceId: 'campaign_1' as CampaignId,
+        workspaceId: campaignId,
         transactionId: testOperationId('transaction_1'),
       },
       cacheAdapter,

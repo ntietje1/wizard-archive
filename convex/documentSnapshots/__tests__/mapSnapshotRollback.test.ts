@@ -297,7 +297,7 @@ describe('rollback of game map pin with non-note itemId', () => {
           status: 'active',
           previewStorageId: null,
           previewUpdatedAt: null,
-          createdBy: ctx.dm.profile._id,
+          createdBy: ctx.dm.memberDomainId,
           updatedTime: null,
           updatedBy: null,
           deletionTime: null,

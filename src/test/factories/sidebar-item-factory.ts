@@ -1,7 +1,7 @@
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { WizardEditorFolderItem, WizardEditorItem } from '@wizard-archive/editor/adapter'
-import type { UserProfileId } from 'shared/common/ids'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 import { testCampaignId } from 'shared/test/campaign-id'
 
 let itemCounter = 0
@@ -42,7 +42,7 @@ function baseFields() {
     previewUpdatedAt: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: `user_${itemCounter}` as UserProfileId,
+    createdBy: testCampaignMemberId(`user_${itemCounter}`),
     deletionTime: null,
     deletedBy: null,
     shares: [],

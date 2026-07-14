@@ -4,7 +4,7 @@ import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import { canAccessResourceAndAncestors } from './resourceAccessPolicy'
 import type { LinkPathKind } from '../../../shared/links/types'
-import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { CampaignMemberRow } from '../../campaigns/rows'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 

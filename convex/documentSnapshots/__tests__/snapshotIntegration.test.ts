@@ -293,7 +293,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
       await t.run(async (dbCtx) => {
         const note = await dbCtx.db.get('sidebarItems', noteRowId)
-        expect(note!.updatedBy).toBe(ctx.dm.profile._id)
+        expect(note!.updatedBy).toBe(ctx.dm.memberDomainId)
         expect(note!.updatedTime).not.toBeNull()
         expect(note!.updatedTime).toBeGreaterThan(beforeNote!.updatedTime ?? 0)
       })

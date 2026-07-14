@@ -1,6 +1,6 @@
 import type { ResourceId, MapPinId } from '../../../resources/domain-id'
-import type { UserProfileId } from '../../../../../../shared/common/ids'
 import { testCampaignId } from '../../../../../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../../../../../shared/test/campaign-member-id'
 
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { completedResourceOperation } from '../../../filesystem/transaction-contract'
@@ -147,7 +147,7 @@ function createBaseResourceItem({
     allPermissionLevel: null,
     campaignId: testCampaignId('campaign-1'),
     color: color ? assertResourceItemColor(color) : null,
-    createdBy: testId<UserProfileId>('user-1'),
+    createdBy: testCampaignMemberId('user-1'),
     deletedBy: null,
     deletionTime: null,
     iconName: null,

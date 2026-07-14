@@ -36,7 +36,7 @@ describe('sidebar item list queries', () => {
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
@@ -53,7 +53,7 @@ describe('sidebar item list queries', () => {
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       status: 'trashed',
       deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     const { trash: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
@@ -126,14 +126,14 @@ describe('sidebar item list queries', () => {
       ])
     })
     const { fileId: privateFileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id, {
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
       deletionTime,
       previewStorageId,
       status: 'trashed',
       storageId: fileStorageId,
     })
     const { noteId: sharedNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
       deletionTime: deletionTime + 1,
       status: 'trashed',
     })
@@ -201,7 +201,7 @@ describe('getSidebarItemsByParent', () => {
     await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
       status: 'trashed',
     })
 
@@ -453,7 +453,7 @@ describe('resolveSidebarItemAccess', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
       deletionTime: Date.now(),
       status: 'trashed',
     })

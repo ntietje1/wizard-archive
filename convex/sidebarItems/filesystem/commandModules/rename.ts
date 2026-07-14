@@ -58,7 +58,7 @@ export async function executeRenameCommand(
   await session.updateResource(item._id, {
     ...updates,
     updatedTime: Date.now(),
-    updatedBy: ctx.membership.userId,
+    updatedBy: ctx.membership.campaignMemberUuid,
   })
 
   await logEditHistory(ctx, {

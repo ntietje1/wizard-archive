@@ -42,7 +42,7 @@ export async function applySidebarItemContentUpdate({
   await ctx.db.patch('sidebarItems', itemId, {
     ...sidebarUpdates,
     updatedTime: Date.now(),
-    updatedBy: ctx.membership.userId,
+    updatedBy: ctx.membership.campaignMemberUuid,
   })
 
   await logEditHistory(ctx, {

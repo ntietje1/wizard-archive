@@ -51,7 +51,7 @@ describe('updateFileStorage', () => {
 
       expect(fileExt!.storageId).toBe(storageId)
       expect(fileItem!.previewStorageId).toBeNull()
-      expect(fileItem!.updatedBy).toBe(ctx.player.profile._id)
+      expect(fileItem!.updatedBy).toBe(ctx.player.memberDomainId)
     })
   })
 

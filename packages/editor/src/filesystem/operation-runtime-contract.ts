@@ -1,7 +1,6 @@
-import type { ResourceId, OperationId } from '../resources/domain-id'
+import type { OperationId, ResourceId, CampaignMemberId } from '../resources/domain-id'
 import type { ReactNode } from 'react'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { UserProfileId } from '../../../../shared/common/ids'
 
 import type { ResourceColor, ResourceIconName, ResourceKind } from '../workspace/resource-contract'
 import type { ResourceTitle } from '../resources/resource-contract'
@@ -105,7 +104,7 @@ export type ResourceIoCapabilities = {
 
 export type ResourceCommandRuntimeArgs = {
   workspaceId: string
-  currentUserId: UserProfileId | null
+  currentActorId: CampaignMemberId | null
   cache: SidebarItemsCache
   navigation: FileSystemNavigationEffects
   trashState: FileSystemTrashDialogState

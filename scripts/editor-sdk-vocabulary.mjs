@@ -10,11 +10,14 @@ const staleExportNamePattern = /(^FileSystem|SidebarItem|SIDEBAR_ITEM)/
 const staleSubpathPattern = /^\.\/filesystem(?:\/|$)/
 const staleDeclarationVocabularyPattern =
   /FileSystem\w*|SidebarItem\w*|SIDEBAR_ITEM\w*|AllPlayers\w*/g
+const providerIdentityVocabularyPattern =
+  /\b(?:SharedId|SessionRowId|WorkspaceMemberId|authUserId|storageId|_id)\b|\bId\s*</g
 
 const expectedStaleExportBaseline = [].sort(compareStrings)
 
 const expectedStaleSubpathBaseline = [].sort(compareStrings)
 const expectedStaleDeclarationBaseline = [].sort(compareStrings)
+const expectedProviderIdentityBaseline = [].sort(compareStrings)
 
 const actualStaleExports = []
 for (const [subpath, target] of Object.entries(editorPackage.exports)) {
@@ -41,6 +44,15 @@ const actualStaleDeclarations = editorPackage.wizardArchive.backendSafeSubpaths
     ),
   )
   .sort(compareStrings)
+const actualProviderIdentityDeclarations = Object.keys(editorPackage.exports)
+  .flatMap((subpath) =>
+    declarationBodiesForExport(subpath).flatMap((source) =>
+      Array.from(new Set(source.match(providerIdentityVocabularyPattern) ?? [])).map(
+        (name) => `${subpath}:${name}`,
+      ),
+    ),
+  )
+  .sort(compareStrings)
 
 const failures = [
   ...compareBaseline('stale public export names', expectedStaleExportBaseline, actualStaleExports),
@@ -49,6 +61,11 @@ const failures = [
     'stale public resource declaration vocabulary',
     expectedStaleDeclarationBaseline,
     actualStaleDeclarations,
+  ),
+  ...compareBaseline(
+    'provider identity vocabulary in public declarations',
+    expectedProviderIdentityBaseline,
+    actualProviderIdentityDeclarations,
   ),
 ]
 
@@ -66,7 +83,8 @@ console.log(
   `${issue} editor SDK vocabulary baseline held: ` +
     `${actualStaleExports.length} stale public exports, ` +
     `${actualStaleSubpaths.length} stale filesystem subpaths, ` +
-    `${actualStaleDeclarations.length} stale resource declaration terms.`,
+    `${actualStaleDeclarations.length} stale resource declaration terms, ` +
+    `${actualProviderIdentityDeclarations.length} provider identity terms.`,
 )
 
 function declarationBodiesForExport(subpath) {

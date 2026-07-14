@@ -10,7 +10,7 @@ import type { FileItem } from '../files/item-contract'
 import type { MapItem } from '../game-maps/item-contract'
 import type { CanvasItem } from '../canvas/item-contract'
 import type { NoteItem } from '../notes/item-contract'
-import type { UserProfileId } from '../../../../shared/common/ids'
+import { testCampaignMemberId } from '../../../../shared/test/campaign-member-id'
 import { testCampaignId } from '../../../../shared/test/campaign-id'
 
 let itemCounter = 0
@@ -35,7 +35,7 @@ function baseFields() {
     previewAssetId: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: `user_${itemCounter}` as UserProfileId,
+    createdBy: testCampaignMemberId(`user_${itemCounter}`),
     deletionTime: null,
     deletedBy: null,
     shares: [],

@@ -717,7 +717,7 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
     )
     const deletion = {
       deletionTime: Date.now(),
-      deletedBy: ctx.membership.userId,
+      deletedBy: ctx.membership.campaignMemberUuid,
     }
     await trashTree(ctx, item, {
       deletionTime: deletion.deletionTime,

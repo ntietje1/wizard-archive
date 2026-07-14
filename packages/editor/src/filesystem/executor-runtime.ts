@@ -1,5 +1,4 @@
-import type { ResourceId, OperationId } from '../resources/domain-id'
-import type { UserProfileId } from '../../../../shared/common/ids'
+import type { OperationId, ResourceId, CampaignMemberId } from '../resources/domain-id'
 import type {
   ResourceCommand,
   ResourceCommandExecutionOptions,
@@ -49,7 +48,7 @@ type FileSystemExecutorSnapshot = {
 
 export type FileSystemExecutorRuntimeArgs = {
   workspaceId: string
-  currentUserId: UserProfileId | null
+  currentActorId: CampaignMemberId | null
   activeItemSurface: { parentId: ResourceId | null } | null
   cacheAdapter: FileSystemCacheAdapter
   navigation: FileSystemNavigationEffects
@@ -170,7 +169,7 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
       command,
       createParentPlan,
       workspaceId: operationArgs.workspaceId,
-      currentUserId: operationArgs.currentUserId,
+      currentActorId: operationArgs.currentActorId,
       activeItemSurface: operationArgs.activeItemSurface,
       cacheAdapter: operationArgs.cacheAdapter,
       createOperationId,

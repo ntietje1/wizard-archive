@@ -13,8 +13,8 @@ import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contrac
 import type { CanvasItemWithContent } from '../item-contract'
 import { createCanvasDocumentDoc } from '../document-contract'
 import { useCanvasDocumentSession } from '../use-document-session'
-import type { UserProfileId } from '../../../../../shared/common/ids'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
 
 describe('useCanvasDocumentSession', () => {
   it('returns ready session maps from a loaded collaboration document', () => {
@@ -153,7 +153,7 @@ function createCanvas(overrides: Partial<CanvasItemWithContent> = {}): CanvasIte
     previewAssetId: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: 'user-1' as UserProfileId,
+    createdBy: testCampaignMemberId('user-1'),
     deletionTime: null,
     deletedBy: null,
     isBookmarked: false,

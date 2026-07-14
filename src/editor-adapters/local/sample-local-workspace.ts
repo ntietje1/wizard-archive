@@ -3,7 +3,6 @@ import {
   LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
   createLocalTextFilePayload,
 } from './local-workspace-model'
-import type { UserProfileId } from 'shared/common/ids'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import {
   assertSha256Digest,
@@ -79,7 +78,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
   actorId: SAMPLE_LOCAL_ACTOR_ID,
   localUser: {
     color: '#61afef',
-    id: 'demo-user' as UserProfileId,
+    id: assertDomainId(DOMAIN_ID_KIND.userProfile, '01980c1a-5e70-7000-8000-000000000301'),
     name: 'Demo',
   },
   workspaceId: SAMPLE_LOCAL_CAMPAIGN_ID,

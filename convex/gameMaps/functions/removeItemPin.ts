@@ -16,7 +16,7 @@ export async function removeItemPin(
 
   await ctx.db.patch('sidebarItems', mapRowId, {
     updatedTime: Date.now(),
-    updatedBy: ctx.membership.userId,
+    updatedBy: ctx.membership.campaignMemberUuid,
   })
 
   const pinnedItem = await ctx.db.get('sidebarItems', pin.itemId)

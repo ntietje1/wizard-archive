@@ -11,7 +11,7 @@ import { noteValueRowToDefinition } from './noteValueRows'
 import { requireValidNoteValueCompileState } from '../compileState'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { CampaignMemberRow } from '../../campaigns/rows'
 import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { AccessibleResourcePathResolver } from '../../sidebarItems/functions/resourcePathResolver'
 import type {

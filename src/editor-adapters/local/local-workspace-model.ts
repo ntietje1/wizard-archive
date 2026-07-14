@@ -8,7 +8,6 @@ import {
   planWizardEditorMapPinCreations,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
 } from '@wizard-archive/editor/adapter'
-import type { UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
@@ -17,6 +16,7 @@ import type {
   CampaignMemberId,
   MapPinId,
   ResourceId,
+  UserProfileId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 

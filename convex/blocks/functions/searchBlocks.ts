@@ -12,7 +12,7 @@ import { enforceBlockSharePermissionsForMembershipOrNull } from '../../blockShar
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { getSidebarItemPermissionLevelForMembership } from '../../sidebarShares/functions/sidebarItemPermissions'
 import type { Block } from '../types'
-import type { CampaignMemberRow } from '../../../shared/campaigns/types'
+import type { CampaignMemberRow } from '../../campaigns/rows'
 import type { Id } from '../../_generated/dataModel'
 
 type VisibleSearchNote = Awaited<ReturnType<typeof getVisibleSearchNote>>

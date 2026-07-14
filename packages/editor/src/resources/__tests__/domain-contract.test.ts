@@ -23,10 +23,12 @@ describe('canonical domain identity', () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     const exportJobId = generateDomainId(DOMAIN_ID_KIND.exportJob)
+    const userProfileId = generateDomainId(DOMAIN_ID_KIND.userProfile)
 
     expect(isUuidV7(resourceId)).toBe(true)
     expect(isUuidV7(operationId)).toBe(true)
     expect(isUuidV7(exportJobId)).toBe(true)
+    expect(isUuidV7(userProfileId)).toBe(true)
     expect(resourceId).not.toBe(operationId)
   })
 })

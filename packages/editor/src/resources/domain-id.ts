@@ -15,6 +15,7 @@ export const DOMAIN_ID_KIND = {
   resourceShare: 'resourceShare',
   session: 'session',
   snapshot: 'snapshot',
+  userProfile: 'userProfile',
 } as const
 
 export type DomainIdKind = (typeof DOMAIN_ID_KIND)[keyof typeof DOMAIN_ID_KIND]
@@ -37,6 +38,7 @@ export type ResourceId = DomainId<typeof DOMAIN_ID_KIND.resource>
 export type ResourceShareId = DomainId<typeof DOMAIN_ID_KIND.resourceShare>
 export type SessionId = DomainId<typeof DOMAIN_ID_KIND.session>
 export type SnapshotId = DomainId<typeof DOMAIN_ID_KIND.snapshot>
+export type UserProfileId = DomainId<typeof DOMAIN_ID_KIND.userProfile>
 
 export type DomainIdByKind = {
   [DOMAIN_ID_KIND.asset]: AssetId
@@ -53,6 +55,7 @@ export type DomainIdByKind = {
   [DOMAIN_ID_KIND.resourceShare]: ResourceShareId
   [DOMAIN_ID_KIND.session]: SessionId
   [DOMAIN_ID_KIND.snapshot]: SnapshotId
+  [DOMAIN_ID_KIND.userProfile]: UserProfileId
 }
 
 const UUID_V7_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/

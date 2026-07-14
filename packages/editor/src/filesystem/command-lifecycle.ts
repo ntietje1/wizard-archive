@@ -1,5 +1,4 @@
-import type { ResourceId, OperationId } from '../resources/domain-id'
-import type { UserProfileId } from '../../../../shared/common/ids'
+import type { OperationId, ResourceId, CampaignMemberId } from '../resources/domain-id'
 import type {
   ResourceCommand,
   ResourceCommandMutationInput,
@@ -20,7 +19,7 @@ type FileSystemCommandLifecycleArgs = {
   command: ResourceCommand
   createParentPlan?: ResourceCreateParentPlan
   workspaceId: string
-  currentUserId: UserProfileId | null
+  currentActorId: CampaignMemberId | null
   activeItemSurface: { parentId: ResourceId | null } | null
   cacheAdapter: FileSystemCacheAdapter
   createOperationId: () => OperationId
@@ -47,7 +46,7 @@ export async function executeFileSystemCommandLifecycle({
   command,
   createParentPlan,
   workspaceId,
-  currentUserId,
+  currentActorId,
   activeItemSurface,
   cacheAdapter,
   createOperationId,
@@ -72,7 +71,7 @@ export async function executeFileSystemCommandLifecycle({
         snapshot: cacheAdapter.getSnapshot(),
         readModel: cacheAdapter.getReadModel(),
         activeItemSurface,
-        currentUserId,
+        currentActorId,
         workspaceId,
       })
     } catch (error) {

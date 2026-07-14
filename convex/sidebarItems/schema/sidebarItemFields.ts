@@ -7,6 +7,7 @@ import {
   sidebarItemTypeValidator,
 } from './validators'
 import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { campaignMemberIdValidator } from '../../campaigns/schema'
 
 export const sidebarItemTableFields = {
   resourceUuid: v.string(),
@@ -23,10 +24,10 @@ export const sidebarItemTableFields = {
   previewStorageId: v.nullable(v.id('_storage')),
   previewUpdatedAt: v.nullable(v.number()),
   updatedTime: v.nullable(v.number()),
-  updatedBy: v.nullable(v.id('userProfiles')),
-  createdBy: v.id('userProfiles'),
+  updatedBy: v.nullable(campaignMemberIdValidator),
+  createdBy: campaignMemberIdValidator,
   deletionTime: v.nullable(v.number()),
-  deletedBy: v.nullable(v.id('userProfiles')),
+  deletedBy: v.nullable(campaignMemberIdValidator),
 }
 
 const {
@@ -53,6 +54,6 @@ export const sidebarItemTableValidator = v.union(
     ...sidebarItemCommonTableFields,
     status: v.literal(RESOURCE_STATUS.trashed),
     deletionTime: v.number(),
-    deletedBy: v.id('userProfiles'),
+    deletedBy: campaignMemberIdValidator,
   }),
 )

@@ -7,7 +7,7 @@ import type {
   WizardEditorItem,
   WizardEditorItemWithContent,
 } from '@wizard-archive/editor/adapter'
-import type { UserProfileId } from 'shared/common/ids'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import { testMapPinId } from 'shared/test/map-pin-id'
 import { testCampaignId } from 'shared/test/campaign-id'
@@ -323,7 +323,7 @@ function createBaseItem(id: ResourceId, name: string) {
     ancestors: [],
     campaignId: testCampaignId('demo-campaign'),
     color: null,
-    createdBy: 'demo-user' as UserProfileId,
+    createdBy: testCampaignMemberId('demo-user'),
     deletedBy: null,
     deletionTime: null,
     iconName: null,

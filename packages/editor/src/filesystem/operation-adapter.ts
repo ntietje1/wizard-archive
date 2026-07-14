@@ -29,7 +29,7 @@ import { useWorkspaceFileSystemOperationState } from '../workspace/sidebar/ui-st
 
 export function useWorkspaceResourceCommandRuntime({
   workspaceId,
-  currentUserId,
+  currentActorId,
   cache,
   navigation,
   trashState,
@@ -57,7 +57,7 @@ export function useWorkspaceResourceCommandRuntime({
   const { pendingOperationCount, executeCommand, discardCreatedItem, runHistoryCommand } =
     useFileSystemExecutor({
       workspaceId,
-      currentUserId,
+      currentActorId,
       activeItemSurface,
       cacheAdapter,
       navigation,

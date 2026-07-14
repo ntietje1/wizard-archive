@@ -28,7 +28,7 @@ export async function updatePinVisibility(
 
   await ctx.db.patch('sidebarItems', mapRowId, {
     updatedTime: now,
-    updatedBy: ctx.membership.userId,
+    updatedBy: ctx.membership.campaignMemberUuid,
   })
 
   const historyEntry = await logEditHistory(

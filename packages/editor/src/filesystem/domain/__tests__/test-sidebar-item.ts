@@ -10,8 +10,8 @@ import type { FileItem } from '../../../files/item-contract'
 import type { MapItem } from '../../../game-maps/item-contract'
 import type { NoteItem } from '../../../notes/item-contract'
 import type { AnyItem, FolderItem } from '../../../workspace/items'
-import type { UserProfileId } from '../../../../../../shared/common/ids'
 import { testCampaignId } from '../../../../../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../../../../../shared/test/campaign-member-id'
 
 function assertNeverSidebarItemType(type: never): never {
   throw new Error(`Unhandled sidebar item type: ${String(type)}`)
@@ -37,7 +37,7 @@ export function createSidebarItem(
     previewAssetId: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: 'user' as UserProfileId,
+    createdBy: testCampaignMemberId('user'),
     deletionTime: null,
     deletedBy: null,
     isActive: true,

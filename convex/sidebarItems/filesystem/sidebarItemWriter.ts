@@ -65,7 +65,7 @@ export async function insertFilesystemSidebarItem(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: ctx.membership.userId,
+    createdBy: ctx.membership.campaignMemberUuid,
   }
   assertSidebarItemLifecycleConsistency(row)
   const itemId = await ctx.db.insert('sidebarItems', row)

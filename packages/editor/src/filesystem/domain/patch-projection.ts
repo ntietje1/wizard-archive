@@ -1,5 +1,4 @@
-import type { ResourceId } from '../../resources/domain-id'
-import type { UserProfileId } from '../../../../../shared/common/ids'
+import type { ResourceId, CampaignMemberId } from '../../resources/domain-id'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import { diffResourceFields, hasMismatchedPrecondition } from '../patch-contract'
 import type { ResourcePatch, ResourcePatchRow } from '../patch-contract'
@@ -63,7 +62,7 @@ function treeItems<T extends ResourcePatchRow>(items: Array<T>, rootId: Resource
 export function projectTrashRoots<T extends ResourcePatchRow>(
   items: Array<T>,
   rootIds: Array<ResourceId>,
-  metadata: { now: number; userId: UserProfileId | null },
+  metadata: { now: number; userId: CampaignMemberId | null },
 ): OptimisticPatchPair {
   const patches = emptyPatchPair()
   for (const rootId of rootIds) {
@@ -176,7 +175,7 @@ export function projectMoveOperations<T extends ResourcePatchRow>({
   trashItems: Array<T>
   operations: Array<TransferOperation>
   now: number
-  userId: UserProfileId | null
+  userId: CampaignMemberId | null
 }): OptimisticPatchPair {
   const patches = emptyPatchPair()
   let projectedItems = [...activeItems, ...trashItems]

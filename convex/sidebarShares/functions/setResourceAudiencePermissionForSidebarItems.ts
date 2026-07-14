@@ -30,7 +30,7 @@ const applyResourceAudiencePermission = async (
 
   await ctx.db.patch('sidebarItems', sidebarItemId, {
     allPermissionLevel: permissionLevel,
-    updatedBy: ctx.membership.userId,
+    updatedBy: ctx.membership.campaignMemberUuid,
     updatedTime: Date.now(),
   })
 

@@ -1,4 +1,9 @@
 import type { UserIdentity } from 'convex/server'
-import type { UserProfileRow } from '../../shared/users/types'
+import type { Doc } from '../_generated/dataModel'
+import type { AssetId } from '@wizard-archive/editor/resources/domain-id'
 
-export type AuthUser = { identity: UserIdentity; profile: UserProfileRow }
+type AuthenticatedUserProfile = Omit<Doc<'userProfiles'>, 'profileImage'> & {
+  profileImage: { type: 'external'; url: string } | { type: 'asset'; assetId: AssetId } | null
+}
+
+export type AuthUser = { identity: UserIdentity; profile: AuthenticatedUserProfile }

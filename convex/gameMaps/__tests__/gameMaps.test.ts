@@ -359,7 +359,7 @@ describe('game map APIs', () => {
       name: 'Trashed Source',
       status: RESOURCE_STATUS.trashed,
       deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+      deletedBy: ctx.dm.memberDomainId,
     })
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {

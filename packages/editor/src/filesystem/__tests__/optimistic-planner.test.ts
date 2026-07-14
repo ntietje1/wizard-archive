@@ -9,12 +9,13 @@ import {
 } from '../../workspace/items'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import type { CampaignId, UserProfileId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
+import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
 import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
 
-const campaignId = 'campaign' as CampaignId
-const userId = 'user_1' as UserProfileId
+const campaignId = testCampaignId('campaign')
+const userId = testCampaignMemberId('user_1')
 const createdResourceId = testDomainId(DOMAIN_ID_KIND.resource, 'optimistic-created')
 
 function createTestCache(snapshot: SidebarCacheSnapshot) {
@@ -45,7 +46,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: null },
-      currentUserId: userId,
+      currentActorId: userId,
       workspaceId: campaignId,
     })
 
@@ -77,7 +78,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: null },
-      currentUserId: userId,
+      currentActorId: userId,
       workspaceId: campaignId,
     })
 
@@ -112,7 +113,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: null },
-      currentUserId: userId,
+      currentActorId: userId,
       workspaceId: campaignId,
     })
 
@@ -143,7 +144,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: null },
-      currentUserId: userId,
+      currentActorId: userId,
       workspaceId: campaignId,
     })
 
@@ -176,7 +177,7 @@ describe('filesystem optimistic planning', () => {
         snapshot: cache.snapshot,
         readModel: cache.readModel,
         activeItemSurface: { parentId: null },
-        currentUserId: userId,
+        currentActorId: userId,
         workspaceId: campaignId,
       })
 
@@ -205,7 +206,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: null },
-      currentUserId: null,
+      currentActorId: null,
       workspaceId: campaignId,
     })
 
@@ -237,7 +238,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: null },
-      currentUserId: null,
+      currentActorId: null,
       workspaceId: campaignId,
     })
 
@@ -269,7 +270,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: activeFolder.id },
-      currentUserId: null,
+      currentActorId: null,
       workspaceId: campaignId,
     })
 
@@ -308,7 +309,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: activeFolder.id },
-      currentUserId: null,
+      currentActorId: null,
       workspaceId: campaignId,
     })
 
@@ -341,7 +342,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: null },
-      currentUserId: userId,
+      currentActorId: userId,
       workspaceId: campaignId,
     })
 
@@ -367,7 +368,7 @@ describe('filesystem optimistic planning', () => {
       snapshot: cache.snapshot,
       readModel: cache.readModel,
       activeItemSurface: { parentId: null },
-      currentUserId: userId,
+      currentActorId: userId,
       workspaceId: campaignId,
     })
 

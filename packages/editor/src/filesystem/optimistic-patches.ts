@@ -1,4 +1,4 @@
-import type { ResourceId } from '../resources/domain-id'
+import type { ResourceId, CampaignMemberId } from '../resources/domain-id'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -9,7 +9,6 @@ import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { diffResourceFields } from './patch-contract'
 import type { ResourceCreateCommand, ResourceRenameCommand } from './transaction-contract'
 import type { ResourcePatch } from './patch-contract'
-import type { UserProfileId } from '../../../../shared/common/ids'
 import type { FileSystemOptimisticPreview } from './domain/lifecycle'
 import { sidebarCachePatchItemFromCacheItem } from './cache-patches'
 import type { SidebarCacheSnapshot } from './cache-patches'
@@ -17,19 +16,19 @@ import type { SidebarCacheSnapshot } from './cache-patches'
 export function buildOptimisticCreatePreview({
   command,
   parentId,
-  currentUserId,
+  currentActorId,
   workspaceId,
   name,
   now = Date.now(),
 }: {
   command: ResourceCreateCommand
   parentId: ResourceId | null
-  currentUserId: UserProfileId | null
+  currentActorId: CampaignMemberId | null
   workspaceId: string
   name: AnyItem['name']
   now?: number
 }): FileSystemOptimisticPreview {
-  if (!currentUserId) {
+  if (!currentActorId) {
     return {
       receiptPatches: [],
       inversePatches: [],
@@ -41,7 +40,7 @@ export function buildOptimisticCreatePreview({
   const item = buildOptimisticCreateItem({
     workspaceId,
     command,
-    currentUserId,
+    currentActorId,
     id: command.resourceId,
     name,
     now,
@@ -63,7 +62,7 @@ export function buildOptimisticCreatePreview({
 function buildOptimisticCreateItem({
   workspaceId,
   command,
-  currentUserId,
+  currentActorId,
   id,
   name,
   now,
@@ -71,7 +70,7 @@ function buildOptimisticCreateItem({
 }: {
   workspaceId: string
   command: ResourceCreateCommand
-  currentUserId: UserProfileId
+  currentActorId: CampaignMemberId
   id: ResourceId
   name: AnyItem['name']
   now: number
@@ -89,7 +88,7 @@ function buildOptimisticCreateItem({
     previewAssetId: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: currentUserId,
+    createdBy: currentActorId,
     deletionTime: null,
     deletedBy: null,
     isActive: true,

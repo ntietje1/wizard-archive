@@ -99,7 +99,7 @@ export async function createItemPins(
     nextPinItemIds.push(item._id)
   }
 
-  const userId = ctx.membership.userId
+  const actorId = ctx.membership.campaignMemberUuid
 
   const pinIds = pins.map(() => generateDomainId(DOMAIN_ID_KIND.mapPin))
   await Promise.all(
@@ -118,7 +118,7 @@ export async function createItemPins(
 
   await ctx.db.patch('sidebarItems', mapId, {
     updatedTime: Date.now(),
-    updatedBy: userId,
+    updatedBy: actorId,
   })
 
   const historyEntry = await logEditHistory(

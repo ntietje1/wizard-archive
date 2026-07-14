@@ -17,7 +17,7 @@ import type { CustomCtx } from 'convex-helpers/server/customFunctions'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import type { AuthUser } from './users/authTypes'
-import type { CampaignRow, CampaignMemberRow } from '../shared/campaigns/types'
+import type { CampaignMemberRow, CampaignRow } from './campaigns/rows'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CampaignId as DomainCampaignId,

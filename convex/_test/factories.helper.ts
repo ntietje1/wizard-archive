@@ -3,10 +3,12 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campa
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CampaignId,
+  CampaignMemberId,
   NoteBlockId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import { deterministicUuidV7 } from '../../shared/test/deterministic-uuid-v7'
+import { testCampaignMemberId } from '../../shared/test/campaign-member-id'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -180,7 +182,7 @@ export function testBlockNoteId(label: string): NoteBlockId {
 const commonFields = (creatorId: Id<'userProfiles'>) => ({
   updatedTime: null,
   updatedBy: null,
-  createdBy: creatorId,
+  createdBy: testCampaignMemberId(String(creatorId)),
   deletionTime: null,
   deletedBy: null,
 })
@@ -203,6 +205,7 @@ export async function createUserProfile(
   const n = nextId()
   const { username, ...rest } = overrides ?? {}
   const defaults = {
+    userProfileUuid: generateDomainId(DOMAIN_ID_KIND.userProfile),
     authUserId: `auth-user-${n}`,
     username: assertUsername(`user-${n}`),
     email: `user-${n}@test.com`,
@@ -340,7 +343,7 @@ type CommonSidebarItemOverrides = Partial<{
   iconName: ResourceIconName | null
   color: ResourceColor | null
   deletionTime: number | null
-  deletedBy: Id<'userProfiles'> | null
+  deletedBy: CampaignMemberId | null
   previewStorageId: Id<'_storage'> | null
   previewUpdatedAt: number | null
 }>

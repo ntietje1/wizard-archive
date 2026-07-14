@@ -53,7 +53,7 @@ export async function rollbackToSnapshot(
   if (!restoredItem) throw new Error('Resolved rollback item is missing')
   await ctx.db.patch('sidebarItems', restoredItem._id, {
     updatedTime: Date.now(),
-    updatedBy: ctx.membership.userId,
+    updatedBy: ctx.membership.campaignMemberUuid,
   })
 
   const historyEntryId = await recordRestoredState(ctx, resolution)
