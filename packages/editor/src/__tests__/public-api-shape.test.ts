@@ -612,9 +612,7 @@ describe('editor package public API shape', () => {
     expect(source).not.toContain('@wizard-archive/editor/notes/item-contract')
     expect(source).not.toContain('@wizard-archive/editor/resources/resource-contract')
     expect(source).not.toContain('@wizard-archive/editor/resources/items-persistence-contract')
-    expect(source).not.toContain('CampaignId')
-    expect(source).not.toContain('workspaceId: CampaignId')
-    expect(source).toContain('workspaceId: string')
+    expect(source).toContain('workspaceId: CampaignId')
     expect(source).toContain('@wizard-archive/editor/adapter')
     expect(sortedAdapterExports()).toEqual(
       expect.arrayContaining([
@@ -798,7 +796,9 @@ describe('editor package public API shape', () => {
     expect(providerSource).not.toContain(
       "workspaceId: NonNullable<ReturnType<typeof useCampaign>['campaignId']>",
     )
-    expect(providerSource).toContain('const { campaign, campaignId, campaignSlug, dmUsername }')
+    expect(providerSource).toContain('const { campaign, campaignId }')
+    expect(providerSource).not.toContain('campaignSlug')
+    expect(providerSource).not.toContain('dmUsername')
     expect(providerSource).toContain('workspaceId: CampaignId')
     expect(providerSource).toContain('campaignId: workspaceId')
     expect(providerSource).toContain('useLiveFileSystemRuntime(\n    workspaceId,')
@@ -1297,7 +1297,6 @@ describe('editor package public API shape', () => {
         'WizardEditorRemoteDownloadSourceInput',
         'WizardEditorResolvedFile',
         'WizardEditorResolvedMapImage',
-        'WizardEditorResourceAvailabilityLookup',
         'WizardEditorResourceAvailabilityMetadataSource',
         'WizardEditorResourceAvailabilityMetadataSourceInput',
         'WizardEditorResourceAvailabilityState',

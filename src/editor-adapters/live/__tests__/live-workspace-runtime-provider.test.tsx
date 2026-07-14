@@ -26,9 +26,6 @@ const useLiveResourceCoreMock = vi.hoisted(() => vi.fn((_scope: unknown) => reso
 const filesystemReadModel = vi.hoisted(() => ({
   activeItems: ['active-item'],
   visibleTrashItems: [],
-  readModel: {
-    getItemBySlug: vi.fn(() => ({ id: 'scene_item', slug: 'scene-one' })),
-  },
 }))
 const filesystemRuntime = vi.hoisted(() => ({
   filesystem: {
@@ -42,7 +39,7 @@ const filesystemRuntime = vi.hoisted(() => ({
     sidebarItems: { setResourceAudiencePermission: vi.fn() },
   },
 }))
-const catalog = vi.hoisted(() => ({ getKnownItemBySlug: vi.fn() }))
+const catalog = vi.hoisted(() => ({}))
 const runtime = vi.hoisted(
   () =>
     ({
@@ -94,7 +91,6 @@ describe('LiveWorkspaceRuntimeProvider', () => {
     campaignState.membership = { id: actorId, role: 'DM' }
     clearWorkspaceContentMock.mockReset()
     navigateToItemMock.mockReset()
-    filesystemReadModel.readModel.getItemBySlug.mockClear()
     useLiveFileSystemRuntimeMock.mockReset()
     useLiveFileSystemRuntimeMock.mockReturnValue(filesystemRuntime)
     useLiveWorkspaceRuntimeMock.mockReset()

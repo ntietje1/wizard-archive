@@ -136,7 +136,7 @@ describe('useLocalWorkspaceRuntime', () => {
     expect(getWizardEditorNavigationCurrentResourceId(source.navigation)).toBe(
       SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
     )
-    expect(source.filesystem.catalog.getKnownItemBySlug(catalogCanvas!.slug)).toBe(catalogCanvas)
+    expect(source.filesystem.catalog.getKnownItemById(catalogCanvas!.id)).toBe(catalogCanvas)
     await source.navigation.openItem(catalogCanvas!.id)
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',

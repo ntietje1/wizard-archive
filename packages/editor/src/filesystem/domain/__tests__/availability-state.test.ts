@@ -29,7 +29,7 @@ describe('resolveResourceAvailabilityState', () => {
   it('returns available content when the active actor can view the readable item', () => {
     const readableItem = createReadableNote({ id: noteId('note-1'), name: 'Secret Note' })
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'id', id: readableItem.id },
+      resourceId: readableItem.id,
       metadataSource: createMetadataSource([readableItem]),
       readableItem,
       actor: ownerActor,
@@ -53,7 +53,7 @@ describe('resolveResourceAvailabilityState', () => {
       status: RESOURCE_STATUS.trashed,
     })
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'id', id: readableItem.id },
+      resourceId: readableItem.id,
       metadataSource: createMetadataSource([readableItem]),
       readableItem,
       actor: ownerActor,
@@ -82,7 +82,7 @@ describe('resolveResourceAvailabilityState', () => {
       shares: [],
     })
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'slug', slug: 'secret-note' },
+      resourceId: metadata.id,
       metadataSource: createMetadataSource([metadata]),
       readableItem,
       actor: ownerViewAsActor,
@@ -99,7 +99,7 @@ describe('resolveResourceAvailabilityState', () => {
     })
   })
 
-  it('uses known slug metadata to explain view-as sharing gaps for pages', () => {
+  it('uses known metadata to explain view-as sharing gaps for pages', () => {
     const metadata = createNote({
       id: noteId('note-hidden-from-viewed-player'),
       name: 'Secret Note',
@@ -113,7 +113,7 @@ describe('resolveResourceAvailabilityState', () => {
       visibleActiveItems: [],
     })
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'slug', slug: 'secret-note' },
+      resourceId: metadata.id,
       metadataSource: createResourceAvailabilityMetadataSource({
         catalog,
         load: { activeStatus: 'success' },
@@ -133,9 +133,9 @@ describe('resolveResourceAvailabilityState', () => {
     })
   })
 
-  it('resolves missing page slugs for direct-message editors as not found', () => {
+  it('resolves missing pages for direct-message editors as not found', () => {
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'slug', slug: 'missing' },
+      resourceId: noteId('missing'),
       metadataSource: createMetadataSource([]),
       readableItem: null,
       actor: ownerActor,
@@ -153,7 +153,7 @@ describe('resolveResourceAvailabilityState', () => {
 
   it('resolves missing player targets through the generic not-found fallback', () => {
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'id', id: noteId('missing') },
+      resourceId: noteId('missing'),
       metadataSource: createMetadataSource([]),
       readableItem: null,
       actor: participantActor,
@@ -181,7 +181,7 @@ describe('resolveResourceAvailabilityState', () => {
       visibleActiveItems: [],
     })
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'id', id: hidden.id },
+      resourceId: hidden.id,
       metadataSource: createResourceAvailabilityMetadataSource({
         catalog,
         load: { activeStatus: 'success' },
@@ -213,7 +213,7 @@ describe('resolveResourceAvailabilityState', () => {
       visibleActiveItems: [],
     })
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'id', id: hidden.id },
+      resourceId: hidden.id,
       metadataSource: createResourceAvailabilityMetadataSource({
         catalog,
         load: { activeStatus: 'success' },
@@ -240,7 +240,7 @@ describe('resolveResourceAvailabilityState', () => {
       slug: 'secret-note',
     })
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'id', id: metadata.id },
+      resourceId: metadata.id,
       metadataSource: createMetadataSource([metadata], 'pending'),
       readableItem: null,
       readableItemLoading: true,
@@ -259,7 +259,7 @@ describe('resolveResourceAvailabilityState', () => {
 
   it('reports readable item errors before metadata load state', () => {
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'id', id: noteId('note-1') },
+      resourceId: noteId('note-1'),
       metadataSource: createMetadataSource([], 'pending'),
       readableItem: null,
       readableItemError: new Error('fetch failed'),
@@ -278,7 +278,7 @@ describe('resolveResourceAvailabilityState', () => {
 
   it('reports falsy readable item error payloads before missing-state fallbacks', () => {
     const state = resolveResourceAvailabilityState({
-      lookup: { kind: 'id', id: noteId('note-1') },
+      resourceId: noteId('note-1'),
       metadataSource: createMetadataSource([], 'success'),
       readableItem: null,
       readableItemError: '',
@@ -318,11 +318,9 @@ function createMetadataSource(
   return {
     directMessage: {
       getItemById: (itemId) => itemsById.get(itemId) ?? null,
-      getItemBySlug: (slug) => items.find((item) => item.slug === slug) ?? null,
     },
     player: {
       getItemById: (itemId) => itemsById.get(itemId) ?? null,
-      getItemBySlug: (slug) => items.find((item) => item.slug === slug) ?? null,
     },
     status,
   }

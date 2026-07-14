@@ -1,10 +1,9 @@
 import { getCampaignActorViewAsMemberId } from 'shared/campaigns/actor'
 import { useCampaignActor } from '~/features/campaigns/hooks/useCampaignActor'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   WizardEditorItemWithContent,
-  WizardEditorResourceAvailabilityLookup,
   WizardEditorResourceAvailabilityMetadataSource,
   WizardEditorResourceAvailabilityState,
   WizardEditorResourceAvailabilitySubject,
@@ -15,7 +14,7 @@ import { toEditorWorkspaceActor } from './workspace-actor'
 
 interface UseLiveSidebarItemAvailabilityStateArgs {
   accessStatus?: 'available' | 'not_found' | 'not_shared' | 'trashed' | null
-  lookup: WizardEditorResourceAvailabilityLookup
+  resourceId: ResourceId | null | undefined
   metadataSource: WizardEditorResourceAvailabilityMetadataSource
   readableItem: WizardEditorItemWithContent | null | undefined
   subject: WizardEditorResourceAvailabilitySubject
@@ -26,7 +25,7 @@ interface UseLiveSidebarItemAvailabilityStateArgs {
 
 export function useLiveSidebarItemAvailabilityState({
   accessStatus,
-  lookup,
+  resourceId,
   metadataSource,
   readableItem,
   readableItemLoading = false,
@@ -57,7 +56,7 @@ export function useLiveSidebarItemAvailabilityState({
     }
   }
   return resolveWizardEditorResourceAvailabilityState({
-    lookup,
+    resourceId,
     metadataSource,
     readableItem,
     readableItemLoading,

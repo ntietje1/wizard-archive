@@ -370,7 +370,7 @@ describe('filesystem cache patches', () => {
     let readModel = adapter.getReadModel()
     expect(readModel.getItem(note.id)).toBe(note)
     expect(readModel.getItems([note.id, trashed.id])).toEqual([note, trashed])
-    expect(readModel.getItemBySlug(note.slug)).toBe(note)
+    expect(readModel.getItem(note.id)).toBe(note)
     expect(readModel.getActiveChildren(null).map((item) => item.id)).toEqual([folder.id, note.id])
 
     adapter.applyPatches([

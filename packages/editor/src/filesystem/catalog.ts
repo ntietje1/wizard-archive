@@ -1,7 +1,6 @@
 import type { ResourceId } from '../resources/domain-id'
 import type { BlockSearchResult } from '../../../../shared/search/types'
 import type { AnyItem } from '../workspace/items'
-import type { ResourceSlug } from '../workspace/resource-contract'
 import type { ItemSearchInput, ItemSearchResult, ItemSearchState } from '../search/model'
 import {
   buildItemSearchResults,
@@ -16,9 +15,7 @@ import type { FileSystemSearch, ItemLinksCapability } from './search'
 
 export interface ResourceCatalog {
   getKnownItemById: (itemId: ResourceId) => AnyItem | null
-  getKnownItemBySlug: (slug: ResourceSlug) => AnyItem | null
   getVisibleItemById: (itemId: ResourceId) => AnyItem | null
-  getVisibleItemBySlug: (slug: ResourceSlug) => AnyItem | null
   getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<AnyItem>
   getVisibleItems: () => ReadonlyArray<AnyItem>
   getVisibleRoots: () => ReadonlyArray<AnyItem>
@@ -68,9 +65,7 @@ export function createResourceCatalogModel({
 
   const catalog: ResourceCatalog = {
     getKnownItemById: index.getKnownItemById,
-    getKnownItemBySlug: index.getKnownItemBySlug,
     getVisibleItemById: index.getVisibleItemById,
-    getVisibleItemBySlug: index.getVisibleItemBySlug,
     getVisibleAncestors: index.getVisibleAncestors,
     getVisibleItems: () => [...index.visibleItems],
     getVisibleRoots: () => [...index.visibleRoots],

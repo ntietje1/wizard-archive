@@ -145,13 +145,12 @@ describe('createResourceCatalogModel', () => {
 
     expect(catalog.getVisibleRoots().map((item) => item.id)).toEqual([folder.id])
     expect(catalog.getVisibleChildren(folder.id).map((item) => item.id)).toEqual([child.id])
-    expect(catalog.getVisibleItemBySlug('child' as typeof child.slug)).toMatchObject({
+    expect(catalog.getVisibleItemById(child.id)).toMatchObject({
       id: child.id,
       parentId: folder.id,
       slug: 'child',
       isTrashed: false,
     })
-    expect(catalog.getVisibleItemBySlug('renamed-child' as typeof child.slug)).toBeNull()
   })
 
   it('prevents catalog consumers from mutating returned item snapshots', () => {

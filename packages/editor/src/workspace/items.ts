@@ -49,7 +49,6 @@ export function isPersistedResourceItem<Item extends Pick<AnyItem, 'id'>>(
 
 type WorkspaceResourceReadModelItem = {
   id: ResourceId
-  slug?: string
   parentId: ResourceId | null
   status: ResourceStatus
 }
@@ -57,12 +56,10 @@ type WorkspaceResourceReadModelItem = {
 export type WorkspaceResourceReadModel<T extends WorkspaceResourceReadModelItem> = {
   items: ReadonlyArray<T>
   itemsById: ReadonlyMap<ResourceId, T>
-  itemsBySlug: ReadonlyMap<ResourceSlug, T>
   activeChildrenByParent: ReadonlyMap<ResourceId | null, ReadonlyArray<T>>
   getItem: (itemId: ResourceId) => T | undefined
   getItems: (itemIds: Array<ResourceId>) => Array<T>
   requireItems: (itemIds: Array<ResourceId>) => Array<T>
-  getItemBySlug: (slug: ResourceSlug) => T | undefined
   getActiveAncestors: (itemId: ResourceId) => Array<T>
   getActiveChildren: (parentId: ResourceId | null) => Array<T>
 }
@@ -76,11 +73,9 @@ export function createWorkspaceResourceReadModel<T extends WorkspaceResourceRead
     activeChildrenByParent: model.activeChildrenByParent,
     items: model.resources,
     itemsById: model.resourcesById,
-    itemsBySlug: model.resourcesBySlug as ReadonlyMap<ResourceSlug, T>,
     getItem: model.getResource,
     getItems: model.getResources,
     requireItems: model.requireResources,
-    getItemBySlug: model.getResourceBySlug as (slug: ResourceSlug) => T | undefined,
     getActiveAncestors: model.getActiveAncestors,
     getActiveChildren: model.getActiveChildren,
   }

@@ -274,16 +274,14 @@ describe('live workspace permission hooks', () => {
 
     const { result } = renderHook(() =>
       useLiveSidebarItemAvailabilityState({
-        lookup: { kind: 'id', id: hiddenNote.id },
+        resourceId: hiddenNote.id,
         metadataSource: {
           status: 'success',
           owner: {
             getItemById: (itemId) => (itemId === hiddenNote.id ? hiddenNote : null),
-            getItemBySlug: () => hiddenNote,
           },
           participant: {
             getItemById: () => null,
-            getItemBySlug: () => null,
           },
         },
         readableItem: undefined,
@@ -305,16 +303,14 @@ describe('live workspace permission hooks', () => {
 
     const { result } = renderHook(() =>
       useLiveSidebarItemAvailabilityState({
-        lookup: { kind: 'id', id: playerCatalogNote.id },
+        resourceId: playerCatalogNote.id,
         metadataSource: {
           status: 'success',
           owner: {
             getItemById: () => null,
-            getItemBySlug: () => null,
           },
           participant: {
             getItemById: (itemId) => (itemId === playerCatalogNote.id ? playerCatalogNote : null),
-            getItemBySlug: () => playerCatalogNote,
           },
         },
         readableItem: undefined,
@@ -338,16 +334,14 @@ describe('live workspace permission hooks', () => {
 
     const { result } = renderHook(() =>
       useLiveSidebarItemAvailabilityState({
-        lookup: { kind: 'id', id: playerCatalogNote.id },
+        resourceId: playerCatalogNote.id,
         metadataSource: {
           status: 'success',
           owner: {
             getItemById: () => null,
-            getItemBySlug: () => null,
           },
           participant: {
             getItemById: (itemId) => (itemId === playerCatalogNote.id ? playerCatalogNote : null),
-            getItemBySlug: () => playerCatalogNote,
           },
         },
         readableItem: undefined,

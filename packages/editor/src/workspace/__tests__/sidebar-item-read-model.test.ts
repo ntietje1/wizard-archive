@@ -5,12 +5,11 @@ import { createWorkspaceResourceReadModel } from '../items'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 
 describe('sidebar item read model', () => {
-  it('indexes items by id and slug', () => {
+  it('indexes items by id', () => {
     const note = createNote({ id: 'note-1' as ResourceId, name: 'Note' })
     const model = createWorkspaceResourceReadModel([note])
 
     expect(model.getItem(note.id)).toBe(note)
-    expect(model.getItemBySlug(note.slug)).toBe(note)
   })
 
   it('throws when duplicate ids are supplied', () => {
@@ -18,35 +17,6 @@ describe('sidebar item read model', () => {
     const second = createNote({ id: 'note-1' as ResourceId, name: 'Second' })
 
     expect(() => createWorkspaceResourceReadModel([first, second])).toThrow(/Duplicate resource id/)
-  })
-
-  it('throws when duplicate slugs are supplied', () => {
-    const first = createNote({
-      id: 'note-1' as ResourceId,
-      name: 'First',
-      slug: 'same',
-    })
-    const second = createNote({
-      id: 'note-2' as ResourceId,
-      name: 'Second',
-      slug: 'same',
-    })
-
-    expect(() => createWorkspaceResourceReadModel([first, second])).toThrow(
-      /Duplicate resource slug/,
-    )
-  })
-
-  it('rejects invalid persisted slugs before indexing', () => {
-    const note = {
-      ...createNote({
-        id: 'note-1' as ResourceId,
-        name: 'Note',
-      }),
-      slug: 'bad slug',
-    }
-
-    expect(() => createWorkspaceResourceReadModel([note])).toThrow('Slug cannot contain spaces')
   })
 
   it('indexes active children only', () => {
@@ -116,17 +86,10 @@ describe('sidebar item read model', () => {
       (model.itemsById as Map<ResourceId, typeof injected>).set(injected.id, injected),
     ).toThrow(TypeError)
     expect(() =>
-      (model.itemsBySlug as Map<typeof injected.slug, typeof injected>).set(
-        injected.slug,
-        injected,
-      ),
-    ).toThrow(TypeError)
-    expect(() =>
       (model.activeChildrenByParent.get(folder.id) as Array<typeof injected>).push(injected),
     ).toThrow(TypeError)
 
     expect(model.getItem(injected.id)).toBeUndefined()
-    expect(model.getItemBySlug(injected.slug)).toBeUndefined()
     expect(model.getItems([injected.id])).toEqual([])
     expect(model.getActiveChildren(folder.id)).toEqual([note])
   })

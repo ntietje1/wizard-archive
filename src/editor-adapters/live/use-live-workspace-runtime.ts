@@ -482,7 +482,7 @@ function useLiveRuntimeCurrentState({
   )
   const sourceAvailabilityState = useLiveSidebarItemAvailabilityState({
     accessStatus: currentItem.accessStatus,
-    lookup: { kind: 'id', id: currentItem.requestedResourceId },
+    resourceId: currentItem.requestedResourceId,
     metadataSource: currentItemAvailabilityMetadataSource,
     readableItem: currentItem.contentItem,
     readableItemLoading: currentItem.isLoading,
@@ -540,7 +540,6 @@ function createCurrentItemAvailabilityMetadataSource(
     ...source,
     participant: {
       getItemById: (itemId) => (itemId === item.id ? item : source.participant.getItemById(itemId)),
-      getItemBySlug: (slug) => (item.slug === slug ? item : source.participant.getItemBySlug(slug)),
     },
   }
 }

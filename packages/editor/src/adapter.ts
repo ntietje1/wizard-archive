@@ -48,7 +48,6 @@ import { isPersistedResourceId, parseResourceSlug } from './workspace/resource-c
 import type {
   ResourceByKind,
   ResourceKind,
-  ResourceSlug,
   ResourceWithContentByKind,
 } from './workspace/resource-contract'
 import type {
@@ -233,13 +232,8 @@ export type WizardEditorWorkspaceActor =
 
 export type WizardEditorResourceAvailabilitySubject = 'item' | 'page'
 
-export type WizardEditorResourceAvailabilityLookup =
-  | { kind: 'id'; id: ResourceId | null | undefined }
-  | { kind: 'slug'; slug: string | null | undefined }
-
 interface WizardEditorResourceAvailabilityMetadataLookup {
   getItemById: (itemId: ResourceId) => WizardEditorItem | null | undefined
-  getItemBySlug: (slug: string) => WizardEditorItem | null | undefined
 }
 
 export interface WizardEditorResourceAvailabilityMetadataSource {
@@ -404,9 +398,7 @@ export interface WizardEditorCurrentResourceState {
 
 export interface WizardEditorResourceCatalog {
   getKnownItemById: (itemId: ResourceId) => WizardEditorItem | null
-  getKnownItemBySlug: (slug: ResourceSlug) => WizardEditorItem | null
   getVisibleItemById: (itemId: ResourceId) => WizardEditorItem | null
-  getVisibleItemBySlug: (slug: ResourceSlug) => WizardEditorItem | null
   getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<WizardEditorItem>
   getVisibleItems: () => ReadonlyArray<WizardEditorItem>
   getVisibleRoots: () => ReadonlyArray<WizardEditorItem>
@@ -583,15 +575,12 @@ export interface WizardEditorWorkspaceModeInput {
 }
 
 export interface WizardEditorResourceAvailabilityMetadataSourceInput {
-  catalog: Pick<
-    ResourceCatalog,
-    'getKnownItemById' | 'getKnownItemBySlug' | 'getVisibleItemById' | 'getVisibleItemBySlug'
-  >
+  catalog: Pick<ResourceCatalog, 'getKnownItemById' | 'getVisibleItemById'>
   load: Pick<FileSystemLoadState, 'activeStatus'>
 }
 
 export interface WizardEditorResourceAvailabilityStateInput {
-  lookup: WizardEditorResourceAvailabilityLookup
+  resourceId: ResourceId | null | undefined
   metadataSource: WizardEditorResourceAvailabilityMetadataSource
   readableItem: WizardEditorItemWithContent | null | undefined
   readableItemLoading?: boolean
@@ -1685,7 +1674,7 @@ export function createWizardEditorCatalogSnapshot({
     ? getWizardEditorStaticCatalogContentItem(catalog, currentResourceId)
     : null
   const availabilityState = resolveResourceAvailabilityState({
-    lookup: { kind: 'id', id: currentResourceId as ResourceId | null | undefined },
+    resourceId: currentResourceId as ResourceId | null | undefined,
     metadataSource: createResourceAvailabilityMetadataSource({
       catalog,
       load: { activeStatus: 'success' },

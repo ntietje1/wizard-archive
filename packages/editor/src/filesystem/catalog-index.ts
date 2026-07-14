@@ -1,6 +1,6 @@
 import type { ResourceId } from '../resources/domain-id'
 import type { AnyItem } from '../workspace/items'
-import type { ResourceSlug, ResourceKind } from '../workspace/resource-contract'
+import type { ResourceKind } from '../workspace/resource-contract'
 
 export interface FileSystemCatalogIndex {
   visibleItems: ReadonlyArray<AnyItem>
@@ -11,9 +11,7 @@ export interface FileSystemCatalogIndex {
   visibleChildrenByParent: ReadonlyMap<ResourceId | null, ReadonlyArray<AnyItem>>
   trashChildrenByParent: ReadonlyMap<ResourceId | null, ReadonlyArray<AnyItem>>
   getKnownItemById: (itemId: ResourceId) => AnyItem | null
-  getKnownItemBySlug: (slug: ResourceSlug) => AnyItem | null
   getVisibleItemById: (itemId: ResourceId) => AnyItem | null
-  getVisibleItemBySlug: (slug: ResourceSlug) => AnyItem | null
   getVisibleAncestors: (itemId: ResourceId) => ReadonlyArray<AnyItem>
   queryVisibleItems: (input?: FileSystemCatalogVisibleItemsInput) => ReadonlyArray<AnyItem>
 }
@@ -50,11 +48,6 @@ export function createFileSystemCatalogIndex({
   )
   const trashItemsById = new Map(trashedItems.map((item) => [item.id, item] as const))
   const knownItemsById = new Map<ResourceId, AnyItem>([...trashItemsById, ...knownActiveItemsById])
-  const knownItemsBySlug = new Map<ResourceSlug, AnyItem>([
-    ...trashedItems.map((item) => [item.slug, item] as const),
-    ...knownActiveItems.map((item) => [item.slug, item] as const),
-  ])
-  const visibleItemsBySlug = new Map(visibleItems.map((item) => [item.slug, item] as const))
   const trashRoots = trashedItems.filter(
     (item) => !item.parentId || !trashItemsById.has(item.parentId),
   )
@@ -70,9 +63,7 @@ export function createFileSystemCatalogIndex({
     visibleChildrenByParent,
     trashChildrenByParent,
     getKnownItemById: (itemId) => knownItemsById.get(itemId) ?? null,
-    getKnownItemBySlug: (slug) => knownItemsBySlug.get(slug) ?? null,
     getVisibleItemById: (itemId) => visibleItemsById.get(itemId) ?? null,
-    getVisibleItemBySlug: (slug) => visibleItemsBySlug.get(slug) ?? null,
     getVisibleAncestors: (itemId) => getVisibleAncestors(itemId, visibleItemsById),
     queryVisibleItems: (input) => queryVisibleItems(visibleItems, input),
   }

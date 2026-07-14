@@ -46,7 +46,6 @@ export function isPersistedResourceId(
 
 type ResourceReadModelResource = {
   id: ResourceId
-  slug?: string
   parentId: ResourceId | null
   status: ResourceStatus
 }
@@ -74,12 +73,10 @@ function createReadonlyResourceMap<K, V>(entries: ReadonlyMap<K, V>): ReadonlyMa
 export type ResourceReadModel<T extends ResourceReadModelResource> = {
   resources: ReadonlyArray<T>
   resourcesById: ReadonlyMap<ResourceId, T>
-  resourcesBySlug: ReadonlyMap<ResourceSlug, T>
   activeChildrenByParent: ReadonlyMap<ResourceId | null, ReadonlyArray<T>>
   getResource: (resourceId: ResourceId) => T | undefined
   getResources: (resourceIds: Array<ResourceId>) => Array<T>
   requireResources: (resourceIds: Array<ResourceId>) => Array<T>
-  getResourceBySlug: (slug: ResourceSlug) => T | undefined
   getActiveAncestors: (resourceId: ResourceId) => Array<T>
   getActiveChildren: (parentId: ResourceId | null) => Array<T>
 }
@@ -89,20 +86,11 @@ export function createResourceReadModel<T extends ResourceReadModelResource>(
 ): ResourceReadModel<T> {
   const indexedResources = [...resources]
   const resourcesById = new Map<ResourceId, T>()
-  const resourcesBySlug = new Map<ResourceSlug, T>()
   const activeChildrenByParent = new Map<ResourceId | null, Array<T>>()
 
   for (const resource of indexedResources) {
     if (resourcesById.has(resource.id)) throw new Error(`Duplicate resource id: ${resource.id}`)
     resourcesById.set(resource.id, resource)
-    if (resource.slug) {
-      const slug = assertResourceSlug(resource.slug)
-      const existing = resourcesBySlug.get(slug)
-      if (existing) {
-        throw new Error(`Duplicate resource slug: ${slug} (${existing.id} and ${resource.id})`)
-      }
-      resourcesBySlug.set(slug, resource)
-    }
     if (isActiveResource(resource)) {
       const children = activeChildrenByParent.get(resource.parentId)
       if (children) {
@@ -123,7 +111,6 @@ export function createResourceReadModel<T extends ResourceReadModelResource>(
     activeChildrenByParent: createReadonlyResourceMap(exposedActiveChildrenByParent),
     resources: createReadonlyResourceArray(indexedResources),
     resourcesById: createReadonlyResourceMap(resourcesById),
-    resourcesBySlug: createReadonlyResourceMap(resourcesBySlug),
     getResource: (resourceId) => resourcesById.get(resourceId),
     getResources: (resourceIds) =>
       resourceIds
@@ -137,7 +124,6 @@ export function createResourceReadModel<T extends ResourceReadModelResource>(
       }
       return resolved as Array<T>
     },
-    getResourceBySlug: (slug) => resourcesBySlug.get(slug),
     getActiveAncestors: (resourceId) => {
       const resource = resourcesById.get(resourceId)
       if (!resource) return []
