@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import type { MouseEvent } from 'react'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import { MoreVertical, Trash2 } from 'lucide-react'
-import { EditableBreadcrumb, SidebarItemBreadcrumb } from './editable-breadcrumb'
+import { SidebarItemBreadcrumb } from './editable-breadcrumb'
 import { ShareButton } from './share-button'
 import { ViewAsPlayerButton } from './view-as-button'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
@@ -13,7 +13,7 @@ import { formatRelativeTime } from '@wizard-archive/ui/utils/format-relative-tim
 import { EmptyContextMenu } from '../../context-menu/components/empty'
 import { TooltipButton } from '@wizard-archive/ui/components/tooltip-button'
 import { isOptimisticSidebarItem } from '../items/optimistic'
-import type { AnyItem, AnyItemWithContent } from '../items'
+import type { AnyItem } from '../items'
 import type { ContextMenuHostRef } from '../../context-menu/components/host'
 import type { ViewContext } from '../menu-context'
 import type { FileTopbarSource } from './source'
@@ -48,7 +48,8 @@ type FileTopbarTitleState =
     }
   | {
       kind: 'item'
-      item: AnyItemWithContent
+      item: AnyItem
+      ancestors: Array<AnyItem>
       canRename: boolean
       isNotShared: boolean
       operations: FileTopbarSource['operations']
@@ -107,9 +108,10 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
         />
       )}
       {title.kind === 'item' && (
-        <EditableBreadcrumb
+        <SidebarItemBreadcrumb
           key={title.item.id}
           item={title.item}
+          ancestors={title.ancestors}
           canRename={title.canRename && !title.isNotShared}
           showNotSharedTooltip={title.isNotShared}
           onRename={async (item, name) => {
@@ -189,7 +191,7 @@ function createFileTopbarTitleState({
   getVisibleAncestors: FileTopbarFilesystem['getVisibleAncestors']
   isCurrentLoading: boolean
   isNotSharedWithPlayer: boolean
-  loadedItem: AnyItemWithContent | null
+  loadedItem: AnyItem | null
   operations: FileTopbarFilesystem['operations']
   navigation: FileTopbarFilesystem['navigation']
   subject: FileTopbarSubjectState
@@ -210,6 +212,7 @@ function createFileTopbarTitleState({
     return {
       kind: 'item',
       item: loadedItem,
+      ancestors: [...getVisibleAncestors(loadedItem.id)],
       canRename,
       isNotShared: isNotSharedWithPlayer,
       operations,
@@ -280,8 +283,7 @@ export function FileTopbar({
   const viewAsParticipantId = getViewAsParticipantId(viewAsParticipant)
 
   const isPendingItem = isOptimisticSidebarItem(item)
-  const loadedItem: AnyItemWithContent | null =
-    item && !isPendingItem ? (item as AnyItemWithContent) : null
+  const loadedItem = item && !isPendingItem ? item : null
 
   const subject = createTopbarSubjectState({
     currentNavigation: navigation.current,

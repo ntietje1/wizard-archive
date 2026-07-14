@@ -19,11 +19,10 @@ const editableBreadcrumbSpy = vi.hoisted(() => vi.fn())
 const workspaceContextMenuSpy = vi.hoisted(() => vi.fn())
 
 vi.mock('../editable-breadcrumb', () => ({
-  EditableBreadcrumb: (props: { canRename: boolean; item: { name: string } }) => {
+  SidebarItemBreadcrumb: (props: { canRename: boolean; item: { name: string } }) => {
     editableBreadcrumbSpy(props)
     return <span>{props.item.name}</span>
   },
-  SidebarItemBreadcrumb: ({ item }: { item: { name: string } }) => <span>{item.name}</span>,
 }))
 
 vi.mock('../share-button', () => ({

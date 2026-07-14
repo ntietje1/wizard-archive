@@ -1,7 +1,7 @@
 import type { KeyboardEvent, RefObject } from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { AnyItem, AnyItemWithContent } from '../items'
+import type { AnyItem } from '../items'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import { useNameValidation } from '../../filesystem/use-name-validation'
 import { NameValidationFeedback } from '@wizard-archive/ui/components/name-validation-feedback'
@@ -270,14 +270,6 @@ function BreadcrumbAncestor({ ancestor, onOpen }: BreadcrumbAncestorProps) {
   )
 }
 
-interface EditableBreadcrumbProps {
-  item: AnyItemWithContent
-  canRename: boolean
-  showNotSharedTooltip?: boolean
-  onRename?: (item: AnyItemWithContent, name: string) => Promise<void> | void
-  onOpenAncestor?: (item: AnyItem) => Promise<void> | void
-}
-
 interface SidebarItemBreadcrumbProps<TItem extends AnyItem = AnyItem> {
   item: TItem
   ancestors: Array<AnyItem>
@@ -313,18 +305,5 @@ export function SidebarItemBreadcrumb<TItem extends AnyItem = AnyItem>({
         showNotSharedTooltip={showNotSharedTooltip}
       />
     </div>
-  )
-}
-
-export function EditableBreadcrumb(props: EditableBreadcrumbProps) {
-  return (
-    <SidebarItemBreadcrumb
-      item={props.item}
-      ancestors={props.item.ancestors}
-      canRename={props.canRename}
-      showNotSharedTooltip={props.showNotSharedTooltip}
-      onRename={props.onRename}
-      onOpenAncestor={props.onOpenAncestor}
-    />
   )
 }
