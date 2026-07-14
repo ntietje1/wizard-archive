@@ -8,7 +8,6 @@ import {
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { executeMoveCommand, createFolder, getSidebarItemRowId } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import { testSessionId } from '../../../shared/test/session-id'
 import type { Id } from '../../_generated/dataModel'
 
 describe('hard delete YJS cleanup', () => {
@@ -75,7 +74,7 @@ describe('hard delete YJS cleanup', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
-      sessionId: testSessionId('note-session'),
+      leaseId: 'note-awareness-lease',
       state: new ArrayBuffer(4),
     })
 
@@ -111,7 +110,7 @@ describe('hard delete YJS cleanup', () => {
       campaignId: ctx.campaignDomainId,
       documentId: canvasId,
       clientId: 42,
-      sessionId: testSessionId('canvas-session'),
+      leaseId: 'canvas-awareness-lease',
       state: new ArrayBuffer(4),
     })
 
@@ -153,7 +152,7 @@ describe('hard delete YJS cleanup', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
-      sessionId: testSessionId('nested-note-session'),
+      leaseId: 'nested-note-awareness-lease',
       state: new ArrayBuffer(4),
     })
 

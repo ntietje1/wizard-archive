@@ -174,7 +174,7 @@ describe('cleanupStaleAwareness', () => {
         documentId: noteId,
         clientId: 1,
         userId: ctx.dm.profile._id,
-        sessionId: 'stale-session',
+        leaseId: 'stale-session',
         state: new ArrayBuffer(4),
         updatedAt: Date.now() - (AWARENESS_TTL_MS + 1000),
       })
@@ -200,7 +200,7 @@ describe('cleanupStaleAwareness', () => {
         documentId: noteId,
         clientId: 1,
         userId: ctx.dm.profile._id,
-        sessionId: 'recent-session',
+        leaseId: 'recent-session',
         state: new ArrayBuffer(4),
         updatedAt: Date.now() - Math.floor(AWARENESS_TTL_MS / 2),
       })
@@ -226,7 +226,7 @@ describe('cleanupStaleAwareness', () => {
         documentId: noteId,
         clientId: 1,
         userId: ctx.dm.profile._id,
-        sessionId: 'stale-session',
+        leaseId: 'stale-session',
         state: new ArrayBuffer(4),
         updatedAt: Date.now() - (AWARENESS_TTL_MS + 1000),
       })
@@ -237,7 +237,7 @@ describe('cleanupStaleAwareness', () => {
         documentId: noteId,
         clientId: 2,
         userId: ctx.dm.profile._id,
-        sessionId: 'fresh-session',
+        leaseId: 'fresh-session',
         state: new ArrayBuffer(4),
         updatedAt: Date.now() - Math.floor(AWARENESS_TTL_MS / 2),
       })
@@ -273,7 +273,7 @@ describe('cleanupStaleAwareness', () => {
           documentId: noteId,
           clientId,
           userId: ctx.dm.profile._id,
-          sessionId: `stale-session-${clientId}`,
+          leaseId: `stale-session-${clientId}`,
           state: new ArrayBuffer(4),
           updatedAt: Date.now() - (AWARENESS_TTL_MS + 1000),
         })

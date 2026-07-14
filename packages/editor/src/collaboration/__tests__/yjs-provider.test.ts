@@ -159,7 +159,7 @@ describe('YjsProvider', () => {
       expect(config.removeAwareness).toHaveBeenCalledWith({
         documentId: DOCUMENT_ID,
         clientId: doc.clientID,
-        sessionId: expect.any(String),
+        leaseId: expect.any(String),
       })
     })
 
@@ -552,7 +552,7 @@ describe('YjsProvider', () => {
       fallbackProvider.updateUser(createYjsProviderUser({ userId: 'player-1', name: 'Mara' }))
 
       const args = (fallbackConfig.pushAwareness as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
-      expect(args.sessionId).toMatch(
+      expect(args.leaseId).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
       )
 
@@ -581,7 +581,7 @@ describe('YjsProvider', () => {
       expect(config.pushAwareness).toHaveBeenCalledTimes(1)
     })
 
-    it('renews an idle awareness session with the same private session id', async () => {
+    it('renews an idle awareness lease with the same private session id', async () => {
       provider.awareness.setLocalState({ cursor: { x: 1, y: 1 } })
       await vi.advanceTimersByTimeAsync(0)
       const firstCall = (config.pushAwareness as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]
@@ -590,8 +590,8 @@ describe('YjsProvider', () => {
 
       expect(config.pushAwareness).toHaveBeenCalledTimes(2)
       const secondCall = (config.pushAwareness as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]
-      expect(secondCall.sessionId).toBe(firstCall.sessionId)
-      expect(secondCall.sessionId).toMatch(/^[0-9a-f-]{36}$/)
+      expect(secondCall.leaseId).toBe(firstCall.leaseId)
+      expect(secondCall.leaseId).toMatch(/^[0-9a-f-]{36}$/)
       expect(readAwarenessState(secondCall.state, doc.clientID)).toEqual({
         cursor: { x: 1, y: 1 },
       })

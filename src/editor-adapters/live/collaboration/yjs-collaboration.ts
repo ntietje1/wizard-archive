@@ -53,7 +53,7 @@ export function useConvexYjsCollaboration(
       pushAwareness: async ({
         clientId,
         documentId: awarenessDocumentId,
-        sessionId,
+        leaseId,
         sourceId,
         state,
       }) => {
@@ -61,21 +61,16 @@ export function useConvexYjsCollaboration(
           campaignId: yjsWorkspaceRecordId(sourceId),
           clientId,
           documentId: awarenessDocumentId,
-          sessionId: yjsSessionId(sessionId),
+          leaseId,
           state,
         })
       },
-      removeAwareness: async ({
-        clientId,
-        documentId: awarenessDocumentId,
-        sessionId,
-        sourceId,
-      }) => {
+      removeAwareness: async ({ clientId, documentId: awarenessDocumentId, leaseId, sourceId }) => {
         return convex.mutation(api.yjsSync.mutations.removeAwareness, {
           campaignId: yjsWorkspaceRecordId(sourceId),
           clientId,
           documentId: awarenessDocumentId,
-          sessionId: yjsSessionId(sessionId),
+          leaseId,
         })
       },
       reportError: (message, err) => logger.error(`[YJS] ${message}`, err),
@@ -91,10 +86,6 @@ function yjsWorkspaceRecordId(sourceId: string | null | undefined): CampaignId {
     throw new Error('Yjs workspace source id is required')
   }
   return assertDomainId(DOMAIN_ID_KIND.campaign, sourceId)
-}
-
-function yjsSessionId(sessionId: string | undefined) {
-  return sessionId ? assertDomainId(DOMAIN_ID_KIND.session, sessionId) : undefined
 }
 
 function useConvexYjsUpdates({

@@ -22,10 +22,13 @@ import {
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdate as makeEmptyYjsUpdate } from '../../_test/yjs.helper'
-import { testSessionId } from '../../../shared/test/session-id'
 
 const COMPACTION_SEQ = 20
-const AWARENESS_SESSION_ID = testSessionId('awareness-session-1')
+const AWARENESS_LEASE_ID = 'awareness-lease-1'
+
+function testLeaseId(value: string) {
+  return `lease-${value}`
+}
 
 function makeAwarenessState(): ArrayBuffer {
   return new Uint8Array([1, 2, 3, 4]).buffer
@@ -323,7 +326,7 @@ describe('pushAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 1,
-        sessionId: AWARENESS_SESSION_ID,
+        leaseId: AWARENESS_LEASE_ID,
         state: makeAwarenessState(),
       }),
     )
@@ -339,7 +342,7 @@ describe('pushAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 1,
-        sessionId: AWARENESS_SESSION_ID,
+        leaseId: AWARENESS_LEASE_ID,
         state: makeAwarenessState(),
       }),
     )
@@ -359,7 +362,7 @@ describe('pushAwareness', () => {
           campaignId: ctx.campaignDomainId,
           documentId,
           clientId: 1,
-          sessionId: AWARENESS_SESSION_ID,
+          leaseId: AWARENESS_LEASE_ID,
           state: makeAwarenessState(),
         }),
       )
@@ -383,7 +386,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state,
     })
 
@@ -423,7 +426,7 @@ describe('pushAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: canvasId,
         clientId: 7,
-        sessionId: AWARENESS_SESSION_ID,
+        leaseId: AWARENESS_LEASE_ID,
         state: makeAwarenessState(),
       }),
     )
@@ -439,7 +442,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: canvasId,
       clientId: 7,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: makeAwarenessState(),
     })
 
@@ -468,7 +471,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 10,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: makeAwarenessState(),
     })
 
@@ -477,7 +480,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 10,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: newState,
     })
 
@@ -506,7 +509,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 1,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: makeAwarenessState(),
     })
 
@@ -514,7 +517,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 2,
-      sessionId: testSessionId('awareness-session-2'),
+      leaseId: testLeaseId('awareness-lease-2'),
       state: makeAwarenessState(),
     })
 
@@ -552,7 +555,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 99,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: makeAwarenessState(),
     })
 
@@ -589,7 +592,7 @@ describe('pushAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 50,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: originalState,
     })
 
@@ -598,10 +601,10 @@ describe('pushAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 50,
-        sessionId: testSessionId('attacker-session'),
+        leaseId: testLeaseId('attacker-lease'),
         state: new Uint8Array([9]).buffer,
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'session_conflict' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'lease_conflict' })
 
     await t.run(async (dbCtx) => {
       const row = await dbCtx.db
@@ -609,7 +612,7 @@ describe('pushAwareness', () => {
         .withIndex('by_document_client', (q) => q.eq('documentId', noteRowId).eq('clientId', 50))
         .unique()
       expect(row?.userId).toBe(ctx.dm.profile._id)
-      expect(row?.sessionId).toBe(AWARENESS_SESSION_ID)
+      expect(row?.leaseId).toBe(AWARENESS_LEASE_ID)
       expect(row?.state).toEqual(originalState)
     })
   })
@@ -626,7 +629,7 @@ describe('pushAwareness', () => {
         clientId: 51,
         state: makeAwarenessState(),
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'session_required' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'lease_required' })
   })
 })
 
@@ -642,7 +645,7 @@ describe('removeAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 1,
-        sessionId: AWARENESS_SESSION_ID,
+        leaseId: AWARENESS_LEASE_ID,
       }),
     )
   })
@@ -662,7 +665,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 5,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: makeAwarenessState(),
     })
 
@@ -670,7 +673,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 5,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
     })
 
     await t.run(async (dbCtx) => {
@@ -697,7 +700,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 999,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
     })
 
     expect(result).toEqual({ status: 'unavailable' })
@@ -718,7 +721,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 1,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: makeAwarenessState(),
     })
 
@@ -726,7 +729,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 2,
-      sessionId: testSessionId('awareness-session-2'),
+      leaseId: testLeaseId('awareness-lease-2'),
       state: makeAwarenessState(),
     })
 
@@ -734,7 +737,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 1,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
     })
 
     await t.run(async (dbCtx) => {
@@ -748,7 +751,7 @@ describe('removeAwareness', () => {
     })
   })
 
-  it('rejects release from a different awareness session', async () => {
+  it('rejects release from a different awareness lease', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
@@ -761,7 +764,7 @@ describe('removeAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 52,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: makeAwarenessState(),
     })
 
@@ -770,9 +773,9 @@ describe('removeAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 52,
-        sessionId: testSessionId('different-session'),
+        leaseId: testLeaseId('different-lease'),
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'session_conflict' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'lease_conflict' })
 
     await t.run(async (dbCtx) => {
       const row = await dbCtx.db

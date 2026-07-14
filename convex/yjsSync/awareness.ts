@@ -3,8 +3,8 @@ import { literals } from 'convex-helpers/validators'
 import { AWARENESS_REJECTION_REASON } from '../../shared/yjs-sync/awareness'
 
 const awarenessRejectionReasonValidator = literals(
-  AWARENESS_REJECTION_REASON.sessionConflict,
-  AWARENESS_REJECTION_REASON.sessionRequired,
+  AWARENESS_REJECTION_REASON.leaseConflict,
+  AWARENESS_REJECTION_REASON.leaseRequired,
 )
 
 export const awarenessLeaseResultValidator = v.union(

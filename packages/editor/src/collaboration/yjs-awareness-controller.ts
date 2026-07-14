@@ -26,13 +26,13 @@ export type YjsAwarenessTransport = {
   pushAwareness: (args: {
     documentId: string
     clientId: number
-    sessionId: string
+    leaseId: string
     state: ArrayBuffer
   }) => Promise<AwarenessLeaseResult>
   removeAwareness: (args: {
     documentId: string
     clientId: number
-    sessionId: string
+    leaseId: string
   }) => Promise<AwarenessReleaseResult>
   reportError: (message: string, error?: unknown) => void
 }
@@ -49,7 +49,7 @@ type YjsAwarenessControllerState = {
 
 const AWARENESS_THROTTLE_MS = 16
 
-function createSessionId() {
+function createLeaseId() {
   try {
     if (typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID()
@@ -83,7 +83,7 @@ export class YjsAwarenessController {
   }
 
   readonly awareness: Awareness
-  private readonly sessionId: string
+  private readonly leaseId: string
 
   constructor(
     private readonly input: {
@@ -94,7 +94,7 @@ export class YjsAwarenessController {
     },
   ) {
     this.awareness = new Awareness(input.doc)
-    this.sessionId = createSessionId()
+    this.leaseId = createLeaseId()
   }
 
   updateUser(user: YjsProviderUser) {
@@ -144,7 +144,7 @@ export class YjsAwarenessController {
         this.input.transport.removeAwareness({
           documentId: this.input.documentId,
           clientId: this.input.doc.clientID,
-          sessionId: this.sessionId,
+          leaseId: this.leaseId,
         }),
       )
       .then(() => undefined)
@@ -192,7 +192,7 @@ export class YjsAwarenessController {
       .pushAwareness({
         documentId: this.input.documentId,
         clientId: myClientId,
-        sessionId: this.sessionId,
+        leaseId: this.leaseId,
         state: uint8ToArrayBuffer(encoded),
       })
       .then((result) => {
@@ -201,7 +201,7 @@ export class YjsAwarenessController {
           return
         }
         this.input.transport.reportError(
-          `Yjs awareness session rejected for ${this.input.documentId}: ${result.reason}`,
+          `Yjs awareness lease rejected for ${this.input.documentId}: ${result.reason}`,
         )
       })
       .catch((err: unknown) => {

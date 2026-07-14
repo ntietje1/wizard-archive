@@ -149,7 +149,7 @@ describe('deleteYjsDocument', () => {
         documentId: noteId,
         clientId: 1,
         userId: ctx.dm.profile._id,
-        sessionId: 'session-a',
+        leaseId: 'session-a',
         state: new ArrayBuffer(4),
         updatedAt: Date.now(),
       })
@@ -196,7 +196,7 @@ describe('deleteYjsDocument', () => {
         documentId: noteA,
         clientId: 1,
         userId: ctx.dm.profile._id,
-        sessionId: 'session-a',
+        leaseId: 'session-a',
         state: new ArrayBuffer(4),
         updatedAt: Date.now(),
       })
@@ -204,7 +204,7 @@ describe('deleteYjsDocument', () => {
         documentId: noteB,
         clientId: 2,
         userId: ctx.dm.profile._id,
-        sessionId: 'session-b',
+        leaseId: 'session-b',
         state: new ArrayBuffer(4),
         updatedAt: Date.now(),
       })

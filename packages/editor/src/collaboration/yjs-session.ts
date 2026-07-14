@@ -47,14 +47,14 @@ export type YjsSessionTransport = {
   pushAwareness: (args: {
     clientId: number
     documentId: ResourceId
-    sessionId: string
+    leaseId: string
     sourceId: string
     state: ArrayBuffer
   }) => Promise<AwarenessLeaseResult>
   removeAwareness: (args: {
     clientId: number
     documentId: ResourceId
-    sessionId: string
+    leaseId: string
     sourceId: string
   }) => Promise<AwarenessReleaseResult>
   reportError: (message: string, error?: unknown) => void
@@ -139,19 +139,19 @@ export function useYjsCollaborationSession({
           sourceId: activeSourceId,
           update,
         }),
-      pushAwareness: ({ clientId, sessionId, state }) =>
+      pushAwareness: ({ clientId, leaseId, state }) =>
         transportRef.current.pushAwareness({
           clientId,
           documentId,
-          sessionId,
+          leaseId,
           sourceId: activeSourceId,
           state,
         }),
-      removeAwareness: ({ clientId, sessionId }) =>
+      removeAwareness: ({ clientId, leaseId }) =>
         transportRef.current.removeAwareness({
           clientId,
           documentId,
-          sessionId,
+          leaseId,
           sourceId: activeSourceId,
         }),
       reportError: (message, err) => transportRef.current.reportError(message, err),

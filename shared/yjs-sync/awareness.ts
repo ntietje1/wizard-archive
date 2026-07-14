@@ -3,8 +3,8 @@ export const AWARENESS_TTL_MS = 30 * 1000
 export const AWARENESS_CLEANUP_BATCH_SIZE = 100
 
 export const AWARENESS_REJECTION_REASON = {
-  sessionConflict: 'session_conflict',
-  sessionRequired: 'session_required',
+  leaseConflict: 'lease_conflict',
+  leaseRequired: 'lease_required',
 } as const
 
 export type AwarenessLeaseResult =

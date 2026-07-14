@@ -23,7 +23,7 @@ export const yjsSyncTables = {
     documentId: yjsDocumentIdValidator,
     clientId: v.number(),
     userId: v.id('userProfiles'),
-    sessionId: v.string(),
+    leaseId: v.string(),
     state: v.bytes(),
     updatedAt: v.number(),
   })

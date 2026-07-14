@@ -1,5 +1,4 @@
 import { testResourceId } from '../../../../../shared/test/resource-id'
-import { testSessionId } from '../../../../../shared/test/session-id'
 import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { renderHook } from '@testing-library/react'
@@ -11,7 +10,7 @@ const DOCUMENT_ID = testResourceId('test-doc-id')
 const CAMPAIGN_ID = testCampaignId('test-campaign-id')
 const OTHER_CAMPAIGN_ID = testCampaignId('other-campaign-id')
 const USER = { name: 'Test User', color: '#ff0000' }
-const AWARENESS_SESSION_ID = testSessionId('awareness-session-id')
+const AWARENESS_LEASE_ID = 'awareness-lease-id'
 
 const {
   mockMutation,
@@ -127,14 +126,14 @@ describe('useConvexYjsCollaboration', () => {
       documentId: DOCUMENT_ID,
       sourceId: CAMPAIGN_ID,
       clientId: 123,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: awarenessState,
     })
     await transport.removeAwareness({
       documentId: DOCUMENT_ID,
       sourceId: CAMPAIGN_ID,
       clientId: 123,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
     })
 
     expect(mockMutation).toHaveBeenCalledWith('pushUpdate', {
@@ -146,14 +145,14 @@ describe('useConvexYjsCollaboration', () => {
       campaignId: CAMPAIGN_ID,
       clientId: 123,
       documentId: DOCUMENT_ID,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
       state: awarenessState,
     })
     expect(mockMutation).toHaveBeenCalledWith('removeAwareness', {
       campaignId: CAMPAIGN_ID,
       clientId: 123,
       documentId: DOCUMENT_ID,
-      sessionId: AWARENESS_SESSION_ID,
+      leaseId: AWARENESS_LEASE_ID,
     })
   })
 
@@ -172,7 +171,7 @@ describe('useConvexYjsCollaboration', () => {
       transport.pushAwareness({
         clientId: 123,
         documentId: DOCUMENT_ID,
-        sessionId: AWARENESS_SESSION_ID,
+        leaseId: AWARENESS_LEASE_ID,
         sourceId: null,
         state: new ArrayBuffer(1),
       }),
@@ -181,7 +180,7 @@ describe('useConvexYjsCollaboration', () => {
       transport.removeAwareness({
         clientId: 123,
         documentId: DOCUMENT_ID,
-        sessionId: AWARENESS_SESSION_ID,
+        leaseId: AWARENESS_LEASE_ID,
         sourceId: null,
       }),
     ).rejects.toThrow('Yjs workspace source id is required')

@@ -16,7 +16,6 @@ import { awarenessLeaseResultValidator, awarenessReleaseResultValidator } from '
 import { AWARENESS_REJECTION_REASON, AWARENESS_TTL_MS } from '../../shared/yjs-sync/awareness'
 import type { AwarenessLeaseResult, AwarenessReleaseResult } from '../../shared/yjs-sync/awareness'
 import { resourceIdValidator } from '../resources/validators'
-import { sessionIdValidator } from '../sessions/schema'
 
 const pushUpdateResultValidator = v.union(
   v.object({ status: v.literal('accepted'), seq: v.number() }),
@@ -138,20 +137,17 @@ export const pushAwareness = campaignMutation({
   args: {
     documentId: resourceIdValidator,
     clientId: v.number(),
-    sessionId: v.optional(sessionIdValidator),
+    leaseId: v.optional(v.string()),
     state: v.bytes(),
   },
   returns: awarenessLeaseResultValidator,
-  handler: async (ctx, { documentId, clientId, sessionId, state }) => {
+  handler: async (ctx, { documentId, clientId, leaseId, state }) => {
     const providerDocumentId = await checkYjsReadAccess(ctx, documentId)
-    if (!sessionId) return rejectedAwarenessLease(AWARENESS_REJECTION_REASON.sessionRequired)
+    if (!leaseId) return rejectedAwarenessLease(AWARENESS_REJECTION_REASON.leaseRequired)
 
     const existing = await getYjsAwarenessForClient(ctx, providerDocumentId, clientId)
-    if (
-      existing &&
-      (existing.userId !== ctx.membership.userId || existing.sessionId !== sessionId)
-    ) {
-      return rejectedAwarenessLease(AWARENESS_REJECTION_REASON.sessionConflict)
+    if (existing && (existing.userId !== ctx.membership.userId || existing.leaseId !== leaseId)) {
+      return rejectedAwarenessLease(AWARENESS_REJECTION_REASON.leaseConflict)
     }
 
     const updatedAt = Date.now()
@@ -166,7 +162,7 @@ export const pushAwareness = campaignMutation({
         documentId: providerDocumentId,
         clientId,
         userId: ctx.membership.userId,
-        sessionId,
+        leaseId,
         state,
         updatedAt,
       })
@@ -180,17 +176,17 @@ export const removeAwareness = campaignMutation({
   args: {
     documentId: resourceIdValidator,
     clientId: v.number(),
-    sessionId: v.optional(sessionIdValidator),
+    leaseId: v.optional(v.string()),
   },
   returns: awarenessReleaseResultValidator,
-  handler: async (ctx, { documentId, clientId, sessionId }) => {
+  handler: async (ctx, { documentId, clientId, leaseId }) => {
     const providerDocumentId = await checkYjsReadAccess(ctx, documentId)
-    if (!sessionId) return rejectedAwarenessRelease(AWARENESS_REJECTION_REASON.sessionRequired)
+    if (!leaseId) return rejectedAwarenessRelease(AWARENESS_REJECTION_REASON.leaseRequired)
 
     const existing = await getYjsAwarenessForClient(ctx, providerDocumentId, clientId)
     if (!existing) return { status: 'unavailable' as const }
-    if (existing.userId !== ctx.membership.userId || existing.sessionId !== sessionId) {
-      return rejectedAwarenessRelease(AWARENESS_REJECTION_REASON.sessionConflict)
+    if (existing.userId !== ctx.membership.userId || existing.leaseId !== leaseId) {
+      return rejectedAwarenessRelease(AWARENESS_REJECTION_REASON.leaseConflict)
     }
 
     await ctx.db.delete('yjsAwareness', existing._id)

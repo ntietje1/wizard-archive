@@ -6,7 +6,10 @@ import { createNote, createSidebarShare } from '../../_test/factories.helper'
 import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdate as makeEmptyYjsUpdate } from '../../_test/yjs.helper'
-import { testSessionId } from '../../../shared/test/session-id'
+
+function testLeaseId(value: string) {
+  return `lease-${value}`
+}
 
 const firstPage = { cursor: null, numItems: 100 }
 
@@ -303,7 +306,7 @@ describe('getAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
-      sessionId: testSessionId('session-42'),
+      leaseId: testLeaseId('lease-42'),
       state,
     })
 
@@ -334,7 +337,7 @@ describe('getAwareness', () => {
         campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId,
-        sessionId: testSessionId(`session-${clientId}`),
+        leaseId: testLeaseId(`lease-${clientId}`),
         state: new ArrayBuffer(4),
       })
     }
@@ -370,7 +373,7 @@ describe('getAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 10,
-      sessionId: testSessionId('session-10'),
+      leaseId: testLeaseId('lease-10'),
       state: new ArrayBuffer(4),
     })
 
@@ -408,7 +411,7 @@ describe('getAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 20,
-      sessionId: testSessionId('session-20'),
+      leaseId: testLeaseId('lease-20'),
       state: new ArrayBuffer(4),
     })
 
@@ -440,7 +443,7 @@ describe('getAwareness', () => {
       campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 99,
-      sessionId: testSessionId('session-99'),
+      leaseId: testLeaseId('lease-99'),
       state,
     })
 
