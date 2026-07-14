@@ -1,16 +1,17 @@
 import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import { createWizardEditorResource } from '@wizard-archive/editor/adapter'
 import { act } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { localWorkspaceReducer } from '../local-workspace-model'
 import type { LocalWorkspaceAction, LocalWorkspaceState } from '../local-workspace-model'
-import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
+import { SAMPLE_LOCAL_RESOURCE_IDS, SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import type { createLocalRuntimeFileSystem } from './helpers/local-runtime'
 import { createLocalWorkspaceRuntime } from './helpers/local-runtime'
 import type { WizardEditorItem, WizardEditorNavigationState } from '@wizard-archive/editor/adapter'
 import type { Dispatch } from 'react'
 import { testCampaignId } from 'shared/test/campaign-id'
+import { testResourceId } from 'shared/test/resource-id'
 
 const TEST_RESOURCE_TYPES = {
   notes: 'note',
@@ -62,7 +63,7 @@ describe('local demo workspace runtime', () => {
 
     await expect(
       source.filesystem.operations.updateItemMetadata({
-        item: { ...item, id: 'missing-local-item' as ResourceId },
+        item: { ...item, id: testResourceId('missing-local-item') },
         name: testResourceTitle('Renamed note'),
       }),
     ).rejects.toThrow('Failed to update item metadata')
@@ -101,12 +102,14 @@ describe('local demo workspace runtime', () => {
     const { setNavigation, source } = createLocalSidebarSource()
 
     await act(async () => {
-      await source.navigation.openItem(createWizardEditorResource('canvas-heist' as ResourceId))
+      await source.navigation.openItem(
+        createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+      )
     })
 
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource('canvas-heist' as ResourceId),
+      resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
     })
   })
 
@@ -123,7 +126,7 @@ describe('local demo workspace runtime', () => {
   it('opens known trashed items from the trash surface', async () => {
     const workspace = localWorkspaceReducer(SAMPLE_LOCAL_WORKSPACE, {
       type: 'trashItems',
-      itemIds: ['canvas-heist'],
+      itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas],
     })
     const { setNavigation, source } = createLocalSidebarSource({
       navigation: { kind: 'trash' },
@@ -131,30 +134,32 @@ describe('local demo workspace runtime', () => {
     })
 
     await act(async () => {
-      await source.navigation.openItem(createWizardEditorResource('canvas-heist' as ResourceId))
+      await source.navigation.openItem(
+        createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+      )
     })
 
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource('canvas-heist' as ResourceId),
+      resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
     })
   })
 
   it('projects a known trashed current item instead of reporting it as missing', () => {
     const workspace = localWorkspaceReducer(SAMPLE_LOCAL_WORKSPACE, {
       type: 'trashItems',
-      itemIds: ['canvas-heist'],
+      itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas],
     })
     const { source } = createLocalSidebarSource({
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource('canvas-heist' as ResourceId),
+        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
       },
       workspace,
     })
 
     expect(source.filesystem.current.contentItem).toMatchObject({
-      id: 'canvas-heist',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       isTrashed: true,
     })
     expect(source.filesystem.current.availabilityState).toMatchObject({
@@ -174,14 +179,16 @@ describe('local demo workspace runtime', () => {
       }),
     )
 
-    expect(created).toEqual({ status: 'completed', id: 'local-note-2', slug: 'local-note-2' })
+    expect(created).toMatchObject({ status: 'completed', slug: 'local-note-2' })
+    if (created.status !== 'completed') throw new Error('Expected local note creation')
+    expect(isUuidV7(created.id)).toBe(true)
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'createItem',
       creation: expect.objectContaining({
-        id: 'local-note-2',
+        id: created.id,
         item: expect.objectContaining({
-          id: 'local-note-2',
+          id: created.id,
           parentId: null,
           type: 'note',
         }),
@@ -189,7 +196,7 @@ describe('local demo workspace runtime', () => {
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-note-2',
+      itemId: created.id,
       title: 'Local source note',
     })
   })
@@ -201,8 +208,8 @@ describe('local demo workspace runtime', () => {
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
     const filesystem = source.filesystem
-    const note = filesystem.catalog.getKnownItemById('note-market' as ResourceId)
-    const canvas = filesystem.catalog.getKnownItemById('canvas-heist' as ResourceId)
+    const note = filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
+    const canvas = filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas)
     if (!note) throw new Error('Expected seeded note to exist in local demo catalog')
     if (!canvas) throw new Error('Expected seeded canvas to exist in local demo catalog')
 
@@ -218,7 +225,7 @@ describe('local demo workspace runtime', () => {
       receipt: expect.objectContaining({
         command: {
           type: 'copy',
-          itemIds: ['note-market'],
+          itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
           targetParentId: null,
         },
       }),
@@ -228,7 +235,7 @@ describe('local demo workspace runtime', () => {
       receipt: expect.objectContaining({
         command: {
           type: 'trash',
-          itemIds: ['canvas-heist'],
+          itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas],
         },
       }),
     })
@@ -237,7 +244,7 @@ describe('local demo workspace runtime', () => {
   it('routes local sidebar trash popover actions into runtime operations', async () => {
     const workspace = localWorkspaceReducer(SAMPLE_LOCAL_WORKSPACE, {
       type: 'trashItems',
-      itemIds: ['canvas-heist'],
+      itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas],
     })
     const deleteDispatch = vi.fn()
     const deleteSource = createLocalWorkspaceRuntime({
@@ -246,7 +253,7 @@ describe('local demo workspace runtime', () => {
     })
 
     await deleteSource.filesystem.operations.requestDeleteItemsForever([
-      'canvas-heist' as ResourceId,
+      SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
     ])
 
     expect(deleteDispatch).toHaveBeenCalledExactlyOnceWith({
@@ -254,7 +261,7 @@ describe('local demo workspace runtime', () => {
       receipt: expect.objectContaining({
         command: {
           type: 'deleteForever',
-          itemIds: ['canvas-heist'],
+          itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas],
         },
       }),
     })

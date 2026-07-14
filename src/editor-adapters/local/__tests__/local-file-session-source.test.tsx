@@ -1,8 +1,7 @@
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { WizardEditorItemWithContent } from '@wizard-archive/editor/adapter'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
-import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
+import { SAMPLE_LOCAL_RESOURCE_IDS, SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { createLocalWorkspaceRuntime } from '../local-workspace-runtime-adapter'
 import { createLocalFileSystemSnapshot } from '../local-filesystem-snapshot'
 import {
@@ -35,7 +34,7 @@ describe('local demo filesystem file session source', () => {
       setWorkspaceMode: vi.fn(),
     })
     const filesystem = runtime.filesystem
-    const file = filesystem.catalog.getKnownItemById('file-handout' as ResourceId)
+    const file = filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile)
     if (!file || file.type !== 'file') {
       throw new Error('Expected the seeded demo file to exist in the filesystem catalog')
     }

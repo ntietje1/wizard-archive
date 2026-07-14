@@ -30,6 +30,7 @@ import {
   useInMemoryNoteValueSessionPorts,
 } from './in-memory-note-session-source'
 import { SAMPLE_LOCAL_WORKSPACE } from './sample-local-workspace'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 export function useLocalWorkspaceRuntime({
   canEdit = true,
@@ -42,7 +43,7 @@ export function useLocalWorkspaceRuntime({
 }: {
   canEdit?: boolean
   collaborationPlayback?: WizardEditorNoteCollaborationPlayback
-  initialItemId?: string | null
+  initialItemId?: ResourceId | null
   initialWorkspace?: LocalWorkspaceState
   openExternalUrl: LocalWorkspaceExternalUrlNavigation
   openSeparateItem?: LocalWorkspaceSeparateItemNavigation
@@ -73,21 +74,21 @@ export function useLocalWorkspaceRuntime({
   const canvasSession = useInMemoryCanvasSessionSource({
     canEdit: canMutateWorkspace,
     getCanvasPayload: (canvasId) => {
-      const payload = requireLocalCanvasPayload(runtimeWorkspace, String(canvasId))
+      const payload = requireLocalCanvasPayload(runtimeWorkspace, canvasId)
       return {
         edges: payload.edges,
         nodes: payload.nodes,
       }
     },
     onCanvasContentChange: ({ canvasId, payload }) => {
-      dispatch({ type: 'replaceCanvasPayload', itemId: String(canvasId), payload })
+      dispatch({ type: 'replaceCanvasPayload', itemId: canvasId, payload })
     },
     user: workspace.localUser,
     workspaceId: workspace.workspaceId,
   })
   const canvasEmbedded = useInMemoryCanvasEmbeddedSessionSource({
     getEmbeddedCanvasPayload: (canvasId) => {
-      const payload = requireLocalCanvasPayload(runtimeWorkspace, String(canvasId))
+      const payload = requireLocalCanvasPayload(runtimeWorkspace, canvasId)
       return {
         edges: payload.edges,
         nodes: payload.nodes,
@@ -96,7 +97,7 @@ export function useLocalWorkspaceRuntime({
   })
   const noteSession = useInMemoryNoteSessionSource({
     onNoteContentChange: ({ body, noteId }) => {
-      dispatch({ type: 'replaceNoteBody', itemId: String(noteId), body })
+      dispatch({ type: 'replaceNoteBody', itemId: noteId, body })
     },
     user: runtimeWorkspace.localUser,
   })

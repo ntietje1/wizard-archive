@@ -1,4 +1,3 @@
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { applyUpdate, encodeStateAsUpdate } from 'yjs'
@@ -11,6 +10,7 @@ import type {
 import { createNote } from '../../../test/factories/sidebar-item-factory'
 import { useInMemoryNoteSessionSource } from '../in-memory-note-session-source'
 import { testNoteBlockId } from 'shared/test/note-block-id'
+import { testResourceId } from 'shared/test/resource-id'
 
 type TestNoteItemWithContent = WizardEditorNoteCollaborationSessionRequest['note']
 
@@ -73,7 +73,7 @@ describe('useInMemoryNoteSessionSource', () => {
 
       await waitFor(() =>
         expect(onNoteContentChange).toHaveBeenCalledWith({
-          noteId: 'note-1',
+          noteId: note.id,
           body: expect.stringContaining('Updated local note body'),
         }),
       )
@@ -155,7 +155,7 @@ describe('useInMemoryNoteSessionSource', () => {
 
 function createContentNote(id: string): TestNoteItemWithContent {
   return {
-    ...createNote({ id: id as ResourceId }),
+    ...createNote({ id: testResourceId(id) }),
     ancestors: [],
     blockMeta: {},
     blockShareAccessWarnings: [],

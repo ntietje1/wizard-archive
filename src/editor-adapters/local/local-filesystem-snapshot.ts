@@ -138,25 +138,23 @@ export function createLocalWorkspaceActor(
 function localAvailabilityTargetLabel(workspace: LocalWorkspaceState) {
   const selectedPlayerId = workspace.selectedViewAsPlayerId
   if (!selectedPlayerId) return 'you'
-  const selectedPlayer = workspace.playerMembers?.find(
-    (member) => String(member.id) === String(selectedPlayerId),
-  )
+  const selectedPlayer = workspace.playerMembers?.find((member) => member.id === selectedPlayerId)
   return selectedPlayer ? getUserDisplayName(selectedPlayer.userProfile) : 'the selected player'
 }
 
 export function createLocalWorkspaceInitialNavigation(
   workspace: LocalWorkspaceState,
-  itemId?: string | null,
+  itemId?: ResourceId | null,
 ): WizardEditorNavigationState {
   if (itemId) {
     return {
       kind: 'resource',
-      resource: createWizardEditorResource(itemId as ResourceId),
+      resource: createWizardEditorResource(itemId),
     }
   }
   const initialItem = workspace.items.find((item) => localWorkspaceItemIsVisible(workspace, item))
   return initialItem
-    ? { kind: 'resource', resource: createWizardEditorResource(initialItem.id as ResourceId) }
+    ? { kind: 'resource', resource: createWizardEditorResource(initialItem.id) }
     : { kind: 'create' }
 }
 
@@ -171,13 +169,13 @@ function createLocalCatalogItems(state: LocalWorkspaceState) {
     actor,
   )
   const visibleItemsById = new Map(
-    visibleItemsWithoutMapPins.map((item) => [String(item.id), item] as const),
+    visibleItemsWithoutMapPins.map((item) => [item.id, item] as const),
   )
   const items = itemsWithoutMapPins.map((item) => {
     if (item.type !== 'gameMap') return item
     return {
       ...item,
-      pins: createLocalMapPins(state, String(item.id), visibleItemsById),
+      pins: createLocalMapPins(state, item.id, visibleItemsById),
     } satisfies LocalMapItemWithContent
   })
   const visibleActiveItemIds = new Set(visibleItemsWithoutMapPins.map((item) => item.id))
@@ -207,18 +205,18 @@ function filterLocalCatalogItemsForActor<TItem extends WizardEditorItemWithConte
   ).data as Array<TItem>
 }
 
-function localNoteBodyForItem(state: LocalWorkspaceState, itemId: string) {
+function localNoteBodyForItem(state: LocalWorkspaceState, itemId: ResourceId) {
   return state.noteBodiesById[itemId] ?? ''
 }
 
-function localMapForItem(state: LocalWorkspaceState, itemId: string) {
+function localMapForItem(state: LocalWorkspaceState, itemId: ResourceId) {
   return state.mapsById[itemId] ?? { id: itemId, imageUrl: null, pins: [] }
 }
 
 function createLocalMapPins(
   state: LocalWorkspaceState,
-  mapId: string,
-  itemsById: ReadonlyMap<string, WizardEditorItemWithContent>,
+  mapId: ResourceId,
+  itemsById: ReadonlyMap<ResourceId, WizardEditorItemWithContent>,
 ) {
   const map = localMapForItem(state, mapId)
   return map.pins.flatMap((pin) => {
@@ -229,8 +227,8 @@ function createLocalMapPins(
       {
         id: pin.id,
         createdAt: pin.creationTime,
-        mapId: map.id as ResourceId,
-        itemId: pin.itemId as ResourceId,
+        mapId: map.id,
+        itemId: pin.itemId,
         layerId: pin.layerId ?? null,
         x: pin.x,
         y: pin.y,
@@ -244,7 +242,7 @@ function createLocalMapPins(
 function createLocalCatalogItem(
   state: LocalWorkspaceState,
   item: LocalWorkspaceItem,
-  localItemsById: ReadonlyMap<string, LocalWorkspaceItem>,
+  localItemsById: ReadonlyMap<ResourceId, LocalWorkspaceItem>,
 ): WizardEditorItemWithContent {
   const baseItem = {
     ...localSidebarItemBaseFields(state, item, localItemsById),
@@ -316,12 +314,12 @@ function createLocalCatalogItem(
 function localSidebarItemBaseFields(
   state: LocalWorkspaceState,
   item: LocalWorkspaceItem,
-  localItemsById: ReadonlyMap<string, LocalWorkspaceItem>,
+  localItemsById: ReadonlyMap<ResourceId, LocalWorkspaceItem>,
 ): LocalSidebarItemBaseFields {
   const isTrashed = item.status === 'trash'
   const myPermissionLevel = localItemPermissionLevel(state, item.id)
   return {
-    id: item.id as ResourceId,
+    id: item.id,
     createdAt: item.createdAt,
     name: requireLocalResourceTitle(item.title || 'Untitled'),
     iconName: item.iconName ?? null,
@@ -357,7 +355,7 @@ function localSidebarItemShares(state: LocalWorkspaceState, item: LocalWorkspace
           id: getLocalResourceShareId(state.workspaceId, item.id, campaignMemberId),
           createdAt: item.createdAt,
           campaignId: state.workspaceId,
-          sidebarItemId: item.id as ResourceId,
+          sidebarItemId: item.id,
           sidebarItemType: localSidebarItemType(item.type),
           campaignMemberId,
           sessionId: null,
@@ -370,7 +368,7 @@ function localSidebarItemShares(state: LocalWorkspaceState, item: LocalWorkspace
 
 function getLocalResourceShareId(
   workspaceId: CampaignId,
-  itemId: string,
+  itemId: ResourceId,
   memberId: CampaignMemberId,
 ) {
   const key = `${workspaceId}\0${itemId}\0${memberId}`
@@ -389,7 +387,7 @@ function localSidebarItemType(itemType: LocalWorkspaceItem['type']): LocalSideba
   return 'folder'
 }
 
-function localItemPermissionLevel(state: LocalWorkspaceState, itemId: string) {
+function localItemPermissionLevel(state: LocalWorkspaceState, itemId: ResourceId) {
   const selectedPlayerId = state.selectedViewAsPlayerId
   if (!selectedPlayerId) return PERMISSION_LEVEL.FULL_ACCESS
 
@@ -406,7 +404,7 @@ function localWorkspaceItemIsVisible(state: LocalWorkspaceState, item: LocalWork
 function localItemAncestors(
   state: LocalWorkspaceState,
   item: LocalWorkspaceItem,
-  itemsById: ReadonlyMap<string, LocalWorkspaceItem>,
+  itemsById: ReadonlyMap<ResourceId, LocalWorkspaceItem>,
 ): Array<WizardEditorFolderItem> {
   const ancestors: Array<WizardEditorFolderItem> = []
   const seenIds = new Set([item.id])
@@ -442,11 +440,11 @@ function requireLocalResourceSlug(value: string): LocalItemSlug {
 function localVisibleParentId(
   state: LocalWorkspaceState,
   item: LocalWorkspaceItem,
-  itemsById: ReadonlyMap<string, LocalWorkspaceItem>,
+  itemsById: ReadonlyMap<ResourceId, LocalWorkspaceItem>,
 ) {
   if (!item.parentId) return null
   const parent = itemsById.get(item.parentId)
-  return parent && localWorkspaceItemIsVisible(state, parent) ? (item.parentId as ResourceId) : null
+  return parent && localWorkspaceItemIsVisible(state, parent) ? item.parentId : null
 }
 
 function createLocalNoteContent(state: LocalWorkspaceState, item: LocalWorkspaceItem) {
@@ -549,7 +547,7 @@ function projectLocalBlockMeta(
 
 function projectSelectedPlayerBlockVisibility(
   state: LocalWorkspaceState,
-  itemId: string,
+  itemId: ResourceId,
   content: LocalNoteContent,
 ): LocalNoteContent {
   const selectedPlayerId = state.selectedViewAsPlayerId

@@ -37,10 +37,10 @@ const LOCAL_ITEM_TYPES_BY_SIDEBAR_TYPE = {
 interface LocalWorkspaceItem {
   color?: LocalResourceColor
   createdAt: number
-  id: string
+  id: ResourceId
   iconName?: LocalResourceIconName
   isBookmarked?: boolean
-  parentId: string | null
+  parentId: ResourceId | null
   slug?: WizardEditorResourceSlug
   status: 'active' | 'trash'
   trashedAt?: number | null
@@ -51,7 +51,7 @@ interface LocalWorkspaceItem {
 }
 
 interface LocalItemCreation {
-  id: string
+  id: ResourceId
   item: LocalWorkspaceItem
   nextLocalItemIndex: number
   slug: WizardEditorResourceSlug
@@ -59,7 +59,7 @@ interface LocalItemCreation {
 
 interface LocalMapPin {
   id: MapPinId
-  itemId: string
+  itemId: ResourceId
   layerId?: string | null
   x: number
   y: number
@@ -68,7 +68,7 @@ interface LocalMapPin {
 }
 
 interface LocalMap {
-  id: string
+  id: ResourceId
   imageUrl: string | null
   layers?: Array<LocalMapLayer>
   pins: Array<LocalMapPin>
@@ -82,7 +82,7 @@ interface LocalMapLayer {
 
 interface LocalMapPinCreation {
   id: MapPinId
-  itemId: string
+  itemId: ResourceId
   layerId?: string | null
   x: number
   y: number
@@ -129,7 +129,7 @@ function getValidLocalViewAsPlayerId(
   if (!selectedPlayerId) return undefined
   if (!state.playerMembers) return selectedPlayerId
 
-  return state.playerMembers.some((member) => String(member.id) === String(selectedPlayerId))
+  return state.playerMembers.some((member) => member.id === selectedPlayerId)
     ? selectedPlayerId
     : undefined
 }
@@ -162,7 +162,7 @@ export type LocalFilePayload = {
 
 export function requireLocalCanvasPayload(
   state: LocalWorkspaceState,
-  canvasId: string,
+  canvasId: ResourceId,
 ): LocalCanvasPayload {
   const payload = state.canvasPayloadsById[canvasId]
   if (!payload) {
@@ -182,7 +182,7 @@ export function requireLocalFilePayloadForItem(
   return payload
 }
 
-function requireLocalMap(state: LocalWorkspaceState, mapId: string): LocalMap {
+function requireLocalMap(state: LocalWorkspaceState, mapId: ResourceId): LocalMap {
   const map = state.mapsById[mapId]
   if (!map) {
     throw new Error(`Missing local map payload for ${mapId}`)
@@ -194,28 +194,28 @@ export type LocalWorkspaceAction =
   | { type: 'applyResourceCommandReceipt'; receipt: LocalResourceCommandReceipt }
   | {
       type: 'createMapPins'
-      mapId: string
+      mapId: ResourceId
       pins: Array<LocalMapPinCreation>
     }
   | { type: 'createItem'; creation: LocalItemCreation }
-  | { type: 'deleteItemsForever'; itemIds: Array<string> }
-  | { type: 'moveItems'; itemIds: Array<string>; targetParentId: string | null }
-  | { type: 'replaceCanvasPayload'; itemId: string; payload: LocalCanvasPayload }
-  | { type: 'replaceNoteBody'; itemId: string; body: string }
-  | { type: 'restoreItems'; itemIds: Array<string>; targetParentId: string | null }
-  | { type: 'trashItems'; itemIds: Array<string> }
-  | { type: 'toggleBookmarks'; itemIds: Array<string> }
+  | { type: 'deleteItemsForever'; itemIds: Array<ResourceId> }
+  | { type: 'moveItems'; itemIds: Array<ResourceId>; targetParentId: ResourceId | null }
+  | { type: 'replaceCanvasPayload'; itemId: ResourceId; payload: LocalCanvasPayload }
+  | { type: 'replaceNoteBody'; itemId: ResourceId; body: string }
+  | { type: 'restoreItems'; itemIds: Array<ResourceId>; targetParentId: ResourceId | null }
+  | { type: 'trashItems'; itemIds: Array<ResourceId> }
+  | { type: 'toggleBookmarks'; itemIds: Array<ResourceId> }
   | {
       type: 'updateItemMetadata'
-      itemId: string
+      itemId: ResourceId
       title?: string
       slug?: WizardEditorResourceSlug
       iconName?: LocalResourceIconName | null
       color?: LocalResourceColor | null
     }
-  | { type: 'replaceFile'; itemId: string; payload: LocalFilePayload }
+  | { type: 'replaceFile'; itemId: ResourceId; payload: LocalFilePayload }
   | { type: 'removeMapPin'; mapPinId: MapPinId }
-  | { type: 'updateMapImage'; layerId: string | null; mapId: string; imageUrl: string | null }
+  | { type: 'updateMapImage'; layerId: string | null; mapId: ResourceId; imageUrl: string | null }
   | { type: 'updateMapPin'; mapPinId: MapPinId; x: number; y: number }
   | { type: 'updateMapPinVisibility'; mapPinId: MapPinId; isVisible: boolean }
 
@@ -266,36 +266,26 @@ function applyResourceCommandReceipt(
 ): LocalWorkspaceState {
   if (receipt.events.length === 0) return state
 
-  const itemIds = receipt.events.flatMap((event) =>
-    'itemId' in event ? [String(event.itemId)] : [],
-  )
+  const itemIds = receipt.events.flatMap((event) => ('itemId' in event ? [event.itemId] : []))
 
   switch (receipt.command.type) {
     case WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.move:
-      return moveItems(
-        state,
-        itemIds,
-        receipt.command.targetParentId ? String(receipt.command.targetParentId) : null,
-      )
+      return moveItems(state, itemIds, receipt.command.targetParentId)
     case WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.copy:
       return copyItemsFromReceipt(
         state,
-        receipt.command.itemIds.map(String),
-        receipt.command.targetParentId ? String(receipt.command.targetParentId) : null,
+        receipt.command.itemIds,
+        receipt.command.targetParentId,
         new Map(
           receipt.events.flatMap((event) =>
-            event.type === 'copied' ? [[String(event.sourceItemId), String(event.itemId)]] : [],
+            event.type === 'copied' ? [[event.sourceItemId, event.itemId]] : [],
           ),
         ),
       )
     case WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.trash:
       return trashItems(state, itemIds)
     case WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.restore:
-      return restoreItems(
-        state,
-        itemIds,
-        receipt.command.targetParentId ? String(receipt.command.targetParentId) : null,
-      )
+      return restoreItems(state, itemIds, receipt.command.targetParentId)
     case WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.deleteForever:
     case WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.emptyTrash:
       return deleteItemsForever(state, itemIds)
@@ -312,7 +302,7 @@ function createLocalWorkspaceMutationTimestamp() {
 
 function markLocalItemsUpdated(
   items: Array<LocalWorkspaceItem>,
-  itemIds: ReadonlySet<string>,
+  itemIds: ReadonlySet<ResourceId>,
   updatedAt: number,
 ) {
   return items.map((item) => (itemIds.has(item.id) ? { ...item, updatedAt } : item))
@@ -350,7 +340,7 @@ function updateItemMetadata(
 
 function replaceFile(
   state: LocalWorkspaceState,
-  itemId: string,
+  itemId: ResourceId,
   payload: LocalFilePayload,
 ): LocalWorkspaceState {
   const item = state.items.find((candidate) => candidate.id === itemId)
@@ -369,7 +359,7 @@ function replaceFile(
 
 function replaceCanvasPayload(
   state: LocalWorkspaceState,
-  itemId: string,
+  itemId: ResourceId,
   payload: LocalCanvasPayload,
 ): LocalWorkspaceState {
   const item = state.items.find((candidate) => candidate.id === itemId)
@@ -388,7 +378,7 @@ function replaceCanvasPayload(
 
 function replaceNoteBody(
   state: LocalWorkspaceState,
-  itemId: string,
+  itemId: ResourceId,
   body: string,
 ): LocalWorkspaceState {
   const item = state.items.find((candidate) => candidate.id === itemId)
@@ -412,20 +402,18 @@ function createMapPins(
   const map = state.mapsById[action.mapId]
   if (!map || action.pins.length === 0) return state
 
-  const activeItemIds = new Set<string>()
+  const activeItemIds = new Set<ResourceId>()
   for (const item of state.items) {
     if (item.status === 'active') activeItemIds.add(item.id)
   }
-  const pins = action.pins.map((pin) => ({ ...pin, itemId: pin.itemId as ResourceId }))
+  const pins = action.pins
+  const pinsByItemId = new Map(pins.map((pin) => [pin.itemId, pin] as const))
   const createdPins = planWizardEditorMapPinCreations({
-    mapId: action.mapId as ResourceId,
-    existingPinnedItemIds: map.pins.map((pin) => pin.itemId as ResourceId),
+    mapId: action.mapId,
+    existingPinnedItemIds: map.pins.map((pin) => pin.itemId),
     pins,
-    canPinItem: (itemId) => activeItemIds.has(String(itemId)),
-    createPin: (pin): LocalMapPinCreation => {
-      const localPin = pin as (typeof pins)[number]
-      return { ...localPin, itemId: String(localPin.itemId) }
-    },
+    canPinItem: (itemId) => activeItemIds.has(itemId),
+    createPin: (pin): LocalMapPinCreation => pinsByItemId.get(pin.itemId)!,
   })
   if (createdPins.length === 0) return state
   const updatedAt = createLocalWorkspaceMutationTimestamp()
@@ -485,7 +473,7 @@ function removeMapPin(state: LocalWorkspaceState, mapPinId: MapPinId): LocalWork
 
 function updateMapImage(
   state: LocalWorkspaceState,
-  mapId: string,
+  mapId: ResourceId,
   layerId: string | null,
   imageUrl: string | null,
 ): LocalWorkspaceState {
@@ -518,16 +506,16 @@ function updateMapContainingPin(
     map.pins.some((pin) => pin.id === mapPinId),
   )
   if (!mapEntry) return { mapId: null, mapsById: state.mapsById }
-  const [mapId, map] = mapEntry
+  const [, map] = mapEntry
   const nextMap = update(map)
   if (nextMap === map || mapsAreEqual(nextMap, map)) {
     return { mapId: null, mapsById: state.mapsById }
   }
   return {
-    mapId,
+    mapId: map.id,
     mapsById: {
       ...state.mapsById,
-      [mapId]: nextMap,
+      [map.id]: nextMap,
     },
   }
 }
@@ -542,7 +530,7 @@ function mapsAreEqual(left: LocalMap, right: LocalMap) {
 
 function withUpdatedLocalMap(
   state: LocalWorkspaceState,
-  mapId: string | null,
+  mapId: ResourceId | null,
   mapsById: Record<string, LocalMap>,
 ): LocalWorkspaceState {
   if (!mapId) return state
@@ -556,8 +544,8 @@ function withUpdatedLocalMap(
 
 function moveItems(
   state: LocalWorkspaceState,
-  itemIds: Array<string>,
-  targetParentId: string | null,
+  itemIds: Array<ResourceId>,
+  targetParentId: ResourceId | null,
 ): LocalWorkspaceState {
   if (!isValidLocalParentTarget(state, targetParentId)) return state
   const rootIds = normalizedRootIds(state, itemIds, { status: 'active' })
@@ -579,9 +567,9 @@ function moveItems(
 
 function copyItemsFromReceipt(
   state: LocalWorkspaceState,
-  itemIds: Array<string>,
-  targetParentId: string | null,
-  copiedItemIdsBySourceId: ReadonlyMap<string, string>,
+  itemIds: Array<ResourceId>,
+  targetParentId: ResourceId | null,
+  copiedItemIdsBySourceId: ReadonlyMap<ResourceId, ResourceId>,
 ): LocalWorkspaceState {
   if (!isValidLocalParentTarget(state, targetParentId)) return state
   const rootIds = normalizedRootIds(state, itemIds, { status: 'active' })
@@ -592,7 +580,7 @@ function copyItemsFromReceipt(
   const copiedCanvasPayloads = { ...state.canvasPayloadsById }
   const copiedFilePayloads = { ...state.filePayloadsById }
   const copiedMapsById = { ...state.mapsById }
-  const copiedMapIds: Array<string> = []
+  const copiedMapIds: Array<ResourceId> = []
   const copiedNoteAdditionalBlocks = { ...state.noteAdditionalBlocksById }
   const copiedNoteBlockVisibilityRef: {
     value: LocalWorkspaceState['noteBlockVisibilityById']
@@ -600,7 +588,7 @@ function copyItemsFromReceipt(
     value: state.noteBlockVisibilityById ? { ...state.noteBlockVisibilityById } : undefined,
   }
   const copiedNoteBodies = { ...state.noteBodiesById }
-  const idMap = new Map<string, string>()
+  const idMap = new Map<ResourceId, ResourceId>()
   const itemsById = new Map(state.items.map((item) => [item.id, item] as const))
   const nextIndexRef = { value: nextIndex }
   const copiedAt = createLocalWorkspaceMutationTimestamp()
@@ -651,7 +639,7 @@ function copyItemsFromReceipt(
   }
 }
 
-function trashItems(state: LocalWorkspaceState, itemIds: Array<string>): LocalWorkspaceState {
+function trashItems(state: LocalWorkspaceState, itemIds: Array<ResourceId>): LocalWorkspaceState {
   const affectedIds = itemIdsWithDescendants(state, itemIds, {
     descendantStatus: 'active',
     rootStatus: 'active',
@@ -666,7 +654,10 @@ function trashItems(state: LocalWorkspaceState, itemIds: Array<string>): LocalWo
   return { ...state, items }
 }
 
-function toggleBookmarks(state: LocalWorkspaceState, itemIds: Array<string>): LocalWorkspaceState {
+function toggleBookmarks(
+  state: LocalWorkspaceState,
+  itemIds: Array<ResourceId>,
+): LocalWorkspaceState {
   const ids = new Set(itemIds)
   if (ids.size === 0) return state
 
@@ -683,8 +674,8 @@ function toggleBookmarks(state: LocalWorkspaceState, itemIds: Array<string>): Lo
 
 function restoreItems(
   state: LocalWorkspaceState,
-  itemIds: Array<string>,
-  targetParentId: string | null,
+  itemIds: Array<ResourceId>,
+  targetParentId: ResourceId | null,
 ): LocalWorkspaceState {
   if (!isValidLocalParentTarget(state, targetParentId)) return state
   const rootIds = normalizedRootIds(state, itemIds, { status: 'trash' })
@@ -710,7 +701,7 @@ function restoreItems(
 
 function deleteItemsForever(
   state: LocalWorkspaceState,
-  itemIds: Array<string>,
+  itemIds: Array<ResourceId>,
 ): LocalWorkspaceState {
   const affectedIds = itemIdsWithDescendants(state, itemIds, {
     descendantStatus: 'trash',
@@ -772,20 +763,20 @@ function copyItemTree({
   copiedItems: Array<LocalWorkspaceItem>
   copiedCanvasPayloads: Record<string, LocalCanvasPayload>
   copiedFilePayloads: Record<string, LocalFilePayload>
-  copiedMapIds: Array<string>
+  copiedMapIds: Array<ResourceId>
   copiedMapsById: Record<string, LocalMap>
   copiedNoteAdditionalBlocks: Record<string, Array<LocalNoteBlock>>
   copiedNoteBlockVisibilityRef: {
     value: LocalWorkspaceState['noteBlockVisibilityById']
   }
   copiedNoteBodies: Record<string, string>
-  copiedItemIdsBySourceId: ReadonlyMap<string, string>
-  idMap: Map<string, string>
+  copiedItemIdsBySourceId: ReadonlyMap<ResourceId, ResourceId>
+  idMap: Map<ResourceId, ResourceId>
   item: LocalWorkspaceItem
   nextIndexRef: { value: number }
-  sourceParentId: string | null
+  sourceParentId: ResourceId | null
   state: LocalWorkspaceState
-  targetParentId: string | null
+  targetParentId: ResourceId | null
 }) {
   const copiedId = copiedItemIdsBySourceId.get(item.id)
   if (!copiedId) {
@@ -794,7 +785,11 @@ function copyItemTree({
   nextIndexRef.value += 1
   idMap.set(item.id, copiedId)
   const copiedParentId =
-    item.parentId === sourceParentId ? targetParentId : (idMap.get(item.parentId ?? '') ?? null)
+    item.parentId === sourceParentId
+      ? targetParentId
+      : item.parentId
+        ? (idMap.get(item.parentId) ?? null)
+        : null
   const copiedItem: LocalWorkspaceItem = {
     ...item,
     createdAt: copiedAt,
@@ -856,7 +851,7 @@ function copyItemTree({
 
 function copyLocalCanvasPayload(
   state: LocalWorkspaceState,
-  sourceCanvasId: string,
+  sourceCanvasId: ResourceId,
 ): LocalCanvasPayload {
   const sourceCanvas = requireLocalCanvasPayload(state, sourceCanvasId)
   const nodeIdMap = new Map(
@@ -881,8 +876,8 @@ function copyLocalCanvasPayload(
 
 function copyLocalMap(
   state: LocalWorkspaceState,
-  sourceMapId: string,
-  copiedMapId: string,
+  sourceMapId: ResourceId,
+  copiedMapId: ResourceId,
 ): LocalMap {
   const sourceMap = requireLocalMap(state, sourceMapId)
   const layerIdMap = new Map(
@@ -907,7 +902,7 @@ function copyLocalMap(
   }
 }
 
-function remapLocalMapPins(map: LocalMap, idMap: ReadonlyMap<string, string>): LocalMap {
+function remapLocalMapPins(map: LocalMap, idMap: ReadonlyMap<ResourceId, ResourceId>): LocalMap {
   return {
     ...map,
     pins: map.pins.map((pin) => ({
@@ -919,7 +914,7 @@ function remapLocalMapPins(map: LocalMap, idMap: ReadonlyMap<string, string>): L
 
 function copyMemberItemPermissions(
   memberItemPermissionsById: LocalWorkspaceState['memberItemPermissionsById'],
-  idMap: ReadonlyMap<string, string>,
+  idMap: ReadonlyMap<ResourceId, ResourceId>,
 ): LocalWorkspaceState['memberItemPermissionsById'] {
   if (!memberItemPermissionsById) return undefined
 
@@ -938,7 +933,7 @@ function copyMemberItemPermissions(
 
 function removeMemberItemPermissionsForItems(
   memberItemPermissionsById: LocalWorkspaceState['memberItemPermissionsById'],
-  removedItemIds: ReadonlySet<string>,
+  removedItemIds: ReadonlySet<ResourceId>,
 ): LocalWorkspaceState['memberItemPermissionsById'] {
   if (!memberItemPermissionsById) return undefined
 
@@ -953,7 +948,7 @@ function removeMemberItemPermissionsForItems(
 
 function removeMapContentForItems(
   mapsById: Record<string, LocalMap>,
-  removedItemIds: ReadonlySet<string>,
+  removedItemIds: ReadonlySet<ResourceId>,
 ) {
   const nextMaps = { ...mapsById }
   for (const itemId of removedItemIds) {
@@ -970,7 +965,7 @@ function removeMapContentForItems(
 
 function normalizedRootIds(
   state: LocalWorkspaceState,
-  itemIds: Array<string>,
+  itemIds: Array<ResourceId>,
   options: { status?: LocalWorkspaceItem['status'] } = {},
 ) {
   const itemsById = new Map(state.items.map((item) => [item.id, item] as const))
@@ -980,8 +975,8 @@ function normalizedRootIds(
       return item && (!options.status || item.status === options.status)
     }),
   )
-  const roots: Array<string> = []
-  const rootIds = new Set<string>()
+  const roots: Array<ResourceId> = []
+  const rootIds = new Set<ResourceId>()
 
   for (const itemId of itemIds) {
     const item = itemsById.get(itemId)
@@ -1007,7 +1002,7 @@ function normalizedRootIds(
 
 function childrenOf(
   state: LocalWorkspaceState,
-  parentId: string,
+  parentId: ResourceId,
   status?: LocalWorkspaceItem['status'],
 ) {
   return state.items.filter(
@@ -1017,9 +1012,9 @@ function childrenOf(
 
 function descendantItemIds(
   state: LocalWorkspaceState,
-  itemId: string,
+  itemId: ResourceId,
   status?: LocalWorkspaceItem['status'],
-): Array<string> {
+): Array<ResourceId> {
   return childrenOf(state, itemId, status).flatMap((child) => [
     child.id,
     ...descendantItemIds(state, child.id, status),
@@ -1028,7 +1023,7 @@ function descendantItemIds(
 
 function itemIdsWithDescendants(
   state: LocalWorkspaceState,
-  itemIds: Array<string>,
+  itemIds: Array<ResourceId>,
   options: {
     descendantStatus?: LocalWorkspaceItem['status']
     rootStatus?: LocalWorkspaceItem['status']
@@ -1042,7 +1037,7 @@ function itemIdsWithDescendants(
   )
 }
 
-function isValidLocalParentTarget(state: LocalWorkspaceState, targetParentId: string | null) {
+function isValidLocalParentTarget(state: LocalWorkspaceState, targetParentId: ResourceId | null) {
   if (targetParentId === null) return true
   const target = state.items.find((item) => item.id === targetParentId)
   return target?.type === 'folder' && target.status === 'active'
@@ -1108,7 +1103,7 @@ export function createLocalItemCreationSession(initialIndex: number) {
     }: {
       color?: LocalResourceColor
       iconName?: LocalResourceIconName
-      parentId: string | null
+      parentId: ResourceId | null
       type: LocalWorkspaceItemType
     }): LocalItemCreation {
       const index = claimNextIndex()
@@ -1134,12 +1129,12 @@ function createLocalItemCreation({
   color?: LocalResourceColor
   iconName?: LocalResourceIconName
   index: number
-  parentId: string | null
+  parentId: ResourceId | null
   type: LocalWorkspaceItemType
 }): LocalItemCreation {
-  const id = `local-${type}-${index}`
+  const id = generateDomainId(DOMAIN_ID_KIND.resource)
   const createdAt = createLocalWorkspaceMutationTimestamp()
-  const slug = requireLocalResourceSlug(id)
+  const slug = requireLocalResourceSlug(`local-${type}-${index}`)
   const item: LocalWorkspaceItem = {
     color,
     createdAt,

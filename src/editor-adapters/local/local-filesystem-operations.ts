@@ -45,7 +45,7 @@ type LocalPathFolderReservation = {
   owners: Set<symbol>
 }
 type LocalCreatedTransaction = {
-  creationId: string
+  creationId: ResourceId
   pathFolderEntries: Array<LocalCreatedPathFolderEntry>
 }
 type LocalCreateItemInput = Omit<WizardEditorResourceCreateCommand, 'type'> & {
@@ -234,7 +234,7 @@ function executeLocalCreateCommand(
   const creation = creationSession.create({
     color: command.color,
     iconName: command.iconName,
-    parentId: parentResolution.parentId ? String(parentResolution.parentId) : null,
+    parentId: parentResolution.parentId,
     type: localItemType,
   })
   dispatch({
@@ -254,7 +254,7 @@ function executeLocalCreateCommand(
     [
       {
         type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.created,
-        itemId: creation.id as ResourceId,
+        itemId: creation.id,
         slug: creation.slug,
       },
     ],
@@ -272,7 +272,7 @@ function executeLocalRenameCommand(
   const slug = name === undefined ? item.slug : createLocalRenameSlug(catalog, item.id, name)
   dispatch({
     type: 'updateItemMetadata',
-    itemId: String(itemId),
+    itemId,
     ...(name === undefined ? {} : { title: name }),
     ...(slug === item.slug ? {} : { slug }),
     ...(iconName === undefined ? {} : { iconName }),
@@ -340,7 +340,10 @@ function executeLocalCommittedFileSystemCommand(
   const completeCommand = (completedCommand: WizardEditorResourceCatalogCommand) =>
     createCompletedLocalFileSystemCommandResult(completedCommand, {
       catalog,
-      claimNextItemIndex: () => creationSession.claimNextIndex(),
+      claimNextItemId: () => {
+        creationSession.claimNextIndex()
+        return generateDomainId(DOMAIN_ID_KIND.resource)
+      },
     })
 
   const result = completeCommand(command)
@@ -472,10 +475,10 @@ function resolveLocalCreateParentTarget({
     }
 
     const creation = creationSession.create({
-      parentId: currentParentId ? String(currentParentId) : null,
+      parentId: currentParentId,
       type: 'folder',
     })
-    const folderId = creation.id as ResourceId
+    const folderId = creation.id
     dispatch({
       type: 'createItem',
       creation,
@@ -538,7 +541,7 @@ function collectLocalPathFolderRollbackItemIds(
   createdPathFolders: Map<string, LocalPathFolderReservation>,
   entries: Array<LocalCreatedPathFolderEntry>,
 ) {
-  const itemIds: Array<string> = []
+  const itemIds: Array<ResourceId> = []
   for (const entry of entries) {
     const reservation = createdPathFolders.get(entry.key)
     if (!reservation || reservation.id !== entry.id) continue

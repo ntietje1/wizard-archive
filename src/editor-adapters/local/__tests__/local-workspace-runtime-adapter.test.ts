@@ -6,12 +6,12 @@ import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 import { LOCAL_WORKSPACE_INITIAL_TIMESTAMP, localWorkspaceReducer } from '../local-workspace-model'
-import type { LocalWorkspaceState } from '../local-workspace-model'
+import type { LocalWorkspaceAction, LocalWorkspaceState } from '../local-workspace-model'
 import {
   createPublicDemoScenario,
   PUBLIC_DEMO_SCENARIO_IDS,
 } from '../public-demo-workspace-presets'
-import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
+import { SAMPLE_LOCAL_RESOURCE_IDS, SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { createLocalWorkspaceRuntime as createLocalWorkspaceRuntimeBase } from '../local-workspace-runtime-adapter'
 import { testNoteBlockId } from 'shared/test/note-block-id'
 import { testMapPinId } from 'shared/test/map-pin-id'
@@ -42,8 +42,13 @@ import type {
   WizardEditorItemWithContent,
   WizardEditorNavigationState,
 } from '@wizard-archive/editor/adapter'
-import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
+import {
+  assertDomainId,
+  DOMAIN_ID_KIND,
+  isUuidV7,
+} from '@wizard-archive/editor/resources/domain-id'
 import { testCampaignMemberId } from 'shared/test/campaign-member-id'
+import { testResourceId } from 'shared/test/resource-id'
 import { createImportFile } from './helpers/import-file'
 
 const TEST_RESOURCE_TYPES = {
@@ -63,7 +68,15 @@ type LocalMapItemWithContent = Extract<WizardEditorItemWithContent, { type: 'gam
 type LocalNoteItemWithContent = Extract<WizardEditorItemWithContent, { type: 'note' }>
 type LocalNoteBlock = LocalNoteItemWithContent['content'][number]
 type LocalImportFile = WizardEditorFileSessionReplaceInput['file']
-const SEEDED_MAP_PIN_IDS = SAMPLE_LOCAL_WORKSPACE.mapsById['map-docks']!.pins.map((pin) => pin.id)
+const SEEDED_MAP_PIN_IDS = SAMPLE_LOCAL_WORKSPACE.mapsById[
+  SAMPLE_LOCAL_RESOURCE_IDS.docksMap
+]!.pins.map((pin) => pin.id)
+const PUBLIC_DEMO_SESSION_NOTE_ID = createPublicDemoScenario(
+  PUBLIC_DEMO_SCENARIO_IDS.collaborativeSessionNotes,
+).initialItemId!
+const PUBLIC_DEMO_TUNNEL_SKETCH_FILE_ID = createPublicDemoScenario(
+  PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap,
+).workspace.items.find((item) => item.title === 'Tide Tunnel Sketch')!.id
 
 describe('createLocalRuntimeFileSystem', () => {
   it('keeps sharing command classification out of the local executor', () => {
@@ -154,9 +167,9 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch,
       workspace,
     })
-    const contentItem = filesystem.catalog.getKnownItemById('note-market' as ResourceId)
+    const contentItem = filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
 
-    expect(contentItem).toMatchObject({ id: 'note-market' })
+    expect(contentItem).toMatchObject({ id: SAMPLE_LOCAL_RESOURCE_IDS.marketNote })
     expect(filesystem.current.contentItem).toBe(contentItem)
     expect(filesystem.permissions.canMutateItem(contentItem!, PERMISSION_LEVEL.FULL_ACCESS)).toBe(
       true,
@@ -168,11 +181,19 @@ describe('createLocalRuntimeFileSystem', () => {
       name: 'Local note',
     })
 
-    expect(created).toEqual({ status: 'completed', id: 'local-note-2', slug: 'local-note-2' })
-    expectCreateItemDispatch(dispatch, { id: 'local-note-2', parentId: null, type: 'note' })
+    expect(created).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-2'),
+      slug: 'local-note-2',
+    })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-note-2'),
+      parentId: null,
+      type: 'note',
+    })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-note-2',
+      itemId: createdResourceId(dispatch, 'local-note-2'),
       title: 'Local note',
     })
   })
@@ -182,23 +203,31 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource('map-docks' as ResourceId),
+        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.docksMap),
       },
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
     const map = filesystem.current.contentItem
 
     expect(map).toMatchObject({
-      id: 'map-docks',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       imageUrl: expect.stringContaining('data:image/svg+xml'),
       pins: [
-        expect.objectContaining({ id: SEEDED_MAP_PIN_IDS[0], itemId: 'note-market' }),
-        expect.objectContaining({ id: SEEDED_MAP_PIN_IDS[1], itemId: 'file-handout' }),
+        expect.objectContaining({
+          id: SEEDED_MAP_PIN_IDS[0],
+          itemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
+        }),
+        expect.objectContaining({
+          id: SEEDED_MAP_PIN_IDS[1],
+          itemId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
+        }),
       ],
       type: TEST_RESOURCE_TYPES.gameMaps,
     })
     expect(
-      SAMPLE_LOCAL_WORKSPACE.mapsById['map-docks']?.pins.map((pin) => pin.creationTime),
+      SAMPLE_LOCAL_WORKSPACE.mapsById[SAMPLE_LOCAL_RESOURCE_IDS.docksMap]?.pins.map(
+        (pin) => pin.creationTime,
+      ),
     ).toEqual([1704067200000, 1704067200000])
   })
 
@@ -208,7 +237,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch,
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
-    const item = filesystem.catalog.getKnownItemById('note-market' as ResourceId)
+    const item = filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
 
     const update = await filesystem.operations.updateItemMetadata({
       item: item!,
@@ -231,13 +260,15 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'note-market',
+      itemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
       slug: 'renamed-market',
       title: 'Renamed Market',
       iconName: 'FileText',
       color: '#abcdef',
     })
-    expect(nextFilesystem.catalog.getKnownItemById('note-market' as ResourceId)).toMatchObject({
+    expect(
+      nextFilesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
+    ).toMatchObject({
       name: 'Renamed Market',
       slug: 'renamed-market',
       iconName: 'FileText',
@@ -252,7 +283,7 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
 
-    await filesystem.operations.toggleBookmarks(['note-market' as ResourceId])
+    await filesystem.operations.toggleBookmarks([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -269,11 +300,13 @@ describe('createLocalRuntimeFileSystem', () => {
       receipt: expect.objectContaining({
         command: {
           type: 'toggleBookmarks',
-          itemIds: ['note-market'],
+          itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
         },
       }),
     })
-    expect(nextFilesystem.catalog.getKnownItemById('note-market' as ResourceId)).toMatchObject({
+    expect(
+      nextFilesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
+    ).toMatchObject({
       isBookmarked: true,
     })
   })
@@ -287,14 +320,14 @@ describe('createLocalRuntimeFileSystem', () => {
 
     await expect(
       runtime.sessions.file.replaceFile({
-        fileId: 'file-handout' as ResourceId,
+        fileId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
         file: createImportFile(['updated handout'], 'updated.txt', { type: 'text/plain' }),
       }),
     ).resolves.toEqual({
       status: 'completed',
       receipt: {
         kind: 'fileReplaced',
-        itemId: 'file-handout',
+        itemId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
         affectedCount: 1,
       },
     })
@@ -309,12 +342,12 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     const nextFilesystem = nextRuntime.filesystem
     const file = nextFilesystem.catalog.getKnownItemById(
-      'file-handout' as ResourceId,
+      SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
     ) as LocalFileItemWithContent
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'replaceFile',
-      itemId: 'file-handout',
+      itemId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
       payload: expect.objectContaining({
         allowDataUrl: true,
         allowObjectUrl: false,
@@ -341,7 +374,7 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     await runtime.sessions.file.replaceFile({
-      fileId: 'file-handout' as ResourceId,
+      fileId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
       file: createLocalImportFile({
         bytes,
         contentType: 'image/png',
@@ -358,7 +391,7 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
     const file = nextRuntime.filesystem.catalog.getKnownItemById(
-      'file-handout' as ResourceId,
+      SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
     ) as LocalFileItemWithContent
 
     expect(nextRuntime.sessions.file.resolveFile(file)).toMatchObject({
@@ -380,7 +413,7 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     const result = await runtime.sessions.file.replaceFile({
-      fileId: 'file-handout' as ResourceId,
+      fileId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
       file: createLocalImportFile({
         arrayBuffer,
         contentType: 'image/png',
@@ -421,24 +454,32 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     const nextFilesystem = nextRuntime.filesystem
     const file = nextFilesystem.catalog.getKnownItemById(
-      'local-file-2' as ResourceId,
+      createdResourceId(dispatch, 'local-file-2'),
     ) as LocalFileItemWithContent
 
     expect(created).toEqual({
       status: 'imported',
       kind: 'file',
       fileName: 'portrait.png',
-      result: { status: 'completed', id: 'local-file-2', slug: 'local-file-2' },
+      result: {
+        status: 'completed',
+        id: createdResourceId(dispatch, 'local-file-2'),
+        slug: 'local-file-2',
+      },
     })
-    expectCreateItemDispatch(dispatch, { id: 'local-file-2', parentId: null, type: 'file' })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-file-2'),
+      parentId: null,
+      type: 'file',
+    })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-file-2',
+      itemId: createdResourceId(dispatch, 'local-file-2'),
       title: 'portrait.png',
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'replaceFile',
-      itemId: 'local-file-2',
+      itemId: createdResourceId(dispatch, 'local-file-2'),
       payload: expect.objectContaining({
         allowDataUrl: true,
         allowObjectUrl: false,
@@ -506,24 +547,32 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     const nextFilesystem = nextRuntime.filesystem
     const note = nextFilesystem.catalog.getKnownItemById(
-      'local-note-2' as ResourceId,
+      createdResourceId(dispatch, 'local-note-2'),
     ) as LocalNoteItemWithContent
 
     expect(created).toEqual({
       status: 'imported',
       kind: 'note',
       fileName: 'notes.txt',
-      result: { status: 'completed', id: 'local-note-2', slug: 'local-note-2' },
+      result: {
+        status: 'completed',
+        id: createdResourceId(dispatch, 'local-note-2'),
+        slug: 'local-note-2',
+      },
     })
-    expectCreateItemDispatch(dispatch, { id: 'local-note-2', parentId: null, type: 'note' })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-note-2'),
+      parentId: null,
+      type: 'note',
+    })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-note-2',
+      itemId: createdResourceId(dispatch, 'local-note-2'),
       title: 'notes.txt',
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'replaceNoteBody',
-      itemId: 'local-note-2',
+      itemId: createdResourceId(dispatch, 'local-note-2'),
       body: 'first line\n- second',
     })
     expect(note.content).toEqual([
@@ -560,14 +609,18 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     const nextFilesystem = nextRuntime.filesystem
     const note = nextFilesystem.catalog.getKnownItemById(
-      'local-note-2' as ResourceId,
+      createdResourceId(dispatch, 'local-note-2'),
     ) as LocalNoteItemWithContent
 
     expect(imported).toEqual({
       status: 'imported',
       kind: 'note',
       fileName: 'notes.txt',
-      result: { status: 'completed', id: 'local-note-2', slug: 'local-note-2' },
+      result: {
+        status: 'completed',
+        id: createdResourceId(dispatch, 'local-note-2'),
+        slug: 'local-note-2',
+      },
     })
     expect(note.content).toEqual([
       expect.objectContaining({
@@ -610,14 +663,18 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(dispatch).toHaveBeenCalledWith({
       type: 'trashItems',
-      itemIds: ['local-note-2'],
+      itemIds: [createdResourceId(dispatch, 'local-note-2')],
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'deleteItemsForever',
-      itemIds: ['local-note-2'],
+      itemIds: [createdResourceId(dispatch, 'local-note-2')],
     })
-    expect(nextWorkspace.noteBodiesById).not.toHaveProperty('local-note-2')
-    expect(nextRuntime.filesystem.catalog.getKnownItemById('local-note-2' as ResourceId)).toBe(null)
+    expect(nextWorkspace.noteBodiesById).not.toHaveProperty(
+      createdResourceId(dispatch, 'local-note-2'),
+    )
+    expect(
+      nextRuntime.filesystem.catalog.getKnownItemById(createdResourceId(dispatch, 'local-note-2')),
+    ).toBe(null)
   })
 
   it('imports local file drop trees through the workspace filesystem operation', async () => {
@@ -651,36 +708,38 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     const nextFilesystem = nextRuntime.filesystem
     const note = nextFilesystem.catalog.getKnownItemById(
-      'local-note-2' as ResourceId,
+      createdResourceId(dispatch, 'local-note-2'),
     ) as LocalNoteItemWithContent
-    const folder = nextFilesystem.catalog.getKnownItemById('local-folder-3' as ResourceId)
+    const folder = nextFilesystem.catalog.getKnownItemById(
+      createdResourceId(dispatch, 'local-folder-3'),
+    )
     const file = nextFilesystem.catalog.getKnownItemById(
-      'local-file-4' as ResourceId,
+      createdResourceId(dispatch, 'local-file-4'),
     ) as LocalFileItemWithContent
 
     expect(receipt).toEqual({
       processedFiles: 2,
       processedFolders: 1,
       skippedFiles: 0,
-      lastFolderId: 'local-folder-3',
+      lastFolderId: createdResourceId(dispatch, 'local-folder-3'),
       skippedFileDetails: [],
     })
     expect(note).toMatchObject({
-      id: 'local-note-2',
+      id: createdResourceId(dispatch, 'local-note-2'),
       name: 'notes.txt',
       parentId: null,
       type: TEST_RESOURCE_TYPES.notes,
     })
     expect(folder).toMatchObject({
-      id: 'local-folder-3',
+      id: createdResourceId(dispatch, 'local-folder-3'),
       name: 'Assets',
       parentId: null,
       type: TEST_RESOURCE_TYPES.folders,
     })
     expect(file).toMatchObject({
-      id: 'local-file-4',
+      id: createdResourceId(dispatch, 'local-file-4'),
       name: 'portrait.png',
-      parentId: 'local-folder-3',
+      parentId: createdResourceId(dispatch, 'local-folder-3'),
       type: TEST_RESOURCE_TYPES.files,
     })
     expect(nextRuntime.sessions.file.resolveFile(file)).toMatchObject({
@@ -706,25 +765,25 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     const createResult = await runtime.sessions.map.pins.create({
-      mapId: 'map-docks' as ResourceId,
-      pins: [{ itemId: 'canvas-heist' as ResourceId, x: 40, y: 60 }],
+      mapId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
+      pins: [{ itemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas, x: 40, y: 60 }],
     })
     if (createResult.status !== 'completed') throw new Error('Expected map pin creation')
     const createdPinIds = createResult.receipt.pinIds
     await runtime.sessions.map.pins.update({
-      mapId: 'map-docks' as ResourceId,
+      mapId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       mapPinId: createdPinIds[0]!,
       x: 41,
       y: 61,
     })
     await runtime.sessions.map.pins.setVisibility({
-      mapId: 'map-docks' as ResourceId,
+      mapId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       mapPinId: createdPinIds[0]!,
       isVisible: false,
     })
     await expect(
       runtime.sessions.map.updateMapImage({
-        mapId: 'map-docks' as ResourceId,
+        mapId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
         file: createImportFile(['<svg />'], 'local-map.svg', { type: 'image/svg+xml' }),
       }),
     ).resolves.toMatchObject({ status: 'completed', receipt: { kind: 'mapImageUpdated' } })
@@ -740,7 +799,7 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     const nextFilesystem = nextRuntime.filesystem
     const nextMap = nextFilesystem.catalog.getKnownItemById(
-      'map-docks' as ResourceId,
+      SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
     ) as LocalMapItemWithContent
 
     expect(createdPinIds).toHaveLength(1)
@@ -750,7 +809,7 @@ describe('createLocalRuntimeFileSystem', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: createdPinIds[0],
-          itemId: 'canvas-heist',
+          itemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
           x: 41,
           y: 61,
           visible: false,
@@ -759,7 +818,7 @@ describe('createLocalRuntimeFileSystem', () => {
     )
 
     await nextRuntime.sessions.map.pins.remove({
-      mapId: 'map-docks' as ResourceId,
+      mapId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       mapPinId: createdPinIds[0]!,
     })
     const finalWorkspace = nextDispatch.mock.calls.reduce(
@@ -771,7 +830,7 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: finalWorkspace,
     })
     const finalMap = finalFilesystem.catalog.getKnownItemById(
-      'map-docks' as ResourceId,
+      SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
     ) as LocalMapItemWithContent
 
     expect(finalMap.pins.map((pin) => pin.id)).toEqual(SEEDED_MAP_PIN_IDS)
@@ -785,13 +844,13 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     const firstCreateResult = await runtime.sessions.map.pins.create({
-      mapId: 'map-docks' as ResourceId,
-      pins: [{ itemId: 'canvas-heist' as ResourceId, x: 40, y: 60 }],
+      mapId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
+      pins: [{ itemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas, x: 40, y: 60 }],
     })
     if (firstCreateResult.status !== 'completed') throw new Error('Expected map pin creation')
     const duplicateCreateResult = await runtime.sessions.map.pins.create({
-      mapId: 'map-docks' as ResourceId,
-      pins: [{ itemId: 'canvas-heist' as ResourceId, x: 44, y: 64 }],
+      mapId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
+      pins: [{ itemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas, x: 44, y: 64 }],
     })
     if (duplicateCreateResult.status !== 'completed') {
       throw new Error('Expected duplicate map pin operation to complete')
@@ -801,12 +860,14 @@ describe('createLocalRuntimeFileSystem', () => {
       (state, [action]) => localWorkspaceReducer(state, action),
       SAMPLE_LOCAL_WORKSPACE,
     )
-    const nextMap = nextWorkspace.mapsById['map-docks']
+    const nextMap = nextWorkspace.mapsById[SAMPLE_LOCAL_RESOURCE_IDS.docksMap]
 
     expect(firstCreateResult.receipt.pinIds).toHaveLength(1)
     expect(isUuidV7(firstCreateResult.receipt.pinIds[0]!)).toBe(true)
     expect(duplicateCreateResult.receipt.pinIds).toEqual([])
-    expect(nextMap?.pins.filter((pin) => pin.itemId === 'canvas-heist')).toEqual([
+    expect(
+      nextMap?.pins.filter((pin) => pin.itemId === SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+    ).toEqual([
       expect.objectContaining({
         id: firstCreateResult.receipt.pinIds[0],
         x: 40,
@@ -821,7 +882,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
-    const note = filesystem.catalog.getKnownItemById('note-market' as ResourceId)
+    const note = filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
 
     expect(note).toMatchObject({ type: TEST_RESOURCE_TYPES.notes })
     if (!note || note.type !== TEST_RESOURCE_TYPES.notes) {
@@ -850,7 +911,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: scenario.workspace,
     })
-    const map = filesystem.catalog.getKnownItemById('map-docks' as ResourceId)
+    const map = filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.docksMap)
 
     expect(map).toMatchObject({
       type: TEST_RESOURCE_TYPES.gameMaps,
@@ -865,23 +926,27 @@ describe('createLocalRuntimeFileSystem', () => {
       expect.objectContaining({ id: 'map-docks-layer-1', name: 'Layer 1' }),
       expect.objectContaining({ id: 'map-docks-layer-2', name: 'Layer 2' }),
     ])
-    expect(findMapPin(mapWithContent, 'file-tunnel-sketch')).toMatchObject({
+    expect(findMapPin(mapWithContent, PUBLIC_DEMO_TUNNEL_SKETCH_FILE_ID)).toMatchObject({
       layerId: 'map-docks-layer-2',
     })
-    expect(findMapPinItem(mapWithContent, 'file-tunnel-sketch')).toMatchObject({
+    expect(findMapPinItem(mapWithContent, PUBLIC_DEMO_TUNNEL_SKETCH_FILE_ID)).toMatchObject({
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
-    expect(findMapPin(mapWithContent, 'file-handout')).toMatchObject({
+    expect(findMapPin(mapWithContent, SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile)).toMatchObject({
       layerId: 'map-docks-layer-1',
     })
-    expect(findMapPinItem(mapWithContent, 'file-handout')).toMatchObject({
+    expect(findMapPinItem(mapWithContent, SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile)).toMatchObject({
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     expect(mapWithContent.pins.map((pin) => pin.itemId)).toEqual(
-      expect.arrayContaining(['file-tunnel-sketch', 'file-handout', 'canvas-heist']),
+      expect.arrayContaining([
+        PUBLIC_DEMO_TUNNEL_SKETCH_FILE_ID,
+        SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
+        SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
+      ]),
     )
     expect(mapWithContent.pins).toHaveLength(3)
-    expect(findMapPin(mapWithContent, 'canvas-heist')).toMatchObject({
+    expect(findMapPin(mapWithContent, SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas)).toMatchObject({
       visible: false,
     })
   })
@@ -895,7 +960,7 @@ describe('createLocalRuntimeFileSystem', () => {
         selectedViewAsPlayerId: selectedParticipantId,
       },
     })
-    const note = filesystem.catalog.getKnownItemById('note-market' as ResourceId)
+    const note = filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
 
     expect(note).toMatchObject({
       myPermissionLevel: PERMISSION_LEVEL.NONE,
@@ -908,8 +973,8 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('omits hidden ancestors from selected-player visible local items', () => {
     const selectedParticipantId = testCampaignMemberId('demo-member-mira')
-    const folderId = 'folder-gm-only'
-    const noteId = 'note-player-clue'
+    const folderId = testResourceId('folder-gm-only')
+    const noteId = testResourceId('note-player-clue')
     const filesystem = createLocalRuntimeFileSystem({
       dispatch: vi.fn(),
       setSelectedViewAsPlayerId: vi.fn(),
@@ -949,9 +1014,9 @@ describe('createLocalRuntimeFileSystem', () => {
       },
     })
 
-    const note = filesystem.catalog.getVisibleItemById(noteId as ResourceId)
+    const note = filesystem.catalog.getVisibleItemById(noteId)
 
-    expect(filesystem.catalog.getVisibleItemById(folderId as ResourceId)).toBeNull()
+    expect(filesystem.catalog.getVisibleItemById(folderId)).toBeNull()
     expect(note).toMatchObject({
       id: noteId,
       ancestors: [],
@@ -969,13 +1034,13 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     expect(filesystem.catalog.getVisibleItems().map((item) => item.id)).toEqual([
-      'canvas-heist',
-      'map-docks',
-      'file-handout',
-      'file-tunnel-sketch',
+      SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
+      SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
+      SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
+      PUBLIC_DEMO_TUNNEL_SKETCH_FILE_ID,
     ])
 
-    const map = filesystem.catalog.getVisibleItemById('map-docks' as ResourceId)
+    const map = filesystem.catalog.getVisibleItemById(SAMPLE_LOCAL_RESOURCE_IDS.docksMap)
     if (!map) {
       throw new Error('Expected selected player to see the shared local map')
     }
@@ -1000,14 +1065,18 @@ describe('createLocalRuntimeFileSystem', () => {
         ...SAMPLE_LOCAL_WORKSPACE,
         selectedViewAsPlayerId: selectedParticipantId,
         memberItemPermissionsById: {
-          'note-market': { [selectedParticipantId]: PERMISSION_LEVEL.NONE },
-          'canvas-heist': { [selectedParticipantId]: PERMISSION_LEVEL.VIEW },
+          [SAMPLE_LOCAL_RESOURCE_IDS.marketNote]: {
+            [selectedParticipantId]: PERMISSION_LEVEL.NONE,
+          },
+          [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas]: {
+            [selectedParticipantId]: PERMISSION_LEVEL.VIEW,
+          },
         },
       },
     })
 
     expect(filesystem.current.contentItem).toMatchObject({
-      id: 'canvas-heist',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
     expect(filesystem.current.availabilityState).toMatchObject({
@@ -1038,7 +1107,7 @@ describe('createLocalRuntimeFileSystem', () => {
       ],
     })
 
-    const sessionNote = requireLocalNoteWithContent(filesystem, 'note-session')
+    const sessionNote = requireLocalNoteWithContent(filesystem, PUBLIC_DEMO_SESSION_NOTE_ID)
     expect(sessionNote).toMatchObject({
       name: 'Session Notes',
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
@@ -1050,7 +1119,7 @@ describe('createLocalRuntimeFileSystem', () => {
       (block) =>
         block.type === 'embed' &&
         block.props.targetKind === 'resource' &&
-        block.props.resourceId === 'note-market',
+        block.props.resourceId === SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
     )
     if (!embeddedPrepBlock) {
       throw new Error('Expected Session Notes to embed the revealed prep note')
@@ -1059,7 +1128,7 @@ describe('createLocalRuntimeFileSystem', () => {
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
 
-    const prepNote = requireLocalNoteWithContent(filesystem, 'note-market')
+    const prepNote = requireLocalNoteWithContent(filesystem, SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
     expect(prepNote.myPermissionLevel).toBe(PERMISSION_LEVEL.VIEW)
     expect(filesystem.permissions.canAccessItem(prepNote, PERMISSION_LEVEL.VIEW)).toBe(true)
     expect(
@@ -1093,7 +1162,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('keeps parent targets on locally created items', () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
@@ -1106,10 +1175,14 @@ describe('createLocalRuntimeFileSystem', () => {
       name: 'Folder note',
     })
 
-    expect(created).toEqual({ status: 'completed', id: 'local-note-3', slug: 'local-note-3' })
+    expect(created).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-3'),
+      slug: 'local-note-3',
+    })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-note-3',
-      parentId: 'local-folder-2',
+      id: createdResourceId(dispatch, 'local-note-3'),
+      parentId: folderId,
       type: 'note',
     })
 
@@ -1122,7 +1195,9 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
     const nextFilesystem = nextRuntime.filesystem
-    const child = nextFilesystem.catalog.getKnownItemById('local-note-3' as ResourceId)
+    const child = nextFilesystem.catalog.getKnownItemById(
+      createdResourceId(dispatch, 'local-note-3'),
+    )
 
     expect(child).toMatchObject({
       parentId: folderId,
@@ -1145,7 +1220,11 @@ describe('createLocalRuntimeFileSystem', () => {
       color: testResourceColor('#22cc88'),
     })
 
-    expect(created).toEqual({ status: 'completed', id: 'local-file-2', slug: 'local-file-2' })
+    expect(created).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-file-2'),
+      slug: 'local-file-2',
+    })
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -1157,8 +1236,10 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     const nextFilesystem = nextRuntime.filesystem
 
-    expect(nextFilesystem.catalog.getKnownItemById('local-file-2' as ResourceId)).toMatchObject({
-      id: 'local-file-2',
+    expect(
+      nextFilesystem.catalog.getKnownItemById(createdResourceId(dispatch, 'local-file-2')),
+    ).toMatchObject({
+      id: createdResourceId(dispatch, 'local-file-2'),
       color: '#22cc88',
       iconName: 'FileText',
       name: 'Styled file',
@@ -1184,18 +1265,34 @@ describe('createLocalRuntimeFileSystem', () => {
       name: 'Second local note',
     })
 
-    expect(firstCreated).toEqual({ status: 'completed', id: 'local-note-2', slug: 'local-note-2' })
-    expect(secondCreated).toEqual({ status: 'completed', id: 'local-note-3', slug: 'local-note-3' })
-    expectCreateItemDispatch(dispatch, { id: 'local-note-2', parentId: null, type: 'note' })
-    expectCreateItemDispatch(dispatch, { id: 'local-note-3', parentId: null, type: 'note' })
+    expect(firstCreated).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-2'),
+      slug: 'local-note-2',
+    })
+    expect(secondCreated).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-3'),
+      slug: 'local-note-3',
+    })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-note-2'),
+      parentId: null,
+      type: 'note',
+    })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-note-3'),
+      parentId: null,
+      type: 'note',
+    })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-note-2',
+      itemId: createdResourceId(dispatch, 'local-note-2'),
       title: 'First local note',
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-note-3',
+      itemId: createdResourceId(dispatch, 'local-note-3'),
       title: 'Second local note',
     })
   })
@@ -1217,31 +1314,39 @@ describe('createLocalRuntimeFileSystem', () => {
       name: 'Ghost Note',
     })
 
-    expect(created).toEqual({ status: 'completed', id: 'local-note-4', slug: 'local-note-4' })
-    expectCreateItemDispatch(dispatch, { id: 'local-folder-2', parentId: null, type: 'folder' })
-    expect(dispatch).toHaveBeenCalledWith({
-      type: 'updateItemMetadata',
-      itemId: 'local-folder-2',
-      title: 'Lore',
+    expect(created).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-4'),
+      slug: 'local-note-4',
     })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-folder-3',
-      parentId: 'local-folder-2',
+      id: createdResourceId(dispatch, 'local-folder-2'),
+      parentId: null,
       type: 'folder',
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-folder-3',
+      itemId: createdResourceId(dispatch, 'local-folder-2'),
+      title: 'Lore',
+    })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-folder-3'),
+      parentId: createdResourceId(dispatch, 'local-folder-2'),
+      type: 'folder',
+    })
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'updateItemMetadata',
+      itemId: createdResourceId(dispatch, 'local-folder-3'),
       title: 'Capital',
     })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-note-4',
-      parentId: 'local-folder-3',
+      id: createdResourceId(dispatch, 'local-note-4'),
+      parentId: createdResourceId(dispatch, 'local-folder-3'),
       type: 'note',
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-note-4',
+      itemId: createdResourceId(dispatch, 'local-note-4'),
       title: 'Ghost Note',
     })
   })
@@ -1269,29 +1374,44 @@ describe('createLocalRuntimeFileSystem', () => {
       name: 'Second Ghost Note',
     })
 
-    expect(firstCreated).toEqual({ status: 'completed', id: 'local-note-4', slug: 'local-note-4' })
-    expect(secondCreated).toEqual({ status: 'completed', id: 'local-note-5', slug: 'local-note-5' })
-    expectCreateItemDispatch(dispatch, { id: 'local-folder-2', parentId: null, type: 'folder' })
+    expect(firstCreated).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-4'),
+      slug: 'local-note-4',
+    })
+    expect(secondCreated).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-5'),
+      slug: 'local-note-5',
+    })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-folder-3',
-      parentId: 'local-folder-2',
+      id: createdResourceId(dispatch, 'local-folder-2'),
+      parentId: null,
       type: 'folder',
     })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-note-4',
-      parentId: 'local-folder-3',
+      id: createdResourceId(dispatch, 'local-folder-3'),
+      parentId: createdResourceId(dispatch, 'local-folder-2'),
+      type: 'folder',
+    })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-note-4'),
+      parentId: createdResourceId(dispatch, 'local-folder-3'),
       type: 'note',
     })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-note-5',
-      parentId: 'local-folder-3',
+      id: createdResourceId(dispatch, 'local-note-5'),
+      parentId: createdResourceId(dispatch, 'local-folder-3'),
       type: 'note',
     })
     const createdFolders = dispatch.mock.calls
       .map(([action]) => action)
       .filter((action) => action.type === 'createItem' && action.creation.item.type === 'folder')
       .map((action) => action.creation.id)
-    expect(createdFolders).toEqual(['local-folder-2', 'local-folder-3'])
+    expect(createdFolders).toEqual([
+      createdResourceId(dispatch, 'local-folder-2'),
+      createdResourceId(dispatch, 'local-folder-3'),
+    ])
   })
 
   it('keeps async path folder reservations when a concurrent create adopts them', async () => {
@@ -1336,7 +1456,7 @@ describe('createLocalRuntimeFileSystem', () => {
     completeSecondInitialization()
     await expect(Promise.resolve(secondCreated)).resolves.toEqual({
       status: 'completed',
-      id: 'local-note-5',
+      id: createdResourceId(dispatch, 'local-note-5'),
       slug: 'local-note-5',
     })
     failFirstInitialization(new Error('Initialization failed'))
@@ -1350,10 +1470,13 @@ describe('createLocalRuntimeFileSystem', () => {
       .map(([action]) => action)
       .filter((action) => action.type === 'createItem' && action.creation.item.type === 'folder')
       .map((action) => action.creation.id)
-    expect(createdFolders).toEqual(['local-folder-2', 'local-folder-3'])
+    expect(createdFolders).toEqual([
+      createdResourceId(dispatch, 'local-folder-2'),
+      createdResourceId(dispatch, 'local-folder-3'),
+    ])
     expectCreateItemDispatch(dispatch, {
-      id: 'local-note-5',
-      parentId: 'local-folder-3',
+      id: createdResourceId(dispatch, 'local-note-5'),
+      parentId: createdResourceId(dispatch, 'local-folder-3'),
       type: 'note',
     })
 
@@ -1366,15 +1489,21 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
 
-    expect(nextFilesystem.catalog.getKnownItemById('local-folder-3' as ResourceId)).toMatchObject({
-      id: 'local-folder-3',
+    expect(
+      nextFilesystem.catalog.getKnownItemById(createdResourceId(dispatch, 'local-folder-3')),
+    ).toMatchObject({
+      id: createdResourceId(dispatch, 'local-folder-3'),
       name: 'Capital',
     })
-    expect(nextFilesystem.catalog.getKnownItemById('local-note-5' as ResourceId)).toMatchObject({
-      id: 'local-note-5',
-      parentId: 'local-folder-3',
+    expect(
+      nextFilesystem.catalog.getKnownItemById(createdResourceId(dispatch, 'local-note-5')),
+    ).toMatchObject({
+      id: createdResourceId(dispatch, 'local-note-5'),
+      parentId: createdResourceId(dispatch, 'local-folder-3'),
     })
-    expect(nextFilesystem.catalog.getKnownItemById('local-note-4' as ResourceId)).toBeNull()
+    expect(
+      nextFilesystem.catalog.getKnownItemById(createdResourceId(dispatch, 'local-note-4')),
+    ).toBeNull()
     expect(reportCreateItemError).toHaveBeenCalledWith(expect.any(Error), 'Failed to create item')
   })
 
@@ -1415,32 +1544,48 @@ describe('createLocalRuntimeFileSystem', () => {
     })
     expect(successfulCreate).toEqual({
       status: 'completed',
-      id: 'local-note-7',
+      id: createdResourceId(dispatch, 'local-note-7'),
       slug: 'local-note-7',
     })
-    expectCreateItemDispatch(dispatch, { id: 'local-folder-2', parentId: null, type: 'folder' })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-folder-3',
-      parentId: 'local-folder-2',
+      id: createdResourceId(dispatch, 'local-folder-2'),
+      parentId: null,
+      type: 'folder',
+    })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-folder-3'),
+      parentId: createdResourceId(dispatch, 'local-folder-2'),
       type: 'folder',
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'trashItems',
-      itemIds: ['local-folder-2', 'local-folder-3', 'local-note-4'],
+      itemIds: [
+        createdResourceId(dispatch, 'local-folder-2'),
+        createdResourceId(dispatch, 'local-folder-3'),
+        createdResourceId(dispatch, 'local-note-4'),
+      ],
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'deleteItemsForever',
-      itemIds: ['local-folder-2', 'local-folder-3', 'local-note-4'],
+      itemIds: [
+        createdResourceId(dispatch, 'local-folder-2'),
+        createdResourceId(dispatch, 'local-folder-3'),
+        createdResourceId(dispatch, 'local-note-4'),
+      ],
     })
-    expectCreateItemDispatch(dispatch, { id: 'local-folder-5', parentId: null, type: 'folder' })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-folder-6',
-      parentId: 'local-folder-5',
+      id: createdResourceId(dispatch, 'local-folder-5'),
+      parentId: null,
       type: 'folder',
     })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-note-7',
-      parentId: 'local-folder-6',
+      id: createdResourceId(dispatch, 'local-folder-6'),
+      parentId: createdResourceId(dispatch, 'local-folder-5'),
+      type: 'folder',
+    })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-note-7'),
+      parentId: createdResourceId(dispatch, 'local-folder-6'),
       type: 'note',
     })
     expect(reportCreateItemError).toHaveBeenCalledWith(expect.any(Error), 'Failed to create item')
@@ -1463,25 +1608,33 @@ describe('createLocalRuntimeFileSystem', () => {
       name: 'Chronicle',
     })
 
-    expect(created).toEqual({ status: 'completed', id: 'local-note-3', slug: 'local-note-3' })
-    expectCreateItemDispatch(dispatch, { id: 'local-folder-2', parentId: null, type: 'folder' })
+    expect(created).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-3'),
+      slug: 'local-note-3',
+    })
+    expectCreateItemDispatch(dispatch, {
+      id: createdResourceId(dispatch, 'local-folder-2'),
+      parentId: null,
+      type: 'folder',
+    })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-folder-2',
+      itemId: createdResourceId(dispatch, 'local-folder-2'),
       title: 'Archive',
     })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-note-3',
-      parentId: 'local-folder-2',
+      id: createdResourceId(dispatch, 'local-note-3'),
+      parentId: createdResourceId(dispatch, 'local-folder-2'),
       type: 'note',
     })
   })
 
   it('resolves parent traversal from the base folder while creating missing folder paths', () => {
     const rootFolderWorkspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const rootFolderId = 'local-folder-2' as ResourceId
+    const rootFolderId = rootFolderWorkspace.items.at(-1)!.id
     const nestedFolderWorkspace = createLocalTestItem(rootFolderWorkspace, 'folder', rootFolderId)
-    const nestedFolderId = 'local-folder-3' as ResourceId
+    const nestedFolderId = nestedFolderWorkspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
@@ -1498,20 +1651,24 @@ describe('createLocalRuntimeFileSystem', () => {
       name: 'Parent Chronicle',
     })
 
-    expect(created).toEqual({ status: 'completed', id: 'local-note-5', slug: 'local-note-5' })
+    expect(created).toEqual({
+      status: 'completed',
+      id: createdResourceId(dispatch, 'local-note-5'),
+      slug: 'local-note-5',
+    })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-folder-4',
-      parentId: 'local-folder-2',
+      id: createdResourceId(dispatch, 'local-folder-4'),
+      parentId: rootFolderId,
       type: 'folder',
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-folder-4',
+      itemId: createdResourceId(dispatch, 'local-folder-4'),
       title: 'Archive',
     })
     expectCreateItemDispatch(dispatch, {
-      id: 'local-note-5',
-      parentId: 'local-folder-4',
+      id: createdResourceId(dispatch, 'local-note-5'),
+      parentId: createdResourceId(dispatch, 'local-folder-4'),
       type: 'note',
     })
   })
@@ -1523,7 +1680,7 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
 
-    await filesystem.operations.trashItems(['note-market' as ResourceId])
+    await filesystem.operations.trashItems([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -1536,7 +1693,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(nextFilesystem.catalog.getTrashedItems()).toEqual([
       expect.objectContaining({
-        id: 'note-market',
+        id: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
         isTrashed: true,
       }),
     ])
@@ -1549,14 +1706,14 @@ describe('createLocalRuntimeFileSystem', () => {
         ...SAMPLE_LOCAL_WORKSPACE,
         selectedViewAsPlayerId: playerId,
         memberItemPermissionsById: {
-          'note-market': {
+          [SAMPLE_LOCAL_RESOURCE_IDS.marketNote]: {
             [playerId]: PERMISSION_LEVEL.VIEW,
           },
         },
       },
       {
         type: 'trashItems',
-        itemIds: ['file-handout'],
+        itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile],
       },
     )
     const filesystem = createLocalRuntimeFileSystem({
@@ -1565,7 +1722,7 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     expect(filesystem.catalog.getTrashedItems()).toEqual([])
-    expect(filesystem.catalog.getKnownItemById('file-handout' as ResourceId)).toBeNull()
+    expect(filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile)).toBeNull()
   })
 
   it('removes note block visibility when permanently deleting local notes', () => {
@@ -1578,24 +1735,27 @@ describe('createLocalRuntimeFileSystem', () => {
       ...SAMPLE_LOCAL_WORKSPACE,
       noteBlockVisibilityById: {
         ...SAMPLE_LOCAL_WORKSPACE.noteBlockVisibilityById,
-        'note-market': [visibilityRule],
+        [SAMPLE_LOCAL_RESOURCE_IDS.marketNote]: [visibilityRule],
       },
     }
 
     const trashed = localWorkspaceReducer(workspace, {
       type: 'trashItems',
-      itemIds: ['note-market'],
+      itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
     })
     const deleted = localWorkspaceReducer(trashed, {
       type: 'deleteItemsForever',
-      itemIds: ['note-market'],
+      itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
     })
 
-    expect(deleted.noteBlockVisibilityById?.['note-market']).toBeUndefined()
+    expect(deleted.noteBlockVisibilityById?.[SAMPLE_LOCAL_RESOURCE_IDS.marketNote]).toBeUndefined()
   })
 
   it('duplicates local items into a target parent through filesystem operations', async () => {
-    const embeddedBlock = createLocalTestNoteEmbedBlock('copied-note-embed', 'file-handout')
+    const embeddedBlock = createLocalTestNoteEmbedBlock(
+      'copied-note-embed',
+      SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
+    )
     const visibilityRule = {
       textIncludes: 'Lantern Market',
       hiddenFrom: [testCampaignMemberId('local_duplicate_visibility_player')],
@@ -1605,21 +1765,21 @@ describe('createLocalRuntimeFileSystem', () => {
       ...createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null),
       noteAdditionalBlocksById: {
         ...SAMPLE_LOCAL_WORKSPACE.noteAdditionalBlocksById,
-        'note-market': [embeddedBlock],
+        [SAMPLE_LOCAL_RESOURCE_IDS.marketNote]: [embeddedBlock],
       },
       noteBlockVisibilityById: {
         ...SAMPLE_LOCAL_WORKSPACE.noteBlockVisibilityById,
-        'note-market': [visibilityRule],
+        [SAMPLE_LOCAL_RESOURCE_IDS.marketNote]: [visibilityRule],
       },
     }
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
       workspace,
     })
 
-    await copyLocalItems(filesystem, ['note-market' as ResourceId], folderId)
+    await copyLocalItems(filesystem, [SAMPLE_LOCAL_RESOURCE_IDS.marketNote], folderId)
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -1629,17 +1789,18 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const duplicate = nextFilesystem.catalog.getKnownItemById('local-note-3' as ResourceId)
+    const duplicateId = nextWorkspace.items.at(-1)!.id
+    const duplicate = nextFilesystem.catalog.getKnownItemById(duplicateId)
 
     expect(duplicate).toMatchObject({
-      id: 'local-note-3',
+      id: duplicateId,
       name: 'The Lantern Market',
       parentId: folderId,
       ancestors: [expect.objectContaining({ id: folderId })],
     })
     expect(duplicate).toMatchObject({ type: TEST_RESOURCE_TYPES.notes })
-    expect(nextWorkspace.noteAdditionalBlocksById['local-note-3']).toEqual([embeddedBlock])
-    expect(nextWorkspace.noteBlockVisibilityById?.['local-note-3']).toEqual([visibilityRule])
+    expect(nextWorkspace.noteAdditionalBlocksById[duplicateId]).toEqual([embeddedBlock])
+    expect(nextWorkspace.noteBlockVisibilityById?.[duplicateId]).toEqual([visibilityRule])
   })
 
   it('returns local command receipts for direct filesystem operations', async () => {
@@ -1650,12 +1811,14 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     await expect(
-      Promise.resolve(filesystem.operations.toggleBookmarks(['note-market' as ResourceId])),
+      Promise.resolve(
+        filesystem.operations.toggleBookmarks([SAMPLE_LOCAL_RESOURCE_IDS.marketNote]),
+      ),
     ).resolves.toMatchObject({
       status: 'completed',
       receipt: {
-        command: { type: 'toggleBookmarks', itemIds: ['note-market'] },
-        events: [{ type: 'updated', itemId: 'note-market' }],
+        command: { type: 'toggleBookmarks', itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote] },
+        events: [{ type: 'updated', itemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote }],
         summary: { kind: 'bookmarksUpdated', affectedCount: 1 },
         transactionId: null,
         undoable: false,
@@ -1663,12 +1826,12 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     await expect(
-      Promise.resolve(filesystem.operations.trashItems(['note-market' as ResourceId])),
+      Promise.resolve(filesystem.operations.trashItems([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])),
     ).resolves.toMatchObject({
       status: 'completed',
       receipt: {
-        command: { type: 'trash', itemIds: ['note-market'] },
-        events: [{ type: 'trashed', itemId: 'note-market' }],
+        command: { type: 'trash', itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote] },
+        events: [{ type: 'trashed', itemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote }],
         summary: { kind: 'trashed', affectedCount: 1 },
       },
     })
@@ -1676,14 +1839,14 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('duplicates local files with their resolved content payload', async () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
       workspace,
     })
 
-    await copyLocalItems(filesystem, ['file-handout' as ResourceId], folderId)
+    await copyLocalItems(filesystem, [SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile], folderId)
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -1694,12 +1857,13 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
     const nextFilesystem = nextRuntime.filesystem
+    const duplicateId = nextWorkspace.items.at(-1)!.id
     const duplicate = nextFilesystem.catalog.getKnownItemById(
-      'local-file-3' as ResourceId,
+      duplicateId,
     ) as LocalFileItemWithContent
 
     expect(duplicate).toMatchObject({
-      id: 'local-file-3',
+      id: duplicateId,
       name: 'Blue-glass Invoice',
       parentId: folderId,
       type: TEST_RESOURCE_TYPES.files,
@@ -1714,11 +1878,11 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('copies local items with duplicate default titles', async () => {
     const workspaceWithFolder = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspaceWithFolder.items.at(-1)!.id
     const workspace: LocalWorkspaceState = {
       ...workspaceWithFolder,
       items: workspaceWithFolder.items.map((item) =>
-        item.id === 'note-market' ? { ...item, title: '' } : item,
+        item.id === SAMPLE_LOCAL_RESOURCE_IDS.marketNote ? { ...item, title: '' } : item,
       ),
     }
     const dispatch = vi.fn()
@@ -1727,7 +1891,7 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace,
     })
 
-    await copyLocalItems(filesystem, ['note-market' as ResourceId], folderId)
+    await copyLocalItems(filesystem, [SAMPLE_LOCAL_RESOURCE_IDS.marketNote], folderId)
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -1738,20 +1902,26 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
 
-    expect(nextFilesystem.catalog.getKnownItemById('local-note-3' as ResourceId)).toMatchObject({
-      id: 'local-note-3',
+    const copiedNoteId = nextWorkspace.items.at(-1)!.id
+    expect(nextFilesystem.catalog.getKnownItemById(copiedNoteId)).toMatchObject({
+      id: copiedNoteId,
       name: 'Untitled Note',
       parentId: folderId,
     })
   })
 
   it('duplicates local canvases with independent document payloads', () => {
-    const nextWorkspace = applyLocalCopyReceipt(SAMPLE_LOCAL_WORKSPACE, ['canvas-heist'], null, [
-      ['canvas-heist', 'local-canvas-2'],
-    ])
+    const copiedCanvasId = testResourceId('copied-canvas')
+    const nextWorkspace = applyLocalCopyReceipt(
+      SAMPLE_LOCAL_WORKSPACE,
+      [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas],
+      null,
+      [[SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas, copiedCanvasId]],
+    )
 
-    const originalCanvas = SAMPLE_LOCAL_WORKSPACE.canvasPayloadsById['canvas-heist']
-    const copiedCanvas = nextWorkspace.canvasPayloadsById['local-canvas-2']
+    const originalCanvas =
+      SAMPLE_LOCAL_WORKSPACE.canvasPayloadsById[SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas]
+    const copiedCanvas = nextWorkspace.canvasPayloadsById[copiedCanvasId]
 
     expect(copiedCanvas).toBeDefined()
     expect(copiedCanvas?.nodes).toHaveLength(originalCanvas?.nodes.length ?? 0)
@@ -1770,11 +1940,11 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('retargets copied local map pins to copied descendants', async () => {
     const workspaceWithFolder = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspaceWithFolder.items.at(-1)!.id
     const workspaceWithMap = createLocalTestItem(workspaceWithFolder, 'map', folderId)
-    const mapId = 'local-map-3'
+    const mapId = workspaceWithMap.items.at(-1)!.id
     const workspaceWithNote = createLocalTestItem(workspaceWithMap, 'note', folderId)
-    const noteId = 'local-note-4'
+    const noteId = workspaceWithNote.items.at(-1)!.id
     const workspace: LocalWorkspaceState = {
       ...workspaceWithNote,
       mapsById: {
@@ -1810,21 +1980,24 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
+    const copiedItems = nextWorkspace.items.slice(workspace.items.length)
+    const copiedMapId = copiedItems.find((item) => item.type === 'map')!.id
+    const copiedNoteId = copiedItems.find((item) => item.type === 'note')!.id
     const copiedMap = nextFilesystem.catalog.getKnownItemById(
-      'local-map-6' as ResourceId,
+      copiedMapId,
     ) as LocalMapItemWithContent
 
-    expect(findMapPin(copiedMap, 'local-note-7')).toMatchObject({
-      itemId: 'local-note-7',
+    expect(findMapPin(copiedMap, copiedNoteId)).toMatchObject({
+      itemId: copiedNoteId,
     })
   })
 
   it('copies local folder trees without changing titles', async () => {
     const workspaceWithFolder = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspaceWithFolder.items.at(-1)!.id
     const workspace = createLocalTestItem(workspaceWithFolder, 'note', folderId)
     const sourceFolder = workspace.items.find((item) => item.id === folderId)
-    const sourceChild = workspace.items.find((item) => item.id === 'local-note-3')
+    const sourceChild = workspace.items.at(-1)
     if (!sourceFolder || !sourceChild) {
       throw new Error('Expected local folder tree fixture to include a folder and child note')
     }
@@ -1845,36 +2018,39 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
 
-    expect(nextFilesystem.catalog.getKnownItemById('local-folder-4' as ResourceId)).toMatchObject({
-      id: 'local-folder-4',
+    const copiedFolder = nextWorkspace.items.at(-2)!
+    const copiedChild = nextWorkspace.items.at(-1)!
+    expect(nextFilesystem.catalog.getKnownItemById(copiedFolder.id)).toMatchObject({
+      id: copiedFolder.id,
       name: sourceFolder.title,
       parentId: null,
     })
-    expect(nextFilesystem.catalog.getKnownItemById('local-note-5' as ResourceId)).toMatchObject({
-      id: 'local-note-5',
+    expect(nextFilesystem.catalog.getKnownItemById(copiedChild.id)).toMatchObject({
+      id: copiedChild.id,
       name: sourceChild.title,
-      parentId: 'local-folder-4',
+      parentId: copiedFolder.id,
     })
   })
 
   it('fails fast when copying a local map without its content payload', () => {
     const workspaceWithFolder = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspaceWithFolder.items.at(-1)!.id
     const workspaceWithMap = createLocalTestItem(workspaceWithFolder, 'map', folderId)
-    const { 'local-map-3': _missingMap, ...mapsById } = workspaceWithMap.mapsById
+    const mapId = workspaceWithMap.items.at(-1)!.id
+    const { [mapId]: _missingMap, ...mapsById } = workspaceWithMap.mapsById
     const workspace: LocalWorkspaceState = {
       ...workspaceWithMap,
       mapsById,
     }
 
     expect(() =>
-      applyLocalCopyReceipt(workspace, ['local-map-3'], null, [['local-map-3', 'local-map-4']]),
-    ).toThrow('Missing local map payload for local-map-3')
+      applyLocalCopyReceipt(workspace, [mapId], null, [[mapId, testResourceId('copied-map')]]),
+    ).toThrow(`Missing local map payload for ${mapId}`)
   })
 
   it('pastes copied local items through the runtime clipboard operations', async () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
@@ -1885,27 +2061,28 @@ describe('createLocalRuntimeFileSystem', () => {
       throw new Error('Expected local clipboard operations to be available')
     }
 
-    filesystem.operations.clipboard.copyItems(['note-market' as ResourceId])
-    await expect(
-      Promise.resolve(filesystem.operations.clipboard.paste(folderId)),
-    ).resolves.toMatchObject({
+    filesystem.operations.clipboard.copyItems([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])
+    const pasteResult = await Promise.resolve(filesystem.operations.clipboard.paste(folderId))
+    expect(pasteResult).toMatchObject({
       status: 'completed',
       receipt: {
         command: {
           type: 'copy',
-          itemIds: ['note-market'],
+          itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
           targetParentId: folderId,
         },
         events: [
-          {
+          expect.objectContaining({
             type: 'copied',
-            itemId: 'local-note-3',
-            sourceItemId: 'note-market',
-          },
+            sourceItemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
+          }),
         ],
         summary: { kind: 'copied', affectedCount: 1 },
       },
     })
+    if (pasteResult.status !== 'completed') throw new Error('Expected local paste to complete')
+    const copiedEvent = pasteResult.receipt.events.find((event) => event.type === 'copied')
+    expect(copiedEvent && isUuidV7(copiedEvent.itemId)).toBe(true)
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -1916,8 +2093,9 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
 
-    expect(nextFilesystem.catalog.getKnownItemById('local-note-3' as ResourceId)).toMatchObject({
-      id: 'local-note-3',
+    const copiedNoteId = nextWorkspace.items.at(-1)!.id
+    expect(nextFilesystem.catalog.getKnownItemById(copiedNoteId)).toMatchObject({
+      id: copiedNoteId,
       name: 'The Lantern Market',
       parentId: folderId,
     })
@@ -1925,7 +2103,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('does not advertise target paste actions for read-only local workspaces', () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const editableFilesystem = createLocalRuntimeFileSystem({
       dispatch: vi.fn(),
       workspace,
@@ -1935,7 +2113,7 @@ describe('createLocalRuntimeFileSystem', () => {
       throw new Error('Expected local clipboard operations to be available')
     }
 
-    editableFilesystem.operations.clipboard.copyItems(['note-market' as ResourceId])
+    editableFilesystem.operations.clipboard.copyItems([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])
     const editableFolder = editableFilesystem.catalog.getKnownItemById(folderId)
 
     if (!editableFolder) {
@@ -1968,7 +2146,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('keeps local clipboard cancellation scoped to the current workspace', async () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
@@ -1979,7 +2157,7 @@ describe('createLocalRuntimeFileSystem', () => {
       throw new Error('Expected local clipboard operations to be available')
     }
 
-    filesystem.operations.clipboard.copyItems(['note-market' as ResourceId])
+    filesystem.operations.clipboard.copyItems([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])
 
     const otherFilesystem = createLocalRuntimeFileSystem({
       dispatch: vi.fn(),
@@ -2006,15 +2184,16 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
 
-    expect(nextFilesystem.catalog.getKnownItemById('local-note-3' as ResourceId)).toMatchObject({
-      id: 'local-note-3',
+    const copiedNoteId = nextWorkspace.items.at(-1)!.id
+    expect(nextFilesystem.catalog.getKnownItemById(copiedNoteId)).toMatchObject({
+      id: copiedNoteId,
       parentId: folderId,
     })
   })
 
   it('keeps local clipboard operations scoped to the current runtime instance', async () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
@@ -2026,7 +2205,7 @@ describe('createLocalRuntimeFileSystem', () => {
       throw new Error('Expected local clipboard operations to be available')
     }
 
-    filesystem.operations.clipboard.copyItems(['note-market' as ResourceId])
+    filesystem.operations.clipboard.copyItems([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])
 
     const otherDispatch = vi.fn()
     const otherFilesystem = createLocalRuntimeFileSystem({
@@ -2057,15 +2236,16 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
 
-    expect(nextFilesystem.catalog.getKnownItemById('local-note-3' as ResourceId)).toMatchObject({
-      id: 'local-note-3',
+    const copiedNoteId = nextWorkspace.items.at(-1)!.id
+    expect(nextFilesystem.catalog.getKnownItemById(copiedNoteId)).toMatchObject({
+      id: copiedNoteId,
       parentId: folderId,
     })
   })
 
   it('ignores local clipboard items that are stale in the active runtime catalog', () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const filesystem = createLocalRuntimeFileSystem({
       dispatch: vi.fn(),
       runtimeInstanceId: 'runtime-a',
@@ -2076,11 +2256,11 @@ describe('createLocalRuntimeFileSystem', () => {
       throw new Error('Expected local clipboard operations to be available')
     }
 
-    filesystem.operations.clipboard.copyItems(['note-market' as ResourceId])
+    filesystem.operations.clipboard.copyItems([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])
 
     const staleWorkspace = localWorkspaceReducer(workspace, {
       type: 'trashItems',
-      itemIds: ['note-market'],
+      itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
     })
     const dispatch = vi.fn()
     const staleFilesystem = createLocalRuntimeFileSystem({
@@ -2102,7 +2282,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('moves cut local items through the runtime clipboard operations', async () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
@@ -2113,7 +2293,7 @@ describe('createLocalRuntimeFileSystem', () => {
       throw new Error('Expected local clipboard operations to be available')
     }
 
-    filesystem.operations.clipboard.cutItems(['canvas-heist' as ResourceId])
+    filesystem.operations.clipboard.cutItems([SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas])
     await filesystem.operations.clipboard.paste(folderId)
 
     const nextWorkspace = dispatch.mock.calls.reduce(
@@ -2125,17 +2305,19 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
 
-    expect(nextFilesystem.catalog.getKnownItemById('canvas-heist' as ResourceId)).toMatchObject({
-      id: 'canvas-heist',
+    expect(
+      nextFilesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+    ).toMatchObject({
+      id: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       parentId: folderId,
     })
   })
 
   it('returns a no-op local receipt when a stale move target is inside the moved tree', async () => {
     const workspaceWithFolder = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspaceWithFolder.items.at(-1)!.id
     const workspace = createLocalTestItem(workspaceWithFolder, 'note', folderId)
-    const childId = 'local-note-3' as ResourceId
+    const childId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
@@ -2175,11 +2357,11 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('copies local folders while preserving trashed descendants in trash', async () => {
     const workspaceWithFolder = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspaceWithFolder.items.at(-1)!.id
     const workspaceWithChild = createLocalTestItem(workspaceWithFolder, 'note', folderId)
     const workspace = localWorkspaceReducer(workspaceWithChild, {
       type: 'trashItems',
-      itemIds: ['local-note-3'],
+      itemIds: [workspaceWithChild.items.at(-1)!.id],
     })
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
@@ -2197,29 +2379,30 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       workspace: nextWorkspace,
     })
-    const folderCopy = nextFilesystem.catalog.getKnownItemById('local-folder-4' as ResourceId)
+    const folderCopyId = nextWorkspace.items.at(-1)!.id
+    const folderCopy = nextFilesystem.catalog.getKnownItemById(folderCopyId)
 
     expect(folderCopy).toMatchObject({
-      id: 'local-folder-4',
+      id: folderCopyId,
       name: 'Untitled',
     })
     expect(nextFilesystem.catalog.getTrashedItems()).toEqual([
-      expect.objectContaining({ id: 'local-note-3' }),
+      expect.objectContaining({ id: workspaceWithChild.items.at(-1)!.id }),
     ])
   })
 
   it('moves and restores local items through filesystem operations', async () => {
     const workspace = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
-    const folderId = 'local-folder-2' as ResourceId
+    const folderId = workspace.items.at(-1)!.id
     const dispatch = vi.fn()
     const filesystem = createLocalRuntimeFileSystem({
       dispatch,
       workspace,
     })
 
-    await moveLocalItems(filesystem, ['canvas-heist' as ResourceId], folderId)
-    await filesystem.operations.trashItems(['canvas-heist' as ResourceId])
-    await filesystem.operations.restoreItems(['canvas-heist' as ResourceId], null)
+    await moveLocalItems(filesystem, [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas], folderId)
+    await filesystem.operations.trashItems([SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas])
+    await filesystem.operations.restoreItems([SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas], null)
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -2230,8 +2413,10 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: nextWorkspace,
     })
 
-    expect(nextFilesystem.catalog.getVisibleItemById('canvas-heist' as ResourceId)).toMatchObject({
-      id: 'canvas-heist',
+    expect(
+      nextFilesystem.catalog.getVisibleItemById(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+    ).toMatchObject({
+      id: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       parentId: null,
       isTrashed: false,
     })
@@ -2245,13 +2430,15 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     await expect(
-      Promise.resolve(filesystem.operations.restoreItems(['note-market' as ResourceId], null)),
+      Promise.resolve(
+        filesystem.operations.restoreItems([SAMPLE_LOCAL_RESOURCE_IDS.marketNote], null),
+      ),
     ).resolves.toMatchObject({
       status: 'completed',
       receipt: { events: [], summary: { kind: 'noop', affectedCount: 0 } },
     })
     await expect(
-      Promise.resolve(filesystem.operations.restoreItems(['missing-item' as ResourceId], null)),
+      Promise.resolve(filesystem.operations.restoreItems([testResourceId('missing-item')], null)),
     ).resolves.toMatchObject({
       status: 'completed',
       receipt: { events: [], summary: { kind: 'noop', affectedCount: 0 } },
@@ -2278,15 +2465,17 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource('canvas-heist' as ResourceId),
+        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
       },
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
     const filesystem = runtime.filesystem
 
-    expect(getWizardEditorNavigationCurrentResourceId(runtime.navigation)).toBe('canvas-heist')
+    expect(getWizardEditorNavigationCurrentResourceId(runtime.navigation)).toBe(
+      SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
+    )
     expect(filesystem.current.contentItem).toBe(
-      filesystem.catalog.getKnownItemById('canvas-heist' as ResourceId),
+      filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
     )
     expect(filesystem.current.availabilityState).toMatchObject({
       status: 'available',
@@ -2304,14 +2493,14 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(runtime.navigation.canOpenItemsSeparately).toEqual({ status: 'available' })
 
-    runtime.navigation.openItem(createWizardEditorResource('canvas-heist' as ResourceId), {
+    runtime.navigation.openItem(createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas), {
       heading: 'Scene 2',
       target: 'separate',
     })
 
     expect(openSeparateItem).toHaveBeenCalledExactlyOnceWith({
       heading: 'Scene 2',
-      itemId: 'canvas-heist',
+      itemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
     })
   })
 
@@ -2329,9 +2518,12 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     expect(
-      runtime.navigation.openItem(createWizardEditorResource('canvas-heist' as ResourceId), {
-        target: 'separate',
-      }),
+      runtime.navigation.openItem(
+        createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+        {
+          target: 'separate',
+        },
+      ),
     ).toEqual({
       status: 'unavailable',
       reason: 'separate_navigation_unsupported',
@@ -2359,7 +2551,7 @@ describe('createLocalRuntimeFileSystem', () => {
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
 
-    expect(filesystem.selection.selectedItemIds).toEqual(['note-market'])
+    expect(filesystem.selection.selectedItemIds).toEqual([SAMPLE_LOCAL_RESOURCE_IDS.marketNote])
   })
 })
 
@@ -2375,25 +2567,37 @@ function expectCreateItemDispatch(
     type: 'canvas' | 'file' | 'folder' | 'map' | 'note'
   },
 ) {
+  const resourceId = createdResourceId(dispatch, id)
+  const parentResourceId = parentId ? createdResourceId(dispatch, parentId) : null
   expect(dispatch).toHaveBeenCalledWith({
     type: 'createItem',
     creation: expect.objectContaining({
-      id,
+      id: resourceId,
       item: expect.objectContaining({
-        id,
-        parentId,
+        id: resourceId,
+        parentId: parentResourceId,
         type,
       }),
     }),
   })
 }
 
-function findMapPinItem(map: LocalMapItemWithContent, itemId: string) {
+function createdResourceId(dispatch: ReturnType<typeof vi.fn>, slugOrId: string): ResourceId {
+  if (isUuidV7(slugOrId)) return assertDomainId(DOMAIN_ID_KIND.resource, slugOrId)
+  for (const [action] of dispatch.mock.calls as Array<[LocalWorkspaceAction]>) {
+    if (action.type === 'createItem' && action.creation.slug === slugOrId) {
+      return action.creation.id
+    }
+  }
+  throw new Error(`Expected local creation for ${slugOrId}`)
+}
+
+function findMapPinItem(map: LocalMapItemWithContent, itemId: ResourceId) {
   return findMapPin(map, itemId).item
 }
 
-function findMapPin(map: LocalMapItemWithContent, itemId: string) {
-  const pin = map.pins.find((candidate) => String(candidate.itemId) === itemId)
+function findMapPin(map: LocalMapItemWithContent, itemId: ResourceId) {
+  const pin = map.pins.find((candidate) => candidate.itemId === itemId)
   if (!pin) {
     throw new Error(`Expected map pin for ${itemId}`)
   }
@@ -2402,9 +2606,9 @@ function findMapPin(map: LocalMapItemWithContent, itemId: string) {
 
 function requireLocalNoteWithContent(
   filesystem: ReturnType<typeof createLocalRuntimeFileSystem>,
-  itemId: string,
+  itemId: ResourceId,
 ): LocalNoteItemWithContent {
-  const item = filesystem.catalog.getKnownItemById(itemId as ResourceId)
+  const item = filesystem.catalog.getKnownItemById(itemId)
   if (!item || item.type !== TEST_RESOURCE_TYPES.notes) {
     throw new Error(`Expected local note ${itemId}`)
   }
@@ -2598,20 +2802,20 @@ function createTestRuntimeFileSystem(runtime: WorkspaceRuntime) {
 
 function applyLocalCopyReceipt(
   state: LocalWorkspaceState,
-  itemIds: Array<string>,
-  targetParentId: string | null,
-  copies: Array<readonly [sourceItemId: string, copiedItemId: string]>,
+  itemIds: Array<ResourceId>,
+  targetParentId: ResourceId | null,
+  copies: Array<readonly [sourceItemId: ResourceId, copiedItemId: ResourceId]>,
 ) {
   const result = completeWizardEditorResourceCommand(
     {
       type: WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.copy,
-      itemIds: itemIds as Array<ResourceId>,
-      targetParentId: targetParentId as ResourceId | null,
+      itemIds,
+      targetParentId,
     },
     copies.map(([sourceItemId, itemId]) => ({
       type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.copied,
-      sourceItemId: sourceItemId as ResourceId,
-      itemId: itemId as ResourceId,
+      sourceItemId,
+      itemId,
     })),
   )
   if (result.status !== 'completed') throw new Error('Expected completed local copy receipt')

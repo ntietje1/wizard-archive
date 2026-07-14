@@ -23,7 +23,7 @@ import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import type { Dispatch } from 'react'
 import type { WorkspaceMode } from 'shared/workspace/workspace-mode'
 
-import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceAction } from './local-workspace-model'
 import { requireLocalCanvasPayload, requireLocalFilePayloadForItem } from './local-workspace-model'
 import { createLocalWorkspaceActor } from './local-filesystem-snapshot'
@@ -113,18 +113,18 @@ export function createLocalWorkspaceRuntime({
   })
   const fileDocument: WizardEditorFileContentSourceInput = {
     canReplaceFile: () => canMutateWorkspace,
-    getItemById: (itemId) => catalog.getKnownItemById(itemId as ResourceId),
+    getItemById: (itemId) => catalog.getKnownItemById(itemId),
     maxUploadBytes: MAX_LOCAL_IMPORT_BYTES,
     readOnlyErrorMessage: 'This local workspace is read-only',
     resolveFile: (file) =>
       requireLocalFilePayloadForItem(workspace, {
-        id: String(file.id),
+        id: file.id,
         title: file.name,
       }),
     writeFile: async ({ file, fileId }) => {
       dispatch({
         type: 'replaceFile',
-        itemId: String(fileId),
+        itemId: fileId,
         payload: await createLocalFilePayload(file),
       })
     },
@@ -135,7 +135,7 @@ export function createLocalWorkspaceRuntime({
       clipboardDriver: filesystemHost.clipboardDriver,
       contentInitializers: {
         initializeImportedTextFile: async ({ file, noteId }) => {
-          dispatch({ type: 'replaceNoteBody', itemId: String(noteId), body: await file.text() })
+          dispatch({ type: 'replaceNoteBody', itemId: noteId, body: await file.text() })
         },
       },
       ioCapabilities: { maxUploadBytes: MAX_LOCAL_IMPORT_BYTES },
@@ -146,8 +146,7 @@ export function createLocalWorkspaceRuntime({
     },
     io: createWizardEditorCatalogIoSource(resources, {
       file: fileDocument,
-      resolveCanvasDownloadContent: (canvas) =>
-        requireLocalCanvasPayload(workspace, String(canvas.id)),
+      resolveCanvasDownloadContent: (canvas) => requireLocalCanvasPayload(workspace, canvas.id),
       resolveMapDownloadUrl: (map) => resolveWizardEditorMapImage(map).imageUrl,
     }),
     history: createWizardEditorUnsupportedHistorySource('not_implemented'),

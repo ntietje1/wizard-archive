@@ -28,9 +28,9 @@ export function createLocalGameMapSessionSource({
   catalog: WizardEditorResourceCatalog
   dispatch: Dispatch<LocalWorkspaceAction>
 }): WizardEditorMapSession {
-  const sessionPinnedItemIdsByMapId = new Map<string, Set<ResourceId>>()
-  const sessionCreatedPinsById = new Map<MapPinId, { itemId: ResourceId; mapId: string }>()
-  const latestMapImageRequestByMapId = new Map<string, number>()
+  const sessionPinnedItemIdsByMapId = new Map<ResourceId, Set<ResourceId>>()
+  const sessionCreatedPinsById = new Map<MapPinId, { itemId: ResourceId; mapId: ResourceId }>()
+  const latestMapImageRequestByMapId = new Map<ResourceId, number>()
   let nextMapImageRequestId = 0
 
   return {
@@ -48,8 +48,8 @@ export function createLocalGameMapSessionSource({
           })
           for (const pin of created.pins) {
             sessionCreatedPinsById.set(pin.id, {
-              itemId: pin.itemId as ResourceId,
-              mapId: String(mapId),
+              itemId: pin.itemId,
+              mapId,
             })
           }
           if (created.unavailable) return { status: 'unavailable', reason: 'map_not_found' }
@@ -136,7 +136,7 @@ export function createLocalGameMapSessionSource({
           if (!isWizardEditorGameMapItem(map)) {
             return { status: 'unavailable', reason: 'map_not_found' }
           }
-          const mapKey = String(input.mapId)
+          const mapKey = input.mapId
           const requestId = ++nextMapImageRequestId
           latestMapImageRequestByMapId.set(mapKey, requestId)
           const image = await readLocalFileAsDataUrl(input.file)
@@ -160,7 +160,7 @@ export function createLocalGameMapSessionSource({
           dispatch({
             type: 'updateMapImage',
             layerId: staged.layerId,
-            mapId: String(staged.mapId),
+            mapId: staged.mapId,
             imageUrl: staged.image,
           })
           return {
@@ -179,21 +179,20 @@ export function createLocalGameMapSessionSource({
 
 function canMutateLocalMapPin(
   catalog: WizardEditorResourceCatalog,
-  sessionCreatedPinsById: ReadonlyMap<MapPinId, { mapId: string }>,
+  sessionCreatedPinsById: ReadonlyMap<MapPinId, { mapId: ResourceId }>,
   mapId: ResourceId,
   mapPinId: MapPinId,
 ) {
-  const mapKey = String(mapId)
   const sessionPin = sessionCreatedPinsById.get(mapPinId)
-  return sessionPin?.mapId === mapKey || catalogHasVisibleMapPin(catalog, mapKey, mapPinId)
+  return sessionPin?.mapId === mapId || catalogHasVisibleMapPin(catalog, mapId, mapPinId)
 }
 
 function catalogHasVisibleMapPin(
   catalog: WizardEditorResourceCatalog,
-  mapId: string,
+  mapId: ResourceId,
   mapPinId: MapPinId,
 ) {
-  const map = catalog.getVisibleItemById(mapId as ResourceId)
+  const map = catalog.getVisibleItemById(mapId)
   return hasWizardEditorGameMapPin(map, mapPinId)
 }
 
@@ -212,7 +211,7 @@ function createLocalMapPins({
   mapId: ResourceId
   layerId: string | null
   pins: Parameters<WizardEditorMapSession['pins']['create']>[0]['pins']
-  sessionPinnedItemIdsByMapId: Map<string, Set<ResourceId>>
+  sessionPinnedItemIdsByMapId: Map<ResourceId, Set<ResourceId>>
 }): {
   pinIds: Array<MapPinId>
   pins: Array<CreatedLocalMapPin>
@@ -224,9 +223,8 @@ function createLocalMapPins({
   if (!existingPinnedItemIds) {
     return { pinIds: [], pins: [], unavailable: true }
   }
-  const mapKey = String(mapId)
-  const sessionPinnedItemIds = sessionPinnedItemIdsByMapId.get(mapKey) ?? new Set<ResourceId>()
-  sessionPinnedItemIdsByMapId.set(mapKey, sessionPinnedItemIds)
+  const sessionPinnedItemIds = sessionPinnedItemIdsByMapId.get(mapId) ?? new Set<ResourceId>()
+  sessionPinnedItemIdsByMapId.set(mapId, sessionPinnedItemIds)
   const pinnedItemIds = [...existingPinnedItemIds, ...sessionPinnedItemIds]
   const createdPins = planWizardEditorMapPinCreations({
     mapId,
@@ -235,7 +233,7 @@ function createLocalMapPins({
     canPinItem: (itemId) => Boolean(catalog.getVisibleItemById(itemId)),
     createPin: (pin) => {
       const created = createLocalMapPin({
-        itemId: String(pin.itemId),
+        itemId: pin.itemId,
         layerId,
         x: pin.x,
         y: pin.y,
@@ -249,11 +247,11 @@ function createLocalMapPins({
 
   dispatch({
     type: 'createMapPins',
-    mapId: mapKey,
+    mapId,
     pins: createdPins,
   })
   for (const pin of createdPins) {
-    sessionPinnedItemIds.add(pin.itemId as ResourceId)
+    sessionPinnedItemIds.add(pin.itemId)
   }
   return {
     pinIds: createdPins.map((created) => created.id),
@@ -268,7 +266,7 @@ function createLocalMapPin({
   x,
   y,
 }: {
-  itemId: string
+  itemId: ResourceId
   layerId: string | null
   x: number
   y: number

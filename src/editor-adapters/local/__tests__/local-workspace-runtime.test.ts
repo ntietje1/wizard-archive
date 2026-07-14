@@ -10,8 +10,9 @@ import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 
 import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceState } from '../local-workspace-model'
-import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
+import { SAMPLE_LOCAL_RESOURCE_IDS, SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { useInMemoryNoteSessionSource } from '../in-memory-note-session-source'
 import { useLocalWorkspaceRuntime } from '../use-local-workspace-runtime'
 import { createLocalRuntimeFileSystem, createLocalWorkspaceRuntime } from './helpers/local-runtime'
@@ -20,6 +21,7 @@ import type {
   WizardEditorNoteEditorSession,
 } from '@wizard-archive/editor/adapter'
 import { createImportFile } from './helpers/import-file'
+import { testResourceId } from 'shared/test/resource-id'
 import {
   createPublicDemoScenario,
   PUBLIC_DEMO_SCENARIO_IDS,
@@ -46,13 +48,15 @@ describe('useLocalWorkspaceRuntime', () => {
     const filesystem = source.filesystem
 
     expect(source.filesystem.current.contentItem).toMatchObject({
-      id: 'note-market',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
       name: 'The Lantern Market',
       type: TEST_RESOURCE_TYPES.notes,
     })
-    const sourceNote = source.filesystem.catalog.getKnownItemById('note-market' as ResourceId)
+    const sourceNote = source.filesystem.catalog.getKnownItemById(
+      SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
+    )
     expect(source.filesystem.current.contentItem).toBe(sourceNote)
-    expect(source.filesystem.catalog.getKnownItemById('note-market' as ResourceId)).toBe(
+    expect(source.filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)).toBe(
       source.filesystem.current.contentItem,
     )
     expect(source.filesystem).toBe(filesystem)
@@ -80,12 +84,12 @@ describe('useLocalWorkspaceRuntime', () => {
     })
 
     await source.filesystem.operations.updateItemMetadata({
-      item: source.filesystem.catalog.getKnownItemById('canvas-heist' as ResourceId)!,
+      item: source.filesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas)!,
       name: 'Board',
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'canvas-heist',
+      itemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       slug: 'board',
       title: 'Board',
     })
@@ -95,13 +99,15 @@ describe('useLocalWorkspaceRuntime', () => {
       parentTarget: { kind: TEST_PARENT_TARGET_KIND.direct, parentId: null },
       name: 'Local note',
     })
-    expect(created).toEqual({ status: 'completed', id: 'local-note-2', slug: 'local-note-2' })
+    expect(created).toMatchObject({ status: 'completed', slug: 'local-note-2' })
+    if (created.status !== 'completed') throw new Error('Expected local note creation')
+    expect(isUuidV7(created.id)).toBe(true)
     expect(dispatch).toHaveBeenCalledWith({
       type: 'createItem',
       creation: expect.objectContaining({
-        id: 'local-note-2',
+        id: created.id,
         item: expect.objectContaining({
-          id: 'local-note-2',
+          id: created.id,
           parentId: null,
           type: 'note',
         }),
@@ -109,7 +115,7 @@ describe('useLocalWorkspaceRuntime', () => {
     })
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
-      itemId: 'local-note-2',
+      itemId: created.id,
       title: 'Local note',
     })
   })
@@ -120,15 +126,19 @@ describe('useLocalWorkspaceRuntime', () => {
       dispatch: vi.fn(),
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource('canvas-heist' as ResourceId),
+        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
       },
       setNavigation,
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
-    const catalogCanvas = source.filesystem.catalog.getKnownItemById('canvas-heist' as ResourceId)
+    const catalogCanvas = source.filesystem.catalog.getKnownItemById(
+      SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
+    )
 
     expect(source.filesystem.current.contentItem).toBe(catalogCanvas)
-    expect(getWizardEditorNavigationCurrentResourceId(source.navigation)).toBe('canvas-heist')
+    expect(getWizardEditorNavigationCurrentResourceId(source.navigation)).toBe(
+      SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
+    )
     expect(source.filesystem.catalog.getKnownItemBySlug(catalogCanvas!.slug)).toBe(catalogCanvas)
     await source.navigation.openItem(createWizardEditorResource(catalogCanvas!.id))
     expect(setNavigation).toHaveBeenCalledWith({
@@ -137,7 +147,7 @@ describe('useLocalWorkspaceRuntime', () => {
     })
 
     const missingItemResult = await source.navigation.openItem(
-      createWizardEditorResource('new-local-note' as ResourceId),
+      createWizardEditorResource(testResourceId('new-local-note')),
     )
     expect(setNavigation).toHaveBeenCalledTimes(1)
     expect(missingItemResult).toEqual({
@@ -188,7 +198,7 @@ describe('useLocalWorkspaceRuntime', () => {
       dispatch,
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource('map-docks' as ResourceId),
+        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.docksMap),
       },
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
@@ -196,18 +206,18 @@ describe('useLocalWorkspaceRuntime', () => {
     expect(source.filesystem.current.availabilityState).toMatchObject({
       status: 'available',
       item: expect.objectContaining({
-        id: 'map-docks',
+        id: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
         imageUrl: expect.stringContaining('data:image/svg+xml'),
         pins: expect.arrayContaining([
           expect.objectContaining({
-            id: SAMPLE_LOCAL_WORKSPACE.mapsById['map-docks']!.pins[0]!.id,
-            itemId: 'note-market',
+            id: SAMPLE_LOCAL_WORKSPACE.mapsById[SAMPLE_LOCAL_RESOURCE_IDS.docksMap]!.pins[0]!.id,
+            itemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
           }),
         ]),
       }),
     })
     expect(source.filesystem.current.contentItem).toMatchObject({
-      id: 'map-docks',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       type: TEST_RESOURCE_TYPES.gameMaps,
     })
   })
@@ -215,7 +225,7 @@ describe('useLocalWorkspaceRuntime', () => {
   it('imports local canvas image files through the runtime filesystem operation', async () => {
     const { result } = renderHook(() =>
       useLocalWorkspaceRuntime({
-        initialItemId: 'canvas-heist',
+        initialItemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
         initialWorkspace: SAMPLE_LOCAL_WORKSPACE,
         openExternalUrl: vi.fn(),
         reportCreateItemError: vi.fn(),
@@ -240,7 +250,7 @@ describe('useLocalWorkspaceRuntime', () => {
   it('opens local canvas document sessions through the runtime content capability', () => {
     const { result } = renderHook(() => {
       const runtime = useLocalWorkspaceRuntime({
-        initialItemId: 'canvas-heist',
+        initialItemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
         initialWorkspace: SAMPLE_LOCAL_WORKSPACE,
         openExternalUrl: vi.fn(),
         reportCreateItemError: vi.fn(),
@@ -255,7 +265,7 @@ describe('useLocalWorkspaceRuntime', () => {
 
     expect(result.current).toMatchObject({
       status: 'ready',
-      canvasId: 'canvas-heist',
+      canvasId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       canEdit: true,
       collaboration: { status: 'unsupported' },
     })
@@ -275,15 +285,17 @@ describe('useLocalWorkspaceRuntime', () => {
       ...playerScenario.workspace,
       memberItemPermissionsById: {
         ...playerScenario.workspace.memberItemPermissionsById,
-        'canvas-heist': {
-          ...playerScenario.workspace.memberItemPermissionsById?.['canvas-heist'],
+        [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas]: {
+          ...playerScenario.workspace.memberItemPermissionsById?.[
+            SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas
+          ],
           [selectedParticipantId]: PERMISSION_LEVEL.VIEW,
         },
       },
     }
     const { result } = renderHook(() => {
       const runtime = useLocalWorkspaceRuntime({
-        initialItemId: 'canvas-heist',
+        initialItemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
         initialWorkspace: workspace,
         openExternalUrl: vi.fn(),
         reportCreateItemError: vi.fn(),
@@ -298,7 +310,7 @@ describe('useLocalWorkspaceRuntime', () => {
 
     expect(result.current).toMatchObject({
       status: 'ready',
-      canvasId: 'canvas-heist',
+      canvasId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       canEdit: false,
     })
   })
@@ -326,7 +338,7 @@ describe('useLocalWorkspaceRuntime', () => {
     const miraMemberId = scenario.workspace.playerMembers?.[0]?.id as unknown as CampaignMemberId
     const { result } = renderHook(() =>
       useLocalWorkspaceRuntime({
-        initialItemId: 'note-market',
+        initialItemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
         initialWorkspace: scenario.workspace,
         openExternalUrl: vi.fn(),
         reportCreateItemError: vi.fn(),
@@ -373,7 +385,7 @@ describe('useLocalWorkspaceRuntime', () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.privatePrep)
     const { result } = renderHook(() =>
       useLocalWorkspaceRuntime({
-        initialItemId: 'note-market',
+        initialItemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
         initialWorkspace: {
           ...scenario.workspace,
           selectedViewAsPlayerId: 'missing-player' as CampaignMemberId,
@@ -434,7 +446,7 @@ describe('useLocalWorkspaceRuntime', () => {
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
     const note = filesystem.catalog.getKnownItemById(
-      'note-market' as ResourceId,
+      SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
     ) as LocalNoteItemWithContent
 
     function Harness({ show }: { show: boolean }) {

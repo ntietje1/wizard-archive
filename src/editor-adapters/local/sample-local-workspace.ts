@@ -1,4 +1,3 @@
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceState } from './local-workspace-model'
 import {
   LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
@@ -31,6 +30,12 @@ const SAMPLE_LOCAL_CAMPAIGN_ID = assertDomainId(
   DOMAIN_ID_KIND.campaign,
   '01980c1a-5e70-7000-8000-000000000301',
 )
+export const SAMPLE_LOCAL_RESOURCE_IDS = {
+  marketNote: assertDomainId(DOMAIN_ID_KIND.resource, '01980c1a-5e70-7000-8000-000000000401'),
+  heistCanvas: assertDomainId(DOMAIN_ID_KIND.resource, '01980c1a-5e70-7000-8000-000000000402'),
+  docksMap: assertDomainId(DOMAIN_ID_KIND.resource, '01980c1a-5e70-7000-8000-000000000403'),
+  invoiceFile: assertDomainId(DOMAIN_ID_KIND.resource, '01980c1a-5e70-7000-8000-000000000404'),
+} as const
 
 const INITIAL_NOTE_BODY = [
   'A waterfront bazaar where every stall hides a second ledger.',
@@ -73,7 +78,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
   items: [
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
-      id: 'note-market',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
       parentId: null,
       status: 'active',
       trashedAt: null,
@@ -84,7 +89,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     },
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
-      id: 'canvas-heist',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       parentId: null,
       status: 'active',
       trashedAt: null,
@@ -95,7 +100,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     },
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
-      id: 'map-docks',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       parentId: null,
       status: 'active',
       trashedAt: null,
@@ -106,7 +111,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     },
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
-      id: 'file-handout',
+      id: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
       parentId: null,
       status: 'active',
       trashedAt: null,
@@ -117,15 +122,15 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     },
   ],
   noteAdditionalBlocksById: {},
-  noteBodiesById: { 'note-market': INITIAL_NOTE_BODY },
+  noteBodiesById: { [SAMPLE_LOCAL_RESOURCE_IDS.marketNote]: INITIAL_NOTE_BODY },
   canvasPayloadsById: {
-    'canvas-heist': {
+    [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas]: {
       nodes: createInitialCanvasNodes(),
       edges: createInitialCanvasEdges(),
     },
   },
   filePayloadsById: {
-    'file-handout': createLocalTextFilePayload({
+    [SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile]: createLocalTextFilePayload({
       name: 'blue-glass-invoice.txt',
       contentType: 'text/plain',
       body: [
@@ -138,13 +143,13 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     }),
   },
   mapsById: {
-    'map-docks': {
-      id: 'map-docks',
+    [SAMPLE_LOCAL_RESOURCE_IDS.docksMap]: {
+      id: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       imageUrl: INITIAL_MAP_IMAGE_URL,
       pins: [
         {
           id: SAMPLE_MARKET_PIN_ID,
-          itemId: 'note-market',
+          itemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
           x: 20,
           y: 25,
           visible: true,
@@ -152,7 +157,7 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
         },
         {
           id: SAMPLE_HANDOUT_PIN_ID,
-          itemId: 'file-handout',
+          itemId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
           x: 53,
           y: 23,
           visible: true,
@@ -202,7 +207,7 @@ function createInitialCanvasNodes(): SampleCanvasPayload['nodes'] {
       width: 300,
       height: 210,
       data: {
-        target: { kind: 'resource', resourceId: 'map-docks' as ResourceId },
+        target: { kind: 'resource', resourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap },
         textColor: 'var(--foreground)',
         backgroundColor: 'var(--t-green)',
         backgroundOpacity: 0.12,

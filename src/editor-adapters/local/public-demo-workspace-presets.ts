@@ -4,7 +4,7 @@ import {
   LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
   createLocalTextFilePayload,
 } from './local-workspace-model'
-import { SAMPLE_LOCAL_WORKSPACE } from './sample-local-workspace'
+import { SAMPLE_LOCAL_RESOURCE_IDS, SAMPLE_LOCAL_WORKSPACE } from './sample-local-workspace'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
@@ -18,20 +18,26 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 
-const PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID = 'note-market'
+const PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID = SAMPLE_LOCAL_RESOURCE_IDS.marketNote
 type PublicDemoAdditionalBlock = LocalWorkspaceState['noteAdditionalBlocksById'][string][number]
-const PUBLIC_DEMO_SESSION_NOTE_ID = 'note-session'
+const PUBLIC_DEMO_SESSION_NOTE_ID = assertDomainId(
+  DOMAIN_ID_KIND.resource,
+  '01980c1a-5e70-7000-8000-000000000405',
+)
 const PUBLIC_DEMO_SESSION_REVEAL_EMBED_BLOCK_ID = assertDomainId(
   DOMAIN_ID_KIND.noteBlock,
   '01980c1a-5e70-7000-8000-000000000001',
 )
-const PUBLIC_DEMO_LAYERED_MAP_ID = 'map-docks'
+const PUBLIC_DEMO_LAYERED_MAP_ID = SAMPLE_LOCAL_RESOURCE_IDS.docksMap
 const PUBLIC_DEMO_MAP_LAYER_1_ID = 'map-docks-layer-1'
 const PUBLIC_DEMO_MAP_LAYER_2_ID = 'map-docks-layer-2'
-const PUBLIC_DEMO_MAP_VISIBLE_GHOST_ITEM_ID = 'note-market'
-const PUBLIC_DEMO_MAP_VISIBLE_PLAYER_ITEM_ID = 'file-handout'
-const PUBLIC_DEMO_MAP_LAYER_2_VISIBLE_ITEM_ID = 'file-tunnel-sketch'
-const PUBLIC_DEMO_MAP_HIDDEN_PIN_ITEM_ID = 'canvas-heist'
+const PUBLIC_DEMO_MAP_VISIBLE_GHOST_ITEM_ID = SAMPLE_LOCAL_RESOURCE_IDS.marketNote
+const PUBLIC_DEMO_MAP_VISIBLE_PLAYER_ITEM_ID = SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile
+const PUBLIC_DEMO_MAP_LAYER_2_VISIBLE_ITEM_ID = assertDomainId(
+  DOMAIN_ID_KIND.resource,
+  '01980c1a-5e70-7000-8000-000000000406',
+)
+const PUBLIC_DEMO_MAP_HIDDEN_PIN_ITEM_ID = SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas
 const PUBLIC_DEMO_MAP_HIDDEN_PIN_ID = assertDomainId(
   DOMAIN_ID_KIND.mapPin,
   '01980c1a-5e70-7000-8000-000000000103',
@@ -92,11 +98,11 @@ const PUBLIC_DEMO_COLLABORATION_PLAYBACK = {
     },
   ],
   initialTypingStep: PUBLIC_DEMO_COLLABORATION_INITIAL_TYPING_STEP,
-  noteId: PUBLIC_DEMO_COLLABORATION_NOTE_ID as ResourceId,
+  noteId: PUBLIC_DEMO_COLLABORATION_NOTE_ID,
   typingBlockIndex: PUBLIC_DEMO_COLLABORATION_TYPING_BLOCK_INDEX,
   typingText: PUBLIC_DEMO_COLLABORATION_TYPING_TEXT,
 } as const satisfies WizardEditorNoteCollaborationPlayback
-const PUBLIC_DEMO_TEMPLATE_NOTE_ID = 'note-market'
+const PUBLIC_DEMO_TEMPLATE_NOTE_ID = SAMPLE_LOCAL_RESOURCE_IDS.marketNote
 const PUBLIC_DEMO_MAP_LAYER_2_IMAGE_URL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760">
   <rect width="1200" height="760" fill="#1e2430"/>
@@ -132,7 +138,7 @@ export type PublicDemoScenarioId =
 export interface PublicDemoScenario {
   collaborationPlayback?: WizardEditorNoteCollaborationPlayback
   id: PublicDemoScenarioId
-  initialItemId: string | null
+  initialItemId: ResourceId | null
   workspace: LocalWorkspaceState
 }
 
@@ -382,7 +388,7 @@ function createPublicDemoScenarioState(
   workspace: LocalWorkspaceState,
   options: {
     collaborationPlayback?: WizardEditorNoteCollaborationPlayback
-    initialItemId?: string | null
+    initialItemId?: ResourceId | null
   } = {},
 ): PublicDemoScenario {
   return {

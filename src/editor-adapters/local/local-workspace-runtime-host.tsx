@@ -5,6 +5,7 @@ import type { WizardEditorNoteCollaborationPlayback } from '@wizard-archive/edit
 import { openBrowserExternalUrl } from '~/editor-adapters/browser/open-browser-external-url'
 import { handleError } from '~/shared/utils/logger'
 import type { LocalWorkspaceState } from './local-workspace-model'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { useLocalWorkspaceRuntime } from './use-local-workspace-runtime'
 import type {
   LocalWorkspaceErrorReporter,
@@ -20,7 +21,7 @@ type LocalWorkspaceRuntimeHostProps = Omit<
 > & {
   canEdit?: boolean
   collaborationPlayback?: WizardEditorNoteCollaborationPlayback
-  initialItemId?: string | null
+  initialItemId?: ResourceId | null
   initialWorkspace?: LocalWorkspaceState
   openExternalUrl?: LocalWorkspaceExternalUrlNavigation
   openSeparateItem?: LocalWorkspaceSeparateItemNavigation

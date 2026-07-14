@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createOpenSeparateDemoItem } from '../demo-navigation'
 import { PUBLIC_DEMO_SCENARIO_IDS } from '../public-demo-workspace-presets'
+import { SAMPLE_LOCAL_RESOURCE_IDS } from '../sample-local-workspace'
 
 describe('openSeparateDemoItem', () => {
   afterEach(() => {
@@ -15,10 +16,10 @@ describe('openSeparateDemoItem', () => {
       scenarioId: PUBLIC_DEMO_SCENARIO_IDS.campaignHome,
     })
 
-    openSeparateItem({ itemId: 'note-market', heading: 'Intro#Details' })
+    openSeparateItem({ itemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote, heading: 'Intro#Details' })
 
     expect(openMock).toHaveBeenCalledWith(
-      `${window.location.origin}/demo?scenario=campaign-home&item=note-market&heading=Intro%23Details`,
+      `${window.location.origin}/demo?scenario=campaign-home&item=${SAMPLE_LOCAL_RESOURCE_IDS.marketNote}&heading=Intro%23Details`,
       '_blank',
       'noopener,noreferrer',
     )
@@ -31,10 +32,10 @@ describe('openSeparateDemoItem', () => {
       scenarioId: PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap,
     })
 
-    openSeparateItem({ itemId: 'map-docks' })
+    openSeparateItem({ itemId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap })
 
     expect(openMock).toHaveBeenCalledWith(
-      `${window.location.origin}/demo?scenario=layered-lore-map&item=map-docks`,
+      `${window.location.origin}/demo?scenario=layered-lore-map&item=${SAMPLE_LOCAL_RESOURCE_IDS.docksMap}`,
       '_blank',
       'noopener,noreferrer',
     )
@@ -47,10 +48,10 @@ describe('openSeparateDemoItem', () => {
       scenarioId: PUBLIC_DEMO_SCENARIO_IDS.campaignHome,
     })
 
-    openSeparateItem({ itemId: 'map-docks' })
+    openSeparateItem({ itemId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap })
 
     expect(openMock).toHaveBeenCalledWith(
-      `${window.location.origin}/demo?scenario=campaign-home&item=map-docks`,
+      `${window.location.origin}/demo?scenario=campaign-home&item=${SAMPLE_LOCAL_RESOURCE_IDS.docksMap}`,
       '_blank',
       'noopener,noreferrer',
     )

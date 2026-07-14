@@ -1,7 +1,6 @@
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { CampaignMemberId } from 'shared/common/ids'
 import {
   completeWizardEditorResourceCommand,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
@@ -9,7 +8,9 @@ import {
 } from '@wizard-archive/editor/adapter'
 import { createLocalItemCreationSession, localWorkspaceReducer } from '../local-workspace-model'
 import type { LocalWorkspaceState } from '../local-workspace-model'
-import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
+import { SAMPLE_LOCAL_RESOURCE_IDS, SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
+import { testResourceId } from 'shared/test/resource-id'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -84,7 +85,7 @@ describe('localWorkspaceReducer', () => {
   it('rejects local item creations under invalid parent targets', () => {
     const session = createLocalItemCreationSession(SAMPLE_LOCAL_WORKSPACE.nextLocalItemIndex)
     const creation = session.create({
-      parentId: 'note-market',
+      parentId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
       type: 'note',
     })
 
@@ -107,7 +108,7 @@ describe('localWorkspaceReducer', () => {
       type: 'createItem',
       creation: {
         ...creation,
-        item: { ...creation.item, id: 'local-note-mismatch' },
+        item: { ...creation.item, id: testResourceId('local-note-mismatch') },
       },
     })
 
@@ -136,76 +137,82 @@ describe('localWorkspaceReducer', () => {
   })
 
   it('copies local member item permissions onto copied folder descendants', () => {
-    const playerId = 'local-player' as CampaignMemberId
-    const workspace = withLocalFolderTreePermissions(playerId)
+    const playerId = testCampaignMemberId('local-player')
+    const { childId, folderId, workspace } = withLocalFolderTreePermissions(playerId)
+    const copiedFolderId = testResourceId('copied-folder')
+    const copiedChildId = testResourceId('copied-note')
 
-    const nextWorkspace = applyLocalCopyReceipt(workspace, ['local-folder-2'], null, [
-      ['local-folder-2', 'local-folder-4'],
-      ['local-note-3', 'local-note-5'],
+    const nextWorkspace = applyLocalCopyReceipt(workspace, [folderId], null, [
+      [folderId, copiedFolderId],
+      [childId, copiedChildId],
     ])
 
-    expect(nextWorkspace.memberItemPermissionsById?.['local-folder-4']).toEqual({
+    expect(nextWorkspace.memberItemPermissionsById?.[copiedFolderId]).toEqual({
       [playerId]: PERMISSION_LEVEL.VIEW,
     })
-    expect(nextWorkspace.memberItemPermissionsById?.['local-note-5']).toEqual({
+    expect(nextWorkspace.memberItemPermissionsById?.[copiedChildId]).toEqual({
       [playerId]: PERMISSION_LEVEL.NONE,
     })
   })
 
   it('uses copied ids from the committed receipt as the mutation source', () => {
-    const nextWorkspace = applyLocalCopyReceipt(SAMPLE_LOCAL_WORKSPACE, ['note-market'], null, [
-      ['note-market', 'receipt-owned-copy'],
-    ])
+    const copiedId = testResourceId('receipt-owned-copy')
+    const nextWorkspace = applyLocalCopyReceipt(
+      SAMPLE_LOCAL_WORKSPACE,
+      [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
+      null,
+      [[SAMPLE_LOCAL_RESOURCE_IDS.marketNote, copiedId]],
+    )
 
     expect(nextWorkspace.items).toContainEqual(
-      expect.objectContaining({ id: 'receipt-owned-copy', slug: 'receipt-owned-copy' }),
+      expect.objectContaining({ id: copiedId, slug: copiedId }),
     )
-    expect(nextWorkspace.items.some((item) => item.id === 'local-note-2')).toBe(false)
+    expect(nextWorkspace.items.filter((item) => item.id === copiedId)).toHaveLength(1)
   })
 
   it('deletes local member item permissions with permanently deleted items', () => {
-    const playerId = 'local-player' as CampaignMemberId
+    const playerId = testCampaignMemberId('local-player')
     const workspace: LocalWorkspaceState = {
       ...SAMPLE_LOCAL_WORKSPACE,
       memberItemPermissionsById: {
-        'canvas-heist': { [playerId]: PERMISSION_LEVEL.VIEW },
-        'note-market': { [playerId]: PERMISSION_LEVEL.NONE },
+        [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas]: { [playerId]: PERMISSION_LEVEL.VIEW },
+        [SAMPLE_LOCAL_RESOURCE_IDS.marketNote]: { [playerId]: PERMISSION_LEVEL.NONE },
       },
     }
 
     const trashedWorkspace = localWorkspaceReducer(workspace, {
       type: 'trashItems',
-      itemIds: ['note-market'],
+      itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
     })
     const nextWorkspace = localWorkspaceReducer(trashedWorkspace, {
       type: 'deleteItemsForever',
-      itemIds: ['note-market'],
+      itemIds: [SAMPLE_LOCAL_RESOURCE_IDS.marketNote],
     })
 
     expect(nextWorkspace.memberItemPermissionsById).toEqual({
-      'canvas-heist': { [playerId]: PERMISSION_LEVEL.VIEW },
+      [SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas]: { [playerId]: PERMISSION_LEVEL.VIEW },
     })
   })
 
   it('rejects moving a local folder under itself', () => {
-    const workspace = withLocalFolderTree()
+    const { folderId, workspace } = withLocalFolderTree()
 
     const nextWorkspace = localWorkspaceReducer(workspace, {
       type: 'moveItems',
-      itemIds: ['local-folder-2'],
-      targetParentId: 'local-folder-2',
+      itemIds: [folderId],
+      targetParentId: folderId,
     })
 
     expect(nextWorkspace).toBe(workspace)
   })
 
   it('rejects moving a local folder under one of its descendants', () => {
-    const workspace = withLocalFolderTree()
+    const { childId, folderId, workspace } = withLocalFolderTree()
 
     const nextWorkspace = localWorkspaceReducer(workspace, {
       type: 'moveItems',
-      itemIds: ['local-folder-2'],
-      targetParentId: 'local-folder-3',
+      itemIds: [folderId],
+      targetParentId: childId,
     })
 
     expect(nextWorkspace).toBe(workspace)
@@ -214,20 +221,20 @@ describe('localWorkspaceReducer', () => {
 
 function applyLocalCopyReceipt(
   state: LocalWorkspaceState,
-  itemIds: Array<string>,
-  targetParentId: string | null,
-  copies: Array<readonly [sourceItemId: string, copiedItemId: string]>,
+  itemIds: Array<ResourceId>,
+  targetParentId: ResourceId | null,
+  copies: Array<readonly [sourceItemId: ResourceId, copiedItemId: ResourceId]>,
 ) {
   const result = completeWizardEditorResourceCommand(
     {
       type: WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.copy,
-      itemIds: itemIds as Array<ResourceId>,
-      targetParentId: targetParentId as ResourceId | null,
+      itemIds,
+      targetParentId,
     },
     copies.map(([sourceItemId, itemId]) => ({
       type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.copied,
-      sourceItemId: sourceItemId as ResourceId,
-      itemId: itemId as ResourceId,
+      sourceItemId,
+      itemId,
     })),
   )
   if (result.status !== 'completed') throw new Error('Expected completed local copy receipt')
@@ -237,7 +244,7 @@ function applyLocalCopyReceipt(
   })
 }
 
-function withLocalFolderTree(): LocalWorkspaceState {
+function withLocalFolderTree() {
   const session = createLocalItemCreationSession(SAMPLE_LOCAL_WORKSPACE.nextLocalItemIndex)
   const folder = session.create({
     parentId: null,
@@ -251,13 +258,14 @@ function withLocalFolderTree(): LocalWorkspaceState {
     type: 'createItem',
     creation: folder,
   })
-  return localWorkspaceReducer(workspaceWithFolder, {
+  const workspace = localWorkspaceReducer(workspaceWithFolder, {
     type: 'createItem',
     creation: childFolder,
   })
+  return { childId: childFolder.id, folderId: folder.id, workspace }
 }
 
-function withLocalFolderTreePermissions(playerId: CampaignMemberId): LocalWorkspaceState {
+function withLocalFolderTreePermissions(playerId: CampaignMemberId) {
   const session = createLocalItemCreationSession(SAMPLE_LOCAL_WORKSPACE.nextLocalItemIndex)
   const folder = session.create({
     parentId: null,
@@ -276,11 +284,12 @@ function withLocalFolderTreePermissions(playerId: CampaignMemberId): LocalWorksp
     creation: childNote,
   })
 
-  return {
+  const workspace = {
     ...workspaceWithChild,
     memberItemPermissionsById: {
       [folder.id]: { [playerId]: PERMISSION_LEVEL.VIEW },
       [childNote.id]: { [playerId]: PERMISSION_LEVEL.NONE },
     },
   }
+  return { childId: childNote.id, folderId: folder.id, workspace }
 }

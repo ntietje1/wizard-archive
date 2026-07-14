@@ -10,21 +10,20 @@ import type {
   WizardEditorResourceCatalogCommand,
   WizardEditorResourceEvent,
 } from '@wizard-archive/editor/adapter'
-import { localItemTypeForSidebarItemType } from './local-workspace-model'
 
 export function createCompletedLocalFileSystemCommandResult(
   command: WizardEditorResourceCatalogCommand,
   {
     catalog,
-    claimNextItemIndex,
+    claimNextItemId,
   }: {
     catalog: WizardEditorResourceCatalog
-    claimNextItemIndex: () => number
+    claimNextItemId: () => ResourceId
   },
 ): ReturnType<typeof completeWizardEditorResourceCommand> {
   const events = planLocalFileSystemCommandEvents(command, {
     catalog,
-    claimNextItemIndex,
+    claimNextItemId,
   })
   return completeWizardEditorResourceCommand(command, events)
 }
@@ -33,10 +32,10 @@ function planLocalFileSystemCommandEvents(
   command: WizardEditorResourceCatalogCommand,
   {
     catalog,
-    claimNextItemIndex,
+    claimNextItemId,
   }: {
     catalog: WizardEditorResourceCatalog
-    claimNextItemIndex: () => number
+    claimNextItemId: () => ResourceId
   },
 ): Array<WizardEditorResourceEvent> {
   switch (command.type) {
@@ -45,7 +44,7 @@ function planLocalFileSystemCommandEvents(
       return collectLocalMoveEvents(catalog, command.itemIds, command.targetParentId)
     case WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.copy:
       if (!isActiveFolderTarget(catalog, command.targetParentId)) return []
-      return collectLocalCopyEvents(catalog, command.itemIds, claimNextItemIndex)
+      return collectLocalCopyEvents(catalog, command.itemIds, claimNextItemId)
     case WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.trash:
       return collectLocalOperationTree(catalog, command.itemIds, 'active').map((item) => ({
         type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.trashed,
@@ -159,19 +158,18 @@ function collectLocalDescendants(
 function collectLocalCopyEvents(
   catalog: WizardEditorResourceCatalog,
   itemIds: Array<ResourceId>,
-  claimNextIndex: () => number,
+  claimNextItemId: () => ResourceId,
 ): Array<WizardEditorResourceEvent> {
   const roots = collectLocalOperationRoots(catalog, itemIds, { status: 'active' })
-  return roots.flatMap((root) => collectLocalCopyTreeEvents(root, catalog, claimNextIndex))
+  return roots.flatMap((root) => collectLocalCopyTreeEvents(root, catalog, claimNextItemId))
 }
 
 function collectLocalCopyTreeEvents(
   item: WizardEditorItem,
   catalog: WizardEditorResourceCatalog,
-  claimNextIndex: () => number,
+  claimNextItemId: () => ResourceId,
 ): Array<WizardEditorResourceEvent> {
-  const localType = localItemTypeForSidebarItemType(item.type)
-  const copiedItemId = `local-${localType}-${claimNextIndex()}` as ResourceId
+  const copiedItemId = claimNextItemId()
   return [
     {
       type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.copied,
@@ -180,6 +178,6 @@ function collectLocalCopyTreeEvents(
     },
     ...catalog
       .getVisibleChildren(item.id)
-      .flatMap((child) => collectLocalCopyTreeEvents(child, catalog, claimNextIndex)),
+      .flatMap((child) => collectLocalCopyTreeEvents(child, catalog, claimNextItemId)),
   ]
 }
