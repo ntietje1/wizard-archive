@@ -41,7 +41,7 @@ import type {
   SidebarItemId as InternalResourceItemId,
   WorkspaceMemberId as InternalParticipantId,
 } from '../../../shared/common/ids'
-import type { HistoryEntryId, MapPinId as InternalMapPinId } from './resources/domain-id'
+import type { AssetId, HistoryEntryId, MapPinId as InternalMapPinId } from './resources/domain-id'
 import type { BlockSearchResult } from '../../../shared/search/types'
 import { isPersistedResourceId, parseResourceSlug } from './workspace/resource-contract'
 import type {
@@ -803,17 +803,17 @@ export interface WizardEditorMapImageReplacementInput<TImage, TMapId extends str
 }
 export interface WizardEditorMapImageLayer {
   id: string
-  imageAssetId: string | null
+  imageAssetId: AssetId | null
   imageUrl: string | null
   name: string
 }
 export interface WizardEditorMapImageSource {
-  imageAssetId: string | null
+  imageAssetId: AssetId | null
   imageUrl: string | null
   layers?: ReadonlyArray<WizardEditorMapImageLayer>
 }
 export interface WizardEditorResolvedMapImage {
-  imageAssetId: string | null
+  imageAssetId: AssetId | null
   imageUrl: string | null
   layer: WizardEditorMapImageLayer | null
 }
