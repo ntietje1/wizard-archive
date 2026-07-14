@@ -13,12 +13,12 @@ describe('session workflows', () => {
       const dmAuth = asDm(ctx)
 
       const s1Id = await dmAuth.mutation(api.sessions.mutations.startSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Session 1',
       })
 
       const s2Id = await dmAuth.mutation(api.sessions.mutations.startSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Session 2',
       })
 
@@ -46,17 +46,17 @@ describe('session workflows', () => {
       const dmAuth = asDm(ctx)
 
       const s1Id = await dmAuth.mutation(api.sessions.mutations.startSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Session 1',
       })
 
       const s2Id = await dmAuth.mutation(api.sessions.mutations.startSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Session 2',
       })
 
       await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       })
 
       const s2Ended = await t.run(async (dbCtx) =>
@@ -68,7 +68,7 @@ describe('session workflows', () => {
       expect(s2Ended!.endedAt).not.toBeNull()
 
       await dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sessionId: s2Id,
       })
 
@@ -82,7 +82,7 @@ describe('session workflows', () => {
 
       await expectConflict(
         dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           sessionId: s1Id,
         }),
       )
@@ -97,23 +97,23 @@ describe('session workflows', () => {
 
       await expectPermissionDenied(
         playerAuth.mutation(api.sessions.mutations.startSession, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
         }),
       )
 
       const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       })
 
       await expectPermissionDenied(
         playerAuth.mutation(api.sessions.mutations.endCurrentSession, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
         }),
       )
 
       await expectPermissionDenied(
         playerAuth.mutation(api.sessions.mutations.setCurrentSession, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           sessionId,
         }),
       )
@@ -125,18 +125,18 @@ describe('session workflows', () => {
       const playerAuth = asPlayer(ctx)
 
       await dmAuth.mutation(api.sessions.mutations.startSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Visible Session',
       })
 
       const current = await playerAuth.query(api.sessions.queries.getCurrentSession, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       })
       expect(current).not.toBeNull()
       expect(current!.name).toBe('Visible Session')
 
       const allSessions = await playerAuth.query(api.sessions.queries.getSessionsByCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       })
       expect(allSessions.length).toBeGreaterThanOrEqual(1)
     })

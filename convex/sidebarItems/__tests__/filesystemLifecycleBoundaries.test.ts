@@ -4,14 +4,14 @@ import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
-import type { Id } from '../../_generated/dataModel'
 import { assertConvexResourceTitle } from '../validation/name'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 describe('filesystem command lifecycle boundaries', () => {
   const t = createTestContext()
   const executeCommand = (
     dmAuth: ReturnType<typeof asDm>,
-    campaignId: Id<'campaigns'>,
+    campaignId: CampaignId,
     command: ResourceCommand,
   ) =>
     executeTestFileSystemCommand(dmAuth, {
@@ -33,7 +33,7 @@ describe('filesystem command lifecycle boundaries', () => {
     })
 
     await expect(
-      executeCommand(dmAuth, ctx.campaignId, {
+      executeCommand(dmAuth, ctx.campaignDomainId, {
         type: 'move',
         itemIds: [trashedNoteId],
         targetParentId: null,
@@ -41,7 +41,7 @@ describe('filesystem command lifecycle boundaries', () => {
     ).rejects.toThrow('Only active items can be moved')
 
     await expect(
-      executeCommand(dmAuth, ctx.campaignId, {
+      executeCommand(dmAuth, ctx.campaignDomainId, {
         type: 'move',
         itemIds: [activeNoteId, trashedNoteId],
         targetParentId: null,
@@ -88,7 +88,7 @@ describe('filesystem command lifecycle boundaries', () => {
     ]
 
     for (const { command, message } of commandCases) {
-      await expect(executeCommand(dmAuth, ctx.campaignId, command)).rejects.toThrow(message)
+      await expect(executeCommand(dmAuth, ctx.campaignDomainId, command)).rejects.toThrow(message)
     }
 
     const hiddenNote = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', hiddenNoteId))
@@ -112,7 +112,7 @@ describe('filesystem command lifecycle boundaries', () => {
     }
 
     await expect(
-      executeCommand(dmAuth, ctx.campaignId, { type: 'trash', itemIds: [rootFolderId] }),
+      executeCommand(dmAuth, ctx.campaignDomainId, { type: 'trash', itemIds: [rootFolderId] }),
     ).rejects.toThrow('Max sidebar tree depth exceeded')
 
     const rootFolder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', rootFolderId))
@@ -139,7 +139,7 @@ describe('filesystem command lifecycle boundaries', () => {
     }
 
     await expect(
-      executeCommand(dmAuth, ctx.campaignId, {
+      executeCommand(dmAuth, ctx.campaignDomainId, {
         type: 'deleteForever',
         itemIds: [folderId],
       }),
@@ -168,9 +168,9 @@ describe('filesystem command lifecycle boundaries', () => {
       })
     }
 
-    await expect(executeCommand(dmAuth, ctx.campaignId, { type: 'emptyTrash' })).rejects.toThrow(
-      'Empty Trash can delete at most 100 items at once',
-    )
+    await expect(
+      executeCommand(dmAuth, ctx.campaignDomainId, { type: 'emptyTrash' }),
+    ).rejects.toThrow('Empty Trash can delete at most 100 items at once')
 
     const folder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folderId))
     expect(folder?.status).toBe('trashed')

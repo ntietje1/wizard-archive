@@ -36,7 +36,7 @@ describe('hard delete YJS cleanup', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Doomed Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -44,14 +44,14 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsUpdates(noteId)).toHaveLength(1)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'emptyTrash' },
     })
 
@@ -63,13 +63,13 @@ describe('hard delete YJS cleanup', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
       sessionId: 'note-session',
@@ -79,14 +79,14 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsAwareness(noteId)).toHaveLength(1)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'emptyTrash' },
     })
 
@@ -98,13 +98,13 @@ describe('hard delete YJS cleanup', () => {
     const dmAuth = asDm(ctx)
 
     const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Doomed Canvas',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: canvasId,
       clientId: 42,
       sessionId: 'canvas-session',
@@ -115,14 +115,14 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsAwareness(canvasId)).toHaveLength(1)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [canvasId],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'emptyTrash' },
     })
 
@@ -137,7 +137,7 @@ describe('hard delete YJS cleanup', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Nested Note',
       parentTarget: { kind: 'direct', parentId: folderId },
     })
@@ -145,7 +145,7 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsUpdates(noteId)).toHaveLength(1)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
       sessionId: 'nested-note-session',
@@ -155,14 +155,14 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsAwareness(noteId)).toHaveLength(1)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'emptyTrash' },
     })
 

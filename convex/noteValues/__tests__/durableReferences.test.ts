@@ -56,7 +56,7 @@ describe('note value durable references', () => {
     blocks: Array<PartialNoteBlock>,
   ) {
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks,
     })
@@ -68,7 +68,7 @@ describe('note value durable references', () => {
     noteId: Parameters<typeof replaceNoteDocumentAndPersist>[2]['noteId'],
   ) {
     return await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
     })
   }
@@ -124,7 +124,7 @@ describe('note value durable references', () => {
     })
 
     await renameValueTestNote(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       name: 'Renamed Source Note',
     })
@@ -171,7 +171,7 @@ describe('note value durable references', () => {
     await persistBlocks(ctx, dmAuth, targetNoteId, targetBlocks)
 
     await renameValueTestNote(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       name: 'Renamed Source Note',
     })
@@ -372,7 +372,7 @@ describe('note value durable references', () => {
     ])
 
     await renameValueTestNote(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       name: 'Renamed Source Note',
     })
@@ -434,7 +434,7 @@ describe('note value durable references', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -454,7 +454,7 @@ describe('note value durable references', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -468,13 +468,13 @@ describe('note value durable references', () => {
     })
 
     await renameValueTestNote(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       name: 'Renamed Source Note',
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -488,7 +488,7 @@ describe('note value durable references', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
     })
 
@@ -516,7 +516,7 @@ describe('note value durable references', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -528,7 +528,7 @@ describe('note value durable references', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -541,13 +541,13 @@ describe('note value durable references', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       blocks: [],
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
     })
     expect(states).toHaveLength(1)

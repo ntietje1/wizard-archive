@@ -19,7 +19,7 @@ describe('filesystem transaction receipts', () => {
     })
 
     const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       operationId: testOperationId('copy-scene-once'),
       command: {
         type: 'copy',
@@ -57,7 +57,7 @@ describe('filesystem transaction receipts', () => {
 
     await expect(
       dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         operationId: 'not-an-operation-id' as never,
         command: { type: 'rename', itemId: noteId, name: 'Scene Two' },
       }),
@@ -73,14 +73,14 @@ describe('filesystem transaction receipts', () => {
 
     const operationId = testOperationId('rename-scene-once')
     await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       operationId,
       command: { type: 'rename', itemId: noteId, name: 'Scene Two' },
     })
 
     await expect(
       executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         operationId,
         command: { type: 'rename', itemId: noteId, name: 'Scene Three' },
       }),
@@ -103,19 +103,19 @@ describe('filesystem transaction receipts', () => {
     })
 
     await executeTestFileSystemCommand(playerAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'rename', itemId: noteId, name: 'Scene Revised' },
     })
 
     const renamed = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(renamed.name).toBe('Scene Revised')
 
     await expectPermissionDenied(
       executeTestFileSystemCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: { type: 'move', itemIds: [noteId], targetParentId: null },
       }),
     )
@@ -129,20 +129,20 @@ describe('filesystem transaction receipts', () => {
     })
 
     const forward = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'rename', itemId: noteId, name: 'Scene Two' },
     })
     const undo = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.undoFileSystemTransaction,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         transactionId: forward.transactionId!,
       },
     )
     const redo = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.redoFileSystemTransaction,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         transactionId: forward.transactionId!,
       },
     )
@@ -163,7 +163,7 @@ describe('filesystem transaction receipts', () => {
 
     const operationId = testOperationId('rename-one-item')
     const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       operationId,
       command: { type: 'rename', itemId: noteId, name: 'Renamed' },
     })
@@ -183,7 +183,7 @@ describe('filesystem transaction receipts', () => {
     expect(receipt.patches[0].fields).not.toHaveProperty('parentId')
 
     const retryReceipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       operationId,
       command: { type: 'rename', itemId: noteId, name: 'Renamed' },
     })
@@ -195,7 +195,7 @@ describe('filesystem transaction receipts', () => {
     const dmAuth = asDm(ctx)
 
     const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       operationId: testOperationId('create-note-in-new-path'),
       command: {
         type: 'create',
@@ -219,7 +219,7 @@ describe('filesystem transaction receipts', () => {
 
     const { active: activeAfterCreate } = await dmAuth.query(
       api.sidebarItems.queries.getSidebarItems,
-      { campaignId: ctx.campaignId },
+      { campaignId: ctx.campaignDomainId },
     )
     const createdIds = activeAfterCreate.map((item) => item.id).sort()
     expect(activeAfterCreate.map((item) => item.name).sort()).toEqual([
@@ -231,14 +231,14 @@ describe('filesystem transaction receipts', () => {
     const undoReceipt = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.undoFileSystemTransaction,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         transactionId: receipt.transactionId!,
       },
     )
     expect(undoReceipt.patches.every((patch) => patch.type === 'updateResource')).toBe(true)
     const { active: activeAfterUndo } = await dmAuth.query(
       api.sidebarItems.queries.getSidebarItems,
-      { campaignId: ctx.campaignId },
+      { campaignId: ctx.campaignDomainId },
     )
     expect(activeAfterUndo).toHaveLength(0)
 
@@ -256,7 +256,7 @@ describe('filesystem transaction receipts', () => {
     const redoReceipt = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.redoFileSystemTransaction,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         transactionId: receipt.transactionId!,
       },
     )
@@ -272,7 +272,7 @@ describe('filesystem transaction receipts', () => {
     )
     const { active: activeAfterRedo } = await dmAuth.query(
       api.sidebarItems.queries.getSidebarItems,
-      { campaignId: ctx.campaignId },
+      { campaignId: ctx.campaignDomainId },
     )
     expect(activeAfterRedo.map((item) => item.id).sort()).toEqual(createdIds)
     expect(activeAfterRedo.map((item) => item.name).sort()).toEqual([

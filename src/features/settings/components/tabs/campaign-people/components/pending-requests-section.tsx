@@ -4,7 +4,7 @@ import { SettingsSection } from '~/features/settings/components/settings-section
 import { MemberRow } from './member-row'
 import { useCampaignMemberStatusUpdate } from './use-campaign-member-status-update'
 import type { CampaignMember } from 'shared/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
 
@@ -13,7 +13,7 @@ export function PendingRequestsSection({
   campaignId,
 }: {
   pendingPlayers: Array<CampaignMember>
-  campaignId: Id<'campaigns'>
+  campaignId: CampaignId
 }) {
   const { isMemberStatusPending, updateMemberStatus } = useCampaignMemberStatusUpdate(campaignId)
 

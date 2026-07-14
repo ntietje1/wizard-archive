@@ -38,7 +38,7 @@ describe('pushUpdate', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
@@ -52,7 +52,7 @@ describe('pushUpdate', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
@@ -64,13 +64,13 @@ describe('pushUpdate', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
@@ -83,23 +83,23 @@ describe('pushUpdate', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const r1 = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
     const r2 = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
     const r3 = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
@@ -115,7 +115,7 @@ describe('pushUpdate', () => {
     const playerAuth = asPlayer(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Shared Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -129,7 +129,7 @@ describe('pushUpdate', () => {
     })
 
     const result = await playerAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
@@ -143,7 +143,7 @@ describe('pushUpdate', () => {
     const playerAuth = asPlayer(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'View Only Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -158,7 +158,7 @@ describe('pushUpdate', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
@@ -176,7 +176,7 @@ describe('pushUpdate', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
@@ -194,7 +194,7 @@ describe('pushUpdate', () => {
     for (const documentId of [folderId, fileId, mapId]) {
       await expectValidationFailed(
         dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           documentId,
           update: makeEmptyYjsUpdate(),
         }),
@@ -207,13 +207,13 @@ describe('pushUpdate', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Lifecycle Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
@@ -221,21 +221,21 @@ describe('pushUpdate', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
     )
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'restore',
     })
 
     const result = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
@@ -250,14 +250,14 @@ describe('pushUpdate', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Compact Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       for (let i = 1; i <= COMPACTION_SEQ; i++) {
         await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           documentId: noteId,
           update: makeEmptyYjsUpdate(),
         })
@@ -283,14 +283,14 @@ describe('pushUpdate', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'No Compact Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     for (let i = 1; i < COMPACTION_SEQ; i++) {
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       })
@@ -316,7 +316,7 @@ describe('pushAwareness', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.yjsSync.mutations.pushAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 1,
         sessionId: AWARENESS_SESSION_ID,
@@ -332,7 +332,7 @@ describe('pushAwareness', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 1,
         sessionId: AWARENESS_SESSION_ID,
@@ -352,7 +352,7 @@ describe('pushAwareness', () => {
     for (const documentId of [folderId, fileId, mapId]) {
       await expectValidationFailed(
         dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           documentId,
           clientId: 1,
           sessionId: AWARENESS_SESSION_ID,
@@ -367,7 +367,7 @@ describe('pushAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -375,7 +375,7 @@ describe('pushAwareness', () => {
     const state = makeAwarenessState()
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
       sessionId: AWARENESS_SESSION_ID,
@@ -400,13 +400,13 @@ describe('pushAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Lifecycle Canvas',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [canvasId],
       targetParentId: null,
       action: 'trash',
@@ -414,7 +414,7 @@ describe('pushAwareness', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: canvasId,
         clientId: 7,
         sessionId: AWARENESS_SESSION_ID,
@@ -423,14 +423,14 @@ describe('pushAwareness', () => {
     )
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [canvasId],
       targetParentId: null,
       action: 'restore',
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: canvasId,
       clientId: 7,
       sessionId: AWARENESS_SESSION_ID,
@@ -452,13 +452,13 @@ describe('pushAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Upsert Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 10,
       sessionId: AWARENESS_SESSION_ID,
@@ -467,7 +467,7 @@ describe('pushAwareness', () => {
 
     const newState = new Uint8Array([5, 6, 7, 8]).buffer
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 10,
       sessionId: AWARENESS_SESSION_ID,
@@ -489,13 +489,13 @@ describe('pushAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Multi Client Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 1,
       sessionId: AWARENESS_SESSION_ID,
@@ -503,7 +503,7 @@ describe('pushAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 2,
       sessionId: `${AWARENESS_SESSION_ID}-2`,
@@ -526,7 +526,7 @@ describe('pushAwareness', () => {
     const playerAuth = asPlayer(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'View Share Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -540,7 +540,7 @@ describe('pushAwareness', () => {
     })
 
     await playerAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 99,
       sessionId: AWARENESS_SESSION_ID,
@@ -563,7 +563,7 @@ describe('pushAwareness', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Owned Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -576,7 +576,7 @@ describe('pushAwareness', () => {
     })
     const originalState = makeAwarenessState()
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 50,
       sessionId: AWARENESS_SESSION_ID,
@@ -585,7 +585,7 @@ describe('pushAwareness', () => {
 
     await expect(
       playerAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 50,
         sessionId: 'attacker-session',
@@ -611,7 +611,7 @@ describe('pushAwareness', () => {
 
     await expect(
       dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 51,
         state: makeAwarenessState(),
@@ -629,7 +629,7 @@ describe('removeAwareness', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.yjsSync.mutations.removeAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 1,
         sessionId: AWARENESS_SESSION_ID,
@@ -642,13 +642,13 @@ describe('removeAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Remove Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 5,
       sessionId: AWARENESS_SESSION_ID,
@@ -656,7 +656,7 @@ describe('removeAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 5,
       sessionId: AWARENESS_SESSION_ID,
@@ -677,13 +677,13 @@ describe('removeAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'No-op Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 999,
       sessionId: AWARENESS_SESSION_ID,
@@ -697,13 +697,13 @@ describe('removeAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Selective Remove Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 1,
       sessionId: AWARENESS_SESSION_ID,
@@ -711,7 +711,7 @@ describe('removeAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 2,
       sessionId: `${AWARENESS_SESSION_ID}-2`,
@@ -719,7 +719,7 @@ describe('removeAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 1,
       sessionId: AWARENESS_SESSION_ID,
@@ -740,12 +740,12 @@ describe('removeAwareness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Session Release Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 52,
       sessionId: AWARENESS_SESSION_ID,
@@ -754,7 +754,7 @@ describe('removeAwareness', () => {
 
     await expect(
       dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId: 52,
         sessionId: 'different-session',

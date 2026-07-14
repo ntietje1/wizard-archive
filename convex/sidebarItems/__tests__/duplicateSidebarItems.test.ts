@@ -58,7 +58,7 @@ describe('executeCopyCommand', () => {
     })
 
     const result = await executeCopyCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId, mapId],
       targetParentId: null,
     })
@@ -91,7 +91,7 @@ describe('executeCopyCommand', () => {
     })
 
     const result = await executeCopyCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [firstId, secondId],
       targetParentId: null,
     })
@@ -122,7 +122,7 @@ describe('executeCopyCommand', () => {
     })
 
     const result = await executeCopyCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: folderId,
     })
@@ -149,7 +149,7 @@ describe('executeCopyCommand', () => {
     await createBlock(t, noteId, ctx.campaignId, { plainText: 'Hidden archers' })
 
     const result = await executeCopyCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
     })
@@ -220,7 +220,7 @@ describe('executeCopyCommand', () => {
 
     await expectPermissionDenied(
       executeCopyCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: destinationFolderId,
       }),
@@ -277,13 +277,13 @@ describe('executeCopyCommand', () => {
     } = await setupImmutableStorageDuplicate()
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId, mapId],
       targetParentId: null,
       action: 'trash',
     })
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId, mapId],
     })
 

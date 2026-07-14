@@ -5,6 +5,7 @@ import {
   addPlayerToCampaign,
   createCampaignWithDm,
   createFolder,
+  getCampaignRowId,
   createNote,
   createSession,
 } from '../../_test/factories.helper'
@@ -30,9 +31,10 @@ describe('createCampaign', () => {
     })
 
     expect(campaignId).toBeDefined()
+    const campaignRowId = await getCampaignRowId(t, campaignId)
 
     await t.run(async (ctx) => {
-      const campaign = await ctx.db.get('campaigns', campaignId)
+      const campaign = await ctx.db.get('campaigns', campaignRowId)
       expect(campaign).not.toBeNull()
       expect(campaign!.name).toBe('My Campaign')
       expect(campaign!.slug).toBe('my-campaign')
@@ -42,7 +44,7 @@ describe('createCampaign', () => {
 
       const members = await ctx.db
         .query('campaignMembers')
-        .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
+        .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignRowId))
         .collect()
       expect(members).toHaveLength(1)
       expect(members[0].role).toBe('DM')
@@ -148,12 +150,12 @@ describe('getUserCampaigns', () => {
   it('returns only Accepted membership campaigns', async () => {
     const user = await setupUser(t)
 
-    const { campaignId } = await createCampaignWithDm(t, user.profile)
+    const { campaignDomainId } = await createCampaignWithDm(t, user.profile)
 
     const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
 
     expect(campaigns).toHaveLength(1)
-    expect(campaigns[0].id).toBe(campaignId)
+    expect(campaigns[0].id).toBe(campaignDomainId)
   })
 
   it('excludes Pending memberships', async () => {
@@ -212,10 +214,10 @@ describe('getUserCampaigns', () => {
     expect(campaigns).toHaveLength(1)
     const campaign = campaigns[0]
     expect(campaign.dmUserProfile).toBeDefined()
-    expect(campaign.dmUserId).toBe(ctx.dm.profile._id)
+    expect(campaign).not.toHaveProperty('dmUserId')
     expect(typeof campaign.acceptedMemberCount).toBe('number')
     expect(campaign.myMembership).toBeDefined()
-    expect(campaign.myMembership!.id).toBe(ctx.dm.memberId)
+    expect(campaign.myMembership!.id).toBe(ctx.dm.memberDomainId)
   })
 
   it('returns public campaign profiles without private account fields', async () => {
@@ -248,10 +250,10 @@ describe('getUserCampaigns', () => {
 
   it('reports accepted campaign members, including the DM membership', async () => {
     const dm = await setupUser(t)
-    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
 
     let campaigns = await dm.authed.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.find((campaign) => campaign.id === campaignId)).toMatchObject({
+    expect(campaigns.find((campaign) => campaign.id === campaignDomainId)).toMatchObject({
       acceptedMemberCount: 1,
     })
 
@@ -259,7 +261,7 @@ describe('getUserCampaigns', () => {
     await addPlayerToCampaign(t, campaignId, player.profile)
 
     campaigns = await dm.authed.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.find((campaign) => campaign.id === campaignId)).toMatchObject({
+    expect(campaigns.find((campaign) => campaign.id === campaignDomainId)).toMatchObject({
       acceptedMemberCount: 2,
     })
   })
@@ -287,7 +289,7 @@ describe('getCampaignBySlug', () => {
       slug,
     })
 
-    expect(campaign.id).toBe(ctx.campaignId)
+    expect(campaign.id).toBe(ctx.campaignDomainId)
     expect(campaign.dmUserProfile).toBeDefined()
   })
 
@@ -366,7 +368,7 @@ describe('getMembersByCampaign', () => {
     const dmAuth = asDm(ctx)
 
     const members = await dmAuth.query(api.campaigns.queries.getMembersByCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(members.length).toBeGreaterThanOrEqual(2)
@@ -382,7 +384,7 @@ describe('getMembersByCampaign', () => {
     const playerAuth = asPlayer(ctx)
 
     const members = await playerAuth.query(api.campaigns.queries.getMembersByCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(members.length).toBeGreaterThanOrEqual(2)
@@ -406,7 +408,7 @@ describe('getMembersByCampaign', () => {
     await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Pending' })
 
     const members = await dmAuth.query(api.campaigns.queries.getMembersByCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
@@ -419,7 +421,7 @@ describe('getMembersByCampaign', () => {
     await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Rejected' })
 
     const members = await dmAuth.query(api.campaigns.queries.getMembersByCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
@@ -432,7 +434,7 @@ describe('getMembersByCampaign', () => {
     await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Removed' })
 
     const members = await dmAuth.query(api.campaigns.queries.getMembersByCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
@@ -444,7 +446,7 @@ describe('getMembersByCampaign', () => {
 
     await expectPermissionDenied(
       outsider.authed.query(api.campaigns.queries.getMembersByCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       }),
     )
   })
@@ -453,7 +455,7 @@ describe('getMembersByCampaign', () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
       t.query(api.campaigns.queries.getMembersByCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       }),
     )
   })
@@ -473,7 +475,7 @@ describe('getCampaignRequests', () => {
     await addPlayerToCampaign(t, ctx.campaignId, removed.profile, { status: 'Removed' })
 
     const members = await dmAuth.query(api.campaigns.queries.getCampaignRequests, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(members).toHaveLength(3)
@@ -492,7 +494,7 @@ describe('getCampaignRequests', () => {
 
     await expectPermissionDenied(
       playerAuth.query(api.campaigns.queries.getCampaignRequests, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       }),
     )
   })
@@ -503,7 +505,7 @@ describe('getCampaignRequests', () => {
 
     await expectPermissionDenied(
       outsider.authed.query(api.campaigns.queries.getCampaignRequests, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       }),
     )
   })
@@ -512,7 +514,7 @@ describe('getCampaignRequests', () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
       t.query(api.campaigns.queries.getCampaignRequests, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       }),
     )
   })
@@ -670,18 +672,18 @@ describe('updateCampaignMemberStatus', () => {
 
   it('transitions Pending to Accepted', async () => {
     const dm = await setupUser(t)
-    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
-    const { memberId } = await addPlayerToCampaign(t, campaignId, player.profile, {
+    const { memberId, memberDomainId } = await addPlayerToCampaign(t, campaignId, player.profile, {
       status: 'Pending',
     })
 
     const result = await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId,
+      campaignId: campaignDomainId,
+      memberId: memberDomainId,
       status: 'Accepted',
     })
-    expect(result).toBe(memberId)
+    expect(result).toBe(memberDomainId)
 
     await t.run(async (ctx) => {
       const member = await ctx.db.get('campaignMembers', memberId)
@@ -691,15 +693,15 @@ describe('updateCampaignMemberStatus', () => {
 
   it('transitions Pending to Rejected', async () => {
     const dm = await setupUser(t)
-    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
-    const { memberId } = await addPlayerToCampaign(t, campaignId, player.profile, {
+    const { memberId, memberDomainId } = await addPlayerToCampaign(t, campaignId, player.profile, {
       status: 'Pending',
     })
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId,
+      campaignId: campaignDomainId,
+      memberId: memberDomainId,
       status: 'Rejected',
     })
 
@@ -714,8 +716,8 @@ describe('updateCampaignMemberStatus', () => {
     const dmAuth = asDm(ctx)
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId: ctx.campaignId,
-      memberId: ctx.player.memberId,
+      campaignId: ctx.campaignDomainId,
+      memberId: ctx.player.memberDomainId,
       status: 'Removed',
     })
 
@@ -727,15 +729,15 @@ describe('updateCampaignMemberStatus', () => {
 
   it('transitions Rejected to Accepted', async () => {
     const dm = await setupUser(t)
-    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
-    const { memberId } = await addPlayerToCampaign(t, campaignId, player.profile, {
+    const { memberId, memberDomainId } = await addPlayerToCampaign(t, campaignId, player.profile, {
       status: 'Rejected',
     })
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId,
+      campaignId: campaignDomainId,
+      memberId: memberDomainId,
       status: 'Accepted',
     })
 
@@ -747,15 +749,15 @@ describe('updateCampaignMemberStatus', () => {
 
   it('transitions Removed to Accepted', async () => {
     const dm = await setupUser(t)
-    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
-    const { memberId } = await addPlayerToCampaign(t, campaignId, player.profile, {
+    const { memberId, memberDomainId } = await addPlayerToCampaign(t, campaignId, player.profile, {
       status: 'Removed',
     })
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId,
+      campaignId: campaignDomainId,
+      memberId: memberDomainId,
       status: 'Accepted',
     })
 
@@ -769,8 +771,8 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-        campaignId: ctx.campaignId,
-        memberId: ctx.player.memberId,
+        campaignId: ctx.campaignDomainId,
+        memberId: ctx.player.memberDomainId,
         status: 'Accepted',
       }),
     )
@@ -778,16 +780,16 @@ describe('updateCampaignMemberStatus', () => {
 
   it('rejects Pending to Removed', async () => {
     const dm = await setupUser(t)
-    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
-    const { memberId } = await addPlayerToCampaign(t, campaignId, player.profile, {
+    const { memberDomainId } = await addPlayerToCampaign(t, campaignId, player.profile, {
       status: 'Pending',
     })
 
     await expectValidationFailed(
       dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-        campaignId,
-        memberId,
+        campaignId: campaignDomainId,
+        memberId: memberDomainId,
         status: 'Removed',
       }),
     )
@@ -798,14 +800,14 @@ describe('updateCampaignMemberStatus', () => {
     const playerAuth = asPlayer(ctx)
 
     const newPlayer = await setupUser(t)
-    const { memberId } = await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, {
+    const { memberDomainId } = await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, {
       status: 'Pending',
     })
 
     await expectPermissionDenied(
       playerAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-        campaignId: ctx.campaignId,
-        memberId,
+        campaignId: ctx.campaignDomainId,
+        memberId: memberDomainId,
         status: 'Accepted',
       }),
     )
@@ -817,8 +819,8 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectPermissionDenied(
       dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-        campaignId: ctx.campaignId,
-        memberId: ctx.dm.memberId,
+        campaignId: ctx.campaignDomainId,
+        memberId: ctx.dm.memberDomainId,
         status: 'Removed',
       }),
     )
@@ -826,9 +828,9 @@ describe('updateCampaignMemberStatus', () => {
 
   it('rejects deleted member', async () => {
     const dm = await setupUser(t)
-    const { campaignId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
-    const { memberId } = await addPlayerToCampaign(t, campaignId, player.profile, {
+    const { memberId, memberDomainId } = await addPlayerToCampaign(t, campaignId, player.profile, {
       status: 'Pending',
     })
 
@@ -838,8 +840,8 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectNotFound(
       dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-        campaignId,
-        memberId,
+        campaignId: campaignDomainId,
+        memberId: memberDomainId,
         status: 'Accepted',
       }),
     )
@@ -849,8 +851,8 @@ describe('updateCampaignMemberStatus', () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
       t.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-        campaignId: ctx.campaignId,
-        memberId: ctx.player.memberId,
+        campaignId: ctx.campaignDomainId,
+        memberId: ctx.player.memberDomainId,
         status: 'Removed',
       }),
     )
@@ -865,7 +867,7 @@ describe('updateCampaign', () => {
     const dmAuth = asDm(ctx)
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Updated Name',
     })
 
@@ -880,7 +882,7 @@ describe('updateCampaign', () => {
     const dmAuth = asDm(ctx)
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       description: 'New description',
     })
 
@@ -899,7 +901,7 @@ describe('updateCampaign', () => {
     })
 
     const campaigns = await dmAuth.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.find((campaign) => campaign.id === ctx.campaignId)).toMatchObject({
+    expect(campaigns.find((campaign) => campaign.id === ctx.campaignDomainId)).toMatchObject({
       defaultFolderInheritShares: false,
     })
 
@@ -918,7 +920,7 @@ describe('updateCampaign', () => {
     const dmAuth = asDm(ctx)
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       slug: 'new-slug',
     })
 
@@ -934,7 +936,7 @@ describe('updateCampaign', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'ab',
       }),
     )
@@ -946,7 +948,7 @@ describe('updateCampaign', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         slug: 'invalid slug',
       }),
     )
@@ -957,7 +959,7 @@ describe('updateCampaign', () => {
     await createCampaignWithDm(t, dm.profile, {
       slug: 'taken-slug',
     })
-    const { campaignId: c2 } = await createCampaignWithDm(t, dm.profile, {
+    const { campaignDomainId: c2 } = await createCampaignWithDm(t, dm.profile, {
       slug: 'other-slug',
     })
 
@@ -975,7 +977,7 @@ describe('updateCampaign', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.campaigns.mutations.updateCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Hacked',
       }),
     )
@@ -985,7 +987,7 @@ describe('updateCampaign', () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
       t.mutation(api.campaigns.mutations.updateCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Nope',
       }),
     )
@@ -1001,7 +1003,7 @@ describe('deleteCampaign', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.campaigns.mutations.deleteCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       }),
     )
   })
@@ -1015,7 +1017,7 @@ describe('deleteCampaign', () => {
     await createSession(t, ctx.campaignId)
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     await t.run(async (dbCtx) => {
@@ -1046,7 +1048,7 @@ describe('deleteCampaign', () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
       t.mutation(api.campaigns.mutations.deleteCampaign, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       }),
     )
   })

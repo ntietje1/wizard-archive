@@ -2,20 +2,15 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import type { CampaignMemberStatus } from 'shared/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
 
-export function useCampaignMemberStatusUpdate(campaignId: Id<'campaigns'>) {
-  const [pendingMemberIds, setPendingMemberIds] = useState<ReadonlySet<Id<'campaignMembers'>>>(
-    new Set(),
-  )
+export function useCampaignMemberStatusUpdate(campaignId: CampaignId) {
+  const [pendingMemberIds, setPendingMemberIds] = useState<ReadonlySet<CampaignMemberId>>(new Set())
   const updateStatus = useAppMutation(api.campaigns.mutations.updateCampaignMemberStatus)
 
-  const updateMemberStatus = async (
-    memberId: Id<'campaignMembers'>,
-    status: CampaignMemberStatus,
-  ) => {
+  const updateMemberStatus = async (memberId: CampaignMemberId, status: CampaignMemberStatus) => {
     try {
       setPendingMemberIds((current) => new Set(current).add(memberId))
       await updateStatus.mutateAsync({ campaignId, memberId, status })
@@ -32,7 +27,7 @@ export function useCampaignMemberStatusUpdate(campaignId: Id<'campaigns'>) {
   }
 
   return {
-    isMemberStatusPending: (memberId: Id<'campaignMembers'>) => pendingMemberIds.has(memberId),
+    isMemberStatusPending: (memberId: CampaignMemberId) => pendingMemberIds.has(memberId),
     updateMemberStatus,
   }
 }

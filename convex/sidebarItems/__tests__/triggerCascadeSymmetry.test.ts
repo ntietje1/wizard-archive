@@ -34,7 +34,7 @@ describe('trigger cascade symmetry', () => {
     const sourceItemIds = [noteId, canvasId, mapId]
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds,
       targetParentId: null,
       action: 'trash',
@@ -46,7 +46,7 @@ describe('trigger cascade symmetry', () => {
     expect(afterTrash.map((item) => item?.status)).toEqual(['trashed', 'trashed', 'trashed'])
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds,
       targetParentId: null,
       action: 'restore',
@@ -59,13 +59,13 @@ describe('trigger cascade symmetry', () => {
     expect(afterRestore.map((item) => item?.parentId)).toEqual([null, null, null])
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds,
       targetParentId: null,
       action: 'trash',
     })
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds,
     })
 
@@ -100,7 +100,7 @@ describe('trigger cascade symmetry', () => {
       )
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [noteId],
         targetParentId: null,
         action: 'trash',
@@ -118,7 +118,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[2]).toEqual(beforeTrash[2])
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [noteId],
         targetParentId: null,
         action: 'restore',
@@ -160,13 +160,13 @@ describe('trigger cascade symmetry', () => {
       )
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [noteId],
         targetParentId: null,
         action: 'trash',
       })
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [noteId],
       })
 
@@ -214,13 +214,13 @@ describe('trigger cascade symmetry', () => {
         })
 
         await executeMoveCommand(dmAuth, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           sourceItemIds: [noteId],
           targetParentId: null,
           action: 'trash',
         })
         await executeDeleteForeverCommand(dmAuth, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           sourceItemIds: [noteId],
         })
         await t.finishAllScheduledFunctions(vi.runAllTimers)
@@ -253,7 +253,7 @@ describe('trigger cascade symmetry', () => {
       )
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [canvasId],
         targetParentId: null,
         action: 'trash',
@@ -263,7 +263,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash).not.toBeNull()
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [canvasId],
         targetParentId: null,
         action: 'restore',
@@ -290,13 +290,13 @@ describe('trigger cascade symmetry', () => {
       )
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [canvasId],
         targetParentId: null,
         action: 'trash',
       })
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [canvasId],
       })
 
@@ -323,7 +323,7 @@ describe('trigger cascade symmetry', () => {
       const pin2 = await createMapPin(t, mapId, { itemId: pinnedNote })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [mapId],
         targetParentId: null,
         action: 'trash',
@@ -336,7 +336,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[1]).not.toBeNull()
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [mapId],
         targetParentId: null,
         action: 'restore',
@@ -367,13 +367,13 @@ describe('trigger cascade symmetry', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [mapId],
         targetParentId: null,
         action: 'trash',
       })
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [mapId],
       })
 
@@ -407,7 +407,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [fileId],
         targetParentId: null,
         action: 'trash',
@@ -417,7 +417,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash).not.toBeNull()
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [fileId],
         targetParentId: null,
         action: 'restore',
@@ -443,13 +443,13 @@ describe('trigger cascade symmetry', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [fileId],
         targetParentId: null,
         action: 'trash',
       })
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [fileId],
       })
 
@@ -480,7 +480,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'trash',
@@ -491,7 +491,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash!.inheritShares).toBe(true)
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'restore',
@@ -518,13 +518,13 @@ describe('trigger cascade symmetry', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'trash',
       })
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
       })
 
@@ -562,7 +562,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [itemId],
         targetParentId: null,
         action: 'trash',
@@ -578,7 +578,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[1]).not.toBeNull()
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [itemId],
         targetParentId: null,
         action: 'restore',
@@ -618,13 +618,13 @@ describe('trigger cascade symmetry', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [itemId],
         targetParentId: null,
         action: 'trash',
       })
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [itemId],
       })
 

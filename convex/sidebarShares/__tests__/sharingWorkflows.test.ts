@@ -22,46 +22,46 @@ describe('sharing workflows', () => {
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: noteId,
       }),
     )
 
     await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId],
-      campaignMemberId: ctx.player.memberId,
+      campaignMemberId: ctx.player.memberDomainId,
       permissionLevel: 'view',
     })
 
     const noteAfterShare = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(noteAfterShare.myPermissionLevel).toBe('view')
 
     await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId],
-      campaignMemberId: ctx.player.memberId,
+      campaignMemberId: ctx.player.memberDomainId,
       permissionLevel: 'edit',
     })
 
     const noteAfterUpgrade = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(noteAfterUpgrade.myPermissionLevel).toBe('edit')
 
     await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId],
-      campaignMemberId: ctx.player.memberId,
+      campaignMemberId: ctx.player.memberDomainId,
     })
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: noteId,
       }),
     )
@@ -79,7 +79,7 @@ describe('sharing workflows', () => {
     await dmAuth.mutation(
       api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [note1Id],
         permissionLevel: 'view',
       },
@@ -87,7 +87,7 @@ describe('sharing workflows', () => {
 
     const { active: itemsAfterFirst } = await playerAuth.query(
       api.sidebarItems.queries.getSidebarItems,
-      { campaignId: ctx.campaignId },
+      { campaignId: ctx.campaignDomainId },
     )
     const visibleAfterFirst = itemsAfterFirst.filter((item) => item.myPermissionLevel !== 'none')
     expect(visibleAfterFirst).toHaveLength(1)
@@ -96,7 +96,7 @@ describe('sharing workflows', () => {
     await dmAuth.mutation(
       api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [note2Id],
         permissionLevel: 'view',
       },
@@ -104,7 +104,7 @@ describe('sharing workflows', () => {
 
     const { active: itemsAfterSecond } = await playerAuth.query(
       api.sidebarItems.queries.getSidebarItems,
-      { campaignId: ctx.campaignId },
+      { campaignId: ctx.campaignDomainId },
     )
     const visibleAfterSecond = itemsAfterSecond.filter((item) => item.myPermissionLevel !== 'none')
     expect(visibleAfterSecond).toHaveLength(2)
@@ -126,27 +126,27 @@ describe('sharing workflows', () => {
     const [folderA, folderB] = folders
 
     await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [folderA],
-      campaignMemberId: ctx.player.memberId,
+      campaignMemberId: ctx.player.memberDomainId,
       permissionLevel: 'view',
     })
 
     const noteWithInheritance = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: leaf,
     })
     expect(noteWithInheritance.myPermissionLevel).toBe('view')
 
     await dmAuth.mutation(api.sidebarShares.mutations.setFolderInheritShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       folderId: folderA,
       inheritShares: false,
     })
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: leaf,
       }),
     )
@@ -154,21 +154,21 @@ describe('sharing workflows', () => {
     await dmAuth.mutation(
       api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [folderB],
         permissionLevel: 'edit',
       },
     )
 
     const noteAfterFolderBEdit = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: leaf,
     })
     expect(noteAfterFolderBEdit.myPermissionLevel).toBe('edit')
   })
 
   it('individual share override beats allPermissionLevel', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 2)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 2)
     const dmAuth = dm.authed
     const p1 = players[0]
     const p2 = players[1]
@@ -178,27 +178,27 @@ describe('sharing workflows', () => {
     await dmAuth.mutation(
       api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
       {
-        campaignId: campaignId,
+        campaignId: campaignDomainId,
         sidebarItemIds: [noteId],
         permissionLevel: 'view',
       },
     )
 
     await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
-      campaignId: campaignId,
+      campaignId: campaignDomainId,
       sidebarItemIds: [noteId],
-      campaignMemberId: p1.memberId,
+      campaignMemberId: p1.memberDomainId,
       permissionLevel: 'edit',
     })
 
     const noteAsP1 = await p1.authed.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: campaignId,
+      campaignId: campaignDomainId,
       id: noteId,
     })
     expect(noteAsP1.myPermissionLevel).toBe('edit')
 
     const noteAsP2 = await p2.authed.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: campaignId,
+      campaignId: campaignDomainId,
       id: noteId,
     })
     expect(noteAsP2.myPermissionLevel).toBe('view')

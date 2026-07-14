@@ -21,6 +21,7 @@ import { throwClientError } from '../errors'
 import { normalizeBlockShareTargetIds } from './blockShareCommand'
 import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { NoteBlockId, OperationId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { operationIdValidator } from '../resources/validators'
 import type {
   ResourceCommand,
@@ -69,6 +70,10 @@ async function getBlockShareCtx(ctx: MutationCtx, args: ProjectedNoteArgs) {
     ...ctx,
     campaign,
     membership,
+    resourceScope: {
+      campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid),
+      actorId: assertDomainId(DOMAIN_ID_KIND.campaignMember, membership.campaignMemberUuid),
+    },
   }
 }
 

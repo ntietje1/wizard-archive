@@ -7,6 +7,7 @@ import type { TestInlineContent } from '../../_test/yjs.helper'
 import type { PartialNoteBlock } from '@wizard-archive/editor/notes/document-contract'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type schema from '../../schema'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 export function valueBlock({
   id,
@@ -80,7 +81,7 @@ export async function renameValueTestNote(
     noteId,
     name,
   }: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
     noteId: Id<'sidebarItems'>
     name: string
   },
@@ -97,7 +98,7 @@ export async function hardDeleteValueTestNote(
     campaignId,
     noteId,
   }: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
     noteId: Id<'sidebarItems'>
   },
 ) {
@@ -122,7 +123,7 @@ export async function replaceNoteDocumentAndPersist(
     noteId,
     blocks,
   }: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
     noteId: Id<'sidebarItems'>
     blocks: Array<PartialNoteBlock>
   },

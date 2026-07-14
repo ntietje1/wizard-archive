@@ -15,7 +15,7 @@ describe('searchBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const result = await dmAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: '',
     })
     expect(result).toEqual([])
@@ -26,7 +26,7 @@ describe('searchBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const result = await dmAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: '   ',
     })
     expect(result).toEqual([])
@@ -49,7 +49,7 @@ describe('searchBlocks', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: 'dragon',
     })
 
@@ -78,11 +78,11 @@ describe('searchBlocks', () => {
     })
 
     const results1 = await dm1.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx1.campaignId,
+      campaignId: ctx1.campaignDomainId,
       query: 'dragon',
     })
     const results2 = await dm2.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx2.campaignId,
+      campaignId: ctx2.campaignDomainId,
       query: 'dragon',
     })
 
@@ -103,7 +103,7 @@ describe('searchBlocks', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: 'dragon',
     })
 
@@ -127,7 +127,7 @@ describe('searchBlocks', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: 'dragon',
     })
 
@@ -150,7 +150,7 @@ describe('searchBlocks', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: 'checking',
     })
 
@@ -177,7 +177,7 @@ describe('searchBlocks', () => {
     })
 
     const result = await playerAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: 'player',
     })
 
@@ -203,7 +203,7 @@ describe('searchBlocks', () => {
     })
 
     const result = await playerAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: 'sentinel',
     })
 
@@ -231,7 +231,7 @@ describe('searchBlocks', () => {
     })
 
     const result = await playerAuth.query(api.blocks.queries.searchBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       query: 'clue',
     })
 
@@ -257,8 +257,8 @@ describe('searchBlocks', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.searchBlocksAsMember, {
-      campaignId: ctx.campaignId,
-      campaignMemberId: ctx.player.memberId,
+      campaignId: ctx.campaignDomainId,
+      campaignMemberId: ctx.player.memberDomainId,
       query: 'preview clue',
     })
 
@@ -271,7 +271,7 @@ describe('searchBlocks', () => {
 
     await expectPermissionDenied(
       outsider.authed.query(api.blocks.queries.searchBlocks, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         query: 'anything',
       }),
     )
@@ -292,7 +292,7 @@ describe('getHeadingsByNote', () => {
     })
 
     const result = await playerAuth.query(api.blocks.queries.getHeadingsByNote, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
     })
 
@@ -320,7 +320,7 @@ describe('getHeadingsByNote', () => {
     })
 
     const result = await playerAuth.query(api.blocks.queries.getHeadingsByNote, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
     })
 

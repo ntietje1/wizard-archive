@@ -70,11 +70,13 @@ describe('public demo workspace presets', () => {
 
   it('grants the selected demo player access to the collaboration session note', () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.collaborativeSessionNotes)
+    const playerId = scenario.workspace.playerMembers?.[0]?.id
+    if (!playerId) throw new Error('Expected the public demo player')
 
-    expect(scenario.workspace.selectedViewAsPlayerId).toBe('demo-member-mira')
-    expect(
-      scenario.workspace.memberItemPermissionsById?.['note-session']?.['demo-member-mira'],
-    ).toBe(PERMISSION_LEVEL.VIEW)
+    expect(String(scenario.workspace.selectedViewAsPlayerId)).toBe(playerId)
+    expect(scenario.workspace.memberItemPermissionsById?.['note-session']?.[playerId]).toBe(
+      PERMISSION_LEVEL.VIEW,
+    )
   })
 
   it('keeps private prep note links complete', () => {
@@ -132,20 +134,22 @@ describe('public demo workspace presets', () => {
 
   it('models layered map pin visibility through player item permissions', () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap)
+    const playerId = scenario.workspace.playerMembers?.[0]?.id
+    if (!playerId) throw new Error('Expected the public demo player')
 
-    expect(scenario.workspace.selectedViewAsPlayerId).toBe('demo-member-mira')
-    expect(scenario.workspace.memberItemPermissionsById?.['map-docks']?.['demo-member-mira']).toBe(
+    expect(String(scenario.workspace.selectedViewAsPlayerId)).toBe(playerId)
+    expect(scenario.workspace.memberItemPermissionsById?.['map-docks']?.[playerId]).toBe(
       PERMISSION_LEVEL.VIEW,
     )
-    expect(
-      scenario.workspace.memberItemPermissionsById?.['note-market']?.['demo-member-mira'],
-    ).toBe(PERMISSION_LEVEL.NONE)
-    expect(
-      scenario.workspace.memberItemPermissionsById?.['file-handout']?.['demo-member-mira'],
-    ).toBe(PERMISSION_LEVEL.VIEW)
-    expect(
-      scenario.workspace.memberItemPermissionsById?.['file-tunnel-sketch']?.['demo-member-mira'],
-    ).toBe(PERMISSION_LEVEL.VIEW)
+    expect(scenario.workspace.memberItemPermissionsById?.['note-market']?.[playerId]).toBe(
+      PERMISSION_LEVEL.NONE,
+    )
+    expect(scenario.workspace.memberItemPermissionsById?.['file-handout']?.[playerId]).toBe(
+      PERMISSION_LEVEL.VIEW,
+    )
+    expect(scenario.workspace.memberItemPermissionsById?.['file-tunnel-sketch']?.[playerId]).toBe(
+      PERMISSION_LEVEL.VIEW,
+    )
     expect(scenario.workspace.mapsById['map-docks']?.layers).toEqual([
       expect.objectContaining({
         id: 'map-docks-layer-1',

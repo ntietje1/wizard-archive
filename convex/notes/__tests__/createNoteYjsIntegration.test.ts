@@ -12,7 +12,7 @@ describe('createNote YJS integration', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -34,7 +34,7 @@ describe('createNote YJS integration', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Empty Note',
       parentTarget: { kind: 'direct', parentId: null },
     })

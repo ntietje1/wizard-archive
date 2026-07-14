@@ -28,13 +28,13 @@ describe('executeMoveCommand', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: folderB,
     })
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(item.parentId).toBe(folderB)
@@ -72,7 +72,7 @@ describe('executeMoveCommand', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [sourceNote],
       targetParentId: destinationFolder,
     })
@@ -95,14 +95,14 @@ describe('executeMoveCommand', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
     const { trash: trashItems } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     expect(trashItems.some((i) => i.id === noteId)).toBe(true)
   })
@@ -114,21 +114,21 @@ describe('executeMoveCommand', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'restore',
     })
 
     const { active: sidebarItems } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     expect(sidebarItems.some((i) => i.id === noteId)).toBe(true)
   })
@@ -147,7 +147,7 @@ describe('executeMoveCommand', () => {
 
     await expectValidationFailed(
       executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [parentFolder],
         targetParentId: childFolder,
       }),
@@ -166,13 +166,13 @@ describe('executeMoveCommand', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
     })
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(item.parentId).toBeNull()
@@ -194,7 +194,7 @@ describe('executeMoveCommand', () => {
 
     await expectPermissionDenied(
       executeMoveCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [noteId],
         targetParentId: null,
         action: 'trash',
@@ -212,7 +212,7 @@ describe('executeMoveCommand', () => {
 
     await expectPermissionDenied(
       executeMoveCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'trash',
@@ -230,7 +230,7 @@ describe('executeMoveCommand', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
@@ -238,7 +238,7 @@ describe('executeMoveCommand', () => {
 
     await expectPermissionDenied(
       executeMoveCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'restore',

@@ -17,17 +17,17 @@ describe('filesystem transaction pruning', () => {
     })
 
     const firstReceipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'rename', itemId: noteId, name: 'Scene 0' },
     })
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId: firstReceipt.transactionId!,
     })
 
     for (let index = 1; index <= 50; index += 1) {
       await executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: { type: 'rename', itemId: noteId, name: `Scene ${index}` },
       })
     }
@@ -59,14 +59,14 @@ describe('filesystem transaction pruning', () => {
       name: 'Scene',
     })
     const copyReceipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'copy', itemIds: [noteId], targetParentId: null },
     })
     const copiedEvent = copyReceipt.events.find((event) => event.type === 'copied')
     expect(copiedEvent).toBeDefined()
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId: copyReceipt.transactionId!,
     })
     await t.run(async (dbCtx) => {
@@ -76,7 +76,7 @@ describe('filesystem transaction pruning', () => {
 
     for (let index = 0; index < 50; index += 1) {
       await executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: { type: 'rename', itemId: noteId, name: `Scene ${index}` },
       })
     }
@@ -101,13 +101,13 @@ describe('filesystem transaction pruning', () => {
     })
 
     const undoableReceipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'rename', itemId: noteId, name: 'Scene Retained' },
     })
 
     for (let index = 0; index < 50; index += 1) {
       await executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: { type: 'emptyTrash' },
       })
     }
@@ -143,7 +143,7 @@ describe('filesystem transaction pruning', () => {
 
     for (let index = 0; index < 52; index += 1) {
       await executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         operationId: testOperationId(`non-undoable-prune-${index}`),
         command: { type: 'emptyTrash' },
       })

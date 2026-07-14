@@ -23,7 +23,7 @@ describe('persisted note value graphs', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteCId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -35,7 +35,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteBId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -47,7 +47,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -60,7 +60,7 @@ describe('persisted note value graphs', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
     })
 
@@ -90,12 +90,12 @@ describe('persisted note value graphs', () => {
       expressionSource: '2',
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
       blocks: [base],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteBId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -107,7 +107,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
       blocks: [
         base,
@@ -121,7 +121,7 @@ describe('persisted note value graphs', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
     })
     const bySlug = new Map(states.map((state) => [state.slug, state]))
@@ -142,7 +142,7 @@ describe('persisted note value graphs', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -154,7 +154,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteBId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -166,7 +166,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -179,11 +179,11 @@ describe('persisted note value graphs', () => {
     })
 
     const aStates = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
     })
     const bStates = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteBId,
     })
 
@@ -212,7 +212,7 @@ describe('persisted note value graphs', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteCId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -224,7 +224,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteBId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -236,7 +236,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -249,11 +249,11 @@ describe('persisted note value graphs', () => {
     })
 
     const bStates = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteBId,
     })
     const aStates = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: noteAId,
     })
 
@@ -279,7 +279,7 @@ describe('persisted note value graphs', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -291,7 +291,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -322,7 +322,7 @@ describe('persisted note value graphs', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
     })
     const bySlug = new Map(states.map((state) => [state.slug, state]))
@@ -361,7 +361,7 @@ describe('persisted note value graphs', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: referencedNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -373,7 +373,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: unrelatedNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -385,7 +385,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -415,7 +415,7 @@ describe('persisted note value graphs', () => {
     ])
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
     })
     expect(states[0]).toMatchObject({
@@ -436,7 +436,7 @@ describe('persisted note value graphs', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -448,7 +448,7 @@ describe('persisted note value graphs', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -465,7 +465,7 @@ describe('persisted note value graphs', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
     })
 

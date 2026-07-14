@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { campaignQuery, dmQuery } from '../functions'
 import { blockVisibilityPermissionLevelValidator } from '../blockShares/schema'
-import { campaignMemberSummaryValidator } from '../campaigns/schema'
+import { campaignMemberIdValidator, campaignMemberSummaryValidator } from '../campaigns/schema'
 import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { blockNoteIdValidator, blockShareStatusValidator, blockTypeValidator } from './schema'
 import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlocksWithShares'
@@ -11,11 +11,12 @@ import {
   searchBlocksAsMember as searchBlocksAsMemberFn,
 } from './functions/searchBlocks'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { requireCampaignMemberRowForCampaign } from '../campaigns/functions/campaignIdentity'
 
 const blockShareInfoValidator = v.object({
   noteBlockId: blockNoteIdValidator,
   shareStatus: blockShareStatusValidator,
-  memberPermissions: v.record(v.id('campaignMembers'), blockVisibilityPermissionLevelValidator),
+  memberPermissions: v.record(campaignMemberIdValidator, blockVisibilityPermissionLevelValidator),
 })
 
 export const getBlocksWithShares = dmQuery({
@@ -26,7 +27,7 @@ export const getBlocksWithShares = dmQuery({
   returns: v.object({
     blocks: v.array(blockShareInfoValidator),
     playerMembers: v.array(campaignMemberSummaryValidator),
-    notePermissionsByMemberId: v.record(v.id('campaignMembers'), permissionLevelValidator),
+    notePermissionsByMemberId: v.record(campaignMemberIdValidator, permissionLevelValidator),
   }),
   handler: async (ctx, args) => {
     return await getBlocksWithSharesFn(ctx, {
@@ -72,13 +73,15 @@ export const searchBlocks = campaignQuery({
 
 export const searchBlocksAsMember = dmQuery({
   args: {
-    campaignMemberId: v.id('campaignMembers'),
+    campaignMemberId: campaignMemberIdValidator,
     query: v.string(),
   },
   returns: v.array(blockSearchResultValidator),
   handler: async (ctx, args) => {
+    const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid)
+    const member = await requireCampaignMemberRowForCampaign(ctx, campaignId, args.campaignMemberId)
     return await searchBlocksAsMemberFn(ctx, {
-      campaignMemberId: args.campaignMemberId,
+      campaignMemberId: member._id,
       query: args.query,
     })
   },

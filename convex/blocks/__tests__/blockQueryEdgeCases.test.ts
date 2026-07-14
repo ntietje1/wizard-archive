@@ -22,7 +22,7 @@ describe('block query edge cases', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blockNoteIds: [testBlockNoteId('unknown-1'), testBlockNoteId('unknown-2')],
     })
@@ -35,7 +35,7 @@ describe('block query edge cases', () => {
   })
 
   it('getBlocksWithShares correctly aggregates shares across multiple blocks', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 2)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 2)
     const dmAuth = dm.authed
     const p1 = players[0]
     const p2 = players[1]
@@ -93,7 +93,7 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId,
+      campaignId: campaignDomainId,
       noteId,
       blockNoteIds: [testBlockNoteId('agg-1'), testBlockNoteId('agg-2'), testBlockNoteId('agg-3')],
     })
@@ -103,16 +103,16 @@ describe('block query edge cases', () => {
     const block3 = result.blocks.find((b) => b.noteBlockId === testBlockNoteId('agg-3'))
 
     expect(block1!.memberPermissions).toEqual({
-      [p1.memberId]: 'view',
+      [p1.memberDomainId]: 'view',
     })
 
     expect(block2!.memberPermissions).toEqual({
-      [p2.memberId]: 'view',
+      [p2.memberDomainId]: 'view',
     })
 
     expect(block3!.memberPermissions).toEqual({
-      [p1.memberId]: 'view',
-      [p2.memberId]: 'view',
+      [p1.memberDomainId]: 'view',
+      [p2.memberDomainId]: 'view',
     })
   })
 
@@ -127,7 +127,7 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blockNoteIds: [testBlockNoteId('no-shares')],
     })
@@ -154,7 +154,7 @@ describe('block query edge cases', () => {
 
     await expectPermissionDenied(
       playerAuth.query(api.blocks.queries.getBlocksWithShares, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         noteId,
         blockNoteIds: [testBlockNoteId('dm-only')],
       }),
@@ -162,7 +162,7 @@ describe('block query edge cases', () => {
   })
 
   it('getBlocksWithShares returns all players and explicit member permissions', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 2)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 2)
     const dmAuth = dm.authed
     const eligiblePlayer = players[0]
     const ineligiblePlayer = players[1]
@@ -193,25 +193,25 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId,
+      campaignId: campaignDomainId,
       noteId,
       blockNoteIds: [testBlockNoteId('single-stale-share')],
     })
 
     expect(result.playerMembers.map((member) => member.id)).toEqual([
-      eligiblePlayer.memberId,
-      ineligiblePlayer.memberId,
+      eligiblePlayer.memberDomainId,
+      ineligiblePlayer.memberDomainId,
     ])
-    expect(result.notePermissionsByMemberId[eligiblePlayer.memberId]).toBe('view')
-    expect(result.notePermissionsByMemberId[ineligiblePlayer.memberId]).toBe('none')
+    expect(result.notePermissionsByMemberId[eligiblePlayer.memberDomainId]).toBe('view')
+    expect(result.notePermissionsByMemberId[ineligiblePlayer.memberDomainId]).toBe('none')
     expect(result.blocks[0]?.memberPermissions).toEqual({
-      [eligiblePlayer.memberId]: 'view',
-      [ineligiblePlayer.memberId]: 'view',
+      [eligiblePlayer.memberDomainId]: 'view',
+      [ineligiblePlayer.memberDomainId]: 'view',
     })
   })
 
   it('getBlocksWithShares returns all playerMembers with note permissions', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 3)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 3)
     const dmAuth = dm.authed
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
@@ -229,23 +229,23 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId,
+      campaignId: campaignDomainId,
       noteId,
       blockNoteIds: [],
     })
 
     expect(result.playerMembers).toHaveLength(3)
     const memberIds = result.playerMembers.map((m) => m.id)
-    expect(memberIds).toContain(players[0].memberId)
-    expect(memberIds).toContain(players[1].memberId)
-    expect(memberIds).toContain(players[2].memberId)
-    expect(result.notePermissionsByMemberId[players[0].memberId]).toBe('view')
-    expect(result.notePermissionsByMemberId[players[1].memberId]).toBe('view')
-    expect(result.notePermissionsByMemberId[players[2].memberId]).toBe('none')
+    expect(memberIds).toContain(players[0].memberDomainId)
+    expect(memberIds).toContain(players[1].memberDomainId)
+    expect(memberIds).toContain(players[2].memberDomainId)
+    expect(result.notePermissionsByMemberId[players[0].memberDomainId]).toBe('view')
+    expect(result.notePermissionsByMemberId[players[1].memberDomainId]).toBe('view')
+    expect(result.notePermissionsByMemberId[players[2].memberDomainId]).toBe('none')
   })
 
   it('getBlocksWithShares treats all-player note access as block share eligibility', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 2)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 2)
     const dmAuth = dm.authed
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id, {
@@ -253,18 +253,18 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId,
+      campaignId: campaignDomainId,
       noteId,
       blockNoteIds: [],
     })
 
     expect(result.playerMembers.map((m) => m.id)).toEqual(
-      expect.arrayContaining(players.map((p) => p.memberId)),
+      expect.arrayContaining(players.map((p) => p.memberDomainId)),
     )
   })
 
   it('getBlocksWithShares applies direct member permission before all-player note access', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 2)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 2)
     const dmAuth = dm.authed
     const deniedPlayer = players[0]
     const eligiblePlayer = players[1]
@@ -292,24 +292,24 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId,
+      campaignId: campaignDomainId,
       noteId,
       blockNoteIds: [testBlockNoteId('direct-none')],
     })
 
     expect(result.playerMembers.map((m) => m.id)).toEqual([
-      deniedPlayer.memberId,
-      eligiblePlayer.memberId,
+      deniedPlayer.memberDomainId,
+      eligiblePlayer.memberDomainId,
     ])
-    expect(result.notePermissionsByMemberId[deniedPlayer.memberId]).toBe('none')
-    expect(result.notePermissionsByMemberId[eligiblePlayer.memberId]).toBe('view')
+    expect(result.notePermissionsByMemberId[deniedPlayer.memberDomainId]).toBe('none')
+    expect(result.notePermissionsByMemberId[eligiblePlayer.memberDomainId]).toBe('view')
     expect(result.blocks[0]?.memberPermissions).toEqual({
-      [deniedPlayer.memberId]: 'view',
+      [deniedPlayer.memberDomainId]: 'view',
     })
   })
 
   it('getBlocksWithShares applies note all-player permission before inherited access', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 1)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 1)
     const dmAuth = dm.authed
     const player = players[0]
 
@@ -332,20 +332,20 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId,
+      campaignId: campaignDomainId,
       noteId,
       blockNoteIds: [testBlockNoteId('all-none')],
     })
 
-    expect(result.playerMembers.map((m) => m.id)).toEqual([player.memberId])
-    expect(result.notePermissionsByMemberId[player.memberId]).toBe('none')
+    expect(result.playerMembers.map((m) => m.id)).toEqual([player.memberDomainId])
+    expect(result.notePermissionsByMemberId[player.memberDomainId]).toBe('none')
     expect(result.blocks[0]?.memberPermissions).toEqual({
-      [player.memberId]: 'view',
+      [player.memberDomainId]: 'view',
     })
   })
 
   it('getBlocksWithShares includes explicit block shares for players without note access', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 2)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 2)
     const dmAuth = dm.authed
     const eligiblePlayer = players[0]
     const ineligiblePlayer = players[1]
@@ -376,20 +376,20 @@ describe('block query edge cases', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
-      campaignId,
+      campaignId: campaignDomainId,
       noteId,
       blockNoteIds: [testBlockNoteId('stale-share')],
     })
 
     expect(result.playerMembers.map((m) => m.id)).toEqual([
-      eligiblePlayer.memberId,
-      ineligiblePlayer.memberId,
+      eligiblePlayer.memberDomainId,
+      ineligiblePlayer.memberDomainId,
     ])
-    expect(result.notePermissionsByMemberId[eligiblePlayer.memberId]).toBe('view')
-    expect(result.notePermissionsByMemberId[ineligiblePlayer.memberId]).toBe('none')
+    expect(result.notePermissionsByMemberId[eligiblePlayer.memberDomainId]).toBe('view')
+    expect(result.notePermissionsByMemberId[ineligiblePlayer.memberDomainId]).toBe('none')
     expect(result.blocks[0]?.memberPermissions).toEqual({
-      [eligiblePlayer.memberId]: 'view',
-      [ineligiblePlayer.memberId]: 'view',
+      [eligiblePlayer.memberDomainId]: 'view',
+      [ineligiblePlayer.memberDomainId]: 'view',
     })
   })
 })

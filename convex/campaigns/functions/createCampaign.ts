@@ -9,8 +9,8 @@ import {
 } from '../../../shared/campaigns/types'
 import { prepareCampaignDescription } from '../../../shared/campaigns/validation'
 import { prepareCampaignName } from '../validation'
-import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function createCampaign(
   ctx: AuthMutationCtx,
@@ -23,7 +23,7 @@ export async function createCampaign(
     slug: CampaignSlug
     description?: string
   },
-): Promise<Id<'campaigns'>> {
+): Promise<CampaignId> {
   const preparedName = prepareCampaignName(name)
   const preparedDescription = prepareCampaignDescription(description)
 
@@ -58,5 +58,5 @@ export async function createCampaign(
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
   })
 
-  return campaignId
+  return campaignUuid
 }

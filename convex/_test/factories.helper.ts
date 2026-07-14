@@ -1,7 +1,7 @@
 import { executeTestFileSystemCommand } from './filesystemCommand.helper'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 import { deterministicUuidV7 } from '../../shared/test/deterministic-uuid-v7'
 import {
   RESOURCE_LOCATION,
@@ -44,6 +44,17 @@ import type {
   ResourceTransactionReceipt,
 } from '@wizard-archive/editor/resources/transaction-contract'
 type T = TestConvex<typeof schema>
+
+export async function getCampaignRowId(t: T, campaignId: CampaignId) {
+  const campaign = await t.run(async (ctx) => {
+    return await ctx.db
+      .query('campaigns')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .unique()
+  })
+  if (!campaign) throw new Error('Campaign not found')
+  return campaign._id
+}
 type AuthedContext = TestConvexForDataModel<DataModel>
 type BlockProps = NoteBlock['props']
 type FileSystemEventType = ResourceEvent['type']
@@ -51,7 +62,7 @@ type FileSystemEventType = ResourceEvent['type']
 export async function executeMoveCommand(
   client: AuthedContext,
   args: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
     action?: 'move' | 'restore' | 'trash'
@@ -78,7 +89,7 @@ export async function executeMoveCommand(
 export async function executeCopyCommand(
   client: AuthedContext,
   args: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
   },
@@ -96,7 +107,7 @@ export async function executeCopyCommand(
 export async function executeDeleteForeverCommand(
   client: AuthedContext,
   args: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
     sourceItemIds: Array<Id<'sidebarItems'>>
   },
 ): Promise<ResourceTransactionReceipt> {
@@ -112,7 +123,7 @@ export async function executeDeleteForeverCommand(
 export async function executeEmptyTrashCommand(
   client: AuthedContext,
   args: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
   },
 ): Promise<ResourceTransactionReceipt> {
   return await executeTestFileSystemCommand(client, {
@@ -238,9 +249,10 @@ export async function createCampaignWithDm(
     return await ctx.db.insert('campaigns', campaignData)
   })
 
+  const dmMemberDomainId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
   const memberId = await t.run(async (ctx) => {
     return await ctx.db.insert('campaignMembers', {
-      campaignMemberUuid: generateDomainId(DOMAIN_ID_KIND.campaignMember),
+      campaignMemberUuid: dmMemberDomainId,
       userId: dmProfile._id,
       campaignId,
       role: CAMPAIGN_MEMBER_ROLE.DM,
@@ -248,7 +260,12 @@ export async function createCampaignWithDm(
     })
   })
 
-  return { campaignId, dmMemberId: memberId }
+  return {
+    campaignId,
+    campaignDomainId: campaignData.campaignUuid,
+    dmMemberId: memberId,
+    dmMemberDomainId,
+  }
 }
 
 export async function addPlayerToCampaign(
@@ -270,7 +287,7 @@ export async function addPlayerToCampaign(
   const memberId = await t.run(async (ctx) => {
     return await ctx.db.insert('campaignMembers', data)
   })
-  return { memberId, ...data }
+  return { memberId, memberDomainId: data.campaignMemberUuid, ...data }
 }
 
 const sidebarItemBase = (

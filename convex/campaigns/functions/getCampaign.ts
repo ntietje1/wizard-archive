@@ -20,6 +20,8 @@ import type {
 } from '../../../shared/campaigns/types'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { toCampaignMemberProjection } from './campaignMemberProjection'
 
 function toCampaignRow(campaign: Doc<'campaigns'>): CampaignRow {
   return {
@@ -32,16 +34,19 @@ function toCampaignRow(campaign: Doc<'campaigns'>): CampaignRow {
 function toCampaign(
   campaign: CampaignRow,
 ): Omit<Campaign, 'dmUserProfile' | 'myMembership' | 'acceptedMemberCount'> {
-  const { _id, _creationTime, currentSessionId: _currentSessionId, ...rest } = campaign
-  return { ...rest, id: _id, createdAt: _creationTime }
-}
-
-function toCampaignMemberSummary(
-  member: CampaignMemberRow,
-  userProfile: CampaignMemberSummary['userProfile'],
-): CampaignMemberSummary {
-  const { _id, _creationTime, ...rest } = member
-  return { ...rest, id: _id, createdAt: _creationTime, userProfile }
+  const {
+    _id: _rowId,
+    _creationTime,
+    campaignUuid,
+    currentSessionId: _currentSessionId,
+    dmUserId: _dmUserRowId,
+    ...fields
+  } = campaign
+  return {
+    ...fields,
+    id: assertDomainId(DOMAIN_ID_KIND.campaign, campaignUuid),
+    createdAt: _creationTime,
+  }
 }
 
 async function countAcceptedMembers(
@@ -79,7 +84,11 @@ async function enhanceCampaign(
       .unique()
 
     if (member && member.status !== CAMPAIGN_MEMBER_STATUS.Removed) {
-      myMembership = toCampaignMemberSummary(member, toUserProfileSummary(profile))
+      myMembership = toCampaignMemberProjection(
+        member,
+        assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid),
+        toUserProfileSummary(profile),
+      )
     }
   }
   return {
@@ -105,6 +114,15 @@ export async function getCampaignBySlug(
   ctx: QueryCtx,
   { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
 ): Promise<Campaign> {
+  return enhanceCampaign(ctx, {
+    campaign: await getCampaignRowBySlug(ctx, { dmUsername, slug }),
+  })
+}
+
+export async function getCampaignRowBySlug(
+  ctx: QueryCtx,
+  { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
+): Promise<CampaignRow> {
   const dmUserProfile = await getUserProfileByUsername(ctx, {
     username: dmUsername,
   })
@@ -115,5 +133,5 @@ export async function getCampaignBySlug(
     .unique()
   if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
-  return enhanceCampaign(ctx, { campaign: toCampaignRow(campaign) })
+  return toCampaignRow(campaign)
 }

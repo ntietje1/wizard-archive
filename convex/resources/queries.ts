@@ -1,7 +1,7 @@
 import type { ResourceCollectionQuery } from '@wizard-archive/editor/resources/index-contract'
 import type { Infer } from 'convex/values'
 import { v } from 'convex/values'
-import { resourceCampaignQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import {
   loadAuthorizedCollection,
   loadAuthorizedResource,
@@ -23,7 +23,7 @@ type StoredAuthorizedResourceCollectionPage = Infer<
   typeof authorizedResourceCollectionPageValidator
 >
 
-export const loadResource = resourceCampaignQuery({
+export const loadResource = campaignQuery({
   args: { resourceId: resourceUuidValidator },
   returns: authorizedResourceSnapshotValidator,
   handler: async (ctx, args): Promise<StoredAuthorizedResourceSnapshot> => {
@@ -34,7 +34,7 @@ export const loadResource = resourceCampaignQuery({
   },
 })
 
-export const loadCollection = resourceCampaignQuery({
+export const loadCollection = campaignQuery({
   args: {
     query: resourceCollectionQueryValidator,
     cursor: v.optional(v.nullable(resourceUuidValidator)),

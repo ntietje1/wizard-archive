@@ -23,7 +23,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Content Test Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
@@ -40,7 +40,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
       const yjsUpdate = makeYjsUpdateWithBlocks(blocks)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: yjsUpdate,
       })
@@ -79,13 +79,13 @@ describe('canvas snapshot uses yjs_state format', () => {
       const dmAuth = asDm(ctx)
 
       const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Test Canvas',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: canvasId,
         update: makeYjsUpdate(),
       })
@@ -117,13 +117,13 @@ describe('Note snapshots use yjs_state format', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Snapshot Type Check',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })

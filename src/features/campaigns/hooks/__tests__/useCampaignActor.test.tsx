@@ -3,16 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { useCampaignActor } from '../useCampaignActor'
 import { testId } from '~/test/helpers/test-id'
+import { testCampaignId } from 'shared/test/campaign-id'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 import type { CampaignViewAsSelection } from 'shared/campaigns/actor'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
-const campaignId = testId<'campaigns'>('campaign_actor')
-const otherCampaignId = testId<'campaigns'>('campaign_other')
-const playerId = testId<'campaignMembers'>('player_1')
+const campaignId = testCampaignId('campaign_actor')
+const otherCampaignId = testCampaignId('campaign_other')
+const playerId = testCampaignMemberId('player_1')
 
 const campaignState = vi.hoisted(() => ({
-  campaignId: 'campaign_actor' as Id<'campaigns'> | undefined,
+  campaignId: undefined as CampaignId | undefined,
   isDm: true as boolean | undefined,
 }))
 const membersState = vi.hoisted(() => ({
@@ -71,7 +73,6 @@ function campaignMember(
   const { id, campaignId: memberCampaignId, ...rest } = overrides
   return {
     id,
-    campaignMemberUuid: '0198f000-0000-7000-8000-000000000001',
     createdAt: 1,
     userId: testId<'userProfiles'>('user_1'),
     campaignId: memberCampaignId,

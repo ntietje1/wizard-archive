@@ -13,12 +13,13 @@ import {
 import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
 import type { YjsCollaborationProvider } from '@wizard-archive/editor/collaboration/yjs-provider'
 import { logger } from '~/shared/utils/logger'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 type ConvexClient = ReturnType<typeof useConvex>
 type QueryClient = ReturnType<typeof useQueryClient>
 type GetNoteSlugById = (noteId: Id<'sidebarItems'>) => WizardEditorResourceSlug | null | undefined
 type BeforeDestroyState = {
-  sourceId: Id<'campaigns'>
+  sourceId: CampaignId
   documentId: string
   provider: YjsCollaborationProvider
 }
@@ -46,7 +47,7 @@ async function invalidatePersistedNoteQueries({
   getNoteSlugById: GetNoteSlugById
   noteId: Id<'sidebarItems'>
   queryClient: QueryClient
-  sourceId: Id<'campaigns'>
+  sourceId: CampaignId
 }) {
   const noteValueStatesByNotesQuery = convexQuery(
     api.noteValues.queries.getNoteValueStatesByNotes,
@@ -99,7 +100,7 @@ async function persistNoteBlocksNow({
   getNoteSlugById: GetNoteSlugById
   noteId: Id<'sidebarItems'>
   queryClient: QueryClient
-  sourceId: Id<'campaigns'>
+  sourceId: CampaignId
 }) {
   const result = await convex.action(api.notes.actions.persistNoteBlocks, {
     campaignId: sourceId,
@@ -146,7 +147,7 @@ export function useNoteYjsCollaboration(
           getNoteSlugById: getNoteSlugByIdRef.current,
           noteId: persistedNoteId as Id<'sidebarItems'>,
           queryClient: queryClientRef.current,
-          sourceId: persistedSourceId as Id<'campaigns'>,
+          sourceId: persistedSourceId as CampaignId,
         }),
       reportError: (message, err) => logger.error(`[Notes] ${message}:`, err),
     },

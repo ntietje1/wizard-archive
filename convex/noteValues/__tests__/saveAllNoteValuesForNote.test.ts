@@ -27,7 +27,7 @@ describe('saveAllNoteValuesForNote', () => {
     }
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -46,7 +46,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
     })
     expect(states.find((state) => state.valueId === 'value-total')).toMatchObject({
@@ -64,7 +64,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -105,7 +105,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks: [
         paragraphWithGeneratedId({
@@ -129,7 +129,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
     })
     expect(states).toEqual(
@@ -151,7 +151,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: firstNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -163,7 +163,7 @@ describe('saveAllNoteValuesForNote', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: secondNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -176,7 +176,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStatesByNotes, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteIds: [firstNoteId, secondNoteId, firstNoteId],
     })
 
@@ -207,7 +207,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: hiddenNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -219,7 +219,7 @@ describe('saveAllNoteValuesForNote', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: editableNoteId,
       blocks: [formulaBlock],
     })
@@ -232,7 +232,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, playerAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: editableNoteId,
       blocks: [formulaBlock],
     })
@@ -254,7 +254,7 @@ describe('saveAllNoteValuesForNote', () => {
     })
 
     const states = await playerAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: editableNoteId,
     })
     expect(states[0]).toMatchObject({

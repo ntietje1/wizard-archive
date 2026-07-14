@@ -22,7 +22,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -58,13 +58,13 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Async Race Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -82,7 +82,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       expect(historyEntry!.hasSnapshot).toBe(true)
 
       const snapshot = await dmAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry!.historyEntryUuid,
       })
 
@@ -114,17 +114,17 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       )
       const replacementToken = await dmAuth.mutation(
         api.gameMaps.mutations.beginMapImageReplacement,
-        { campaignId: ctx.campaignId, mapId },
+        { campaignId: ctx.campaignDomainId, mapId },
       )
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         replacementToken,
         uploadSessionId: upload.sessionId,
       })
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -139,7 +139,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       expect(historyEntry?.hasSnapshot).toBe(true)
       await expect(
         playerAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           editHistoryId: historyEntry!.historyEntryUuid,
         }),
       ).resolves.toMatchObject({
@@ -187,7 +187,7 @@ describe('rollback edge cases', () => {
     })
 
     const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       editHistoryId: fakeId,
     })
     expect(result).toEqual({ status: 'rejected', reason: 'history_entry_unavailable' })
@@ -195,7 +195,7 @@ describe('rollback edge cases', () => {
 
   it('getHistoryPreview returns null when hasSnapshot is false', async () => {
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'No Snapshot Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -211,7 +211,7 @@ describe('rollback edge cases', () => {
     expect(historyEntry!.hasSnapshot).toBe(false)
 
     const snapshot = await dmAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       editHistoryId: historyEntry!.historyEntryUuid,
     })
 
@@ -220,13 +220,13 @@ describe('rollback edge cases', () => {
 
   it('rejects a snapshot whose item identity does not match its history entry', async () => {
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Snapshot Target',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: otherNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeYjsUpdate(),
     })
@@ -247,13 +247,13 @@ describe('rollback edge cases', () => {
 
     await expect(
       dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry.historyEntryUuid,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'snapshot_incompatible' })
     await expect(
       dmAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry.historyEntryUuid,
       }),
     ).resolves.toEqual({ kind: 'unsupported' })
@@ -262,7 +262,7 @@ describe('rollback edge cases', () => {
   it('rejects direct snapshot reads for view-only users', async () => {
     const playerAuth = asPlayer(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'View Only Snapshot Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -284,7 +284,7 @@ describe('rollback edge cases', () => {
 
     await expectPermissionDenied(
       playerAuth.query(api.documentSnapshots.queries.getHistoryPreview, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry!.historyEntryUuid,
       }),
     )
@@ -295,7 +295,7 @@ describe('rollback edge cases', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       mapId,
       pins: [{ itemId: noteId, x: 10, y: 20 }],
     })
@@ -318,7 +318,7 @@ describe('rollback edge cases', () => {
     })
 
     const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       editHistoryId: snapshotEntry!.historyEntryUuid,
     })
 

@@ -1,7 +1,7 @@
 import type { ResourceStructureCommand } from '@wizard-archive/editor/resources/command-contract'
 import { v } from 'convex/values'
 import type { Infer } from 'convex/values'
-import { resourceCampaignMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { executeStructureCommand as executeStructureCommandFn } from './functions/executeStructureCommand'
 import {
   resourceStructureCommandResultValidator,
@@ -10,7 +10,7 @@ import {
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 
-export const executeStructureCommand = resourceCampaignMutation({
+export const executeStructureCommand = campaignMutation({
   args: {
     operationId: v.string(),
     command: resourceStructureCommandValidator,

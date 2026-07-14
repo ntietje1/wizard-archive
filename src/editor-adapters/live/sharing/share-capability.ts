@@ -1,7 +1,7 @@
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 interface LiveShareCapabilityInput {
-  workspaceRecordId: Id<'campaigns'> | undefined
+  workspaceRecordId: CampaignId | undefined
   hasPersistedTarget: boolean
   hasShareTargets: boolean
   isDm: boolean | undefined

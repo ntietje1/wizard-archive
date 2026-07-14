@@ -14,11 +14,11 @@ describe('link panel rows', () => {
     const dmAuth = asDm(ctx)
 
     await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       content: [
         {
@@ -38,7 +38,7 @@ describe('link panel rows', () => {
     })
 
     const rows = await dmAuth.query(api.links.queries.getOutgoingLinkPanelRows, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceId,
     })
 
@@ -68,11 +68,11 @@ describe('link panel rows', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       content: [
         {
@@ -86,7 +86,7 @@ describe('link panel rows', () => {
     })
 
     const rows = await dmAuth.query(api.links.queries.getBacklinkPanelRows, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: targetId,
     })
 
@@ -108,11 +108,11 @@ describe('link panel rows', () => {
     const playerAuth = asPlayer(ctx)
 
     await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Hidden Target',
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Shared Source',
       content: [
         {
@@ -133,7 +133,7 @@ describe('link panel rows', () => {
     })
 
     const rows = await playerAuth.query(api.links.queries.getOutgoingLinkPanelRows, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceId,
     })
 
@@ -150,11 +150,11 @@ describe('link panel rows', () => {
     const playerAuth = asPlayer(ctx)
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Shared Target',
     })
     await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Hidden Source',
       content: [
         {
@@ -175,7 +175,7 @@ describe('link panel rows', () => {
     })
 
     const rows = await playerAuth.query(api.links.queries.getBacklinkPanelRows, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: targetId,
     })
 

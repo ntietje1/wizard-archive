@@ -27,7 +27,7 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [original.noteId],
         targetParentId: null,
         action: 'trash',
@@ -38,7 +38,7 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [original.noteId],
         targetParentId: null,
         action: 'restore',
@@ -84,7 +84,7 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId],
         targetParentId: null,
         action: 'trash',
@@ -114,7 +114,7 @@ describe('trash workflows', () => {
       expect(trashedBookmark!.sidebarItemId).toBe(noteA.noteId)
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId],
         targetParentId: null,
         action: 'restore',
@@ -165,14 +165,14 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId],
         targetParentId: null,
         action: 'trash',
       })
 
       const movedIds = await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId, nestedNote.noteId],
         targetParentId: null,
         action: 'restore',
@@ -204,14 +204,14 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId],
         targetParentId: null,
         action: 'trash',
       })
 
       const movedIds = await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId],
         targetParentId: folder.folderId,
         action: 'restore',
@@ -237,14 +237,14 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId],
         targetParentId: null,
         action: 'trash',
       })
 
       const movedIds = await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [nestedNote.noteId],
         targetParentId: folder.folderId,
         action: 'restore',
@@ -275,14 +275,14 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [sourceFolder.folderId],
         targetParentId: null,
         action: 'trash',
       })
 
       const movedIds = await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [sourceFolder.folderId],
         targetParentId: targetFolder.folderId,
         action: 'restore',
@@ -313,7 +313,7 @@ describe('trash workflows', () => {
       })
 
       const movedIds = await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId, nestedNote.noteId, siblingNote.noteId],
         targetParentId: null,
         action: 'trash',
@@ -377,14 +377,14 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId],
         targetParentId: null,
         action: 'trash',
       })
 
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId],
       })
 
@@ -430,14 +430,14 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId, siblingNote.noteId],
         targetParentId: null,
         action: 'trash',
       })
 
       const deletedIds = await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folder.folderId, childNote.noteId, siblingNote.noteId],
       })
 
@@ -479,14 +479,14 @@ describe('trash workflows', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [note1.noteId, note2.noteId, folder.folderId],
         targetParentId: null,
         action: 'trash',
       })
 
       const receipt = await executeEmptyTrashCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       })
       expect(filesystemEventItemIds(receipt, 'deletedForever').sort()).toEqual(
         [note1.noteId, note2.noteId, folder.folderId].sort(),

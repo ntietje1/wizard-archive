@@ -4,7 +4,7 @@ import { CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { MemberRow } from './member-row'
 import { useCampaignMemberStatusUpdate } from './use-campaign-member-status-update'
 import type { CampaignMember } from 'shared/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { Badge } from '@wizard-archive/ui/shadcn/components/badge'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
@@ -15,7 +15,7 @@ export function RejectedRemovedSection({
   campaignId,
 }: {
   players: Array<CampaignMember>
-  campaignId: Id<'campaigns'>
+  campaignId: CampaignId
 }) {
   const [showRejected, setShowRejected] = useState(false)
   const { isMemberStatusPending, updateMemberStatus } = useCampaignMemberStatusUpdate(campaignId)

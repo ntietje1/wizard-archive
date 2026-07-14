@@ -5,6 +5,7 @@ import { AUTH_STORAGE_PATH } from './constants'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import type { APIRequestContext, APIResponse } from '@playwright/test'
 import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 const E2E_APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:3000'
 const CONVEX_OPERATION_ATTEMPTS = 3
@@ -15,7 +16,7 @@ export async function getCampaignIdFromRoute({
 }: {
   dmUsername: string
   slug: string
-}): Promise<Id<'campaigns'>> {
+}): Promise<CampaignId> {
   const client = await createE2EConvexClient()
   const campaign = await client.query(api.campaigns.queries.getCampaignBySlug, {
     dmUsername,
@@ -42,7 +43,7 @@ export async function getSidebarItemIdBySlug({
   campaignId,
   slug,
 }: {
-  campaignId: Id<'campaigns'>
+  campaignId: CampaignId
   slug: string
 }): Promise<Id<'sidebarItems'>> {
   return (
@@ -57,7 +58,7 @@ export async function getSidebarItemBySlug({
   campaignId,
   slug,
 }: {
-  campaignId: Id<'campaigns'>
+  campaignId: CampaignId
   slug: string
 }) {
   const client = await createE2EConvexClient()
@@ -75,7 +76,7 @@ export async function getSidebarItemByName({
   campaignId,
   name,
 }: {
-  campaignId: Id<'campaigns'>
+  campaignId: CampaignId
   name: string
 }) {
   const client = await createE2EConvexClient()
@@ -92,8 +93,8 @@ export async function getSidebarItemByName({
 export async function ensureAcceptedPlayerMember({
   campaignId,
 }: {
-  campaignId: Id<'campaigns'>
-}): Promise<Id<'campaignMembers'>> {
+  campaignId: CampaignId
+}): Promise<CampaignMemberId> {
   const client = await createE2EConvexClient()
   const members = await client.query(api.campaigns.queries.getMembersByCampaign, { campaignId })
   const player = members

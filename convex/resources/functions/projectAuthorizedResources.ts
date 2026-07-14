@@ -15,7 +15,7 @@ import { MAX_RESOURCE_CATALOG_PAGE_SIZE } from '@wizard-archive/editor/resources
 import type { ResourceRecord } from '@wizard-archive/editor/resources/resource-record'
 import { indexRevision } from '@wizard-archive/editor/resources/workspace-index'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
-import type { ResourceCampaignQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import { ConvexResourceCatalog } from './ConvexResourceCatalog'
 
 type CollectionPage = Readonly<{
@@ -23,7 +23,7 @@ type CollectionPage = Readonly<{
   cursor: string | null
 }>
 
-function projectionScope(ctx: ResourceCampaignQueryCtx): ResourceProjectionScope {
+function projectionScope(ctx: CampaignQueryCtx): ResourceProjectionScope {
   return {
     ...ctx.resourceScope,
     projection: ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player',
@@ -88,7 +88,7 @@ async function createSnapshot(
 }
 
 export async function loadAuthorizedResource(
-  ctx: ResourceCampaignQueryCtx,
+  ctx: CampaignQueryCtx,
   resourceIdValue: string,
 ): Promise<AuthorizedResourceSnapshot> {
   const scope = projectionScope(ctx)
@@ -122,7 +122,7 @@ export async function loadAuthorizedResource(
 }
 
 export async function loadAuthorizedCollection(
-  ctx: ResourceCampaignQueryCtx,
+  ctx: CampaignQueryCtx,
   input: {
     query: ResourceCollectionQuery
     cursor: string | null

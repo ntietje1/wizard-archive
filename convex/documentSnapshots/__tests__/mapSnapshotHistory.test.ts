@@ -21,7 +21,7 @@ describe('updateMap creates correct number of history entries', () => {
     )
 
     const result = await createGameMapViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Single Entry Map',
       parentTarget: { kind: 'direct', parentId: null },
       uploadSessionId: sessionId,
@@ -38,7 +38,7 @@ describe('updateMap creates correct number of history entries', () => {
 
     // Change image to null (remove)
     await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       mapId: result.mapId,
       replacementToken: null,
       uploadSessionId: null,
@@ -71,7 +71,7 @@ describe('updateMap creates correct number of history entries', () => {
     )
 
     const result = await createGameMapViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Multi Update Map',
       parentTarget: { kind: 'direct', parentId: null },
       uploadSessionId: sessionId,
@@ -86,7 +86,7 @@ describe('updateMap creates correct number of history entries', () => {
     })
 
     await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: {
         type: 'rename',
         itemId: result.mapId,
@@ -95,7 +95,7 @@ describe('updateMap creates correct number of history entries', () => {
     })
 
     await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       mapId: result.mapId,
       replacementToken: null,
       uploadSessionId: null,

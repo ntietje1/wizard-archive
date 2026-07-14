@@ -2,18 +2,9 @@ import { CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { logger } from '../../common/logger'
 import { getCampaignMemberRows, loadProfilesByMemberUserId } from './campaignMemberProfiles'
 import type { DmQueryCtx } from '../../functions'
-import type { UserProfile } from '../../../shared/users/types'
-import type { CampaignMember, CampaignMemberRow } from '../../../shared/campaigns/types'
-
-function toCampaignMember(member: CampaignMemberRow, userProfile: UserProfile): CampaignMember {
-  const { _id, _creationTime, ...fields } = member
-  return {
-    ...fields,
-    id: _id,
-    createdAt: _creationTime,
-    userProfile,
-  }
-}
+import type { CampaignMember } from '../../../shared/campaigns/types'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { toCampaignMemberProjection } from './campaignMemberProjection'
 
 export async function getCampaignRequests(ctx: DmQueryCtx): Promise<Array<CampaignMember>> {
   const members = await getCampaignMemberRows(ctx)
@@ -23,6 +14,7 @@ export async function getCampaignRequests(ctx: DmQueryCtx): Promise<Array<Campai
     nonAcceptedMembers,
     (profile) => profile,
   )
+  const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid)
 
   return nonAcceptedMembers.flatMap((member) => {
     const profile = profilesByUserId.get(member.userId)
@@ -30,6 +22,6 @@ export async function getCampaignRequests(ctx: DmQueryCtx): Promise<Array<Campai
       logger.error(`User profile not found for userId: ${member.userId}`)
       return []
     }
-    return [toCampaignMember(member, profile)]
+    return [toCampaignMemberProjection(member, campaignId, profile)]
   })
 }

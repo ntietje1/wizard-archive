@@ -1,5 +1,5 @@
 import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignSlug } from 'shared/campaigns/validation'
 import type { Username } from 'shared/users/validation'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
@@ -18,17 +18,14 @@ export function useUserCampaignsQuery() {
   return useAuthQuery(api.campaigns.queries.getUserCampaigns, {})
 }
 
-export function useCampaignMembersQuery(campaignId: Id<'campaigns'> | undefined) {
+export function useCampaignMembersQuery(campaignId: CampaignId | undefined) {
   return useAuthQuery(
     api.campaigns.queries.getMembersByCampaign,
     campaignId ? { campaignId } : 'skip',
   )
 }
 
-export function useCampaignRequestsQuery(
-  campaignId: Id<'campaigns'> | undefined,
-  enabled: boolean,
-) {
+export function useCampaignRequestsQuery(campaignId: CampaignId | undefined, enabled: boolean) {
   return useAuthQuery(
     api.campaigns.queries.getCampaignRequests,
     campaignId && enabled ? { campaignId } : 'skip',

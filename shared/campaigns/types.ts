@@ -1,4 +1,10 @@
-import type { CampaignId, CampaignMemberId, SessionRowId, UserProfileId } from '../common/ids'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId as CampaignRowId,
+  CampaignMemberId as CampaignMemberRowId,
+  SessionRowId,
+  UserProfileId,
+} from '../common/ids'
 import type { CampaignSlug } from './validation'
 import type { UserProfile, UserProfileSummary } from '../users/types'
 
@@ -29,7 +35,7 @@ export type CampaignMemberStatus =
 
 export type CampaignRow = {
   campaignUuid: string
-  _id: CampaignId
+  _id: CampaignRowId
   _creationTime: number
   dmUserId: UserProfileId
   name: string
@@ -40,7 +46,10 @@ export type CampaignRow = {
   defaultFolderInheritShares: boolean
 }
 
-export type Campaign = Omit<CampaignRow, '_id' | '_creationTime' | 'currentSessionId'> & {
+export type Campaign = Omit<
+  CampaignRow,
+  '_id' | '_creationTime' | 'campaignUuid' | 'currentSessionId' | 'dmUserId'
+> & {
   id: CampaignId
   createdAt: number
   dmUserProfile: UserProfileSummary
@@ -50,22 +59,27 @@ export type Campaign = Omit<CampaignRow, '_id' | '_creationTime' | 'currentSessi
 
 export type CampaignMemberRow = {
   campaignMemberUuid: string
-  _id: CampaignMemberId
+  _id: CampaignMemberRowId
   _creationTime: number
   userId: UserProfileId
-  campaignId: CampaignId
+  campaignId: CampaignRowId
   role: CampaignMemberRole
   status: CampaignMemberStatus
 }
 
-export type CampaignMember = Omit<CampaignMemberRow, '_id' | '_creationTime'> & {
+type PublicCampaignMember = Omit<
+  CampaignMemberRow,
+  '_id' | '_creationTime' | 'campaignMemberUuid' | 'campaignId'
+> & {
   id: CampaignMemberId
+  campaignId: CampaignId
   createdAt: number
+}
+
+export type CampaignMember = PublicCampaignMember & {
   userProfile: UserProfile
 }
 
-export type CampaignMemberSummary = Omit<CampaignMemberRow, '_id' | '_creationTime'> & {
-  id: CampaignMemberId
-  createdAt: number
+export type CampaignMemberSummary = PublicCampaignMember & {
   userProfile: UserProfileSummary
 }

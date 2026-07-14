@@ -6,10 +6,14 @@ import { joinCampaign as joinCampaignFn } from './functions/joinCampaign'
 import { hardDeleteCampaign } from './functions/lifecycle'
 import { updateCampaign as updateCampaignFn } from './functions/updateCampaign'
 import { updateCampaignMemberStatus as updateCampaignMemberStatusFn } from './functions/updateCampaignMemberStatus'
-import { campaignMemberStatusValidator } from './schema'
+import {
+  campaignIdValidator,
+  campaignMemberIdValidator,
+  campaignMemberStatusValidator,
+} from './schema'
 import { assertCampaignSlug, campaignSlugValidator } from './validation'
-import type { Id } from '../_generated/dataModel'
 import type { CampaignMemberStatus } from '../../shared/campaigns/types'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 export const createCampaign = authMutation({
   args: {
@@ -17,8 +21,8 @@ export const createCampaign = authMutation({
     description: v.optional(v.string()),
     slug: campaignSlugValidator,
   },
-  returns: v.id('campaigns'),
-  handler: async (ctx, args): Promise<Id<'campaigns'>> => {
+  returns: campaignIdValidator,
+  handler: async (ctx, args): Promise<CampaignId> => {
     return createCampaignFn(ctx, {
       name: args.name,
       slug: assertCampaignSlug(args.slug),
@@ -48,8 +52,8 @@ export const updateCampaign = dmMutation({
     slug: v.optional(campaignSlugValidator),
     defaultFolderInheritShares: v.optional(v.boolean()),
   },
-  returns: v.id('campaigns'),
-  handler: async (ctx, args): Promise<Id<'campaigns'>> => {
+  returns: campaignIdValidator,
+  handler: async (ctx, args): Promise<CampaignId> => {
     return updateCampaignFn(ctx, {
       name: args.name,
       description: args.description,
@@ -61,19 +65,21 @@ export const updateCampaign = dmMutation({
 
 export const deleteCampaign = dmMutation({
   args: {},
-  returns: v.id('campaigns'),
-  handler: async (ctx): Promise<Id<'campaigns'>> => {
-    return hardDeleteCampaign(ctx, ctx.campaign._id)
+  returns: campaignIdValidator,
+  handler: async (ctx): Promise<CampaignId> => {
+    const campaignId = ctx.resourceScope.campaignId
+    await hardDeleteCampaign(ctx, ctx.campaign._id)
+    return campaignId
   },
 })
 
 export const updateCampaignMemberStatus = dmMutation({
   args: {
-    memberId: v.id('campaignMembers'),
+    memberId: campaignMemberIdValidator,
     status: campaignMemberStatusValidator,
   },
-  returns: v.id('campaignMembers'),
-  handler: async (ctx, args): Promise<Id<'campaignMembers'>> => {
+  returns: campaignMemberIdValidator,
+  handler: async (ctx, args): Promise<CampaignMemberId> => {
     return updateCampaignMemberStatusFn(ctx, {
       memberId: args.memberId,
       status: args.status,

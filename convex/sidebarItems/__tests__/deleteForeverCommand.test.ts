@@ -21,7 +21,7 @@ describe('executeDeleteForeverCommand', () => {
 
     await expectNotFound(
       executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [noteId],
       }),
     )
@@ -34,14 +34,14 @@ describe('executeDeleteForeverCommand', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
     })
 
@@ -61,7 +61,7 @@ describe('executeDeleteForeverCommand', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
@@ -69,7 +69,7 @@ describe('executeDeleteForeverCommand', () => {
 
     await expectPermissionDenied(
       executeDeleteForeverCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
       }),
     )
@@ -91,14 +91,14 @@ describe('executeDeleteForeverCommand', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeDeleteForeverCommand(playerAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
     })
 

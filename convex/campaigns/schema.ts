@@ -1,14 +1,18 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import type { Validator } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
-import { domainValidatorFields } from '../common/schema'
 import { userProfileSummaryValidator, userProfileValidator } from '../users/schema'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 export const campaignStatusValidator = literals('Active', 'Inactive', 'Deleted')
 
 export const campaignMemberRoleValidator = literals('DM', 'Player')
 
 export const campaignMemberStatusValidator = literals('Pending', 'Accepted', 'Rejected', 'Removed')
+
+export const campaignIdValidator = v.string() as Validator<CampaignId>
+export const campaignMemberIdValidator = v.string() as Validator<CampaignMemberId>
 
 const campaignFields = {
   campaignUuid: v.string(),
@@ -49,27 +53,36 @@ export const campaignTables = {
     .index('by_user', ['userId']),
 }
 
-const campaignMemberValidatorFields = {
-  ...domainValidatorFields('campaignMembers'),
-  ...campaignMemberTableFields,
+const publicCampaignMemberFields = {
+  id: campaignMemberIdValidator,
+  campaignId: campaignIdValidator,
+  userId: v.id('userProfiles'),
+  createdAt: v.number(),
+  role: campaignMemberRoleValidator,
+  status: campaignMemberStatusValidator,
 }
 
 export const campaignMemberValidator = v.object({
-  ...campaignMemberValidatorFields,
+  ...publicCampaignMemberFields,
   userProfile: userProfileValidator,
 })
 
 export const campaignMemberSummaryValidator = v.object({
-  ...campaignMemberValidatorFields,
+  ...publicCampaignMemberFields,
   userProfile: userProfileSummaryValidator,
 })
 
-const campaignValidatorFields = {
-  ...domainValidatorFields('campaigns'),
-  ...campaignFields,
+const publicCampaignFields = {
+  id: campaignIdValidator,
+  createdAt: v.number(),
+  name: v.string(),
+  description: v.string(),
+  slug: v.string(),
+  status: campaignStatusValidator,
+  defaultFolderInheritShares: v.boolean(),
   dmUserProfile: userProfileSummaryValidator,
   myMembership: v.nullable(campaignMemberSummaryValidator),
   acceptedMemberCount: v.number(),
 }
 
-export const campaignValidator = v.object(campaignValidatorFields)
+export const campaignValidator = v.object(publicCampaignFields)

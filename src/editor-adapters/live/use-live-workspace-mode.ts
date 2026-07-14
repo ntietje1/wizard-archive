@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import type { WorkspaceMode } from 'shared/workspace/workspace-mode'
 import { liveWorkspacePreferencesQuery } from './live-workspace-preferences'
 import type { LiveWorkspacePreferences } from './live-workspace-preferences'
@@ -22,10 +22,10 @@ interface WorkspaceModeContextType {
   workspaceMode: WorkspaceMode
   campaignActor: CampaignActor | null
   workspaceActor: WizardEditorWorkspaceActor | null
-  viewAsPlayerId: Id<'campaignMembers'> | undefined
+  viewAsPlayerId: CampaignMemberId | undefined
   canEdit: boolean
   setWorkspaceMode: (workspaceMode: WorkspaceMode) => void
-  setViewAsPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
+  setViewAsPlayerId: (playerId: CampaignMemberId | undefined) => void
 }
 
 export function useLiveWorkspaceMode(
@@ -102,7 +102,7 @@ export function useLiveWorkspaceMode(
     mutate({ editorMode: mode })
   }
 
-  const setViewAsPlayerId = (playerId: Id<'campaignMembers'> | undefined) => {
+  const setViewAsPlayerId = (playerId: CampaignMemberId | undefined) => {
     if (!isDm || !workspaceRecordId) return
     setViewAsPlayer(playerId ? { campaignId: workspaceRecordId, memberId: playerId } : null)
   }

@@ -4,6 +4,7 @@ import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resourc
 import type { WizardEditorItem } from '@wizard-archive/editor/adapter'
 import type { CampaignActor } from 'shared/campaigns/actor'
 import type { CampaignId, SidebarItemId } from 'shared/common/ids'
+import type { CampaignId as CampaignDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { useFileSystemReadModel } from '../read-model'
@@ -24,7 +25,8 @@ vi.mock('~/features/campaigns/hooks/useCampaignActor', () => ({
 
 describe('useFileSystemReadModel', () => {
   const campaignId = 'campaign_read_model' as CampaignId
-  const playerActor: CampaignActor = { kind: 'player', campaignId }
+  const campaignDomainId = campaignId as unknown as CampaignDomainId
+  const playerActor: CampaignActor = { kind: 'player', campaignId: campaignDomainId }
 
   beforeEach(() => {
     useLiveSidebarItemsQueriesMock.mockReset()

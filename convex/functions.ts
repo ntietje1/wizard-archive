@@ -24,6 +24,7 @@ import type {
   CampaignMemberId as DomainCampaignMemberId,
 } from '@wizard-archive/editor/resources/domain-id'
 import { getAssetIdByStorageId } from './storage/functions/assetIdentity'
+import { findCampaignRow } from './campaigns/functions/campaignIdentity'
 
 // --- Context enrichment ---
 
@@ -130,29 +131,72 @@ export const authMutation = customMutation(
 
 // --- Campaign-scoped wrappers ---
 
-const campaignArgs = { campaignId: v.id('campaigns') } as const
-type CampaignScopeInputArgs = { campaignId: Id<'campaigns'> }
+const campaignArgs = { campaignId: v.string() } as const
+const campaignRowArgs = { campaignId: v.id('campaigns') } as const
+type CampaignScopeInputArgs = { campaignId: string }
 type CampaignScopeInputResult = {
-  ctx: { campaign: CampaignRow; membership: CampaignMemberRow }
+  ctx: {
+    campaign: CampaignRow
+    membership: CampaignMemberRow
+    resourceScope: {
+      campaignId: DomainCampaignId
+      actorId: DomainCampaignMemberId
+    }
+  }
   args: {}
 }
 
 async function campaignScopeInput(
   ctx: object,
-  { campaignId }: CampaignScopeInputArgs,
+  { campaignId: campaignIdValue }: CampaignScopeInputArgs,
 ): Promise<CampaignScopeInputResult> {
   assertAuthenticatedCtx(ctx)
-  const { campaign, membership } = await checkMembership(ctx, campaignId)
-  return { ctx: { campaign, membership }, args: {} }
+  const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, campaignIdValue)
+  const campaignDoc = await findCampaignRow(ctx, campaignId)
+  if (!campaignDoc) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
+  }
+  const { campaign, membership } = await checkMembership(ctx, campaignDoc._id)
+  const actorId = assertDomainId(DOMAIN_ID_KIND.campaignMember, membership.campaignMemberUuid)
+  return { ctx: { campaign, membership, resourceScope: { campaignId, actorId } }, args: {} }
 }
 
 async function dmScopeInput(
   ctx: object,
-  { campaignId }: CampaignScopeInputArgs,
+  input: CampaignScopeInputArgs,
+): Promise<CampaignScopeInputResult> {
+  const scoped = await campaignScopeInput(ctx, input)
+  if (scoped.ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can perform this action')
+  }
+  return scoped
+}
+
+async function campaignRowScopeInput(
+  ctx: object,
+  { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<CampaignScopeInputResult> {
   assertAuthenticatedCtx(ctx)
-  const { campaign, membership } = await checkDmMembership(ctx, campaignId)
-  return { ctx: { campaign, membership }, args: {} }
+  const { campaign, membership } = await checkMembership(ctx, campaignId)
+  return {
+    ctx: {
+      campaign,
+      membership,
+      resourceScope: {
+        campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid),
+        actorId: assertDomainId(DOMAIN_ID_KIND.campaignMember, membership.campaignMemberUuid),
+      },
+    },
+    args: {},
+  }
+}
+
+async function dmRowScopeInput(ctx: object, input: { campaignId: Id<'campaigns'> }) {
+  const scoped = await campaignRowScopeInput(ctx, input)
+  if (scoped.ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can perform this action')
+  }
+  return scoped
 }
 
 export const campaignQuery = customQuery(authQuery, {
@@ -177,18 +221,18 @@ const authInternalMutation = customMutation(
 )
 
 export const campaignInternalQuery = customQuery(authInternalQuery, {
-  args: campaignArgs,
-  input: campaignScopeInput,
+  args: campaignRowArgs,
+  input: campaignRowScopeInput,
 })
 
 export const campaignInternalMutation = customMutation(authInternalMutation, {
-  args: campaignArgs,
-  input: campaignScopeInput,
+  args: campaignRowArgs,
+  input: campaignRowScopeInput,
 })
 
 export const dmInternalQuery = customQuery(authInternalQuery, {
-  args: campaignArgs,
-  input: dmScopeInput,
+  args: campaignRowArgs,
+  input: dmRowScopeInput,
 })
 
 export const campaignMutation = customMutation(authMutation, {
@@ -206,48 +250,6 @@ export const dmMutation = customMutation(authMutation, {
   input: dmScopeInput,
 })
 
-const resourceCampaignArgs = { campaignId: v.string() } as const
-type ResourceCampaignScopeInputArgs = { campaignId: string }
-type ResourceCampaignScopeInputResult = {
-  ctx: {
-    campaign: CampaignRow
-    membership: CampaignMemberRow
-    resourceScope: {
-      campaignId: DomainCampaignId
-      actorId: DomainCampaignMemberId
-    }
-  }
-  args: {}
-}
-
-async function resourceCampaignScopeInput(
-  ctx: object,
-  { campaignId: campaignIdValue }: ResourceCampaignScopeInputArgs,
-): Promise<ResourceCampaignScopeInputResult> {
-  assertAuthenticatedCtx(ctx)
-  const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, campaignIdValue)
-  const campaignDoc = await ctx.db
-    .query('campaigns')
-    .withIndex('by_campaignUuid', (indexQuery) => indexQuery.eq('campaignUuid', campaignId))
-    .unique()
-  if (!campaignDoc) {
-    throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
-  }
-  const { campaign, membership } = await checkMembership(ctx, campaignDoc._id)
-  const actorId = assertDomainId(DOMAIN_ID_KIND.campaignMember, membership.campaignMemberUuid)
-  return { ctx: { campaign, membership, resourceScope: { campaignId, actorId } }, args: {} }
-}
-
-export const resourceCampaignQuery = customQuery(authQuery, {
-  args: resourceCampaignArgs,
-  input: resourceCampaignScopeInput,
-})
-
-export const resourceCampaignMutation = customMutation(authMutation, {
-  args: resourceCampaignArgs,
-  input: resourceCampaignScopeInput,
-})
-
 // --- Context types ---
 
 export type AuthQueryCtx = CustomCtx<typeof authQuery>
@@ -259,5 +261,3 @@ export type CampaignInternalMutationCtx = CustomCtx<typeof campaignInternalMutat
 export type DmQueryCtx = CustomCtx<typeof dmQuery>
 export type DmMutationCtx = CustomCtx<typeof dmMutation>
 export type DmInternalQueryCtx = CustomCtx<typeof dmInternalQuery>
-export type ResourceCampaignQueryCtx = CustomCtx<typeof resourceCampaignQuery>
-export type ResourceCampaignMutationCtx = CustomCtx<typeof resourceCampaignMutation>

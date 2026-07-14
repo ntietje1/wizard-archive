@@ -44,19 +44,19 @@ describe('executeMoveCommand cross-module effects', () => {
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: noteId,
       }),
     )
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: sharedFolder,
     })
 
     const noteAfterMove = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(noteAfterMove.myPermissionLevel).toBe('view')
@@ -86,20 +86,20 @@ describe('executeMoveCommand cross-module effects', () => {
     })
 
     const noteBefore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(noteBefore.myPermissionLevel).toBe('view')
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
     })
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: noteId,
       }),
     )
@@ -119,7 +119,7 @@ describe('executeMoveCommand cross-module effects', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
@@ -150,7 +150,7 @@ describe('executeMoveCommand cross-module effects', () => {
 
     await expectValidationFailed(
       executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [parent],
         targetParentId: child,
       }),
@@ -175,7 +175,7 @@ describe('executeMoveCommand cross-module effects', () => {
 
     await expectPermissionDenied(
       executeMoveCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'trash',
@@ -201,7 +201,7 @@ describe('executeMoveCommand cross-module effects', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
@@ -209,7 +209,7 @@ describe('executeMoveCommand cross-module effects', () => {
 
     await expectPermissionDenied(
       executeMoveCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'restore',
@@ -222,6 +222,7 @@ describe('executeMoveCommand cross-module effects', () => {
     const dmAuth = asDm(ctx)
     const { folderB, sourceId, targetId } = await setupSiblingRelativeNoteLink(t, dmAuth, {
       campaignId: ctx.campaignId,
+      campaignDomainId: ctx.campaignDomainId,
       creatorProfileId: ctx.dm.profile._id,
     })
 
@@ -231,7 +232,7 @@ describe('executeMoveCommand cross-module effects', () => {
     expect(links[0].query).toBe('./Target')
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [sourceId],
       targetParentId: folderB,
     })
@@ -267,7 +268,7 @@ describe('executeMoveCommand cross-module effects', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: sourceId,
       update: makeYjsUpdateWithBlocks([
         {
@@ -280,7 +281,7 @@ describe('executeMoveCommand cross-module effects', () => {
       ]),
     })
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: sourceId,
     })
 
@@ -296,7 +297,7 @@ describe('executeMoveCommand cross-module effects', () => {
     expect(links[0].targetItemId).toBe(targetId)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [districtId],
       targetParentId: elsewhereId,
     })

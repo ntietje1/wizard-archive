@@ -40,11 +40,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: noteId },
+      { campaignId: ctx.campaignDomainId, itemId: noteId },
     )
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
       uploadSessionId: sessionId,
       claimToken: claimToken!,
@@ -91,11 +91,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: noteId },
+      { campaignId: ctx.campaignDomainId, itemId: noteId },
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
       uploadSessionId: sessionId,
       claimToken: claimToken!,
@@ -144,11 +144,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: noteId },
+      { campaignId: ctx.campaignDomainId, itemId: noteId },
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
       uploadSessionId: sessionId,
       claimToken: claimToken!,
@@ -191,11 +191,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await playerAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: noteId },
+      { campaignId: ctx.campaignDomainId, itemId: noteId },
     )
 
     await playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
       uploadSessionId: sessionId,
       claimToken: claimToken!,
@@ -230,12 +230,12 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await playerAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: noteId },
+      { campaignId: ctx.campaignDomainId, itemId: noteId },
     )
 
     await expectNotFound(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
         uploadSessionId: sessionId,
         claimToken: claimToken!,
@@ -266,11 +266,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await playerAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: fileId },
+      { campaignId: ctx.campaignDomainId, itemId: fileId },
     )
 
     await playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: fileId,
       uploadSessionId: sessionId,
       claimToken: claimToken!,
@@ -305,7 +305,7 @@ describe('setPreviewImage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
         uploadSessionId: sessionId,
         claimToken: 'fake-token',
@@ -328,7 +328,7 @@ describe('setPreviewImage', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: folderId,
         uploadSessionId: sessionId,
         claimToken: 'fake-token',
@@ -351,7 +351,7 @@ describe('setPreviewImage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
         uploadSessionId: sessionId,
         claimToken: 'fake-token',
@@ -377,7 +377,7 @@ describe('setPreviewImage', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
         uploadSessionId: sessionId,
         claimToken: 'fake-token',
@@ -392,7 +392,7 @@ describe('setPreviewImage', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
 
@@ -405,7 +405,7 @@ describe('setPreviewImage', () => {
 
     await expectConflict(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
         uploadSessionId: sessionId,
         claimToken: 'wrong-token',
@@ -418,7 +418,7 @@ describe('setPreviewImage', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const claim = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
     if (claim.status !== 'claimed') throw new Error('Expected preview claim')
@@ -437,7 +437,7 @@ describe('setPreviewImage', () => {
     )
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
       uploadSessionId: sessionId,
       claimToken: claim.claimToken,
@@ -458,7 +458,7 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: noteId },
+      { campaignId: ctx.campaignDomainId, itemId: noteId },
     )
 
     await t.run(async (dbCtx) => {
@@ -475,7 +475,7 @@ describe('setPreviewImage', () => {
 
     await expectConflict(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
         uploadSessionId: sessionId,
         claimToken: claimToken!,
@@ -498,11 +498,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: canvasId },
+      { campaignId: ctx.campaignDomainId, itemId: canvasId },
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: canvasId,
       uploadSessionId: sessionId,
       claimToken: claimToken!,
@@ -546,11 +546,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: canvasId },
+      { campaignId: ctx.campaignDomainId, itemId: canvasId },
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: canvasId,
       uploadSessionId: sessionId,
       claimToken: claimToken!,
@@ -588,11 +588,11 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await playerAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: canvasId },
+      { campaignId: ctx.campaignDomainId, itemId: canvasId },
     )
 
     await playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: canvasId,
       uploadSessionId: sessionId,
       claimToken: claimToken!,
@@ -627,7 +627,7 @@ describe('setPreviewImage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: canvasId,
         uploadSessionId: sessionId,
         claimToken: 'fake-token',
@@ -650,7 +650,7 @@ describe('setPreviewImage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: canvasId,
         uploadSessionId: sessionId,
         claimToken: 'fake-token',
@@ -676,7 +676,7 @@ describe('setPreviewImage', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: canvasId,
         uploadSessionId: sessionId,
         claimToken: 'fake-token',
@@ -692,7 +692,7 @@ describe('setPreviewImage', () => {
 
     const { claimToken } = await dmAuth.mutation(
       api.sidebarItems.mutations.claimPreviewGeneration,
-      { campaignId: ctx.campaignId, itemId: noteId },
+      { campaignId: ctx.campaignDomainId, itemId: noteId },
     )
 
     const { sessionId, storageId } = await storeUncommittedTestUploadSession(
@@ -707,7 +707,7 @@ describe('setPreviewImage', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
         uploadSessionId: sessionId,
         claimToken: claimToken!,
@@ -728,7 +728,7 @@ describe('setPreviewImage', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.sidebarItems.mutations.setPreviewImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
         uploadSessionId: sessionId,
         claimToken: 'fake-token',

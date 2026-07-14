@@ -18,14 +18,14 @@ describe('getUpdates', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Auth Test Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expectNotAuthenticated(
       t.query(api.yjsSync.queries.getUpdates, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         afterSeq: null,
         paginationOpts: firstPage,
@@ -39,7 +39,7 @@ describe('getUpdates', () => {
 
     await expectPermissionDenied(
       asPlayer(ctx).query(api.yjsSync.queries.getUpdates, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         afterSeq: null,
         paginationOpts: firstPage,
@@ -52,24 +52,24 @@ describe('getUpdates', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Ordered Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
 
     const result = await dmAuth.query(api.yjsSync.queries.getUpdates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       afterSeq: null,
       paginationOpts: firstPage,
@@ -87,13 +87,13 @@ describe('getUpdates', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Initial Cursor Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.query(api.yjsSync.queries.getUpdates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       afterSeq: null,
       paginationOpts: firstPage,
@@ -108,30 +108,30 @@ describe('getUpdates', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Paged Updates Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
 
     const firstResult = await dmAuth.query(api.yjsSync.queries.getUpdates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       afterSeq: null,
       paginationOpts: { cursor: null, numItems: 2 },
     })
     const secondResult = await dmAuth.query(api.yjsSync.queries.getUpdates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       afterSeq: null,
       paginationOpts: { cursor: firstResult.continueCursor, numItems: 2 },
@@ -148,13 +148,13 @@ describe('getUpdates', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Fields Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.query(api.yjsSync.queries.getUpdates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       afterSeq: null,
       paginationOpts: firstPage,
@@ -172,13 +172,13 @@ describe('getUpdates', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'DM Read Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.query(api.yjsSync.queries.getUpdates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       afterSeq: null,
       paginationOpts: firstPage,
@@ -192,7 +192,7 @@ describe('getUpdates', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Shared Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -206,7 +206,7 @@ describe('getUpdates', () => {
     })
 
     const result = await asPlayer(ctx).query(api.yjsSync.queries.getUpdates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       afterSeq: null,
       paginationOpts: firstPage,
@@ -222,7 +222,7 @@ describe('getUpdates', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.query(api.yjsSync.queries.getUpdates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       afterSeq: null,
       paginationOpts: firstPage,
@@ -241,14 +241,14 @@ describe('getAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Auth Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expectNotAuthenticated(
       t.query(api.yjsSync.queries.getAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         paginationOpts: firstPage,
       }),
@@ -261,7 +261,7 @@ describe('getAwareness', () => {
 
     await expectPermissionDenied(
       asPlayer(ctx).query(api.yjsSync.queries.getAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         paginationOpts: firstPage,
       }),
@@ -273,13 +273,13 @@ describe('getAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'No Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.query(api.yjsSync.queries.getAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       paginationOpts: firstPage,
     })
@@ -292,14 +292,14 @@ describe('getAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const state = new ArrayBuffer(4)
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 42,
       sessionId: 'session-42',
@@ -307,7 +307,7 @@ describe('getAwareness', () => {
     })
 
     const result = await dmAuth.query(api.yjsSync.queries.getAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       paginationOpts: firstPage,
     })
@@ -323,14 +323,14 @@ describe('getAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Paged Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     for (const clientId of [30, 10, 20]) {
       await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         clientId,
         sessionId: `session-${clientId}`,
@@ -339,12 +339,12 @@ describe('getAwareness', () => {
     }
 
     const firstResult = await dmAuth.query(api.yjsSync.queries.getAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       paginationOpts: { cursor: null, numItems: 2 },
     })
     const secondResult = await dmAuth.query(api.yjsSync.queries.getAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       paginationOpts: { cursor: firstResult.continueCursor, numItems: 2 },
     })
@@ -360,13 +360,13 @@ describe('getAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'DM Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 10,
       sessionId: 'session-10',
@@ -374,7 +374,7 @@ describe('getAwareness', () => {
     })
 
     const result = await dmAuth.query(api.yjsSync.queries.getAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       paginationOpts: firstPage,
     })
@@ -390,7 +390,7 @@ describe('getAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Shared Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -404,7 +404,7 @@ describe('getAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 20,
       sessionId: 'session-20',
@@ -412,7 +412,7 @@ describe('getAwareness', () => {
     })
 
     const result = await asPlayer(ctx).query(api.yjsSync.queries.getAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       paginationOpts: firstPage,
     })
@@ -429,14 +429,14 @@ describe('getAwareness', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Fields Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const state = new ArrayBuffer(4)
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       clientId: 99,
       sessionId: 'session-99',
@@ -444,7 +444,7 @@ describe('getAwareness', () => {
     })
 
     const result = await dmAuth.query(api.yjsSync.queries.getAwareness, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       paginationOpts: firstPage,
     })

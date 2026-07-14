@@ -2,11 +2,11 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useAuthPaginatedQuery } from '~/shared/hooks/useAuthPaginatedQuery'
 import { logger } from '~/shared/utils/logger'
-import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'shared/common/ids'
 import { useWizardEditorYjsCollaborationSession } from '@wizard-archive/editor/adapter'
 import type { YjsCollaborationProvider } from '@wizard-archive/editor/collaboration/yjs-provider'
 import type { Doc } from 'yjs'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 const YJS_SYNC_PAGE_SIZE = 100
 
@@ -18,7 +18,7 @@ export function useConvexYjsCollaboration(
   options?: {
     onBeforeDestroy?: (state: {
       documentId: SidebarItemId
-      sourceId: Id<'campaigns'>
+      sourceId: CampaignId
       doc: Doc
       provider: YjsCollaborationProvider
     }) => Promise<void> | void
@@ -85,11 +85,11 @@ export function useConvexYjsCollaboration(
   })
 }
 
-function yjsWorkspaceRecordId(sourceId: string | null | undefined): Id<'campaigns'> {
+function yjsWorkspaceRecordId(sourceId: string | null | undefined): CampaignId {
   if (!sourceId) {
     throw new Error('Yjs workspace source id is required')
   }
-  return sourceId as Id<'campaigns'>
+  return sourceId as CampaignId
 }
 
 function useConvexYjsUpdates({

@@ -4,8 +4,10 @@ import { throwClientError } from '../../errors'
 import { prepareCampaignDescription } from '../../../shared/campaigns/validation'
 import { prepareCampaignName } from '../validation'
 import type { WithoutSystemFields } from 'convex/server'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Doc } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 export async function updateCampaign(
   ctx: DmMutationCtx,
@@ -20,7 +22,7 @@ export async function updateCampaign(
     slug?: CampaignSlug
     defaultFolderInheritShares?: boolean
   },
-): Promise<Id<'campaigns'>> {
+): Promise<CampaignId> {
   const campaign = ctx.campaign
   const userId = ctx.membership.userId
 
@@ -48,10 +50,10 @@ export async function updateCampaign(
   }
 
   if (Object.keys(updates).length === 0) {
-    return campaign._id
+    return assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid)
   }
 
   await ctx.db.patch('campaigns', campaign._id, updates)
 
-  return campaign._id
+  return assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid)
 }

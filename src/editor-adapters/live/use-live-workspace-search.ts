@@ -1,6 +1,7 @@
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemId } from 'shared/common/ids'
+import type { CampaignMemberId as CampaignMemberRowId, SidebarItemId } from 'shared/common/ids'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import {
   createWizardEditorCatalogItemSearchResult,
   createWizardEditorCatalogItemLink,
@@ -38,7 +39,7 @@ export function useLiveWorkspaceSearch(
       'canAccessItem' | 'getMemberItemPermissionLevel'
     >
   },
-  viewAsPlayerId: Id<'campaignMembers'> | null,
+  viewAsPlayerId: CampaignMemberId | null,
 ) {
   const { catalog, permissions } = filesystem
   const workspaceRecordId = liveSearchWorkspaceRecordId(workspaceId)
@@ -94,7 +95,7 @@ export function useLiveWorkspaceSearch(
     contentProjection: {
       canAccessItem: permissions.canAccessItem,
       getMemberItemPermissionLevel: permissions.getMemberItemPermissionLevel,
-      viewAsParticipantId: viewAsPlayerId ?? undefined,
+      viewAsParticipantId: (viewAsPlayerId as CampaignMemberRowId | null) ?? undefined,
     },
     sourceId,
   })
@@ -103,7 +104,7 @@ export function useLiveWorkspaceSearch(
 }
 
 function liveSearchWorkspaceRecordId(workspaceId: string) {
-  return workspaceId as Id<'campaigns'>
+  return workspaceId as CampaignId
 }
 
 type LiveItemLinkKind = 'backlinks' | 'outgoing'

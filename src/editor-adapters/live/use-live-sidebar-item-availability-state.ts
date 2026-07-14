@@ -1,7 +1,7 @@
 import { getCampaignActorViewAsMemberId } from 'shared/campaigns/actor'
 import { useCampaignActor } from '~/features/campaigns/hooks/useCampaignActor'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   WizardEditorItemWithContent,
   WizardEditorResourceAvailabilityLookup,
@@ -74,10 +74,10 @@ function resolveAccessTarget({
   viewAsPlayerId,
   members,
 }: {
-  viewAsPlayerId: Id<'campaignMembers'> | undefined
+  viewAsPlayerId: CampaignMemberId | undefined
   members:
     | Array<{
-        id: Id<'campaignMembers'>
+        id: CampaignMemberId
         userProfile: { name?: string | null; username?: string | null }
       }>
     | undefined

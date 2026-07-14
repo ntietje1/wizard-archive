@@ -5,7 +5,7 @@ import type {
   WizardEditorSortOrder,
 } from '@wizard-archive/editor/adapter'
 import type { WorkspaceMode } from 'shared/workspace/workspace-mode'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 export interface LiveWorkspacePreferences {
   sortOrder: WizardEditorSortOrder
@@ -13,7 +13,7 @@ export interface LiveWorkspacePreferences {
   editorMode: WorkspaceMode
 }
 
-export function liveWorkspacePreferencesQuery(workspaceRecordId: Id<'campaigns'>) {
+export function liveWorkspacePreferencesQuery(workspaceRecordId: CampaignId) {
   return convexQuery(api.editors.queries.getCurrentEditor, {
     campaignId: workspaceRecordId,
   })

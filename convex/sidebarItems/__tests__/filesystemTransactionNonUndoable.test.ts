@@ -21,7 +21,7 @@ describe('non-undoable filesystem transactions', () => {
 
     const operationId = testOperationId('delete-folder-forever')
     const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       operationId,
       command: {
         type: 'deleteForever',
@@ -36,7 +36,7 @@ describe('non-undoable filesystem transactions', () => {
     )
 
     const retryReceipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       operationId,
       command: {
         type: 'deleteForever',
@@ -60,12 +60,12 @@ describe('non-undoable filesystem transactions', () => {
 
     await expect(
       executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: { type: 'emptyTrash' },
       }),
     ).rejects.toThrow('Empty Trash can delete at most 100 items at once')
     const { trash: remainingTrash } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     expect(remainingTrash).toHaveLength(101)
   })

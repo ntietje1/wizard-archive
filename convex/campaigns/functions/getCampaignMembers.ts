@@ -3,21 +3,9 @@ import { logger } from '../../common/logger'
 import { toUserProfileSummary } from '../../users/functions/profileSummary'
 import { getCampaignMemberRows, loadProfilesByMemberUserId } from './campaignMemberProfiles'
 import type { CampaignQueryCtx } from '../../functions'
-import type { UserProfileSummary } from '../../../shared/users/types'
-import type { CampaignMemberRow, CampaignMemberSummary } from '../../../shared/campaigns/types'
-
-function toCampaignMemberSummary(
-  member: CampaignMemberRow,
-  userProfile: UserProfileSummary,
-): CampaignMemberSummary {
-  const { _id, _creationTime, ...fields } = member
-  return {
-    ...fields,
-    id: _id,
-    createdAt: _creationTime,
-    userProfile,
-  }
-}
+import type { CampaignMemberSummary } from '../../../shared/campaigns/types'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { toCampaignMemberProjection } from './campaignMemberProjection'
 
 export async function getCampaignMembers(
   ctx: CampaignQueryCtx,
@@ -29,12 +17,13 @@ export async function getCampaignMembers(
     activeMembers,
     toUserProfileSummary,
   )
+  const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid)
   return activeMembers.flatMap((member) => {
     const profile = profilesByUserId.get(member.userId)
     if (!profile) {
       logger.warn(`User profile not found for userId: ${member.userId}`)
       return []
     }
-    return [toCampaignMemberSummary(member, profile)]
+    return [toCampaignMemberProjection(member, campaignId, profile)]
   })
 }

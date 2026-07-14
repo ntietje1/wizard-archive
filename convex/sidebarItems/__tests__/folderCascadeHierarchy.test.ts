@@ -65,7 +65,7 @@ describe('folder cascade hierarchy', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'trash',
@@ -104,7 +104,7 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.bookmark).not.toBeNull()
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'restore',
@@ -227,13 +227,13 @@ describe('folder cascade hierarchy', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'trash',
       })
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [folderId],
       })
 
@@ -299,7 +299,7 @@ describe('folder cascade hierarchy', () => {
       const block = await createBlock(t, leaf, ctx.campaignId)
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [root],
         targetParentId: null,
         action: 'trash',
@@ -324,7 +324,7 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.block).not.toBeNull()
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [root],
         targetParentId: null,
         action: 'restore',
@@ -415,13 +415,13 @@ describe('folder cascade hierarchy', () => {
       })
 
       await executeMoveCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [root],
         targetParentId: null,
         action: 'trash',
       })
       await executeDeleteForeverCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sourceItemIds: [root],
       })
 

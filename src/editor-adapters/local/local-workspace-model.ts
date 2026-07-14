@@ -123,7 +123,7 @@ function getValidLocalViewAsPlayerId(
   if (!selectedPlayerId) return undefined
   if (!state.playerMembers) return selectedPlayerId
 
-  return state.playerMembers.some((member) => member.id === selectedPlayerId)
+  return state.playerMembers.some((member) => String(member.id) === String(selectedPlayerId))
     ? selectedPlayerId
     : undefined
 }

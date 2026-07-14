@@ -18,7 +18,7 @@ describe('create item with parentTarget paths', () => {
     const dmAuth = asDm(ctx)
 
     const result = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Leaf Note',
       parentTarget: {
         kind: 'path',
@@ -28,7 +28,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
     const arcOne = rootItems.find((item) => item.name === 'Arc One')
@@ -36,7 +36,7 @@ describe('create item with parentTarget paths', () => {
     expect(arcOne?.type).toBe('folder')
 
     const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: arcOne!.id,
     })
     const arcTwo = arcOneChildren.find((item) => item.name === 'Arc Two')
@@ -44,7 +44,7 @@ describe('create item with parentTarget paths', () => {
     expect(arcTwo?.type).toBe('folder')
 
     const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: arcTwo!.id,
     })
     const createdNote = arcTwoChildren.find((item) => item.id === result.noteId)
@@ -68,7 +68,7 @@ describe('create item with parentTarget paths', () => {
 
     await expectPermissionDenied(
       executeTestFileSystemCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: {
           type: 'create',
           itemType: 'folder',
@@ -79,7 +79,7 @@ describe('create item with parentTarget paths', () => {
     )
     await expectPermissionDenied(
       createNoteViaFilesystem(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Restricted Note',
         parentTarget: {
           kind: 'path',
@@ -96,7 +96,7 @@ describe('create item with parentTarget paths', () => {
 
     await expectValidationFailed(
       executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: {
           type: 'create',
           itemType: 'note',
@@ -111,7 +111,7 @@ describe('create item with parentTarget paths', () => {
     )
 
     const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
     const arcOne = rootItems.find((item) => item.name === 'Arc One')
@@ -128,7 +128,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     const result = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Leaf Note',
       parentTarget: {
         kind: 'path',
@@ -138,13 +138,13 @@ describe('create item with parentTarget paths', () => {
     })
 
     const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
     expect(rootItems.some((item) => item.name === 'Arc One')).toBe(false)
 
     const baseChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: baseFolderId,
     })
     const arcOne = baseChildren.find((item) => item.name === 'Arc One')
@@ -154,7 +154,7 @@ describe('create item with parentTarget paths', () => {
     expect(baseChildren.some((item) => item.id === result.noteId)).toBe(false)
 
     const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: arcOne!.id,
     })
     const arcTwo = arcOneChildren.find((item) => item.name === 'Arc Two')
@@ -163,7 +163,7 @@ describe('create item with parentTarget paths', () => {
     expect(arcTwo?.type).toBe('folder')
 
     const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: arcTwo!.id,
     })
     const createdNote = arcTwoChildren.find((item) => item.id === result.noteId)
@@ -184,7 +184,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Leaf Folder',
       parentTarget: {
         kind: 'path',
@@ -194,13 +194,13 @@ describe('create item with parentTarget paths', () => {
     })
 
     const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
     expect(rootItems.filter((item) => item.name === 'Arc One')).toHaveLength(1)
 
     const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: arcOneId,
     })
     const arcTwo = arcOneChildren.find((item) => item.name === 'Arc Two')
@@ -208,7 +208,7 @@ describe('create item with parentTarget paths', () => {
     expect(arcOneChildren.filter((item) => item.name === 'Arc Two')).toHaveLength(1)
 
     const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: arcTwo!.id,
     })
     expect(arcTwoChildren.some((item) => item.name === 'Leaf Folder')).toBe(true)
@@ -231,7 +231,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Leaf Folder',
       parentTarget: {
         kind: 'path',
@@ -241,13 +241,13 @@ describe('create item with parentTarget paths', () => {
     })
 
     const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
     expect(rootItems.some((item) => item.name === 'Arc One')).toBe(false)
 
     const baseChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: baseFolderId,
     })
     const arcOne = baseChildren.find((item) => item.name === 'Arc One')
@@ -256,7 +256,7 @@ describe('create item with parentTarget paths', () => {
     expect(arcOne?.id).toBe(arcOneId)
 
     const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: arcOneId,
     })
     const arcTwo = arcOneChildren.find((item) => item.name === 'Arc Two')
@@ -265,7 +265,7 @@ describe('create item with parentTarget paths', () => {
     expect(arcTwo?.type).toBe('folder')
 
     const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: arcTwo!.id,
     })
     expect(arcTwoChildren.some((item) => item.name === 'Leaf Folder')).toBe(true)
@@ -281,7 +281,7 @@ describe('create item with parentTarget paths', () => {
 
     await expectValidationFailed(
       createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Leaf Note',
         parentTarget: {
           kind: 'path',
@@ -307,7 +307,7 @@ describe('create item with parentTarget paths', () => {
 
     await expectValidationFailed(
       createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Leaf Note',
         parentTarget: {
           kind: 'path',
@@ -318,13 +318,13 @@ describe('create item with parentTarget paths', () => {
     )
 
     const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
     expect(rootItems.some((item) => item.name === 'Arc One')).toBe(false)
 
     const baseChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: baseFolderId,
     })
     expect(baseChildren.filter((item) => item.name === 'Arc One')).toHaveLength(1)
@@ -340,7 +340,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     const result = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Leaf Note',
       parentTarget: {
         kind: 'path',
@@ -350,7 +350,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     const baseChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: baseFolderId,
     })
     const nestedFolder = baseChildren.find((item) => item.name === 'Nested')
@@ -358,7 +358,7 @@ describe('create item with parentTarget paths', () => {
     expect(nestedFolder?.type).toBe('folder')
 
     const nestedChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: nestedFolder!.id,
     })
     expect(nestedChildren.some((item) => item.id === result.noteId)).toBe(true)
@@ -377,7 +377,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     const result = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Leaf Note',
       parentTarget: {
         kind: 'path',
@@ -387,7 +387,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     const worldChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: worldId,
     })
     const archiveFolder = worldChildren.find((item) => item.name === 'Archive')
@@ -395,7 +395,7 @@ describe('create item with parentTarget paths', () => {
     expect(archiveFolder?.type).toBe('folder')
 
     const archiveChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: archiveFolder!.id,
     })
     expect(archiveChildren.some((item) => item.id === result.noteId)).toBe(true)
@@ -407,7 +407,7 @@ describe('create item with parentTarget paths', () => {
 
     await expectValidationFailed(
       createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Leaf Note',
         parentTarget: {
           kind: 'path',
@@ -417,7 +417,7 @@ describe('create item with parentTarget paths', () => {
       }),
     )
     const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
     expect(rootItems.some((item) => item.name === 'Archive')).toBe(false)

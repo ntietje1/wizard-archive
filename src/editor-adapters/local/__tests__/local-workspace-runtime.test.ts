@@ -321,8 +321,8 @@ describe('useLocalWorkspaceRuntime', () => {
   })
 
   it('switches the public prep scenario through the runtime view-as capability', () => {
-    const miraMemberId = 'demo-member-mira' as CampaignMemberId
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.privatePrep)
+    const miraMemberId = scenario.workspace.playerMembers?.[0]?.id as unknown as CampaignMemberId
     const { result } = renderHook(() =>
       useLocalWorkspaceRuntime({
         initialItemId: 'note-market',
@@ -399,8 +399,8 @@ describe('useLocalWorkspaceRuntime', () => {
   })
 
   it('omits selected-player hidden note blocks from local search', () => {
-    const miraMemberId = 'demo-member-mira' as CampaignMemberId
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.privatePrep)
+    const miraMemberId = scenario.workspace.playerMembers?.[0]?.id as unknown as CampaignMemberId
     const { result } = renderHook(() =>
       useLocalWorkspaceRuntime({
         initialItemId: scenario.initialItemId,

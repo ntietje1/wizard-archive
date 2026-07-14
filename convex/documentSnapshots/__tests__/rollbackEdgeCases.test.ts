@@ -32,7 +32,7 @@ describe('rollback permission checks', () => {
       const playerAuth = asPlayer(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Protected Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
@@ -46,7 +46,7 @@ describe('rollback permission checks', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -61,7 +61,7 @@ describe('rollback permission checks', () => {
 
       await expectPermissionDenied(
         playerAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           editHistoryId: historyEntry!.historyEntryUuid,
         }),
       )
@@ -78,13 +78,13 @@ describe('rollback permission checks', () => {
       const playerAuth = asPlayer(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Private Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -99,7 +99,7 @@ describe('rollback permission checks', () => {
 
       await expectPermissionDenied(
         playerAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           editHistoryId: historyEntry!.historyEntryUuid,
         }),
       )
@@ -135,7 +135,7 @@ describe('rollback error handling', () => {
     })
 
     const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       editHistoryId: fakeId,
     })
     expect(result).toEqual({ status: 'rejected', reason: 'history_entry_unavailable' })
@@ -148,7 +148,7 @@ describe('rollback error handling', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'No Snapshot Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
@@ -164,7 +164,7 @@ describe('rollback error handling', () => {
       expect(historyEntry!.hasSnapshot).toBe(false)
 
       const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry!.historyEntryUuid,
       })
       expect(result).toEqual({ status: 'rejected', reason: 'snapshot_unavailable' })
@@ -184,7 +184,7 @@ describe('note rollback data integrity', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Rollback Content Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
@@ -201,7 +201,7 @@ describe('note rollback data integrity', () => {
       const originalUpdate = makeYjsUpdateWithBlocks(originalBlocks)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: originalUpdate,
       })
@@ -229,7 +229,7 @@ describe('note rollback data integrity', () => {
       const modifiedUpdate = makeYjsUpdateWithBlocks(modifiedBlocks)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: modifiedUpdate,
       })
@@ -244,14 +244,14 @@ describe('note rollback data integrity', () => {
         return latest?.seq ?? -1
       })
       const result = await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: snapshotEntry!.historyEntryUuid,
       })
       expect(result.status).toBe('restored')
 
       await expect(
         dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           documentId: noteId,
           revision: 0,
           update: modifiedUpdate,
@@ -312,13 +312,13 @@ describe('canvas rollback data integrity', () => {
       const dmAuth = asDm(ctx)
 
       const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Rollback Canvas',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: canvasId,
         update: makeYjsUpdate(),
       })
@@ -359,7 +359,7 @@ describe('canvas rollback data integrity', () => {
         },
       ]
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: canvasId,
         update: makeYjsUpdateWithBlocks(modifiedBlocks),
       })
@@ -374,7 +374,7 @@ describe('canvas rollback data integrity', () => {
         return latest?.seq ?? -1
       })
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: snapshotEntry!.historyEntryUuid,
       })
 
@@ -416,7 +416,7 @@ describe('rollback metadata integrity', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -430,7 +430,7 @@ describe('rollback metadata integrity', () => {
       })
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: sourceEntry!.historyEntryUuid,
       })
 
@@ -458,13 +458,13 @@ describe('rollback metadata integrity', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Timestamp Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -484,7 +484,7 @@ describe('rollback metadata integrity', () => {
       vi.advanceTimersByTime(1000)
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry!.historyEntryUuid,
       })
 
@@ -513,14 +513,14 @@ describe('map rollback with deleted pin targets', () => {
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: n1, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: n2, x: 30, y: 40 }],
       })
@@ -540,7 +540,7 @@ describe('map rollback with deleted pin targets', () => {
       })
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: secondPinEntry.historyEntryUuid,
       })
 
@@ -573,7 +573,7 @@ describe('sequential rollbacks', () => {
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: n1, x: 10, y: 20 }],
       })
@@ -587,7 +587,7 @@ describe('sequential rollbacks', () => {
       })
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: n2, x: 30, y: 40 }],
       })
@@ -603,7 +603,7 @@ describe('sequential rollbacks', () => {
       })
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: secondEntry.historyEntryUuid,
       })
 
@@ -616,7 +616,7 @@ describe('sequential rollbacks', () => {
       })
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: firstEntry!.historyEntryUuid,
       })
 
@@ -645,7 +645,7 @@ describe('sequential rollbacks', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -659,11 +659,11 @@ describe('sequential rollbacks', () => {
       })
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: entry!.historyEntryUuid,
       })
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: entry!.historyEntryUuid,
       })
 
@@ -699,7 +699,7 @@ describe('map rollback restores image state', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -730,10 +730,10 @@ describe('map rollback restores image state', () => {
 
       const replacementToken = await dmAuth.mutation(
         api.gameMaps.mutations.beginMapImageReplacement,
-        { campaignId: ctx.campaignId, mapId },
+        { campaignId: ctx.campaignDomainId, mapId },
       )
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         replacementToken,
         uploadSessionId: newUploadSessionId,
@@ -748,7 +748,7 @@ describe('map rollback restores image state', () => {
       })
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: snapshotEntry!.historyEntryUuid,
       })
 

@@ -8,7 +8,7 @@ type CampaignLifecycleCtx = Pick<MutationCtx, 'db'>
 export async function hardDeleteCampaign(
   ctx: CampaignLifecycleCtx,
   campaignId: Id<'campaigns'>,
-): Promise<Id<'campaigns'>> {
+): Promise<void> {
   const [
     allItems,
     sessions,
@@ -61,8 +61,6 @@ export async function hardDeleteCampaign(
   ])
 
   await ctx.db.delete('campaigns', campaignId)
-
-  return campaignId
 }
 
 async function retireCampaignForDeletedDm(

@@ -19,14 +19,14 @@ describe('cross-action debounce independence on game maps', () => {
       const dmAuth = asDm(ctx)
 
       const result = await createGameMapViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Cross Action Map',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       // Change the image — property changes don't create snapshots
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId: result.mapId,
         replacementToken: null,
         uploadSessionId: null,
@@ -36,7 +36,7 @@ describe('cross-action debounce independence on game maps', () => {
       // Now add a pin — should get a snapshot
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       await createSnapshotPin(t, dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId: result.mapId,
         itemId: noteId,
         x: 10,
@@ -70,7 +70,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await createSnapshotPin(t, dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         itemId: n1,
         x: 10,
@@ -78,7 +78,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
         flushScheduledFunctions: false,
       })
       await createSnapshotPin(t, dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         itemId: n2,
         x: 30,
@@ -131,7 +131,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [
           { itemId: n1, x: 10, y: 20 },

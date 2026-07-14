@@ -32,7 +32,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
@@ -68,7 +68,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
@@ -107,14 +107,14 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'restore',
@@ -143,25 +143,25 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Persist Guard',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
         { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
       ]),
     })
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
@@ -169,7 +169,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
 
     await expect(
       dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdateWithBlocks([
           { id: testBlockNoteId('block-b'), type: 'heading', props: { level: 1 }, children: [] },

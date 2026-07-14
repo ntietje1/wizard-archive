@@ -31,7 +31,7 @@ describe('note value lifecycle', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -52,7 +52,7 @@ describe('note value lifecycle', () => {
     )
 
     const receipt = await executeCopyCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [sourceId],
       targetParentId: null,
     })
@@ -88,7 +88,7 @@ describe('note value lifecycle', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -102,7 +102,7 @@ describe('note value lifecycle', () => {
 
     await expect(
       playerAuth.query(api.noteValues.queries.getNoteValueStates, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         noteId,
       }),
     ).resolves.toEqual([])
@@ -116,7 +116,7 @@ describe('note value lifecycle', () => {
 
     await expect(
       playerAuth.query(api.noteValues.queries.getNoteValueStates, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         noteId,
       }),
     ).resolves.toEqual([])
@@ -144,7 +144,7 @@ describe('note value lifecycle', () => {
 
     await expect(
       playerAuth.query(api.noteValues.queries.getNoteValueStates, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         noteId,
       }),
     ).resolves.toMatchObject([{ slug: 'strength', status: 'ok', rawValue: 16 }])
@@ -159,7 +159,7 @@ describe('note value lifecycle', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -182,7 +182,7 @@ describe('note value lifecycle', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks: [],
     })
@@ -217,13 +217,13 @@ describe('note value lifecycle', () => {
         }),
       ]
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdateWithBlocks(originalBlocks),
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
       await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
       })
 
@@ -253,13 +253,13 @@ describe('note value lifecycle', () => {
         }),
       ]
       await replaceNoteDocumentAndPersist(t, dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         noteId,
         blocks: modifiedBlocks,
       })
 
       let states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         noteId,
       })
       expect(states.map((state) => state.slug).sort()).toEqual(['strength', 'strength_mod'])
@@ -267,7 +267,7 @@ describe('note value lifecycle', () => {
       expect(strength).toMatchObject({ status: 'ok', rawValue: 18 })
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: snapshotEntry!.historyEntryUuid,
       })
       await t.action(internal.notes.internalActions.persistNoteBlocksFromYjs, {
@@ -275,7 +275,7 @@ describe('note value lifecycle', () => {
       })
 
       states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         noteId,
       })
       expect(states).toHaveLength(1)
@@ -328,7 +328,7 @@ describe('note value lifecycle', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -341,7 +341,7 @@ describe('note value lifecycle', () => {
     })
 
     await hardDeleteValueTestNote(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
     })
 
@@ -371,7 +371,7 @@ describe('note value lifecycle', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: sourceNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -383,7 +383,7 @@ describe('note value lifecycle', () => {
       ],
     })
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -396,7 +396,7 @@ describe('note value lifecycle', () => {
     })
 
     let states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
     })
     expect(states[0]).toMatchObject({
@@ -428,7 +428,7 @@ describe('note value lifecycle', () => {
     })
 
     states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
     })
     expect(states[0]).toMatchObject({
@@ -437,12 +437,12 @@ describe('note value lifecycle', () => {
     })
 
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: sourceNoteId,
     })
 
     states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId: targetNoteId,
     })
     expect(states[0]).toMatchObject({
@@ -460,7 +460,7 @@ describe('note value lifecycle', () => {
     })
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks: [
         valueBlockWithGeneratedId({
@@ -477,7 +477,7 @@ describe('note value lifecycle', () => {
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
     })
     expect(states).toEqual([])
@@ -507,7 +507,7 @@ describe('note value lifecycle', () => {
     ]
 
     await replaceNoteDocumentAndPersist(t, dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
       blocks,
     })
@@ -532,7 +532,7 @@ describe('note value lifecycle', () => {
     })
 
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
@@ -558,7 +558,7 @@ describe('note value lifecycle', () => {
     expect(secondSnapshot).toEqual(firstSnapshot)
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       noteId,
     })
     const bySlug = new Map(

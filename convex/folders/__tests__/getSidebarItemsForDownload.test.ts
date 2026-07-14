@@ -44,7 +44,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -69,7 +69,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -108,7 +108,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -138,7 +138,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -166,7 +166,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -194,7 +194,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [parentId],
     })
 
@@ -231,7 +231,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -261,7 +261,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -290,7 +290,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [l0],
     })
 
@@ -324,13 +324,13 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
       ],
     })
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: canvasId,
       update: uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc)),
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [canvasId],
     })
 
@@ -385,7 +385,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -437,7 +437,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -470,7 +470,7 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -494,7 +494,7 @@ describe('getRootContentsForDownload — collectItemsRecursively at root', () =>
     await createGameMap(t, ctx.campaignId, ctx.dm.profile._id, { name: 'RootMap' })
 
     const result = await dmAuth.query(api.folders.queries.getRootContentsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const names = result.items.map((item: DownloadItem) => item.name)
@@ -510,7 +510,7 @@ describe('getRootContentsForDownload — collectItemsRecursively at root', () =>
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'PathTest' })
 
     const result = await dmAuth.query(api.folders.queries.getRootContentsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const note = result.items.find((item: DownloadItem) => item.name === 'PathTest.md')
@@ -527,7 +527,7 @@ describe('getRootContentsForDownload — collectItemsRecursively at root', () =>
 
     await expectPermissionDenied(
       playerAuth.query(api.folders.queries.getRootContentsForDownload, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       }),
     )
   })
@@ -549,7 +549,7 @@ describe('getSidebarItemsForDownload', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
     })
 
@@ -573,7 +573,7 @@ describe('getSidebarItemsForDownload', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId, noteId, fileId],
     })
 
@@ -601,7 +601,7 @@ describe('getSidebarItemsForDownload', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [firstNoteId, secondNoteId],
     })
 

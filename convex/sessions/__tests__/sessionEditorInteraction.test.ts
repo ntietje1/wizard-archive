@@ -11,7 +11,7 @@ describe('session + editor state interaction', () => {
     const dmAuth = asDm(ctx)
 
     const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const [campaignAfterStart, sessionAfterStart] = await t.run(async (dbCtx) => [
@@ -24,7 +24,7 @@ describe('session + editor state interaction', () => {
     expect(campaignAfterStart!.currentSessionId).toBe(sessionAfterStart!._id)
 
     await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const campaignAfterEnd = await t.run(async (dbCtx) => dbCtx.db.get('campaigns', ctx.campaignId))
@@ -45,35 +45,35 @@ describe('session + editor state interaction', () => {
     const playerAuth = asPlayer(ctx)
 
     await dmAuth.mutation(api.editors.mutations.setCurrentEditor, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sortOrder: 'Alphabetical',
       sortDirection: 'Ascending',
     })
 
     await playerAuth.mutation(api.editors.mutations.setCurrentEditor, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sortOrder: 'DateCreated',
       sortDirection: 'Descending',
     })
 
     await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const dmEditor = await dmAuth.query(api.editors.queries.getCurrentEditor, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     expect(dmEditor!.sortOrder).toBe('Alphabetical')
     expect(dmEditor!.sortDirection).toBe('Ascending')
 
     const playerEditor = await playerAuth.query(api.editors.queries.getCurrentEditor, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     expect(playerEditor!.sortOrder).toBe('DateCreated')
     expect(playerEditor!.sortDirection).toBe('Descending')
@@ -84,13 +84,13 @@ describe('session + editor state interaction', () => {
     const dmAuth = asDm(ctx)
 
     const s1 = await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     const s2 = await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     const s3 = await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const [session1, session2, session3] = await t.run(async (dbCtx) =>
@@ -117,20 +117,20 @@ describe('session + editor state interaction', () => {
     const dmAuth = asDm(ctx)
 
     const s1 = await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Session 1',
     })
     const s2 = await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Session 2',
     })
     const s3 = await dmAuth.mutation(api.sessions.mutations.startSession, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Session 3',
     })
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const [r1, r2, r3] = await t.run(async (dbCtx) =>

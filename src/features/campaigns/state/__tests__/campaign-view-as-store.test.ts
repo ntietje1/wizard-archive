@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
-import { testId } from '~/test/helpers/test-id'
+import { testCampaignId } from 'shared/test/campaign-id'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 import { useCampaignViewAsStore } from '../campaign-view-as-store'
 
 beforeEach(() => {
@@ -8,8 +9,8 @@ beforeEach(() => {
 
 describe('useCampaignViewAsStore', () => {
   it('stores the selected campaign player view', () => {
-    const campaignId = testId<'campaigns'>('campaign_view')
-    const memberId = testId<'campaignMembers'>('member_view')
+    const campaignId = testCampaignId('campaign_view')
+    const memberId = testCampaignMemberId('member_view')
 
     useCampaignViewAsStore.getState().setViewAsPlayer({ campaignId, memberId })
 
@@ -21,8 +22,8 @@ describe('useCampaignViewAsStore', () => {
 
   it('clears the selected campaign player view', () => {
     useCampaignViewAsStore.getState().setViewAsPlayer({
-      campaignId: testId<'campaigns'>('campaign_view'),
-      memberId: testId<'campaignMembers'>('member_view'),
+      campaignId: testCampaignId('campaign_view'),
+      memberId: testCampaignMemberId('member_view'),
     })
 
     useCampaignViewAsStore.getState().setViewAsPlayer(null)

@@ -1018,6 +1018,8 @@ describe('createLocalRuntimeFileSystem', () => {
 
   it('projects collaborative public demo sharing state through the local runtime', () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.collaborativeSessionNotes)
+    const miraMemberId = scenario.workspace.playerMembers?.[0]?.id
+    if (!miraMemberId) throw new Error('Expected the public demo player')
     const runtime = createLocalRuntime({
       dispatch: vi.fn(),
       setSelectedViewAsPlayerId: vi.fn(),
@@ -1027,10 +1029,10 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(runtime.sharing.viewAsParticipant).toMatchObject({
       status: 'available',
-      selectedParticipantId: 'demo-member-mira',
+      selectedParticipantId: miraMemberId,
       participants: [
         expect.objectContaining({
-          id: 'demo-member-mira',
+          id: miraMemberId,
           displayName: 'Mira',
         }),
       ],

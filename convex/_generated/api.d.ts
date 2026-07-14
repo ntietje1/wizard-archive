@@ -54,7 +54,9 @@ import type * as bookmarks_types from "../bookmarks/types.js";
 import type * as campaigns_constants from "../campaigns/constants.js";
 import type * as campaigns_defaultFolderInheritSharesMigration from "../campaigns/defaultFolderInheritSharesMigration.js";
 import type * as campaigns_functions_acceptedPlayerMember from "../campaigns/functions/acceptedPlayerMember.js";
+import type * as campaigns_functions_campaignIdentity from "../campaigns/functions/campaignIdentity.js";
 import type * as campaigns_functions_campaignMemberProfiles from "../campaigns/functions/campaignMemberProfiles.js";
+import type * as campaigns_functions_campaignMemberProjection from "../campaigns/functions/campaignMemberProjection.js";
 import type * as campaigns_functions_createCampaign from "../campaigns/functions/createCampaign.js";
 import type * as campaigns_functions_getCampaign from "../campaigns/functions/getCampaign.js";
 import type * as campaigns_functions_getCampaignMembers from "../campaigns/functions/getCampaignMembers.js";
@@ -64,6 +66,7 @@ import type * as campaigns_functions_joinCampaign from "../campaigns/functions/j
 import type * as campaigns_functions_lifecycle from "../campaigns/functions/lifecycle.js";
 import type * as campaigns_functions_updateCampaign from "../campaigns/functions/updateCampaign.js";
 import type * as campaigns_functions_updateCampaignMemberStatus from "../campaigns/functions/updateCampaignMemberStatus.js";
+import type * as campaigns_internalQueries from "../campaigns/internalQueries.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
 import type * as campaigns_validation from "../campaigns/validation.js";
@@ -343,7 +346,9 @@ declare const fullApi: ApiFromModules<{
   "campaigns/constants": typeof campaigns_constants;
   "campaigns/defaultFolderInheritSharesMigration": typeof campaigns_defaultFolderInheritSharesMigration;
   "campaigns/functions/acceptedPlayerMember": typeof campaigns_functions_acceptedPlayerMember;
+  "campaigns/functions/campaignIdentity": typeof campaigns_functions_campaignIdentity;
   "campaigns/functions/campaignMemberProfiles": typeof campaigns_functions_campaignMemberProfiles;
+  "campaigns/functions/campaignMemberProjection": typeof campaigns_functions_campaignMemberProjection;
   "campaigns/functions/createCampaign": typeof campaigns_functions_createCampaign;
   "campaigns/functions/getCampaign": typeof campaigns_functions_getCampaign;
   "campaigns/functions/getCampaignMembers": typeof campaigns_functions_getCampaignMembers;
@@ -353,6 +358,7 @@ declare const fullApi: ApiFromModules<{
   "campaigns/functions/lifecycle": typeof campaigns_functions_lifecycle;
   "campaigns/functions/updateCampaign": typeof campaigns_functions_updateCampaign;
   "campaigns/functions/updateCampaignMemberStatus": typeof campaigns_functions_updateCampaignMemberStatus;
+  "campaigns/internalQueries": typeof campaigns_internalQueries;
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
   "campaigns/validation": typeof campaigns_validation;

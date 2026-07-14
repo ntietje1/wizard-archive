@@ -22,7 +22,7 @@ describe('filesystem transaction semantics', () => {
     })
 
     const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
     })
     await t.run(async (dbCtx) => {
@@ -33,7 +33,7 @@ describe('filesystem transaction semantics', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId: receipt.transactionId!,
     })
 
@@ -53,7 +53,7 @@ describe('filesystem transaction semantics', () => {
     })
 
     const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: {
         type: 'rename',
         itemId: noteId,
@@ -65,14 +65,14 @@ describe('filesystem transaction semantics', () => {
     expect(receipt.events).toEqual([{ type: 'updated', itemId: noteId }])
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId: receipt.transactionId!,
     })
     let note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
     expect(note?.color).toBe('#14b8a6')
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId: receipt.transactionId!,
     })
     note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))

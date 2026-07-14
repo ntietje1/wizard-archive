@@ -10,10 +10,11 @@ import {
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 async function getShareInfo(
   dmAuth: ReturnType<typeof asDm>,
-  campaignId: Id<'campaigns'>,
+  campaignId: CampaignId,
   sidebarItemId: Id<'sidebarItems'>,
 ) {
   const [result] = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
@@ -28,9 +29,9 @@ async function getShareInfo(
 
 async function shareWithPlayer(
   dmAuth: ReturnType<typeof asDm>,
-  campaignId: Id<'campaigns'>,
+  campaignId: CampaignId,
   sidebarItemIds: Array<Id<'sidebarItems'>>,
-  campaignMemberId: Id<'campaignMembers'>,
+  campaignMemberId: CampaignMemberId,
   permissionLevel: 'view' | 'edit' | 'full_access' | 'none' = 'view',
 ) {
   await dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
@@ -49,9 +50,9 @@ describe('setResourcesMemberPermission', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId)
+    await shareWithPlayer(dmAuth, ctx.campaignDomainId, [noteId], ctx.player.memberDomainId)
 
-    const result = await getShareInfo(dmAuth, ctx.campaignId, noteId)
+    const result = await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)
     expect(result.shares).toHaveLength(1)
     expect(isUuidV7(result.shares[0].id)).toBe(true)
     expect(result.shares[0]).not.toHaveProperty('_id')
@@ -74,10 +75,16 @@ describe('setResourcesMemberPermission', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId, folderId], ctx.player.memberId, 'edit')
+    await shareWithPlayer(
+      dmAuth,
+      ctx.campaignDomainId,
+      [noteId, folderId],
+      ctx.player.memberDomainId,
+      'edit',
+    )
 
     const [note, folder] = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId, folderId],
     })
     expect(note.shares[0].permissionLevel).toBe('edit')
@@ -92,7 +99,13 @@ describe('setResourcesMemberPermission', () => {
       name: 'Folder',
     })
 
-    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId, folderId], ctx.player.memberId, 'edit')
+    await shareWithPlayer(
+      dmAuth,
+      ctx.campaignDomainId,
+      [noteId, folderId],
+      ctx.player.memberDomainId,
+      'edit',
+    )
 
     await t.run(async (dbCtx) => {
       const noteHistory = await dbCtx.db
@@ -123,11 +136,11 @@ describe('setResourcesMemberPermission', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId, 'view')
-    const before = await getShareInfo(dmAuth, ctx.campaignId, noteId)
-    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId, 'edit')
+    await shareWithPlayer(dmAuth, ctx.campaignDomainId, [noteId], ctx.player.memberDomainId, 'view')
+    const before = await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)
+    await shareWithPlayer(dmAuth, ctx.campaignDomainId, [noteId], ctx.player.memberDomainId, 'edit')
 
-    const result = await getShareInfo(dmAuth, ctx.campaignId, noteId)
+    const result = await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)
     expect(result.shares).toHaveLength(1)
     expect(result.shares[0].id).toBe(before.shares[0].id)
     expect(result.shares[0].permissionLevel).toBe('edit')
@@ -140,9 +153,9 @@ describe('setResourcesMemberPermission', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [noteId],
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
         permissionLevel: 'view',
       }),
     )
@@ -156,9 +169,9 @@ describe('setResourcesMemberPermission', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [noteId],
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
         permissionLevel: 'view',
       }),
     )
@@ -170,16 +183,22 @@ describe('setResourcesMemberPermission', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    for (const campaignMemberId of [ctx.dm.memberId, otherCtx.player.memberId]) {
-      await expectValidationFailed(
-        dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
-          campaignId: ctx.campaignId,
-          sidebarItemIds: [noteId],
-          campaignMemberId,
-          permissionLevel: 'view',
-        }),
-      )
-    }
+    await expectValidationFailed(
+      dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
+        campaignId: ctx.campaignDomainId,
+        sidebarItemIds: [noteId],
+        campaignMemberId: ctx.dm.memberDomainId,
+        permissionLevel: 'view',
+      }),
+    )
+    await expectNotFound(
+      dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
+        campaignId: ctx.campaignDomainId,
+        sidebarItemIds: [noteId],
+        campaignMemberId: otherCtx.player.memberDomainId,
+        permissionLevel: 'view',
+      }),
+    )
 
     for (const status of ['Pending', 'Rejected', 'Removed'] as const) {
       await t.run(async (dbCtx) => {
@@ -187,9 +206,9 @@ describe('setResourcesMemberPermission', () => {
       })
       await expectValidationFailed(
         dmAuth.mutation(api.sidebarShares.mutations.setResourcesMemberPermission, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           sidebarItemIds: [noteId],
-          campaignMemberId: ctx.player.memberId,
+          campaignMemberId: ctx.player.memberDomainId,
           permissionLevel: 'view',
         }),
       )
@@ -206,15 +225,20 @@ describe('clearResourcesMemberPermission', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId, folderId], ctx.player.memberId)
+    await shareWithPlayer(
+      dmAuth,
+      ctx.campaignDomainId,
+      [noteId, folderId],
+      ctx.player.memberDomainId,
+    )
     await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId, folderId],
-      campaignMemberId: ctx.player.memberId,
+      campaignMemberId: ctx.player.memberDomainId,
     })
 
     const [note, folder] = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId, folderId],
     })
     expect(note.shares).toHaveLength(0)
@@ -227,12 +251,12 @@ describe('clearResourcesMemberPermission', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId],
-      campaignMemberId: ctx.player.memberId,
+      campaignMemberId: ctx.player.memberDomainId,
     })
 
-    const result = await getShareInfo(dmAuth, ctx.campaignId, noteId)
+    const result = await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)
     expect(result.shares).toHaveLength(0)
   })
 
@@ -240,15 +264,15 @@ describe('clearResourcesMemberPermission', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId)
+    await shareWithPlayer(dmAuth, ctx.campaignDomainId, [noteId], ctx.player.memberDomainId)
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('campaignMembers', ctx.player.memberId, { status: 'Removed' })
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId],
-      campaignMemberId: ctx.player.memberId,
+      campaignMemberId: ctx.player.memberDomainId,
     })
 
     const remainingShares = await t.run(async (dbCtx) => {
@@ -273,11 +297,11 @@ describe('clearResourcesMemberPermission', () => {
       name: 'Folder',
     })
 
-    await shareWithPlayer(dmAuth, ctx.campaignId, [noteId], ctx.player.memberId, 'view')
+    await shareWithPlayer(dmAuth, ctx.campaignDomainId, [noteId], ctx.player.memberDomainId, 'view')
     await dmAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId, folderId],
-      campaignMemberId: ctx.player.memberId,
+      campaignMemberId: ctx.player.memberDomainId,
     })
 
     await t.run(async (dbCtx) => {
@@ -317,9 +341,9 @@ describe('clearResourcesMemberPermission', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarShares.mutations.clearResourcesMemberPermission, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [noteId],
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
       }),
     )
   })
@@ -348,7 +372,7 @@ describe('getSidebarItemsWithShares', () => {
     })
 
     const [folder, note] = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [folderId, noteId],
     })
 
@@ -374,7 +398,7 @@ describe('getSidebarItemsWithShares', () => {
       await dbCtx.db.patch('campaignMembers', ctx.player.memberId, { status: 'Removed' })
     })
 
-    const result = await getShareInfo(dmAuth, ctx.campaignId, noteId)
+    const result = await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)
 
     expect(result.shares.map((share) => share.campaignMemberId)).toEqual([ctx.player.memberId])
     expect(result.memberInheritedPermissions).toEqual({})
@@ -388,7 +412,7 @@ describe('getSidebarItemsWithShares', () => {
 
     await expectNotFound(
       dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [noteId],
       }),
     )
@@ -407,14 +431,14 @@ describe('setResourceAudiencePermissionForSidebarItems', () => {
     await dmAuth.mutation(
       api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [noteId, folderId],
         permissionLevel: 'view',
       },
     )
 
     let results = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId, folderId],
     })
     expect(results.map((item) => item.allPermissionLevel)).toEqual(['view', 'view'])
@@ -422,14 +446,14 @@ describe('setResourceAudiencePermissionForSidebarItems', () => {
     await dmAuth.mutation(
       api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [noteId, folderId],
         permissionLevel: null,
       },
     )
 
     results = await dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sidebarItemIds: [noteId, folderId],
     })
     expect(results.map((item) => item.allPermissionLevel)).toEqual([null, null])
@@ -444,7 +468,7 @@ describe('setResourceAudiencePermissionForSidebarItems', () => {
       playerAuth.mutation(
         api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
         {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           sidebarItemIds: [noteId],
           permissionLevel: 'view',
         },
@@ -462,18 +486,18 @@ describe('setFolderInheritShares', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarShares.mutations.setFolderInheritShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       folderId,
       inheritShares: true,
     })
-    expect((await getShareInfo(dmAuth, ctx.campaignId, folderId)).inheritShares).toBe(true)
+    expect((await getShareInfo(dmAuth, ctx.campaignDomainId, folderId)).inheritShares).toBe(true)
 
     await dmAuth.mutation(api.sidebarShares.mutations.setFolderInheritShares, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       folderId,
       inheritShares: false,
     })
-    expect((await getShareInfo(dmAuth, ctx.campaignId, folderId)).inheritShares).toBe(false)
+    expect((await getShareInfo(dmAuth, ctx.campaignDomainId, folderId)).inheritShares).toBe(false)
   })
 })
 
@@ -493,17 +517,23 @@ describe('permission resolution', () => {
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: noteId,
       }),
     )
 
-    await shareWithPlayer(dmAuth, ctx.campaignId, [folderId], ctx.player.memberId, 'edit')
+    await shareWithPlayer(
+      dmAuth,
+      ctx.campaignDomainId,
+      [folderId],
+      ctx.player.memberDomainId,
+      'edit',
+    )
 
     expect(
       (
         await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           id: noteId,
         })
       ).myPermissionLevel,
@@ -512,7 +542,7 @@ describe('permission resolution', () => {
     await dmAuth.mutation(
       api.sidebarShares.mutations.setResourceAudiencePermissionForSidebarItems,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         sidebarItemIds: [noteId],
         permissionLevel: 'view',
       },
@@ -521,7 +551,7 @@ describe('permission resolution', () => {
     expect(
       (
         await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           id: noteId,
         })
       ).myPermissionLevel,

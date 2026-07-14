@@ -62,7 +62,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
     })
 
@@ -97,7 +97,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId],
     })
 
@@ -136,7 +136,7 @@ describe('preview cleanup on hard delete', () => {
     await trashItem(t, fileId, ctx.dm.profile._id)
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId],
     })
 
@@ -174,7 +174,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [mapId],
     })
 
@@ -208,7 +208,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [mapId],
     })
 
@@ -250,7 +250,7 @@ describe('preview cleanup on hard delete', () => {
     await trashItem(t, mapId, ctx.dm.profile._id)
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [mapId],
     })
 
@@ -278,7 +278,7 @@ describe('preview cleanup on hard delete', () => {
     await trashItem(t, noteId, ctx.dm.profile._id)
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
     })
 
@@ -296,7 +296,7 @@ describe('preview cleanup on hard delete', () => {
     await trashItem(t, folderId, ctx.dm.profile._id)
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 

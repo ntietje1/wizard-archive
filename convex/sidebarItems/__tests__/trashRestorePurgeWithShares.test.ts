@@ -52,7 +52,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     // Trash the folder
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
@@ -76,7 +76,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     // Restore the folder
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'restore',
@@ -101,20 +101,20 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     // Player can see note again
     const noteAfterRestore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(noteAfterRestore.myPermissionLevel).toBe('view')
 
     // Trash again and permanently delete
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
     })
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
     })
 
@@ -149,20 +149,20 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'restore',
     })
 
     const note = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
     expect(note.myPermissionLevel).toBe('edit')
@@ -185,7 +185,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId, siblingNoteId],
       targetParentId: null,
       action: 'trash',
@@ -201,7 +201,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(afterTrash.map((item) => item?.status)).toEqual(['trashed', 'trashed', 'trashed'])
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId, siblingNoteId],
       targetParentId: null,
       action: 'restore',
@@ -237,7 +237,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
@@ -247,7 +247,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(afterTrash).not.toBeNull()
 
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
     })
 

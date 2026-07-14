@@ -4,6 +4,7 @@ import type { DataModel, Id } from '../_generated/dataModel'
 import type schema from '../schema'
 import { createFolder, createNote, testBlockNoteId } from './factories.helper'
 import { makeYjsUpdateWithBlocks } from './yjs.helper'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 type T = TestConvex<typeof schema>
 type AuthedContext = TestConvexForDataModel<DataModel>
@@ -13,6 +14,7 @@ export async function setupSiblingRelativeNoteLink(
   client: AuthedContext,
   args: {
     campaignId: Id<'campaigns'>
+    campaignDomainId: CampaignId
     creatorProfileId: Id<'userProfiles'>
   },
 ) {
@@ -32,7 +34,7 @@ export async function setupSiblingRelativeNoteLink(
   })
 
   await client.mutation(api.yjsSync.mutations.pushUpdate, {
-    campaignId: args.campaignId,
+    campaignId: args.campaignDomainId,
     documentId: sourceId,
     update: makeYjsUpdateWithBlocks([
       {
@@ -45,7 +47,7 @@ export async function setupSiblingRelativeNoteLink(
     ]),
   })
   await client.action(api.notes.actions.persistNoteBlocks, {
-    campaignId: args.campaignId,
+    campaignId: args.campaignDomainId,
     documentId: sourceId,
   })
 

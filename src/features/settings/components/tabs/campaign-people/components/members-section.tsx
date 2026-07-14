@@ -4,7 +4,7 @@ import { SettingsSection } from '~/features/settings/components/settings-section
 import { MemberRow } from './member-row'
 import { RemovePlayerDialog } from './remove-player-dialog'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { Badge } from '@wizard-archive/ui/shadcn/components/badge'
 import { Button } from '@wizard-archive/ui/shadcn/components/button'
 import { Separator } from '@wizard-archive/ui/shadcn/components/separator'
@@ -24,9 +24,9 @@ export function MembersSection({
   dmMember: CampaignMemberSummary | undefined
   acceptedPlayers: Array<CampaignMemberSummary>
   isDm: boolean
-  campaignId: Id<'campaigns'>
+  campaignId: CampaignId
 }) {
-  const [deletingMemberId, setDeletingMemberId] = useState<Id<'campaignMembers'> | null>(null)
+  const [deletingMemberId, setDeletingMemberId] = useState<CampaignMemberId | null>(null)
 
   const deletingPlayer = acceptedPlayers.find((p) => p.id === deletingMemberId)
 

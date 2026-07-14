@@ -17,6 +17,7 @@ import { makeYjsUpdateWithBlocks } from './yjs.helper'
 import type { DataModel, Id } from '../_generated/dataModel'
 import type { TestConvexForDataModel } from 'convex-test'
 import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   ResourceEvent,
   ResourceTransactionReceipt,
@@ -24,7 +25,7 @@ import type {
 type AuthedContext = TestConvexForDataModel<DataModel>
 
 type CreateSidebarItemSetupArgs = {
-  campaignId: Id<'campaigns'>
+  campaignId: CampaignId
   name: string
   parentTarget?: CreateParentTarget
   iconName?: ResourceIconName

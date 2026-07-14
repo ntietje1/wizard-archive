@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { setupUser } from '../../_test/identities.helper'
-import { createFile, createFolder, createGameMap, createNote } from '../../_test/factories.helper'
+import {
+  createFile,
+  createFolder,
+  createGameMap,
+  createNote,
+  getCampaignRowId,
+} from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
@@ -19,6 +25,7 @@ describe('campaign lifecycle', () => {
       name: 'Test Campaign',
       slug: 'test-campaign',
     })
+    const campaignRowId = await getCampaignRowId(t, campaignId)
 
     const joinStatus = await player.authed.mutation(api.campaigns.mutations.joinCampaign, {
       dmUsername: dm.profile.username,
@@ -44,10 +51,10 @@ describe('campaign lifecycle', () => {
     expect(playerCampaigns).toHaveLength(1)
     expect(playerCampaigns[0].id).toBe(campaignId)
 
-    const { folderId } = await createFolder(t, campaignId, dm.profile._id)
-    await createNote(t, campaignId, dm.profile._id, { parentId: folderId })
-    await createFile(t, campaignId, dm.profile._id)
-    await createGameMap(t, campaignId, dm.profile._id)
+    const { folderId } = await createFolder(t, campaignRowId, dm.profile._id)
+    await createNote(t, campaignRowId, dm.profile._id, { parentId: folderId })
+    await createFile(t, campaignRowId, dm.profile._id)
+    await createGameMap(t, campaignRowId, dm.profile._id)
 
     const { active: playerSidebarItems } = await player.authed.query(
       api.sidebarItems.queries.getSidebarItems,
@@ -57,7 +64,7 @@ describe('campaign lifecycle', () => {
       return await ctx.db
         .query('sidebarItems')
         .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
-          q.eq('campaignId', campaignId).eq('status', RESOURCE_STATUS.active),
+          q.eq('campaignId', campaignRowId).eq('status', RESOURCE_STATUS.active),
         )
         .collect()
     })
@@ -65,12 +72,12 @@ describe('campaign lifecycle', () => {
     expect(playerSidebarItems).toHaveLength(0)
     expect(expectedActiveItems.length).toBeGreaterThanOrEqual(4)
 
-    const lifecycleNote = await createNote(t, campaignId, dm.profile._id)
+    const lifecycleNote = await createNote(t, campaignRowId, dm.profile._id)
     await t.run(async (dbCtx) => {
       const dmMember = await dbCtx.db
         .query('campaignMembers')
         .withIndex('by_campaign_user', (q) =>
-          q.eq('campaignId', campaignId).eq('userId', dm.profile._id),
+          q.eq('campaignId', campaignRowId).eq('userId', dm.profile._id),
         )
         .unique()
       if (!dmMember) throw new Error('Missing DM member')
@@ -78,7 +85,7 @@ describe('campaign lifecycle', () => {
         historyEntryUuid: generateDomainId(DOMAIN_ID_KIND.historyEntry),
         itemId: lifecycleNote.noteId,
         itemType: 'note',
-        campaignId,
+        campaignId: campaignRowId,
         campaignMemberId: dmMember._id,
         action: EDIT_HISTORY_ACTION.content_edited,
         metadata: null,
@@ -89,7 +96,7 @@ describe('campaign lifecycle', () => {
         itemId: lifecycleNote.noteId,
         itemType: 'note',
         editHistoryId,
-        campaignId,
+        campaignId: campaignRowId,
         snapshotType: DOCUMENT_SNAPSHOT_TYPE.YjsState,
         data: new ArrayBuffer(0),
       })
@@ -129,14 +136,14 @@ describe('campaign lifecycle', () => {
     })
 
     const campaign = await t.run(async (ctx) => {
-      return await ctx.db.get('campaigns', campaignId)
+      return await ctx.db.get('campaigns', campaignRowId)
     })
     expect(campaign).toBeNull()
 
     const remainingNotes = await t.run(async (ctx) => {
       return await ctx.db
         .query('sidebarItems')
-        .withIndex('by_campaign_deletionTime', (q) => q.eq('campaignId', campaignId))
+        .withIndex('by_campaign_deletionTime', (q) => q.eq('campaignId', campaignRowId))
         .collect()
     })
     expect(remainingNotes).toHaveLength(0)
@@ -144,7 +151,7 @@ describe('campaign lifecycle', () => {
     const remainingMembers = await t.run(async (ctx) => {
       return await ctx.db
         .query('campaignMembers')
-        .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
+        .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignRowId))
         .collect()
     })
     expect(remainingMembers).toHaveLength(0)
@@ -152,7 +159,7 @@ describe('campaign lifecycle', () => {
     const remainingHistory = await t.run(async (ctx) => {
       return await ctx.db
         .query('editHistory')
-        .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
+        .withIndex('by_campaign', (q) => q.eq('campaignId', campaignRowId))
         .collect()
     })
     expect(remainingHistory).toHaveLength(0)
@@ -160,7 +167,7 @@ describe('campaign lifecycle', () => {
     const remainingSnapshots = await t.run(async (ctx) => {
       return await ctx.db
         .query('documentSnapshots')
-        .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId))
+        .withIndex('by_campaign', (q) => q.eq('campaignId', campaignRowId))
         .collect()
     })
     expect(remainingSnapshots).toHaveLength(0)

@@ -24,7 +24,7 @@ describe('persistBlocks', () => {
 
     await expectNotAuthenticated(
       t.action(api.notes.actions.persistNoteBlocks, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
       }),
     )
@@ -36,7 +36,7 @@ describe('persistBlocks', () => {
     const playerAuth = asPlayer(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Write Access Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -51,7 +51,7 @@ describe('persistBlocks', () => {
 
     await expectPermissionDenied(
       playerAuth.action(api.notes.actions.persistNoteBlocks, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
       }),
     )
@@ -62,14 +62,14 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Projection Canvas',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expectValidationFailed(
       dmAuth.action(api.notes.actions.persistNoteBlocks, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: canvasId,
       }),
     )
@@ -80,13 +80,13 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Empty Doc Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
@@ -107,19 +107,19 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Persist Blocks Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeYjsUpdate(),
     })
 
     const result = await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
@@ -140,7 +140,7 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Content Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -151,7 +151,7 @@ describe('persistBlocks', () => {
     }
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
         {
@@ -172,7 +172,7 @@ describe('persistBlocks', () => {
     })
 
     const result = await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
@@ -213,7 +213,7 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Imported Text Canvas',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -228,7 +228,7 @@ describe('persistBlocks', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.yjsSync.mutations.pushImportedTextNoteUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: canvasId,
         update: makeYjsUpdate(),
         content: [],
@@ -255,7 +255,7 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Imported Text Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -286,7 +286,7 @@ describe('persistBlocks', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushImportedTextNoteUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks(content),
       content,
@@ -359,13 +359,13 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Embed Aspect Ratio Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
         {
@@ -384,7 +384,7 @@ describe('persistBlocks', () => {
     })
 
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
@@ -411,13 +411,13 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Value Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
         {
@@ -439,7 +439,7 @@ describe('persistBlocks', () => {
     })
 
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 

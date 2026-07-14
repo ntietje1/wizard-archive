@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './types'
 import type { CampaignMemberSummary } from './types'
-import type { CampaignId, CampaignMemberId } from '../common/ids'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 export type CampaignActor =
   | { kind: 'dm'; campaignId: CampaignId }

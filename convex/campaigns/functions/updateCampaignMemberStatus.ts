@@ -1,9 +1,11 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
-import type { Id } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
 import type { CampaignMemberStatus } from '../../../shared/campaigns/types'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { requireCampaignMemberRow } from './campaignIdentity'
 
 const VALID_STATUS_TRANSITIONS: Record<
   CampaignMemberStatus,
@@ -20,12 +22,9 @@ const VALID_STATUS_TRANSITIONS: Record<
 
 export async function updateCampaignMemberStatus(
   ctx: DmMutationCtx,
-  { memberId, status }: { memberId: Id<'campaignMembers'>; status: CampaignMemberStatus },
-): Promise<Id<'campaignMembers'>> {
-  const member = await ctx.db.get('campaignMembers', memberId)
-  if (!member) {
-    throwClientError(ERROR_CODE.NOT_FOUND, 'Member not found')
-  }
+  { memberId, status }: { memberId: CampaignMemberId; status: CampaignMemberStatus },
+): Promise<CampaignMemberId> {
+  const member = await requireCampaignMemberRow(ctx, memberId)
 
   if (member.campaignId !== ctx.campaign._id) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Member does not belong to this campaign')
@@ -47,5 +46,5 @@ export async function updateCampaignMemberStatus(
     status,
   })
 
-  return member._id
+  return assertDomainId(DOMAIN_ID_KIND.campaignMember, member.campaignMemberUuid)
 }

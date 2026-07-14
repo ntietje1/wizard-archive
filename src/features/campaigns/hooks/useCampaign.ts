@@ -4,7 +4,7 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import { parseCampaignSlug } from 'shared/campaigns/validation'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import type { Campaign } from 'shared/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { parseUsername } from 'shared/users/validation'
 import type { CampaignSlug } from 'shared/campaigns/validation'
 import type { Username } from 'shared/users/validation'
@@ -19,7 +19,7 @@ export type CampaignContextType = CampaignRouteIdentity & {
   campaign: UseQueryResult<Campaign, Error>
   isDm: boolean | undefined
   isCampaignLoaded: boolean
-  campaignId: Id<'campaigns'> | undefined
+  campaignId: CampaignId | undefined
 }
 
 export const CampaignContext = createContext<CampaignContextType | null>(null)

@@ -37,7 +37,7 @@ describe('updateFileStorage', () => {
     )
 
     await playerAuth.mutation(api.files.mutations.updateFileStorage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       fileId,
       uploadSessionId: sessionId,
     })
@@ -77,7 +77,7 @@ describe('updateFileStorage', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.files.mutations.updateFileStorage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         fileId,
         uploadSessionId: sessionId,
       }),
@@ -111,7 +111,7 @@ describe('updateFileStorage', () => {
 
     await expectNotFound(
       playerAuth.mutation(api.files.mutations.updateFileStorage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         fileId,
         uploadSessionId: sessionId,
       }),
@@ -142,7 +142,7 @@ describe('updateFileStorage', () => {
     })
 
     await playerAuth.mutation(api.files.mutations.updateFileStorage, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       fileId,
       uploadSessionId: session.sessionId,
     })
@@ -165,7 +165,7 @@ describe('updateFileStorage', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.files.mutations.updateFileStorage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         fileId,
         uploadSessionId: null,
       }),

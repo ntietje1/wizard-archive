@@ -200,7 +200,7 @@ describe('onDeleteUser', () => {
   it("retires DM-owned campaigns and removes the deleted user's campaign state", async () => {
     const dm = await setupUser(t)
     const player = await setupUser(t)
-    const { campaignId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
     const { memberId: playerMemberId } = await addPlayerToCampaign(t, campaignId, player.profile)
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
     const { blockDbId } = await createBlock(t, noteId, campaignId, {
@@ -220,7 +220,7 @@ describe('onDeleteUser', () => {
     })
 
     await dm.authed.mutation(api.editors.mutations.setCurrentEditor, {
-      campaignId,
+      campaignId: campaignDomainId,
     })
 
     await t.run(async (ctx) => {
@@ -255,7 +255,7 @@ describe('onDeleteUser', () => {
   it('removes player campaign state without retiring the campaign', async () => {
     const dm = await setupUser(t)
     const player = await setupUser(t)
-    const { campaignId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
+    const { campaignId, campaignDomainId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
     const { memberId: playerMemberId } = await addPlayerToCampaign(t, campaignId, player.profile)
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
     const { blockDbId } = await createBlock(t, noteId, campaignId, {
@@ -275,7 +275,7 @@ describe('onDeleteUser', () => {
     })
 
     await player.authed.mutation(api.editors.mutations.setCurrentEditor, {
-      campaignId,
+      campaignId: campaignDomainId,
     })
 
     await t.run(async (ctx) => {

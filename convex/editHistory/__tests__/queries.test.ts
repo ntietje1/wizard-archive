@@ -18,7 +18,7 @@ describe('edit history queries', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Canonical history note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -32,7 +32,7 @@ describe('edit history queries', () => {
     expect(historyEntry).not.toBeNull()
     expect(isUuidV7(historyEntry!.historyEntryUuid)).toBe(true)
     const projectedEntry = await dmAuth.query(api.editHistory.queries.getHistoryEntry, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       editHistoryId: historyEntry!.historyEntryUuid,
     })
     expect(projectedEntry).toMatchObject({
@@ -43,7 +43,7 @@ describe('edit history queries', () => {
     expect(projectedEntry).not.toHaveProperty('historyEntryUuid')
     await expectValidationFailed(
       dmAuth.query(api.editHistory.queries.getHistoryEntry, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry!._id as never,
       }),
     )
@@ -55,7 +55,7 @@ describe('edit history queries', () => {
     const playerAuth = asPlayer(ctx)
 
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Shared history note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -77,7 +77,7 @@ describe('edit history queries', () => {
 
     await expectPermissionDenied(
       playerAuth.query(api.editHistory.queries.getHistoryEntry, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry!.historyEntryUuid,
       }),
     )

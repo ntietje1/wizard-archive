@@ -23,13 +23,13 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId],
       targetParentId: null,
       action: 'trash',
     })
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId],
     })
 
@@ -46,13 +46,13 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [mapId],
       targetParentId: null,
       action: 'trash',
     })
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [mapId],
     })
 
@@ -68,7 +68,7 @@ describe('storage lifecycle with file/map deletion', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const [file, map] = await t.run(async (dbCtx) => [
@@ -93,13 +93,13 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignId })
+    await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignDomainId })
 
     const [folder, file] = await t.run(async (dbCtx) => [
       await dbCtx.db.get('sidebarItems', folderId),
@@ -119,13 +119,13 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId],
       targetParentId: null,
       action: 'trash',
     })
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId],
     })
 
@@ -143,13 +143,13 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [mapId],
       targetParentId: null,
       action: 'trash',
     })
     await executeDeleteForeverCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [mapId],
     })
 

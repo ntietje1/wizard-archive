@@ -23,6 +23,7 @@ import {
 } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { Id } from '../../_generated/dataModel'
 import { requireCreateParentTarget } from '../validation/parent'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 describe('validateResourceTitle', () => {
   it('canonicalizes blank titles to Untitled', () => {
@@ -250,7 +251,7 @@ describe('cross-table slug uniqueness', () => {
     })
 
     const result = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'test',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -275,11 +276,11 @@ describe('cross-table slug uniqueness', () => {
     })
 
     const item1 = await dm1.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx1.campaignId,
+      campaignId: ctx1.campaignDomainId,
       slug: 'shared-name',
     })
     const item2 = await dm2.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx2.campaignId,
+      campaignId: ctx2.campaignDomainId,
       slug: 'shared-name',
     })
 
@@ -300,7 +301,7 @@ describe('cross-table slug uniqueness', () => {
     })
 
     const result = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'deleted-item',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -314,7 +315,7 @@ describe('cross-table slug uniqueness', () => {
 
     await expect(
       dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         slug: 'bad slug',
       }),
     ).rejects.toThrow('Slug cannot contain spaces')
@@ -325,7 +326,7 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     const created = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: '🎉🎊',
       parentTarget: { kind: 'direct', parentId: null },
       content: [],
@@ -341,14 +342,14 @@ describe('cross-table slug uniqueness', () => {
     const secondName = `${'a'.repeat(253)} 2`
 
     const first = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: firstName,
       parentTarget: { kind: 'direct', parentId: null },
       content: [],
     })
 
     const second = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: secondName,
       parentTarget: { kind: 'direct', parentId: null },
       content: [],
@@ -366,7 +367,7 @@ describe('cross-table slug uniqueness', () => {
 
     await expect(
       executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: {
           type: 'create',
           itemType: RESOURCE_TYPES.notes,
@@ -383,14 +384,14 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     const folder = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'folder-to-update',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expect(
       executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: {
           type: 'rename',
           itemId: folder.folderId,
@@ -405,7 +406,7 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     const receipt = await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: {
         type: 'create',
         itemType: RESOURCE_TYPES.files,
@@ -421,7 +422,7 @@ describe('cross-table slug uniqueness', () => {
     }
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       slug: created.slug,
     })
 
@@ -434,13 +435,13 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     const map = await createGameMapViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'map-color',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: {
         type: 'rename',
         itemId: map.mapId,
@@ -450,7 +451,7 @@ describe('cross-table slug uniqueness', () => {
     })
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       slug: map.slug,
     })
 
@@ -463,14 +464,14 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     const canvas = await createCanvasViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'canvas-to-update',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expect(
       executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: {
           type: 'rename',
           itemId: canvas.canvasId,
@@ -486,7 +487,7 @@ describe('folder share inheritance defaults', () => {
 
   async function getFolderInheritShares(
     client: ReturnType<typeof asDm>,
-    campaignId: Id<'campaigns'>,
+    campaignId: CampaignId,
     folderId: Id<'sidebarItems'>,
   ) {
     const item = await client.query(api.sidebarItems.queries.getSidebarItem, {
@@ -503,14 +504,14 @@ describe('folder share inheritance defaults', () => {
     const dmAuth = asDm(ctx)
 
     const folder = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'default-off',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await expect(getFolderInheritShares(dmAuth, ctx.campaignId, folder.folderId)).resolves.toBe(
-      false,
-    )
+    await expect(
+      getFolderInheritShares(dmAuth, ctx.campaignDomainId, folder.folderId),
+    ).resolves.toBe(false)
   })
 
   it('uses the campaign folder inheritance default only for future folders', async () => {
@@ -518,41 +519,41 @@ describe('folder share inheritance defaults', () => {
     const dmAuth = asDm(ctx)
 
     const before = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'before-setting-change',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       defaultFolderInheritShares: true,
     })
 
     const afterEnabled = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'after-setting-enabled',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       defaultFolderInheritShares: false,
     })
 
     const afterDisabled = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'after-setting-disabled',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await expect(getFolderInheritShares(dmAuth, ctx.campaignId, before.folderId)).resolves.toBe(
-      false,
-    )
     await expect(
-      getFolderInheritShares(dmAuth, ctx.campaignId, afterEnabled.folderId),
+      getFolderInheritShares(dmAuth, ctx.campaignDomainId, before.folderId),
+    ).resolves.toBe(false)
+    await expect(
+      getFolderInheritShares(dmAuth, ctx.campaignDomainId, afterEnabled.folderId),
     ).resolves.toBe(true)
     await expect(
-      getFolderInheritShares(dmAuth, ctx.campaignId, afterDisabled.folderId),
+      getFolderInheritShares(dmAuth, ctx.campaignDomainId, afterDisabled.folderId),
     ).resolves.toBe(false)
   })
 })

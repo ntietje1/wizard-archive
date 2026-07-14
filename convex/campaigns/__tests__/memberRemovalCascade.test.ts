@@ -16,7 +16,7 @@ describe('multi-player share + membership removal cascade', () => {
   const t = createTestContext()
 
   it('removed player loses access to all campaign content', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 2)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 2)
     const dmAuth = dm.authed
     const p1 = players[0]
     const p2 = players[1]
@@ -36,8 +36,8 @@ describe('multi-player share + membership removal cascade', () => {
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId: p1.memberId,
+      campaignId: campaignDomainId,
+      memberId: p1.memberDomainId,
       status: 'Removed',
     })
 
@@ -45,14 +45,14 @@ describe('multi-player share + membership removal cascade', () => {
     expect(p1Campaigns).toHaveLength(0)
 
     const p2Note = await p2.authed.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId,
+      campaignId: campaignDomainId,
       id: noteId,
     })
     expect(p2Note.myPermissionLevel).toBe('view')
   })
 
   it('shares and bookmarks remain in DB after member removal', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 1)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 1)
     const dmAuth = dm.authed
     const p1 = players[0]
 
@@ -70,8 +70,8 @@ describe('multi-player share + membership removal cascade', () => {
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId: p1.memberId,
+      campaignId: campaignDomainId,
+      memberId: p1.memberDomainId,
       status: 'Removed',
     })
 
@@ -84,28 +84,28 @@ describe('multi-player share + membership removal cascade', () => {
   })
 
   it('restores a removed player to accepted membership', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 1)
+    const { dm, players, campaignDomainId } = await setupMultiPlayerContext(t, 1)
     const dmAuth = dm.authed
     const p1 = players[0]
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId: p1.memberId,
+      campaignId: campaignDomainId,
+      memberId: p1.memberDomainId,
       status: 'Removed',
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId: p1.memberId,
+      campaignId: campaignDomainId,
+      memberId: p1.memberDomainId,
       status: 'Accepted',
     })
 
     const campaigns = await p1.authed.query(api.campaigns.queries.getUserCampaigns, {})
-    expect(campaigns.map((campaign) => campaign.id)).toContain(campaignId)
+    expect(campaigns.map((campaign) => campaign.id)).toContain(campaignDomainId)
   })
 
   it('block shares for removed player still exist but player cannot access note', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 1)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 1)
     const dmAuth = dm.authed
     const p1 = players[0]
 
@@ -128,36 +128,38 @@ describe('multi-player share + membership removal cascade', () => {
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId: p1.memberId,
+      campaignId: campaignDomainId,
+      memberId: p1.memberDomainId,
       status: 'Removed',
     })
 
-    await expectPermissionDenied(p1.authed.query(api.notes.queries.getNote, { campaignId, noteId }))
+    await expectPermissionDenied(
+      p1.authed.query(api.notes.queries.getNote, { campaignId: campaignDomainId, noteId }),
+    )
 
     const blockShare = await t.run(async (dbCtx) => dbCtx.db.get('blockShares', blockShareId))
     expect(blockShare).not.toBeNull()
   })
 
   it('DM can still see all content after removing all players', async () => {
-    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 2)
+    const { dm, players, campaignId, campaignDomainId } = await setupMultiPlayerContext(t, 2)
     const dmAuth = dm.authed
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId: players[0].memberId,
+      campaignId: campaignDomainId,
+      memberId: players[0].memberDomainId,
       status: 'Removed',
     })
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
-      campaignId,
-      memberId: players[1].memberId,
+      campaignId: campaignDomainId,
+      memberId: players[1].memberDomainId,
       status: 'Removed',
     })
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId,
+      campaignId: campaignDomainId,
     })
     const noteItem = items.find((i) => i.id === noteId)
     expect(noteItem).toBeDefined()

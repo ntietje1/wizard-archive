@@ -15,7 +15,7 @@ import type { Id } from '../../_generated/dataModel'
 import type { CampaignMemberSummary } from '../../../shared/campaigns/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { BlockShareInfo } from '@wizard-archive/editor/notes/document-contract'
-import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 function normalizeBlockMemberPermission(
   permissionLevel: PermissionLevel | null | undefined,
@@ -35,9 +35,9 @@ export const getBlocksWithShares = async (
     blockNoteIds: Array<NoteBlockId>
   },
 ): Promise<{
-  blocks: Array<BlockShareInfo<Id<'campaignMembers'>>>
+  blocks: Array<BlockShareInfo<CampaignMemberId>>
   playerMembers: Array<CampaignMemberSummary>
-  notePermissionsByMemberId: Record<Id<'campaignMembers'>, PermissionLevel>
+  notePermissionsByMemberId: Record<CampaignMemberId, PermissionLevel>
 }> => {
   const note = await getSidebarItem(ctx, noteId)
   if (!note || note.type !== RESOURCE_TYPES.notes) {
@@ -60,20 +60,22 @@ export const getBlocksWithShares = async (
 
   const sharesByBlockId = new Map<
     Id<'blocks'>,
-    Record<Id<'campaignMembers'>, Extract<PermissionLevel, 'none' | 'view'>>
+    Record<CampaignMemberId, Extract<PermissionLevel, 'none' | 'view'>>
   >()
   for (const share of allNoteShares) {
+    const memberId = sharePlayers.memberIdByRowId.get(share.campaignMemberId)
+    if (!memberId) continue
     const permissions = sharesByBlockId.get(share.blockId) ?? {}
-    permissions[share.campaignMemberId] = normalizeBlockMemberPermission(share.permissionLevel)
+    permissions[memberId] = normalizeBlockMemberPermission(share.permissionLevel)
     sharesByBlockId.set(share.blockId, permissions)
   }
   const notePermissionsByMemberId = Object.fromEntries(
     sharePlayers.notePermissionByMemberId,
-  ) as Record<Id<'campaignMembers'>, PermissionLevel>
+  ) as Record<CampaignMemberId, PermissionLevel>
 
   const blocks = await asyncMap(
     blockNoteIds,
-    async (blockNoteId): Promise<BlockShareInfo<Id<'campaignMembers'>>> => {
+    async (blockNoteId): Promise<BlockShareInfo<CampaignMemberId>> => {
       const block = await findBlockByBlockNoteId(ctx, { noteId, blockNoteId })
 
       if (!block) {

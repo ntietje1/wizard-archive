@@ -17,6 +17,8 @@ import type {
   ResourceTransactionReceipt,
 } from '@wizard-archive/editor/resources/transaction-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
 
 type BlockShareActionCtx = Pick<ActionCtx, 'runMutation' | 'runQuery'>
 type BlockShareActionCommand = Extract<
@@ -71,6 +73,21 @@ async function executeProjectedBlockShareCommand(
   return receipt
 }
 
+async function resolveCampaignRowId(ctx: BlockShareActionCtx, campaignId: CampaignId) {
+  return await ctx.runQuery(internal.campaigns.internalQueries.resolveCampaignRowId, { campaignId })
+}
+
+async function resolveCampaignAndMemberRowIds(
+  ctx: BlockShareActionCtx,
+  campaignId: CampaignId,
+  campaignMemberId: CampaignMemberId,
+) {
+  return await ctx.runQuery(internal.campaigns.internalQueries.resolveCampaignAndMemberRowIds, {
+    campaignId,
+    campaignMemberId,
+  })
+}
+
 function blockMemberPermissionCommand({
   blockNoteIds,
   campaignMemberId,
@@ -92,10 +109,10 @@ function blockMemberPermissionCommand({
 }
 
 const blockMemberActionArgs = {
-  campaignId: v.id('campaigns'),
+  campaignId: campaignIdValidator,
   noteId: v.id('sidebarItems'),
   blockNoteIds: v.array(blockNoteIdValidator),
-  campaignMemberId: v.id('campaignMembers'),
+  campaignMemberId: campaignMemberIdValidator,
 }
 
 function createBlockMemberPermissionHandler(
@@ -105,18 +122,19 @@ function createBlockMemberPermissionHandler(
   return async (
     ctx: BlockShareActionCtx,
     args: {
-      campaignId: Id<'campaigns'>
+      campaignId: CampaignId
       noteId: Id<'sidebarItems'>
       blockNoteIds: Array<string>
-      campaignMemberId: Id<'campaignMembers'>
+      campaignMemberId: CampaignMemberId
     },
   ): Promise<ResourceTransactionReceipt> => {
+    const rowIds = await resolveCampaignAndMemberRowIds(ctx, args.campaignId, args.campaignMemberId)
     return await executeProjectedBlockShareCommand(ctx, {
-      campaignId: args.campaignId,
+      campaignId: rowIds.campaignId,
       command: blockMemberPermissionCommand({
         noteId: args.noteId,
         blockNoteIds: args.blockNoteIds,
-        campaignMemberId: args.campaignMemberId,
+        campaignMemberId: rowIds.campaignMemberId,
         permissionLevel,
       }),
       historyStatus,
@@ -126,15 +144,16 @@ function createBlockMemberPermissionHandler(
 
 export const setBlocksShareStatus = action({
   args: {
-    campaignId: v.id('campaigns'),
+    campaignId: campaignIdValidator,
     noteId: v.id('sidebarItems'),
     blockNoteIds: v.array(blockNoteIdValidator),
     status: blockShareStatusValidator,
   },
   returns: fileSystemTransactionReceiptValidator,
   handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
+    const campaignId = await resolveCampaignRowId(ctx, args.campaignId)
     return await executeProjectedBlockShareCommand(ctx, {
-      campaignId: args.campaignId,
+      campaignId,
       command: {
         type: RESOURCE_COMMAND_TYPE.setBlocksShareStatus,
         noteId: args.noteId,
@@ -159,20 +178,21 @@ export const unshareBlocks = action({
 
 export const setBlockMemberPermission = action({
   args: {
-    campaignId: v.id('campaigns'),
+    campaignId: campaignIdValidator,
     noteId: v.id('sidebarItems'),
     blockNoteIds: v.array(blockNoteIdValidator),
-    campaignMemberId: v.id('campaignMembers'),
+    campaignMemberId: campaignMemberIdValidator,
     permissionLevel: v.nullable(blockVisibilityPermissionLevelValidator),
   },
   returns: fileSystemTransactionReceiptValidator,
   handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
+    const rowIds = await resolveCampaignAndMemberRowIds(ctx, args.campaignId, args.campaignMemberId)
     return await executeProjectedBlockShareCommand(ctx, {
-      campaignId: args.campaignId,
+      campaignId: rowIds.campaignId,
       command: blockMemberPermissionCommand({
         noteId: args.noteId,
         blockNoteIds: args.blockNoteIds,
-        campaignMemberId: args.campaignMemberId,
+        campaignMemberId: rowIds.campaignMemberId,
         permissionLevel: args.permissionLevel,
       }),
     })

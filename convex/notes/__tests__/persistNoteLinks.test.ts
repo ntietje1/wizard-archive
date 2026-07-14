@@ -15,10 +15,11 @@ import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import { createAccessibleResourcePathResolver } from '../../sidebarItems/functions/resourcePathResolver'
 import type { Block } from '../../blocks/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,
-  campaignId: Id<'campaigns'>,
+  campaignId: CampaignId,
   noteId: Id<'sidebarItems'>,
   blocks: Parameters<typeof makeYjsUpdateWithBlocks>[0],
 ) {
@@ -104,17 +105,17 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'paragraph',
@@ -142,22 +143,22 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { folderId } = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Factions',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'The Guild',
       parentTarget: { kind: 'direct', parentId: folderId },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'paragraph',
@@ -177,17 +178,17 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'paragraph',
@@ -221,17 +222,17 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Capital',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'paragraph',
@@ -266,12 +267,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'paragraph',
@@ -306,12 +307,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'paragraph',
@@ -337,12 +338,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'paragraph',
@@ -374,12 +375,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -394,7 +395,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       },
     ] as Parameters<typeof makeYjsUpdateWithBlocks>[0]
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, blocks)
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, blocks)
     const originalLink = await t.run(async (dbCtx) => {
       const links = await dbCtx.db
         .query('noteLinks')
@@ -405,7 +406,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       return links[0]
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, blocks)
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, sourceId, blocks)
 
     await t.run(async (dbCtx) => {
       const links = await dbCtx.db
@@ -426,12 +427,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -484,12 +485,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -540,12 +541,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -590,12 +591,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -622,7 +623,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -649,7 +650,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -670,7 +671,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     })
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Future Target',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -693,12 +694,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -738,17 +739,17 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const dmAuth = asDm(ctx)
 
     const { folderId: worldId } = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'World',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Capital',
       parentTarget: { kind: 'direct', parentId: worldId },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: worldId },
     })
@@ -773,12 +774,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Hidden Target',
       parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
     })

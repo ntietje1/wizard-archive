@@ -4,7 +4,7 @@ import { createGameMap, createNote } from './factories.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type { DataModel, Doc, Id } from '../_generated/dataModel'
 import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
-import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
 import type schema from '../schema'
 
 type T = TestConvex<typeof schema>
@@ -15,7 +15,7 @@ export async function createSnapshotPin(
   t: T,
   client: AuthedContext,
   args: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
     mapId: Id<'sidebarItems'>
     itemId: Id<'sidebarItems'>
     x: number
@@ -41,6 +41,7 @@ export async function createMapWithTwoSnapshotPins(
   client: AuthedContext,
   args: {
     campaignId: Id<'campaigns'>
+    campaignDomainId: CampaignId
     ownerId: Id<'userProfiles'>
   },
 ) {
@@ -49,7 +50,7 @@ export async function createMapWithTwoSnapshotPins(
   const { noteId: secondNoteId } = await createNote(t, args.campaignId, args.ownerId)
 
   await createSnapshotPin(t, client, {
-    campaignId: args.campaignId,
+    campaignId: args.campaignDomainId,
     mapId,
     itemId: firstNoteId,
     x: 10,
@@ -57,7 +58,7 @@ export async function createMapWithTwoSnapshotPins(
   })
 
   await createSnapshotPin(t, client, {
-    campaignId: args.campaignId,
+    campaignId: args.campaignDomainId,
     mapId,
     itemId: secondNoteId,
     x: 30,

@@ -27,31 +27,40 @@ export async function setupCampaignContext(t: T) {
   const dm = await setupUser(t)
   const player = await setupUser(t)
 
-  const { campaignId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
-  const { memberId: playerMemberId } = await addPlayerToCampaign(t, campaignId, player.profile)
+  const { campaignId, campaignDomainId, dmMemberId, dmMemberDomainId } = await createCampaignWithDm(
+    t,
+    dm.profile,
+  )
+  const { memberId: playerMemberId, memberDomainId: playerMemberDomainId } =
+    await addPlayerToCampaign(t, campaignId, player.profile)
 
   return {
-    dm: { ...dm, memberId: dmMemberId },
-    player: { ...player, memberId: playerMemberId },
+    dm: { ...dm, memberId: dmMemberId, memberDomainId: dmMemberDomainId },
+    player: { ...player, memberId: playerMemberId, memberDomainId: playerMemberDomainId },
     campaignId,
+    campaignDomainId,
   }
 }
 
 export async function setupMultiPlayerContext(t: T, playerCount: number) {
   const dm = await setupUser(t)
-  const { campaignId, dmMemberId } = await createCampaignWithDm(t, dm.profile)
+  const { campaignId, campaignDomainId, dmMemberId, dmMemberDomainId } = await createCampaignWithDm(
+    t,
+    dm.profile,
+  )
 
   const players = []
   for (let i = 0; i < playerCount; i++) {
     const p = await setupUser(t)
-    const { memberId } = await addPlayerToCampaign(t, campaignId, p.profile)
-    players.push({ ...p, memberId })
+    const { memberId, memberDomainId } = await addPlayerToCampaign(t, campaignId, p.profile)
+    players.push({ ...p, memberId, memberDomainId })
   }
 
   return {
-    dm: { ...dm, memberId: dmMemberId },
+    dm: { ...dm, memberId: dmMemberId, memberDomainId: dmMemberDomainId },
     players,
     campaignId,
+    campaignDomainId,
   }
 }
 

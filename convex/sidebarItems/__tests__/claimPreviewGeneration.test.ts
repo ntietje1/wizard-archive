@@ -30,7 +30,7 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
 
@@ -55,7 +55,7 @@ describe('claimPreviewGeneration', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: folderId,
     })
 
@@ -80,7 +80,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
 
@@ -102,7 +102,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: fileId,
     })
 
@@ -125,7 +125,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
       }),
     )
@@ -139,7 +139,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
       }),
     )
@@ -156,7 +156,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
       }),
     )
@@ -169,13 +169,13 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const first = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
     expect(first.status).toBe('claimed')
 
     const second = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
     expect(second).toEqual({
@@ -191,7 +191,7 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const first = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
     expect(first.status).toBe('claimed')
@@ -202,7 +202,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
     expect(result.status).toBe('claimed')
@@ -223,7 +223,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
     expect(result).toEqual({
@@ -246,7 +246,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
 
@@ -259,7 +259,7 @@ describe('claimPreviewGeneration', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const first = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
     expect(first.status).toBe('claimed')
@@ -272,7 +272,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const second = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
 
@@ -296,7 +296,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: noteId,
     })
     expect(result.status).toBe('claimed')
@@ -309,7 +309,7 @@ describe('claimPreviewGeneration', () => {
     const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: canvasId,
     })
 
@@ -342,7 +342,7 @@ describe('claimPreviewGeneration', () => {
     })
 
     const result = await playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemId: canvasId,
     })
 
@@ -365,7 +365,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: canvasId,
       }),
     )
@@ -379,7 +379,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: canvasId,
       }),
     )
@@ -391,7 +391,7 @@ describe('claimPreviewGeneration', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.sidebarItems.mutations.claimPreviewGeneration, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         itemId: noteId,
       }),
     )

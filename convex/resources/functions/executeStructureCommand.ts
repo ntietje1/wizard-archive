@@ -31,7 +31,7 @@ import type { VersionStamp } from '@wizard-archive/editor/resources/component-ve
 import type { WithoutSystemFields } from 'convex/server'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { Doc } from '../../_generated/dataModel'
-import type { ResourceCampaignMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 
 type ExecuteStructureCommandArgs = {
   operationId: string
@@ -58,7 +58,7 @@ class CatalogRejection extends Error {
   }
 }
 
-async function getResource(ctx: ResourceCampaignMutationCtx, resourceId: ResourceId) {
+async function getResource(ctx: CampaignMutationCtx, resourceId: ResourceId) {
   return await ctx.db
     .query('resources')
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
@@ -66,7 +66,7 @@ async function getResource(ctx: ResourceCampaignMutationCtx, resourceId: Resourc
 }
 
 async function requireResource(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   resourceId: ResourceId,
 ): Promise<Doc<'resources'>> {
@@ -77,7 +77,7 @@ async function requireResource(
 }
 
 async function validateParent(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   parentId: ResourceId | null,
 ): Promise<Doc<'resources'> | null> {
@@ -166,7 +166,7 @@ async function planMetadataUpdate(
 }
 
 async function applyMetadataUpdates(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   updates: ReadonlyArray<PlannedMetadataUpdate>,
 ): Promise<void> {
   for (const update of updates) {
@@ -177,7 +177,7 @@ async function applyMetadataUpdates(
 }
 
 async function createResource(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   actorId: CampaignMemberId,
   operationId: OperationId,
@@ -232,7 +232,7 @@ async function createResource(
 }
 
 async function updateResourceMetadata(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   actorId: CampaignMemberId,
   operationId: OperationId,
@@ -255,7 +255,7 @@ async function updateResourceMetadata(
 }
 
 async function operationRoots(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   resourceIds: ReadonlyArray<ResourceId>,
 ): Promise<ReadonlyArray<Doc<'resources'>>> {
@@ -277,7 +277,7 @@ async function operationRoots(
 }
 
 async function hasSelectedAncestor(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   resource: Doc<'resources'>,
   selected: ReadonlySet<ResourceId>,
@@ -303,7 +303,7 @@ async function hasSelectedAncestor(
 }
 
 async function descendants(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   roots: ReadonlyArray<Doc<'resources'>>,
 ): Promise<ReadonlyArray<Doc<'resources'>>> {
@@ -330,7 +330,7 @@ async function descendants(
 }
 
 async function lifecycleClosure(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   resourceIds: ReadonlyArray<ResourceId>,
   lifecycle: 'active' | 'trashed',
@@ -344,7 +344,7 @@ async function lifecycleClosure(
 }
 
 async function moveResources(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   actorId: CampaignMemberId,
   operationId: OperationId,
@@ -389,7 +389,7 @@ async function moveResources(
 }
 
 async function changeLifecycle(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   actorId: CampaignMemberId,
   operationId: OperationId,
@@ -434,7 +434,7 @@ async function changeLifecycle(
 }
 
 async function permanentlyDeleteResources(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   operationId: OperationId,
   command: Extract<ResourceStructureCommand, { type: 'permanentlyDelete' }>,
@@ -526,7 +526,7 @@ async function permanentlyDeleteResources(
 }
 
 async function applyCommand(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   campaignId: CampaignId,
   actorId: CampaignMemberId,
   operationId: OperationId,
@@ -550,7 +550,7 @@ async function applyCommand(
 }
 
 export async function executeStructureCommand(
-  ctx: ResourceCampaignMutationCtx,
+  ctx: CampaignMutationCtx,
   args: ExecuteStructureCommandArgs,
 ): Promise<ResourceStructureCommandResult> {
   let operationId: OperationId

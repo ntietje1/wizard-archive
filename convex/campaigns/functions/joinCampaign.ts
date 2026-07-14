@@ -8,7 +8,7 @@ import {
 } from '../../../shared/campaigns/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { getCampaignBySlug } from './getCampaign'
+import { getCampaignRowBySlug } from './getCampaign'
 import type { CampaignMemberStatus } from '../../../shared/campaigns/types'
 import type { AuthMutationCtx } from '../../functions'
 
@@ -17,7 +17,7 @@ export async function joinCampaign(
   { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
 ): Promise<CampaignMemberStatus> {
   const profile = ctx.user.profile
-  const campaign = await getCampaignBySlug(ctx, { dmUsername, slug })
+  const campaign = await getCampaignRowBySlug(ctx, { dmUsername, slug })
 
   if (campaign.status !== CAMPAIGN_STATUS.Active) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'This campaign is not accepting new members')
@@ -25,7 +25,9 @@ export async function joinCampaign(
 
   const existingMember = await ctx.db
     .query('campaignMembers')
-    .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaign.id).eq('userId', profile._id))
+    .withIndex('by_campaign_user', (q) =>
+      q.eq('campaignId', campaign._id).eq('userId', profile._id),
+    )
     .unique()
 
   if (existingMember) {
@@ -35,7 +37,7 @@ export async function joinCampaign(
   await ctx.db.insert('campaignMembers', {
     campaignMemberUuid: generateDomainId(DOMAIN_ID_KIND.campaignMember),
     userId: profile._id,
-    campaignId: campaign.id,
+    campaignId: campaign._id,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Pending,
   })

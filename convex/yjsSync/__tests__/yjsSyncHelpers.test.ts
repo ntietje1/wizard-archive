@@ -68,7 +68,7 @@ describe('createYjsDocument', () => {
     const dmAuth = asDm(ctx)
 
     const result = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -88,7 +88,7 @@ describe('createYjsDocument', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Idempotent Note',
       parentTarget: { kind: 'direct', parentId: null },
     })

@@ -131,7 +131,9 @@ export function createLocalWorkspaceActor(
 function localAvailabilityTargetLabel(workspace: LocalWorkspaceState) {
   const selectedPlayerId = workspace.selectedViewAsPlayerId
   if (!selectedPlayerId) return 'you'
-  const selectedPlayer = workspace.playerMembers?.find((member) => member.id === selectedPlayerId)
+  const selectedPlayer = workspace.playerMembers?.find(
+    (member) => String(member.id) === String(selectedPlayerId),
+  )
   return selectedPlayer ? getUserDisplayName(selectedPlayer.userProfile) : 'the selected player'
 }
 

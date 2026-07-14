@@ -6,6 +6,7 @@ import { createNote } from '../../_test/factories.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import type { Id } from '../../_generated/dataModel'
 import type { ResourceTransactionReceipt } from '@wizard-archive/editor/resources/transaction-contract'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 async function executeToggleBookmarks(
   dmAuth: ReturnType<typeof asDm>,
@@ -13,7 +14,7 @@ async function executeToggleBookmarks(
     campaignId,
     itemIds,
   }: {
-    campaignId: Id<'campaigns'>
+    campaignId: CampaignId
     itemIds: Array<Id<'sidebarItems'>>
   },
 ) {
@@ -37,7 +38,7 @@ describe('filesystem bookmark operations', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const initialReceipt = await executeToggleBookmarks(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemIds: [noteId, noteId],
     })
 
@@ -52,12 +53,12 @@ describe('filesystem bookmark operations', () => {
 
     const transactionId = transactionIdFrom(initialReceipt)
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId,
     })
 
     const afterUndoReceipt = await executeToggleBookmarks(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemIds: [noteId, noteId],
     })
     expect(afterUndoReceipt.patches).toMatchObject([
@@ -65,16 +66,16 @@ describe('filesystem bookmark operations', () => {
     ])
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId: transactionIdFrom(afterUndoReceipt),
     })
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId,
     })
 
     const afterRedoReceipt = await executeToggleBookmarks(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       itemIds: [noteId],
     })
     expect(afterRedoReceipt.patches).toMatchObject([

@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { api } from 'convex/_generated/api'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { WIZARD_EDITOR_DEFAULT_SORT_OPTIONS } from '@wizard-archive/editor/adapter'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import type { WizardEditorSortOptions } from '@wizard-archive/editor/adapter'
 import { liveWorkspacePreferencesQuery } from '~/editor-adapters/live/live-workspace-preferences'
 import type { LiveWorkspacePreferences } from '~/editor-adapters/live/live-workspace-preferences'
@@ -17,12 +17,12 @@ interface LiveSidebarSortOptions {
 }
 
 type WorkspaceScopedSortOptions = {
-  workspaceRecordId: Id<'campaigns'>
+  workspaceRecordId: CampaignId
   options: WizardEditorSortOptions
 }
 
 type SidebarSortMutationContext = {
-  workspaceRecordId: Id<'campaigns'>
+  workspaceRecordId: CampaignId
   mutationId: number
   nextSortOptions: WizardEditorSortOptions
   previousMutationId: number | null
@@ -41,7 +41,7 @@ export function useLiveSidebarSortOptions(): LiveSidebarSortOptions {
     null,
   )
   const nextMutationId = useRef(0)
-  const latestMutationIds = useRef(new Map<Id<'campaigns'>, number>())
+  const latestMutationIds = useRef(new Map<CampaignId, number>())
   const mutationContexts = useRef(new Map<number, SidebarSortMutationContext>())
   const currentSortOptionsRef = useRef(WIZARD_EDITOR_DEFAULT_SORT_OPTIONS)
   const activeWorkspaceRecordIdRef = useRef(workspaceRecordId)
@@ -60,7 +60,7 @@ export function useLiveSidebarSortOptions(): LiveSidebarSortOptions {
     : (activeFallbackSortOptions ?? WIZARD_EDITOR_DEFAULT_SORT_OPTIONS)
   const currentSortOptions = activePendingSortOptions ?? savedSortOptions
   currentSortOptionsRef.current = currentSortOptions
-  const clearPendingSortOptionsForWorkspace = (settledWorkspaceRecordId: Id<'campaigns'>) => {
+  const clearPendingSortOptionsForWorkspace = (settledWorkspaceRecordId: CampaignId) => {
     setPendingSortOptions((current) =>
       current?.workspaceRecordId === settledWorkspaceRecordId ? null : current,
     )

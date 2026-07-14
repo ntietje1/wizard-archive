@@ -79,14 +79,14 @@ describe('campaign deletion cascade', () => {
 
     const { sessionId } = await createSession(t, ctx.campaignId)
     const moveReceipt = await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [fileId],
       targetParentId: folderId,
     })
     expect(moveReceipt.transactionId).not.toBeNull()
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const cId = ctx.campaignId
@@ -160,7 +160,7 @@ describe('campaign deletion cascade', () => {
     })
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const [active, trashed] = await t.run(async (dbCtx) => {
@@ -179,7 +179,7 @@ describe('campaign deletion cascade', () => {
     const cId = ctx.campaignId
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
-      campaignId: cId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const campaign = await t.run(async (dbCtx) => {
@@ -194,16 +194,16 @@ describe('campaign deletion cascade', () => {
     const cId = ctx.campaignId
 
     await dmAuth.mutation(api.editors.mutations.setCurrentEditor, {
-      campaignId: cId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const editorBefore = await dmAuth.query(api.editors.queries.getCurrentEditor, {
-      campaignId: cId,
+      campaignId: ctx.campaignDomainId,
     })
     expect(editorBefore).not.toBeNull()
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
-      campaignId: cId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const remainingEditors = await t.run(async (dbCtx) => {

@@ -26,7 +26,7 @@ describe('enhanceBase previewUrl resolution', () => {
     })
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const note = items.find((i) => i.id === noteId)
@@ -54,7 +54,7 @@ describe('enhanceBase previewUrl resolution', () => {
     })
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const canvas = items.find((i) => i.id === canvasId)
@@ -71,7 +71,7 @@ describe('enhanceBase previewUrl resolution', () => {
     const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const canvas = items.find((i) => i.id === canvasId)
@@ -86,7 +86,7 @@ describe('enhanceBase previewUrl resolution', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const note = items.find((i) => i.id === noteId)

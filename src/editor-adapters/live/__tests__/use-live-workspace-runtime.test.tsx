@@ -25,6 +25,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignActor } from 'shared/campaigns/actor'
+import type { CampaignMemberId as CampaignMemberRowId } from 'shared/common/ids'
 import type { LiveFileSystemReadModel } from '../filesystem/read-model'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 import { testMapPinId } from 'shared/test/map-pin-id'
@@ -1168,6 +1169,7 @@ describe('useLiveWorkspaceRuntime', () => {
 
   it('projects live note content through the selected view-as player visibility', async () => {
     const playerId = 'member-1' as DmViewAsActor['memberId']
+    const playerRowId = playerId as unknown as CampaignMemberRowId
     const previewItem = createContentNote('note-2', 'Player Preview', {
       content: [createNoteBlock('visible'), createNoteBlock('hidden')],
       blockMeta: {
@@ -1180,7 +1182,7 @@ describe('useLiveWorkspaceRuntime', () => {
           myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
           shareStatus: SHARE_STATUS.ALL_SHARED,
           sharedWith: [],
-          hiddenFrom: [playerId],
+          hiddenFrom: [playerRowId],
         },
       },
       allPermissionLevel: PERMISSION_LEVEL.VIEW,
@@ -1520,7 +1522,7 @@ describe('useLiveWorkspaceRuntime', () => {
   it('clamps stale live view-as member ids after participants load', () => {
     workspaceModeState.campaignActor = {
       kind: 'dm_view_as',
-      campaignId: campaignState.campaignId,
+      campaignId: campaignState.campaignId as unknown as DmViewAsActor['campaignId'],
       memberId: 'stale-player' as DmViewAsActor['memberId'],
     }
 

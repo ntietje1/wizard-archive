@@ -2,7 +2,7 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { SettingsSubAlertDialogContent } from '~/features/settings/components/settings-sub-dialog'
 import { useUpdateCampaignMemberStatusMutation } from '~/features/campaigns/hooks/use-campaign-operations'
 import { handleError } from '~/shared/utils/logger'
@@ -23,7 +23,7 @@ export function RemovePlayerDialog({
   onClose,
 }: {
   player: CampaignMemberSummary | undefined
-  campaignId: Id<'campaigns'>
+  campaignId: CampaignId
   isOpen: boolean
   onClose: () => void
 }) {

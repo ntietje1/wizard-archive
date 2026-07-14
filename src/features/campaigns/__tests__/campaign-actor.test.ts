@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vite-plus/test'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { resolveCampaignActor } from 'shared/campaigns/actor'
 import { createCampaignMember } from '~/test/factories/campaign-factory'
-import { testId } from '~/test/helpers/test-id'
+import { testCampaignId } from 'shared/test/campaign-id'
 
-const campaignId = testId<'campaigns'>('campaign_actor')
-const otherCampaignId = testId<'campaigns'>('campaign_other')
+const campaignId = testCampaignId('campaign_actor')
+const otherCampaignId = testCampaignId('campaign_other')
 const player = createCampaignMember({ campaignId, role: CAMPAIGN_MEMBER_ROLE.Player })
 
 describe('resolveCampaignActor', () => {

@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { Edit, Plus, Sword, Trash2, User, Users } from 'lucide-react'
 import { CampaignsContentError } from './campaigns-content-error'
 import type { Campaign } from 'shared/campaigns/types'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { CampaignDialog } from '~/features/campaigns/components/campaign-dialog'
 import { ContentGrid } from '@wizard-archive/ui/components/content-grid'
 import { EmptyState } from '~/features/campaigns/components/content-grid/empty-state'
@@ -15,8 +15,8 @@ import { useUserCampaignsQuery } from '~/features/campaigns/hooks/use-campaign-o
 
 export function CampaignsContent() {
   const [creatingCampaign, setCreatingCampaign] = useState(false)
-  const [editingCampaignId, setEditingCampaignId] = useState<Id<'campaigns'> | null>(null)
-  const [deletingCampaignId, setDeletingCampaignId] = useState<Id<'campaigns'> | null>(null)
+  const [editingCampaignId, setEditingCampaignId] = useState<CampaignId | null>(null)
+  const [deletingCampaignId, setDeletingCampaignId] = useState<CampaignId | null>(null)
 
   const campaigns = useUserCampaignsQuery()
 

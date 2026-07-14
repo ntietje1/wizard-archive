@@ -26,13 +26,13 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Snapshot Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -61,13 +61,13 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'History Entry Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -95,13 +95,13 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Rapid Edit Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -109,7 +109,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       // Push again before idle timeout — seq advances, so the first
       // scheduled maybeCreateSnapshot should see a stale triggerSeq and bail
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -144,14 +144,14 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Interval Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       // First push — will create snapshot after idle
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -163,7 +163,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
       // Second push — snapshot function fires but minimum interval not met
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -184,7 +184,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 
       // Third push — now minimum interval has passed
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -218,14 +218,14 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Burst Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       for (let i = 0; i < 5; i++) {
         await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           documentId: noteId,
           update: makeYjsUpdate(),
         })
@@ -260,7 +260,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Updated Time Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
@@ -270,7 +270,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -295,13 +295,13 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const dmAuth = asDm(ctx)
 
       const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Snapshot Canvas',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: canvasId,
         update: makeYjsUpdate(),
       })
@@ -340,13 +340,13 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const dmAuth = asDm(ctx)
 
       const { noteId } = await createNoteViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Deleted Note',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -392,7 +392,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -433,6 +433,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
 
       const { mapId } = await createMapWithTwoSnapshotPins(t, dmAuth, {
         campaignId: ctx.campaignId,
+        campaignDomainId: ctx.campaignDomainId,
         ownerId: ctx.dm.profile._id,
       })
 
@@ -470,7 +471,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -479,7 +480,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapPinId: pinId,
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
@@ -514,7 +515,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -523,7 +524,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.updateItemPin, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapPinId: pinId,
         x: 50,
         y: 60,
@@ -560,7 +561,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -569,7 +570,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.updatePinVisibility, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapPinId: pinId,
         visible: true,
       })
@@ -611,14 +612,14 @@ describe('game map pin mutations — snapshot scheduling', () => {
       )
 
       const result = await createGameMapViaFilesystem(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         name: 'Test Map',
         parentTarget: { kind: 'direct', parentId: null },
         uploadSessionId: sessionId,
       })
 
       await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId: result.mapId,
         replacementToken: null,
         uploadSessionId: null,
@@ -654,7 +655,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
 
       // Pin on map1
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId: map1,
         pins: [{ itemId: n1, x: 10, y: 20 }],
       })
@@ -662,7 +663,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
 
       // Pin on map2 — different map, should get its own snapshot
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId: map2,
         pins: [{ itemId: n2, x: 30, y: 40 }],
       })
@@ -700,7 +701,7 @@ describe('rollbackToSnapshot', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         mapId,
         pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
@@ -715,7 +716,7 @@ describe('rollbackToSnapshot', () => {
       expect(historyEntry).not.toBeNull()
 
       await dmAuth.action(api.documentSnapshots.actions.rollbackToSnapshot, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         editHistoryId: historyEntry!.historyEntryUuid,
       })
 

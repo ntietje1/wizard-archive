@@ -16,10 +16,11 @@ import { makeYjsUpdate, makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { saveAllBlocksForNote } from '../functions/saveAllBlocksForNote'
 import type { CampaignMutationCtx } from '../../functions'
 import type { TableContent } from '@wizard-archive/editor/notes/document-contract'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,
-  campaignId: Id<'campaigns'>,
+  campaignId: CampaignId,
   noteId: Id<'sidebarItems'>,
   blocks: Parameters<typeof makeYjsUpdateWithBlocks>[0],
 ) {
@@ -126,12 +127,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Update Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'heading',
@@ -150,7 +151,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
 
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
@@ -169,7 +170,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Delete Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -178,7 +179,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       blockNoteId: testBlockNoteId('remove'),
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       { id: testBlockNoteId('keep'), type: 'paragraph', props: {}, children: [] },
     ])
 
@@ -198,7 +199,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Share Cascade Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -219,7 +220,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       })
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       { id: testBlockNoteId('other-block'), type: 'paragraph', props: {}, children: [] },
     ])
 
@@ -235,12 +236,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Preserve Share Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
         id: testBlockNoteId('block-a'),
         type: 'paragraph',
@@ -259,7 +260,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
 
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
@@ -277,17 +278,17 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Soft Delete Guard',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
     ])
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
@@ -399,7 +400,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       },
     )
     await executeMoveCommand(asDm(ctx), {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [inactiveCanvasId],
       targetParentId: null,
       action: 'trash',
@@ -451,7 +452,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Empty Content Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -464,12 +465,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
       update: makeYjsUpdate(),
     })
     await dmAuth.action(api.notes.actions.persistNoteBlocks, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       documentId: noteId,
     })
 
@@ -486,12 +487,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Nested Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
         id: testBlockNoteId('root'),
         type: 'paragraph',
@@ -548,7 +549,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Coexist Test',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -557,7 +558,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       blockNoteId: testBlockNoteId('existing'),
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
         id: testBlockNoteId('new-block'),
         type: 'heading',
@@ -585,12 +586,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Deep Nesting',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
         id: testBlockNoteId('d0'),
         type: 'toggleListItem',
@@ -652,7 +653,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       name: 'Mixed Ops',
       parentTarget: { kind: 'direct', parentId: null },
     })
@@ -665,7 +666,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       blockNoteId: testBlockNoteId('will-delete'),
     })
 
-    await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
+    await pushAndPersist(dmAuth, ctx.campaignDomainId, noteId, [
       {
         id: testBlockNoteId('will-update'),
         type: 'heading',

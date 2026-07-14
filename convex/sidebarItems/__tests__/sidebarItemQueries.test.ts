@@ -21,7 +21,7 @@ describe('sidebar item list queries', () => {
     await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(items.length).toBe(2)
@@ -39,7 +39,7 @@ describe('sidebar item list queries', () => {
     })
 
     const { active: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(items.length).toBe(1)
@@ -56,7 +56,7 @@ describe('sidebar item list queries', () => {
     })
 
     const { trash: items } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(items.length).toBe(1)
@@ -78,7 +78,7 @@ describe('sidebar item list queries', () => {
     })
 
     const { active: items } = await playerAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     const shared = items.find((i) => i.id === sharedNote)
@@ -107,7 +107,7 @@ describe('sidebar item list queries', () => {
     })
 
     const { active: items } = await playerAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(items.find((item) => item.id === folderId)).toBeUndefined()
@@ -145,7 +145,7 @@ describe('sidebar item list queries', () => {
     })
 
     const { trash: items } = await playerAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
 
     expect(items.map((item) => item.id)).toEqual([sharedNoteId])
@@ -171,7 +171,7 @@ describe('getSidebarItemsByParent', () => {
     })
 
     const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: folderId,
     })
 
@@ -186,7 +186,7 @@ describe('getSidebarItemsByParent', () => {
     await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
 
@@ -205,7 +205,7 @@ describe('getSidebarItemsByParent', () => {
     })
 
     const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
 
@@ -228,13 +228,13 @@ describe('getSidebarItemsByParent', () => {
     })
 
     const rootItems = await playerAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       parentId: null,
     })
     const privateFolderChildren = await playerAuth.query(
       api.sidebarItems.queries.getSidebarItemsByParent,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         parentId: folderId,
       },
     )
@@ -257,7 +257,7 @@ describe('getSidebarItem', () => {
     })
 
     const result = await dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
 
@@ -277,7 +277,7 @@ describe('getSidebarItem', () => {
 
     await expectNotFound(
       dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: noteId,
       }),
     )
@@ -299,7 +299,7 @@ describe('getSidebarItem', () => {
 
     await expectNotFound(
       dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: folderId,
       }),
     )
@@ -313,7 +313,7 @@ describe('getSidebarItem', () => {
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: noteId,
       }),
     )
@@ -336,7 +336,7 @@ describe('getSidebarItem', () => {
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: noteId,
       }),
     )
@@ -349,7 +349,7 @@ describe('getSidebarItem', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       id: noteId,
     })
 
@@ -373,7 +373,7 @@ describe('getSidebarItemBySlug', () => {
     const { noteId, slug } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       slug,
     })
 
@@ -386,7 +386,7 @@ describe('getSidebarItemBySlug', () => {
     const dmAuth = asDm(ctx)
 
     const result = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       slug: 'does-not-exist',
     })
 
@@ -409,7 +409,7 @@ describe('getSidebarItemBySlug', () => {
     })
 
     const result = await playerAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       slug,
     })
 
@@ -426,7 +426,7 @@ describe('resolveSidebarItemAccess', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       lookup: { kind: 'id', id: noteId },
     })
 
@@ -444,7 +444,7 @@ describe('resolveSidebarItemAccess', () => {
     })
 
     const result = await playerAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       lookup: { kind: 'id', id: noteId },
     })
 
@@ -456,7 +456,7 @@ describe('resolveSidebarItemAccess', () => {
     const dmAuth = asDm(ctx)
 
     const result = await dmAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       lookup: { kind: 'slug', slug: 'missing-slug' },
     })
 
@@ -471,7 +471,7 @@ describe('resolveSidebarItemAccess', () => {
     })
 
     const result = await playerAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       lookup: { kind: 'slug', slug },
     })
 
@@ -496,7 +496,7 @@ describe('resolveSidebarItemAccess', () => {
     })
 
     const result = await playerAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       lookup: { kind: 'id', id: fileId },
     })
 
@@ -513,7 +513,7 @@ describe('resolveSidebarItemAccess', () => {
     })
 
     const result = await dmAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       lookup: { kind: 'id', id: noteId },
     })
 

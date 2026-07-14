@@ -17,19 +17,19 @@ describe('emptyTrash filesystem command', () => {
     const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await executeMoveCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       sourceItemIds: [n1, n2],
       targetParentId: null,
       action: 'trash',
     })
 
     await executeTestFileSystemCommand(dmAuth, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       command: { type: 'emptyTrash' },
     })
 
     const { trash: trashItems } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
     })
     expect(trashItems.length).toBe(0)
 
@@ -45,7 +45,7 @@ describe('emptyTrash filesystem command', () => {
 
     await expectPermissionDenied(
       executeTestFileSystemCommand(playerAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: { type: 'emptyTrash' },
       }),
     )

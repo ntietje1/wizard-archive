@@ -9,7 +9,11 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/t
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 import { assertUsername } from 'shared/users/validation'
-import type { CampaignMemberId, SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type {
+  CampaignMemberId as CampaignMemberRowId,
+  SidebarItemId,
+  UserProfileId,
+} from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
@@ -47,12 +51,16 @@ const PUBLIC_DEMO_PRIVATE_PREP_NOTE_BODY = [
   `- ${PUBLIC_DEMO_PRIVATE_PREP_SECRET_TEXT}`,
   '- The clue connects the [[The Lantern Market]] to the [[Harbor Heist Board]], but the courier vanishes before the party reaches [[Moonwell Docks]].',
 ].join('\n')
-const PUBLIC_DEMO_PLAYER_MEMBER_ID = 'demo-member-mira' as CampaignMemberId
+const PUBLIC_DEMO_PLAYER_MEMBER_ID = assertDomainId(
+  DOMAIN_ID_KIND.campaignMember,
+  '01980c1a-5e70-7000-8000-000000000105',
+)
+const PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID =
+  PUBLIC_DEMO_PLAYER_MEMBER_ID as unknown as CampaignMemberRowId
 const PUBLIC_DEMO_PLAYER_USER_ID = 'demo-user-mira' as UserProfileId
 const PUBLIC_DEMO_PLAYER_MEMBERS: Array<CampaignMemberSummary> = [
   {
     id: PUBLIC_DEMO_PLAYER_MEMBER_ID,
-    campaignMemberUuid: '0198c000-0000-7000-8000-000000000001',
     createdAt: 1,
     campaignId: SAMPLE_LOCAL_WORKSPACE.workspaceId as PublicDemoMemberWorkspaceRecordId,
     role: CAMPAIGN_MEMBER_ROLE.Player,
@@ -158,13 +166,13 @@ function createPublicDemoLinkPreviewWorkspace(): LocalWorkspaceState {
 
 function createPublicDemoPlayerPreviewWorkspace(): LocalWorkspaceState {
   return withPublicDemoPrivatePrepSharingState(createPublicDemoLinkPreviewWorkspace(), {
-    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
+    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID,
   })
 }
 
 function createPublicDemoRevealedInPlayWorkspace(): LocalWorkspaceState {
   return withPublicDemoPrivatePrepSharingState(createPublicDemoLinkPreviewWorkspace(), {
-    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
+    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID,
     secretVisibleToPlayer: true,
   })
 }
@@ -210,7 +218,7 @@ function createPublicDemoCollaborationWorkspace(): LocalWorkspaceState {
     {
       secretVisibleToPlayer: true,
       playerVisibleItemIds: [PUBLIC_DEMO_SESSION_NOTE_ID],
-      selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
+      selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID,
     },
   )
 }
@@ -315,7 +323,7 @@ function createPublicDemoLayeredLoreMapWorkspace(): LocalWorkspaceState {
       },
     },
     playerMembers: clonePublicDemoPlayerMembers(),
-    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
+    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID,
   }
 }
 
@@ -455,7 +463,7 @@ function withPublicDemoPrivatePrepSharingState(
   options: {
     playerVisibleItemIds?: Array<string>
     secretVisibleToPlayer?: boolean
-    selectedViewAsPlayerId?: CampaignMemberId
+    selectedViewAsPlayerId?: CampaignMemberRowId
   } = {},
 ): LocalWorkspaceState {
   const memberItemPermissionsById = { ...workspace.memberItemPermissionsById }
@@ -515,7 +523,7 @@ function createPublicDemoPrivatePrepSecretVisibilityRule(secretVisibleToPlayer: 
   return {
     textIncludes: PUBLIC_DEMO_PRIVATE_PREP_SECRET_TEXT,
     shareStatus: SHARE_STATUS.NOT_SHARED,
-    hiddenFrom: [PUBLIC_DEMO_PLAYER_MEMBER_ID],
+    hiddenFrom: [PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID],
   }
 }
 

@@ -32,7 +32,7 @@ describe('filesystem transaction guards', () => {
     const { active, trash: trashed } = await dmAuth.query(
       api.sidebarItems.queries.getSidebarItems,
       {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
       },
     )
 
@@ -100,7 +100,7 @@ describe('filesystem transaction guards', () => {
 
     await expect(
       dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         transactionId,
       }),
     ).rejects.toThrow('Filesystem item no longer exists')
@@ -177,7 +177,7 @@ describe('filesystem transaction guards', () => {
 
     await expect(
       dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         transactionId,
       }),
     ).rejects.toThrow('Filesystem transaction can no longer be applied cleanly')
@@ -229,7 +229,7 @@ describe('filesystem transaction guards', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
+      campaignId: ctx.campaignDomainId,
       transactionId,
     })
 
@@ -297,7 +297,7 @@ describe('filesystem transaction guards', () => {
 
     await expect(
       dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         transactionId,
       }),
     ).rejects.toThrow('Filesystem item no longer exists')
@@ -356,14 +356,14 @@ describe('filesystem transaction guards', () => {
     for (const command of commands) {
       await expect(
         executeTestFileSystemCommand(dmAuth, {
-          campaignId: ctx.campaignId,
+          campaignId: ctx.campaignDomainId,
           command,
         }),
       ).rejects.toThrow()
     }
 
     const { active: otherItems } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
-      campaignId: otherCampaign.campaignId,
+      campaignId: otherCampaign.campaignDomainId,
     })
     expect(otherItems.map((item) => item.name).sort()).toEqual(['Other Folder', 'Other Note'])
   })
@@ -386,20 +386,20 @@ describe('filesystem transaction guards', () => {
 
     await expect(
       dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         id: hiddenFolderId,
       }),
     ).rejects.toThrow('This item could not be found')
     await expect(
       dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         slug: hiddenFolderSlug,
       }),
     ).resolves.toBeNull()
 
     await expect(
       executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: {
           type: 'create',
           itemType: 'note',
@@ -410,7 +410,7 @@ describe('filesystem transaction guards', () => {
     ).rejects.toThrow('Parent not found')
     await expect(
       executeTestFileSystemCommand(dmAuth, {
-        campaignId: ctx.campaignId,
+        campaignId: ctx.campaignDomainId,
         command: { type: 'move', itemIds: [noteId], targetParentId: hiddenFolderId },
       }),
     ).rejects.toThrow('Parent not found')

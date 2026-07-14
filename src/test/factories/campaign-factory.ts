@@ -6,7 +6,8 @@ import {
 import { assertCampaignSlug } from 'shared/campaigns/validation'
 import { createUser } from './user-factory'
 import type { Campaign, CampaignMember } from 'shared/campaigns/types'
-import { testId } from '~/test/helpers/test-id'
+import { testCampaignId } from 'shared/test/campaign-id'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 
 let campaignCounter = 0
 
@@ -18,7 +19,7 @@ type CreateCampaignOverrides = Omit<Partial<Campaign>, 'myMembership' | 'slug'> 
 export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
   campaignCounter++
   const dmUser = createUser()
-  const campaignId = overrides?.id ?? testId(`campaign_${campaignCounter}`)
+  const campaignId = overrides?.id ?? testCampaignId(`campaign_${campaignCounter}`)
   const {
     defaultFolderInheritShares = false,
     myMembership: memberOverrides,
@@ -27,9 +28,7 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
   } = overrides ?? {}
   const campaign: Campaign = {
     id: campaignId,
-    campaignUuid: `0198a000-0000-7000-8000-${campaignCounter.toString().padStart(12, '0')}`,
     createdAt: Date.now(),
-    dmUserId: dmUser.id,
     name: `Test Campaign ${campaignCounter}`,
     description: '',
     slug: assertCampaignSlug(slug ?? `test-campaign-${campaignCounter}`),
@@ -51,8 +50,7 @@ export function createCampaignMember(
   memberCounter++
   const user = createUser()
   return {
-    id: testId(`member_${memberCounter}`),
-    campaignMemberUuid: `0198b000-0000-7000-8000-${memberCounter.toString().padStart(12, '0')}`,
+    id: testCampaignMemberId(`member_${memberCounter}`),
     createdAt: Date.now(),
     userId: user.id,
     role: CAMPAIGN_MEMBER_ROLE.Player,
