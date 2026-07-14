@@ -64,8 +64,6 @@ describe('useLiveBlocksShare', () => {
         kind: 'shared',
         affectedCount: 1,
         createdCount: 0,
-        mergedCount: 0,
-        skippedCount: 0,
       },
       undoable: false,
     })
@@ -469,8 +467,6 @@ function createDeferredPromise() {
       kind: 'shared'
       affectedCount: number
       createdCount: number
-      mergedCount: number
-      skippedCount: number
     }
     undoable: boolean
   }>((resolvePromise) => {
@@ -485,8 +481,6 @@ function createDeferredPromise() {
           kind: 'shared',
           affectedCount: 1,
           createdCount: 0,
-          mergedCount: 0,
-          skippedCount: 0,
         },
         undoable: false,
       })

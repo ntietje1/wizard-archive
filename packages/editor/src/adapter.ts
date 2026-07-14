@@ -201,8 +201,7 @@ export type WizardEditorResourceCommand = ResourceCommand & {}
 export type WizardEditorResourceCatalogCommand = ResourceCatalogCommand & {}
 export type WizardEditorResourceSharingCommand = ResourceSharingCommand & {}
 export type WizardEditorResourceCommandExecutionOptions = ResourceCommandExecutionOptions & {}
-export type WizardEditorResourceCommandResult<TConflict = unknown> =
-  ResourceCommandResult<TConflict>
+export type WizardEditorResourceCommandResult = ResourceCommandResult
 export type WizardEditorResourceCreateCommand = ResourceCreateCommand & {}
 export type WizardEditorResourceCreateParentPlan = ResourceCreateParentPlan & {}
 export type WizardEditorResourceRenameCommand = ResourceRenameCommand & {}
@@ -236,10 +235,7 @@ export const WIZARD_EDITOR_RESOURCE_EVENT_TYPE = {
   copied: RESOURCE_EVENT_TYPE.copied,
   trashed: RESOURCE_EVENT_TYPE.trashed,
   restored: RESOURCE_EVENT_TYPE.restored,
-  replaced: RESOURCE_EVENT_TYPE.replaced,
-  mergedFolder: RESOURCE_EVENT_TYPE.mergedFolder,
   deletedForever: RESOURCE_EVENT_TYPE.deletedForever,
-  skipped: RESOURCE_EVENT_TYPE.skipped,
   noop: RESOURCE_EVENT_TYPE.noop,
 } as const satisfies Record<string, WizardEditorResourceEvent['type']>
 export type WizardEditorWorkspaceActor =
@@ -1524,7 +1520,7 @@ export function completeWizardEditorResourceCommand(
   command: WizardEditorResourceCommand,
   events: Array<WizardEditorResourceEvent>,
   { transactionId = null, undoable = false }: WizardEditorResourceCommandCompletionOptions = {},
-): WizardEditorResourceCommandResult<never> {
+): WizardEditorResourceCommandResult {
   return completedResourceCommand(command, events, {
     transactionId: transactionId as ResourceTransactionReceipt['transactionId'],
     undoable,
@@ -2331,9 +2327,7 @@ function isWizardEditorResourceReceiptSummary(summary: unknown) {
   return (
     typeof summary.kind === 'string' &&
     typeof summary.affectedCount === 'number' &&
-    typeof summary.createdCount === 'number' &&
-    typeof summary.mergedCount === 'number' &&
-    typeof summary.skippedCount === 'number'
+    typeof summary.createdCount === 'number'
   )
 }
 

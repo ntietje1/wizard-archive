@@ -19,7 +19,6 @@ function createReceiptEventGroups(receipt: ResourceTransactionReceipt) {
     moved: receipt.events.filter(isReceiptEventType('moved')),
     trashed: receipt.events.filter(isReceiptEventType('trashed')),
     restored: receipt.events.filter(isReceiptEventType('restored')),
-    mergedFolder: receipt.events.filter(isReceiptEventType('mergedFolder')),
     deletedForever: receipt.events.filter(isReceiptEventType('deletedForever')),
   }
 }
@@ -77,13 +76,7 @@ export function getReceiptSelectedRootIds(
   const selectedEvents =
     receipt.direction === 'undo'
       ? [...events.moved, ...events.trashed]
-      : [
-          ...events.created,
-          ...events.copied,
-          ...events.moved,
-          ...events.restored,
-          ...events.mergedFolder,
-        ]
+      : [...events.created, ...events.copied, ...events.moved, ...events.restored]
   return selectedEvents.map((event) => event.itemId)
 }
 

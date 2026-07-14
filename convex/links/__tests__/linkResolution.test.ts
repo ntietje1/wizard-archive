@@ -6,7 +6,7 @@ import {
 } from '../../../shared/links/resolution'
 import type { AnyItem } from '@wizard-archive/editor/resources/items'
 import type { Id } from '../../_generated/dataModel'
-import { assertConvexSidebarItemName } from '../../sidebarItems/validation/name'
+import { assertConvexResourceTitle } from '../../sidebarItems/validation/name'
 import { assertConvexSidebarItemSlug } from '../../sidebarItems/validation/slug'
 
 function makeItem(id: string, name: string, parentId: string | null = null): AnyItem {
@@ -17,7 +17,7 @@ function makeItem(id: string, name: string, parentId: string | null = null): Any
     id: id as Id<'sidebarItems'>,
     _id: id as Id<'sidebarItems'>,
     _creationTime: 0,
-    name: name ? assertConvexSidebarItemName(name) : ('' as AnyItem['name']),
+    name: name ? assertConvexResourceTitle(name) : ('' as AnyItem['name']),
     slug: name ? assertConvexSidebarItemSlug(slug) : ('invalid' as AnyItem['slug']),
     parentId: parentId as Id<'sidebarItems'> | null,
     campaignId: 'campaign1' as Id<'campaigns'>,

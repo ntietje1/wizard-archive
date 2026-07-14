@@ -93,38 +93,9 @@ describe('filesystem receipt selectors', () => {
     ).toEqual([{ id: itemId, parentId: null }])
   })
 
-  it('derives removed visible items from patches even when events only name the merge root', () => {
-    const mergedFolderId = 'folder_1' as SidebarItemId
-    const copiedChildId = 'child_1' as SidebarItemId
-    const command = {
-      type: 'copy',
-      itemIds: [mergedFolderId],
-      targetParentId: null,
-    } satisfies ResourceCommand
-
-    expect(
-      getReceiptRemovedRootIds(
-        createFileSystemReceipt({
-          command,
-          direction: 'undo',
-          events: [{ type: 'mergedFolder', itemId: mergedFolderId, sourceItemId: mergedFolderId }],
-          patches: [
-            {
-              type: 'updateResource',
-              itemId: copiedChildId,
-              before: { status: 'active' },
-              fields: { status: 'undoHidden' },
-            },
-          ],
-        }),
-      ),
-    ).toEqual([copiedChildId])
-  })
-
   it('selects the created copy from copy receipts', () => {
     const copiedItemId = 'copied_item' as SidebarItemId
     const sourceItemId = 'source_item' as SidebarItemId
-    const replacedItemId = 'replaced_item' as SidebarItemId
     const command = {
       type: 'copy',
       itemIds: [sourceItemId],
@@ -136,10 +107,7 @@ describe('filesystem receipt selectors', () => {
         createFileSystemReceipt({
           command,
           direction: 'forward',
-          events: [
-            { type: 'copied', itemId: copiedItemId, sourceItemId },
-            { type: 'replaced', itemId: replacedItemId, sourceItemId },
-          ],
+          events: [{ type: 'copied', itemId: copiedItemId, sourceItemId }],
         }),
       ),
     ).toEqual([copiedItemId])

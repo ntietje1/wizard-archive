@@ -14,7 +14,6 @@ import type { ResourceCommand } from '../transaction-contract'
 import { fileSystemCommandFixtures, fileSystemCommandReceiptEvents } from './command-fixtures'
 
 const sourceItemId = 'source' as SidebarItemId
-const replacedItemId = 'replaced' as SidebarItemId
 const itemId = 'item' as SidebarItemId
 
 describe('summarizeResourceReceipt', () => {
@@ -124,42 +123,6 @@ describe('summarizeResourceReceipt', () => {
         ],
       ).kind,
     ).toBe('renamed')
-  })
-
-  it('counts replaced destinations as affected receipt items', () => {
-    expect(
-      summarizeResourceReceipt(
-        {
-          type: RESOURCE_COMMAND_TYPE.copy,
-          itemIds: [sourceItemId],
-          targetParentId: null,
-        },
-        [
-          {
-            type: RESOURCE_EVENT_TYPE.replaced,
-            itemId: replacedItemId,
-            sourceItemId,
-          },
-        ],
-      ).affectedCount,
-    ).toBe(1)
-
-    expect(
-      summarizeResourceReceipt(
-        {
-          type: RESOURCE_COMMAND_TYPE.move,
-          itemIds: [sourceItemId],
-          targetParentId: null,
-        },
-        [
-          {
-            type: RESOURCE_EVENT_TYPE.replaced,
-            itemId: replacedItemId,
-            sourceItemId,
-          },
-        ],
-      ).affectedCount,
-    ).toBe(1)
   })
 
   it('counts restored roots without treating conflict renames as extra restored items', () => {

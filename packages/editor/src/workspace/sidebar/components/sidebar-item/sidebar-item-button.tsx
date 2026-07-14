@@ -98,8 +98,6 @@ export function SidebarItemButton({
               onFinishRename={handleFinishRename}
               onCancelRename={handleCancelRename}
               displayClassName={sidebarItemNameClass(visualState)}
-              parentId={item.parentId}
-              excludeId={item.id}
             />
           }
           presentation={{

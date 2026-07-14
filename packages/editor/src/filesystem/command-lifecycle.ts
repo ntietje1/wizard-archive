@@ -1,14 +1,11 @@
 import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
 import type {
   ResourceCommand,
-  ResourceCommandDecisionRecord,
   ResourceCommandMutationInput,
   ResourceCommandResult,
   ResourceCreateParentPlan,
-  ResourceOperationDecision,
   ResourceTransactionReceipt,
 } from './transaction-contract'
-import type { ItemOperationConflict } from './operation-planner'
 import type { FileSystemLifecycleIntent } from './domain/lifecycle'
 import type { FileSystemCacheAdapter } from './cache'
 import { planFileSystemOptimisticCommand } from './optimistic-planner'
@@ -22,7 +19,6 @@ type ProgressToastId = string | number
 type FileSystemCommandLifecycleArgs = {
   command: ResourceCommand
   createParentPlan?: ResourceCreateParentPlan
-  decisions?: ResourceCommandDecisionRecord
   workspaceId: string
   currentUserId: UserProfileId | null
   activeItemSurface: { parentId: SidebarItemId | null } | null
@@ -50,7 +46,6 @@ type FileSystemCommandLifecycleArgs = {
 export async function executeFileSystemCommandLifecycle({
   command,
   createParentPlan,
-  decisions,
   workspaceId,
   currentUserId,
   activeItemSurface,
@@ -69,14 +64,11 @@ export async function executeFileSystemCommandLifecycle({
   showReceiptToast,
 }: FileSystemCommandLifecycleArgs): Promise<FileSystemCommandLifecycleResult> {
   return await runMutation(async () => {
-    let operationDecisions: Array<ResourceOperationDecision> | undefined
     let plan: ReturnType<typeof planFileSystemOptimisticCommand>
     try {
-      operationDecisions = toDecisionArray(decisions)
       plan = planFileSystemOptimisticCommand({
         command,
         createParentPlan,
-        decisions: operationDecisions,
         snapshot: cacheAdapter.getSnapshot(),
         readModel: cacheAdapter.getReadModel(),
         activeItemSurface,
@@ -101,7 +93,6 @@ export async function executeFileSystemCommandLifecycle({
       mutate: () =>
         executeMutation({
           command,
-          decisions: operationDecisions,
           operationId: createOperationId(),
         }),
       progressMessage: getCommandProgressToastText(command),
@@ -122,17 +113,4 @@ export async function executeFileSystemCommandLifecycle({
   })
 }
 
-type FileSystemCommandLifecycleResult = ResourceCommandResult<ItemOperationConflict>
-
-function toDecisionArray(
-  decisions?: ResourceCommandDecisionRecord,
-): Array<ResourceOperationDecision> | undefined {
-  if (!decisions) return undefined
-  const result: Array<ResourceOperationDecision> = []
-  for (const [sourceItemId, decision] of Object.entries(decisions)) {
-    if (decision) {
-      result.push({ sourceItemId: sourceItemId as SidebarItemId, action: decision.action })
-    }
-  }
-  return result
-}
+type FileSystemCommandLifecycleResult = ResourceCommandResult

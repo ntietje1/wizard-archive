@@ -23,8 +23,6 @@ const receipt: ResourceTransactionReceipt = {
     kind: 'created',
     affectedCount: 1,
     createdCount: 1,
-    mergedCount: 0,
-    skippedCount: 0,
   },
   undoable: true,
 }

@@ -15,7 +15,6 @@ import {
 } from '../../validation/orchestration'
 import { logEditHistory } from '../../../editHistory/log'
 import { resyncNoteLinksForNotes } from '../../../links/functions/resyncNoteLinksForNotes'
-import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
 import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
 import { evaluateRestore } from '@wizard-archive/editor/resources/operation-capabilities'
 import { planTransferOperations } from '@wizard-archive/editor/resources/operation-contract'
@@ -24,10 +23,8 @@ import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-co
 import type {
   ResourceCommand,
   ResourceEvent,
-  ResourceOperationDecision,
 } from '@wizard-archive/editor/resources/transaction-contract'
 import type { TransferOperation } from '@wizard-archive/editor/resources/operation-contract'
-import { collectSidebarChildrenMap } from '../children'
 import { loadSidebarItemAncestorMap } from '../ancestors'
 import { collectDescendants } from '../../functions/collectDescendants'
 import { assertSidebarOperationAllowed, operationActorFromRole } from '../capabilities'
@@ -39,7 +36,7 @@ import { checkSidebarItemRowAccess, requireSidebarItemRowOperationAccess } from 
 import type { AccessibleSidebarItemRow } from '../access'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Doc, Id } from '../../../_generated/dataModel'
-import { assertConvexSidebarItemName } from '../../validation/name'
+import { assertConvexResourceTitle } from '../../validation/name'
 import type { FileSystemWriteSession, StoredResourceDelta } from '../deltas'
 const clearDeletion = { deletionTime: null, deletedBy: null }
 type StoredSidebarItemRow = Doc<'sidebarItems'>
@@ -165,7 +162,7 @@ async function executeRestore(
 ) {
   const restoreTarget = await resolveRestoreTargetParentId(ctx, parentId)
   const restoreParentId = restoreTarget.parentId
-  const requestedName = name ? assertConvexSidebarItemName(name) : null
+  const requestedName = name ? assertConvexResourceTitle(name) : null
   const restoreParent =
     restoreParentId === null
       ? null
@@ -187,7 +184,7 @@ async function executeRestore(
     newParentId: restoreParentId,
   })
 
-  const conflictPatch = requestedName
+  const titlePatch = requestedName
     ? {
         name: requestedName,
         slug: await findUniqueSidebarItemSlug(ctx, {
@@ -199,7 +196,7 @@ async function executeRestore(
 
   await session.restoreSidebarTree(item, {
     ...clearDeletion,
-    ...conflictPatch,
+    ...titlePatch,
     status: RESOURCE_STATUS.active,
     parentId: restoreParentId,
   })
@@ -230,7 +227,7 @@ async function executeParentMove(
     session: FileSystemWriteSession
   },
 ) {
-  const requestedName = name ? assertConvexSidebarItemName(name) : null
+  const requestedName = name ? assertConvexResourceTitle(name) : null
   await validateSidebarMove(ctx, {
     item,
     newParentId: parentId,
@@ -271,58 +268,6 @@ async function executeParentMove(
     item,
     status: item.status,
   })
-}
-
-async function collectMoveChildrenMap(
-  ctx: CampaignMutationCtx,
-  folders: Array<Pick<AccessibleSidebarItemRow, '_id' | 'status'>>,
-) {
-  const folderStatuses = new Map(folders.map((folder) => [folder._id, folder.status]))
-
-  return await collectSidebarChildrenMap({
-    rootFolderIds: folders.map((folder) => folder._id),
-    maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
-    getChildren: async (parentId) => {
-      const status = folderStatuses.get(parentId)
-      if (!status) {
-        throw new Error(
-          `Missing sidebar item status for folder ${parentId} while collecting move children`,
-        )
-      }
-      const children = await getSidebarItemRowsByParentStatus(ctx, {
-        parentId,
-        status,
-      })
-      for (const child of children) {
-        if (child.type === RESOURCE_TYPES.folders) {
-          folderStatuses.set(child._id, child.status)
-        }
-      }
-      return children
-    },
-    onDepthExceeded: () => {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max sidebar move planning depth exceeded')
-    },
-  })
-}
-
-async function getSidebarItemRowsByParentStatus(
-  ctx: CampaignMutationCtx,
-  {
-    parentId,
-    status,
-  }: {
-    parentId: Id<'sidebarItems'>
-    status: ResourceStatus
-  },
-): Promise<Array<StoredSidebarItemRow>> {
-  const children = await ctx.db
-    .query('sidebarItems')
-    .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
-      q.eq('campaignId', ctx.campaign._id).eq('status', status).eq('parentId', parentId),
-    )
-    .collect()
-  return children
 }
 
 async function executeMoveOperations(
@@ -400,11 +345,9 @@ async function normalizeOperationRoots(
   ctx: CampaignMutationCtx,
   sourceItems: Array<AccessibleSidebarItemRow>,
 ) {
-  const folders = sourceItems.filter((item) => item.type === RESOURCE_TYPES.folders)
-  const childrenMap = await collectMoveChildrenMap(ctx, folders)
   const itemsById = createSidebarOperationReadModel({
     items: sourceItems,
-    childrenMap,
+    childrenMap: new Map(),
   }).itemsById
   const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
     items: sourceItems,
@@ -471,13 +414,11 @@ async function executeMovePlan(
     sourceItemIds,
     targetParentId,
     action = 'move',
-    decisions,
     session,
   }: {
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
     action?: MoveCommandAction
-    decisions?: Array<ResourceOperationDecision>
     session: FileSystemWriteSession
   },
 ): Promise<Array<ResourceEvent>> {
@@ -498,30 +439,20 @@ async function executeMovePlan(
     action === 'restore'
       ? (await resolveRestoreTargetParentId(ctx, targetParentId)).parentId
       : targetParentId
-  const targetItems = await getActiveSidebarItemRowsByParent(ctx, {
-    parentId: effectiveTargetParentId,
-  })
-  const folders = [...sourceItems, ...targetItems].filter(
-    (item) => item.type === RESOURCE_TYPES.folders,
-  )
-  const childrenMap = await collectMoveChildrenMap(ctx, folders)
   const readModel = createSidebarOperationReadModel({
-    items: [...sourceItems, ...targetItems],
-    childrenMap,
+    items: sourceItems,
+    childrenMap: new Map(),
   })
   const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
     items: sourceItems,
     itemsById: readModel.itemsById,
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
   })
-  const plan = planTransferOperations({
+  const operations = planTransferOperations({
     mode: 'move',
     items: toSidebarOperationItems(sourceItems),
     itemsById: ancestorItemsById,
     targetParentId: effectiveTargetParentId,
-    targetItems: toSidebarOperationItems(targetItems),
-    decisions,
-    getChildren: (parentId) => toSidebarOperationItems(childrenMap.get(parentId) ?? []),
   })
 
   const rootSourceItems = normalizeSelectedRoots(
@@ -530,7 +461,7 @@ async function executeMovePlan(
   )
   const events = await executeMoveOperations(
     ctx,
-    plan.operations,
+    operations,
     action,
     rootSourceItems.map((item) => item.id),
     session,
@@ -543,11 +474,9 @@ export async function executeMoveCommand(
   {
     command,
     action,
-    decisions,
   }: {
     command: MoveFileSystemCommand | RestoreFileSystemCommand | TrashFileSystemCommand
     action: MoveCommandAction
-    decisions?: Array<ResourceOperationDecision>
   },
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
@@ -555,7 +484,6 @@ export async function executeMoveCommand(
     sourceItemIds: command.itemIds,
     targetParentId: command.type === 'trash' ? null : command.targetParentId,
     action,
-    decisions,
     session,
   })
 

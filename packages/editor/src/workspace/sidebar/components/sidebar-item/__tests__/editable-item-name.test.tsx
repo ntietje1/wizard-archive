@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { EditableName } from '../editable-item-name'
 import { canonicalizeResourceItemTitle } from '../../../../items'
 
-const checkNameUniqueMock = vi.hoisted(() => vi.fn())
+const validateNameMock = vi.hoisted(() => vi.fn())
 const toastErrorMock = vi.hoisted(() => vi.fn())
 const handleErrorMock = vi.hoisted(() => vi.fn())
 
@@ -11,7 +11,7 @@ vi.mock('../../../../../filesystem/use-name-validation', () => ({
   useNameValidation: () => ({
     hasError: false,
     validationError: null,
-    checkNameUnique: checkNameUniqueMock,
+    validateName: validateNameMock,
   }),
 }))
 
@@ -25,13 +25,9 @@ vi.mock('../../../../../errors/handle-error', () => ({
   handleError: handleErrorMock,
 }))
 
-vi.mock('../../../hooks/use-sidebar-name-validator', () => ({
-  useSidebarNameValidator: () => vi.fn(),
-}))
-
 describe('EditableName', () => {
   beforeEach(() => {
-    checkNameUniqueMock.mockReset()
+    validateNameMock.mockReset()
     handleErrorMock.mockReset()
     toastErrorMock.mockReset()
   })
@@ -44,7 +40,6 @@ describe('EditableName', () => {
         displayClassName="text-muted-foreground"
         onFinishRename={vi.fn()}
         onCancelRename={vi.fn()}
-        parentId={null}
       />,
     )
 
@@ -62,7 +57,6 @@ describe('EditableName', () => {
         displayClassName="text-muted-foreground"
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 
@@ -88,7 +82,6 @@ describe('EditableName', () => {
         displayClassName="text-muted-foreground"
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 
@@ -117,7 +110,6 @@ describe('EditableName', () => {
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 
@@ -135,7 +127,6 @@ describe('EditableName', () => {
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 
@@ -157,14 +148,13 @@ describe('EditableName', () => {
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 
     fireEvent.blur(screen.getByRole('textbox'))
 
     await waitFor(() => expect(onCancelRename).toHaveBeenCalledTimes(1))
-    expect(checkNameUniqueMock).not.toHaveBeenCalled()
+    expect(validateNameMock).not.toHaveBeenCalled()
     expect(onFinishRename).not.toHaveBeenCalled()
   })
 
@@ -177,7 +167,6 @@ describe('EditableName', () => {
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 
@@ -190,7 +179,6 @@ describe('EditableName', () => {
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 
@@ -198,7 +186,7 @@ describe('EditableName', () => {
   })
 
   it('reports a rename validation failure and restores the previous name', async () => {
-    checkNameUniqueMock.mockReturnValue('Name already exists')
+    validateNameMock.mockReturnValue('Title is invalid')
     const onFinishRename = vi.fn().mockResolvedValue(undefined)
     const onCancelRename = vi.fn()
     render(
@@ -207,7 +195,6 @@ describe('EditableName', () => {
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 
@@ -216,7 +203,7 @@ describe('EditableName', () => {
     fireEvent.blur(input)
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('Name already exists')
+      expect(toastErrorMock).toHaveBeenCalledWith('Title is invalid')
       expect(input).toHaveValue('Session Notes')
       expect(onCancelRename).toHaveBeenCalledTimes(1)
     })
@@ -233,7 +220,6 @@ describe('EditableName', () => {
         isRenaming={true}
         onFinishRename={onFinishRename}
         onCancelRename={onCancelRename}
-        parentId={null}
       />,
     )
 

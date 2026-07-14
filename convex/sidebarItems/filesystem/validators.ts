@@ -136,16 +136,6 @@ export const fileSystemCommandValidator = v.union(
   fileSystemCommandValidatorsByType[RESOURCE_COMMAND_TYPE.toggleBookmarks],
 )
 
-export const fileSystemOperationDecisionValidator = v.object({
-  sourceItemId: v.id('sidebarItems'),
-  action: v.union(
-    v.literal('skip'),
-    v.literal('replace'),
-    v.literal('keepBoth'),
-    v.literal('mergeFolder'),
-  ),
-})
-
 export const fileSystemEventValidator = v.union(
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.created),
@@ -180,23 +170,8 @@ export const fileSystemEventValidator = v.union(
     itemId: v.id('sidebarItems'),
   }),
   v.object({
-    type: v.literal(RESOURCE_EVENT_TYPE.replaced),
-    itemId: v.id('sidebarItems'),
-    sourceItemId: v.id('sidebarItems'),
-  }),
-  v.object({
-    type: v.literal(RESOURCE_EVENT_TYPE.mergedFolder),
-    itemId: v.id('sidebarItems'),
-    sourceItemId: v.id('sidebarItems'),
-  }),
-  v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.deletedForever),
     itemId: v.id('sidebarItems'),
-  }),
-  v.object({
-    type: v.literal(RESOURCE_EVENT_TYPE.skipped),
-    itemId: v.id('sidebarItems'),
-    sourceItemId: v.id('sidebarItems'),
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.noop),
@@ -220,8 +195,6 @@ const fileSystemSummaryValidator = v.object({
   ),
   affectedCount: v.number(),
   createdCount: v.number(),
-  mergedCount: v.number(),
-  skippedCount: v.number(),
 })
 
 const sidebarItemSnapshotValidator = v.object({

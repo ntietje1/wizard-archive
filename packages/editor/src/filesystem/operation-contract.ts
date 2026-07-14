@@ -2,7 +2,6 @@ import type { ResourceId } from '../workspace/resource-contract'
 import { isTrashedSidebarItem } from '../workspace/items/status'
 import { normalizeSelectedRoots } from './domain/selection-roots'
 import type { ResourcePatchRow } from './patch-contract'
-import type { ResourceOperationDecision } from './transaction-contract'
 
 export type OperationPlannerItem = Pick<
   ResourcePatchRow,
@@ -23,15 +22,6 @@ type PlanTransferOperationsInput = {
   items: Array<OperationPlannerItem>
   itemsById: ReadonlyMap<ResourceId, Pick<OperationPlannerItem, 'id' | 'parentId'>>
   targetParentId: ResourceId | null
-  targetItems: Array<OperationPlannerItem>
-  decisions?: ReadonlyArray<ResourceOperationDecision>
-  getChildren?: (parentId: ResourceId) => Array<OperationPlannerItem>
-}
-
-type TransferOperationPlan = {
-  status: 'ready'
-  conflicts: []
-  operations: Array<TransferOperation>
 }
 
 export function planTransferOperations({
@@ -39,7 +29,7 @@ export function planTransferOperations({
   items,
   itemsById,
   targetParentId,
-}: PlanTransferOperationsInput): TransferOperationPlan {
+}: PlanTransferOperationsInput): Array<TransferOperation> {
   const roots = normalizeSelectedRoots(items, itemsById)
   const operations = roots.flatMap((item): Array<TransferOperation> => {
     if (mode === 'move' && item.parentId === targetParentId && !isTrashedSidebarItem(item)) {
@@ -56,5 +46,5 @@ export function planTransferOperations({
     ]
   })
 
-  return { status: 'ready', conflicts: [], operations }
+  return operations
 }

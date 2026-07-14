@@ -232,7 +232,6 @@ export function createTestWorkspaceRuntime({
         pasteIntoTarget: () => missingTestFilesystemOperation('pasteIntoTarget'),
         importFile: () => missingTestFilesystemOperation('importFile'),
         importDrop: () => missingTestFilesystemOperation('importDrop'),
-        validateItemName: () => ({ valid: true }),
         validateCreateItem: () => ({ valid: true }),
         ...operations,
       },

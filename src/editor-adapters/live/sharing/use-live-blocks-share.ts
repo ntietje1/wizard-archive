@@ -148,9 +148,7 @@ function isBlockShareCommandResult(result: unknown): result is BlockShareCommand
   return (
     isRecord(result) &&
     typeof result.status === 'string' &&
-    ['completed', 'needsDecision', 'rejected', 'unsupported', 'unavailable', 'error'].includes(
-      result.status,
-    )
+    ['completed', 'rejected', 'unsupported', 'unavailable', 'error'].includes(result.status)
   )
 }
 

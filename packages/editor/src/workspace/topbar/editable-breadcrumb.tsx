@@ -1,8 +1,7 @@
 import type { KeyboardEvent, RefObject } from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { AnyItem, AnyItemWithContent, ValidationResult } from '../items'
-import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { AnyItem, AnyItemWithContent } from '../items'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
 import { useNameValidation } from '../../filesystem/use-name-validation'
 import { NameValidationFeedback } from '@wizard-archive/ui/components/name-validation-feedback'
@@ -18,15 +17,8 @@ interface EditableNameProps {
   defaultName?: string
   onRename?: (newName: string) => Promise<void>
   onChange?: (name: string) => void
-  parentId: SidebarItemId | null
-  excludeId?: SidebarItemId
   disabled?: boolean
   showNotSharedTooltip?: boolean
-  validateName?: (
-    name: string,
-    parentId: SidebarItemId | null,
-    excludeId?: SidebarItemId,
-  ) => ValidationResult
 }
 
 interface EditableNameFieldProps {
@@ -115,11 +107,8 @@ function EditableName({
   defaultName = '',
   onRename,
   onChange,
-  parentId,
-  excludeId,
   disabled,
   showNotSharedTooltip,
-  validateName,
 }: EditableNameProps) {
   const [draftName, setDraftName] = useState<string>('')
   const [isEditing, setIsEditing] = useState(false)
@@ -131,13 +120,10 @@ function EditableName({
   const name = isEditing ? draftName : initialName
   const nameLabel = getEditableNameLabel(initialName, defaultName)
 
-  const { hasError, validationError, checkNameUnique } = useNameValidation({
+  const { hasError, validationError, validateName } = useNameValidation({
     name,
     initialName,
     isActive: isEditing,
-    parentId,
-    excludeId,
-    validateName,
   })
 
   useEffect(() => {
@@ -161,10 +147,9 @@ function EditableName({
       return
     }
 
-    // Validate the name before submitting
     setIsSubmitting(true)
     try {
-      const error = checkNameUnique(trimmedName)
+      const error = validateName(trimmedName)
       if (error) {
         toast.error(error)
         setDraftName('')
@@ -291,11 +276,6 @@ interface EditableBreadcrumbProps {
   showNotSharedTooltip?: boolean
   onRename?: (item: AnyItemWithContent, name: string) => Promise<void> | void
   onOpenAncestor?: (item: AnyItem) => Promise<void> | void
-  validateName?: (
-    name: string,
-    parentId: SidebarItemId | null,
-    excludeId?: SidebarItemId,
-  ) => ValidationResult
 }
 
 interface SidebarItemBreadcrumbProps<TItem extends AnyItem = AnyItem> {
@@ -305,11 +285,6 @@ interface SidebarItemBreadcrumbProps<TItem extends AnyItem = AnyItem> {
   showNotSharedTooltip?: boolean
   onRename?: (item: TItem, name: string) => Promise<void> | void
   onOpenAncestor?: (item: AnyItem) => Promise<void> | void
-  validateName?: (
-    name: string,
-    parentId: SidebarItemId | null,
-    excludeId?: SidebarItemId,
-  ) => ValidationResult
 }
 
 export function SidebarItemBreadcrumb<TItem extends AnyItem = AnyItem>({
@@ -319,7 +294,6 @@ export function SidebarItemBreadcrumb<TItem extends AnyItem = AnyItem>({
   showNotSharedTooltip,
   onRename,
   onOpenAncestor,
-  validateName,
 }: SidebarItemBreadcrumbProps<TItem>) {
   const handleRename = async (newName: string) => {
     await onRename?.(item, newName)
@@ -335,11 +309,8 @@ export function SidebarItemBreadcrumb<TItem extends AnyItem = AnyItem>({
       <EditableName
         initialName={item.name}
         onRename={handleRename}
-        parentId={item.parentId}
-        excludeId={item.id}
         disabled={!canRename}
         showNotSharedTooltip={showNotSharedTooltip}
-        validateName={validateName}
       />
     </div>
   )
@@ -354,7 +325,6 @@ export function EditableBreadcrumb(props: EditableBreadcrumbProps) {
       showNotSharedTooltip={props.showNotSharedTooltip}
       onRename={props.onRename}
       onOpenAncestor={props.onOpenAncestor}
-      validateName={props.validateName}
     />
   )
 }

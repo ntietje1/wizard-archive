@@ -1712,7 +1712,7 @@ describe('createLocalRuntimeFileSystem', () => {
     })
   })
 
-  it('keeps copied local item default titles aligned with generated ids', async () => {
+  it('copies local items with duplicate default titles', async () => {
     const workspaceWithFolder = createLocalTestItem(SAMPLE_LOCAL_WORKSPACE, 'folder', null)
     const folderId = 'local-folder-2' as SidebarItemId
     const workspace: LocalWorkspaceState = {
@@ -1740,7 +1740,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(nextFilesystem.catalog.getKnownItemById('local-note-3' as SidebarItemId)).toMatchObject({
       id: 'local-note-3',
-      name: 'Untitled Note 3',
+      name: 'Untitled Note',
       parentId: folderId,
     })
   })

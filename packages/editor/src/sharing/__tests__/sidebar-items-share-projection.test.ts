@@ -291,8 +291,6 @@ function completedShareCommandResult(): ResourceCommandResult {
         kind: 'shared',
         affectedCount: 1,
         createdCount: 0,
-        mergedCount: 0,
-        skippedCount: 0,
       },
       undoable: true,
     },

@@ -139,7 +139,7 @@ async function executeProjectedBlockShareCommand(
       changes: [],
       undoable: false,
     },
-    requestFingerprint: fileSystemRequestFingerprint({ command }),
+    requestFingerprint: fileSystemRequestFingerprint(command),
     operationId: args.operationId,
   })
 }

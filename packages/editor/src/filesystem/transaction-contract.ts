@@ -199,24 +199,13 @@ export function isResourceSharingCommand(
   }
 }
 
-export type ResourceOperationDecision = {
-  sourceItemId: ResourceId
-  action: 'skip' | 'replace' | 'keepBoth' | 'mergeFolder'
-}
-
-export type ResourceCommandDecision = Pick<ResourceOperationDecision, 'action'>
-
-export type ResourceCommandDecisionRecord = Partial<Record<ResourceId, ResourceCommandDecision>>
-
 export type ResourceCommandExecutionOptions = {
-  decisions?: ResourceCommandDecisionRecord
   createParentPlan?: ResourceCreateParentPlan
   onSuccess?: () => void
 }
 
 export type ResourceCommandMutationInput = {
   command: ResourceCommand
-  decisions: Array<ResourceOperationDecision> | undefined
   operationId: OperationId
 }
 
@@ -228,10 +217,7 @@ export const RESOURCE_EVENT_TYPE = {
   copied: 'copied',
   trashed: 'trashed',
   restored: 'restored',
-  replaced: 'replaced',
-  mergedFolder: 'mergedFolder',
   deletedForever: 'deletedForever',
-  skipped: 'skipped',
   noop: 'noop',
 } as const
 
@@ -252,22 +238,7 @@ export type ResourceEvent =
   | { type: typeof RESOURCE_EVENT_TYPE.moved; itemId: ResourceId }
   | { type: typeof RESOURCE_EVENT_TYPE.trashed; itemId: ResourceId }
   | { type: typeof RESOURCE_EVENT_TYPE.restored; itemId: ResourceId }
-  | {
-      type: typeof RESOURCE_EVENT_TYPE.replaced
-      itemId: ResourceId
-      sourceItemId: ResourceId
-    }
-  | {
-      type: typeof RESOURCE_EVENT_TYPE.mergedFolder
-      itemId: ResourceId
-      sourceItemId: ResourceId
-    }
   | { type: typeof RESOURCE_EVENT_TYPE.deletedForever; itemId: ResourceId }
-  | {
-      type: typeof RESOURCE_EVENT_TYPE.skipped
-      itemId: ResourceId
-      sourceItemId: ResourceId
-    }
   | { type: typeof RESOURCE_EVENT_TYPE.noop; itemId: ResourceId }
 
 type ResourceMessageKind =
@@ -287,8 +258,6 @@ type ResourceReceiptMessage = {
   kind: ResourceMessageKind
   affectedCount: number
   createdCount: number
-  mergedCount: number
-  skippedCount: number
 }
 
 type ResourceMessageKindSelector = (events: Array<ResourceEvent>) => ResourceMessageKind
@@ -342,34 +311,19 @@ function summarizeResourceEvents(
     (event) =>
       event.type === RESOURCE_EVENT_TYPE.created || event.type === RESOURCE_EVENT_TYPE.copied,
   ).length
-  const mergedCount = events.filter(
-    (event) => event.type === RESOURCE_EVENT_TYPE.mergedFolder,
-  ).length
-  const skippedCount = events.filter((event) => event.type === RESOURCE_EVENT_TYPE.skipped).length
-  const affectedCount = affectedCountForMessageKind(kind, events, {
-    createdCount,
-    mergedCount,
-  })
+  const affectedCount = affectedCountForMessageKind(kind, events, createdCount)
 
   return {
     kind,
     affectedCount,
     createdCount,
-    mergedCount,
-    skippedCount,
   }
 }
 
 function affectedCountForMessageKind(
   kind: ResourceMessageKind,
   events: Array<ResourceEvent>,
-  {
-    createdCount,
-    mergedCount,
-  }: {
-    createdCount: number
-    mergedCount: number
-  },
+  createdCount: number,
 ) {
   switch (kind) {
     case 'created':
@@ -381,18 +335,9 @@ function affectedCountForMessageKind(
     case 'renamed':
       return events.filter((event) => event.type === RESOURCE_EVENT_TYPE.renamed).length
     case 'copied':
-      return (
-        createdCount +
-        mergedCount +
-        events.filter((event) => event.type === RESOURCE_EVENT_TYPE.replaced).length
-      )
+      return createdCount
     case 'moved':
-      return events.filter(
-        (event) =>
-          event.type === RESOURCE_EVENT_TYPE.moved ||
-          event.type === RESOURCE_EVENT_TYPE.replaced ||
-          event.type === RESOURCE_EVENT_TYPE.mergedFolder,
-      ).length
+      return events.filter((event) => event.type === RESOURCE_EVENT_TYPE.moved).length
     case 'restored':
       return events.filter((event) => event.type === RESOURCE_EVENT_TYPE.restored).length
     case 'trashed':
@@ -434,10 +379,9 @@ export type ResourceTransactionReceipt = {
   undoable: boolean
 }
 
-export type ResourceCommandResult<TConflict = unknown> =
+export type ResourceCommandResult =
   | { status: 'completed'; receipt: ResourceTransactionReceipt }
-  | { status: 'needsDecision'; conflicts: Array<TConflict> }
-  | { status: 'rejected'; reason: 'stale-conflict' | 'stale-history' }
+  | { status: 'rejected'; reason: 'stale-history' }
   | { status: 'unsupported'; reason: string }
   | { status: 'unavailable'; reason: string }
   | { status: 'error'; error?: unknown }
@@ -452,7 +396,7 @@ export function completedResourceCommand(
     transactionId?: OperationId | null
     undoable?: boolean
   } = {},
-): ResourceCommandResult<never> {
+): ResourceCommandResult {
   return {
     status: 'completed',
     receipt: {

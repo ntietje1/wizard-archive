@@ -3,9 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { useNameValidation } from '../use-name-validation'
 
 function renderNameValidation(name: string, isActive = true) {
-  return renderHook(() =>
-    useNameValidation({ name, initialName: 'Initial', isActive, parentId: null }),
-  )
+  return renderHook(() => useNameValidation({ name, initialName: 'Initial', isActive }))
 }
 
 describe('useNameValidation', () => {

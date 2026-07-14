@@ -41,7 +41,7 @@ const defaultMapFormValues: MapFormValues = {
 }
 
 export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }: MapFormProps) {
-  const { updateItemMetadata, updateMapImage, validateItemName } = source
+  const { updateItemMetadata, updateMapImage } = source
   const map = mapState.item
   const [values, setValues] = useState(() => getMapFormDefaultValues(map))
   const loadedMapIdRef = useRef<SidebarItemId | null>(map?.id ?? null)
@@ -63,9 +63,6 @@ export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }:
     name: values.name,
     initialName: map?.name ?? '',
     isActive: values.name.trim().length > 0 && !!map,
-    parentId: map?.parentId ?? null,
-    excludeId: mapId,
-    validateName: validateItemName,
   })
 
   function updateValues(nextValues: Partial<MapFormValues>) {

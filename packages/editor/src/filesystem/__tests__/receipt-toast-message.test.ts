@@ -21,19 +21,15 @@ function metadataUpdateReceipt(
       kind: 'updated',
       affectedCount: 1,
       createdCount: 0,
-      mergedCount: 0,
-      skippedCount: 0,
     },
     undoable: true,
   }
 }
 
-function copyFolderMergeReceipt(
+function copyReceipt(
   direction: ResourceTransactionReceipt['direction'],
-  options: { createdCount?: number; mergedCount?: number } = {},
+  createdCount: number,
 ): ResourceTransactionReceipt {
-  const createdCount = options.createdCount ?? 0
-  const mergedCount = options.mergedCount ?? 1
   return {
     transactionId: testOperationId('transaction_1'),
     direction,
@@ -42,14 +38,16 @@ function copyFolderMergeReceipt(
       itemIds: ['folder_1' as SidebarItemId],
       targetParentId: null,
     },
-    events: [{ type: 'mergedFolder', itemId: 'folder_1' as SidebarItemId, sourceItemId: itemId }],
+    events: Array.from({ length: createdCount }, (_, index) => ({
+      type: 'copied' as const,
+      itemId: `copy_${index}` as SidebarItemId,
+      sourceItemId: itemId,
+    })),
     patches: [],
     summary: {
       kind: 'copied',
-      affectedCount: createdCount + mergedCount,
+      affectedCount: createdCount,
       createdCount,
-      mergedCount,
-      skippedCount: 0,
     },
     undoable: true,
   }
@@ -67,19 +65,17 @@ describe('getReceiptToastMessage', () => {
     })
   })
 
-  it('formats merge-only copy undo receipts as folder merge reversions', () => {
-    expect(getReceiptToastMessage(copyFolderMergeReceipt('undo'))).toEqual({
+  it('formats a single copy undo receipt', () => {
+    expect(getReceiptToastMessage(copyReceipt('undo', 1))).toEqual({
       type: 'success',
-      text: 'Reverted folder merge',
+      text: 'Removed copied item',
     })
   })
 
-  it('formats mixed copy undo receipts with copied item and folder merge counts', () => {
-    expect(
-      getReceiptToastMessage(copyFolderMergeReceipt('undo', { createdCount: 2, mergedCount: 2 })),
-    ).toEqual({
+  it('formats multi-item copy undo receipts', () => {
+    expect(getReceiptToastMessage(copyReceipt('undo', 2))).toEqual({
       type: 'success',
-      text: 'Removed 2 copied items, reverted 2 folder merges',
+      text: 'Removed 2 copied items',
     })
   })
 })

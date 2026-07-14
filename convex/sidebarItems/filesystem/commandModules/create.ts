@@ -1,4 +1,4 @@
-import { assertConvexSidebarItemName } from '../../validation/name'
+import { assertConvexResourceTitle } from '../../validation/name'
 import { requireCreateParentTarget } from '../../validation/parent'
 import { requireOptionalSidebarItemColor, requireOptionalSidebarItemIconName } from '../appearance'
 import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
@@ -27,7 +27,7 @@ async function createSidebarItem(
   assertSidebarOperationAllowed(
     evaluateCreateItem(operationActorFromRole(ctx.membership.role), command.itemType),
   )
-  const name = assertConvexSidebarItemName(command.name)
+  const name = assertConvexResourceTitle(command.name)
   const parentTarget = requireCreateParentTarget(command.parentTarget)
   const iconName = requireOptionalSidebarItemIconName(command.iconName)
   const color = requireOptionalSidebarItemColor(command.color)

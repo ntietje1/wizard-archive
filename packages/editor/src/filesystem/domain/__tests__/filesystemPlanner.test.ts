@@ -6,27 +6,18 @@ import { planCopyTransfer, planMoveTransfer } from './transfer-planning-test-hel
 
 describe('copy transfer planning', () => {
   it('returns no operations for empty inputs', () => {
-    expect(planCopyTransfer({ items: [], targetParentId: null, targetItems: [] })).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [],
-    })
+    expect(planCopyTransfer({ items: [], targetParentId: null })).toEqual([])
   })
 
   it('preserves duplicate sibling titles exactly', () => {
     const result = planCopyTransfer({
       items: [createSidebarItem('note-1', 'Scene')],
       targetParentId: null,
-      targetItems: [createSidebarItem('note-2', 'Scene')],
     })
 
-    expect(result).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [
-        { action: 'place', sourceItemId: 'note-1', targetParentId: null, name: 'Scene' },
-      ],
-    })
+    expect(result).toEqual([
+      { action: 'place', sourceItemId: 'note-1', targetParentId: null, name: 'Scene' },
+    ])
   })
 
   it('ignores descendants when an ancestor folder is selected', () => {
@@ -39,16 +30,9 @@ describe('copy transfer planning', () => {
       planCopyTransfer({
         items: [folder, child],
         targetParentId: null,
-        targetItems: [],
-        getChildren: (parentId) => (parentId === folder.id ? [child] : []),
+        graphItems: [folder, child],
       }),
-    ).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [
-        { action: 'place', sourceItemId: 'folder-1', targetParentId: null, name: 'Scenes' },
-      ],
-    })
+    ).toEqual([{ action: 'place', sourceItemId: 'folder-1', targetParentId: null, name: 'Scenes' }])
   })
 })
 
@@ -62,21 +46,14 @@ describe('move transfer planning', () => {
       planMoveTransfer({
         items: [source],
         targetParentId: null,
-        targetItems: [createSidebarItem('note-2', 'Scene')],
         graphItems: [createSidebarItem('source-folder', 'Source', RESOURCE_TYPES.folders)],
       }),
-    ).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [{ action: 'place', sourceItemId: 'note-1', targetParentId: null }],
-    })
+    ).toEqual([{ action: 'place', sourceItemId: 'note-1', targetParentId: null }])
   })
 
   it('returns no operation for an active same-parent move', () => {
     const source = createSidebarItem('note-1', 'Scene')
 
-    expect(
-      planMoveTransfer({ items: [source], targetParentId: null, targetItems: [source] }),
-    ).toEqual({ status: 'ready', conflicts: [], operations: [] })
+    expect(planMoveTransfer({ items: [source], targetParentId: null })).toEqual([])
   })
 })

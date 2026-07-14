@@ -57,7 +57,6 @@ export function FileForm({
   source,
   upload,
 }: FileFormProps) {
-  const { validateItemName } = source
   const file = fileState.item
   const loadedFileId = fileId && file?.id === fileId ? fileId : undefined
   const [valueState, setValueState] = useState<FileFormValueState>(() => ({
@@ -81,9 +80,6 @@ export function FileForm({
     name: effectiveName,
     initialName: file?.name ?? '',
     isActive: effectiveName.trim().length > 0 && (fileId ? !!file : true),
-    parentId: file?.parentId ?? parentId ?? null,
-    excludeId: fileId,
-    validateName: validateItemName,
   })
 
   function updateValues(nextValues: Partial<FileFormValues>) {

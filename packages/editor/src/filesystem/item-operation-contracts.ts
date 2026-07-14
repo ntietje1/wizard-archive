@@ -162,12 +162,6 @@ type FileSystemCreateItemValidation = (
   input: FileSystemCreateItemValidationInput,
 ) => ValidationResult
 
-export type FileSystemItemNameValidation = (
-  name: string,
-  parentId: SidebarItemId | null,
-  excludeId?: SidebarItemId,
-) => ValidationResult
-
 export type FileSystemItemCreateOperations = {
   createItem: FileSystemCreateItem
 }
@@ -195,12 +189,7 @@ export type FileSystemItemMetadataUpdateOperations = {
   updateItemMetadata: FileSystemUpdateItemMetadata
 }
 
-export type FileSystemItemMetadataOperations = FileSystemItemMetadataUpdateOperations &
-  FileSystemItemNameValidationOperations
-
-type FileSystemItemNameValidationOperations = {
-  validateItemName: FileSystemItemNameValidation
-}
+export type FileSystemItemMetadataOperations = FileSystemItemMetadataUpdateOperations
 
 export type FileSystemItemFormOperations = FileSystemItemCreateOperations &
   FileSystemItemMetadataOperations

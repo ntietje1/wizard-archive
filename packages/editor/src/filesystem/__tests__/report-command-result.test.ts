@@ -49,16 +49,9 @@ describe('reportResourceCommandFailure', () => {
     expect(reportError).toHaveBeenNthCalledWith(4, error, 'History failed')
   })
 
-  it('leaves completed, decision, pending, and no-op results with their owning UI', () => {
+  it('leaves completed, pending, and no-op results with their owning UI', () => {
     const reportError = vi.fn()
 
-    expect(
-      reportResourceCommandFailure(
-        { status: 'needsDecision', conflicts: [] },
-        'Operation failed',
-        reportError,
-      ),
-    ).toBe(false)
     expect(
       reportResourceCommandFailure(
         { status: 'pending', reason: 'folder_confirmation_required' },

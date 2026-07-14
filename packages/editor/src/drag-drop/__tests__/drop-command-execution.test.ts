@@ -99,7 +99,7 @@ describe('executePlannedDropCommand', () => {
   it('returns rejected filesystem resource command results directly', async () => {
     const item = createNote()
     const ctx = createExecutionContext()
-    const resourceResult = { status: 'rejected', reason: 'stale-conflict' }
+    const resourceResult = { status: 'rejected', reason: 'stale-history' }
     ctx.executeFileSystemCommand.mockResolvedValue(resourceResult)
 
     await expect(

@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { SidebarItemId } from '../../../../../../../shared/common/ids'
 import type { ResourceTitle } from '../../../../resources/resource-contract'
 import { handleError } from '../../../../errors/handle-error'
 import { useNameValidation } from '../../../../filesystem/use-name-validation'
 import { NameValidationFeedback } from '@wizard-archive/ui/components/name-validation-feedback'
 import { cn } from '@wizard-archive/ui/shadcn/lib/utils'
-import { useSidebarNameValidator } from '../../hooks/use-sidebar-name-validator'
 
 interface EditableNameProps {
   initialName: ResourceTitle
@@ -14,8 +12,6 @@ interface EditableNameProps {
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void
   displayClassName?: string
-  parentId: SidebarItemId | null
-  excludeId?: SidebarItemId
 }
 
 export function EditableName({
@@ -24,11 +20,8 @@ export function EditableName({
   onFinishRename,
   onCancelRename,
   displayClassName,
-  parentId,
-  excludeId,
 }: EditableNameProps) {
   const [name, setName] = useState<string>(initialName)
-  const validateName = useSidebarNameValidator()
   const prevKeyRef = useRef({ isRenaming, initialName })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -51,13 +44,10 @@ export function EditableName({
     prevKeyRef.current = { isRenaming, initialName }
   }
 
-  const { hasError, validationError, checkNameUnique } = useNameValidation({
+  const { hasError, validationError, validateName } = useNameValidation({
     name,
     initialName,
     isActive: isRenaming,
-    parentId,
-    excludeId,
-    validateName,
   })
 
   useEffect(() => {
@@ -90,7 +80,7 @@ export function EditableName({
 
       setIsSubmitting(true)
       try {
-        const error = checkNameUnique(trimmedName)
+        const error = validateName(trimmedName)
         if (error) {
           toast.error(error)
           setName(initialName)

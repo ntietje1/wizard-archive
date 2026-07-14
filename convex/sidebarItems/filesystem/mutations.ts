@@ -1,4 +1,3 @@
-import { v } from 'convex/values'
 import { campaignMutation } from '../../functions'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
@@ -6,7 +5,6 @@ import { assertNever } from '../../common/types'
 import { RESOURCE_COMMAND_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
 import type {
   ResourceCommand,
-  ResourceOperationDecision,
   ResourceTransactionReceipt,
 } from '@wizard-archive/editor/resources/transaction-contract'
 import { executeCreateCommand } from './commandModules/create'
@@ -23,11 +21,7 @@ import {
   loadIdempotentFilesystemReceipt,
   recordFilesystemTransaction,
 } from './transactions'
-import {
-  fileSystemCommandValidator,
-  fileSystemOperationDecisionValidator,
-  fileSystemTransactionReceiptValidator,
-} from './validators'
+import { fileSystemCommandValidator, fileSystemTransactionReceiptValidator } from './validators'
 import type { StoredResourceDelta } from './deltas'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
@@ -66,13 +60,7 @@ function assertCommandSize(command: ResourceCommand) {
 
 async function executeCommand(
   ctx: CampaignMutationCtx,
-  {
-    command,
-    decisions,
-  }: {
-    command: ResourceCommand
-    decisions?: Array<ResourceOperationDecision>
-  },
+  command: ResourceCommand,
 ): Promise<StoredResourceDelta> {
   assertCommandSize(command)
 
@@ -82,17 +70,16 @@ async function executeCommand(
     case RESOURCE_COMMAND_TYPE.rename:
       return await executeRenameCommand(ctx, { command })
     case RESOURCE_COMMAND_TYPE.copy:
-      return await executeCopyCommand(ctx, { command, decisions })
+      return await executeCopyCommand(ctx, { command })
     case RESOURCE_COMMAND_TYPE.move:
-      return await executeMoveCommand(ctx, { command, action: 'move', decisions })
+      return await executeMoveCommand(ctx, { command, action: 'move' })
     case RESOURCE_COMMAND_TYPE.restore:
       return await executeMoveCommand(ctx, {
         command,
         action: 'restore',
-        decisions,
       })
     case RESOURCE_COMMAND_TYPE.trash:
-      return await executeMoveCommand(ctx, { command, action: 'trash', decisions })
+      return await executeMoveCommand(ctx, { command, action: 'trash' })
     case RESOURCE_COMMAND_TYPE.deleteForever:
       return await executeDeleteForeverCommand(ctx, { command })
     case RESOURCE_COMMAND_TYPE.emptyTrash:
@@ -117,22 +104,17 @@ async function executeCommand(
 export const executeFileSystemCommand = campaignMutation({
   args: {
     command: fileSystemCommandValidator,
-    decisions: v.optional(v.array(fileSystemOperationDecisionValidator)),
     operationId: operationIdValidator,
   },
   returns: fileSystemTransactionReceiptValidator,
   handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
     const command = normalizeCommand(args.command as ResourceCommand)
-    const decisions = args.decisions as Array<ResourceOperationDecision> | undefined
     const operationId = assertDomainId(DOMAIN_ID_KIND.operation, args.operationId)
-    const requestFingerprint = fileSystemRequestFingerprint({ command, decisions })
+    const requestFingerprint = fileSystemRequestFingerprint(command)
     const existing = await loadIdempotentFilesystemReceipt(ctx, operationId, requestFingerprint)
     if (existing) return existing
 
-    const delta = await executeCommand(ctx, {
-      command,
-      decisions,
-    })
+    const delta = await executeCommand(ctx, command)
     return await recordFilesystemTransaction(ctx, {
       delta,
       operationId,

@@ -56,9 +56,6 @@ vi.mock('../dialogs', () => ({
 vi.mock('../executor', () => ({
   useFileSystemExecutor: () => ({
     pendingOperationCount: 0,
-    pendingConflict: null,
-    clearPendingConflict: vi.fn(),
-    resolvePendingConflict: vi.fn(),
     executeCommand: mocks.executeCommand,
     discardCreatedItem: vi.fn(),
     runHistoryCommand: vi.fn(() => ({ status: 'noop', reason: 'test' })),

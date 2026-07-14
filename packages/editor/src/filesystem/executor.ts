@@ -25,8 +25,6 @@ export function useFileSystemExecutor(args: FileSystemExecutorRuntimeArgs) {
 
   return {
     ...snapshot,
-    clearPendingConflict: runtime.clearPendingConflict,
-    resolvePendingConflict: runtime.resolvePendingConflict,
     executeCommand: runtime.executeCommand,
     discardCreatedItem: runtime.discardCreatedItem,
     runHistoryCommand: runtime.runHistoryCommand,

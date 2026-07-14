@@ -21,16 +21,11 @@ describe('filesystem operation domain', () => {
     const plan = planMoveTransfer({
       items: selectedRoots,
       targetParentId: null,
-      targetItems: [],
-      getChildren: (parentId) => (parentId === folder.id ? [child] : []),
+      graphItems: [folder, child],
     })
 
     expect(selectedRoots.map((selected) => selected.id)).toEqual([folder.id])
-    expect(plan).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [],
-    })
+    expect(plan).toEqual([])
   })
 
   it('keeps unrelated selected roots and plans a real move', () => {
@@ -47,18 +42,14 @@ describe('filesystem operation domain', () => {
     const plan = planMoveTransfer({
       items: selectedRoots,
       targetParentId: targetFolder.id,
-      targetItems: [],
+      graphItems: [targetFolder],
     })
 
     expect(selectedRoots.map((selected) => selected.id)).toEqual([noteA.id, noteB.id])
-    expect(plan).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [
-        { sourceItemId: noteA.id, action: 'place', targetParentId: targetFolder.id },
-        { sourceItemId: noteB.id, action: 'place', targetParentId: targetFolder.id },
-      ],
-    })
+    expect(plan).toEqual([
+      { sourceItemId: noteA.id, action: 'place', targetParentId: targetFolder.id },
+      { sourceItemId: noteB.id, action: 'place', targetParentId: targetFolder.id },
+    ])
   })
 
   it('normalizes multi-level selected descendants to the highest selected ancestor', () => {
@@ -113,13 +104,8 @@ describe('filesystem operation domain', () => {
       planMoveTransfer({
         items: [],
         targetParentId: null,
-        targetItems: [],
       }),
-    ).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [],
-    })
+    ).toEqual([])
   })
 
   it('ignores duplicate titles in the target collection', () => {
@@ -127,20 +113,13 @@ describe('filesystem operation domain', () => {
     const source = createSidebarItem('note-1', 'Conflict', RESOURCE_TYPES.notes, {
       parentId: parent.id,
     })
-    const target = createSidebarItem('note-2', 'Conflict')
-
     expect(
       planMoveTransfer({
         items: [source],
         targetParentId: null,
-        targetItems: [target],
         graphItems: [parent],
       }),
-    ).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [{ action: 'place', sourceItemId: source.id, targetParentId: null }],
-    })
+    ).toEqual([{ action: 'place', sourceItemId: source.id, targetParentId: null }])
   })
 
   it('plans moving an item to its current parent as a no-op', () => {
@@ -153,13 +132,8 @@ describe('filesystem operation domain', () => {
       planMoveTransfer({
         items: [child],
         targetParentId: parent.id,
-        targetItems: [],
         graphItems: [parent],
       }),
-    ).toEqual({
-      status: 'ready',
-      conflicts: [],
-      operations: [],
-    })
+    ).toEqual([])
   })
 })

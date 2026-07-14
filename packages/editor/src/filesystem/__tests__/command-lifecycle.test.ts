@@ -70,7 +70,6 @@ describe('filesystem command lifecycle', () => {
         name: 'Scene',
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
-      decisions: undefined,
       operationId: testOperationId('operation-1'),
     })
     expect(applyLifecycleIntents).toHaveBeenCalledWith(

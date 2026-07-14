@@ -7,7 +7,7 @@ import type {
   AnyResourceRow,
   ResourceShare,
 } from '@wizard-archive/editor/resources/resource-contract'
-import { assertConvexSidebarItemName } from '../validation/name'
+import { assertConvexResourceTitle } from '../validation/name'
 import { assertConvexSidebarItemSlug } from '../validation/slug'
 import { isActiveSidebarItem, isTrashedSidebarItem } from '../types/status'
 import type { CampaignQueryCtx } from '../../functions'
@@ -49,7 +49,7 @@ function normalizeSidebarItemFields<T extends SidebarItemEnhancementRow>(item: T
     ...publicFields,
     id: normalizedId,
     createdAt: normalizedCreatedAt,
-    name: assertConvexSidebarItemName(item.name),
+    name: assertConvexResourceTitle(item.name),
     iconName: item.iconName === null ? null : assertResourceIconName(item.iconName),
     color: item.color === null ? null : assertResourceColor(item.color),
     slug: assertConvexSidebarItemSlug(item.slug),

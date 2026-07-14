@@ -119,7 +119,6 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           onOpenAncestor={(item) => {
             void title.navigation.openItem(createWorkspaceResource(item.id))
           }}
-          validateName={title.operations.validateItemName}
         />
       )}
     </div>

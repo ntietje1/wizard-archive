@@ -20,7 +20,7 @@ const openItemMock = vi.hoisted(() => vi.fn())
 
 function createFileSystem(overrides?: Partial<HotkeyFileSystemActions>): HotkeyFileSystemActions {
   const filesystem = {
-    requestTrashItems: vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] }),
+    requestTrashItems: vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' }),
     confirmDeleteForever: vi.fn(),
     copy: vi.fn(),
     cut: vi.fn(),
@@ -37,7 +37,7 @@ function createFileSystem(overrides?: Partial<HotkeyFileSystemActions>): HotkeyF
     get canPaste() {
       return clipboardCanPaste
     },
-    paste: vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] }),
+    paste: vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' }),
     resolveOperationItems: ({ itemIds }) => {
       const { operationItems } = createResourceCatalogModel({
         activeItems: sidebarItems,

@@ -86,14 +86,14 @@ describe('WorkspaceRuntimeDndProvider', () => {
     await props?.dndContext.openItem(runtime.filesystem.catalog.getKnownItemById(canvasId)!)
     expect(openItem).toHaveBeenCalledWith(createWorkspaceResource(canvasId))
 
-    executeDropCommand.mockResolvedValueOnce({ status: 'rejected', reason: 'stale-conflict' })
+    executeDropCommand.mockResolvedValueOnce({ status: 'rejected', reason: 'stale-history' })
 
     await expect(
       props?.dndContext.executeFileSystemCommand({
         type: 'trash',
         itemIds: [noteId],
       }),
-    ).resolves.toEqual({ status: 'rejected', reason: 'stale-conflict' })
+    ).resolves.toEqual({ status: 'rejected', reason: 'stale-history' })
     expect(executeDropCommand).toHaveBeenCalledWith({
       type: 'trash',
       itemIds: [noteId],

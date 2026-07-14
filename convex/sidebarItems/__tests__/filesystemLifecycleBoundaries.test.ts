@@ -5,7 +5,7 @@ import { createTestContext } from '../../_test/setup.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import type { ResourceCommand } from '@wizard-archive/editor/resources/transaction-contract'
 import type { Id } from '../../_generated/dataModel'
-import { assertConvexSidebarItemName } from '../validation/name'
+import { assertConvexResourceTitle } from '../validation/name'
 
 describe('filesystem command lifecycle boundaries', () => {
   const t = createTestContext()
@@ -65,7 +65,7 @@ describe('filesystem command lifecycle boundaries', () => {
         command: {
           type: 'rename',
           itemId: hiddenNoteId,
-          name: assertConvexSidebarItemName('Renamed Hidden Note'),
+          name: assertConvexResourceTitle('Renamed Hidden Note'),
         },
         message: 'Only active items can be renamed',
       },
@@ -113,7 +113,7 @@ describe('filesystem command lifecycle boundaries', () => {
 
     await expect(
       executeCommand(dmAuth, ctx.campaignId, { type: 'trash', itemIds: [rootFolderId] }),
-    ).rejects.toThrow('Max sidebar move planning depth exceeded')
+    ).rejects.toThrow('Max sidebar tree depth exceeded')
 
     const rootFolder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', rootFolderId))
     expect(rootFolder?.status).toBe('active')

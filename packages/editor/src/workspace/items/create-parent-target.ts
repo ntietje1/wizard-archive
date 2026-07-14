@@ -4,7 +4,7 @@ import {
   CREATE_PARENT_TARGET_KIND,
   canonicalizeResourceItemTitle,
   isActiveResourceItem,
-  validateItemName,
+  validateResourceTitle,
 } from '../items'
 import { RESOURCE_TYPES } from '../items-persistence-contract'
 
@@ -253,7 +253,7 @@ function applyCreateParentPathSegment(
   const segment = rawSegment.trim()
   if (!segment || segment === '.') return true
   if (segment === '..') return removeLastCreateParentPathEntry(path)
-  if (!validateItemName(segment).valid) return false
+  if (!validateResourceTitle(segment).valid) return false
 
   path.push(planNamedCreateParentPathEntry(path, segment, source, resolvePendingFolder))
   return true
@@ -315,9 +315,9 @@ function applyNamedPathSegment(
   segment: string,
   source: CreateParentTargetValidationSource,
 ): ValidationResult {
-  const nameResult = validateItemName(segment)
-  if (!nameResult.valid) {
-    return nameResult
+  const titleResult = validateResourceTitle(segment)
+  if (!titleResult.valid) {
+    return titleResult
   }
 
   const currentParent = traversalStack[traversalStack.length - 1]

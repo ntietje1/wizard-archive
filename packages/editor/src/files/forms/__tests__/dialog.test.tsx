@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { ValidationResult } from '../../../workspace/items'
 import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
@@ -62,7 +61,6 @@ describe('FileDialog', () => {
 })
 
 function createFileFormSource(): FileFormSource {
-  const validName = { valid: true } satisfies ValidationResult
   return {
     createItem: vi.fn(() => ({
       status: 'completed' as const,
@@ -77,7 +75,6 @@ function createFileFormSource(): FileFormSource {
     updateItemMetadata: vi.fn(() => ({
       slug: assertResourceItemSlug('updated-handout'),
     })),
-    validateItemName: vi.fn(() => validName),
   }
 }
 

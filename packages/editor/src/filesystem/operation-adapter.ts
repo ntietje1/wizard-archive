@@ -54,28 +54,21 @@ export function useWorkspaceResourceCommandRuntime({
 
   const cacheAdapter = useMemo(() => createFileSystemCacheAdapter(cache), [cache])
   const executorEffects = useMemo(() => createFileSystemExecutorEffects(), [])
-  const {
-    pendingOperationCount,
-    pendingConflict,
-    clearPendingConflict,
-    resolvePendingConflict,
-    executeCommand,
-    discardCreatedItem,
-    runHistoryCommand,
-  } = useFileSystemExecutor({
-    workspaceId,
-    currentUserId,
-    activeItemSurface,
-    cacheAdapter,
-    navigation,
-    selectionCommands,
-    uiCommands,
-    executeMutation,
-    undoMutation,
-    redoMutation,
-    undoStore,
-    effects: executorEffects,
-  })
+  const { pendingOperationCount, executeCommand, discardCreatedItem, runHistoryCommand } =
+    useFileSystemExecutor({
+      workspaceId,
+      currentUserId,
+      activeItemSurface,
+      cacheAdapter,
+      navigation,
+      selectionCommands,
+      uiCommands,
+      executeMutation,
+      undoMutation,
+      redoMutation,
+      undoStore,
+      effects: executorEffects,
+    })
 
   const itemCommandOperations = createFileSystemItemCommandOperations({
     discardCreatedItem,
@@ -88,9 +81,6 @@ export function useWorkspaceResourceCommandRuntime({
   const dialogs = useFileSystemDialogs({
     cacheAdapter,
     trashState,
-    pendingConflict,
-    resolvePendingConflict,
-    clearPendingConflict,
     trashItems: async (itemIds) => await trashItems(itemIds),
     deleteForever: async (itemIds) => await deleteForever(itemIds),
     emptyTrash: async () => await emptyTrash(),

@@ -1,22 +1,12 @@
-import { validateItemName } from '../workspace/items'
-import type { ValidationResult } from '../workspace/items'
-import type { SidebarItemId } from '../../../../shared/common/ids'
-
+import { validateResourceTitle } from '../workspace/items'
 interface UseNameValidationOptions {
   name: string
   initialName: string
   isActive: boolean
-  parentId: SidebarItemId | null
-  excludeId?: SidebarItemId
-  validateName?: (
-    name: string,
-    parentId: SidebarItemId | null,
-    excludeId?: SidebarItemId,
-  ) => ValidationResult
 }
 
 export function useNameValidation({ name, initialName, isActive }: UseNameValidationOptions) {
-  const validation = isActive ? validateItemName(name) : { valid: true as const }
+  const validation = isActive ? validateResourceTitle(name) : { valid: true as const }
   const validationError = validation.valid ? undefined : validation.error
 
   return {
@@ -24,9 +14,9 @@ export function useNameValidation({ name, initialName, isActive }: UseNameValida
     shouldValidate: isActive && name !== initialName,
     isUnique: validation.valid,
     isNotUnique: false,
-    checkNameUnique: (value: string) => {
+    validateName: (value: string) => {
       if (!isActive) return undefined
-      const result = validateItemName(value)
+      const result = validateResourceTitle(value)
       return result.valid ? undefined : result.error
     },
     validationError,

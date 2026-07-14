@@ -27,7 +27,7 @@ describe('TrashBanner', () => {
       slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
-    const restoreItems = vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] })
+    const restoreItems = vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' })
     const source = createTrashBannerSource({
       canDeleteItemForever: () => false,
       canEmptyTrash: true,
@@ -113,7 +113,7 @@ function createTrashBannerSource({
   canRestoreItem = () => true,
   requestDeleteItemsForever = vi.fn(),
   requestEmptyTrash = vi.fn(),
-  restoreItems = vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] }),
+  restoreItems = vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' }),
 }: {
   canDeleteItemForever?: TrashBannerSource['canDeleteItemForever']
   canEmptyTrash: boolean

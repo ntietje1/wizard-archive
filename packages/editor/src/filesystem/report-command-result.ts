@@ -12,7 +12,6 @@ export function reportResourceCommandFailure(
 ) {
   switch (result.status) {
     case 'completed':
-    case 'needsDecision':
     case 'pending':
     case 'noop':
       return false
@@ -20,7 +19,7 @@ export function reportResourceCommandFailure(
       reportError(result.error ?? new Error(fallbackMessage), fallbackMessage)
       return true
     case 'rejected':
-      reportError(new Error(rejectedCommandMessage(result.reason)), fallbackMessage)
+      reportError(new Error('Filesystem history changed. Try again.'), fallbackMessage)
       return true
     case 'unsupported':
       reportError(
@@ -35,14 +34,6 @@ export function reportResourceCommandFailure(
       )
       return true
   }
-}
-
-function rejectedCommandMessage(
-  reason: Extract<ResourceCommandResult, { status: 'rejected' }>['reason'],
-) {
-  return reason === 'stale-history'
-    ? 'Filesystem history changed. Try again.'
-    : 'The filesystem changed while the conflict was open. Try the operation again.'
 }
 
 function formatReason(reason: string) {

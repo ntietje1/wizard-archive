@@ -2,7 +2,7 @@ import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
 import { logEditHistory } from '../../../editHistory/log'
 import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
-import { assertConvexSidebarItemName } from '../../validation/name'
+import { assertConvexResourceTitle } from '../../validation/name'
 import { requireOptionalSidebarItemColor, requireOptionalSidebarItemIconName } from '../appearance'
 import { prepareSidebarItemRename } from '../../validation/orchestration'
 import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
@@ -90,7 +90,7 @@ async function collectSidebarMetadataChanges(
   command: RenameFileSystemCommand,
   changeSet: RenameChangeSet,
 ): Promise<void> {
-  const name = command.name === undefined ? undefined : assertConvexSidebarItemName(command.name)
+  const name = command.name === undefined ? undefined : assertConvexResourceTitle(command.name)
   const iconName = requireOptionalSidebarItemIconName(command.iconName)
   const color = requireOptionalSidebarItemColor(command.color)
 

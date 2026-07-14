@@ -65,10 +65,7 @@ describe('filesystem receipt effects', () => {
       planFileSystemReceiptEffects({
         receipt: createFileSystemReceipt({
           command,
-          events: [
-            { type: 'copied', itemId: copiedItem.id, sourceItemId },
-            { type: 'replaced', itemId: replacedItem.id, sourceItemId },
-          ],
+          events: [{ type: 'copied', itemId: copiedItem.id, sourceItemId }],
           patches: [
             { type: 'upsertResource', item: resourcePatchRowFromCacheItem(copiedItem) },
             {

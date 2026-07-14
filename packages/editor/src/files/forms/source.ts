@@ -12,5 +12,4 @@ export interface FileFormSource {
   openItem: (itemId: SidebarItemId) => MaybePromise<void>
   replaceFile: FileSession['replaceFile']
   updateItemMetadata: FileSystemItemFormOperations['updateItemMetadata']
-  validateItemName: FileSystemItemFormOperations['validateItemName']
 }

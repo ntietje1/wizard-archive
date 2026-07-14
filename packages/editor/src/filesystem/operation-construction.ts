@@ -1,8 +1,8 @@
 import { isPromiseLike } from '../../../../shared/common/async'
 import type { SidebarItemId } from '../../../../shared/common/ids'
 import type { ResourceImportContentInitializers } from '../files/import-contract'
-import { canonicalizeResourceItemTitle, validateItemName } from '../workspace/items'
-import type { AnyItem, ValidationResult } from '../workspace/items'
+import { canonicalizeResourceItemTitle } from '../workspace/items'
+import type { AnyItem } from '../workspace/items'
 import type {
   ResourceColor,
   ResourceSlug,
@@ -30,7 +30,6 @@ import type {
   FileSystemCreateItemCompletedResult,
   FileSystemCreateItemInput,
   ResourceImportFileOperation,
-  FileSystemItemNameValidation,
   FileSystemUpdateItemMetadata,
 } from './item-operation-contracts'
 import type { FileSystemOperations } from './operations'
@@ -614,8 +613,6 @@ function createImportDropOperation({
 
 function createFileSystemValidationOperations(catalog: ResourceCatalog) {
   return {
-    validateItemName: (name, parentId, excludeId) =>
-      validateRuntimeItemName(catalog, name, parentId, excludeId),
     validateCreateItem: ({ name, parentTarget }) =>
       validateCreateItemLocally(
         { name, parentTarget },
@@ -624,7 +621,7 @@ function createFileSystemValidationOperations(catalog: ResourceCatalog) {
           getActiveChildren: catalog.getVisibleChildren,
         },
       ),
-  } satisfies Pick<FileSystemOperations, 'validateCreateItem' | 'validateItemName'>
+  } satisfies Pick<FileSystemOperations, 'validateCreateItem'>
 }
 
 function getContextMenuPasteParentId({
@@ -632,15 +629,6 @@ function getContextMenuPasteParentId({
 }: FileSystemHostPasteTargetInput): SidebarItemId | null | undefined {
   if (clickedItem?.type === RESOURCE_TYPES.folders) return clickedItem.id
   return clickedItem ? clickedItem.parentId : undefined
-}
-
-function validateRuntimeItemName(
-  _catalog: ResourceCatalog,
-  name: string,
-  _parentId: Parameters<FileSystemItemNameValidation>[1],
-  _excludeId?: Parameters<FileSystemItemNameValidation>[2],
-): ValidationResult {
-  return validateItemName(name)
 }
 
 function resolveCreateItemName({

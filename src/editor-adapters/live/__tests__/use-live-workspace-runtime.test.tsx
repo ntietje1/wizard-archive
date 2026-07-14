@@ -157,8 +157,6 @@ const completedFileSystemCommandResult: CompletedResourceCommandResult = {
       kind: 'noop',
       affectedCount: 0,
       createdCount: 0,
-      mergedCount: 0,
-      skippedCount: 0,
     },
     undoable: false,
   },

@@ -37,7 +37,7 @@ vi.mock('../../../../../filesystem/use-name-validation', () => ({
     setValue: vi.fn(),
     hasError: false,
     validationError: null,
-    checkNameUnique: vi.fn(),
+    validateName: vi.fn(),
   }),
 }))
 
@@ -61,10 +61,6 @@ vi.mock('../../../workspace-state', () => ({
   useSidebarWorkspaceState: () => ({
     editing: { renamingItemId: null, setRenamingItemId: vi.fn() },
   }),
-}))
-
-vi.mock('../../../hooks/use-sidebar-name-validator', () => ({
-  useSidebarNameValidator: () => vi.fn(),
 }))
 
 vi.mock('../../../use-item-selection-interactions', () => ({

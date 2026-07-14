@@ -201,8 +201,6 @@ function createReceipt(transactionId: OperationId = TRANSACTION_1): ResourceTran
       kind: 'created',
       affectedCount: 1,
       createdCount: 1,
-      mergedCount: 0,
-      skippedCount: 0,
     },
     undoable: true,
   }
@@ -219,8 +217,6 @@ function createDeleteForeverReceipt(item: WizardEditorItem): ResourceTransaction
       kind: 'deletedForever',
       affectedCount: 1,
       createdCount: 0,
-      mergedCount: 0,
-      skippedCount: 0,
     },
     undoable: false,
   }
@@ -264,8 +260,6 @@ function createRenameReceipt({
       kind: 'renamed',
       affectedCount: 1,
       createdCount: 0,
-      mergedCount: 0,
-      skippedCount: 0,
     },
     undoable: true,
   }
@@ -298,8 +292,6 @@ function createUndoCreateReceipt(item: WizardEditorItem): ResourceTransactionRec
       kind: 'created',
       affectedCount: 1,
       createdCount: 1,
-      mergedCount: 0,
-      skippedCount: 0,
     },
     undoable: true,
   }
@@ -345,8 +337,6 @@ function createUndoCopiedFolderReceipt({
       kind: 'copied',
       affectedCount: 2,
       createdCount: 1,
-      mergedCount: 0,
-      skippedCount: 0,
     },
     undoable: true,
   }
@@ -986,12 +976,11 @@ describe('useLiveFileSystemRuntime', () => {
           itemIds: [source.id],
           targetParentId: target.id,
         },
-        decisions: undefined,
       }),
     )
   })
 
-  it('runs a duplicate-title drop without conflict decisions', async () => {
+  it('runs a duplicate-title drop directly', async () => {
     const sourceParent = createFolder({
       id: 'source_parent' as Id<'sidebarItems'>,
       name: 'Source Folder',
@@ -1026,11 +1015,7 @@ describe('useLiveFileSystemRuntime', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Drop' }))
 
     await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
-    expect(executeMutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({
-        decisions: undefined,
-      }),
-    )
+    expect(executeMutateAsync).toHaveBeenCalledWith(expect.objectContaining({}))
   })
 
   it('clears editor state from delete receipt snapshots', async () => {

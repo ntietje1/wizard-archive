@@ -15,7 +15,6 @@ import { hasMismatchedPrecondition } from '@wizard-archive/editor/resources/patc
 import type {
   ResourceTransactionReceipt,
   ResourceCommand,
-  ResourceOperationDecision,
 } from '@wizard-archive/editor/resources/transaction-contract'
 import type { ResourcePatch } from '@wizard-archive/editor/resources/patch-contract'
 import {
@@ -64,14 +63,8 @@ function stableSerialize(value: FingerprintValue) {
   return JSON.stringify(normalizeFingerprintValue(value))
 }
 
-export function fileSystemRequestFingerprint({
-  command,
-  decisions,
-}: {
-  command: ResourceCommand
-  decisions?: Array<ResourceOperationDecision>
-}) {
-  return stableSerialize({ command, decisions: decisions ?? [] })
+export function fileSystemRequestFingerprint(command: ResourceCommand) {
+  return stableSerialize(command)
 }
 
 async function getExistingOperation(ctx: CampaignMutationCtx, operationId: OperationId) {

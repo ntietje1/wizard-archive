@@ -10,7 +10,7 @@ import { testId } from '../../../test/id'
 const nameValidationState = vi.hoisted(() => ({
   hasError: false,
   validationError: null as string | null,
-  checkNameUnique: vi.fn(),
+  validateName: vi.fn(),
 }))
 
 vi.mock('../../../filesystem/use-name-validation', () => ({
@@ -25,7 +25,7 @@ describe('SidebarItemBreadcrumb', () => {
   beforeEach(() => {
     nameValidationState.hasError = false
     nameValidationState.validationError = null
-    nameValidationState.checkNameUnique.mockReset()
+    nameValidationState.validateName.mockReset()
   })
 
   it('renders the full ancestor trail for pending items', () => {
@@ -109,7 +109,7 @@ describe('SidebarItemBreadcrumb', () => {
 
   it('delegates ancestor navigation and rename to caller-owned handlers', async () => {
     const user = userEvent.setup()
-    nameValidationState.checkNameUnique.mockReturnValue(undefined)
+    nameValidationState.validateName.mockReturnValue(undefined)
     const parent = createFolder({ name: 'Places' })
     const item = createNote({ name: 'Scene', parentId: parent.id })
     const onOpenAncestor = vi.fn()
@@ -139,7 +139,7 @@ describe('SidebarItemBreadcrumb', () => {
 
   it('shows name validation errors', () => {
     nameValidationState.hasError = true
-    nameValidationState.validationError = 'A sibling already uses this name'
+    nameValidationState.validationError = 'Title is invalid'
     const item = createNote({ name: 'Scene' })
 
     render(<SidebarItemBreadcrumb item={item} ancestors={[]} canRename={true} />)
@@ -148,12 +148,12 @@ describe('SidebarItemBreadcrumb', () => {
       'aria-invalid',
       'true',
     )
-    expect(screen.getByText('A sibling already uses this name')).toBeInTheDocument()
+    expect(screen.getByText('Title is invalid')).toBeInTheDocument()
   })
 
   it('keeps the rename field editable after invalid blur validation', async () => {
     const user = userEvent.setup()
-    nameValidationState.checkNameUnique.mockReturnValue('A sibling already uses this name')
+    nameValidationState.validateName.mockReturnValue('Title is invalid')
     const item = createNote({ name: 'Scene' })
 
     render(<SidebarItemBreadcrumb item={item} ancestors={[]} canRename={true} />)

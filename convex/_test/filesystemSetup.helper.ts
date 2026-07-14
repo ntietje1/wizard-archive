@@ -12,7 +12,7 @@ import type {
   ResourceKind,
 } from '@wizard-archive/editor/resources/resource-contract'
 
-import { assertConvexSidebarItemName } from '../sidebarItems/validation/name'
+import { assertConvexResourceTitle } from '../sidebarItems/validation/name'
 import { makeYjsUpdateWithBlocks } from './yjs.helper'
 import type { DataModel, Id } from '../_generated/dataModel'
 import type { TestConvexForDataModel } from 'convex-test'
@@ -50,7 +50,7 @@ async function createSidebarItemViaFilesystem(
     command: {
       type: 'create',
       itemType: args.itemType,
-      name: assertConvexSidebarItemName(args.name),
+      name: assertConvexResourceTitle(args.name),
       parentTarget: args.parentTarget ?? { kind: 'direct', parentId: null },
       iconName: args.iconName === undefined ? undefined : assertResourceItemIconName(args.iconName),
       color: args.color === undefined ? undefined : assertResourceItemColor(args.color),

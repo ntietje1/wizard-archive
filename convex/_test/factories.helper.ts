@@ -21,7 +21,7 @@ import { normalizeLegacyResourcePathSegment } from '../sidebarItems/resourcePath
 import { SHARE_STATUS } from '../../shared/block-shares/share-status'
 import { slugify } from '../../shared/slugs'
 import { assertCampaignSlug } from '../campaigns/validation'
-import { assertConvexSidebarItemName } from '../sidebarItems/validation/name'
+import { assertConvexResourceTitle } from '../sidebarItems/validation/name'
 import { assertConvexSidebarItemSlug } from '../sidebarItems/validation/slug'
 import { assertSidebarItemLifecycleConsistency } from '../sidebarItems/types/status'
 import { assertUsername } from '../users/validation'
@@ -40,7 +40,6 @@ import type {
 } from '@wizard-archive/editor/notes/document-contract'
 import type { BlockInsert } from '../blocks/types'
 import type {
-  ResourceOperationDecision,
   ResourceEvent,
   ResourceTransactionReceipt,
 } from '@wizard-archive/editor/resources/transaction-contract'
@@ -56,7 +55,6 @@ export async function executeMoveCommand(
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
     action?: 'move' | 'restore' | 'trash'
-    decisions?: Array<ResourceOperationDecision>
   },
 ): Promise<ResourceTransactionReceipt> {
   const action = args.action ?? 'move'
@@ -74,7 +72,6 @@ export async function executeMoveCommand(
   return await executeTestFileSystemCommand(client, {
     campaignId: args.campaignId,
     command,
-    decisions: args.decisions,
   })
 }
 
@@ -84,7 +81,6 @@ export async function executeCopyCommand(
     campaignId: Id<'campaigns'>
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
-    decisions?: Array<ResourceOperationDecision>
   },
 ): Promise<ResourceTransactionReceipt> {
   return await executeTestFileSystemCommand(client, {
@@ -94,7 +90,6 @@ export async function executeCopyCommand(
       itemIds: args.sourceItemIds,
       targetParentId: args.targetParentId,
     },
-    decisions: args.decisions,
   })
 }
 
@@ -339,7 +334,7 @@ async function insertResource(
   overrides?: CommonSidebarItemOverrides & Record<string, unknown>,
 ) {
   const n = nextId()
-  const name = assertConvexSidebarItemName(overrides?.name ?? `${label} ${n}`)
+  const name = assertConvexResourceTitle(overrides?.name ?? `${label} ${n}`)
 
   const {
     inheritShares,

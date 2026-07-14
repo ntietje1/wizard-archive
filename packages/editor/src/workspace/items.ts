@@ -106,7 +106,7 @@ export type WithContentResourceItem<T extends AnyItem> = WithContentResource<T>
 
 export type ValidationResult = { valid: true } | { valid: false; error: string }
 
-export function validateItemName(name: string): ValidationResult {
+export function validateResourceTitle(name: string): ValidationResult {
   try {
     canonicalizeResourceTitle(name)
     return { valid: true }

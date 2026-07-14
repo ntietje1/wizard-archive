@@ -41,7 +41,7 @@ describe('createRuntimeTrashSource', () => {
   })
 
   it('returns the typed restore result from the runtime operation', async () => {
-    const result = { status: 'rejected' as const, reason: 'stale-conflict' as const }
+    const result = { status: 'rejected' as const, reason: 'stale-history' as const }
     const restoreItems = vi.fn().mockResolvedValue(result)
     const source = createRuntimeTrashSource(
       createRuntime({

@@ -1,4 +1,4 @@
-import { validateItemName } from '../items'
+import { validateResourceTitle } from '../items'
 import type { CreateParentTarget, ValidationResult } from '../items'
 import type { CreateParentTargetValidationSource } from './create-parent-target'
 import { validateCreateParentTarget } from './create-parent-target'
@@ -18,9 +18,9 @@ export function validateCreateItemLocally(
     return parentResult
   }
 
-  const nameResult = validateItemName(name)
-  if (!nameResult.valid) {
-    return nameResult
+  const titleResult = validateResourceTitle(name)
+  if (!titleResult.valid) {
+    return titleResult
   }
 
   return { valid: true }

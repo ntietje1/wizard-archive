@@ -3,33 +3,13 @@ import type { ResourceTransactionReceipt } from './transaction-contract'
 type FileSystemReceiptMessage = ResourceTransactionReceipt['summary']
 type FileSystemMessageKind = FileSystemReceiptMessage['kind']
 
-function pluralize(count: number, singular: string, plural = `${singular}s`) {
-  return count === 1 ? singular : plural
-}
-
 function copiedMessage(message: FileSystemReceiptMessage) {
   if (message.kind !== 'copied') return null
-  if (message.createdCount > 0 && message.mergedCount > 0) {
-    return `Copied ${message.createdCount} ${pluralize(message.createdCount, 'item')}, merged ${message.mergedCount} ${pluralize(message.mergedCount, 'folder')}`
-  }
-  if (message.mergedCount > 0) {
-    return message.mergedCount === 1 ? 'Folder merged' : `${message.mergedCount} folders merged`
-  }
   return message.createdCount === 1 ? 'Item copied' : `${message.createdCount} items copied`
 }
 
 function copiedUndoMessage(message: FileSystemReceiptMessage) {
   if (message.kind !== 'copied') return null
-  if (message.createdCount > 0 && message.mergedCount > 0) {
-    const copiedItems = pluralize(message.createdCount, 'item')
-    const folderMerges = pluralize(message.mergedCount, 'folder merge', 'folder merges')
-    return `Removed ${message.createdCount} copied ${copiedItems}, reverted ${message.mergedCount} ${folderMerges}`
-  }
-  if (message.mergedCount > 0) {
-    return message.mergedCount === 1
-      ? 'Reverted folder merge'
-      : `Reverted ${message.mergedCount} folder merges`
-  }
   return message.createdCount === 1
     ? 'Removed copied item'
     : `Removed ${message.createdCount} copied items`
@@ -91,7 +71,7 @@ function formatReceiptMessage(receipt: ResourceTransactionReceipt) {
 export function getReceiptToastMessage(receipt: ResourceTransactionReceipt) {
   const { summary } = receipt
   if (summary.kind === 'noop' || summary.affectedCount === 0) {
-    return summary.skippedCount > 0 ? { type: 'info' as const, text: 'No items changed' } : null
+    return null
   }
 
   const text = formatReceiptMessage(receipt)

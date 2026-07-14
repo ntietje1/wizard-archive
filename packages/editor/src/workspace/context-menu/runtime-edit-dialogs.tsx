@@ -71,7 +71,6 @@ export function RuntimeMapEditDialog({
   const mapFormSource: MapFormSource = {
     updateItemMetadata: operations.updateItemMetadata,
     updateMapImage: map.updateMapImage,
-    validateItemName: operations.validateItemName,
   }
 
   return (
@@ -122,7 +121,6 @@ export function RuntimeFileEditDialog({
     },
     replaceFile: file.replaceFile,
     updateItemMetadata: operations.updateItemMetadata,
-    validateItemName: operations.validateItemName,
   }
 
   return (

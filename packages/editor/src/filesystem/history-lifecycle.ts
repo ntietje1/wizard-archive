@@ -39,7 +39,7 @@ export async function executeFileSystemHistoryLifecycle({
   showProgress,
   dismissProgress,
   showReceiptToast,
-}: FileSystemHistoryLifecycleArgs): Promise<ResourceCommandResult<never>> {
+}: FileSystemHistoryLifecycleArgs): Promise<ResourceCommandResult> {
   if (isEntryStale?.(entry)) return { status: 'rejected', reason: 'stale-history' }
 
   return await executeFileSystemReceiptLifecycle({

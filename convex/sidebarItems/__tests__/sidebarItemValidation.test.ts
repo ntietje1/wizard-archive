@@ -13,7 +13,7 @@ import { api } from '../../_generated/api'
 import { testId } from '../../_test/test-id.helper'
 import {
   canonicalizeResourceItemTitle,
-  validateItemName,
+  validateResourceTitle,
   validateNoCircularParentAsync,
   parseResourceItemSlug,
 } from '@wizard-archive/editor/resources/items'
@@ -24,25 +24,25 @@ import {
 import type { Id } from '../../_generated/dataModel'
 import { requireCreateParentTarget } from '../validation/parent'
 
-describe('validateItemName', () => {
+describe('validateResourceTitle', () => {
   it('canonicalizes blank titles to Untitled', () => {
-    expect(validateItemName('')).toEqual({ valid: true })
+    expect(validateResourceTitle('')).toEqual({ valid: true })
     expect(canonicalizeResourceItemTitle('   ')).toBe('Untitled')
   })
 
   it('accepts exactly 255 characters', () => {
     const name = 'a'.repeat(255)
-    expect(validateItemName(name)).toEqual({ valid: true })
+    expect(validateResourceTitle(name)).toEqual({ valid: true })
   })
 
   it('rejects 256 characters', () => {
     const name = 'a'.repeat(256)
-    const result = validateItemName(name)
+    const result = validateResourceTitle(name)
     expect(result.valid).toBe(false)
   })
 
   it('accepts natural Unicode and filesystem-reserved characters', () => {
-    expect(validateItemName('./a\\b:*?"<>[]#|. 🎉')).toEqual({ valid: true })
+    expect(validateResourceTitle('./a\\b:*?"<>[]#|. 🎉')).toEqual({ valid: true })
   })
 
   it('normalizes Unicode and control runs', () => {
@@ -50,9 +50,9 @@ describe('validateItemName', () => {
   })
 
   it('counts Unicode scalars and rejects malformed UTF-16', () => {
-    expect(validateItemName('🎉'.repeat(255))).toEqual({ valid: true })
-    expect(validateItemName('🎉'.repeat(256)).valid).toBe(false)
-    expect(validateItemName('\ud800').valid).toBe(false)
+    expect(validateResourceTitle('🎉'.repeat(255))).toEqual({ valid: true })
+    expect(validateResourceTitle('🎉'.repeat(256)).valid).toBe(false)
+    expect(validateResourceTitle('\ud800').valid).toBe(false)
   })
 })
 

@@ -3,7 +3,7 @@ import { throwClientError } from '../../../errors'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
 import { logEditHistory } from '../../../editHistory/log'
-import { assertConvexSidebarItemName } from '../../validation/name'
+import { assertConvexResourceTitle } from '../../validation/name'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type {
   ResourceColor,
@@ -19,13 +19,8 @@ import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-co
 import type {
   ResourceCommand,
   ResourceEvent,
-  ResourceOperationDecision,
 } from '@wizard-archive/editor/resources/transaction-contract'
-import type {
-  OperationPlannerItem,
-  TransferOperation,
-} from '@wizard-archive/editor/resources/operation-contract'
-import { collectSidebarChildrenMap } from '../children'
+import type { TransferOperation } from '@wizard-archive/editor/resources/operation-contract'
 import { loadSidebarItemAncestorMap } from '../ancestors'
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
 import { isActiveSidebarItem } from '../../types/status'
@@ -146,7 +141,7 @@ async function copyChildrenIntoFolder(
   const children = await getActiveSidebarItemRowsByParent(ctx, { parentId: sourceFolderId })
   for (const child of children) {
     const source = await validateSidebarItemCopyable(ctx, child._id)
-    const name = assertConvexSidebarItemName(source.name)
+    const name = assertConvexResourceTitle(source.name)
     const copiedChildId = await insertCopiedSidebarItem(ctx, {
       source,
       parentId: targetFolderId,
@@ -165,20 +160,6 @@ async function copyChildrenIntoFolder(
       )
     }
   }
-}
-
-async function collectCopyChildrenMap(
-  ctx: CampaignMutationCtx,
-  folderIds: Array<Id<'sidebarItems'>>,
-) {
-  return await collectSidebarChildrenMap({
-    rootFolderIds: folderIds,
-    maxDepth: MAX_COPY_DEPTH,
-    getChildren: (parentId) => getActiveSidebarItemRowsByParent(ctx, { parentId }),
-    onDepthExceeded: () => {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max sidebar copy planning depth exceeded')
-    },
-  })
 }
 
 async function executeCopyOperations(
@@ -211,7 +192,7 @@ async function executeCopyOperation(
   const copiedId = await insertCopiedSidebarItem(ctx, {
     source,
     parentId,
-    name: assertConvexSidebarItemName(operation.name ?? source.name),
+    name: assertConvexResourceTitle(operation.name ?? source.name),
     copyContext,
     isRoot: rootSourceIds.has(source._id),
   })
@@ -312,39 +293,18 @@ async function loadCopyableSources(
 function planCopyEffects({
   sourceItems,
   targetParentId,
-  targetItems,
-  decisions,
-  childrenMap,
   itemsById,
 }: {
   sourceItems: Array<AccessibleSidebarItemRow>
   targetParentId: Id<'sidebarItems'> | null
-  targetItems: Array<OperationPlannerItem>
-  decisions?: Array<ResourceOperationDecision>
-  childrenMap: ReadonlyMap<Id<'sidebarItems'>, Array<OperationPlannerItem>>
-  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, 'id' | 'parentId'>>
+  itemsById: Parameters<typeof planTransferOperations>[0]['itemsById']
 }) {
-  const sourcePlannerItems = toSidebarOperationItems(sourceItems)
   return planTransferOperations({
     mode: 'copy',
-    items: sourcePlannerItems,
+    items: toSidebarOperationItems(sourceItems),
     itemsById,
     targetParentId,
-    targetItems,
-    decisions,
-    getChildren: (parentId) => childrenMap.get(parentId) ?? [],
   })
-}
-
-async function collectCopyPlanningChildrenMap(
-  ctx: CampaignMutationCtx,
-  sourceItems: Array<AccessibleSidebarItemRow>,
-  targetItems: Array<{ _id: Id<'sidebarItems'>; type: string }>,
-) {
-  const folderIds = [...sourceItems, ...targetItems]
-    .filter((item) => item.type === RESOURCE_TYPES.folders)
-    .map((item) => item._id)
-  return collectCopyChildrenMap(ctx, folderIds)
 }
 
 async function executeCopyPlan(
@@ -352,31 +312,20 @@ async function executeCopyPlan(
   {
     sourceItemIds,
     targetParentId,
-    decisions,
     session,
   }: {
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
-    decisions?: Array<ResourceOperationDecision>
     session: FileSystemWriteSession
   },
 ): Promise<Array<ResourceEvent>> {
-  const targetItems = await getActiveSidebarItemRowsByParent(ctx, { parentId: targetParentId })
   const sourceItems = await loadCopyableSources(ctx, {
     sourceItemIds,
     targetParentId,
   })
-  const childrenMap = await collectCopyPlanningChildrenMap(ctx, sourceItems, targetItems)
-  const targetPlannerItems = toSidebarOperationItems(targetItems)
-  const plannerChildrenMap = new Map(
-    Array.from(childrenMap, ([parentId, children]) => [
-      parentId,
-      toSidebarOperationItems(children),
-    ]),
-  )
   const readModel = createSidebarOperationReadModel({
-    items: [...sourceItems, ...targetItems],
-    childrenMap,
+    items: sourceItems,
+    childrenMap: new Map(),
   })
   const ancestorItemsById = await loadSidebarItemAncestorMap(ctx, {
     items: sourceItems,
@@ -391,13 +340,10 @@ async function executeCopyPlan(
   const plan = planCopyEffects({
     sourceItems,
     targetParentId,
-    targetItems: targetPlannerItems,
-    decisions,
-    childrenMap: plannerChildrenMap,
     itemsById: ancestorItemsById,
   })
 
-  const events = await executeCopyOperations(ctx, plan.operations, rootSourceIds, session)
+  const events = await executeCopyOperations(ctx, plan, rootSourceIds, session)
   return events
 }
 
@@ -405,17 +351,14 @@ export async function executeCopyCommand(
   ctx: CampaignMutationCtx,
   {
     command,
-    decisions,
   }: {
     command: CopyFileSystemCommand
-    decisions?: Array<ResourceOperationDecision>
   },
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
   const events = await executeCopyPlan(ctx, {
     sourceItemIds: command.itemIds,
     targetParentId: command.targetParentId,
-    decisions,
     session,
   })
 

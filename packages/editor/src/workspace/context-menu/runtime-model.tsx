@@ -182,7 +182,6 @@ export function useWorkspaceRuntimeContextMenuModel(
     operations: {
       createItem: operations.createItem,
       updateItemMetadata: operations.updateItemMetadata,
-      validateItemName: operations.validateItemName,
     },
   }
   const editDialogs = useRuntimeItemEditDialogs(

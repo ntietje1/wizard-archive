@@ -44,14 +44,13 @@ describe('MapForm', () => {
     const parentId = 'folder-1' as SidebarItemId
     const mapId = 'map-1' as SidebarItemId
     const map = createExistingMap(mapId, { parentId })
-    const validateItemName = vi.fn(() => ({ valid: false as const, error: 'Name already exists' }))
 
     render(
       <MapForm
         mapId={mapId}
         mapState={{ status: 'ready', item: map, isPending: false, error: null }}
         onClose={vi.fn()}
-        source={createSource({ validateItemName })}
+        source={createSource()}
         upload={createUpload({ file: createImageFile() })}
       />,
     )
@@ -59,8 +58,6 @@ describe('MapForm', () => {
     fireEvent.change(screen.getByLabelText('Map Name'), { target: { value: 'Cavern' } })
 
     await waitFor(() => expect(screen.getByDisplayValue('Cavern')).toBeInTheDocument())
-    expect(validateItemName).not.toHaveBeenCalled()
-    expect(screen.queryByText('Name already exists')).not.toBeInTheDocument()
   })
 
   it('keeps edit controls disabled when the backing map is missing', () => {
@@ -181,7 +178,6 @@ function createSource(overrides: Partial<MapFormSource> = {}): MapFormSource {
   return {
     updateItemMetadata: vi.fn().mockResolvedValue({ slug: 'map' }),
     updateMapImage: vi.fn().mockResolvedValue(completedMapImageUpdate('map-1' as SidebarItemId)),
-    validateItemName: vi.fn(() => ({ valid: true as const, error: undefined })),
     ...overrides,
   } as MapFormSource
 }

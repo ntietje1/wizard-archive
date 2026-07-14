@@ -31,7 +31,7 @@ import type {
   ResourcePatch,
   ResourcePatchRow,
 } from '@wizard-archive/editor/resources/patch-contract'
-import { assertConvexSidebarItemName } from '../validation/name'
+import { assertConvexResourceTitle } from '../validation/name'
 import { assertConvexSidebarItemSlug } from '../validation/slug'
 import { logEditHistory } from '../../editHistory/log'
 import { assertSidebarOperationAllowed, operationActorFromRole } from './capabilities'
@@ -286,7 +286,7 @@ function insertedItemInversePatch(after: StoredResourcePatchRow): ResourcePatch 
 function insertedItemUndoPrecondition(after: StoredResourcePatchRow): SidebarItemPatchPrecondition {
   return {
     type: after.type,
-    name: assertConvexSidebarItemName(after.name),
+    name: assertConvexResourceTitle(after.name),
     slug: assertConvexSidebarItemSlug(after.slug),
     iconName: after.iconName === null ? null : assertResourceIconName(after.iconName),
     color: after.color === null ? null : assertResourceColor(after.color),

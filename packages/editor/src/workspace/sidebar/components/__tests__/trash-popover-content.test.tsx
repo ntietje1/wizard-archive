@@ -49,7 +49,7 @@ describe('TrashPopoverContent', () => {
     const onClose = vi.fn()
     const openTrash = vi.fn()
     const openItem = vi.fn()
-    const restoreItems = vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] })
+    const restoreItems = vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' })
     const requestDeleteItemsForever = vi.fn()
     const requestEmptyTrash = vi.fn()
     const source = createTrashSource({
@@ -112,7 +112,7 @@ describe('TrashPopoverContent', () => {
     expect(restoreButton).toBeDisabled()
     expect(restoreItems).toHaveBeenCalledTimes(1)
 
-    restoreDeferred.resolve({ status: 'needsDecision', conflicts: [] })
+    restoreDeferred.resolve({ status: 'unavailable', reason: 'test' })
 
     await waitFor(() => expect(restoreButton).toBeEnabled())
   })
@@ -154,7 +154,7 @@ describe('TrashPopoverContent', () => {
     expect(requestDeleteItemsForever).not.toHaveBeenCalled()
     expect(requestEmptyTrash).not.toHaveBeenCalled()
 
-    restoreDeferred.resolve({ status: 'needsDecision', conflicts: [] })
+    restoreDeferred.resolve({ status: 'unavailable', reason: 'test' })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Restore' })).toBeEnabled())
   })
 
@@ -168,7 +168,7 @@ describe('TrashPopoverContent', () => {
     const emptyTrashDeferred = createDeferred<void>()
     const requestEmptyTrash = vi.fn(() => emptyTrashDeferred.promise)
     const requestDeleteItemsForever = vi.fn()
-    const restoreItems = vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] })
+    const restoreItems = vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' })
     const source = createTrashSource({
       requestDeleteItemsForever,
       requestEmptyTrash,
@@ -210,7 +210,7 @@ describe('TrashPopoverContent', () => {
       slug: 'delete-only',
       status: RESOURCE_STATUS.trashed,
     })
-    const restoreItems = vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] })
+    const restoreItems = vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' })
     const requestDeleteItemsForever = vi.fn()
     const source = createTrashSource({
       canDeleteItemForever: (item) => item.id === deleteOnlyNote.id,
@@ -369,7 +369,7 @@ function createTrashSource({
   openTrash = vi.fn(),
   requestDeleteItemsForever = vi.fn(),
   requestEmptyTrash = vi.fn(),
-  restoreItems = vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] }),
+  restoreItems = vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' }),
   trashItems = [],
 }: {
   canDragItem?: TrashPopoverContentSource['canDragItem']

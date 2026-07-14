@@ -23,7 +23,6 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from '@wizard-archive/ui/shadcn/components/input-group'
-import { useSidebarNameValidator } from '../hooks/use-sidebar-name-validator'
 
 interface SidebarItemEditFormValues {
   name: string
@@ -60,15 +59,11 @@ function OpenSidebarItemEditDialog({
   const colorLabelId = useId()
   const [values, setValues] = useState(() => getSidebarItemEditFormValues(item))
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const validateName = useSidebarNameValidator()
 
   const nameValidation = useNameValidation({
     name: values.name,
     initialName: item.name ?? '',
     isActive: true,
-    parentId: item.parentId,
-    excludeId: item.id,
-    validateName,
   })
 
   const handleClose = () => {

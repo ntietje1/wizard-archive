@@ -19,7 +19,6 @@ type LocalWorkspaceItemType = 'note' | 'folder' | 'canvas' | 'map' | 'file'
 type LocalSidebarItemType = WizardEditorItem['type']
 type LocalResourceColor = NonNullable<WizardEditorItem['color']>
 type LocalResourceIconName = NonNullable<WizardEditorItem['iconName']>
-const FIRST_CREATED_LOCAL_ITEM_INDEX = 2
 export const LOCAL_WORKSPACE_INITIAL_TIMESTAMP = 1704067200000
 const LOCAL_ITEM_TYPES_BY_SIDEBAR_TYPE = {
   note: 'note',
@@ -782,7 +781,6 @@ function copyItemTree({
   state: LocalWorkspaceState
   targetParentId: string | null
 }) {
-  const copiedIndex = nextIndexRef.value
   const copiedId = copiedItemIdsBySourceId.get(item.id)
   if (!copiedId) {
     throw new Error(`Copy receipt is missing a copied id for ${item.id}`)
@@ -799,7 +797,7 @@ function copyItemTree({
     slug: requireLocalResourceSlug(copiedId),
     status: 'active',
     trashedAt: null,
-    title: item.title || localItemTitle(item.type, copiedIndex),
+    title: item.title || localItemTitle(item.type),
     updatedAt: copiedAt,
   }
   copiedItems.push(copiedItem)
@@ -1147,7 +1145,7 @@ function createLocalItemCreation({
     trashedAt: null,
     type,
     updatedAt: createdAt,
-    title: localItemTitle(type, index),
+    title: localItemTitle(type),
     description: localItemDescription(type),
   }
 
@@ -1171,13 +1169,12 @@ function requireLocalResourceSlug(value: string): WizardEditorResourceSlug {
   return slug
 }
 
-function localItemTitle(type: LocalWorkspaceItemType, index: number) {
-  const suffix = index === FIRST_CREATED_LOCAL_ITEM_INDEX ? '' : ` ${index}`
-  if (type === 'folder') return `New Folder${suffix}`
-  if (type === 'canvas') return `New Canvas${suffix}`
-  if (type === 'map') return `New Map${suffix}`
-  if (type === 'file') return `New File${suffix}`
-  return `Untitled Note${suffix}`
+function localItemTitle(type: LocalWorkspaceItemType) {
+  if (type === 'folder') return 'New Folder'
+  if (type === 'canvas') return 'New Canvas'
+  if (type === 'map') return 'New Map'
+  if (type === 'file') return 'New File'
+  return 'Untitled Note'
 }
 
 function localItemDescription(type: LocalWorkspaceItemType) {

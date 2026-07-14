@@ -7,10 +7,6 @@ import type { FileSystemReceiptEffectError } from './receipt-effects'
 
 type ProgressToastId = string | number
 
-function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`)
-}
-
 export type FileSystemExecutorEffects = {
   reportError: (error: unknown, message: string) => void
   reportReceiptEffectError: (error: unknown, context: FileSystemReceiptEffectError) => void
@@ -41,16 +37,7 @@ function reportReceiptEffectError(error: unknown, context: FileSystemReceiptEffe
 function showReceiptToast(receipt: ResourceTransactionReceipt) {
   const message = getReceiptToastMessage(receipt)
   if (!message) return
-  switch (message.type) {
-    case 'success':
-      toast.success(message.text)
-      return
-    case 'info':
-      toast.info(message.text)
-      return
-    default:
-      return assertNever(message)
-  }
+  toast.success(message.text)
 }
 
 export function createFileSystemExecutorEffects(): FileSystemExecutorEffects {

@@ -8,5 +8,4 @@ export type MapFormEditState = ItemContentLoadState<MapItem>
 export interface MapFormSource {
   updateItemMetadata: FileSystemItemFormOperations['updateItemMetadata']
   updateMapImage: MapSession['updateMapImage']
-  validateItemName: FileSystemItemFormOperations['validateItemName']
 }

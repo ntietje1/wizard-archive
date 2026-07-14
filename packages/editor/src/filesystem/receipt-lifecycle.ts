@@ -24,7 +24,7 @@ export async function executeFileSystemReceiptLifecycle({
   showProgress,
   dismissProgress,
   showReceiptToast,
-}: FileSystemReceiptLifecycleArgs): Promise<ResourceCommandResult<never>> {
+}: FileSystemReceiptLifecycleArgs): Promise<ResourceCommandResult> {
   const receipt = await runMutation(() =>
     runFileSystemOptimisticMutation({
       cacheAdapter,

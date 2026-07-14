@@ -28,10 +28,6 @@ vi.mock('../../../../filesystem/use-name-validation', () => ({
   }),
 }))
 
-vi.mock('../../hooks/use-sidebar-name-validator', () => ({
-  useSidebarNameValidator: () => vi.fn(),
-}))
-
 vi.mock('../../../../errors/handle-error', () => ({
   handleError: handleErrorMock,
 }))

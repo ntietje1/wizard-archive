@@ -1,13 +1,11 @@
 import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
 import type {
   ResourceCommand,
-  ResourceCommandDecisionRecord,
   ResourceCommandExecutionOptions,
   ResourceCommandMutationInput,
   ResourceCommandResult,
   ResourceTransactionReceipt,
 } from './transaction-contract'
-import type { ItemOperationConflict } from './operation-planner'
 import type { FileSystemLifecycleIntent } from './domain/lifecycle'
 import type { AnyItem } from '../workspace/items'
 import type { FileSystemCacheAdapter } from './cache'
@@ -45,18 +43,8 @@ type FileSystemUiCommands = {
   setFolderState: (folderId: SidebarItemId, isOpen: boolean) => void
 }
 
-export type FileSystemPendingConflict = {
-  command: ResourceCommand
-  createParentPlan?: ResourceCommandExecutionOptions['createParentPlan']
-  conflicts: Array<ItemOperationConflict>
-  replayFingerprint: string
-  workspaceId: string
-  onSuccess?: () => void
-}
-
 type FileSystemExecutorSnapshot = {
   pendingOperationCount: number
-  pendingConflict: FileSystemPendingConflict | null
 }
 
 export type FileSystemExecutorRuntimeArgs = {
@@ -98,7 +86,6 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
   let mutationQueue: Promise<void> = Promise.resolve()
   let snapshot: FileSystemExecutorSnapshot = {
     pendingOperationCount: 0,
-    pendingConflict: null,
   }
   const listeners = new Set<() => void>()
 
@@ -176,13 +163,12 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
 
   const executeCommand = async (
     command: ResourceCommand,
-    { createParentPlan, decisions, onSuccess }: ResourceCommandExecutionOptions = {},
-  ): Promise<ResourceCommandResult<ItemOperationConflict>> => {
+    { createParentPlan, onSuccess }: ResourceCommandExecutionOptions = {},
+  ): Promise<ResourceCommandResult> => {
     const operationArgs = args
-    const result = await executeFileSystemCommandLifecycle({
+    return await executeFileSystemCommandLifecycle({
       command,
       createParentPlan,
-      decisions,
       workspaceId: operationArgs.workspaceId,
       currentUserId: operationArgs.currentUserId,
       activeItemSurface: operationArgs.activeItemSurface,
@@ -204,19 +190,6 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
       dismissProgress: operationArgs.effects.dismissProgress,
       showReceiptToast: operationArgs.effects.showReceiptToast,
     })
-    if (result.status === 'needsDecision') {
-      updateSnapshot({
-        pendingConflict: {
-          command,
-          createParentPlan,
-          conflicts: result.conflicts,
-          replayFingerprint: fingerprintFileSystemSnapshot(operationArgs.cacheAdapter),
-          workspaceId: operationArgs.workspaceId,
-          onSuccess,
-        },
-      })
-    }
-    return result
   }
 
   const discardCreatedItem = async (transactionId: OperationId) => {
@@ -298,39 +271,10 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
     )
   }
 
-  const resolvePendingConflict = async (decisions: ResourceCommandDecisionRecord) => {
-    const pendingConflict = snapshot.pendingConflict
-    if (!pendingConflict) {
-      return {
-        status: 'unavailable',
-        reason: 'no-pending-conflict',
-      } satisfies ResourceCommandResult<ItemOperationConflict>
-    }
-    const command = pendingConflict.command
-    const onSuccess = pendingConflict.onSuccess
-    updateSnapshot({ pendingConflict: null })
-    if (
-      pendingConflict.workspaceId !== args.workspaceId ||
-      pendingConflict.replayFingerprint !== fingerprintFileSystemSnapshot(args.cacheAdapter)
-    ) {
-      return {
-        status: 'rejected',
-        reason: 'stale-conflict',
-      } satisfies ResourceCommandResult<ItemOperationConflict>
-    }
-    return await executeCommand(command, {
-      createParentPlan: pendingConflict.createParentPlan,
-      decisions,
-      onSuccess,
-    })
-  }
-
   return {
     getSnapshot,
     subscribe,
     updateArgs,
-    clearPendingConflict: () => updateSnapshot({ pendingConflict: null }),
-    resolvePendingConflict,
     executeCommand,
     discardCreatedItem,
     runHistoryCommand,

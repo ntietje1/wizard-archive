@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { assertResourceItemColor, assertResourceItemSlug } from '../../../workspace/items'
-import type { ValidationResult } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
 import { FileForm } from '../form'
@@ -107,9 +106,7 @@ describe('FileForm', () => {
   it('accepts the effective uploaded filename when the optional name is blank', () => {
     const parentId: SidebarItemId = testId<'sidebarItems'>('parent_folder')
     const uploadedFile = new File(['duplicate'], 'duplicate.pdf', { type: 'application/pdf' })
-    const source = createFileFormSource({
-      validateItemName: vi.fn(() => ({ valid: false, error: 'Name already exists' })),
-    })
+    const source = createFileFormSource()
 
     renderFileForm({
       parentId,
@@ -121,8 +118,6 @@ describe('FileForm', () => {
       }),
     })
 
-    expect(source.validateItemName).not.toHaveBeenCalled()
-    expect(screen.queryByText('Name already exists')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled()
   })
 
@@ -381,7 +376,6 @@ function renderFileForm({
 }
 
 function createFileFormSource(overrides: Partial<FileFormSource> = {}): FileFormSource {
-  const validName = { valid: true } satisfies ValidationResult
   return {
     createItem: vi.fn(async (_values, attachFile) => {
       const created = {
@@ -404,7 +398,6 @@ function createFileFormSource(overrides: Partial<FileFormSource> = {}): FileForm
     updateItemMetadata: vi.fn(() => ({
       slug: assertResourceItemSlug('updated-handout'),
     })),
-    validateItemName: vi.fn(() => validName),
     ...overrides,
   }
 }

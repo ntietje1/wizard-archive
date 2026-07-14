@@ -4,7 +4,6 @@ import type {
   ResourceCommand,
   ResourceCreateCommand,
   ResourceCreateParentPlan,
-  ResourceOperationDecision,
   ResourceRenameCommand,
 } from './transaction-contract'
 import type { ResourcePatch } from './patch-contract'
@@ -41,7 +40,6 @@ type FileSystemOptimisticPlan =
 type PlannerArgs = {
   command: ResourceCommand
   createParentPlan?: ResourceCreateParentPlan
-  decisions?: Array<ResourceOperationDecision>
   snapshot: SidebarCacheSnapshot
   readModel: WorkspaceResourceReadModel<AnyItem>
   activeItemSurface: { parentId: SidebarItemId | null } | null
@@ -101,16 +99,14 @@ function planMoveOrRestore(
   const operations: Array<TransferOperation> = []
 
   for (const [targetParentId, groupItems] of groups) {
-    const plan = planTransferOperations({
-      mode: 'move',
-      items: groupItems,
-      itemsById: args.readModel.itemsById,
-      targetParentId,
-      targetItems: args.readModel.getActiveChildren(targetParentId),
-      decisions: args.decisions,
-      getChildren: args.readModel.getActiveChildren,
-    })
-    operations.push(...plan.operations)
+    operations.push(
+      ...planTransferOperations({
+        mode: 'move',
+        items: groupItems,
+        itemsById: args.readModel.itemsById,
+        targetParentId,
+      }),
+    )
   }
 
   return ready(

@@ -117,8 +117,6 @@ function completedShareCommandResult() {
         kind: 'shared' as const,
         affectedCount: 1,
         createdCount: 0,
-        mergedCount: 0,
-        skippedCount: 0,
       },
       undoable: true,
     },

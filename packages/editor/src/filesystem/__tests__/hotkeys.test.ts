@@ -309,7 +309,7 @@ describe('filesystem undo/redo hotkeys', () => {
         canUndo: true,
         canRedo: false,
         undo,
-        redo: vi.fn().mockResolvedValue({ status: 'needsDecision', conflicts: [] }),
+        redo: vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' }),
         reportError,
       }),
     )
