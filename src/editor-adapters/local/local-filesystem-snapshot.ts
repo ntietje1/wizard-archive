@@ -37,7 +37,6 @@ import {
 import type {
   CampaignId,
   CampaignMemberId as CanonicalCampaignMemberId,
-  MapPinId,
   ResourceShareId,
 } from '@wizard-archive/editor/resources/domain-id'
 
@@ -230,7 +229,7 @@ function createLocalMapPins(
 
     return [
       {
-        id: pin.id as MapPinId,
+        id: pin.id,
         createdAt: pin.creationTime,
         mapId: map.id as SidebarItemId,
         itemId: pin.itemId as SidebarItemId,

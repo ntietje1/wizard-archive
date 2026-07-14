@@ -47,8 +47,7 @@ export function createLocalGameMapSessionSource({
             sessionPinnedItemIdsByMapId,
           })
           for (const pin of created.pins) {
-            const pinId = pin.id as MapPinId
-            sessionCreatedPinsById.set(pinId, {
+            sessionCreatedPinsById.set(pin.id, {
               itemId: pin.itemId as SidebarItemId,
               mapId: String(mapId),
             })
@@ -73,7 +72,7 @@ export function createLocalGameMapSessionSource({
           if (!canMutateLocalMapPin(catalog, sessionCreatedPinsById, mapId, mapPinId)) {
             return { status: 'unavailable', reason: 'map_pin_not_found' }
           }
-          dispatch({ type: 'updateMapPin', mapPinId: String(mapPinId), x, y })
+          dispatch({ type: 'updateMapPin', mapPinId, x, y })
           return completeWizardEditorMapPinOperation({
             kind: 'mapPinUpdated',
             mapId,
@@ -97,7 +96,7 @@ export function createLocalGameMapSessionSource({
             }
             sessionCreatedPinsById.delete(mapPinId)
           }
-          dispatch({ type: 'removeMapPin', mapPinId: String(mapPinId) })
+          dispatch({ type: 'removeMapPin', mapPinId })
           return completeWizardEditorMapPinOperation({
             kind: 'mapPinRemoved',
             mapId,
@@ -114,7 +113,7 @@ export function createLocalGameMapSessionSource({
           }
           dispatch({
             type: 'updateMapPinVisibility',
-            mapPinId: String(mapPinId),
+            mapPinId,
             isVisible,
           })
           return completeWizardEditorMapPinOperation({
@@ -257,7 +256,7 @@ function createLocalMapPins({
     sessionPinnedItemIds.add(pin.itemId as SidebarItemId)
   }
   return {
-    pinIds: createdPins.map((created) => created.id as MapPinId),
+    pinIds: createdPins.map((created) => created.id),
     pins: createdPins,
     unavailable: false,
   }

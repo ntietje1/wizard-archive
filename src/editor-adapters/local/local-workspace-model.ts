@@ -14,7 +14,7 @@ import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, MapPinId } from '@wizard-archive/editor/resources/domain-id'
 
 type LocalWorkspaceItemType = 'note' | 'folder' | 'canvas' | 'map' | 'file'
 type LocalSidebarItemType = WizardEditorItem['type']
@@ -53,7 +53,7 @@ interface LocalItemCreation {
 }
 
 interface LocalMapPin {
-  id: string
+  id: MapPinId
   itemId: string
   layerId?: string | null
   x: number
@@ -76,7 +76,7 @@ interface LocalMapLayer {
 }
 
 interface LocalMapPinCreation {
-  id: string
+  id: MapPinId
   itemId: string
   layerId?: string | null
   x: number
@@ -209,10 +209,10 @@ export type LocalWorkspaceAction =
       color?: LocalResourceColor | null
     }
   | { type: 'replaceFile'; itemId: string; payload: LocalFilePayload }
-  | { type: 'removeMapPin'; mapPinId: string }
+  | { type: 'removeMapPin'; mapPinId: MapPinId }
   | { type: 'updateMapImage'; layerId: string | null; mapId: string; imageUrl: string | null }
-  | { type: 'updateMapPin'; mapPinId: string; x: number; y: number }
-  | { type: 'updateMapPinVisibility'; mapPinId: string; isVisible: boolean }
+  | { type: 'updateMapPin'; mapPinId: MapPinId; x: number; y: number }
+  | { type: 'updateMapPinVisibility'; mapPinId: MapPinId; isVisible: boolean }
 
 type LocalWorkspaceReducerMap = {
   [Type in LocalWorkspaceAction['type']]: (
@@ -437,7 +437,7 @@ function createMapPins(
 
 function updateMapPin(
   state: LocalWorkspaceState,
-  mapPinId: string,
+  mapPinId: MapPinId,
   x: number,
   y: number,
 ): LocalWorkspaceState {
@@ -454,7 +454,7 @@ function updateMapPin(
 
 function updateMapPinVisibility(
   state: LocalWorkspaceState,
-  mapPinId: string,
+  mapPinId: MapPinId,
   isVisible: boolean,
 ): LocalWorkspaceState {
   const updated = updateMapContainingPin(state, mapPinId, (map) => ({
@@ -468,7 +468,7 @@ function updateMapPinVisibility(
     : withUpdatedLocalMap(state, updated.mapId, updated.mapsById)
 }
 
-function removeMapPin(state: LocalWorkspaceState, mapPinId: string): LocalWorkspaceState {
+function removeMapPin(state: LocalWorkspaceState, mapPinId: MapPinId): LocalWorkspaceState {
   const updated = updateMapContainingPin(state, mapPinId, (map) => ({
     ...map,
     pins: map.pins.filter((pin) => pin.id !== mapPinId),
@@ -506,7 +506,7 @@ function updateMapImage(
 
 function updateMapContainingPin(
   state: LocalWorkspaceState,
-  mapPinId: string,
+  mapPinId: MapPinId,
   update: (map: LocalMap) => LocalMap,
 ) {
   const mapEntry = Object.entries(state.mapsById).find(([, map]) =>

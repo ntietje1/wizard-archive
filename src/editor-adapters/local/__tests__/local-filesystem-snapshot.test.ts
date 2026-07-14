@@ -15,6 +15,7 @@ import {
 } from '../public-demo-workspace-presets'
 import { SAMPLE_LOCAL_WORKSPACE } from '../sample-local-workspace'
 import { LOCAL_WORKSPACE_INITIAL_TIMESTAMP } from '../local-workspace-model'
+import { testMapPinId } from 'shared/test/map-pin-id'
 import { testNoteBlockId } from 'shared/test/note-block-id'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 
@@ -185,7 +186,7 @@ describe('local filesystem snapshot', () => {
         imageUrl: null,
         pins: [
           {
-            id: 'pin-visible-note',
+            id: testMapPinId('snapshot_visible_note'),
             itemId: 'visible-note',
             x: 20,
             y: 25,
@@ -193,7 +194,7 @@ describe('local filesystem snapshot', () => {
             creationTime: 1000,
           },
           {
-            id: 'pin-hidden-note',
+            id: testMapPinId('snapshot_hidden_note'),
             itemId: 'hidden-note',
             x: 40,
             y: 45,
