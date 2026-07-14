@@ -1,5 +1,4 @@
-import type { CampaignId } from '../common/ids'
-import type { SessionId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, SessionId } from '@wizard-archive/editor/resources/domain-id'
 
 export type Session = {
   id: SessionId

@@ -2,6 +2,7 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import type { Validator } from 'convex/values'
 import type { SessionId } from '@wizard-archive/editor/resources/domain-id'
+import { campaignIdValidator } from '../campaigns/schema'
 
 export const sessionIdValidator = v.string() as Validator<SessionId>
 
@@ -24,7 +25,7 @@ export const sessionTables = {
 export const sessionValidator = v.object({
   id: sessionIdValidator,
   createdAt: v.number(),
-  campaignId: v.id('campaigns'),
+  campaignId: campaignIdValidator,
   name: v.nullable(v.string()),
   startedAt: v.number(),
   endedAt: v.nullable(v.number()),

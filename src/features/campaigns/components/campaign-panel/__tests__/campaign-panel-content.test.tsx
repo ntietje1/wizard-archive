@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CampaignPanelContent } from '../campaign-panel-content'
 import type { CampaignPanelSource } from '../campaign-panel-source'
 import type { Session } from 'shared/sessions/types'
-import type { CampaignId } from 'shared/common/ids'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { testSessionId } from 'shared/test/session-id'
 
 const settingsStoreMocks = vi.hoisted(() => ({

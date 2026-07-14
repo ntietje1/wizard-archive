@@ -29,6 +29,8 @@ describe('startSession', () => {
     })
     expect(current).not.toBeNull()
     expect(current!.id).toBe(sessionId)
+    expect(current!.campaignId).toBe(ctx.campaignDomainId)
+    expect(current!.campaignId).not.toBe(ctx.campaignId)
     expect(isUuidV7(current!.id)).toBe(true)
   })
 
@@ -55,6 +57,7 @@ describe('startSession', () => {
 
     expect(first).toBeDefined()
     expect(second).toBeDefined()
+    expect(sessions.every((session) => session.campaignId === ctx.campaignDomainId)).toBe(true)
     expect(first!.endedAt).not.toBeNull()
     expect(second!.endedAt).toBeNull()
 
