@@ -31,10 +31,10 @@ function LiveWorkspaceRuntimeContent({
 }: {
   children: (runtime: WorkspaceRuntime) => ReactNode
 }) {
-  const { campaign, campaignId, campaignSlug, dmUsername } = useCampaign()
+  const { campaign, campaignId } = useCampaign()
   const membership = campaign.data?.myMembership
 
-  if (!campaignId || !membership) {
+  if (!membership) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -46,8 +46,6 @@ function LiveWorkspaceRuntimeContent({
     <LoadedLiveWorkspaceRuntimeContent
       workspaceId={campaignId}
       actorId={membership.id}
-      campaignSlug={campaignSlug}
-      dmUsername={dmUsername}
       projection={membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player'}
     >
       {children}
@@ -58,16 +56,12 @@ function LiveWorkspaceRuntimeContent({
 function LoadedLiveWorkspaceRuntimeContent({
   workspaceId,
   actorId,
-  campaignSlug,
   children,
-  dmUsername,
   projection,
 }: {
   workspaceId: CampaignId
   actorId: CampaignMemberId
-  campaignSlug: ReturnType<typeof useCampaign>['campaignSlug']
   children: (runtime: WorkspaceRuntime) => ReactNode
-  dmUsername: ReturnType<typeof useCampaign>['dmUsername']
   projection: 'dm' | 'player'
 }) {
   const resourceCore = useLiveResourceCore({
@@ -96,7 +90,7 @@ function LoadedLiveWorkspaceRuntimeContent({
     sidebarItemsShareOperations: liveFileSystemRuntime.sharing.sidebarItems,
     openExternalUrl: openBrowserExternalUrl,
     openSeparateItem: ({ heading, resourceId }) =>
-      openSeparateLiveWorkspaceItem({ campaignSlug, dmUsername, heading, resourceId }),
+      openSeparateLiveWorkspaceItem({ campaignId: workspaceId, heading, resourceId }),
   })
 
   return (
@@ -109,16 +103,14 @@ function LoadedLiveWorkspaceRuntimeContent({
 }
 
 const openSeparateLiveWorkspaceItem = ({
-  campaignSlug,
-  dmUsername,
+  campaignId,
   heading,
   resourceId,
 }: Parameters<LiveWorkspaceSeparateItemNavigation>[0] & {
-  campaignSlug: ReturnType<typeof useCampaign>['campaignSlug']
-  dmUsername: ReturnType<typeof useCampaign>['dmUsername']
+  campaignId: CampaignId
 }) => {
   const searchParams = new URLSearchParams({ item: resourceId })
   if (heading) searchParams.set('heading', heading)
-  const path = `${createEditorRoutePath({ dmUsername, campaignSlug })}?${searchParams.toString()}`
+  const path = `${createEditorRoutePath({ campaignId })}?${searchParams.toString()}`
   window.open(path, '_blank', 'noopener,noreferrer')
 }

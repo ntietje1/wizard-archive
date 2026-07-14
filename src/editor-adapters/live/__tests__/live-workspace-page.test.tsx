@@ -5,6 +5,7 @@ import { LiveWorkspacePage } from '../live-workspace-page'
 import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 
 const navigateMock = vi.hoisted(() => vi.fn())
+const campaignId = vi.hoisted(() => '018f2e40-7c00-7000-8000-000000000002')
 const useMatchMock = vi.hoisted(() => vi.fn())
 const openCampaignsDashboardMock = vi.hoisted(() => vi.fn())
 const savePanelPreferenceMock = vi.hoisted(() => vi.fn())
@@ -106,8 +107,7 @@ vi.mock('~/shared/utils/logger', () => ({
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
     campaign: { data: { name: 'Storm King' } },
-    campaignSlug: 'campaign',
-    dmUsername: 'dm',
+    campaignId,
   }),
 }))
 
@@ -284,7 +284,7 @@ describe('LiveWorkspacePage', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { dmUsername: 'dm', campaignSlug: 'campaign' },
+      params: { campaignId },
       search: { item: 'session-notes' },
       replace: true,
     })
@@ -306,7 +306,7 @@ describe('LiveWorkspacePage', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { dmUsername: 'dm', campaignSlug: 'campaign' },
+      params: { campaignId },
       search: {},
       replace: true,
     })

@@ -14,6 +14,7 @@ import { TestWrapper } from '~/test/test-wrapper'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 const mockUseMatch = vi.fn()
+let routeCampaignId = createCampaign().id
 
 vi.mock('~/shared/hooks/useAuthQuery', () => ({
   useAuthQuery: vi.fn(),
@@ -22,10 +23,7 @@ vi.mock('~/shared/hooks/useAuthQuery', () => ({
 vi.mock('@tanstack/react-router', () => ({
   useMatch: (...args: Array<unknown>) => mockUseMatch(...args),
   useNavigate: () => vi.fn(),
-  useParams: () => ({
-    dmUsername: 'testdm',
-    campaignSlug: 'my-campaign',
-  }),
+  useParams: () => ({}),
   useSearch: () => ({}),
   useLocation: () => ({ pathname: '/', search: '', hash: '' }),
   Link: ({ children, ...props }: Record<string, unknown> & { children?: ReactNode }) =>
@@ -37,8 +35,7 @@ function CampaignConsumer() {
   const ctx = useCampaign()
   return (
     <div>
-      <span data-testid="dm-username">{ctx.dmUsername}</span>
-      <span data-testid="campaign-slug">{ctx.campaignSlug}</span>
+      <span data-testid="campaign-id">{ctx.campaignId}</span>
       <span data-testid="is-dm">{String(ctx.isDm)}</span>
       <span data-testid="is-loaded">{String(ctx.isCampaignLoaded)}</span>
     </div>
@@ -47,11 +44,9 @@ function CampaignConsumer() {
 
 describe('CampaignProvider', () => {
   beforeEach(() => {
+    routeCampaignId = createCampaign().id
     mockUseMatch.mockReturnValue({
-      params: {
-        dmUsername: 'testdm',
-        campaignSlug: 'my-campaign',
-      },
+      params: { campaignId: routeCampaignId },
     })
   })
 
@@ -69,8 +64,7 @@ describe('CampaignProvider', () => {
       </TestWrapper>,
     )
 
-    expect(screen.getByTestId('dm-username')).toHaveTextContent('testdm')
-    expect(screen.getByTestId('campaign-slug')).toHaveTextContent('my-campaign')
+    expect(screen.getByTestId('campaign-id')).toHaveTextContent(routeCampaignId)
     expect(screen.getByTestId('is-loaded')).toHaveTextContent('true')
   })
 
@@ -158,7 +152,7 @@ describe('CampaignProvider', () => {
       </TestWrapper>,
     )
 
-    expect(screen.queryByTestId('dm-username')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('campaign-id')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Campaign Not Found' })).toBeInTheDocument()
   })
 
@@ -178,7 +172,7 @@ describe('CampaignProvider', () => {
       </TestWrapper>,
     )
 
-    expect(screen.queryByTestId('dm-username')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('campaign-id')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Could Not Load Campaign' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Try Again' }))

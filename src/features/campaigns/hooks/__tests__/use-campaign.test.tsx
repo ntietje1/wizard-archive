@@ -2,7 +2,6 @@ import { createElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { renderHook } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
-import { assertUsername } from 'shared/users/validation'
 import type { ReactNode } from 'react'
 import type { CampaignContextType } from '~/features/campaigns/hooks/useCampaign'
 import {
@@ -47,8 +46,6 @@ describe('useCampaign', () => {
   it('returns context value when inside provider', () => {
     const campaign = createCampaign()
     const value: CampaignContextType = {
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -58,7 +55,6 @@ describe('useCampaign', () => {
     const { result } = renderHook(() => useCampaign(), {
       wrapper: createWrapper(value),
     })
-    expect(result.current.dmUsername).toBe('testdm')
     expect(result.current.isDm).toBe(true)
     expect(result.current.campaignId).toBe(campaign.id)
   })
@@ -68,8 +64,6 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     const value: CampaignContextType = {
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -87,8 +81,6 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
     const value: CampaignContextType = {
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: false,
       isCampaignLoaded: true,
@@ -123,10 +115,7 @@ describe('useOptionalCampaign', () => {
       slug: 'my-campaign',
     })
     mockUseMatch.mockReturnValue({
-      params: {
-        dmUsername: 'testdm',
-        campaignSlug: 'my-campaign',
-      },
+      params: { campaignId: campaign.id },
     })
     vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery(campaign))
 
@@ -138,8 +127,6 @@ describe('useOptionalCampaign', () => {
     if (!campaignContext) {
       throw new Error('Expected campaign context')
     }
-    expect(campaignContext.dmUsername).toBe('testdm')
-    expect(campaignContext.campaignSlug).toBe(campaign.slug)
     expect(campaignContext.campaignId).toBe(campaign.id)
     expect(campaignContext.isDm).toBe(true)
   })

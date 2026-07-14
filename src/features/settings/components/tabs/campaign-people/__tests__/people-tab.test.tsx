@@ -1,7 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { assertUsername } from 'shared/users/validation'
 import { PeopleTab } from '~/features/settings/components/tabs/campaign-people/people-tab'
 import { useOptionalCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { createCampaign, createCampaignMember } from '~/test/factories/campaign-factory'
@@ -61,8 +60,6 @@ describe('PeopleTab', () => {
       slug: 'my-campaign',
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: false,
       isCampaignLoaded: true,
@@ -105,8 +102,6 @@ describe('PeopleTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -134,7 +129,7 @@ describe('PeopleTab', () => {
     )
 
     expect(screen.getByTestId('invite-link-section')).toHaveTextContent(
-      `https://example.test/join/testdm/${campaign.slug}`,
+      `https://example.test/join/${campaign.dmUserProfile.username}/${campaign.slug}`,
     )
     expect(screen.getByTestId('members-section')).toBeInTheDocument()
     expect(screen.getByTestId('pending-requests-section')).toBeInTheDocument()
@@ -148,8 +143,6 @@ describe('PeopleTab', () => {
     })
     const retryMembers = vi.fn()
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -191,8 +184,6 @@ describe('PeopleTab', () => {
       }),
     ]
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,

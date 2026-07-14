@@ -97,7 +97,7 @@ export function SettingsDialog() {
   const { isOpen, close, activeTab, setActiveTab } = useSettingsStore()
   const profileQuery = useUserProfileQuery()
   const campaignMatch = useMatch({
-    from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug',
+    from: '/_app/_authed/campaigns/$campaignId',
     shouldThrow: false,
   })
   const isInCampaign = !!campaignMatch

@@ -86,14 +86,14 @@ function useLiveWorkspaceHeadingRequest() {
   const searchItem = editorMatch?.search?.item
   const searchTrash = editorMatch?.search?.trash
   const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { campaignId } = useCampaign()
 
   return {
     heading,
     onConsumed: () => {
       void navigate({
         to: EDITOR_ROUTE,
-        params: { dmUsername, campaignSlug },
+        params: { campaignId },
         search: searchItem ? { item: searchItem } : searchTrash ? { trash: true } : {},
         replace: true,
       })

@@ -13,12 +13,11 @@ export function CampaignLayout() {
 }
 
 function CampaignRouteContent() {
-  const { campaignSlug, dmUsername } = useCampaign()
-  const routeIdentity = `${dmUsername}/${campaignSlug}`
+  const { campaignId } = useCampaign()
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <ErrorBoundary FallbackComponent={ErrorFallback} key={routeIdentity}>
+      <ErrorBoundary FallbackComponent={ErrorFallback} key={campaignId}>
         <Outlet />
       </ErrorBoundary>
     </div>

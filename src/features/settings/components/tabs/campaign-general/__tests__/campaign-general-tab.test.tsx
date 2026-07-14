@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
-import { assertUsername } from 'shared/users/validation'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CampaignGeneralTab } from '~/features/settings/components/tabs/campaign-general/campaign-general-tab'
@@ -52,12 +51,10 @@ describe('CampaignGeneralTab', () => {
   it('announces loading while campaign settings are pending', () => {
     const campaign = createCampaign({ slug: 'pending-campaign' })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery<ReturnType<typeof createCampaign>>(undefined),
       isDm: undefined,
       isCampaignLoaded: false,
-      campaignId: undefined,
+      campaignId: campaign.id,
     })
 
     render(
@@ -72,12 +69,10 @@ describe('CampaignGeneralTab', () => {
   it('shows the campaign settings load failure', () => {
     const campaign = createCampaign({ slug: 'failed-campaign' })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQueryError<ReturnType<typeof createCampaign>>(new Error('campaign failed')),
       isDm: undefined,
       isCampaignLoaded: false,
-      campaignId: undefined,
+      campaignId: campaign.id,
     })
 
     render(
@@ -92,8 +87,6 @@ describe('CampaignGeneralTab', () => {
   it('shows the campaign settings load failure after campaign lookup settles without data', () => {
     const campaign = createCampaign({ slug: 'missing-campaign' })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery<ReturnType<typeof createCampaign>>(undefined, {
         fetchStatus: 'idle',
         isFetching: false,
@@ -104,7 +97,7 @@ describe('CampaignGeneralTab', () => {
       }),
       isDm: undefined,
       isCampaignLoaded: true,
-      campaignId: undefined,
+      campaignId: campaign.id,
     })
 
     render(
@@ -122,8 +115,6 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -147,8 +138,6 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -175,8 +164,6 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,
@@ -209,8 +196,6 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: false,
       isCampaignLoaded: true,
@@ -234,8 +219,6 @@ describe('CampaignGeneralTab', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     vi.mocked(useOptionalCampaign).mockReturnValue({
-      dmUsername: assertUsername('testdm'),
-      campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
       isCampaignLoaded: true,

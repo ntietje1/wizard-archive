@@ -15,10 +15,10 @@ export function useLiveWorkspaceSelectedResourceId(): ResourceId | null {
 
 export const useLiveWorkspaceNavigation = () => {
   const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = useCampaign()
+  const { campaignId } = useCampaign()
   const { lastSelectedWorkspaceItemSearch, setLastSelectedItem } = useLastWorkspaceItem()
 
-  const routeParams = { dmUsername, campaignSlug }
+  const routeParams = { campaignId }
 
   const navigateToWorkspaceRoute = async (search: WorkspaceRouteSearch, replace?: boolean) => {
     await navigate({

@@ -449,10 +449,10 @@ export function JoinCampaignPage() {
   }
 
   const goToCampaignHome = () => {
-    if (!dmUsername || !campaignSlug) return
+    if (!campaign) return
     void navigate({
-      to: '/campaigns/$dmUsername/$campaignSlug',
-      params: { dmUsername, campaignSlug },
+      to: '/campaigns/$campaignId',
+      params: { campaignId: campaign.id },
     })
   }
 

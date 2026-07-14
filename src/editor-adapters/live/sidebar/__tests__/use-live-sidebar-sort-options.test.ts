@@ -59,8 +59,6 @@ vi.mock('convex/_generated/api', () => ({
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
     campaignId: campaignIdState.value,
-    dmUsername: 'dm',
-    campaignSlug: 'world',
   }),
 }))
 

@@ -9,6 +9,7 @@ import {
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const useMatchMock = vi.hoisted(() => vi.fn())
+const campaignId = vi.hoisted(() => '018f2e40-7c00-7000-8000-000000000001')
 const lastWorkspaceItemState = vi.hoisted(() => ({
   lastSelectedWorkspaceItemSearch: null as Record<string, unknown> | null,
   setLastSelectedItem: vi.fn(),
@@ -21,8 +22,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
-    campaignSlug: 'campaign',
-    dmUsername: 'dm',
+    campaignId,
   }),
 }))
 
@@ -65,7 +65,7 @@ describe('useLiveWorkspaceNavigation', () => {
     expect(lastWorkspaceItemState.setLastSelectedItem).toHaveBeenCalledExactlyOnceWith(resourceId)
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { dmUsername: 'dm', campaignSlug: 'campaign' },
+      params: { campaignId },
       search: { item: resourceId, heading: 'arrival' },
       replace: true,
     })
@@ -80,7 +80,7 @@ describe('useLiveWorkspaceNavigation', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { dmUsername: 'dm', campaignSlug: 'campaign' },
+      params: { campaignId },
       search: { trash: true },
       replace: undefined,
     })
@@ -97,7 +97,7 @@ describe('useLiveWorkspaceNavigation', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { dmUsername: 'dm', campaignSlug: 'campaign' },
+      params: { campaignId },
       search: { item: resourceId, heading: 'scene' },
       replace: undefined,
     })
@@ -112,7 +112,7 @@ describe('useLiveWorkspaceNavigation', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { dmUsername: 'dm', campaignSlug: 'campaign' },
+      params: { campaignId },
       search: {},
       replace: undefined,
     })
@@ -128,7 +128,7 @@ describe('useLiveWorkspaceNavigation', () => {
 
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
-      params: { dmUsername: 'dm', campaignSlug: 'campaign' },
+      params: { campaignId },
       search: {},
       replace: undefined,
     })

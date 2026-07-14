@@ -271,6 +271,42 @@ describe('getUserCampaigns', () => {
   })
 })
 
+describe('getCampaignById', () => {
+  const t = createTestContext()
+
+  it('loads an authorized campaign through its domain UUID', async () => {
+    const dm = await setupUser(t)
+    const { campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+
+    const campaign = await dm.authed.query(api.campaigns.queries.getCampaignById, {
+      campaignId: campaignDomainId,
+    })
+
+    expect(campaign.id).toBe(campaignDomainId)
+  })
+
+  it('does not expose a campaign to an actor without membership', async () => {
+    const dm = await setupUser(t)
+    const outsider = await setupUser(t)
+    const { campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+
+    await expectPermissionDenied(
+      outsider.authed.query(api.campaigns.queries.getCampaignById, {
+        campaignId: campaignDomainId,
+      }),
+    )
+  })
+
+  it('requires authentication', async () => {
+    const dm = await setupUser(t)
+    const { campaignDomainId } = await createCampaignWithDm(t, dm.profile)
+
+    await expectNotAuthenticated(
+      t.query(api.campaigns.queries.getCampaignById, { campaignId: campaignDomainId }),
+    )
+  })
+})
+
 describe('getCampaignBySlug', () => {
   const t = createTestContext()
 

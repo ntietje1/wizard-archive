@@ -78,7 +78,11 @@ describe('landing demo runtime surfaces', () => {
 
   it('mounts collaborative Session Notes with an embedded revealed prep note state', async () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.collaborativeSessionNotes)
-    const sessionBlocks = scenario.workspace.noteAdditionalBlocksById['note-session'] ?? []
+    const sessionNoteId = scenario.initialItemId
+    if (!sessionNoteId) throw new Error('Collaborative scenario requires an initial note')
+    const prepNote = scenario.workspace.items.find((item) => item.title === 'The Lantern Market')
+    if (!prepNote) throw new Error('Collaborative scenario requires its prep note')
+    const sessionBlocks = scenario.workspace.noteAdditionalBlocksById[sessionNoteId] ?? []
 
     render(
       <LocalWorkspaceRuntimeHost
@@ -94,8 +98,8 @@ describe('landing demo runtime surfaces', () => {
 
     expect(await screen.findByLabelText('Collaborative Session Notes')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Session Notes')).toBeInTheDocument()
-    expect(scenario.workspace.noteBodiesById['note-session']).toContain('Scene: Moonwell Docks')
-    expect(scenario.workspace.noteBodiesById['note-market']).toContain(
+    expect(scenario.workspace.noteBodiesById[sessionNoteId]).toContain('Scene: Moonwell Docks')
+    expect(scenario.workspace.noteBodiesById[prepNote.id]).toContain(
       'GM secret: Mara Vell planted the blue-glass invoice to bait the Salt Warehouse clerk',
     )
     expect(sessionBlocks).toEqual([
@@ -103,7 +107,7 @@ describe('landing demo runtime surfaces', () => {
         type: 'embed',
         props: expect.objectContaining({
           targetKind: 'resource',
-          resourceId: 'note-market',
+          resourceId: prepNote.id,
         }),
       }),
     ])

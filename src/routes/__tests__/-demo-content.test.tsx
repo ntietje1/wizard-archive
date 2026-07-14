@@ -69,15 +69,16 @@ describe('LocalDemoRouteContent', () => {
 
   it('mounts the local workspace from item and heading URL state', () => {
     clientOnlyState.renderClient = true
-    window.history.replaceState(null, '', '/demo?item=session-notes&heading=Intro')
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
+    const resourceId = scenario.workspace.items[0].id
+    window.history.replaceState(null, '', `/demo?item=${resourceId}&heading=Intro`)
 
     render(<LocalDemoRouteContent />)
 
     expect(screen.getByText('Local demo workspace')).toBeInTheDocument()
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        initialItemId: 'session-notes',
+        initialItemId: resourceId,
         initialWorkspace: scenario.workspace,
         openSeparateItem: expect.any(Function),
       }),
@@ -95,7 +96,7 @@ describe('LocalDemoRouteContent', () => {
       | undefined
     noteHeadingRequest?.onConsumed?.()
 
-    expect(window.location.search).toBe('?item=session-notes')
+    expect(window.location.search).toBe(`?item=${resourceId}`)
   })
 
   it('mounts the requested public demo scenario from URL state', () => {

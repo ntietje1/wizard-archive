@@ -5,9 +5,8 @@ describe('createEditorRoutePath', () => {
   it('builds the live editor path with encoded route params', () => {
     expect(
       createEditorRoutePath({
-        dmUsername: 'dm name',
-        campaignSlug: 'storm/king',
+        campaignId: 'campaign/id',
       }),
-    ).toBe('/campaigns/dm%20name/storm%2Fking/editor')
+    ).toBe('/campaigns/campaign%2Fid/editor')
   })
 })

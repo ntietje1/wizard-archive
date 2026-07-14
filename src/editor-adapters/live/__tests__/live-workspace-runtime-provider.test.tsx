@@ -15,8 +15,6 @@ const campaignId = testCampaignId('live-provider')
 const actorId = testCampaignMemberId('live-provider')
 const campaignState = vi.hoisted(() => ({
   campaignId: undefined as ReturnType<typeof testCampaignId> | undefined,
-  campaignSlug: 'lost city',
-  dmUsername: 'gm user',
   membership: undefined as { id: ReturnType<typeof testCampaignMemberId>; role: 'DM' } | undefined,
 }))
 const resourceCore = vi.hoisted(() => ({
@@ -57,8 +55,6 @@ const runtime = vi.hoisted(
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
     campaignId: campaignState.campaignId,
-    campaignSlug: campaignState.campaignSlug,
-    dmUsername: campaignState.dmUsername,
     campaign: { data: { myMembership: campaignState.membership } },
   }),
 }))
@@ -96,8 +92,6 @@ describe('LiveWorkspaceRuntimeProvider', () => {
   beforeEach(() => {
     campaignState.campaignId = campaignId
     campaignState.membership = { id: actorId, role: 'DM' }
-    campaignState.campaignSlug = 'lost city'
-    campaignState.dmUsername = 'gm user'
     clearWorkspaceContentMock.mockReset()
     navigateToItemMock.mockReset()
     filesystemReadModel.readModel.getItemBySlug.mockClear()
@@ -193,7 +187,7 @@ describe('LiveWorkspaceRuntimeProvider', () => {
       'noopener,noreferrer',
     )
     expect(openMock).toHaveBeenCalledWith(
-      `/campaigns/gm%20user/lost%20city/editor?${expectedSearchParams.toString()}`,
+      `/campaigns/${campaignId}/editor?${expectedSearchParams.toString()}`,
       '_blank',
       'noopener,noreferrer',
     )

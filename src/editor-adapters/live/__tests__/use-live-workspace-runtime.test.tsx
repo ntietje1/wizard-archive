@@ -207,8 +207,6 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
     campaign: { data: { myMembership: null } },
     campaignId: campaignState.campaignId,
-    campaignSlug: 'campaign',
-    dmUsername: 'dm',
     isCampaignLoaded: campaignState.isCampaignLoaded,
     isDm: campaignState.isDm,
   }),

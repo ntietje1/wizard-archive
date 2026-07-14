@@ -9,7 +9,10 @@ import {
   campaignValidator,
 } from './schema'
 import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampaigns'
-import { getCampaignBySlug as getCampaignBySlugFn } from './functions/getCampaign'
+import {
+  getCampaign as getCampaignFn,
+  getCampaignBySlug as getCampaignBySlugFn,
+} from './functions/getCampaign'
 import { assertCampaignSlug, campaignSlugValidator } from './validation'
 
 import type { Campaign, CampaignMember, CampaignMemberSummary } from '../../shared/campaigns/types'
@@ -33,6 +36,16 @@ export const getCampaignBySlug = authQuery({
       dmUsername: assertUsername(args.dmUsername),
       slug: assertCampaignSlug(args.slug),
     })
+  },
+})
+
+export const getCampaignById = campaignQuery({
+  args: {},
+  returns: campaignValidator,
+  handler: async (ctx): Promise<Campaign> => {
+    const campaign = await getCampaignFn(ctx, { campaignId: ctx.campaign._id })
+    if (!campaign) throw new Error('Campaign scope resolved a missing campaign')
+    return campaign
   },
 })
 

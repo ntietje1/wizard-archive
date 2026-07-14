@@ -1,25 +1,20 @@
 import { createContext, useContext } from 'react'
 import { useMatch } from '@tanstack/react-router'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { parseCampaignSlug } from 'shared/campaigns/validation'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import type { Campaign } from 'shared/campaigns/types'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
-import { parseUsername } from 'shared/users/validation'
-import type { CampaignSlug } from 'shared/campaigns/validation'
-import type { Username } from 'shared/users/validation'
-import { useCampaignBySlugQuery } from '~/features/campaigns/hooks/use-campaign-operations'
+import { useCampaignByIdQuery } from '~/features/campaigns/hooks/use-campaign-operations'
 
 type CampaignRouteIdentity = {
-  dmUsername: Username
-  campaignSlug: CampaignSlug
+  campaignId: CampaignId
 }
 
 export type CampaignContextType = CampaignRouteIdentity & {
   campaign: UseQueryResult<Campaign, Error>
   isDm: boolean | undefined
   isCampaignLoaded: boolean
-  campaignId: CampaignId | undefined
 }
 
 export const CampaignContext = createContext<CampaignContextType | null>(null)
@@ -33,24 +28,19 @@ export function buildCampaignContextValue(
     campaign,
     isCampaignLoaded: campaign.data !== undefined,
     isDm: campaign.data ? campaign.data.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM : undefined,
-    campaignId: campaign.data?.id,
   }
 }
 
 export function useOptionalCampaignRoute(): CampaignRouteIdentity | null {
   const campaignMatch = useMatch({
-    from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug',
+    from: '/_app/_authed/campaigns/$campaignId',
     shouldThrow: false,
   })
 
   if (!campaignMatch) return null
 
-  const dmUsername = parseUsername(campaignMatch.params.dmUsername)
-  const campaignSlug = parseCampaignSlug(campaignMatch.params.campaignSlug)
-
-  if (!dmUsername || !campaignSlug) return null
-
-  return { dmUsername, campaignSlug }
+  const campaignId = parseDomainId(DOMAIN_ID_KIND.campaign, campaignMatch.params.campaignId)
+  return campaignId ? { campaignId } : null
 }
 
 /**
@@ -65,7 +55,7 @@ export function useOptionalCampaignRoute(): CampaignRouteIdentity | null {
 export function useOptionalCampaign(): CampaignContextType | null {
   const context = useContext(CampaignContext)
   const identity = useOptionalCampaignRoute()
-  const campaign = useCampaignBySlugQuery(context ? null : identity)
+  const campaign = useCampaignByIdQuery(context ? null : (identity?.campaignId ?? null))
 
   if (context) return context
   if (!identity) return null

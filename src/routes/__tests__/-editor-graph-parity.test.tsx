@@ -80,8 +80,7 @@ vi.mock('~/editor-adapters/live/use-live-workspace-navigation', () => ({
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({
     campaign: { data: { name: 'Storm King' } },
-    campaignSlug: 'storm-king',
-    dmUsername: 'mira',
+    campaignId: '018f2e40-7c00-7000-8000-000000000005',
   }),
 }))
 

@@ -11,7 +11,6 @@ import {
   getUserProfileByUsername,
 } from '../../users/functions/getUserProfile'
 import { toUserProfileSummary } from '../../users/functions/profileSummary'
-import type { AuthQueryCtx } from '../../functions'
 import type {
   Campaign,
   CampaignRow,
@@ -101,7 +100,7 @@ async function enhanceCampaign(
 
 // NOTE: No membership check here — callers need to verify membership
 export async function getCampaign(
-  ctx: AuthQueryCtx,
+  ctx: QueryCtx,
   { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<Campaign | null> {
   const campaign = await ctx.db.get('campaigns', campaignId)
