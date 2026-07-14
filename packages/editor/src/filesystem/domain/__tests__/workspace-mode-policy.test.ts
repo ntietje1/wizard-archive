@@ -2,18 +2,20 @@ import { describe, expect, it } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { WORKSPACE_MODE } from '../../../../../../shared/workspace/workspace-mode'
 import { createNote } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
 import { testResourceShareId } from '../../../test/resource-share-id'
+import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
+import { testDomainId } from '../../../test/domain-id'
 import { RESOURCE_STATUS } from '../../../workspace/items-persistence-contract'
 import { resolveResourceWorkspaceModePolicy } from '../workspace-mode-policy'
 import type { EditorWorkspaceActor } from '../permission-resolution'
 import { createPermissionLookup } from './permission-test-utils'
 
-const memberId = testId<'campaignMembers'>('workspace_mode_member')
+const memberDomainId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'workspace_mode_member')
+const campaignId = testDomainId(DOMAIN_ID_KIND.campaign, 'workspace_mode_campaign')
 const participantActor: EditorWorkspaceActor = { kind: 'participant' }
 const ownerViewAsActor: EditorWorkspaceActor = {
   kind: 'owner_view_as',
-  participantId: memberId,
+  participantId: memberDomainId,
 }
 
 describe('resource workspace mode policy', () => {
@@ -39,10 +41,10 @@ describe('resource workspace mode policy', () => {
         {
           id: testResourceShareId('workspace_mode_share'),
           createdAt: 1,
-          campaignId: noteBase.campaignId,
+          campaignId,
           sidebarItemId: noteBase.id,
           sidebarItemType: noteBase.type,
-          campaignMemberId: memberId,
+          campaignMemberId: memberDomainId,
           sessionId: null,
           permissionLevel: PERMISSION_LEVEL.EDIT,
         },

@@ -7,42 +7,32 @@ import { throwClientError } from '../../errors'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
-import type { ResourceShareId } from '@wizard-archive/editor/resources/domain-id'
-
-type SidebarItemShare = Omit<
-  Doc<'sidebarItemShares'>,
-  '_id' | '_creationTime' | 'resourceShareUuid'
-> & {
-  id: ResourceShareId
-  createdAt: number
-}
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceShare } from '@wizard-archive/editor/resources/resource-contract'
+import {
+  loadSidebarItemShareIdentityProjection,
+  projectSidebarItemShare,
+} from './projectSidebarItemShare'
+import type { SidebarItemShareIdentityProjection } from './projectSidebarItemShare'
 
 export interface SidebarItemWithShares {
   sidebarItemId: Id<'sidebarItems'>
   allPermissionLevel: PermissionLevel | null
   inheritShares: boolean | null
-  shares: Array<SidebarItemShare>
+  shares: Array<ResourceShare>
   inheritedAllPermissionLevel: PermissionLevel | null
   inheritedFromFolderName: string | null
-  memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
-  memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
-}
-
-function toSidebarItemShare(share: Doc<'sidebarItemShares'>): SidebarItemShare {
-  const { _id: _rowId, _creationTime, resourceShareUuid, ...fields } = share
-  return {
-    ...fields,
-    id: resourceShareUuid,
-    createdAt: _creationTime,
-  }
+  memberInheritedPermissions: Record<CampaignMemberId, PermissionLevel>
+  memberInheritedFromFolderNames: Record<CampaignMemberId, string>
 }
 
 async function getShareInfoForSidebarItem(
   ctx: CampaignQueryCtx,
   sidebarItemId: Id<'sidebarItems'>,
   playerMemberIds: Array<Id<'campaignMembers'>>,
+  identities: SidebarItemShareIdentityProjection,
 ): Promise<SidebarItemWithShares> {
   const itemRow = await getSidebarItem(ctx, sidebarItemId)
   if (itemRow && itemRow.campaignId !== ctx.campaign._id) {
@@ -66,13 +56,15 @@ async function getShareInfoForSidebarItem(
     memberIds: playerMemberIds,
   })
 
-  const memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel> = {}
-  const memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string> = {}
+  const memberInheritedPermissions: Record<CampaignMemberId, PermissionLevel> = {}
+  const memberInheritedFromFolderNames: Record<CampaignMemberId, string> = {}
   for (const memberId of playerMemberIds) {
+    const campaignMemberId = identities.memberIds.get(memberId)
+    if (!campaignMemberId) throw new Error('Campaign member identity is missing')
     const entry = inherited.members[memberId]
-    memberInheritedPermissions[memberId] = entry?.level ?? PERMISSION_LEVEL.NONE
+    memberInheritedPermissions[campaignMemberId] = entry?.level ?? PERMISSION_LEVEL.NONE
     if (entry?.folderName) {
-      memberInheritedFromFolderNames[memberId] = entry.folderName
+      memberInheritedFromFolderNames[campaignMemberId] = entry.folderName
     }
   }
 
@@ -80,7 +72,7 @@ async function getShareInfoForSidebarItem(
     sidebarItemId,
     allPermissionLevel: item.allPermissionLevel,
     inheritShares: item.type === RESOURCE_TYPES.folders ? item.inheritShares : null,
-    shares: shares.map(toSidebarItemShare),
+    shares: shares.map((share) => projectSidebarItemShare(share, identities)),
     inheritedAllPermissionLevel: inherited.allPlayers.level,
     inheritedFromFolderName: inherited.allPlayers.folderName,
     memberInheritedPermissions,
@@ -92,10 +84,7 @@ export async function getSidebarItemsWithShares(
   ctx: CampaignQueryCtx,
   { sidebarItemIds }: { sidebarItemIds: Array<Id<'sidebarItems'>> },
 ): Promise<Array<SidebarItemWithShares>> {
-  const members = await ctx.db
-    .query('campaignMembers')
-    .withIndex('by_campaign_user', (q) => q.eq('campaignId', ctx.campaign._id))
-    .collect()
+  const { identities, members } = await loadSidebarItemShareIdentityProjection(ctx)
   const playerMemberIds = members
     .filter(
       (member) =>
@@ -106,7 +95,7 @@ export async function getSidebarItemsWithShares(
 
   return await Promise.all(
     [...new Set(sidebarItemIds)].map((sidebarItemId) =>
-      getShareInfoForSidebarItem(ctx, sidebarItemId, playerMemberIds),
+      getShareInfoForSidebarItem(ctx, sidebarItemId, playerMemberIds, identities),
     ),
   )
 }

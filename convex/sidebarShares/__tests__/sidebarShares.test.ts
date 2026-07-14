@@ -57,7 +57,9 @@ describe('setResourcesMemberPermission', () => {
     expect(isUuidV7(result.shares[0].id)).toBe(true)
     expect(result.shares[0]).not.toHaveProperty('_id')
     expect(result.shares[0]).not.toHaveProperty('resourceShareUuid')
-    expect(result.shares[0].campaignMemberId).toBe(ctx.player.memberId)
+    expect(result.shares[0].campaignId).toBe(ctx.campaignDomainId)
+    expect(result.shares[0].campaignMemberId).toBe(ctx.player.memberDomainId)
+    expect(result.shares[0].sessionId).toBeNull()
     expect(result.shares[0].permissionLevel).toBe('view')
 
     await t.run(async (dbCtx) => {
@@ -67,6 +69,21 @@ describe('setResourcesMemberPermission', () => {
         .unique()
       expect(share?.resourceShareUuid).toBe(result.shares[0].id)
     })
+  })
+
+  it('projects the canonical session identity recorded on a share', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignDomainId,
+      name: 'Sharing session',
+    })
+
+    await shareWithPlayer(dmAuth, ctx.campaignDomainId, [noteId], ctx.player.memberDomainId)
+
+    const result = await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)
+    expect(result.shares[0].sessionId).toBe(sessionId)
   })
 
   it('sets permissions for multiple items in one mutation', async () => {
@@ -380,7 +397,7 @@ describe('getSidebarItemsWithShares', () => {
     expect(folder.inheritShares).toBe(true)
     expect(folder.shares).toHaveLength(1)
     expect(note.inheritedAllPermissionLevel).toBe('view')
-    expect(note.memberInheritedPermissions[ctx.player.memberId]).toBe('edit')
+    expect(note.memberInheritedPermissions[ctx.player.memberDomainId]).toBe('edit')
   })
 
   it('omits inactive players from inherited projections while preserving stale rows to clear', async () => {
@@ -400,7 +417,9 @@ describe('getSidebarItemsWithShares', () => {
 
     const result = await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)
 
-    expect(result.shares.map((share) => share.campaignMemberId)).toEqual([ctx.player.memberId])
+    expect(result.shares.map((share) => share.campaignMemberId)).toEqual([
+      ctx.player.memberDomainId,
+    ])
     expect(result.memberInheritedPermissions).toEqual({})
   })
 

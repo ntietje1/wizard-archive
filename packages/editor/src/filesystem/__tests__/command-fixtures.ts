@@ -3,6 +3,8 @@ import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import { RESOURCE_COMMAND_TYPE, RESOURCE_EVENT_TYPE } from '../transaction-contract'
 import type { ResourceCommand, ResourceEvent } from '../transaction-contract'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 
 export const commandFixtureItemIds = {
   item: 'fixture_item' as SidebarItemId,
@@ -10,6 +12,7 @@ export const commandFixtureItemIds = {
   destination: 'fixture_destination' as SidebarItemId,
   folder: 'fixture_folder' as SidebarItemId,
   member: 'fixture_member' as CampaignMemberId,
+  memberDomain: testDomainId(DOMAIN_ID_KIND.campaignMember, 'fixture_member'),
   note: 'fixture_note' as SidebarItemId,
 } as const
 
@@ -59,13 +62,13 @@ export const fileSystemCommandFixtures = {
   [RESOURCE_COMMAND_TYPE.setResourcesMemberPermission]: {
     type: RESOURCE_COMMAND_TYPE.setResourcesMemberPermission,
     itemIds: [commandFixtureItemIds.source],
-    campaignMemberId: commandFixtureItemIds.member,
+    campaignMemberId: commandFixtureItemIds.memberDomain,
     permissionLevel: 'view',
   },
   [RESOURCE_COMMAND_TYPE.clearResourcesMemberPermission]: {
     type: RESOURCE_COMMAND_TYPE.clearResourcesMemberPermission,
     itemIds: [commandFixtureItemIds.source],
-    campaignMemberId: commandFixtureItemIds.member,
+    campaignMemberId: commandFixtureItemIds.memberDomain,
   },
   [RESOURCE_COMMAND_TYPE.setFolderInheritShares]: {
     type: RESOURCE_COMMAND_TYPE.setFolderInheritShares,

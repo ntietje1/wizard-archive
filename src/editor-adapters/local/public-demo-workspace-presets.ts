@@ -16,7 +16,7 @@ import type {
 } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId, NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 const PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID = 'note-market'
 type PublicDemoAdditionalBlock = LocalWorkspaceState['noteAdditionalBlocksById'][string][number]
@@ -166,13 +166,13 @@ function createPublicDemoLinkPreviewWorkspace(): LocalWorkspaceState {
 
 function createPublicDemoPlayerPreviewWorkspace(): LocalWorkspaceState {
   return withPublicDemoPrivatePrepSharingState(createPublicDemoLinkPreviewWorkspace(), {
-    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID,
+    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
   })
 }
 
 function createPublicDemoRevealedInPlayWorkspace(): LocalWorkspaceState {
   return withPublicDemoPrivatePrepSharingState(createPublicDemoLinkPreviewWorkspace(), {
-    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID,
+    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
     secretVisibleToPlayer: true,
   })
 }
@@ -218,7 +218,7 @@ function createPublicDemoCollaborationWorkspace(): LocalWorkspaceState {
     {
       secretVisibleToPlayer: true,
       playerVisibleItemIds: [PUBLIC_DEMO_SESSION_NOTE_ID],
-      selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID,
+      selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
     },
   )
 }
@@ -323,7 +323,7 @@ function createPublicDemoLayeredLoreMapWorkspace(): LocalWorkspaceState {
       },
     },
     playerMembers: clonePublicDemoPlayerMembers(),
-    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID,
+    selectedViewAsPlayerId: PUBLIC_DEMO_PLAYER_MEMBER_ID,
   }
 }
 
@@ -463,7 +463,7 @@ function withPublicDemoPrivatePrepSharingState(
   options: {
     playerVisibleItemIds?: Array<string>
     secretVisibleToPlayer?: boolean
-    selectedViewAsPlayerId?: CampaignMemberRowId
+    selectedViewAsPlayerId?: CampaignMemberId
   } = {},
 ): LocalWorkspaceState {
   const memberItemPermissionsById = { ...workspace.memberItemPermissionsById }

@@ -28,9 +28,18 @@ import {
   withValidLocalViewAsPlayerSelection,
 } from './local-workspace-model'
 import type { LocalWorkspaceState } from './local-workspace-model'
-import type { CampaignMemberId, SidebarItemId } from 'shared/common/ids'
-import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { MapPinId, ResourceShareId } from '@wizard-archive/editor/resources/domain-id'
+import type { SidebarItemId } from 'shared/common/ids'
+import {
+  DOMAIN_ID_KIND,
+  generateDomainId,
+  parseDomainId,
+} from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  CampaignMemberId as CanonicalCampaignMemberId,
+  MapPinId,
+  ResourceShareId,
+} from '@wizard-archive/editor/resources/domain-id'
 
 export type LocalFileSystemSnapshot = Omit<WizardEditorCatalogSnapshot, 'current'> & {
   workspace: LocalWorkspaceState
@@ -44,6 +53,8 @@ type LocalItemName = WizardEditorItemWithContent['name']
 type LocalItemSlug = WizardEditorItemWithContent['slug']
 type LocalSidebarItemShareType = WizardEditorItemWithContent['shares'][number]['sidebarItemType']
 const localResourceShareIds = new Map<string, ResourceShareId>()
+const localCampaignIds = new Map<string, CampaignId>()
+const localCampaignMemberIds = new Map<string, CanonicalCampaignMemberId>()
 type LocalSidebarItemBaseFields = Pick<
   WizardEditorItemWithContent,
   | 'id'
@@ -78,7 +89,6 @@ type LocalNoteContent = Pick<LocalNoteItemWithContent, 'blockMeta' | 'content'>
 type LocalNoteBlock = LocalNoteContent['content'][number]
 type LocalNoteBlockMeta = LocalNoteContent['blockMeta'][string]
 type LocalItemWorkspaceRecordId = WizardEditorItemWithContent['campaignId']
-type LocalItemShareWorkspaceRecordId = WizardEditorItemWithContent['shares'][number]['campaignId']
 type LocalNoteBlockVisibilityRules = NonNullable<
   LocalWorkspaceState['noteBlockVisibilityById']
 >[string]
@@ -123,7 +133,7 @@ export function createLocalWorkspaceActor(
   return workspace.selectedViewAsPlayerId
     ? {
         kind: 'owner_view_as',
-        participantId: workspace.selectedViewAsPlayerId,
+        participantId: getLocalCampaignMemberId(workspace.selectedViewAsPlayerId),
       }
     : { kind: 'owner' }
 }
@@ -345,10 +355,10 @@ function localSidebarItemShares(state: LocalWorkspaceState, item: LocalWorkspace
     ([campaignMemberId, permissionLevel]) => ({
       id: getLocalResourceShareId(state.workspaceId, item.id, campaignMemberId),
       createdAt: item.createdAt,
-      campaignId: state.workspaceId as LocalItemShareWorkspaceRecordId,
+      campaignId: getLocalCampaignId(state.workspaceId),
       sidebarItemId: item.id as SidebarItemId,
       sidebarItemType: localSidebarItemType(item.type),
-      campaignMemberId: campaignMemberId as CampaignMemberId,
+      campaignMemberId: getLocalCampaignMemberId(campaignMemberId),
       sessionId: null,
       permissionLevel,
     }),
@@ -361,6 +371,24 @@ function getLocalResourceShareId(workspaceId: string, itemId: string, memberId: 
   if (existing) return existing
   const id = generateDomainId(DOMAIN_ID_KIND.resourceShare)
   localResourceShareIds.set(key, id)
+  return id
+}
+
+function getLocalCampaignId(workspaceId: string) {
+  const existing = localCampaignIds.get(workspaceId)
+  if (existing) return existing
+  const id = generateDomainId(DOMAIN_ID_KIND.campaign)
+  localCampaignIds.set(workspaceId, id)
+  return id
+}
+
+export function getLocalCampaignMemberId(memberId: string) {
+  const canonicalId = parseDomainId(DOMAIN_ID_KIND.campaignMember, memberId)
+  if (canonicalId) return canonicalId
+  const existing = localCampaignMemberIds.get(memberId)
+  if (existing) return existing
+  const id = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+  localCampaignMemberIds.set(memberId, id)
   return id
 }
 
@@ -566,11 +594,15 @@ function projectSelectedPlayerBlockVisibility(
 
 function getLocalBlockMemberPermissionLevel(
   meta: LocalNoteBlockMeta,
-  selectedPlayerId: CampaignMemberId,
+  selectedPlayerId: string,
   notePermissionLevel: PermissionLevel,
 ): PermissionLevel | null {
-  if ((meta.hiddenFrom ?? []).includes(selectedPlayerId)) return PERMISSION_LEVEL.NONE
-  if (meta.sharedWith.includes(selectedPlayerId)) return PERMISSION_LEVEL.VIEW
+  if ((meta.hiddenFrom ?? []).some((memberId) => memberId === selectedPlayerId)) {
+    return PERMISSION_LEVEL.NONE
+  }
+  if (meta.sharedWith.some((memberId) => memberId === selectedPlayerId)) {
+    return PERMISSION_LEVEL.VIEW
+  }
   return notePermissionLevel
 }
 

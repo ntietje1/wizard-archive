@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
-import type { CampaignMemberId, SidebarItemId } from 'shared/common/ids'
+import type { SidebarItemId } from 'shared/common/ids'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { createWizardEditorResource } from '@wizard-archive/editor/adapter'
 import type { WizardEditorItemWithContent } from '@wizard-archive/editor/adapter'
 import {

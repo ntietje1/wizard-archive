@@ -17,6 +17,8 @@ import {
 import { createParentTargetValidator } from '../validation/parent'
 import { resourceShareIdValidator } from '../../sidebarShares/validators'
 import { assetIdValidator, operationIdValidator } from '../../resources/validators'
+import { campaignIdValidator, campaignMemberIdValidator } from '../../campaigns/schema'
+import { sessionIdValidator } from '../../sessions/schema'
 
 const createCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.create),
@@ -76,14 +78,14 @@ const setResourceAudiencePermissionCommandValidator = v.object({
 const setResourcesMemberPermissionCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.setResourcesMemberPermission),
   itemIds: v.array(v.id('sidebarItems')),
-  campaignMemberId: v.id('campaignMembers'),
+  campaignMemberId: campaignMemberIdValidator,
   permissionLevel: permissionLevelValidator,
 })
 
 const clearResourcesMemberPermissionCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.clearResourcesMemberPermission),
   itemIds: v.array(v.id('sidebarItems')),
-  campaignMemberId: v.id('campaignMembers'),
+  campaignMemberId: campaignMemberIdValidator,
 })
 
 const setFolderInheritSharesCommandValidator = v.object({
@@ -250,11 +252,11 @@ const sidebarItemPatchPreconditionValidator = v.object({
 const sidebarItemShareSnapshotValidator = v.object({
   id: resourceShareIdValidator,
   createdAt: v.number(),
-  workspaceId: v.id('campaigns'),
+  workspaceId: campaignIdValidator,
   resourceId: v.id('sidebarItems'),
   sidebarItemType: sidebarItemTypeValidator,
-  memberId: v.id('campaignMembers'),
-  sessionId: v.nullable(v.id('sessions')),
+  memberId: campaignMemberIdValidator,
+  sessionId: v.nullable(sessionIdValidator),
   permissionLevel: v.nullable(permissionLevelValidator),
 })
 
@@ -321,7 +323,7 @@ export const fileSystemPatchValidator = v.union(
   v.object({
     type: v.literal('updateResourceShare'),
     resourceId: v.id('sidebarItems'),
-    memberId: v.id('campaignMembers'),
+    memberId: campaignMemberIdValidator,
     before: sidebarItemSharePatchFieldsValidator,
     fields: sidebarItemSharePatchFieldsValidator,
   }),

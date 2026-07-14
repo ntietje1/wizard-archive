@@ -1,9 +1,4 @@
-import type {
-  SessionRowId,
-  UserProfileId,
-  WorkspaceId,
-  WorkspaceMemberId,
-} from '../../../../shared/common/ids'
+import type { UserProfileId, WorkspaceId, WorkspaceMemberId } from '../../../../shared/common/ids'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type {
   ResourceId,
@@ -12,7 +7,13 @@ import type {
   ResourceStatus,
   ResourceKind,
 } from '../workspace/resource-contract'
-import type { AssetId, ResourceShareId } from '../resources/domain-id'
+import type {
+  AssetId,
+  CampaignId,
+  CampaignMemberId,
+  ResourceShareId,
+  SessionId,
+} from '../resources/domain-id'
 
 export type ResourcePatchRow = {
   id: ResourceId
@@ -87,11 +88,11 @@ const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
 type ResourceSharePatchRow = {
   id: ResourceShareId
   createdAt: number
-  workspaceId: WorkspaceId
+  workspaceId: CampaignId
   resourceId: ResourceId
   sidebarItemType: ResourceKind
-  memberId: WorkspaceMemberId
-  sessionId: SessionRowId | null
+  memberId: CampaignMemberId
+  sessionId: SessionId | null
   permissionLevel: PermissionLevel | null
 }
 
@@ -135,7 +136,7 @@ export type ResourcePatch =
   | {
       type: 'updateResourceShare'
       resourceId: ResourceId
-      memberId: WorkspaceMemberId
+      memberId: CampaignMemberId
       before: ResourceSharePatchPrecondition
       fields: ResourceShareFieldPatch
     }

@@ -116,7 +116,7 @@ describe('filesystem transaction undo and redo', () => {
       command: {
         type: 'setResourcesMemberPermission',
         itemIds: [noteId],
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
         permissionLevel: 'none',
       },
     })

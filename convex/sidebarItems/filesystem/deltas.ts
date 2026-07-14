@@ -40,6 +40,10 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { InsertFilesystemSidebarItemArgs } from './sidebarItemWriter'
 import { toSidebarItemDocument, toSidebarItemReplacement } from '../types/status'
 import { getAssetIdByStorageId, getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
+import {
+  createSidebarItemShareIdentityProjection,
+  projectSidebarItemShare,
+} from '../../sidebarShares/functions/projectSidebarItemShare'
 
 type BookmarkStateChangeRow = {
   sidebarItemId: Id<'sidebarItems'>
@@ -147,25 +151,37 @@ export async function storedSidebarItemPatchFields(
   }
 }
 
-function sidebarItemSharePatchRowFromStored(
+async function sidebarItemSharePatchRowFromStored(
+  ctx: CampaignMutationCtx,
   row: StoredSidebarItemSharePatchRow,
-): SidebarItemSharePatchRow {
-  const {
-    _id: _rowId,
-    _creationTime,
-    resourceShareUuid,
-    campaignId,
-    campaignMemberId,
-    sidebarItemId,
-    ...fields
-  } = row
+): Promise<SidebarItemSharePatchRow> {
+  const [member, session] = await Promise.all([
+    ctx.db.get('campaignMembers', row.campaignMemberId),
+    row.sessionId ? ctx.db.get('sessions', row.sessionId) : null,
+  ])
+  if (
+    !member ||
+    member.campaignId !== ctx.campaign._id ||
+    (row.sessionId && (!session || session.campaignId !== ctx.campaign._id))
+  ) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  const share = projectSidebarItemShare(
+    row,
+    createSidebarItemShareIdentityProjection(ctx.campaign, [member], session ? [session] : []),
+  )
   return {
-    ...fields,
-    id: resourceShareUuid,
-    createdAt: _creationTime,
-    workspaceId: campaignId,
-    memberId: campaignMemberId,
-    resourceId: sidebarItemId,
+    id: share.id,
+    createdAt: share.createdAt,
+    workspaceId: share.campaignId,
+    resourceId: share.sidebarItemId,
+    sidebarItemType: share.sidebarItemType,
+    memberId: share.campaignMemberId,
+    sessionId: share.sessionId,
+    permissionLevel: share.permissionLevel,
   }
 }
 
@@ -237,12 +253,15 @@ function changedUndoableItemPatch(before: StoredResourcePatchRow, after: StoredR
   }
 }
 
-function changedSharePatch(
+async function changedSharePatch(
+  ctx: CampaignMutationCtx,
   before: StoredSidebarItemSharePatchRow,
   after: StoredSidebarItemSharePatchRow,
 ) {
-  const publicBefore = sidebarItemSharePatchRowFromStored(before)
-  const publicAfter = sidebarItemSharePatchRowFromStored(after)
+  const [publicBefore, publicAfter] = await Promise.all([
+    sidebarItemSharePatchRowFromStored(ctx, before),
+    sidebarItemSharePatchRowFromStored(ctx, after),
+  ])
   const diff = diffResourceShareFields(publicBefore, publicAfter)
   if (!diff) return null
   return {
@@ -323,14 +342,14 @@ export async function receiptPatchesFromChangeSet(
         case 'insertResourceShare':
           return {
             type: 'upsertResourceShare',
-            share: sidebarItemSharePatchRowFromStored(change.after),
+            share: await sidebarItemSharePatchRowFromStored(ctx, change.after),
           }
         case 'updateResourceShare':
-          return changedSharePatch(change.before, change.after)
+          return await changedSharePatch(ctx, change.before, change.after)
         case 'removeResourceShare':
           return {
             type: 'removeResourceShare',
-            share: sidebarItemSharePatchRowFromStored(change.before),
+            share: await sidebarItemSharePatchRowFromStored(ctx, change.before),
           }
         case 'updateFolderShare':
           return changedFolderSharePatch(change.before, change.after)
@@ -353,129 +372,110 @@ export async function receiptPatchesFromChangeSet(
             isBookmarked: false,
           }
       }
+      return null
     }),
   )
   return patches.filter((patch): patch is ResourcePatch => patch !== null)
 }
 
-export function redoPatchesFromChangeSet(changes: Array<StoredFileSystemChange>) {
-  const patches: Array<ResourcePatch> = []
-  for (const change of changes) {
-    switch (change.type) {
-      case 'insertResource':
-        patches.push(insertedItemForwardPatch(change.after))
-        break
-      case 'updateResource': {
-        const patch = changedUndoableItemPatch(change.before, change.after)
-        if (patch) patches.push(patch)
-        break
+export async function redoPatchesFromChangeSet(
+  ctx: CampaignMutationCtx,
+  changes: Array<StoredFileSystemChange>,
+) {
+  const patches = await Promise.all(
+    changes.map(async (change): Promise<ResourcePatch | null> => {
+      switch (change.type) {
+        case 'insertResource':
+          return insertedItemForwardPatch(change.after)
+        case 'updateResource':
+          return changedUndoableItemPatch(change.before, change.after)
+        case 'insertResourceShare':
+          return {
+            type: 'upsertResourceShare',
+            share: await sidebarItemSharePatchRowFromStored(ctx, change.after),
+          }
+        case 'updateResourceShare':
+          return await changedSharePatch(ctx, change.before, change.after)
+        case 'removeResourceShare':
+          return {
+            type: 'removeResourceShare',
+            share: await sidebarItemSharePatchRowFromStored(ctx, change.before),
+          }
+        case 'updateFolderShare':
+          return changedFolderSharePatch(change.before, change.after)
+        case 'updateResourceBookmarkState':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.itemId,
+            isBookmarked: change.after,
+          }
+        case 'insertBookmark':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.after.sidebarItemId,
+            isBookmarked: true,
+          }
+        case 'removeBookmark':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.before.sidebarItemId,
+            isBookmarked: false,
+          }
       }
-      case 'insertResourceShare':
-        patches.push({
-          type: 'upsertResourceShare',
-          share: sidebarItemSharePatchRowFromStored(change.after),
-        })
-        break
-      case 'updateResourceShare': {
-        const patch = changedSharePatch(change.before, change.after)
-        if (patch) patches.push(patch)
-        break
-      }
-      case 'removeResourceShare':
-        patches.push({
-          type: 'removeResourceShare',
-          share: sidebarItemSharePatchRowFromStored(change.before),
-        })
-        break
-      case 'updateFolderShare': {
-        const patch = changedFolderSharePatch(change.before, change.after)
-        if (patch) patches.push(patch)
-        break
-      }
-      case 'updateResourceBookmarkState':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.itemId,
-          isBookmarked: change.after,
-        })
-        break
-      case 'insertBookmark':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.after.sidebarItemId,
-          isBookmarked: true,
-        })
-        break
-      case 'removeBookmark':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.before.sidebarItemId,
-          isBookmarked: false,
-        })
-        break
-    }
-  }
-  return patches
+      return null
+    }),
+  )
+  return patches.filter((patch): patch is ResourcePatch => patch !== null)
 }
 
-export function undoPatchesFromChangeSet(changes: Array<StoredFileSystemChange>) {
-  const patches: Array<ResourcePatch> = []
-  for (const change of changes) {
-    switch (change.type) {
-      case 'insertResource':
-        patches.push(insertedItemInversePatch(change.after))
-        break
-      case 'updateResource': {
-        const patch = changedUndoableItemPatch(change.after, change.before)
-        if (patch) patches.push(patch)
-        break
+export async function undoPatchesFromChangeSet(
+  ctx: CampaignMutationCtx,
+  changes: Array<StoredFileSystemChange>,
+) {
+  const patches = await Promise.all(
+    changes.map(async (change): Promise<ResourcePatch | null> => {
+      switch (change.type) {
+        case 'insertResource':
+          return insertedItemInversePatch(change.after)
+        case 'updateResource':
+          return changedUndoableItemPatch(change.after, change.before)
+        case 'insertResourceShare':
+          return {
+            type: 'removeResourceShare',
+            share: await sidebarItemSharePatchRowFromStored(ctx, change.after),
+          }
+        case 'updateResourceShare':
+          return await changedSharePatch(ctx, change.after, change.before)
+        case 'removeResourceShare':
+          return {
+            type: 'upsertResourceShare',
+            share: await sidebarItemSharePatchRowFromStored(ctx, change.before),
+          }
+        case 'updateFolderShare':
+          return changedFolderSharePatch(change.after, change.before)
+        case 'updateResourceBookmarkState':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.itemId,
+            isBookmarked: change.before,
+          }
+        case 'insertBookmark':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.after.sidebarItemId,
+            isBookmarked: false,
+          }
+        case 'removeBookmark':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.before.sidebarItemId,
+            isBookmarked: true,
+          }
       }
-      case 'insertResourceShare':
-        patches.push({
-          type: 'removeResourceShare',
-          share: sidebarItemSharePatchRowFromStored(change.after),
-        })
-        break
-      case 'updateResourceShare': {
-        const patch = changedSharePatch(change.after, change.before)
-        if (patch) patches.push(patch)
-        break
-      }
-      case 'removeResourceShare':
-        patches.push({
-          type: 'upsertResourceShare',
-          share: sidebarItemSharePatchRowFromStored(change.before),
-        })
-        break
-      case 'updateFolderShare': {
-        const patch = changedFolderSharePatch(change.after, change.before)
-        if (patch) patches.push(patch)
-        break
-      }
-      case 'updateResourceBookmarkState':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.itemId,
-          isBookmarked: change.before,
-        })
-        break
-      case 'insertBookmark':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.after.sidebarItemId,
-          isBookmarked: false,
-        })
-        break
-      case 'removeBookmark':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.before.sidebarItemId,
-          isBookmarked: true,
-        })
-        break
-    }
-  }
-  return patches
+      return null
+    }),
+  )
+  return patches.filter((patch): patch is ResourcePatch => patch !== null)
 }
 
 export function deletedForeverEvent(itemId: Id<'sidebarItems'>): ResourceEvent {

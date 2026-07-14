@@ -161,7 +161,7 @@ describe('filesystem transaction guards', () => {
         command: {
           type: 'setResourcesMemberPermission',
           itemIds: [noteId],
-          campaignMemberId: ctx.player.memberId,
+          campaignMemberId: ctx.player.memberDomainId,
           permissionLevel: 'view',
         },
         events: [],

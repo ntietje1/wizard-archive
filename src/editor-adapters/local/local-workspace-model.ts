@@ -10,10 +10,11 @@ import {
   planWizardEditorMapPinCreations,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
 } from '@wizard-archive/editor/adapter'
-import type { CampaignMemberId, SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 type LocalWorkspaceItemType = 'note' | 'folder' | 'canvas' | 'map' | 'file'
 type LocalSidebarItemType = WizardEditorItem['type']

@@ -17,6 +17,8 @@ import {
 } from '../../test/workspace-note-session-source-factory'
 import { testId } from '../../test/id'
 import { testResourceShareId } from '../../test/resource-share-id'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 import { createRuntimeNoteContentSource } from '../runtime-content-source'
 import type * as BlockNoteCore from '@blocknote/core'
 import type { Doc } from 'yjs'
@@ -439,7 +441,8 @@ describe('NoteContent', () => {
   })
 
   it('shows every block in DM view-as mode when the viewed player has edit note permission', async () => {
-    const playerId = testId<'campaignMembers'>('player-1')
+    const memberId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'player-1')
+    const playerId = memberId as unknown as NonNullable<typeof viewAsState.viewAsPlayerId>
     const hiddenByDefaultBlock = createBlock('hidden-by-default-block')
     viewAsState.viewAsPlayerId = playerId
 
@@ -460,10 +463,10 @@ describe('NoteContent', () => {
         {
           id: testResourceShareId('note-share-1'),
           createdAt: 1,
-          campaignId: baseNote.campaignId,
+          campaignId: testDomainId(DOMAIN_ID_KIND.campaign, 'note-share-campaign'),
           sidebarItemId: baseNote.id,
           sidebarItemType: baseNote.type,
-          campaignMemberId: playerId,
+          campaignMemberId: memberId,
           sessionId: null,
           permissionLevel: PERMISSION_LEVEL.EDIT,
         },

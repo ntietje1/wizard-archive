@@ -94,18 +94,32 @@ describe('filesystem share operations', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+      campaignId: ctx.campaignDomainId,
+      name: 'Sharing session',
+    })
 
     const setReceipt = await executeShareCommand(dmAuth, {
       campaignId: ctx.campaignDomainId,
       command: {
         type: 'setResourcesMemberPermission',
         itemIds: [noteId],
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
         permissionLevel: 'edit' satisfies SharePermissionLevel,
       } satisfies ResourceCommand,
     })
+    expect(setReceipt.patches).toMatchObject([
+      {
+        type: 'upsertResourceShare',
+        share: {
+          workspaceId: ctx.campaignDomainId,
+          memberId: ctx.player.memberDomainId,
+          sessionId,
+        },
+      },
+    ])
     expect((await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)).shares).toMatchObject([
-      { campaignMemberId: ctx.player.memberId, permissionLevel: 'edit' },
+      { campaignMemberId: ctx.player.memberDomainId, permissionLevel: 'edit' },
     ])
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
@@ -119,7 +133,7 @@ describe('filesystem share operations', () => {
       transactionId: setReceipt.transactionId!,
     })
     expect((await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)).shares).toMatchObject([
-      { campaignMemberId: ctx.player.memberId, permissionLevel: 'edit' },
+      { campaignMemberId: ctx.player.memberDomainId, permissionLevel: 'edit' },
     ])
 
     const clearReceipt = await executeShareCommand(dmAuth, {
@@ -127,7 +141,7 @@ describe('filesystem share operations', () => {
       command: {
         type: 'clearResourcesMemberPermission',
         itemIds: [noteId],
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
       } satisfies ResourceCommand,
     })
     expect((await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)).shares).toEqual([])
@@ -137,7 +151,7 @@ describe('filesystem share operations', () => {
       transactionId: clearReceipt.transactionId!,
     })
     expect((await getShareInfo(dmAuth, ctx.campaignDomainId, noteId)).shares).toMatchObject([
-      { campaignMemberId: ctx.player.memberId, permissionLevel: 'edit' },
+      { campaignMemberId: ctx.player.memberDomainId, permissionLevel: 'edit' },
     ])
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {

@@ -12,8 +12,9 @@ import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../../workspace/items/optimis
 import { projectMoveOperations, projectTrashRoots } from '../domain/patch-projection'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import type { ResourcePatch } from '../patch-contract'
-import type { WorkspaceMemberId } from '../../../../../shared/common/ids'
 import { testResourceShareId } from '../../test/resource-share-id'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 
 const NOW = 1000
 
@@ -39,10 +40,10 @@ function createShare(
   return {
     id: testResourceShareId(`share_${item.id}`),
     createdAt: 1,
-    workspaceId: item.campaignId,
+    workspaceId: testDomainId(DOMAIN_ID_KIND.campaign, `campaign_${item.id}`),
     resourceId: item.id,
     sidebarItemType: item.type,
-    memberId: 'member_1' as WorkspaceMemberId,
+    memberId: testDomainId(DOMAIN_ID_KIND.campaignMember, 'member_1'),
     sessionId: null,
     permissionLevel: PERMISSION_LEVEL.VIEW,
     ...overrides,

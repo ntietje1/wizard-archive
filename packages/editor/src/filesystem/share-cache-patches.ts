@@ -8,8 +8,8 @@ function sidebarSharePatchToCacheShare(share: SidebarSharePatch): AnyItem['share
   const { memberId, resourceId, workspaceId, ...shareFields } = share
   return {
     ...shareFields,
-    campaignId: workspaceId as AnyItem['shares'][number]['campaignId'],
-    campaignMemberId: memberId as AnyItem['shares'][number]['campaignMemberId'],
+    campaignId: workspaceId,
+    campaignMemberId: memberId,
     sidebarItemId: resourceId,
   }
 }

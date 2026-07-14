@@ -30,6 +30,7 @@ import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { toSidebarItemDocument, toSidebarItemReplacement } from '../types/status'
 import type { OperationId } from '@wizard-archive/editor/resources/domain-id'
+import { requireCampaignMemberRow } from '../../campaigns/functions/campaignIdentity'
 const MAX_FILESYSTEM_UNDO_HISTORY = 50
 const MAX_FILESYSTEM_NON_UNDOABLE_HISTORY = 50
 const MAX_FILESYSTEM_TRANSACTION_EVENTS = 1_000
@@ -87,12 +88,7 @@ function assertTransactionPayloadSize(delta: StoredResourceDelta) {
     )
   }
 
-  const patchCounts = [
-    delta.changes.length,
-    redoPatchesFromChangeSet(delta.changes).length,
-    undoPatchesFromChangeSet(delta.changes).length,
-  ]
-  if (Math.max(...patchCounts) > MAX_FILESYSTEM_TRANSACTION_PATCHES) {
+  if (delta.changes.length > MAX_FILESYSTEM_TRANSACTION_PATCHES) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,
       'Filesystem operation changes too many items to record in one transaction',
@@ -106,8 +102,8 @@ async function receiptPatchesForDirection(
   direction: FileSystemTransactionDirection,
   undoable: boolean,
 ) {
-  if (direction === 'undo') return undoable ? undoPatchesFromChangeSet(changes) : []
-  if (direction === 'redo') return undoable ? redoPatchesFromChangeSet(changes) : []
+  if (direction === 'undo') return undoable ? await undoPatchesFromChangeSet(ctx, changes) : []
+  if (direction === 'redo') return undoable ? await redoPatchesFromChangeSet(ctx, changes) : []
   return await receiptPatchesFromChangeSet(ctx, changes)
 }
 
@@ -315,9 +311,10 @@ async function applySidebarItemSharePatch(
     itemId: patch.resourceId,
     operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
+  const member = await requireTransactionShareMember(ctx, patch.memberId)
   const share = await getSidebarItemShareRow(ctx, {
     sidebarItemId: patch.resourceId,
-    campaignMemberId: patch.memberId as Id<'campaignMembers'>,
+    campaignMemberId: member._id,
   })
   if (!share) throwClientError(ERROR_CODE.NOT_FOUND, 'Sidebar item share no longer exists')
   if (hasMismatchedPrecondition(share, patch.before)) {
@@ -364,6 +361,20 @@ async function assertTransactionTargetMember(
   }
 }
 
+async function requireTransactionShareMember(
+  ctx: CampaignMutationCtx,
+  memberId: Extract<ResourcePatch, { type: 'updateResourceShare' }>['memberId'],
+) {
+  const member = await requireCampaignMemberRow(ctx, memberId)
+  if (member.campaignId !== ctx.campaign._id) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  return member
+}
+
 async function applySidebarItemShareRemoval(
   ctx: CampaignMutationCtx,
   patch: Extract<ResourcePatch, { type: 'removeResourceShare' }>,
@@ -373,9 +384,10 @@ async function applySidebarItemShareRemoval(
     itemId: patch.share.resourceId,
     operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
+  const member = await requireTransactionShareMember(ctx, patch.share.memberId)
   const share = await getSidebarItemShareRow(ctx, {
     sidebarItemId: patch.share.resourceId,
-    campaignMemberId: patch.share.memberId as Id<'campaignMembers'>,
+    campaignMemberId: member._id,
   })
   if (!share) return
   if (hasMismatchedPrecondition(share, { permissionLevel: patch.share.permissionLevel })) {
@@ -396,10 +408,34 @@ async function applySidebarItemShareUpsert(
     itemId: patch.share.resourceId,
     operation: PERMISSION_OPERATION.MANAGE_SIDEBAR_ITEM,
   })
-  await assertTransactionTargetMember(ctx, patch.share.memberId as Id<'campaignMembers'>)
+  if (patch.share.workspaceId !== ctx.campaign.campaignUuid) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  const member = await requireTransactionShareMember(ctx, patch.share.memberId)
+  const session = patch.share.sessionId
+    ? await ctx.db
+        .query('sessions')
+        .withIndex('by_sessionUuid', (query) => query.eq('sessionUuid', patch.share.sessionId!))
+        .unique()
+    : null
+  if (session && session.campaignId !== ctx.campaign._id) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
+  if (patch.share.sessionId && !session) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Filesystem transaction can no longer be applied cleanly',
+    )
+  }
   const existing = await getSidebarItemShareRow(ctx, {
     sidebarItemId: patch.share.resourceId,
-    campaignMemberId: patch.share.memberId as Id<'campaignMembers'>,
+    campaignMemberId: member._id,
   })
   if (existing) {
     if (existing.permissionLevel !== patch.share.permissionLevel) {
@@ -415,8 +451,8 @@ async function applySidebarItemShareUpsert(
     campaignId: ctx.campaign._id,
     sidebarItemId: patch.share.resourceId,
     sidebarItemType: patch.share.sidebarItemType,
-    campaignMemberId: patch.share.memberId as Id<'campaignMembers'>,
-    sessionId: patch.share.sessionId,
+    campaignMemberId: member._id,
+    sessionId: session?._id ?? null,
     permissionLevel: patch.share.permissionLevel,
   })
 }
@@ -556,7 +592,7 @@ async function pruneOldFilesystemTransactions(ctx: CampaignMutationCtx) {
   for (const transaction of transactions.slice(MAX_FILESYSTEM_UNDO_HISTORY)) {
     await hardDeleteUndoHiddenCreatedRows(
       ctx,
-      undoPatchesFromChangeSet(transaction.changes as StoredResourceDelta['changes']),
+      await undoPatchesFromChangeSet(ctx, transaction.changes as StoredResourceDelta['changes']),
     )
     await ctx.db.delete('filesystemTransactions', transaction._id)
   }
@@ -648,7 +684,9 @@ export async function applyFilesystemTransactionDirection(
   const command = source.command as ResourceCommand
   const changes = source.changes as StoredResourceDelta['changes']
   const databasePatches =
-    direction === 'undo' ? undoPatchesFromChangeSet(changes) : redoPatchesFromChangeSet(changes)
+    direction === 'undo'
+      ? await undoPatchesFromChangeSet(ctx, changes)
+      : await redoPatchesFromChangeSet(ctx, changes)
   await applyPatches(ctx, databasePatches, direction)
 
   return {

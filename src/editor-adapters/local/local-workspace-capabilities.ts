@@ -1,4 +1,4 @@
-import type { CampaignMemberId } from 'shared/common/ids'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 export function canMutateLocalWorkspace({
   canEdit,

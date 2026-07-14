@@ -244,6 +244,7 @@ import type * as sidebarItems_validation_orchestration from "../sidebarItems/val
 import type * as sidebarItems_validation_parent from "../sidebarItems/validation/parent.js";
 import type * as sidebarItems_validation_slug from "../sidebarItems/validation/slug.js";
 import type * as sidebarShares_functions_getSidebarItemsWithShares from "../sidebarShares/functions/getSidebarItemsWithShares.js";
+import type * as sidebarShares_functions_projectSidebarItemShare from "../sidebarShares/functions/projectSidebarItemShare.js";
 import type * as sidebarShares_functions_setFolderInheritShares from "../sidebarShares/functions/setFolderInheritShares.js";
 import type * as sidebarShares_functions_setResourceAudiencePermissionForSidebarItems from "../sidebarShares/functions/setResourceAudiencePermissionForSidebarItems.js";
 import type * as sidebarShares_functions_sidebarItemPermissions from "../sidebarShares/functions/sidebarItemPermissions.js";
@@ -535,6 +536,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/validation/parent": typeof sidebarItems_validation_parent;
   "sidebarItems/validation/slug": typeof sidebarItems_validation_slug;
   "sidebarShares/functions/getSidebarItemsWithShares": typeof sidebarShares_functions_getSidebarItemsWithShares;
+  "sidebarShares/functions/projectSidebarItemShare": typeof sidebarShares_functions_projectSidebarItemShare;
   "sidebarShares/functions/setFolderInheritShares": typeof sidebarShares_functions_setFolderInheritShares;
   "sidebarShares/functions/setResourceAudiencePermissionForSidebarItems": typeof sidebarShares_functions_setResourceAudiencePermissionForSidebarItems;
   "sidebarShares/functions/sidebarItemPermissions": typeof sidebarShares_functions_sidebarItemPermissions;

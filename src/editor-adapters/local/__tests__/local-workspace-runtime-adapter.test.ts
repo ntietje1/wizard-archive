@@ -26,7 +26,8 @@ import {
   createTestNoteSessionPorts,
   createTestNoteValueSessionPorts,
 } from './helpers/session-sources'
-import type { CampaignMemberId, SidebarItemId } from 'shared/common/ids'
+import type { CampaignMemberId as CampaignMemberRowId, SidebarItemId } from 'shared/common/ids'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import {
   completeWizardEditorResourceCommand,
   createWizardEditorResource,
@@ -1573,7 +1574,7 @@ describe('createLocalRuntimeFileSystem', () => {
   it('removes note block visibility when permanently deleting local notes', () => {
     const visibilityRule = {
       textIncludes: 'Lantern Market',
-      hiddenFrom: ['player-mira' as CampaignMemberId],
+      hiddenFrom: ['player-mira' as CampaignMemberRowId],
       shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
     }
     const workspace: LocalWorkspaceState = {
@@ -1600,7 +1601,7 @@ describe('createLocalRuntimeFileSystem', () => {
     const embeddedBlock = createLocalTestNoteEmbedBlock('copied-note-embed', 'file-handout')
     const visibilityRule = {
       textIncludes: 'Lantern Market',
-      hiddenFrom: ['player-mira' as CampaignMemberId],
+      hiddenFrom: ['player-mira' as CampaignMemberRowId],
       shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
     }
     const workspace: LocalWorkspaceState = {

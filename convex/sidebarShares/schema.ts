@@ -5,6 +5,8 @@ import {
   sidebarItemTypeValidator,
 } from '../sidebarItems/schema/validators'
 import { resourceShareIdValidator } from './validators'
+import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
+import { sessionIdValidator } from '../sessions/schema'
 
 const sidebarItemShareTableFields = {
   campaignId: v.id('campaigns'),
@@ -28,5 +30,10 @@ export const sidebarShareTables = {
 export const sidebarItemShareValidator = v.object({
   id: resourceShareIdValidator,
   createdAt: v.number(),
-  ...sidebarItemShareTableFields,
+  campaignId: campaignIdValidator,
+  sidebarItemId: v.id('sidebarItems'),
+  sidebarItemType: sidebarItemTypeValidator,
+  campaignMemberId: campaignMemberIdValidator,
+  sessionId: v.nullable(sessionIdValidator),
+  permissionLevel: v.nullable(permissionLevelValidator),
 })

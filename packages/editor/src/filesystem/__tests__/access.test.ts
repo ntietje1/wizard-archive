@@ -11,17 +11,23 @@ import {
   resolveWorkspaceModeForItem,
 } from '../access'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
 import { testResourceShareId } from '../../test/resource-share-id'
+import { testId } from '../../test/id'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 
 type FileSystemItemsReadState = Parameters<typeof filterFileSystemItemsForActor>[0]
 type EditorWorkspaceActor = NonNullable<Parameters<typeof filterFileSystemItemsForActor>[1]>
 type SidebarItemShare = AnyItem['shares'][number]
 
-const memberId = testId<'campaignMembers'>('member_test')
+const memberDomainId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'member_test')
+const campaignId = testDomainId(DOMAIN_ID_KIND.campaign, 'campaign_test')
 
 const ownerActor: EditorWorkspaceActor = { kind: 'owner' }
-const ownerViewAsActor: EditorWorkspaceActor = { kind: 'owner_view_as', participantId: memberId }
+const ownerViewAsActor: EditorWorkspaceActor = {
+  kind: 'owner_view_as',
+  participantId: memberDomainId,
+}
 const participantActor: EditorWorkspaceActor = { kind: 'participant' }
 
 function createShare(
@@ -32,10 +38,10 @@ function createShare(
   return {
     id: testResourceShareId(id),
     createdAt: 1,
-    campaignId: note.campaignId,
+    campaignId,
     sidebarItemId: note.id,
     sidebarItemType: note.type,
-    campaignMemberId: memberId,
+    campaignMemberId: memberDomainId,
     sessionId: null,
     permissionLevel,
   }
@@ -130,7 +136,9 @@ describe('actor filesystem permissions', () => {
     expect(permissions.canAccessItem(note, PERMISSION_LEVEL.EDIT)).toBe(true)
     expect(permissions.canAccessItem(note, PERMISSION_LEVEL.FULL_ACCESS)).toBe(false)
     expect(permissions.canMutateItem(note, PERMISSION_LEVEL.EDIT)).toBe(false)
-    expect(permissions.getMemberItemPermissionLevel(note, memberId)).toBe(PERMISSION_LEVEL.EDIT)
+    expect(permissions.getMemberItemPermissionLevel(note, memberDomainId)).toBe(
+      PERMISSION_LEVEL.EDIT,
+    )
   })
 
   it('treats nullable explicit member shares as view for direct-message view-as', () => {

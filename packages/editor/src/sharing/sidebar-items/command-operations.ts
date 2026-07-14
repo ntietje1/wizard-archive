@@ -1,6 +1,6 @@
 import type { ResourceCommand, ResourceCommandResult } from '../../filesystem/transaction-contract'
 import type { ResourceShareOperations } from '../contracts'
-import type { CampaignMemberId } from '../../../../../shared/common/ids'
+import type { CampaignMemberId } from '../../resources/domain-id'
 
 type SidebarItemsShareCommand =
   | Extract<ResourceCommand, { type: 'setResourceAudiencePermission' }>

@@ -16,6 +16,10 @@ import type { CampaignQueryCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { PermissionLevel } from '../../../shared/permissions/types'
+import {
+  loadSidebarItemShareIdentityProjection,
+  projectSidebarItemShare,
+} from '../../sidebarShares/functions/projectSidebarItemShare'
 
 type SidebarItemEnhancementRow = AnyResourceRow | (Doc<'sidebarItems'> & { previewAssetId?: never })
 
@@ -69,13 +73,7 @@ export async function enhanceBase<T extends SidebarItemEnhancementRow>(
     enhancement
       ? enhancement.shares
       : membership.role === CAMPAIGN_MEMBER_ROLE.DM
-        ? ctx.db
-            .query('sidebarItemShares')
-            .withIndex('by_campaign_item_member', (q) =>
-              q.eq('campaignId', normalizedItem.campaignId).eq('sidebarItemId', normalizedItem.id),
-            )
-            .collect()
-            .then((rows) => rows.map(toResourceShare))
+        ? getResourceShares(ctx, normalizedItem.id)
         : [],
     enhancement
       ? enhancement.isBookmarked
@@ -104,6 +102,22 @@ export async function enhanceBase<T extends SidebarItemEnhancementRow>(
   }
 }
 
+async function getResourceShares(
+  ctx: CampaignQueryCtx,
+  sidebarItemId: Id<'sidebarItems'>,
+): Promise<Array<ResourceShare>> {
+  const [shares, projection] = await Promise.all([
+    ctx.db
+      .query('sidebarItemShares')
+      .withIndex('by_campaign_item_member', (q) =>
+        q.eq('campaignId', ctx.campaign._id).eq('sidebarItemId', sidebarItemId),
+      )
+      .collect(),
+    loadSidebarItemShareIdentityProjection(ctx),
+  ])
+  return shares.map((share) => projectSidebarItemShare(share, projection.identities))
+}
+
 async function resolvePreviewIdentity(
   ctx: CampaignQueryCtx,
   item: SidebarItemEnhancementRow,
@@ -114,13 +128,4 @@ async function resolvePreviewIdentity(
   }
   const assetId = item.previewAssetId ?? null
   return { assetId, storageId: await getStorageIdByAssetId(ctx.db, assetId) }
-}
-
-export function toResourceShare(share: Doc<'sidebarItemShares'>): ResourceShare {
-  const { _id: _rowId, _creationTime, resourceShareUuid, ...fields } = share
-  return {
-    ...fields,
-    id: resourceShareUuid,
-    createdAt: _creationTime,
-  }
 }

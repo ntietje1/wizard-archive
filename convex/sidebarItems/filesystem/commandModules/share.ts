@@ -19,6 +19,7 @@ import type {
   StoredResourcePatchRow,
   StoredSidebarItemSharePatchRow,
 } from '../deltas'
+import { requireCampaignMemberRow } from '../../../campaigns/functions/campaignIdentity'
 
 type FolderSharePatchRow = Extract<ResourceChange, { type: 'updateFolderShare' }>['before']
 type SidebarItemSharePatchRow = StoredSidebarItemSharePatchRow
@@ -141,18 +142,19 @@ async function executeMemberCommand(
   command: SetSidebarItemsMemberPermissionFileSystemCommand,
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
+  const member = await requireShareCommandMember(ctx, command.campaignMemberId)
   const before = await loadSidebarItemShareSnapshots(ctx, {
     itemIds: command.itemIds,
-    campaignMemberId: command.campaignMemberId,
+    campaignMemberId: member._id,
   })
 
   await setResourcesMemberPermission(ctx, {
     sidebarItemIds: command.itemIds,
-    campaignMemberId: command.campaignMemberId,
+    campaignMemberId: member._id,
     permissionLevel: command.permissionLevel,
   })
 
-  return await recordMemberShareChanges(ctx, session, command, before)
+  return await recordMemberShareChanges(ctx, session, command, member._id, before)
 }
 
 async function executeClearMemberCommand(
@@ -160,17 +162,29 @@ async function executeClearMemberCommand(
   command: ClearSidebarItemsMemberPermissionFileSystemCommand,
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
+  const member = await requireShareCommandMember(ctx, command.campaignMemberId)
   const before = await loadSidebarItemShareSnapshots(ctx, {
     itemIds: command.itemIds,
-    campaignMemberId: command.campaignMemberId,
+    campaignMemberId: member._id,
   })
 
   await clearResourcesMemberPermission(ctx, {
     sidebarItemIds: command.itemIds,
-    campaignMemberId: command.campaignMemberId,
+    campaignMemberId: member._id,
   })
 
-  return await recordMemberShareChanges(ctx, session, command, before)
+  return await recordMemberShareChanges(ctx, session, command, member._id, before)
+}
+
+async function requireShareCommandMember(
+  ctx: CampaignMutationCtx,
+  memberId: SetSidebarItemsMemberPermissionFileSystemCommand['campaignMemberId'],
+) {
+  const member = await requireCampaignMemberRow(ctx, memberId)
+  if (member.campaignId !== ctx.campaign._id) {
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign member not found')
+  }
+  return member
 }
 
 async function recordMemberShareChanges(
@@ -179,13 +193,14 @@ async function recordMemberShareChanges(
   command:
     | SetSidebarItemsMemberPermissionFileSystemCommand
     | ClearSidebarItemsMemberPermissionFileSystemCommand,
+  campaignMemberId: Id<'campaignMembers'>,
   before: Map<Id<'sidebarItems'>, SidebarItemSharePatchRow | null>,
 ) {
   const shares = await Promise.all(
     command.itemIds.map((itemId) =>
       getSidebarItemShareRow(ctx, {
         sidebarItemId: itemId,
-        campaignMemberId: command.campaignMemberId,
+        campaignMemberId,
       }),
     ),
   )
