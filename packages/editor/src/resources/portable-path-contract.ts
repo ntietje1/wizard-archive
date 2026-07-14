@@ -35,7 +35,7 @@ export type PortablePathWarning = Readonly<{
 
 export type PortablePathFailure = Readonly<{
   resourceId: ResourceId
-  code: 'invalid_placement' | 'relative_path_too_long'
+  code: 'invalid_input' | 'invalid_placement' | 'relative_path_too_long'
 }>
 
 export type PortablePathProjection = Readonly<{
