@@ -260,23 +260,23 @@ describe('cross-table slug uniqueness', () => {
     const dm1 = asDm(ctx1)
     const dm2 = asDm(ctx2)
 
-    await createNote(t, ctx1.campaignId, ctx1.dm.profile._id, {
+    const first = await createNote(t, ctx1.campaignId, ctx1.dm.profile._id, {
       name: 'shared-name',
       slug: 'shared-name',
     })
 
-    await createNote(t, ctx2.campaignId, ctx2.dm.profile._id, {
+    const second = await createNote(t, ctx2.campaignId, ctx2.dm.profile._id, {
       name: 'shared-name',
       slug: 'shared-name',
     })
 
-    const item1 = await dm1.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+    const item1 = await dm1.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx1.campaignDomainId,
-      slug: 'shared-name',
+      id: first.noteId,
     })
-    const item2 = await dm2.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+    const item2 = await dm2.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx2.campaignDomainId,
-      slug: 'shared-name',
+      id: second.noteId,
     })
 
     expect(item1).not.toBeNull()
@@ -302,18 +302,6 @@ describe('cross-table slug uniqueness', () => {
     })
 
     expect(result.slug).toBe('deleted-item-1')
-  })
-
-  it('rejects invalid slugs at the query boundary', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    await expect(
-      dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-        campaignId: ctx.campaignDomainId,
-        slug: 'bad slug',
-      }),
-    ).rejects.toThrow('Slug cannot contain spaces')
   })
 
   it('accepts titles that do not produce a textual route slug', async () => {
@@ -416,9 +404,9 @@ describe('cross-table slug uniqueness', () => {
       throw new Error('Expected file create command to create a sidebar item')
     }
 
-    const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+    const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignDomainId,
-      slug: created.slug,
+      id: created.itemId,
     })
 
     expect(item?.iconName).toBe('Shield')
@@ -445,9 +433,9 @@ describe('cross-table slug uniqueness', () => {
       },
     })
 
-    const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+    const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignDomainId,
-      slug: map.slug,
+      id: map.mapId,
     })
 
     expect(item?.iconName).toBe('Grid2x2Plus')

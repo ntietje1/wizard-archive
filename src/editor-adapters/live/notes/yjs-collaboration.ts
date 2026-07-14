@@ -56,7 +56,7 @@ async function invalidatePersistedNoteQueries({
     queryClient.invalidateQueries({
       queryKey: convexQuery(api.sidebarItems.queries.resolveSidebarItemAccess, {
         campaignId: sourceId,
-        lookup: { kind: 'id', id: noteId },
+        resourceId: noteId,
       }).queryKey,
     }),
     queryClient.invalidateQueries({

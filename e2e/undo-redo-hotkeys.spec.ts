@@ -14,10 +14,10 @@ import {
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import { getEditor } from './helpers/editor-helpers'
-import { getCampaignIdFromRoute, getSidebarItemIdBySlug } from './helpers/convex-helpers'
 import { pressRedo, pressUndo } from './helpers/keyboard-helpers'
 import { createNote, openItem } from './helpers/sidebar-helpers'
 import type { Page } from '@playwright/test'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 const campaignName = testName('URHotkeys')
@@ -96,7 +96,7 @@ test.describe.serial('editor surface hotkey routing', () => {
     await navigateToCampaign(page, campaignName)
     const noteName = `Undo Embed Note ${Date.now()}`
     await createNote(page, noteName)
-    const noteId = await getCurrentNoteId(page)
+    const noteId = getCurrentNoteId(page)
 
     await openFreshRuntimeCanvas(page, `Undo Embed Canvas ${Date.now()}`)
     await seedCanvasEmbedNodeViaRuntime(page, {
@@ -135,26 +135,14 @@ async function openFreshRuntimeCanvas(page: Page, canvasName: string) {
   await selectCanvasTool(page, 'Pointer')
 }
 
-async function getCurrentNoteId(page: Page): Promise<ResourceId> {
-  const noteSlug = getCurrentItemSlug(page)
-  const { dmUsername, campaignSlug } = getCurrentCampaignRoute(page)
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
-  return await getSidebarItemIdBySlug({ campaignId, slug: noteSlug })
+function getCurrentNoteId(page: Page): ResourceId {
+  return assertDomainId(DOMAIN_ID_KIND.resource, getCurrentItemId(page))
 }
 
-function getCurrentCampaignRoute(page: Page) {
-  const url = new URL(page.url())
-  const [, campaignsSegment, dmUsername, campaignSlug] = url.pathname.split('/')
-  if (campaignsSegment !== 'campaigns' || !dmUsername || !campaignSlug) {
-    throw new Error(`Expected a campaign route, received ${url.pathname}`)
+function getCurrentItemId(page: Page) {
+  const resourceId = new URL(page.url()).searchParams.get('item')
+  if (!resourceId) {
+    throw new Error(`Expected a resource ID in ${page.url()}`)
   }
-  return { dmUsername, campaignSlug }
-}
-
-function getCurrentItemSlug(page: Page) {
-  const itemSlug = new URL(page.url()).searchParams.get('item')
-  if (!itemSlug) {
-    throw new Error(`Expected an item slug in ${page.url()}`)
-  }
-  return itemSlug
+  return resourceId
 }

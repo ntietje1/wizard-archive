@@ -27,11 +27,11 @@ import {
   createE2EConvexClient,
   ensureAcceptedPlayerMember,
   getCampaignIdFromRoute,
-  getSidebarItemIdBySlug,
 } from './helpers/convex-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import { signInByApi } from './helpers/auth-helpers'
 import type { Browser } from '@playwright/test'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CampaignId,
   CampaignMemberId,
@@ -59,7 +59,7 @@ let noteId: ResourceId
 let playerMemberId: CampaignMemberId
 let dmUsername: string
 let campaignSlug: string
-let noteSlug: string
+let noteResourceId: ResourceId
 let visibleBlockNoteId: string
 let conditionalBlockNoteId: string
 let convexClient: Awaited<ReturnType<typeof createE2EConvexClient>> | null = null
@@ -81,12 +81,12 @@ test.describe('block sharing', () => {
     campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
 
     await createNote(page, noteName)
-    const itemSlug = new URL(page.url()).searchParams.get('item')
-    if (!itemSlug) {
-      throw new Error(`Unable to read note slug from ${page.url()}`)
+    const resourceId = new URL(page.url()).searchParams.get('item')
+    if (!resourceId) {
+      throw new Error(`Unable to read note resource ID from ${page.url()}`)
     }
-    noteSlug = itemSlug
-    noteId = await getSidebarItemIdBySlug({ campaignId, slug: itemSlug })
+    noteResourceId = assertDomainId(DOMAIN_ID_KIND.resource, resourceId)
+    noteId = noteResourceId
 
     await typeInEditor(page, visibleBlockText)
     await page.keyboard.press('Enter')
@@ -463,7 +463,7 @@ async function expectBlocksAsActualPlayer(
 }
 
 async function openPlayerNote(page: Parameters<typeof typeInEditor>[0]) {
-  const playerNoteUrl = `/campaigns/${dmUsername}/${campaignSlug}/editor?item=${noteSlug}`
+  const playerNoteUrl = `/campaigns/${campaignId}/editor?item=${noteResourceId}`
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await page.goto(playerNoteUrl, { waitUntil: 'commit' })

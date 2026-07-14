@@ -18,8 +18,6 @@ import {
   getCampaignIdFromRoute,
   getCampaignRouteFromUrl,
   getSidebarItemByName,
-  getSidebarItemBySlug,
-  getSidebarItemIdBySlug,
 } from './helpers/convex-helpers'
 import { makeYjsUpdateWithBlocks } from '../convex/_test/yjs.helper'
 import type { Locator, Page, TestInfo } from '@playwright/test'
@@ -618,7 +616,7 @@ async function openCampaign(page: Page) {
 }
 
 async function persistSourceNoteContent(page: Page) {
-  await persistNoteBlocksBySlug(page, 'embeddable-source-note', [
+  await persistNoteBlocksByName(page, sourceNoteName(), [
     {
       id: testNoteBlockId('source-paragraph'),
       type: 'paragraph',
@@ -630,21 +628,17 @@ async function persistSourceNoteContent(page: Page) {
 }
 
 async function persistNoteBlocks(page: Page, itemName: string, blocks: Array<PartialNoteBlock>) {
-  const noteSlug = await getItemSlugFromSidebarItem(page, itemName)
-  await persistNoteBlocksBySlug(page, noteSlug, blocks)
+  await persistNoteBlocksByName(page, itemName, blocks)
 }
 
-async function persistNoteBlocksBySlug(
+async function persistNoteBlocksByName(
   page: Page,
-  noteSlug: string,
+  noteName: string,
   blocks: Array<PartialNoteBlock>,
 ) {
   const { dmUsername, campaignSlug } = getCampaignRoute(page)
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
-  const sourceNoteId = await getSidebarItemIdBySlug({
-    campaignId,
-    slug: noteSlug,
-  })
+  const sourceNoteId = (await getSidebarItemByName({ campaignId, name: noteName })).id
   const client = await createE2EConvexClient()
   await client.mutation(api.yjsSync.mutations.pushUpdate, {
     campaignId,
@@ -1236,23 +1230,19 @@ function paragraphBlock(id: string, text: string): PartialNoteBlock {
 }
 
 async function expectFileInAssetsFolder(page: Page) {
-  const assetsSlug = await getItemSlugFromSidebarItem(page, 'Assets')
-  const fileSlug = await getItemSlugFromSidebarItem(page, imageFileName)
+  await expect(sidebarItem(page, 'Assets')).toBeVisible({ timeout: 15_000 })
+  await expect(sidebarItem(page, imageFileName)).toBeVisible({ timeout: 15_000 })
   const { dmUsername, campaignSlug } = getCampaignRoute(page)
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
-  const assets = await getSidebarItemBySlug({ campaignId, slug: assetsSlug })
-  const file = await getSidebarItemBySlug({ campaignId, slug: fileSlug })
+  const assets = await getSidebarItemByName({ campaignId, name: 'Assets' })
+  const file = await getSidebarItemByName({ campaignId, name: imageFileName })
   expect(file.parentId).toBe(assets.id)
 }
 
 async function getFirstPersistedEmbedTargetKind(page: Page, itemName: string) {
-  const noteSlug = await getItemSlugFromSidebarItem(page, itemName)
   const { dmUsername, campaignSlug } = getCampaignRoute(page)
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
-  const noteId = await getSidebarItemIdBySlug({
-    campaignId,
-    slug: noteSlug,
-  })
+  const noteId = (await getSidebarItemByName({ campaignId, name: itemName })).id
   const client = await createE2EConvexClient()
   const note = await client.query(api.notes.queries.getNote, {
     campaignId,
@@ -1265,17 +1255,7 @@ async function getFirstPersistedEmbedTargetKind(page: Page, itemName: string) {
 async function getSourceNoteId(page: Page) {
   const { dmUsername, campaignSlug } = getCampaignRoute(page)
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
-  return await getSidebarItemIdBySlug({
-    campaignId,
-    slug: 'embeddable-source-note',
-  })
-}
-
-async function getItemSlugFromSidebarItem(page: Page, itemName: string) {
-  await expect(sidebarItem(page, itemName)).toBeVisible({ timeout: 15_000 })
-  const { dmUsername, campaignSlug } = getCampaignRoute(page)
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
-  return (await getSidebarItemByName({ campaignId, name: itemName })).slug
+  return (await getSidebarItemByName({ campaignId, name: sourceNoteName() })).id
 }
 
 function sourceNoteName() {

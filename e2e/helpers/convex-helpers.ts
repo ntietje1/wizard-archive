@@ -4,11 +4,7 @@ import { api } from 'convex/_generated/api'
 import { AUTH_STORAGE_PATH } from './constants'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import type { APIRequestContext, APIResponse } from '@playwright/test'
-import type {
-  CampaignId,
-  CampaignMemberId,
-  ResourceId,
-} from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 const E2E_APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:3000'
 const CONVEX_OPERATION_ATTEMPTS = 3
@@ -40,39 +36,6 @@ export function getCampaignRouteFromUrl(url: string): {
     throw new Error(`Expected campaign route, got ${url}`)
   }
   return { dmUsername, campaignSlug }
-}
-
-export async function getSidebarItemIdBySlug({
-  campaignId,
-  slug,
-}: {
-  campaignId: CampaignId
-  slug: string
-}): Promise<ResourceId> {
-  return (
-    await getSidebarItemBySlug({
-      campaignId,
-      slug,
-    })
-  ).id
-}
-
-export async function getSidebarItemBySlug({
-  campaignId,
-  slug,
-}: {
-  campaignId: CampaignId
-  slug: string
-}) {
-  const client = await createE2EConvexClient()
-  const item = await client.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-    campaignId,
-    slug,
-  })
-  if (!item) {
-    throw new Error(`Unable to find sidebar item with slug "${slug}"`)
-  }
-  return item
 }
 
 export async function getSidebarItemByName({

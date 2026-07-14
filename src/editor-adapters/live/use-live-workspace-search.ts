@@ -90,7 +90,7 @@ export function useLiveWorkspaceSearch(
     loadItemContent: async (itemId: ResourceId) => {
       const result = await convex.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
         campaignId: workspaceId,
-        lookup: { kind: 'id', id: itemId },
+        resourceId: itemId,
       })
       return result.status === 'available' ? result.item : null
     },

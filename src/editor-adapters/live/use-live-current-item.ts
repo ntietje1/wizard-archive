@@ -24,9 +24,7 @@ export function useLiveCurrentItem({
 
   const sidebarItemAccessQuery = useAuthQuery(
     api.sidebarItems.queries.resolveSidebarItemAccess,
-    resourceId && workspaceRecordId
-      ? { campaignId: workspaceRecordId, lookup: { kind: 'id', id: resourceId } }
-      : 'skip',
+    resourceId && workspaceRecordId ? { campaignId: workspaceRecordId, resourceId } : 'skip',
   )
 
   const knownItem = resolveKnownCurrentItem(resourceId, getKnownItemById)

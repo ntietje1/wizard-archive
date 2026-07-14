@@ -175,6 +175,7 @@ import type * as resources_functions_loadResourceContent from "../resources/func
 import type * as resources_functions_mapContent from "../resources/functions/mapContent.js";
 import type * as resources_functions_noteContent from "../resources/functions/noteContent.js";
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
+import type * as resources_functions_resourceCatalogMetadata from "../resources/functions/resourceCatalogMetadata.js";
 import type * as resources_functions_resourceContentCopy from "../resources/functions/resourceContentCopy.js";
 import type * as resources_functions_resourceDeletion from "../resources/functions/resourceDeletion.js";
 import type * as resources_integrity from "../resources/integrity.js";
@@ -229,7 +230,6 @@ import type * as sidebarItems_functions_enhanceSidebarItem from "../sidebarItems
 import type * as sidebarItems_functions_enhanceSidebarItemRows from "../sidebarItems/functions/enhanceSidebarItemRows.js";
 import type * as sidebarItems_functions_fetchCampaignSidebarItems from "../sidebarItems/functions/fetchCampaignSidebarItems.js";
 import type * as sidebarItems_functions_getSidebarItem from "../sidebarItems/functions/getSidebarItem.js";
-import type * as sidebarItems_functions_getSidebarItemBySlug from "../sidebarItems/functions/getSidebarItemBySlug.js";
 import type * as sidebarItems_functions_getSidebarItemWithContent from "../sidebarItems/functions/getSidebarItemWithContent.js";
 import type * as sidebarItems_functions_getSidebarItemsByParent from "../sidebarItems/functions/getSidebarItemsByParent.js";
 import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
@@ -483,6 +483,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/mapContent": typeof resources_functions_mapContent;
   "resources/functions/noteContent": typeof resources_functions_noteContent;
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
+  "resources/functions/resourceCatalogMetadata": typeof resources_functions_resourceCatalogMetadata;
   "resources/functions/resourceContentCopy": typeof resources_functions_resourceContentCopy;
   "resources/functions/resourceDeletion": typeof resources_functions_resourceDeletion;
   "resources/integrity": typeof resources_integrity;
@@ -537,7 +538,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/enhanceSidebarItemRows": typeof sidebarItems_functions_enhanceSidebarItemRows;
   "sidebarItems/functions/fetchCampaignSidebarItems": typeof sidebarItems_functions_fetchCampaignSidebarItems;
   "sidebarItems/functions/getSidebarItem": typeof sidebarItems_functions_getSidebarItem;
-  "sidebarItems/functions/getSidebarItemBySlug": typeof sidebarItems_functions_getSidebarItemBySlug;
   "sidebarItems/functions/getSidebarItemWithContent": typeof sidebarItems_functions_getSidebarItemWithContent;
   "sidebarItems/functions/getSidebarItemsByParent": typeof sidebarItems_functions_getSidebarItemsByParent;
   "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;

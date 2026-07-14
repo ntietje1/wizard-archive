@@ -98,7 +98,7 @@ describe('useLiveCurrentItem', () => {
     expect(result.current.contentItem).toBe(result.current.item)
     expect(authQueryCalls[0]?.[1]).toEqual({
       campaignId: 'campaign_1',
-      lookup: { kind: 'id', id: serverItem.id },
+      resourceId: serverItem.id,
     })
   })
 

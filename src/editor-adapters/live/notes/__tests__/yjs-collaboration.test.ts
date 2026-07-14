@@ -144,7 +144,7 @@ describe('useNoteYjsCollaboration', () => {
         'resolveSidebarItemAccess',
         {
           campaignId: CAMPAIGN_ID,
-          lookup: { kind: 'id', id: NOTE_ID },
+          resourceId: NOTE_ID,
         },
       ],
     })

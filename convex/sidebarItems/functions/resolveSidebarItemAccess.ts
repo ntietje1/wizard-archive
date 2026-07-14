@@ -4,17 +4,9 @@ import { getSidebarItem } from './getSidebarItem'
 import { canAccessResourceAndAncestors } from './resourceAccessPolicy'
 import { isTrashedSidebarItem, isUndoHiddenSidebarItem } from '../types/status'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Doc } from '../../_generated/dataModel'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
-import type {
-  AnyResourceWithContent,
-  ResourceSlug,
-} from '@wizard-archive/editor/resources/resource-contract'
+import type { AnyResourceWithContent } from '@wizard-archive/editor/resources/resource-contract'
 import { findSidebarItemRow } from './sidebarItemIdentity'
-
-export type SidebarItemAccessLookup =
-  | { kind: 'id'; id: ResourceId }
-  | { kind: 'slug'; slug: ResourceSlug }
 
 export type SidebarItemAccessResolution =
   | { status: 'not_found' }
@@ -24,10 +16,12 @@ export type SidebarItemAccessResolution =
 
 export async function resolveSidebarItemAccess(
   ctx: CampaignQueryCtx,
-  lookup: SidebarItemAccessLookup,
+  resourceId: ResourceId,
 ): Promise<SidebarItemAccessResolution> {
-  const rawItem = await getSidebarItemByAccessLookup(ctx, lookup)
-  if (!rawItem) return { status: 'not_found' }
+  const rawItem = await findSidebarItemRow(ctx, resourceId)
+  if (!rawItem || rawItem.campaignId !== ctx.campaign._id || isUndoHiddenSidebarItem(rawItem)) {
+    return { status: 'not_found' }
+  }
 
   if (!(await canAccessResourceAndAncestors(ctx, rawItem, PERMISSION_LEVEL.VIEW))) {
     return { status: 'not_shared' }
@@ -42,22 +36,4 @@ export async function resolveSidebarItemAccess(
     status: 'available',
     item: await enhanceSidebarItemWithContent(ctx, { item: enhanced }),
   }
-}
-
-async function getSidebarItemByAccessLookup(
-  ctx: CampaignQueryCtx,
-  lookup: SidebarItemAccessLookup,
-): Promise<Doc<'sidebarItems'> | null> {
-  const raw =
-    lookup.kind === 'id'
-      ? await findSidebarItemRow(ctx, lookup.id)
-      : await ctx.db
-          .query('sidebarItems')
-          .withIndex('by_campaign_slug', (q) =>
-            q.eq('campaignId', ctx.campaign._id).eq('slug', lookup.slug),
-          )
-          .unique()
-
-  if (!raw || raw.campaignId !== ctx.campaign._id || isUndoHiddenSidebarItem(raw)) return null
-  return raw
 }

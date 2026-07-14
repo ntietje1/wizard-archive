@@ -9,6 +9,7 @@ import {
 } from '../../_test/factories.helper'
 import { expectNotFound } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { testResourceId } from '../../../shared/test/resource-id'
 
 describe('sidebar item list queries', () => {
   const t = createTestContext()
@@ -363,60 +364,6 @@ describe('getSidebarItem', () => {
   })
 })
 
-describe('getSidebarItemBySlug', () => {
-  const t = createTestContext()
-
-  it('finds item by slug', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { noteId, slug } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    const result = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx.campaignDomainId,
-      slug,
-    })
-
-    expect(result).not.toBeNull()
-    expect(result!.id).toBe(noteId)
-  })
-
-  it('returns null for nonexistent slug', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const result = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx.campaignDomainId,
-      slug: 'does-not-exist',
-    })
-
-    expect(result).toBeNull()
-  })
-
-  it('returns null for a shared item under an unshared ancestor', async () => {
-    const ctx = await setupCampaignContext(t)
-    const playerAuth = asPlayer(ctx)
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
-    const { noteId, slug } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      parentId: folderId,
-    })
-    await createSidebarShare(t, {
-      campaignId: ctx.campaignId,
-      sidebarItemId: noteId,
-      sidebarItemType: 'note',
-      campaignMemberId: ctx.player.memberId,
-      permissionLevel: 'view',
-    })
-
-    const result = await playerAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-      campaignId: ctx.campaignDomainId,
-      slug,
-    })
-
-    expect(result).toBeNull()
-  })
-})
-
 describe('resolveSidebarItemAccess', () => {
   const t = createTestContext()
 
@@ -427,7 +374,7 @@ describe('resolveSidebarItemAccess', () => {
 
     const result = await dmAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
       campaignId: ctx.campaignDomainId,
-      lookup: { kind: 'id', id: noteId },
+      resourceId: noteId,
     })
 
     expect(result.status).toBe('available')
@@ -445,34 +392,34 @@ describe('resolveSidebarItemAccess', () => {
 
     const result = await playerAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
       campaignId: ctx.campaignDomainId,
-      lookup: { kind: 'id', id: noteId },
+      resourceId: noteId,
     })
 
     expect(result).toEqual({ status: 'not_shared' })
   })
 
-  it('returns not_found for missing slugs', async () => {
+  it('returns not_found for missing resource ids', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
     const result = await dmAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
       campaignId: ctx.campaignDomainId,
-      lookup: { kind: 'slug', slug: 'missing-slug' },
+      resourceId: testResourceId('missing-resource'),
     })
 
     expect(result).toEqual({ status: 'not_found' })
   })
 
-  it('returns no resource data for existing unshared slugs', async () => {
+  it('returns no resource data for another existing unshared item', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
-    const { slug } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Private slug note',
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Private note',
     })
 
     const result = await playerAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
       campaignId: ctx.campaignDomainId,
-      lookup: { kind: 'slug', slug },
+      resourceId: noteId,
     })
 
     expect(result).toEqual({ status: 'not_shared' })
@@ -497,7 +444,7 @@ describe('resolveSidebarItemAccess', () => {
 
     const result = await playerAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
       campaignId: ctx.campaignDomainId,
-      lookup: { kind: 'id', id: fileId },
+      resourceId: fileId,
     })
 
     expect(result).toEqual({ status: 'not_shared' })
@@ -514,7 +461,7 @@ describe('resolveSidebarItemAccess', () => {
 
     const result = await dmAuth.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
       campaignId: ctx.campaignDomainId,
-      lookup: { kind: 'id', id: noteId },
+      resourceId: noteId,
     })
 
     expect(result).toEqual({ status: 'trashed' })

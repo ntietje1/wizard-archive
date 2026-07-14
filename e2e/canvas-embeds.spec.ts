@@ -42,7 +42,6 @@ import {
   getCampaignIdFromRoute,
   getCampaignRouteFromUrl,
   getSidebarItemByName,
-  getSidebarItemBySlug,
 } from './helpers/convex-helpers'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { Locator, Page, TestInfo } from '@playwright/test'
@@ -711,20 +710,13 @@ async function dragSidebarItemToCanvasNode(page: Page, itemName: string, target:
 }
 
 async function expectFileInAssetsFolder(page: Page) {
-  const assetsSlug = await getItemSlugFromSidebarItem(page, 'Assets')
-  const fileSlug = await getItemSlugFromSidebarItem(page, imageFileName)
+  await expect(sidebarItem(page, 'Assets')).toBeVisible({ timeout: 15_000 })
+  await expect(sidebarItem(page, imageFileName)).toBeVisible({ timeout: 15_000 })
   const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
   const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
-  const assets = await getSidebarItemBySlug({ campaignId, slug: assetsSlug })
-  const file = await getSidebarItemBySlug({ campaignId, slug: fileSlug })
+  const assets = await getSidebarItemByName({ campaignId, name: 'Assets' })
+  const file = await getSidebarItemByName({ campaignId, name: imageFileName })
   expect(file.parentId).toBe(assets.id)
-}
-
-async function getItemSlugFromSidebarItem(page: Page, itemName: string) {
-  await expect(sidebarItem(page, itemName)).toBeVisible({ timeout: 15_000 })
-  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
-  return (await getSidebarItemByName({ campaignId, name: itemName })).slug
 }
 
 function createOnePixelPng() {

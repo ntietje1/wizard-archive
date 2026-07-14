@@ -371,15 +371,10 @@ describe('filesystem transaction guards', () => {
   it('keeps undo-hidden items out of direct queries and active parent targets', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { folderId: hiddenFolderId, slug: hiddenFolderSlug } = await createFolder(
-      t,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        name: 'Hidden',
-        status: 'undoHidden',
-      },
-    )
+    const { folderId: hiddenFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Hidden',
+      status: 'undoHidden',
+    })
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Visible',
     })
@@ -390,13 +385,6 @@ describe('filesystem transaction guards', () => {
         id: hiddenFolderId,
       }),
     ).rejects.toThrow('This item could not be found')
-    await expect(
-      dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
-        campaignId: ctx.campaignDomainId,
-        slug: hiddenFolderSlug,
-      }),
-    ).resolves.toBeNull()
-
     await expect(
       executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignDomainId,
