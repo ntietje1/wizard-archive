@@ -185,6 +185,10 @@
       "types": "./dist/resources/authored-destination-contract.d.mts",
       "default": "./dist/resources/authored-destination-contract.mjs"
     },
+    "./resources/authored-destination": {
+      "types": "./dist/resources/authored-destination.d.mts",
+      "default": "./dist/resources/authored-destination.mjs"
+    },
     "./resources/portable-path-contract": {
       "types": "./dist/resources/portable-path-contract.d.mts",
       "default": "./dist/resources/portable-path-contract.mjs"
@@ -282,6 +286,7 @@
       "./resources/optimistic-index",
       "./resources/optimistic-runtime",
       "./resources/authored-destination-contract",
+      "./resources/authored-destination",
       "./resources/portable-path-contract",
       "./resources/portable-path-projector",
       "./resources/wizard-archive-contract",
