@@ -14,6 +14,7 @@ import type {
   PortablePathWarning,
   PortableRelativePath,
 } from './portable-path-contract'
+import { hasUnpairedUtf16 } from './well-formed-unicode'
 
 const RESERVED_PACKAGE_ROOT = '.wizardarchive'
 const TRASH_ROOT = `${RESERVED_PACKAGE_ROOT}/trashed`
@@ -135,7 +136,7 @@ function projectSegment(
   warningCodes: Map<ResourceId, Set<WarningCode>>,
   failures: Array<PortablePathFailure>,
 ): ProjectedResource | null {
-  if (!isWellFormed(resource.title) || !isValidExtension(resource)) {
+  if (hasUnpairedUtf16(resource.title) || !isValidExtension(resource)) {
     failures.push({ resourceId: resource.resourceId, code: 'invalid_input' })
     return null
   }
@@ -276,21 +277,6 @@ function collisionKey(segment: string): string {
     .normalize('NFKC')
     .toLowerCase()
     .replace(/[ .]+$/gu, '')
-}
-
-function isWellFormed(value: string): boolean {
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index)
-    if (code >= 0xd800 && code <= 0xdbff) {
-      if (index + 1 >= value.length) return false
-      const next = value.charCodeAt(index + 1)
-      if (next < 0xdc00 || next > 0xdfff) return false
-      index += 1
-    } else if (code >= 0xdc00 && code <= 0xdfff) {
-      return false
-    }
-  }
-  return true
 }
 
 function truncateUtf8(value: string, maximumBytes: number): string {

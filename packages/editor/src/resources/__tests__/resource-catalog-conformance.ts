@@ -412,7 +412,7 @@ export function defineResourceCatalogConformance(
       ).resolves.toEqual({ status: 'rejected', reason: 'ownership_mismatch' })
     })
 
-    it('preserves the first alias observation and keeps application roles deterministic', async () => {
+    it('deduplicates equivalent import entries and keeps application roles deterministic', async () => {
       const { catalog, operations } = await createCatalog({ authorize: () => true, now: () => 70 })
       const resourceId = domainId(DOMAIN_ID_KIND.resource, 70)
       expectCompleted(
@@ -428,8 +428,9 @@ export function defineResourceCatalogConformance(
       const first = alias(resourceId, domainId(DOMAIN_ID_KIND.importJob, 701), 'Notes/Entry.md')
       const repeated = alias(resourceId, domainId(DOMAIN_ID_KIND.importJob, 702), 'notes/entry.md')
       expect(await operations.appendAlias(first)).toEqual(first)
-      expect(await operations.appendAlias(repeated)).toEqual(first)
-      expect(await catalog.listAliases(campaignId, resourceId)).toEqual([first])
+      expect(await operations.appendAlias(first)).toEqual(first)
+      expect(await operations.appendAlias(repeated)).toEqual(repeated)
+      expect(await catalog.listAliases(campaignId, resourceId)).toEqual([first, repeated])
 
       await operations.setRole(campaignId, { role: 'player-handout', resourceId })
       await operations.setRole(campaignId, { role: 'campaign-home', resourceId })
@@ -476,16 +477,13 @@ export function defineResourceCatalogConformance(
   })
 }
 
-function alias(
-  resourceId: ResourceId,
-  firstSeenImportJobId: ImportJobId,
-  rawPath: string,
-): SourcePathAlias {
+function alias(resourceId: ResourceId, importJobId: ImportJobId, rawPath: string): SourcePathAlias {
   return {
     campaignId,
     resourceId,
-    firstSeenImportJobId,
+    importJobId,
     sourceRootId: 'upload',
-    value: { rawPath, normalizedPath: rawPath.toLocaleLowerCase('en-US') },
+    rawPath,
+    normalizedPath: rawPath,
   }
 }

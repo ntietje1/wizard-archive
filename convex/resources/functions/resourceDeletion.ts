@@ -109,7 +109,7 @@ export async function planResourceDeletion(
     plan.aliases.push(
       ...(await ctx.db
         .query('resourceSourcePathAliases')
-        .withIndex('by_campaign_and_resource_and_normalizedPath', (query) =>
+        .withIndex('by_campaign_and_resource', (query) =>
           query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
         )
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),

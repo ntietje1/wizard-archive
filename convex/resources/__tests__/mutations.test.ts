@@ -881,7 +881,7 @@ describe('resource structure commands', () => {
       await ctx.db.insert('resourceSourcePathAliases', {
         campaignUuid,
         resourceUuid: deleteChildId,
-        firstSeenImportJobUuid: generateDomainId(DOMAIN_ID_KIND.importJob),
+        importJobUuid: generateDomainId(DOMAIN_ID_KIND.importJob),
         sourceRootId: 'upload',
         rawPath: 'Notes/Child.md',
         normalizedPath: 'Notes/Child.md',
@@ -926,7 +926,7 @@ describe('resource structure commands', () => {
       expect(
         await ctx.db
           .query('resourceSourcePathAliases')
-          .withIndex('by_campaign_and_resource_and_normalizedPath', (query) =>
+          .withIndex('by_campaign_and_resource', (query) =>
             query.eq('campaignUuid', campaignUuid).eq('resourceUuid', deleteChildId),
           )
           .take(1),

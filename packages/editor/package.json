@@ -129,6 +129,10 @@
       "types": "./dist/resources/resource-catalog-contract.d.mts",
       "default": "./dist/resources/resource-catalog-contract.mjs"
     },
+    "./resources/source-path-alias": {
+      "types": "./dist/resources/source-path-alias.d.mts",
+      "default": "./dist/resources/source-path-alias.mjs"
+    },
     "./resources/index-contract": {
       "types": "./dist/resources/resource-index-contract.d.mts",
       "default": "./dist/resources/resource-index-contract.mjs"
@@ -264,6 +268,7 @@
       "./resources/resource-record",
       "./resources/resource-metadata-version",
       "./resources/catalog-contract",
+      "./resources/source-path-alias",
       "./resources/index-contract",
       "./resources/workspace-index",
       "./resources/command-contract",

@@ -10,7 +10,7 @@ import type {
 } from './domain-id'
 import type { PortableRelativePath } from './portable-path-contract'
 import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-contract'
-import type { ApplicationResourceRole, SourcePathAliasValue } from './resource-catalog-contract'
+import type { ApplicationResourceRole, SourcePathAlias } from './resource-catalog-contract'
 import type { ResourceTombstone } from './resource-metadata-version'
 
 export const WIZARD_ARCHIVE_VERSION = 'wizard-archive-v1' as const
@@ -36,7 +36,7 @@ export type WizardArchiveResource = Readonly<{
   metadataVersion: VersionStamp
   contentVersion: VersionStamp | null
   artifact: WizardArchiveArtifact
-  aliases: ReadonlyArray<SourcePathAliasValue>
+  aliases: ReadonlyArray<SourcePathAlias>
 }>
 
 export type WizardArchiveNoteSection = Readonly<{

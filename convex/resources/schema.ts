@@ -307,15 +307,19 @@ export const resourceTables = {
   resourceSourcePathAliases: defineTable({
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
-    firstSeenImportJobUuid: v.string(),
+    importJobUuid: v.string(),
     sourceRootId: v.string(),
     rawPath: v.string(),
     normalizedPath: v.string(),
-  }).index('by_campaign_and_resource_and_normalizedPath', [
-    'campaignUuid',
-    'resourceUuid',
-    'normalizedPath',
-  ]),
+  })
+    .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid'])
+    .index('by_import_entry', [
+      'campaignUuid',
+      'resourceUuid',
+      'importJobUuid',
+      'sourceRootId',
+      'normalizedPath',
+    ]),
 
   resourceRoles: defineTable({
     campaignUuid: campaignUuidValidator,

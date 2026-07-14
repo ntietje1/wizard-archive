@@ -10,6 +10,7 @@ import type {
   SourcePathAlias,
 } from './resource-catalog-contract'
 import { assertResourceCatalogPageSize } from './resource-catalog-contract'
+import { assertSourcePathAlias } from './source-path-alias'
 import type {
   AuthoritativeResourceOperationExecutor,
   CommandEnvelope,
@@ -147,13 +148,12 @@ function validateSnapshotHierarchy(state: CatalogState, campaignId: CampaignId):
 
 function addSnapshotAliases(state: CatalogState, snapshot: ResourceCatalogSnapshot): void {
   for (const alias of snapshot.aliases) {
+    assertSourcePathAlias(alias)
     if (alias.campaignId !== snapshot.campaignId || !state.resources.has(alias.resourceId)) {
       throw new TypeError('Invalid initial resource catalog alias')
     }
     const aliases = state.aliases.get(alias.resourceId) ?? []
-    if (
-      aliases.some((candidate) => candidate.value.normalizedPath === alias.value.normalizedPath)
-    ) {
+    if (aliases.some((candidate) => sameAlias(candidate, alias))) {
       throw new TypeError('Duplicate initial resource catalog alias')
     }
     state.aliases.set(alias.resourceId, [...aliases, alias])
@@ -192,8 +192,19 @@ function byTombstoneResourceId(left: ResourceTombstone, right: ResourceTombstone
 function byAlias(left: SourcePathAlias, right: SourcePathAlias): number {
   return (
     left.resourceId.localeCompare(right.resourceId) ||
-    left.value.normalizedPath.localeCompare(right.value.normalizedPath) ||
-    left.firstSeenImportJobId.localeCompare(right.firstSeenImportJobId)
+    left.importJobId.localeCompare(right.importJobId) ||
+    left.sourceRootId.localeCompare(right.sourceRootId) ||
+    left.normalizedPath.localeCompare(right.normalizedPath)
+  )
+}
+
+function sameAlias(left: SourcePathAlias, right: SourcePathAlias): boolean {
+  return (
+    left.campaignId === right.campaignId &&
+    left.resourceId === right.resourceId &&
+    left.importJobId === right.importJobId &&
+    left.sourceRootId === right.sourceRootId &&
+    left.normalizedPath === right.normalizedPath
   )
 }
 
@@ -485,11 +496,10 @@ export class InMemoryResourceOperationExecutor<
 
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias> {
     return this.#enqueue(() => {
+      assertSourcePathAlias(alias)
       ownedResource(this.#backend.state, alias.campaignId, alias.resourceId)
       const current = this.#backend.state.aliases.get(alias.resourceId) ?? []
-      const existing = current.find(
-        (candidate) => candidate.value.normalizedPath === alias.value.normalizedPath,
-      )
+      const existing = current.find((candidate) => sameAlias(candidate, alias))
       if (existing) return existing
       this.#backend.state.aliases.set(alias.resourceId, [...current, alias])
       this.#publish(alias.campaignId)

@@ -152,12 +152,10 @@ describe('InMemoryResourceOperationExecutor deep copy', () => {
     await operations.appendAlias({
       campaignId,
       resourceId: sourceChildId,
-      firstSeenImportJobId: assertDomainId(
-        DOMAIN_ID_KIND.importJob,
-        '01890f47-f6c8-7a5b-8c9d-000000000023',
-      ),
+      importJobId: assertDomainId(DOMAIN_ID_KIND.importJob, '01890f47-f6c8-7a5b-8c9d-000000000023'),
       sourceRootId: 'upload',
-      value: { rawPath: 'Note.md', normalizedPath: 'note.md' },
+      rawPath: 'Note.md',
+      normalizedPath: 'Note.md',
     })
     await operations.setRole(campaignId, { role: 'campaign-home', resourceId: sourceRootId })
     const listener = vi.fn()

@@ -18,17 +18,13 @@ export function assertResourceCatalogPageSize(limit: number): void {
   }
 }
 
-export type SourcePathAliasValue = Readonly<{
-  rawPath: string
-  normalizedPath: string
-}>
-
 export type SourcePathAlias = Readonly<{
   campaignId: CampaignId
   resourceId: ResourceId
-  firstSeenImportJobId: ImportJobId
+  importJobId: ImportJobId
   sourceRootId: string
-  value: SourcePathAliasValue
+  rawPath: string
+  normalizedPath: string
 }>
 
 export type ApplicationResourceRole = Readonly<{

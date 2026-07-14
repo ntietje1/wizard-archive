@@ -3,6 +3,7 @@ import type {
   SourcePathAlias,
 } from '@wizard-archive/editor/resources/catalog-contract'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { assertSourcePathAlias } from '@wizard-archive/editor/resources/source-path-alias'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { Doc } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
@@ -20,27 +21,33 @@ async function requireOwnedResource(
 }
 
 function sourcePathAliasFromRow(row: Doc<'resourceSourcePathAliases'>): SourcePathAlias {
-  return {
+  const alias = {
     campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, row.campaignUuid),
     resourceId: assertDomainId(DOMAIN_ID_KIND.resource, row.resourceUuid),
-    firstSeenImportJobId: assertDomainId(DOMAIN_ID_KIND.importJob, row.firstSeenImportJobUuid),
+    importJobId: assertDomainId(DOMAIN_ID_KIND.importJob, row.importJobUuid),
     sourceRootId: row.sourceRootId,
-    value: { rawPath: row.rawPath, normalizedPath: row.normalizedPath },
+    rawPath: row.rawPath,
+    normalizedPath: row.normalizedPath,
   }
+  assertSourcePathAlias(alias)
+  return alias
 }
 
 export async function appendResourceSourcePathAlias(
   ctx: MutationCtx,
   alias: SourcePathAlias,
 ): Promise<SourcePathAlias> {
+  assertSourcePathAlias(alias)
   await requireOwnedResource(ctx, alias.campaignId, alias.resourceId)
   const existing = await ctx.db
     .query('resourceSourcePathAliases')
-    .withIndex('by_campaign_and_resource_and_normalizedPath', (query) =>
+    .withIndex('by_import_entry', (query) =>
       query
         .eq('campaignUuid', alias.campaignId)
         .eq('resourceUuid', alias.resourceId)
-        .eq('normalizedPath', alias.value.normalizedPath),
+        .eq('importJobUuid', alias.importJobId)
+        .eq('sourceRootId', alias.sourceRootId)
+        .eq('normalizedPath', alias.normalizedPath),
     )
     .unique()
   if (existing) return sourcePathAliasFromRow(existing)
@@ -48,10 +55,10 @@ export async function appendResourceSourcePathAlias(
   await ctx.db.insert('resourceSourcePathAliases', {
     campaignUuid: alias.campaignId,
     resourceUuid: alias.resourceId,
-    firstSeenImportJobUuid: alias.firstSeenImportJobId,
+    importJobUuid: alias.importJobId,
     sourceRootId: alias.sourceRootId,
-    rawPath: alias.value.rawPath,
-    normalizedPath: alias.value.normalizedPath,
+    rawPath: alias.rawPath,
+    normalizedPath: alias.normalizedPath,
   })
   return alias
 }

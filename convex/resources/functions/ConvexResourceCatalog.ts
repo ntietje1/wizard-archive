@@ -1,4 +1,5 @@
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { assertSourcePathAlias } from '@wizard-archive/editor/resources/source-path-alias'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   ApplicationResourceRole,
@@ -56,13 +57,16 @@ function toTombstone(tombstone: Doc<'resourceTombstones'>): ResourceTombstone {
 }
 
 function toAlias(alias: Doc<'resourceSourcePathAliases'>): SourcePathAlias {
-  return {
+  const sourcePathAlias = {
     campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, alias.campaignUuid),
     resourceId: assertDomainId(DOMAIN_ID_KIND.resource, alias.resourceUuid),
-    firstSeenImportJobId: assertDomainId(DOMAIN_ID_KIND.importJob, alias.firstSeenImportJobUuid),
+    importJobId: assertDomainId(DOMAIN_ID_KIND.importJob, alias.importJobUuid),
     sourceRootId: alias.sourceRootId,
-    value: { rawPath: alias.rawPath, normalizedPath: alias.normalizedPath },
+    rawPath: alias.rawPath,
+    normalizedPath: alias.normalizedPath,
   }
+  assertSourcePathAlias(sourcePathAlias)
+  return sourcePathAlias
 }
 
 function toRole(role: Doc<'resourceRoles'>): ApplicationResourceRole {
@@ -139,7 +143,7 @@ export class ConvexResourceCatalog implements ResourceCatalogReader {
   ): Promise<ReadonlyArray<SourcePathAlias>> {
     const aliases = await this.db
       .query('resourceSourcePathAliases')
-      .withIndex('by_campaign_and_resource_and_normalizedPath', (query) =>
+      .withIndex('by_campaign_and_resource', (query) =>
         query.eq('campaignUuid', campaignId).eq('resourceUuid', resourceId),
       )
       .collect()
@@ -166,9 +170,7 @@ export class ConvexResourceCatalog implements ResourceCatalogReader {
         .collect(),
       this.db
         .query('resourceSourcePathAliases')
-        .withIndex('by_campaign_and_resource_and_normalizedPath', (query) =>
-          query.eq('campaignUuid', campaignId),
-        )
+        .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
         .collect(),
       this.listRoles(campaignId),
     ])
