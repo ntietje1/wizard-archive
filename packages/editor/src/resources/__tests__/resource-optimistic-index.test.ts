@@ -277,6 +277,8 @@ describe('OptimisticWorkspaceResourceIndex', () => {
       state: 'known',
       value: expect.objectContaining({ title: 'Renamed', metadataVersion: version2 }),
     })
+    expect(optimistic.confirm(receipt(operationId, rootId))).toEqual({ status: 'confirmed' })
+    expect(optimistic.overlays()).toHaveLength(1)
     expect(optimistic.confirm(receipt(operationId, rootId, version3))).toEqual({
       status: 'rejected',
       reason: 'receipt_mismatch',

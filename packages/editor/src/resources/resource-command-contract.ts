@@ -122,7 +122,10 @@ export type CommandEnvelope<TCommand> = Readonly<{
   command: TCommand
 }>
 
-export type CapabilityUnavailableReason = 'capability_not_supported' | 'scope_unavailable'
+export type CapabilityUnavailableReason =
+  | 'capability_not_supported'
+  | 'dependency_unavailable'
+  | 'scope_unavailable'
 
 export type ResourceStructureRejection =
   | 'invalid_command'

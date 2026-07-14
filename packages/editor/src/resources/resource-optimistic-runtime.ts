@@ -1,0 +1,75 @@
+import type {
+  CommandDelivery,
+  ResourceStructureCommand,
+  ResourceStructureCommandGateway,
+  ResourceStructureCommandResult,
+} from './resource-command-contract'
+import type { WorkspaceResourceIndex } from './resource-index-contract'
+import type { OptimisticResourceCommand } from './resource-optimism-contract'
+import { OptimisticWorkspaceResourceIndex } from './resource-optimistic-index'
+import type { ResourceOptimisticSubmitResult } from './resource-optimistic-index'
+
+function isOptimisticCommand(
+  command: ResourceStructureCommand,
+): command is OptimisticResourceCommand {
+  return command.type !== 'deepCopy' && command.type !== 'permanentlyDelete'
+}
+
+function rejectedSubmission(
+  submission: Extract<ResourceOptimisticSubmitResult, { status: 'rejected' }>,
+): CommandDelivery<ResourceStructureCommandResult> {
+  switch (submission.reason) {
+    case 'dependency_unavailable':
+      return {
+        status: 'received',
+        result: { status: 'unavailable', reason: 'dependency_unavailable' },
+      }
+    case 'scope_changed':
+      return {
+        status: 'received',
+        result: { status: 'unavailable', reason: 'scope_unavailable' },
+      }
+    case 'operation_id_reused':
+      return {
+        status: 'received',
+        result: { status: 'rejected', reason: 'operation_id_reused' },
+      }
+    case 'invalid_command':
+      return {
+        status: 'received',
+        result: { status: 'rejected', reason: 'invalid_command' },
+      }
+  }
+}
+
+function createOptimisticStructureGateway(
+  index: OptimisticWorkspaceResourceIndex,
+  authoritative: ResourceStructureCommandGateway,
+): ResourceStructureCommandGateway {
+  return {
+    execute: async (envelope) => {
+      if (!isOptimisticCommand(envelope.command)) {
+        return await authoritative.execute(envelope)
+      }
+
+      const submission = await index.submit(envelope.operationId, envelope.command)
+      if (submission.status === 'rejected') return rejectedSubmission(submission)
+
+      const delivery = await authoritative.execute(envelope)
+      index.reconcile(envelope.operationId, delivery)
+      return delivery
+    },
+  }
+}
+
+export function createOptimisticResourceStructureRuntime(
+  baseIndex: WorkspaceResourceIndex,
+  authoritativeGateway: ResourceStructureCommandGateway,
+  now: () => number = Date.now,
+) {
+  const index = new OptimisticWorkspaceResourceIndex(baseIndex, now)
+  return {
+    index,
+    structure: createOptimisticStructureGateway(index, authoritativeGateway),
+  }
+}
