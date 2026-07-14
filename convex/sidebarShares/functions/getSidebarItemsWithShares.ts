@@ -2,8 +2,6 @@ import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persisten
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
-import { ERROR_CODE } from '../../../shared/errors/client'
-import { throwClientError } from '../../errors'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
@@ -35,9 +33,6 @@ async function getShareInfoForSidebarItem(
   identities: SidebarItemShareIdentityProjection,
 ): Promise<SidebarItemWithShares> {
   const itemRow = await getSidebarItem(ctx, sidebarItemId)
-  if (itemRow && itemRow.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Item does not belong to this campaign')
-  }
   const item = await requireItemAccess(ctx, {
     rawItem: itemRow,
     requiredLevel: PERMISSION_LEVEL.VIEW,
@@ -46,13 +41,12 @@ async function getShareInfoForSidebarItem(
   const shares = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
-      q.eq('campaignId', item.campaignId).eq('sidebarItemId', sidebarItemId),
+      q.eq('campaignId', ctx.campaign._id).eq('sidebarItemId', sidebarItemId),
     )
     .collect()
 
   const inherited = await resolveInheritedPermissions(ctx, {
     parentId: item.parentId,
-    campaignId: item.campaignId,
     memberIds: playerMemberIds,
   })
 

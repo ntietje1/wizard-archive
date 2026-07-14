@@ -6,9 +6,10 @@ import type {
   WizardEditorItem,
   WizardEditorItemWithContent,
 } from '@wizard-archive/editor/adapter'
-import type { CampaignId, SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import { testMapPinId } from 'shared/test/map-pin-id'
+import { testCampaignId } from 'shared/test/campaign-id'
 import { createImportFile } from './helpers/import-file'
 import { createLocalGameMapSessionSource } from '../local-game-map-session-source'
 
@@ -313,7 +314,7 @@ function createBaseItem(id: string, name: string) {
     createdAt: 1,
     allPermissionLevel: null,
     ancestors: [],
-    campaignId: 'demo-campaign' as CampaignId,
+    campaignId: testCampaignId('demo-campaign'),
     color: null,
     createdBy: 'demo-user' as UserProfileId,
     deletedBy: null,

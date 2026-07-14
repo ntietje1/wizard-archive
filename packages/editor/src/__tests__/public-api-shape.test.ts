@@ -409,14 +409,14 @@ describe('editor package public API shape', () => {
     expect(source).toContain('@wizard-archive/editor/adapter')
   })
 
-  it('keeps editor package test fixtures on package-owned workspace id types', () => {
+  it('keeps editor package test fixtures on canonical campaign identity', () => {
     const source = readFileSync(
       path.join(process.cwd(), 'packages/editor/src/test/sidebar-item-factory.ts'),
       'utf8',
     )
 
-    expect(source).not.toContain('CampaignId')
-    expect(source).toContain('ResourceWorkspaceId')
+    expect(source).toContain('shared/test/campaign-id')
+    expect(source).not.toContain('ResourceWorkspaceId')
   })
 
   it('keeps live runtime file replacement on adapter-owned item predicates', () => {
@@ -2356,14 +2356,15 @@ describe('editor package public API shape', () => {
     }
   })
 
-  it('keeps resource row workspace ids source-neutral', () => {
+  it('keeps resource row campaign ids domain-owned', () => {
     const source = readFileSync(
       path.join(process.cwd(), 'packages/editor/src/workspace/resource-contract.ts'),
       'utf8',
     )
 
-    expect(source).not.toContain('CampaignId')
-    expect(source).toContain("export type ResourceWorkspaceId = ResourceTableId<'campaigns'>")
+    expect(source).toContain('campaignId: CampaignId')
+    expect(source).not.toContain('ResourceWorkspaceId')
+    expect(source).not.toContain("ResourceTableId<'campaigns'>")
   })
 
   it('keeps central embed and preview surfaces in resource vocabulary', () => {

@@ -13,7 +13,8 @@ import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contrac
 import type { CanvasItemWithContent } from '../item-contract'
 import { createCanvasDocumentDoc } from '../document-contract'
 import { useCanvasDocumentSession } from '../use-document-session'
-import type { CampaignId, SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import type { SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
 describe('useCanvasDocumentSession', () => {
   it('returns ready session maps from a loaded collaboration document', () => {
@@ -38,7 +39,7 @@ describe('useCanvasDocumentSession', () => {
     expect(result.current).toMatchObject({
       status: 'ready',
       canvasId: 'canvas-1',
-      workspaceId: 'campaign-1',
+      workspaceId: testCampaignId('campaign-1'),
       canEdit: true,
       colorMode: 'dark',
       parentId: 'folder-1',
@@ -141,7 +142,7 @@ function createCanvas(overrides: Partial<CanvasItemWithContent> = {}): CanvasIte
     id: 'canvas-1' as SidebarItemId,
     createdAt: 1,
     type: RESOURCE_TYPES.canvases,
-    campaignId: 'campaign-1' as CampaignId,
+    campaignId: testCampaignId('campaign-1'),
     name: 'Canvas' as ResourceTitle,
     parentId: 'folder-1' as SidebarItemId,
     iconName: null,

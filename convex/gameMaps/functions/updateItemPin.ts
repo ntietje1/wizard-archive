@@ -48,7 +48,7 @@ export async function updateItemPin(
   await captureGameMapSnapshot(ctx, {
     mapId: map.id,
     editHistoryId: historyEntry.rowId,
-    campaignId: map.campaignId,
+    campaignId: ctx.campaign._id,
   })
 
   return mapPinId

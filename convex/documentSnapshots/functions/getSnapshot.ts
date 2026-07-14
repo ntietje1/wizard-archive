@@ -60,7 +60,6 @@ export async function resolveHistorySnapshot(
     snapshots.length !== 1 ||
     rawItem.id !== historyEntry.itemId ||
     rawItem.type !== historyEntry.itemType ||
-    rawItem.campaignId !== ctx.campaign._id ||
     snapshot.itemId !== historyEntry.itemId ||
     snapshot.itemType !== historyEntry.itemType ||
     snapshot.campaignId !== historyEntry.campaignId

@@ -8,8 +8,9 @@ import {
 import { resolveSurfaceDropCommand } from '../surface-planner'
 import { createNote as createNoteFixture } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
-const campaignId = testId<'campaigns'>('campaign_1')
+const campaignId = testCampaignId('campaign_1')
 
 function createNote(overrides: Parameters<typeof createNoteFixture>[0] = {}) {
   return createNoteFixture({ campaignId, ...overrides })
@@ -165,7 +166,7 @@ describe('resolveSurfaceDropCommand', () => {
   })
 
   it('rejects wrong-workspace items using planning context workspace id', () => {
-    const note = createNote({ campaignId: testId<'campaigns'>('other_campaign') })
+    const note = createNote({ campaignId: testCampaignId('other_campaign') })
 
     expect(
       resolveSurfaceDropCommand(
@@ -182,7 +183,7 @@ describe('resolveSurfaceDropCommand', () => {
   })
 
   it('rejects wrong-workspace note link drops using planning context workspace id', () => {
-    const note = createNote({ campaignId: testId<'campaigns'>('other_campaign') })
+    const note = createNote({ campaignId: testCampaignId('other_campaign') })
 
     expect(
       resolveSurfaceDropCommand(

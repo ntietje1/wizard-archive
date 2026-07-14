@@ -14,8 +14,5 @@ export async function getBlockShareNote(
   if (!rawItem || rawItem.type !== RESOURCE_TYPES.notes) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   }
-  if (rawItem.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
-  }
   return rawItem
 }

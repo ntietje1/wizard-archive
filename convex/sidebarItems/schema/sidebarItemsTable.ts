@@ -10,9 +10,11 @@ import {
 import { sidebarItemShareValidator } from '../../sidebarShares/schema'
 import { domainValidatorFields } from '../../common/schema'
 import { assetIdValidator, operationIdValidator } from '../../resources/validators'
+import { campaignIdValidator } from '../../campaigns/schema'
 
 const {
   normalizedName: _normalizedName,
+  campaignId: _campaignRowId,
   previewStorageId: _previewStorageId,
   previewUpdatedAt: _previewUpdatedAt,
   ...publicSidebarItemFields
@@ -21,6 +23,7 @@ const {
 export const sidebarItemValidatorFields = {
   ...domainValidatorFields('sidebarItems'),
   ...publicSidebarItemFields,
+  campaignId: campaignIdValidator,
   previewAssetId: v.nullable(assetIdValidator),
   shares: v.array(sidebarItemShareValidator),
   isBookmarked: v.boolean(),

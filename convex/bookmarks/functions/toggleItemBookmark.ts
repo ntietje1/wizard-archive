@@ -20,7 +20,7 @@ export async function toggleItemBookmark(
     throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
   }
 
-  const campaignId = item.campaignId
+  const campaignId = ctx.campaign._id
   const campaignMemberId = ctx.membership._id
 
   await requireItemAccess(ctx, {

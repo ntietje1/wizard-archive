@@ -56,9 +56,6 @@ async function getShareTargetItem(
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-  if (item.campaignId !== ctx.campaign._id) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Item does not belong to this campaign')
-  }
   return item
 }
 
@@ -76,7 +73,7 @@ async function getExistingMemberShare(
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
       q
-        .eq('campaignId', item.campaignId)
+        .eq('campaignId', ctx.campaign._id)
         .eq('sidebarItemId', item.id)
         .eq('campaignMemberId', campaignMemberId),
     )
@@ -147,7 +144,7 @@ export async function setResourcesMemberPermission(
 
     await ctx.db.insert('sidebarItemShares', {
       resourceShareUuid: generateDomainId(DOMAIN_ID_KIND.resourceShare),
-      campaignId: item.campaignId,
+      campaignId: ctx.campaign._id,
       sidebarItemId: item.id,
       sidebarItemType: item.type,
       campaignMemberId,

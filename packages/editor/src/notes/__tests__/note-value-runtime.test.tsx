@@ -13,7 +13,8 @@ import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory
 import { useNoteValueRuntimeSource } from '../value-runtime'
 import type { NoteValueReferences } from '../value-runtime-model'
 import type { CustomBlockNoteEditor } from '../editor-schema'
-import type { CampaignId, SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import type { SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import type { NoteValueRuntimeState } from '../values/state-contract'
 import type { FolderItem } from '../../workspace/items'
 import type { NoteItem } from '../../notes/item-contract'
@@ -305,8 +306,8 @@ function sidebarItemId(id: string): SidebarItemId {
   return id as SidebarItemId
 }
 
-function campaignId(id: string): CampaignId {
-  return id as CampaignId
+function campaignId(id: string) {
+  return testCampaignId(id)
 }
 
 function userProfileId(id: string): UserProfileId {

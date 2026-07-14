@@ -18,8 +18,9 @@ import {
   createNote as createNoteFixture,
 } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
-const campaignId = testId<'campaigns'>('campaign_1')
+const campaignId = testCampaignId('campaign_1')
 
 function createNote(overrides: Parameters<typeof createNoteFixture>[0] = {}) {
   return createNoteFixture({ campaignId, ...overrides })

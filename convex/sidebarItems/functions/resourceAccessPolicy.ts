@@ -80,7 +80,6 @@ async function getCachedResourcePermissionLevel(
   const permissionLevel = getSidebarItemPermissionLevelForMembership(ctx, {
     item: {
       id: item._id,
-      campaignId: item.campaignId,
       allPermissionLevel: item.allPermissionLevel,
       parentId: item.parentId,
     },

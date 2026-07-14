@@ -53,7 +53,7 @@ export const getBlocksWithShares = async (
     ctx.db
       .query('blockShares')
       .withIndex('by_campaign_note', (q) =>
-        q.eq('campaignId', note.campaignId).eq('noteId', noteId),
+        q.eq('campaignId', ctx.campaign._id).eq('noteId', noteId),
       )
       .collect(),
   ])

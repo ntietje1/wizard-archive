@@ -1,4 +1,4 @@
-import type { UserProfileId, WorkspaceId, WorkspaceMemberId } from '../../../../shared/common/ids'
+import type { UserProfileId, WorkspaceMemberId } from '../../../../shared/common/ids'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type {
   ResourceId,
@@ -21,7 +21,7 @@ export type ResourcePatchRow = {
   name: string
   slug: string
   parentId: ResourceId | null
-  workspaceId: WorkspaceId
+  workspaceId: CampaignId
   type: ResourceKind
   color: string | null
   iconName: ResourceIconName | null

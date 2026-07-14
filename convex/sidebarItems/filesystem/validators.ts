@@ -205,7 +205,7 @@ const sidebarItemSnapshotValidator = v.object({
   name: v.string(),
   slug: v.string(),
   parentId: v.nullable(v.id('sidebarItems')),
-  workspaceId: v.id('campaigns'),
+  workspaceId: campaignIdValidator,
   type: sidebarItemTypeValidator,
   color: v.nullable(v.string()),
   iconName: v.nullable(v.string()),

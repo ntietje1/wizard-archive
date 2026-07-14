@@ -75,7 +75,7 @@ export function sidebarCachePatchItemFromCacheItem(item: AnyItem): SidebarCacheP
   const row = resourcePatchRowFromCacheItem(item)
   const base = {
     ...row,
-    campaignId: row.workspaceId as AnyItem['campaignId'],
+    campaignId: row.workspaceId,
     shares: item.shares,
     isBookmarked: item.isBookmarked,
     myPermissionLevel: item.myPermissionLevel,
@@ -134,7 +134,7 @@ function enhancePatchRowForSidebarCache(item: CacheableSidebarItem, existing?: A
     'workspaceId' in item
       ? (() => {
           const { workspaceId, ...fields } = item
-          return { ...fields, campaignId: workspaceId as AnyItem['campaignId'] }
+          return { ...fields, campaignId: workspaceId }
         })()
       : item
   const cacheFields = hasSidebarCacheFields(item) ? item : existing

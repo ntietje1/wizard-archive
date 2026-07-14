@@ -37,11 +37,12 @@ import {
   resolveDropTarget,
 } from '../drop-target-data'
 import { testId } from '../../test/id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-const campaignId = testId<'campaigns'>('campaign_1')
+const campaignId = testCampaignId('campaign_1')
 
 function createNote(overrides: Parameters<typeof createNoteFixture>[0] = {}) {
   return createNoteFixture({ campaignId, ...overrides })

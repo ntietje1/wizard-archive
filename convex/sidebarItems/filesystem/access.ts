@@ -2,17 +2,22 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { getPermissionRequirementForOperation } from '../../../shared/permissions/requirements'
-import { enhanceBase } from '../functions/enhanceBaseSidebarItem'
+import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
+import { assertConvexResourceTitle } from '../validation/name'
+import { assertConvexSidebarItemSlug } from '../validation/slug'
 import type { PermissionOperation } from '../../../shared/permissions/requirements'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnyResourceRow } from '@wizard-archive/editor/resources/resource-contract'
 import type { Doc } from '../../_generated/dataModel'
 
-type SidebarItemAccessRow = AnyResourceRow | Doc<'sidebarItems'>
+type SidebarItemAccessRow = Doc<'sidebarItems'>
 
-export type AccessibleSidebarItemRow = Doc<'sidebarItems'> &
-  Awaited<ReturnType<typeof enhanceBase<Doc<'sidebarItems'>>>>
+export type AccessibleSidebarItemRow = Doc<'sidebarItems'> & {
+  id: Doc<'sidebarItems'>['_id']
+  name: ReturnType<typeof assertConvexResourceTitle>
+  slug: ReturnType<typeof assertConvexSidebarItemSlug>
+  myPermissionLevel: PermissionLevel
+}
 
 export async function checkSidebarItemRowAccess<T extends SidebarItemAccessRow>(
   ctx: CampaignQueryCtx,
@@ -26,9 +31,21 @@ export async function checkSidebarItemRowAccess<T extends SidebarItemAccessRow>(
 ): Promise<AccessibleSidebarItemRow | null> {
   if (!rawItem) return null
   if (rawItem.campaignId !== ctx.campaign._id) return null
-  const item = await enhanceBase(ctx, { item: rawItem })
-  if (!hasAtLeastPermissionLevel(item.myPermissionLevel, requiredLevel)) return null
-  return { ...rawItem, ...item } as AccessibleSidebarItemRow
+  const myPermissionLevel = await getSidebarItemPermissionLevel(ctx, {
+    item: {
+      id: rawItem._id,
+      allPermissionLevel: rawItem.allPermissionLevel,
+      parentId: rawItem.parentId,
+    },
+  })
+  if (!hasAtLeastPermissionLevel(myPermissionLevel, requiredLevel)) return null
+  return {
+    ...rawItem,
+    id: rawItem._id,
+    name: assertConvexResourceTitle(rawItem.name),
+    slug: assertConvexSidebarItemSlug(rawItem.slug),
+    myPermissionLevel,
+  }
 }
 
 export async function requireSidebarItemRowAccess<T extends SidebarItemAccessRow>(

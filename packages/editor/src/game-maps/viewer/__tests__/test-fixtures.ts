@@ -1,4 +1,5 @@
-import type { CampaignId, SidebarItemId, UserProfileId } from '../../../../../../shared/common/ids'
+import type { SidebarItemId, UserProfileId } from '../../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../../shared/test/campaign-id'
 import type { MapPinId } from '../../../resources/domain-id'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { completedResourceOperation } from '../../../filesystem/transaction-contract'
@@ -147,7 +148,7 @@ function createBaseResourceItem({
     createdAt: 0,
     id,
     allPermissionLevel: null,
-    campaignId: testId<CampaignId>('campaign-1'),
+    campaignId: testCampaignId('campaign-1'),
     color: color ? assertResourceItemColor(color) : null,
     createdBy: testId<UserProfileId>('user-1'),
     deletedBy: null,

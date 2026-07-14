@@ -12,7 +12,7 @@ import type { ShareStatus } from '../../../shared/block-shares/share-status'
 import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
 
 export type BlockShareMutationCtx = Pick<MutationCtx, 'db'> & {
-  campaign: Pick<Doc<'campaigns'>, '_id' | 'currentSessionId'>
+  campaign: Pick<Doc<'campaigns'>, '_id' | 'campaignUuid' | 'currentSessionId'>
   membership: Pick<Doc<'campaignMembers'>, '_id'>
 }
 

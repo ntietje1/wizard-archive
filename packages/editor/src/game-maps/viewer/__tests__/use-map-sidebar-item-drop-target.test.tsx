@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { CampaignId, SidebarItemId } from '../../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../../shared/test/campaign-id'
 import { MAP_DROP_ZONE_TYPE } from '../../../drag-drop/drop-target-data'
 import { executeRegisteredSurfaceDropCommand } from '../../../drag-drop/surface-command'
 import { resolveSurfaceDropCommand } from '../../../drag-drop/surface-planner'
@@ -147,7 +148,7 @@ function createMap(): MapItemWithContent {
 function createNote(): AnyItem {
   return {
     id: itemId('note-1'),
-    campaignId: 'campaign-1' as CampaignId,
+    campaignId: testCampaignId('campaign-1'),
     location: RESOURCE_LOCATION.sidebar,
     status: RESOURCE_STATUS.active,
     type: RESOURCE_TYPES.notes,

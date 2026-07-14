@@ -32,7 +32,7 @@ async function getNotePermissionLevelsByMemberId(
   const directShares = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
-      q.eq('campaignId', note.campaignId).eq('sidebarItemId', note.id),
+      q.eq('campaignId', ctx.campaign._id).eq('sidebarItemId', note.id),
     )
     .collect()
 
@@ -46,7 +46,6 @@ async function getNotePermissionLevelsByMemberId(
 
   const inherited = await resolveInheritedPermissions(ctx, {
     parentId: note.parentId,
-    campaignId: note.campaignId,
     memberIds: candidateMemberIds,
   })
 
@@ -87,10 +86,8 @@ export async function getBlockSharePlayerNoteAccess(
 export async function getActiveBlockSharePlayerMemberIds(
   ctx: BlockShareEligibilityCtx,
   {
-    note,
     candidateMemberIds,
   }: {
-    note: NoteItemRow
     candidateMemberIds: Array<Id<'campaignMembers'>>
   },
 ): Promise<Set<Id<'campaignMembers'>>> {
@@ -100,7 +97,7 @@ export async function getActiveBlockSharePlayerMemberIds(
       const member = await ctx.db.get('campaignMembers', memberId)
       if (
         member &&
-        member.campaignId === note.campaignId &&
+        member.campaignId === ctx.campaign._id &&
         member.role === CAMPAIGN_MEMBER_ROLE.Player &&
         member.status === CAMPAIGN_MEMBER_STATUS.Accepted
       ) {

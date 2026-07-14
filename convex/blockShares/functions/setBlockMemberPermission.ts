@@ -34,7 +34,7 @@ export const setBlockMemberPermission = async (
   if (blockNoteIds.length === 0) return []
 
   const note = await getBlockShareNote(ctx, noteId)
-  const memberArgs = { campaignId: note.campaignId, campaignMemberId }
+  const memberArgs = { campaignId: ctx.campaign._id, campaignMemberId }
   const member = await (permissionLevel === null
     ? requireCampaignMember(ctx, memberArgs)
     : requireAcceptedPlayerMember(ctx, memberArgs))

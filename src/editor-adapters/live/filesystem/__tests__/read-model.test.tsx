@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'
 import type { WizardEditorItem } from '@wizard-archive/editor/adapter'
 import type { CampaignActor } from 'shared/campaigns/actor'
-import type { CampaignId, SidebarItemId } from 'shared/common/ids'
-import type { CampaignId as CampaignDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { SidebarItemId } from 'shared/common/ids'
+import { testCampaignId } from 'shared/test/campaign-id'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { useFileSystemReadModel } from '../read-model'
@@ -24,9 +24,8 @@ vi.mock('~/features/campaigns/hooks/useCampaignActor', () => ({
 }))
 
 describe('useFileSystemReadModel', () => {
-  const campaignId = 'campaign_read_model' as CampaignId
-  const campaignDomainId = campaignId as unknown as CampaignDomainId
-  const playerActor: CampaignActor = { kind: 'player', campaignId: campaignDomainId }
+  const campaignId = testCampaignId('campaign_read_model')
+  const playerActor: CampaignActor = { kind: 'player', campaignId }
 
   beforeEach(() => {
     useLiveSidebarItemsQueriesMock.mockReset()

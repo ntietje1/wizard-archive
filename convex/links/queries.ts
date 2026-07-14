@@ -36,9 +36,8 @@ const linkPanelRowValidator = v.object({
 async function toLinkPanelItem(
   ctx: CampaignQueryCtx,
   item: AnyResourceRow | null,
-  campaignId: Id<'campaigns'>,
 ): Promise<LinkPanelItem | null> {
-  if (!item || item.campaignId !== campaignId || !isActiveResource(item)) return null
+  if (!item || !isActiveResource(item)) return null
   const visibleItem = await checkItemAccess(ctx, {
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.VIEW,
@@ -56,7 +55,7 @@ async function getLinkPanelItem(
   ctx: CampaignQueryCtx,
   itemId: Id<'sidebarItems'>,
 ): Promise<LinkPanelItem | null> {
-  return toLinkPanelItem(ctx, await getSidebarItem(ctx, itemId), ctx.campaign._id)
+  return toLinkPanelItem(ctx, await getSidebarItem(ctx, itemId))
 }
 
 function toLinkPanelRow(link: Doc<'noteLinks'>, item: LinkPanelItem | null): LinkPanelRow {

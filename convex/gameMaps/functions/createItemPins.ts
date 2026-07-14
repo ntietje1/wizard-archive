@@ -65,7 +65,7 @@ export async function createItemPins(
       if (!item) {
         throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
       }
-      if (item.campaignId !== rawItem.campaignId) {
+      if (item.campaignId !== ctx.campaign._id) {
         throwClientError(
           ERROR_CODE.VALIDATION_FAILED,
           'Item must belong to the same campaign as the map',
@@ -87,7 +87,7 @@ export async function createItemPins(
       mapId,
       item: { ...item, id: item._id, workspaceId: item.campaignId },
       existingPinItemIds: nextPinItemIds,
-      workspaceId: rawItem.campaignId,
+      workspaceId: ctx.campaign._id,
     })
     if (dropValidationError === 'trashed_item') {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Restore the item before pinning it to a map')
@@ -135,7 +135,7 @@ export async function createItemPins(
   await captureGameMapSnapshot(ctx, {
     mapId,
     editHistoryId: historyEntry.rowId,
-    campaignId: rawItem.campaignId,
+    campaignId: ctx.campaign._id,
   })
   await ctx.db.patch('editHistory', historyEntry.rowId, { hasSnapshot: true })
 

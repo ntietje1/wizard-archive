@@ -34,7 +34,6 @@ export type ResourceLocation = 'sidebar'
 export type ResourceIconName = (typeof RESOURCE_ICON_NAMES)[number]
 export type ResourceSlug = BrandedString<'ResourceSlug'>
 export type ResourceColor = BrandedString<'ResourceColor'>
-export type ResourceWorkspaceId = ResourceTableId<'campaigns'>
 
 export type ResourceValidationResult = { valid: true } | { valid: false; error: string }
 
@@ -262,7 +261,7 @@ export type ResourceRow<T extends ResourceKind = ResourceKind> = {
   iconName: string | null
   color: string | null
   slug: string
-  campaignId: ResourceWorkspaceId
+  campaignId: CampaignId
   parentId: ResourceId | null
   type: T
   allPermissionLevel: PermissionLevel | null

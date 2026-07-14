@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { RESOURCE_STATUS } from '../../workspace/items-persistence-contract'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import {
   createFile,
   createFolder,
@@ -22,7 +23,7 @@ describe('sidebar item factory', () => {
       createdAt: 1,
       name: 'Test Item 1',
       slug: 'test-item-1',
-      campaignId: 'campaign_1',
+      campaignId: testCampaignId('campaign_1'),
       createdBy: 'user_1',
     })
   })

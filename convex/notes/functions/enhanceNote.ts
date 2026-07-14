@@ -139,7 +139,6 @@ async function getBlockShareAccessWarnings(
     candidateMemberIds: memberIds,
   })
   const activePlayerMemberIds = await getActiveBlockSharePlayerMemberIds(ctx, {
-    note,
     candidateMemberIds: memberIds,
   })
 

@@ -7,7 +7,8 @@ import type {
   AnyResourceRow,
   ResourceShare,
 } from '@wizard-archive/editor/resources/resource-contract'
-import type { AssetId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { AssetId, CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { assertConvexResourceTitle } from '../validation/name'
 import { assertConvexSidebarItemSlug } from '../validation/slug'
 import { getAssetIdByStorageId, getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
@@ -32,6 +33,7 @@ export type SidebarItemEnhancement = {
 function normalizeSidebarItemFields<T extends SidebarItemEnhancementRow>(
   item: T,
   previewAssetId: AssetId | null,
+  campaignId: CampaignId,
 ) {
   const normalizedId = 'id' in item ? item.id : item._id
   const normalizedCreatedAt = 'createdAt' in item ? item.createdAt : item._creationTime
@@ -52,6 +54,7 @@ function normalizeSidebarItemFields<T extends SidebarItemEnhancementRow>(
   return {
     ...publicFields,
     id: normalizedId,
+    campaignId,
     createdAt: normalizedCreatedAt,
     name: assertConvexResourceTitle(item.name),
     iconName: item.iconName === null ? null : assertResourceIconName(item.iconName),
@@ -67,7 +70,8 @@ export async function enhanceBase<T extends SidebarItemEnhancementRow>(
 ) {
   const { membership } = ctx
   const previewIdentity = await resolvePreviewIdentity(ctx, item)
-  const normalizedItem = normalizeSidebarItemFields(item, previewIdentity.assetId)
+  const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid)
+  const normalizedItem = normalizeSidebarItemFields(item, previewIdentity.assetId, campaignId)
 
   const [shares, isBookmarked, myPermissionLevel, previewUrl] = await Promise.all([
     enhancement
@@ -81,7 +85,7 @@ export async function enhanceBase<T extends SidebarItemEnhancementRow>(
           .query('bookmarks')
           .withIndex('by_campaign_member_item', (q) =>
             q
-              .eq('campaignId', normalizedItem.campaignId)
+              .eq('campaignId', ctx.campaign._id)
               .eq('campaignMemberId', membership._id)
               .eq('sidebarItemId', normalizedItem.id),
           )

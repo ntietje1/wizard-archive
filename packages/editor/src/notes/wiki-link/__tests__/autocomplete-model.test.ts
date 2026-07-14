@@ -20,7 +20,8 @@ import {
   RESOURCE_TYPES,
 } from '../../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../../workspace/items'
-import type { CampaignId, SidebarItemId, UserProfileId } from '../../../../../../shared/common/ids'
+import type { SidebarItemId, UserProfileId } from '../../../../../../shared/common/ids'
+import { testCampaignId } from '../../../../../../shared/test/campaign-id'
 import { createResourceCatalogModel } from '../../../filesystem/catalog'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { testNoteBlockId } from '../../../test/blocknote-id'
@@ -48,8 +49,8 @@ function createSidebarItemId(label: string): SidebarItemId {
   return `${label}-${testIdCounter}` as SidebarItemId
 }
 
-function createCampaignId(): CampaignId {
-  return 'campaign-1' as CampaignId
+function createCampaignId() {
+  return testCampaignId('campaign-1')
 }
 
 function createUserProfileId(): UserProfileId {

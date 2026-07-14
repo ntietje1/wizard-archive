@@ -1,9 +1,8 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { normalizeExplicitSharePermissionLevel } from '../../../shared/permissions/share-permissions'
-import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
-import type { AnyResourceRow } from '@wizard-archive/editor/resources/resource-contract'
+import { isUndoHiddenSidebarItem } from '../../sidebarItems/types/status'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
@@ -11,6 +10,12 @@ import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignMemberRow } from '../../../shared/campaigns/types'
 type SidebarPermissionCtx = Pick<QueryCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>
+}
+
+type SidebarItemPermissionRow = {
+  id: Id<'sidebarItems'>
+  allPermissionLevel: PermissionLevel | null
+  parentId: Id<'sidebarItems'> | null
 }
 
 type InheritedMemberPermission = { level: PermissionLevel; folderName: string | null }
@@ -114,25 +119,35 @@ export async function resolveInheritedPermissions(
   ctx: SidebarPermissionCtx,
   {
     parentId,
-    campaignId,
     memberIds,
   }: {
     parentId: Id<'sidebarItems'> | null
-    campaignId: Id<'campaigns'>
     memberIds: Array<Id<'campaignMembers'>>
   },
 ): Promise<InheritedPermissionsResult> {
+  const campaignId = ctx.campaign._id
   const result = createInheritedPermissionsResult()
   const unresolvedMembers = new Set(memberIds)
   let allPlayersResolved = false
 
   let currentParentId = parentId
   while (currentParentId) {
-    const folder = await getSidebarItem(ctx, currentParentId)
-    if (!folder) break
+    const folder = await ctx.db.get('sidebarItems', currentParentId)
+    if (!folder || folder.campaignId !== ctx.campaign._id || isUndoHiddenSidebarItem(folder)) {
+      break
+    }
 
-    const inheritsFolderShares =
-      folder.type === RESOURCE_TYPES.folders && folder.inheritShares === true
+    const folderExtension =
+      folder.type === RESOURCE_TYPES.folders
+        ? await ctx.db
+            .query('folders')
+            .withIndex('by_sidebarItemId', (query) => query.eq('sidebarItemId', folder._id))
+            .unique()
+        : null
+    if (folder.type === RESOURCE_TYPES.folders && !folderExtension) {
+      throw new Error('Missing folder extension row')
+    }
+    const inheritsFolderShares = folderExtension?.inheritShares === true
     if (inheritsFolderShares) {
       await applyFolderMemberShares(ctx, {
         campaignId,
@@ -158,7 +173,7 @@ export async function resolveInheritedPermissions(
 
 export async function getSidebarItemPermissionLevel(
   ctx: CampaignQueryCtx,
-  { item }: { item: Pick<AnyResourceRow, 'id' | 'campaignId' | 'allPermissionLevel' | 'parentId'> },
+  { item }: { item: SidebarItemPermissionRow },
 ): Promise<PermissionLevel> {
   return await getSidebarItemPermissionLevelForMembership(ctx, {
     item,
@@ -172,11 +187,11 @@ export async function getSidebarItemPermissionLevelForMembership(
     item,
     membership,
   }: {
-    item: Pick<AnyResourceRow, 'id' | 'campaignId' | 'allPermissionLevel' | 'parentId'>
+    item: SidebarItemPermissionRow
     membership: CampaignMemberRow
   },
 ): Promise<PermissionLevel> {
-  const campaignId = item.campaignId
+  const campaignId = ctx.campaign._id
 
   if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
     return PERMISSION_LEVEL.FULL_ACCESS
@@ -196,7 +211,6 @@ export async function getSidebarItemPermissionLevelForMembership(
 
   const inherited = await resolveInheritedPermissions(ctx, {
     parentId: item.parentId ?? null,
-    campaignId,
     memberIds: [checkId],
   })
   return inherited.members[checkId]?.level ?? PERMISSION_LEVEL.NONE

@@ -10,8 +10,8 @@ import type { FileItem } from '../files/item-contract'
 import type { MapItem } from '../game-maps/item-contract'
 import type { CanvasItem } from '../canvas/item-contract'
 import type { NoteItem } from '../notes/item-contract'
-import type { ResourceWorkspaceId } from '../workspace/resource-contract'
 import type { UserProfileId } from '../../../../shared/common/ids'
+import { testCampaignId } from '../../../../shared/test/campaign-id'
 
 let itemCounter = 0
 
@@ -31,7 +31,7 @@ function baseFields() {
     iconName: null,
     color: null,
     slug: assertResourceItemSlug(`test-item-${itemCounter}`),
-    campaignId: `campaign_${itemCounter}` as ResourceWorkspaceId,
+    campaignId: testCampaignId(`campaign_${itemCounter}`),
     parentId: null,
     allPermissionLevel: null,
     location: RESOURCE_LOCATION.sidebar,

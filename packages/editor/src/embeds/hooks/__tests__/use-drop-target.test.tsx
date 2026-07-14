@@ -13,7 +13,7 @@ import { DndProviderContext } from '../../../drag-drop/context'
 import { useExternalDropTarget } from '../../../drag-drop/use-external-drop-target'
 import { useExternalUrlDropTarget } from '../../../drag-drop/use-external-url-drop-target'
 import { createNote as createNoteFixture } from '../../../test/sidebar-item-factory'
-import { testId } from '../../../test/id'
+import { testCampaignId } from '../../../../../../shared/test/campaign-id'
 
 const dropTargetState = vi.hoisted(() => ({
   args: null as null | {
@@ -47,7 +47,7 @@ vi.mock('../../../drag-drop/use-external-url-drop-target', async (importOriginal
 })
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
 
-const campaignId = testId<'campaigns'>('campaign_1')
+const campaignId = testCampaignId('campaign_1')
 type TestDropPayloadDispatcher = (input: {
   payload: unknown
   rawTarget: Record<string, unknown> | null

@@ -14,7 +14,6 @@ import type {
 import type { CampaignActor, CampaignViewAsSelection } from 'shared/campaigns/actor'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
-import type { Id } from 'convex/_generated/dataModel'
 import type { LiveWorkspacePreferences } from '../live-workspace-preferences'
 import { useLiveSidebarItemAvailabilityState } from '../use-live-sidebar-item-availability-state'
 import { useLiveWorkspaceMode } from '../use-live-workspace-mode'
@@ -26,7 +25,6 @@ interface MockMutationOptions {
 }
 
 const campaignId = 'campaign_1' as CampaignId
-const campaignRowId = campaignId as unknown as Id<'campaigns'>
 const playerMemberId = 'member_1' as CampaignMemberId
 const TEST_SORT_ORDERS = {
   Alphabetical: 'Alphabetical',
@@ -146,7 +144,7 @@ describe('live workspace permission hooks', () => {
 
   it('lets a read-only player store their workspace mode preference', () => {
     const note = createNote({
-      campaignId: campaignRowId,
+      campaignId,
       myPermissionLevel: PERMISSION_LEVEL.VIEW,
     })
 
@@ -177,7 +175,7 @@ describe('live workspace permission hooks', () => {
     actorState.actor = { kind: 'dm', campaignId }
     campaignState.isDm = true
     const note = createNote({
-      campaignId: campaignRowId,
+      campaignId,
       myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
     })
 
@@ -221,7 +219,7 @@ describe('live workspace permission hooks', () => {
   it('invalidates the workspace preference query captured when the mode update started', async () => {
     const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries')
     const note = createNote({
-      campaignId: campaignRowId,
+      campaignId,
       myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
     })
     actorState.actor = { kind: 'dm', campaignId }
@@ -253,7 +251,7 @@ describe('live workspace permission hooks', () => {
     campaignState.isDm = true
     actorState.actor = { kind: 'dm_view_as', campaignId, memberId: playerMemberId }
     const note = createNote({
-      campaignId: campaignRowId,
+      campaignId,
       myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
     })
 
@@ -272,7 +270,7 @@ describe('live workspace permission hooks', () => {
   it('uses player availability while the DM is viewing as a player', () => {
     campaignState.isDm = true
     actorState.actor = { kind: 'dm_view_as', campaignId, memberId: playerMemberId }
-    const hiddenNote = createNote({ campaignId: campaignRowId, name: 'Hidden GM note' })
+    const hiddenNote = createNote({ campaignId, name: 'Hidden GM note' })
 
     const { result } = renderHook(() =>
       useLiveSidebarItemAvailabilityState({
@@ -303,7 +301,7 @@ describe('live workspace permission hooks', () => {
   it('names the viewed-as player when an item is not shared with them', () => {
     campaignState.isDm = true
     actorState.actor = { kind: 'dm_view_as', campaignId, memberId: playerMemberId }
-    const playerCatalogNote = createNote({ campaignId: campaignRowId, name: 'Player catalog note' })
+    const playerCatalogNote = createNote({ campaignId, name: 'Player catalog note' })
 
     const { result } = renderHook(() =>
       useLiveSidebarItemAvailabilityState({
@@ -336,7 +334,7 @@ describe('live workspace permission hooks', () => {
     campaignState.isDm = true
     actorState.actor = { kind: 'dm_view_as', campaignId, memberId: playerMemberId }
     membersState.data = undefined
-    const playerCatalogNote = createNote({ campaignId: campaignRowId, name: 'Player catalog note' })
+    const playerCatalogNote = createNote({ campaignId, name: 'Player catalog note' })
 
     const { result } = renderHook(() =>
       useLiveSidebarItemAvailabilityState({

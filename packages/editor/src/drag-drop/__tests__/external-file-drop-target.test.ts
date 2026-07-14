@@ -4,6 +4,7 @@ import {
   createNote as createNoteFixture,
 } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import {
   CANVAS_DROP_ZONE_TYPE,
   EMPTY_EMBED_DROP_TYPE,
@@ -11,7 +12,7 @@ import {
 } from '../drop-target-data'
 import { resolveExternalFileDropTarget } from '../external-file-drop-target'
 
-const campaignId = testId<'campaigns'>('campaign_1')
+const campaignId = testCampaignId('campaign_1')
 
 describe('resolveExternalFileDropTarget', () => {
   it('models root and folder file drops as direct imports', () => {

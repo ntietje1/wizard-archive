@@ -1,5 +1,6 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import {
   assertResourceColor,
   assertResourceIconName,
@@ -123,7 +124,7 @@ async function resourcePatchRowFromStored(
   const {
     _id,
     _creationTime,
-    campaignId,
+    campaignId: _campaignRowId,
     normalizedName: _normalizedName,
     previewStorageId,
     previewUpdatedAt: _previewUpdatedAt,
@@ -133,7 +134,7 @@ async function resourcePatchRowFromStored(
     ...fields,
     id: _id,
     createdAt: _creationTime,
-    workspaceId: campaignId,
+    workspaceId: assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid),
     previewAssetId: await getAssetIdByStorageId(ctx.db, previewStorageId),
   }
 }

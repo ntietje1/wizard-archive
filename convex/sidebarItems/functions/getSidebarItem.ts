@@ -1,5 +1,6 @@
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { AnyResourceRow } from '@wizard-archive/editor/resources/resource-contract'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import { assertNever } from '../../common/types'
@@ -8,7 +9,7 @@ import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 import { getAssetIdByStorageId } from '../../storage/functions/assetIdentity'
 type GetSidebarItemCtx = Pick<QueryCtx, 'db'> & {
-  campaign: Pick<Doc<'campaigns'>, '_id'>
+  campaign: Pick<Doc<'campaigns'>, '_id' | 'campaignUuid'>
 }
 
 async function getSidebarItemExtension<TTable extends 'folders' | 'gameMaps' | 'files'>(
@@ -99,6 +100,7 @@ async function toEditorResourceRow(ctx: GetSidebarItemCtx, row: Doc<'sidebarItem
   return {
     ...fields,
     id: _id,
+    campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, ctx.campaign.campaignUuid),
     createdAt: _creationTime,
     previewAssetId: await getAssetIdByStorageId(ctx.db, previewStorageId),
   }

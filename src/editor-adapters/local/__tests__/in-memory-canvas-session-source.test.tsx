@@ -1,7 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, test, vi } from 'vite-plus/test'
 import { testCanvasNodeId } from 'shared/test/canvas-node-id'
-import type { CampaignId, SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
+import { testCampaignId } from 'shared/test/campaign-id'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type {
   WizardEditorEmbeddedCanvasState,
@@ -126,7 +127,7 @@ test('in-memory canvas sessions use the current workspace id after rerender', ()
 
   expect(result.current).toMatchObject({
     status: 'ready',
-    workspaceId,
+    workspaceId: testCampaignId(workspaceId),
   })
   if (result.current.status !== 'ready') throw new Error('expected ready canvas session')
   expect(result.current.nodesMap.has(testCanvasNodeId('workspace-1-node'))).toBe(true)
@@ -135,7 +136,7 @@ test('in-memory canvas sessions use the current workspace id after rerender', ()
 
   expect(result.current).toMatchObject({
     status: 'ready',
-    workspaceId: secondWorkspaceId,
+    workspaceId: testCampaignId(secondWorkspaceId),
   })
   if (result.current.status !== 'ready') throw new Error('expected ready canvas session')
   expect(result.current.nodesMap.has(testCanvasNodeId('workspace-2-node'))).toBe(true)
@@ -247,7 +248,7 @@ function createCanvasItem({
     createdAt: 1,
     allPermissionLevel: null,
     color: null,
-    campaignId: itemWorkspaceId as CampaignId,
+    campaignId: testCampaignId(itemWorkspaceId),
     createdBy: 'user-1' as UserProfileId,
     deletedBy: null,
     deletionTime: null,

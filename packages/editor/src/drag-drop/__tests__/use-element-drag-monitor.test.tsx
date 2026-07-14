@@ -17,11 +17,12 @@ import {
   createNote as createNoteFixture,
 } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { registerSurfaceDropExecutor } from '../surface-command'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
 
 const monitorForElements = vi.fn()
-const campaignId = testId<'campaigns'>('campaign_1')
+const campaignId = testCampaignId('campaign_1')
 
 vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
   monitorForElements: (args: unknown) => monitorForElements(args),

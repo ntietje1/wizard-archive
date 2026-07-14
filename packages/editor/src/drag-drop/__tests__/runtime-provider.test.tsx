@@ -7,6 +7,7 @@ import { createDisabledExternalFileDropCapability } from '../file-drop'
 import { createResourceCatalogModel } from '../../filesystem/catalog'
 import { createNote } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { resetDndStore } from './store-test-utils'
 
 const monitorForElements = vi.fn()
@@ -48,7 +49,7 @@ describe('DndRuntimeProvider', () => {
   it('keeps context consumers idle when only drag overlay state changes', () => {
     const note = createNote({
       id: testId<'sidebarItems'>('note_context_identity'),
-      campaignId: testId<'campaigns'>('campaign_context_identity'),
+      campaignId: testCampaignId('campaign_context_identity'),
     })
     const { catalog, operationItems } = createResourceCatalogModel({
       activeItems: [note],
@@ -102,7 +103,7 @@ describe('DndRuntimeProvider', () => {
   it('does not monitor external files when external file drops are disabled', () => {
     const note = createNote({
       id: testId<'sidebarItems'>('note_external_disabled'),
-      campaignId: testId<'campaigns'>('campaign_external_disabled'),
+      campaignId: testCampaignId('campaign_external_disabled'),
     })
     const { catalog, operationItems } = createResourceCatalogModel({
       activeItems: [note],
@@ -136,7 +137,7 @@ describe('DndRuntimeProvider', () => {
   it('exposes only runtime drop capabilities through the DnD provider value', () => {
     const note = createNote({
       id: testId<'sidebarItems'>('note_context_shape'),
-      campaignId: testId<'campaigns'>('campaign_context_shape'),
+      campaignId: testCampaignId('campaign_context_shape'),
     })
     const { catalog, operationItems } = createResourceCatalogModel({
       activeItems: [note],
@@ -180,7 +181,7 @@ describe('DndRuntimeProvider', () => {
   it('monitors external files when external file drops are enabled', () => {
     const note = createNote({
       id: testId<'sidebarItems'>('note_external_enabled'),
-      campaignId: testId<'campaigns'>('campaign_external_enabled'),
+      campaignId: testCampaignId('campaign_external_enabled'),
     })
     const { catalog, operationItems } = createResourceCatalogModel({
       activeItems: [note],

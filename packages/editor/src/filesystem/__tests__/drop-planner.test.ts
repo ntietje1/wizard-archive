@@ -6,8 +6,9 @@ import type { DropPlanningContext } from '../../drag-drop/planning-context'
 import { createFolder } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
 import { resolveFileSystemDropTarget } from '../drop-planner'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 
-const campaignId = testId<'campaigns'>('campaign_1')
+const campaignId = testCampaignId('campaign_1')
 
 function planningContext(overrides?: Partial<DropPlanningContext>): DropPlanningContext {
   return {

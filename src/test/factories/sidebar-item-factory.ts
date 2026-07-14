@@ -1,7 +1,8 @@
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
 import type { WizardEditorFolderItem, WizardEditorItem } from '@wizard-archive/editor/adapter'
-import type { CampaignId, SidebarItemId, UserProfileId } from 'shared/common/ids'
+import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
+import { testCampaignId } from 'shared/test/campaign-id'
 
 let itemCounter = 0
 
@@ -36,7 +37,7 @@ function baseFields() {
     iconName: null,
     color: null,
     slug: testResourceSlug(`test-item-${itemCounter}`),
-    campaignId: `campaign_${itemCounter}` as CampaignId,
+    campaignId: testCampaignId(`campaign_${itemCounter}`),
     parentId: null,
     allPermissionLevel: null,
     location: TEST_ITEM_LOCATION as 'sidebar',

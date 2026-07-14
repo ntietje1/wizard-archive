@@ -26,7 +26,7 @@ export async function getHeadingsByNote(
   const blocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_type', (q) =>
-      q.eq('campaignId', visibleNote.campaignId).eq('noteId', noteId).eq('type', 'heading'),
+      q.eq('campaignId', ctx.campaign._id).eq('noteId', noteId).eq('type', 'heading'),
     )
     .collect()
 
