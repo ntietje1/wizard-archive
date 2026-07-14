@@ -9,11 +9,13 @@ import {
 import {
   authorizedResourceSnapshotValidator,
   noteContentSnapshotValidator,
+  resourceContentSnapshotValidator,
   resourceCollectionQueryValidator,
   resourceUuidValidator,
 } from './schema'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteContent'
+import { loadResourceContent as loadResourceContentFn } from './functions/loadResourceContent'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 
@@ -57,5 +59,17 @@ export const loadNoteContent = campaignQuery({
   handler: async (ctx, args) => {
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     return await loadNoteContentFn(ctx, resourceId)
+  },
+})
+
+export const loadContent = campaignQuery({
+  args: {
+    resourceId: resourceUuidValidator,
+    kind: v.union(v.literal('file'), v.literal('map'), v.literal('canvas')),
+  },
+  returns: resourceContentSnapshotValidator,
+  handler: async (ctx, args) => {
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
+    return await loadResourceContentFn(ctx, resourceId, args.kind)
   },
 })

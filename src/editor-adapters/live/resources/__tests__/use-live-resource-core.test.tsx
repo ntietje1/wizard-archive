@@ -36,6 +36,9 @@ describe('useLiveResourceCore', () => {
     expect(result.current.loader).toBe(initial.loader)
     expect(result.current.structure).toBe(initial.structure)
     expect(result.current.content.notes).toBe(initial.content.notes)
+    expect(result.current.content.files).toBe(initial.content.files)
+    expect(result.current.content.maps).toBe(initial.content.maps)
+    expect(result.current.content.canvases).toBe(initial.content.canvases)
   })
 
   it('replaces every scoped capability when the actor projection changes', () => {
@@ -57,5 +60,8 @@ describe('useLiveResourceCore', () => {
     expect(result.current.loader).not.toBe(initial.loader)
     expect(result.current.structure).not.toBe(initial.structure)
     expect(result.current.content.notes).not.toBe(initial.content.notes)
+    expect(result.current.content.files).not.toBe(initial.content.files)
+    expect(result.current.content.maps).not.toBe(initial.content.maps)
+    expect(result.current.content.canvases).not.toBe(initial.content.canvases)
   })
 })

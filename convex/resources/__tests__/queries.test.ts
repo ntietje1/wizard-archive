@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceKind } from '@wizard-archive/editor/resources/resource-record'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import type { FunctionArgs } from 'convex/server'
 import { api } from '../../_generated/api'
@@ -190,6 +191,109 @@ describe('authorized resource projection', () => {
     ).resolves.toEqual({ status: 'integrity_error', issue: 'content_missing' })
   })
 
+  it('loads provider-neutral file, map, and canvas content states', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const fileId = await createResource(campaign, campaignUuid, 'file', null, 'File')
+    const mapId = await createResource(campaign, campaignUuid, 'map', null, 'Map')
+    const canvasId = await createResource(campaign, campaignUuid, 'canvas', null, 'Canvas')
+
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadContent, {
+        campaignId: campaignUuid,
+        resourceId: fileId,
+        kind: 'file',
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        status: 'ready',
+        kind: 'file',
+        content: {
+          assetId: null,
+          extension: null,
+          mediaType: 'application/octet-stream',
+          originalName: null,
+        },
+      }),
+    )
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadContent, {
+        campaignId: campaignUuid,
+        resourceId: mapId,
+        kind: 'map',
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        status: 'ready',
+        kind: 'map',
+        content: { imageAssetId: null, layers: [], pins: [] },
+      }),
+    )
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadContent, {
+        campaignId: campaignUuid,
+        resourceId: canvasId,
+        kind: 'canvas',
+      }),
+    ).resolves.toEqual(expect.objectContaining({ status: 'ready', kind: 'canvas' }))
+
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', fileId))
+        .unique()
+      await ctx.db.patch(content!._id, { state: 'initializing' })
+      await ctx.db.insert('resourceAssetCopyIntents', {
+        campaignUuid,
+        resourceUuid: fileId,
+        operationUuid: operationId,
+        sourceAssetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
+        destinationAssetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
+        status: 'pending',
+        attempts: 0,
+        lastAttemptAt: null,
+        lastError: null,
+        createdAt: Date.now(),
+      })
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadContent, {
+        campaignId: campaignUuid,
+        resourceId: fileId,
+        kind: 'file',
+      }),
+    ).resolves.toEqual({ status: 'initializing', operationId })
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', fileId))
+        .unique()
+      await ctx.db.patch(content!._id, { state: 'failed' })
+    })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadContent, {
+        campaignId: campaignUuid,
+        resourceId: fileId,
+        kind: 'file',
+      }),
+    ).resolves.toEqual({ status: 'integrity_error', issue: 'content_missing' })
+    await expect(
+      asPlayer(campaign).query(api.resources.queries.loadContent, {
+        campaignId: campaignUuid,
+        resourceId: mapId,
+        kind: 'map',
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'unauthorized' })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadContent, {
+        campaignId: campaignUuid,
+        resourceId: mapId,
+        kind: 'canvas',
+      }),
+    ).resolves.toEqual({ status: 'unavailable', reason: 'capability_not_supported' })
+  })
+
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {
     return await t.run(async (ctx) => (await ctx.db.get('campaigns', campaignId))!.campaignUuid)
   }
@@ -203,7 +307,7 @@ describe('authorized resource projection', () => {
   async function createResource(
     campaign: Awaited<ReturnType<typeof setupCampaignContext>>,
     campaignUuid: string,
-    kind: 'folder' | 'note',
+    kind: ResourceKind,
     parentId: ResourceId | null,
     title: string,
   ) {

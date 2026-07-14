@@ -81,6 +81,7 @@ describe('resource integrity diagnostics', () => {
       const failedCopyId = await ctx.db.insert('resourceAssetCopyIntents', {
         campaignUuid,
         resourceUuid: failedCopyResourceUuid,
+        operationUuid: generateDomainId(DOMAIN_ID_KIND.operation),
         sourceAssetUuid,
         destinationAssetUuid,
         status: 'failed',

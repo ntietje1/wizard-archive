@@ -211,17 +211,69 @@ export const bindNoteContentResultValidator = v.union(
   }),
 )
 
+const contentUnavailableSnapshotValidator = v.object({
+  status: v.literal('unavailable'),
+  reason: literals('capability_not_supported', 'unauthorized'),
+})
+
+const contentIntegritySnapshotValidator = v.object({
+  status: v.literal('integrity_error'),
+  issue: literals('content_missing', 'content_corrupt', 'version_mismatch'),
+})
+
 export const noteContentSnapshotValidator = v.union(
   v.object({ status: v.literal('initializing'), operationId: v.string() }),
   v.object({ status: v.literal('ready'), update: v.bytes(), version: versionStampValidator }),
+  contentUnavailableSnapshotValidator,
+  contentIntegritySnapshotValidator,
+)
+
+export const resourceContentSnapshotValidator = v.union(
+  v.object({ status: v.literal('initializing'), operationId: v.string() }),
   v.object({
-    status: v.literal('unavailable'),
-    reason: literals('capability_not_supported', 'unauthorized'),
+    status: v.literal('ready'),
+    kind: v.literal('file'),
+    content: v.object({
+      assetId: v.nullable(assetIdValidator),
+      extension: v.nullable(v.string()),
+      mediaType: v.string(),
+      originalName: v.nullable(v.string()),
+    }),
+    version: versionStampValidator,
   }),
   v.object({
-    status: v.literal('integrity_error'),
-    issue: literals('content_missing', 'version_mismatch'),
+    status: v.literal('ready'),
+    kind: v.literal('map'),
+    content: v.object({
+      imageAssetId: v.nullable(assetIdValidator),
+      layers: v.array(
+        v.object({
+          id: v.string(),
+          imageAssetId: v.nullable(assetIdValidator),
+          name: v.string(),
+        }),
+      ),
+      pins: v.array(
+        v.object({
+          id: v.string(),
+          targetResourceId: v.string(),
+          layerId: v.nullable(v.string()),
+          x: v.number(),
+          y: v.number(),
+          visible: v.boolean(),
+        }),
+      ),
+    }),
+    version: versionStampValidator,
   }),
+  v.object({
+    status: v.literal('ready'),
+    kind: v.literal('canvas'),
+    update: v.bytes(),
+    version: versionStampValidator,
+  }),
+  contentUnavailableSnapshotValidator,
+  contentIntegritySnapshotValidator,
 )
 
 const externalEffectAttemptFields = {
@@ -362,6 +414,7 @@ export const resourceTables = {
   resourceAssetCopyIntents: defineTable({
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
+    operationUuid: v.string(),
     sourceAssetUuid: assetIdValidator,
     destinationAssetUuid: assetIdValidator,
     status: literals('pending', 'processing', 'failed'),

@@ -6,6 +6,23 @@ import { createOptimisticResourceStructureRuntime } from '@wizard-archive/editor
 import { createLiveResourceIndexRuntime } from './live-resource-index'
 import { createLiveResourceStructureGateway } from './live-resource-structure-gateway'
 import { createLiveNoteContentSource } from './live-note-content-source'
+import { createLiveResourceContentSource } from './live-resource-content-source'
+
+function subscribeToWatch<T>(
+  watch: Readonly<{
+    localQueryResult(): T | undefined
+    onUpdate(listener: () => void): () => void
+  }>,
+  apply: (value: T) => void,
+) {
+  const update = () => {
+    const value = watch.localQueryResult()
+    if (value !== undefined) apply(value)
+  }
+  const unsubscribe = watch.onUpdate(update)
+  update()
+  return unsubscribe
+}
 
 export function useLiveResourceCore(scope: ResourceProjectionScope) {
   const convex = useConvex()
@@ -43,20 +60,31 @@ export function useLiveResourceCore(scope: ResourceProjectionScope) {
           campaignId: currentScope.campaignId,
           resourceId,
         })
-        const update = () => {
-          const snapshot = watch.localQueryResult()
-          if (snapshot) apply(snapshot)
-        }
-        const unsubscribe = watch.onUpdate(update)
-        update()
-        return unsubscribe
+        return subscribeToWatch(watch, apply)
       },
     })
+    const createContentSource = (kind: 'file' | 'map' | 'canvas') =>
+      createLiveResourceContentSource(kind, {
+        watch: (resourceId, apply) => {
+          const watch = convex.watchQuery(api.resources.queries.loadContent, {
+            campaignId: currentScope.campaignId,
+            resourceId,
+            kind,
+          })
+          return subscribeToWatch(watch, apply)
+        },
+      })
+    const files = createContentSource('file')
+    const maps = createContentSource('map')
+    const canvases = createContentSource('canvas')
 
     return {
-      content: { notes },
+      content: { notes, files, maps, canvases },
       dispose: () => {
         notes.dispose()
+        files.dispose()
+        maps.dispose()
+        canvases.dispose()
         optimistic.dispose()
       },
       index: optimistic.index,

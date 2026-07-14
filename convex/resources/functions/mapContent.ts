@@ -3,7 +3,11 @@ import {
   assertDomainId,
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  OperationId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
 import type { CampaignMutationCtx } from '../../functions'
 import { initialJsonContentVersion } from './contentVersion'
@@ -44,6 +48,7 @@ export async function loadMapContentDeletion(ctx: CampaignMutationCtx, resourceI
 export async function prepareMapContentCopy(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
+  operationId: OperationId,
   sourceResourceId: ResourceId,
   destinationResourceId: ResourceId,
 ): Promise<ContentCopyPreparation> {
@@ -51,7 +56,7 @@ export async function prepareMapContentCopy(
   if (!content || content.campaignUuid !== campaignId || pins.length > 500) {
     return { status: 'integrity_error' }
   }
-  const assets = await prepareAssetCopies(ctx, campaignId, destinationResourceId, [
+  const assets = await prepareAssetCopies(ctx, campaignId, operationId, destinationResourceId, [
     content.imageAssetUuid,
     ...content.layers.map((layer) => layer.imageAssetUuid),
   ])

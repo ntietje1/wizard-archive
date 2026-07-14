@@ -19,6 +19,7 @@ import type {
   ResourceStructureCommandResult,
   ResourceStructureCommandGateway,
 } from '@wizard-archive/editor/resources/command-contract'
+import { createResourceWatchStore } from './resource-watch-store'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type BindNoteContentArgs = FunctionArgs<typeof api.resources.mutations.bindNoteContent>
@@ -31,6 +32,7 @@ type LiveNoteContentBackend = Readonly<{
 
 type LocalCreate = Readonly<{ operationId: OperationId; doc: Y.Doc }>
 type NoteState = ContentSessionState<Y.Doc, Y.Doc>
+type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteState>>
 
 function toArrayBuffer(update: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(update.byteLength)
@@ -54,9 +56,7 @@ function bindingIssue(reason: Extract<BindNoteContentResult, { status: 'rejected
 }
 
 class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
-  readonly #states = new Map<ResourceId, NoteState>()
-  readonly #listeners = new Map<ResourceId, Set<() => void>>()
-  readonly #watches = new Map<ResourceId, () => void>()
+  readonly #store: NoteStore
   readonly #localCreates = new Map<ResourceId, LocalCreate>()
   readonly #pendingCreates = new Map<ResourceId, LocalCreate>()
   readonly #boundDocuments = new Map<ResourceId, Readonly<{ digest: string; doc: Y.Doc }>>()
@@ -66,19 +66,18 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
     private readonly campaignId: CampaignId,
     private readonly structure: ResourceStructureCommandGateway,
     private readonly backend: LiveNoteContentBackend,
-  ) {}
+  ) {
+    this.#store = createResourceWatchStore(backend.watch, (resourceId, snapshot) =>
+      this.#apply(resourceId, snapshot),
+    )
+  }
 
   get(resourceId: ResourceId): NoteState {
-    this.#ensureWatch(resourceId)
-    return this.#states.get(resourceId) ?? { status: 'loading' }
+    return this.#store.get(resourceId) ?? { status: 'loading' }
   }
 
   subscribe(resourceId: ResourceId, listener: () => void): () => void {
-    this.#ensureWatch(resourceId)
-    const listeners = this.#listeners.get(resourceId) ?? new Set()
-    listeners.add(listener)
-    this.#listeners.set(resourceId, listeners)
-    return () => listeners.delete(listener)
+    return this.#store.subscribe(resourceId, listener)
   }
 
   async create(
@@ -157,19 +156,9 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
   }
 
   dispose(): void {
-    for (const unsubscribe of this.#watches.values()) unsubscribe()
+    this.#store.dispose()
     for (const loaded of this.#loadedDocuments.values()) loaded.doc.destroy()
-    this.#watches.clear()
-    this.#listeners.clear()
     this.#loadedDocuments.clear()
-  }
-
-  #ensureWatch(resourceId: ResourceId): void {
-    if (this.#watches.has(resourceId)) return
-    this.#watches.set(
-      resourceId,
-      this.backend.watch(resourceId, (snapshot) => this.#apply(resourceId, snapshot)),
-    )
   }
 
   #apply(resourceId: ResourceId, snapshot: NoteSnapshot): void {
@@ -236,8 +225,7 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
   }
 
   #setState(resourceId: ResourceId, state: NoteState): void {
-    this.#states.set(resourceId, state)
-    for (const listener of this.#listeners.get(resourceId) ?? []) listener()
+    this.#store.set(resourceId, state)
   }
 }
 

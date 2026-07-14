@@ -1,4 +1,8 @@
-import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  OperationId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
 import { initialJsonContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
@@ -35,12 +39,13 @@ export async function loadFileContentDeletion(ctx: CampaignMutationCtx, resource
 export async function prepareFileContentCopy(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
+  operationId: OperationId,
   sourceResourceId: ResourceId,
   destinationResourceId: ResourceId,
 ): Promise<ContentCopyPreparation> {
   const content = await loadFileContentDeletion(ctx, sourceResourceId)
   if (!content || content.campaignUuid !== campaignId) return { status: 'integrity_error' }
-  const assets = await prepareAssetCopies(ctx, campaignId, destinationResourceId, [
+  const assets = await prepareAssetCopies(ctx, campaignId, operationId, destinationResourceId, [
     content.assetUuid,
   ])
   if (!assets) return { status: 'integrity_error' }

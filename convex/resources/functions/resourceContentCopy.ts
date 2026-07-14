@@ -71,6 +71,7 @@ async function prepareResourceContentCopy(
       return await prepareFileContentCopy(
         ctx,
         campaignId,
+        operationId,
         copy.sourceResourceId,
         copy.destinationResourceId,
       )
@@ -78,6 +79,7 @@ async function prepareResourceContentCopy(
       return await prepareMapContentCopy(
         ctx,
         campaignId,
+        operationId,
         copy.sourceResourceId,
         copy.destinationResourceId,
       )

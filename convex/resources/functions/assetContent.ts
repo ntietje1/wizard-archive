@@ -3,7 +3,12 @@ import {
   assertDomainId,
   generateDomainId,
 } from '@wizard-archive/editor/resources/domain-id'
-import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  AssetId,
+  CampaignId,
+  OperationId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
 import { internal } from '../../_generated/api'
 
@@ -16,6 +21,7 @@ export type PreparedAssetCopies = Readonly<{
 export async function prepareAssetCopies(
   ctx: CampaignMutationCtx,
   campaignId: CampaignId,
+  operationId: OperationId,
   resourceId: ResourceId,
   sourceAssetUuids: ReadonlyArray<string | null>,
 ): Promise<PreparedAssetCopies | null> {
@@ -64,6 +70,7 @@ export async function prepareAssetCopies(
           ctx.db.insert('resourceAssetCopyIntents', {
             campaignUuid: campaignId,
             resourceUuid: resourceId,
+            operationUuid: operationId,
             sourceAssetUuid,
             destinationAssetUuid,
             status: 'pending',
