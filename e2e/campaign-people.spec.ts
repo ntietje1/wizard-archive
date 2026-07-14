@@ -1,9 +1,19 @@
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { openSettingsPeopleTab } from './helpers/permission-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import type { Page } from '@playwright/test'
 
 const campaignName = testName('E2E People')
+
+async function openSettingsPeopleTab(page: Page) {
+  await page.getByRole('button', { name: 'User menu' }).click()
+  await page.getByRole('button', { name: /^settings$/i }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible({ timeout: 10000 })
+  await dialog.getByRole('button', { name: /people/i }).click()
+  await expect(dialog.getByText(/members/i).first()).toBeVisible({ timeout: 5000 })
+  return dialog
+}
 
 test.describe.serial('campaign people management', () => {
   test.beforeAll(async ({ browser }) => {

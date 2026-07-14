@@ -13,18 +13,6 @@ const editorDevelopmentAliases = [
     find: /^@wizard-archive\/editor$/,
     replacement: editorSourcePath('index.ts'),
   },
-  {
-    find: /^@wizard-archive\/editor\/collaboration\/yjs-provider$/,
-    replacement: editorSourcePath('collaboration/yjs-provider.ts'),
-  },
-  {
-    find: /^@wizard-archive\/editor\/resources\/items$/,
-    replacement: editorSourcePath('workspace/items.ts'),
-  },
-  {
-    find: /^@wizard-archive\/editor\/sharing$/,
-    replacement: editorSourcePath('sharing/contracts.ts'),
-  },
 ]
 
 const editorPackEntries = Object.entries(editorPackage.exports).flatMap(([subpath, target]) => {

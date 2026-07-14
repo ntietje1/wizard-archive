@@ -246,7 +246,9 @@ describe('import boundary checks', () => {
       ]),
     ).toEqual([
       'convex/gameMaps/functions/createItemPins.ts:1 convex may not import value from backend-unsafe editor package subpath @wizard-archive/editor/game-maps',
+      'convex/canvases/functions/enhanceCanvas.ts:1 convex may not import type from backend-unsafe editor package subpath @wizard-archive/editor/canvas/item-contract',
       'convex/notes/functions/enhanceNote.ts:1 convex may not import type from backend-unsafe editor package subpath @wizard-archive/editor/notes',
+      'convex/notes/functions/importText.ts:1 convex may not import value from backend-unsafe editor package subpath @wizard-archive/editor/notes/imported-text',
     ])
   })
 
@@ -323,6 +325,7 @@ describe('import boundary checks', () => {
     ).toEqual([
       'src/editor-adapters/live/example.ts:1 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/workspace/items',
       'src/editor-adapters/live/example.ts:2 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/workspace/items',
+      'src/editor-adapters/live/example.ts:3 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/resources/items-persistence-contract',
     ])
   })
 

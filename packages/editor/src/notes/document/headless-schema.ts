@@ -22,8 +22,6 @@ const headlessNoteSchema = BlockNoteSchema.create({
   styleSpecs: customStyleSpecs,
 })
 
-export type HeadlessNoteStyleSchema = typeof headlessNoteSchema.styleSchema
-
 export function createHeadlessNoteEditor() {
   return createHeadlessBlockNoteEditor({ schema: headlessNoteSchema })
 }

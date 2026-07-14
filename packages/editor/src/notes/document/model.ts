@@ -1,13 +1,11 @@
 import type { z } from 'zod'
 import { z as zod } from 'zod'
-import type { ShareStatus } from '../../../../../shared/block-shares/share-status'
 import {
   deriveExternalEmbedName,
   embedTargetKindSchema,
   embedTargetSchema,
   externalEmbedUrlSchema,
 } from '../../../../../shared/embeds/embedTargets'
-import type { PermissionLevel } from '../../../../../shared/permissions/types'
 import { noteValuePropsSchema } from '../values/schema'
 import { isUuidV7 } from '../../resources/domain-id'
 import type { NoteBlockId } from '../../resources/domain-id'
@@ -373,12 +371,6 @@ function createPartialBlockNodeSchema(
 const partialBlockNoteBlockSchema = createPartialBlockSchema(allFlatBlockContentSchemas)
 
 export const partialNoteDocumentSchema = zod.array(partialBlockNoteBlockSchema)
-
-export type BlockShareInfo<MemberId extends string> = {
-  noteBlockId: NoteBlockId
-  shareStatus: ShareStatus
-  memberPermissions: Record<MemberId, Extract<PermissionLevel, 'none' | 'view'>>
-}
 
 export type HeadingLevel = Extract<NoteBlockContent, { type: 'heading' }>['props']['level']
 

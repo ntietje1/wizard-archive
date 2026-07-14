@@ -79,6 +79,9 @@ function collectPublicDependencyGraph(root, packageJson) {
 
     const source = readFileSync(path.join(root, sourcePath), 'utf8')
     for (const specifier of collectImports(sourcePath, source)) {
+      if (specifier === packageJson.name || specifier.startsWith(`${packageJson.name}/`)) {
+        continue
+      }
       if (specifier.startsWith('.')) {
         const resolved = resolveRelativeImport(root, sourcePath, specifier)
         if (resolved.startsWith(`${editorPackagePath}/`)) {
