@@ -11,23 +11,12 @@ export type NoteEmbedBlockProps = Partial<Props<typeof embedBlockConfig.propSche
 export const DEFAULT_NOTE_EMBED_PREVIEW_WIDTH = 480
 
 export function embedTargetFromBlockProps(props: NoteEmbedBlockProps): EmbedTarget {
-  const legacyProps = props as Record<string, unknown> & {
-    sidebarItemId?: unknown
-    targetKind?: unknown
-  }
   if (props.targetKind === 'resource') {
     return normalizeEmbedTarget({
       kind: 'resource',
       resourceId: props.resourceId,
     })
   }
-  if (legacyProps.targetKind === 'sidebarItem') {
-    return normalizeEmbedTarget({
-      kind: 'sidebarItem',
-      sidebarItemId: legacyProps.sidebarItemId,
-    })
-  }
-
   if (props.targetKind === 'externalUrl') {
     return normalizeEmbedTarget({
       kind: 'externalUrl',

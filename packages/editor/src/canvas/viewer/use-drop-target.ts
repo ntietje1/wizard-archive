@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import {
   createEmbedCanvasNode,
-  createSidebarItemEmbedCanvasNode,
+  createResourceEmbedCanvasNode,
 } from '../nodes/embed/embed-node-creation'
 import type { CanvasDropZoneData } from '../../drag-drop/drop-target-data'
 import { useExternalDropTarget } from '../../drag-drop/use-external-drop-target'
@@ -98,7 +98,7 @@ export function useCanvasDropTarget({
         })
 
         const nodes = embedCommand.items.map((sidebarItem, index) =>
-          createSidebarItemEmbedCanvasNode(sidebarItem.id, {
+          createResourceEmbedCanvasNode(sidebarItem.id, {
             x: position.x + index * STACK_OFFSET,
             y: position.y + index * STACK_OFFSET,
           }),

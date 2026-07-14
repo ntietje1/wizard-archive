@@ -49,14 +49,14 @@ function createStrokeNode(id: string): Node {
   }
 }
 
-function createLegacyEmbedNode(id: string): Extract<Node, { type: 'embed' }> {
+function createEmbedNode(id: string): Extract<Node, { type: 'embed' }> {
   return {
     id,
     type: 'embed',
     position: { x: 0, y: 0 },
     width: 320,
     height: 240,
-    data: { sidebarItemId: 'old-item' } as never,
+    data: { target: { kind: 'empty' } },
   }
 }
 
@@ -280,37 +280,9 @@ describe('createCanvasDocumentWriter', () => {
     })
   })
 
-  it('removes legacy embed sidebarItemId when patching a canonical target', () => {
-    nodesMap.set('embed-1', createLegacyEmbedNode('embed-1'))
-    const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
-
-    writer.patchNodeData(
-      new Map([
-        [
-          'embed-1',
-          {
-            target: {
-              kind: 'externalUrl',
-              url: 'https://example.com/file.pdf',
-              name: 'file.pdf',
-            },
-          },
-        ],
-      ]),
-    )
-
-    expect(nodesMap.get('embed-1')?.data).toEqual({
-      target: {
-        kind: 'externalUrl',
-        url: 'https://example.com/file.pdf',
-        name: 'file.pdf',
-      },
-    })
-  })
-
   it('removes embed locked aspect ratio when patching null', () => {
     nodesMap.set('embed-1', {
-      ...createLegacyEmbedNode('embed-1'),
+      ...createEmbedNode('embed-1'),
       data: { target: { kind: 'empty' }, lockedAspectRatio: 2 },
     })
     const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })

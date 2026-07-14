@@ -90,8 +90,8 @@ export function useCanvasToolbarModel() {
         activeFormattingSnapshot,
         isNoteEmbed: (node) => {
           const target = node.type === 'embed' ? normalizeEmbedNodeData(node.data).target : null
-          const sidebarItemId = target?.kind === 'resource' ? target.resourceId : null
-          return sidebarItemId ? isSidebarItemEmbedRichTextEditable(sidebarItemId) : false
+          const resourceId = target?.kind === 'resource' ? target.resourceId : null
+          return resourceId ? isSidebarItemEmbedRichTextEditable(resourceId) : false
         },
         patchEdge,
         patchNodeData,

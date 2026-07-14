@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { createCanvasNodePlacement } from '../../nodes/canvas-node-modules'
 import {
   createEmbedCanvasNode,
-  createSidebarItemEmbedCanvasNode,
+  createResourceEmbedCanvasNode,
 } from '../../nodes/embed/embed-node-creation'
 import { getStrokeBounds } from '../../nodes/stroke/stroke-node-model'
 import { clearAllStrokePathCache } from '../../nodes/stroke/stroke-path-cache'
@@ -338,7 +338,7 @@ function seedPerformanceEdge(
 function seedPerformanceEmbedNode(
   { doc, nodesMap }: CanvasPerformanceRuntimeDependencies,
   requireCanEdit: () => void,
-  { id, sidebarItemId, position, width, height, zIndex }: SeedEmbedNodeOptions,
+  { id, resourceId, position, width, height, zIndex }: SeedEmbedNodeOptions,
 ) {
   requireCanEdit()
   requireFinitePosition('position', position)
@@ -350,7 +350,7 @@ function seedPerformanceEmbedNode(
   }
   validateOptionalZIndex(zIndex)
   doc.transact(() => {
-    const node = createSidebarItemEmbedCanvasNode(sidebarItemId, position)
+    const node = createResourceEmbedCanvasNode(resourceId, position)
     nodesMap.set(id, {
       ...node,
       id,

@@ -5,7 +5,7 @@ import {
 } from '../embed-block-html'
 
 describe('parseExternalEmbedBlockHtml', () => {
-  it('parses sidebar item embed target and layout props from external HTML', () => {
+  it('rejects legacy sidebar item targets while preserving layout props', () => {
     const element = document.createElement('section')
     element.setAttribute(NOTE_EMBED_EXTERNAL_HTML_ATTRIBUTE, 'true')
     element.setAttribute('data-target-kind', 'sidebarItem')
@@ -15,8 +15,7 @@ describe('parseExternalEmbedBlockHtml', () => {
     element.setAttribute('data-preview-aspect-ratio', '1.5')
 
     expect(parseExternalEmbedBlockHtml(element)).toEqual({
-      targetKind: 'resource',
-      resourceId: 'note_1',
+      targetKind: 'empty',
       previewWidth: 480,
       previewHeight: 320,
       previewAspectRatio: 1.5,

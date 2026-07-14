@@ -18,13 +18,6 @@ export function parseExternalEmbedBlockHtml(
       ...parseExternalEmbedLayoutProps(element),
     }
   }
-  if (targetKind === 'sidebarItem') {
-    return {
-      targetKind: 'resource',
-      resourceId: element.getAttribute('data-sidebar-item-id') ?? undefined,
-      ...parseExternalEmbedLayoutProps(element),
-    }
-  }
   if (targetKind === 'externalUrl') {
     return {
       targetKind,

@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { createEmbedNodeContextMenuContributor } from '../../nodes/embed/embed-node-context-menu'
-import { createAndSelectEmbeddedCanvasNode } from '../document/canvas-document-commands'
+import { createAndSelectResourceCanvasNode } from '../document/canvas-document-commands'
 import { SIDEBAR_ITEM_CREATION_COMMANDS } from '../../../workspace/sidebar/creation-catalog'
 import {
   sidebarItemOpenInNewTabMenuItem,
@@ -149,8 +149,8 @@ function buildEmbeddedSidebarItemCreateItem({
         }
 
         try {
-          createAndSelectEmbeddedCanvasNode({
-            sidebarItemId: result.id,
+          createAndSelectResourceCanvasNode({
+            resourceId: result.id,
             pointerPosition,
             screenToCanvasPosition: context.screenToCanvasPosition,
             createNode: context.createNode,

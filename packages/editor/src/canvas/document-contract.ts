@@ -8,7 +8,6 @@ import { canvasSurfaceStyleKeys, parseCanvasSurfaceStyles } from './surface-styl
 import { parseCanvasTextDocument } from './text/model'
 import type { CanvasTextDocument } from './text/model'
 import type { EmbedTarget } from '../../../../shared/embeds/embedTargets'
-import type { SidebarItemId } from '../../../../shared/common/ids'
 
 export interface CanvasStrokeNodeData {
   points: Array<[number, number, number]>
@@ -210,35 +209,9 @@ export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | nu
   } as CanvasDocumentNode
 }
 
-function migrateLegacyCanvasEmbedNodeData(value: unknown): unknown {
-  if (!isRecord(value)) return value
-  if (value.type !== 'embed' || !isRecord(value.data)) return value
-
-  const { sidebarItemId, ...canonicalData } = value.data
-  if (!('sidebarItemId' in value.data)) {
-    return value
-  }
-
-  const target =
-    canonicalData.target ??
-    (typeof sidebarItemId === 'string' && sidebarItemId.length > 0
-      ? { kind: 'resource', resourceId: sidebarItemId as SidebarItemId }
-      : undefined)
-
-  return {
-    ...value,
-    data: {
-      ...canonicalData,
-      ...(target ? { target } : {}),
-    },
-  }
-}
-
 export function normalizeCanvasDocumentNode(value: unknown): CanvasDocumentNode | null {
   return parseCanvasDocumentNode(
-    stripLegacyCanvasRendererFields(
-      migrateLegacyCanvasEmbedNodeData(stripEphemeralCanvasNodeState(value)),
-    ),
+    stripLegacyCanvasRendererFields(stripEphemeralCanvasNodeState(value)),
   )
 }
 

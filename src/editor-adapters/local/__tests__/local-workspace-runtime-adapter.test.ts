@@ -2514,13 +2514,13 @@ function isPromiseLike<T>(value: T | PromiseLike<T>): value is PromiseLike<T> {
   )
 }
 
-function createLocalTestNoteEmbedBlock(blockId: string, sidebarItemId: string): LocalNoteBlock {
+function createLocalTestNoteEmbedBlock(blockId: string, resourceId: string): LocalNoteBlock {
   return {
     id: testNoteBlockId(blockId),
     type: 'embed',
     props: {
       targetKind: 'resource',
-      resourceId: sidebarItemId,
+      resourceId,
     },
     content: undefined,
     children: [],

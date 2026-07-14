@@ -123,17 +123,7 @@ export function reconstructBlockTree(flatBlocks: Array<Block>): Array<NoteBlock>
 
 function stripLegacyEmbedProps(props: unknown): unknown {
   if (!props || typeof props !== 'object' || Array.isArray(props)) return props
-  const next = Object.fromEntries(Object.entries(props).filter(([key]) => key !== 'previewHeight'))
-  if (next.targetKind !== 'sidebarItem') return next
-
-  const { sidebarItemId, ...rest } = next
-  return {
-    ...rest,
-    targetKind: 'resource',
-    ...(typeof sidebarItemId === 'string' && sidebarItemId.length > 0
-      ? { resourceId: sidebarItemId }
-      : {}),
-  }
+  return Object.fromEntries(Object.entries(props).filter(([key]) => key !== 'previewHeight'))
 }
 
 function stripUndefined<T extends Record<string, unknown>>(value: T): T {

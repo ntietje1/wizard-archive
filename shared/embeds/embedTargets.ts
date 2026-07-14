@@ -16,11 +16,6 @@ const resourceEmbedTargetSchema = z.strictObject({
   resourceId: z.string().min(1),
 })
 
-const legacySidebarItemEmbedTargetSchema = z.strictObject({
-  kind: z.literal('sidebarItem'),
-  sidebarItemId: z.string().min(1),
-})
-
 const externalUrlEmbedTargetSchema = z.strictObject({
   kind: z.literal('externalUrl'),
   url: externalEmbedUrlSchema,
@@ -30,13 +25,6 @@ const externalUrlEmbedTargetSchema = z.strictObject({
 export const embedTargetSchema = z.discriminatedUnion('kind', [
   emptyEmbedTargetSchema,
   resourceEmbedTargetSchema,
-  externalUrlEmbedTargetSchema,
-])
-
-const parseableEmbedTargetSchema = z.discriminatedUnion('kind', [
-  emptyEmbedTargetSchema,
-  resourceEmbedTargetSchema,
-  legacySidebarItemEmbedTargetSchema,
   externalUrlEmbedTargetSchema,
 ])
 
@@ -61,15 +49,9 @@ export function normalizeEmbedTarget(value: unknown): EmbedTarget {
 }
 
 export function parseEmbedTarget(value: unknown): EmbedTarget | null {
-  const result = parseableEmbedTargetSchema.safeParse(value)
+  const result = embedTargetSchema.safeParse(value)
   if (!result.success) return null
   const target = result.data
-  if (target.kind === 'sidebarItem') {
-    return {
-      kind: 'resource',
-      resourceId: target.sidebarItemId as SidebarItemId,
-    }
-  }
   if (target.kind !== 'resource') return target
   return {
     kind: 'resource',

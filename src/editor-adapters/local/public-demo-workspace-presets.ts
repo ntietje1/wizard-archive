@@ -197,9 +197,9 @@ function createPublicDemoCollaborationWorkspace(): LocalWorkspaceState {
       noteAdditionalBlocksById: {
         ...workspace.noteAdditionalBlocksById,
         [PUBLIC_DEMO_SESSION_NOTE_ID]: [
-          createSidebarItemEmbedBlock({
+          createResourceEmbedBlock({
             blockId: PUBLIC_DEMO_SESSION_REVEAL_EMBED_BLOCK_ID,
-            sidebarItemId: PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID,
+            resourceId: PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID,
           }),
         ],
       },
@@ -426,19 +426,19 @@ function createWorkspaceWithNoteBody(
   }
 }
 
-function createSidebarItemEmbedBlock({
+function createResourceEmbedBlock({
   blockId,
-  sidebarItemId,
+  resourceId,
 }: {
   blockId: NoteBlockId
-  sidebarItemId: string
+  resourceId: string
 }): PublicDemoAdditionalBlock {
   return {
     id: blockId,
     type: 'embed',
     props: {
       targetKind: 'resource',
-      resourceId: sidebarItemId,
+      resourceId,
       previewWidth: 560,
     },
     content: undefined,

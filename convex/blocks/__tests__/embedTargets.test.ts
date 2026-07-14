@@ -41,10 +41,9 @@ describe('embed targets', () => {
     expect(normalizeEmbedTarget({ kind: 'empty' })).toEqual({ kind: 'empty' })
   })
 
-  it('normalizes legacy sidebar item targets to resource targets', () => {
+  it('rejects legacy sidebar item targets', () => {
     expect(normalizeEmbedTarget({ kind: 'sidebarItem', sidebarItemId: 'item-id' })).toEqual({
-      kind: 'resource',
-      resourceId: 'item-id',
+      kind: 'empty',
     })
   })
 

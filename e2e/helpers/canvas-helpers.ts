@@ -461,7 +461,7 @@ export async function seedCanvasEmbedNodeViaRuntime(
   page: Page,
   options: {
     id: string
-    sidebarItemId: Id<'sidebarItems'>
+    resourceId: Id<'sidebarItems'>
     position: CanvasPoint
     width?: number
     height?: number

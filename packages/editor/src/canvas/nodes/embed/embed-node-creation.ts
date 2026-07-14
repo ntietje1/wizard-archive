@@ -16,9 +16,9 @@ export function createEmbedCanvasNode(
   }).node
 }
 
-export function createSidebarItemEmbedCanvasNode(
-  sidebarItemId: SidebarItemId,
+export function createResourceEmbedCanvasNode(
+  resourceId: SidebarItemId,
   position: CanvasPosition,
 ): CanvasDocumentNode {
-  return createEmbedCanvasNode({ kind: 'resource', resourceId: sidebarItemId }, position)
+  return createEmbedCanvasNode({ kind: 'resource', resourceId }, position)
 }

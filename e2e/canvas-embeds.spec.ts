@@ -125,7 +125,7 @@ test.describe.serial('canvas embedded preview behavior', () => {
     await openHostCanvas(page, hostName)
     await seedCanvasEmbedNodeViaRuntime(page, {
       id: 'embed-source',
-      sidebarItemId: sourceCanvasId,
+      resourceId: sourceCanvasId,
       position: { x: 220, y: 180 },
       width: 420,
       height: 300,
@@ -198,7 +198,7 @@ test.describe.serial('canvas embedded preview behavior', () => {
     await selectCanvasTool(page, 'Pointer')
     await seedCanvasEmbedNodeViaRuntime(page, {
       id: 'embedded-note-block-drag',
-      sidebarItemId: note.id,
+      resourceId: note.id,
       position: { x: 620, y: 180 },
       width: 520,
       height: 360,
@@ -254,7 +254,7 @@ test.describe.serial('canvas embedded preview behavior', () => {
     await openHostCanvas(page, hostName)
     await seedCanvasEmbedNodeViaRuntime(page, {
       id: 'embed-source',
-      sidebarItemId: sourceCanvasId,
+      resourceId: sourceCanvasId,
       position: { x: 220, y: 180 },
       width: 420,
       height: 300,
@@ -294,7 +294,7 @@ test.describe.serial('canvas embedded preview behavior', () => {
     await openHostCanvas(page, hostName)
     await seedCanvasEmbedNodeViaRuntime(page, {
       id: 'embed-open-target',
-      sidebarItemId: sourceCanvasId,
+      resourceId: sourceCanvasId,
       position: { x: 240, y: 180 },
       width: 360,
       height: 260,

@@ -75,10 +75,9 @@ function createEmbedNode(id: string): Extract<Node, { type: 'embed' }> {
     width: 320,
     height: 240,
     data: {
-      sidebarItemId: 'legacy-item',
       target: { kind: 'empty' },
       lockedAspectRatio: 2,
-    } as never,
+    },
   }
 }
 

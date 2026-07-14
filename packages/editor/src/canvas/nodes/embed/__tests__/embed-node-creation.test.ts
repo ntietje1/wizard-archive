@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { createEmbedCanvasNode, createSidebarItemEmbedCanvasNode } from '../embed-node-creation'
+import { createEmbedCanvasNode, createResourceEmbedCanvasNode } from '../embed-node-creation'
 import { testId } from '../../../../test/id'
 
 describe('createEmbedCanvasNode', () => {
@@ -9,7 +9,7 @@ describe('createEmbedCanvasNode', () => {
       { kind: 'externalUrl', url: 'https://example.com/a.mp3', name: 'a.mp3' },
       { x: 0, y: 0 },
     )
-    const sidebarItemNode = createSidebarItemEmbedCanvasNode(testId('item-1'), { x: 0, y: 0 })
+    const resourceNode = createResourceEmbedCanvasNode(testId('item-1'), { x: 0, y: 0 })
 
     expect(emptyNode).toMatchObject({ width: 320, height: 240 })
     expect(emptyNode.data).toEqual(
@@ -25,8 +25,8 @@ describe('createEmbedCanvasNode', () => {
       }),
     )
 
-    expect(sidebarItemNode).toMatchObject({ width: 320, height: 240 })
-    expect(sidebarItemNode.data).toEqual(
+    expect(resourceNode).toMatchObject({ width: 320, height: 240 })
+    expect(resourceNode.data).toEqual(
       expect.objectContaining({
         target: { kind: 'resource', resourceId: 'item-1' },
       }),

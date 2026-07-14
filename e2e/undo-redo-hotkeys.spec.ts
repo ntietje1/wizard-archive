@@ -101,7 +101,7 @@ test.describe.serial('editor surface hotkey routing', () => {
     await openFreshRuntimeCanvas(page, `Undo Embed Canvas ${Date.now()}`)
     await seedCanvasEmbedNodeViaRuntime(page, {
       id: 'embedded-note-undo',
-      sidebarItemId: noteId,
+      resourceId: noteId,
       position: { x: 220, y: 180 },
       width: 420,
       height: 280,

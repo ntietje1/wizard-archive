@@ -476,7 +476,7 @@ function getCurrentEmbedProps(
   props: Record<string, unknown>,
   legacyContent?: unknown,
 ): Record<string, unknown> {
-  const next = getCanonicalEmbedTargetProps(props)
+  const next = { ...props }
   for (const key of ['previewWidth', 'previewHeight', 'previewAspectRatio'] as const) {
     const value = getPositiveNumber(props[key])
     if (value === undefined) {
@@ -489,17 +489,6 @@ function getCurrentEmbedProps(
     delete next.previewHeight
   }
   return next
-}
-
-function getCanonicalEmbedTargetProps(props: Record<string, unknown>): Record<string, unknown> {
-  if (props.targetKind !== 'sidebarItem') return { ...props }
-  const { sidebarItemId, ...rest } = props
-  return {
-    ...rest,
-    ...(typeof sidebarItemId === 'string' && sidebarItemId.length > 0
-      ? { targetKind: 'resource', resourceId: sidebarItemId }
-      : { targetKind: 'empty' }),
-  }
 }
 
 function getLegacyMediaName(props: Record<string, unknown>, url: string): string | null {

@@ -134,7 +134,7 @@ describe('canvas document model parsers', () => {
     ).toEqual({ target: { kind: 'resource', resourceId: 'sidebar-1' } })
   })
 
-  it('normalizes legacy embed sidebarItemId at the document boundary', () => {
+  it('rejects legacy embed sidebarItemId at the document boundary', () => {
     const legacyNode = {
       id: 'node-1',
       type: 'embed',
@@ -143,9 +143,7 @@ describe('canvas document model parsers', () => {
     }
 
     expect(parseCanvasDocumentNode(legacyNode)).toBeNull()
-    expect(normalizeCanvasDocumentNode(legacyNode)?.data).toEqual({
-      target: { kind: 'resource', resourceId: 'sidebar-1' },
-    })
+    expect(normalizeCanvasDocumentNode(legacyNode)).toBeNull()
   })
 
   it('parses awareness payloads used by collaborative canvas sessions', () => {

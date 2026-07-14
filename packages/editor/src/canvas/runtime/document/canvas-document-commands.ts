@@ -236,10 +236,7 @@ function normalizeEmbedNodeDataPatch(
   const nextData = {
     ...existingData,
     ...patch,
-  } as CanvasEmbedDocumentNode['data'] & { sidebarItemId?: unknown }
-  if (patch.target) {
-    delete nextData.sidebarItemId
-  }
+  } as CanvasEmbedDocumentNode['data']
   // lockedAspectRatio uses null as an explicit unset sentinel; undefined leaves it unchanged.
   if (patch.lockedAspectRatio === null) {
     delete nextData.lockedAspectRatio
@@ -486,21 +483,21 @@ export function applyCanvasReorderCommand({
   })
 }
 
-export function createAndSelectEmbeddedCanvasNode({
-  sidebarItemId,
+export function createAndSelectResourceCanvasNode({
+  resourceId,
   pointerPosition,
   screenToCanvasPosition,
   createNode,
   setSelection,
 }: {
-  sidebarItemId: SidebarItemId
+  resourceId: SidebarItemId
   pointerPosition: CanvasContextMenuPoint
   screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   createNode: (node: CanvasDocumentNode) => void
   setSelection: (selection: CanvasSelectionSnapshot) => void
 }) {
   return createAndSelectEmbedCanvasNode({
-    target: { kind: 'resource', resourceId: sidebarItemId },
+    target: { kind: 'resource', resourceId },
     pointerPosition,
     screenToCanvasPosition,
     createNode,

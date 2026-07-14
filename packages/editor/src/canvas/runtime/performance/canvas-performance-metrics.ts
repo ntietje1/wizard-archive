@@ -76,7 +76,7 @@ interface CanvasPerformanceRuntime {
   }) => void
   seedEmbedNode: (options: {
     id: string
-    sidebarItemId: SidebarItemId
+    resourceId: SidebarItemId
     position: CanvasPosition
     width?: number
     height?: number

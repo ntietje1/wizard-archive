@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useCanvasContextMenu } from '../use-canvas-context-menu'
 import { createEmbedNodeContextMenuContributor } from '../../../nodes/embed/embed-node-context-menu'
-import { createAndSelectEmbeddedCanvasNode } from '../../document/canvas-document-commands'
+import { createAndSelectResourceCanvasNode } from '../../document/canvas-document-commands'
 import {
   TEXT_NODE_DEFAULT_HEIGHT,
   TEXT_NODE_DEFAULT_WIDTH,
@@ -114,8 +114,8 @@ function createTestContextMenuSource(): CanvasContextMenuSource {
             name: 'Item',
           })
 
-          createAndSelectEmbeddedCanvasNode({
-            sidebarItemId: result.id,
+          createAndSelectResourceCanvasNode({
+            resourceId: result.id,
             pointerPosition: menuContext.pointerPosition,
             screenToCanvasPosition: context.screenToCanvasPosition,
             createNode: context.createNode,
