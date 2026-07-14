@@ -1,8 +1,6 @@
-import { BlockNoteEditor } from '@blocknote/core'
 import { SideMenuController } from '@blocknote/react'
 import { useEffect, useRef, useState } from 'react'
 import { getNoteRenderState } from './render-state'
-import { createEditorSchema } from './editor-specs'
 import { NoteView } from './view'
 import { SideMenuRenderer, SideMenuRuntimeProvider } from './side-menu/side-menu'
 import { useOwnedBlockNoteEditor } from '../rich-text/blocknote/use-owned-blocknote-editor'
@@ -34,10 +32,10 @@ import type {
   NoteSharingContentSource,
   NoteWikiLinkContentSource,
 } from './runtime'
-import { NOTE_YJS_FRAGMENT } from './document/headless-yjs'
 import type { NoteCollaborationPlayback } from './playback-contract'
 import type { NoteValueReferences, NoteValueRuntimeStateSource } from './value-runtime-model'
 import { createDetachedNotePlaybackEngine } from './playback-collaboration-adapter'
+import { createCollaborativeNoteEditor } from './document/collaborative-editor'
 
 type NoteEditorChangeHandler = (
   editor: CustomBlockNoteEditor | null,
@@ -402,17 +400,7 @@ function CollaborativeNoteEditor({
   const forceOpenLinkPopover = useRef<(() => void) | null>(null)
   const editor = useOwnedBlockNoteEditor({
     identity: provider,
-    createEditor: () =>
-      BlockNoteEditor.create({
-        schema: createEditorSchema(),
-        disableExtensions: ['link', 'dropFile'],
-        collaboration: {
-          provider,
-          fragment: doc.getXmlFragment(NOTE_YJS_FRAGMENT),
-          user,
-          showCursorLabels: 'activity',
-        },
-      }) as unknown as CustomBlockNoteEditor,
+    createEditor: () => createCollaborativeNoteEditor({ doc, provider, user }),
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, doc, provider),
   })

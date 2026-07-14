@@ -1,18 +1,18 @@
+import { isUuidV7 } from '../../resources/domain-id'
 import type { ResourceId } from '../../resources/domain-id'
 import * as Y from 'yjs'
 import React from 'react'
 import { describe, expect, it } from 'vite-plus/test'
-import { BlockNoteEditor } from '@blocknote/core'
 import { render } from '@testing-library/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { createEditorSchema } from '../editor-specs'
 import { YjsProvider } from '../../collaboration/yjs-provider-runtime'
 import { NoteValueRuntimeContext } from '../value-block/value-block-runtime-context'
 import type { NoteValueRuntimeContextValue } from '../value-block/value-block-runtime-context'
-import { NOTE_YJS_FRAGMENT } from '../document/headless-yjs'
+import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../document/headless-yjs'
 import { createNoteYDocFromContent, readNoteYDocContent } from '../imported-text'
 import type { PartialNoteBlock } from '../document/model'
 import type { CustomBlockNoteEditor } from '../editor-schema'
+import { createCollaborativeNoteEditor } from '../document/collaborative-editor'
 
 import { testNoteBlockId } from '../../test/blocknote-id'
 
@@ -58,6 +58,35 @@ const runtimeContextValue: NoteValueRuntimeContextValue = {
 }
 
 describe('inline value collaboration round-trip', () => {
+  it('projects a fresh collaborative editor document with canonical block identity', () => {
+    const doc = new Y.Doc()
+    const provider = createProvider(doc)
+    const editor = createCollaborativeNoteEditor({
+      doc,
+      provider,
+      user: { name: 'Tester', color: '#000000' },
+    })
+    const view = render(
+      React.createElement(
+        NoteValueRuntimeContext.Provider,
+        { value: runtimeContextValue },
+        React.createElement(TestBlockNoteView, { editor, editable: true }),
+      ),
+    )
+
+    try {
+      editor.insertInlineContent('Hello')
+      const blocks = noteYDocToBlocks(doc, NOTE_YJS_FRAGMENT)
+      expect(blocks).not.toHaveLength(0)
+      expect(blocks.every((block) => isUuidV7(block.id))).toBe(true)
+    } finally {
+      view.unmount()
+      provider.destroy()
+      editor._tiptapEditor.destroy()
+      doc.destroy()
+    }
+  })
+
   it('converts valid blocks to a Yjs document', () => {
     const doc = createNoteYDocFromContent([
       {
@@ -93,15 +122,11 @@ describe('inline value collaboration round-trip', () => {
       },
     ])
     const provider = createProvider(doc)
-    const editor = BlockNoteEditor.create({
-      schema: createEditorSchema(),
-      collaboration: {
-        provider,
-        fragment: doc.getXmlFragment(NOTE_YJS_FRAGMENT),
-        user: { name: 'Tester', color: '#000000' },
-        showCursorLabels: 'activity',
-      },
-    }) as unknown as CustomBlockNoteEditor
+    const editor = createCollaborativeNoteEditor({
+      doc,
+      provider,
+      user: { name: 'Tester', color: '#000000' },
+    })
     let view: ReturnType<typeof render> | null = null
 
     try {
