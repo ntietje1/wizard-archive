@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  deriveExternalEmbedName,
-  embedTargetSchema,
-  inferExternalEmbedMediaKind,
-  normalizeEmbedTarget,
-} from '../../../shared/embeds/embedTargets'
+import { deriveExternalEmbedName, embedTargetSchema } from '../../../shared/embeds/embedTargets'
 
 describe('embed targets', () => {
   it('accepts empty, resource, and external URL targets', () => {
@@ -26,25 +21,6 @@ describe('embed targets', () => {
       false,
     )
     expect(embedTargetSchema.safeParse({ kind: 'externalUrl', url: 'notaurl' }).success).toBe(false)
-  })
-
-  it('infers media type from extension only', () => {
-    expect(inferExternalEmbedMediaKind('https://x.test/a.png')).toBe('image')
-    expect(inferExternalEmbedMediaKind('https://x.test/a.webm?download=1')).toBe('video')
-    expect(inferExternalEmbedMediaKind('https://x.test/a.mp3')).toBe('audio')
-    expect(inferExternalEmbedMediaKind('https://x.test/a.pdf')).toBe('pdf')
-    expect(inferExternalEmbedMediaKind('https://x.test/a')).toBe('unknown')
-  })
-
-  it('normalizes missing targets to empty', () => {
-    expect(normalizeEmbedTarget(undefined)).toEqual({ kind: 'empty' })
-    expect(normalizeEmbedTarget({ kind: 'empty' })).toEqual({ kind: 'empty' })
-  })
-
-  it('rejects legacy sidebar item targets', () => {
-    expect(normalizeEmbedTarget({ kind: 'sidebarItem', sidebarItemId: 'item-id' })).toEqual({
-      kind: 'empty',
-    })
   })
 
   it('derives a stable display name from an external URL', () => {

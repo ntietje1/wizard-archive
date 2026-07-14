@@ -1,7 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": ["src/routes/**/*.{ts,tsx}", "convex/**/*.ts", "e2e/**/*.ts"],
-  "ignorePatterns": ["packages/ui/src/shadcn/**", "convex/_generated/**", "convex/_test/**"],
+  "ignorePatterns": [
+    "packages/ui/src/shadcn/**",
+    "convex/_generated/**",
+    "convex/_test/**",
+    "src/routeTree.gen.ts"
+  ],
   "usedClassMembers": [
     {
       "extends": "ObservableV2",

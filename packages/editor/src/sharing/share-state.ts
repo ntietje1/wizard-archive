@@ -8,7 +8,7 @@ export interface ShareItem {
   shareState: ShareState
 }
 
-export const AGGREGATE_SHARE_STATUS = {
+const AGGREGATE_SHARE_STATUS = {
   ALL_SHARED: 'all_shared',
   INDIVIDUALLY_SHARED: 'individually_shared',
   NOT_SHARED: 'not_shared',

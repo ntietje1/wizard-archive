@@ -1,4 +1,3 @@
-export const AWARENESS_HEARTBEAT_MS = 10 * 1000
 export const AWARENESS_TTL_MS = 30 * 1000
 export const AWARENESS_CLEANUP_BATCH_SIZE = 100
 

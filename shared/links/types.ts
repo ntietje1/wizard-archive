@@ -11,17 +11,3 @@ export type ParsedLinkData = {
   rawTarget: string
   isExternal: boolean
 }
-
-export type ResolvedLink<TItemId = string> = ParsedLinkData & {
-  status: 'resolved' | 'unresolved' | 'rejected'
-  rejectionReason: 'dangerous_url' | null
-  itemId: TItemId | null
-  href: string | null
-  color: string | null
-}
-
-export type LinkResolvableItem<TItemId = string> = {
-  id: TItemId
-  name: string
-  parentId: TItemId | null
-}

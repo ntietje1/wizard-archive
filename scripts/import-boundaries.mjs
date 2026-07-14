@@ -39,16 +39,6 @@ const blockedP01ContractPrefixes = [
 ]
 const editorPackageName = '@wizard-archive/editor'
 const uiPackageName = '@wizard-archive/ui'
-const legacyEditorAdapterResourceSpecifiers = new Set([
-  `${editorPackageName}/resources/history-contract`,
-  `${editorPackageName}/resources/items-persistence-contract`,
-  `${editorPackageName}/resources/operation-capabilities`,
-  `${editorPackageName}/resources/operation-contract`,
-  `${editorPackageName}/resources/patch-contract`,
-  `${editorPackageName}/resources/resource-contract`,
-  `${editorPackageName}/resources/selection-roots`,
-  `${editorPackageName}/resources/transaction-contract`,
-])
 const editorPackageJson = JSON.parse(
   readFileSync(path.join(process.cwd(), 'packages/editor/package.json'), 'utf8'),
 )
@@ -57,18 +47,7 @@ const backendSafeEditorPackageSpecifiers = new Set(
     (subpath) => `${editorPackageName}${subpath.slice(1)}`,
   ),
 )
-const editorAdapterImportBaseline = {
-  issue: 'WIZ-18',
-  recordedAtHead: '6d18a46ac6462ae96a43f1129326912228f541ea',
-  allowedSpecifiers: new Set([
-    '@wizard-archive/editor',
-    '@wizard-archive/editor/adapter',
-    '@wizard-archive/editor/collaboration/yjs-provider',
-    '@wizard-archive/editor/resources/items',
-    '@wizard-archive/editor/runtime',
-    '@wizard-archive/editor/sharing',
-  ]),
-}
+const editorAdapterRootSpecifiers = new Set(['@wizard-archive/editor'])
 
 function normalizedRelativePath(root, filePath) {
   return path.relative(root, filePath).split(path.sep).join('/')
@@ -303,14 +282,8 @@ function editorPackageBoundaryViolation(
 function editorAdapterBoundaryViolation(filePath, source, index, specifier, kind) {
   if (!filePath.startsWith('src/editor-adapters/')) return null
   if (specifier !== editorPackageName && !specifier.startsWith(`${editorPackageName}/`)) return null
-  if (editorAdapterImportBaseline.allowedSpecifiers.has(specifier)) return null
-  if (
-    specifier.startsWith(`${editorPackageName}/resources/`) &&
-    backendSafeEditorPackageSpecifiers.has(specifier) &&
-    !legacyEditorAdapterResourceSpecifiers.has(specifier)
-  ) {
-    return null
-  }
+  if (editorAdapterRootSpecifiers.has(specifier)) return null
+  if (backendSafeEditorPackageSpecifiers.has(specifier)) return null
 
   return importViolation(
     filePath,

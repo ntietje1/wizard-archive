@@ -13,10 +13,6 @@
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
     },
-    "./adapter": {
-      "types": "./dist/adapter.d.mts",
-      "default": "./dist/adapter.mjs"
-    },
     "./canvas/document-contract": {
       "types": "./dist/canvas/document-contract.d.mts",
       "default": "./dist/canvas/document-contract.mjs"
@@ -229,39 +225,21 @@
       "types": "./dist/resources/resource-source-classifier.d.mts",
       "default": "./dist/resources/resource-source-classifier.mjs"
     },
-    "./runtime": {
-      "types": "./dist/workspace/runtime.d.mts",
-      "default": "./dist/workspace/runtime.mjs"
-    },
     "./style.css": "./dist/style.css"
   },
   "dependencies": {
-    "@atlaskit/pragmatic-drag-and-drop": "^1.7.7",
     "@base-ui/react": "^1.6.0",
     "@blocknote/core": "^0.46.2",
-    "@blocknote/react": "^0.46.2",
-    "@blocknote/shadcn": "^0.46.2",
-    "@tiptap/pm": "^3.18.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "color": "^5.0.2",
     "escape-html": "^1.0.3",
-    "html-to-image": "^1.11.13",
-    "jszip": "^3.10.1",
-    "lib0": "^0.2.117",
-    "lodash-es": "^4.17.21",
     "lucide-react": "^0.541.0",
     "motion": "^12.24.12",
-    "pdfjs-dist": "5.4.296",
-    "perfect-freehand": "^1.2.3",
-    "react-pdf": "^10.4.1",
-    "react-zoom-pan-pinch": "^3.7.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
-    "y-prosemirror": "1.3.7",
     "y-protocols": "^1.0.6",
-    "zod": "^4.4.3",
-    "zustand": "^5.0.8"
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "react": "^19.1.1",

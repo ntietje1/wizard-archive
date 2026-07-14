@@ -32,7 +32,7 @@ const {
   ...defaultBlockSpecsWithoutMedia
 } = defaultBlockSpecs
 
-export const embedBlockConfig = {
+const embedBlockConfig = {
   type: 'embed',
   propSchema: {
     targetKind: {
@@ -53,10 +53,6 @@ export const embedBlockConfig = {
   },
   content: 'none',
 } as const
-
-function renderDomEmbedBlock() {
-  return { dom: document.createElement('div') }
-}
 
 function createEmbedBlockSpec(render: EmbedBlockRenderer) {
   return createBlockSpec(embedBlockConfig, { render })()
@@ -93,7 +89,3 @@ export function createLegacyMediaDecodeBlockSpecs({
     embed: createEmbedBlockSpec(renderEmbedBlock),
   } satisfies BlockSpecs
 }
-
-export const customBlockSpecs = createNoteBlockSpecs({
-  renderEmbedBlock: renderDomEmbedBlock,
-})

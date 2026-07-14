@@ -9,7 +9,7 @@ interface NoteValueFunctionMetadata {
   maxArgs?: number
 }
 
-export const NOTE_VALUE_FUNCTIONS = [
+const NOTE_VALUE_FUNCTIONS = [
   {
     name: 'min',
     signature: 'min(value, ...values)',
@@ -62,7 +62,6 @@ export const NOTE_VALUE_FUNCTION_BY_NAME: ReadonlyMap<string, NoteValueFunctionM
   NOTE_VALUE_FUNCTIONS.map((fn) => [fn.name, fn]),
 )
 
-export const NOTE_VALUE_DEFAULT_SLUG = 'value'
 const NOTE_VALUE_SLUG_MAX_LENGTH = 255
 export const NOTE_VALUE_SLUG_OPTIONS = {
   label: 'Value slug',

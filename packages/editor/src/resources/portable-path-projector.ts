@@ -179,6 +179,8 @@ function projectSegment(
   return { resource, baseName, extension, segment }
 }
 
+// Collision resolution deliberately converges in one loop while extending only colliding IDs.
+// fallow-ignore-next-line complexity
 function resolveSiblingCollisions(
   siblings: ReadonlyArray<ProjectedResource>,
   warningCodes: Map<ResourceId, Set<WarningCode>>,

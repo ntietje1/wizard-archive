@@ -7,7 +7,7 @@ const VALUE_INLINE_ID_ATTRIBUTE = 'data-note-value-id'
 const VALUE_INLINE_SLUG_ATTRIBUTE = 'data-note-value-slug'
 const VALUE_INLINE_EXPRESSION_ATTRIBUTE = 'data-note-value-expression-source'
 
-export function getValueInlineText(props: Partial<NoteValueProps>): string {
+function getValueInlineText(props: Partial<NoteValueProps>): string {
   return props.slug || props.expressionSource || 'value'
 }
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 
 const boundaryModule = await import('../../../../scripts/import-boundaries.mjs')
 
@@ -268,15 +268,15 @@ describe('import boundary checks', () => {
     ])
   })
 
-  it('allows baselined editor adapter package imports', () => {
+  it('allows the editor root and backend-safe leaf contracts', () => {
     expect(
       analyzeImportBoundaries([
         {
           filePath: 'src/editor-adapters/live/example.ts',
           source: [
             "import { WizardEditor } from '@wizard-archive/editor'",
-            "import { createWizardEditorRuntime } from '@wizard-archive/editor/adapter'",
-            "import type { WizardEditorMapSession } from '@wizard-archive/editor/adapter'",
+            "import type { WizardEditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'",
+            "import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'",
           ].join('\n'),
         },
       ]),
@@ -294,8 +294,7 @@ describe('import boundary checks', () => {
             "import type { WorkspaceRuntime } from '@wizard-archive/editor/workspace/runtime'",
             "import { planMapPinCreations } from '@wizard-archive/editor/game-maps'",
             "import type { NoteSession } from '@wizard-archive/editor/notes'",
-            "import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'",
-            "import type { HistorySnapshot } from '@wizard-archive/editor/resources/history-contract'",
+            "import { createWizardEditorRuntime } from '@wizard-archive/editor/adapter'",
           ].join('\n'),
         },
       ]),
@@ -305,25 +304,25 @@ describe('import boundary checks', () => {
       'src/editor-adapters/live/example.ts:3 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/workspace/runtime',
       'src/editor-adapters/live/example.ts:4 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/game-maps',
       'src/editor-adapters/live/example.ts:5 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/notes',
-      'src/editor-adapters/live/example.ts:6 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/canvas/document-contract',
-      'src/editor-adapters/live/example.ts:7 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/resources/history-contract',
+      'src/editor-adapters/live/example.ts:6 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/adapter',
     ])
   })
 
-  it('allows editor adapter imports from the resource read model contract', () => {
+  it('blocks undeclared legacy resource models', () => {
     expect(
       analyzeImportBoundaries([
         {
           filePath: 'src/editor-adapters/live/example.ts',
           source: [
-            "import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'",
-            "import type { AnyItem } from '@wizard-archive/editor/resources/items'",
+            "import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/workspace/items'",
+            "import type { AnyItem } from '@wizard-archive/editor/workspace/items'",
             "import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'",
           ].join('\n'),
         },
       ]),
     ).toEqual([
-      'src/editor-adapters/live/example.ts:3 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/resources/items-persistence-contract',
+      'src/editor-adapters/live/example.ts:1 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/workspace/items',
+      'src/editor-adapters/live/example.ts:2 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/workspace/items',
     ])
   })
 

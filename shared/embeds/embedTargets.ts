@@ -35,18 +35,6 @@ type ResourceEmbedTarget = Omit<z.infer<typeof resourceEmbedTargetSchema>, 'reso
 type ExternalUrlEmbedTarget = z.infer<typeof externalUrlEmbedTargetSchema>
 
 export type EmbedTarget = EmptyEmbedTarget | ResourceEmbedTarget | ExternalUrlEmbedTarget
-type ExternalEmbedMediaKind = 'image' | 'video' | 'audio' | 'pdf' | 'unknown'
-
-const MEDIA_EXTENSION_BY_KIND: Record<Exclude<ExternalEmbedMediaKind, 'unknown'>, Set<string>> = {
-  image: new Set(['apng', 'avif', 'bmp', 'gif', 'ico', 'jpeg', 'jpg', 'png', 'svg', 'webp']),
-  video: new Set(['m4v', 'mov', 'mp4', 'ogv', 'webm']),
-  audio: new Set(['aac', 'flac', 'm4a', 'mp3', 'oga', 'ogg', 'opus', 'wav', 'weba']),
-  pdf: new Set(['pdf']),
-}
-
-export function normalizeEmbedTarget(value: unknown): EmbedTarget {
-  return parseEmbedTarget(value) ?? { kind: 'empty' }
-}
 
 export function parseEmbedTarget(value: unknown): EmbedTarget | null {
   const result = embedTargetSchema.safeParse(value)
@@ -59,36 +47,12 @@ export function parseEmbedTarget(value: unknown): EmbedTarget | null {
   }
 }
 
-export function inferExternalEmbedMediaKind(url: string): ExternalEmbedMediaKind {
-  const extension = getUrlExtension(url)
-  if (!extension) return 'unknown'
-
-  for (const [kind, extensions] of Object.entries(MEDIA_EXTENSION_BY_KIND)) {
-    if (extensions.has(extension)) return kind as Exclude<ExternalEmbedMediaKind, 'unknown'>
-  }
-
-  return 'unknown'
-}
-
 export function deriveExternalEmbedName(url: string): string | null {
   try {
     const parsed = new URL(url)
     const pathSegments = parsed.pathname.split('/').filter(Boolean)
     const filename = decodeURIComponent(pathSegments[pathSegments.length - 1] ?? '')
     return filename || parsed.hostname
-  } catch {
-    return null
-  }
-}
-
-function getUrlExtension(url: string): string | null {
-  try {
-    const parsed = new URL(url)
-    const pathSegments = parsed.pathname.split('/')
-    const filename = pathSegments[pathSegments.length - 1] ?? ''
-    const dotIndex = filename.lastIndexOf('.')
-    if (dotIndex < 0 || dotIndex === filename.length - 1) return null
-    return filename.slice(dotIndex + 1).toLowerCase()
   } catch {
     return null
   }

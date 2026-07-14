@@ -1,6 +1,6 @@
 import { isFiniteNumber, isRecord } from './parser-primitives'
 
-export interface ParsedCanvasPoint2D {
+interface ParsedCanvasPoint2D {
   x: number
   y: number
 }
@@ -10,17 +10,6 @@ interface ParsedCanvasBounds {
   y: number
   width: number
   height: number
-}
-
-interface ParsedCanvasBoundsDimensions {
-  width: number
-  height: number
-}
-
-interface ParsedCanvasStrokeSelectionData {
-  points: Array<[number, number, number]>
-  size: number
-  bounds: ParsedCanvasBounds
 }
 
 function parsePoint(value: unknown): [number, number, number] | null {
@@ -59,21 +48,4 @@ export function parseCanvasPoint2D(value: unknown): ParsedCanvasPoint2D | null {
   if (!isRecord(value)) return null
   const { x, y } = value
   return isFiniteNumber(x) && isFiniteNumber(y) ? { x, y } : null
-}
-
-export function parseCanvasBoundsDimensions(value: unknown): ParsedCanvasBoundsDimensions | null {
-  if (!isRecord(value)) return null
-  const { width, height } = value
-  return isFiniteNumber(width) && isFiniteNumber(height) ? { width, height } : null
-}
-
-export function parseCanvasStrokeSelectionData(
-  value: unknown,
-): ParsedCanvasStrokeSelectionData | null {
-  if (!isRecord(value)) return null
-  const points = parseCanvasPoints(value.points)
-  const bounds = parseCanvasBounds(value.bounds)
-  return points && isFiniteNumber(value.size) && bounds
-    ? { points, size: value.size, bounds }
-    : null
 }

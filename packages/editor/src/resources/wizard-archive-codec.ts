@@ -130,6 +130,8 @@ export function parseWizardArchiveManifest(bytes: Uint8Array): WizardArchiveMani
     : { status: 'invalid', reason: 'invalid_manifest' }
 }
 
+// Package validation is one ordered rejection pipeline so callers receive the first stable reason.
+// fallow-ignore-next-line complexity
 export async function validateWizardArchivePackage(
   manifest: WizardArchiveManifest,
   entries: ReadonlyArray<WizardArchivePackageEntry>,
@@ -529,6 +531,8 @@ function readCanvasSection(value: unknown): WizardArchiveCanvasSection | null {
   return resourceId && nodeIds && destinations ? { resourceId, nodeIds, destinations } : null
 }
 
+// Manifest validation is one ordered invariant pass over the decoded archive contract.
+// fallow-ignore-next-line complexity
 function validateManifest(manifest: WizardArchiveManifest): boolean {
   if (
     manifest.version !== WIZARD_ARCHIVE_VERSION ||
@@ -676,9 +680,9 @@ function validateHierarchy(
   let parentId = resource.parentId
   while (parentId !== null) {
     if (visited.has(parentId)) return false
-    visited.add(parentId)
     const parent = resources.get(parentId)
     if (!parent || parent.kind !== 'folder') return false
+    visited.add(parentId)
     if (resource.lifecycle === 'active' && parent.lifecycle === 'trashed') return false
     parentId = parent.parentId
   }

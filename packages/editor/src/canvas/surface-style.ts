@@ -10,7 +10,7 @@ export const canvasSurfaceStyleKeys = new Set([
   'borderWidth',
 ])
 
-export function parseCanvasNodeSurfaceColor(value: unknown): string | null | undefined {
+function parseCanvasNodeSurfaceColor(value: unknown): string | null | undefined {
   return typeof value === 'string' || value === null ? value : undefined
 }
 
@@ -18,7 +18,7 @@ export function parseCanvasNodeSurfaceOpacity(value: unknown, fallback = 100): n
   return isFiniteNumber(value) ? clampNumber(value, 0, 100) : fallback
 }
 
-export function parseCanvasNodeBorderWidth(value: unknown, fallback = 1): number {
+function parseCanvasNodeBorderWidth(value: unknown, fallback = 1): number {
   return isFiniteNumber(value) ? clampNumber(value, 0, 99) : fallback
 }
 

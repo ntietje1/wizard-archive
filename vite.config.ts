@@ -14,10 +14,6 @@ const editorDevelopmentAliases = [
     replacement: editorSourcePath('index.ts'),
   },
   {
-    find: /^@wizard-archive\/editor\/adapter$/,
-    replacement: editorSourcePath('adapter.ts'),
-  },
-  {
     find: /^@wizard-archive\/editor\/collaboration\/yjs-provider$/,
     replacement: editorSourcePath('collaboration/yjs-provider.ts'),
   },

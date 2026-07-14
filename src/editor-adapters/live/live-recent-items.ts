@@ -1,8 +1,5 @@
-import usePersistedState from '@wizard-archive/ui/hooks/use-persisted-state'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { logger } from '~/shared/utils/logger'
 import { readPersistedJson, writePersistedJson } from '@wizard-archive/ui/storage/persisted-storage'
-import type { WizardEditorItem } from '@wizard-archive/editor/adapter'
 import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
@@ -26,21 +23,6 @@ export function addLiveRecentItem(workspaceRecordId: string, resourceId: Resourc
   } catch (error) {
     logger.debug('Failed to write recent items for key', key, error)
   }
-}
-
-export function useLiveRecentItems<T>(
-  items: ReadonlyArray<WizardEditorItem>,
-  mapItem: (item: WizardEditorItem) => T,
-): Array<T> {
-  const { campaignId: workspaceRecordId } = useCampaign()
-
-  const [entries] = usePersistedState<Array<RecentItemEntry>>(
-    workspaceRecordId ? storageKey(workspaceRecordId) : null,
-    [],
-    parseRecentItemEntries,
-  )
-
-  return createRecentItemResults({ entries, items, mapItem })
 }
 
 function addRecentItemEntry({
@@ -74,28 +56,4 @@ function parseRecentItemEntry(entry: unknown): RecentItemEntry | null {
 
   const resourceId = parseDomainId(DOMAIN_ID_KIND.resource, rawResourceId)
   return resourceId ? { resourceId, timestamp } : null
-}
-
-function createRecentItemResults<T>({
-  entries,
-  items,
-  mapItem,
-}: {
-  entries: ReadonlyArray<RecentItemEntry>
-  items: ReadonlyArray<WizardEditorItem>
-  mapItem: (item: WizardEditorItem) => T
-}): Array<T> {
-  const itemById = new Map<ResourceId, WizardEditorItem>()
-  for (const item of items) {
-    itemById.set(item.id, item)
-  }
-
-  const results: Array<T> = []
-  for (const entry of entries) {
-    const item = itemById.get(entry.resourceId)
-    if (item) {
-      results.push(mapItem(item))
-    }
-  }
-  return results
 }

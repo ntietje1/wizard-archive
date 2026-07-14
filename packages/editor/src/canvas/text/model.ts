@@ -29,16 +29,6 @@ const defaultTextPropsSchema = zod.strictObject({
 
 const inlineContentSchema = zod.array(textInlineContentSchema).optional()
 
-export const CANVAS_TEXT_BLOCK_TYPES = [
-  'paragraph',
-  'heading',
-  'bulletListItem',
-  'numberedListItem',
-  'checkListItem',
-  'quote',
-  'codeBlock',
-] as const
-
 const headingLevelSchema = zod.union(
   [1, 2, 3, 4, 5, 6].map((level) => zod.literal(level)) as [
     ZodLiteral<1>,

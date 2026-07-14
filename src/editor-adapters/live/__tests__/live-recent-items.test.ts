@@ -1,20 +1,11 @@
-import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testResourceId } from '../../../../shared/test/resource-id'
-import { createNote } from '~/test/factories/sidebar-item-factory'
-import { addLiveRecentItem, useLiveRecentItems } from '../live-recent-items'
-
-const workspaceState = vi.hoisted(() => ({ workspaceRecordId: 'campaign-1' as string | null }))
-
-vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => ({ campaignId: workspaceState.workspaceRecordId }),
-}))
+import { addLiveRecentItem } from '../live-recent-items'
 
 describe('live recent items', () => {
   let storage: Record<string, string>
 
   beforeEach(() => {
-    workspaceState.workspaceRecordId = 'campaign-1'
     storage = {}
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => {
       return storage[key] ?? null
@@ -79,23 +70,5 @@ describe('live recent items', () => {
     expect(stored).toHaveLength(100)
     expect(stored[0].resourceId).toBe(newResourceId)
     expect(stored.some((entry: { resourceId: string }) => entry.resourceId === ids[99])).toBe(false)
-  })
-
-  it('projects valid persisted entries onto visible live workspace items', async () => {
-    const first = createNote({ id: testResourceId('first'), name: 'First' })
-    const second = createNote({ id: testResourceId('second'), name: 'Second' })
-    storage['recent-resources-v1-campaign-1'] = JSON.stringify([
-      { resourceId: testResourceId('missing'), timestamp: 3 },
-      { resourceId: second.id, timestamp: 2 },
-      { resourceId: first.id, timestamp: 1 },
-      { resourceId: '', timestamp: 0 },
-      { resourceId: testResourceId('missing-time') },
-    ])
-
-    const { result } = renderHook(() => useLiveRecentItems([first, second], (item) => item.name))
-
-    await waitFor(() => {
-      expect(result.current).toEqual(['Second', 'First'])
-    })
   })
 })

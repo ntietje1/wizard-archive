@@ -28,7 +28,7 @@ function isExternalUrl(str: string): boolean {
   return SAFE_EXTERNAL_URL_PREFIXES.some((prefix) => lower.startsWith(prefix))
 }
 
-export function isDangerousUrl(str: string): boolean {
+function isDangerousUrl(str: string): boolean {
   const lower = str.trim().toLowerCase()
   return DANGEROUS_URL_PREFIXES.some((prefix) => lower.startsWith(prefix))
 }
@@ -73,7 +73,7 @@ export function parseWikiLinkText(text: string): ParsedWikiLinkFields {
   return { pathKind, itemPath, itemName, headingPath, displayName }
 }
 
-export type ParsedMdLinkFields = {
+type ParsedMdLinkFields = {
   target: string
   isExternal: boolean
   pathKind: LinkPathKind

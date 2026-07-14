@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   MD_LINK_REGEX,
   WIKI_LINK_REGEX,
-  isDangerousUrl,
   parseMdLinkTarget,
   parseWikiLinkText,
 } from '../../../shared/links/parsing'
@@ -198,24 +197,6 @@ describe('parseMdLinkTarget', () => {
       itemName: '',
       headingPath: [],
     })
-  })
-})
-
-describe('isDangerousUrl', () => {
-  it('returns true for dangerous or non-navigable schemes', () => {
-    expect(isDangerousUrl('javascript:alert(1)')).toBe(true)
-    expect(isDangerousUrl('data:text/html,<script>')).toBe(true)
-    expect(isDangerousUrl('vbscript:msgbox(1)')).toBe(true)
-    expect(isDangerousUrl('file:///etc/passwd')).toBe(true)
-    expect(isDangerousUrl('blob:https://example.com/uuid')).toBe(true)
-    expect(isDangerousUrl('about:blank')).toBe(true)
-    expect(isDangerousUrl('filesystem:https://example.com/temporary/file')).toBe(true)
-  })
-
-  it('returns false for safe external and internal targets', () => {
-    expect(isDangerousUrl('https://example.com')).toBe(false)
-    expect(isDangerousUrl('//example.com/docs')).toBe(false)
-    expect(isDangerousUrl('Lore/Capital')).toBe(false)
   })
 })
 
