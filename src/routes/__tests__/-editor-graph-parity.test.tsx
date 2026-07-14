@@ -134,11 +134,9 @@ describe('editor graph parity', () => {
       expect.arrayContaining([
         expect.objectContaining({
           initialItemId: null,
-          openSeparateItem: expect.any(Function),
         }),
         expect.objectContaining({
           canEdit: false,
-          openSeparateItem: expect.any(Function),
         }),
       ]),
     )
@@ -167,7 +165,6 @@ describe('editor graph parity', () => {
         expect.objectContaining({
           ariaLabel: 'Editor workspace',
           runtime: graphState.liveRuntime,
-          sidebar: 'resizable',
           workspaceName: 'Storm King',
         }),
       ]),

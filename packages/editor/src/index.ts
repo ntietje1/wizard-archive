@@ -1,8 +1,8 @@
 import { createElement } from 'react'
 import type { ReactElement, ReactNode } from 'react'
-import { WorkspaceRuntimeHost } from './workspace/runtime-host'
-import type { WorkspaceRuntime } from './workspace/runtime'
-import type { SortOptions } from './workspace/items-persistence-contract'
+import { ResourceShell } from './resources/resource-shell'
+import type { ResourceShellSort } from './resources/resource-shell'
+import type { WizardEditorRuntime } from './resources/editor-runtime-contract'
 import type { ResourceId } from './resources/domain-id'
 
 export interface WizardEditorCanvasViewport {
@@ -19,32 +19,14 @@ export interface WizardEditorMapTransform {
 
 export interface WizardEditorProps {
   ariaLabel: string
-  noteHeadingRequest?: {
-    heading?: string | null
-    onConsumed?: () => void
-  }
-  panelPreferences?: {
-    appliedPanelPreferences: Record<string, { size: number | null; visible: boolean | null }> | null
-    initialPanelPreferences: Record<string, { size: number | null; visible: boolean | null }> | null
-    isLoaded: boolean
-    onPanelPreferenceChange?: (preference: {
-      panelId: string
-      size: number
-      visible: boolean
-    }) => void
-  }
-  runtime: WorkspaceRuntime
+  runtime: WizardEditorRuntime
   sidebar?: 'fixed' | 'none' | 'resizable'
   sidebarSlots?: {
     bottomPanel?: ReactNode
     railEndControls?: ReactNode
     railStartControls?: ReactNode
   }
-  sidebarSort?: {
-    options: SortOptions
-    setOptions: (options: SortOptions) => void
-  }
-  viewStateStores: WizardEditorViewStateStores
+  sidebarSort?: ResourceShellSort
   workspaceName: string | null
 }
 
@@ -82,7 +64,14 @@ const WORKSPACE_VIEW_STATE_STORAGE = {
 } as const
 
 export function WizardEditor(props: WizardEditorProps): ReactElement {
-  return createElement(WorkspaceRuntimeHost, props)
+  return createElement(ResourceShell, {
+    ariaLabel: props.ariaLabel,
+    runtime: props.runtime,
+    sidebarSlots: props.sidebarSlots,
+    showSidebar: props.sidebar !== 'none',
+    sort: props.sidebarSort,
+    workspaceName: props.workspaceName,
+  })
 }
 
 export function createBrowserWizardEditorViewStateStores({

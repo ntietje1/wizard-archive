@@ -20,6 +20,7 @@ import type {
 } from './editor-runtime-contract'
 import type { CampaignId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
+import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
 import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 
@@ -37,6 +38,7 @@ export type InMemoryEditorContent = Readonly<{
 }>
 
 export type InMemoryEditorRuntimeInput = Readonly<{
+  authorize?: InMemoryResourceRuntimeOptions['authorize']
   scope: ResourceProjectionScope
   snapshot: ResourceCatalogSnapshot
   content?: InMemoryEditorContent
@@ -150,6 +152,7 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
 }
 
 export function createInMemoryEditorRuntime({
+  authorize = () => true,
   content = {},
   navigation,
   now,
@@ -159,7 +162,7 @@ export function createInMemoryEditorRuntime({
   const resources = createInMemoryResourceRuntime({
     scope,
     initialSnapshot: snapshot,
-    authorize: () => true,
+    authorize,
     ...(now ? { now } : {}),
   })
   const notes = new InMemoryNoteContentSource(content.notes ?? [], scope.campaignId, (envelope) =>

@@ -1,4 +1,3 @@
-import { createOpenSeparateDemoItem } from '~/editor-adapters/local/demo-navigation'
 import { LocalWorkspaceRuntimeHost } from '~/editor-adapters/local/local-workspace-runtime-host'
 import {
   createPublicDemoScenario,
@@ -77,10 +76,8 @@ function PublicDemoIsland({
     <LocalWorkspaceRuntimeHost
       ariaLabel={ariaLabel}
       canEdit={canEdit}
-      collaborationPlayback={scenario.collaborationPlayback}
       initialItemId={scenario.initialItemId}
       initialWorkspace={scenario.workspace}
-      openSeparateItem={createOpenSeparateDemoItem({ scenarioId: scenario.id })}
       sidebar={sidebar}
       workspaceName="Demo workspace"
     />

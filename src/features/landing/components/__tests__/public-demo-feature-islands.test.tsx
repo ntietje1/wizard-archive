@@ -64,7 +64,6 @@ describe('public demo feature islands', () => {
         canEdit: false,
         initialItemId: scenario.initialItemId,
         initialWorkspace: scenario.workspace,
-        openSeparateItem: expect.any(Function),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -79,8 +78,6 @@ describe('public demo feature islands', () => {
 
   it('renders the workspace feature through the focused local runtime and shared editor host', () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.privatePrep)
-    const openMock = vi.spyOn(window, 'open').mockImplementation(() => null)
-
     render(<PublicDemoWorkspaceFeatureIsland />)
 
     expect(
@@ -92,7 +89,6 @@ describe('public demo feature islands', () => {
         canEdit: true,
         initialItemId: scenario.initialItemId,
         initialWorkspace: scenario.workspace,
-        openSeparateItem: expect.any(Function),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -100,17 +96,6 @@ describe('public demo feature islands', () => {
         ariaLabel: 'Text editor link autocomplete preview',
         sidebar: 'none',
       }),
-    )
-
-    const runtimeInput = localRuntimeInputMock.mock.lastCall?.[0] as
-      | { openSeparateItem?: (input: { itemId: string }) => void }
-      | undefined
-    runtimeInput?.openSeparateItem?.({ itemId: 'note-market' })
-
-    expect(openMock).toHaveBeenCalledWith(
-      `${window.location.origin}/demo?scenario=private-prep&item=note-market`,
-      '_blank',
-      'noopener,noreferrer',
     )
   })
 
@@ -124,7 +109,6 @@ describe('public demo feature islands', () => {
       expect.objectContaining({
         initialItemId: scenario.initialItemId,
         initialWorkspace: scenario.workspace,
-        openSeparateItem: expect.any(Function),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -145,7 +129,6 @@ describe('public demo feature islands', () => {
       expect.objectContaining({
         initialItemId: scenario.initialItemId,
         initialWorkspace: scenario.workspace,
-        openSeparateItem: expect.any(Function),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -165,10 +148,8 @@ describe('public demo feature islands', () => {
     expect(localRuntimeInputMock).toHaveBeenCalledWith(
       expect.objectContaining({
         canEdit: true,
-        collaborationPlayback: scenario.collaborationPlayback,
         initialItemId: scenario.initialItemId,
         initialWorkspace: scenario.workspace,
-        openSeparateItem: expect.any(Function),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
@@ -190,7 +171,6 @@ describe('public demo feature islands', () => {
         canEdit: true,
         initialItemId: scenario.initialItemId,
         initialWorkspace: scenario.workspace,
-        openSeparateItem: expect.any(Function),
       }),
     )
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(

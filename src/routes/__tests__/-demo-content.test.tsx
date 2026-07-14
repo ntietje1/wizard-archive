@@ -67,7 +67,7 @@ describe('LocalDemoRouteContent', () => {
     expect(screen.getByText('Loading demo workspace')).toBeInTheDocument()
   })
 
-  it('mounts the local workspace from item and heading URL state', () => {
+  it('mounts the local workspace from item URL state', () => {
     clientOnlyState.renderClient = true
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
     const resourceId = scenario.workspace.items[0].id
@@ -80,23 +80,11 @@ describe('LocalDemoRouteContent', () => {
       expect.objectContaining({
         initialItemId: resourceId,
         initialWorkspace: scenario.workspace,
-        openSeparateItem: expect.any(Function),
       }),
     )
     expect(workspaceRuntimeHostProps.current).toMatchObject({
       ariaLabel: 'Demo workspace',
-      noteHeadingRequest: {
-        heading: 'Intro',
-        onConsumed: expect.any(Function),
-      },
     })
-
-    const noteHeadingRequest = workspaceRuntimeHostProps.current?.noteHeadingRequest as
-      | { onConsumed?: () => void }
-      | undefined
-    noteHeadingRequest?.onConsumed?.()
-
-    expect(window.location.search).toBe(`?item=${resourceId}`)
   })
 
   it('mounts the requested public demo scenario from URL state', () => {
@@ -146,11 +134,6 @@ describe('LocalDemoRouteContent', () => {
         initialWorkspace: scenario.workspace,
       }),
     )
-    expect(workspaceRuntimeHostProps.current).toMatchObject({
-      noteHeadingRequest: {
-        heading: null,
-      },
-    })
   })
 
   it('mounts the editor host with an empty heading request when URL state is absent', () => {
@@ -167,9 +150,6 @@ describe('LocalDemoRouteContent', () => {
       }),
     )
     expect(workspaceRuntimeHostProps.current).toMatchObject({
-      noteHeadingRequest: {
-        heading: null,
-      },
       runtime: {
         workspace: { id: 'demo-workspace', instanceId: 'demo-runtime' },
       },

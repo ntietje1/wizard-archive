@@ -1,9 +1,6 @@
 import { ClientOnly } from '@tanstack/react-router'
 import { parseWorkspaceRouteSearchParams } from '~/editor-adapters/workspace-route-search'
-import {
-  createOpenSeparateDemoItem,
-  parsePublicDemoRouteSearchParams,
-} from '~/editor-adapters/local/demo-navigation'
+import { parsePublicDemoRouteSearchParams } from '~/editor-adapters/local/demo-navigation'
 import { LocalWorkspaceRuntimeHost } from '~/editor-adapters/local/local-workspace-runtime-host'
 import { NavBar } from '~/features/landing/components/nav-bar'
 import { createPublicDemoScenario } from '~/editor-adapters/local/public-demo-workspace-presets'
@@ -33,14 +30,8 @@ function LocalDemoWorkspace() {
   return (
     <LocalWorkspaceRuntimeHost
       ariaLabel="Demo workspace"
-      collaborationPlayback={scenario.collaborationPlayback}
       initialItemId={initialSearch.item ?? scenario.initialItemId}
       initialWorkspace={scenario.workspace}
-      noteHeadingRequest={{
-        heading: initialSearch.heading ?? null,
-        onConsumed: clearInitialHeading,
-      }}
-      openSeparateItem={createOpenSeparateDemoItem({ scenarioId: scenario.id })}
       workspaceName="Demo workspace"
     />
   )
@@ -70,11 +61,4 @@ function readDemoRouteSearch(searchParams: URLSearchParams) {
     ...parsePublicDemoRouteSearchParams(searchParams),
     ...parseWorkspaceRouteSearchParams(searchParams),
   }
-}
-
-function clearInitialHeading() {
-  if (typeof window === 'undefined') return
-  const url = new URL(window.location.href)
-  url.searchParams.delete('heading')
-  window.history.replaceState(window.history.state, '', url)
 }
