@@ -221,6 +221,10 @@
       "types": "./dist/resources/resource-content-version.d.mts",
       "default": "./dist/resources/resource-content-version.mjs"
     },
+    "./resources/source-classifier": {
+      "types": "./dist/resources/resource-source-classifier.d.mts",
+      "default": "./dist/resources/resource-source-classifier.mjs"
+    },
     "./runtime": {
       "types": "./dist/workspace/runtime.d.mts",
       "default": "./dist/workspace/runtime.mjs"
@@ -310,7 +314,8 @@
       "./resources/wizard-archive-transfer-planner",
       "./resources/editor-runtime-contract",
       "./resources/file-content-contract",
-      "./resources/content-version"
+      "./resources/content-version",
+      "./resources/source-classifier"
     ]
   }
 }

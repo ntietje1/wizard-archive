@@ -15,6 +15,7 @@ export const FILE_VIEWER_UNAVAILABLE_REASON = {
   encrypted: 'encrypted',
   limitExceeded: 'limit_exceeded',
   parserTimeout: 'parser_timeout',
+  decoderLimit: 'decoder_limit',
   invalidUtf8: 'invalid_utf8',
   nulByte: 'nul_byte',
   noteSizeLimit: 'note_size_limit',
