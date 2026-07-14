@@ -19,7 +19,14 @@ import type {
 } from '../resource-index-contract'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-contract'
 import type { WizardArchiveManifest } from '../wizard-archive-contract'
-import { WIZARD_ARCHIVE_VERSION } from '../wizard-archive-contract'
+import {
+  WIZARD_ARCHIVE_CANVAS_SECTION_VERSION,
+  WIZARD_ARCHIVE_FILE_SECTION_VERSION,
+  WIZARD_ARCHIVE_MAP_SECTION_VERSION,
+  WIZARD_ARCHIVE_NOTE_SECTION_VERSION,
+  WIZARD_ARCHIVE_SCHEMA_VERSION,
+  WIZARD_ARCHIVE_VERSION,
+} from '../wizard-archive-contract'
 
 const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, '01890f47-f6c8-7a5b-8c9d-0123456789a1')
 const operationId = assertDomainId(DOMAIN_ID_KIND.operation, '01890f47-f6c8-7a5b-8c9d-0123456789a3')
@@ -113,16 +120,21 @@ describe('canonical contract fixtures', () => {
     } satisfies PortablePathProjection
     const manifest = {
       version: WIZARD_ARCHIVE_VERSION,
+      schemaVersion: WIZARD_ARCHIVE_SCHEMA_VERSION,
+      scope: 'full_campaign',
       sourceCampaignId: campaignId,
       transferSnapshotId: snapshotId,
       portablePathVersion: PORTABLE_PATH_VERSION,
       resources: [],
       tombstones: [],
+      aliases: [],
       roles: [],
-      notes: [],
-      files: [],
-      maps: [],
-      canvases: [],
+      sections: {
+        notes: { version: WIZARD_ARCHIVE_NOTE_SECTION_VERSION, entries: [] },
+        files: { version: WIZARD_ARCHIVE_FILE_SECTION_VERSION, entries: [] },
+        maps: { version: WIZARD_ARCHIVE_MAP_SECTION_VERSION, entries: [] },
+        canvases: { version: WIZARD_ARCHIVE_CANVAS_SECTION_VERSION, entries: [] },
+      },
     } satisfies WizardArchiveManifest
 
     expect(projection).not.toHaveProperty('planDigest')

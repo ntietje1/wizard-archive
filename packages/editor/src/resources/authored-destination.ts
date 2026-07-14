@@ -61,38 +61,39 @@ export async function resolveAuthoredDestination<TDisplay>(
     ) => CanonicalTargetKnowledge<TDisplay> | Promise<CanonicalTargetKnowledge<TDisplay>>
   }>,
 ): Promise<ResolvedAuthoredDestination<TDisplay>> {
-  if (!isAuthoredDestination(destination)) return { status: 'unsupported' }
-  switch (destination.kind) {
+  const authored = parseAuthoredDestination(destination)
+  if (authored === null) return { status: 'unsupported' }
+  switch (authored.kind) {
     case 'externalUrl': {
-      const url = parseSafeHttpsUrl(destination.url)
+      const url = parseSafeHttpsUrl(authored.url)
       return url === null ? { status: 'unsupported' } : { status: 'external', url }
     }
     case 'unresolved':
-      return { status: 'unresolved', rawTarget: destination.rawTarget }
+      return { status: 'unresolved', rawTarget: authored.rawTarget }
     case 'internal': {
-      const knowledge = await lookup(destination.target)
+      const knowledge = await lookup(authored.target)
       switch (knowledge.state) {
         case 'missing':
           return {
             status: 'broken',
             kind: 'internal',
-            target: destination.target,
+            target: authored.target,
             reason: 'missing',
           }
         case 'unavailable':
-          return { status: 'unavailable', kind: 'internal', target: destination.target }
+          return { status: 'unavailable', kind: 'internal', target: authored.target }
         case 'available':
           return knowledge.campaignId === campaignId
             ? {
                 status: 'available',
                 kind: 'internal',
-                target: destination.target,
+                target: authored.target,
                 display: knowledge.display,
               }
             : {
                 status: 'broken',
                 kind: 'internal',
-                target: destination.target,
+                target: authored.target,
                 reason: 'cross_campaign',
               }
       }
@@ -179,25 +180,29 @@ export function backlinksForResource(
   return edges.filter((edge) => edge.target.resourceId === resourceId)
 }
 
-function isAuthoredDestination(value: unknown): value is AuthoredDestination {
-  if (!isRecord(value) || typeof value.kind !== 'string') return false
+export function parseAuthoredDestination(value: unknown): AuthoredDestination | null {
+  if (!isRecord(value) || typeof value.kind !== 'string') return null
   switch (value.kind) {
-    case 'externalUrl':
-      return (
+    case 'externalUrl': {
+      const valid =
         hasOnlyKeys(value, ['kind', 'url']) &&
         typeof value.url === 'string' &&
         parseSafeHttpsUrl(value.url) !== null
-      )
-    case 'unresolved':
-      return (
+      return valid ? (value as AuthoredDestination) : null
+    }
+    case 'unresolved': {
+      const valid =
         hasOnlyKeys(value, ['kind', 'rawTarget']) &&
         typeof value.rawTarget === 'string' &&
         !hasUnpairedUtf16(value.rawTarget)
-      )
+      return valid ? (value as AuthoredDestination) : null
+    }
     case 'internal':
       return hasOnlyKeys(value, ['kind', 'target']) && isCanonicalTarget(value.target)
+        ? (value as AuthoredDestination)
+        : null
     default:
-      return false
+      return null
   }
 }
 

@@ -201,6 +201,10 @@
       "types": "./dist/resources/wizard-archive-contract.d.mts",
       "default": "./dist/resources/wizard-archive-contract.mjs"
     },
+    "./resources/wizard-archive-codec": {
+      "types": "./dist/resources/wizard-archive-codec.d.mts",
+      "default": "./dist/resources/wizard-archive-codec.mjs"
+    },
     "./resources/editor-runtime-contract": {
       "types": "./dist/resources/editor-runtime-contract.d.mts",
       "default": "./dist/resources/editor-runtime-contract.mjs"
@@ -290,6 +294,7 @@
       "./resources/portable-path-contract",
       "./resources/portable-path-projector",
       "./resources/wizard-archive-contract",
+      "./resources/wizard-archive-codec",
       "./resources/editor-runtime-contract"
     ]
   }

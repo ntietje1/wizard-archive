@@ -1,6 +1,7 @@
 import type { AuthoredDestination } from './authored-destination-contract'
 import type { Sha256Digest, VersionStamp } from './component-version'
 import type {
+  AssetId,
   CampaignId,
   CanvasNodeId,
   MapPinId,
@@ -8,12 +9,18 @@ import type {
   ResourceId,
   SnapshotId,
 } from './domain-id'
-import type { PortableRelativePath } from './portable-path-contract'
+import type { PORTABLE_PATH_VERSION, PortableRelativePath } from './portable-path-contract'
 import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-contract'
 import type { ApplicationResourceRole, SourcePathAlias } from './resource-catalog-contract'
 import type { ResourceTombstone } from './resource-metadata-version'
 
 export const WIZARD_ARCHIVE_VERSION = 'wizard-archive-v1' as const
+export const WIZARD_ARCHIVE_SCHEMA_VERSION = 'wizard-archive-manifest-v1' as const
+export const WIZARD_ARCHIVE_NOTE_SECTION_VERSION = 'note-transfer-v1' as const
+export const WIZARD_ARCHIVE_FILE_SECTION_VERSION = 'file-transfer-v1' as const
+export const WIZARD_ARCHIVE_MAP_SECTION_VERSION = 'map-transfer-v1' as const
+export const WIZARD_ARCHIVE_CANVAS_SECTION_VERSION = 'canvas-transfer-v1' as const
+export const WIZARD_ARCHIVE_MANIFEST_PATH = '.wizardarchive/manifest.json' as const
 
 export type WizardArchiveArtifact =
   | { readonly kind: 'directory'; readonly path: PortableRelativePath }
@@ -36,7 +43,6 @@ export type WizardArchiveResource = Readonly<{
   metadataVersion: VersionStamp
   contentVersion: VersionStamp | null
   artifact: WizardArchiveArtifact
-  aliases: ReadonlyArray<SourcePathAlias>
 }>
 
 export type WizardArchiveNoteSection = Readonly<{
@@ -47,9 +53,16 @@ export type WizardArchiveNoteSection = Readonly<{
 
 export type WizardArchiveFileSection = Readonly<{
   resourceId: ResourceId
+  assetId: AssetId
+  classification:
+    | 'viewable_image'
+    | 'viewable_pdf'
+    | 'viewable_audio'
+    | 'viewable_video'
+    | 'inert_file'
   extension: string | null
   mediaType: string
-  originalName: string | null
+  viewerUnavailableReason: string | null
   destinations: ReadonlyArray<AuthoredDestination>
 }>
 
@@ -65,18 +78,37 @@ export type WizardArchiveCanvasSection = Readonly<{
   destinations: ReadonlyArray<AuthoredDestination>
 }>
 
+export type WizardArchiveSection<TEntry, TVersion extends string> = Readonly<{
+  version: TVersion
+  entries: ReadonlyArray<TEntry>
+}>
+
 export type WizardArchiveManifest = Readonly<{
   version: typeof WIZARD_ARCHIVE_VERSION
+  schemaVersion: typeof WIZARD_ARCHIVE_SCHEMA_VERSION
+  scope: 'full_campaign'
   sourceCampaignId: CampaignId
   transferSnapshotId: SnapshotId
-  portablePathVersion: 'portable-path-v1'
+  portablePathVersion: typeof PORTABLE_PATH_VERSION
   resources: ReadonlyArray<WizardArchiveResource>
   tombstones: ReadonlyArray<ResourceTombstone>
+  aliases: ReadonlyArray<SourcePathAlias>
   roles: ReadonlyArray<ApplicationResourceRole>
-  notes: ReadonlyArray<WizardArchiveNoteSection>
-  files: ReadonlyArray<WizardArchiveFileSection>
-  maps: ReadonlyArray<WizardArchiveMapSection>
-  canvases: ReadonlyArray<WizardArchiveCanvasSection>
+  sections: Readonly<{
+    notes: WizardArchiveSection<
+      WizardArchiveNoteSection,
+      typeof WIZARD_ARCHIVE_NOTE_SECTION_VERSION
+    >
+    files: WizardArchiveSection<
+      WizardArchiveFileSection,
+      typeof WIZARD_ARCHIVE_FILE_SECTION_VERSION
+    >
+    maps: WizardArchiveSection<WizardArchiveMapSection, typeof WIZARD_ARCHIVE_MAP_SECTION_VERSION>
+    canvases: WizardArchiveSection<
+      WizardArchiveCanvasSection,
+      typeof WIZARD_ARCHIVE_CANVAS_SECTION_VERSION
+    >
+  }>
 }>
 
 export type WizardArchiveMode = 'same_campaign_update' | 'new_campaign_clone'
