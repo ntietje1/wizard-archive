@@ -6,48 +6,20 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { logger } from '../../common/logger'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { readGameMapSnapshot } from '@wizard-archive/editor/game-maps/document-contract'
 import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/document-contract'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
+import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 
 export async function rollbackGameMap(
   ctx: CampaignMutationCtx,
   itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
-  let parsed: GameMapSnapshotData
-  try {
-    parsed = JSON.parse(new TextDecoder().decode(snapshotData))
-  } catch (e) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      `Failed to parse game map snapshot: ${e instanceof Error ? e.message : 'unknown error'}`,
-    )
-  }
-
-  if (!Array.isArray(parsed.pins)) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Invalid game map snapshot: missing or malformed pins array',
-    )
-  }
-
-  for (let i = 0; i < parsed.pins.length; i++) {
-    const pin = parsed.pins[i]
-    if (
-      !pin ||
-      typeof pin.itemId !== 'string' ||
-      typeof pin.x !== 'number' ||
-      typeof pin.y !== 'number' ||
-      typeof pin.visible !== 'boolean'
-    ) {
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        `Invalid game map snapshot: malformed pin at index ${i}`,
-      )
-    }
-  }
+  const parsed = readGameMapSnapshot(snapshotData)
+  if (!parsed) throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Invalid game map snapshot')
 
   const rawItem = await getSidebarItem(ctx, itemId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
@@ -60,37 +32,50 @@ export async function rollbackGameMap(
     throw new Error(`rollbackMap: expected a map but got ${String(map.type)}`)
   }
 
+  await restoreMapImages(ctx, map.id, parsed)
+  await ctx.db.patch('sidebarItems', map.id, { previewStorageId: null })
+  await replaceMapPins(ctx, map.id, parsed.pins)
+}
+
+async function restoreMapImages(
+  ctx: CampaignMutationCtx,
+  mapId: Id<'sidebarItems'>,
+  snapshot: GameMapSnapshotData,
+) {
   const ext = await ctx.db
     .query('gameMaps')
-    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', map.id))
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
     .unique()
-  if (ext) {
-    await ctx.db.patch('gameMaps', ext._id, {
-      imageStorageId: parsed.imageAssetId as unknown as Id<'_storage'> | null,
-      ...(parsed.layers
-        ? {
-            layers: parsed.layers.map((layer) => ({
-              id: layer.id,
-              imageStorageId: layer.imageAssetId as unknown as Id<'_storage'> | null,
-              name: layer.name,
-            })),
-          }
-        : { layers: undefined }),
-    })
-  }
-
-  await ctx.db.patch('sidebarItems', map.id, {
-    previewStorageId: null,
+  if (!ext) return
+  const [imageStorageId, layers] = await Promise.all([
+    getStorageIdByAssetId(ctx.db, snapshot.imageAssetId),
+    snapshot.layers
+      ? asyncMap(snapshot.layers, async (layer) => ({
+          id: layer.id,
+          imageStorageId: await getStorageIdByAssetId(ctx.db, layer.imageAssetId),
+          name: layer.name,
+        }))
+      : undefined,
+  ])
+  await ctx.db.patch('gameMaps', ext._id, {
+    imageStorageId,
+    ...(layers ? { layers } : { layers: undefined }),
   })
+}
 
+async function replaceMapPins(
+  ctx: CampaignMutationCtx,
+  mapId: Id<'sidebarItems'>,
+  pins: GameMapSnapshotData['pins'],
+) {
   const existingPins = await ctx.db
     .query('mapPins')
-    .withIndex('by_map_item', (q) => q.eq('mapId', map.id))
+    .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
     .collect()
 
   await asyncMap(existingPins, (pin) => ctx.db.delete('mapPins', pin._id))
 
-  const pinTargetChecks = await asyncMap(parsed.pins, async (pin) => {
+  const pinTargetChecks = await asyncMap(pins, async (pin) => {
     try {
       const item = await ctx.db.get('sidebarItems', pin.itemId)
       return { pin, exists: item !== null && isActiveSidebarItem(item) }
@@ -110,7 +95,7 @@ export async function rollbackGameMap(
   await asyncMap(validPins, (pin) =>
     ctx.db.insert('mapPins', {
       mapPinUuid: pin.id,
-      mapId: map.id,
+      mapId,
       itemId: pin.itemId,
       layerId: pin.layerId ?? null,
       x: pin.x,

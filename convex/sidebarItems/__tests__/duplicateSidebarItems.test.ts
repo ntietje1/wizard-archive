@@ -14,6 +14,7 @@ import {
   filesystemEventItemIds,
 } from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
+import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 
 describe('executeCopyCommand', () => {
   const t = createTestContext()
@@ -21,13 +22,30 @@ describe('executeCopyCommand', () => {
   async function setupImmutableStorageDuplicate() {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const [fileStorageId, mapStorageId, previewStorageId] = await t.run(async (dbCtx) => {
-      return await Promise.all([
-        dbCtx.storage.store(new Blob(['file-body'])),
-        dbCtx.storage.store(new Blob(['map-body'])),
-        dbCtx.storage.store(new Blob(['preview-body'])),
-      ])
-    })
+    const fileStorageId = (
+      await storeCommittedTestUploadSession(
+        t,
+        ctx.dm.profile._id,
+        new Blob(['file-body']),
+        'file.txt',
+      )
+    ).storageId
+    const mapStorageId = (
+      await storeCommittedTestUploadSession(
+        t,
+        ctx.dm.profile._id,
+        new Blob(['map-body']),
+        'map.png',
+      )
+    ).storageId
+    const previewStorageId = (
+      await storeCommittedTestUploadSession(
+        t,
+        ctx.dm.profile._id,
+        new Blob(['preview-body']),
+        'preview.png',
+      )
+    ).storageId
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Handout',

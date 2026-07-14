@@ -9,7 +9,7 @@ import {
 } from '../filesystem/validators'
 import { sidebarItemShareValidator } from '../../sidebarShares/schema'
 import { domainValidatorFields } from '../../common/schema'
-import { operationIdValidator } from '../../resources/validators'
+import { assetIdValidator, operationIdValidator } from '../../resources/validators'
 
 const {
   normalizedName: _normalizedName,
@@ -21,7 +21,7 @@ const {
 export const sidebarItemValidatorFields = {
   ...domainValidatorFields('sidebarItems'),
   ...publicSidebarItemFields,
-  previewAssetId: v.nullable(v.id('_storage')),
+  previewAssetId: v.nullable(assetIdValidator),
   shares: v.array(sidebarItemShareValidator),
   isBookmarked: v.boolean(),
   myPermissionLevel: permissionLevelValidator,

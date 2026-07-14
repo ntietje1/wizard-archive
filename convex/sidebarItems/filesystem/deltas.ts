@@ -38,8 +38,8 @@ import { assertSidebarOperationAllowed, operationActorFromRole } from './capabil
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { InsertFilesystemSidebarItemArgs } from './sidebarItemWriter'
-import type { AssetId } from '../../../shared/common/ids'
 import { toSidebarItemDocument, toSidebarItemReplacement } from '../types/status'
+import { getAssetIdByStorageId, getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 
 type BookmarkStateChangeRow = {
   sidebarItemId: Id<'sidebarItems'>
@@ -112,15 +112,10 @@ type UndoableFileSystemPatch = Extract<
   { type: (typeof UNDOABLE_PATCH_TYPES)[number] }
 >
 
-function assetIdFromStorageId(storageId: Id<'_storage'> | null): AssetId | null {
-  return storageId as unknown as AssetId | null
-}
-
-function storageIdFromAssetId(assetId: AssetId | null): Id<'_storage'> | null {
-  return assetId as unknown as Id<'_storage'> | null
-}
-
-function resourcePatchRowFromStored(row: StoredResourcePatchRow): ResourcePatchRow {
+async function resourcePatchRowFromStored(
+  ctx: CampaignMutationCtx,
+  row: StoredResourcePatchRow,
+): Promise<ResourcePatchRow> {
   const {
     _id,
     _creationTime,
@@ -135,16 +130,19 @@ function resourcePatchRowFromStored(row: StoredResourcePatchRow): ResourcePatchR
     id: _id,
     createdAt: _creationTime,
     workspaceId: campaignId,
-    previewAssetId: assetIdFromStorageId(previewStorageId),
+    previewAssetId: await getAssetIdByStorageId(ctx.db, previewStorageId),
   }
 }
 
-export function storedSidebarItemPatchFields(fields: SidebarItemFieldPatch) {
+export async function storedSidebarItemPatchFields(
+  ctx: CampaignMutationCtx,
+  fields: SidebarItemFieldPatch,
+) {
   const { previewAssetId, ...storedFields } = fields
   return {
     ...storedFields,
     ...(previewAssetId !== undefined
-      ? { previewStorageId: storageIdFromAssetId(previewAssetId) }
+      ? { previewStorageId: await getStorageIdByAssetId(ctx.db, previewAssetId) }
       : {}),
   }
 }
@@ -202,10 +200,14 @@ function snapshotsMatch(
   )
 }
 
-function changedItemPatch(before: StoredResourcePatchRow, after: StoredResourcePatchRow) {
+async function changedItemPatch(
+  ctx: CampaignMutationCtx,
+  before: StoredResourcePatchRow,
+  after: StoredResourcePatchRow,
+) {
   const { changed, previous } = diffResourceFields(
-    resourcePatchRowFromStored(before),
-    resourcePatchRowFromStored(after),
+    await resourcePatchRowFromStored(ctx, before),
+    await resourcePatchRowFromStored(ctx, after),
   )
   if (Object.keys(changed).length === 0) return null
   return {
@@ -298,71 +300,62 @@ function insertedItemUndoPrecondition(after: StoredResourcePatchRow): SidebarIte
   }
 }
 
-export function receiptPatchesFromChangeSet(changes: Array<StoredFileSystemChange>) {
-  const patches: Array<ResourcePatch> = []
-  for (const change of changes) {
-    switch (change.type) {
-      case 'insertResource':
-        patches.push({ type: 'upsertResource', item: resourcePatchRowFromStored(change.after) })
-        break
-      case 'updateResource': {
-        const patch = changedItemPatch(change.before, change.after)
-        if (patch) patches.push(patch)
-        break
+export async function receiptPatchesFromChangeSet(
+  ctx: CampaignMutationCtx,
+  changes: Array<StoredFileSystemChange>,
+) {
+  const patches = await Promise.all(
+    changes.map(async (change): Promise<ResourcePatch | null> => {
+      switch (change.type) {
+        case 'insertResource':
+          return {
+            type: 'upsertResource',
+            item: await resourcePatchRowFromStored(ctx, change.after),
+          }
+        case 'updateResource':
+          return await changedItemPatch(ctx, change.before, change.after)
+        case 'removeResource':
+          return {
+            type: 'removeResource',
+            itemId: change.itemId,
+            snapshot: await resourcePatchRowFromStored(ctx, change.before),
+          }
+        case 'insertResourceShare':
+          return {
+            type: 'upsertResourceShare',
+            share: sidebarItemSharePatchRowFromStored(change.after),
+          }
+        case 'updateResourceShare':
+          return changedSharePatch(change.before, change.after)
+        case 'removeResourceShare':
+          return {
+            type: 'removeResourceShare',
+            share: sidebarItemSharePatchRowFromStored(change.before),
+          }
+        case 'updateFolderShare':
+          return changedFolderSharePatch(change.before, change.after)
+        case 'updateResourceBookmarkState':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.itemId,
+            isBookmarked: change.after,
+          }
+        case 'insertBookmark':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.after.sidebarItemId,
+            isBookmarked: true,
+          }
+        case 'removeBookmark':
+          return {
+            type: 'setResourceBookmarkState',
+            itemId: change.before.sidebarItemId,
+            isBookmarked: false,
+          }
       }
-      case 'removeResource':
-        patches.push({
-          type: 'removeResource',
-          itemId: change.itemId,
-          snapshot: resourcePatchRowFromStored(change.before),
-        })
-        break
-      case 'insertResourceShare':
-        patches.push({
-          type: 'upsertResourceShare',
-          share: sidebarItemSharePatchRowFromStored(change.after),
-        })
-        break
-      case 'updateResourceShare': {
-        const patch = changedSharePatch(change.before, change.after)
-        if (patch) patches.push(patch)
-        break
-      }
-      case 'removeResourceShare':
-        patches.push({
-          type: 'removeResourceShare',
-          share: sidebarItemSharePatchRowFromStored(change.before),
-        })
-        break
-      case 'updateFolderShare': {
-        const patch = changedFolderSharePatch(change.before, change.after)
-        if (patch) patches.push(patch)
-        break
-      }
-      case 'updateResourceBookmarkState':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.itemId,
-          isBookmarked: change.after,
-        })
-        break
-      case 'insertBookmark':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.after.sidebarItemId,
-          isBookmarked: true,
-        })
-        break
-      case 'removeBookmark':
-        patches.push({
-          type: 'setResourceBookmarkState',
-          itemId: change.before.sidebarItemId,
-          isBookmarked: false,
-        })
-        break
-    }
-  }
-  return patches
+    }),
+  )
+  return patches.filter((patch): patch is ResourcePatch => patch !== null)
 }
 
 export function redoPatchesFromChangeSet(changes: Array<StoredFileSystemChange>) {
@@ -584,7 +577,7 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
     if (!before) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
     }
-    const storedFields = storedSidebarItemPatchFields(fields)
+    const storedFields = await storedSidebarItemPatchFields(ctx, fields)
     const after = toSidebarItemDocument({ ...before, ...storedFields })
     const beforeSnapshot = before
     if (snapshotsMatch(beforeSnapshot, after)) return
@@ -606,7 +599,10 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
   const trashSidebarTree: FileSystemWriteSession['trashSidebarTree'] = async (item) => {
     const beforeItems = await collectTreeSnapshot(ctx, item)
     assertSidebarOperationAllowed(
-      evaluateTrash(operationActorFromRole(ctx.membership.role), resourcePatchRowFromStored(item)),
+      evaluateTrash(
+        operationActorFromRole(ctx.membership.role),
+        await resourcePatchRowFromStored(ctx, item),
+      ),
     )
     const deletion = {
       deletionTime: Date.now(),

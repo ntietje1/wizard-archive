@@ -4,7 +4,8 @@ import { projectLiveSidebarItem } from '../project-live-sidebar-item'
 import type { WizardEditorItem } from '@wizard-archive/editor/adapter'
 
 describe('projectLiveSidebarItem', () => {
-  it('projects preview storage into the editor resource contract', () => {
+  it('preserves canonical asset identities from the live query', () => {
+    const previewAssetId = '019817c2-7df0-7000-8000-000000000001'
     const item = projectLiveSidebarItem<WizardEditorItem>({
       id: 'item',
       createdAt: 1,
@@ -16,7 +17,7 @@ describe('projectLiveSidebarItem', () => {
       allPermissionLevel: null,
       location: 'sidebar',
       status: 'active',
-      previewStorageId: 'preview-storage',
+      previewAssetId,
       updatedTime: null,
       updatedBy: null,
       createdBy: 'user',
@@ -32,7 +33,7 @@ describe('projectLiveSidebarItem', () => {
       previewUrl: null,
     })
 
-    expect(item.previewAssetId).toBe('preview-storage')
+    expect(item.previewAssetId).toBe(previewAssetId)
     expect(item).not.toHaveProperty('previewStorageId')
   })
 })

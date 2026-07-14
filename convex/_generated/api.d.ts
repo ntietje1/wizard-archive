@@ -91,6 +91,7 @@ import type * as documentSnapshots_queries from "../documentSnapshots/queries.js
 import type * as documentSnapshots_rollback from "../documentSnapshots/rollback.js";
 import type * as documentSnapshots_types from "../documentSnapshots/types.js";
 import type * as editHistory_blockShareMemberMigration from "../editHistory/blockShareMemberMigration.js";
+import type * as editHistory_functions_getHistoryEntry from "../editHistory/functions/getHistoryEntry.js";
 import type * as editHistory_log from "../editHistory/log.js";
 import type * as editHistory_queries from "../editHistory/queries.js";
 import type * as editors_functions_getCurrentEditor from "../editors/functions/getCurrentEditor.js";
@@ -164,6 +165,7 @@ import type * as resources_functions_executeStructureCommand from "../resources/
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
 import type * as resources_mutations from "../resources/mutations.js";
 import type * as resources_queries from "../resources/queries.js";
+import type * as resources_validators from "../resources/validators.js";
 import type * as sessions_functions_endCurrentSession from "../sessions/functions/endCurrentSession.js";
 import type * as sessions_functions_getCurrentSession from "../sessions/functions/getCurrentSession.js";
 import type * as sessions_functions_getSession from "../sessions/functions/getSession.js";
@@ -225,6 +227,7 @@ import type * as sidebarItems_normalizedNameMigration from "../sidebarItems/norm
 import type * as sidebarItems_previewGeneration from "../sidebarItems/previewGeneration.js";
 import type * as sidebarItems_previewLease from "../sidebarItems/previewLease.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
+import type * as sidebarItems_resourcePathSegment from "../sidebarItems/resourcePathSegment.js";
 import type * as sidebarItems_schema_anySidebarItemValidator from "../sidebarItems/schema/anySidebarItemValidator.js";
 import type * as sidebarItems_schema_anySidebarItemWithContentValidator from "../sidebarItems/schema/anySidebarItemWithContentValidator.js";
 import type * as sidebarItems_schema_sidebarItemFields from "../sidebarItems/schema/sidebarItemFields.js";
@@ -245,6 +248,8 @@ import type * as sidebarShares_functions_sidebarItemPermissions from "../sidebar
 import type * as sidebarShares_functions_sidebarItemShareMutations from "../sidebarShares/functions/sidebarItemShareMutations.js";
 import type * as sidebarShares_mutations from "../sidebarShares/mutations.js";
 import type * as sidebarShares_queries from "../sidebarShares/queries.js";
+import type * as sidebarShares_validators from "../sidebarShares/validators.js";
+import type * as storage_functions_assetIdentity from "../storage/functions/assetIdentity.js";
 import type * as storage_functions_bindUpload from "../storage/functions/bindUpload.js";
 import type * as storage_functions_commitUpload from "../storage/functions/commitUpload.js";
 import type * as storage_functions_createUploadSession from "../storage/functions/createUploadSession.js";
@@ -375,6 +380,7 @@ declare const fullApi: ApiFromModules<{
   "documentSnapshots/rollback": typeof documentSnapshots_rollback;
   "documentSnapshots/types": typeof documentSnapshots_types;
   "editHistory/blockShareMemberMigration": typeof editHistory_blockShareMemberMigration;
+  "editHistory/functions/getHistoryEntry": typeof editHistory_functions_getHistoryEntry;
   "editHistory/log": typeof editHistory_log;
   "editHistory/queries": typeof editHistory_queries;
   "editors/functions/getCurrentEditor": typeof editors_functions_getCurrentEditor;
@@ -448,6 +454,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
   "resources/mutations": typeof resources_mutations;
   "resources/queries": typeof resources_queries;
+  "resources/validators": typeof resources_validators;
   "sessions/functions/endCurrentSession": typeof sessions_functions_endCurrentSession;
   "sessions/functions/getCurrentSession": typeof sessions_functions_getCurrentSession;
   "sessions/functions/getSession": typeof sessions_functions_getSession;
@@ -509,6 +516,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/previewGeneration": typeof sidebarItems_previewGeneration;
   "sidebarItems/previewLease": typeof sidebarItems_previewLease;
   "sidebarItems/queries": typeof sidebarItems_queries;
+  "sidebarItems/resourcePathSegment": typeof sidebarItems_resourcePathSegment;
   "sidebarItems/schema/anySidebarItemValidator": typeof sidebarItems_schema_anySidebarItemValidator;
   "sidebarItems/schema/anySidebarItemWithContentValidator": typeof sidebarItems_schema_anySidebarItemWithContentValidator;
   "sidebarItems/schema/sidebarItemFields": typeof sidebarItems_schema_sidebarItemFields;
@@ -529,6 +537,8 @@ declare const fullApi: ApiFromModules<{
   "sidebarShares/functions/sidebarItemShareMutations": typeof sidebarShares_functions_sidebarItemShareMutations;
   "sidebarShares/mutations": typeof sidebarShares_mutations;
   "sidebarShares/queries": typeof sidebarShares_queries;
+  "sidebarShares/validators": typeof sidebarShares_validators;
+  "storage/functions/assetIdentity": typeof storage_functions_assetIdentity;
   "storage/functions/bindUpload": typeof storage_functions_bindUpload;
   "storage/functions/commitUpload": typeof storage_functions_commitUpload;
   "storage/functions/createUploadSession": typeof storage_functions_createUploadSession;

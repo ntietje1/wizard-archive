@@ -2,11 +2,12 @@ import { v } from 'convex/values'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import { folderValidator } from '../folders/baseSchema'
+import { assetIdValidator } from '../resources/validators'
 
 const fileValidatorFields = {
   ...sidebarItemValidatorFields,
   type: v.literal(RESOURCE_TYPES.files),
-  assetId: v.nullable(v.id('_storage')),
+  assetId: v.nullable(assetIdValidator),
   downloadUrl: v.nullable(v.string()),
   contentType: v.nullable(v.string()),
 }

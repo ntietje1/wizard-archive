@@ -5,6 +5,7 @@ import { uploadFile as uploadFileToUrl } from '~/shared/uploads/upload-file'
 import type { Id } from 'convex/_generated/dataModel'
 import type { WizardEditorFileSessionReplaceInput } from '@wizard-archive/editor/adapter'
 import { createFile } from '~/test/factories/sidebar-item-factory'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 const updateFileStorageMock = vi.hoisted(() => vi.fn())
 const appMutationQueue = vi.hoisted(() => [] as Array<{ mutateAsync: ReturnType<typeof vi.fn> }>)
@@ -236,7 +237,7 @@ describe('useLiveFileSessionAdapter', () => {
       result.current.session.resolveFile(
         createFile({
           id: 'file-attached' as Id<'sidebarItems'>,
-          assetId: 'storage-1' as Id<'_storage'>,
+          assetId: generateDomainId(DOMAIN_ID_KIND.asset),
           downloadUrl: null,
           name: 'Broken handout',
         }) as LiveFileSessionResolvedItem,

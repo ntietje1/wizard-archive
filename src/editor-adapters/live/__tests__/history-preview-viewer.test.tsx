@@ -6,6 +6,7 @@ import { useLiveWorkspaceHistory } from '~/editor-adapters/live/use-live-workspa
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'shared/common/ids'
 import { testHistoryEntryId } from 'shared/test/history-entry-id'
+import { testAssetId } from 'shared/test/asset-id'
 
 type HistorySnapshot = NonNullable<WizardEditorHistoryInput['preview']['snapshot']>
 const { useAuthPaginatedQueryMock, useCampaignQueryMock } = vi.hoisted(() => ({
@@ -201,7 +202,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
       snapshot: {
         data: {
           kind: 'game-map',
-          snapshotData: { imageAssetId: 'storage-1', pins: [] },
+          snapshotData: { imageAssetId: testAssetId('asset-1'), pins: [] },
           imageUrlState: { status: 'ready', url: 'https://example.test/map.png' },
         } satisfies HistorySnapshot,
         isLoading: false,
@@ -228,7 +229,7 @@ describe('useLiveWorkspaceHistory preview state', () => {
       entryTime: 2,
       snapshot: {
         kind: 'game-map',
-        snapshotData: { imageAssetId: 'storage-1', pins: [] },
+        snapshotData: { imageAssetId: testAssetId('asset-1'), pins: [] },
         imageUrlState: { status: 'ready', url: 'https://example.test/map.png' },
       },
     })

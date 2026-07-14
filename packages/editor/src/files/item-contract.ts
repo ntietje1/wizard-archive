@@ -1,4 +1,4 @@
-import type { AssetId } from '../../../../shared/common/ids'
+import type { AssetId } from '../resources/domain-id'
 import type { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type {
   BaseResource,

@@ -3,14 +3,14 @@ import type { MapItem } from '@wizard-archive/editor/game-maps/item-contract'
 import { resolveMapImage } from '@wizard-archive/editor/game-maps/image-resolution'
 import type { CampaignQueryCtx } from '../../functions'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
-import type { Id } from '../../_generated/dataModel'
+import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 
 export async function getGameMapForDownload(
   ctx: CampaignQueryCtx,
   item: MapItem,
   path: string,
 ): Promise<DownloadItem> {
-  const imageStorageId = resolveMapImage(item).imageAssetId as unknown as Id<'_storage'> | null
+  const imageStorageId = await getStorageIdByAssetId(ctx.db, resolveMapImage(item).imageAssetId)
   return {
     type: RESOURCE_TYPES.gameMaps,
     name: item.name,

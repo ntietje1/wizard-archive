@@ -6,7 +6,7 @@ import { assertNever } from '../../common/types'
 import { isUndoHiddenSidebarItem } from '../types/status'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
-import type { AssetId } from '../../../shared/common/ids'
+import { getAssetIdByStorageId } from '../../storage/functions/assetIdentity'
 type GetSidebarItemCtx = Pick<QueryCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>
 }
@@ -46,44 +46,49 @@ export async function getSidebarItemFromRaw(
   raw: Doc<'sidebarItems'>,
 ): Promise<AnyResourceRow | null> {
   if (raw.campaignId !== ctx.campaign._id || isUndoHiddenSidebarItem(raw)) return null
+  const base = await toEditorResourceRow(ctx, raw)
   switch (raw.type) {
     case RESOURCE_TYPES.folders: {
       const ext = await requireSidebarItemExtension(ctx, 'folders', raw._id, 'folder')
-      return { ...toEditorResourceRow(raw), inheritShares: ext.inheritShares } as AnyResourceRow
+      return { ...base, inheritShares: ext.inheritShares } as AnyResourceRow
     }
     case RESOURCE_TYPES.gameMaps: {
       const ext = await requireSidebarItemExtension(ctx, 'gameMaps', raw._id, 'game map')
-      return {
-        ...toEditorResourceRow(raw),
-        imageAssetId: ext.imageStorageId as AssetId | null,
-        ...(ext.layers
-          ? {
-              layers: ext.layers.map((layer) => ({
+      const [imageAssetId, layers] = await Promise.all([
+        getAssetIdByStorageId(ctx.db, ext.imageStorageId),
+        ext.layers
+          ? Promise.all(
+              ext.layers.map(async (layer) => ({
                 id: layer.id,
-                imageAssetId: layer.imageStorageId as AssetId | null,
+                imageAssetId: await getAssetIdByStorageId(ctx.db, layer.imageStorageId),
                 name: layer.name,
               })),
-            }
-          : {}),
+            )
+          : undefined,
+      ])
+      return {
+        ...base,
+        imageAssetId,
+        ...(layers ? { layers } : {}),
       } as AnyResourceRow
     }
     case RESOURCE_TYPES.files: {
       const ext = await requireSidebarItemExtension(ctx, 'files', raw._id, 'file')
       return {
-        ...toEditorResourceRow(raw),
-        assetId: ext.storageId as AssetId | null,
+        ...base,
+        assetId: await getAssetIdByStorageId(ctx.db, ext.storageId),
       } as AnyResourceRow
     }
     case RESOURCE_TYPES.notes:
-      return toEditorResourceRow(raw) as AnyResourceRow
+      return base as AnyResourceRow
     case RESOURCE_TYPES.canvases:
-      return toEditorResourceRow(raw) as AnyResourceRow
+      return base as AnyResourceRow
     default:
       return assertNever(raw.type)
   }
 }
 
-function toEditorResourceRow(row: Doc<'sidebarItems'>) {
+async function toEditorResourceRow(ctx: GetSidebarItemCtx, row: Doc<'sidebarItems'>) {
   const {
     _id,
     _creationTime,
@@ -95,6 +100,6 @@ function toEditorResourceRow(row: Doc<'sidebarItems'>) {
     ...fields,
     id: _id,
     createdAt: _creationTime,
-    previewAssetId: previewStorageId as AssetId | null,
+    previewAssetId: await getAssetIdByStorageId(ctx.db, previewStorageId),
   }
 }

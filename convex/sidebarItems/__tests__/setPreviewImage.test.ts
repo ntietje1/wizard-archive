@@ -17,7 +17,10 @@ import {
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { getPreviewLease } from '../previewLease'
-import { storeUncommittedTestUploadSession } from '../../_test/storage.helper'
+import {
+  storeCommittedTestUploadSession,
+  storeUncommittedTestUploadSession,
+} from '../../_test/storage.helper'
 
 describe('setPreviewImage', () => {
   const t = createTestContext()
@@ -66,9 +69,14 @@ describe('setPreviewImage', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const oldStorageId = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['old-preview']))
-    })
+    const oldStorageId = (
+      await storeCommittedTestUploadSession(
+        t,
+        ctx.dm.profile._id,
+        new Blob(['old-preview']),
+        'old-preview.png',
+      )
+    ).storageId
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', noteId, { previewStorageId: oldStorageId })
@@ -109,9 +117,14 @@ describe('setPreviewImage', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const oldStorageId = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['shared-preview-file']))
-    })
+    const oldStorageId = (
+      await storeCommittedTestUploadSession(
+        t,
+        ctx.dm.profile._id,
+        new Blob(['shared-preview-file']),
+        'shared-preview.png',
+      )
+    ).storageId
 
     await t.run(async (dbCtx) => {
       const fileExt = await dbCtx.db
@@ -511,9 +524,14 @@ describe('setPreviewImage', () => {
 
     const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const oldStorageId = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['old-preview']))
-    })
+    const oldStorageId = (
+      await storeCommittedTestUploadSession(
+        t,
+        ctx.dm.profile._id,
+        new Blob(['old-preview']),
+        'old-preview.png',
+      )
+    ).storageId
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', canvasId, { previewStorageId: oldStorageId })

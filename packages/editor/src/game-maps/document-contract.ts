@@ -1,6 +1,5 @@
-import type { AssetId } from '../../../../shared/common/ids'
-import { isUuidV7 } from '../resources/domain-id'
-import type { MapPinId } from '../resources/domain-id'
+import { DOMAIN_ID_KIND, isUuidV7, parseDomainId } from '../resources/domain-id'
+import type { AssetId, MapPinId } from '../resources/domain-id'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { ResourceId, ResourceStatus, ResourceKind } from '../workspace/resource-contract'
 
@@ -66,8 +65,8 @@ type GameMapSnapshotPinData = {
 }
 
 export type GameMapSnapshotData = {
-  imageAssetId: string | null
-  layers?: Array<{ id: string; imageAssetId: string | null; name: string }>
+  imageAssetId: AssetId | null
+  layers?: Array<{ id: string; imageAssetId: AssetId | null; name: string }>
   pins: Array<GameMapSnapshotPinData>
 }
 
@@ -86,7 +85,7 @@ export function readGameMapSnapshot(data: ArrayBuffer): GameMapSnapshotData | nu
 
 function isGameMapSnapshotData(value: unknown): value is GameMapSnapshotData {
   if (!isRecord(value)) return false
-  if (!(typeof value.imageAssetId === 'string' || value.imageAssetId === null)) return false
+  if (!(value.imageAssetId === null || isAssetId(value.imageAssetId))) return false
   if (
     value.layers !== undefined &&
     (!Array.isArray(value.layers) ||
@@ -95,7 +94,7 @@ function isGameMapSnapshotData(value: unknown): value is GameMapSnapshotData {
           isRecord(layer) &&
           typeof layer.id === 'string' &&
           typeof layer.name === 'string' &&
-          (typeof layer.imageAssetId === 'string' || layer.imageAssetId === null),
+          (layer.imageAssetId === null || isAssetId(layer.imageAssetId)),
       ))
   ) {
     return false
@@ -103,6 +102,10 @@ function isGameMapSnapshotData(value: unknown): value is GameMapSnapshotData {
   if (!Array.isArray(value.pins)) return false
 
   return value.pins.every(isGameMapSnapshotPinData)
+}
+
+function isAssetId(value: unknown): value is AssetId {
+  return typeof value === 'string' && parseDomainId(DOMAIN_ID_KIND.asset, value) !== null
 }
 
 function isGameMapSnapshotPinData(value: unknown) {

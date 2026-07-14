@@ -7,6 +7,7 @@ import type { GameMapSnapshotData } from '@wizard-archive/editor/game-maps/docum
 import type { MutationCtx, QueryCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
 import { DOCUMENT_SNAPSHOT_TYPE } from '../../documentSnapshots/types'
+import { getAssetIdByStorageId } from '../../storage/functions/assetIdentity'
 
 export async function encodeGameMapSnapshot(
   ctx: QueryCtx,
@@ -60,17 +61,20 @@ export async function encodeGameMapSnapshot(
     validPins.push({ pin: pins[i], item })
   }
 
+  const [imageAssetId, layers] = await Promise.all([
+    getAssetIdByStorageId(ctx.db, map.imageStorageId),
+    map.layers
+      ? asyncMap(map.layers, async (layer) => ({
+          id: layer.id,
+          imageAssetId: await getAssetIdByStorageId(ctx.db, layer.imageStorageId),
+          name: layer.name,
+        }))
+      : undefined,
+  ])
+
   const snapshotData: GameMapSnapshotData = {
-    imageAssetId: map.imageStorageId,
-    ...(map.layers
-      ? {
-          layers: map.layers.map((layer) => ({
-            id: layer.id,
-            imageAssetId: layer.imageStorageId,
-            name: layer.name,
-          })),
-        }
-      : {}),
+    imageAssetId,
+    ...(layers ? { layers } : {}),
     pins: validPins.map(({ pin, item }) => ({
       id: pin.mapPinUuid,
       itemId: pin.itemId,

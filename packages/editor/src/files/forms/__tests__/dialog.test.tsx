@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
+import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import { FileDialog } from '../dialog'
 import type { FileUploadControl } from '@wizard-archive/ui/file-upload/control'
 import type { FileFormSource } from '../source'
@@ -29,7 +30,7 @@ describe('FileDialog', () => {
     const first = createFile({
       id: testId('file_1'),
       name: 'Original handout',
-      assetId: testId('storage_1'),
+      assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const refreshed = { ...first, name: canonicalizeResourceItemTitle('Remote handout update') }
     const props = {

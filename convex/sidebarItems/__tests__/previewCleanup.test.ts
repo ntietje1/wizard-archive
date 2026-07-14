@@ -12,6 +12,7 @@ import type { TestConvex } from 'convex-test'
 import type schema from '../../schema'
 import type { Id } from '../../_generated/dataModel'
 import { getPreviewLease } from '../previewLease'
+import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 
 async function trashItem(
   t: TestConvex<typeof schema>,
@@ -29,6 +30,15 @@ async function trashItem(
   })
 }
 
+async function storeTestAsset(
+  t: TestConvex<typeof schema>,
+  userId: Id<'userProfiles'>,
+  contents: string,
+) {
+  return (await storeCommittedTestUploadSession(t, userId, new Blob([contents]), 'asset.bin'))
+    .storageId
+}
+
 describe('preview cleanup on hard delete', () => {
   const t = createTestContext()
 
@@ -38,14 +48,14 @@ describe('preview cleanup on hard delete', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const storageId = await t.run(async (dbCtx) => {
+    await t.run(async (dbCtx) => {
       await dbCtx.db.insert('sidebarItemPreviewLeases', {
         sidebarItemId: noteId,
         claimToken: 'claim',
         lockedUntil: Date.now() + 1000,
       })
-      return await dbCtx.storage.store(new Blob(['preview']))
     })
+    const storageId = await storeTestAsset(t, ctx.dm.profile._id, 'preview')
 
     await trashItem(t, noteId, ctx.dm.profile._id, {
       previewStorageId: storageId,
@@ -70,12 +80,8 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const fileBlob = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['file-content']))
-    })
-    const previewBlob = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['preview-content']))
-    })
+    const fileBlob = await storeTestAsset(t, ctx.dm.profile._id, 'file-content')
+    const previewBlob = await storeTestAsset(t, ctx.dm.profile._id, 'preview-content')
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
@@ -110,9 +116,7 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sharedBlob = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['shared-file-map']))
-    })
+    const sharedBlob = await storeTestAsset(t, ctx.dm.profile._id, 'shared-file-map')
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
@@ -154,9 +158,7 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sharedBlob = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['map-image']))
-    })
+    const sharedBlob = await storeTestAsset(t, ctx.dm.profile._id, 'map-image')
 
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
@@ -189,12 +191,8 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const imageBlob = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['map-image']))
-    })
-    const previewBlob = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['map-preview']))
-    })
+    const imageBlob = await storeTestAsset(t, ctx.dm.profile._id, 'map-image')
+    const previewBlob = await storeTestAsset(t, ctx.dm.profile._id, 'map-preview')
 
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
@@ -229,9 +227,7 @@ describe('preview cleanup on hard delete', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sharedBlob = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['shared-map-file-preview']))
-    })
+    const sharedBlob = await storeTestAsset(t, ctx.dm.profile._id, 'shared-map-file-preview')
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)

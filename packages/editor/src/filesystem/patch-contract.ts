@@ -1,6 +1,5 @@
 import type {
   SessionRowId,
-  AssetId,
   UserProfileId,
   WorkspaceId,
   WorkspaceMemberId,
@@ -13,7 +12,7 @@ import type {
   ResourceStatus,
   ResourceKind,
 } from '../workspace/resource-contract'
-import type { ResourceShareId } from '../resources/domain-id'
+import type { AssetId, ResourceShareId } from '../resources/domain-id'
 
 export type ResourcePatchRow = {
   id: ResourceId

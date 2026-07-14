@@ -6,14 +6,14 @@ import type {
   FileItem,
   FileItemRow,
 } from '@wizard-archive/editor/files/item-contract'
-import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemEnhancement } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
+import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 
 export const enhanceFile = async (
   ctx: CampaignQueryCtx,
   { file, enhancement }: { file: FileItemRow; enhancement?: SidebarItemEnhancement },
 ): Promise<FileItem> => {
-  const storageId = file.assetId as unknown as Id<'_storage'> | null
+  const storageId = await getStorageIdByAssetId(ctx.db, file.assetId)
   const [base, downloadUrl, storageMetadata] = await Promise.all([
     enhanceBase(ctx, { item: file, enhancement }),
     storageId ? ctx.storage.getUrl(storageId) : null,

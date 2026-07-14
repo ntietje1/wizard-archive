@@ -1,4 +1,5 @@
-import type { AssetId, UserProfileId } from '../common/ids'
+import type { UserProfileId } from '../common/ids'
+import type { AssetId } from '@wizard-archive/editor/resources/domain-id'
 import type { Username } from './validation'
 
 type ProfileImage = { type: 'external'; url: string } | { type: 'asset'; assetId: AssetId }

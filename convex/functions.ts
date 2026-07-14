@@ -18,20 +18,27 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
 import type { AuthUser } from './users/authTypes'
 import type { CampaignRow, CampaignMemberRow } from '../shared/campaigns/types'
-import type { AssetId } from '../shared/common/ids'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CampaignId as DomainCampaignId,
   CampaignMemberId as DomainCampaignMemberId,
 } from '@wizard-archive/editor/resources/domain-id'
+import { getAssetIdByStorageId } from './storage/functions/assetIdentity'
 
 // --- Context enrichment ---
 
-function toAuthenticatedProfile(profile: Doc<'userProfiles'>): AuthUser['profile'] {
-  const profileImage =
-    profile.profileImage?.type === 'storage'
-      ? { type: 'asset' as const, assetId: profile.profileImage.storageId as unknown as AssetId }
-      : profile.profileImage
+async function toAuthenticatedProfile(
+  ctx: QueryCtx | MutationCtx,
+  profile: Doc<'userProfiles'>,
+): Promise<AuthUser['profile']> {
+  let profileImage: AuthUser['profile']['profileImage']
+  if (profile.profileImage?.type === 'storage') {
+    const assetId = await getAssetIdByStorageId(ctx.db, profile.profileImage.storageId)
+    if (assetId === null) throw new Error('Profile image is missing its asset identity')
+    profileImage = { type: 'asset', assetId }
+  } else {
+    profileImage = profile.profileImage
+  }
   return {
     ...profile,
     profileImage,
@@ -53,7 +60,7 @@ export async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUse
   const authProfileKey = getAuthProfileKey(identity)
   const profile = await getUserProfileDocByAuthProfileKey(ctx, { authProfileKey })
   if (!profile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
-  return { identity, profile: toAuthenticatedProfile(profile) }
+  return { identity, profile: await toAuthenticatedProfile(ctx, profile) }
 }
 
 // convex-helpers does not propagate enriched ctx types through chained

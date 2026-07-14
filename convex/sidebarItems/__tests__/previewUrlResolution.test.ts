@@ -3,6 +3,7 @@ import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createCanvas, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
+import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 
 describe('enhanceBase previewUrl resolution', () => {
   const t = createTestContext()
@@ -13,9 +14,12 @@ describe('enhanceBase previewUrl resolution', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const storageId = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['preview-data']))
-    })
+    const { assetId, storageId } = await storeCommittedTestUploadSession(
+      t,
+      ctx.dm.profile._id,
+      new Blob(['preview-data']),
+      'preview.png',
+    )
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', noteId, { previewStorageId: storageId })
@@ -27,6 +31,7 @@ describe('enhanceBase previewUrl resolution', () => {
 
     const note = items.find((i) => i.id === noteId)
     expect(note).toBeDefined()
+    expect(note!.previewAssetId).toBe(assetId)
     expect(note!.previewUrl).not.toBeNull()
     expect(typeof note!.previewUrl).toBe('string')
   })
@@ -37,9 +42,12 @@ describe('enhanceBase previewUrl resolution', () => {
 
     const { canvasId } = await createCanvas(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const storageId = await t.run(async (dbCtx) => {
-      return await dbCtx.storage.store(new Blob(['canvas-preview']))
-    })
+    const { assetId, storageId } = await storeCommittedTestUploadSession(
+      t,
+      ctx.dm.profile._id,
+      new Blob(['canvas-preview']),
+      'canvas-preview.png',
+    )
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', canvasId, { previewStorageId: storageId })
@@ -51,6 +59,7 @@ describe('enhanceBase previewUrl resolution', () => {
 
     const canvas = items.find((i) => i.id === canvasId)
     expect(canvas).toBeDefined()
+    expect(canvas!.previewAssetId).toBe(assetId)
     expect(canvas!.previewUrl).not.toBeNull()
     expect(typeof canvas!.previewUrl).toBe('string')
   })

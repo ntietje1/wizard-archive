@@ -6,19 +6,19 @@ import {
 } from '../../sidebar/project-live-sidebar-item'
 
 describe('mergeProjectedItemsIntoLiveRows', () => {
-  it('keeps raw asset storage fields authoritative across optimistic cache updates', () => {
+  it('keeps canonical asset fields authoritative across optimistic cache updates', () => {
     const rows = [
       {
         id: 'file-1',
         type: 'file',
-        previewStorageId: 'preview-asset',
-        storageId: 'file-asset',
+        previewAssetId: '019817c2-7df0-7000-8000-000000000001',
+        assetId: '019817c2-7df0-7000-8000-000000000002',
       },
       {
         id: 'map-1',
         type: 'gameMap',
-        imageStorageId: 'map-asset',
-        layers: [{ id: 'layer-1', imageStorageId: 'layer-asset' }],
+        imageAssetId: '019817c2-7df0-7000-8000-000000000003',
+        layers: [{ id: 'layer-1', imageAssetId: '019817c2-7df0-7000-8000-000000000004' }],
       },
     ]
     const projected = projectLiveSidebarItems<WizardEditorItem>(rows)
@@ -28,18 +28,15 @@ describe('mergeProjectedItemsIntoLiveRows', () => {
     expect(merged).toEqual([
       expect.objectContaining({
         id: 'file-1',
-        previewStorageId: 'preview-asset',
-        storageId: 'file-asset',
+        previewAssetId: '019817c2-7df0-7000-8000-000000000001',
+        assetId: '019817c2-7df0-7000-8000-000000000002',
       }),
       expect.objectContaining({
         id: 'map-1',
-        imageStorageId: 'map-asset',
-        layers: [{ id: 'layer-1', imageStorageId: 'layer-asset' }],
+        imageAssetId: '019817c2-7df0-7000-8000-000000000003',
+        layers: [{ id: 'layer-1', imageAssetId: '019817c2-7df0-7000-8000-000000000004' }],
       }),
     ])
-    expect(merged[0]).not.toHaveProperty('assetId')
-    expect(merged[0]).not.toHaveProperty('previewAssetId')
-    expect(merged[1]).not.toHaveProperty('imageAssetId')
     expect(projectLiveSidebarItems<WizardEditorItem>(merged)).toEqual(projected)
   })
 })

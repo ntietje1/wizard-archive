@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { resolveMapImage, withResolvedMapImage } from '../image-resolution'
 import type { MapImageSource } from '../image-resolution'
-import type { AssetId } from '../../../../../shared/common/ids'
+import type { AssetId } from '../../resources/domain-id'
 
 describe('map image resolution', () => {
   it('uses the base map image when no layers exist', () => {

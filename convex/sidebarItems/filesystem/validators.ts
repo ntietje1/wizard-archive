@@ -16,7 +16,7 @@ import {
 } from '../../blockShares/commandValidators'
 import { createParentTargetValidator } from '../validation/parent'
 import { resourceShareIdValidator } from '../../sidebarShares/validators'
-import { operationIdValidator } from '../../resources/validators'
+import { assetIdValidator, operationIdValidator } from '../../resources/validators'
 
 const createCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.create),
@@ -215,7 +215,7 @@ const sidebarItemSnapshotValidator = v.object({
   createdBy: sidebarItemTableFields.createdBy,
   deletionTime: sidebarItemTableFields.deletionTime,
   deletedBy: sidebarItemTableFields.deletedBy,
-  previewAssetId: v.nullable(v.id('_storage')),
+  previewAssetId: v.nullable(assetIdValidator),
 })
 
 const storedSidebarItemSnapshotValidator = v.object({
@@ -232,7 +232,7 @@ const sidebarItemPatchCommonFields = {
   parentId: v.optional(v.nullable(v.id('sidebarItems'))),
   status: v.optional(sidebarItemStatusValidator),
   allPermissionLevel: v.optional(v.nullable(permissionLevelValidator)),
-  previewAssetId: v.optional(v.nullable(v.id('_storage'))),
+  previewAssetId: v.optional(v.nullable(assetIdValidator)),
   updatedTime: v.optional(v.nullable(v.number())),
   updatedBy: v.optional(v.nullable(v.id('userProfiles'))),
   deletionTime: v.optional(v.nullable(v.number())),

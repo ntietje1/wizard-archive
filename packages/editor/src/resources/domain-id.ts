@@ -1,8 +1,5 @@
 import { formatUuid } from '../types/uuid'
 
-declare const uuidV7Brand: unique symbol
-declare const domainIdBrand: unique symbol
-
 export const DOMAIN_ID_KIND = {
   asset: 'asset',
   campaign: 'campaign',
@@ -21,9 +18,9 @@ export const DOMAIN_ID_KIND = {
 } as const
 
 export type DomainIdKind = (typeof DOMAIN_ID_KIND)[keyof typeof DOMAIN_ID_KIND]
-export type UuidV7 = string & { readonly [uuidV7Brand]: true }
+export type UuidV7 = string & { readonly __uuidV7: true }
 type DomainId<TKind extends DomainIdKind> = UuidV7 & {
-  readonly [domainIdBrand]: TKind
+  readonly __domainIdKind: TKind
 }
 
 export type AssetId = DomainId<typeof DOMAIN_ID_KIND.asset>

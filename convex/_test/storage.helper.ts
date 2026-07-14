@@ -22,14 +22,15 @@ export async function storeCommittedTestUploadSession(
 ) {
   return await t.run(async (dbCtx) => {
     const storageId = await dbCtx.storage.store(blob)
+    const assetId = generateDomainId(DOMAIN_ID_KIND.asset)
     const sessionId = await dbCtx.db.insert('fileStorage', {
-      assetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
+      assetUuid: assetId,
       storageId,
       userId,
       status: FILE_STORAGE_STATUS.Committed,
       originalFileName,
     })
-    return { sessionId, storageId }
+    return { assetId, sessionId, storageId }
   })
 }
 
@@ -41,13 +42,14 @@ export async function storeUncommittedTestUploadSession(
 ) {
   return await t.run(async (dbCtx) => {
     const storageId = await dbCtx.storage.store(blob)
+    const assetId = generateDomainId(DOMAIN_ID_KIND.asset)
     const sessionId = await dbCtx.db.insert('fileStorage', {
-      assetUuid: generateDomainId(DOMAIN_ID_KIND.asset),
+      assetUuid: assetId,
       storageId,
       userId,
       status: FILE_STORAGE_STATUS.Uncommitted,
       originalFileName,
     })
-    return { sessionId, storageId }
+    return { assetId, sessionId, storageId }
   })
 }

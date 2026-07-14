@@ -24,24 +24,27 @@ import type {
   MapPinWithItem,
 } from '@wizard-archive/editor/game-maps/item-contract'
 import type { MapPin } from '@wizard-archive/editor/game-maps/document-contract'
-import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemEnhancement } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
+import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 
 export const enhanceGameMap = async (
   ctx: CampaignQueryCtx,
   { gameMap, enhancement }: { gameMap: MapItemRow; enhancement?: SidebarItemEnhancement },
 ): Promise<MapItem> => {
-  const imageStorageId = gameMap.imageAssetId as unknown as Id<'_storage'> | null
+  const imageStorageId = await getStorageIdByAssetId(ctx.db, gameMap.imageAssetId)
   const [base, imageUrl, layers] = await Promise.all([
     enhanceBase(ctx, { item: gameMap, enhancement }),
     imageStorageId ? ctx.storage.getUrl(imageStorageId) : null,
     gameMap.layers
-      ? asyncMap(gameMap.layers, async (layer) => ({
-          id: layer.id,
-          imageAssetId: layer.imageAssetId,
-          imageUrl: layer.imageAssetId ? await ctx.storage.getUrl(layer.imageAssetId) : null,
-          name: layer.name,
-        }))
+      ? asyncMap(gameMap.layers, async (layer) => {
+          const storageId = await getStorageIdByAssetId(ctx.db, layer.imageAssetId)
+          return {
+            id: layer.id,
+            imageAssetId: layer.imageAssetId,
+            imageUrl: storageId ? await ctx.storage.getUrl(storageId) : null,
+            name: layer.name,
+          }
+        })
       : undefined,
   ])
 

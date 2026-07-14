@@ -6,6 +6,7 @@ import type { Infer } from 'convex/values'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { historyPreviewValidator } from '../historyPreview'
+import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 
 type HistoryPreview = Infer<typeof historyPreviewValidator>
 
@@ -32,7 +33,8 @@ export async function getHistoryPreview(
       if (!snapshotData.imageAssetId) {
         return { kind: 'game-map', snapshotData, imageUrlState: { status: 'idle' } }
       }
-      const url = await ctx.storage.getUrl(snapshotData.imageAssetId as Id<'_storage'>)
+      const storageId = await getStorageIdByAssetId(ctx.db, snapshotData.imageAssetId)
+      const url = storageId ? await ctx.storage.getUrl(storageId) : null
       return {
         kind: 'game-map',
         snapshotData,

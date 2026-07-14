@@ -2,34 +2,25 @@ import { assertStoredUsername } from '../validation'
 import type { Username } from '../../../shared/users/validation'
 import type { MutationCtx, QueryCtx } from '../../_generated/server'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { UserProfile, UserProfileRow } from '../../../shared/users/types'
-import type { AssetId } from '../../../shared/common/ids'
+import type { UserProfile } from '../../../shared/users/types'
 
-function toUserProfileRow(profile: Doc<'userProfiles'>): UserProfileRow {
-  const profileImage =
-    profile.profileImage?.type === 'storage'
-      ? { type: 'asset' as const, assetId: profile.profileImage.storageId as unknown as AssetId }
-      : profile.profileImage
-  return {
-    ...profile,
-    profileImage,
-    username: assertStoredUsername(profile.username),
-  }
-}
-
-async function enhanceProfile(ctx: QueryCtx, profile: UserProfileRow): Promise<UserProfile> {
+async function enhanceProfile(ctx: QueryCtx, profile: Doc<'userProfiles'>): Promise<UserProfile> {
   let imageUrl: string | null = null
   if (profile.profileImage) {
     if (profile.profileImage.type === 'external') {
       imageUrl = profile.profileImage.url
     } else {
-      imageUrl =
-        (await ctx.storage.getUrl(profile.profileImage.assetId as unknown as Id<'_storage'>)) ??
-        null
+      imageUrl = (await ctx.storage.getUrl(profile.profileImage.storageId)) ?? null
     }
   }
   const { _id, _creationTime, profileImage: _, ...rest } = profile
-  return { ...rest, id: _id, createdAt: _creationTime, imageUrl }
+  return {
+    ...rest,
+    id: _id,
+    createdAt: _creationTime,
+    username: assertStoredUsername(profile.username),
+    imageUrl,
+  }
 }
 
 export async function getUserProfileByAuthProfileKey(
@@ -38,7 +29,7 @@ export async function getUserProfileByAuthProfileKey(
 ): Promise<UserProfile | null> {
   const profile = await getUserProfileDocByAuthProfileKey(ctx, { authProfileKey })
   if (!profile) return null
-  return enhanceProfile(ctx, toUserProfileRow(profile))
+  return enhanceProfile(ctx, profile)
 }
 
 export async function getUserProfileDocByAuthProfileKey(
@@ -60,7 +51,7 @@ export async function getUserProfileByUsername(
     .withIndex('by_username', (q) => q.eq('username', username))
     .unique()
   if (!profile) return null
-  return enhanceProfile(ctx, toUserProfileRow(profile))
+  return enhanceProfile(ctx, profile)
 }
 
 export async function getUserProfileById(
@@ -69,5 +60,5 @@ export async function getUserProfileById(
 ): Promise<UserProfile | null> {
   const profile = await ctx.db.get('userProfiles', profileId)
   if (!profile) return null
-  return enhanceProfile(ctx, toUserProfileRow(profile))
+  return enhanceProfile(ctx, profile)
 }

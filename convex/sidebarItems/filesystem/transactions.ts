@@ -88,7 +88,7 @@ function assertTransactionPayloadSize(delta: StoredResourceDelta) {
   }
 
   const patchCounts = [
-    receiptPatchesFromChangeSet(delta.changes).length,
+    delta.changes.length,
     redoPatchesFromChangeSet(delta.changes).length,
     undoPatchesFromChangeSet(delta.changes).length,
   ]
@@ -100,14 +100,15 @@ function assertTransactionPayloadSize(delta: StoredResourceDelta) {
   }
 }
 
-function receiptPatchesForDirection(
+async function receiptPatchesForDirection(
+  ctx: CampaignMutationCtx,
   changes: StoredResourceDelta['changes'],
   direction: FileSystemTransactionDirection,
   undoable: boolean,
 ) {
   if (direction === 'undo') return undoable ? undoPatchesFromChangeSet(changes) : []
   if (direction === 'redo') return undoable ? redoPatchesFromChangeSet(changes) : []
-  return receiptPatchesFromChangeSet(changes)
+  return await receiptPatchesFromChangeSet(ctx, changes)
 }
 
 export async function loadTransactionReceipt(
@@ -124,7 +125,7 @@ export async function loadTransactionReceipt(
     direction,
     command,
     events: transaction.events,
-    patches: receiptPatchesForDirection(changes, direction, transaction.undoable),
+    patches: await receiptPatchesForDirection(ctx, changes, direction, transaction.undoable),
     summary: summarizeResourceReceipt(command, transaction.events),
     undoable: transaction.undoable,
   }
@@ -159,7 +160,7 @@ export async function recordFilesystemTransaction(
   },
 ): Promise<ResourceTransactionReceipt> {
   assertTransactionPayloadSize(delta)
-  const receiptPatches = receiptPatchesFromChangeSet(delta.changes)
+  const receiptPatches = await receiptPatchesFromChangeSet(ctx, delta.changes)
   await ctx.db.insert('filesystemTransactions', {
     campaignId: ctx.campaign._id,
     actorMemberId: ctx.membership._id,
@@ -223,7 +224,7 @@ async function applySidebarItemPatch(
     throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
   }
   await requireSidebarItemPatchAuthority(ctx, item, patch)
-  if (hasMismatchedPrecondition(item, storedSidebarItemPatchFields(patch.before))) {
+  if (hasMismatchedPrecondition(item, await storedSidebarItemPatchFields(ctx, patch.before))) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,
       'Filesystem transaction can no longer be applied cleanly',
@@ -231,7 +232,7 @@ async function applySidebarItemPatch(
   }
   const after = toSidebarItemDocument({
     ...item,
-    ...storedSidebarItemPatchFields(patch.fields),
+    ...(await storedSidebarItemPatchFields(ctx, patch.fields)),
   })
   await ctx.db.replace('sidebarItems', patch.itemId, toSidebarItemReplacement(after))
 }
@@ -655,7 +656,7 @@ export async function applyFilesystemTransactionDirection(
     events: source.events,
     direction,
     command,
-    patches: receiptPatchesForDirection(changes, direction, source.undoable),
+    patches: await receiptPatchesForDirection(ctx, changes, direction, source.undoable),
     summary: summarizeResourceReceipt(command, source.events),
     undoable: true,
   }

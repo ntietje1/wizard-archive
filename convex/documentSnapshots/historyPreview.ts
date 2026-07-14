@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { assetIdValidator } from '../resources/validators'
 
 const historyPreviewImageUrlStateValidator = v.union(
   v.object({ status: v.literal('idle') }),
@@ -7,12 +8,12 @@ const historyPreviewImageUrlStateValidator = v.union(
 )
 
 const gameMapSnapshotDataValidator = v.object({
-  imageAssetId: v.nullable(v.string()),
+  imageAssetId: v.nullable(assetIdValidator),
   layers: v.optional(
     v.array(
       v.object({
         id: v.string(),
-        imageAssetId: v.nullable(v.string()),
+        imageAssetId: v.nullable(assetIdValidator),
         name: v.string(),
       }),
     ),

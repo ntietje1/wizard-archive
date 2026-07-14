@@ -4,17 +4,18 @@ import { defineTable } from 'convex/server'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { MapPinId } from '@wizard-archive/editor/resources/domain-id'
+import { assetIdValidator } from '../resources/validators'
 
 export const mapLayerValidator = v.object({
   id: v.string(),
-  imageAssetId: v.nullable(v.id('_storage')),
+  imageAssetId: v.nullable(assetIdValidator),
   imageUrl: v.nullable(v.string()),
   name: v.string(),
 })
 
 export const mapValidatorFields = {
   ...sidebarItemValidatorFields,
-  imageAssetId: v.nullable(v.id('_storage')),
+  imageAssetId: v.nullable(assetIdValidator),
   type: v.literal(RESOURCE_TYPES.gameMaps),
   imageUrl: v.nullable(v.string()),
   layers: v.optional(v.array(mapLayerValidator)),

@@ -2,8 +2,8 @@ import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persisten
 import type { FileItem } from '@wizard-archive/editor/files/item-contract'
 import type { CampaignQueryCtx } from '../../functions'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
-import type { Id } from '../../_generated/dataModel'
 import { logger } from '../../common/logger'
+import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 
 export async function getFileForDownload(
   ctx: CampaignQueryCtx,
@@ -11,7 +11,7 @@ export async function getFileForDownload(
   path: string,
 ): Promise<DownloadItem> {
   let downloadUrl: string | null = null
-  const storageId = item.assetId as unknown as Id<'_storage'> | null
+  const storageId = await getStorageIdByAssetId(ctx.db, item.assetId)
   if (storageId) {
     try {
       downloadUrl = await ctx.storage.getUrl(storageId)

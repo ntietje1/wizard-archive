@@ -1,11 +1,6 @@
 import { isPromiseLike } from '../../../../shared/common/async'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type {
-  CampaignMemberId,
-  SessionRowId,
-  AssetId,
-  UserProfileId,
-} from '../../../../shared/common/ids'
+import type { CampaignMemberId, SessionRowId, UserProfileId } from '../../../../shared/common/ids'
 import { brandString } from '../../../../shared/branded'
 import type { BrandedString } from '../../../../shared/branded'
 import { parseSlug, validateSlug } from '../../../../shared/slugs'
@@ -21,7 +16,7 @@ import type { NoteItem, NoteItemRow, NoteItemWithContent } from '../notes/item-c
 import { isOptimisticSidebarItemId } from './items/optimistic'
 import { RESOURCE_ICON_NAMES, RESOURCE_STATUS } from './items-persistence-contract'
 import type { RESOURCE_TYPES } from './items-persistence-contract'
-import type { ResourceShareId } from '../resources/domain-id'
+import type { AssetId, ResourceShareId } from '../resources/domain-id'
 import type { ResourceTitle } from '../resources/resource-contract'
 
 type ResourceTableId<TableName extends string> = string & { __tableName: TableName }

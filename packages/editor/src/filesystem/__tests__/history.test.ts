@@ -3,6 +3,7 @@ import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { testHistoryEntryId } from '../../test/history-entry-id'
 import { createResourceFileSystemHistory, resolveResourceHistoryScope } from '../history'
 import type { HistoryPreviewSnapshot, ResourceHistory } from '../history-types'
+import { testAssetId } from '../../../../../shared/test/asset-id'
 
 describe('workspace history model', () => {
   it('gates active history entries to persisted editable items', () => {
@@ -36,7 +37,7 @@ describe('workspace history model', () => {
   it('accepts product-level game-map preview content from the source', () => {
     const snapshot = {
       kind: 'game-map',
-      snapshotData: { imageAssetId: 'storage-1', pins: [] },
+      snapshotData: { imageAssetId: testAssetId('asset-1'), pins: [] },
       imageUrlState: { status: 'ready', url: 'https://example.test/map.png' },
     } satisfies HistoryPreviewSnapshot
 
@@ -79,7 +80,7 @@ describe('workspace history model', () => {
         entryTime: 2,
         snapshot: {
           kind: 'game-map',
-          snapshotData: { imageAssetId: 'storage-1', pins: [] },
+          snapshotData: { imageAssetId: testAssetId('asset-1'), pins: [] },
           imageUrlState: { status: 'ready', url: 'https://example.test/map.png' },
         },
       },

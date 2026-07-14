@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { assertResourceItemColor, assertResourceItemSlug } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
+import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import { FileForm } from '../form'
 import type { FileUploadControl } from '@wizard-archive/ui/file-upload/control'
 import type { FileFormEditState, FileFormSource } from '../source'
@@ -52,7 +53,7 @@ describe('FileForm', () => {
       iconName: 'FileText',
       name: 'Loaded handout',
       slug: 'loaded-handout',
-      assetId: testId('storage_1'),
+      assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const { rerender } = render(
       <FileForm
@@ -126,7 +127,7 @@ describe('FileForm', () => {
       id: testId('file_1'),
       name: 'Handout',
       slug: 'handout',
-      assetId: testId('storage_1'),
+      assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const source = createFileFormSource()
     const onSuccess = vi.fn()
@@ -159,7 +160,7 @@ describe('FileForm', () => {
       id: testId('file_1'),
       name: 'Handout',
       slug: 'handout',
-      assetId: testId('storage_1'),
+      assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const source = createFileFormSource()
     vi.mocked(source.replaceFile).mockRejectedValueOnce(new Error('Upload failed'))
@@ -200,7 +201,7 @@ describe('FileForm', () => {
       id: testId('file_1'),
       name: 'Handout',
       slug: 'handout',
-      assetId: testId('storage_1'),
+      assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const source = createFileFormSource()
     vi.mocked(source.replaceFile).mockResolvedValueOnce({

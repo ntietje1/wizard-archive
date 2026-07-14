@@ -9,6 +9,7 @@ import type * as ImportedTextModule from '../../../notes/imported-text'
 import { createCanvasDocumentDoc } from '../../../canvas/document-contract'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
 import { testNoteBlockId } from '../../../test/blocknote-id'
+import { testAssetId } from '../../../../../../shared/test/asset-id'
 
 const { canvasReadOnlyPreviewMock, readNoteYDocContentMock, staticNoteContentMock } = vi.hoisted(
   () => ({
@@ -195,7 +196,7 @@ describe('HistoryPreviewViewer', () => {
             kind: 'game-map',
             imageUrlState: { status: 'ready', url: 'https://example.com/map.png' },
             snapshotData: {
-              imageAssetId: 'storage-1',
+              imageAssetId: testAssetId('asset-1'),
               pins: [
                 {
                   id: testMapPinId('history-preview-pin'),
@@ -231,7 +232,7 @@ describe('HistoryPreviewViewer', () => {
             kind: 'game-map',
             imageUrlState: { status: 'idle' },
             snapshotData: {
-              imageAssetId: 'storage-1',
+              imageAssetId: testAssetId('asset-1'),
               pins: [],
             },
           },
