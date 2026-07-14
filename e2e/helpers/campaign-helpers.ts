@@ -81,9 +81,9 @@ export async function navigateToCampaign(page: Page, campaignName: string) {
   await waitForCampaignsDashboard(page)
   await page.getByText(campaignName, { exact: true }).click()
   await page.waitForURL(/\/campaigns\/[^/]+\/editor/)
-  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+  const resources = page.getByRole('navigation', { name: 'Resources' })
   const campaignNotFound = page.getByRole('heading', { name: 'Campaign Not Found' })
-  await expect(sidebar.or(campaignNotFound)).toBeVisible({ timeout: 30000 })
+  await expect(resources.or(campaignNotFound)).toBeVisible({ timeout: 30000 })
   if (await campaignNotFound.isVisible()) {
     throw new Error(`Campaign card navigated to an unavailable campaign: ${page.url()}`)
   }
