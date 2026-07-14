@@ -19,6 +19,8 @@ import { testNoteBlockId } from 'shared/test/note-block-id'
 import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 import { testResourceId } from 'shared/test/resource-id'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { initialResourceMetadataVersion } from '@wizard-archive/editor/resources/resource-metadata-version'
 
 type LocalMapItemWithContent = Extract<WizardEditorItemWithContent, { type: 'gameMap' }>
 type LocalNoteItemWithContent = Extract<WizardEditorItemWithContent, { type: 'note' }>
@@ -29,6 +31,30 @@ afterEach(() => {
 })
 
 describe('local filesystem snapshot', () => {
+  it('seeds canonical metadata versions for every local demo resource', async () => {
+    const workspaces = [
+      SAMPLE_LOCAL_WORKSPACE,
+      ...Object.values(PUBLIC_DEMO_SCENARIO_IDS).map(
+        (scenarioId) => createPublicDemoScenario(scenarioId).workspace,
+      ),
+    ]
+
+    for (const workspace of workspaces) {
+      for (const item of workspace.items) {
+        await expect(
+          initialResourceMetadataVersion({
+            parentId: item.parentId,
+            kind: item.type,
+            title: canonicalizeResourceTitle(item.title),
+            icon: item.iconName ?? null,
+            color: item.color ?? null,
+            lifecycle: item.status === 'active' ? 'active' : 'trashed',
+          }),
+        ).resolves.toEqual(item.metadataVersion)
+      }
+    }
+  })
+
   it('projects stable local item lifecycle timestamps from the workspace model', () => {
     vi.useFakeTimers()
     const createdAt = Date.UTC(2026, 6, 1, 15, 45, 0)

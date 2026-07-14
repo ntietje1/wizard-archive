@@ -17,6 +17,11 @@ import type {
   NoteBlockId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
+import {
+  assertSha256Digest,
+  initialVersion,
+} from '@wizard-archive/editor/resources/component-version'
+import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 
 const PUBLIC_DEMO_LINK_PREVIEW_NOTE_ID = SAMPLE_LOCAL_RESOURCE_IDS.marketNote
 type PublicDemoAdditionalBlock = LocalWorkspaceState['noteAdditionalBlocksById'][string][number]
@@ -193,6 +198,9 @@ function createPublicDemoCollaborationWorkspace(): LocalWorkspaceState {
         {
           createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
           id: PUBLIC_DEMO_SESSION_NOTE_ID,
+          metadataVersion: initialVersion(
+            assertSha256Digest('63ce6f735d05671271e4d0e42b5dab5cf05fc7990b4d7dfbf534861ade291d44'),
+          ),
           parentId: null,
           status: 'active',
           trashedAt: null,
@@ -241,6 +249,9 @@ function createPublicDemoLayeredLoreMapWorkspace(): LocalWorkspaceState {
       {
         createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
         id: PUBLIC_DEMO_MAP_LAYER_2_VISIBLE_ITEM_ID,
+        metadataVersion: initialVersion(
+          assertSha256Digest('3ebdd69720bde04f41bba5edc41cc5618599de86b8c43c70724f0b650425144b'),
+        ),
         parentId: null,
         status: 'active',
         trashedAt: null,
@@ -333,6 +344,9 @@ function createPublicDemoLayeredLoreMapWorkspace(): LocalWorkspaceState {
 function createPublicDemoTemplateWorkspace(): LocalWorkspaceState {
   return createWorkspaceWithNoteBody(PUBLIC_DEMO_TEMPLATE_NOTE_ID, PUBLIC_DEMO_TEMPLATE_NOTE_BODY, {
     description: 'Reusable note format',
+    metadataVersion: initialVersion(
+      assertSha256Digest('bea5322e4057c31aea55a0277829648cc826eec6a8a9bc997c27dde1b45b602c'),
+    ),
     title: 'Location Template',
   })
 }
@@ -408,7 +422,9 @@ function createPublicDemoScenarioState(
 function createWorkspaceWithNoteBody(
   noteId: string,
   body: string,
-  metadata?: { description?: string; title?: string },
+  metadata?:
+    | { description?: string; metadataVersion?: undefined; title?: undefined }
+    | { description?: string; metadataVersion: VersionStamp; title: string },
 ): LocalWorkspaceState {
   assertPublicDemoNoteItem(noteId)
   const workspace = clonePublicDemoWorkspace()
@@ -419,6 +435,7 @@ function createWorkspaceWithNoteBody(
           ? {
               ...item,
               ...(metadata.description ? { description: metadata.description } : {}),
+              ...(metadata.metadataVersion ? { metadataVersion: metadata.metadataVersion } : {}),
               ...(metadata.title ? { title: metadata.title } : {}),
             }
           : item,

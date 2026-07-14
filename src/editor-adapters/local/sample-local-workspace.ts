@@ -5,6 +5,10 @@ import {
 } from './local-workspace-model'
 import type { UserProfileId } from 'shared/common/ids'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  assertSha256Digest,
+  initialVersion,
+} from '@wizard-archive/editor/resources/component-version'
 
 const SAMPLE_MARKET_PIN_ID = assertDomainId(
   DOMAIN_ID_KIND.mapPin,
@@ -29,6 +33,10 @@ const SAMPLE_CLOCK_NODE_ID = assertDomainId(
 const SAMPLE_LOCAL_CAMPAIGN_ID = assertDomainId(
   DOMAIN_ID_KIND.campaign,
   '01980c1a-5e70-7000-8000-000000000301',
+)
+const SAMPLE_LOCAL_ACTOR_ID = assertDomainId(
+  DOMAIN_ID_KIND.campaignMember,
+  '01980c1a-5e70-7000-8000-000000000302',
 )
 export const SAMPLE_LOCAL_RESOURCE_IDS = {
   marketNote: assertDomainId(DOMAIN_ID_KIND.resource, '01980c1a-5e70-7000-8000-000000000401'),
@@ -68,6 +76,7 @@ const INITIAL_MAP_IMAGE_URL = `data:image/svg+xml;charset=utf-8,${encodeURICompo
 `)}`
 
 export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
+  actorId: SAMPLE_LOCAL_ACTOR_ID,
   localUser: {
     color: '#61afef',
     id: 'demo-user' as UserProfileId,
@@ -79,6 +88,9 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
       id: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
+      metadataVersion: initialVersion(
+        assertSha256Digest('b0d997ebc2fa80098fb4100293402befc37f14939570df1ca07d4278707f4c16'),
+      ),
       parentId: null,
       status: 'active',
       trashedAt: null,
@@ -90,6 +102,9 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
       id: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
+      metadataVersion: initialVersion(
+        assertSha256Digest('1e178a97b4e3b5b4e92a0517a8e420984d426488b11d8937fdc4ccb4f345f94e'),
+      ),
       parentId: null,
       status: 'active',
       trashedAt: null,
@@ -101,6 +116,9 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
       id: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
+      metadataVersion: initialVersion(
+        assertSha256Digest('c9552caf4d1e4a61d848aa7c8365977f48d51c42a39a9742417b10505abfd9b3'),
+      ),
       parentId: null,
       status: 'active',
       trashedAt: null,
@@ -112,6 +130,9 @@ export const SAMPLE_LOCAL_WORKSPACE: LocalWorkspaceState = {
     {
       createdAt: LOCAL_WORKSPACE_INITIAL_TIMESTAMP,
       id: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
+      metadataVersion: initialVersion(
+        assertSha256Digest('31cce17b34abce152679fa435a7481797dfde94fee20f31c99f26dd6640d6cbb'),
+      ),
       parentId: null,
       status: 'active',
       trashedAt: null,

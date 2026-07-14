@@ -20,6 +20,7 @@ import type {
   MapPinId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
+import type { VersionStamp } from '@wizard-archive/editor/resources/component-version'
 
 type LocalWorkspaceItemType = 'note' | 'folder' | 'canvas' | 'map' | 'file'
 type LocalSidebarItemType = WizardEditorItem['type']
@@ -40,6 +41,7 @@ interface LocalWorkspaceItem {
   id: ResourceId
   iconName?: LocalResourceIconName
   isBookmarked?: boolean
+  metadataVersion?: VersionStamp
   parentId: ResourceId | null
   slug?: WizardEditorResourceSlug
   status: 'active' | 'trash'
@@ -107,6 +109,7 @@ interface LocalNoteBlockVisibilityRule extends Partial<
 }
 
 export interface LocalWorkspaceState {
+  actorId: CampaignMemberId
   localUser: LocalWorkspaceUser
   workspaceId: CampaignId
   nextLocalItemIndex: number
