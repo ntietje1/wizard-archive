@@ -1,11 +1,11 @@
 import { useMatch, useNavigate } from '@tanstack/react-router'
-import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { WorkspaceRouteSearch } from '~/editor-adapters/workspace-route-search'
 import { EDITOR_ROUTE, EDITOR_ROUTE_ID } from '~/editor-adapters/live/editor-route'
 import { useLastWorkspaceItem } from '~/editor-adapters/live/use-last-workspace-item'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
-export function useLiveWorkspaceSelectedSlug(): WizardEditorResourceSlug | null {
+export function useLiveWorkspaceSelectedResourceId(): ResourceId | null {
   const editorMatch = useMatch({
     from: EDITOR_ROUTE_ID,
     shouldThrow: false,
@@ -30,12 +30,12 @@ export const useLiveWorkspaceNavigation = () => {
   }
 
   const navigateToItem = async (
-    slug: WizardEditorResourceSlug,
+    resourceId: ResourceId,
     options: { heading?: string; replace?: boolean } = {},
   ) => {
-    setLastSelectedItem(slug)
+    setLastSelectedItem(resourceId)
     await navigateToWorkspaceRoute(
-      options.heading ? { item: slug, heading: options.heading } : { item: slug },
+      options.heading ? { item: resourceId, heading: options.heading } : { item: resourceId },
       options.replace,
     )
   }

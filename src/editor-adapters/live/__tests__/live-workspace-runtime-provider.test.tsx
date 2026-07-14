@@ -1,12 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { WizardEditorRuntime } from '@wizard-archive/editor/adapter'
+import { testResourceId } from '../../../../shared/test/resource-id'
 import { LiveWorkspaceRuntimeProvider } from '../live-workspace-runtime-provider'
 
 const clearWorkspaceContentMock = vi.hoisted(() => vi.fn())
 const navigateToItemMock = vi.hoisted(() => vi.fn())
 const useLiveFileSystemRuntimeMock = vi.hoisted(() => vi.fn())
 const useLiveWorkspaceRuntimeMock = vi.hoisted(() => vi.fn())
+const selectedResourceId = testResourceId('scene-one')
 const campaignState = vi.hoisted(() => ({
   campaignId: 'campaign_1' as string | undefined,
   campaignSlug: 'lost city',
@@ -58,7 +60,7 @@ vi.mock('../use-live-workspace-navigation', () => ({
     clearWorkspaceContent: clearWorkspaceContentMock,
     navigateToItem: navigateToItemMock,
   }),
-  useLiveWorkspaceSelectedSlug: () => 'scene-one',
+  useLiveWorkspaceSelectedResourceId: () => selectedResourceId,
 }))
 
 vi.mock('../filesystem/host', () => ({
@@ -106,11 +108,12 @@ describe('LiveWorkspaceRuntimeProvider', () => {
     )
     const navigation = useLiveFileSystemRuntimeMock.mock.calls[0]?.[1] as {
       getCurrentResourceId: () => string | null
-      openResource: (resource: { slug: string }, options?: { replace?: boolean }) => void
+      openResource: (resource: { id: string }, options?: { replace?: boolean }) => void
     }
-    expect(navigation.getCurrentResourceId()).toBe('scene_item')
-    navigation.openResource({ slug: 'scene-two' }, { replace: true })
-    expect(navigateToItemMock).toHaveBeenCalledWith('scene-two', { replace: true })
+    expect(navigation.getCurrentResourceId()).toBe(selectedResourceId)
+    const otherResourceId = testResourceId('scene-two')
+    navigation.openResource({ id: otherResourceId }, { replace: true })
+    expect(navigateToItemMock).toHaveBeenCalledWith(otherResourceId, { replace: true })
     expect(useLiveWorkspaceRuntimeMock).toHaveBeenCalledExactlyOnceWith({
       workspaceId: 'campaign_1',
       filesystemReadModel,
@@ -149,15 +152,15 @@ describe('LiveWorkspaceRuntimeProvider', () => {
 
     const runtimeInput = useLiveWorkspaceRuntimeMock.mock.calls[0]?.[0] as {
       openExternalUrl: (url: string) => void
-      openSeparateItem: (input: { heading?: string; itemSlug: string }) => void
+      openSeparateItem: (input: { heading?: string; resourceId: string }) => void
     }
     runtimeInput.openExternalUrl('https://example.com/file.pdf')
     runtimeInput.openSeparateItem({
       heading: 'Intro#Details',
-      itemSlug: 'scene-one',
+      resourceId: selectedResourceId,
     })
 
-    const expectedSearchParams = new URLSearchParams({ item: 'scene-one' })
+    const expectedSearchParams = new URLSearchParams({ item: selectedResourceId })
     expectedSearchParams.set('heading', 'Intro#Details')
     expect(openMock).toHaveBeenCalledWith(
       'https://example.com/file.pdf',

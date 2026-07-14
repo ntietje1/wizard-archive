@@ -4,12 +4,7 @@ import { isPromiseLike } from '../../../../shared/common/async'
 import type { ResourceImportContentInitializers } from '../files/import-contract'
 import { canonicalizeResourceItemTitle } from '../workspace/items'
 import type { AnyItem } from '../workspace/items'
-import type {
-  ResourceColor,
-  ResourceSlug,
-  ResourceIconName,
-  ResourceKind,
-} from '../workspace/resource-contract'
+import type { ResourceColor, ResourceIconName, ResourceKind } from '../workspace/resource-contract'
 import type { ResourceTitle } from '../resources/resource-contract'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 
@@ -48,30 +43,19 @@ type FileSystemHostPasteTargetInput = {
   clickedItem?: AnyItem
 }
 
-type NavigateToWorkspaceItem = (
-  slug: ResourceSlug,
-  options?: { heading?: string; replace?: boolean },
-) => Promise<unknown> | void
-
-type ResourceSlugChangeListener = (itemId: ResourceId, slug: ResourceSlug | null) => void
 type CreateItemErrorReporter = (error: unknown, message: string) => void
-type LastSelectedItemWriter = (slug: ResourceSlug) => void
 
 type WorkspaceFileSystemOperationsInput = {
   capabilities: ResourceCommandCapabilities
   catalog: ResourceCatalog
   clipboardDriver: ResourceClipboardDriver
   contentInitializers: ResourceImportContentInitializers
-  currentItem: AnyItem | null
   dropDriver: ResourceDropDriver
   historyDriver?: ResourceHistoryOperationDriver
   ioCapabilities?: ResourceIoCapabilities
   operationDriver: ResourceOperationDriver
   trashDriver: ResourceTrashDriver
-  navigateToItem: NavigateToWorkspaceItem
-  onItemSlugChange?: ResourceSlugChangeListener
   reportCreateItemError: CreateItemErrorReporter
-  setLastSelectedItem?: LastSelectedItemWriter
 }
 
 type OptimisticCreatedItems = {
@@ -98,16 +82,12 @@ export function createWorkspaceFileSystemOperations({
   catalog,
   clipboardDriver,
   contentInitializers,
-  currentItem,
   dropDriver,
   historyDriver = UNAVAILABLE_FILE_SYSTEM_HISTORY_DRIVER,
   ioCapabilities = {},
   operationDriver,
   trashDriver,
-  navigateToItem,
-  onItemSlugChange,
   reportCreateItemError,
-  setLastSelectedItem,
 }: WorkspaceFileSystemOperationsInput): FileSystemOperations {
   const optimisticCreatedItems = createOptimisticCreatedItems()
   const canCreateItems = isOperationCapabilityAvailable(capabilities.createItems)
@@ -117,16 +97,11 @@ export function createWorkspaceFileSystemOperations({
     canManageFolders,
     catalog,
     filesystem: operationDriver,
-    onItemSlugChange,
     optimisticCreatedItems,
     reportCreateItemError,
   })
   const updateItemMetadata = createWorkspaceUpdateItemMetadataOperation({
-    currentItem,
     filesystem: operationDriver,
-    navigateToItem,
-    onItemSlugChange,
-    setLastSelectedItem,
   })
   const importFile: ResourceImportFileOperation = (input) =>
     importWorkspaceFile({
@@ -168,7 +143,6 @@ function createWorkspaceCreateItemOperation({
   canManageFolders,
   catalog,
   filesystem,
-  onItemSlugChange,
   optimisticCreatedItems,
   reportCreateItemError,
 }: {
@@ -176,7 +150,6 @@ function createWorkspaceCreateItemOperation({
   canManageFolders: boolean
   catalog: ResourceCatalog
   filesystem: ResourceOperationDriver
-  onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange']
   optimisticCreatedItems: OptimisticCreatedItems
   reportCreateItemError: WorkspaceFileSystemOperationsInput['reportCreateItemError']
 }): FileSystemCreateItem {
@@ -188,7 +161,6 @@ function createWorkspaceCreateItemOperation({
       filesystem,
       initialize,
       input,
-      onItemSlugChange,
       optimisticCreatedItems,
       ownerScope: null,
       reportCreateItemError,
@@ -213,7 +185,6 @@ function createWorkspaceItemWithScope({
   filesystem,
   initialize,
   input,
-  onItemSlugChange,
   optimisticCreatedItems,
   ownerScope,
   reportCreateItemError,
@@ -224,14 +195,13 @@ function createWorkspaceItemWithScope({
   filesystem: ResourceOperationDriver
   initialize: WorkspaceCreateItemInitializer
   input: WorkspaceCreateItemInput
-  onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange']
   optimisticCreatedItems: OptimisticCreatedItems
   ownerScope: CreateItemScope | null
   reportCreateItemError: WorkspaceFileSystemOperationsInput['reportCreateItemError']
 }): WorkspaceCreateItemResult {
   if (!canCreateItems) return { status: 'unavailable', reason: 'create_items_unsupported' }
 
-  const scope = createItemScope(optimisticCreatedItems, onItemSlugChange, ownerScope)
+  const scope = createItemScope(optimisticCreatedItems, ownerScope)
   try {
     const request = createWorkspaceItemRequest({ catalog, input, optimisticCreatedItems })
     if (!canCreatePlannedItem(input.type, request.parentPlan, canManageFolders)) {
@@ -239,7 +209,6 @@ function createWorkspaceItemWithScope({
     }
     const recordCreatedItem = createCreatedItemRecorder({
       name: request.name,
-      onItemSlugChange,
       optimisticCreatedItems,
       parentKey: request.parentKey,
       scope,
@@ -256,7 +225,6 @@ function createWorkspaceItemWithScope({
               filesystem,
               initialize: nestedInitialize,
               input: nestedInput,
-              onItemSlugChange,
               optimisticCreatedItems,
               ownerScope: scope,
               reportCreateItemError,
@@ -294,7 +262,6 @@ function canCreatePlannedItem(
 
 function createItemScope(
   optimisticCreatedItems: OptimisticCreatedItems,
-  onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange'],
   ownerScope: CreateItemScope | null,
 ): CreateItemScope {
   const createScope = new Set<ResourceId>()
@@ -310,7 +277,6 @@ function createItemScope(
     discard: () => {
       for (const createdItemId of [...createScope].reverse()) {
         removeOptimisticCreatedItem(optimisticCreatedItems, { createdItemId })
-        onItemSlugChange?.(createdItemId, null)
         ownerScope?.forget(createdItemId)
       }
       createScope.clear()
@@ -363,14 +329,12 @@ function reconcilePersistedOptimisticCreatedItems(
 
 function createCreatedItemRecorder({
   name,
-  onItemSlugChange,
   optimisticCreatedItems,
   parentKey,
   scope,
   type,
 }: {
   name: ResourceTitle
-  onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange']
   optimisticCreatedItems: OptimisticCreatedItems
   parentKey: string
   scope: CreateItemScope
@@ -386,7 +350,6 @@ function createCreatedItemRecorder({
       parentKey,
       type,
     })
-    onItemSlugChange?.(createdItem.id, createdItem.slug)
     recordedResult = { status: 'completed', id: createdItem.id, slug: createdItem.slug }
     return recordedResult
   }
@@ -450,17 +413,9 @@ function removeOptimisticCreatedItem(
 }
 
 function createWorkspaceUpdateItemMetadataOperation({
-  currentItem,
   filesystem,
-  navigateToItem,
-  onItemSlugChange,
-  setLastSelectedItem,
 }: {
-  currentItem: AnyItem | null
   filesystem: ResourceOperationDriver
-  navigateToItem: WorkspaceFileSystemOperationsInput['navigateToItem']
-  onItemSlugChange: WorkspaceFileSystemOperationsInput['onItemSlugChange']
-  setLastSelectedItem: WorkspaceFileSystemOperationsInput['setLastSelectedItem']
 }): FileSystemUpdateItemMetadata {
   return async ({ color, iconName, item, name }) => {
     const metadataUpdate = normalizeRuntimeMetadataUpdate({ color, iconName, name })
@@ -480,13 +435,6 @@ function createWorkspaceUpdateItemMetadataOperation({
       throw new Error('Failed to update item metadata', { cause: error })
     }
     const slug = update.slug ?? item.slug
-    onItemSlugChange?.(item.id, slug)
-
-    if (currentItem?.id === item.id && slug !== item.slug) {
-      setLastSelectedItem?.(slug)
-      await Promise.resolve(navigateToItem(slug, { replace: true })).catch(() => undefined)
-    }
-
     return { slug }
   }
 }

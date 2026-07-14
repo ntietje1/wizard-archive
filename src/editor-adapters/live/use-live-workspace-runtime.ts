@@ -16,11 +16,10 @@ import type {
   WizardEditorNavigation,
   WizardEditorPermissionSource,
   WizardEditorResourceAvailabilityMetadataSource,
-  WizardEditorResourceSlug,
   WizardEditorRuntime,
   WizardEditorWorkspaceActor,
 } from '@wizard-archive/editor/adapter'
-import { createElement, useCallback, useRef, useState } from 'react'
+import { createElement, useCallback, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
@@ -63,7 +62,7 @@ import { handleError } from '~/shared/utils/logger'
 
 export type LiveWorkspaceSeparateItemNavigation = (input: {
   heading?: string
-  itemSlug: string
+  resourceId: ResourceId
 }) => void
 
 type LiveWorkspaceExternalUrlNavigation = (url: string) => void
@@ -97,7 +96,7 @@ export function useLiveWorkspaceRuntime({
     visibleActiveItems: filesystemReadModel.visibleActiveItems,
   })
   const currentItem = useLiveCurrentItem({
-    getKnownItemBySlug: filesystemModel.catalog.getKnownItemBySlug,
+    getKnownItemById: filesystemModel.catalog.getKnownItemById,
   })
   const workspaceMode = useLiveWorkspaceMode(
     currentItem.item,
@@ -119,7 +118,6 @@ export function useLiveWorkspaceRuntime({
     filesystemHost,
     filesystemModel,
     canUseDmWorkspaceActions,
-    navigationSource,
     sidebarItemsShareOperations,
     workspaceId,
     workspaceMode,
@@ -142,7 +140,6 @@ type LiveCampaign = ReturnType<typeof useCampaign>
 type LiveCurrentItem = ReturnType<typeof useLiveCurrentItem>
 type LiveWorkspaceMode = ReturnType<typeof useLiveWorkspaceMode>
 type LiveFileSystemModel = ReturnType<typeof createWizardEditorResourceCatalogSource>
-type LiveRuntimeNavigationSource = ReturnType<typeof useLiveRuntimeNavigation>
 type LiveRuntimeSources = ReturnType<typeof createWizardEditorRuntimeSources>
 
 function useLiveRuntimeSources({
@@ -152,7 +149,6 @@ function useLiveRuntimeSources({
   filesystemHost,
   filesystemModel,
   canUseDmWorkspaceActions,
-  navigationSource,
   sidebarItemsShareOperations,
   workspaceId,
   workspaceMode,
@@ -163,7 +159,6 @@ function useLiveRuntimeSources({
   filesystemHost: LiveFileSystemHost
   filesystemModel: LiveFileSystemModel
   canUseDmWorkspaceActions: boolean
-  navigationSource: LiveRuntimeNavigationSource
   sidebarItemsShareOperations: LiveSidebarItemsShareOperations
   workspaceId: string
   workspaceMode: LiveWorkspaceMode
@@ -230,11 +225,8 @@ function useLiveRuntimeSources({
         initializeImportedFile: contentSessions.file.initializeImportedFile,
         initializeImportedTextFile,
       },
-      navigateToItem: navigationSource.navigateToItem,
-      onItemSlugChange: navigationSource.onItemSlugChange,
       resourceCommandDriver: filesystemHost.resourceCommands,
       reportCreateItemError: handleError,
-      setLastSelectedItem: navigationSource.setLastSelectedItem,
       trashDialogDriver: filesystemHost.trashOperations,
       unavailableReason: 'insufficient_authority',
     },
@@ -424,12 +416,11 @@ function useLiveRuntimeNavigation({
   const { clearWorkspaceContent, navigateToItem, navigateToTrash, openLastWorkspaceItem } =
     useLiveWorkspaceNavigation()
   const { setLastSelectedItem } = useLastWorkspaceItem()
-  const createdItemSlugsByIdRef = useRef(new Map<string, WizardEditorResourceSlug>())
-  const requestedSlug = currentItem.requestedSlug
+  const requestedResourceId = currentItem.requestedResourceId
   const currentNavigationState = resolveWizardEditorNavigationState({
     canCreateDashboard: canCreateItems,
     resource: currentItem.item ? createWizardEditorResource(currentItem.item.id) : null,
-    isResourceRequested: Boolean(requestedSlug),
+    isResourceRequested: Boolean(requestedResourceId),
     isWorkspaceLoaded: campaign.isCampaignLoaded,
     trashRequested: currentItem.isTrashRequested,
   })
@@ -439,19 +430,19 @@ function useLiveRuntimeNavigation({
   }
   const openItem: WizardEditorNavigation['openItem'] = async (resource, options) => {
     const itemId = getWizardEditorResourceId(resource)
-    const createdSlug = createdItemSlugsByIdRef.current.get(itemId)
-    const item = createdSlug ? null : catalog.getVisibleItemById(itemId)
-    const slug = createdSlug ?? item?.slug
-    if (!slug) return { status: 'unavailable', reason: 'resource_not_visible' }
-    setLastSelectedItem(slug)
+    const knownItem = catalog.getKnownItemById(itemId)
+    if (knownItem && !catalog.getVisibleItemById(itemId)) {
+      return { status: 'unavailable', reason: 'resource_not_visible' }
+    }
+    setLastSelectedItem(itemId)
     if (options?.target === 'separate') {
       openSeparateItem({
         heading: options.heading,
-        itemSlug: slug,
+        resourceId: itemId,
       })
       return { status: 'completed' }
     }
-    return await completeNavigation(() => navigateToItem(slug, options))
+    return await completeNavigation(() => navigateToItem(itemId, options))
   }
 
   return {
@@ -464,13 +455,6 @@ function useLiveRuntimeNavigation({
       openItem,
       openExternalUrl: (url: string) => completeNavigation(() => openExternalUrl(url)),
       openTrash: () => completeNavigation(navigateToTrash),
-    },
-    onItemSlugChange: (itemId: string, slug: WizardEditorResourceSlug | null) => {
-      if (slug === null) {
-        createdItemSlugsByIdRef.current.delete(itemId)
-        return
-      }
-      createdItemSlugsByIdRef.current.set(itemId, slug)
     },
     setLastSelectedItem,
   }
@@ -497,13 +481,13 @@ function useLiveRuntimeCurrentState({
   )
   const sourceAvailabilityState = useLiveSidebarItemAvailabilityState({
     accessStatus: currentItem.accessStatus,
-    lookup: { kind: 'slug', slug: currentItem.requestedSlug },
+    lookup: { kind: 'id', id: currentItem.requestedResourceId },
     metadataSource: currentItemAvailabilityMetadataSource,
     readableItem: currentItem.contentItem,
     readableItemLoading: currentItem.isLoading,
     readableItemError: currentItem.itemError,
     subject: 'item',
-    fallbackLabel: getRequestedItemFallbackLabel(currentItem.requestedSlug),
+    fallbackLabel: 'Item',
   })
   const availabilityState: WizardEditorCurrentResourceState['availabilityState'] =
     campaign.isCampaignLoaded
@@ -544,11 +528,6 @@ function useLiveRuntimeContentSessions({
   const noteValues = useLiveNoteValueSessionPorts()
 
   return { file, map, note, noteHeadings, notePlayback, noteValues }
-}
-
-function getRequestedItemFallbackLabel(slug: WizardEditorResourceSlug | null) {
-  const label = slug?.trim()
-  return label || 'Item'
 }
 
 function createCurrentItemAvailabilityMetadataSource(

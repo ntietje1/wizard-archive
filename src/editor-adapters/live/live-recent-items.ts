@@ -2,26 +2,27 @@ import usePersistedState from '@wizard-archive/ui/hooks/use-persisted-state'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { logger } from '~/shared/utils/logger'
 import { readPersistedJson, writePersistedJson } from '@wizard-archive/ui/storage/persisted-storage'
-import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
-import type { WizardEditorItem, WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
+import type { WizardEditorItem } from '@wizard-archive/editor/adapter'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 const MAX_RECENT_ITEMS = 100
 
 interface RecentItemEntry {
-  slug: WizardEditorResourceSlug
+  resourceId: ResourceId
   timestamp: number
 }
 
 function storageKey(workspaceRecordId: string) {
-  return `recent-items-${workspaceRecordId}`
+  return `recent-resources-v1-${workspaceRecordId}`
 }
 
-export function addLiveRecentItem(workspaceRecordId: string, slug: WizardEditorResourceSlug) {
+export function addLiveRecentItem(workspaceRecordId: string, resourceId: ResourceId) {
   if (!workspaceRecordId) return
   const key = storageKey(workspaceRecordId)
   try {
     const entries = readPersistedJson(key, [], parseRecentItemEntries)
-    writePersistedJson(key, addRecentItemEntry({ entries, slug }))
+    writePersistedJson(key, addRecentItemEntry({ entries, resourceId }))
   } catch (error) {
     logger.debug('Failed to write recent items for key', key, error)
   }
@@ -45,16 +46,16 @@ export function useLiveRecentItems<T>(
 function addRecentItemEntry({
   entries,
   now = Date.now(),
-  slug,
+  resourceId,
 }: {
   entries: ReadonlyArray<RecentItemEntry>
   now?: number
-  slug: WizardEditorResourceSlug
+  resourceId: ResourceId
 }): Array<RecentItemEntry> {
-  return [{ slug, timestamp: now }, ...entries.filter((entry) => entry.slug !== slug)].slice(
-    0,
-    MAX_RECENT_ITEMS,
-  )
+  return [
+    { resourceId, timestamp: now },
+    ...entries.filter((entry) => entry.resourceId !== resourceId),
+  ].slice(0, MAX_RECENT_ITEMS)
 }
 
 function parseRecentItemEntries(value: unknown): Array<RecentItemEntry> {
@@ -67,12 +68,12 @@ function parseRecentItemEntries(value: unknown): Array<RecentItemEntry> {
 
 function parseRecentItemEntry(entry: unknown): RecentItemEntry | null {
   if (typeof entry !== 'object' || entry === null) return null
-  const rawSlug = (entry as { slug?: unknown }).slug
+  const rawResourceId = (entry as { resourceId?: unknown }).resourceId
   const timestamp = (entry as { timestamp?: unknown }).timestamp
-  if (typeof rawSlug !== 'string' || typeof timestamp !== 'number') return null
+  if (typeof rawResourceId !== 'string' || typeof timestamp !== 'number') return null
 
-  const slug = parseWizardEditorResourceSlug(rawSlug)
-  return slug ? { slug, timestamp } : null
+  const resourceId = parseDomainId(DOMAIN_ID_KIND.resource, rawResourceId)
+  return resourceId ? { resourceId, timestamp } : null
 }
 
 function createRecentItemResults<T>({
@@ -84,14 +85,14 @@ function createRecentItemResults<T>({
   items: ReadonlyArray<WizardEditorItem>
   mapItem: (item: WizardEditorItem) => T
 }): Array<T> {
-  const slugToItem = new Map<WizardEditorResourceSlug, WizardEditorItem>()
+  const itemById = new Map<ResourceId, WizardEditorItem>()
   for (const item of items) {
-    slugToItem.set(item.slug, item)
+    itemById.set(item.id, item)
   }
 
   const results: Array<T> = []
   for (const entry of entries) {
-    const item = slugToItem.get(entry.slug)
+    const item = itemById.get(entry.resourceId)
     if (item) {
       results.push(mapItem(item))
     }

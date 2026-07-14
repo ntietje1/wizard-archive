@@ -1,7 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
-import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
+import { testResourceId } from '../../../../shared/test/resource-id'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { addLiveRecentItem, useLiveRecentItems } from '../live-recent-items'
 
@@ -31,60 +30,66 @@ describe('live recent items', () => {
   })
 
   it('persists a recent item entry for the live workspace storage key', () => {
-    addLiveRecentItem('campaign-1', testResourceSlug('my-note'))
+    const resourceId = testResourceId('my-note')
+    addLiveRecentItem('campaign-1', resourceId)
 
-    const stored = JSON.parse(storage['recent-items-campaign-1'])
+    const stored = JSON.parse(storage['recent-resources-v1-campaign-1'])
     expect(stored).toHaveLength(1)
-    expect(stored[0].slug).toBe('my-note')
+    expect(stored[0].resourceId).toBe(resourceId)
     expect(typeof stored[0].timestamp).toBe('number')
     expect(window.dispatchEvent).toHaveBeenCalledOnce()
     const event = vi.mocked(window.dispatchEvent).mock.calls[0][0] as CustomEvent
     expect(event.type).toBe('localStorageChange')
-    expect(event.detail.key).toBe('recent-items-campaign-1')
+    expect(event.detail.key).toBe('recent-resources-v1-campaign-1')
   })
 
-  it('moves the most recent slug to the front and caps the live workspace history', () => {
-    storage['recent-items-campaign-1'] = JSON.stringify(
+  it('moves the most recent resource to the front and caps the live workspace history', () => {
+    const ids = Array.from({ length: 100 }, (_, index) => testResourceId(`note-${index}`))
+    storage['recent-resources-v1-campaign-1'] = JSON.stringify(
       Array.from({ length: 100 }, (_, index) => ({
-        slug: `note-${index}`,
+        resourceId: ids[index],
         timestamp: index,
       })),
     )
 
-    addLiveRecentItem('campaign-1', testResourceSlug('note-50'))
+    addLiveRecentItem('campaign-1', ids[50]!)
 
-    const stored = JSON.parse(storage['recent-items-campaign-1'])
+    const stored = JSON.parse(storage['recent-resources-v1-campaign-1'])
     expect(stored).toHaveLength(100)
-    expect(stored[0].slug).toBe('note-50')
+    expect(stored[0].resourceId).toBe(ids[50])
     expect(typeof stored[0].timestamp).toBe('number')
-    expect(stored.filter((entry: { slug: string }) => entry.slug === 'note-50')).toHaveLength(1)
+    expect(
+      stored.filter((entry: { resourceId: string }) => entry.resourceId === ids[50]),
+    ).toHaveLength(1)
   })
 
-  it('adds a new slug to the front and drops the oldest capped entry', () => {
-    storage['recent-items-campaign-1'] = JSON.stringify(
+  it('adds a new resource to the front and drops the oldest capped entry', () => {
+    const ids = Array.from({ length: 100 }, (_, index) => testResourceId(`note-${index}`))
+    const newResourceId = testResourceId('new-note')
+    storage['recent-resources-v1-campaign-1'] = JSON.stringify(
       Array.from({ length: 100 }, (_, index) => ({
-        slug: `note-${index}`,
+        resourceId: ids[index],
         timestamp: index,
       })),
     )
 
-    addLiveRecentItem('campaign-1', testResourceSlug('new-note'))
+    addLiveRecentItem('campaign-1', newResourceId)
 
-    const stored = JSON.parse(storage['recent-items-campaign-1'])
+    const stored = JSON.parse(storage['recent-resources-v1-campaign-1'])
     expect(stored).toHaveLength(100)
-    expect(stored[0].slug).toBe('new-note')
-    expect(stored.some((entry: { slug: string }) => entry.slug === 'note-99')).toBe(false)
+    expect(stored[0].resourceId).toBe(newResourceId)
+    expect(stored.some((entry: { resourceId: string }) => entry.resourceId === ids[99])).toBe(false)
   })
 
   it('projects valid persisted entries onto visible live workspace items', async () => {
-    const first = createNote({ name: 'First', slug: 'first' })
-    const second = createNote({ name: 'Second', slug: 'second' })
-    storage['recent-items-campaign-1'] = JSON.stringify([
-      { slug: 'missing', timestamp: 3 },
-      { slug: 'second', timestamp: 2 },
-      { slug: 'first', timestamp: 1 },
-      { slug: '', timestamp: 0 },
-      { slug: 'missing-time' },
+    const first = createNote({ id: testResourceId('first'), name: 'First' })
+    const second = createNote({ id: testResourceId('second'), name: 'Second' })
+    storage['recent-resources-v1-campaign-1'] = JSON.stringify([
+      { resourceId: testResourceId('missing'), timestamp: 3 },
+      { resourceId: second.id, timestamp: 2 },
+      { resourceId: first.id, timestamp: 1 },
+      { resourceId: '', timestamp: 0 },
+      { resourceId: testResourceId('missing-time') },
     ])
 
     const { result } = renderHook(() => useLiveRecentItems([first, second], (item) => item.name))
@@ -94,11 +99,3 @@ describe('live recent items', () => {
     })
   })
 })
-
-function testResourceSlug(value: string): WizardEditorResourceSlug {
-  const slug = parseWizardEditorResourceSlug(value)
-  if (!slug) {
-    throw new Error(`Invalid test resource slug: ${value}`)
-  }
-  return slug
-}

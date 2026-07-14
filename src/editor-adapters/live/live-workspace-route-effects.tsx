@@ -1,15 +1,17 @@
 import { useEffect } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { addLiveRecentItem } from '~/editor-adapters/live/live-recent-items'
-import { useLiveWorkspaceSelectedSlug } from './use-live-workspace-navigation'
+import { useLiveWorkspaceSelectedResourceId } from './use-live-workspace-navigation'
 
 export function LiveWorkspaceRouteEffects() {
-  const requestedSlug = useLiveWorkspaceSelectedSlug()
+  const requestedResourceId = useLiveWorkspaceSelectedResourceId()
   const { campaignId: workspaceRecordId } = useCampaign()
 
   useEffect(() => {
-    if (requestedSlug && workspaceRecordId) addLiveRecentItem(workspaceRecordId, requestedSlug)
-  }, [requestedSlug, workspaceRecordId])
+    if (requestedResourceId && workspaceRecordId) {
+      addLiveRecentItem(workspaceRecordId, requestedResourceId)
+    }
+  }, [requestedResourceId, workspaceRecordId])
 
   return null
 }

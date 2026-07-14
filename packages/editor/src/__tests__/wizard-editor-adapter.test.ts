@@ -350,7 +350,6 @@ describe('WizardEditor adapter contract', () => {
     const contentInitializers = createTestCommands().contentInitializers
     const resourceCommandDriver = createTestCommands().resourceCommandDriver
     const trashDriver = createTestCommands().trashDriver
-    const navigateToItem = vi.fn()
     const reportCreateItemError = vi.fn()
 
     const commands = createWizardEditorCommandSource({
@@ -358,7 +357,6 @@ describe('WizardEditor adapter contract', () => {
       canManageFolders: false,
       clipboardDriver,
       contentInitializers,
-      navigateToItem,
       resourceCommandDriver,
       reportCreateItemError,
       trashDialogDriver: trashDriver,
@@ -372,7 +370,6 @@ describe('WizardEditor adapter contract', () => {
     expect(commands.clipboardDriver).toBe(clipboardDriver)
     expect(commands.contentInitializers).toBe(contentInitializers)
     expect(commands.resourceCommandDriver).toBe(resourceCommandDriver)
-    expect(commands.navigateToItem).toBe(navigateToItem)
     expect(commands.reportCreateItemError).toBe(reportCreateItemError)
     commands.dropDriver.executeDropCommand({ type: 'trash', itemIds: [] })
     commands.operationDriver.toggleBookmarks([])
@@ -537,7 +534,6 @@ describe('WizardEditor adapter contract', () => {
         canCreateItems: true,
         clipboardDriver: commandDrivers.clipboardDriver,
         contentInitializers: commandDrivers.contentInitializers,
-        navigateToItem: commandDrivers.navigateToItem,
         resourceCommandDriver: commandDrivers.resourceCommandDriver,
         reportCreateItemError: commandDrivers.reportCreateItemError,
         trashDialogDriver: commandDrivers.trashDriver,
@@ -636,7 +632,6 @@ describe('WizardEditor adapter contract', () => {
         contentInitializers: {
           initializeImportedTextFile,
         },
-        navigateToItem: commandDrivers.navigateToItem,
         resourceCommandDriver: commandDrivers.resourceCommandDriver,
         reportCreateItemError: commandDrivers.reportCreateItemError,
         trashDialogDriver: commandDrivers.trashDriver,
@@ -691,7 +686,6 @@ describe('WizardEditor adapter contract', () => {
         canCreateItems: true,
         clipboardDriver: commandDrivers.clipboardDriver,
         contentInitializers: commandDrivers.contentInitializers,
-        navigateToItem: commandDrivers.navigateToItem,
         resourceCommandDriver: commandDrivers.resourceCommandDriver,
         reportCreateItemError: commandDrivers.reportCreateItemError,
         trashDialogDriver: commandDrivers.trashDriver,
@@ -1018,7 +1012,6 @@ function createTestCommands(): WizardEditorCommandSource {
       confirmEmptyTrash: vi.fn(),
     },
     unavailableReason: 'read_only',
-    navigateToItem: vi.fn(),
     reportCreateItemError: vi.fn(),
   })
 }

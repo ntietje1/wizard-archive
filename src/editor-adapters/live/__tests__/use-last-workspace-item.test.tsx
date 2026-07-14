@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
-import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
+import { testResourceId } from '../../../../shared/test/resource-id'
 import { useLastWorkspaceItem } from '../use-last-workspace-item'
 
 const workspaceState = vi.hoisted(() => ({
@@ -25,6 +24,7 @@ vi.mock('@wizard-archive/ui/hooks/use-persisted-state', () => ({
 }))
 
 describe('useLastWorkspaceItem', () => {
+  const resourceId = testResourceId('last-note')
   beforeEach(() => {
     workspaceState.workspaceRecordId = 'campaign_1'
     persistedState.key = null
@@ -38,19 +38,19 @@ describe('useLastWorkspaceItem', () => {
   it('uses the current workspace scoped persistence key', () => {
     renderHook(() => useLastWorkspaceItem())
 
-    expect(persistedState.key).toBe('last-editor-item-campaign_1')
+    expect(persistedState.key).toBe('last-editor-resource-v1-campaign_1')
   })
 
-  it('projects the stored sidebar item slug into workspace search', () => {
-    persistedState.value = 'last-note'
+  it('projects the stored resource UUID into workspace search', () => {
+    persistedState.value = resourceId
 
     const { result } = renderHook(() => useLastWorkspaceItem())
 
-    expect(result.current.lastSelectedItem).toBe('last-note')
-    expect(result.current.lastSelectedWorkspaceItemSearch).toEqual({ item: 'last-note' })
+    expect(result.current.lastSelectedItem).toBe(resourceId)
+    expect(result.current.lastSelectedWorkspaceItemSearch).toEqual({ item: resourceId })
   })
 
-  it('drops malformed stored slugs', () => {
+  it('drops pre-cutover stored slugs', () => {
     persistedState.value = '../private-note'
 
     const { result } = renderHook(() => useLastWorkspaceItem())
@@ -67,22 +67,14 @@ describe('useLastWorkspaceItem', () => {
     expect(persistedState.key).toBeNull()
   })
 
-  it('stores the selected sidebar item slug', () => {
+  it('stores the selected resource UUID', () => {
     const { result } = renderHook(() => useLastWorkspaceItem())
 
     act(() => {
-      result.current.setLastSelectedItem(testResourceSlug('next-note'))
+      result.current.setLastSelectedItem(resourceId)
     })
 
-    expect(persistedState.setValue).toHaveBeenCalledExactlyOnceWith('next-note')
-    expect(persistedState.value).toBe('next-note')
+    expect(persistedState.setValue).toHaveBeenCalledExactlyOnceWith(resourceId)
+    expect(persistedState.value).toBe(resourceId)
   })
 })
-
-function testResourceSlug(value: string): WizardEditorResourceSlug {
-  const slug = parseWizardEditorResourceSlug(value)
-  if (!slug) {
-    throw new Error(`Invalid test resource slug: ${value}`)
-  }
-  return slug
-}

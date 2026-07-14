@@ -12,7 +12,6 @@ import {
 } from '../../test/sidebar-item-factory'
 
 import type { ResourceImportContentInitializers } from '../../files/import-contract'
-import type { AnyItem } from '../../workspace/items'
 import type { ResourceSlug } from '../../workspace/resource-contract'
 import type { ResourceCommandResult } from '../transaction-contract'
 
@@ -45,11 +44,6 @@ type TestWorkspaceFileSystemDropDriver = Parameters<
 type TestWorkspaceFileSystemTrashDriver = Parameters<
   typeof createWorkspaceFileSystemOperations
 >[0]['trashDriver']
-type TestWorkspaceFileSystemNavigateToItem = (
-  slug: ResourceSlug,
-  options?: { heading?: string; replace?: boolean },
-) => Promise<unknown> | void
-
 function createOperationDriver(
   overrides: Partial<TestWorkspaceFileSystemOperationDriver> = {},
 ): TestWorkspaceFileSystemOperationDriver {
@@ -107,11 +101,8 @@ describe('filesystem operations source', () => {
     const operationDriver = createOperationDriver({
       createItem: vi.fn().mockResolvedValue({ id: created.id, slug: created.slug }),
     })
-    const onItemSlugChange = vi.fn()
-
     const source = createTestWorkspaceFileSystemOperations({
       catalog,
-      onItemSlugChange,
       operationDriver,
     })
 
@@ -127,7 +118,6 @@ describe('filesystem operations source', () => {
       parentTarget: { kind: 'direct', parentId: null },
     })
     expect(response).toEqual({ status: 'completed', id: created.id, slug: created.slug })
-    expect(onItemSlugChange).toHaveBeenCalledExactlyOnceWith(created.id, created.slug)
   })
 
   it('returns an explicit unavailable create result when item creation is disabled', async () => {
@@ -379,11 +369,9 @@ describe('filesystem operations source', () => {
       },
     )
     const operationDriver = createOperationDriver({ createItem })
-    const onItemSlugChange = vi.fn()
     const source = createTestWorkspaceFileSystemOperations({
       catalog,
       operationDriver,
-      onItemSlugChange,
     })
 
     await source.createItem(
@@ -403,10 +391,6 @@ describe('filesystem operations source', () => {
     )
 
     expect(initializedChild).toEqual({ status: 'completed', ...createdNote })
-    expect(onItemSlugChange).toHaveBeenCalledWith(createdFolder.id, createdFolder.slug)
-    expect(
-      onItemSlugChange.mock.calls.filter(([itemId]) => itemId === createdFolder.id),
-    ).toHaveLength(1)
   })
 
   it('preserves duplicate child titles before catalog refresh', async () => {
@@ -764,24 +748,19 @@ describe('filesystem operations source', () => {
     expect(trashDriver.confirmEmptyTrash).toHaveBeenCalledOnce()
   })
 
-  it('renames the current item and replaces navigation with the returned slug', async () => {
+  it('renames an item without changing resource navigation identity', async () => {
     const note = createNote({ name: 'Scene', slug: 'scene' })
     const catalog = createResourceCatalogModel({
       activeItems: [note],
       trashItems: [],
     }).catalog
-    const navigateToItem = vi.fn()
-    const setLastSelectedItem = vi.fn()
     const operationDriver = createOperationDriver({
       renameItem: vi.fn().mockResolvedValue({ slug: 'renamed-scene' }),
     })
 
     const source = createTestWorkspaceFileSystemOperations({
       catalog,
-      currentItem: note,
       operationDriver,
-      navigateToItem,
-      setLastSelectedItem,
     })
 
     await expect(
@@ -794,31 +773,6 @@ describe('filesystem operations source', () => {
       iconName: undefined,
       color: undefined,
     })
-    expect(setLastSelectedItem).toHaveBeenCalledWith('renamed-scene')
-    expect(navigateToItem).toHaveBeenCalledWith('renamed-scene', { replace: true })
-  })
-
-  it('returns the rename result when refreshing current item navigation fails', async () => {
-    const note = createNote({ name: 'Scene', slug: 'scene' })
-    const catalog = createResourceCatalogModel({
-      activeItems: [note],
-      trashItems: [],
-    }).catalog
-    const navigationError = new Error('navigation failed')
-    const operationDriver = createOperationDriver({
-      renameItem: vi.fn().mockResolvedValue({ slug: 'renamed-scene' }),
-    })
-
-    const source = createTestWorkspaceFileSystemOperations({
-      catalog,
-      currentItem: note,
-      operationDriver,
-      navigateToItem: vi.fn().mockRejectedValue(navigationError),
-    })
-
-    await expect(source.updateItemMetadata({ item: note, name: 'Renamed Scene' })).resolves.toEqual(
-      { slug: 'renamed-scene' },
-    )
   })
 
   it('rejects changed metadata when the operation driver cannot complete a rename', async () => {
@@ -872,24 +826,16 @@ function createTestWorkspaceFileSystemOperations({
   canManageFolders = true,
   catalog,
   clipboardDriver = createClipboardDriver(),
-  currentItem = null,
   dropDriver = createDropDriver(),
   operationDriver,
-  navigateToItem = vi.fn(),
-  onItemSlugChange = vi.fn(),
-  setLastSelectedItem = vi.fn(),
   trashDriver = createTrashDriver(),
 }: {
   canCreateItems?: boolean
   canManageFolders?: boolean
   catalog: ReturnType<typeof createResourceCatalogModel>['catalog']
   clipboardDriver?: TestWorkspaceFileSystemClipboardDriver
-  currentItem?: AnyItem | null
   dropDriver?: TestWorkspaceFileSystemDropDriver
   operationDriver: TestWorkspaceFileSystemOperationDriver
-  navigateToItem?: TestWorkspaceFileSystemNavigateToItem
-  onItemSlugChange?: (itemId: ResourceId, slug: ResourceSlug | null) => void
-  setLastSelectedItem?: (slug: ResourceSlug) => void
   trashDriver?: TestWorkspaceFileSystemTrashDriver
 }) {
   return createWorkspaceFileSystemOperations({
@@ -904,13 +850,9 @@ function createTestWorkspaceFileSystemOperations({
     catalog,
     contentInitializers,
     clipboardDriver,
-    currentItem,
     dropDriver,
     operationDriver,
-    navigateToItem,
-    onItemSlugChange,
     reportCreateItemError: vi.fn(),
-    setLastSelectedItem,
     trashDriver,
   })
 }

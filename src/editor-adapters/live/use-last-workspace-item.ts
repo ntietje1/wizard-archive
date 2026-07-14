@@ -1,5 +1,5 @@
-import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
-import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { WorkspaceRouteSearch } from '~/editor-adapters/workspace-route-search'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import usePersistedState from '@wizard-archive/ui/hooks/use-persisted-state'
@@ -12,15 +12,15 @@ export function useLastWorkspaceItem() {
   const { campaignId: workspaceRecordId } = useCampaign()
 
   const [storedLastSelectedItem, setStoredLastSelectedItem] = usePersistedState<string | null>(
-    workspaceRecordId ? `last-editor-item-${workspaceRecordId}` : null,
+    workspaceRecordId ? `last-editor-resource-v1-${workspaceRecordId}` : null,
     null,
     parseStoredLastSelectedItem,
   )
-  const lastSelectedItem: WizardEditorResourceSlug | null = storedLastSelectedItem
-    ? parseWizardEditorResourceSlug(storedLastSelectedItem)
+  const lastSelectedItem: ResourceId | null = storedLastSelectedItem
+    ? parseDomainId(DOMAIN_ID_KIND.resource, storedLastSelectedItem)
     : null
 
-  const setLastSelectedItem = (value: WizardEditorResourceSlug | null) => {
+  const setLastSelectedItem = (value: ResourceId | null) => {
     setStoredLastSelectedItem(value)
   }
 

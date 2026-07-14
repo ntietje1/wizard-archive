@@ -1,94 +1,51 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testResourceId } from '../../../shared/test/resource-id'
 import {
   parseWorkspaceRouteSearchParams,
   validateSearch,
 } from '~/editor-adapters/workspace-route-search'
 
-describe('validateSearch', () => {
-  it('extracts item slug', () => {
-    expect(validateSearch({ item: 'my-note' })).toEqual({ item: 'my-note' })
-  })
+const resourceId = testResourceId('workspace-route')
 
-  it('only accepts headings for a resource route', () => {
-    expect(validateSearch({ heading: 'intro' })).toEqual({})
-    expect(validateSearch({ item: 'my-note', heading: 'intro' })).toEqual({
-      item: 'my-note',
+describe('validateSearch', () => {
+  it('accepts a resource UUID with an optional heading', () => {
+    expect(validateSearch({ item: resourceId })).toEqual({ item: resourceId })
+    expect(validateSearch({ item: resourceId, heading: '  intro  ' })).toEqual({
+      item: resourceId,
       heading: 'intro',
     })
   })
 
-  it('extracts trash flag', () => {
+  it('accepts trash only as a separate route mode', () => {
     expect(validateSearch({ trash: true })).toEqual({ trash: true })
+    expect(validateSearch({ item: resourceId, trash: true })).toEqual({})
   })
 
-  it('rejects simultaneous resource and trash modes', () => {
-    expect(validateSearch({ item: 'note', heading: 'h1', trash: true })).toEqual({})
-  })
-
-  it('trims whitespace from strings', () => {
-    expect(validateSearch({ item: '  slug  ' })).toEqual({ item: 'slug' })
-    expect(validateSearch({ item: 'slug', heading: '  head  ' })).toEqual({
-      item: 'slug',
-      heading: 'head',
-    })
-  })
-
-  it('accepts valid slugs with numbers', () => {
-    expect(validateSearch({ item: 'item-123' })).toEqual({ item: 'item-123' })
-  })
-
-  it('accepts one-character item slugs', () => {
-    expect(validateSearch({ item: 'a' })).toEqual({ item: 'a' })
-    expect(validateSearch({ item: 'aa' })).toEqual({ item: 'aa' })
-  })
-
-  it('accepts multi-part slugs with hyphens and underscores', () => {
-    expect(validateSearch({ item: 'a-b' })).toEqual({ item: 'a-b' })
-    expect(validateSearch({ item: 'a_b' })).toEqual({ item: 'a_b' })
-    expect(validateSearch({ item: 'a-b-c' })).toEqual({ item: 'a-b-c' })
-  })
-
-  it('accepts one-character headings', () => {
-    expect(validateSearch({ item: 'note', heading: 'h' })).toEqual({ item: 'note', heading: 'h' })
-    expect(validateSearch({ item: 'note', heading: 'hh' })).toEqual({
-      item: 'note',
-      heading: 'hh',
-    })
+  it('rejects slugs, malformed UUIDs, and headings without a resource', () => {
+    expect(validateSearch({ item: 'my-note' })).toEqual({})
+    expect(validateSearch({ item: resourceId.toUpperCase() })).toEqual({})
+    expect(validateSearch({ heading: 'intro' })).toEqual({})
   })
 
   it('drops oversized headings', () => {
-    expect(validateSearch({ heading: 'h'.repeat(513), item: 'note' })).toEqual({ item: 'note' })
-  })
-
-  it('drops invalid item, heading, and trash shapes', () => {
-    expect(validateSearch({ item: '', heading: '', trash: false })).toEqual({})
-    expect(validateSearch({ item: '   ', heading: '   ', trash: 'true' })).toEqual({})
-    expect(validateSearch({ item: 123, heading: ['intro'], trash: 1 })).toEqual({})
-  })
-
-  it('rejects malformed resource intents as a whole', () => {
-    expect(validateSearch({ item: '../private-note', heading: 'intro', trash: true })).toEqual({})
+    expect(validateSearch({ item: resourceId, heading: 'h'.repeat(513) })).toEqual({
+      item: resourceId,
+    })
   })
 })
 
 describe('parseWorkspaceRouteSearchParams', () => {
-  it('rejects URL search params that request resource and trash modes together', () => {
-    const searchParams = new URLSearchParams({
-      item: '  session-notes  ',
-      heading: '  Intro  ',
-      trash: 'true',
+  it('parses UUID resource routes', () => {
+    const searchParams = new URLSearchParams({ item: resourceId, heading: 'Intro' })
+    expect(parseWorkspaceRouteSearchParams(searchParams)).toEqual({
+      item: resourceId,
+      heading: 'Intro',
     })
-
-    expect(parseWorkspaceRouteSearchParams(searchParams)).toEqual({})
   })
 
-  it('drops malformed URL search params', () => {
-    const searchParams = new URLSearchParams({
-      item: '../private-note',
-      heading: 'h'.repeat(513),
-      trash: 'false',
-    })
-
-    expect(parseWorkspaceRouteSearchParams(searchParams)).toEqual({})
+  it('rejects pre-cutover slug routes', () => {
+    expect(parseWorkspaceRouteSearchParams(new URLSearchParams({ item: 'session-notes' }))).toEqual(
+      {},
+    )
   })
 })

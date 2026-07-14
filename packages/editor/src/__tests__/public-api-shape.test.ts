@@ -913,26 +913,20 @@ describe('editor package public API shape', () => {
     }
   })
 
-  it('keeps route resource slug parsing on the adapter facade', () => {
-    const routeSlugConsumers = [
+  it('uses canonical UUID identity in route and persisted navigation state', () => {
+    const routeIdentityConsumers = [
       'src/editor-adapters/workspace-route-search.ts',
       'src/editor-adapters/live/use-last-workspace-item.ts',
-      'src/editor-adapters/live/live-recent-items.ts',
-      'src/editor-adapters/live/__tests__/use-last-workspace-item.test.tsx',
-      'src/editor-adapters/live/__tests__/live-recent-items.test.ts',
-      'src/editor-adapters/live/__tests__/use-live-current-item.test.tsx',
-      'src/editor-adapters/live/__tests__/use-live-workspace-navigation.test.tsx',
+      'src/editor-adapters/live/use-live-workspace-navigation.ts',
     ]
 
-    for (const sourcePath of routeSlugConsumers) {
+    for (const sourcePath of routeIdentityConsumers) {
       const source = readFileSync(path.join(process.cwd(), sourcePath), 'utf8')
 
-      expect(source).not.toContain('@wizard-archive/editor/resources/resource-contract')
-      expect(source).toContain('@wizard-archive/editor/adapter')
+      expect(source).toContain('@wizard-archive/editor/resources/domain-id')
+      expect(source).not.toContain('ResourceSlug')
+      expect(source).not.toContain('parseWizardEditorResourceSlug')
     }
-    expect(sortedAdapterExports()).toEqual(
-      expect.arrayContaining(['WizardEditorResourceSlug', 'parseWizardEditorResourceSlug']),
-    )
   })
 
   it('keeps live sort options on the adapter facade', () => {

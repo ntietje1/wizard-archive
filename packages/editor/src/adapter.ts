@@ -487,13 +487,7 @@ export interface WizardEditorCommandSource {
   operationDriver: ResourceOperationDriver
   dropDriver: ResourceDropDriver
   historyDriver: ResourceHistoryOperationDriver
-  navigateToItem: (
-    slug: ResourceSlug,
-    options?: { heading?: string; replace?: boolean },
-  ) => Promise<unknown> | void
-  onItemSlugChange?: (itemId: ResourceId, slug: ResourceSlug | null) => void
   reportCreateItemError: (error: unknown, message: string) => void
-  setLastSelectedItem?: (slug: ResourceSlug) => void
   trashDriver: ResourceTrashDriver
 }
 
@@ -505,10 +499,7 @@ export interface WizardEditorCommandSourceInput {
   contentInitializers: ResourceImportContentInitializers
   ioCapabilities?: ResourceIoCapabilities
   resourceCommandDriver: ResourceCommandDriver
-  navigateToItem: WizardEditorCommandSource['navigateToItem']
-  onItemSlugChange?: WizardEditorCommandSource['onItemSlugChange']
   reportCreateItemError: WizardEditorCommandSource['reportCreateItemError']
-  setLastSelectedItem?: WizardEditorCommandSource['setLastSelectedItem']
   trashDialogDriver: Pick<ResourceTrashDriver, 'confirmDeleteForever' | 'confirmEmptyTrash'>
 }
 
@@ -1401,7 +1392,6 @@ export function createWizardEditorRuntime(adapter: WizardEditorAdapter): WizardE
   const operations = createWorkspaceFileSystemOperations({
     ...adapter.commands,
     catalog: adapter.resources.catalog,
-    currentItem: adapter.resources.current.item,
   })
 
   const workspaceRuntime = createWorkspaceRuntime({
@@ -1626,10 +1616,7 @@ export function createWizardEditorCommandSource({
   contentInitializers,
   ioCapabilities = {},
   resourceCommandDriver,
-  navigateToItem,
-  onItemSlugChange,
   reportCreateItemError,
-  setLastSelectedItem,
   trashDialogDriver,
   unavailableReason,
 }: WizardEditorCommandSourceInput): WizardEditorCommandSource {
@@ -1649,11 +1636,8 @@ export function createWizardEditorCommandSource({
     historyDriver,
     ioCapabilities,
     resourceCommandDriver,
-    navigateToItem,
-    onItemSlugChange,
     operationDriver,
     reportCreateItemError,
-    setLastSelectedItem,
     trashDriver,
   }
 }

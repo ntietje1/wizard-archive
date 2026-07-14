@@ -232,10 +232,10 @@ vi.mock('~/editor-adapters/live/use-live-current-item', () => ({
     isTrashRequested: liveSourceState.editorSearch?.trash === true,
     isLoading: false,
     itemError: null,
-    requestedSlug:
+    requestedResourceId:
       typeof liveSourceState.editorSearch?.item === 'string'
         ? liveSourceState.editorSearch.item
-        : liveSourceState.item?.slug,
+        : liveSourceState.item?.id,
   }),
 }))
 
@@ -616,13 +616,13 @@ describe('useLiveWorkspaceRuntime', () => {
       },
       undefined,
     )
-    expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith('created-item')
-    expect(navigationMocks.navigateToItem).toHaveBeenCalledWith('created-item', undefined)
+    expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith(created.id)
+    expect(navigationMocks.navigateToItem).toHaveBeenCalledWith(created.id, undefined)
   })
 
   it('exposes missing requested item availability through filesystem content', () => {
     liveSourceState.contentItem = null
-    liveSourceState.editorSearch = { item: testResourceSlug('missing-note') }
+    liveSourceState.editorSearch = { item: testResourceId('missing-note') }
     liveSourceState.item = null
 
     const { result } = renderLiveWorkspaceRuntime()
@@ -631,10 +631,10 @@ describe('useLiveWorkspaceRuntime', () => {
     expect(result.current.navigation.current).toEqual({ kind: 'resource', resource: null })
     expect(currentContent.availabilityState).toMatchObject({
       status: 'not_found',
-      label: 'missing-note',
+      label: 'Item',
     })
     expect(availabilityStateCalls.at(-1)).toMatchObject({
-      fallbackLabel: 'missing-note',
+      fallbackLabel: 'Item',
       subject: 'item',
     })
   })
@@ -781,8 +781,8 @@ describe('useLiveWorkspaceRuntime', () => {
       heading: 'Intro#Details',
     })
 
-    expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith(liveSourceState.item!.slug)
-    expect(navigationMocks.navigateToItem).toHaveBeenCalledWith(liveSourceState.item!.slug, {
+    expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith(liveSourceState.item!.id)
+    expect(navigationMocks.navigateToItem).toHaveBeenCalledWith(liveSourceState.item!.id, {
       heading: 'Intro#Details',
     })
   })
@@ -903,10 +903,10 @@ describe('useLiveWorkspaceRuntime', () => {
       target: 'separate',
     })
 
-    expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith(liveSourceState.item!.slug)
+    expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith(liveSourceState.item!.id)
     expect(navigationMocks.openSeparateItem).toHaveBeenCalledExactlyOnceWith({
       heading: 'Intro#Details',
-      itemSlug: liveSourceState.item!.slug,
+      resourceId: liveSourceState.item!.id,
     })
   })
 
@@ -1353,12 +1353,15 @@ describe('useLiveWorkspaceRuntime', () => {
       iconName: 'FileText',
       color: '#abcdef',
     })
-    expect(navigationMocks.setLastSelectedItem).toHaveBeenCalledWith('renamed-note')
-    expect(navigationMocks.navigateToItem).toHaveBeenCalledWith('renamed-note', { replace: true })
+    expect(navigationMocks.setLastSelectedItem).not.toHaveBeenCalled()
+    expect(navigationMocks.navigateToItem).not.toHaveBeenCalled()
 
     await result.current.navigation.openItem(createWizardEditorResource(liveSourceState.item!.id))
 
-    expect(navigationMocks.navigateToItem).toHaveBeenLastCalledWith('renamed-note', undefined)
+    expect(navigationMocks.navigateToItem).toHaveBeenLastCalledWith(
+      liveSourceState.item!.id,
+      undefined,
+    )
   })
 
   it('toggles bookmarks through the filesystem operation capability', async () => {
@@ -1554,8 +1557,8 @@ describe('useLiveWorkspaceRuntime', () => {
     await expect(
       result.current.navigation.openItem(createWizardEditorResource(hiddenItem.id)),
     ).resolves.toEqual({ status: 'unavailable', reason: 'resource_not_visible' })
-    expect(navigationMocks.setLastSelectedItem).not.toHaveBeenCalledWith(hiddenItem.slug)
-    expect(navigationMocks.navigateToItem).not.toHaveBeenCalledWith(hiddenItem.slug, undefined)
+    expect(navigationMocks.setLastSelectedItem).not.toHaveBeenCalledWith(hiddenItem.id)
+    expect(navigationMocks.navigateToItem).not.toHaveBeenCalledWith(hiddenItem.id, undefined)
   })
 
   it('does not hydrate note outgoing links for non-note current items', () => {

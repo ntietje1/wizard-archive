@@ -3,7 +3,6 @@ import {
   createWizardEditorCatalogNavigation,
   createWizardEditorCatalogResourceSource,
   createWizardEditorCatalogSearchSource,
-  createWizardEditorResource,
   createWizardEditorRuntime,
   createWizardEditorRuntimeSources,
   createWizardEditorUnsupportedHistorySource,
@@ -146,12 +145,6 @@ export function createLocalWorkspaceRuntime({
       resourceCommandDriver: filesystemHost.resourceCommandDriver,
       trashDialogDriver: filesystemHost.trashDialogDriver,
       unavailableReason: 'read_only',
-      navigateToItem: (slug) => {
-        const item = catalog.getKnownItemBySlug(slug)
-        if (item) {
-          setNavigation({ kind: 'resource', resource: createWizardEditorResource(item.id) })
-        }
-      },
       reportCreateItemError,
     },
     io: createWizardEditorCatalogIoSource(resources, {

@@ -1,8 +1,8 @@
-import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
-import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 export type WorkspaceRouteSearch =
-  | { item: WizardEditorResourceSlug; heading?: string; trash?: never }
+  | { item: ResourceId; heading?: string; trash?: never }
   | { trash: true; item?: never; heading?: never }
   | { item?: never; heading?: never; trash?: never }
 
@@ -22,7 +22,7 @@ export const validateSearch = (search: Record<string, unknown>): WorkspaceRouteS
   if (trashRequested && (requestedItem || requestedHeading)) return {}
   if (trashRequested) return { trash: true }
 
-  const item = requestedItem ? parseWizardEditorResourceSlug(requestedItem) : null
+  const item = requestedItem ? parseDomainId(DOMAIN_ID_KIND.resource, requestedItem) : null
   if (!item) return {}
 
   if (requestedHeading && requestedHeading.length <= MAX_WORKSPACE_ROUTE_HEADING_LENGTH) {

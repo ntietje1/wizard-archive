@@ -1,10 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
+import { testResourceId } from '../../../../shared/test/resource-id'
 import { EDITOR_ROUTE, EDITOR_ROUTE_ID } from '~/editor-adapters/live/editor-route'
 import {
   useLiveWorkspaceNavigation,
-  useLiveWorkspaceSelectedSlug,
+  useLiveWorkspaceSelectedResourceId,
 } from '../use-live-workspace-navigation'
 
 const navigateMock = vi.hoisted(() => vi.fn())
@@ -31,6 +31,7 @@ vi.mock('~/editor-adapters/live/use-last-workspace-item', () => ({
 }))
 
 describe('useLiveWorkspaceNavigation', () => {
+  const resourceId = testResourceId('scene-one')
   beforeEach(() => {
     navigateMock.mockReset()
     useMatchMock.mockReset()
@@ -39,33 +40,33 @@ describe('useLiveWorkspaceNavigation', () => {
     vi.restoreAllMocks()
   })
 
-  it('reads the selected slug from the shared editor route', () => {
-    useMatchMock.mockReturnValue({ search: { item: 'open-note' } })
+  it('reads the selected resource UUID from the shared editor route', () => {
+    useMatchMock.mockReturnValue({ search: { item: resourceId } })
 
-    const { result } = renderHook(() => useLiveWorkspaceSelectedSlug())
+    const { result } = renderHook(() => useLiveWorkspaceSelectedResourceId())
 
     expect(useMatchMock).toHaveBeenCalledWith({
       from: EDITOR_ROUTE_ID,
       shouldThrow: false,
     })
-    expect(result.current).toBe('open-note')
+    expect(result.current).toBe(resourceId)
   })
 
   it('navigates to an item and records it as the latest workspace item', async () => {
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {
-      await result.current.navigateToItem('scene-one' as WizardEditorResourceSlug, {
+      await result.current.navigateToItem(resourceId, {
         heading: 'arrival',
         replace: true,
       })
     })
 
-    expect(lastWorkspaceItemState.setLastSelectedItem).toHaveBeenCalledExactlyOnceWith('scene-one')
+    expect(lastWorkspaceItemState.setLastSelectedItem).toHaveBeenCalledExactlyOnceWith(resourceId)
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
       params: { dmUsername: 'dm', campaignSlug: 'campaign' },
-      search: { item: 'scene-one', heading: 'arrival' },
+      search: { item: resourceId, heading: 'arrival' },
       replace: true,
     })
   })
@@ -86,7 +87,7 @@ describe('useLiveWorkspaceNavigation', () => {
   })
 
   it('opens the last editor item using the stored route search', async () => {
-    lastWorkspaceItemState.lastSelectedWorkspaceItemSearch = { item: 'last-note', heading: 'scene' }
+    lastWorkspaceItemState.lastSelectedWorkspaceItemSearch = { item: resourceId, heading: 'scene' }
 
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
@@ -97,7 +98,7 @@ describe('useLiveWorkspaceNavigation', () => {
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
       params: { dmUsername: 'dm', campaignSlug: 'campaign' },
-      search: { item: 'last-note', heading: 'scene' },
+      search: { item: resourceId, heading: 'scene' },
       replace: undefined,
     })
   })
@@ -118,7 +119,7 @@ describe('useLiveWorkspaceNavigation', () => {
   })
 
   it('keeps the last selected item when opening the create dashboard', async () => {
-    lastWorkspaceItemState.lastSelectedWorkspaceItemSearch = { item: 'last-note' }
+    lastWorkspaceItemState.lastSelectedWorkspaceItemSearch = { item: resourceId }
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {

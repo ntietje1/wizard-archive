@@ -2,11 +2,8 @@ import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  WizardEditorItem,
-  WizardEditorItemWithContent,
-  WizardEditorResourceSlug,
-} from '@wizard-archive/editor/adapter'
+import type { WizardEditorItem, WizardEditorItemWithContent } from '@wizard-archive/editor/adapter'
+import { testResourceId } from '../../../../shared/test/resource-id'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { EDITOR_ROUTE_ID } from '../editor-route'
 import { useLiveCurrentItem } from '../use-live-current-item'
@@ -55,19 +52,17 @@ describe('useLiveCurrentItem', () => {
     matchCalls.length = 0
   })
 
-  it('resolves optimistic slugs from the active sidebar cache', () => {
+  it('resolves an optimistic resource from the active sidebar cache', () => {
     const optimisticItem = createNote({
-      id: 'optimistic-create-1' as ResourceId,
+      id: testResourceId('optimistic-create-1'),
       name: 'Scene Draft',
       slug: 'scene-draft',
     })
-    routeSearch = { item: optimisticItem.slug }
+    routeSearch = { item: optimisticItem.id }
     activeItems = [optimisticItem]
     queryData = { status: 'not_found' }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current.item?.id).toBe(optimisticItem.id)
     expect(matchCalls[0]).toEqual({
@@ -76,28 +71,24 @@ describe('useLiveCurrentItem', () => {
     })
   })
 
-  it('reports not found when a requested slug is missing', () => {
-    routeSearch = { item: 'missing-slug' }
+  it('reports not found when a requested resource is missing', () => {
+    routeSearch = { item: testResourceId('missing') }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current.isNotFound).toBe(true)
   })
 
   it('uses the server item after the optimistic item resolves', () => {
     const serverItem = createNote({
-      id: 'note_1' as ResourceId,
+      id: testResourceId('note-1'),
       name: 'Resolved Scene',
       slug: 'resolved-scene',
     })
-    routeSearch = { item: serverItem.slug }
+    routeSearch = { item: serverItem.id }
     queryData = { status: 'available', item: serverItem as WizardEditorItemWithContent }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current.item).toMatchObject({
       id: serverItem.id,
@@ -107,17 +98,15 @@ describe('useLiveCurrentItem', () => {
     expect(result.current.contentItem).toBe(result.current.item)
     expect(authQueryCalls[0]?.[1]).toEqual({
       campaignId: 'campaign_1',
-      lookup: { kind: 'slug', slug: 'resolved-scene' },
+      lookup: { kind: 'id', id: serverItem.id },
     })
   })
 
   it('keeps denied server results explicit without exposing item metadata', () => {
-    routeSearch = { item: 'private-scene' }
+    routeSearch = { item: testResourceId('private-scene') }
     queryData = { status: 'not_shared' }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current.item).toBeNull()
     expect(result.current.contentItem).toBeNull()
@@ -125,38 +114,36 @@ describe('useLiveCurrentItem', () => {
     expect(result.current.accessStatus).toBe('not_shared')
   })
 
-  it('skips the current item query without a requested slug', () => {
-    renderHook(() => useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }))
+  it('skips the current item query without a requested resource', () => {
+    renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(authQueryCalls[0]?.[1]).toBe('skip')
   })
 
   it('does not reuse previous campaign item data as query placeholder content', () => {
-    routeSearch = { item: 'shared-slug' }
+    routeSearch = { item: testResourceId('shared') }
 
-    renderHook(() => useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }))
+    renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(authQueryCalls[0]).toHaveLength(2)
   })
 
   it('prefers the resolved server item over a stale optimistic cache item', () => {
     const optimisticItem = createNote({
-      id: 'optimistic-create-1' as ResourceId,
+      id: testResourceId('optimistic-create-1'),
       name: 'Scene Draft',
       slug: 'resolved-scene',
     })
     const serverItem = createNote({
-      id: 'note_1' as ResourceId,
+      id: testResourceId('note-1'),
       name: 'Resolved Scene',
       slug: optimisticItem.slug,
     })
-    routeSearch = { item: serverItem.slug }
+    routeSearch = { item: serverItem.id }
     activeItems = [optimisticItem]
     queryData = { status: 'available', item: serverItem as WizardEditorItemWithContent }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current.item).toMatchObject({
       id: serverItem.id,
@@ -168,29 +155,25 @@ describe('useLiveCurrentItem', () => {
   })
 
   it('reports not found for an empty active cache and successful empty query', () => {
-    routeSearch = { item: 'empty-slug' }
+    routeSearch = { item: testResourceId('empty') }
     activeItems = []
     queryData = { status: 'not_found' }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current.isNotFound).toBe(true)
   })
 
-  it('treats a successful stale query item as missing for the requested slug', () => {
+  it('treats a successful stale query item as missing for the requested resource', () => {
     const staleItem = createNote({
-      id: 'note_stale' as ResourceId,
+      id: testResourceId('note-stale'),
       name: 'Stale Scene',
       slug: 'stale-scene',
     })
-    routeSearch = { item: 'requested-scene' }
+    routeSearch = { item: testResourceId('requested-scene') }
     queryData = { status: 'available', item: staleItem as WizardEditorItemWithContent }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current.item).toBeNull()
     expect(result.current.isLoading).toBe(false)
@@ -200,23 +183,19 @@ describe('useLiveCurrentItem', () => {
   it('reports current item query errors', () => {
     queryError = new Error('fetch failed')
     queryStatus = 'error'
-    routeSearch = { item: 'broken-slug' }
+    routeSearch = { item: testResourceId('broken') }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current.itemError).toBe(queryError)
   })
 
-  it('keeps requested persisted slugs loading while the item query is pending', () => {
+  it('keeps requested resources loading while the item query is pending', () => {
     queryStatus = 'pending'
     isFetching = true
-    routeSearch = { item: 'loading-slug' }
+    routeSearch = { item: testResourceId('loading') }
 
-    const { result } = renderHook(() =>
-      useLiveCurrentItem({ getKnownItemBySlug: getActiveItemBySlug }),
-    )
+    const { result } = renderHook(() => useLiveCurrentItem({ getKnownItemById: getActiveItemById }))
 
     expect(result.current).toMatchObject({
       item: null,
@@ -228,8 +207,8 @@ describe('useLiveCurrentItem', () => {
   })
 })
 
-function getActiveItemBySlug(slug: WizardEditorResourceSlug) {
-  return activeItems.find((item) => item.slug === slug) ?? null
+function getActiveItemById(resourceId: ResourceId) {
+  return activeItems.find((item) => item.id === resourceId) ?? null
 }
 
 type SidebarItemAccessResult =

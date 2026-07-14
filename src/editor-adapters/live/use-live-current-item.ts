@@ -1,20 +1,16 @@
 import { useMatch } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import type {
-  WizardEditorItem,
-  WizardEditorItemWithContent,
-  WizardEditorResourceSlug,
-} from '@wizard-archive/editor/adapter'
-import { isPersistedWizardEditorItem } from '@wizard-archive/editor/adapter'
+import type { WizardEditorItem, WizardEditorItemWithContent } from '@wizard-archive/editor/adapter'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { EDITOR_ROUTE_ID } from './editor-route'
 import { projectLiveSidebarItem } from './sidebar/project-live-sidebar-item'
 
 export function useLiveCurrentItem({
-  getKnownItemBySlug,
+  getKnownItemById,
 }: {
-  getKnownItemBySlug: (slug: WizardEditorResourceSlug) => WizardEditorItem | null
+  getKnownItemById: (resourceId: ResourceId) => WizardEditorItem | null
 }) {
   const { campaignId: workspaceRecordId } = useCampaign()
 
@@ -24,21 +20,21 @@ export function useLiveCurrentItem({
   })
   const editorSearch = editorMatch?.search ?? {}
 
-  const slug = editorSearch.item ?? null
+  const resourceId = editorSearch.item ?? null
 
   const sidebarItemAccessQuery = useAuthQuery(
     api.sidebarItems.queries.resolveSidebarItemAccess,
-    slug && workspaceRecordId
-      ? { campaignId: workspaceRecordId, lookup: { kind: 'slug', slug } }
+    resourceId && workspaceRecordId
+      ? { campaignId: workspaceRecordId, lookup: { kind: 'id', id: resourceId } }
       : 'skip',
   )
 
-  const optimisticItem = resolveOptimisticCurrentItem(slug, getKnownItemBySlug)
-  const accessItems = projectCurrentItemAccessResult(sidebarItemAccessQuery.data, slug)
+  const knownItem = resolveKnownCurrentItem(resourceId, getKnownItemById)
+  const accessItems = projectCurrentItemAccessResult(sidebarItemAccessQuery.data, resourceId)
   const accessStatus = sidebarItemAccessQuery.data?.status ?? null
-  const rawItem = slug ? (accessItems.contentItem ?? accessItems.item ?? optimisticItem) : null
+  const rawItem = resourceId ? (accessItems.contentItem ?? accessItems.item ?? knownItem) : null
   const state = resolveLiveCurrentItemState({
-    slug,
+    resourceId,
     rawItem,
     queryStatus: sidebarItemAccessQuery.status,
     isFetching: sidebarItemAccessQuery.isFetching,
@@ -51,7 +47,7 @@ export function useLiveCurrentItem({
     accessStatus,
     contentItem: accessItems.contentItem,
     isTrashRequested: editorSearch.trash === true,
-    requestedSlug: slug,
+    requestedResourceId: resourceId,
   }
 }
 
@@ -61,24 +57,24 @@ type CurrentItemAccessResult =
   | { status: 'trashed' }
   | { status: 'available'; item: WizardEditorItemWithContent }
 
-function resolveOptimisticCurrentItem(
-  slug: WizardEditorResourceSlug | null,
-  getKnownItemBySlug: (slug: WizardEditorResourceSlug) => WizardEditorItem | null,
+function resolveKnownCurrentItem(
+  resourceId: ResourceId | null,
+  getKnownItemById: (resourceId: ResourceId) => WizardEditorItem | null,
 ) {
-  if (!slug) return null
-  const knownItem = getKnownItemBySlug(slug)
-  return knownItem && !isPersistedWizardEditorItem(knownItem) ? knownItem : null
+  if (!resourceId) return null
+  return getKnownItemById(resourceId)
 }
 
 function projectCurrentItemAccessResult(
   result: CurrentItemAccessResult | null | undefined,
-  slug: WizardEditorResourceSlug | null,
+  resourceId: ResourceId | null,
 ): { item: WizardEditorItem | null; contentItem: WizardEditorItemWithContent | null } {
-  if (!slug || !result || result.status !== 'available' || result.item.slug !== slug) {
+  if (!resourceId || !result || result.status !== 'available') {
     return { item: null, contentItem: null }
   }
 
   const item = projectLiveSidebarItem<WizardEditorItem>(result.item)
+  if (item.id !== resourceId) return { item: null, contentItem: null }
   return {
     item,
     contentItem: projectLiveSidebarItem<WizardEditorItemWithContent>(result.item),
@@ -101,7 +97,7 @@ function resolveLiveCurrentItemState({
   queryError,
   queryStatus,
   rawItem,
-  slug,
+  resourceId,
   accessStatus,
 }: {
   accessStatus: CurrentItemAccessResult['status'] | null
@@ -109,11 +105,11 @@ function resolveLiveCurrentItemState({
   queryError: unknown
   queryStatus: CurrentItemQueryStatus
   rawItem: WizardEditorItem | null
-  slug: WizardEditorResourceSlug | null
+  resourceId: ResourceId | null
 }): ResolvedCurrentItemState {
-  const item = rawItem && rawItem.slug === slug ? rawItem : null
+  const item = rawItem && rawItem.id === resourceId ? rawItem : null
 
-  if (!slug) {
+  if (!resourceId) {
     return {
       item: null,
       itemType: undefined,

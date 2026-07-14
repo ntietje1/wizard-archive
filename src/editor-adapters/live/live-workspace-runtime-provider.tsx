@@ -7,7 +7,7 @@ import { useLiveFileSystemRuntime } from './filesystem/host'
 import { LiveWorkspaceRouteEffects } from './live-workspace-route-effects'
 import {
   useLiveWorkspaceNavigation,
-  useLiveWorkspaceSelectedSlug,
+  useLiveWorkspaceSelectedResourceId,
 } from './use-live-workspace-navigation'
 import { useLiveWorkspaceRuntime } from './use-live-workspace-runtime'
 import type { LiveWorkspaceSeparateItemNavigation } from './use-live-workspace-runtime'
@@ -61,17 +61,14 @@ function LoadedLiveWorkspaceRuntimeContent({
 }) {
   const filesystemReadModel = useFileSystemReadModel()
   const liveWorkspaceNavigation = useLiveWorkspaceNavigation()
-  const currentSlug = useLiveWorkspaceSelectedSlug()
-  const currentResourceId = currentSlug
-    ? (filesystemReadModel.readModel.getItemBySlug(currentSlug)?.id ?? null)
-    : null
+  const currentResourceId = useLiveWorkspaceSelectedResourceId()
   const liveFileSystemRuntime = useLiveFileSystemRuntime(
     workspaceId,
     {
       getCurrentResourceId: () => currentResourceId,
       clearWorkspaceContent: liveWorkspaceNavigation.clearWorkspaceContent,
       openResource: (resource, options) =>
-        liveWorkspaceNavigation.navigateToItem(resource.slug, options),
+        liveWorkspaceNavigation.navigateToItem(resource.id, options),
     },
     filesystemReadModel,
   )
@@ -81,8 +78,8 @@ function LoadedLiveWorkspaceRuntimeContent({
     filesystemHost: liveFileSystemRuntime.filesystem,
     sidebarItemsShareOperations: liveFileSystemRuntime.sharing.sidebarItems,
     openExternalUrl: openBrowserExternalUrl,
-    openSeparateItem: ({ heading, itemSlug }) =>
-      openSeparateLiveWorkspaceItem({ campaignSlug, dmUsername, heading, itemSlug }),
+    openSeparateItem: ({ heading, resourceId }) =>
+      openSeparateLiveWorkspaceItem({ campaignSlug, dmUsername, heading, resourceId }),
   })
 
   return (
@@ -98,12 +95,12 @@ const openSeparateLiveWorkspaceItem = ({
   campaignSlug,
   dmUsername,
   heading,
-  itemSlug,
+  resourceId,
 }: Parameters<LiveWorkspaceSeparateItemNavigation>[0] & {
   campaignSlug: ReturnType<typeof useCampaign>['campaignSlug']
   dmUsername: ReturnType<typeof useCampaign>['dmUsername']
 }) => {
-  const searchParams = new URLSearchParams({ item: itemSlug })
+  const searchParams = new URLSearchParams({ item: resourceId })
   if (heading) searchParams.set('heading', heading)
   const path = `${createEditorRoutePath({ dmUsername, campaignSlug })}?${searchParams.toString()}`
   window.open(path, '_blank', 'noopener,noreferrer')

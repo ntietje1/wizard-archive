@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { Id } from 'convex/_generated/dataModel'
+import { testResourceId } from '../../../../shared/test/resource-id'
 import { EDITOR_ROUTE_ID } from '../editor-route'
 import { LiveWorkspaceRouteEffects } from '../live-workspace-route-effects'
 
@@ -17,30 +18,31 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 }))
 
 vi.mock('~/editor-adapters/live/live-recent-items', () => ({
-  addLiveRecentItem: (workspaceRecordId: unknown, slug: unknown) =>
-    addRecentItemMock(workspaceRecordId, slug),
+  addLiveRecentItem: (workspaceRecordId: unknown, resourceId: unknown) =>
+    addRecentItemMock(workspaceRecordId, resourceId),
 }))
 
 describe('LiveWorkspaceRouteEffects', () => {
+  const resourceId = testResourceId('scene-one')
   beforeEach(() => {
     useMatchMock.mockReset()
     useCampaignMock.mockReset()
     addRecentItemMock.mockReset()
     useCampaignMock.mockReturnValue({ campaignId: 'campaign_1' as Id<'campaigns'> })
-    useMatchMock.mockReturnValue({ search: { item: 'scene-one' } })
+    useMatchMock.mockReturnValue({ search: { item: resourceId } })
   })
 
-  it('records the current live route item slug as a recent item', () => {
+  it('records the current live route resource as a recent item', () => {
     render(<LiveWorkspaceRouteEffects />)
 
     expect(useMatchMock).toHaveBeenCalledWith({
       from: EDITOR_ROUTE_ID,
       shouldThrow: false,
     })
-    expect(addRecentItemMock).toHaveBeenCalledExactlyOnceWith('campaign_1', 'scene-one')
+    expect(addRecentItemMock).toHaveBeenCalledExactlyOnceWith('campaign_1', resourceId)
   })
 
-  it('does not record a recent item without a route item slug', () => {
+  it('does not record a recent item without a route resource', () => {
     useMatchMock.mockReturnValue({ search: {} })
 
     render(<LiveWorkspaceRouteEffects />)
