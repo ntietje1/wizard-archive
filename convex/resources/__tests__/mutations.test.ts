@@ -19,6 +19,7 @@ import {
 } from '@wizard-archive/editor/canvas/document-contract'
 import * as Y from 'yjs'
 import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
+import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -488,6 +489,7 @@ describe('resource structure commands', () => {
       await ctx.db.replace('resourceFileContents', fileContent!._id, {
         campaignUuid,
         resourceUuid: fileId,
+        state: 'ready',
         assetUuid: null,
         extension: 'txt',
         mediaType: 'text/plain',
@@ -506,6 +508,7 @@ describe('resource structure commands', () => {
       await ctx.db.replace('resourceMapContents', mapContent!._id, {
         campaignUuid,
         resourceUuid: mapId,
+        state: 'ready',
         imageAssetUuid: null,
         layers: [],
         version: await initialJsonContentVersion({
@@ -622,6 +625,96 @@ describe('resource structure commands', () => {
           version: expect.objectContaining({ revision: 1 }),
         }),
       )
+    })
+  })
+
+  it('commits asset copy intents and retirement candidates without provider identity', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const sourceFileId = await createResource(campaign, campaignUuid, 'file', null, 'Asset')
+    const sourceAsset = await storeCommittedTestUploadSession(
+      t,
+      campaign.dm.profile._id,
+      new Blob(['asset bytes']),
+      'asset.txt',
+    )
+    await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', sourceFileId))
+        .unique()
+      const semanticContent = {
+        assetUuid: sourceAsset.assetId,
+        extension: 'txt',
+        mediaType: 'text/plain',
+        originalName: 'asset.txt',
+      }
+      await ctx.db.replace('resourceFileContents', content!._id, {
+        campaignUuid,
+        resourceUuid: sourceFileId,
+        state: 'ready',
+        ...semanticContent,
+        version: await initialJsonContentVersion(semanticContent),
+      })
+    })
+
+    const copy = await execute(campaign, campaignUuid, {
+      type: 'deepCopy',
+      sourceRootIds: [sourceFileId],
+      destinationParentId: null,
+    })
+    if (copy.status !== 'completed' || copy.receipt.result.type !== 'deepCopied') {
+      throw new Error('Expected completed deep copy')
+    }
+    const destinationFileId = copy.receipt.result.roots[0]!.destinationRootId
+    const destinationAssetId = await t.run(async (ctx) => {
+      const content = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', destinationFileId))
+        .unique()
+      expect(content).toEqual(
+        expect.objectContaining({
+          state: 'initializing',
+          assetUuid: expect.not.stringMatching(sourceAsset.assetId),
+          version: expect.objectContaining({ revision: 1 }),
+        }),
+      )
+      const intent = await ctx.db
+        .query('resourceAssetCopyIntents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', destinationFileId))
+        .unique()
+      expect(intent).toEqual(
+        expect.objectContaining({
+          sourceAssetUuid: sourceAsset.assetId,
+          destinationAssetUuid: content!.assetUuid,
+          status: 'pending',
+        }),
+      )
+      expect(intent).not.toHaveProperty('storageId')
+      return content!.assetUuid!
+    })
+
+    await execute(campaign, campaignUuid, {
+      type: 'trash',
+      resourceIds: [destinationFileId],
+    })
+    await execute(campaign, campaignUuid, {
+      type: 'permanentlyDelete',
+      resourceIds: [destinationFileId],
+    })
+    await t.run(async (ctx) => {
+      expect(
+        await ctx.db
+          .query('resourceAssetCopyIntents')
+          .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', destinationFileId))
+          .unique(),
+      ).toBeNull()
+      expect(
+        await ctx.db
+          .query('resourceAssetRetirementCandidates')
+          .withIndex('by_assetUuid', (query) => query.eq('assetUuid', destinationAssetId))
+          .unique(),
+      ).toEqual(expect.objectContaining({ status: 'pending' }))
     })
   })
 

@@ -10,6 +10,7 @@ import { initialJsonContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { remapResourceId } from './contentCopyTypes'
 import { findCanonicalResource } from './findCanonicalResource'
+import { prepareAssetCopies } from './assetContent'
 
 const EMPTY_MAP_CONTENT = { imageAssetUuid: null, layers: [], pins: [] } as const
 
@@ -21,6 +22,7 @@ export async function createMapContent(
   await ctx.db.insert('resourceMapContents', {
     campaignUuid: campaignId,
     resourceUuid: resourceId,
+    state: 'ready',
     imageAssetUuid: null,
     layers: [],
     version: await initialJsonContentVersion(EMPTY_MAP_CONTENT),
@@ -49,9 +51,11 @@ export async function prepareMapContentCopy(
   if (!content || content.campaignUuid !== campaignId || pins.length > 500) {
     return { status: 'integrity_error' }
   }
-  if (content.imageAssetUuid !== null || content.layers.some((layer) => layer.imageAssetUuid)) {
-    return { status: 'unavailable' }
-  }
+  const assets = await prepareAssetCopies(ctx, campaignId, destinationResourceId, [
+    content.imageAssetUuid,
+    ...content.layers.map((layer) => layer.imageAssetUuid),
+  ])
+  if (!assets) return { status: 'integrity_error' }
   const layerIds = new Set(content.layers.map((layer) => layer.id))
   if (layerIds.size !== content.layers.length) return { status: 'integrity_error' }
 
@@ -122,8 +126,11 @@ export async function prepareMapContentCopy(
           visible: pin.visible,
         }))
         const copiedContent = {
-          imageAssetUuid: null,
-          layers: content.layers,
+          imageAssetUuid: assets.remap(content.imageAssetUuid),
+          layers: content.layers.map((layer) => ({
+            ...layer,
+            imageAssetUuid: assets.remap(layer.imageAssetUuid),
+          })),
           pins: copiedPins.map(({ mapPinUuid, targetResourceUuid, layerId, x, y, visible }) => ({
             mapPinUuid,
             targetResourceUuid,
@@ -138,11 +145,13 @@ export async function prepareMapContentCopy(
           await ctx.db.insert('resourceMapContents', {
             campaignUuid: campaignId,
             resourceUuid: destinationResourceId,
-            imageAssetUuid: null,
-            layers: content.layers,
+            state: assets.initializing ? 'initializing' : 'ready',
+            imageAssetUuid: copiedContent.imageAssetUuid,
+            layers: copiedContent.layers,
             version,
           })
           await Promise.all(copiedPins.map((pin) => ctx.db.insert('resourceMapPins', pin)))
+          await assets.commit()
         }
       },
     },

@@ -6,6 +6,7 @@ import { loadCanvasContentDeletion } from './canvasContent'
 import { loadFileContentDeletion } from './fileContent'
 import { loadMapContentDeletion } from './mapContent'
 import { loadNoteContentDeletion } from './noteContent'
+import { fileAssetIds, mapAssetIds } from './assetContent'
 
 type ResourceDeletionPlan = {
   aliases: Array<Doc<'resourceSourcePathAliases'>>
@@ -16,6 +17,8 @@ type ResourceDeletionPlan = {
   mapContents: Array<Doc<'resourceMapContents'>>
   mapPins: Array<Doc<'resourceMapPins'>>
   canvasContents: Array<Doc<'resourceCanvasContents'>>
+  assetCopyIntents: Array<Doc<'resourceAssetCopyIntents'>>
+  retirementAssetUuids: Set<string>
 }
 
 function createPlan(): ResourceDeletionPlan {
@@ -28,11 +31,27 @@ function createPlan(): ResourceDeletionPlan {
     mapContents: [],
     mapPins: [],
     canvasContents: [],
+    assetCopyIntents: [],
+    retirementAssetUuids: new Set(),
   }
 }
 
 function rowCount(plan: ResourceDeletionPlan): number {
-  return Object.values(plan).reduce((count, rows) => count + rows.length, 0)
+  return rowGroups(plan).reduce((count, rows) => count + rows.length, 0)
+}
+
+function rowGroups(plan: ResourceDeletionPlan) {
+  return [
+    plan.aliases,
+    plan.roles,
+    plan.noteContents,
+    plan.noteIntents,
+    plan.fileContents,
+    plan.mapContents,
+    plan.mapPins,
+    plan.canvasContents,
+    plan.assetCopyIntents,
+  ]
 }
 
 async function addContent(
@@ -52,12 +71,20 @@ async function addContent(
     }
     case 'file': {
       const content = await loadFileContentDeletion(ctx, resourceId)
-      if (content) plan.fileContents.push(content)
+      if (content) {
+        plan.fileContents.push(content)
+        fileAssetIds(content).forEach((assetUuid) => plan.retirementAssetUuids.add(assetUuid))
+      }
       return
     }
     case 'map': {
       const deletion = await loadMapContentDeletion(ctx, resourceId)
-      if (deletion.content) plan.mapContents.push(deletion.content)
+      if (deletion.content) {
+        plan.mapContents.push(deletion.content)
+        mapAssetIds(deletion.content).forEach((assetUuid) =>
+          plan.retirementAssetUuids.add(assetUuid),
+        )
+      }
       plan.mapPins.push(...deletion.pins)
       return
     }
@@ -91,6 +118,12 @@ export async function planResourceDeletion(
         )
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
+    plan.assetCopyIntents.push(
+      ...(await ctx.db
+        .query('resourceAssetCopyIntents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resource.resourceUuid))
+        .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
+    )
     await addContent(ctx, plan, resource)
     if (rowCount(plan) > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) return null
   }
@@ -101,7 +134,31 @@ export async function applyResourceDeletion(
   ctx: CampaignMutationCtx,
   plan: ResourceDeletionPlan,
 ): Promise<void> {
-  for (const rows of Object.values(plan)) {
-    for (const row of rows) await ctx.db.delete(row._id)
-  }
+  await Promise.all(rowGroups(plan).flatMap((rows) => rows.map((row) => ctx.db.delete(row._id))))
+  const createdAt = Date.now()
+  const assets = [...plan.retirementAssetUuids]
+  const existing = await Promise.all(
+    assets.map((assetUuid) =>
+      ctx.db
+        .query('resourceAssetRetirementCandidates')
+        .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetUuid))
+        .unique(),
+    ),
+  )
+  await Promise.all(
+    assets.flatMap((assetUuid, index) =>
+      existing[index]
+        ? []
+        : [
+            ctx.db.insert('resourceAssetRetirementCandidates', {
+              assetUuid,
+              status: 'pending',
+              attempts: 0,
+              lastAttemptAt: null,
+              lastError: null,
+              createdAt,
+            }),
+          ],
+    ),
+  )
 }

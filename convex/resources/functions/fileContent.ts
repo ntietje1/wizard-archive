@@ -2,6 +2,7 @@ import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/do
 import type { CampaignMutationCtx } from '../../functions'
 import { initialJsonContentVersion } from './contentVersion'
 import type { ContentCopyPreparation } from './contentCopyTypes'
+import { prepareAssetCopies } from './assetContent'
 
 const EMPTY_FILE_CONTENT = {
   assetUuid: null,
@@ -18,6 +19,7 @@ export async function createFileContent(
   await ctx.db.insert('resourceFileContents', {
     campaignUuid: campaignId,
     resourceUuid: resourceId,
+    state: 'ready',
     ...EMPTY_FILE_CONTENT,
     version: await initialJsonContentVersion(EMPTY_FILE_CONTENT),
   })
@@ -38,10 +40,13 @@ export async function prepareFileContentCopy(
 ): Promise<ContentCopyPreparation> {
   const content = await loadFileContentDeletion(ctx, sourceResourceId)
   if (!content || content.campaignUuid !== campaignId) return { status: 'integrity_error' }
-  if (content.assetUuid !== null) return { status: 'unavailable' }
+  const assets = await prepareAssetCopies(ctx, campaignId, destinationResourceId, [
+    content.assetUuid,
+  ])
+  if (!assets) return { status: 'integrity_error' }
 
   const copied = {
-    assetUuid: null,
+    assetUuid: assets.remap(content.assetUuid),
     extension: content.extension,
     mediaType: content.mediaType,
     originalName: content.originalName,
@@ -56,9 +61,11 @@ export async function prepareFileContentCopy(
           await ctx.db.insert('resourceFileContents', {
             campaignUuid: campaignId,
             resourceUuid: destinationResourceId,
+            state: assets.initializing ? 'initializing' : 'ready',
             ...copied,
             version,
           })
+          await assets.commit()
         }),
     },
   }

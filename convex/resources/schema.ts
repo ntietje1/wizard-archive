@@ -223,6 +223,14 @@ export const noteContentSnapshotValidator = v.union(
   }),
 )
 
+const externalEffectIntentFields = {
+  status: literals('pending', 'failed'),
+  attempts: v.number(),
+  lastAttemptAt: v.nullable(v.number()),
+  lastError: v.nullable(v.string()),
+  createdAt: v.number(),
+}
+
 export const resourceTables = {
   resources: defineTable(resourceTableValidator)
     .index('by_resourceUuid', ['resourceUuid'])
@@ -299,11 +307,7 @@ export const resourceTables = {
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
     operationUuid: v.string(),
-    status: literals('pending', 'failed'),
-    attempts: v.number(),
-    lastAttemptAt: v.nullable(v.number()),
-    lastError: v.nullable(v.string()),
-    createdAt: v.number(),
+    ...externalEffectIntentFields,
   })
     .index('by_resourceUuid', ['resourceUuid'])
     .index('by_status_and_createdAt', ['status', 'createdAt']),
@@ -311,6 +315,7 @@ export const resourceTables = {
   resourceFileContents: defineTable({
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
+    state: literals('initializing', 'ready', 'failed'),
     assetUuid: v.nullable(v.string()),
     extension: v.nullable(v.string()),
     mediaType: v.string(),
@@ -321,6 +326,7 @@ export const resourceTables = {
   resourceMapContents: defineTable({
     campaignUuid: campaignUuidValidator,
     resourceUuid: resourceUuidValidator,
+    state: literals('initializing', 'ready', 'failed'),
     imageAssetUuid: v.nullable(v.string()),
     layers: v.array(
       v.object({
@@ -351,4 +357,22 @@ export const resourceTables = {
     update: v.bytes(),
     version: versionStampValidator,
   }).index('by_resourceUuid', ['resourceUuid']),
+
+  resourceAssetCopyIntents: defineTable({
+    campaignUuid: campaignUuidValidator,
+    resourceUuid: resourceUuidValidator,
+    sourceAssetUuid: v.string(),
+    destinationAssetUuid: v.string(),
+    ...externalEffectIntentFields,
+  })
+    .index('by_resourceUuid', ['resourceUuid'])
+    .index('by_destinationAssetUuid', ['destinationAssetUuid'])
+    .index('by_status_and_createdAt', ['status', 'createdAt']),
+
+  resourceAssetRetirementCandidates: defineTable({
+    assetUuid: v.string(),
+    ...externalEffectIntentFields,
+  })
+    .index('by_assetUuid', ['assetUuid'])
+    .index('by_status_and_createdAt', ['status', 'createdAt']),
 }
