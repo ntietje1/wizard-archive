@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import type { AssetId } from '@wizard-archive/editor/resources/domain-id'
+import { internal } from '../_generated/api'
 import { internalMutation } from '../_generated/server'
 import type { MutationCtx } from '../_generated/server'
 
@@ -11,7 +12,7 @@ const workResult = v.union(
 async function setContentAssetState(
   ctx: MutationCtx,
   resourceUuid: string,
-  state: 'ready' | 'failed',
+  state: 'initializing' | 'ready' | 'failed',
 ) {
   const [file, map] = await Promise.all([
     ctx.db
@@ -243,6 +244,49 @@ export const failAssetRetirement = internalMutation({
     const candidate = await ctx.db.get('resourceAssetRetirementCandidates', candidateId)
     if (!candidate) return { status: 'unavailable' as const }
     await ctx.db.patch(candidateId, { status: 'failed', lastError: error.slice(0, 200) })
+    return { status: 'completed' as const }
+  },
+})
+
+export const retryAssetCopy = internalMutation({
+  args: { intentId: v.id('resourceAssetCopyIntents'), staleBefore: v.number() },
+  returns: workResult,
+  handler: async (ctx, { intentId, staleBefore }) => {
+    const intent = await ctx.db.get('resourceAssetCopyIntents', intentId)
+    if (
+      !intent ||
+      intent.status === 'pending' ||
+      (intent.status === 'processing' &&
+        (intent.lastAttemptAt === null || intent.lastAttemptAt > staleBefore))
+    ) {
+      return { status: 'unavailable' as const }
+    }
+    await ctx.db.patch(intentId, { status: 'pending', lastError: null })
+    await setContentAssetState(ctx, intent.resourceUuid, 'initializing')
+    await ctx.scheduler.runAfter(0, internal.resources.internalActions.processAssetCopy, {
+      intentId,
+    })
+    return { status: 'completed' as const }
+  },
+})
+
+export const retryAssetRetirement = internalMutation({
+  args: { candidateId: v.id('resourceAssetRetirementCandidates'), staleBefore: v.number() },
+  returns: workResult,
+  handler: async (ctx, { candidateId, staleBefore }) => {
+    const candidate = await ctx.db.get('resourceAssetRetirementCandidates', candidateId)
+    if (
+      !candidate ||
+      candidate.status === 'pending' ||
+      (candidate.status === 'processing' &&
+        (candidate.lastAttemptAt === null || candidate.lastAttemptAt > staleBefore))
+    ) {
+      return { status: 'unavailable' as const }
+    }
+    await ctx.db.patch(candidateId, { status: 'pending', lastError: null })
+    await ctx.scheduler.runAfter(0, internal.resources.internalActions.processAssetRetirement, {
+      candidateId,
+    })
     return { status: 'completed' as const }
   },
 })

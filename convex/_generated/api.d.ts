@@ -176,6 +176,7 @@ import type * as resources_functions_noteContent from "../resources/functions/no
 import type * as resources_functions_projectAuthorizedResources from "../resources/functions/projectAuthorizedResources.js";
 import type * as resources_functions_resourceContentCopy from "../resources/functions/resourceContentCopy.js";
 import type * as resources_functions_resourceDeletion from "../resources/functions/resourceDeletion.js";
+import type * as resources_integrity from "../resources/integrity.js";
 import type * as resources_internalActions from "../resources/internalActions.js";
 import type * as resources_internalMutations from "../resources/internalMutations.js";
 import type * as resources_mutations from "../resources/mutations.js";
@@ -482,6 +483,7 @@ declare const fullApi: ApiFromModules<{
   "resources/functions/projectAuthorizedResources": typeof resources_functions_projectAuthorizedResources;
   "resources/functions/resourceContentCopy": typeof resources_functions_resourceContentCopy;
   "resources/functions/resourceDeletion": typeof resources_functions_resourceDeletion;
+  "resources/integrity": typeof resources_integrity;
   "resources/internalActions": typeof resources_internalActions;
   "resources/internalMutations": typeof resources_internalMutations;
   "resources/mutations": typeof resources_mutations;
