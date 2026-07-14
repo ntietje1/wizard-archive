@@ -153,6 +153,10 @@
       "types": "./dist/resources/in-memory-resource-catalog.d.mts",
       "default": "./dist/resources/in-memory-resource-catalog.mjs"
     },
+    "./resources/in-memory-runtime": {
+      "types": "./dist/resources/in-memory-resource-runtime.d.mts",
+      "default": "./dist/resources/in-memory-resource-runtime.mjs"
+    },
     "./resources/content-session-contract": {
       "types": "./dist/resources/content-session-contract.d.mts",
       "default": "./dist/resources/content-session-contract.mjs"
@@ -262,6 +266,7 @@
       "./resources/command-protocol",
       "./resources/operation-ledger",
       "./resources/in-memory-catalog",
+      "./resources/in-memory-runtime",
       "./resources/content-session-contract",
       "./resources/content-copy-contract",
       "./resources/optimism-contract",

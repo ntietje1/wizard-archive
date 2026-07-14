@@ -2,7 +2,13 @@ import type { VersionStamp } from './component-version'
 import { isUuidV7 } from './domain-id'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
 import { RESOURCE_KIND } from './resource-contract'
-import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-contract'
+import type {
+  ResourceColor,
+  ResourceIcon,
+  ResourceKind,
+  ResourceRecord,
+  ResourceTitle,
+} from './resource-contract'
 
 declare const indexRevisionBrand: unique symbol
 
@@ -45,6 +51,24 @@ export type AuthorizedResourceSummary = Readonly<{
   createdAt: number
   updatedAt: number
 }>
+
+export function authorizedResourceSummaryFromRecord(
+  resource: ResourceRecord,
+): AuthorizedResourceSummary {
+  return {
+    id: resource.id,
+    campaignId: resource.campaignId,
+    displayParentId: resource.parentId,
+    kind: resource.kind,
+    title: resource.title,
+    icon: resource.icon,
+    color: resource.color,
+    lifecycle: resource.lifecycle.state,
+    metadataVersion: resource.metadataVersion,
+    createdAt: resource.created.at,
+    updatedAt: resource.updated.at,
+  }
+}
 
 export interface WorkspaceResourceIndexSnapshot {
   readonly scope: ResourceProjectionScope

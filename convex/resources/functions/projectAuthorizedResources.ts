@@ -9,6 +9,7 @@ import type {
 } from '@wizard-archive/editor/resources/index-contract'
 import {
   RESOURCE_INDEX_SCHEMA,
+  authorizedResourceSummaryFromRecord,
   normalizeResourceCollectionQuery,
 } from '@wizard-archive/editor/resources/index-contract'
 import { MAX_RESOURCE_CATALOG_PAGE_SIZE } from '@wizard-archive/editor/resources/catalog-contract'
@@ -28,22 +29,6 @@ function projectionScope(ctx: CampaignQueryCtx): ResourceProjectionScope {
     ...ctx.resourceScope,
     projection: ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player',
     schema: RESOURCE_INDEX_SCHEMA,
-  }
-}
-
-function toSummary(resource: ResourceRecord): AuthorizedResourceSummary {
-  return {
-    id: resource.id,
-    campaignId: resource.campaignId,
-    displayParentId: resource.parentId,
-    kind: resource.kind,
-    title: resource.title,
-    icon: resource.icon,
-    color: resource.color,
-    lifecycle: resource.lifecycle.state,
-    metadataVersion: resource.metadataVersion,
-    createdAt: resource.created.at,
-    updatedAt: resource.updated.at,
   }
 }
 
@@ -71,7 +56,9 @@ function uniqueSummaries(
   resources: ReadonlyArray<ResourceRecord>,
 ): ReadonlyArray<AuthorizedResourceSummary> {
   const summaries = new Map<ResourceId, AuthorizedResourceSummary>()
-  for (const resource of resources) summaries.set(resource.id, toSummary(resource))
+  for (const resource of resources) {
+    summaries.set(resource.id, authorizedResourceSummaryFromRecord(resource))
+  }
   return Array.from(summaries.values()).sort((left, right) => left.id.localeCompare(right.id))
 }
 
