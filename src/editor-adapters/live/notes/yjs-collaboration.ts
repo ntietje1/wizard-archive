@@ -9,14 +9,12 @@ import {
   isWizardEditorYjsProviderApplyingRemoteUpdate,
   useWizardEditorNoteYjsPersistenceLifecycle,
 } from '@wizard-archive/editor/adapter'
-import type { WizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
 import type { YjsCollaborationProvider } from '@wizard-archive/editor/collaboration/yjs-provider'
 import { logger } from '~/shared/utils/logger'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 type ConvexClient = ReturnType<typeof useConvex>
 type QueryClient = ReturnType<typeof useQueryClient>
-type GetNoteSlugById = (noteId: ResourceId) => WizardEditorResourceSlug | null | undefined
 type BeforeDestroyState = {
   sourceId: CampaignId
   documentId: ResourceId
@@ -38,12 +36,10 @@ async function flushProviderForPersist(provider: YjsCollaborationProvider, label
 }
 
 async function invalidatePersistedNoteQueries({
-  getNoteSlugById,
   noteId,
   queryClient,
   sourceId,
 }: {
-  getNoteSlugById: GetNoteSlugById
   noteId: ResourceId
   queryClient: QueryClient
   sourceId: CampaignId
@@ -73,30 +69,16 @@ async function invalidatePersistedNoteQueries({
     }),
   ]
 
-  const slug = getNoteSlugById(noteId)
-  if (slug) {
-    invalidations.push(
-      queryClient.invalidateQueries({
-        queryKey: convexQuery(api.sidebarItems.queries.resolveSidebarItemAccess, {
-          campaignId: sourceId,
-          lookup: { kind: 'slug', slug },
-        }).queryKey,
-      }),
-    )
-  }
-
   await Promise.all(invalidations)
 }
 
 async function persistNoteBlocksNow({
   convex,
-  getNoteSlugById,
   noteId,
   queryClient,
   sourceId,
 }: {
   convex: ConvexClient
-  getNoteSlugById: GetNoteSlugById
   noteId: ResourceId
   queryClient: QueryClient
   sourceId: CampaignId
@@ -106,7 +88,7 @@ async function persistNoteBlocksNow({
     documentId: noteId,
   })
   if (result.status === 'rejected') return result
-  await invalidatePersistedNoteQueries({ getNoteSlugById, noteId, queryClient, sourceId })
+  await invalidatePersistedNoteQueries({ noteId, queryClient, sourceId })
   return result
 }
 
@@ -115,16 +97,13 @@ export function useNoteYjsCollaboration(
   noteId: ResourceId,
   user: { name: string; color: string },
   canEdit: boolean,
-  { getNoteSlugById }: { getNoteSlugById: GetNoteSlugById },
 ) {
   const convex = useConvex()
   const queryClient = useQueryClient()
   const convexRef = useRef(convex)
   const queryClientRef = useRef(queryClient)
-  const getNoteSlugByIdRef = useRef(getNoteSlugById)
   convexRef.current = convex
   queryClientRef.current = queryClient
-  getNoteSlugByIdRef.current = getNoteSlugById
 
   const beforeDestroyRef = useRef((_state: BeforeDestroyState) => Promise.resolve())
 
@@ -143,7 +122,6 @@ export function useNoteYjsCollaboration(
       persistNote: (persistedNoteId, persistedSourceId) =>
         persistNoteBlocksNow({
           convex: convexRef.current,
-          getNoteSlugById: getNoteSlugByIdRef.current,
           noteId: persistedNoteId,
           queryClient: queryClientRef.current,
           sourceId: persistedSourceId as CampaignId,

@@ -195,7 +195,6 @@ describe('live note session source note data', () => {
     const session = renderHook(() => {
       const source = useLiveNoteSessionPorts({
         canEditNote: () => true,
-        getNoteSlugById: () => null,
         workspaceId: 'campaign_1',
       })
       return source.document.useCollaborationSession({ mode: 'editable', note })
@@ -211,7 +210,6 @@ describe('live note session source note data', () => {
       note.id,
       expect.objectContaining({ name: 'Anonymous' }),
       true,
-      { getNoteSlugById: expect.any(Function) },
     )
   })
 
@@ -222,7 +220,6 @@ describe('live note session source note data', () => {
     const session = renderHook(() => {
       const source = useLiveNoteSessionPorts({
         canEditNote,
-        getNoteSlugById: () => null,
         workspaceId: 'campaign_1',
       })
       return source.document.useCollaborationSession({ mode: 'editable', note })
@@ -238,7 +235,6 @@ describe('live note session source note data', () => {
       note.id,
       expect.objectContaining({ name: 'Mina' }),
       false,
-      { getNoteSlugById: expect.any(Function) },
     )
   })
 
@@ -249,7 +245,6 @@ describe('live note session source note data', () => {
     renderHook(() => {
       const source = useLiveNoteSessionPorts({
         canEditNote,
-        getNoteSlugById: () => null,
         workspaceId: 'campaign_1',
       })
       return source.document.useCollaborationSession({ mode: 'editable', note })
@@ -261,7 +256,6 @@ describe('live note session source note data', () => {
       note.id,
       expect.objectContaining({ name: 'Mina' }),
       false,
-      { getNoteSlugById: expect.any(Function) },
     )
   })
 
@@ -271,7 +265,6 @@ describe('live note session source note data', () => {
     const session = renderHook(() => {
       const source = useLiveNoteSessionPorts({
         canEditNote: () => true,
-        getNoteSlugById: () => null,
         workspaceId: 'campaign_1',
       })
       return source.document.useCollaborationSession({ mode: 'readonly', note })
@@ -283,7 +276,6 @@ describe('live note session source note data', () => {
       note.id,
       expect.objectContaining({ name: 'Mina' }),
       false,
-      { getNoteSlugById: expect.any(Function) },
     )
   })
 })

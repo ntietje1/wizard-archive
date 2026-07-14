@@ -741,7 +741,6 @@ describe('useLiveWorkspaceRuntime', () => {
       readonlyNote.id,
       expect.any(Object),
       false,
-      { getNoteSlugById: expect.any(Function) },
     )
   })
 

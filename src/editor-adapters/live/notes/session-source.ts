@@ -14,7 +14,6 @@ import type {
   WizardEditorNoteEditorSession,
   WizardEditorNoteHeadingSessionPorts,
   WizardEditorNotePlaybackSessionPorts,
-  WizardEditorResourceSlug,
   WizardEditorNoteSessionPorts,
   WizardEditorNoteValueSessionPorts,
 } from '@wizard-archive/editor/adapter'
@@ -27,7 +26,6 @@ function useLiveNoteCollaborationSession(
   workspaceId: string,
   canEditNote: (note: LiveNoteItemWithContent) => boolean,
   request: WizardEditorNoteCollaborationSessionRequest,
-  getNoteSlugById: (noteId: ResourceId) => WizardEditorResourceSlug | null | undefined,
 ): WizardEditorNoteEditorSession {
   const { isLoading: userLoading, user } = useLiveCollaborationUser()
   const persistedNoteId = isPersistedWizardEditorItemId(request.note.id) ? request.note.id : null
@@ -38,7 +36,6 @@ function useLiveNoteCollaborationSession(
     persistedNoteId ?? request.note.id,
     user,
     sessionCanEdit,
-    { getNoteSlugById },
   )
 
   const base = {
@@ -67,17 +64,15 @@ function useLiveNoteCollaborationSession(
 
 export function useLiveNoteSessionPorts({
   canEditNote,
-  getNoteSlugById,
   workspaceId,
 }: {
   canEditNote: (note: LiveNoteItemWithContent) => boolean
-  getNoteSlugById: (noteId: ResourceId) => WizardEditorResourceSlug | null | undefined
   workspaceId: string
 }): WizardEditorNoteSessionPorts {
   return {
     document: {
       useCollaborationSession: (request) =>
-        useLiveNoteCollaborationSession(workspaceId, canEditNote, request, getNoteSlugById),
+        useLiveNoteCollaborationSession(workspaceId, canEditNote, request),
     },
   }
 }

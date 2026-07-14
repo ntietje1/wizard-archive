@@ -6,15 +6,12 @@ import { useNoteYjsCollaboration } from '~/editor-adapters/live/notes/yjs-collab
 import type { Id } from 'convex/_generated/dataModel'
 
 import { flushMicrotasks } from '~/test/helpers/async'
-import { parseWizardEditorResourceSlug } from '@wizard-archive/editor/adapter'
 
 const NOTE_ID = 'test-note-id' as ResourceId
 const OTHER_NOTE_ID = 'other-test-note-id' as ResourceId
 const CAMPAIGN_ID = 'test-campaign-id' as Id<'campaigns'>
 const USER = { name: 'Test User', color: '#ff0000' }
 const PROVIDER = { awareness: {} }
-const TEST_NOTE_SLUG = parseWizardEditorResourceSlug('test-note')
-if (!TEST_NOTE_SLUG) throw new Error('Expected test note slug to be valid')
 
 const {
   mockAction,
@@ -161,16 +158,6 @@ describe('useNoteYjsCollaboration', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['convexQuery', 'getNoteValueStatesByNotes', { campaignId: 'test-campaign-id' }],
     })
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: [
-        'convexQuery',
-        'resolveSidebarItemAccess',
-        {
-          campaignId: 'test-campaign-id',
-          lookup: { kind: 'slug', slug: 'test-note' },
-        },
-      ],
-    })
     expect(callOrder.slice(0, 2)).toEqual(['flush', 'persist'])
   })
 
@@ -219,9 +206,7 @@ describe('useNoteYjsCollaboration', () => {
 })
 
 function useTestNoteYjsCollaboration(noteId: ResourceId, canEdit: boolean) {
-  return useNoteYjsCollaboration(CAMPAIGN_ID, noteId, USER, canEdit, {
-    getNoteSlugById: (id) => (id === NOTE_ID ? TEST_NOTE_SLUG : null),
-  })
+  return useNoteYjsCollaboration(CAMPAIGN_ID, noteId, USER, canEdit)
 }
 
 function createSessionDoc(noteId: ResourceId) {

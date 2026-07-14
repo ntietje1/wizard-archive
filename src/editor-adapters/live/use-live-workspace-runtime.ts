@@ -521,7 +521,6 @@ function useLiveRuntimeContentSessions({
   const note = useLiveNoteSessionPorts({
     workspaceId,
     canEditNote: (noteItem) => permissions.canMutateItem(noteItem, PERMISSION_LEVEL.EDIT),
-    getNoteSlugById: (noteId) => catalog.getKnownItemById(noteId)?.slug,
   })
   const noteHeadings = useLiveNoteHeadingSessionPorts()
   const notePlayback = useLiveNotePlaybackSessionPorts()
