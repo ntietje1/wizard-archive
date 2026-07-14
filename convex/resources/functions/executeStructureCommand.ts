@@ -284,11 +284,14 @@ async function operationRoots(
   }
   const selected = new Set(resourceIds)
   const resources = new Map<ResourceId, Doc<'resources'>>()
+  const selectedResources: Array<Doc<'resources'>> = []
   for (const resourceId of resourceIds) {
-    resources.set(resourceId, await requireResource(ctx, campaignId, resourceId))
+    const resource = await requireResource(ctx, campaignId, resourceId)
+    resources.set(resourceId, resource)
+    selectedResources.push(resource)
   }
   const roots: Array<Doc<'resources'>> = []
-  for (const resource of resources.values()) {
+  for (const resource of selectedResources) {
     if (!(await hasSelectedAncestor(ctx, campaignId, resource, selected, resources))) {
       roots.push(resource)
     }
