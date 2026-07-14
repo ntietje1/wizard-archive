@@ -5,7 +5,6 @@ import { getBlockSharePermissionLevelMigrationPatch } from './blockShares/permis
 import { getDeleteBlockInlineContentProjectionFieldPatch } from './blocks/inlineContentMigration'
 import { getCampaignDefaultFolderInheritSharesMigrationPatch } from './campaigns/defaultFolderInheritSharesMigration'
 import { getFolderInheritSharesMigrationPatch } from './folders/inheritSharesMigration'
-import { getEditHistoryBlockShareMemberMigrationPatch } from './editHistory/blockShareMemberMigration'
 import {
   getLegacyNoteValueCompileFieldsCleanupPatch,
   getNoteValueCompileStateMigrationPatch,
@@ -67,13 +66,6 @@ export const backfillNoteValueCompileState = migrations.define({
   migrateOne: (_ctx, row) => getNoteValueCompileStateMigrationPatch(row) ?? undefined,
 })
 
-export const migrateEditHistoryBlockShareMember = migrations.define({
-  table: 'editHistory',
-  batchSize: 100,
-  migrateOne: (_ctx, row) =>
-    getEditHistoryBlockShareMemberMigrationPatch(row) as Partial<typeof row> | undefined,
-})
-
 export const migrateFileSystemTransactionVocabulary = migrations.define({
   table: 'filesystemTransactions',
   batchSize: 100,
@@ -125,10 +117,6 @@ export const runBackfillNoteValueCompileStateMigration = migrations.runner(
   internal.migrations.backfillNoteValueCompileState,
 )
 
-export const runEditHistoryBlockShareMemberMigration = migrations.runner(
-  internal.migrations.migrateEditHistoryBlockShareMember,
-)
-
 export const runFileSystemTransactionVocabularyMigration = migrations.runner(
   internal.migrations.migrateFileSystemTransactionVocabulary,
 )
@@ -152,7 +140,6 @@ export const runAll = migrations.runner([
   internal.migrations.backfillCampaignDefaultFolderInheritShares,
   internal.migrations.backfillFolderInheritShares,
   internal.migrations.backfillNoteValueCompileState,
-  internal.migrations.migrateEditHistoryBlockShareMember,
   internal.migrations.migrateFileSystemTransactionVocabulary,
   internal.migrations.removeLegacyNoteValueCompileFields,
 ])

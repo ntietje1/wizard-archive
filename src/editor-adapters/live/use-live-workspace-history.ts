@@ -4,7 +4,11 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemId } from 'shared/common/ids'
-import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  CampaignMemberId,
+  HistoryEntryId,
+} from '@wizard-archive/editor/resources/domain-id'
 import {
   createWizardEditorHistorySource,
   resolveWizardEditorHistoryScope,
@@ -32,9 +36,9 @@ type LiveResourceHistoryControls = Pick<
   rollbackEntryId: HistoryEntryId | null
 }
 type LiveHistoryEntry = Omit<EditorHistoryEntry, 'memberId' | 'metadata' | 'workspaceId'> & {
-  campaignMemberId: Id<'campaignMembers'>
+  campaignMemberId: CampaignMemberId
   metadata: EditorHistoryEntry['metadata']
-} & Record<'campaignId', Id<'campaigns'>>
+} & Record<'campaignId', CampaignId>
 
 export function useLiveWorkspaceHistory({
   canEdit,

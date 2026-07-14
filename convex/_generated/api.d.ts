@@ -93,7 +93,6 @@ import type * as documentSnapshots_internalQueries from "../documentSnapshots/in
 import type * as documentSnapshots_queries from "../documentSnapshots/queries.js";
 import type * as documentSnapshots_rollback from "../documentSnapshots/rollback.js";
 import type * as documentSnapshots_types from "../documentSnapshots/types.js";
-import type * as editHistory_blockShareMemberMigration from "../editHistory/blockShareMemberMigration.js";
 import type * as editHistory_functions_getHistoryEntry from "../editHistory/functions/getHistoryEntry.js";
 import type * as editHistory_log from "../editHistory/log.js";
 import type * as editHistory_queries from "../editHistory/queries.js";
@@ -385,7 +384,6 @@ declare const fullApi: ApiFromModules<{
   "documentSnapshots/queries": typeof documentSnapshots_queries;
   "documentSnapshots/rollback": typeof documentSnapshots_rollback;
   "documentSnapshots/types": typeof documentSnapshots_types;
-  "editHistory/blockShareMemberMigration": typeof editHistory_blockShareMemberMigration;
   "editHistory/functions/getHistoryEntry": typeof editHistory_functions_getHistoryEntry;
   "editHistory/log": typeof editHistory_log;
   "editHistory/queries": typeof editHistory_queries;

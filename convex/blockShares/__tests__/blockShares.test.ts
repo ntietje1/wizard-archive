@@ -635,6 +635,16 @@ describe('block permission resolution', () => {
     })
     expect(receipt.transactionId).toEqual(expect.any(String))
 
+    const historyEntry = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('editHistory')
+        .withIndex('by_item_action', (query) =>
+          query.eq('itemId', noteId).eq('action', 'block_share_changed'),
+        )
+        .unique()
+    })
+    expect(historyEntry?.metadata).toMatchObject({ memberId: ctx.player.memberDomainId })
+
     const dmResult = await getBlockShareInfo(dmAuth, {
       campaignId: ctx.campaignDomainId,
       noteId,

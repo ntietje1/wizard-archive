@@ -38,9 +38,23 @@ describe('edit history queries', () => {
     expect(projectedEntry).toMatchObject({
       id: historyEntry!.historyEntryUuid,
       createdAt: historyEntry!._creationTime,
+      campaignId: ctx.campaignDomainId,
+      campaignMemberId: ctx.dm.memberDomainId,
     })
+    expect(projectedEntry!.campaignId).not.toBe(ctx.campaignId)
+    expect(projectedEntry!.campaignMemberId).not.toBe(ctx.dm.memberId)
     expect(projectedEntry).not.toHaveProperty('_id')
     expect(projectedEntry).not.toHaveProperty('historyEntryUuid')
+
+    const historyPage = await dmAuth.query(api.editHistory.queries.getItemHistory, {
+      campaignId: ctx.campaignDomainId,
+      itemId: noteId,
+      paginationOpts: { cursor: null, numItems: 20 },
+    })
+    expect(historyPage.page[0]).toMatchObject({
+      campaignId: ctx.campaignDomainId,
+      campaignMemberId: ctx.dm.memberDomainId,
+    })
     await expectValidationFailed(
       dmAuth.query(api.editHistory.queries.getHistoryEntry, {
         campaignId: ctx.campaignDomainId,

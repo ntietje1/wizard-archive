@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import type { Validator } from 'convex/values'
 import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
+import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
 import type { HistoryEntryId } from '@wizard-archive/editor/resources/domain-id'
 
 export const historyEntryIdValidator = v.string() as Validator<HistoryEntryId>
@@ -50,7 +51,7 @@ const permissionChangedMetadataValidator = v.object({
 })
 const blockShareChangedMetadataValidator = v.object({
   status: v.string(),
-  memberId: v.optional(v.id('campaignMembers')),
+  memberId: v.optional(campaignMemberIdValidator),
   blockCount: v.optional(v.number()),
 })
 const inheritSharesChangedMetadataValidator = v.object({
@@ -191,8 +192,20 @@ const editHistoryVariants = [
 ] as const
 
 export const editHistoryValidator = v.union(
-  ...editHistoryVariants.map(({ historyEntryUuid: _historyEntryUuid, ...fields }) =>
-    v.object({ id: historyEntryIdValidator, createdAt: v.number(), ...fields }),
+  ...editHistoryVariants.map(
+    ({
+      historyEntryUuid: _historyEntryUuid,
+      campaignId: _campaignRowId,
+      campaignMemberId: _campaignMemberRowId,
+      ...fields
+    }) =>
+      v.object({
+        id: historyEntryIdValidator,
+        createdAt: v.number(),
+        ...fields,
+        campaignId: campaignIdValidator,
+        campaignMemberId: campaignMemberIdValidator,
+      }),
   ),
 )
 

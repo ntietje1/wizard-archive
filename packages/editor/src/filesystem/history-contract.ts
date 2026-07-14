@@ -1,5 +1,4 @@
-import type { WorkspaceId, WorkspaceMemberId } from '../../../../shared/common/ids'
-import type { HistoryEntryId } from '../resources/domain-id'
+import type { CampaignId, CampaignMemberId, HistoryEntryId } from '../resources/domain-id'
 import type { ResourceId, ResourceKind } from '../workspace/resource-contract'
 
 const SHARED_HISTORY_ACTION = {
@@ -85,7 +84,7 @@ type SharedHistoryMetadataMap = {
   }
   block_share_changed: {
     status: string
-    memberId?: WorkspaceMemberId
+    memberId?: CampaignMemberId
     blockCount?: number
   }
   inherit_shares_changed: {
@@ -127,8 +126,8 @@ export type EditHistoryEntry = {
     createdAt: number
     itemId: ResourceId
     itemType: ResourceKind
-    workspaceId: WorkspaceId
-    memberId: WorkspaceMemberId
+    workspaceId: CampaignId
+    memberId: CampaignMemberId
     action: K
     metadata: EditHistoryMetadataMap[K]
     hasSnapshot: boolean

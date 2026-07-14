@@ -2285,11 +2285,7 @@ describe('editor package public API shape', () => {
   })
 
   it('keeps non-adapter public resource contracts in workspace vocabulary', () => {
-    for (const subpath of [
-      './resources/history-contract',
-      './resources/patch-contract',
-      './game-maps/document-contract',
-    ]) {
+    for (const subpath of ['./resources/patch-contract', './game-maps/document-contract']) {
       const declaration = declarationTextForExport(subpath)
       const source = readFileSync(path.join(process.cwd(), sourcePathForExport(subpath)), 'utf8')
 
@@ -2421,11 +2417,18 @@ describe('editor package public API shape', () => {
     expect(sortedHistoryContractExports()).not.toEqual(
       expect.arrayContaining(['HistorySnapshot', 'isHistorySnapshot', 'SNAPSHOT_TYPE']),
     )
-    expect(declarationTextForExport('./resources/history-contract')).not.toContain(
-      'DocumentSnapshot',
+    const historyDeclaration = declarationTextForExport('./resources/history-contract')
+    const historySource = readFileSync(
+      path.join(process.cwd(), 'packages/editor/src/filesystem/history-contract.ts'),
+      'utf8',
     )
-    expect(declarationTextForExport('./resources/history-contract')).not.toContain('_creationTime')
-    expect(declarationTextForExport('./resources/history-contract')).not.toContain('_id')
+    expect(historyDeclaration).not.toContain('DocumentSnapshot')
+    expect(historyDeclaration).not.toContain('WorkspaceId')
+    expect(historyDeclaration).not.toContain('WorkspaceMemberId')
+    expect(historyDeclaration).not.toContain('_creationTime')
+    expect(historyDeclaration).not.toContain('_id')
+    expect(historySource).toContain('CampaignId')
+    expect(historySource).toContain('CampaignMemberId')
     expect(declarationTextForExport('./adapter')).not.toContain('CampaignMemberSummary')
   })
 

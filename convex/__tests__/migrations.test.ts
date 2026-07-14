@@ -3,13 +3,11 @@ import { PERMISSION_LEVEL } from '../../shared/permissions/types'
 import { getBlockSharePermissionLevelMigrationPatch } from '../blockShares/permissionLevelMigration'
 import { getDeleteBlockInlineContentProjectionFieldPatch } from '../blocks/inlineContentMigration'
 import { getCampaignDefaultFolderInheritSharesMigrationPatch } from '../campaigns/defaultFolderInheritSharesMigration'
-import { getEditHistoryBlockShareMemberMigrationPatch } from '../editHistory/blockShareMemberMigration'
 import { getFolderInheritSharesMigrationPatch } from '../folders/inheritSharesMigration'
 import { getFileSystemTransactionVocabularyMigrationPatch } from '../sidebarItems/filesystem/transactionVocabularyMigration'
 import { getFileSystemSnapshotNormalizedNameMigrationPatch } from '../sidebarItems/filesystem/snapshotNormalizedNameMigration'
 import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
 import { getSidebarItemNormalizedNameMigrationPatch } from '../sidebarItems/normalizedNameMigration'
-import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 
 describe('migrations', () => {
   describe('getSidebarItemLifecycleMigrationPatch', () => {
@@ -126,33 +124,6 @@ describe('migrations', () => {
           defaultFolderInheritShares: true,
         }),
       ).toBeNull()
-    })
-  })
-
-  describe('getEditHistoryBlockShareMemberMigrationPatch', () => {
-    it('renames legacy member metadata in nested update changes', () => {
-      expect(
-        getEditHistoryBlockShareMemberMigrationPatch({
-          action: EDIT_HISTORY_ACTION.updated,
-          metadata: {
-            changes: [
-              {
-                action: EDIT_HISTORY_ACTION.block_share_changed,
-                metadata: { status: 'shared', campaignMemberId: 'member-1' },
-              },
-            ],
-          },
-        }),
-      ).toEqual({
-        metadata: {
-          changes: [
-            {
-              action: EDIT_HISTORY_ACTION.block_share_changed,
-              metadata: { status: 'shared', memberId: 'member-1' },
-            },
-          ],
-        },
-      })
     })
   })
 

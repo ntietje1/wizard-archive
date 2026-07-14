@@ -11,6 +11,7 @@ import type { BlockShareMutationCtx } from './blockShareMutations'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 type BlockMemberPermissionHistoryStatus = 'shared' | 'unshared'
 
@@ -34,14 +35,14 @@ export const setBlockMemberPermission = async (
 
   const note = await getBlockShareNote(ctx, noteId)
   const memberArgs = { campaignId: note.campaignId, campaignMemberId }
-  await (permissionLevel === null
+  const member = await (permissionLevel === null
     ? requireCampaignMember(ctx, memberArgs)
     : requireAcceptedPlayerMember(ctx, memberArgs))
 
   const changedBlockNoteIds = await setBlocksMemberPermissionHelper(ctx, {
     note,
     blockNoteIds,
-    campaignMemberId,
+    campaignMemberId: member._id,
     permissionLevel,
   })
 
@@ -52,7 +53,7 @@ export const setBlockMemberPermission = async (
       action: EDIT_HISTORY_ACTION.block_share_changed,
       metadata: {
         status: historyStatus ?? permissionLevel ?? 'default',
-        memberId: campaignMemberId,
+        memberId: assertDomainId(DOMAIN_ID_KIND.campaignMember, member.campaignMemberUuid),
         blockCount: changedBlockNoteIds.length,
       },
     })

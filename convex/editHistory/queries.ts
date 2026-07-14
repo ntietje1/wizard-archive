@@ -8,10 +8,37 @@ import { paginatedQueryResultFields } from '../common/pagination'
 import { editHistoryValidator, historyEntryIdValidator } from './schema'
 import { getHistoryEntryRow, requireHistoryEntryId } from './functions/getHistoryEntry'
 import type { Doc } from '../_generated/dataModel'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { QueryCtx } from '../_generated/server'
 
-function toEditHistoryEntry(entry: Doc<'editHistory'>) {
-  const { _id: _rowId, _creationTime, historyEntryUuid, ...fields } = entry
-  return { ...fields, id: historyEntryUuid, createdAt: _creationTime }
+async function toEditHistoryEntry(
+  ctx: Pick<QueryCtx, 'db'>,
+  campaign: Pick<Doc<'campaigns'>, '_id' | 'campaignUuid'>,
+  entry: Doc<'editHistory'>,
+) {
+  if (entry.campaignId !== campaign._id) {
+    throw new Error('Edit history entry is outside its campaign')
+  }
+  const member = await ctx.db.get('campaignMembers', entry.campaignMemberId)
+  if (!member || member.campaignId !== entry.campaignId) {
+    throw new Error('Edit history member is missing from its campaign')
+  }
+
+  const {
+    _id: _rowId,
+    _creationTime,
+    historyEntryUuid,
+    campaignId: _campaignRowId,
+    campaignMemberId: _campaignMemberRowId,
+    ...fields
+  } = entry
+  return {
+    ...fields,
+    id: historyEntryUuid,
+    createdAt: _creationTime,
+    campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, campaign.campaignUuid),
+    campaignMemberId: assertDomainId(DOMAIN_ID_KIND.campaignMember, member.campaignMemberUuid),
+  }
 }
 
 export const getHistoryEntry = campaignQuery({
@@ -29,7 +56,7 @@ export const getHistoryEntry = campaignQuery({
       requiredLevel: PERMISSION_LEVEL.EDIT,
     })
 
-    return toEditHistoryEntry(entry)
+    return await toEditHistoryEntry(ctx, ctx.campaign, entry)
   },
 })
 
@@ -53,6 +80,11 @@ export const getItemHistory = campaignQuery({
       .withIndex('by_item', (q) => q.eq('itemId', itemId))
       .order('desc')
       .paginate(paginationOpts)
-    return { ...page, page: page.page.map(toEditHistoryEntry) }
+    return {
+      ...page,
+      page: await Promise.all(
+        page.page.map((entry) => toEditHistoryEntry(ctx, ctx.campaign, entry)),
+      ),
+    }
   },
 })
