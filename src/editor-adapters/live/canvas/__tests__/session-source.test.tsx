@@ -1,4 +1,5 @@
 import { testResourceId } from '../../../../../shared/test/resource-id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
@@ -10,6 +11,8 @@ import {
 } from '~/editor-adapters/live/canvas/session-source'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
+
+const CAMPAIGN_ID = testCampaignId('campaign_1')
 
 const doc = vi.hoisted(() => ({
   getMap: vi.fn(() => new Map()),
@@ -116,7 +119,7 @@ describe('useLiveCanvasSessionSource', () => {
       collaboration: { status: 'unavailable' },
     })
     expect(collaborationMock).toHaveBeenCalledWith(
-      'campaign_1',
+      CAMPAIGN_ID,
       canvas.id,
       expect.objectContaining({ name: 'Mina' }),
       true,
@@ -133,7 +136,7 @@ describe('useLiveCanvasSessionSource', () => {
 
     expect(result.current).toMatchObject({ status: 'ready', canEdit: false })
     expect(collaborationMock).toHaveBeenCalledWith(
-      'campaign_1',
+      CAMPAIGN_ID,
       canvas.id,
       expect.objectContaining({ name: 'Mina' }),
       false,
@@ -181,7 +184,7 @@ describe('useLiveCanvasSessionSource', () => {
     expect(authPaginatedQueryMock).toHaveBeenCalledWith(
       expect.anything(),
       {
-        campaignId: 'campaign_1',
+        campaignId: CAMPAIGN_ID,
         documentId: canvasId,
         afterSeq: 3,
       },
@@ -263,7 +266,7 @@ describe('useLiveCanvasSessionSource', () => {
 
 function useTestLiveCanvasSessionSource({ canEdit = true }: { canEdit?: boolean } = {}) {
   return useLiveCanvasSessionSource({
-    workspaceId: testId<'campaigns'>('campaign_1'),
+    workspaceId: CAMPAIGN_ID,
     access: {
       canEditCanvas: () => canEdit,
     },
@@ -272,7 +275,7 @@ function useTestLiveCanvasSessionSource({ canEdit = true }: { canEdit?: boolean 
 
 function useTestLiveCanvasEmbeddedSessionSource() {
   return useLiveCanvasEmbeddedSessionSource({
-    workspaceId: testId<'campaigns'>('campaign_1'),
+    workspaceId: CAMPAIGN_ID,
   })
 }
 

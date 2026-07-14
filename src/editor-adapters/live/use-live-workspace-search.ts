@@ -31,7 +31,7 @@ type LiveWorkspaceSearchQueryClient = {
 }
 
 export function useLiveWorkspaceSearch(
-  workspaceId: string,
+  workspaceId: CampaignId,
   convex: LiveWorkspaceSearchQueryClient,
   current: WizardEditorCurrentResourceState,
   currentItem: WizardEditorItem | null,
@@ -45,7 +45,6 @@ export function useLiveWorkspaceSearch(
   viewAsPlayerId: CampaignMemberId | null,
 ) {
   const { catalog, permissions } = filesystem
-  const workspaceRecordId = liveSearchWorkspaceRecordId(workspaceId)
   const currentItemId = currentItem?.id ?? null
   const currentNoteItemId = isWizardEditorNoteItem(currentItem) ? currentItem.id : null
   const backlinks = useLiveItemLinksState({ itemId: currentItemId, kind: 'backlinks' })
@@ -73,12 +72,12 @@ export function useLiveWorkspaceSearch(
     searchBody: async (input) => {
       const bodyResults = viewAsPlayerId
         ? await convex.query(api.blocks.queries.searchBlocksAsMember, {
-            campaignId: workspaceRecordId,
+            campaignId: workspaceId,
             campaignMemberId: viewAsPlayerId,
             query: input.query,
           })
         : await convex.query(api.blocks.queries.searchBlocks, {
-            campaignId: workspaceRecordId,
+            campaignId: workspaceId,
             query: input.query,
           })
       return Array.isArray(bodyResults) ? bodyResults : undefined
@@ -90,7 +89,7 @@ export function useLiveWorkspaceSearch(
     current,
     loadItemContent: async (itemId: ResourceId) => {
       const result = await convex.query(api.sidebarItems.queries.resolveSidebarItemAccess, {
-        campaignId: workspaceRecordId,
+        campaignId: workspaceId,
         lookup: { kind: 'id', id: itemId },
       })
       return result.status === 'available' ? result.item : null
@@ -104,10 +103,6 @@ export function useLiveWorkspaceSearch(
   })
 
   return { resourceContent, search: searchSource.items }
-}
-
-function liveSearchWorkspaceRecordId(workspaceId: string) {
-  return workspaceId as CampaignId
 }
 
 type LiveItemLinkKind = 'backlinks' | 'outgoing'

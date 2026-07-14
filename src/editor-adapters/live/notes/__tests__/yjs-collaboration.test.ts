@@ -1,15 +1,15 @@
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { useNoteYjsCollaboration } from '~/editor-adapters/live/notes/yjs-collaboration'
-import type { Id } from 'convex/_generated/dataModel'
 
 import { flushMicrotasks } from '~/test/helpers/async'
 
 const NOTE_ID = 'test-note-id' as ResourceId
 const OTHER_NOTE_ID = 'other-test-note-id' as ResourceId
-const CAMPAIGN_ID = 'test-campaign-id' as Id<'campaigns'>
+const CAMPAIGN_ID = testCampaignId('test-campaign-id')
 const USER = { name: 'Test User', color: '#ff0000' }
 const PROVIDER = { awareness: {} }
 
@@ -88,7 +88,7 @@ describe('useNoteYjsCollaboration', () => {
     mockIsApplyingRemoteUpdate.mockReturnValue(false)
     mockUseConvexYjsCollaboration.mockReset()
     mockUseConvexYjsCollaboration.mockImplementation(
-      (_sourceId: Id<'campaigns'>, noteId: ResourceId) => ({
+      (_sourceId: CampaignId, noteId: ResourceId) => ({
         doc: createSessionDoc(noteId),
         provider: PROVIDER,
         instanceId: noteId,
@@ -135,7 +135,7 @@ describe('useNoteYjsCollaboration', () => {
     await flushMicrotasks(10)
 
     expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
-      campaignId: 'test-campaign-id',
+      campaignId: CAMPAIGN_ID,
       documentId: NOTE_ID,
     })
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
@@ -143,20 +143,16 @@ describe('useNoteYjsCollaboration', () => {
         'convexQuery',
         'resolveSidebarItemAccess',
         {
-          campaignId: 'test-campaign-id',
+          campaignId: CAMPAIGN_ID,
           lookup: { kind: 'id', id: NOTE_ID },
         },
       ],
     })
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: [
-        'convexQuery',
-        'getNoteValueStates',
-        { campaignId: 'test-campaign-id', noteId: NOTE_ID },
-      ],
+      queryKey: ['convexQuery', 'getNoteValueStates', { campaignId: CAMPAIGN_ID, noteId: NOTE_ID }],
     })
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['convexQuery', 'getNoteValueStatesByNotes', { campaignId: 'test-campaign-id' }],
+      queryKey: ['convexQuery', 'getNoteValueStatesByNotes', { campaignId: CAMPAIGN_ID }],
     })
     expect(callOrder.slice(0, 2)).toEqual(['flush', 'persist'])
   })
@@ -190,7 +186,7 @@ describe('useNoteYjsCollaboration', () => {
     const cleanup = firstOptions.onBeforeDestroy({
       documentId: NOTE_ID,
       provider: PROVIDER,
-      sourceId: 'test-campaign-id',
+      sourceId: CAMPAIGN_ID,
     })
 
     await Promise.resolve()
@@ -199,7 +195,7 @@ describe('useNoteYjsCollaboration', () => {
     await flushMicrotasks(10)
 
     expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
-      campaignId: 'test-campaign-id',
+      campaignId: CAMPAIGN_ID,
       documentId: NOTE_ID,
     })
   })

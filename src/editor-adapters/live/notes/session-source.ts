@@ -1,4 +1,4 @@
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { api } from 'convex/_generated/api'
 import { useNoteYjsCollaboration } from './yjs-collaboration'
 import { useLiveCollaborationUser } from '~/editor-adapters/live/collaboration/use-live-collaboration-user'
@@ -23,7 +23,7 @@ import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 type LiveNoteItemWithContent = WizardEditorNoteCollaborationSessionRequest['note']
 
 function useLiveNoteCollaborationSession(
-  workspaceId: string,
+  workspaceId: CampaignId,
   canEditNote: (note: LiveNoteItemWithContent) => boolean,
   request: WizardEditorNoteCollaborationSessionRequest,
 ): WizardEditorNoteEditorSession {
@@ -67,7 +67,7 @@ export function useLiveNoteSessionPorts({
   workspaceId,
 }: {
   canEditNote: (note: LiveNoteItemWithContent) => boolean
-  workspaceId: string
+  workspaceId: CampaignId
 }): WizardEditorNoteSessionPorts {
   return {
     document: {

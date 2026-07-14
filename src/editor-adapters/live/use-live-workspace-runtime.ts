@@ -24,7 +24,11 @@ import { useConvex } from '@convex-dev/react-query'
 import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 
-import type { HistoryEntryId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  HistoryEntryId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/campaigns/hooks/useCampaignMembers'
 import type { LiveFileSystemReadModel } from '~/editor-adapters/live/filesystem/read-model'
@@ -75,7 +79,7 @@ export function useLiveWorkspaceRuntime({
   openExternalUrl,
   openSeparateItem,
 }: {
-  workspaceId: string
+  workspaceId: CampaignId
   filesystemReadModel: LiveFileSystemReadModel
   filesystemHost: LiveFileSystemHost
   sidebarItemsShareOperations: LiveSidebarItemsShareOperations
@@ -160,7 +164,7 @@ function useLiveRuntimeSources({
   filesystemModel: LiveFileSystemModel
   canUseDmWorkspaceActions: boolean
   sidebarItemsShareOperations: LiveSidebarItemsShareOperations
-  workspaceId: string
+  workspaceId: CampaignId
   workspaceMode: LiveWorkspaceMode
 }): LiveRuntimeSources {
   const { catalog, operationItems, paths, load } = filesystemModel
@@ -508,7 +512,7 @@ function useLiveRuntimeContentSessions({
 }: {
   catalog: LiveFileSystemModel['catalog']
   permissions: Pick<WizardEditorPermissionSource, 'canMutateItem'>
-  workspaceId: string
+  workspaceId: CampaignId
 }) {
   const file = useLiveFileSessionAdapter({
     canReplaceFile: (fileItem) => permissions.canMutateItem(fileItem, PERMISSION_LEVEL.EDIT),

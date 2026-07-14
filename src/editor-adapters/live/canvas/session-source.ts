@@ -25,7 +25,7 @@ import type {
 const EMBEDDED_CANVAS_YJS_PAGE_SIZE = 100
 
 type LiveCanvasSessionPortsInput = Omit<WizardEditorCanvasSessionPortsInput, 'documentSession'> & {
-  workspaceId: string
+  workspaceId: CampaignId
 }
 
 export function useLiveCanvasSessionSource(
@@ -45,7 +45,7 @@ type LiveCanvasEmbeddedSessionPortsInput = Omit<
   WizardEditorCanvasEmbeddedSessionPortsInput,
   'embeddedCanvas'
 > & {
-  workspaceId: string
+  workspaceId: CampaignId
 }
 
 export function useLiveCanvasEmbeddedSessionSource({
@@ -61,7 +61,7 @@ export function useLiveCanvasEmbeddedSessionSource({
 type LiveCanvasDocumentSessionInput = Parameters<
   WizardEditorCanvasSessionPortsInput['documentSession']['useCanvasDocumentSession']
 >[0] & {
-  workspaceId: string
+  workspaceId: CampaignId
 }
 
 function useLiveCanvasDocumentSession({
@@ -74,12 +74,7 @@ function useLiveCanvasDocumentSession({
   const resolvedTheme = useResolvedTheme()
   const { isLoading: userLoading, user } = useLiveCollaborationUser()
 
-  const collaboration = useConvexYjsCollaboration(
-    liveCanvasWorkspaceRecordId(workspaceId),
-    canvas.id,
-    user,
-    canEdit,
-  )
+  const collaboration = useConvexYjsCollaboration(workspaceId, canvas.id, user, canEdit)
 
   return useWizardEditorCanvasDocumentSession({
     canvas,
@@ -109,7 +104,7 @@ function resolveLiveCanvasDocumentCollaboration(
   }
 }
 
-function useLiveEmbeddedCanvasState(workspaceId: string, canvasId: ResourceId) {
+function useLiveEmbeddedCanvasState(workspaceId: CampaignId, canvasId: ResourceId) {
   return useWizardEditorEmbeddedCanvasStateFromUpdates({
     canvasId,
     useUpdates: (input) => useLiveEmbeddedCanvasUpdates({ ...input, workspaceId }),
@@ -120,13 +115,13 @@ const useLiveEmbeddedCanvasUpdates = ({
   afterSeq,
   canvasId,
   workspaceId,
-}: Parameters<WizardEditorEmbeddedCanvasUpdateSource>[0] & { workspaceId: string }) => {
+}: Parameters<WizardEditorEmbeddedCanvasUpdateSource>[0] & { workspaceId: CampaignId }) => {
   const persistedCanvasId = isPersistedWizardEditorItemId(canvasId) ? canvasId : null
   const updatesResult = useAuthPaginatedQuery(
     api.yjsSync.queries.getUpdates,
     persistedCanvasId
       ? {
-          campaignId: liveCanvasWorkspaceRecordId(workspaceId),
+          campaignId: workspaceId,
           documentId: persistedCanvasId,
           afterSeq: afterSeq ?? null,
         }
@@ -146,8 +141,4 @@ const useLiveEmbeddedCanvasUpdates = ({
     data: persistedCanvasId && status !== 'Exhausted' ? undefined : results,
     isError: queryState.isError === true,
   }
-}
-
-function liveCanvasWorkspaceRecordId(workspaceId: string): CampaignId {
-  return workspaceId as CampaignId
 }

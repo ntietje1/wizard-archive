@@ -31,10 +31,10 @@ function LiveWorkspaceRuntimeContent({
 }: {
   children: (runtime: WizardEditorRuntime) => ReactNode
 }) {
-  const { campaign, campaignId: workspaceRecordId, campaignSlug, dmUsername } = useCampaign()
+  const { campaign, campaignId, campaignSlug, dmUsername } = useCampaign()
   const membership = campaign.data?.myMembership
 
-  if (!workspaceRecordId || !membership) {
+  if (!campaignId || !membership) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -44,7 +44,7 @@ function LiveWorkspaceRuntimeContent({
 
   return (
     <LoadedLiveWorkspaceRuntimeContent
-      workspaceId={workspaceRecordId}
+      workspaceId={campaignId}
       actorId={membership.id}
       campaignSlug={campaignSlug}
       dmUsername={dmUsername}

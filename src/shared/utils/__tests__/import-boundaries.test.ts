@@ -9,7 +9,7 @@ const {
 } = boundaryModule
 
 describe('import boundary checks', () => {
-  it('allows generated Convex contracts only at explicit frontend data boundaries', () => {
+  it('allows generated Convex contracts only at explicit frontend provider boundaries', () => {
     expect(
       analyzeImportBoundaries([
         {
@@ -23,9 +23,14 @@ describe('import boundary checks', () => {
           filePath: 'src/features/example/hooks/use-example.ts',
           source: "import { api } from 'convex/_generated/api'",
         },
+        {
+          filePath: 'src/editor-adapters/live/example.ts',
+          source: "import type { Id } from 'convex/_generated/dataModel'",
+        },
       ]),
     ).toEqual([
       'src/example.ts:1 src may import generated Convex API values only from explicit data-boundary modules',
+      'src/example.ts:2 src may import generated Convex data-model types only from explicit provider boundaries',
     ])
   })
 

@@ -1,12 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'
+import type { Id } from 'convex/_generated/dataModel'
 import type {
   WizardEditorItem,
   WizardEditorResourceCreateCommand,
   useWizardEditorResourceCommandRuntime,
 } from '@wizard-archive/editor/adapter'
-import type { Id } from 'convex/_generated/dataModel'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import { createContext, use } from 'react'
 import type { ReactNode } from 'react'
@@ -14,7 +15,11 @@ import { useLiveFileSystemRuntime } from '../host'
 import type { LiveFileSystemReadModel } from '../read-model'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testOperationId } from '../../../../../shared/test/operation-id'
-import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  OperationId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 
 let sidebarItems: Array<WizardEditorItem> = []
 let trashItems: Array<WizardEditorItem> = []
@@ -33,7 +38,7 @@ const currentResourceIdState = vi.hoisted(() => ({
   value: null as ResourceId | null,
 }))
 const currentWorkspaceIdState = vi.hoisted(() => ({
-  value: 'campaign_1' as Id<'campaigns'>,
+  value: '01980c1a-5e70-7000-8000-000000000301' as CampaignId,
 }))
 const TRANSACTION_1 = testOperationId('transaction_1')
 const TRANSACTION_2 = testOperationId('transaction_2')
@@ -534,7 +539,7 @@ describe('useLiveFileSystemRuntime', () => {
   beforeEach(() => {
     sidebarItems = []
     trashItems = []
-    currentWorkspaceIdState.value = `campaign_${++campaignIndex}` as Id<'campaigns'>
+    currentWorkspaceIdState.value = testCampaignId(`campaign_${++campaignIndex}`)
     executeMutateAsync.mockReset()
     undoMutateAsync.mockReset()
     redoMutateAsync.mockReset()

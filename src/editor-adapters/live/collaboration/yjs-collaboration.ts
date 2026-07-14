@@ -12,7 +12,7 @@ import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/do
 const YJS_SYNC_PAGE_SIZE = 100
 
 export function useConvexYjsCollaboration(
-  initialSourceId: string | null,
+  initialSourceId: CampaignId | null,
   documentId: ResourceId,
   user: { name: string; color: string },
   canEdit: boolean,
@@ -90,7 +90,7 @@ function yjsWorkspaceRecordId(sourceId: string | null | undefined): CampaignId {
   if (!sourceId) {
     throw new Error('Yjs workspace source id is required')
   }
-  return sourceId as CampaignId
+  return assertDomainId(DOMAIN_ID_KIND.campaign, sourceId)
 }
 
 function yjsSessionId(sessionId: string | undefined) {

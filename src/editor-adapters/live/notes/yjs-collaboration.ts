@@ -11,6 +11,7 @@ import {
 } from '@wizard-archive/editor/adapter'
 import type { YjsCollaborationProvider } from '@wizard-archive/editor/collaboration/yjs-provider'
 import { logger } from '~/shared/utils/logger'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 type ConvexClient = ReturnType<typeof useConvex>
@@ -93,7 +94,7 @@ async function persistNoteBlocksNow({
 }
 
 export function useNoteYjsCollaboration(
-  sourceId: string | null,
+  sourceId: CampaignId | null,
   noteId: ResourceId,
   user: { name: string; color: string },
   canEdit: boolean,
@@ -124,7 +125,7 @@ export function useNoteYjsCollaboration(
           convex: convexRef.current,
           noteId: persistedNoteId,
           queryClient: queryClientRef.current,
-          sourceId: persistedSourceId as CampaignId,
+          sourceId: assertDomainId(DOMAIN_ID_KIND.campaign, persistedSourceId),
         }),
       reportError: (message, err) => logger.error(`[Notes] ${message}:`, err),
     },

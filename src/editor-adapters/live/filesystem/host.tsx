@@ -4,6 +4,7 @@ import {
   useWizardEditorResourceCommandRuntime,
 } from '@wizard-archive/editor/adapter'
 import type { WizardEditorItem } from '@wizard-archive/editor/adapter'
+import type { CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useLiveSidebarItemsCache } from '~/editor-adapters/live/filesystem/sidebar-items-cache'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
@@ -30,7 +31,7 @@ type LiveFileSystemTrashState = {
 }
 
 export function useLiveFileSystemRuntime(
-  workspaceId: string,
+  workspaceId: CampaignId,
   navigation: LiveFileSystemNavigation,
   filesystemReadModel: LiveFileSystemReadModel,
 ): LiveFileSystemRuntime {

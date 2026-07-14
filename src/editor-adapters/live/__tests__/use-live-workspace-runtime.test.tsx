@@ -1,5 +1,6 @@
-import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { testResourceId } from '../../../../shared/test/resource-id'
+import { testCampaignId } from '../../../../shared/test/campaign-id'
 import {
   completeWizardEditorResourceCommand,
   createWizardEditorResource,
@@ -25,7 +26,6 @@ import { createFolder, createGameMap, createNote } from '~/test/factories/sideba
 import { useLiveWorkspaceRuntime } from '../use-live-workspace-runtime'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
-import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignActor } from 'shared/campaigns/actor'
 import type { LiveFileSystemReadModel } from '../filesystem/read-model'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
@@ -110,7 +110,7 @@ function createMockFileSystemReadModel(): LiveFileSystemReadModel {
 }
 
 const campaignState = vi.hoisted(() => ({
-  campaignId: 'campaign-1' as Id<'campaigns'>,
+  campaignId: '01980c1a-5e70-7000-8000-000000000302' as CampaignId,
   isCampaignLoaded: true,
   isDm: true,
 }))
@@ -119,7 +119,7 @@ const workspaceModeState = vi.hoisted(() => ({
   canEdit: true,
   campaignActor: {
     kind: 'dm',
-    campaignId: 'campaign-1' as CampaignActor['campaignId'],
+    campaignId: '01980c1a-5e70-7000-8000-000000000302' as CampaignActor['campaignId'],
   } as CampaignActor | null,
 }))
 type DmViewAsActor = Extract<CampaignActor, { kind: 'dm_view_as' }>
@@ -497,7 +497,7 @@ function renderLiveWorkspaceRuntime() {
 
 describe('useLiveWorkspaceRuntime', () => {
   beforeEach(() => {
-    campaignState.campaignId = 'campaign-1' as Id<'campaigns'>
+    campaignState.campaignId = testCampaignId('campaign-1')
     liveSourceState.contentItem = createContentNote('note-1')
     liveSourceState.editorSearch = null
     liveSourceState.item = liveSourceState.contentItem
@@ -509,7 +509,7 @@ describe('useLiveWorkspaceRuntime', () => {
     workspaceModeState.canEdit = true
     workspaceModeState.campaignActor = {
       kind: 'dm',
-      campaignId: 'campaign-1' as CampaignActor['campaignId'],
+      campaignId: campaignState.campaignId,
     }
     campaignMutationMocks.mutateAsync.mockReset()
     campaignQueryMock.mockReset()
@@ -678,7 +678,7 @@ describe('useLiveWorkspaceRuntime', () => {
   it('uses the active view-as actor to suppress DM-only runtime affordances', async () => {
     workspaceModeState.campaignActor = {
       kind: 'dm_view_as',
-      campaignId: 'campaign-1' as CampaignActor['campaignId'],
+      campaignId: campaignState.campaignId,
       memberId: 'player-1' as DmViewAsActor['memberId'],
     }
     liveSourceState.contentItem = null
@@ -709,7 +709,7 @@ describe('useLiveWorkspaceRuntime', () => {
     campaignState.isDm = false
     workspaceModeState.campaignActor = {
       kind: 'player',
-      campaignId: 'campaign-1' as CampaignActor['campaignId'],
+      campaignId: campaignState.campaignId,
     }
     const currentEditableNote = createContentNote('note-1', 'Editable current note', {
       myPermissionLevel: PERMISSION_LEVEL.EDIT,
@@ -737,7 +737,7 @@ describe('useLiveWorkspaceRuntime', () => {
     })
 
     expect(noteSessionMocks.useNoteYjsCollaboration).toHaveBeenCalledWith(
-      'campaign-1',
+      campaignState.campaignId,
       readonlyNote.id,
       expect.any(Object),
       false,
@@ -748,7 +748,7 @@ describe('useLiveWorkspaceRuntime', () => {
     campaignState.isDm = false
     workspaceModeState.campaignActor = {
       kind: 'player',
-      campaignId: 'campaign-1' as CampaignActor['campaignId'],
+      campaignId: campaignState.campaignId,
     }
     liveSourceState.contentItem = null
     liveSourceState.editorSearch = {}
@@ -955,7 +955,7 @@ describe('useLiveWorkspaceRuntime', () => {
       }),
     )
     expect(textImportMocks.convexQuery.mock.calls[0]?.[1]).toEqual({
-      campaignId: 'campaign-1',
+      campaignId: campaignState.campaignId,
       query: 'session',
     })
   })
@@ -1097,7 +1097,7 @@ describe('useLiveWorkspaceRuntime', () => {
       }),
     )
 
-    campaignState.campaignId = 'campaign-2' as Id<'campaigns'>
+    campaignState.campaignId = testCampaignId('campaign-2')
     rerender()
     act(() => {
       getAvailableSearch(result.current).ensureSearchState({ query: 'source' })
@@ -1115,7 +1115,7 @@ describe('useLiveWorkspaceRuntime', () => {
     liveSourceState.extraActiveItems = [createContentNote('note-2', 'Player Note')]
     workspaceModeState.campaignActor = {
       kind: 'dm_view_as',
-      campaignId: 'campaign-1' as DmViewAsActor['campaignId'],
+      campaignId: campaignState.campaignId,
       memberId: 'member-1' as DmViewAsActor['memberId'],
     }
     textImportMocks.convexQuery.mockResolvedValueOnce([
@@ -1135,7 +1135,7 @@ describe('useLiveWorkspaceRuntime', () => {
       }),
     )
     expect(textImportMocks.convexQuery.mock.calls[0]?.[1]).toEqual({
-      campaignId: 'campaign-1',
+      campaignId: campaignState.campaignId,
       campaignMemberId: 'member-1',
       query: 'player clue',
     })
@@ -1193,7 +1193,7 @@ describe('useLiveWorkspaceRuntime', () => {
     })
     workspaceModeState.campaignActor = {
       kind: 'dm_view_as',
-      campaignId: 'campaign-1' as DmViewAsActor['campaignId'],
+      campaignId: campaignState.campaignId,
       memberId: playerId,
     }
     liveSourceState.extraActiveItems = [previewItem]
@@ -1623,7 +1623,7 @@ describe('useLiveWorkspaceRuntime', () => {
     campaignState.isDm = false
     workspaceModeState.campaignActor = {
       kind: 'player',
-      campaignId: 'campaign-1' as CampaignActor['campaignId'],
+      campaignId: campaignState.campaignId,
     }
 
     const { result } = renderLiveWorkspaceRuntime()

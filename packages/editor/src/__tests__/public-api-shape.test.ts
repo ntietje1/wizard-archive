@@ -527,7 +527,9 @@ describe('editor package public API shape', () => {
     )
     expect(liveNoteYjsSource).not.toContain('@wizard-archive/editor/notes/yjs-persistence')
     expect(liveNoteYjsSource).not.toContain('persistedCampaignId')
-    expect(liveNoteYjsSource).toContain('sourceId: persistedSourceId')
+    expect(liveNoteYjsSource).toContain(
+      'sourceId: assertDomainId(DOMAIN_ID_KIND.campaign, persistedSourceId)',
+    )
     expect(liveNoteYjsSource).toContain('@wizard-archive/editor/adapter')
     expect(sortedAdapterExports()).toEqual(
       expect.arrayContaining([
@@ -636,7 +638,9 @@ describe('editor package public API shape', () => {
     expect(source).not.toContain('@wizard-archive/editor/notes/item-contract')
     expect(source).not.toContain('@wizard-archive/editor/resources/resource-contract')
     expect(source).not.toContain('@wizard-archive/editor/resources/items-persistence-contract')
-    expect(source).not.toContain('CampaignId')
+    expect(source).not.toContain('convex/_generated/dataModel')
+    expect(source).not.toMatch(/\bId<'campaigns'>/)
+    expect(source).toContain('CampaignId')
     expect(source).toContain('@wizard-archive/editor/adapter')
     expect(sortedAdapterExports()).toContain('createWizardEditorPlainTextNoteContent')
   })
@@ -733,7 +737,7 @@ describe('editor package public API shape', () => {
     expect(source).toContain('workspaceId: string')
   })
 
-  it('keeps live canvas session source inputs workspace-shaped', () => {
+  it('keeps live canvas session campaign identity domain-owned', () => {
     const source = readFileSync(
       path.join(process.cwd(), 'src/editor-adapters/live/canvas/session-source.ts'),
       'utf8',
@@ -743,14 +747,14 @@ describe('editor package public API shape', () => {
       'utf8',
     )
 
-    expect(source).not.toContain('CampaignId')
-    expect(source).not.toContain('campaignId: CampaignId')
-    expect(source).toContain('workspaceId: string')
+    expect(source).not.toContain('convex/_generated/dataModel')
+    expect(source).not.toContain('as CampaignId')
+    expect(source).toContain('workspaceId: CampaignId')
     expect(runtimeSource).toContain('useLiveCanvasSessionSource({\n    workspaceId,')
     expect(runtimeSource).toContain('useLiveCanvasEmbeddedSessionSource({\n    workspaceId,')
   })
 
-  it('keeps live note session source inputs workspace-shaped', () => {
+  it('keeps live note session campaign identity domain-owned', () => {
     const source = readFileSync(
       path.join(process.cwd(), 'src/editor-adapters/live/notes/session-source.ts'),
       'utf8',
@@ -760,13 +764,13 @@ describe('editor package public API shape', () => {
       'utf8',
     )
 
-    expect(source).not.toContain('CampaignId')
-    expect(source).not.toContain('campaignId: CampaignId')
-    expect(source).toContain('workspaceId: string')
+    expect(source).not.toContain('convex/_generated/dataModel')
+    expect(source).not.toContain('as CampaignId')
+    expect(source).toContain('workspaceId: CampaignId')
     expect(runtimeSource).toContain('useLiveNoteSessionPorts({\n    workspaceId,')
   })
 
-  it('keeps live filesystem source inputs workspace-shaped', () => {
+  it('keeps live filesystem campaign identity domain-owned', () => {
     const hostSource = readFileSync(
       path.join(process.cwd(), 'src/editor-adapters/live/filesystem/host.tsx'),
       'utf8',
@@ -784,22 +788,23 @@ describe('editor package public API shape', () => {
       'utf8',
     )
 
-    expect(hostSource).not.toContain('campaignId: CampaignId')
-    expect(hostSource).toContain('workspaceId: string')
+    expect(hostSource).not.toContain('convex/_generated/dataModel')
+    expect(hostSource).toContain('workspaceId: CampaignId')
     expect(downloadSource).not.toContain('asLiveDownloadCampaignId')
-    expect(downloadSource).not.toContain('campaignId: CampaignId')
-    expect(downloadSource).toContain('workspaceId: string')
+    expect(downloadSource).not.toContain('convex/_generated/dataModel')
+    expect(downloadSource).not.toMatch(/\bas Id</)
+    expect(downloadSource).toContain('workspaceId: CampaignId')
     expect(providerSource).not.toContain(
       "workspaceId: NonNullable<ReturnType<typeof useCampaign>['campaignId']>",
     )
-    expect(providerSource).not.toContain('const { campaignId, campaignSlug, dmUsername }')
-    expect(providerSource).toContain('workspaceId: string')
-    expect(providerSource).toContain('campaignId: workspaceRecordId')
+    expect(providerSource).toContain('const { campaign, campaignId, campaignSlug, dmUsername }')
+    expect(providerSource).toContain('workspaceId: CampaignId')
+    expect(providerSource).toContain('campaignId: workspaceId')
     expect(providerSource).toContain('useLiveFileSystemRuntime(\n    workspaceId,')
     expect(runtimeSource).toContain('createLiveWorkspaceDownloadSource(convex, workspaceId,')
   })
 
-  it('keeps live workspace runtime input ids source-neutral', () => {
+  it('keeps live workspace runtime campaign identity domain-owned', () => {
     const runtimeSource = readFileSync(
       path.join(process.cwd(), 'src/editor-adapters/live/use-live-workspace-runtime.ts'),
       'utf8',
@@ -807,8 +812,8 @@ describe('editor package public API shape', () => {
 
     expect(runtimeSource).not.toContain('type LiveWorkspaceId')
     expect(runtimeSource).not.toContain("NonNullable<LiveCampaign['campaignId']>")
-    expect(runtimeSource).not.toContain('workspaceId: LiveWorkspaceId')
-    expect(runtimeSource).toContain('workspaceId: string')
+    expect(runtimeSource).not.toContain('as CampaignId')
+    expect(runtimeSource).toContain('workspaceId: CampaignId')
   })
 
   it('keeps local workspace runtime adapter tests on the adapter facade', () => {
@@ -962,7 +967,7 @@ describe('editor package public API shape', () => {
     expect(sortedAdapterExports()).toContain('isWizardEditorNoteItem')
   })
 
-  it('keeps live search inputs workspace-shaped', () => {
+  it('keeps live search campaign identity domain-owned', () => {
     const source = readFileSync(
       path.join(process.cwd(), 'src/editor-adapters/live/use-live-workspace-search.ts'),
       'utf8',
@@ -970,7 +975,8 @@ describe('editor package public API shape', () => {
 
     expect(source).not.toContain('liveSearchCampaignId')
     expect(source).not.toContain("campaignId: Id<'campaigns'>")
-    expect(source).toContain('workspaceId: string')
+    expect(source).not.toContain('as CampaignId')
+    expect(source).toContain('workspaceId: CampaignId')
   })
 
   it('keeps live sidebar query source ids workspace-shaped', () => {
@@ -987,16 +993,17 @@ describe('editor package public API shape', () => {
     }
   })
 
-  it('keeps live Yjs collaboration source ids workspace-shaped', () => {
+  it('validates live Yjs source ids at the campaign boundary', () => {
     const source = readFileSync(
       path.join(process.cwd(), 'src/editor-adapters/live/collaboration/yjs-collaboration.ts'),
       'utf8',
     )
 
     expect(source).not.toContain('yjsCampaignId')
-    expect(source).not.toContain('Yjs campaign source id is required')
     expect(source).toContain('yjsWorkspaceRecordId')
     expect(source).toContain('Yjs workspace source id is required')
+    expect(source).toContain('assertDomainId(DOMAIN_ID_KIND.campaign, sourceId)')
+    expect(source).not.toContain('as CampaignId')
   })
 
   it('keeps live workspace preferences state workspace-shaped', () => {
@@ -2278,18 +2285,21 @@ describe('editor package public API shape', () => {
     }
   })
 
-  it('keeps non-adapter public resource contracts in workspace vocabulary', () => {
+  it('keeps public resource ownership domain-owned and provider-neutral', () => {
     for (const subpath of ['./resources/patch-contract', './game-maps/document-contract']) {
       const declaration = declarationTextForExport(subpath)
       const source = readFileSync(path.join(process.cwd(), sourcePathForExport(subpath)), 'utf8')
 
-      expect(source).not.toMatch(/\bCampaign\w*\b/)
-      expect(source).not.toMatch(/\bcampaign\w*\b/)
-      expect(source).not.toContain('wrong_campaign')
-      expect(declaration).not.toMatch(/\bCampaign\w*\b/)
-      expect(declaration).not.toMatch(/\bcampaign\w*\b/)
-      expect(declaration).not.toContain('wrong_campaign')
+      expect(source).not.toContain('convex/_generated')
+      expect(source).not.toMatch(/\bId<['"]/)
+      expect(declaration).not.toMatch(/\bId<['"]/)
     }
+    expect(
+      readFileSync(
+        path.join(process.cwd(), sourcePathForExport('./resources/patch-contract')),
+        'utf8',
+      ),
+    ).toContain('CampaignId')
   })
 
   it('keeps resource operation capability exports in resource terminology', () => {

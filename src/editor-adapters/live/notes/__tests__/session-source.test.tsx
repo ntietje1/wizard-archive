@@ -11,6 +11,9 @@ import type { WizardEditorNoteCollaborationSessionRequest } from '@wizard-archiv
 
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testResourceId } from '../../../../../shared/test/resource-id'
+import { testCampaignId } from '../../../../../shared/test/campaign-id'
+
+const CAMPAIGN_ID = testCampaignId('campaign_1')
 
 const noteDoc = vi.hoisted(() => ({ getXmlFragment: vi.fn() }))
 type TestNoteItemWithContent = WizardEditorNoteCollaborationSessionRequest['note']
@@ -195,7 +198,7 @@ describe('live note session source note data', () => {
     const session = renderHook(() => {
       const source = useLiveNoteSessionPorts({
         canEditNote: () => true,
-        workspaceId: 'campaign_1',
+        workspaceId: CAMPAIGN_ID,
       })
       return source.document.useCollaborationSession({ mode: 'editable', note })
     })
@@ -206,7 +209,7 @@ describe('live note session source note data', () => {
       user: expect.objectContaining({ name: 'Anonymous' }),
     })
     expect(useNoteYjsCollaborationMock).toHaveBeenCalledWith(
-      'campaign_1',
+      CAMPAIGN_ID,
       note.id,
       expect.objectContaining({ name: 'Anonymous' }),
       true,
@@ -220,7 +223,7 @@ describe('live note session source note data', () => {
     const session = renderHook(() => {
       const source = useLiveNoteSessionPorts({
         canEditNote,
-        workspaceId: 'campaign_1',
+        workspaceId: CAMPAIGN_ID,
       })
       return source.document.useCollaborationSession({ mode: 'editable', note })
     })
@@ -245,14 +248,14 @@ describe('live note session source note data', () => {
     renderHook(() => {
       const source = useLiveNoteSessionPorts({
         canEditNote,
-        workspaceId: 'campaign_1',
+        workspaceId: CAMPAIGN_ID,
       })
       return source.document.useCollaborationSession({ mode: 'editable', note })
     })
 
     expect(canEditNote).toHaveBeenCalledWith(note)
     expect(useNoteYjsCollaborationMock).toHaveBeenCalledWith(
-      'campaign_1',
+      CAMPAIGN_ID,
       note.id,
       expect.objectContaining({ name: 'Mina' }),
       false,
@@ -265,14 +268,14 @@ describe('live note session source note data', () => {
     const session = renderHook(() => {
       const source = useLiveNoteSessionPorts({
         canEditNote: () => true,
-        workspaceId: 'campaign_1',
+        workspaceId: CAMPAIGN_ID,
       })
       return source.document.useCollaborationSession({ mode: 'readonly', note })
     })
 
     expect(session.result.current.mode).toBe('readonly')
     expect(useNoteYjsCollaborationMock).toHaveBeenCalledWith(
-      'campaign_1',
+      CAMPAIGN_ID,
       note.id,
       expect.objectContaining({ name: 'Mina' }),
       false,

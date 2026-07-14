@@ -39,6 +39,16 @@ const blockedP01ContractPrefixes = [
 ]
 const editorPackageName = '@wizard-archive/editor'
 const uiPackageName = '@wizard-archive/ui'
+const legacyEditorAdapterResourceSpecifiers = new Set([
+  `${editorPackageName}/resources/history-contract`,
+  `${editorPackageName}/resources/items-persistence-contract`,
+  `${editorPackageName}/resources/operation-capabilities`,
+  `${editorPackageName}/resources/operation-contract`,
+  `${editorPackageName}/resources/patch-contract`,
+  `${editorPackageName}/resources/resource-contract`,
+  `${editorPackageName}/resources/selection-roots`,
+  `${editorPackageName}/resources/transaction-contract`,
+])
 const editorPackageJson = JSON.parse(
   readFileSync(path.join(process.cwd(), 'packages/editor/package.json'), 'utf8'),
 )
@@ -115,10 +125,20 @@ function isGeneratedApiDataBoundary(filePath) {
   )
 }
 
+function isGeneratedDataModelBoundary(filePath) {
+  return (
+    filePath.startsWith('src/editor-adapters/live/') ||
+    filePath.startsWith('src/shared/uploads/') ||
+    filePath.startsWith('src/features/settings/components/tabs/account-profile/') ||
+    filePath.startsWith('src/test/') ||
+    filePath.includes('/__tests__/')
+  )
+}
+
 function isAllowedSrcConvexImport(filePath, specifier) {
   if (!specifier.startsWith('convex/')) return true
   if (packageConvexModules.has(specifier)) return true
-  if (specifier === generatedConvexDataModel) return true
+  if (specifier === generatedConvexDataModel) return isGeneratedDataModelBoundary(filePath)
   if (specifier === generatedConvexApi) return isGeneratedApiDataBoundary(filePath)
   if (isBlockedP01Contract(specifier)) return false
   return false
@@ -203,11 +223,17 @@ function srcConvexImportViolation(filePath, source, index, specifier, kind) {
   if (specifier === generatedConvexApi) {
     return `${filePath}:${lineNumber(source, index)} src may import generated Convex API ${kind}s only from explicit data-boundary modules`
   }
+  if (specifier === generatedConvexDataModel) {
+    return `${filePath}:${lineNumber(source, index)} src may import generated Convex data-model ${kind}s only from explicit provider boundaries`
+  }
   return `${filePath}:${lineNumber(source, index)} src may not import ${kind} from local Convex module ${specifier}`
 }
 
 function sharedBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) {
   if (sourceZone !== 'shared') return null
+  if (specifier === `${editorPackageName}/resources/domain-id`) {
+    return null
+  }
   if (!['convex', 'src', 'editor-package', 'ui-package'].includes(targetZone)) return null
   return importViolation(
     filePath,
@@ -277,6 +303,13 @@ function editorAdapterBoundaryViolation(filePath, source, index, specifier, kind
   if (!filePath.startsWith('src/editor-adapters/')) return null
   if (specifier !== editorPackageName && !specifier.startsWith(`${editorPackageName}/`)) return null
   if (editorAdapterImportBaseline.allowedSpecifiers.has(specifier)) return null
+  if (
+    specifier.startsWith(`${editorPackageName}/resources/`) &&
+    backendSafeEditorPackageSpecifiers.has(specifier) &&
+    !legacyEditorAdapterResourceSpecifiers.has(specifier)
+  ) {
+    return null
+  }
 
   return importViolation(
     filePath,
