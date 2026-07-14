@@ -16,6 +16,8 @@ import type { ApplicationResourceRole, SourcePathAlias } from './resource-catalo
 import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-contract'
 import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-contract'
 import type { ResourceTombstone } from './resource-metadata-version'
+import { FILE_CLASSIFICATION, FILE_VIEWER_UNAVAILABLE_REASON } from './file-content-contract'
+import type { FileViewerUnavailableReason } from './file-content-contract'
 import {
   WIZARD_ARCHIVE_CANVAS_SECTION_VERSION,
   WIZARD_ARCHIVE_FILE_SECTION_VERSION,
@@ -73,13 +75,12 @@ export type WizardArchivePackageValidationResult =
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder('utf-8', { fatal: true })
-const FILE_CLASSIFICATIONS = new Set<WizardArchiveFileSection['classification']>([
-  'viewable_image',
-  'viewable_pdf',
-  'viewable_audio',
-  'viewable_video',
-  'inert_file',
-])
+const FILE_CLASSIFICATIONS = new Set<WizardArchiveFileSection['classification']>(
+  Object.values(FILE_CLASSIFICATION),
+)
+const FILE_VIEWER_UNAVAILABLE_REASONS: ReadonlySet<string> = new Set(
+  Object.values(FILE_VIEWER_UNAVAILABLE_REASON),
+)
 
 export function encodeWizardArchiveManifest(manifest: WizardArchiveManifest): Uint8Array {
   if (!validateManifest(manifest)) throw new TypeError('Invalid Wizard Archive manifest')
@@ -478,15 +479,19 @@ function readFileSection(value: unknown): WizardArchiveFileSection | null {
       'resourceId',
       'assetId',
       'classification',
+      'byteSize',
+      'detectedFormat',
       'extension',
       'mediaType',
       'viewerUnavailableReason',
       'destinations',
     ]) ||
     !FILE_CLASSIFICATIONS.has(value.classification as WizardArchiveFileSection['classification']) ||
+    !isByteSize(value.byteSize) ||
+    !isNullableString(value.detectedFormat) ||
     !isNullableString(value.extension) ||
     typeof value.mediaType !== 'string' ||
-    !isNullableString(value.viewerUnavailableReason)
+    !isFileViewerUnavailableReason(value.viewerUnavailableReason)
   ) {
     return null
   }
@@ -498,9 +503,11 @@ function readFileSection(value: unknown): WizardArchiveFileSection | null {
         resourceId,
         assetId,
         classification: value.classification as WizardArchiveFileSection['classification'],
+        byteSize: value.byteSize,
+        detectedFormat: value.detectedFormat as string | null,
         extension: value.extension as string | null,
         mediaType: value.mediaType,
-        viewerUnavailableReason: value.viewerUnavailableReason as string | null,
+        viewerUnavailableReason: value.viewerUnavailableReason,
         destinations,
       }
     : null
@@ -611,7 +618,9 @@ function validateManifest(manifest: WizardArchiveManifest): boolean {
       assetIds.has(file.assetId) ||
       file.mediaType.length === 0 ||
       resource.artifact.kind !== 'file' ||
+      resource.artifact.byteSize !== file.byteSize ||
       resource.artifact.mediaType !== file.mediaType ||
+      !validFileViewerState(file) ||
       !isCanonicalExtension(file.extension) ||
       (file.extension !== null && !resource.artifact.path.endsWith(`.${file.extension}`))
     ) {
@@ -620,6 +629,26 @@ function validateManifest(manifest: WizardArchiveManifest): boolean {
     assetIds.add(file.assetId)
   }
   return validateDestinations(manifest, resources)
+}
+
+function validFileViewerState(file: WizardArchiveFileSection): boolean {
+  return file.classification === FILE_CLASSIFICATION.inert
+    ? file.viewerUnavailableReason !== null
+    : file.viewerUnavailableReason === null
+}
+
+function isFileViewerUnavailableReason(
+  value: unknown,
+): value is FileViewerUnavailableReason | null {
+  return value === null || (typeof value === 'string' && FILE_VIEWER_UNAVAILABLE_REASONS.has(value))
+}
+
+function isByteSize(value: unknown): value is number {
+  return (
+    Number.isSafeInteger(value) &&
+    (value as number) >= 0 &&
+    (value as number) <= MAX_WIZARD_ARCHIVE_ENTRY_BYTES
+  )
 }
 
 function validateResourceArtifact(resource: WizardArchiveResource): boolean {

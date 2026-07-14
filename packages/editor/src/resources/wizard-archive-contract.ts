@@ -13,6 +13,7 @@ import type { PORTABLE_PATH_VERSION, PortableRelativePath } from './portable-pat
 import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-contract'
 import type { ApplicationResourceRole, SourcePathAlias } from './resource-catalog-contract'
 import type { ResourceTombstone } from './resource-metadata-version'
+import type { FileOwnedMetadata } from './file-content-contract'
 
 export const WIZARD_ARCHIVE_VERSION = 'wizard-archive-v1' as const
 export const WIZARD_ARCHIVE_SCHEMA_VERSION = 'wizard-archive-manifest-v1' as const
@@ -51,20 +52,12 @@ export type WizardArchiveNoteSection = Readonly<{
   destinations: ReadonlyArray<AuthoredDestination>
 }>
 
-export type WizardArchiveFileSection = Readonly<{
-  resourceId: ResourceId
-  assetId: AssetId
-  classification:
-    | 'viewable_image'
-    | 'viewable_pdf'
-    | 'viewable_audio'
-    | 'viewable_video'
-    | 'inert_file'
-  extension: string | null
-  mediaType: string
-  viewerUnavailableReason: string | null
-  destinations: ReadonlyArray<AuthoredDestination>
-}>
+export type WizardArchiveFileSection = FileOwnedMetadata &
+  Readonly<{
+    resourceId: ResourceId
+    assetId: AssetId
+    destinations: ReadonlyArray<AuthoredDestination>
+  }>
 
 export type WizardArchiveMapSection = Readonly<{
   resourceId: ResourceId

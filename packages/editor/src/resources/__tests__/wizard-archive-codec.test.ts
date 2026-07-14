@@ -138,6 +138,22 @@ describe('Wizard Archive manifest codec', () => {
     )
   })
 
+  it('requires file-owned metadata to match its declared artifact', async () => {
+    const fixture = await createFixture()
+    const encoded = encodeWizardArchiveManifest(fixture.manifest)
+    const byteSize = JSON.parse(decoder.decode(encoded))
+    byteSize.sections.files.entries[0].byteSize += 1
+    expect(parseWizardArchiveManifest(encoder.encode(JSON.stringify(byteSize))).status).toBe(
+      'invalid',
+    )
+
+    const viewerState = JSON.parse(decoder.decode(encoded))
+    viewerState.sections.files.entries[0].viewerUnavailableReason = 'malformed'
+    expect(parseWizardArchiveManifest(encoder.encode(JSON.stringify(viewerState))).status).toBe(
+      'invalid',
+    )
+  })
+
   it('validates exact declared artifacts, sizes, and digests before application', async () => {
     const fixture = await createFixture()
     const manifestBytes = encodeWizardArchiveManifest(fixture.manifest)
@@ -267,6 +283,8 @@ async function createFixture() {
             resourceId: fileId,
             assetId,
             classification: 'viewable_image',
+            byteSize: 4,
+            detectedFormat: 'png',
             extension: 'png',
             mediaType: 'image/png',
             viewerUnavailableReason: null,
