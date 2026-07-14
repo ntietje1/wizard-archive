@@ -34,9 +34,7 @@ import {
   resolveResourceAvailabilityState,
 } from './filesystem/domain/availability-state'
 import {
-  createWorkspaceResource,
   createWorkspaceRuntime,
-  getWorkspaceResourceId,
   getWorkspaceNavigationCurrentResourceId,
   resolveWorkspaceNavigationState,
 } from './workspace/runtime'
@@ -56,7 +54,6 @@ import type {
 import type {
   WorkspaceNavigationResult,
   WorkspaceNavigationState,
-  WorkspaceResource,
   WorkspaceRuntime,
 } from './workspace/runtime'
 import type { WorkspaceResourceReadModel } from './workspace/items'
@@ -165,11 +162,6 @@ type InternalCatalogItemLinkRow = Omit<WizardEditorCatalogItemLinkRow, 'item'> &
 export interface WizardEditorWorkspaceSource {
   id: string
   instanceId?: string
-}
-
-export interface WizardEditorResource {
-  kind: 'resource'
-  uri: WorkspaceResource['uri']
 }
 
 export type WizardEditorSortOrder = 'Alphabetical' | 'DateCreated' | 'DateModified'
@@ -374,7 +366,7 @@ export interface WizardEditorNavigation {
   openCreateDashboard: () => WizardEditorNavigationResult
   openDefaultItem: () => WizardEditorNavigationResult
   openItem: (
-    resource: WizardEditorResource,
+    resourceId: ResourceId,
     options?: WizardEditorNavigationOptions,
   ) => WizardEditorNavigationResult
   openExternalUrl: (url: string) => WizardEditorNavigationResult
@@ -390,7 +382,7 @@ export type WizardEditorNavigationState =
     }
   | {
       kind: 'resource'
-      resource: WizardEditorResource | null
+      resourceId: ResourceId | null
     }
   | {
       kind: 'trash'
@@ -400,7 +392,7 @@ type WizardEditorNavigationStateResolutionInput = {
   canCreateDashboard: boolean
   isResourceRequested: boolean
   isWorkspaceLoaded: boolean
-  resource: WizardEditorResource | null
+  resourceId: ResourceId | null
   trashRequested: boolean
 }
 
@@ -1590,7 +1582,7 @@ export function createWizardEditorCatalogNavigation({
     )
   }
   const openItemInCurrentSurface = (itemId: ResourceId) => {
-    setNavigation({ kind: 'resource', resource: createWizardEditorResource(itemId) })
+    setNavigation({ kind: 'resource', resourceId: itemId })
     return completedWizardEditorNavigation()
   }
 
@@ -1613,8 +1605,7 @@ export function createWizardEditorCatalogNavigation({
         ? openItemInCurrentSurface(itemId)
         : unavailableWizardEditorNavigation('default_resource_unavailable')
     },
-    openItem: (resource, options) => {
-      const itemId = getWizardEditorResourceId(resource)
+    openItem: (itemId, options) => {
       if (options?.target === 'separate') {
         if (!openSeparateItem) {
           return unavailableWizardEditorNavigation(separateNavigationUnavailableReason)
@@ -2260,14 +2251,6 @@ function getWizardEditorStaticCatalogContentItem(
   return knownItem?.isTrashed && isWizardEditorItemWithContent(knownItem) ? knownItem : null
 }
 
-export function createWizardEditorResource(resourceId: ResourceId): WizardEditorResource {
-  return createWorkspaceResource(resourceId)
-}
-
-export function getWizardEditorResourceId(resource: WizardEditorResource): ResourceId {
-  return getWorkspaceResourceId(resource as WorkspaceResource)
-}
-
 export function getWizardEditorNavigationCurrentResourceId({
   current,
 }: {
@@ -2279,9 +2262,5 @@ export function getWizardEditorNavigationCurrentResourceId({
 export function resolveWizardEditorNavigationState(
   input: WizardEditorNavigationStateResolutionInput,
 ): WizardEditorNavigationState {
-  return resolveWorkspaceNavigationState(
-    input as Omit<WizardEditorNavigationStateResolutionInput, 'resource'> & {
-      resource: WorkspaceResource | null
-    },
-  )
+  return resolveWorkspaceNavigationState(input)
 }

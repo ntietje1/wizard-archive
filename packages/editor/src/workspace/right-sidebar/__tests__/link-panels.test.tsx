@@ -5,7 +5,6 @@ import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 import type { AnyItem } from '../../items'
-import { createWorkspaceResource } from '../../runtime'
 import type { BuiltContextMenu } from '../../../context-menu/types'
 import type { ContextMenuHostRef } from '../../../context-menu/components/host'
 import { RIGHT_SIDEBAR_CONTENT } from '../content'
@@ -55,7 +54,7 @@ describe('link sidebar panels', () => {
       itemId: sidebarItemId('source-id'),
       kind: 'outgoing',
     })
-    expect(openItemMock).toHaveBeenCalledWith(createWorkspaceResource(sidebarItemId('target-id')))
+    expect(openItemMock).toHaveBeenCalledWith(sidebarItemId('target-id'))
   })
 
   it('renders unresolved outgoing link labels', () => {

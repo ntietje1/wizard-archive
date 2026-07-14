@@ -1,12 +1,9 @@
 import type { ResourceId } from '../resources/domain-id'
 import type { BlockSearchResult } from '../../../../shared/search/types'
 import type { AnyItem } from '../workspace/items'
-import { createWorkspaceResource } from '../workspace/runtime'
-import type { WorkspaceResource } from '../workspace/runtime'
 
 export interface ItemSearchResult {
   itemId: ResourceId
-  resource: WorkspaceResource
   item: AnyItem
   breadcrumb: string
   matchType: 'title' | 'body'
@@ -79,7 +76,6 @@ export function toItemSearchResult(
 ): ItemSearchResult {
   return {
     itemId: item.id,
-    resource: createWorkspaceResource(item.id),
     item,
     breadcrumb: getBreadcrumb(item),
     matchType,

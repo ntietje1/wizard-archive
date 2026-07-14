@@ -1,5 +1,4 @@
 import {
-  createWizardEditorResource,
   createWizardEditorCatalogSnapshot,
   createWizardEditorPlainTextNoteContent,
   filterWizardEditorItemsForActor,
@@ -149,13 +148,11 @@ export function createLocalWorkspaceInitialNavigation(
   if (itemId) {
     return {
       kind: 'resource',
-      resource: createWizardEditorResource(itemId),
+      resourceId: itemId,
     }
   }
   const initialItem = workspace.items.find((item) => localWorkspaceItemIsVisible(workspace, item))
-  return initialItem
-    ? { kind: 'resource', resource: createWizardEditorResource(initialItem.id) }
-    : { kind: 'create' }
+  return initialItem ? { kind: 'resource', resourceId: initialItem.id } : { kind: 'create' }
 }
 
 function createLocalCatalogItems(state: LocalWorkspaceState) {

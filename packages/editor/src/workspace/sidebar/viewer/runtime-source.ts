@@ -1,5 +1,4 @@
 import type { ResourceId } from '../../../resources/domain-id'
-import { createWorkspaceResource } from '../../runtime'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import type { FileSession } from '../../../files/session-contract'
 import type { FileItemWithContent } from '../../../files/item-contract'
@@ -161,7 +160,7 @@ function createRuntimeCanvasViewerSource(
           filesystem: runtime.filesystem,
           navigation: {
             openItem: async (itemId, navigationOptions) => {
-              await runtime.navigation.openItem(createWorkspaceResource(itemId), navigationOptions)
+              await runtime.navigation.openItem(itemId, navigationOptions)
             },
             openExternalUrl: async (url) => {
               await runtime.navigation.openExternalUrl(url)
@@ -193,7 +192,7 @@ function createRuntimeMapViewerSource(
     updateMapPin: sessions.map.pins.update,
     updateMapPinVisibility: sessions.map.pins.setVisibility,
     openItem: async (itemId, navigationOptions) => {
-      await runtime.navigation.openItem(createWorkspaceResource(itemId), navigationOptions)
+      await runtime.navigation.openItem(itemId, navigationOptions)
     },
     resolveEmbeddedMapState: createWorkspaceMapRenderPins(permissions),
     transformStore: viewStateStores.mapTransform,

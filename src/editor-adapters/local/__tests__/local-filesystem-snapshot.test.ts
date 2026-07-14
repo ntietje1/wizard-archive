@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 
-import { createWizardEditorResource } from '@wizard-archive/editor/adapter'
 import type { WizardEditorItemWithContent } from '@wizard-archive/editor/adapter'
 import {
   createLocalFileSystemSnapshot,
@@ -148,7 +147,7 @@ describe('local filesystem snapshot', () => {
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap)
     const snapshot = createLocalFileSystemSnapshot(scenario.workspace, {
       kind: 'resource',
-      resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
+      resourceId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
     })
 
     expect(snapshot.current.contentItem).toBeNull()
@@ -169,7 +168,7 @@ describe('local filesystem snapshot', () => {
 
     expect(navigation).toEqual({
       kind: 'resource',
-      resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
+      resourceId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
     })
     expect(snapshot.current.availabilityState).toMatchObject({ status: 'not_shared' })
   })

@@ -18,18 +18,7 @@ import type {
 import type { AnyItem, AnyItemWithContent } from './items'
 import type { ResourceId } from '../resources/domain-id'
 
-declare const resourceUriBrand: unique symbol
-const WORKSPACE_RESOURCE_URI_PREFIX = 'resource:'
 const SAFE_EXTERNAL_URL_PROTOCOLS = new Set(['http:', 'https:'])
-
-type ResourceUri = string & {
-  readonly [resourceUriBrand]: true
-}
-
-export interface WorkspaceResource {
-  kind: 'resource'
-  uri: ResourceUri
-}
 
 export interface WorkspaceNavigation {
   canOpenItemsSeparately: WorkspaceNavigationCapability
@@ -37,7 +26,7 @@ export interface WorkspaceNavigation {
   openCreateDashboard: () => MaybePromise<WorkspaceNavigationResult>
   openDefaultItem: () => MaybePromise<WorkspaceNavigationResult>
   openItem: (
-    resource: WorkspaceResource,
+    resourceId: ResourceId,
     options?: WorkspaceNavigationOptions,
   ) => MaybePromise<WorkspaceNavigationResult>
   openExternalUrl: (url: string) => MaybePromise<WorkspaceNavigationResult>
@@ -69,51 +58,33 @@ export type WorkspaceNavigationState =
     }
   | {
       kind: 'resource'
-      resource: WorkspaceResource | null
+      resourceId: ResourceId | null
     }
   | {
       kind: 'trash'
     }
 
-export function createWorkspaceResource(resourceId: ResourceId): WorkspaceResource {
-  return {
-    kind: 'resource',
-    uri: `${WORKSPACE_RESOURCE_URI_PREFIX}${resourceId}` as ResourceUri,
-  }
-}
-
-export function getWorkspaceResourceId(resource: WorkspaceResource): ResourceId {
-  if (!resource.uri.startsWith(WORKSPACE_RESOURCE_URI_PREFIX)) {
-    throw new Error(
-      `Unsupported workspace resource URI: ${resource.uri}. Expected ${WORKSPACE_RESOURCE_URI_PREFIX}<resourceId>`,
-    )
-  }
-  return resource.uri.slice(WORKSPACE_RESOURCE_URI_PREFIX.length) as ResourceId
-}
-
 export function getWorkspaceNavigationCurrentResourceId({
   current,
 }: Pick<WorkspaceNavigation, 'current'>): ResourceId | null {
-  return current.kind === 'resource' && current.resource
-    ? getWorkspaceResourceId(current.resource)
-    : null
+  return current.kind === 'resource' ? current.resourceId : null
 }
 
 export function resolveWorkspaceNavigationState({
   canCreateDashboard,
   isResourceRequested,
   isWorkspaceLoaded,
-  resource,
+  resourceId,
   trashRequested,
 }: {
   canCreateDashboard: boolean
   isResourceRequested: boolean
   isWorkspaceLoaded: boolean
-  resource: WorkspaceResource | null
+  resourceId: ResourceId | null
   trashRequested: boolean
 }): WorkspaceNavigationState {
   if (trashRequested) return { kind: 'trash' }
-  if (isResourceRequested) return { kind: 'resource', resource }
+  if (isResourceRequested) return { kind: 'resource', resourceId }
   if (!isWorkspaceLoaded) return { kind: 'empty' }
   return canCreateDashboard ? { kind: 'create' } : { kind: 'empty' }
 }

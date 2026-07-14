@@ -12,7 +12,6 @@ import { createFolder, createGameMap, createNote } from '../../test/sidebar-item
 import type { WorkspaceNavigation } from '../runtime'
 import type { SidebarWorkspaceState } from '../sidebar/workspace-state'
 import { SidebarWorkspaceStateProvider } from '../sidebar/workspace-state'
-import { createWorkspaceResource } from '../runtime'
 
 type DndRuntimeProviderProps = ComponentProps<typeof DndRuntimeProvider>
 
@@ -84,7 +83,7 @@ describe('WorkspaceRuntimeDndProvider', () => {
     )
 
     await props?.dndContext.openItem(runtime.filesystem.catalog.getKnownItemById(canvasId)!)
-    expect(openItem).toHaveBeenCalledWith(createWorkspaceResource(canvasId))
+    expect(openItem).toHaveBeenCalledWith(canvasId)
 
     executeDropCommand.mockResolvedValueOnce({ status: 'rejected', reason: 'stale-history' })
 
@@ -192,7 +191,7 @@ describe('WorkspaceRuntimeDndProvider', () => {
 
     expect(importFile).toHaveBeenCalled()
     expect(setFolderState).toHaveBeenCalledWith(testResourceId('folder_clues'), true)
-    expect(openItem).toHaveBeenCalledWith(createWorkspaceResource(testResourceId('note_clues')), {
+    expect(openItem).toHaveBeenCalledWith(testResourceId('note_clues'), {
       replace: true,
     })
   })

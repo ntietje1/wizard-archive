@@ -8,7 +8,6 @@ import {
   createWizardEditorPermissionSource,
   createWizardEditorRemoteDownloadSource,
   createWizardEditorResourceCatalogSource,
-  createWizardEditorResource,
   createWizardEditorRuntime,
   createWizardEditorRuntimeSources,
   createWizardEditorSharingSource,
@@ -18,7 +17,6 @@ import {
   createWizardEditorCatalogSearchSource,
   createWizardEditorUnsupportedHistorySource,
   getWizardEditorNavigationCurrentResourceId,
-  getWizardEditorResourceId,
   isWizardEditorItemWithContent,
   resolveWizardEditorMapImage,
   resolveWizardEditorNavigationState,
@@ -122,12 +120,6 @@ describe('WizardEditor adapter contract', () => {
     })
   })
 
-  it('keeps resource identity helpers on the adapter contract', () => {
-    const resource = createWizardEditorResource('item-1' as never)
-
-    expect(getWizardEditorResourceId(resource)).toBe('item-1')
-  })
-
   it('resolves layered map images through the adapter contract', () => {
     expect(
       resolveWizardEditorMapImage(
@@ -155,20 +147,20 @@ describe('WizardEditor adapter contract', () => {
   })
 
   it('resolves navigation state from resource facts without adapter-specific callbacks', () => {
-    const resource = createWizardEditorResource('item-1' as never)
+    const resourceId = 'item-1' as never
 
     expect(
       resolveWizardEditorNavigationState({
         canCreateDashboard: true,
         isResourceRequested: true,
         isWorkspaceLoaded: true,
-        resource: resource,
+        resourceId,
         trashRequested: false,
       }),
-    ).toEqual({ kind: 'resource', resource })
+    ).toEqual({ kind: 'resource', resourceId })
     expect(
       getWizardEditorNavigationCurrentResourceId({
-        current: { kind: 'resource', resource },
+        current: { kind: 'resource', resourceId },
       }),
     ).toBe('item-1')
   })
@@ -214,10 +206,10 @@ describe('WizardEditor adapter contract', () => {
     navigation.openDefaultItem()
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource(visible.id),
+      resourceId: visible.id,
     })
 
-    navigation.openItem(createWizardEditorResource(visible.id), {
+    navigation.openItem(visible.id, {
       heading: 'Visible Note',
       target: 'separate',
     })
@@ -225,13 +217,11 @@ describe('WizardEditor adapter contract', () => {
       heading: 'Visible Note',
       itemId: String(visible.id),
     })
-    expect(navigation.openItem(createWizardEditorResource(hidden.id))).toEqual({
+    expect(navigation.openItem(hidden.id)).toEqual({
       status: 'unavailable',
       reason: 'resource_not_visible',
     })
-    expect(
-      navigation.openItem(createWizardEditorResource(hidden.id), { target: 'separate' }),
-    ).toEqual({
+    expect(navigation.openItem(hidden.id, { target: 'separate' })).toEqual({
       status: 'unavailable',
       reason: 'resource_not_visible',
     })
@@ -242,7 +232,7 @@ describe('WizardEditor adapter contract', () => {
     setNavigation.mockClear()
     const staleCurrentNavigation = createWizardEditorCatalogNavigation({
       catalog: snapshot.catalog,
-      current: { kind: 'resource', resource: createWizardEditorResource(trashed.id) },
+      current: { kind: 'resource', resourceId: trashed.id },
       openExternalUrl,
       openSeparateItem,
       setNavigation,
@@ -251,7 +241,7 @@ describe('WizardEditor adapter contract', () => {
     staleCurrentNavigation.openDefaultItem()
     expect(setNavigation).toHaveBeenCalledExactlyOnceWith({
       kind: 'resource',
-      resource: createWizardEditorResource(visible.id),
+      resourceId: visible.id,
     })
   })
 
@@ -278,7 +268,7 @@ describe('WizardEditor adapter contract', () => {
       reason: 'demo_single_surface',
     })
     expect(
-      navigation.openItem(createWizardEditorResource('missing-item' as ResourceId), {
+      navigation.openItem('missing-item' as ResourceId, {
         target: 'separate',
       }),
     ).toEqual({
@@ -579,7 +569,7 @@ describe('WizardEditor adapter contract', () => {
     runtime.navigation.openDefaultItem()
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource(visible.id),
+      resourceId: visible.id,
     })
   })
 
@@ -592,7 +582,7 @@ describe('WizardEditor adapter contract', () => {
       activeItems: [fileItem],
       trashItems: [],
       visibleActiveItems: [fileItem],
-      current: { kind: 'resource', resource: createWizardEditorResource(fileItem.id) },
+      current: { kind: 'resource', resourceId: fileItem.id },
       unavailableResource: {
         label: 'Test item',
         message: 'Select an item.',
@@ -803,7 +793,7 @@ describe('WizardEditor adapter contract', () => {
       activeItems: [visible, hidden],
       trashItems: [trashed],
       visibleActiveItems: [visible],
-      current: { kind: 'resource', resource: createWizardEditorResource(visible.id) },
+      current: { kind: 'resource', resourceId: visible.id },
       unavailableResource: {
         label: 'Test item',
         message: 'Select an item.',
@@ -822,7 +812,7 @@ describe('WizardEditor adapter contract', () => {
       activeItems: [visible, hidden],
       trashItems: [trashed],
       visibleActiveItems: [visible],
-      current: { kind: 'resource', resource: createWizardEditorResource(hidden.id) },
+      current: { kind: 'resource', resourceId: hidden.id },
       unavailableResource: {
         label: 'Test item',
         message: 'Select an item.',
@@ -839,7 +829,7 @@ describe('WizardEditor adapter contract', () => {
     const trashedSnapshot = createWizardEditorCatalogSnapshot({
       activeItems: [visible],
       trashItems: [trashed],
-      current: { kind: 'resource', resource: createWizardEditorResource(trashed.id) },
+      current: { kind: 'resource', resourceId: trashed.id },
       unavailableResource: {
         label: 'Test item',
         message: 'Select an item.',
@@ -859,7 +849,7 @@ describe('WizardEditor adapter contract', () => {
       activeItems: [visible],
       trashItems: [],
       visibleActiveItems: [visible],
-      current: { kind: 'resource', resource: createWizardEditorResource(visible.id) },
+      current: { kind: 'resource', resourceId: visible.id },
       unavailableResource: {
         label: 'Test item',
         message: 'Select an item.',

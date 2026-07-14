@@ -1,6 +1,5 @@
 import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
-import { createWizardEditorResource } from '@wizard-archive/editor/adapter'
 import { act } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { localWorkspaceReducer } from '../local-workspace-model'
@@ -102,14 +101,12 @@ describe('local demo workspace runtime', () => {
     const { setNavigation, source } = createLocalSidebarSource()
 
     await act(async () => {
-      await source.navigation.openItem(
-        createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
-      )
+      await source.navigation.openItem(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas)
     })
 
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+      resourceId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
     })
   })
 
@@ -134,14 +131,12 @@ describe('local demo workspace runtime', () => {
     })
 
     await act(async () => {
-      await source.navigation.openItem(
-        createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
-      )
+      await source.navigation.openItem(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas)
     })
 
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+      resourceId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
     })
   })
 
@@ -153,7 +148,7 @@ describe('local demo workspace runtime', () => {
     const { source } = createLocalSidebarSource({
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+        resourceId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       },
       workspace,
     })

@@ -4,7 +4,6 @@ import { testResourceId } from '../../../../shared/test/resource-id'
 import { testCampaignId } from '../../../../shared/test/campaign-id'
 import {
   completeWizardEditorResourceCommand,
-  createWizardEditorResource,
   parseWizardEditorResourceSlug,
 } from '@wizard-archive/editor/adapter'
 import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'
@@ -600,7 +599,7 @@ describe('useLiveWorkspaceRuntime', () => {
     })
     expect(created.status).toBe('completed')
     if (created.status !== 'completed') throw new Error('Expected create to complete')
-    await result.current.navigation.openItem(createWizardEditorResource(created.id))
+    await result.current.navigation.openItem(created.id)
 
     expect(fileSystemItemMocks.executeCommand).toHaveBeenCalledWith(
       {
@@ -627,7 +626,7 @@ describe('useLiveWorkspaceRuntime', () => {
     const { result } = renderLiveWorkspaceRuntime()
     const currentContent = result.current.filesystem.current
 
-    expect(result.current.navigation.current).toEqual({ kind: 'resource', resource: null })
+    expect(result.current.navigation.current).toEqual({ kind: 'resource', resourceId: null })
     expect(currentContent.availabilityState).toMatchObject({
       status: 'not_found',
       label: 'Item',
@@ -775,7 +774,7 @@ describe('useLiveWorkspaceRuntime', () => {
   it('opens items through the filesystem selection capability with heading targets', async () => {
     const { result } = renderLiveWorkspaceRuntime()
 
-    await result.current.navigation.openItem(createWizardEditorResource(testResourceId('note-1')), {
+    await result.current.navigation.openItem(testResourceId('note-1'), {
       heading: 'Intro#Details',
     })
 
@@ -896,7 +895,7 @@ describe('useLiveWorkspaceRuntime', () => {
   it('opens items separately through the supplied live navigation capability', async () => {
     const { result } = renderLiveWorkspaceRuntime()
 
-    await result.current.navigation.openItem(createWizardEditorResource(testResourceId('note-1')), {
+    await result.current.navigation.openItem(testResourceId('note-1'), {
       heading: 'Intro#Details',
       target: 'separate',
     })
@@ -1354,7 +1353,7 @@ describe('useLiveWorkspaceRuntime', () => {
     expect(navigationMocks.setLastSelectedItem).not.toHaveBeenCalled()
     expect(navigationMocks.navigateToItem).not.toHaveBeenCalled()
 
-    await result.current.navigation.openItem(createWizardEditorResource(liveSourceState.item!.id))
+    await result.current.navigation.openItem(liveSourceState.item!.id)
 
     expect(navigationMocks.navigateToItem).toHaveBeenLastCalledWith(
       liveSourceState.item!.id,
@@ -1552,9 +1551,10 @@ describe('useLiveWorkspaceRuntime', () => {
     liveSourceState.hiddenActiveItems = [hiddenItem]
     const { result } = renderLiveWorkspaceRuntime()
 
-    await expect(
-      result.current.navigation.openItem(createWizardEditorResource(hiddenItem.id)),
-    ).resolves.toEqual({ status: 'unavailable', reason: 'resource_not_visible' })
+    await expect(result.current.navigation.openItem(hiddenItem.id)).resolves.toEqual({
+      status: 'unavailable',
+      reason: 'resource_not_visible',
+    })
     expect(navigationMocks.setLastSelectedItem).not.toHaveBeenCalledWith(hiddenItem.id)
     expect(navigationMocks.navigateToItem).not.toHaveBeenCalledWith(hiddenItem.id, undefined)
   })

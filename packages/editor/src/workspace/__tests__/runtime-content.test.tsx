@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { WorkspaceRuntimeContent } from '../runtime-content'
-import { createWorkspaceResource } from '../runtime'
 import type { CurrentItemState, WorkspaceNavigationState, WorkspaceRuntime } from '../runtime'
 import { DndProviderContext } from '../../drag-drop/context'
 import { dropTargetChromeClass } from '@wizard-archive/ui/drag-drop/drop-target-visual-state'
@@ -221,7 +220,7 @@ describe('WorkspaceRuntimeContent', () => {
           message: 'Page not found.',
         },
         canEdit: true,
-        currentNavigation: { kind: 'resource', resource: null },
+        currentNavigation: { kind: 'resource', resourceId: null },
         isDm: true,
       }),
     )
@@ -239,7 +238,7 @@ describe('WorkspaceRuntimeContent', () => {
             status: 'loading',
             label: note.name,
           },
-          currentNavigation: { kind: 'resource', resource: createWorkspaceResource(note.id) },
+          currentNavigation: { kind: 'resource', resourceId: note.id },
           item: note,
         }),
       ),
@@ -266,7 +265,7 @@ describe('WorkspaceRuntimeContent', () => {
           message: 'This page is not shared with you.',
         },
         canEdit: true,
-        currentNavigation: { kind: 'resource', resource: null },
+        currentNavigation: { kind: 'resource', resourceId: null },
       }),
     )
 

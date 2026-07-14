@@ -6,7 +6,6 @@ import { WorkspaceRuntimeSearchRequestProvider } from '../search-request-provide
 import type { SearchDialogController } from '../../search/dialog-controller'
 import type { FileSystemSearch } from '../../filesystem/search'
 import { createNote } from '../../test/sidebar-item-factory'
-import { createWorkspaceResource } from '../runtime'
 import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory'
 import type { EmbeddedNoteContentSource } from '../../notes/runtime'
 import type {
@@ -86,7 +85,7 @@ describe('WorkspaceRuntimeSearchDialog', () => {
               breadcrumb: '',
               item: note,
               itemId: note.id,
-              resource: createWorkspaceResource(note.id),
+              resource: note.id,
               matchText: null,
               matchType: 'title' as const,
             },

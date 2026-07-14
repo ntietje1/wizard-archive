@@ -1,16 +1,16 @@
 import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { createWorkspaceResource, resolveWorkspaceNavigationState } from '../runtime'
+import { resolveWorkspaceNavigationState } from '../runtime'
 import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory'
 
 describe('workspace navigation', () => {
   it('resolves trash and requested item states before default workspace destinations', () => {
-    const resource = createWorkspaceResource(testResourceId('note-1'))
+    const resourceId = testResourceId('note-1')
 
     expect(
       resolveWorkspaceNavigationState({
         canCreateDashboard: true,
-        resource: resource,
+        resourceId,
         isResourceRequested: true,
         isWorkspaceLoaded: true,
         trashRequested: true,
@@ -19,19 +19,19 @@ describe('workspace navigation', () => {
     expect(
       resolveWorkspaceNavigationState({
         canCreateDashboard: true,
-        resource: resource,
+        resourceId,
         isResourceRequested: true,
         isWorkspaceLoaded: true,
         trashRequested: false,
       }),
-    ).toEqual({ kind: 'resource', resource })
+    ).toEqual({ kind: 'resource', resourceId })
   })
 
   it('resolves loaded empty workspaces to create or empty based on capability', () => {
     expect(
       resolveWorkspaceNavigationState({
         canCreateDashboard: true,
-        resource: null,
+        resourceId: null,
         isResourceRequested: false,
         isWorkspaceLoaded: true,
         trashRequested: false,
@@ -40,7 +40,7 @@ describe('workspace navigation', () => {
     expect(
       resolveWorkspaceNavigationState({
         canCreateDashboard: false,
-        resource: null,
+        resourceId: null,
         isResourceRequested: false,
         isWorkspaceLoaded: true,
         trashRequested: false,
@@ -52,7 +52,7 @@ describe('workspace navigation', () => {
     expect(
       resolveWorkspaceNavigationState({
         canCreateDashboard: true,
-        resource: null,
+        resourceId: null,
         isResourceRequested: false,
         isWorkspaceLoaded: false,
         trashRequested: false,
@@ -61,12 +61,12 @@ describe('workspace navigation', () => {
   })
 
   it('ignores an available resource when resource navigation was not requested', () => {
-    const resource = createWorkspaceResource(testResourceId('note-1'))
+    const resourceId = testResourceId('note-1')
 
     expect(
       resolveWorkspaceNavigationState({
         canCreateDashboard: true,
-        resource,
+        resourceId,
         isResourceRequested: false,
         isWorkspaceLoaded: true,
         trashRequested: false,

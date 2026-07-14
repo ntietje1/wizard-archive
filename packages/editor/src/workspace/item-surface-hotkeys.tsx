@@ -1,5 +1,4 @@
 import type { RefObject } from 'react'
-import { createWorkspaceResource } from './runtime'
 import type { WorkspaceRuntime } from './runtime'
 import type { HotkeyFileSystemActions } from './sidebar/use-item-surface-hotkeys'
 import { useItemSurfaceHotkeys } from './sidebar/use-item-surface-hotkeys'
@@ -44,7 +43,7 @@ export function WorkspaceRuntimeItemSurfaceHotkeys({
     },
     confirmDeleteForever: operations.requestDeleteItemsForever,
     getVisibleAncestors: catalog.getVisibleAncestors,
-    openItem: (itemId) => runtime.navigation.openItem(createWorkspaceResource(itemId)),
+    openItem: (itemId) => runtime.navigation.openItem(itemId),
     requestTrashItems: operations.trashItems,
     resolveOperationItems: operationItems.resolveItems,
   }

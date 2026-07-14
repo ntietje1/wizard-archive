@@ -59,10 +59,6 @@ describe('buildItemSearchResults', () => {
       [titleMatch.id, 'title', null],
       [bodyMatch.id, 'body', 'first body hit wins'],
     ])
-    expect(results[1]?.resource).toEqual({
-      kind: 'resource',
-      uri: `resource:${bodyMatch.id}`,
-    })
     expect(results[1]?.item).toBe(bodyMatch)
   })
 })

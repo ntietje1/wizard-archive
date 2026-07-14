@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createNote } from '../../../test/sidebar-item-factory'
-import { createWorkspaceResource } from '../../runtime'
 import { createSidebarItemContextMenuActions } from '../actions/sidebar-item-actions'
 
 const handleErrorMock = vi.hoisted(() => vi.fn())
@@ -30,8 +29,8 @@ describe('createSidebarItemContextMenuActions', () => {
     await actions.open({ surface: 'sidebar', item: note, selectedItems: [note] })
     await actions.openInNewTab({ surface: 'sidebar', item: note, selectedItems: [note] })
 
-    expect(openItem).toHaveBeenNthCalledWith(1, createWorkspaceResource(note.id))
-    expect(openItem).toHaveBeenNthCalledWith(2, createWorkspaceResource(note.id), {
+    expect(openItem).toHaveBeenNthCalledWith(1, note.id)
+    expect(openItem).toHaveBeenNthCalledWith(2, note.id, {
       target: 'separate',
     })
   })

@@ -12,7 +12,6 @@ import type { LinkStatus, LinkType } from '../links/decoration'
 
 import type { FileSystemOperations } from '../../filesystem/operations'
 import type { WorkspaceNavigation, WorkspaceRuntime } from '../../workspace/runtime'
-import { getWorkspaceResourceId } from '../../workspace/runtime'
 
 const {
   createNoteMock,
@@ -713,9 +712,7 @@ function createWorkspaceRuntime({ canEdit }: { canEdit: boolean }): WorkspaceRun
   const validationSource = buildCreateValidationSource(sidebarItems)
   const runtime = createTestWorkspaceRuntime({ activeItems: sidebarItems, canEdit })
   const openItem: WorkspaceNavigation['openItem'] = (resource, options) =>
-    options?.target === 'separate'
-      ? openMock(getWorkspaceResourceId(resource), options)
-      : navigateMock(getWorkspaceResourceId(resource), options)
+    options?.target === 'separate' ? openMock(resource, options) : navigateMock(resource, options)
   const openExternalUrl: WorkspaceNavigation['openExternalUrl'] = (url) =>
     openMock(url, '_blank', 'noopener,noreferrer')
   const operations: FileSystemOperations = {

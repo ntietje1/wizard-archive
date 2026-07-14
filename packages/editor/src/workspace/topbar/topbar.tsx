@@ -13,7 +13,6 @@ import { formatRelativeTime } from '@wizard-archive/ui/utils/format-relative-tim
 import { EmptyContextMenu } from '../../context-menu/components/empty'
 import { TooltipButton } from '@wizard-archive/ui/components/tooltip-button'
 import { isOptimisticSidebarItem } from '../items/optimistic'
-import { createWorkspaceResource } from '../runtime'
 import type { AnyItem, AnyItemWithContent } from '../items'
 import type { ContextMenuHostRef } from '../../context-menu/components/host'
 import type { ViewContext } from '../menu-context'
@@ -103,7 +102,7 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
           ancestors={title.ancestors}
           canRename={false}
           onOpenAncestor={(item) => {
-            void title.navigation.openItem(createWorkspaceResource(item.id))
+            void title.navigation.openItem(item.id)
           }}
         />
       )}
@@ -117,7 +116,7 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
             await title.operations.updateItemMetadata({ item, name })
           }}
           onOpenAncestor={(item) => {
-            void title.navigation.openItem(createWorkspaceResource(item.id))
+            void title.navigation.openItem(item.id)
           }}
         />
       )}

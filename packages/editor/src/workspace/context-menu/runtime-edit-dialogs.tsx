@@ -1,5 +1,4 @@
 import type { ResourceId } from '../../resources/domain-id'
-import { createWorkspaceResource } from '../runtime'
 import { FileDialog } from '../../files/forms/dialog'
 import type { FileFormSource } from '../../files/forms/source'
 import { useFileUploadControl } from '../../files/forms/use-file-upload-control'
@@ -118,7 +117,7 @@ export function RuntimeFileEditDialog({
   const fileFormSource: FileFormSource = {
     createItem: operations.createItem,
     openItem: async (itemId) => {
-      await runtime.navigation.openItem(createWorkspaceResource(itemId))
+      await runtime.navigation.openItem(itemId)
     },
     replaceFile: file.replaceFile,
     updateItemMetadata: operations.updateItemMetadata,

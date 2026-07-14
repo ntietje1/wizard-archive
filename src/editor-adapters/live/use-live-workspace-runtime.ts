@@ -2,11 +2,9 @@ import {
   createWizardEditorPermissionSource,
   createWizardEditorResourceAvailabilityMetadataSource,
   createWizardEditorResourceCatalogSource,
-  createWizardEditorResource,
   createWizardEditorRuntime,
   createWizardEditorRuntimeSources,
   createWizardEditorSharingSource,
-  getWizardEditorResourceId,
   isWizardEditorFileItem,
   resolveWizardEditorNavigationState,
 } from '@wizard-archive/editor/adapter'
@@ -423,7 +421,7 @@ function useLiveRuntimeNavigation({
   const requestedResourceId = currentItem.requestedResourceId
   const currentNavigationState = resolveWizardEditorNavigationState({
     canCreateDashboard: canCreateItems,
-    resource: currentItem.item ? createWizardEditorResource(currentItem.item.id) : null,
+    resourceId: currentItem.item ? currentItem.item.id : null,
     isResourceRequested: Boolean(requestedResourceId),
     isWorkspaceLoaded: campaign.isCampaignLoaded,
     trashRequested: currentItem.isTrashRequested,
@@ -432,8 +430,7 @@ function useLiveRuntimeNavigation({
     await navigate()
     return { status: 'completed' as const }
   }
-  const openItem: WizardEditorNavigation['openItem'] = async (resource, options) => {
-    const itemId = getWizardEditorResourceId(resource)
+  const openItem: WizardEditorNavigation['openItem'] = async (itemId, options) => {
     const knownItem = catalog.getKnownItemById(itemId)
     if (knownItem && !catalog.getVisibleItemById(itemId)) {
       return { status: 'unavailable', reason: 'resource_not_visible' }

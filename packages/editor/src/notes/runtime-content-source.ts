@@ -1,4 +1,3 @@
-import { createWorkspaceResource } from '../workspace/runtime'
 import type {
   EmbeddedNoteContentSource,
   NoteLinkNavigationSource,
@@ -113,10 +112,9 @@ export function createRuntimeNoteContentSource(
   const linkNavigation: NoteLinkNavigationSource = {
     getSourceParentId: (sourceNoteId) => catalog.getVisibleItemById(sourceNoteId)?.parentId,
     openExternalLink: runtime.navigation.openExternalUrl,
-    openInternalLink: ({ heading, itemId }) =>
-      runtime.navigation.openItem(createWorkspaceResource(itemId), { heading }),
+    openInternalLink: ({ heading, itemId }) => runtime.navigation.openItem(itemId, { heading }),
     openInternalLinkSeparately: ({ heading, itemId }) =>
-      runtime.navigation.openItem(createWorkspaceResource(itemId), {
+      runtime.navigation.openItem(itemId, {
         heading,
         target: 'separate',
       }),

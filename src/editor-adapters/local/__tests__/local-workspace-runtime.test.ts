@@ -1,8 +1,5 @@
 import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
-import {
-  createWizardEditorResource,
-  getWizardEditorNavigationCurrentResourceId,
-} from '@wizard-archive/editor/adapter'
+import { getWizardEditorNavigationCurrentResourceId } from '@wizard-archive/editor/adapter'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { act, render, renderHook } from '@testing-library/react'
 import { createElement } from 'react'
@@ -126,7 +123,7 @@ describe('useLocalWorkspaceRuntime', () => {
       dispatch: vi.fn(),
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+        resourceId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       },
       setNavigation,
       workspace: SAMPLE_LOCAL_WORKSPACE,
@@ -140,15 +137,13 @@ describe('useLocalWorkspaceRuntime', () => {
       SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
     )
     expect(source.filesystem.catalog.getKnownItemBySlug(catalogCanvas!.slug)).toBe(catalogCanvas)
-    await source.navigation.openItem(createWizardEditorResource(catalogCanvas!.id))
+    await source.navigation.openItem(catalogCanvas!.id)
     expect(setNavigation).toHaveBeenCalledWith({
       kind: 'resource',
-      resource: createWizardEditorResource(catalogCanvas!.id),
+      resourceId: catalogCanvas!.id,
     })
 
-    const missingItemResult = await source.navigation.openItem(
-      createWizardEditorResource(testResourceId('new-local-note')),
-    )
+    const missingItemResult = await source.navigation.openItem(testResourceId('new-local-note'))
     expect(setNavigation).toHaveBeenCalledTimes(1)
     expect(missingItemResult).toEqual({
       status: 'unavailable',
@@ -198,7 +193,7 @@ describe('useLocalWorkspaceRuntime', () => {
       dispatch,
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.docksMap),
+        resourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       },
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })

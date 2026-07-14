@@ -1,7 +1,4 @@
-import {
-  createWorkspaceResource,
-  getWorkspaceNavigationCurrentResourceId,
-} from '../../workspace/runtime'
+import { getWorkspaceNavigationCurrentResourceId } from '../../workspace/runtime'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import { CREATE_PARENT_TARGET_KIND } from '../../workspace/items'
 import { createSidebarDragDataSource } from '../../drag-drop/sidebar-drag-data'
@@ -42,7 +39,7 @@ export function createRuntimeItemCardSource(runtime: RuntimeItemCardSourceInput)
     canDragItem: (item) => permissions.canMutateItem(item, PERMISSION_LEVEL.FULL_ACCESS),
     currentItemId: getWorkspaceNavigationCurrentResourceId(navigation),
     getSidebarDragData: dragDataSource.getSidebarDragData,
-    openItem: (itemId) => navigation.openItem(createWorkspaceResource(itemId)),
+    openItem: (itemId) => navigation.openItem(itemId),
   }
 }
 

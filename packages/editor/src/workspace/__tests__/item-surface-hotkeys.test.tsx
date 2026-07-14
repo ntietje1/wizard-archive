@@ -3,7 +3,6 @@ import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { HotkeyFileSystemActions } from '../sidebar/use-item-surface-hotkeys'
 import { WorkspaceRuntimeItemSurfaceHotkeys } from '../item-surface-hotkeys'
-import { createWorkspaceResource } from '../runtime'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../test/workspace-runtime-factory'
 
@@ -60,7 +59,7 @@ describe('WorkspaceRuntimeItemSurfaceHotkeys', () => {
     expect(paste).toHaveBeenCalledWith(folder.id)
     expect(trashItems).toHaveBeenCalledWith([note.id])
     expect(requestDeleteItemsForever).toHaveBeenCalledWith([note.id])
-    expect(openItem).toHaveBeenCalledWith(createWorkspaceResource(note.id))
+    expect(openItem).toHaveBeenCalledWith(note.id)
     expect(actions.getVisibleAncestors(note.id)).toEqual([folder])
     expect(actions.resolveOperationItems({ itemIds: [note.id] })).toEqual([note])
   })

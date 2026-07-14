@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { WorkspaceRuntimeGraph } from '../runtime-graph'
-import { createWorkspaceResource } from '../runtime'
 import type { CurrentItemState, WorkspaceRuntime } from '../runtime'
 import type { FileTopbarSource } from '../topbar/source'
 import type { NoteItemWithContent } from '../../notes/item-contract'
@@ -105,9 +104,9 @@ describe('WorkspaceRuntimeGraph', () => {
     )
 
     const source = getLastFileTopbarSource()
-    source.navigation.openItem(createWorkspaceResource(item.id))
+    source.navigation.openItem(item.id)
 
-    expect(openItem).toHaveBeenCalledWith(createWorkspaceResource(item.id))
+    expect(openItem).toHaveBeenCalledWith(item.id)
   })
 })
 

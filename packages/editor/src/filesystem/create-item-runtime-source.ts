@@ -1,4 +1,3 @@
-import { createWorkspaceResource } from '../workspace/runtime'
 import { CREATE_PARENT_TARGET_KIND } from '../workspace/items'
 import type { CreateItemSource } from './create-item-source'
 import type { WorkspaceNavigation } from '../workspace/runtime'
@@ -30,6 +29,6 @@ export function createRuntimeCreateItemSource(
         parentTarget: { kind: CREATE_PARENT_TARGET_KIND.direct, parentId },
       }),
     openCreateDashboard: navigation.openCreateDashboard,
-    openItem: (itemId) => navigation.openItem(createWorkspaceResource(itemId)),
+    openItem: (itemId) => navigation.openItem(itemId),
   }
 }

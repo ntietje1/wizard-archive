@@ -1,5 +1,4 @@
 import type { ResourceId } from '../../../resources/domain-id'
-import { createWorkspaceResource } from '../../runtime'
 
 import type { FileSystemItemContextMenuOperations } from '../../../filesystem/item-operation-contracts'
 import type { WorkspaceMenuContext } from '../../menu-context'
@@ -27,7 +26,7 @@ export function createSidebarItemContextMenuActions({
     open: async (context: WorkspaceMenuContext) => {
       if (!context.item) return
       try {
-        await source.openItem(createWorkspaceResource(context.item.id))
+        await source.openItem(context.item.id)
       } catch (error) {
         handleError(error, 'Failed to open item')
       }
@@ -36,7 +35,7 @@ export function createSidebarItemContextMenuActions({
       if (!context.item) return
       if (source.canOpenItemsSeparately.status !== 'available') return
       try {
-        await source.openItem(createWorkspaceResource(context.item.id), { target: 'separate' })
+        await source.openItem(context.item.id, { target: 'separate' })
       } catch (error) {
         handleError(error, 'Failed to open item')
       }

@@ -1,5 +1,4 @@
 import { Link2, Link2Off } from 'lucide-react'
-import { createWorkspaceResource } from '../../runtime'
 import type { WorkspaceNavigation } from '../../runtime'
 import type { ItemLinksCapability } from '../../../filesystem/search'
 import type { ResourceContentSource } from '../../../filesystem/resource-content-source'
@@ -90,7 +89,7 @@ function LinkListRow({
       onClick={() => {
         void (async () => {
           try {
-            const result = await onNavigate(createWorkspaceResource(item.id))
+            const result = await onNavigate(item.id)
             if (result.status === 'unavailable') {
               toast.error('Unable to open linked item')
             }

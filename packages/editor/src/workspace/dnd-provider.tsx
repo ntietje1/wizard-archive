@@ -1,5 +1,4 @@
 import type { ResourceId } from '../resources/domain-id'
-import { createWorkspaceResource } from './runtime'
 import type { ReactNode } from 'react'
 
 import type { WorkspaceNavigation } from './runtime'
@@ -45,7 +44,7 @@ export function WorkspaceRuntimeDndProvider({
   const sidebarWorkspace = useSidebarWorkspaceState()
   const { handleDrop: handleDropFiles } = useFileDropHandler(filesystem, {
     openItem: async (itemId, options) => {
-      await runtime.navigation.openItem(createWorkspaceResource(itemId), options)
+      await runtime.navigation.openItem(itemId, options)
     },
     revealItem: (itemId: ResourceId) => {
       revealSidebarItemParents({
@@ -72,7 +71,7 @@ export function WorkspaceRuntimeDndProvider({
           return filesystem.operations.executeDropCommand(command)
         },
         openItem: async (item) => {
-          await runtime.navigation.openItem(createWorkspaceResource(item.id))
+          await runtime.navigation.openItem(item.id)
         },
       }}
       dropPlanningContext={{

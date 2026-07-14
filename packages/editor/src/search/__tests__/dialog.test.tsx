@@ -13,7 +13,6 @@ import type {
   SearchDialogRequestState,
 } from '../dialog-controller'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
-import { createWorkspaceResource } from '../../workspace/runtime'
 import type { AnyItem, AnyItemWithContent } from '../../workspace/items'
 import { buildItemSearchResults } from '../model'
 import { WorkspaceContextMenuModelSourceProvider } from '../../workspace/context-menu-model-source'
@@ -368,7 +367,7 @@ describe('SearchDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open result' }))
 
-    expect(searchDataState.openItem).toHaveBeenCalledWith(createWorkspaceResource(note.id))
+    expect(searchDataState.openItem).toHaveBeenCalledWith(note.id)
   })
 
   it('reports item-open failures without dismissing the current result', async () => {

@@ -2,7 +2,6 @@ import { waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
 import { RESOURCE_TYPES } from '../../items-persistence-contract'
-import { createWorkspaceResource } from '../../runtime'
 import { createCreationActions } from '../actions/creation-actions'
 import { CREATE_PARENT_TARGET_KIND } from '../../items'
 
@@ -45,7 +44,7 @@ describe('createCreationActions', () => {
       parentTarget: { kind: CREATE_PARENT_TARGET_KIND.direct, parentId: folder.id },
     })
     await waitFor(() => {
-      expect(openItem).toHaveBeenCalledExactlyOnceWith(createWorkspaceResource(created.id))
+      expect(openItem).toHaveBeenCalledExactlyOnceWith(created.id)
     })
     expect(setRenamingItemId).toHaveBeenCalledExactlyOnceWith(created.id)
   })

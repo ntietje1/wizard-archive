@@ -4,7 +4,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { FileText } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createFolder, createNote } from '../../../../../test/sidebar-item-factory'
-import { createWorkspaceResource } from '../../../../runtime'
 import { SidebarItem } from '../sidebar-item'
 import { SidebarItemButton } from '../sidebar-item-button'
 import type { SidebarItemSource } from '../../sidebar-tree-source'
@@ -177,7 +176,7 @@ describe('SidebarItem', () => {
 
     fireEvent.click(button)
 
-    expect(openItemMock).toHaveBeenCalledWith(createWorkspaceResource(item.id))
+    expect(openItemMock).toHaveBeenCalledWith(item.id)
   })
 
   it('restores the original row when a filesystem rename fails', async () => {

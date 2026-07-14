@@ -31,7 +31,6 @@ import {
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import {
   completeWizardEditorResourceCommand,
-  createWizardEditorResource,
   getWizardEditorNavigationCurrentResourceId,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
   WIZARD_EDITOR_RESOURCE_EVENT_TYPE,
@@ -203,7 +202,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.docksMap),
+        resourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
       },
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
@@ -2465,7 +2464,7 @@ describe('createLocalRuntimeFileSystem', () => {
       dispatch: vi.fn(),
       navigation: {
         kind: 'resource',
-        resource: createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
+        resourceId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
       },
       workspace: SAMPLE_LOCAL_WORKSPACE,
     })
@@ -2493,7 +2492,7 @@ describe('createLocalRuntimeFileSystem', () => {
 
     expect(runtime.navigation.canOpenItemsSeparately).toEqual({ status: 'available' })
 
-    runtime.navigation.openItem(createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas), {
+    runtime.navigation.openItem(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas, {
       heading: 'Scene 2',
       target: 'separate',
     })
@@ -2518,12 +2517,9 @@ describe('createLocalRuntimeFileSystem', () => {
     })
 
     expect(
-      runtime.navigation.openItem(
-        createWizardEditorResource(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas),
-        {
-          target: 'separate',
-        },
-      ),
+      runtime.navigation.openItem(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas, {
+        target: 'separate',
+      }),
     ).toEqual({
       status: 'unavailable',
       reason: 'separate_navigation_unsupported',

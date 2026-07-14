@@ -24,7 +24,7 @@ import type { FileSystemLoadState } from '../filesystem/load-state'
 import { createCurrentItemFileSystemSelection } from '../filesystem/selection'
 import type { FileSystemSelection } from '../filesystem/selection'
 import type { FileSystemPermissions } from '../filesystem/permissions'
-import { createWorkspaceResource, createWorkspaceRuntime } from '../workspace/runtime'
+import { createWorkspaceRuntime } from '../workspace/runtime'
 import type {
   WorkspaceNavigation,
   WorkspaceNavigationState,
@@ -174,8 +174,7 @@ export function createTestWorkspaceRuntime({
           message: 'Page not found.',
         })
   const navigationState: WorkspaceNavigationState =
-    currentNavigation ??
-    (item ? { kind: 'resource', resource: createWorkspaceResource(item.id) } : { kind: 'empty' })
+    currentNavigation ?? (item ? { kind: 'resource', resourceId: item.id } : { kind: 'empty' })
   const defaultSelection = createTestFileSystemSelection({
     currentItemId: item?.id ?? null,
     fallbackSelectedItemIds: selectedItemIds ?? (item ? [item.id] : []),

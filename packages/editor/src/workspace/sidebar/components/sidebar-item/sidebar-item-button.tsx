@@ -12,7 +12,6 @@ import { WorkspaceContextMenu } from '../../../context-menu/context-menu'
 import { useItemSelectionInteractions } from '../../use-item-selection-interactions'
 import { isOptimisticSidebarItem } from '../../../items/optimistic'
 import { sidebarItemActionButtonClass, sidebarItemNameClass } from '../../item-visual-state'
-import { createWorkspaceResource } from '../../../runtime'
 import type { SidebarWorkspaceItemSurfaceName } from '../../workspace-state'
 import type { MouseEvent, Ref } from 'react'
 import type { SidebarItemSource } from '../sidebar-tree-source'
@@ -62,7 +61,7 @@ export function SidebarItemButton({
 
   const selectItem = (event: MouseEvent) => {
     handleItemClick(event, () => {
-      void source.openItem(createWorkspaceResource(item.id))
+      void source.openItem(item.id)
     })
   }
 

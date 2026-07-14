@@ -108,7 +108,7 @@ export function useSearchDialogController({
     itemOpenPendingRef.current = true
     void (async () => {
       try {
-        await actions.openItem(result.resource)
+        await actions.openItem(result.itemId)
         itemOpenPendingRef.current = false
         close()
       } catch (error) {

@@ -11,7 +11,6 @@ import type { ResourceKind } from '../../resource-contract'
 
 import type { MaybePromise } from '../../../../../../shared/common/async'
 
-import { createWorkspaceResource } from '../../runtime'
 import type { WorkspaceNavigation } from '../../runtime'
 import type { FileSystemCreateItemResult } from '../../../filesystem/item-operation-contracts'
 type CreateContextMenuItem = (input: {
@@ -45,7 +44,7 @@ export function createCreationActions({
         handleError(new Error(`Creation failed: ${created.status}`), command.failureMessage)
         return
       }
-      await openItem(createWorkspaceResource(created.id))
+      await openItem(created.id)
       setRenamingItemId(created.id)
     } catch (error) {
       handleError(error, command.failureMessage)

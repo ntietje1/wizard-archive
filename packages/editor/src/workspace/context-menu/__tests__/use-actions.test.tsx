@@ -5,7 +5,6 @@ import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { createTestWorkspaceRuntime } from '../../../test/workspace-runtime-factory'
 import { useWorkspaceContextMenuActions } from '../use-actions'
-import { createWorkspaceResource } from '../../runtime'
 import { createWorkspaceFilesystemContextMenuTarget } from '../filesystem-target'
 import type { FileSystemItemContextMenuOperations } from '../../../filesystem/item-operation-contracts'
 import type { ResourceShareSource } from '../../../sharing/contracts'
@@ -230,7 +229,7 @@ describe('useWorkspaceContextMenuActions', () => {
       selectedItems: [note],
     })
 
-    expect(openItemMock).toHaveBeenCalledExactlyOnceWith(createWorkspaceResource(note.id))
+    expect(openItemMock).toHaveBeenCalledExactlyOnceWith(note.id)
   })
 
   it('opens sidebar items separately through workspace runtime navigation', async () => {
@@ -251,7 +250,7 @@ describe('useWorkspaceContextMenuActions', () => {
       selectedItems: [note],
     })
 
-    expect(openItemMock).toHaveBeenCalledExactlyOnceWith(createWorkspaceResource(note.id), {
+    expect(openItemMock).toHaveBeenCalledExactlyOnceWith(note.id, {
       target: 'separate',
     })
   })
