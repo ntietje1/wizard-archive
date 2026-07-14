@@ -328,7 +328,7 @@ function executeLocalFileSystemCommand(
 
 function executeLocalCommittedFileSystemCommand(
   command: LocalCommittedFileSystemCommand,
-  { catalog, creationSession, dispatch }: LocalCommandContext,
+  { catalog, dispatch }: LocalCommandContext,
 ): ReturnType<typeof completeWizardEditorResourceCommand> {
   if (isWizardEditorResourceSharingCommand(command)) {
     return { status: 'unsupported', reason: 'sharing_unsupported' }
@@ -340,10 +340,7 @@ function executeLocalCommittedFileSystemCommand(
   const completeCommand = (completedCommand: WizardEditorResourceCatalogCommand) =>
     createCompletedLocalFileSystemCommandResult(completedCommand, {
       catalog,
-      claimNextItemId: () => {
-        creationSession.claimNextIndex()
-        return generateDomainId(DOMAIN_ID_KIND.resource)
-      },
+      claimNextItemId: () => generateDomainId(DOMAIN_ID_KIND.resource),
     })
 
   const result = completeCommand(command)

@@ -136,23 +136,29 @@ describe('localWorkspaceReducer', () => {
     expect(replayedWorkspace.nextLocalItemIndex).toBe(creation.nextLocalItemIndex)
   })
 
-  it('copies local member item permissions onto copied folder descendants', () => {
+  it('leaves access grants and bookmarks behind when copying a tree', () => {
     const playerId = testCampaignMemberId('local-player')
     const { childId, folderId, workspace } = withLocalFolderTreePermissions(playerId)
     const copiedFolderId = testResourceId('copied-folder')
     const copiedChildId = testResourceId('copied-note')
 
-    const nextWorkspace = applyLocalCopyReceipt(workspace, [folderId], null, [
+    const bookmarkedWorkspace = {
+      ...workspace,
+      items: workspace.items.map((item) =>
+        item.id === folderId ? { ...item, isBookmarked: true } : item,
+      ),
+    }
+    const nextWorkspace = applyLocalCopyReceipt(bookmarkedWorkspace, [folderId], null, [
       [folderId, copiedFolderId],
       [childId, copiedChildId],
     ])
 
-    expect(nextWorkspace.memberItemPermissionsById?.[copiedFolderId]).toEqual({
-      [playerId]: PERMISSION_LEVEL.VIEW,
-    })
-    expect(nextWorkspace.memberItemPermissionsById?.[copiedChildId]).toEqual({
-      [playerId]: PERMISSION_LEVEL.NONE,
-    })
+    expect(nextWorkspace.memberItemPermissionsById?.[copiedFolderId]).toBeUndefined()
+    expect(nextWorkspace.memberItemPermissionsById?.[copiedChildId]).toBeUndefined()
+    expect(nextWorkspace.items.find((item) => item.id === copiedFolderId)?.isBookmarked).toBe(false)
+    expect(nextWorkspace.memberItemPermissionsById?.[folderId]?.[playerId]).toBe(
+      PERMISSION_LEVEL.VIEW,
+    )
   })
 
   it('uses copied ids from the committed receipt as the mutation source', () => {
@@ -168,6 +174,7 @@ describe('localWorkspaceReducer', () => {
       expect.objectContaining({ id: copiedId, slug: copiedId }),
     )
     expect(nextWorkspace.items.filter((item) => item.id === copiedId)).toHaveLength(1)
+    expect(nextWorkspace.nextLocalItemIndex).toBe(SAMPLE_LOCAL_WORKSPACE.nextLocalItemIndex)
   })
 
   it('deletes local member item permissions with permanently deleted items', () => {

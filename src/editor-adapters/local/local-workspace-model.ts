@@ -575,7 +575,6 @@ function copyItemsFromReceipt(
   const rootIds = normalizedRootIds(state, itemIds, { status: 'active' })
   if (rootIds.length === 0) return state
 
-  let nextIndex = state.nextLocalItemIndex
   const copiedItems: Array<LocalWorkspaceItem> = []
   const copiedCanvasPayloads = { ...state.canvasPayloadsById }
   const copiedFilePayloads = { ...state.filePayloadsById }
@@ -590,7 +589,6 @@ function copyItemsFromReceipt(
   const copiedNoteBodies = { ...state.noteBodiesById }
   const idMap = new Map<ResourceId, ResourceId>()
   const itemsById = new Map(state.items.map((item) => [item.id, item] as const))
-  const nextIndexRef = { value: nextIndex }
   const copiedAt = createLocalWorkspaceMutationTimestamp()
 
   for (const rootId of rootIds) {
@@ -607,7 +605,6 @@ function copyItemsFromReceipt(
       copiedNoteBodies,
       copiedItemIdsBySourceId,
       idMap,
-      nextIndexRef,
       sourceParentId: root.parentId,
       state,
       targetParentId,
@@ -615,24 +612,16 @@ function copyItemsFromReceipt(
       copiedAt,
     })
   }
-  nextIndex = nextIndexRef.value
-
   if (copiedItems.length === 0) return state
   for (const copiedMapId of copiedMapIds) {
     copiedMapsById[copiedMapId] = remapLocalMapPins(copiedMapsById[copiedMapId]!, idMap)
   }
-  const copiedMemberItemPermissionsById = copyMemberItemPermissions(
-    state.memberItemPermissionsById,
-    idMap,
-  )
   return {
     ...state,
     canvasPayloadsById: copiedCanvasPayloads,
     filePayloadsById: copiedFilePayloads,
     items: [...state.items, ...copiedItems],
     mapsById: copiedMapsById,
-    memberItemPermissionsById: copiedMemberItemPermissionsById,
-    nextLocalItemIndex: nextIndex,
     noteAdditionalBlocksById: copiedNoteAdditionalBlocks,
     noteBlockVisibilityById: copiedNoteBlockVisibilityRef.value,
     noteBodiesById: copiedNoteBodies,
@@ -754,7 +743,6 @@ function copyItemTree({
   copiedItemIdsBySourceId,
   idMap,
   item,
-  nextIndexRef,
   sourceParentId,
   state,
   targetParentId,
@@ -773,7 +761,6 @@ function copyItemTree({
   copiedItemIdsBySourceId: ReadonlyMap<ResourceId, ResourceId>
   idMap: Map<ResourceId, ResourceId>
   item: LocalWorkspaceItem
-  nextIndexRef: { value: number }
   sourceParentId: ResourceId | null
   state: LocalWorkspaceState
   targetParentId: ResourceId | null
@@ -782,7 +769,6 @@ function copyItemTree({
   if (!copiedId) {
     throw new Error(`Copy receipt is missing a copied id for ${item.id}`)
   }
-  nextIndexRef.value += 1
   idMap.set(item.id, copiedId)
   const copiedParentId =
     item.parentId === sourceParentId
@@ -793,7 +779,9 @@ function copyItemTree({
   const copiedItem: LocalWorkspaceItem = {
     ...item,
     createdAt: copiedAt,
+    description: '',
     id: copiedId,
+    isBookmarked: false,
     parentId: copiedParentId,
     slug: requireLocalResourceSlug(copiedId),
     status: 'active',
@@ -840,7 +828,6 @@ function copyItemTree({
       copiedItemIdsBySourceId,
       idMap,
       item: child,
-      nextIndexRef,
       sourceParentId,
       state,
       targetParentId,
@@ -910,25 +897,6 @@ function remapLocalMapPins(map: LocalMap, idMap: ReadonlyMap<ResourceId, Resourc
       itemId: idMap.get(pin.itemId) ?? pin.itemId,
     })),
   }
-}
-
-function copyMemberItemPermissions(
-  memberItemPermissionsById: LocalWorkspaceState['memberItemPermissionsById'],
-  idMap: ReadonlyMap<ResourceId, ResourceId>,
-): LocalWorkspaceState['memberItemPermissionsById'] {
-  if (!memberItemPermissionsById) return undefined
-
-  let nextMemberItemPermissionsById: LocalWorkspaceState['memberItemPermissionsById'] =
-    memberItemPermissionsById
-  for (const [sourceItemId, copiedItemId] of idMap) {
-    const sourcePermissions = memberItemPermissionsById[sourceItemId]
-    if (!sourcePermissions) continue
-    nextMemberItemPermissionsById = {
-      ...nextMemberItemPermissionsById,
-      [copiedItemId]: { ...sourcePermissions },
-    }
-  }
-  return nextMemberItemPermissionsById
 }
 
 function removeMemberItemPermissionsForItems(
