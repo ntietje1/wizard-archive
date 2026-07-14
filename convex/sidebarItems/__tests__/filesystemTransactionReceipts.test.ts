@@ -222,6 +222,20 @@ describe('filesystem transaction receipts', () => {
       { campaignId: ctx.campaignDomainId },
     )
     const createdIds = activeAfterCreate.map((item) => item.id).sort()
+    const loadResourceUuids = () =>
+      t.run(async (dbCtx) => {
+        const rows = await dbCtx.db
+          .query('sidebarItems')
+          .withIndex('by_campaign_deletionTime', (query) =>
+            query.eq('campaignId', ctx.campaignId).eq('deletionTime', null),
+          )
+          .collect()
+        return rows.map((row) => row.resourceUuid).sort()
+      })
+    const createdResourceUuids = await loadResourceUuids()
+    expect(createdResourceUuids).toHaveLength(3)
+    expect(new Set(createdResourceUuids).size).toBe(3)
+    expect(createdResourceUuids.every(isUuidV7)).toBe(true)
     expect(activeAfterCreate.map((item) => item.name).sort()).toEqual([
       'Act One',
       'Adventures',
@@ -280,5 +294,7 @@ describe('filesystem transaction receipts', () => {
       'Adventures',
       'Scene',
     ])
+    const redoneResourceUuids = await loadResourceUuids()
+    expect(redoneResourceUuids).toEqual(createdResourceUuids)
   })
 })

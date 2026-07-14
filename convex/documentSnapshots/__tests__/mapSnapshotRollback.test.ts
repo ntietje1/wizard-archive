@@ -11,6 +11,7 @@ import {
 } from '../../_test/documentSnapshots.helper'
 import { api } from '../../_generated/api'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { SNAPSHOT_MIN_INTERVAL_MS } from '../../yjsSync/constants'
 
 describe('game map operations are rollbackable after every operation', () => {
@@ -278,6 +279,7 @@ describe('rollback of game map pin with non-note itemId', () => {
       // Create a folder and pin it to the map (pins can reference any sidebar item)
       const { folderId } = await t.run(async (dbCtx) => {
         const id = await dbCtx.db.insert('sidebarItems', {
+          resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
           campaignId: ctx.campaignId,
           name: 'Pinned Folder',
           normalizedName: 'pinned folder',

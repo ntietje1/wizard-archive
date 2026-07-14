@@ -93,6 +93,7 @@ async function toEditorResourceRow(ctx: GetSidebarItemCtx, row: Doc<'sidebarItem
   const {
     _id,
     _creationTime,
+    resourceUuid: _resourceUuid,
     previewStorageId,
     previewUpdatedAt: _previewUpdatedAt,
     ...fields

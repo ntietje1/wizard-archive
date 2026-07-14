@@ -13,6 +13,7 @@ import { assetIdValidator, operationIdValidator } from '../../resources/validato
 import { campaignIdValidator } from '../../campaigns/schema'
 
 const {
+  resourceUuid: _resourceUuid,
   normalizedName: _normalizedName,
   campaignId: _campaignRowId,
   previewStorageId: _previewStorageId,
@@ -39,6 +40,7 @@ const extensionBaseFields = {
 
 export const sidebarItemsTables = {
   sidebarItems: defineTable(sidebarItemTableValidator)
+    .index('by_resourceUuid', ['resourceUuid'])
     .index('by_campaign_status_normalizedName_deletionTime', [
       'campaignId',
       'status',

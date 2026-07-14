@@ -40,6 +40,7 @@ function normalizeSidebarItemFields<T extends SidebarItemEnhancementRow>(
   const {
     _id: _rawId,
     _creationTime: _rawCreationTime,
+    resourceUuid: _resourceUuid,
     normalizedName: _normalizedName,
     previewStorageId: _previewStorageId,
     previewUpdatedAt: _previewUpdatedAt,
@@ -47,6 +48,7 @@ function normalizeSidebarItemFields<T extends SidebarItemEnhancementRow>(
   } = item as T & {
     _id?: Id<'sidebarItems'>
     _creationTime?: number
+    resourceUuid?: string
     normalizedName?: string
     previewStorageId?: Id<'_storage'> | null
     previewUpdatedAt?: number | null

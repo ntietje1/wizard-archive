@@ -53,6 +53,7 @@ export function toSidebarItemDocument<T extends SidebarItemLifecycleFields>(item
 export function toSidebarItemReplacement<T extends SidebarItemLifecycleFields>(item: T) {
   const document = toSidebarItemDocument(item)
   const common = {
+    resourceUuid: document.resourceUuid,
     name: document.name,
     normalizedName: normalizeLegacyResourcePathSegment(document.name),
     slug: document.slug,

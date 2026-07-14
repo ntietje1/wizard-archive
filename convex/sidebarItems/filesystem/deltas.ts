@@ -124,6 +124,7 @@ async function resourcePatchRowFromStored(
   const {
     _id,
     _creationTime,
+    resourceUuid: _resourceUuid,
     campaignId: _campaignRowId,
     normalizedName: _normalizedName,
     previewStorageId,

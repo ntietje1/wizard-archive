@@ -10,6 +10,7 @@ import type {
   ResourceKind,
 } from '@wizard-archive/editor/resources/resource-contract'
 import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { normalizeLegacyResourcePathSegment } from '../resourcePathSegment'
 
 import { assertSidebarItemLifecycleConsistency } from '../types/status'
@@ -43,6 +44,7 @@ export async function insertFilesystemSidebarItem(
   })
 
   const row = {
+    resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
     campaignId: ctx.campaign._id,
     name: prepared.name,
     normalizedName: normalizeLegacyResourcePathSegment(prepared.name),

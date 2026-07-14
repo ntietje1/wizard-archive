@@ -1,7 +1,11 @@
 import { executeTestFileSystemCommand } from './filesystemCommand.helper'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId, NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  NoteBlockId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import { deterministicUuidV7 } from '../../shared/test/deterministic-uuid-v7'
 import {
   RESOURCE_LOCATION,
@@ -295,6 +299,7 @@ const sidebarItemBase = (
   creatorProfileId: Id<'userProfiles'>,
   name: ResourceTitle,
 ): {
+  resourceUuid: ResourceId
   name: ResourceTitle
   normalizedName: string
   slug: string
@@ -308,6 +313,7 @@ const sidebarItemBase = (
   previewStorageId: null
   previewUpdatedAt: null
 } & ReturnType<typeof commonFields> => ({
+  resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
   name,
   normalizedName: normalizeLegacyResourcePathSegment(name),
   slug: assertConvexSidebarItemSlug(slugify(name)),
@@ -324,6 +330,7 @@ const sidebarItemBase = (
 })
 
 type CommonSidebarItemOverrides = Partial<{
+  resourceUuid: ResourceId
   name: string
   slug: string
   parentId: Id<'sidebarItems'> | null
