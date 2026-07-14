@@ -427,7 +427,7 @@ export class InMemoryResourceCatalog
     const items = candidates.slice(0, limit)
     return Promise.resolve({
       items,
-      cursor: candidates.length > items.length ? items.at(-1)!.id : null,
+      cursor: candidates.length > items.length ? items[items.length - 1]!.id : null,
     })
   }
 
