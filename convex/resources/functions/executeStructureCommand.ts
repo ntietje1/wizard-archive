@@ -42,6 +42,7 @@ import { createMapContent } from './mapContent'
 import { createNoteContent } from './noteContent'
 import { applyResourceDeletion, planResourceDeletion } from './resourceDeletion'
 import { findCanonicalResource } from './findCanonicalResource'
+import { prepareResourceContentCopies } from './resourceContentCopy'
 
 type ExecuteStructureCommandArgs = {
   operationId: string
@@ -528,10 +529,6 @@ async function deepCopyResources(
     command.sourceRootIds,
     'active',
   )
-  if (closure.some((resource) => resource.kind !== 'folder')) {
-    throw new CatalogRejection('content_unavailable')
-  }
-
   const rootIds = new Set(roots.map((root) => root.resourceUuid))
   const resourceMap = new Map(
     closure.map((resource) => [
@@ -561,6 +558,21 @@ async function deepCopyResources(
     }),
   )
 
+  const content = await prepareResourceContentCopies(
+    ctx,
+    campaignId,
+    operationId,
+    copies.map((copy) => ({
+      sourceResourceId: copy.source.resourceUuid as ResourceId,
+      destinationResourceId: copy.resourceId,
+      kind: copy.source.kind,
+    })),
+  )
+  if (content.status === 'unavailable') throw new CatalogRejection('content_unavailable')
+  if (content.status === 'integrity_error') {
+    throw new CatalogRejection('content_integrity_failure')
+  }
+
   for (const copy of copies) {
     await ctx.db.insert('resources', {
       resourceUuid: copy.resourceId,
@@ -580,6 +592,7 @@ async function deepCopyResources(
       updatedByMemberUuid: actorId,
     })
   }
+  for (const commit of content.commits) await commit()
 
   return completed(
     campaignId,

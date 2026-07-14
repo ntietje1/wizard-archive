@@ -1,6 +1,7 @@
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
 import { initialJsonContentVersion } from './contentVersion'
+import type { ContentCopyPreparation } from './contentCopyTypes'
 
 const EMPTY_FILE_CONTENT = {
   assetUuid: null,
@@ -27,4 +28,38 @@ export async function loadFileContentDeletion(ctx: CampaignMutationCtx, resource
     .query('resourceFileContents')
     .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
     .unique()
+}
+
+export async function prepareFileContentCopy(
+  ctx: CampaignMutationCtx,
+  campaignId: CampaignId,
+  sourceResourceId: ResourceId,
+  destinationResourceId: ResourceId,
+): Promise<ContentCopyPreparation> {
+  const content = await loadFileContentDeletion(ctx, sourceResourceId)
+  if (!content || content.campaignUuid !== campaignId) return { status: 'integrity_error' }
+  if (content.assetUuid !== null) return { status: 'unavailable' }
+
+  const copied = {
+    assetUuid: null,
+    extension: content.extension,
+    mediaType: content.mediaType,
+    originalName: content.originalName,
+  }
+  const version = await initialJsonContentVersion(copied)
+  return {
+    status: 'ready',
+    plan: {
+      referenceableTargets: [],
+      finalize: () =>
+        Promise.resolve(async () => {
+          await ctx.db.insert('resourceFileContents', {
+            campaignUuid: campaignId,
+            resourceUuid: destinationResourceId,
+            ...copied,
+            version,
+          })
+        }),
+    },
+  }
 }

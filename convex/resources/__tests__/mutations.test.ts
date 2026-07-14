@@ -9,6 +9,16 @@ import type { Id } from '../../_generated/dataModel'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
+import {
+  NOTE_YJS_FRAGMENT,
+  decodeNoteYjsUpdatesToBlocks,
+} from '@wizard-archive/editor/notes/document-yjs'
+import {
+  createCanvasDocumentDoc,
+  readCanvasDocumentContent,
+} from '@wizard-archive/editor/canvas/document-contract'
+import * as Y from 'yjs'
+import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -417,6 +427,201 @@ describe('resource structure commands', () => {
           metadataVersion: expect.objectContaining({ revision: 1 }),
         }),
       ])
+    })
+  })
+
+  it('deep copies independent note, file, map, and canvas content with internal references', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const sourceRootId = await createResource(campaign, campaignUuid, 'folder', null, 'Source')
+    const fileId = await createResource(campaign, campaignUuid, 'file', sourceRootId, 'File')
+    const mapId = await createResource(campaign, campaignUuid, 'map', sourceRootId, 'Map')
+    const canvasId = await createResource(campaign, campaignUuid, 'canvas', sourceRootId, 'Canvas')
+    const noteId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const noteOperationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId: noteOperationId,
+      command: {
+        type: 'create',
+        resourceId: noteId,
+        kind: 'note',
+        parentId: sourceRootId,
+        title: 'Note',
+        icon: null,
+        color: null,
+      },
+    })
+    const sourceBlockId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
+      campaignId: campaignUuid,
+      operationId: noteOperationId,
+      resourceId: noteId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: sourceBlockId,
+          type: 'embed',
+          props: { targetKind: 'resource', resourceId: mapId },
+        },
+      ]),
+    })
+    const sourcePinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
+    const sourceNodeId = generateDomainId(DOMAIN_ID_KIND.canvasNode)
+    const canvasDoc = createCanvasDocumentDoc({
+      nodes: [
+        {
+          id: sourceNodeId,
+          type: 'embed',
+          position: { x: 10, y: 20 },
+          data: { target: { kind: 'resource', resourceId: fileId } },
+        },
+      ],
+      edges: [],
+    })
+    const canvasUpdate = Uint8Array.from(Y.encodeStateAsUpdate(canvasDoc)).buffer
+    canvasDoc.destroy()
+    await t.run(async (ctx) => {
+      const fileContent = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', fileId))
+        .unique()
+      await ctx.db.replace('resourceFileContents', fileContent!._id, {
+        campaignUuid,
+        resourceUuid: fileId,
+        assetUuid: null,
+        extension: 'txt',
+        mediaType: 'text/plain',
+        originalName: 'handout.txt',
+        version: await initialJsonContentVersion({
+          assetUuid: null,
+          extension: 'txt',
+          mediaType: 'text/plain',
+          originalName: 'handout.txt',
+        }),
+      })
+      const mapContent = await ctx.db
+        .query('resourceMapContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', mapId))
+        .unique()
+      await ctx.db.replace('resourceMapContents', mapContent!._id, {
+        campaignUuid,
+        resourceUuid: mapId,
+        imageAssetUuid: null,
+        layers: [],
+        version: await initialJsonContentVersion({
+          imageAssetUuid: null,
+          layers: [],
+          pins: [{ mapPinUuid: sourcePinId, targetResourceUuid: noteId }],
+        }),
+      })
+      await ctx.db.insert('resourceMapPins', {
+        campaignUuid,
+        mapResourceUuid: mapId,
+        mapPinUuid: sourcePinId,
+        targetResourceUuid: noteId,
+        layerId: null,
+        x: 1,
+        y: 2,
+        visible: true,
+      })
+      const canvasContent = await ctx.db
+        .query('resourceCanvasContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', canvasId))
+        .unique()
+      await ctx.db.replace('resourceCanvasContents', canvasContent!._id, {
+        campaignUuid,
+        resourceUuid: canvasId,
+        update: canvasUpdate,
+        version: await initialBinaryContentVersion(canvasUpdate),
+      })
+    })
+
+    const result = await execute(campaign, campaignUuid, {
+      type: 'deepCopy',
+      sourceRootIds: [sourceRootId],
+      destinationParentId: null,
+    })
+    if (result.status !== 'completed' || result.receipt.result.type !== 'deepCopied') {
+      throw new Error('Expected completed deep copy')
+    }
+    const destinationRootId = result.receipt.result.roots[0]!.destinationRootId
+
+    await t.run(async (ctx) => {
+      const children = await ctx.db
+        .query('resources')
+        .withIndex('by_campaign_and_parent', (query) =>
+          query.eq('campaignUuid', campaignUuid).eq('parentResourceUuid', destinationRootId),
+        )
+        .take(10)
+      const destinations = new Map(children.map((resource) => [resource.kind, resource]))
+      const copiedNote = destinations.get('note')!
+      const copiedMap = destinations.get('map')!
+      const copiedFile = destinations.get('file')!
+      const copiedCanvas = destinations.get('canvas')!
+
+      const noteContent = await ctx.db
+        .query('resourceNoteContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', copiedNote.resourceUuid))
+        .unique()
+      expect(noteContent).toEqual(
+        expect.objectContaining({
+          state: 'ready',
+          version: expect.objectContaining({ revision: 1 }),
+        }),
+      )
+      if (!noteContent || noteContent.state !== 'ready') throw new Error('Expected copied note')
+      const [copiedBlock] = decodeNoteYjsUpdatesToBlocks(
+        [{ update: noteContent.update }],
+        NOTE_YJS_FRAGMENT,
+      )
+      expect(copiedBlock).toEqual(
+        expect.objectContaining({
+          id: expect.not.stringMatching(sourceBlockId),
+          props: expect.objectContaining({ resourceId: copiedMap.resourceUuid }),
+        }),
+      )
+
+      const [copiedPin] = await ctx.db
+        .query('resourceMapPins')
+        .withIndex('by_mapResourceUuid', (query) =>
+          query.eq('mapResourceUuid', copiedMap.resourceUuid),
+        )
+        .take(2)
+      expect(copiedPin).toEqual(
+        expect.objectContaining({
+          mapPinUuid: expect.not.stringMatching(sourcePinId),
+          targetResourceUuid: copiedNote.resourceUuid,
+        }),
+      )
+
+      const canvasContent = await ctx.db
+        .query('resourceCanvasContents')
+        .withIndex('by_resourceUuid', (query) =>
+          query.eq('resourceUuid', copiedCanvas.resourceUuid),
+        )
+        .unique()
+      const copiedCanvasDoc = new Y.Doc()
+      Y.applyUpdate(copiedCanvasDoc, new Uint8Array(canvasContent!.update))
+      const copiedCanvasDocument = readCanvasDocumentContent(copiedCanvasDoc)
+      copiedCanvasDoc.destroy()
+      expect(copiedCanvasDocument.nodes[0]).toEqual(
+        expect.objectContaining({
+          id: expect.not.stringMatching(sourceNodeId),
+          data: { target: { kind: 'resource', resourceId: copiedFile.resourceUuid } },
+        }),
+      )
+
+      const fileContent = await ctx.db
+        .query('resourceFileContents')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', copiedFile.resourceUuid))
+        .unique()
+      expect(fileContent).toEqual(
+        expect.objectContaining({
+          assetUuid: null,
+          originalName: 'handout.txt',
+          version: expect.objectContaining({ revision: 1 }),
+        }),
+      )
     })
   })
 
