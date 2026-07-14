@@ -161,6 +161,10 @@
       "types": "./dist/resources/in-memory-resource-runtime.d.mts",
       "default": "./dist/resources/in-memory-resource-runtime.mjs"
     },
+    "./resources/in-memory-editor-runtime": {
+      "types": "./dist/resources/in-memory-editor-runtime.d.mts",
+      "default": "./dist/resources/in-memory-editor-runtime.mjs"
+    },
     "./resources/content-session-contract": {
       "types": "./dist/resources/content-session-contract.d.mts",
       "default": "./dist/resources/content-session-contract.mjs"
@@ -300,6 +304,7 @@
       "./resources/operation-ledger",
       "./resources/in-memory-catalog",
       "./resources/in-memory-runtime",
+      "./resources/in-memory-editor-runtime",
       "./resources/content-session-contract",
       "./resources/content-copy-contract",
       "./resources/optimism-contract",
