@@ -7,7 +7,7 @@ import type { WizardEditorRuntime } from './resources/editor-runtime-contract'
 export interface WizardEditorProps {
   ariaLabel: string
   runtime: WizardEditorRuntime
-  sidebar?: 'fixed' | 'none' | 'resizable'
+  sidebar?: 'fixed' | 'none'
   sidebarSlots?: {
     bottomPanel?: ReactNode
     railEndControls?: ReactNode

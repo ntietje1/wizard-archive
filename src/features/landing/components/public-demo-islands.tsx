@@ -70,7 +70,7 @@ function PublicDemoIsland({
   ariaLabel: string
   canEdit?: boolean
   scenario: PublicDemoScenario
-  sidebar?: 'fixed' | 'none' | 'resizable'
+  sidebar?: 'fixed' | 'none'
 }) {
   return (
     <LocalWorkspaceRuntimeHost

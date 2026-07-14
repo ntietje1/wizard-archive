@@ -52,9 +52,135 @@ describe('ResourceShell', () => {
     })
     core.dispose()
   })
+
+  it('updates natural title, icon, and color through one metadata command', async () => {
+    const { core, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit details' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Resource title' }), {
+      target: { value: 'Renamed folder' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Resource icon' }), {
+      target: { value: 'Book' },
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Resource color' }), {
+      target: { value: '#123456' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByRole('heading', { name: 'Renamed folder' })).toBeInTheDocument()
+    expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
+      state: 'known',
+      value: { title: 'Renamed folder', icon: 'Book', color: '#123456' },
+    })
+    core.dispose()
+  })
+
+  it('keeps exact duplicate titles unchanged when creating resources', async () => {
+    const { core, resource } = await shellRuntime(true)
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'New resource title' }), {
+      target: { value: resource.title },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Folder' }))
+
+    expect(await screen.findByText('folder created')).toBeInTheDocument()
+    const roots = core.runtime.resources.index
+      .getSnapshot()
+      .list({ parentId: null, lifecycle: 'active' })
+    expect(roots).toMatchObject({ state: 'known', complete: true })
+    if (roots.state === 'known') {
+      expect(roots.items.filter((item) => item.title === resource.title)).toHaveLength(2)
+    }
+    core.dispose()
+  })
+
+  it('requires explicit confirmation before permanent deletion', async () => {
+    const { core, resource } = await shellRuntime(true, 'trashed')
+
+    render(
+      <ResourceShell
+        ariaLabel="Editable resources"
+        runtime={core.runtime}
+        workspaceName="DM view"
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: `Delete ${resource.title} forever` }))
+    expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('known')
+    fireEvent.click(
+      screen.getByRole('button', { name: `Confirm delete ${resource.title} forever` }),
+    )
+
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('missing'),
+    )
+    core.dispose()
+  })
+
+  it('retries indeterminate delivery with the same operation identity', async () => {
+    const { core, resource } = await shellRuntime(true)
+    if (core.runtime.resources.structure.status !== 'available') throw new Error('expected editor')
+    const authoritative = core.runtime.resources.structure.value
+    const operationIds: Array<string> = []
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        structure: {
+          status: 'available' as const,
+          value: {
+            execute: async (...args: Parameters<typeof authoritative.execute>) => {
+              operationIds.push(args[0].operationId)
+              if (operationIds.length === 1) {
+                return {
+                  status: 'indeterminate' as const,
+                  retryable: true as const,
+                  reason: 'response_lost' as const,
+                }
+              }
+              return await authoritative.execute(...args)
+            },
+          },
+        },
+      },
+    }
+
+    render(
+      <ResourceShell ariaLabel="Editable resources" runtime={runtime} workspaceName="DM view" />,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: `Move ${resource.title} to trash` }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+
+    await waitFor(() =>
+      expect(core.runtime.resources.index.getSnapshot().lookup(resource.id)).toMatchObject({
+        state: 'known',
+        value: { lifecycle: 'trashed' },
+      }),
+    )
+    expect(operationIds).toHaveLength(2)
+    expect(operationIds[0]).toBe(operationIds[1])
+    core.dispose()
+  })
 })
 
-async function shellRuntime(canEdit: boolean) {
+async function shellRuntime(canEdit: boolean, lifecycle: 'active' | 'trashed' = 'active') {
   const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
   const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
   const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -67,7 +193,8 @@ async function shellRuntime(canEdit: boolean) {
     title: canonicalizeResourceTitle('Campaign folder'),
     icon: null,
     color: null,
-    lifecycle: { state: 'active' },
+    lifecycle:
+      lifecycle === 'active' ? { state: 'active' } : { state: 'trashed', at: 1, by: actorId },
     metadataVersion: version,
     created: { at: 1, by: actorId },
     updated: { at: 1, by: actorId },

@@ -14,6 +14,7 @@ import type {
   AuthorizedResourceSummary,
   ResourceCollectionQuery,
   ResourceKnowledge,
+  ResourceLoadResult,
   WorkspaceResourceIndexSnapshot,
 } from './resource-index-contract'
 import { canonicalizeResourceTitle, RESOURCE_KIND } from './resource-record'
@@ -24,6 +25,8 @@ export type ResourceShellSort = Readonly<{
   by: 'created' | 'title' | 'updated'
   direction: 'ascending' | 'descending'
 }>
+
+type Report = (message: string, retry?: () => void) => void
 
 export function ResourceShell({
   ariaLabel,
@@ -47,28 +50,29 @@ export function ResourceShell({
   const snapshot = useResourceSnapshot(runtime)
   const selectedResourceId = useResourceSelection(runtime)
   const [lifecycle, setLifecycle] = useState<'active' | 'trashed'>('active')
-  const [message, setMessage] = useState<string | null>(null)
+  const [notice, setNotice] = useState<{ message: string; retry?: () => void } | null>(null)
+  const report: Report = (message, retry) => setNotice({ message, ...(retry ? { retry } : {}) })
   const rootsQuery = { parentId: null, lifecycle } as const
-
-  useEffect(() => {
-    if (selectedResourceId) void runtime.resources.loader.ensureResource(selectedResourceId)
-  }, [runtime, selectedResourceId])
+  const selectedLoad = useEnsureResource(runtime, selectedResourceId)
 
   const selected = selectedResourceId
     ? snapshot.lookup(selectedResourceId)
     : ({ state: 'unknown' } as const)
 
   return (
-    <section aria-label={ariaLabel} className="flex h-full min-h-0 bg-background text-foreground">
+    <section
+      aria-label={ariaLabel}
+      className="flex h-full min-h-0 flex-col bg-background text-foreground sm:flex-row"
+    >
       {showSidebar && (
-        <aside className="flex w-72 min-w-56 flex-col border-r border-border">
+        <aside className="flex max-h-72 w-full shrink-0 flex-col border-b border-border sm:max-h-none sm:w-72 sm:min-w-56 sm:border-r sm:border-b-0">
           <div className="flex items-center justify-between border-b border-border p-2">
             <div className="flex items-center gap-1">{sidebarSlots?.railStartControls}</div>
             <strong className="truncate px-2 text-sm">{workspaceName ?? 'Resources'}</strong>
             <div className="flex items-center gap-1">{sidebarSlots?.railEndControls}</div>
           </div>
           {runtime.resources.structure.status === 'available' && (
-            <ResourceCreateMenu runtime={runtime} parentId={null} onReport={setMessage} />
+            <ResourceCreateMenu runtime={runtime} parentId={null} onReport={report} />
           )}
           <div className="flex border-b border-border p-1" aria-label="Resource lifecycle">
             {(['active', 'trashed'] as const).map((value) => (
@@ -92,8 +96,15 @@ export function ResourceShell({
               sort={sort}
             />
           </nav>
-          {message && (
-            <p className="border-t border-border p-2 text-xs text-muted-foreground">{message}</p>
+          {notice && (
+            <p className="border-t border-border p-2 text-xs text-muted-foreground">
+              {notice.message}{' '}
+              {notice.retry && (
+                <button type="button" className="underline" onClick={notice.retry}>
+                  Retry
+                </button>
+              )}
+            </p>
           )}
           {sidebarSlots?.bottomPanel}
         </aside>
@@ -101,9 +112,10 @@ export function ResourceShell({
       <main className="min-w-0 flex-1 overflow-auto">
         <SelectedResource
           knowledge={selected}
+          load={selectedLoad}
           resourceId={selectedResourceId}
           runtime={runtime}
-          onReport={setMessage}
+          onReport={report}
         />
       </main>
     </section>
@@ -128,9 +140,43 @@ function useResourceSelection(runtime: WizardEditorRuntime) {
 
 function useEnsureCollection(runtime: WizardEditorRuntime, query: ResourceCollectionQuery) {
   const { lifecycle, parentId } = query
+  const [attempt, setAttempt] = useState(0)
+  const key = `${parentId ?? 'root'}:${lifecycle}:${attempt}`
+  const [loaded, setLoaded] = useState<{ key: string; result: ResourceLoadResult } | null>(null)
   useEffect(() => {
-    void runtime.resources.loader.ensureCollection({ parentId, lifecycle })
-  }, [lifecycle, parentId, runtime])
+    let current = true
+    void runtime.resources.loader
+      .ensureCollection({ parentId, lifecycle })
+      .then((result) => current && setLoaded({ key, result }))
+    return () => {
+      current = false
+    }
+  }, [key, lifecycle, parentId, runtime])
+  return {
+    result: loaded?.key === key ? loaded.result : null,
+    retry: () => setAttempt((value) => value + 1),
+  }
+}
+
+function useEnsureResource(runtime: WizardEditorRuntime, resourceId: ResourceId | null) {
+  const [attempt, setAttempt] = useState(0)
+  const key = `${resourceId ?? 'none'}:${attempt}`
+  const [loaded, setLoaded] = useState<{ key: string; result: ResourceLoadResult } | null>(null)
+  useEffect(() => {
+    let current = true
+    if (resourceId) {
+      void runtime.resources.loader
+        .ensureResource(resourceId)
+        .then((result) => current && setLoaded({ key, result }))
+    }
+    return () => {
+      current = false
+    }
+  }, [key, resourceId, runtime])
+  return {
+    result: loaded?.key === key ? loaded.result : null,
+    retry: () => setAttempt((value) => value + 1),
+  }
 }
 
 function ResourceCollection({
@@ -146,12 +192,14 @@ function ResourceCollection({
   snapshot: WorkspaceResourceIndexSnapshot
   sort: ResourceShellSort
 }) {
-  useEnsureCollection(runtime, query)
+  const load = useEnsureCollection(runtime, query)
   const collection = snapshot.list(query)
   if (collection.state === 'unknown') {
     return (
       <ul>
-        <CollectionState label="Loading resources…" />
+        <CollectionState>
+          <ResourceLoadState load={load} pendingLabel="Loading resources…" />
+        </CollectionState>
       </ul>
     )
   }
@@ -181,8 +229,32 @@ function ResourceCollection({
   )
 }
 
-function CollectionState({ label }: { label: string }) {
-  return <li className="px-2 py-1 text-xs text-muted-foreground">{label}</li>
+function CollectionState({ children, label }: { children?: ReactNode; label?: string }) {
+  return <li className="px-2 py-1 text-xs text-muted-foreground">{children ?? label}</li>
+}
+
+function ResourceLoadState({
+  load,
+  pendingLabel,
+}: {
+  load: { result: ResourceLoadResult | null; retry: () => void }
+  pendingLabel: string
+}) {
+  const result = load.result
+  if (!result) return pendingLabel
+  if (result.status === 'completed') return 'Waiting for authorized data…'
+  if (result.status === 'scope_changed') return 'Resource scope changed'
+  if (result.status === 'unavailable') return `Unavailable: ${result.reason}`
+  return (
+    <span>
+      {result.retryable ? 'Could not load.' : `Could not load: ${result.reason}.`}{' '}
+      {result.retryable && (
+        <button type="button" className="underline" onClick={load.retry}>
+          Retry
+        </button>
+      )}
+    </span>
+  )
 }
 
 function ResourceTreeRow({
@@ -248,30 +320,65 @@ function ResourceCreateMenu({
   parentId,
   runtime,
 }: {
-  onReport: (message: string) => void
+  onReport: Report
   parentId: ResourceId | null
   runtime: WizardEditorRuntime
 }) {
+  const [title, setTitle] = useState('')
+  const [icon, setIcon] = useState('')
+  const [color, setColor] = useState('')
   return (
-    <div className="grid grid-cols-4 gap-1 border-b border-border p-2">
-      {(
-        [RESOURCE_KIND.note, RESOURCE_KIND.folder, RESOURCE_KIND.map, RESOURCE_KIND.canvas] as const
-      ).map((kind) => (
-        <button
-          key={kind}
-          type="button"
-          className="rounded border border-border px-1 py-1 text-xs hover:bg-muted"
-          onClick={() => void createResource(runtime, kind, parentId, onReport)}
-        >
-          {kind === 'note'
-            ? 'Note'
-            : kind === 'folder'
-              ? 'Folder'
-              : kind === 'map'
-                ? 'Map'
-                : 'Canvas'}
-        </button>
-      ))}
+    <div className="space-y-1 border-b border-border p-2">
+      <input
+        aria-label="New resource title"
+        className="w-full rounded border border-border bg-background px-2 py-1 text-xs"
+        placeholder="Optional title"
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+      />
+      <div className="grid grid-cols-2 gap-1">
+        <input
+          aria-label="New resource icon"
+          className="min-w-0 rounded border border-border bg-background px-2 py-1 text-xs"
+          placeholder="Optional icon"
+          value={icon}
+          onChange={(event) => setIcon(event.target.value)}
+        />
+        <input
+          aria-label="New resource color"
+          className="min-w-0 rounded border border-border bg-background px-2 py-1 text-xs"
+          placeholder="Optional color"
+          value={color}
+          onChange={(event) => setColor(event.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-4 gap-1">
+        {(
+          [
+            RESOURCE_KIND.note,
+            RESOURCE_KIND.folder,
+            RESOURCE_KIND.map,
+            RESOURCE_KIND.canvas,
+          ] as const
+        ).map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            className="rounded border border-border px-1 py-1 text-xs hover:bg-muted"
+            onClick={() =>
+              void createResource(runtime, kind, parentId, { title, icon, color }, onReport)
+            }
+          >
+            {kind === 'note'
+              ? 'Note'
+              : kind === 'folder'
+                ? 'Folder'
+                : kind === 'map'
+                  ? 'Map'
+                  : 'Canvas'}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -280,14 +387,17 @@ async function createResource(
   runtime: WizardEditorRuntime,
   kind: ResourceKind,
   parentId: ResourceId | null,
-  report: (message: string) => void,
+  metadata: { title: string; icon: string; color: string },
+  report: Report,
 ) {
   if (runtime.resources.structure.status !== 'available') {
     report('Unavailable: unauthorized')
     return
   }
+  const structure = runtime.resources.structure.value
   const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
   const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+  const local = kind === 'note' ? new Y.Doc() : null
   const envelope = {
     campaignId: runtime.scope.campaignId,
     operationId,
@@ -296,27 +406,34 @@ async function createResource(
       resourceId,
       kind,
       parentId,
-      title: canonicalizeResourceTitle(`Untitled ${kind}`),
-      icon: null,
-      color: null,
+      title: canonicalizeResourceTitle(metadata.title || `Untitled ${kind}`),
+      icon: metadata.icon || null,
+      color: metadata.color || null,
     },
   }
-  const delivery =
-    kind === 'note'
-      ? await runtime.content.notes.create(
-          {
-            ...envelope,
-            command: { ...envelope.command, kind: 'note' },
-          },
-          new Y.Doc(),
-        )
-      : await runtime.resources.structure.value.execute(envelope)
-  if (delivery.status === 'received' && delivery.result.status === 'completed') {
-    runtime.navigation.open(resourceId)
-    report(`${kind} created`)
-    return
+  const attempt = async (): Promise<void> => {
+    const delivery =
+      kind === 'note'
+        ? await runtime.content.notes.create(
+            {
+              ...envelope,
+              command: { ...envelope.command, kind: 'note' },
+            },
+            local!,
+          )
+        : await structure.execute(envelope)
+    if (delivery.status === 'indeterminate') {
+      report(deliveryMessage(delivery), () => void attempt())
+      return
+    }
+    if (delivery.status === 'received' && delivery.result.status === 'completed') {
+      runtime.navigation.open(resourceId)
+      report(`${kind} created`)
+      return
+    }
+    report(deliveryMessage(delivery))
   }
-  report(deliveryMessage(delivery))
+  await attempt()
 }
 
 function deliveryMessage(delivery: CommandDelivery<ResourceStructureCommandResult>) {
@@ -330,17 +447,25 @@ function deliveryMessage(delivery: CommandDelivery<ResourceStructureCommandResul
 
 function SelectedResource({
   knowledge,
+  load,
   onReport,
   resourceId,
   runtime,
 }: {
   knowledge: ResourceKnowledge<AuthorizedResourceSummary>
-  onReport: (message: string) => void
+  load: { result: ResourceLoadResult | null; retry: () => void }
+  onReport: Report
   resourceId: ResourceId | null
   runtime: WizardEditorRuntime
 }) {
   if (!resourceId) return <EmptySelection />
-  if (knowledge.state === 'unknown') return <SurfaceState label="Loading resource…" />
+  if (knowledge.state === 'unknown') {
+    return (
+      <SurfaceState>
+        <ResourceLoadState load={load} pendingLabel="Loading resource…" />
+      </SurfaceState>
+    )
+  }
   if (knowledge.state === 'missing') return <SurfaceState label="Resource not found" />
   const resource = knowledge.value
   return (
@@ -349,10 +474,12 @@ function SelectedResource({
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-semibold">{resource.title}</h1>
           <ResourceBreadcrumb resource={resource} runtime={runtime} />
+          <ResourceCapabilitySummary resourceId={resource.id} runtime={runtime} />
         </div>
         <ResourceActions resource={resource} runtime={runtime} onReport={onReport} />
       </header>
       <ResourceContent resource={resource} runtime={runtime} />
+      <ResourceDetails resource={resource} runtime={runtime} onReport={onReport} />
     </div>
   )
 }
@@ -373,27 +500,160 @@ function ResourceBreadcrumb({
   )
 }
 
+function ResourceCapabilitySummary({
+  resourceId,
+  runtime,
+}: {
+  resourceId: ResourceId
+  runtime: WizardEditorRuntime
+}) {
+  const accessCapability = runtime.resources.access
+  const bookmarkCapability = runtime.resources.bookmarks
+  const previewCapability = runtime.resources.previews
+  const access = useSyncExternalStore(
+    (listener) =>
+      accessCapability.status === 'available'
+        ? accessCapability.value.subscribe(resourceId, listener)
+        : () => undefined,
+    () => (accessCapability.status === 'available' ? accessCapability.value.get(resourceId) : null),
+    () => null,
+  )
+  const bookmark = useSyncExternalStore(
+    (listener) =>
+      bookmarkCapability.status === 'available'
+        ? bookmarkCapability.value.subscribe(resourceId, listener)
+        : () => undefined,
+    () =>
+      bookmarkCapability.status === 'available' ? bookmarkCapability.value.get(resourceId) : null,
+    () => null,
+  )
+  const preview = useSyncExternalStore(
+    (listener) =>
+      previewCapability.status === 'available'
+        ? previewCapability.value.subscribe(resourceId, listener)
+        : () => undefined,
+    () =>
+      previewCapability.status === 'available' ? previewCapability.value.get(resourceId) : null,
+    () => null,
+  )
+  const values = [
+    runtime.resources.structure.status === 'available' ? 'Editable' : 'Read only',
+    access?.state === 'known' ? `Access: ${access.value}` : null,
+    bookmark?.state === 'known' && bookmark.value ? 'Bookmarked' : null,
+    preview?.state === 'known' && preview.value ? 'Preview available' : null,
+  ].filter((value): value is string => value !== null)
+  return <p className="truncate text-xs text-muted-foreground">{values.join(' · ')}</p>
+}
+
+function ResourceDetails({
+  onReport,
+  resource,
+  runtime,
+}: {
+  onReport: Report
+  resource: AuthorizedResourceSummary
+  runtime: WizardEditorRuntime
+}) {
+  return (
+    <details className="border-t border-border p-3 text-xs text-muted-foreground">
+      <summary className="cursor-pointer">Details</summary>
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+        <dt>Kind</dt>
+        <dd>{resource.kind}</dd>
+        <dt>Location</dt>
+        <dd>{resource.displayParentId ? 'Visible folder' : 'Campaign root'}</dd>
+        <dt>Lifecycle</dt>
+        <dd>{resource.lifecycle}</dd>
+        <dt>Created</dt>
+        <dd>{new Date(resource.createdAt).toLocaleString()}</dd>
+        <dt>Updated</dt>
+        <dd>{new Date(resource.updatedAt).toLocaleString()}</dd>
+        <dt>Resource ID</dt>
+        <dd className="break-all font-mono">{resource.id}</dd>
+      </dl>
+      <button
+        type="button"
+        className="mt-2 rounded border border-border px-2 py-1"
+        onClick={() => void copyResourceLink(runtime, resource, onReport)}
+      >
+        Copy link
+      </button>
+    </details>
+  )
+}
+
+async function copyResourceLink(
+  runtime: WizardEditorRuntime,
+  resource: AuthorizedResourceSummary,
+  report: Report,
+) {
+  if (resource.campaignId !== runtime.scope.campaignId) {
+    report('Cannot link a resource from another campaign')
+    return
+  }
+  if (!globalThis.navigator?.clipboard) {
+    report('Copy link is unavailable')
+    return
+  }
+  const url = new URL(
+    `/campaigns/${runtime.scope.campaignId}/editor?item=${resource.id}`,
+    globalThis.location?.origin ?? 'https://wizard-archive.invalid',
+  )
+  await navigator.clipboard.writeText(url.href)
+  report('Link copied')
+}
+
 function ResourceActions({
   onReport,
   resource,
   runtime,
 }: {
-  onReport: (message: string) => void
+  onReport: Report
   resource: AuthorizedResourceSummary
   runtime: WizardEditorRuntime
 }) {
+  const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   if (runtime.resources.structure.status !== 'available') return null
   const command = resource.lifecycle === 'active' ? 'trash' : 'restore'
+  if (editing) {
+    return (
+      <ResourceMetadataForm
+        resource={resource}
+        runtime={runtime}
+        onCancel={() => setEditing(false)}
+        onReport={onReport}
+      />
+    )
+  }
   return (
     <div className="flex gap-1">
       {resource.lifecycle === 'active' && (
-        <button
-          type="button"
-          className="rounded border border-border px-2 py-1 text-xs"
-          onClick={() => void duplicateResource(runtime, resource, onReport)}
-        >
-          Duplicate
-        </button>
+        <>
+          <button
+            type="button"
+            className="rounded border border-border px-2 py-1 text-xs"
+            onClick={() => setEditing(true)}
+          >
+            Edit details
+          </button>
+          {resource.displayParentId !== null && (
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-1 text-xs"
+              onClick={() => void moveResourceToRoot(runtime, resource.id, onReport)}
+            >
+              Move to root
+            </button>
+          )}
+          <button
+            type="button"
+            className="rounded border border-border px-2 py-1 text-xs"
+            onClick={() => void duplicateResource(runtime, resource, onReport)}
+          >
+            Duplicate
+          </button>
+        </>
       )}
       <button
         type="button"
@@ -405,19 +665,145 @@ function ResourceActions({
       >
         {command === 'trash' ? 'Trash' : 'Restore'}
       </button>
-      {resource.lifecycle === 'trashed' && (
-        <button
-          type="button"
-          aria-label={`Delete ${resource.title} forever`}
-          className="rounded border border-destructive px-2 py-1 text-xs text-destructive"
-          onClick={() =>
-            void executeSingleResourceCommand(runtime, resource.id, 'permanentlyDelete', onReport)
-          }
-        >
-          Delete forever
-        </button>
-      )}
+      {resource.lifecycle === 'trashed' &&
+        (confirmDelete ? (
+          <>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-1 text-xs"
+              onClick={() => setConfirmDelete(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              aria-label={`Confirm delete ${resource.title} forever`}
+              className="rounded border border-destructive px-2 py-1 text-xs text-destructive"
+              onClick={() =>
+                void executeSingleResourceCommand(
+                  runtime,
+                  resource.id,
+                  'permanentlyDelete',
+                  onReport,
+                )
+              }
+            >
+              Confirm delete
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            aria-label={`Delete ${resource.title} forever`}
+            className="rounded border border-destructive px-2 py-1 text-xs text-destructive"
+            onClick={() => setConfirmDelete(true)}
+          >
+            Delete forever
+          </button>
+        ))}
     </div>
+  )
+}
+
+function ResourceMetadataForm({
+  onCancel,
+  onReport,
+  resource,
+  runtime,
+}: {
+  onCancel: () => void
+  onReport: Report
+  resource: AuthorizedResourceSummary
+  runtime: WizardEditorRuntime
+}) {
+  const [title, setTitle] = useState<string>(resource.title)
+  const [icon, setIcon] = useState(resource.icon ?? '')
+  const [color, setColor] = useState(resource.color ?? '')
+  return (
+    <form
+      className="flex max-w-xl flex-wrap justify-end gap-1"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void updateResourceMetadata(runtime, resource.id, { title, icon, color }, onReport).then(
+          (completed) => completed && onCancel(),
+        )
+      }}
+    >
+      <input
+        aria-label="Resource title"
+        className="min-w-40 rounded border border-border bg-background px-2 py-1 text-xs"
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+      />
+      <input
+        aria-label="Resource icon"
+        className="w-24 rounded border border-border bg-background px-2 py-1 text-xs"
+        placeholder="Icon"
+        value={icon}
+        onChange={(event) => setIcon(event.target.value)}
+      />
+      <input
+        aria-label="Resource color"
+        className="w-24 rounded border border-border bg-background px-2 py-1 text-xs"
+        placeholder="Color"
+        value={color}
+        onChange={(event) => setColor(event.target.value)}
+      />
+      <button
+        type="button"
+        className="rounded border border-border px-2 py-1 text-xs"
+        onClick={onCancel}
+      >
+        Cancel
+      </button>
+      <button type="submit" className="rounded border border-border px-2 py-1 text-xs">
+        Save
+      </button>
+    </form>
+  )
+}
+
+async function updateResourceMetadata(
+  runtime: WizardEditorRuntime,
+  resourceId: ResourceId,
+  values: { title: string; icon: string; color: string },
+  report: Report,
+) {
+  let title
+  try {
+    title = canonicalizeResourceTitle(values.title)
+  } catch {
+    report('Invalid resource title')
+    return false
+  }
+  return await executeRetryableStructureCommand(
+    runtime,
+    {
+      type: 'updateMetadata',
+      resourceId,
+      changes: {
+        title,
+        icon: values.icon || null,
+        color: values.color || null,
+      },
+    },
+    report,
+  )
+}
+
+async function moveResourceToRoot(
+  runtime: WizardEditorRuntime,
+  resourceId: ResourceId,
+  report: Report,
+) {
+  await executeRetryableStructureCommand(
+    runtime,
+    {
+      type: 'move',
+      resourceIds: [resourceId],
+      destinationParentId: null,
+    },
+    report,
   )
 }
 
@@ -425,35 +811,62 @@ async function executeSingleResourceCommand(
   runtime: WizardEditorRuntime,
   resourceId: ResourceId,
   type: 'trash' | 'restore' | 'permanentlyDelete',
-  report: (message: string) => void,
+  report: Report,
 ) {
-  const delivery = await deliverStructureCommand(runtime, { type, resourceIds: [resourceId] })
-  if (!delivery) return report('Unavailable: unauthorized')
-  report(deliveryMessage(delivery))
+  await executeRetryableStructureCommand(runtime, { type, resourceIds: [resourceId] }, report)
 }
 
 async function duplicateResource(
   runtime: WizardEditorRuntime,
   resource: AuthorizedResourceSummary,
-  report: (message: string) => void,
+  report: Report,
 ) {
-  const delivery = await deliverStructureCommand(runtime, {
-    type: 'deepCopy',
-    sourceRootIds: [resource.id],
-    destinationParentId: resource.displayParentId,
-  })
-  if (!delivery) return report('Unavailable: unauthorized')
-  if (
-    delivery.status === 'received' &&
-    delivery.result.status === 'completed' &&
-    delivery.result.receipt.result.type === 'deepCopied'
-  ) {
-    const destinationId = delivery.result.receipt.result.roots[0]?.destinationRootId
-    if (destinationId) runtime.navigation.open(destinationId)
-    report('Resource duplicated')
-    return
+  await executeRetryableStructureCommand(
+    runtime,
+    {
+      type: 'deepCopy',
+      sourceRootIds: [resource.id],
+      destinationParentId: resource.displayParentId,
+    },
+    report,
+    (delivery) => {
+      if (
+        delivery.status === 'received' &&
+        delivery.result.status === 'completed' &&
+        delivery.result.receipt.result.type === 'deepCopied'
+      ) {
+        const destinationId = delivery.result.receipt.result.roots[0]?.destinationRootId
+        if (destinationId) runtime.navigation.open(destinationId)
+        report('Resource duplicated')
+        return
+      }
+      report(deliveryMessage(delivery))
+    },
+  )
+}
+
+async function executeRetryableStructureCommand(
+  runtime: WizardEditorRuntime,
+  command: ResourceStructureCommand,
+  report: Report,
+  handle: (delivery: CommandDelivery<ResourceStructureCommandResult>) => void = (delivery) =>
+    report(deliveryMessage(delivery)),
+) {
+  const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+  const attempt = async (): Promise<boolean> => {
+    const delivery = await deliverStructureCommand(runtime, command, operationId)
+    if (!delivery) {
+      report('Unavailable: unauthorized')
+      return false
+    }
+    if (delivery.status === 'indeterminate') {
+      report(deliveryMessage(delivery), () => void attempt())
+      return false
+    }
+    handle(delivery)
+    return delivery.status === 'received' && delivery.result.status === 'completed'
   }
-  report(deliveryMessage(delivery))
+  return await attempt()
 }
 
 function availableStructure(runtime: WizardEditorRuntime): ResourceStructureCommandGateway | null {
@@ -465,12 +878,13 @@ function availableStructure(runtime: WizardEditorRuntime): ResourceStructureComm
 function deliverStructureCommand(
   runtime: WizardEditorRuntime,
   command: ResourceStructureCommand,
+  operationId = generateDomainId(DOMAIN_ID_KIND.operation),
 ): Promise<CommandDelivery<ResourceStructureCommandResult>> | null {
   const structure = availableStructure(runtime)
   return (
     structure?.execute({
       campaignId: runtime.scope.campaignId,
-      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      operationId,
       command,
     }) ?? null
   )
@@ -582,10 +996,10 @@ function EmptySelection() {
   return <SurfaceState label="Select a resource" />
 }
 
-function SurfaceState({ label }: { label: string }) {
+function SurfaceState({ children, label }: { children?: ReactNode; label?: string }) {
   return (
     <div className="flex min-h-72 flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
-      {label}
+      {children ?? label}
     </div>
   )
 }
