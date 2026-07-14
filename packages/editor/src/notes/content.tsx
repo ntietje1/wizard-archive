@@ -1,5 +1,5 @@
 import { SideMenuController } from '@blocknote/react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getNoteRenderState } from './render-state'
 import { NoteView } from './view'
 import { SideMenuRenderer, SideMenuRuntimeProvider } from './side-menu/side-menu'
@@ -398,11 +398,22 @@ function CollaborativeNoteEditor({
   onEditorChange?: NoteEditorChangeHandler
 }) {
   const forceOpenLinkPopover = useRef<(() => void) | null>(null)
+  const userColor = user.color
+  const userName = user.name
+  const createEditor = useCallback(
+    () =>
+      createCollaborativeNoteEditor({ doc, provider, user: { color: userColor, name: userName } }),
+    [doc, provider, userColor, userName],
+  )
+  const handleEditorChange = useCallback(
+    (nextEditor: CustomBlockNoteEditor | null) => onEditorChange?.(nextEditor, doc, provider),
+    [doc, onEditorChange, provider],
+  )
   const editor = useOwnedBlockNoteEditor({
     identity: provider,
-    createEditor: () => createCollaborativeNoteEditor({ doc, provider, user }),
+    createEditor,
     destroyEditor: destroyBlockNoteEditor,
-    onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, doc, provider),
+    onEditorChange: handleEditorChange,
   })
 
   useEffect(() => {

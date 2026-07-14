@@ -3,7 +3,7 @@ import { BlockNoteEditor } from '@blocknote/core'
 import { createEditorSchema } from './editor-specs'
 import { destroyBlockNoteEditor } from '../rich-text/blocknote/destroy-blocknote-editor'
 import { useOwnedBlockNoteEditor } from '../rich-text/blocknote/use-owned-blocknote-editor'
-import { useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import type { CustomBlockNoteEditor } from './editor-schema'
 
 import type { NoteBlock } from './document/model'
@@ -20,10 +20,8 @@ export function useStaticNoteContentEditor({
   onEditorChange?: StaticNoteEditorChangeHandler
 }) {
   const editorIdentity = useStaticNoteContentIdentity(noteId, content)
-
-  return useOwnedBlockNoteEditor({
-    identity: editorIdentity,
-    createEditor: () =>
+  const createEditor = useCallback(
+    () =>
       BlockNoteEditor.create({
         schema: createEditorSchema(),
         disableExtensions: ['link'],
@@ -34,6 +32,12 @@ export function useStaticNoteContentEditor({
               >['initialContent'])
             : undefined,
       }) as unknown as CustomBlockNoteEditor,
+    [content],
+  )
+
+  return useOwnedBlockNoteEditor({
+    identity: editorIdentity,
+    createEditor,
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange,
   })
