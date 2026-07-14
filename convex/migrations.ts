@@ -3,6 +3,10 @@ import { components, internal } from './_generated/api'
 import type { DataModel } from './_generated/dataModel'
 import { getBlockSharePermissionLevelMigrationPatch } from './blockShares/permissionLevelMigration'
 import { getDeleteBlockInlineContentProjectionFieldPatch } from './blocks/inlineContentMigration'
+import {
+  getResourceEmbedPropsMigrationPatch,
+  isLegacySidebarItemEmbedProps,
+} from './blocks/embedTargetMigration'
 import { getCampaignDefaultFolderInheritSharesMigrationPatch } from './campaigns/defaultFolderInheritSharesMigration'
 import { getFolderInheritSharesMigrationPatch } from './folders/inheritSharesMigration'
 import {
@@ -37,6 +41,18 @@ export const deleteBlockInlineContentProjectionField = migrations.define({
       block as { inlineContent?: unknown },
     )
     return patch as Partial<typeof block> | undefined
+  },
+})
+
+export const migrateEmbedTargetResourceIds = migrations.define({
+  table: 'blocks',
+  batchSize: 100,
+  migrateOne: async (ctx, block) => {
+    if (block.type !== 'embed' || !isLegacySidebarItemEmbedProps(block.props)) return
+    const target = await ctx.db.get('sidebarItems', block.props.sidebarItemId)
+    return {
+      props: getResourceEmbedPropsMigrationPatch(block.props, target?.resourceUuid ?? null),
+    }
   },
 })
 
@@ -105,6 +121,10 @@ export const runDeleteBlockInlineContentProjectionFieldMigration = migrations.ru
   internal.migrations.deleteBlockInlineContentProjectionField,
 )
 
+export const runEmbedTargetResourceIdsMigration = migrations.runner(
+  internal.migrations.migrateEmbedTargetResourceIds,
+)
+
 export const runBackfillFolderInheritSharesMigration = migrations.runner(
   internal.migrations.backfillFolderInheritShares,
 )
@@ -137,6 +157,7 @@ export const runAll = migrations.runner([
   internal.migrations.migrateSidebarItemLifecycleStatus,
   internal.migrations.migrateBlockSharePermissionLevel,
   internal.migrations.deleteBlockInlineContentProjectionField,
+  internal.migrations.migrateEmbedTargetResourceIds,
   internal.migrations.backfillCampaignDefaultFolderInheritShares,
   internal.migrations.backfillFolderInheritShares,
   internal.migrations.backfillNoteValueCompileState,
