@@ -213,6 +213,14 @@
       "types": "./dist/resources/editor-runtime-contract.d.mts",
       "default": "./dist/resources/editor-runtime-contract.mjs"
     },
+    "./resources/file-content-contract": {
+      "types": "./dist/resources/file-content-contract.d.mts",
+      "default": "./dist/resources/file-content-contract.mjs"
+    },
+    "./resources/content-version": {
+      "types": "./dist/resources/resource-content-version.d.mts",
+      "default": "./dist/resources/resource-content-version.mjs"
+    },
     "./runtime": {
       "types": "./dist/workspace/runtime.d.mts",
       "default": "./dist/workspace/runtime.mjs"
@@ -300,7 +308,9 @@
       "./resources/wizard-archive-contract",
       "./resources/wizard-archive-codec",
       "./resources/wizard-archive-transfer-planner",
-      "./resources/editor-runtime-contract"
+      "./resources/editor-runtime-contract",
+      "./resources/file-content-contract",
+      "./resources/content-version"
     ]
   }
 }

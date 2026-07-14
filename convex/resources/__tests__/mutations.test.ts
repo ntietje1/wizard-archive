@@ -20,6 +20,7 @@ import {
 import * as Y from 'yjs'
 import { initialBinaryContentVersion, initialJsonContentVersion } from '../functions/contentVersion'
 import { storeCommittedTestUploadSession } from '../../_test/storage.helper'
+import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
 
 type StoredResourceStructureCommand = FunctionArgs<
   typeof api.resources.mutations.executeStructureCommand
@@ -488,20 +489,21 @@ describe('resource structure commands', () => {
         .query('resourceFileContents')
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', fileId))
         .unique()
+      const fileMetadata = {
+        classification: 'inert_file' as const,
+        byteSize: 0,
+        detectedFormat: null,
+        extension: 'txt',
+        mediaType: 'application/octet-stream',
+        viewerUnavailableReason: 'empty_file' as const,
+      }
       await ctx.db.replace('resourceFileContents', fileContent!._id, {
         campaignUuid,
         resourceUuid: fileId,
         state: 'ready',
         assetUuid: null,
-        extension: 'txt',
-        mediaType: 'text/plain',
-        originalName: 'handout.txt',
-        version: await initialJsonContentVersion({
-          assetUuid: null,
-          extension: 'txt',
-          mediaType: 'text/plain',
-          originalName: 'handout.txt',
-        }),
+        ...fileMetadata,
+        version: await initialFileContentVersion(new Uint8Array(), fileMetadata),
       })
       const mapContent = await ctx.db
         .query('resourceMapContents')
@@ -623,7 +625,12 @@ describe('resource structure commands', () => {
       expect(fileContent).toEqual(
         expect.objectContaining({
           assetUuid: null,
-          originalName: 'handout.txt',
+          classification: 'inert_file',
+          byteSize: 0,
+          detectedFormat: null,
+          extension: 'txt',
+          mediaType: 'application/octet-stream',
+          viewerUnavailableReason: 'empty_file',
           version: expect.objectContaining({ revision: 1 }),
         }),
       )
@@ -646,18 +653,24 @@ describe('resource structure commands', () => {
         .query('resourceFileContents')
         .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', sourceFileId))
         .unique()
-      const semanticContent = {
-        assetUuid: sourceAsset.assetId,
+      const fileMetadata = {
+        classification: 'inert_file' as const,
+        byteSize: 11,
+        detectedFormat: null,
         extension: 'txt',
-        mediaType: 'text/plain',
-        originalName: 'asset.txt',
+        mediaType: 'application/octet-stream',
+        viewerUnavailableReason: 'unsupported_format' as const,
       }
+      const semanticContent = { assetUuid: sourceAsset.assetId, ...fileMetadata }
       await ctx.db.replace('resourceFileContents', content!._id, {
         campaignUuid,
         resourceUuid: sourceFileId,
         state: 'ready',
         ...semanticContent,
-        version: await initialJsonContentVersion(semanticContent),
+        version: await initialFileContentVersion(
+          new TextEncoder().encode('asset bytes'),
+          fileMetadata,
+        ),
       })
     })
 

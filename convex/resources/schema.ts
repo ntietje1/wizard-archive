@@ -5,6 +5,10 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { assetIdValidator } from './validators'
+import {
+  FILE_CLASSIFICATION,
+  FILE_VIEWER_UNAVAILABLE_REASON,
+} from '@wizard-archive/editor/resources/file-content-contract'
 
 export const resourceUuidValidator = v.string()
 export const campaignUuidValidator = v.string()
@@ -17,6 +21,19 @@ export const versionStampValidator = v.object({
 })
 
 export const resourceKindValidator = literals(...Object.values(RESOURCE_KIND))
+export const fileClassificationValidator = literals(...Object.values(FILE_CLASSIFICATION))
+export const fileViewerUnavailableReasonValidator = literals(
+  ...Object.values(FILE_VIEWER_UNAVAILABLE_REASON),
+)
+
+const fileOwnedMetadataValidators = {
+  classification: fileClassificationValidator,
+  byteSize: v.number(),
+  detectedFormat: v.nullable(v.string()),
+  extension: v.nullable(v.string()),
+  mediaType: v.string(),
+  viewerUnavailableReason: v.nullable(fileViewerUnavailableReasonValidator),
+}
 
 export const resourceProjectionScopeValidator = v.object({
   campaignId: campaignUuidValidator,
@@ -235,9 +252,7 @@ export const resourceContentSnapshotValidator = v.union(
     kind: v.literal('file'),
     content: v.object({
       assetId: v.nullable(assetIdValidator),
-      extension: v.nullable(v.string()),
-      mediaType: v.string(),
-      originalName: v.nullable(v.string()),
+      ...fileOwnedMetadataValidators,
     }),
     version: versionStampValidator,
   }),
@@ -374,9 +389,7 @@ export const resourceTables = {
     resourceUuid: resourceUuidValidator,
     state: literals('initializing', 'ready', 'failed'),
     assetUuid: v.nullable(assetIdValidator),
-    extension: v.nullable(v.string()),
-    mediaType: v.string(),
-    originalName: v.nullable(v.string()),
+    ...fileOwnedMetadataValidators,
     version: versionStampValidator,
   }).index('by_resourceUuid', ['resourceUuid']),
 

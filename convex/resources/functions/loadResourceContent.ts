@@ -45,9 +45,12 @@ async function loadFileContent(ctx: CampaignQueryCtx, resourceId: ResourceId) {
     kind: 'file' as const,
     content: {
       assetId: content.assetUuid,
+      classification: content.classification,
+      byteSize: content.byteSize,
+      detectedFormat: content.detectedFormat,
       extension: content.extension,
       mediaType: content.mediaType,
-      originalName: content.originalName,
+      viewerUnavailableReason: content.viewerUnavailableReason,
     },
     version: content.version,
   }

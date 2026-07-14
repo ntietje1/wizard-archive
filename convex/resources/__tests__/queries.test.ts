@@ -210,9 +210,12 @@ describe('authorized resource projection', () => {
         kind: 'file',
         content: {
           assetId: null,
+          classification: 'inert_file',
+          byteSize: 0,
+          detectedFormat: null,
           extension: null,
           mediaType: 'application/octet-stream',
-          originalName: null,
+          viewerUnavailableReason: 'empty_file',
         },
       }),
     )

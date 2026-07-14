@@ -1,7 +1,7 @@
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
-import { initialBinaryContentVersion } from './contentVersion'
+import { initialNoteContentVersion } from '@wizard-archive/editor/resources/content-version'
 import {
   NOTE_YJS_FRAGMENT,
   decodeNoteYjsUpdatesToBlocks,
@@ -14,7 +14,7 @@ export type BindNoteContentResult =
   | {
       status: 'completed'
       resourceId: ResourceId
-      version: Awaited<ReturnType<typeof initialBinaryContentVersion>>
+      version: Awaited<ReturnType<typeof initialNoteContentVersion>>
     }
   | {
       status: 'rejected'
@@ -74,7 +74,7 @@ export async function bindNoteContent(
   let version
   try {
     decodeNoteYjsUpdatesToBlocks([{ update: args.update }], NOTE_YJS_FRAGMENT)
-    version = await initialBinaryContentVersion(args.update)
+    version = await initialNoteContentVersion(new Uint8Array(args.update))
   } catch {
     return { status: 'rejected', reason: 'content_corrupt' }
   }

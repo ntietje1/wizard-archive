@@ -14,6 +14,7 @@ import type {
   WorkspaceResourceIndex,
 } from './resource-index-contract'
 import type { VersionStamp } from './component-version'
+import type { FileOwnedMetadata } from './file-content-contract'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -37,12 +38,10 @@ export interface ResourcePreviewSource {
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
-export type FileResourceContent = Readonly<{
-  assetId: AssetId | null
-  extension: string | null
-  mediaType: string
-  originalName: string | null
-}>
+export type FileResourceContent = FileOwnedMetadata &
+  Readonly<{
+    assetId: AssetId | null
+  }>
 
 export type MapResourceContent = Readonly<{
   imageAssetId: AssetId | null

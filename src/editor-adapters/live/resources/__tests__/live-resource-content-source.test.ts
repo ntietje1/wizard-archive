@@ -35,9 +35,12 @@ describe('LiveResourceContentSource', () => {
 
     const content = {
       assetId: null,
+      classification: 'inert_file' as const,
+      byteSize: 0,
+      detectedFormat: null,
       extension: 'txt',
-      mediaType: 'text/plain',
-      originalName: 'notes.txt',
+      mediaType: 'application/octet-stream',
+      viewerUnavailableReason: 'empty_file' as const,
     }
     apply({ status: 'ready', kind: 'file', content, version })
     expect(source.get(resourceId)).toEqual({ status: 'ready', content, version })

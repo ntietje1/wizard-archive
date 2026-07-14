@@ -4,15 +4,22 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMutationCtx } from '../../functions'
-import { initialJsonContentVersion } from './contentVersion'
+import {
+  assertVersionStamp,
+  initialVersion,
+} from '@wizard-archive/editor/resources/component-version'
+import { initialFileContentVersion } from '@wizard-archive/editor/resources/content-version'
+import { FILE_VIEWER_UNAVAILABLE_REASON } from '@wizard-archive/editor/resources/file-content-contract'
 import type { ContentCopyPreparation } from './contentCopyTypes'
 import { prepareAssetCopies } from './assetContent'
 
 const EMPTY_FILE_CONTENT = {
-  assetUuid: null,
+  classification: 'inert_file',
+  byteSize: 0,
+  detectedFormat: null,
   extension: null,
   mediaType: 'application/octet-stream',
-  originalName: null,
+  viewerUnavailableReason: FILE_VIEWER_UNAVAILABLE_REASON.empty,
 } as const
 
 export async function createFileContent(
@@ -24,8 +31,9 @@ export async function createFileContent(
     campaignUuid: campaignId,
     resourceUuid: resourceId,
     state: 'ready',
+    assetUuid: null,
     ...EMPTY_FILE_CONTENT,
-    version: await initialJsonContentVersion(EMPTY_FILE_CONTENT),
+    version: await initialFileContentVersion(new Uint8Array(), EMPTY_FILE_CONTENT),
   })
 }
 
@@ -52,11 +60,14 @@ export async function prepareFileContentCopy(
 
   const copied = {
     assetUuid: assets.remap(content.assetUuid),
+    classification: content.classification,
+    byteSize: content.byteSize,
+    detectedFormat: content.detectedFormat,
     extension: content.extension,
     mediaType: content.mediaType,
-    originalName: content.originalName,
+    viewerUnavailableReason: content.viewerUnavailableReason,
   }
-  const version = await initialJsonContentVersion(copied)
+  const version = initialVersion(assertVersionStamp(content.version).digest)
   return {
     status: 'ready',
     plan: {
