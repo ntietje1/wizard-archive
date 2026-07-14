@@ -205,6 +205,10 @@
       "types": "./dist/resources/wizard-archive-codec.d.mts",
       "default": "./dist/resources/wizard-archive-codec.mjs"
     },
+    "./resources/wizard-archive-transfer-planner": {
+      "types": "./dist/resources/wizard-archive-transfer-planner.d.mts",
+      "default": "./dist/resources/wizard-archive-transfer-planner.mjs"
+    },
     "./resources/editor-runtime-contract": {
       "types": "./dist/resources/editor-runtime-contract.d.mts",
       "default": "./dist/resources/editor-runtime-contract.mjs"
@@ -295,6 +299,7 @@
       "./resources/portable-path-projector",
       "./resources/wizard-archive-contract",
       "./resources/wizard-archive-codec",
+      "./resources/wizard-archive-transfer-planner",
       "./resources/editor-runtime-contract"
     ]
   }
