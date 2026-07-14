@@ -1,6 +1,6 @@
 import type * as Y from 'yjs'
 import type { NoteContentSource, ResourceContentSource } from './content-session-contract'
-import type { AssetId, CampaignMemberId, HistoryEntryId, ResourceId } from './domain-id'
+import type { AssetId, CampaignMemberId, HistoryEntryId, MapPinId, ResourceId } from './domain-id'
 import type {
   ResourceAccessCommandGateway,
   ResourceBookmarkCommandGateway,
@@ -54,7 +54,7 @@ export type MapResourceContent = Readonly<{
   >
   pins: ReadonlyArray<
     Readonly<{
-      id: string
+      id: MapPinId
       targetResourceId: ResourceId
       layerId: string | null
       x: number
@@ -91,7 +91,7 @@ export interface WizardEditorRuntime {
   readonly resources: {
     readonly index: WorkspaceResourceIndex
     readonly loader: ResourceIndexLoader
-    readonly structure: ResourceStructureCommandGateway
+    readonly structure: ResourceCapability<ResourceStructureCommandGateway>
     readonly access: ResourceCapability<ResourceAccessGateway>
     readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
     readonly previews: ResourceCapability<ResourcePreviewSource>

@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
-import { initialNoteContentVersion } from './resource-content-version'
+import { initialFileContentVersion, initialNoteContentVersion } from './resource-content-version'
+import { initialVersion, sha256Digest } from './component-version'
 import type { VersionStamp } from './component-version'
 import type {
   ContentSessionState,
@@ -10,6 +11,7 @@ import type {
 import type {
   CommandDelivery,
   CommandEnvelope,
+  ResourceStructureCommandGateway,
   ResourceStructureCommandResult,
 } from './resource-command-contract'
 import type {
@@ -23,6 +25,8 @@ import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
 import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
 import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
+import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
+import { FILE_CLASSIFICATION, FILE_VIEWER_UNAVAILABLE_REASON } from './file-content-contract'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -39,6 +43,7 @@ export type InMemoryEditorContent = Readonly<{
 
 export type InMemoryEditorRuntimeInput = Readonly<{
   authorize?: InMemoryResourceRuntimeOptions['authorize']
+  canEdit?: boolean
   scope: ResourceProjectionScope
   snapshot: ResourceCatalogSnapshot
   content?: InMemoryEditorContent
@@ -95,7 +100,7 @@ class InMemoryNoteContentSource
   constructor(
     ready: ReadonlyArray<ReadyContent<Y.Doc>>,
     private readonly campaignId: CampaignId,
-    private readonly executeStructure: WizardEditorRuntime['resources']['structure']['execute'],
+    private readonly executeStructure: ResourceStructureCommandGateway['execute'],
   ) {
     super(ready)
   }
@@ -152,26 +157,65 @@ function invalidCreateDelivery(): CommandDelivery<ResourceStructureCommandResult
 }
 
 export function createInMemoryEditorRuntime({
-  authorize = () => true,
+  authorize,
+  canEdit: requestedCanEdit,
   content = {},
   navigation,
   now,
   scope,
   snapshot,
 }: InMemoryEditorRuntimeInput): Readonly<{ runtime: WizardEditorRuntime; dispose(): void }> {
+  const canEdit = requestedCanEdit ?? scope.projection === 'dm'
+  const kinds = new Map(snapshot.resources.map((resource) => [resource.id, resource.kind]))
+  let executeStructure: ResourceStructureCommandGateway['execute'] = () =>
+    Promise.resolve({
+      status: 'not_committed',
+      retryable: false,
+      reason: 'transport_unavailable',
+    })
+  const notes = new InMemoryNoteContentSource(content.notes ?? [], scope.campaignId, (envelope) =>
+    executeStructure(envelope),
+  )
+  const files = new InMemoryContentSource<null, FileResourceContent>(content.files ?? [])
+  const maps = new InMemoryContentSource<null, MapResourceContent>(content.maps ?? [])
+  const canvases = new InMemoryContentSource<null, Y.Doc>(content.canvases ?? [])
   const resources = createInMemoryResourceRuntime({
     scope,
     initialSnapshot: snapshot,
-    authorize,
+    authorize: authorize ?? (() => canEdit),
+    contentCopy: createInMemoryContentCopyPlanner(kinds, { notes, files, maps, canvases }),
     ...(now ? { now } : {}),
   })
-  const notes = new InMemoryNoteContentSource(content.notes ?? [], scope.campaignId, (envelope) =>
-    resources.structure.execute(envelope),
-  )
+  const editorStructure: ResourceStructureCommandGateway = {
+    execute: async (envelope) => {
+      const createWasKnown =
+        envelope.command.type === 'create' && kinds.has(envelope.command.resourceId)
+      const delivery = await resources.structure.execute(envelope)
+      if (
+        delivery.status === 'received' &&
+        delivery.result.status === 'completed' &&
+        envelope.command.type === 'create' &&
+        !createWasKnown
+      ) {
+        kinds.set(envelope.command.resourceId, envelope.command.kind)
+        await initializeCreatedContent(envelope.command, envelope.operationId, {
+          notes,
+          files,
+          maps,
+          canvases,
+        })
+      }
+      return delivery
+    },
+  }
+  executeStructure = (envelope) => editorStructure.execute(envelope)
   const unsupported = {
     status: 'unavailable',
     reason: 'capability_not_supported',
   } as const
+  const structure = canEdit
+    ? ({ status: 'available', value: editorStructure } as const)
+    : ({ status: 'unavailable', reason: 'unauthorized' } as const)
 
   return {
     runtime: {
@@ -179,21 +223,83 @@ export function createInMemoryEditorRuntime({
       resources: {
         index: resources.index,
         loader: resources.loader,
-        structure: resources.structure,
+        structure,
         access: unsupported,
         bookmarks: unsupported,
         previews: unsupported,
       },
       content: {
         notes,
-        files: new InMemoryContentSource(content.files ?? []),
-        maps: new InMemoryContentSource(content.maps ?? []),
-        canvases: new InMemoryContentSource(content.canvases ?? []),
+        files,
+        maps,
+        canvases,
       },
       navigation,
       search: unsupported,
       history: unsupported,
     },
     dispose: resources.dispose,
+  }
+}
+
+async function initializeCreatedContent(
+  command: Extract<
+    Parameters<ResourceStructureCommandGateway['execute']>[0]['command'],
+    { type: 'create' }
+  >,
+  operationId: OperationId,
+  stores: Readonly<{
+    notes: InMemoryNoteContentSource
+    files: InMemoryContentSource<null, FileResourceContent>
+    maps: InMemoryContentSource<null, MapResourceContent>
+    canvases: InMemoryContentSource<null, Y.Doc>
+  }>,
+) {
+  switch (command.kind) {
+    case 'folder':
+      return
+    case 'note':
+      stores.notes.set(command.resourceId, {
+        status: 'initializing',
+        operationId,
+        local: new Y.Doc(),
+      })
+      return
+    case 'file': {
+      const content: FileResourceContent = {
+        assetId: null,
+        classification: FILE_CLASSIFICATION.inert,
+        byteSize: 0,
+        detectedFormat: null,
+        extension: null,
+        mediaType: 'application/octet-stream',
+        viewerUnavailableReason: FILE_VIEWER_UNAVAILABLE_REASON.empty,
+      }
+      stores.files.set(command.resourceId, {
+        status: 'ready',
+        content,
+        version: await initialFileContentVersion(new Uint8Array(), content),
+      })
+      return
+    }
+    case 'map': {
+      const content: MapResourceContent = { imageAssetId: null, layers: [], pins: [] }
+      stores.maps.set(command.resourceId, {
+        status: 'ready',
+        content,
+        version: initialVersion(
+          await sha256Digest(new TextEncoder().encode(JSON.stringify(content))),
+        ),
+      })
+      return
+    }
+    case 'canvas': {
+      const content = new Y.Doc()
+      stores.canvases.set(command.resourceId, {
+        status: 'ready',
+        content,
+        version: initialVersion(await sha256Digest(Y.encodeStateAsUpdate(content))),
+      })
+    }
   }
 }

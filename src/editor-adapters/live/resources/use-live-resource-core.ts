@@ -98,13 +98,17 @@ function createScopedLiveResourceRuntime(
     status: 'unavailable',
     reason: 'capability_not_supported',
   } as const
+  const structure =
+    currentScope.projection === 'dm'
+      ? ({ status: 'available', value: optimistic.structure } as const)
+      : ({ status: 'unavailable', reason: 'unauthorized' } as const)
   return {
     runtime: {
       scope: currentScope,
       resources: {
         index: optimistic.index,
         loader: base.loader,
-        structure: optimistic.structure,
+        structure,
         access: unsupported,
         bookmarks: unsupported,
         previews: unsupported,

@@ -34,6 +34,11 @@ export const SAMPLE_LOCAL_RESOURCE_IDS = {
   invoiceFile: assertDomainId(DOMAIN_ID_KIND.resource, '01980c1a-5e70-7000-8000-000000000404'),
 } as const
 
+const SAMPLE_MAP_PIN_IDS = {
+  market: assertDomainId(DOMAIN_ID_KIND.mapPin, '01980c1a-5e70-7000-8000-000000000501'),
+  invoice: assertDomainId(DOMAIN_ID_KIND.mapPin, '01980c1a-5e70-7000-8000-000000000502'),
+} as const
+
 export const SAMPLE_NOTE_BODY = [
   'A waterfront bazaar where every stall hides a second ledger.',
   '',
@@ -86,7 +91,7 @@ export function createSampleLocalWorkspaceFixture({
             layers: [{ id: 'docks', imageAssetId: null, name: 'Moonwell Docks' }],
             pins: [
               {
-                id: 'market',
+                id: SAMPLE_MAP_PIN_IDS.market,
                 targetResourceId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
                 layerId: 'docks',
                 x: 20,
@@ -94,7 +99,7 @@ export function createSampleLocalWorkspaceFixture({
                 visible: true,
               },
               {
-                id: 'invoice',
+                id: SAMPLE_MAP_PIN_IDS.invoice,
                 targetResourceId: SAMPLE_LOCAL_RESOURCE_IDS.invoiceFile,
                 layerId: 'docks',
                 x: 53,

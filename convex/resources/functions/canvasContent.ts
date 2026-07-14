@@ -11,9 +11,7 @@ import type {
 import type { CanonicalTargetMapEntry } from '@wizard-archive/editor/resources/content-copy-contract'
 import {
   createCanvasDocumentDoc,
-  parseCanvasDocumentEdge,
-  parseCanvasDocumentNode,
-  readCanvasDocumentContent,
+  parseCanvasDocumentContent,
 } from '@wizard-archive/editor/canvas/document-contract'
 import type {
   CanvasDocumentEdge,
@@ -105,18 +103,8 @@ function decodeCanvasContent(
   const doc = new Y.Doc()
   try {
     Y.applyUpdate(doc, new Uint8Array(update))
-    const content = readCanvasDocumentContent(doc)
-    const nodes = content.nodes.map(parseCanvasDocumentNode)
-    const edges = content.edges.map(parseCanvasDocumentEdge)
-    if (nodes.some((node) => node === null) || edges.some((edge) => edge === null)) return null
-    const typedNodes = nodes as Array<CanvasDocumentNode>
-    const typedEdges = edges as Array<CanvasDocumentEdge>
-    const nodeIds = new Set(typedNodes.map((node) => node.id))
-    if (nodeIds.size !== typedNodes.length) return null
-    if (new Set(typedEdges.map((edge) => edge.id)).size !== typedEdges.length) return null
-    if (typedEdges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target)))
-      return null
-    return { nodes: typedNodes, edges: typedEdges }
+    const content = parseCanvasDocumentContent(doc)
+    return content ? { nodes: [...content.nodes], edges: [...content.edges] } : null
   } catch {
     return null
   } finally {

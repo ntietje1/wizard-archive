@@ -332,3 +332,17 @@ export function readCanvasDocumentContent(doc: Y.Doc): {
     nodes: Array.from(nodesMap.values()),
   }
 }
+
+export function parseCanvasDocumentContent(doc: Y.Doc): CanvasDocumentContent | null {
+  const content = readCanvasDocumentContent(doc)
+  const nodes = content.nodes.map(parseCanvasDocumentNode)
+  const edges = content.edges.map(parseCanvasDocumentEdge)
+  if (nodes.some((node) => node === null) || edges.some((edge) => edge === null)) return null
+  const typedNodes = nodes as Array<CanvasDocumentNode>
+  const typedEdges = edges as Array<CanvasDocumentEdge>
+  const nodeIds = new Set(typedNodes.map((node) => node.id))
+  if (nodeIds.size !== typedNodes.length) return null
+  if (new Set(typedEdges.map((edge) => edge.id)).size !== typedEdges.length) return null
+  if (typedEdges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target))) return null
+  return { nodes: typedNodes, edges: typedEdges }
+}

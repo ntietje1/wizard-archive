@@ -5,6 +5,12 @@ import { DOMAIN_ID_KIND, generateDomainId } from './domain-id'
 import type { ResourceId } from './domain-id'
 import type { WizardEditorRuntime } from './editor-runtime-contract'
 import type {
+  CommandDelivery,
+  ResourceStructureCommand,
+  ResourceStructureCommandGateway,
+  ResourceStructureCommandResult,
+} from './resource-command-contract'
+import type {
   AuthorizedResourceSummary,
   ResourceCollectionQuery,
   ResourceKnowledge,
@@ -61,7 +67,9 @@ export function ResourceShell({
             <strong className="truncate px-2 text-sm">{workspaceName ?? 'Resources'}</strong>
             <div className="flex items-center gap-1">{sidebarSlots?.railEndControls}</div>
           </div>
-          <ResourceCreateMenu runtime={runtime} parentId={null} onReport={setMessage} />
+          {runtime.resources.structure.status === 'available' && (
+            <ResourceCreateMenu runtime={runtime} parentId={null} onReport={setMessage} />
+          )}
           <div className="flex border-b border-border p-1" aria-label="Resource lifecycle">
             {(['active', 'trashed'] as const).map((value) => (
               <button
@@ -140,9 +148,19 @@ function ResourceCollection({
 }) {
   useEnsureCollection(runtime, query)
   const collection = snapshot.list(query)
-  if (collection.state === 'unknown') return <CollectionState label="Loading resources…" />
+  if (collection.state === 'unknown') {
+    return (
+      <ul>
+        <CollectionState label="Loading resources…" />
+      </ul>
+    )
+  }
   if (collection.items.length === 0 && collection.complete) {
-    return <CollectionState label="No resources" />
+    return (
+      <ul>
+        <CollectionState label="No resources" />
+      </ul>
+    )
   }
 
   const items = sortAuthorizedResourceSummaries(collection.items, sort.by, sort.direction)
@@ -264,6 +282,10 @@ async function createResource(
   parentId: ResourceId | null,
   report: (message: string) => void,
 ) {
+  if (runtime.resources.structure.status !== 'available') {
+    report('Unavailable: unauthorized')
+    return
+  }
   const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
   const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
   const envelope = {
@@ -288,7 +310,7 @@ async function createResource(
           },
           new Y.Doc(),
         )
-      : await runtime.resources.structure.execute(envelope)
+      : await runtime.resources.structure.value.execute(envelope)
   if (delivery.status === 'received' && delivery.result.status === 'completed') {
     runtime.navigation.open(resourceId)
     report(`${kind} created`)
@@ -297,9 +319,7 @@ async function createResource(
   report(deliveryMessage(delivery))
 }
 
-function deliveryMessage(
-  delivery: Awaited<ReturnType<WizardEditorRuntime['resources']['structure']['execute']>>,
-) {
+function deliveryMessage(delivery: CommandDelivery<ResourceStructureCommandResult>) {
   if (delivery.status === 'indeterminate')
     return 'Delivery is uncertain. Retry with the same operation.'
   if (delivery.status === 'not_committed') return `Not committed: ${delivery.reason}`
@@ -362,11 +382,24 @@ function ResourceActions({
   resource: AuthorizedResourceSummary
   runtime: WizardEditorRuntime
 }) {
+  if (runtime.resources.structure.status !== 'available') return null
   const command = resource.lifecycle === 'active' ? 'trash' : 'restore'
   return (
     <div className="flex gap-1">
+      {resource.lifecycle === 'active' && (
+        <button
+          type="button"
+          className="rounded border border-border px-2 py-1 text-xs"
+          onClick={() => void duplicateResource(runtime, resource, onReport)}
+        >
+          Duplicate
+        </button>
+      )}
       <button
         type="button"
+        aria-label={
+          command === 'trash' ? `Move ${resource.title} to trash` : `Restore ${resource.title}`
+        }
         className="rounded border border-border px-2 py-1 text-xs"
         onClick={() => void executeSingleResourceCommand(runtime, resource.id, command, onReport)}
       >
@@ -375,6 +408,7 @@ function ResourceActions({
       {resource.lifecycle === 'trashed' && (
         <button
           type="button"
+          aria-label={`Delete ${resource.title} forever`}
           className="rounded border border-destructive px-2 py-1 text-xs text-destructive"
           onClick={() =>
             void executeSingleResourceCommand(runtime, resource.id, 'permanentlyDelete', onReport)
@@ -393,12 +427,53 @@ async function executeSingleResourceCommand(
   type: 'trash' | 'restore' | 'permanentlyDelete',
   report: (message: string) => void,
 ) {
-  const delivery = await runtime.resources.structure.execute({
-    campaignId: runtime.scope.campaignId,
-    operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-    command: { type, resourceIds: [resourceId] },
-  })
+  const delivery = await deliverStructureCommand(runtime, { type, resourceIds: [resourceId] })
+  if (!delivery) return report('Unavailable: unauthorized')
   report(deliveryMessage(delivery))
+}
+
+async function duplicateResource(
+  runtime: WizardEditorRuntime,
+  resource: AuthorizedResourceSummary,
+  report: (message: string) => void,
+) {
+  const delivery = await deliverStructureCommand(runtime, {
+    type: 'deepCopy',
+    sourceRootIds: [resource.id],
+    destinationParentId: resource.displayParentId,
+  })
+  if (!delivery) return report('Unavailable: unauthorized')
+  if (
+    delivery.status === 'received' &&
+    delivery.result.status === 'completed' &&
+    delivery.result.receipt.result.type === 'deepCopied'
+  ) {
+    const destinationId = delivery.result.receipt.result.roots[0]?.destinationRootId
+    if (destinationId) runtime.navigation.open(destinationId)
+    report('Resource duplicated')
+    return
+  }
+  report(deliveryMessage(delivery))
+}
+
+function availableStructure(runtime: WizardEditorRuntime): ResourceStructureCommandGateway | null {
+  return runtime.resources.structure.status === 'available'
+    ? runtime.resources.structure.value
+    : null
+}
+
+function deliverStructureCommand(
+  runtime: WizardEditorRuntime,
+  command: ResourceStructureCommand,
+): Promise<CommandDelivery<ResourceStructureCommandResult>> | null {
+  const structure = availableStructure(runtime)
+  return (
+    structure?.execute({
+      campaignId: runtime.scope.campaignId,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command,
+    }) ?? null
+  )
 }
 
 function ResourceContent({

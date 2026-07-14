@@ -1,7 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
-import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import {
   createSampleLocalWorkspaceFixture,
   SAMPLE_LOCAL_RESOURCE_IDS,
@@ -24,29 +22,13 @@ describe('useLocalWorkspaceRuntime', () => {
     })
   })
 
-  it('uses the fixture projection as a hard write boundary', async () => {
+  it('uses the fixture projection as an explicit write boundary', () => {
     const workspace = createSampleLocalWorkspaceFixture({ projection: 'player' })
     const { result } = renderHook(() => useLocalWorkspaceRuntime({ initialWorkspace: workspace }))
 
-    const delivery = await act(() =>
-      result.current.resources.structure.execute({
-        campaignId: workspace.scope.campaignId,
-        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
-        command: {
-          type: 'create',
-          resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
-          kind: 'folder',
-          parentId: null,
-          title: canonicalizeResourceTitle('Player folder'),
-          icon: null,
-          color: null,
-        },
-      }),
-    )
-
-    expect(delivery).toMatchObject({
-      status: 'received',
-      result: { status: 'rejected', reason: 'unauthorized' },
+    expect(result.current.resources.structure).toEqual({
+      status: 'unavailable',
+      reason: 'unauthorized',
     })
   })
 

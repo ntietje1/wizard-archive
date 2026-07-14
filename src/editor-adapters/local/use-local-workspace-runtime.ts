@@ -19,7 +19,7 @@ export function useLocalWorkspaceRuntime({
     return createInMemoryEditorRuntime({
       ...workspace,
       navigation: createLocalResourceNavigation(initialItemId ?? null),
-      authorize: () => canEdit && workspace.scope.projection === 'dm',
+      canEdit: canEdit && workspace.scope.projection === 'dm',
     })
   })
 

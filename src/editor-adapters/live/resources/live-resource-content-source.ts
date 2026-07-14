@@ -94,6 +94,7 @@ class LiveResourceContentSource implements ResourceContentSource<null, ResourceC
                 ...snapshot.content,
                 pins: snapshot.content.pins.map((pin) => ({
                   ...pin,
+                  id: assertDomainId(DOMAIN_ID_KIND.mapPin, pin.id),
                   targetResourceId: assertDomainId(DOMAIN_ID_KIND.resource, pin.targetResourceId),
                 })),
               },

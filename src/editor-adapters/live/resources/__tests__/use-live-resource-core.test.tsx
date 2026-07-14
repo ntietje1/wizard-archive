@@ -42,6 +42,7 @@ describe('useLiveResourceCore', () => {
     expect(result.current.resources.index).toBe(initial.resources.index)
     expect(result.current.resources.loader).toBe(initial.resources.loader)
     expect(result.current.resources.structure).toBe(initial.resources.structure)
+    expect(result.current.resources.structure.status).toBe('available')
     expect(result.current.content.notes).toBe(initial.content.notes)
     expect(result.current.content.files).toBe(initial.content.files)
     expect(result.current.content.maps).toBe(initial.content.maps)
@@ -70,6 +71,10 @@ describe('useLiveResourceCore', () => {
     expect(next.resources.index).not.toBe(initial.resources.index)
     expect(next.resources.loader).not.toBe(initial.resources.loader)
     expect(next.resources.structure).not.toBe(initial.resources.structure)
+    expect(next.resources.structure).toEqual({
+      status: 'unavailable',
+      reason: 'unauthorized',
+    })
     expect(next.content.notes).not.toBe(initial.content.notes)
     expect(next.content.files).not.toBe(initial.content.files)
     expect(next.content.maps).not.toBe(initial.content.maps)
