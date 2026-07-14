@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { MaybePromise } from '../../../../../shared/common/async'
-import type { CampaignMemberId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import type { ResourceCommandResult } from '../../filesystem/transaction-contract'
 import { createBlocksShareRuntimeState } from '../contracts'
@@ -9,7 +9,13 @@ import type {
   BlocksShareOperations,
   BlocksShareState,
   EditorShareParticipant,
+  EditorShareParticipantId,
 } from '../contracts'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
+
+const PLAYER_1 = testDomainId(DOMAIN_ID_KIND.campaignMember, 'block_share_player_1')
+const PLAYER_2 = testDomainId(DOMAIN_ID_KIND.campaignMember, 'block_share_player_2')
 
 describe('createBlocksShareRuntimeState', () => {
   it('keeps missing selected block rows incomplete', () => {
@@ -18,7 +24,7 @@ describe('createBlocksShareRuntimeState', () => {
       data: {
         blocks: [],
         notePermissionsByParticipantId: {},
-        participants: [createPlayerMember('player-1')],
+        participants: [createPlayerMember(PLAYER_1)],
       },
     })
 
@@ -26,7 +32,7 @@ describe('createBlocksShareRuntimeState', () => {
     expect(state.aggregateShareStatus).toBe('not_shared')
     expect(state.shareItems).toEqual([
       expect.objectContaining({
-        participant: expect.objectContaining({ id: 'player-1' }),
+        participant: expect.objectContaining({ id: PLAYER_1 }),
         kind: 'controllable',
         permissionLevel: 'default',
       }),
@@ -41,19 +47,19 @@ describe('createBlocksShareRuntimeState', () => {
           {
             noteBlockId: 'block-1',
             shareStatus: 'all_shared',
-            memberPermissions: { 'player-1': PERMISSION_LEVEL.VIEW },
+            memberPermissions: { [PLAYER_1]: PERMISSION_LEVEL.VIEW },
           },
           {
             noteBlockId: 'block-2',
             shareStatus: 'not_shared',
-            memberPermissions: { 'player-1': PERMISSION_LEVEL.NONE },
+            memberPermissions: { [PLAYER_1]: PERMISSION_LEVEL.NONE },
           },
         ],
         notePermissionsByParticipantId: {
-          'player-1': PERMISSION_LEVEL.NONE,
-          'player-2': PERMISSION_LEVEL.EDIT,
+          [PLAYER_1]: PERMISSION_LEVEL.NONE,
+          [PLAYER_2]: PERMISSION_LEVEL.EDIT,
         },
-        participants: [createPlayerMember('player-1'), createPlayerMember('player-2')],
+        participants: [createPlayerMember(PLAYER_1), createPlayerMember(PLAYER_2)],
       },
     })
 
@@ -63,13 +69,13 @@ describe('createBlocksShareRuntimeState', () => {
       defaultPermissionLevel: 'mixed',
       shareItems: [
         {
-          participant: { id: 'player-1' },
+          participant: { id: PLAYER_1 },
           kind: 'controllable',
           permissionLevel: 'mixed',
           hasExplicitShare: true,
         },
         {
-          participant: { id: 'player-2' },
+          participant: { id: PLAYER_2 },
           kind: 'locked_visible',
           permissionLevel: 'visible',
           hasExplicitShare: false,
@@ -173,7 +179,7 @@ describe('createBlocksShareRuntimeState', () => {
   })
 
   it('returns member share command results to callers', async () => {
-    const playerId = 'player-1' as CampaignMemberId
+    const playerId = PLAYER_1
     const state = createBlockShareState({
       data: {
         blocks: [
@@ -255,7 +261,7 @@ function createBlockShareState({
   })
 }
 
-function createPlayerMember<MemberId extends string>(
+function createPlayerMember<MemberId extends EditorShareParticipantId>(
   memberId: MemberId,
 ): EditorShareParticipant & { id: MemberId } {
   return {

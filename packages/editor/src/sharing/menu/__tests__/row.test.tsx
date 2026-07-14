@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 
 import type { EditorShareParticipant } from '../../contracts'
 import { ShareMenuPlayerIdentity } from '../row'
+import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
+import { testDomainId } from '../../../test/domain-id'
 
 describe('ShareMenuPlayerIdentity', () => {
   it('uses username-only profiles as a single primary identity label', () => {
@@ -31,7 +33,7 @@ function createMember({
   username: string
 }): EditorShareParticipant {
   return {
-    id: 'member_1',
+    id: testDomainId(DOMAIN_ID_KIND.campaignMember, 'share_menu_member'),
     displayName: name ?? `@${username}`,
     imageUrl: null,
     username: name ? username : undefined,

@@ -1,6 +1,7 @@
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { getVisibleNoteBlocks } from './visibility'
-import type { CampaignMemberId, SidebarItemId } from '../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { CampaignMemberId } from '../resources/domain-id'
 import type { NoteBlock } from './document/model'
 import type { NoteItemWithContent } from '../notes/item-contract'
 import type { PermissionLevel } from '../../../../shared/permissions/types'

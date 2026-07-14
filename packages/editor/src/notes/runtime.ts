@@ -1,4 +1,5 @@
-import type { CampaignMemberId, SidebarItemId } from '../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { CampaignMemberId } from '../resources/domain-id'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { AnyItem, ValidationResult, CreateParentTarget } from '../workspace/items'
 import type { ResourceKind } from '../workspace/resource-contract'

@@ -32,8 +32,6 @@ import type {
   FileSystemItemCreateValidationOperations,
   FileSystemItemImportOperations,
 } from '../filesystem/item-operation-contracts'
-import type { CampaignMemberId } from '../../../../shared/common/ids'
-
 type RuntimeNoteFileSystemOperations = FileSystemItemImportOperations &
   FileSystemItemCreateValidationOperations
 
@@ -79,7 +77,7 @@ export function createRuntimeNoteContentSource(
   const paths = runtime.filesystem.paths
   const selectedViewAsPlayerId =
     sharing.viewAsParticipant.status === 'available'
-      ? (sharing.viewAsParticipant.selectedParticipantId as CampaignMemberId | undefined)
+      ? sharing.viewAsParticipant.selectedParticipantId
       : undefined
   const noteValueReferences: NoteValueReferences = {
     getNoteCandidates: () =>

@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import { createNote } from '../../test/sidebar-item-factory'
-import { testId } from '../../test/id'
+import { testDomainId } from '../../test/domain-id'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { createSidebarItemsShareCommandOperations } from '../sidebar-items/command-operations'
 
 describe('sidebar item share command operations', () => {
   it('executes sidebar sharing changes as filesystem share commands', async () => {
     const item = createNote({ name: 'Shared Scene' })
-    const memberId = testId<'campaignMembers'>('member_1')
+    const memberId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'member_1')
     const executeCommand = vi.fn().mockResolvedValue(null)
     const operations = createSidebarItemsShareCommandOperations({ executeCommand })
 

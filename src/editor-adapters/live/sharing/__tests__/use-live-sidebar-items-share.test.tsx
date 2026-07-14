@@ -10,6 +10,8 @@ import type {
   ShareActionResult,
 } from '@wizard-archive/editor/sharing'
 import { useLiveSidebarItemsShare } from '../use-live-sidebar-items-share'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
 
 type ReadyResourceShareState = Extract<ResourceShareState, { status: 'ready' }>
 
@@ -20,11 +22,11 @@ type SidebarShareQueryItem = {
   inheritedAllPermissionLevel: PermissionLevel | null
   inheritedFromFolderName: string | null
   shares: Array<{
-    campaignMemberId: Id<'campaignMembers'>
+    campaignMemberId: CampaignMemberId
     permissionLevel: PermissionLevel | null
   }>
-  memberInheritedPermissions: Partial<Record<Id<'campaignMembers'>, PermissionLevel>>
-  memberInheritedFromFolderNames: Partial<Record<Id<'campaignMembers'>, string>>
+  memberInheritedPermissions: Partial<Record<CampaignMemberId, PermissionLevel>>
+  memberInheritedFromFolderNames: Partial<Record<CampaignMemberId, string>>
 }
 
 const useLiveSidebarItemsShareQueryMock = vi.hoisted(() => vi.fn())
@@ -80,7 +82,7 @@ function shareQueryItem(
   }
 }
 
-function playerMember(memberId: Id<'campaignMembers'>, name = 'Player One') {
+function playerMember(memberId: CampaignMemberId, name = 'Player One') {
   return {
     id: memberId,
     role: 'Player',
@@ -240,8 +242,8 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('projects loaded share rows into aggregate item state', () => {
-    const playerId = 'member_1' as Id<'campaignMembers'>
-    const otherPlayerId = 'member_2' as Id<'campaignMembers'>
+    const playerId = testCampaignMemberId('live_item_share_player_1')
+    const otherPlayerId = testCampaignMemberId('live_item_share_player_2')
     const folder = createFolder({ id: 'folder_1' as Id<'sidebarItems'>, name: 'Lore' })
     const firstNote = createNote({
       id: 'note_1' as Id<'sidebarItems'>,
@@ -325,7 +327,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('keeps explicit member denies ahead of inherited all-player access', () => {
-    const playerId = 'member_1' as Id<'campaignMembers'>
+    const playerId = testCampaignMemberId('live_item_deny_player')
     const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
     useCampaignMembersMock.mockReturnValue({
       data: [playerMember(playerId)],
@@ -357,7 +359,7 @@ describe('useLiveSidebarItemsShare', () => {
   })
 
   it('does not count explicit member denies as active individual shares', () => {
-    const playerId = 'member_1' as Id<'campaignMembers'>
+    const playerId = testCampaignMemberId('live_item_inherited_player')
     const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
     useCampaignMembersMock.mockReturnValue({
       data: [playerMember(playerId)],
@@ -390,7 +392,7 @@ describe('useLiveSidebarItemsShare', () => {
 
   it('marks sharing incomplete when loaded selections are missing item share rows', () => {
     const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
-    const playerId = 'member_1' as Id<'campaignMembers'>
+    const playerId = testCampaignMemberId('live_item_pending_player')
     useCampaignMembersMock.mockReturnValue({
       data: [playerMember(playerId)],
       isSuccess: true,
@@ -477,7 +479,7 @@ describe('useLiveSidebarItemsShare', () => {
   it('routes member share writes and clears through filesystem operations', async () => {
     const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
     const player = {
-      id: 'member_1' as Id<'campaignMembers'>,
+      id: testCampaignMemberId('live_item_write_player'),
       role: 'Player',
       userProfile: { id: 'user_1', name: 'Player One' },
     }
@@ -511,7 +513,7 @@ describe('useLiveSidebarItemsShare', () => {
 
   it('keeps sharing mutations pending until overlapping commands settle', async () => {
     const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
-    const player = playerMember('member_1' as Id<'campaignMembers'>)
+    const player = playerMember(testCampaignMemberId('live_item_concurrent_player'))
     const firstCommand = createDeferredPromise()
     const secondCommand = createDeferredPromise()
     let firstWrite: Promise<ShareActionResult> | undefined
@@ -553,7 +555,7 @@ describe('useLiveSidebarItemsShare', () => {
 
   it('writes an explicit member deny when toggling inherited member access off', async () => {
     const item = createNote({ id: 'note_1' as Id<'sidebarItems'> })
-    const player = playerMember('member_1' as Id<'campaignMembers'>)
+    const player = playerMember(testCampaignMemberId('live_item_toggle_player'))
     useCampaignMembersMock.mockReturnValue({
       data: [player],
       isSuccess: true,

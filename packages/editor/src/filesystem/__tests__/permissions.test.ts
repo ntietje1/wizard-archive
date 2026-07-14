@@ -5,9 +5,11 @@ import { WORKSPACE_MODE } from '../../../../../shared/workspace/workspace-mode'
 import type { AnyItem } from '../../workspace/items'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { testId } from '../../test/id'
+import { testDomainId } from '../../test/domain-id'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { createActorFileSystemPermissions } from '../access'
 
-const memberId = testId<'campaignMembers'>('member_permissions')
+const memberId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'member_permissions')
 type TestWorkspaceActor = NonNullable<
   Parameters<typeof createActorFileSystemPermissions>[0]['actor']
 >

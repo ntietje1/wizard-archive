@@ -2,6 +2,7 @@ import { SHARE_STATUS } from '../../../../shared/block-shares/share-status'
 import type { ShareStatus } from '../../../../shared/block-shares/share-status'
 import type { MaybePromise } from '../../../../shared/common/async'
 import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { CampaignMemberId } from '../resources/domain-id'
 import type { ReactNode } from 'react'
 import { hasPermissionForRequirement } from '../../../../shared/permissions/requirements'
 import type { AnyItem } from '../workspace/items'
@@ -19,7 +20,7 @@ export const EDITOR_PERMISSION_LEVEL = {
 export type EditorPermissionLevel =
   (typeof EDITOR_PERMISSION_LEVEL)[keyof typeof EDITOR_PERMISSION_LEVEL]
 
-export type EditorShareParticipantId = string
+export type EditorShareParticipantId = CampaignMemberId
 
 export interface EditorShareParticipant {
   id: EditorShareParticipantId
@@ -136,7 +137,9 @@ interface ReadyBlocksShareState extends BlocksShareStateBase {
 
 export type BlocksShareState = PendingBlocksShareState | ReadyBlocksShareState
 
-export interface BlockShareProjectionData<ParticipantId extends string = BlockShareParticipantId> {
+export interface BlockShareProjectionData<
+  ParticipantId extends EditorShareParticipantId = BlockShareParticipantId,
+> {
   blocks?: Array<{
     noteBlockId: string
     shareStatus: ShareStatus | null
@@ -154,7 +157,9 @@ export interface BlockShareProjectionData<ParticipantId extends string = BlockSh
   participants?: Array<EditorShareParticipant & { id: ParticipantId }>
 }
 
-export interface BlocksShareProjection<ParticipantId extends string = BlockShareParticipantId> {
+export interface BlocksShareProjection<
+  ParticipantId extends EditorShareParticipantId = BlockShareParticipantId,
+> {
   status: Exclude<BlocksShareStatus, 'unavailable'>
   aggregateShareStatus: AggregateShareStatus
   defaultPermissionLevel: AggregateBlockVisibilitySelectValue
@@ -229,7 +234,7 @@ interface ReadyResourceShareState extends ResourceShareStateBase {
 export type ResourceShareState = PendingResourceShareState | ReadyResourceShareState
 
 export interface ResourceShareProjectionData<
-  ParticipantId extends string = BlockShareParticipantId,
+  ParticipantId extends EditorShareParticipantId = BlockShareParticipantId,
 > {
   sidebarItemId: AnyItem['id']
   allPermissionLevel: EditorPermissionLevel | null
@@ -244,7 +249,9 @@ export interface ResourceShareProjectionData<
   memberInheritedFromFolderNames: Partial<Record<ParticipantId, string>>
 }
 
-export interface ResourceShareProjection<ParticipantId extends string = BlockShareParticipantId> {
+export interface ResourceShareProjection<
+  ParticipantId extends EditorShareParticipantId = BlockShareParticipantId,
+> {
   aggregateShareStatus: AggregateShareStatus | null
   defaultPermissionLevel: NullableAggregatePermissionLevel
   getParticipantAccessSource: (participantId: ParticipantId) => 'explicit' | 'default' | 'none'
@@ -364,11 +371,11 @@ export function createResourceShareRuntimeState(
   })
 }
 
-type BlockShareProjectionBlock<MemberId extends string> = NonNullable<
+type BlockShareProjectionBlock<MemberId extends EditorShareParticipantId> = NonNullable<
   BlockShareProjectionData<MemberId>['blocks']
 >[number]
 
-function createBlocksShareProjection<MemberId extends string>({
+function createBlocksShareProjection<MemberId extends EditorShareParticipantId>({
   noteBlockIds,
   data,
 }: {
@@ -406,22 +413,22 @@ function getBlocksShareProjectionStatus({
   data,
   hasCompleteData,
 }: {
-  data: BlockShareProjectionData<string> | undefined
+  data: BlockShareProjectionData<EditorShareParticipantId> | undefined
   hasCompleteData: boolean
-}): BlocksShareProjection<string>['status'] {
+}): BlocksShareProjection<EditorShareParticipantId>['status'] {
   if (!data) return 'loading'
   return hasCompleteData ? 'ready' : 'incomplete'
 }
 
 function getBlockDefaultVisibility(
-  blockInfo: BlockShareProjectionBlock<string> | undefined,
+  blockInfo: BlockShareProjectionBlock<EditorShareParticipantId> | undefined,
 ): Extract<BlockVisibilitySelectValue, 'hidden' | 'visible'> {
   return blockInfo?.shareStatus === SHARE_STATUS.ALL_SHARED ? 'visible' : 'hidden'
 }
 
 function getMemberBlockVisibility(
-  blockInfo: BlockShareProjectionBlock<string> | undefined,
-  memberId: string,
+  blockInfo: BlockShareProjectionBlock<EditorShareParticipantId> | undefined,
+  memberId: EditorShareParticipantId,
 ): BlockVisibilitySelectValue {
   const permissionLevel = getMemberPermissions(blockInfo)[memberId]
   if (permissionLevel === EDITOR_PERMISSION_LEVEL.NONE) return 'hidden'
@@ -430,7 +437,7 @@ function getMemberBlockVisibility(
 }
 
 function getBlockAggregateShareStatus(
-  blockInfos: Array<BlockShareProjectionBlock<string>>,
+  blockInfos: Array<BlockShareProjectionBlock<EditorShareParticipantId>>,
 ): BlocksShareState['aggregateShareStatus'] {
   const values = blockInfos.map((info) => getBlockDefaultVisibility(info))
   const aggregateValue = aggregateBlockShareValues(values, 'hidden')
@@ -447,12 +454,12 @@ function getBlockAggregateShareStatus(
 }
 
 function getMemberPermissions(
-  blockInfo: BlockShareProjectionBlock<string> | undefined,
+  blockInfo: BlockShareProjectionBlock<EditorShareParticipantId> | undefined,
 ): Partial<Record<string, Extract<EditorPermissionLevel, 'none' | 'view'>>> {
   return blockInfo?.memberPermissions ?? {}
 }
 
-function createBlockInfoMap<MemberId extends string>(
+function createBlockInfoMap<MemberId extends EditorShareParticipantId>(
   blockInfos: Array<BlockShareProjectionBlock<MemberId>> | undefined,
 ) {
   const map = new Map<string, BlockShareProjectionBlock<MemberId>>()
@@ -462,7 +469,7 @@ function createBlockInfoMap<MemberId extends string>(
   return map
 }
 
-function createBlockShareItems<MemberId extends string>({
+function createBlockShareItems<MemberId extends EditorShareParticipantId>({
   blockInfos,
   notePermissionsByParticipantId,
   participants,
@@ -593,7 +600,7 @@ function getBlockPermissionLevel(
   return value === 'visible' ? EDITOR_PERMISSION_LEVEL.VIEW : EDITOR_PERMISSION_LEVEL.NONE
 }
 
-interface SidebarItemShareInfo<ParticipantId extends string> {
+interface SidebarItemShareInfo<ParticipantId extends EditorShareParticipantId> {
   itemId: AnyItem['id']
   allPermissionLevel: EditorPermissionLevel | null
   sharedParticipantIds: Set<ParticipantId>
@@ -604,7 +611,7 @@ interface SidebarItemShareInfo<ParticipantId extends string> {
   participantInheritedFromFolderNames: Map<ParticipantId, string>
 }
 
-function createResourceShareProjection<ParticipantId extends string>({
+function createResourceShareProjection<ParticipantId extends EditorShareParticipantId>({
   itemShareData,
   items,
   participants,
@@ -670,12 +677,12 @@ function getResourceShareProjectionStatus({
   participantsLoaded: boolean
   shareDataLoaded: boolean
   hasCompleteData: boolean
-}): ResourceShareProjection<string>['status'] {
+}): ResourceShareProjection<EditorShareParticipantId>['status'] {
   if (!participantsLoaded || !shareDataLoaded) return 'loading'
   return hasCompleteData ? 'ready' : 'incomplete'
 }
 
-function getItemShareInfos<ParticipantId extends string>(
+function getItemShareInfos<ParticipantId extends EditorShareParticipantId>(
   items: Array<AnyItem>,
   itemShareData: Array<ResourceShareProjectionData<ParticipantId>>,
 ) {
@@ -687,7 +694,7 @@ function getItemShareInfos<ParticipantId extends string>(
     .filter((info): info is SidebarItemShareInfo<ParticipantId> => Boolean(info))
 }
 
-function toSidebarItemShareInfo<ParticipantId extends string>(
+function toSidebarItemShareInfo<ParticipantId extends EditorShareParticipantId>(
   itemShareData: ResourceShareProjectionData<ParticipantId>,
 ): SidebarItemShareInfo<ParticipantId> {
   const sharedParticipantIds = new Set<ParticipantId>()
@@ -716,7 +723,7 @@ function toSidebarItemShareInfo<ParticipantId extends string>(
   }
 }
 
-function getSidebarItemsAggregateShareStatus<ParticipantId extends string>(
+function getSidebarItemsAggregateShareStatus<ParticipantId extends EditorShareParticipantId>(
   itemShareInfos: Array<SidebarItemShareInfo<ParticipantId>>,
   hasCompleteData: boolean,
 ): AggregateShareStatus | null {
@@ -737,7 +744,7 @@ function hasPermissionAccess(level: EditorPermissionLevel | null | undefined): b
   return level !== null && level !== undefined && level !== EDITOR_PERMISSION_LEVEL.NONE
 }
 
-function hasAnyShareAccess<ParticipantId extends string>(
+function hasAnyShareAccess<ParticipantId extends EditorShareParticipantId>(
   info: SidebarItemShareInfo<ParticipantId>,
 ) {
   const hasExplicitMemberShares = Array.from(info.participantPermissions.values()).some(
@@ -753,7 +760,7 @@ function hasAnyShareAccess<ParticipantId extends string>(
   )
 }
 
-function createGetShareState<ParticipantId extends string>(
+function createGetShareState<ParticipantId extends EditorShareParticipantId>(
   itemShareInfos: Array<SidebarItemShareInfo<ParticipantId>>,
   hasCompleteData: boolean,
 ) {
@@ -767,7 +774,7 @@ function createGetShareState<ParticipantId extends string>(
   }
 }
 
-function createGetParticipantAccessSource<ParticipantId extends string>(
+function createGetParticipantAccessSource<ParticipantId extends EditorShareParticipantId>(
   itemShareInfos: Array<SidebarItemShareInfo<ParticipantId>>,
   hasCompleteData: boolean,
 ) {
@@ -790,7 +797,7 @@ function createGetParticipantAccessSource<ParticipantId extends string>(
   }
 }
 
-function hasMemberShareAccess<ParticipantId extends string>(
+function hasMemberShareAccess<ParticipantId extends EditorShareParticipantId>(
   info: SidebarItemShareInfo<ParticipantId>,
   participantId: ParticipantId,
 ) {
@@ -799,7 +806,7 @@ function hasMemberShareAccess<ParticipantId extends string>(
   return hasPermissionAccess(getDefaultMemberPermission(info, participantId))
 }
 
-function getExplicitMemberPermission<ParticipantId extends string>(
+function getExplicitMemberPermission<ParticipantId extends EditorShareParticipantId>(
   info: SidebarItemShareInfo<ParticipantId>,
   participantId: ParticipantId,
 ): EditorPermissionLevel | null {
@@ -807,7 +814,7 @@ function getExplicitMemberPermission<ParticipantId extends string>(
   return info.participantPermissions.get(participantId) ?? EDITOR_PERMISSION_LEVEL.VIEW
 }
 
-function createSidebarItemShareItems<ParticipantId extends string>(
+function createSidebarItemShareItems<ParticipantId extends EditorShareParticipantId>(
   participants: Array<EditorShareParticipant & { id: ParticipantId }>,
   itemShareInfos: Array<SidebarItemShareInfo<ParticipantId>>,
   getShareState: (participantId: ParticipantId) => ShareState,
@@ -819,7 +826,7 @@ function createSidebarItemShareItems<ParticipantId extends string>(
   )
 }
 
-function createShareItem<ParticipantId extends string>(
+function createShareItem<ParticipantId extends EditorShareParticipantId>(
   participant: EditorShareParticipant & { id: ParticipantId },
   itemShareInfos: Array<SidebarItemShareInfo<ParticipantId>>,
   getShareState: (participantId: ParticipantId) => ShareState,
@@ -849,7 +856,7 @@ function createShareItem<ParticipantId extends string>(
   }
 }
 
-function getDefaultMemberPermission<ParticipantId extends string>(
+function getDefaultMemberPermission<ParticipantId extends EditorShareParticipantId>(
   info: SidebarItemShareInfo<ParticipantId>,
   participantId: ParticipantId,
 ): EditorPermissionLevel {
@@ -1004,7 +1011,9 @@ async function toggleSidebarItemsShareStatus({
   )
 }
 
-async function toggleSidebarItemsShareWithParticipant<ParticipantId extends string>({
+async function toggleSidebarItemsShareWithParticipant<
+  ParticipantId extends EditorShareParticipantId,
+>({
   canMutateShares,
   getParticipantAccessSource,
   getShareState,

@@ -14,19 +14,20 @@ import { canLoadLiveShareData, canRunLiveShareMutation } from './share-capabilit
 import { useShareMutationRunner } from './use-share-mutation-runner'
 import { useLiveSidebarItemsShareQuery } from './use-live-sidebar-items-share-query'
 import { toEditorShareParticipant } from '~/editor-adapters/sharing/share-participants'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 type LiveResourceShareProjectionRow = {
-  sidebarItemId: ResourceShareProjectionData<string>['sidebarItemId']
+  sidebarItemId: ResourceShareProjectionData<CampaignMemberId>['sidebarItemId']
   allPermissionLevel: EditorPermissionLevel | null
   inheritShares: boolean | null
   inheritedAllPermissionLevel: EditorPermissionLevel | null
   inheritedFromFolderName: string | null
   shares: Array<{
-    campaignMemberId: string
+    campaignMemberId: CampaignMemberId
     permissionLevel: EditorPermissionLevel | null
   }>
-  memberInheritedPermissions: Partial<Record<string, EditorPermissionLevel>>
-  memberInheritedFromFolderNames: Partial<Record<string, string>>
+  memberInheritedPermissions: Partial<Record<CampaignMemberId, EditorPermissionLevel>>
+  memberInheritedFromFolderNames: Partial<Record<CampaignMemberId, string>>
 }
 
 export function useLiveSidebarItemsShare(
@@ -81,7 +82,7 @@ export function useLiveSidebarItemsShare(
 
 function toEditorResourceShareProjectionData(
   data: Array<LiveResourceShareProjectionRow>,
-): Array<ResourceShareProjectionData<string>> {
+): Array<ResourceShareProjectionData<CampaignMemberId>> {
   return data.map((item) => ({
     sidebarItemId: item.sidebarItemId,
     allPermissionLevel: item.allPermissionLevel,

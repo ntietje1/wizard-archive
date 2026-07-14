@@ -77,17 +77,6 @@ async function resolveCampaignRowId(ctx: BlockShareActionCtx, campaignId: Campai
   return await ctx.runQuery(internal.campaigns.internalQueries.resolveCampaignRowId, { campaignId })
 }
 
-async function resolveCampaignAndMemberRowIds(
-  ctx: BlockShareActionCtx,
-  campaignId: CampaignId,
-  campaignMemberId: CampaignMemberId,
-) {
-  return await ctx.runQuery(internal.campaigns.internalQueries.resolveCampaignAndMemberRowIds, {
-    campaignId,
-    campaignMemberId,
-  })
-}
-
 function blockMemberPermissionCommand({
   blockNoteIds,
   campaignMemberId,
@@ -96,7 +85,7 @@ function blockMemberPermissionCommand({
 }: {
   noteId: Id<'sidebarItems'>
   blockNoteIds: Array<string>
-  campaignMemberId: Id<'campaignMembers'>
+  campaignMemberId: CampaignMemberId
   permissionLevel: 'none' | 'view' | null
 }): BlockShareActionCommand {
   return {
@@ -128,13 +117,13 @@ function createBlockMemberPermissionHandler(
       campaignMemberId: CampaignMemberId
     },
   ): Promise<ResourceTransactionReceipt> => {
-    const rowIds = await resolveCampaignAndMemberRowIds(ctx, args.campaignId, args.campaignMemberId)
+    const campaignId = await resolveCampaignRowId(ctx, args.campaignId)
     return await executeProjectedBlockShareCommand(ctx, {
-      campaignId: rowIds.campaignId,
+      campaignId,
       command: blockMemberPermissionCommand({
         noteId: args.noteId,
         blockNoteIds: args.blockNoteIds,
-        campaignMemberId: rowIds.campaignMemberId,
+        campaignMemberId: args.campaignMemberId,
         permissionLevel,
       }),
       historyStatus,
@@ -186,13 +175,13 @@ export const setBlockMemberPermission = action({
   },
   returns: fileSystemTransactionReceiptValidator,
   handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
-    const rowIds = await resolveCampaignAndMemberRowIds(ctx, args.campaignId, args.campaignMemberId)
+    const campaignId = await resolveCampaignRowId(ctx, args.campaignId)
     return await executeProjectedBlockShareCommand(ctx, {
-      campaignId: rowIds.campaignId,
+      campaignId,
       command: blockMemberPermissionCommand({
         noteId: args.noteId,
         blockNoteIds: args.blockNoteIds,
-        campaignMemberId: rowIds.campaignMemberId,
+        campaignMemberId: args.campaignMemberId,
         permissionLevel: args.permissionLevel,
       }),
     })

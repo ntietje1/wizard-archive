@@ -24,6 +24,8 @@ import type {
 } from '@wizard-archive/editor/notes/item-contract'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemEnhancement } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 export const enhanceNote = async (
   ctx: CampaignQueryCtx,
@@ -36,15 +38,27 @@ export const enhanceNoteWithContent = async (
   ctx: CampaignQueryCtx,
   { note }: { note: NoteItem },
 ): Promise<NoteItemWithContent> => {
-  const [ancestors, allBlocks] = await Promise.all([
+  const isDm = ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM
+  const [ancestors, allBlocks, campaignMembers] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: note.parentId,
       isTrashed: note.isTrashed,
     }),
     getAllBlocksByNote(ctx, { noteId: note.id }),
+    isDm
+      ? ctx.db
+          .query('campaignMembers')
+          .withIndex('by_campaign_user', (query) => query.eq('campaignId', ctx.campaign._id))
+          .collect()
+      : [],
   ])
 
-  const isDm = ctx.membership.role === CAMPAIGN_MEMBER_ROLE.DM
+  const memberIdByRowId = new Map(
+    campaignMembers.map((member) => [
+      member._id,
+      assertDomainId(DOMAIN_ID_KIND.campaignMember, member.campaignMemberUuid),
+    ]),
+  )
   const permittedBlocks: Array<(typeof allBlocks)[number]> = []
   const blockMetaEntries = await asyncMap(allBlocks, async (block) => {
     const shareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
@@ -59,7 +73,7 @@ export const enhanceNoteWithContent = async (
     const viewSharedMemberIds = isDm
       ? blockShares.flatMap((s) =>
           normalizeExplicitSharePermissionLevel(s.permissionLevel) === PERMISSION_LEVEL.VIEW
-            ? [s.campaignMemberId]
+            ? [requireProjectedCampaignMemberId(memberIdByRowId, s.campaignMemberId)]
             : [],
         )
       : []
@@ -73,12 +87,16 @@ export const enhanceNoteWithContent = async (
         hiddenFrom: isDm
           ? blockShares.flatMap((s) =>
               normalizeExplicitSharePermissionLevel(s.permissionLevel) === PERMISSION_LEVEL.NONE
-                ? [s.campaignMemberId]
+                ? [requireProjectedCampaignMemberId(memberIdByRowId, s.campaignMemberId)]
                 : [],
             )
           : [],
       } satisfies BlockMeta,
-      warningMemberIds: viewSharedMemberIds,
+      warningMemberRowIds: blockShares.flatMap((share) =>
+        normalizeExplicitSharePermissionLevel(share.permissionLevel) === PERMISSION_LEVEL.VIEW
+          ? [share.campaignMemberId]
+          : [],
+      ),
     }
   })
   const blockMeta: Record<string, BlockMeta> = {}
@@ -86,7 +104,7 @@ export const enhanceNoteWithContent = async (
   for (const entry of blockMetaEntries) {
     if (!entry) continue
     blockMeta[entry.blockNoteId] = entry.meta
-    for (const memberId of entry.warningMemberIds) {
+    for (const memberId of entry.warningMemberRowIds) {
       warningBlockCountsByMemberId.set(
         memberId,
         (warningBlockCountsByMemberId.get(memberId) ?? 0) + 1,
@@ -94,7 +112,7 @@ export const enhanceNoteWithContent = async (
     }
   }
   const blockShareAccessWarnings = isDm
-    ? await getBlockShareAccessWarnings(ctx, note, warningBlockCountsByMemberId)
+    ? await getBlockShareAccessWarnings(ctx, note, warningBlockCountsByMemberId, memberIdByRowId)
     : []
 
   const content = reconstructBlockTree(permittedBlocks)
@@ -111,6 +129,7 @@ async function getBlockShareAccessWarnings(
   ctx: CampaignQueryCtx,
   note: NoteItem,
   blockCountsByMemberId: Map<Id<'campaignMembers'>, number>,
+  memberIdByRowId: Map<Id<'campaignMembers'>, CampaignMemberId>,
 ): Promise<Array<BlockShareAccessWarning>> {
   const memberIds = [...blockCountsByMemberId.keys()]
   if (memberIds.length === 0) return []
@@ -128,6 +147,17 @@ async function getBlockShareAccessWarnings(
     if (!activePlayerMemberIds.has(row.memberId)) return []
     if (hasPermissionForRequirement(row.notePermissionLevel, PERMISSION_LEVEL.VIEW)) return []
     const blockCount = blockCountsByMemberId.get(row.memberId)
-    return blockCount === undefined ? [] : [{ campaignMemberId: row.memberId, blockCount }]
+    if (blockCount === undefined) return []
+    const campaignMemberId = requireProjectedCampaignMemberId(memberIdByRowId, row.memberId)
+    return [{ campaignMemberId, blockCount }]
   })
+}
+
+function requireProjectedCampaignMemberId(
+  memberIdByRowId: Map<Id<'campaignMembers'>, CampaignMemberId>,
+  memberRowId: Id<'campaignMembers'>,
+) {
+  const memberId = memberIdByRowId.get(memberRowId)
+  if (!memberId) throw new Error('Block share references an unknown campaign member')
+  return memberId
 }

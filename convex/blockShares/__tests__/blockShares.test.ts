@@ -624,7 +624,7 @@ describe('block permission resolution', () => {
         type: 'setBlockMemberPermission',
         noteId,
         blockNoteIds: [blockNoteId],
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
         permissionLevel: 'view',
       },
       direction: 'forward',
@@ -762,7 +762,7 @@ describe('block permission resolution', () => {
     })) as NoteItemWithContent
     expect(dmNote.blockShareAccessWarnings).toEqual([
       {
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
         blockCount: 1,
       },
     ])
@@ -780,7 +780,7 @@ describe('block permission resolution', () => {
     })) as NoteItemWithContent
     expect(dmNoteWithHiddenAllPlayers.blockShareAccessWarnings).toEqual([
       {
-        campaignMemberId: ctx.player.memberId,
+        campaignMemberId: ctx.player.memberDomainId,
         blockCount: 1,
       },
     ])

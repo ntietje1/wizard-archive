@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { CampaignMemberId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { SHARE_STATUS } from '../../../../../shared/block-shares/share-status'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import {
@@ -13,6 +13,8 @@ import type { InlineContent, NoteBlock } from '../../notes/document/model'
 import type { NoteItemWithContent } from '../../notes/item-contract'
 import type { AnyItemWithContent } from '../../workspace/items'
 import { testNoteBlockId } from '../../test/blocknote-id'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 
 describe('resource content source', () => {
   it('reuses the current content item without loading it', () => {
@@ -245,7 +247,7 @@ describe('resource content source', () => {
   })
 
   it('projects note content through player visibility rules', () => {
-    const playerId = 'player-1' as CampaignMemberId
+    const playerId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'content_projection_player')
     const visibleBlock = paragraph('visible', 'Visible clue')
     const hiddenBlock = paragraph('hidden', 'Hidden clue')
     const note = createContentNote({
@@ -280,7 +282,7 @@ describe('resource content source', () => {
   })
 
   it('returns unavailable before rendering non-note content hidden in view-as mode', () => {
-    const playerId = 'player-1' as CampaignMemberId
+    const playerId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'hidden_folder_player')
     const folder = createContentFolder({
       id: sidebarItemId('folder-hidden-view-as'),
       name: 'Hidden folder',

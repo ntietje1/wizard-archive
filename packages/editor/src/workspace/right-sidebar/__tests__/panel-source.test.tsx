@@ -13,10 +13,11 @@ import type { ResourceHistory } from '../../../filesystem/history-types'
 import type { EditHistoryEntry } from '../../../filesystem/history-contract'
 import { SHARE_STATUS } from '../../../../../../shared/block-shares/share-status'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
-import type { CampaignMemberId } from '../../../../../../shared/common/ids'
 import type { BlockMeta, NoteItemWithContent } from '../../../notes/item-contract'
 import type { NoteBlock } from '../../../notes/document/model'
 import type { NoteBlockId } from '../../../resources/domain-id'
+import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
+import { testDomainId } from '../../../test/domain-id'
 
 class IntersectionObserverStub {
   observe = vi.fn()
@@ -142,7 +143,7 @@ describe('right-sidebar panel source', () => {
   })
 
   it('uses view-as note block visibility for current note outline headings', () => {
-    const playerId = testId<'campaignMembers'>('player-1') as CampaignMemberId
+    const playerId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'outline_player')
     const note = createNoteWithHeadings({
       visible: blockMeta(PERMISSION_LEVEL.EDIT, {
         shareStatus: SHARE_STATUS.ALL_SHARED,

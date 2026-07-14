@@ -4,21 +4,26 @@ import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import type { ResourceCommandResult } from '../../filesystem/transaction-contract'
 import type { AnyItem } from '../../workspace/items'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import { testId } from '../../test/id'
 import { createResourceShareRuntimeState } from '../contracts'
 import type {
   EditorShareParticipant,
+  EditorShareParticipantId,
   ResourceShareOperations,
   ResourceShareProjectionData,
   ResourceShareState,
 } from '../contracts'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
+
+const PLAYER_1 = testDomainId(DOMAIN_ID_KIND.campaignMember, 'item_share_player_1')
+const PLAYER_2 = testDomainId(DOMAIN_ID_KIND.campaignMember, 'item_share_player_2')
 
 describe('createResourceShareRuntimeState', () => {
   it('keeps missing selected item rows incomplete', () => {
     const state = createResourceShareState({
       shareableItems: [createNoteItem('note-1')],
       itemShareData: [],
-      participants: [createPlayerMember(testId<'campaignMembers'>('player-1'))],
+      participants: [createPlayerMember(PLAYER_1)],
     })
 
     expect(state.status).toBe('incomplete')
@@ -34,21 +39,18 @@ describe('createResourceShareRuntimeState', () => {
           allPermissionLevel: PERMISSION_LEVEL.VIEW,
           inheritedAllPermissionLevel: PERMISSION_LEVEL.EDIT,
           inheritedFromFolderName: 'Lore',
-          memberInheritedPermissions: { 'player-2': PERMISSION_LEVEL.EDIT },
-          memberInheritedFromFolderNames: { 'player-2': 'Lore' },
-          shares: [{ participantId: 'player-1', permissionLevel: PERMISSION_LEVEL.VIEW }],
+          memberInheritedPermissions: { [PLAYER_2]: PERMISSION_LEVEL.EDIT },
+          memberInheritedFromFolderNames: { [PLAYER_2]: 'Lore' },
+          shares: [{ participantId: PLAYER_1, permissionLevel: PERMISSION_LEVEL.VIEW }],
         }),
         createShareData('note-2', {
           inheritedFromFolderName: 'Lore',
-          memberInheritedPermissions: { 'player-2': PERMISSION_LEVEL.EDIT },
-          memberInheritedFromFolderNames: { 'player-2': 'Lore' },
-          shares: [{ participantId: 'player-1', permissionLevel: PERMISSION_LEVEL.EDIT }],
+          memberInheritedPermissions: { [PLAYER_2]: PERMISSION_LEVEL.EDIT },
+          memberInheritedFromFolderNames: { [PLAYER_2]: 'Lore' },
+          shares: [{ participantId: PLAYER_1, permissionLevel: PERMISSION_LEVEL.EDIT }],
         }),
       ],
-      participants: [
-        createPlayerMember(testId<'campaignMembers'>('player-1')),
-        createPlayerMember(testId<'campaignMembers'>('player-2')),
-      ],
+      participants: [createPlayerMember(PLAYER_1), createPlayerMember(PLAYER_2)],
     })
 
     expect(state).toMatchObject({
@@ -61,14 +63,14 @@ describe('createResourceShareRuntimeState', () => {
       inheritShares: false,
       shareItems: [
         {
-          participant: { id: 'player-1' },
+          participant: { id: PLAYER_1 },
           shareState: 'all',
           permissionLevel: 'mixed',
           hasExplicitShare: true,
           inheritedPermissionLevel: 'mixed',
         },
         {
-          participant: { id: 'player-2' },
+          participant: { id: PLAYER_2 },
           shareState: 'all',
           permissionLevel: 'mixed',
           hasExplicitShare: false,
@@ -121,7 +123,7 @@ describe('createResourceShareRuntimeState', () => {
 
   it('writes an explicit deny when toggling inherited member access off', async () => {
     const item = createNoteItem('note-1')
-    const player = createPlayerMember(testId<'campaignMembers'>('player-1'))
+    const player = createPlayerMember(PLAYER_1)
     const operations = createShareOperations()
     const runShareCommand = vi.fn(
       async (command: () => MaybePromise<ResourceCommandResult>, _errorMessage: string) => {
@@ -159,7 +161,7 @@ describe('createResourceShareRuntimeState', () => {
     const state = createResourceShareState({
       shareableItems: [createNoteItem('note-1')],
       itemShareData: [],
-      participants: [createPlayerMember(testId<'campaignMembers'>('player-1'))],
+      participants: [createPlayerMember(PLAYER_1)],
       runShareCommand: vi.fn(),
     })
 
@@ -222,7 +224,7 @@ function createResourceShareState({
   })
 }
 
-function createShareData<MemberId extends string = string>(
+function createShareData<MemberId extends EditorShareParticipantId = EditorShareParticipantId>(
   itemId: string,
   overrides: Partial<ResourceShareProjectionData<MemberId>> = {},
 ): ResourceShareProjectionData<MemberId> {
@@ -258,7 +260,7 @@ function createFolderItem(itemId: string): AnyItem {
   } as AnyItem
 }
 
-function createPlayerMember<MemberId extends string>(
+function createPlayerMember<MemberId extends EditorShareParticipantId>(
   memberId: MemberId,
 ): EditorShareParticipant & { id: MemberId } {
   return {

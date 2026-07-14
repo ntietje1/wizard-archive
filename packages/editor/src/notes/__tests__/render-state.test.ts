@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vite-plus/test'
 import { SHARE_STATUS } from '../../../../../shared/block-shares/share-status'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import { getNoteRenderState } from '../render-state'
-import type { CampaignMemberId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 import type { NoteBlock } from '../document/model'
 import type { BlockMeta, NoteItemWithContent } from '../../notes/item-contract'
 
@@ -47,7 +49,7 @@ describe('note render state', () => {
   })
 
   it('filters static content for view-as players even when the current user can edit', () => {
-    const playerId = 'player-1' as CampaignMemberId
+    const playerId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'render_state_player')
     const note = createNote({
       allPlayers: blockMeta(PERMISSION_LEVEL.EDIT, {
         shareStatus: SHARE_STATUS.ALL_SHARED,

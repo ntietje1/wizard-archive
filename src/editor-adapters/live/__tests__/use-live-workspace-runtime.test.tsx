@@ -25,10 +25,10 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignActor } from 'shared/campaigns/actor'
-import type { CampaignMemberId as CampaignMemberRowId } from 'shared/common/ids'
 import type { LiveFileSystemReadModel } from '../filesystem/read-model'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 import { testMapPinId } from 'shared/test/map-pin-id'
+import { testCampaignMemberId } from 'shared/test/campaign-member-id'
 
 const liveSourceState = vi.hoisted(() => ({
   contentItem: null as WizardEditorItemWithContent | null,
@@ -1168,8 +1168,7 @@ describe('useLiveWorkspaceRuntime', () => {
   })
 
   it('projects live note content through the selected view-as player visibility', async () => {
-    const playerId = 'member-1' as DmViewAsActor['memberId']
-    const playerRowId = playerId as unknown as CampaignMemberRowId
+    const playerId = testCampaignMemberId('live_workspace_view_as_player')
     const previewItem = createContentNote('note-2', 'Player Preview', {
       content: [createNoteBlock('visible'), createNoteBlock('hidden')],
       blockMeta: {
@@ -1182,7 +1181,7 @@ describe('useLiveWorkspaceRuntime', () => {
           myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
           shareStatus: SHARE_STATUS.ALL_SHARED,
           sharedWith: [],
-          hiddenFrom: [playerRowId],
+          hiddenFrom: [playerId],
         },
       },
       allPermissionLevel: PERMISSION_LEVEL.VIEW,

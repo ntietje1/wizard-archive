@@ -30,6 +30,7 @@ import type {
 import type { CampaignMemberRow, CampaignRow } from '../../shared/campaigns/types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
+import { requireCampaignMemberRowForCampaign } from '../campaigns/functions/campaignIdentity'
 
 type BlockShareCommand = Extract<
   ResourceCommand,
@@ -122,15 +123,21 @@ async function executeProjectedBlockShareCommand(
         status: command.status,
       })
       break
-    case RESOURCE_COMMAND_TYPE.setBlockMemberPermission:
+    case RESOURCE_COMMAND_TYPE.setBlockMemberPermission: {
+      const member = await requireCampaignMemberRowForCampaign(
+        blockShareCtx,
+        blockShareCtx.resourceScope.campaignId,
+        command.campaignMemberId,
+      )
       changedBlockNoteIds = await setBlockMemberPermissionFn(blockShareCtx, {
         noteId: command.noteId,
         blockNoteIds,
-        campaignMemberId: command.campaignMemberId,
+        campaignMemberId: member._id,
         permissionLevel: command.permissionLevel,
         historyStatus: args.historyStatus,
       })
       break
+    }
   }
 
   const events =

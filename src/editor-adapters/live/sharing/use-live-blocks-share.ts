@@ -11,6 +11,7 @@ import type {
   BlocksShareOperations,
   BlocksShareState,
   EditorPermissionLevel,
+  EditorShareParticipantId,
 } from '@wizard-archive/editor/sharing'
 import { createBlocksShareRuntimeState } from '@wizard-archive/editor/sharing'
 import {
@@ -22,8 +23,8 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { canLoadLiveShareData, canRunLiveShareMutation } from './share-capability'
 import { useShareMutationRunner } from './use-share-mutation-runner'
 import { toEditorShareParticipant } from '~/editor-adapters/sharing/share-participants'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
-type CampaignMemberId = CampaignMemberSummary['id']
 type BlockVisibilityLevel = Extract<PermissionLevel, 'none' | 'view'>
 type BlockShareStatus = ShareStatus
 type BlockShareCommandResult = Awaited<ReturnType<BlocksShareOperations['setBlocksShareStatus']>>
@@ -37,7 +38,7 @@ interface SetBlocksShareStatusInput {
 interface SetBlockMemberPermissionInput {
   noteId: BlockShareTargetNote['id']
   noteBlockIds: Array<string>
-  participantId: string
+  participantId: EditorShareParticipantId
   permissionLevel: BlockVisibilityLevel | null
 }
 
@@ -81,7 +82,7 @@ export function useLiveBlocksShare(
         campaignId: workspaceRecordId,
         noteId: args.noteId,
         blockNoteIds: args.noteBlockIds,
-        campaignMemberId: args.participantId as CampaignMemberId,
+        campaignMemberId: args.participantId,
         permissionLevel: args.permissionLevel,
       })
     },
@@ -92,7 +93,7 @@ export function useLiveBlocksShare(
       return normalizeBlockShareCommandResult(
         await setBlockMemberPermission.mutateAsync({
           ...input,
-          participantId: input.participantId as CampaignMemberId,
+          participantId: input.participantId,
         }),
       )
     },
@@ -127,7 +128,7 @@ function toEditorBlockShareProjectionData(
       }
     | null
     | undefined,
-): BlockShareProjectionData<string> | undefined {
+): BlockShareProjectionData<CampaignMemberId> | undefined {
   if (!data) return undefined
 
   return {

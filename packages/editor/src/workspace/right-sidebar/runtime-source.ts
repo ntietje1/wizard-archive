@@ -3,7 +3,7 @@ import type { Heading } from '../../notes/document/model'
 import type { NoteBlockId } from '../../resources/domain-id'
 import * as rightSidebarSource from './source'
 import type { CurrentItemState, WorkspaceNavigation } from '../runtime'
-import type { CampaignMemberId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
 import type { AnyItemWithContent } from '../items'
 import type { ResourceHistory } from '../../filesystem/history-types'
 import type { ItemLinksCapability } from '../../filesystem/search'
@@ -71,7 +71,7 @@ export function createRuntimeRightSidebarSource(
   const panels = createRuntimeRightSidebarPanelSource(runtime)
   const selectedViewAsPlayerId =
     sharing.viewAsParticipant.status === 'available'
-      ? (sharing.viewAsParticipant.selectedParticipantId as CampaignMemberId | undefined)
+      ? sharing.viewAsParticipant.selectedParticipantId
       : undefined
 
   return {

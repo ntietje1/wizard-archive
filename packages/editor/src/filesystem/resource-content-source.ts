@@ -1,4 +1,5 @@
-import type { CampaignMemberId, SidebarItemId } from '../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { CampaignMemberId } from '../resources/domain-id'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { ResourceAvailabilityState } from './domain/availability-state'

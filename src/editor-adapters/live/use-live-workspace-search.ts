@@ -1,6 +1,6 @@
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CampaignMemberId as CampaignMemberRowId, SidebarItemId } from 'shared/common/ids'
+import type { SidebarItemId } from 'shared/common/ids'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import {
   createWizardEditorCatalogItemSearchResult,
@@ -95,7 +95,7 @@ export function useLiveWorkspaceSearch(
     contentProjection: {
       canAccessItem: permissions.canAccessItem,
       getMemberItemPermissionLevel: permissions.getMemberItemPermissionLevel,
-      viewAsParticipantId: (viewAsPlayerId as CampaignMemberRowId | null) ?? undefined,
+      viewAsParticipantId: viewAsPlayerId ?? undefined,
     },
     sourceId,
   })

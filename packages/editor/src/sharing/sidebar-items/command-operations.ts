@@ -1,6 +1,5 @@
 import type { ResourceCommand, ResourceCommandResult } from '../../filesystem/transaction-contract'
 import type { ResourceShareOperations } from '../contracts'
-import type { CampaignMemberId } from '../../resources/domain-id'
 
 type SidebarItemsShareCommand =
   | Extract<ResourceCommand, { type: 'setResourceAudiencePermission' }>
@@ -25,14 +24,14 @@ export function createSidebarItemsShareCommandOperations({
       return await executeCommand({
         type: 'setResourcesMemberPermission',
         ...input,
-        campaignMemberId: participantId as CampaignMemberId,
+        campaignMemberId: participantId,
       })
     },
     clearParticipantPermission: async ({ participantId, ...input }) => {
       return await executeCommand({
         type: 'clearResourcesMemberPermission',
         ...input,
-        campaignMemberId: participantId as CampaignMemberId,
+        campaignMemberId: participantId,
       })
     },
     setFolderInheritShares: async (input) => {

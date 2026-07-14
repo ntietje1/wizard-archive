@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useLiveBlocksShare } from '../use-live-blocks-share'
 import { testId } from '~/test/helpers/test-id'
-import type { Id } from 'convex/_generated/dataModel'
 import type {
   BlockShareTargetBlock,
   BlockShareTargetNote,
@@ -11,6 +10,8 @@ import type {
 } from '@wizard-archive/editor/sharing'
 import type { ReactNode } from 'react'
 import { testOperationId } from '../../../../../shared/test/operation-id'
+import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
+import type { CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())
 const convexActionMock = vi.hoisted(() => vi.fn())
@@ -235,7 +236,7 @@ describe('useLiveBlocksShare', () => {
   it('sets player block visibility through the projection-aware action', async () => {
     const block = createBlock('block-1')
     const note = createNoteWithContent()
-    const playerId = testId<'campaignMembers'>('player-1')
+    const playerId = testCampaignMemberId('live_blocks_player_1')
     useCampaignQueryMock.mockReturnValue({
       data: {
         blocks: [
@@ -276,8 +277,8 @@ describe('useLiveBlocksShare', () => {
     const firstBlock = createBlock('block-1')
     const secondBlock = createBlock('block-2')
     const note = createNoteWithContent()
-    const playerId = testId<'campaignMembers'>('player-1')
-    const editorId = testId<'campaignMembers'>('player-2')
+    const playerId = testCampaignMemberId('live_blocks_mixed_player')
+    const editorId = testCampaignMemberId('live_blocks_mixed_editor')
     useCampaignQueryMock.mockReturnValue({
       data: {
         blocks: [
@@ -326,7 +327,7 @@ describe('useLiveBlocksShare', () => {
   it('exposes players without note access as controllable block-share rows', async () => {
     const block = createBlock('block-1')
     const note = createNoteWithContent()
-    const playerId = testId<'campaignMembers'>('player-1')
+    const playerId = testCampaignMemberId('live_blocks_permission_player')
     useCampaignQueryMock.mockReturnValue({
       data: {
         blocks: [
@@ -369,7 +370,7 @@ describe('useLiveBlocksShare', () => {
   it('does not count explicit hidden member permissions as individual block shares', () => {
     const block = createBlock('block-1')
     const note = createNoteWithContent()
-    const playerId = testId<'campaignMembers'>('player-1')
+    const playerId = testCampaignMemberId('live_blocks_hidden_player')
     useCampaignQueryMock.mockReturnValue({
       data: {
         blocks: [
@@ -405,7 +406,7 @@ describe('useLiveBlocksShare', () => {
   it('toggles individually shared hidden blocks back to not shared', async () => {
     const block = createBlock('block-1')
     const note = createNoteWithContent()
-    const playerId = testId<'campaignMembers'>('player-1')
+    const playerId = testCampaignMemberId('live_blocks_visible_player')
     useCampaignQueryMock.mockReturnValue({
       data: {
         blocks: [
@@ -492,7 +493,7 @@ function createNoteWithContent(id = 'embedded-note-id'): BlockShareTargetNote {
   return { id: testId<'sidebarItems'>(id) }
 }
 
-function createPlayerMember(memberId: Id<'campaignMembers'>) {
+function createPlayerMember(memberId: CampaignMemberId) {
   return {
     id: memberId,
     createdAt: 1,

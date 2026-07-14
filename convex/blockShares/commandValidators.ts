@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { RESOURCE_COMMAND_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
 import { blockNoteIdValidator, blockShareStatusValidator } from '../blocks/schema'
 import { blockVisibilityPermissionLevelValidator } from './schema'
+import { campaignMemberIdValidator } from '../campaigns/schema'
 
 export const setBlocksShareStatusCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.setBlocksShareStatus),
@@ -14,7 +15,7 @@ export const setBlockMemberPermissionCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.setBlockMemberPermission),
   noteId: v.id('sidebarItems'),
   blockNoteIds: v.array(blockNoteIdValidator),
-  campaignMemberId: v.id('campaignMembers'),
+  campaignMemberId: campaignMemberIdValidator,
   permissionLevel: v.nullable(blockVisibilityPermissionLevelValidator),
 })
 

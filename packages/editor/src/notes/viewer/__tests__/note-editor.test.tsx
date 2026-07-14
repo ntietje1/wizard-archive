@@ -20,20 +20,24 @@ import type {
   NoteWikiLinkContentSource,
 } from '../../runtime'
 import type { NoteEditorSetParticipantPermission, NoteEditorSource } from '../note-editor-source'
-import type { EditorShareParticipant } from '../../../sharing/contracts'
+import type { EditorShareParticipant, EditorShareParticipantId } from '../../../sharing/contracts'
 import type { WikiLinkAutocompleteItemSource } from '../../wiki-link/autocomplete-model'
 import { buildWikiLinkAutocompleteModelFromSource } from '../../wiki-link/autocomplete-model'
 import type { WikiLinkAutocompleteModelData } from '../../wiki-link/autocomplete-source'
 import type { NoteScrollStore } from '../use-scroll-persistence'
 import type { NoteValueReferences, NoteValueRuntimeStateSource } from '../../value-runtime-model'
+import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
+import { testDomainId } from '../../../test/domain-id'
 
 const noteContentSpy = vi.hoisted(() => vi.fn())
 const noteFormattingToolbarSpy = vi.hoisted(() => vi.fn())
 const setParticipantPermissionMock = vi.hoisted(() => vi.fn())
 const useScrollPersistenceMock = vi.hoisted(() => vi.fn())
+const PLAYER_1 = testDomainId(DOMAIN_ID_KIND.campaignMember, 'note_editor_player_1')
+const PLAYER_2 = testDomainId(DOMAIN_ID_KIND.campaignMember, 'note_editor_player_2')
 const participants = [
-  createParticipant('player-1', 'Player One', 'player@example.com'),
-  createParticipant('player-2', 'Second Player', 'second@example.com'),
+  createParticipant(PLAYER_1, 'Player One', 'player@example.com'),
+  createParticipant(PLAYER_2, 'Second Player', 'second@example.com'),
 ]
 
 vi.mock('../../content', () => ({
@@ -142,7 +146,7 @@ describe('NoteEditor', () => {
     const note = createNote({
       blockShareAccessWarnings: [
         {
-          campaignMemberId: testId('player-1'),
+          campaignMemberId: PLAYER_1,
           blockCount: 2,
         },
       ],
@@ -166,7 +170,7 @@ describe('NoteEditor', () => {
 
     expect(setParticipantPermissionMock).toHaveBeenCalledWith({
       itemIds: [note.id],
-      participantId: testId('player-1'),
+      participantId: PLAYER_1,
       permissionLevel: PERMISSION_LEVEL.VIEW,
     })
   })
@@ -177,7 +181,7 @@ describe('NoteEditor', () => {
     const note = createNote({
       blockShareAccessWarnings: [
         {
-          campaignMemberId: testId('player-1'),
+          campaignMemberId: PLAYER_1,
           blockCount: 2,
         },
       ],
@@ -192,7 +196,7 @@ describe('NoteEditor', () => {
 
     expect(sourcesetParticipantPermissionMock).toHaveBeenCalledWith({
       itemIds: [note.id],
-      participantId: testId('player-1'),
+      participantId: PLAYER_1,
       permissionLevel: PERMISSION_LEVEL.VIEW,
     })
   })
@@ -202,11 +206,11 @@ describe('NoteEditor', () => {
     const note = createNote({
       blockShareAccessWarnings: [
         {
-          campaignMemberId: testId('player-1'),
+          campaignMemberId: PLAYER_1,
           blockCount: 1,
         },
         {
-          campaignMemberId: testId('player-2'),
+          campaignMemberId: PLAYER_2,
           blockCount: 3,
         },
       ],
@@ -225,12 +229,12 @@ describe('NoteEditor', () => {
     expect(setParticipantPermissionMock).toHaveBeenCalledTimes(2)
     expect(setParticipantPermissionMock).toHaveBeenCalledWith({
       itemIds: [note.id],
-      participantId: testId('player-1'),
+      participantId: PLAYER_1,
       permissionLevel: PERMISSION_LEVEL.VIEW,
     })
     expect(setParticipantPermissionMock).toHaveBeenCalledWith({
       itemIds: [note.id],
-      participantId: testId('player-2'),
+      participantId: PLAYER_2,
       permissionLevel: PERMISSION_LEVEL.VIEW,
     })
   })
@@ -244,11 +248,11 @@ describe('NoteEditor', () => {
     const note = createNote({
       blockShareAccessWarnings: [
         {
-          campaignMemberId: testId('player-1'),
+          campaignMemberId: PLAYER_1,
           blockCount: 1,
         },
         {
-          campaignMemberId: testId('player-2'),
+          campaignMemberId: PLAYER_2,
           blockCount: 3,
         },
       ],
@@ -272,7 +276,7 @@ describe('NoteEditor', () => {
       createNote({
         blockShareAccessWarnings: [
           {
-            campaignMemberId: testId('player-1'),
+            campaignMemberId: PLAYER_1,
             blockCount: 2,
           },
         ],
@@ -330,7 +334,11 @@ function renderNoteEditor(note: NoteItemWithContent, options: CreateNoteEditorSo
   return render(<NoteEditor item={note} source={createNoteEditorSource(options)} />)
 }
 
-function createParticipant(id: string, name: string, email: string): EditorShareParticipant {
+function createParticipant(
+  id: EditorShareParticipantId,
+  name: string,
+  email: string,
+): EditorShareParticipant {
   return {
     id,
     displayName: name,

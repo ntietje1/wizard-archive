@@ -4,7 +4,7 @@ import {
 } from '../../../../shared/permissions/block-visibility'
 import { hasPermissionForRequirement } from '../../../../shared/permissions/requirements'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
-import type { CampaignMemberId } from '../../../../shared/common/ids'
+import type { CampaignMemberId } from '../resources/domain-id'
 import type { NoteBlock } from './document/model'
 import type { BlockMeta, NoteItemWithContent } from '../notes/item-contract'
 import type { PermissionLevel } from '../../../../shared/permissions/types'

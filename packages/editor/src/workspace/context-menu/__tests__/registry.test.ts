@@ -31,6 +31,11 @@ import {
   createGameMap,
   createNote,
 } from '../../../test/sidebar-item-factory'
+import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
+import { testDomainId } from '../../../test/domain-id'
+
+const PLAYER_ID = testDomainId(DOMAIN_ID_KIND.campaignMember, 'context_menu_player')
+const PLAYER_MENU_ITEM_ID = `view-as-player-${PLAYER_ID}`
 
 function createActions(): WorkspaceContextMenuServices['actions'] {
   return {
@@ -130,7 +135,7 @@ function createBaseViewAsPlayerService(): AvailableViewAsPlayerService {
     setViewAsPlayerId: vi.fn(),
     playerMembers: [
       {
-        id: 'player-1',
+        id: PLAYER_ID,
         displayName: 'Mina',
         username: 'mina',
         imageUrl: 'https://example.com/mina.png',
@@ -438,7 +443,7 @@ describe('buildMenu', () => {
 
     const shareItem = sidebarMenu.flatItems.find((item) => item.id === 'share-items')
     const viewAsItem = topbarMenu.flatItems.find((item) => item.id === 'view-as-player')
-    const playerItem = viewAsItem?.children?.find((item) => item.id === 'view-as-player-player-1')
+    const playerItem = viewAsItem?.children?.find((item) => item.id === PLAYER_MENU_ITEM_ID)
 
     expect(shareItem?.submenuContent).toBe('share-panel')
     expect(renderPanel).toHaveBeenCalledWith([note])
@@ -459,7 +464,7 @@ describe('buildMenu', () => {
       expect.objectContaining({ item: note }),
       PERMISSION_LEVEL.VIEW,
     )
-    expect(setViewAsPlayerId).toHaveBeenCalledExactlyOnceWith('player-1')
+    expect(setViewAsPlayerId).toHaveBeenCalledExactlyOnceWith(PLAYER_ID)
   })
 
   it('DM sees sidebar item and filesystem actions on a note in sidebar', () => {
@@ -888,9 +893,7 @@ describe('buildMenu', () => {
     })
 
     const viewAsItem = topbarMenu.flatItems.find((menuItem) => menuItem.id === 'view-as-player')
-    const playerItem = viewAsItem?.children?.find(
-      (menuItem) => menuItem.id === 'view-as-player-player-1',
-    )
+    const playerItem = viewAsItem?.children?.find((menuItem) => menuItem.id === PLAYER_MENU_ITEM_ID)
     const topbarItemIds = topbarMenu.flatItems.map((menuItem) => menuItem.id)
 
     expect(viewAsItem).toMatchObject({
@@ -920,7 +923,7 @@ describe('buildMenu', () => {
         selectedItems: [note],
       }),
       services: createServices({
-        viewAsPlayer: { viewAsPlayerId: 'player-1', setViewAsPlayerId },
+        viewAsPlayer: { viewAsPlayerId: PLAYER_ID, setViewAsPlayerId },
       }),
       contributors: workspaceContextMenuContributors,
       commands: workspaceContextMenuCommands,
@@ -928,9 +931,7 @@ describe('buildMenu', () => {
     })
 
     const viewAsItem = menu.flatItems.find((menuItem) => menuItem.id === 'view-as-player')
-    const playerItem = viewAsItem?.children?.find(
-      (menuItem) => menuItem.id === 'view-as-player-player-1',
-    )
+    const playerItem = viewAsItem?.children?.find((menuItem) => menuItem.id === PLAYER_MENU_ITEM_ID)
 
     expect(viewAsItem).toMatchObject({
       label: 'View as Player...',

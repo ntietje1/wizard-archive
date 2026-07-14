@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../../shared/permissions/types'
 import { createFolder, createNote } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
+import { testDomainId } from '../../../test/domain-id'
+import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
 import type { AnyItem } from '../../../workspace/items'
 import {
   actorCanMutateResource,
@@ -12,7 +14,7 @@ import {
 import type { EditorWorkspaceActor } from '../permission-resolution'
 import { createPermissionLookup } from './permission-test-utils'
 
-const memberId = testId<'campaignMembers'>('permission_resolution_member')
+const memberId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'permission_resolution_member')
 const ownerActor: EditorWorkspaceActor = { kind: 'owner' }
 const participantActor: EditorWorkspaceActor = { kind: 'participant' }
 const ownerViewAsActor: EditorWorkspaceActor = {

@@ -1,4 +1,4 @@
-import type { CampaignMemberId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
 import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import { RESOURCE_COMMAND_TYPE, RESOURCE_EVENT_TYPE } from '../transaction-contract'
@@ -11,7 +11,6 @@ export const commandFixtureItemIds = {
   source: 'fixture_source' as SidebarItemId,
   destination: 'fixture_destination' as SidebarItemId,
   folder: 'fixture_folder' as SidebarItemId,
-  member: 'fixture_member' as CampaignMemberId,
   memberDomain: testDomainId(DOMAIN_ID_KIND.campaignMember, 'fixture_member'),
   note: 'fixture_note' as SidebarItemId,
 } as const
@@ -85,7 +84,7 @@ export const fileSystemCommandFixtures = {
     type: RESOURCE_COMMAND_TYPE.setBlockMemberPermission,
     noteId: commandFixtureItemIds.note,
     blockNoteIds: ['fixture_block'],
-    campaignMemberId: commandFixtureItemIds.member,
+    campaignMemberId: commandFixtureItemIds.memberDomain,
     permissionLevel: 'view',
   },
   [RESOURCE_COMMAND_TYPE.toggleBookmarks]: {

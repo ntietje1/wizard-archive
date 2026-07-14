@@ -11,7 +11,8 @@ import {
 import { WorkspaceRuntimeHost } from '../runtime-host'
 import type { WorkspaceRuntime } from '../runtime'
 import { useWorkspaceRuntime } from '../runtime-context'
-import type { CampaignMemberId } from '../../../../../shared/common/ids'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 
 const shellSpy = vi.hoisted(() => vi.fn())
 const searchDialogSpy = vi.hoisted(() => vi.fn())
@@ -257,15 +258,16 @@ describe('WorkspaceRuntimeHost', () => {
 
   it('renders view-as state from the workspace runtime capability', () => {
     const setSelectedParticipantId = vi.fn()
+    const participantId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'runtime_host_member')
     const runtime = createRuntime({
       viewAsParticipant: {
         status: 'available',
         isPending: false,
-        selectedParticipantId: 'member-a' as CampaignMemberId,
+        selectedParticipantId: participantId,
         setSelectedParticipantId,
         participants: [
           {
-            id: 'member-a' as CampaignMemberId,
+            id: participantId,
             displayName: 'Mina',
             username: 'mina',
             imageUrl: null,

@@ -37,10 +37,7 @@ import type { MaybePromise } from '../../../shared/common/async'
 import type { NoteProjectionResult } from '../../../shared/yjs-sync/note-projection'
 import type { Awareness } from 'y-protocols/awareness'
 import type { Doc, Map as YMap } from 'yjs'
-import type {
-  SidebarItemId as InternalResourceItemId,
-  WorkspaceMemberId as InternalParticipantId,
-} from '../../../shared/common/ids'
+import type { SidebarItemId as InternalResourceItemId } from '../../../shared/common/ids'
 import type { AssetId, HistoryEntryId, MapPinId as InternalMapPinId } from './resources/domain-id'
 import type { BlockSearchResult } from '../../../shared/search/types'
 import { isPersistedResourceId, parseResourceSlug } from './workspace/resource-contract'
@@ -2169,9 +2166,7 @@ export function useWizardEditorHydratedCatalogResourceContentSource<SourceId ext
       ? {
           canAccessItem: input.contentProjection.canAccessItem,
           getMemberItemPermissionLevel: input.contentProjection.getMemberItemPermissionLevel,
-          viewAsPlayerId: input.contentProjection.viewAsParticipantId as
-            | InternalParticipantId
-            | undefined,
+          viewAsPlayerId: input.contentProjection.viewAsParticipantId,
         }
       : undefined,
     sourceId: input.sourceId,

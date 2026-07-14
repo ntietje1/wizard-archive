@@ -2,8 +2,14 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { ViewAsPlayerButton } from '../view-as-button'
-import type { ViewAsParticipantCapability } from '../../../sharing/contracts'
-import { testId } from '../../../test/id'
+import type {
+  EditorShareParticipantId,
+  ViewAsParticipantCapability,
+} from '../../../sharing/contracts'
+import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
+import { testDomainId } from '../../../test/domain-id'
+
+const PLAYER_ID = testDomainId(DOMAIN_ID_KIND.campaignMember, 'topbar_player')
 
 type AvailableViewAsParticipantCapability = Extract<
   ViewAsParticipantCapability,
@@ -11,7 +17,7 @@ type AvailableViewAsParticipantCapability = Extract<
 >
 
 const viewAsState = vi.hoisted(() => ({
-  viewAsParticipantId: undefined as string | undefined,
+  viewAsParticipantId: undefined as EditorShareParticipantId | undefined,
   setSelectedParticipantId: vi.fn(),
 }))
 
@@ -38,14 +44,12 @@ describe('ViewAsPlayerButton', () => {
     await user.click(screen.getByRole('button', { name: 'View as player' }))
     await user.click(await screen.findByRole('menuitemcheckbox', { name: /mina/i }))
 
-    expect(viewAsState.setSelectedParticipantId).toHaveBeenCalledExactlyOnceWith(
-      testId<'campaignMembers'>('player-1'),
-    )
+    expect(viewAsState.setSelectedParticipantId).toHaveBeenCalledExactlyOnceWith(PLAYER_ID)
   })
 
   it('clears view-as mode when active', async () => {
     const user = userEvent.setup()
-    viewAsState.viewAsParticipantId = testId<'campaignMembers'>('player-1')
+    viewAsState.viewAsParticipantId = PLAYER_ID
     render(<ViewAsPlayerButton viewAsPlayer={createViewAsParticipantCapability()} />)
 
     await user.click(screen.getByRole('button', { name: 'View as player' }))
@@ -56,7 +60,7 @@ describe('ViewAsPlayerButton', () => {
 
   it('opens the player menu while view-as mode is active', async () => {
     const user = userEvent.setup()
-    viewAsState.viewAsParticipantId = testId<'campaignMembers'>('player-1')
+    viewAsState.viewAsParticipantId = PLAYER_ID
     render(<ViewAsPlayerButton viewAsPlayer={createViewAsParticipantCapability()} />)
 
     await user.click(screen.getByRole('button', { name: 'View as player' }))
@@ -87,7 +91,7 @@ function createViewAsParticipantCapability(
     setSelectedParticipantId: viewAsState.setSelectedParticipantId,
     participants: [
       {
-        id: testId<'campaignMembers'>('player-1'),
+        id: PLAYER_ID,
         displayName: 'Mina',
         username: 'mina',
         imageUrl: 'https://example.com/mina.png',

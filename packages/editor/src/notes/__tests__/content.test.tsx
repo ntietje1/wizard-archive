@@ -34,7 +34,8 @@ import type {
   NoteSessionPorts,
   NoteValueSessionPorts,
 } from '../workspace-session-source'
-import type { CampaignMemberId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import type { CampaignMemberId } from '../../resources/domain-id'
 import type * as ImportedTextModule from '../imported-text'
 
 const { activeItemsState, blockNoteCreateMock, viewAsState, noteSessionState, noteViewSpy } =
@@ -396,7 +397,7 @@ describe('NoteContent', () => {
   })
 
   it('filters live note blocks using player visibility in DM view-as mode', async () => {
-    const playerId = testId<'campaignMembers'>('player-1')
+    const playerId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'content_player_1')
     const allSharedBlock = createBlock('all-shared-block')
     const playerSharedBlock = createBlock('player-shared-block')
     const otherPlayerBlock = createBlock('other-player-block')
@@ -421,7 +422,7 @@ describe('NoteContent', () => {
         [otherPlayerBlock.id]: {
           myPermissionLevel: PERMISSION_LEVEL.NONE,
           shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
-          sharedWith: [testId<'campaignMembers'>('player-2')],
+          sharedWith: [testDomainId(DOMAIN_ID_KIND.campaignMember, 'content_player_2')],
         },
       },
     })
@@ -489,7 +490,7 @@ describe('NoteContent', () => {
   })
 
   it('keeps DM view-as rendering static and in viewer link mode', async () => {
-    const playerId = testId<'campaignMembers'>('player-1')
+    const playerId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'static_content_player')
     const visibleBlock = createBlock('visible-block')
     viewAsState.viewAsPlayerId = playerId
 

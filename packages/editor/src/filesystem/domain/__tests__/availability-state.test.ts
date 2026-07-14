@@ -12,8 +12,10 @@ import {
 import type { EditorWorkspaceActor } from '../permission-resolution'
 import { createNote } from '../../../test/sidebar-item-factory'
 import { testId } from '../../../test/id'
+import { testDomainId } from '../../../test/domain-id'
+import { DOMAIN_ID_KIND } from '../../../resources/domain-id'
 
-const memberId = testId<'campaignMembers'>('member_test')
+const memberId = testDomainId(DOMAIN_ID_KIND.campaignMember, 'member_test')
 
 const ownerActor: EditorWorkspaceActor = { kind: 'owner' }
 const ownerViewAsActor: EditorWorkspaceActor = { kind: 'owner_view_as', participantId: memberId }

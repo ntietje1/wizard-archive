@@ -4,6 +4,7 @@ import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persisten
 import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { blockShareStatusValidator, editorBlockInputValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'
+import { campaignMemberIdValidator } from '../campaigns/schema'
 
 const noteValidatorFields = {
   ...sidebarItemValidatorFields,
@@ -15,12 +16,12 @@ export const noteValidator = v.object(noteValidatorFields)
 const blockMetaValidator = v.object({
   myPermissionLevel: permissionLevelValidator,
   shareStatus: blockShareStatusValidator,
-  sharedWith: v.array(v.id('campaignMembers')),
-  hiddenFrom: v.optional(v.array(v.id('campaignMembers'))),
+  sharedWith: v.array(campaignMemberIdValidator),
+  hiddenFrom: v.optional(v.array(campaignMemberIdValidator)),
 })
 
 const blockShareAccessWarningValidator = v.object({
-  campaignMemberId: v.id('campaignMembers'),
+  campaignMemberId: campaignMemberIdValidator,
   blockCount: v.number(),
 })
 

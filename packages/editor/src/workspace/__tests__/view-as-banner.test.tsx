@@ -2,7 +2,15 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { ViewAsBanner } from '../view-as-banner'
-import type { EditorShareParticipant, ViewAsParticipantCapability } from '../../sharing/contracts'
+import type {
+  EditorShareParticipant,
+  EditorShareParticipantId,
+  ViewAsParticipantCapability,
+} from '../../sharing/contracts'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
+
+const MEMBER_ID = testDomainId(DOMAIN_ID_KIND.campaignMember, 'view_as_banner_member')
 
 describe('ViewAsBanner', () => {
   it('renders the selected player display name and exits through the runtime capability', async () => {
@@ -12,7 +20,7 @@ describe('ViewAsBanner', () => {
     render(
       <ViewAsBanner
         viewAsPlayer={createViewAsParticipantCapability({
-          selectedParticipantId: 'member-a',
+          selectedParticipantId: MEMBER_ID,
           setSelectedParticipantId,
         })}
       />,
@@ -30,8 +38,8 @@ describe('ViewAsBanner', () => {
     render(
       <ViewAsBanner
         viewAsPlayer={createViewAsParticipantCapability({
-          selectedParticipantId: 'member-a',
-          participant: { id: 'member-a', displayName: '', username: 'mina', imageUrl: null },
+          selectedParticipantId: MEMBER_ID,
+          participant: { id: MEMBER_ID, displayName: '', username: 'mina', imageUrl: null },
         })}
       />,
     )
@@ -43,10 +51,10 @@ describe('ViewAsBanner', () => {
 function createViewAsParticipantCapability({
   selectedParticipantId,
   setSelectedParticipantId,
-  participant = { id: 'member-a', displayName: 'Mina', username: 'mina', imageUrl: null },
+  participant = { id: MEMBER_ID, displayName: 'Mina', username: 'mina', imageUrl: null },
 }: {
-  selectedParticipantId: string | undefined
-  setSelectedParticipantId?: (playerId: string | undefined) => void
+  selectedParticipantId: EditorShareParticipantId | undefined
+  setSelectedParticipantId?: (playerId: EditorShareParticipantId | undefined) => void
   participant?: EditorShareParticipant
 }): ViewAsParticipantCapability {
   return {

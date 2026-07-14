@@ -9,11 +9,7 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/t
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SHARE_STATUS } from 'shared/block-shares/share-status'
 import { assertUsername } from 'shared/users/validation'
-import type {
-  CampaignMemberId as CampaignMemberRowId,
-  SidebarItemId,
-  UserProfileId,
-} from 'shared/common/ids'
+import type { SidebarItemId, UserProfileId } from 'shared/common/ids'
 import type { CampaignMemberSummary } from 'shared/campaigns/types'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { CampaignMemberId, NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
@@ -55,8 +51,6 @@ const PUBLIC_DEMO_PLAYER_MEMBER_ID = assertDomainId(
   DOMAIN_ID_KIND.campaignMember,
   '01980c1a-5e70-7000-8000-000000000105',
 )
-const PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID =
-  PUBLIC_DEMO_PLAYER_MEMBER_ID as unknown as CampaignMemberRowId
 const PUBLIC_DEMO_PLAYER_USER_ID = 'demo-user-mira' as UserProfileId
 const PUBLIC_DEMO_PLAYER_MEMBERS: Array<CampaignMemberSummary> = [
   {
@@ -523,7 +517,7 @@ function createPublicDemoPrivatePrepSecretVisibilityRule(secretVisibleToPlayer: 
   return {
     textIncludes: PUBLIC_DEMO_PRIVATE_PREP_SECRET_TEXT,
     shareStatus: SHARE_STATUS.NOT_SHARED,
-    hiddenFrom: [PUBLIC_DEMO_PLAYER_MEMBER_ROW_ID],
+    hiddenFrom: [PUBLIC_DEMO_PLAYER_MEMBER_ID],
   }
 }
 
