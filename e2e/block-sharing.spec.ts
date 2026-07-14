@@ -9,7 +9,6 @@ import {
   approvePlayerRequest,
   blockShareAllPlayersRow,
   blockSharePlayerRow,
-  getCampaignRouteParts,
   getBlockTextLocator,
   getVisibleBlockDragHandle,
   getVisibleBlockShareButton,
@@ -26,7 +25,8 @@ import {
 import {
   createE2EConvexClient,
   ensureAcceptedPlayerMember,
-  getCampaignIdFromRoute,
+  getCampaignIdFromUrl,
+  getCampaignInvitationRoute,
 } from './helpers/convex-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import { signInByApi } from './helpers/auth-helpers'
@@ -77,8 +77,8 @@ test.describe('block sharing', () => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
     await createCampaign(page, campaignName)
     await navigateToCampaign(page, campaignName)
-    ;({ dmUsername, campaignSlug } = getCampaignRouteParts(page))
-    campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+    campaignId = getCampaignIdFromUrl(page.url())
+    ;({ dmUsername, campaignSlug } = await getCampaignInvitationRoute(campaignId))
 
     await createNote(page, noteName)
     const resourceId = new URL(page.url()).searchParams.get('item')

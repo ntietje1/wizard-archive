@@ -58,15 +58,6 @@ export async function openSettingsPeopleTab(page: Page) {
   return dialog
 }
 
-export function getCampaignRouteParts(page: Page) {
-  const match = page.url().match(/\/campaigns\/([^/]+)\/([^/?]+)/)
-  if (!match) {
-    throw new Error(`Unexpected campaign URL format: ${page.url()}`)
-  }
-  const [, dmUsername, campaignSlug] = match
-  return { dmUsername, campaignSlug }
-}
-
 export async function requestToJoinCampaignAsPlayer({
   browser,
   dmUsername,

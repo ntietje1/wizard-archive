@@ -80,8 +80,13 @@ function slugForCampaignName(name: string) {
 export async function navigateToCampaign(page: Page, campaignName: string) {
   await waitForCampaignsDashboard(page)
   await page.getByText(campaignName, { exact: true }).click()
-  await page.waitForURL(/\/campaigns\/[^/]+\/[^/]+\/editor/)
-  await expect(page.getByRole('navigation', { name: 'Sidebar' })).toBeVisible({ timeout: 30000 })
+  await page.waitForURL(/\/campaigns\/[^/]+\/editor/)
+  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+  const campaignNotFound = page.getByRole('heading', { name: 'Campaign Not Found' })
+  await expect(sidebar.or(campaignNotFound)).toBeVisible({ timeout: 30000 })
+  if (await campaignNotFound.isVisible()) {
+    throw new Error(`Campaign card navigated to an unavailable campaign: ${page.url()}`)
+  }
 }
 
 export async function deleteCampaign(page: Page, name: string) {

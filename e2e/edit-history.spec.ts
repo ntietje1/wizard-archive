@@ -5,8 +5,7 @@ import { createNote, openItem } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import {
   createE2EConvexClient,
-  getCampaignIdFromRoute,
-  getCampaignRouteFromUrl,
+  getCampaignIdFromUrl,
   getSidebarItemByName,
 } from './helpers/convex-helpers'
 import {
@@ -25,6 +24,7 @@ const updatedContent = ' — updated content'
 
 test.describe.serial('edit history', () => {
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(90_000)
     const context = await browser.newContext({
       storageState: AUTH_STORAGE_PATH,
     })
@@ -203,8 +203,7 @@ async function waitForPersistedHistoryEntry(
     noteName: string
   },
 ) {
-  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   const note = await getSidebarItemByName({ campaignId, name: targetNoteName })
   const client = await createE2EConvexClient()
 

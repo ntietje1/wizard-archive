@@ -39,8 +39,7 @@ import {
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import {
   createE2EConvexClient,
-  getCampaignIdFromRoute,
-  getCampaignRouteFromUrl,
+  getCampaignIdFromUrl,
   getSidebarItemByName,
 } from './helpers/convex-helpers'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
@@ -162,8 +161,7 @@ test.describe.serial('canvas embedded preview behavior', () => {
     await page.goto('/campaigns', { waitUntil: 'commit' })
     await navigateToCampaign(page, campaignName)
     await createNote(page, noteName)
-    const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
-    const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+    const campaignId = getCampaignIdFromUrl(page.url())
     const note = await getSidebarItemByName({ campaignId, name: noteName })
     const client = await createE2EConvexClient()
     await client.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -406,8 +404,7 @@ async function createEmbeddedCanvasFixture(page: Page, testInfo: TestInfo) {
 }
 
 async function persistCurrentCanvasSnapshot(page: Page, canvasId: ResourceId) {
-  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   const snapshot = await getCanvasRuntimeSnapshot(page)
   const doc = createCanvasDocumentDoc({ nodes: snapshot.nodes, edges: snapshot.edges })
   try {
@@ -712,8 +709,7 @@ async function dragSidebarItemToCanvasNode(page: Page, itemName: string, target:
 async function expectFileInAssetsFolder(page: Page) {
   await expect(sidebarItem(page, 'Assets')).toBeVisible({ timeout: 15_000 })
   await expect(sidebarItem(page, imageFileName)).toBeVisible({ timeout: 15_000 })
-  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   const assets = await getSidebarItemByName({ campaignId, name: 'Assets' })
   const file = await getSidebarItemByName({ campaignId, name: imageFileName })
   expect(file.parentId).toBe(assets.id)

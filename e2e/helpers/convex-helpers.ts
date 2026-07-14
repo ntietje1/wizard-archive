@@ -5,37 +5,25 @@ import { AUTH_STORAGE_PATH } from './constants'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import type { APIRequestContext, APIResponse } from '@playwright/test'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 const E2E_APP_URL = process.env.E2E_APP_URL ?? 'http://localhost:3000'
 const CONVEX_OPERATION_ATTEMPTS = 3
 
-export async function getCampaignIdFromRoute({
-  dmUsername,
-  slug,
-}: {
-  dmUsername: string
-  slug: string
-}): Promise<CampaignId> {
-  const client = await createE2EConvexClient()
-  const campaign = await client.query(api.campaigns.queries.getCampaignBySlug, {
-    dmUsername,
-    slug,
-  })
-  if (!campaign) {
-    throw new Error(`Campaign not found for dmUsername=${dmUsername}, slug=${slug}`)
-  }
-  return campaign.id
-}
-
-export function getCampaignRouteFromUrl(url: string): {
-  dmUsername: string
-  campaignSlug: string
-} {
-  const [, campaignsSegment, dmUsername, campaignSlug] = new URL(url).pathname.split('/')
-  if (campaignsSegment !== 'campaigns' || !dmUsername || !campaignSlug) {
+export function getCampaignIdFromUrl(url: string): CampaignId {
+  const [, campaignsSegment, campaignId, editorSegment] = new URL(url).pathname.split('/')
+  if (campaignsSegment !== 'campaigns' || !campaignId || editorSegment !== 'editor') {
     throw new Error(`Expected campaign route, got ${url}`)
   }
-  return { dmUsername, campaignSlug }
+  return assertDomainId(DOMAIN_ID_KIND.campaign, campaignId)
+}
+
+export async function getCampaignInvitationRoute(campaignId: CampaignId) {
+  const client = await createE2EConvexClient()
+  const campaign = await client.query(api.campaigns.queries.getCampaignById, { campaignId })
+  const dmUsername = campaign.dmUserProfile.username
+  if (!dmUsername) throw new Error(`Campaign ${campaignId} has no DM username`)
+  return { dmUsername, campaignSlug: campaign.slug }
 }
 
 export async function getSidebarItemByName({

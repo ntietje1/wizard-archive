@@ -5,8 +5,7 @@ import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/ca
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import {
   createE2EConvexClient,
-  getCampaignIdFromRoute,
-  getCampaignRouteFromUrl,
+  getCampaignIdFromUrl,
   getSidebarItemByName,
 } from './helpers/convex-helpers'
 import {
@@ -350,8 +349,7 @@ async function persistNoteBlocksByName(
   noteName: string,
   blocks: Array<PartialNoteBlock>,
 ) {
-  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   const note = await getSidebarItemByName({ campaignId, name: noteName })
   const client = await createE2EConvexClient()
   await client.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -377,8 +375,7 @@ async function waitForPersistedValueState(
     slug: string
   },
 ) {
-  const { dmUsername, campaignSlug } = getCampaignRouteFromUrl(page.url())
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   const note = await getSidebarItemByName({ campaignId, name: noteName })
   const client = await createE2EConvexClient()
 

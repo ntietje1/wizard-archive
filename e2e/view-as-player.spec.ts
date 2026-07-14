@@ -7,7 +7,6 @@ import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/ca
 import { createFolder, createNote, openItem } from './helpers/sidebar-helpers'
 import {
   approvePlayerRequest,
-  getCampaignRouteParts,
   requestToJoinCampaignAsPlayer,
   setResourceAudiencePermission,
 } from './helpers/permission-helpers'
@@ -23,7 +22,11 @@ import {
   seedCanvasTextNodesViaRuntime,
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
-import { ensureAcceptedPlayerMember, getCampaignIdFromRoute } from './helpers/convex-helpers'
+import {
+  ensureAcceptedPlayerMember,
+  getCampaignIdFromUrl,
+  getCampaignInvitationRoute,
+} from './helpers/convex-helpers'
 import {
   createMap,
   mapImage,
@@ -92,8 +95,8 @@ test.describe('view-as-player', () => {
     await createMap(page, actorMap)
     await uploadMapImage(page, testImagePath, actorMap)
     await pinSidebarItemToOpenMap(page, mapPinTarget)
-    const { dmUsername, campaignSlug } = getCampaignRouteParts(page)
-    const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+    const campaignId = getCampaignIdFromUrl(page.url())
+    const { dmUsername, campaignSlug } = await getCampaignInvitationRoute(campaignId)
 
     await page.close()
     await context.close()

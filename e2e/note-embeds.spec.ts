@@ -15,8 +15,7 @@ import {
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import {
   createE2EConvexClient,
-  getCampaignIdFromRoute,
-  getCampaignRouteFromUrl,
+  getCampaignIdFromUrl,
   getSidebarItemByName,
 } from './helpers/convex-helpers'
 import { makeYjsUpdateWithBlocks } from '../convex/_test/yjs.helper'
@@ -636,8 +635,7 @@ async function persistNoteBlocksByName(
   noteName: string,
   blocks: Array<PartialNoteBlock>,
 ) {
-  const { dmUsername, campaignSlug } = getCampaignRoute(page)
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   const sourceNoteId = (await getSidebarItemByName({ campaignId, name: noteName })).id
   const client = await createE2EConvexClient()
   await client.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -649,13 +647,6 @@ async function persistNoteBlocksByName(
     campaignId,
     documentId: sourceNoteId,
   })
-}
-
-function getCampaignRoute(page: Page): {
-  dmUsername: string
-  campaignSlug: string
-} {
-  return getCampaignRouteFromUrl(page.url())
 }
 
 async function insertEmptyEmbedBlock(page: Page) {
@@ -1232,16 +1223,14 @@ function paragraphBlock(id: string, text: string): PartialNoteBlock {
 async function expectFileInAssetsFolder(page: Page) {
   await expect(sidebarItem(page, 'Assets')).toBeVisible({ timeout: 15_000 })
   await expect(sidebarItem(page, imageFileName)).toBeVisible({ timeout: 15_000 })
-  const { dmUsername, campaignSlug } = getCampaignRoute(page)
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   const assets = await getSidebarItemByName({ campaignId, name: 'Assets' })
   const file = await getSidebarItemByName({ campaignId, name: imageFileName })
   expect(file.parentId).toBe(assets.id)
 }
 
 async function getFirstPersistedEmbedTargetKind(page: Page, itemName: string) {
-  const { dmUsername, campaignSlug } = getCampaignRoute(page)
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   const noteId = (await getSidebarItemByName({ campaignId, name: itemName })).id
   const client = await createE2EConvexClient()
   const note = await client.query(api.notes.queries.getNote, {
@@ -1253,8 +1242,7 @@ async function getFirstPersistedEmbedTargetKind(page: Page, itemName: string) {
 }
 
 async function getSourceNoteId(page: Page) {
-  const { dmUsername, campaignSlug } = getCampaignRoute(page)
-  const campaignId = await getCampaignIdFromRoute({ dmUsername, slug: campaignSlug })
+  const campaignId = getCampaignIdFromUrl(page.url())
   return (await getSidebarItemByName({ campaignId, name: sourceNoteName() })).id
 }
 
