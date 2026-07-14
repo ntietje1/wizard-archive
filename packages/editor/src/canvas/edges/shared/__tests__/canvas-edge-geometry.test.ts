@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import {
   buildCanvasEdgeGeometryFromResolvedEndpoints,
   buildPolylinePath,
@@ -24,8 +25,8 @@ describe('buildCanvasEdgeGeometryFromResolvedEndpoints', () => {
     const startEndpoints = captureResolvedEndpoints(
       {
         id: 'edge-start',
-        source: 'stroke-1',
-        target: 'target-1',
+        source: testCanvasNodeId('stroke-1'),
+        target: testCanvasNodeId('target-1'),
         sourceHandle: 'start',
         targetHandle: 'left',
       } as Edge,
@@ -34,8 +35,8 @@ describe('buildCanvasEdgeGeometryFromResolvedEndpoints', () => {
     const endEndpoints = captureResolvedEndpoints(
       {
         id: 'edge-end',
-        source: 'stroke-1',
-        target: 'target-1',
+        source: testCanvasNodeId('stroke-1'),
+        target: testCanvasNodeId('target-1'),
         sourceHandle: 'end',
         targetHandle: 'left',
       } as Edge,
@@ -70,8 +71,8 @@ describe('buildCanvasEdgeGeometryFromResolvedEndpoints', () => {
       captureResolvedEndpoints(
         {
           id: 'edge-start',
-          source: 'stroke-1',
-          target: 'target-1',
+          source: testCanvasNodeId('stroke-1'),
+          target: testCanvasNodeId('target-1'),
           sourceHandle: 'start',
           targetHandle: 'left',
         } as Edge,
@@ -94,8 +95,8 @@ describe('buildCanvasEdgeGeometryFromResolvedEndpoints', () => {
       captureResolvedEndpoints(
         {
           id: 'edge-end',
-          source: 'stroke-1',
-          target: 'target-1',
+          source: testCanvasNodeId('stroke-1'),
+          target: testCanvasNodeId('target-1'),
           sourceHandle: 'end',
           targetHandle: 'left',
         } as Edge,
@@ -212,7 +213,7 @@ function captureResolvedEndpoints(edge: Edge, nodesById: ReadonlyMap<string, Nod
 
 function createStrokeEdgeFixture(points: unknown) {
   const strokeNode = {
-    id: 'stroke-1',
+    id: testCanvasNodeId('stroke-1'),
     type: 'stroke',
     position: { x: 10, y: 20 },
     width: 100,
@@ -225,7 +226,7 @@ function createStrokeEdgeFixture(points: unknown) {
     },
   } as unknown as Node
   const targetNode: Node = {
-    id: 'target-1',
+    id: testCanvasNodeId('target-1'),
     type: 'text',
     position: { x: 200, y: 20 },
     width: 80,

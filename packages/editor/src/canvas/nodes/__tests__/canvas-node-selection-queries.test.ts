@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import type { CanvasDocumentNode as Node } from '../../document-contract'
 import {
   getCanvasNodesMatchingLasso,
@@ -9,7 +10,7 @@ describe('canvas node selection queries', () => {
   it('uses default rectangular selection behavior for rectangle-shaped nodes', () => {
     const nodes: Array<Node> = [
       {
-        id: 'text-1',
+        id: testCanvasNodeId('text-1'),
         type: 'text',
         position: { x: 10, y: 10 },
         width: 80,
@@ -20,7 +21,7 @@ describe('canvas node selection queries', () => {
 
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 100, height: 100 }, { zoom: 1 }),
-    ).toEqual(new Set(['text-1']))
+    ).toEqual(new Set([testCanvasNodeId('text-1')]))
     expect(
       getCanvasNodesMatchingLasso(
         nodes,
@@ -32,13 +33,13 @@ describe('canvas node selection queries', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(new Set(['text-1']))
+    ).toEqual(new Set([testCanvasNodeId('text-1')]))
   })
 
   it('selects text nodes when the drag rectangle only partially overlaps them', () => {
     const nodes: Array<Node> = [
       {
-        id: 'text-1',
+        id: testCanvasNodeId('text-1'),
         type: 'text',
         position: { x: 10, y: 10 },
         width: 80,
@@ -49,7 +50,7 @@ describe('canvas node selection queries', () => {
 
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 30, height: 30 }, { zoom: 1 }),
-    ).toEqual(new Set(['text-1']))
+    ).toEqual(new Set([testCanvasNodeId('text-1')]))
   })
 
   it('uses bespoke stroke selection behavior and safely ignores unknown node types', () => {
@@ -67,7 +68,7 @@ describe('canvas node selection queries', () => {
 
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 40, height: 40 }, { zoom: 1 }),
-    ).toEqual(new Set(['stroke-1']))
+    ).toEqual(new Set([testCanvasNodeId('stroke-1')]))
     expect(
       getCanvasNodesMatchingLasso(
         nodes,
@@ -79,7 +80,7 @@ describe('canvas node selection queries', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(new Set(['stroke-1']))
+    ).toEqual(new Set([testCanvasNodeId('stroke-1')]))
   })
 
   it('uses the same padded stroke hit detection for rectangle selection as point selection', () => {
@@ -87,7 +88,7 @@ describe('canvas node selection queries', () => {
 
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 40, y: 20, width: 20, height: 1 }, { zoom: 1 }),
-    ).toEqual(new Set(['stroke-1']))
+    ).toEqual(new Set([testCanvasNodeId('stroke-1')]))
   })
 
   it('uses padded stroke candidate bounds for lasso selection', () => {
@@ -104,7 +105,7 @@ describe('canvas node selection queries', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(new Set(['stroke-1']))
+    ).toEqual(new Set([testCanvasNodeId('stroke-1')]))
   })
   it('selects moved strokes using their rendered position', () => {
     const nodes: Array<Node> = [
@@ -124,7 +125,7 @@ describe('canvas node selection queries', () => {
         { x: 460, y: 245, width: 20, height: 10 },
         { zoom: 1 },
       ),
-    ).toEqual(new Set(['stroke-1']))
+    ).toEqual(new Set([testCanvasNodeId('stroke-1')]))
   })
 
   it('ignores malformed stroke payloads during rectangle selection candidate filtering', () => {
@@ -142,7 +143,7 @@ describe('canvas node selection queries', () => {
         },
       } as unknown as Node,
       {
-        id: 'text-1',
+        id: testCanvasNodeId('text-1'),
         type: 'text',
         position: { x: 10, y: 10 },
         width: 80,
@@ -153,7 +154,7 @@ describe('canvas node selection queries', () => {
 
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 100, height: 100 }, { zoom: 1 }),
-    ).toEqual(new Set(['text-1']))
+    ).toEqual(new Set([testCanvasNodeId('text-1')]))
     expect(
       getCanvasNodesMatchingLasso(
         nodes,
@@ -165,7 +166,7 @@ describe('canvas node selection queries', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(new Set(['text-1']))
+    ).toEqual(new Set([testCanvasNodeId('text-1')]))
   })
 })
 
@@ -184,7 +185,7 @@ function createStrokeNode({
   position?: { x: number; y: number }
 } = {}): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'stroke',
     position,
     width: bounds.width,

@@ -1,5 +1,6 @@
 import type { CanvasNormalizedEdgeStyle } from './shared/canvas-edge-style'
 import type { CanvasHandlePosition } from '../types/canvas-domain-types'
+import type { CanvasNodeId } from '../../resources/domain-id'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
@@ -9,8 +10,8 @@ import type {
 export interface CanvasEdgeRendererProps<TType extends CanvasEdgeType = CanvasEdgeType> {
   id: string
   type: TType
-  source: string
-  target: string
+  source: CanvasNodeId
+  target: CanvasNodeId
   sourceHandle?: string | null
   targetHandle?: string | null
   style?: CanvasEdgeStyle

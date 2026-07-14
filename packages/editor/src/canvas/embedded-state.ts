@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import * as Y from 'yjs'
 import type { SidebarItemId } from '../../../../shared/common/ids'
 import type { EmbeddedCanvasState } from './embedded-state-contract'
 import { yMapToArray } from './utils/canvas-yjs-utils'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from './document-contract'
+import { parseCanvasDocumentEdge, parseCanvasDocumentNode } from './document-contract'
 
 interface EmbeddedCanvasUpdate {
   revision: number
@@ -96,8 +96,8 @@ export function useEmbeddedCanvasStateFromUpdates({
     })
   }, [activeCursor, canvasId, doc, updatesResult.data])
 
-  const nodes = useYMapAsArray<CanvasDocumentNode>(doc, 'nodes')
-  const edges = useYMapAsArray<CanvasDocumentEdge>(doc, 'edges')
+  const nodes = useYMapAsArray(doc, 'nodes', parseCanvasDocumentNode)
+  const edges = useYMapAsArray(doc, 'edges', parseCanvasDocumentEdge)
 
   const status = resolveEmbeddedCanvasStatus(activeCursor, updatesResult)
   if (status !== 'available') return { status }
@@ -137,38 +137,42 @@ function cursorsEqual(left: EmbeddedCanvasCursor, right: EmbeddedCanvasCursor) {
   )
 }
 
-function useYMapAsArray<T>(doc: Y.Doc, mapName: string): Array<T> {
-  const map = useMemo(() => doc.getMap<T>(mapName), [doc, mapName])
-  const snapshotRef = useRef<{ map: Y.Map<T> | null; value: Array<T> }>({
-    map: null,
-    value: [],
-  })
-
-  if (snapshotRef.current.map !== map) {
-    snapshotRef.current = { map, value: yMapToArray(map) }
+function useYMapAsArray<T>(
+  doc: Y.Doc,
+  mapName: string,
+  parseValue: (value: unknown) => T | null,
+): Array<T> {
+  const map = doc.getMap<unknown>(mapName)
+  const getSnapshot = () => getYMapArraySnapshot(map, parseValue)
+  const subscribe = (onStoreChange: () => void) => {
+    map.observe(onStoreChange)
+    return () => map.unobserve(onStoreChange)
   }
 
-  const subscribe = useCallback(
-    (onStoreChange: () => void) => {
-      const syncSnapshot = () => {
-        const nextSnapshot = yMapToArray(map)
-        if (arraysEqual(snapshotRef.current.value, nextSnapshot)) {
-          return
-        }
-
-        snapshotRef.current = { map, value: nextSnapshot }
-        onStoreChange()
-      }
-
-      syncSnapshot()
-      map.observe(syncSnapshot)
-      return () => map.unobserve(syncSnapshot)
-    },
-    [map],
-  )
-  const getSnapshot = useCallback(() => snapshotRef.current.value, [])
-
   return useSyncExternalStore(subscribe, getSnapshot)
+}
+
+const yMapArraySnapshots = new WeakMap<
+  Y.Map<unknown>,
+  { source: Array<unknown>; value: Array<unknown> }
+>()
+
+function getYMapArraySnapshot<T>(map: Y.Map<unknown>, parseValue: (value: unknown) => T | null) {
+  const source = yMapToArray(map)
+  const cached = yMapArraySnapshots.get(map) as
+    | { source: Array<unknown>; value: Array<T> }
+    | undefined
+  if (cached && arraysEqual(cached.source, source)) return cached.value
+  const snapshot = parseYMapValues(source, parseValue)
+  yMapArraySnapshots.set(map, { source, value: snapshot })
+  return snapshot
+}
+
+function parseYMapValues<T>(values: Array<unknown>, parseValue: (value: unknown) => T | null) {
+  return values.flatMap((value) => {
+    const parsed = parseValue(value)
+    return parsed ? [parsed] : []
+  })
 }
 
 function arraysEqual<T>(left: Array<T>, right: Array<T>) {

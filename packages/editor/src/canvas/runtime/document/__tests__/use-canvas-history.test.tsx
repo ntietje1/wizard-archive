@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { useCanvasHistory } from '../use-canvas-history'
@@ -15,7 +16,7 @@ function textContent(text: string): TextNode['data']['content'] {
 
 function createNode(id: string): TextNode {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 0, y: 0 },
     data: { content: textContent(id) },
@@ -314,8 +315,8 @@ describe('useCanvasHistory', () => {
         edgesMap.set('edge-1', {
           id: 'edge-1',
           type: 'bezier',
-          source: 'a',
-          target: 'b',
+          source: testCanvasNodeId('a'),
+          target: testCanvasNodeId('b'),
         })
       })
     })

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { getCanvasFitViewport } from '../canvas-fit-view'
 
 describe('getCanvasFitViewport', () => {
@@ -6,7 +7,7 @@ describe('getCanvasFitViewport', () => {
     const viewport = getCanvasFitViewport({
       nodes: [
         {
-          id: 'node-1',
+          id: testCanvasNodeId('node-1'),
           type: 'text',
           position: { x: 0, y: 0 },
           width: 100,
@@ -28,7 +29,7 @@ describe('getCanvasFitViewport', () => {
     const viewport = getCanvasFitViewport({
       nodes: [
         {
-          id: 'node-1',
+          id: testCanvasNodeId('node-1'),
           type: 'text',
           position: { x: 0, y: 0 },
           width: 200,

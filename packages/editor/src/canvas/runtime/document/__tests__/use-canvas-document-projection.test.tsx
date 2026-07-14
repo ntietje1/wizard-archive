@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { describe, expect, it } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { useCanvasDocumentProjection } from '../use-canvas-document-projection'
@@ -11,7 +12,7 @@ type TextNode = Extract<Node, { type: 'text' }>
 
 function createTextNode(id: string): TextNode {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 20, y: 40 },
     width: 120,
@@ -30,8 +31,8 @@ function createOrderedTextNode(id: string, zIndex: number): Node {
 function createEdge(id: string): Edge {
   return {
     id,
-    source: 'node-1',
-    target: 'node-2',
+    source: testCanvasNodeId('node-1'),
+    target: testCanvasNodeId('node-2'),
     type: 'straight',
   }
 }
@@ -41,7 +42,7 @@ describe('useCanvasDocumentProjection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
 
     const localDraggingIdsRef = { current: new Set<string>() }
     const canvasEngine = createCanvasEngine()
@@ -62,13 +63,16 @@ describe('useCanvasDocumentProjection', () => {
 
     expect(canvasEngine.getSnapshot().nodes).toEqual([
       expect.objectContaining({
-        id: 'node-1',
+        id: testCanvasNodeId('node-1'),
       }),
     ])
     expect(canvasEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
 
     act(() => {
-      canvasEngine.setSelection({ nodeIds: new Set(['node-1']), edgeIds: new Set() })
+      canvasEngine.setSelection({
+        nodeIds: new Set([testCanvasNodeId('node-1')]),
+        edgeIds: new Set(),
+      })
     })
 
     rerender({
@@ -78,18 +82,20 @@ describe('useCanvasDocumentProjection', () => {
 
     expect(canvasEngine.getSnapshot().nodes).toEqual([
       expect.objectContaining({
-        id: 'node-1',
+        id: testCanvasNodeId('node-1'),
       }),
     ])
-    expect(canvasEngine.getSnapshot().selectedNodeIds).toEqual(new Set(['node-1']))
+    expect(canvasEngine.getSnapshot().selectedNodeIds).toEqual(
+      new Set([testCanvasNodeId('node-1')]),
+    )
   })
 
   it('removes deleted document ids from local selection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', createTextNode('node-1'))
-    nodesMap.set('node-2', createTextNode('node-2'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), createTextNode('node-2'))
     edgesMap.set('edge-1', createEdge('edge-1'))
     const canvasEngine = createCanvasEngine()
 
@@ -105,11 +111,11 @@ describe('useCanvasDocumentProjection', () => {
 
     act(() => {
       canvasEngine.setSelection({
-        nodeIds: new Set(['node-1']),
+        nodeIds: new Set([testCanvasNodeId('node-1')]),
         edgeIds: new Set(['edge-1']),
       })
       doc.transact(() => {
-        nodesMap.delete('node-1')
+        nodesMap.delete(testCanvasNodeId('node-1'))
         edgesMap.delete('edge-1')
       })
     })
@@ -122,12 +128,12 @@ describe('useCanvasDocumentProjection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', {
+    nodesMap.set(testCanvasNodeId('node-1'), {
       ...createTextNode('node-1'),
       selected: true,
       draggable: true,
     } as unknown as Node)
-    nodesMap.set('node-2', {
+    nodesMap.set(testCanvasNodeId('node-2'), {
       ...createTextNode('node-2'),
       position: { x: 220, y: 40 },
       selected: true,
@@ -148,7 +154,10 @@ describe('useCanvasDocumentProjection', () => {
       }),
     )
 
-    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual(['node-1', 'node-2'])
+    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual([
+      testCanvasNodeId('node-1'),
+      testCanvasNodeId('node-2'),
+    ])
     for (const node of canvasEngine.getSnapshot().nodes) {
       expect(node).not.toHaveProperty('selected')
       expect(node).not.toHaveProperty('draggable')
@@ -160,7 +169,7 @@ describe('useCanvasDocumentProjection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
 
     const canvasEngine = createCanvasEngine()
 
@@ -183,7 +192,7 @@ describe('useCanvasDocumentProjection', () => {
       canvasEngine.setDocumentSnapshot({
         nodes: [staleRuntimeNode],
       })
-      nodesMap.set('node-1', {
+      nodesMap.set(testCanvasNodeId('node-1'), {
         ...createTextNode('node-1'),
         data: { content: [{ type: 'paragraph', props: { textColor: 'blue' } }] },
       })
@@ -191,7 +200,7 @@ describe('useCanvasDocumentProjection', () => {
 
     const [projectedNode] = canvasEngine.getSnapshot().nodes
     expect(projectedNode).toMatchObject({
-      id: 'node-1',
+      id: testCanvasNodeId('node-1'),
       data: { content: [{ type: 'paragraph', props: { textColor: 'blue' } }] },
     })
     expect(projectedNode).not.toHaveProperty('selected')
@@ -202,16 +211,16 @@ describe('useCanvasDocumentProjection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', {
-      id: 'node-1',
+    nodesMap.set(testCanvasNodeId('node-1'), {
+      id: testCanvasNodeId('node-1'),
       type: 'text',
       position: { x: Number.NaN, y: 20 },
       data: {},
     } as unknown as Node)
-    nodesMap.set('node-2', null as unknown as Node)
+    nodesMap.set(testCanvasNodeId('node-2'), null as unknown as Node)
     edgesMap.set('edge-1', {
       id: 'edge-1',
-      source: 'node-1',
+      source: testCanvasNodeId('node-1'),
       target: '',
       type: 'straight',
     } as unknown as Edge)
@@ -237,8 +246,8 @@ describe('useCanvasDocumentProjection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', createTextNode('node-1'))
-    nodesMap.set('node-2', createTextNode('node-2'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), createTextNode('node-2'))
     edgesMap.set('edge-1', createEdge('edge-1'))
 
     const canvasEngine = createCanvasEngine()
@@ -254,11 +263,13 @@ describe('useCanvasDocumentProjection', () => {
     )
 
     act(() => {
-      nodesMap.set('node-1', createTextNode('node-2'))
+      nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-2'))
       edgesMap.set('edge-1', createEdge('edge-2'))
     })
 
-    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual(['node-2'])
+    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual([
+      testCanvasNodeId('node-2'),
+    ])
     expect(canvasEngine.getSnapshot().edges).toEqual([])
   })
 
@@ -266,8 +277,8 @@ describe('useCanvasDocumentProjection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-2', createOrderedTextNode('node-2', 10))
-    nodesMap.set('node-1', createOrderedTextNode('node-1', 4))
+    nodesMap.set(testCanvasNodeId('node-2'), createOrderedTextNode('node-2', 10))
+    nodesMap.set(testCanvasNodeId('node-1'), createOrderedTextNode('node-1', 4))
 
     const canvasEngine = createCanvasEngine()
 
@@ -281,7 +292,10 @@ describe('useCanvasDocumentProjection', () => {
       }),
     )
 
-    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual(['node-1', 'node-2'])
+    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual([
+      testCanvasNodeId('node-1'),
+      testCanvasNodeId('node-2'),
+    ])
     expect(canvasEngine.getSnapshot().nodes.map((node) => node.zIndex)).toEqual([4, 10])
   })
 
@@ -289,8 +303,8 @@ describe('useCanvasDocumentProjection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', createOrderedTextNode('node-1', 1))
-    nodesMap.set('node-2', createOrderedTextNode('node-2', 2))
+    nodesMap.set(testCanvasNodeId('node-1'), createOrderedTextNode('node-1', 1))
+    nodesMap.set(testCanvasNodeId('node-2'), createOrderedTextNode('node-2', 2))
 
     const canvasEngine = createCanvasEngine()
 
@@ -309,22 +323,25 @@ describe('useCanvasDocumentProjection', () => {
     })
 
     act(() => {
-      const existing = nodesMap.get('node-1')
+      const existing = nodesMap.get(testCanvasNodeId('node-1'))
       if (!existing) throw new Error('missing node-1')
-      nodesMap.set('node-1', {
+      nodesMap.set(testCanvasNodeId('node-1'), {
         ...existing,
         data: { ...existing.data, backgroundColor: 'var(--background)' },
       } as Node)
     })
 
-    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual(['node-2', 'node-1'])
+    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual([
+      testCanvasNodeId('node-2'),
+      testCanvasNodeId('node-1'),
+    ])
   })
 
   it('restores document node dimensions when remote resize awareness clears', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
 
     const canvasEngine = createCanvasEngine()
     const localDraggingIdsRef = { current: new Set<string>() }
@@ -344,11 +361,13 @@ describe('useCanvasDocumentProjection', () => {
     rerender({
       ...initialProps,
       remoteResizeDimensions: {
-        'node-1': { x: 90, y: 100, width: 300, height: 180 },
+        [testCanvasNodeId('node-1')]: { x: 90, y: 100, width: 300, height: 180 },
       },
     })
 
-    expect(canvasEngine.getSnapshot().nodeLookup.get('node-1')?.node).toMatchObject({
+    expect(
+      canvasEngine.getSnapshot().nodeLookup.get(testCanvasNodeId('node-1'))?.node,
+    ).toMatchObject({
       position: { x: 90, y: 100 },
       width: 300,
       height: 180,
@@ -359,7 +378,9 @@ describe('useCanvasDocumentProjection', () => {
       remoteResizeDimensions: {},
     })
 
-    expect(canvasEngine.getSnapshot().nodeLookup.get('node-1')?.node).toMatchObject({
+    expect(
+      canvasEngine.getSnapshot().nodeLookup.get(testCanvasNodeId('node-1'))?.node,
+    ).toMatchObject({
       position: { x: 20, y: 40 },
       width: 120,
       height: 36,
@@ -370,8 +391,8 @@ describe('useCanvasDocumentProjection', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
-    nodesMap.set('node-1', createTextNode('node-1'))
-    nodesMap.set('node-2', {
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), {
       ...createTextNode('node-2'),
       position: { x: 240, y: 80 },
       width: 160,
@@ -396,23 +417,27 @@ describe('useCanvasDocumentProjection', () => {
     rerender({
       ...initialProps,
       remoteResizeDimensions: {
-        'node-1': { x: 90, y: 100, width: 300, height: 180 },
-        'node-2': { x: 320, y: 140, width: 240, height: 120 },
+        [testCanvasNodeId('node-1')]: { x: 90, y: 100, width: 300, height: 180 },
+        [testCanvasNodeId('node-2')]: { x: 320, y: 140, width: 240, height: 120 },
       },
     })
     rerender({
       ...initialProps,
       remoteResizeDimensions: {
-        'node-2': { x: 340, y: 160, width: 260, height: 140 },
+        [testCanvasNodeId('node-2')]: { x: 340, y: 160, width: 260, height: 140 },
       },
     })
 
-    expect(canvasEngine.getSnapshot().nodeLookup.get('node-1')?.node).toMatchObject({
+    expect(
+      canvasEngine.getSnapshot().nodeLookup.get(testCanvasNodeId('node-1'))?.node,
+    ).toMatchObject({
       position: { x: 20, y: 40 },
       width: 120,
       height: 36,
     })
-    expect(canvasEngine.getSnapshot().nodeLookup.get('node-2')?.node).toMatchObject({
+    expect(
+      canvasEngine.getSnapshot().nodeLookup.get(testCanvasNodeId('node-2'))?.node,
+    ).toMatchObject({
       position: { x: 340, y: 160 },
       width: 260,
       height: 140,

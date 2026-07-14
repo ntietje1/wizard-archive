@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { parseCanvasAwarenessUser, parseCanvasDrawAwarenessState } from '../awareness'
 import {
   normalizeCanvasDocumentEdge,
@@ -22,6 +23,9 @@ import {
 import { parseCanvasTextDocument } from '../text/model'
 
 describe('canvas document model parsers', () => {
+  const node1Id = testCanvasNodeId('node-1')
+  const node2Id = testCanvasNodeId('node-2')
+
   it('parses geometry payloads into stable canvas values', () => {
     expect(parseCanvasPoint2D({ x: 10, y: 20 })).toEqual({ x: 10, y: 20 })
     expect(parseCanvasBoundsDimensions({ width: 30, height: 40, x: 99 })).toEqual({
@@ -50,7 +54,7 @@ describe('canvas document model parsers', () => {
   it('keeps document node fields that belong in persisted canvas state', () => {
     expect(
       parseCanvasDocumentNode({
-        id: 'node-1',
+        id: node1Id,
         type: 'text',
         position: { x: 10, y: 20 },
         data: { content: [{ type: 'paragraph' }] },
@@ -59,7 +63,7 @@ describe('canvas document model parsers', () => {
         zIndex: 7,
       }),
     ).toEqual({
-      id: 'node-1',
+      id: node1Id,
       type: 'text',
       position: { x: 10, y: 20 },
       data: { content: [{ type: 'paragraph' }] },
@@ -71,7 +75,7 @@ describe('canvas document model parsers', () => {
 
   it('keeps renderer class names out of persisted canvas node state', () => {
     const nodeWithRendererClass = {
-      id: 'node-1',
+      id: node1Id,
       type: 'text',
       position: { x: 10, y: 20 },
       data: { content: [{ type: 'paragraph' }] },
@@ -80,7 +84,7 @@ describe('canvas document model parsers', () => {
 
     expect(parseCanvasDocumentNode(nodeWithRendererClass)).toBeNull()
     expect(normalizeCanvasDocumentNode(nodeWithRendererClass)).toEqual({
-      id: 'node-1',
+      id: node1Id,
       type: 'text',
       position: { x: 10, y: 20 },
       data: { content: [{ type: 'paragraph' }] },
@@ -126,7 +130,7 @@ describe('canvas document model parsers', () => {
 
     expect(
       parseCanvasDocumentNode({
-        id: 'node-1',
+        id: node1Id,
         type: 'embed',
         position: { x: 0, y: 0 },
         data: { target: { kind: 'resource', resourceId: 'sidebar-1' } },
@@ -136,7 +140,7 @@ describe('canvas document model parsers', () => {
 
   it('rejects legacy embed sidebarItemId at the document boundary', () => {
     const legacyNode = {
-      id: 'node-1',
+      id: node1Id,
       type: 'embed',
       position: { x: 0, y: 0 },
       data: { sidebarItemId: 'sidebar-1' },
@@ -187,15 +191,15 @@ describe('canvas document model parsers', () => {
     expect(
       parseCanvasDocumentEdge({
         id: 'edge-1',
-        source: 'node-1',
-        target: 'node-2',
+        source: node1Id,
+        target: node2Id,
         type: 'straight',
         style: { stroke: '#0f0', strokeWidth: 2 },
       }),
     ).toEqual({
       id: 'edge-1',
-      source: 'node-1',
-      target: 'node-2',
+      source: node1Id,
+      target: node2Id,
       type: 'straight',
       style: { stroke: '#0f0', strokeWidth: 2 },
     })
@@ -204,8 +208,8 @@ describe('canvas document model parsers', () => {
   it('keeps renderer class names out of persisted canvas edge state', () => {
     const edgeWithRendererClass = {
       id: 'edge-1',
-      source: 'node-1',
-      target: 'node-2',
+      source: node1Id,
+      target: node2Id,
       type: 'straight',
       className: 'stroke-muted',
     }
@@ -213,8 +217,8 @@ describe('canvas document model parsers', () => {
     expect(parseCanvasDocumentEdge(edgeWithRendererClass)).toBeNull()
     expect(normalizeCanvasDocumentEdge(edgeWithRendererClass)).toEqual({
       id: 'edge-1',
-      source: 'node-1',
-      target: 'node-2',
+      source: node1Id,
+      target: node2Id,
       type: 'straight',
     })
   })

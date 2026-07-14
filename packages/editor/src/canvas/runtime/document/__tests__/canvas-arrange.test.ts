@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { createCanvasArrangePlan } from '../canvas-arrange'
 import * as Y from 'yjs'
 import type { CanvasDocumentNode as Node } from '../../../document-contract'
@@ -28,7 +29,7 @@ vi.mock('../../../nodes/shared/canvas-node-bounds', () => ({
 
 function createNode(id: string, x: number, y: number, width: number, height: number): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x, y },
     width,
@@ -47,7 +48,7 @@ function createOffsetNode(
   height: number,
 ): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: positionX, y: positionY },
     width,
@@ -77,8 +78,18 @@ function createSelection(nodeIds: Array<string>) {
 }
 
 function planPositions(plan: ReturnType<typeof createCanvasArrangePlan>) {
+  const nodeOrder = new Map<string, number>(
+    [testCanvasNodeId('a'), testCanvasNodeId('b'), testCanvasNodeId('c')].map((id, index) => [
+      id,
+      index,
+    ]),
+  )
   return Array.from(plan ?? [])
-    .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+    .sort(
+      ([leftId], [rightId]) =>
+        (nodeOrder.get(leftId) ?? Number.MAX_SAFE_INTEGER) -
+          (nodeOrder.get(rightId) ?? Number.MAX_SAFE_INTEGER) || leftId.localeCompare(rightId),
+    )
     .map(([id, position]) => ({ id, ...position }))
 }
 
@@ -98,42 +109,46 @@ describe('createCanvasArrangePlan', () => {
       createNode('b', 10, 50, 40, 20),
       createNode('c', 80, 25, 10, 30),
     ])
-    const selection = createSelection(['a', 'b', 'c'])
+    const selection = createSelection([
+      testCanvasNodeId('a'),
+      testCanvasNodeId('b'),
+      testCanvasNodeId('c'),
+    ])
 
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignLeft'))).toEqual([
-      { id: 'a', x: 10, y: 10 },
-      { id: 'b', x: 10, y: 50 },
-      { id: 'c', x: 10, y: 25 },
+      { id: testCanvasNodeId('a'), x: 10, y: 10 },
+      { id: testCanvasNodeId('b'), x: 10, y: 50 },
+      { id: testCanvasNodeId('c'), x: 10, y: 25 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignRight'))).toEqual([
-      { id: 'a', x: 70, y: 10 },
-      { id: 'b', x: 50, y: 50 },
-      { id: 'c', x: 80, y: 25 },
+      { id: testCanvasNodeId('a'), x: 70, y: 10 },
+      { id: testCanvasNodeId('b'), x: 50, y: 50 },
+      { id: testCanvasNodeId('c'), x: 80, y: 25 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignTop'))).toEqual([
-      { id: 'a', x: 30, y: 10 },
-      { id: 'b', x: 10, y: 10 },
-      { id: 'c', x: 80, y: 10 },
+      { id: testCanvasNodeId('a'), x: 30, y: 10 },
+      { id: testCanvasNodeId('b'), x: 10, y: 10 },
+      { id: testCanvasNodeId('c'), x: 80, y: 10 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignBottom'))).toEqual([
-      { id: 'a', x: 30, y: 60 },
-      { id: 'b', x: 10, y: 50 },
-      { id: 'c', x: 80, y: 40 },
+      { id: testCanvasNodeId('a'), x: 30, y: 60 },
+      { id: testCanvasNodeId('b'), x: 10, y: 50 },
+      { id: testCanvasNodeId('c'), x: 80, y: 40 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignCenter'))).toEqual([
-      { id: 'a', x: 40, y: 35 },
-      { id: 'b', x: 30, y: 30 },
-      { id: 'c', x: 45, y: 25 },
+      { id: testCanvasNodeId('a'), x: 40, y: 35 },
+      { id: testCanvasNodeId('b'), x: 30, y: 30 },
+      { id: testCanvasNodeId('c'), x: 45, y: 25 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignVertical'))).toEqual([
-      { id: 'a', x: 40, y: 10 },
-      { id: 'b', x: 30, y: 50 },
-      { id: 'c', x: 45, y: 25 },
+      { id: testCanvasNodeId('a'), x: 40, y: 10 },
+      { id: testCanvasNodeId('b'), x: 30, y: 50 },
+      { id: testCanvasNodeId('c'), x: 45, y: 25 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignHorizontal'))).toEqual([
-      { id: 'a', x: 30, y: 35 },
-      { id: 'b', x: 10, y: 30 },
-      { id: 'c', x: 80, y: 25 },
+      { id: testCanvasNodeId('a'), x: 30, y: 35 },
+      { id: testCanvasNodeId('b'), x: 10, y: 30 },
+      { id: testCanvasNodeId('c'), x: 80, y: 25 },
     ])
   })
 
@@ -143,42 +158,46 @@ describe('createCanvasArrangePlan', () => {
       createOffsetNode('b', 47, 4, 50, 0, 10, 20),
       createOffsetNode('c', 110, 75, 100, 80, 40, 30),
     ])
-    const selection = createSelection(['a', 'b', 'c'])
+    const selection = createSelection([
+      testCanvasNodeId('a'),
+      testCanvasNodeId('b'),
+      testCanvasNodeId('c'),
+    ])
 
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignLeft'))).toEqual([
-      { id: 'a', x: 5, y: 23 },
-      { id: 'b', x: -3, y: 4 },
-      { id: 'c', x: 10, y: 75 },
+      { id: testCanvasNodeId('a'), x: 5, y: 23 },
+      { id: testCanvasNodeId('b'), x: -3, y: 4 },
+      { id: testCanvasNodeId('c'), x: 10, y: 75 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignRight'))).toEqual([
-      { id: 'a', x: 125, y: 23 },
-      { id: 'b', x: 127, y: 4 },
-      { id: 'c', x: 110, y: 75 },
+      { id: testCanvasNodeId('a'), x: 125, y: 23 },
+      { id: testCanvasNodeId('b'), x: 127, y: 4 },
+      { id: testCanvasNodeId('c'), x: 110, y: 75 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignTop'))).toEqual([
-      { id: 'a', x: 5, y: 3 },
-      { id: 'b', x: 47, y: 4 },
-      { id: 'c', x: 110, y: -5 },
+      { id: testCanvasNodeId('a'), x: 5, y: 3 },
+      { id: testCanvasNodeId('b'), x: 47, y: 4 },
+      { id: testCanvasNodeId('c'), x: 110, y: -5 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignBottom'))).toEqual([
-      { id: 'a', x: 5, y: 103 },
-      { id: 'b', x: 47, y: 94 },
-      { id: 'c', x: 110, y: 75 },
+      { id: testCanvasNodeId('a'), x: 5, y: 103 },
+      { id: testCanvasNodeId('b'), x: 47, y: 94 },
+      { id: testCanvasNodeId('c'), x: 110, y: 75 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignCenter'))).toEqual([
-      { id: 'a', x: 65, y: 53 },
-      { id: 'b', x: 62, y: 49 },
-      { id: 'c', x: 60, y: 35 },
+      { id: testCanvasNodeId('a'), x: 65, y: 53 },
+      { id: testCanvasNodeId('b'), x: 62, y: 49 },
+      { id: testCanvasNodeId('c'), x: 60, y: 35 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignVertical'))).toEqual([
-      { id: 'a', x: 65, y: 23 },
-      { id: 'b', x: 62, y: 4 },
-      { id: 'c', x: 60, y: 75 },
+      { id: testCanvasNodeId('a'), x: 65, y: 23 },
+      { id: testCanvasNodeId('b'), x: 62, y: 4 },
+      { id: testCanvasNodeId('c'), x: 60, y: 75 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignHorizontal'))).toEqual([
-      { id: 'a', x: 5, y: 53 },
-      { id: 'b', x: 47, y: 49 },
-      { id: 'c', x: 110, y: 35 },
+      { id: testCanvasNodeId('a'), x: 5, y: 53 },
+      { id: testCanvasNodeId('b'), x: 47, y: 49 },
+      { id: testCanvasNodeId('c'), x: 110, y: 35 },
     ])
   })
 
@@ -188,21 +207,25 @@ describe('createCanvasArrangePlan', () => {
       createNode('b', 80, 0, 10, 20),
       createNode('c', 140, 100, 40, 30),
     ])
-    const selection = createSelection(['a', 'b', 'c'])
+    const selection = createSelection([
+      testCanvasNodeId('a'),
+      testCanvasNodeId('b'),
+      testCanvasNodeId('c'),
+    ])
 
     expect(
       planPositions(createCanvasArrangePlan(nodesMap, selection, 'distributeHorizontal')),
     ).toEqual([
-      { id: 'a', x: 0, y: 50 },
-      { id: 'b', x: 75, y: 0 },
-      { id: 'c', x: 140, y: 100 },
+      { id: testCanvasNodeId('a'), x: 0, y: 50 },
+      { id: testCanvasNodeId('b'), x: 75, y: 0 },
+      { id: testCanvasNodeId('c'), x: 140, y: 100 },
     ])
     expect(
       planPositions(createCanvasArrangePlan(nodesMap, selection, 'distributeVertical')),
     ).toEqual([
-      { id: 'a', x: 0, y: 55 },
-      { id: 'b', x: 80, y: 0 },
-      { id: 'c', x: 140, y: 100 },
+      { id: testCanvasNodeId('a'), x: 0, y: 55 },
+      { id: testCanvasNodeId('b'), x: 80, y: 0 },
+      { id: testCanvasNodeId('c'), x: 140, y: 100 },
     ])
   })
 
@@ -212,21 +235,25 @@ describe('createCanvasArrangePlan', () => {
       createOffsetNode('b', 47, 4, 50, 0, 10, 20),
       createOffsetNode('c', 110, 75, 100, 80, 40, 30),
     ])
-    const selection = createSelection(['a', 'b', 'c'])
+    const selection = createSelection([
+      testCanvasNodeId('a'),
+      testCanvasNodeId('b'),
+      testCanvasNodeId('c'),
+    ])
 
     expect(
       planPositions(createCanvasArrangePlan(nodesMap, selection, 'distributeHorizontal')),
     ).toEqual([
-      { id: 'a', x: 5, y: 23 },
-      { id: 'b', x: 52, y: 4 },
-      { id: 'c', x: 110, y: 75 },
+      { id: testCanvasNodeId('a'), x: 5, y: 23 },
+      { id: testCanvasNodeId('b'), x: 52, y: 4 },
+      { id: testCanvasNodeId('c'), x: 110, y: 75 },
     ])
     expect(
       planPositions(createCanvasArrangePlan(nodesMap, selection, 'distributeVertical')),
     ).toEqual([
-      { id: 'a', x: 5, y: 48 },
-      { id: 'b', x: 47, y: 4 },
-      { id: 'c', x: 110, y: 75 },
+      { id: testCanvasNodeId('a'), x: 5, y: 48 },
+      { id: testCanvasNodeId('b'), x: 47, y: 4 },
+      { id: testCanvasNodeId('c'), x: 110, y: 75 },
     ])
   })
 
@@ -236,17 +263,21 @@ describe('createCanvasArrangePlan', () => {
       createNode('b', 80, 30, 10, 20),
       createNode('c', 140, 100, 40, 30),
     ])
-    const selection = createSelection(['a', 'b', 'c'])
+    const selection = createSelection([
+      testCanvasNodeId('a'),
+      testCanvasNodeId('b'),
+      testCanvasNodeId('c'),
+    ])
 
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'flipHorizontal'))).toEqual([
-      { id: 'a', x: 160, y: 0 },
-      { id: 'b', x: 90, y: 30 },
-      { id: 'c', x: 0, y: 100 },
+      { id: testCanvasNodeId('a'), x: 160, y: 0 },
+      { id: testCanvasNodeId('b'), x: 90, y: 30 },
+      { id: testCanvasNodeId('c'), x: 0, y: 100 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'flipVertical'))).toEqual([
-      { id: 'a', x: 0, y: 120 },
-      { id: 'b', x: 80, y: 80 },
-      { id: 'c', x: 140, y: 0 },
+      { id: testCanvasNodeId('a'), x: 0, y: 120 },
+      { id: testCanvasNodeId('b'), x: 80, y: 80 },
+      { id: testCanvasNodeId('c'), x: 140, y: 0 },
     ])
   })
 
@@ -276,7 +307,7 @@ describe('createCanvasArrangePlan', () => {
       expect(
         planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignRight')),
       ).toContainEqual({
-        id: 'node-0',
+        id: testCanvasNodeId('node-0'),
         x: 310,
         y: 0,
       })
@@ -292,17 +323,21 @@ describe('createCanvasArrangePlan', () => {
       createOffsetNode('b', 47, 4, 50, 0, 10, 20),
       createOffsetNode('c', 110, 75, 100, 80, 40, 30),
     ])
-    const selection = createSelection(['a', 'b', 'c'])
+    const selection = createSelection([
+      testCanvasNodeId('a'),
+      testCanvasNodeId('b'),
+      testCanvasNodeId('c'),
+    ])
 
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'flipHorizontal'))).toEqual([
-      { id: 'a', x: 125, y: 23 },
-      { id: 'b', x: 77, y: 4 },
-      { id: 'c', x: 10, y: 75 },
+      { id: testCanvasNodeId('a'), x: 125, y: 23 },
+      { id: testCanvasNodeId('b'), x: 77, y: 4 },
+      { id: testCanvasNodeId('c'), x: 10, y: 75 },
     ])
     expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'flipVertical'))).toEqual([
-      { id: 'a', x: 5, y: 83 },
-      { id: 'b', x: 47, y: 94 },
-      { id: 'c', x: 110, y: -5 },
+      { id: testCanvasNodeId('a'), x: 5, y: 83 },
+      { id: testCanvasNodeId('b'), x: 47, y: 94 },
+      { id: testCanvasNodeId('c'), x: 110, y: -5 },
     ])
   })
 
@@ -312,9 +347,15 @@ describe('createCanvasArrangePlan', () => {
       createNode('b', 80, 30, 10, 20),
     ])
 
-    expect(createCanvasArrangePlan(nodesMap, createSelection(['a']), 'alignLeft')).toBeNull()
     expect(
-      createCanvasArrangePlan(nodesMap, createSelection(['a', 'b']), 'distributeHorizontal'),
+      createCanvasArrangePlan(nodesMap, createSelection([testCanvasNodeId('a')]), 'alignLeft'),
+    ).toBeNull()
+    expect(
+      createCanvasArrangePlan(
+        nodesMap,
+        createSelection([testCanvasNodeId('a'), testCanvasNodeId('b')]),
+        'distributeHorizontal',
+      ),
     ).toBeNull()
     expect(
       createCanvasArrangePlan(

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import * as Y from 'yjs'
 import {
   applyCanvasPasteCommand,
@@ -22,7 +23,7 @@ import type {
 
 function createNode(id: string): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 10, y: 20 },
     width: 120,
@@ -34,8 +35,8 @@ function createNode(id: string): Node {
 function createEdge(id: string): Edge {
   return {
     id,
-    source: 'node-1',
-    target: 'node-2',
+    source: testCanvasNodeId('node-1'),
+    target: testCanvasNodeId('node-2'),
     type: 'straight',
   }
 }
@@ -49,7 +50,7 @@ function createStyledEdge(id: string, strokeWidth: number): Edge {
 
 function createStrokeNode(id: string): Extract<Node, { type: 'stroke' }> {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'stroke',
     position: { x: 0, y: 0 },
     width: 20,
@@ -69,7 +70,7 @@ function createStrokeNode(id: string): Extract<Node, { type: 'stroke' }> {
 
 function createEmbedNode(id: string): Extract<Node, { type: 'embed' }> {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'embed',
     position: { x: 0, y: 0 },
     width: 320,
@@ -107,7 +108,7 @@ describe('canvas document commands', () => {
       nextZIndex: 7,
     })
 
-    expect(nodesMap.get('node-1')?.zIndex).toBe(7)
+    expect(nodesMap.get(testCanvasNodeId('node-1'))?.zIndex).toBe(7)
     expect(() =>
       createCanvasNodeCommand({
         nodesMap,
@@ -115,7 +116,7 @@ describe('canvas document commands', () => {
         sanitizeNode: (node) => node,
         nextZIndex: 8,
       }),
-    ).toThrow('Canvas node "node-1" already exists')
+    ).toThrow(`Canvas node "${testCanvasNodeId('node-1')}" already exists`)
     expect(() =>
       createCanvasNodeCommandUpdates({
         nodesMap,
@@ -124,40 +125,43 @@ describe('canvas document commands', () => {
         nextZIndex: 8,
         operation: 'createNodes',
       }),
-    ).toThrow('Canvas node "node-2" already exists')
+    ).toThrow(`Canvas node "${testCanvasNodeId('node-2')}" already exists`)
     doc.destroy()
   })
 
   it('patches node data by node type and preserves embed unset sentinels', () => {
     const { doc, nodesMap } = createCanvasMaps()
-    nodesMap.set('text-1', createNode('text-1'))
-    nodesMap.set('stroke-1', createStrokeNode('stroke-1'))
-    nodesMap.set('embed-1', createEmbedNode('embed-1'))
+    nodesMap.set(testCanvasNodeId('text-1'), createNode('text-1'))
+    nodesMap.set(testCanvasNodeId('stroke-1'), createStrokeNode('stroke-1'))
+    nodesMap.set(testCanvasNodeId('embed-1'), createEmbedNode('embed-1'))
 
     patchCanvasNodeDataCommand({
       nodesMap,
       updates: new Map([
-        ['text-1', { backgroundColor: 'red' }],
-        ['stroke-1', { color: '#f00' }],
-        ['embed-1', { target: { kind: 'empty' }, lockedAspectRatio: null }],
+        [testCanvasNodeId('text-1'), { backgroundColor: 'red' }],
+        [testCanvasNodeId('stroke-1'), { color: '#f00' }],
+        [testCanvasNodeId('embed-1'), { target: { kind: 'empty' }, lockedAspectRatio: null }],
       ]),
       sanitizeNode: (node) => node,
     })
 
-    expect(nodesMap.get('text-1')?.data).toMatchObject({ backgroundColor: 'red' })
-    expect(nodesMap.get('stroke-1')?.data).toMatchObject({ color: '#f00' })
-    expect(nodesMap.get('embed-1')?.data).toEqual({ target: { kind: 'empty' } })
+    expect(nodesMap.get(testCanvasNodeId('text-1'))?.data).toMatchObject({ backgroundColor: 'red' })
+    expect(nodesMap.get(testCanvasNodeId('stroke-1'))?.data).toMatchObject({ color: '#f00' })
+    expect(nodesMap.get(testCanvasNodeId('embed-1'))?.data).toEqual({ target: { kind: 'empty' } })
     doc.destroy()
   })
 
   it('throws for unhandled node types when patching node data', () => {
     const { doc, nodesMap } = createCanvasMaps()
-    nodesMap.set('bad-1', { ...createNode('bad-1'), type: 'unknown' } as unknown as Node)
+    nodesMap.set(testCanvasNodeId('bad-1'), {
+      ...createNode('bad-1'),
+      type: 'unknown',
+    } as unknown as Node)
 
     expect(() =>
       patchCanvasNodeDataCommand({
         nodesMap,
-        updates: new Map([['bad-1', { backgroundColor: 'red' }]]),
+        updates: new Map([[testCanvasNodeId('bad-1'), { backgroundColor: 'red' }]]),
         sanitizeNode: (node) => node,
       }),
     ).toThrow('Unhandled canvas node type in patchNodeData: unknown')
@@ -175,8 +179,8 @@ describe('canvas document commands', () => {
     createCanvasEdgeCommand({
       edgesMap,
       connection: {
-        source: 'node-1',
-        target: 'node-2',
+        source: testCanvasNodeId('node-1'),
+        target: testCanvasNodeId('node-2'),
         sourceHandle: null,
         targetHandle: null,
       },
@@ -196,13 +200,13 @@ describe('canvas document commands', () => {
 
   it('resizes nodes and deletes the selected graph through command helpers', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    nodesMap.set('node-1', createNode('node-1'))
-    nodesMap.set('node-2', createNode('node-2'))
+    nodesMap.set(testCanvasNodeId('node-1'), createNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), createNode('node-2'))
     edgesMap.set('edge-1', createEdge('edge-1'))
 
     resizeCanvasNodeCommand({
       nodesMap,
-      nodeId: 'node-1',
+      nodeId: testCanvasNodeId('node-1'),
       width: 200,
       height: 80,
       position: { x: 30, y: 40 },
@@ -210,16 +214,18 @@ describe('canvas document commands', () => {
     })
     resizeCanvasNodesCommand({
       nodesMap,
-      updates: new Map([['node-2', { width: 140, height: 60, position: { x: 50, y: 60 } }]]),
+      updates: new Map([
+        [testCanvasNodeId('node-2'), { width: 140, height: 60, position: { x: 50, y: 60 } }],
+      ]),
       sanitizeNode: (node) => node,
     })
 
-    expect(nodesMap.get('node-1')).toMatchObject({
+    expect(nodesMap.get(testCanvasNodeId('node-1'))).toMatchObject({
       position: { x: 30, y: 40 },
       width: 200,
       height: 80,
     })
-    expect(nodesMap.get('node-2')).toMatchObject({
+    expect(nodesMap.get(testCanvasNodeId('node-2'))).toMatchObject({
       position: { x: 50, y: 60 },
       width: 140,
       height: 60,
@@ -229,10 +235,10 @@ describe('canvas document commands', () => {
       deleteCanvasSelectionCommand({
         nodesMap,
         edgesMap,
-        selection: selectionSnapshot(new Set(['node-1']), new Set()),
+        selection: selectionSnapshot(new Set([testCanvasNodeId('node-1')]), new Set()),
       }),
     ).toEqual({ nodeCount: 1, edgeCount: 1 })
-    expect(nodesMap.has('node-1')).toBe(false)
+    expect(nodesMap.has(testCanvasNodeId('node-1'))).toBe(false)
     expect(edgesMap.has('edge-1')).toBe(false)
     doc.destroy()
   })
@@ -248,10 +254,13 @@ describe('canvas document commands', () => {
         paste: {
           nodes: [createNode('node-1'), createNode('node-2')],
           edges: [createEdge('edge-1')],
-          selection: selectionSnapshot(new Set(['node-1', 'node-2']), new Set(['edge-1'])),
+          selection: selectionSnapshot(
+            new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')]),
+            new Set(['edge-1']),
+          ),
         },
         sanitizeNode: (node) => {
-          if (node.id === 'node-2') {
+          if (node.id === testCanvasNodeId('node-2')) {
             throw new Error('invalid node')
           }
           return node
@@ -275,7 +284,10 @@ describe('canvas document commands', () => {
       paste: {
         nodes: [createNode('node-1'), createNode('node-2')],
         edges: [createStyledEdge('edge-1', 0)],
-        selection: selectionSnapshot(new Set(['node-1', 'node-2']), new Set(['edge-1'])),
+        selection: selectionSnapshot(
+          new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')]),
+          new Set(['edge-1']),
+        ),
       },
       sanitizeNode: (node) => node,
     })
@@ -286,18 +298,18 @@ describe('canvas document commands', () => {
 
   it('validates multi-node position updates before writing any node updates', () => {
     const { doc, nodesMap } = createCanvasMaps()
-    nodesMap.set('node-1', createNode('node-1'))
-    nodesMap.set('node-2', createNode('node-2'))
+    nodesMap.set(testCanvasNodeId('node-1'), createNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), createNode('node-2'))
 
     expect(() =>
       setCanvasNodePositionsCommand({
         nodesMap,
         positions: new Map([
-          ['node-1', { x: 100, y: 100 }],
-          ['node-2', { x: 200, y: 200 }],
+          [testCanvasNodeId('node-1'), { x: 100, y: 100 }],
+          [testCanvasNodeId('node-2'), { x: 200, y: 200 }],
         ]),
         sanitizeNode: (node) => {
-          if (node.id === 'node-2') {
+          if (node.id === testCanvasNodeId('node-2')) {
             throw new Error('invalid node')
           }
           return node
@@ -305,14 +317,14 @@ describe('canvas document commands', () => {
       }),
     ).toThrow('invalid node')
 
-    expect(nodesMap.get('node-1')?.position).toEqual({ x: 10, y: 20 })
-    expect(nodesMap.get('node-2')?.position).toEqual({ x: 10, y: 20 })
+    expect(nodesMap.get(testCanvasNodeId('node-1'))?.position).toEqual({ x: 10, y: 20 })
+    expect(nodesMap.get(testCanvasNodeId('node-2'))?.position).toEqual({ x: 10, y: 20 })
     doc.destroy()
   })
 
   it('skips reordered nodes and edges that were concurrently deleted', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    nodesMap.set('node-1', createNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-1'), createNode('node-1'))
     edgesMap.set('edge-1', createEdge('edge-1'))
 
     applyCanvasReorderCommand({
@@ -330,8 +342,8 @@ describe('canvas document commands', () => {
       },
     })
 
-    expect(nodesMap.get('node-1')?.zIndex).toBe(10)
-    expect(nodesMap.has('node-2')).toBe(false)
+    expect(nodesMap.get(testCanvasNodeId('node-1'))?.zIndex).toBe(10)
+    expect(nodesMap.has(testCanvasNodeId('node-2'))).toBe(false)
     expect(edgesMap.get('edge-1')?.zIndex).toBe(30)
     expect(edgesMap.has('edge-2')).toBe(false)
     doc.destroy()

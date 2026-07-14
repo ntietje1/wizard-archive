@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { sanitizeNodeForPersistence } from '../canvas-node-persistence-sanitizer'
 import type { CanvasDocumentNode as Node } from '../../../document-contract'
 
@@ -7,7 +8,7 @@ describe('sanitizeNodeForPersistence', () => {
     expect(
       sanitizeNodeForPersistence(
         {
-          id: 'node-1',
+          id: testCanvasNodeId('node-1'),
           type: 'text',
           position: { x: 10, y: 20 },
           width: 120,
@@ -18,7 +19,7 @@ describe('sanitizeNodeForPersistence', () => {
         'test',
       ),
     ).toEqual({
-      id: 'node-1',
+      id: testCanvasNodeId('node-1'),
       type: 'text',
       position: { x: 10, y: 20 },
       width: 120,

@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { isUuidV7 } from '../../../../resources/domain-id'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../../document-contract'
 import {
@@ -13,7 +14,7 @@ describe('canvas context menu clipboard', () => {
     const nodesMap = doc.getMap<CanvasDocumentNode>('nodes')
     const edgesMap = doc.getMap<CanvasDocumentEdge>('edges')
     const node: CanvasDocumentNode = {
-      id: 'source-node',
+      id: testCanvasNodeId('source-node'),
       type: 'text',
       position: { x: 10, y: 20 },
       data: {},

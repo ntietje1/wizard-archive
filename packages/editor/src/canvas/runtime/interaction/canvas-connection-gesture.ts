@@ -7,6 +7,7 @@ import type {
   CanvasConnectionDraftEndpoint,
 } from './canvas-connection-gesture-types'
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react'
+import { DOMAIN_ID_KIND, parseDomainId } from '../../../resources/domain-id'
 
 const CONNECTION_HANDLE_SNAP_RADIUS = 20
 const CONNECTION_HANDLE_SNAP_INTERVAL_MS = 50
@@ -208,7 +209,7 @@ function resolveCanvasConnectionHandle(target: EventTarget | null) {
 
   return {
     element,
-    nodeId: nodeElement.dataset.nodeId ?? null,
+    nodeId: parseDomainId(DOMAIN_ID_KIND.canvasNode, nodeElement.dataset.nodeId ?? ''),
     handleId: element.dataset.handleId ?? null,
     position: parseConnectionHandlePosition(element.dataset.handlePosition),
   }

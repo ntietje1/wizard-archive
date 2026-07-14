@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test'
 import { CanvasConnectionLayer } from '../canvas-connection-layer'
 import { buildConnectionDraftGeometry } from '../canvas-connection-layer-geometry'
@@ -22,7 +23,7 @@ import type {
   CanvasEdgeType,
 } from '../../document-contract'
 const sourceNode: Node = {
-  id: 'source',
+  id: testCanvasNodeId('source'),
   type: 'text',
   position: { x: 0, y: 0 },
   width: 100,
@@ -30,7 +31,7 @@ const sourceNode: Node = {
   data: {},
 }
 const targetNode: Node = {
-  id: 'target',
+  id: testCanvasNodeId('target'),
   type: 'text',
   position: { x: 200, y: 0 },
   width: 100,
@@ -48,14 +49,14 @@ function createSnappedDraft(): CanvasConnectionDraft {
   return {
     pointerId: 1,
     source: {
-      nodeId: 'source',
+      nodeId: sourceNode.id,
       handleId: 'right',
       position: CANVAS_HANDLE_POSITION.Right,
       point: { x: 100, y: 25 },
     },
     current: { x: 200, y: 25 },
     snapTarget: {
-      nodeId: 'target',
+      nodeId: targetNode.id,
       handleId: 'left',
       position: CANVAS_HANDLE_POSITION.Left,
       point: { x: 200, y: 25 },
@@ -66,8 +67,8 @@ function createSnappedDraft(): CanvasConnectionDraft {
 function buildExpectedEdge(type: CanvasEdgeType): Edge {
   return {
     id: 'edge-1',
-    source: 'source',
-    target: 'target',
+    source: sourceNode.id,
+    target: targetNode.id,
     sourceHandle: 'right',
     targetHandle: 'left',
     type,
@@ -133,7 +134,7 @@ describe('CanvasConnectionLayer', () => {
     const draft: CanvasConnectionDraft = {
       pointerId: 1,
       source: {
-        nodeId: 'source',
+        nodeId: sourceNode.id,
         handleId: 'right',
         position: CANVAS_HANDLE_POSITION.Right,
         point: { x: 100, y: 25 },
@@ -167,7 +168,7 @@ describe('CanvasConnectionLayer', () => {
     const draft: CanvasConnectionDraft = {
       pointerId: 1,
       source: {
-        nodeId: 'source',
+        nodeId: sourceNode.id,
         handleId: 'right',
         position: CANVAS_HANDLE_POSITION.Right,
         point: { x: 100, y: 25 },
@@ -186,7 +187,7 @@ describe('CanvasConnectionLayer', () => {
     const draft: CanvasConnectionDraft = {
       pointerId: 1,
       source: {
-        nodeId: 'source',
+        nodeId: sourceNode.id,
         handleId: 'right',
         position: CANVAS_HANDLE_POSITION.Right,
         point: { x: 100, y: 25 },
@@ -205,7 +206,7 @@ describe('CanvasConnectionLayer', () => {
     const draft: CanvasConnectionDraft = {
       pointerId: 1,
       source: {
-        nodeId: 'source',
+        nodeId: sourceNode.id,
         handleId: 'right',
         position: CANVAS_HANDLE_POSITION.Right,
         point: { x: 100, y: 25 },
@@ -224,7 +225,7 @@ describe('CanvasConnectionLayer', () => {
     const draft: CanvasConnectionDraft = {
       pointerId: 1,
       source: {
-        nodeId: 'source',
+        nodeId: sourceNode.id,
         handleId: 'right',
         position: CANVAS_HANDLE_POSITION.Right,
         point: { x: 100, y: 25 },
@@ -250,7 +251,7 @@ describe('CanvasConnectionLayer', () => {
     renderConnectionLayer(engine, {
       pointerId: 1,
       source: {
-        nodeId: 'source',
+        nodeId: sourceNode.id,
         handleId: 'right',
         position: CANVAS_HANDLE_POSITION.Right,
         point: { x: 100, y: 25 },
@@ -270,7 +271,7 @@ describe('CanvasConnectionLayer', () => {
         {
           pointerId: 1,
           source: {
-            nodeId: 'source',
+            nodeId: sourceNode.id,
             handleId: 'right',
             position: CANVAS_HANDLE_POSITION.Right,
             point: { x: 100, y: 25 },
@@ -290,7 +291,7 @@ describe('CanvasConnectionLayer', () => {
         sourceNode,
         targetNode,
         {
-          id: 'unrelated-node',
+          id: testCanvasNodeId('unrelated-node'),
           type: 'text',
           position: { x: 1000, y: 1000 },
           width: 100,
@@ -316,7 +317,7 @@ describe('CanvasConnectionLayer', () => {
     renderConnectionLayer(engine, {
       pointerId: 1,
       source: {
-        nodeId: 'source',
+        nodeId: sourceNode.id,
         handleId: 'right',
         position: CANVAS_HANDLE_POSITION.Right,
         point: { x: 100, y: 25 },

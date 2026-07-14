@@ -13,6 +13,7 @@ import {
   selectCanvasTool,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 
 const ARTIFACT_DIR = path.resolve('output/playwright')
 const ARTIFACT_PREFIX = process.env.CANVAS_PERF_ARTIFACT_PREFIX ?? 'canvas-performance-baseline'
@@ -182,7 +183,7 @@ test.describe.serial('canvas performance probe', () => {
 
     interactions.viewportCoordinateRegression = await measureInteraction(page, async () => {
       await selectCanvasTool(page, 'Pointer')
-      const coordinateNodeId = 'perf-embed-0'
+      const coordinateNodeId = testCanvasNodeId('perf-embed-0')
       await page.evaluate((nodeId) => {
         const runtime = window.__WA_CANVAS_PERF_RUNTIME__
         if (!runtime) throw new Error('Missing canvas performance runtime')

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import * as Y from 'yjs'
 import { createCanvasDocumentWriter } from '../use-canvas-document-writer'
 import type { CanvasEdgePatch } from '../../../edges/canvas-edge-types'
@@ -14,12 +15,12 @@ const validCanvasEdgePatch: CanvasEdgePatch = {
 void validCanvasEdgePatch
 
 // @ts-expect-error Canvas edge patches intentionally cannot rewrite connection endpoints.
-const invalidCanvasEdgePatch: CanvasEdgePatch = { source: 'node-2' }
+const invalidCanvasEdgePatch: CanvasEdgePatch = { source: testCanvasNodeId('node-2') }
 void invalidCanvasEdgePatch
 
 function createTextNode(id: string): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 10, y: 20 },
     width: 120,
@@ -30,7 +31,7 @@ function createTextNode(id: string): Node {
 
 function createStrokeNode(id: string): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'stroke',
     position: { x: 0, y: 0 },
     width: 20,
@@ -51,7 +52,7 @@ function createStrokeNode(id: string): Node {
 
 function createEmbedNode(id: string): Extract<Node, { type: 'embed' }> {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'embed',
     position: { x: 0, y: 0 },
     width: 320,
@@ -82,8 +83,8 @@ describe('createCanvasDocumentWriter', () => {
     writer.createNode(createTextNode('node-2'))
     writer.createEdge(
       {
-        source: 'node-1',
-        target: 'node-2',
+        source: testCanvasNodeId('node-1'),
+        target: testCanvasNodeId('node-2'),
         sourceHandle: null,
         targetHandle: null,
       },
@@ -97,14 +98,14 @@ describe('createCanvasDocumentWriter', () => {
       },
     )
 
-    expect(nodesMap.get('node-1')).toMatchObject({
+    expect(nodesMap.get(testCanvasNodeId('node-1'))).toMatchObject({
       type: 'text',
       data: { content: [{ type: 'paragraph' }] },
     })
     expect(Array.from(edgesMap.values())).toEqual([
       expect.objectContaining({
-        source: 'node-1',
-        target: 'node-2',
+        source: testCanvasNodeId('node-1'),
+        target: testCanvasNodeId('node-2'),
         sourceHandle: null,
         targetHandle: null,
         type: 'step',
@@ -116,10 +117,10 @@ describe('createCanvasDocumentWriter', () => {
       }),
     ])
 
-    writer.patchNodeData(new Map([['node-1', { backgroundColor: 'red' }]]))
-    writer.setNodePositions(new Map([['node-1', { x: 50, y: 60 }]]))
+    writer.patchNodeData(new Map([[testCanvasNodeId('node-1'), { backgroundColor: 'red' }]]))
+    writer.setNodePositions(new Map([[testCanvasNodeId('node-1'), { x: 50, y: 60 }]]))
 
-    expect(nodesMap.get('node-1')).toMatchObject({
+    expect(nodesMap.get(testCanvasNodeId('node-1'))).toMatchObject({
       position: { x: 50, y: 60 },
       data: { backgroundColor: 'red' },
     })
@@ -141,9 +142,9 @@ describe('createCanvasDocumentWriter', () => {
     })
 
     writer.deleteEdges(new Set([edgeId]))
-    writer.deleteNodes(new Set(['node-1']))
+    writer.deleteNodes(new Set([testCanvasNodeId('node-1')]))
 
-    expect(nodesMap.get('node-1')).toBeUndefined()
+    expect(nodesMap.get(testCanvasNodeId('node-1'))).toBeUndefined()
     expect(edgesMap.get(edgeId)).toBeUndefined()
   })
 
@@ -166,18 +167,18 @@ describe('createCanvasDocumentWriter', () => {
   })
 
   it('resizes multiple nodes in one writer call', () => {
-    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
     nodesMap.set('stroke-1', createStrokeNode('stroke-1'))
     const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
 
     writer.resizeNodes(
       new Map([
-        ['node-1', { width: 120, height: 60, position: { x: 10, y: 20 } }],
+        [testCanvasNodeId('node-1'), { width: 120, height: 60, position: { x: 10, y: 20 } }],
         ['stroke-1', { width: 40, height: 20, position: { x: 50, y: 60 } }],
       ]),
     )
 
-    expect(nodesMap.get('node-1')).toMatchObject({
+    expect(nodesMap.get(testCanvasNodeId('node-1'))).toMatchObject({
       position: { x: 10, y: 20 },
       width: 120,
       height: 60,
@@ -201,10 +202,10 @@ describe('createCanvasDocumentWriter', () => {
 
     writer.createNodes([createTextNode('node-1'), createTextNode('node-2')])
 
-    expect(nodesMap.has('node-1')).toBe(true)
-    expect(nodesMap.has('node-2')).toBe(true)
-    expect(nodesMap.get('node-1')?.zIndex).toBe(1)
-    expect(nodesMap.get('node-2')?.zIndex).toBe(2)
+    expect(nodesMap.has(testCanvasNodeId('node-1'))).toBe(true)
+    expect(nodesMap.has(testCanvasNodeId('node-2'))).toBe(true)
+    expect(nodesMap.get(testCanvasNodeId('node-1'))?.zIndex).toBe(1)
+    expect(nodesMap.get(testCanvasNodeId('node-2'))?.zIndex).toBe(2)
     expect(nodeEvents).toBe(1)
   })
 
@@ -213,7 +214,7 @@ describe('createCanvasDocumentWriter', () => {
 
     expect(() => {
       writer.createNodes([createTextNode('node-1'), createTextNode('node-1')])
-    }).toThrow('Canvas node "node-1" already exists')
+    }).toThrow(`Canvas node "${testCanvasNodeId('node-1')}" already exists`)
 
     expect(Array.from(nodesMap.keys())).toEqual([])
   })
@@ -233,12 +234,12 @@ describe('createCanvasDocumentWriter', () => {
   })
 
   it('applies batched node data, edge, and position updates in one writer call', () => {
-    nodesMap.set('node-1', createTextNode('node-1'))
-    nodesMap.set('node-2', createTextNode('node-2'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), createTextNode('node-2'))
     edgesMap.set('edge-1', {
       id: 'edge-1',
-      source: 'node-1',
-      target: 'node-2',
+      source: testCanvasNodeId('node-1'),
+      target: testCanvasNodeId('node-2'),
       type: 'straight',
       style: { strokeWidth: 1 },
     })
@@ -246,8 +247,8 @@ describe('createCanvasDocumentWriter', () => {
 
     writer.patchNodeData(
       new Map([
-        ['node-1', { backgroundColor: 'red' }],
-        ['node-2', { backgroundColor: 'blue' }],
+        [testCanvasNodeId('node-1'), { backgroundColor: 'red' }],
+        [testCanvasNodeId('node-2'), { backgroundColor: 'blue' }],
       ]),
     )
     writer.patchEdges(
@@ -262,16 +263,16 @@ describe('createCanvasDocumentWriter', () => {
     )
     writer.setNodePositions(
       new Map([
-        ['node-1', { x: 100, y: 200 }],
-        ['node-2', { x: 300, y: 400 }],
+        [testCanvasNodeId('node-1'), { x: 100, y: 200 }],
+        [testCanvasNodeId('node-2'), { x: 300, y: 400 }],
       ]),
     )
 
-    expect(nodesMap.get('node-1')).toMatchObject({
+    expect(nodesMap.get(testCanvasNodeId('node-1'))).toMatchObject({
       data: { backgroundColor: 'red' },
       position: { x: 100, y: 200 },
     })
-    expect(nodesMap.get('node-2')).toMatchObject({
+    expect(nodesMap.get(testCanvasNodeId('node-2'))).toMatchObject({
       data: { backgroundColor: 'blue' },
       position: { x: 300, y: 400 },
     })
@@ -293,14 +294,14 @@ describe('createCanvasDocumentWriter', () => {
   })
 
   it('clamps edge stroke widths to one when creating and patching edges', () => {
-    nodesMap.set('node-1', createTextNode('node-1'))
-    nodesMap.set('node-2', createTextNode('node-2'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), createTextNode('node-2'))
     const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
 
     writer.createEdge(
       {
-        source: 'node-1',
-        target: 'node-2',
+        source: testCanvasNodeId('node-1'),
+        target: testCanvasNodeId('node-2'),
       },
       {
         type: 'bezier',
@@ -365,12 +366,12 @@ describe('createCanvasDocumentWriter', () => {
       reason: 'unavailable-target',
     })
 
-    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
 
     expect(
       writer.execute({
         type: 'patchNodeData',
-        updates: new Map([['node-1', { backgroundColor: 'red' }]]),
+        updates: new Map([[testCanvasNodeId('node-1'), { backgroundColor: 'red' }]]),
       }),
     ).toEqual({
       type: 'completed',
@@ -386,55 +387,62 @@ describe('createCanvasDocumentWriter', () => {
   })
 
   it('deletes edges connected to removed nodes in the same document change', () => {
-    nodesMap.set('node-1', createTextNode('node-1'))
-    nodesMap.set('node-2', createTextNode('node-2'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), createTextNode('node-2'))
     edgesMap.set('edge-1', {
       id: 'edge-1',
       type: 'bezier',
-      source: 'node-1',
-      target: 'node-2',
+      source: testCanvasNodeId('node-1'),
+      target: testCanvasNodeId('node-2'),
     })
     const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
 
-    expect(writer.execute({ type: 'deleteNodes', nodeIds: new Set(['node-1']) })).toEqual({
+    expect(
+      writer.execute({ type: 'deleteNodes', nodeIds: new Set([testCanvasNodeId('node-1')]) }),
+    ).toEqual({
       type: 'completed',
       command: 'deleteNodes',
       affectedCount: 2,
     })
 
-    expect(nodesMap.has('node-1')).toBe(false)
+    expect(nodesMap.has(testCanvasNodeId('node-1'))).toBe(false)
     expect(edgesMap.has('edge-1')).toBe(false)
   })
 
   it('throws when createNode is called with a duplicate node id', () => {
-    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
     const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
 
     expect(() => {
       writer.createNode(createTextNode('node-1'))
-    }).toThrow('Canvas node "node-1" already exists')
+    }).toThrow(`Canvas node "${testCanvasNodeId('node-1')}" already exists`)
   })
 
   it('does not mutate the document when created for a read-only runtime', () => {
-    nodesMap.set('node-1', createTextNode('node-1'))
-    nodesMap.set('node-2', createTextNode('node-2'))
+    nodesMap.set(testCanvasNodeId('node-1'), createTextNode('node-1'))
+    nodesMap.set(testCanvasNodeId('node-2'), createTextNode('node-2'))
     edgesMap.set('edge-1', {
       id: 'edge-1',
       type: 'bezier',
-      source: 'node-1',
-      target: 'node-2',
+      source: testCanvasNodeId('node-1'),
+      target: testCanvasNodeId('node-2'),
     })
     const writer = createCanvasDocumentWriter({ canEdit: false, nodesMap, edgesMap })
 
     writer.createNode(createTextNode('created-node'))
     writer.createNodes([createTextNode('created-node-2')])
-    writer.patchNodeData(new Map([['node-1', { backgroundColor: 'red' }]]))
-    writer.resizeNode('node-1', 50, 60, { x: 1, y: 2 })
-    writer.resizeNodes(new Map([['node-1', { width: 40, height: 30, position: { x: 5, y: 6 } }]]))
-    writer.setNodePositions(new Map([['node-1', { x: 8, y: 9 }]]))
+    writer.patchNodeData(new Map([[testCanvasNodeId('node-1'), { backgroundColor: 'red' }]]))
+    writer.resizeNode(testCanvasNodeId('node-1'), 50, 60, { x: 1, y: 2 })
+    writer.resizeNodes(
+      new Map([[testCanvasNodeId('node-1'), { width: 40, height: 30, position: { x: 5, y: 6 } }]]),
+    )
+    writer.setNodePositions(new Map([[testCanvasNodeId('node-1'), { x: 8, y: 9 }]]))
     writer.patchEdges(new Map([['edge-1', { type: 'step' }]]))
-    writer.createEdge({ source: 'node-1', target: 'node-2' })
-    writer.deleteNodes(new Set(['node-1']))
+    writer.createEdge({
+      source: testCanvasNodeId('node-1'),
+      target: testCanvasNodeId('node-2'),
+    })
+    writer.deleteNodes(new Set([testCanvasNodeId('node-1')]))
     writer.deleteEdges(new Set(['edge-1']))
 
     expect(Array.from(nodesMap.values())).toEqual([
@@ -445,8 +453,8 @@ describe('createCanvasDocumentWriter', () => {
       {
         id: 'edge-1',
         type: 'bezier',
-        source: 'node-1',
-        target: 'node-2',
+        source: testCanvasNodeId('node-1'),
+        target: testCanvasNodeId('node-2'),
       },
     ])
   })

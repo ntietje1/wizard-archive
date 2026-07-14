@@ -8,6 +8,7 @@ import type {
   CanvasStrokeNodeData,
   CanvasTextNodeData,
 } from '../document-contract'
+import type { CanvasNodeId } from '../../resources/domain-id'
 
 export interface CanvasNodeDataByType {
   embed: CanvasEmbedNodeData
@@ -32,7 +33,7 @@ export type CanvasRuntimeNode<
   TType extends CanvasNodeType = CanvasNodeType,
   TData extends CanvasNodeRenderDataByType[TType] = CanvasNodeRenderDataByType[TType],
 > = {
-  id: string
+  id: CanvasNodeId
   type: TType
   position: CanvasPosition
   data: TData
@@ -50,7 +51,7 @@ export interface CanvasNodeCreateArgs<TType extends CanvasNodeType = CanvasNodeT
 }
 
 export interface CanvasNodeComponentProps<TType extends CanvasNodeType = CanvasNodeType> {
-  id: string
+  id: CanvasNodeId
   type?: TType
   data: CanvasNodeComponentDataByType[TType]
   dragging?: boolean

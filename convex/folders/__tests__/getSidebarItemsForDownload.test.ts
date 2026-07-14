@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { testCanvasNodeId } from '../../../shared/test/canvas-node-id'
 import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
@@ -309,14 +310,14 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
       edges: [
         {
           id: 'edge-1',
-          source: 'node-1',
-          target: 'node-1',
+          source: testCanvasNodeId('node-1'),
+          target: testCanvasNodeId('node-1'),
           type: 'bezier',
         },
       ],
       nodes: [
         {
-          id: 'node-1',
+          id: testCanvasNodeId('node-1'),
           type: 'text',
           position: { x: 10, y: 20 },
           data: {},
@@ -343,14 +344,14 @@ describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
           edges: [
             {
               id: 'edge-1',
-              source: 'node-1',
-              target: 'node-1',
+              source: testCanvasNodeId('node-1'),
+              target: testCanvasNodeId('node-1'),
               type: 'bezier',
             },
           ],
           nodes: [
             {
-              id: 'node-1',
+              id: testCanvasNodeId('node-1'),
               type: 'text',
               position: { x: 10, y: 20 },
               data: {},

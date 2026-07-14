@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasEdgeRenderer } from '../canvas-edge-renderer'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
@@ -63,8 +64,8 @@ function createEdge(
 ): CanvasDocumentEdge {
   return {
     id,
-    source: `${id}-source`,
-    target: `${id}-target`,
+    source: testCanvasNodeId(`${id}-source`),
+    target: testCanvasNodeId(`${id}-target`),
     sourceHandle: null,
     targetHandle: null,
     type: 'straight',

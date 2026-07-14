@@ -8,6 +8,9 @@ import type {
   CanvasDocumentNode,
 } from '@wizard-archive/editor/canvas/document-contract'
 import type { Locator, Page } from '@playwright/test'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { CanvasNodeId } from '@wizard-archive/editor/resources/domain-id'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 
 export interface CanvasPoint {
   x: number
@@ -21,7 +24,7 @@ export interface CanvasViewportState extends CanvasPoint {
 export interface CanvasRuntimeSnapshot {
   nodes: Array<CanvasDocumentNode>
   edges: Array<CanvasDocumentEdge>
-  selection: { nodeIds: Array<string>; edgeIds: Array<string> }
+  selection: { nodeIds: Array<CanvasNodeId>; edgeIds: Array<string> }
   viewport: CanvasViewportState
 }
 
@@ -187,7 +190,8 @@ export function getCanvasPendingPreviewActiveNodes(page: Page) {
 }
 
 export function getCanvasNodeById(page: Page, nodeId: string) {
-  return page.locator(`[data-testid="canvas-node"][data-node-id="${nodeId}"]`)
+  const resolvedNodeId = resolveTestCanvasNodeId(nodeId)
+  return page.locator(`[data-testid="canvas-node"][data-node-id="${resolvedNodeId}"]`)
 }
 
 export function getCanvasNodeSurface(node: Locator) {
@@ -351,7 +355,7 @@ export async function expectCanvasRuntimeSelection(
       }
     })
     .toEqual({
-      nodeIds: [...(selection.nodeIds ?? [])].sort(),
+      nodeIds: (selection.nodeIds ?? []).map(resolveTestCanvasNodeId).sort(),
       edgeIds: [...(selection.edgeIds ?? [])].sort(),
     })
 }
@@ -361,9 +365,24 @@ export async function setCanvasSelectionViaRuntime(
   selection: CanvasRuntimeSelectionInput,
 ) {
   await waitForCanvasRuntime(page)
-  await page.evaluate((nextSelection) => {
-    window.__WA_CANVAS_PERF_RUNTIME__?.setSelection(nextSelection)
-  }, selection)
+  if (selection.nodeIds === undefined) {
+    if (!selection.edgeIds) {
+      throw new Error('Canvas selection requires nodeIds or edgeIds')
+    }
+    await page.evaluate(
+      (nextSelection) => {
+        window.__WA_CANVAS_PERF_RUNTIME__?.setSelection(nextSelection)
+      },
+      { edgeIds: selection.edgeIds },
+    )
+  } else {
+    await page.evaluate(
+      (nextSelection) => {
+        window.__WA_CANVAS_PERF_RUNTIME__?.setSelection(nextSelection)
+      },
+      { ...selection, nodeIds: selection.nodeIds.map(resolveTestCanvasNodeId) },
+    )
+  }
   await expectCanvasRuntimeSelection(page, selection)
   await getCanvasPane(page).evaluate((pane) => {
     pane.focus()
@@ -401,9 +420,14 @@ export async function seedCanvasTextNodesViaRuntime(
   },
 ) {
   await waitForCanvasRuntime(page)
+  const { idPrefix = 'perf-node', ...seedConfiguration } = options
+  const runtimeOptions = {
+    ...seedConfiguration,
+    nodeIds: createTestCanvasNodeIds(options.count, idPrefix),
+  }
   await page.evaluate((seedOptions) => {
     window.__WA_CANVAS_PERF_RUNTIME__?.seedTextNodes(seedOptions)
-  }, options)
+  }, runtimeOptions)
   await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(options.count)
 }
 
@@ -426,9 +450,14 @@ export async function seedCanvasStrokeNodesViaRuntime(
   },
 ) {
   await waitForCanvasRuntime(page)
+  const { idPrefix = 'perf-stroke', ...seedConfiguration } = options
+  const runtimeOptions = {
+    ...seedConfiguration,
+    nodeIds: createTestCanvasNodeIds(options.count, idPrefix),
+  }
   await page.evaluate((seedOptions) => {
     window.__WA_CANVAS_PERF_RUNTIME__?.seedStrokeNodes(seedOptions)
-  }, options)
+  }, runtimeOptions)
   await expect.poll(() => getCanvasNodesByType(page, 'stroke').count()).toBe(options.count)
 }
 
@@ -446,9 +475,14 @@ export async function seedCanvasEdgeViaRuntime(
   },
 ) {
   await waitForCanvasRuntime(page)
+  const runtimeOptions = {
+    ...options,
+    source: resolveTestCanvasNodeId(options.source),
+    target: resolveTestCanvasNodeId(options.target),
+  }
   await page.evaluate((edgeOptions) => {
     window.__WA_CANVAS_PERF_RUNTIME__?.seedEdge(edgeOptions)
-  }, options)
+  }, runtimeOptions)
   if (options.id) {
     await expect(getCanvasEdgeById(page, options.id)).toHaveCount(1)
     return
@@ -469,9 +503,10 @@ export async function seedCanvasEmbedNodeViaRuntime(
   },
 ) {
   await waitForCanvasRuntime(page)
+  const runtimeOptions = { ...options, id: resolveTestCanvasNodeId(options.id) }
   await page.evaluate((embedOptions) => {
     window.__WA_CANVAS_PERF_RUNTIME__?.seedEmbedNode(embedOptions)
-  }, options)
+  }, runtimeOptions)
   await expect(getCanvasNodeById(page, options.id)).toBeVisible({ timeout: 10_000 })
 }
 
@@ -481,11 +516,12 @@ export async function seedCanvasCoordinateProbeNodeViaRuntime(
   start: CanvasPoint,
 ) {
   await waitForCanvasRuntime(page)
+  const resolvedNodeId = resolveTestCanvasNodeId(id)
   await page.evaluate(
     ({ nodeId, position }) => {
       window.__WA_CANVAS_PERF_RUNTIME__?.seedCoordinateProbeNode({ id: nodeId, start: position })
     },
-    { nodeId: id, position: start },
+    { nodeId: resolvedNodeId, position: start },
   )
   await expect(getCanvasNodeById(page, id)).toBeVisible({ timeout: 10_000 })
 }
@@ -556,6 +592,11 @@ export async function expectCanvasEdgeModel(
     style?: Record<string, unknown>
   },
 ) {
+  const resolvedExpected = {
+    ...expected,
+    source: expected.source ? resolveTestCanvasNodeId(expected.source) : undefined,
+    target: expected.target ? resolveTestCanvasNodeId(expected.target) : undefined,
+  }
   await expect
     .poll(async () => {
       const snapshot = await getCanvasRuntimeSnapshot(page)
@@ -563,7 +604,7 @@ export async function expectCanvasEdgeModel(
       if (!edge) return null
       return edge
     })
-    .toMatchObject(expected)
+    .toMatchObject(resolvedExpected)
 }
 
 export async function getCanvasRuntimeNodePosition(
@@ -571,14 +612,23 @@ export async function getCanvasRuntimeNodePosition(
   nodeId: string,
 ): Promise<CanvasPoint> {
   await waitForCanvasRuntime(page)
+  const resolvedNodeId = resolveTestCanvasNodeId(nodeId)
   const position = await page.evaluate(
     (id) => window.__WA_CANVAS_PERF_RUNTIME__?.getNodePosition(id),
-    nodeId,
+    resolvedNodeId,
   )
   if (!position) {
     throw new Error(`Missing canvas runtime node position for ${nodeId}`)
   }
   return position
+}
+
+function resolveTestCanvasNodeId(value: string): CanvasNodeId {
+  return parseDomainId(DOMAIN_ID_KIND.canvasNode, value) ?? testCanvasNodeId(value)
+}
+
+function createTestCanvasNodeIds(count: number, prefix: string) {
+  return Array.from({ length: count }, (_, index) => testCanvasNodeId(`${prefix}-${index}`))
 }
 
 export async function selectFirstCanvasNodesViaRuntime(page: Page, count: number) {

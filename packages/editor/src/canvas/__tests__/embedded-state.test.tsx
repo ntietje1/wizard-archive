@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { useEmbeddedCanvasStateFromUpdates } from '../embedded-state'
 import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { testCanvasNodeId } from '../../../../../shared/test/canvas-node-id'
+import type { CanvasNodeId } from '../../resources/domain-id'
+
+const NODE_1 = testCanvasNodeId('embedded-node-1')
+const NODE_2 = testCanvasNodeId('embedded-node-2')
 
 describe('useEmbeddedCanvasStateFromUpdates', () => {
   afterEach(() => {
@@ -11,8 +16,8 @@ describe('useEmbeddedCanvasStateFromUpdates', () => {
 
   it('loads Yjs updates into local nodes and edges and settles after the initial empty response', async () => {
     const initialUpdate = createCanvasUpdate({
-      nodes: [{ id: 'node-1', position: { x: 10, y: 20 }, data: {}, type: 'text' }],
-      edges: [{ id: 'edge-1', source: 'node-1', target: 'node-1', type: 'bezier' }],
+      nodes: [{ id: NODE_1, position: { x: 10, y: 20 }, data: {}, type: 'text' }],
+      edges: [{ id: 'edge-1', source: NODE_1, target: NODE_1, type: 'bezier' }],
     })
     let currentResult = {
       data: [{ revision: 0, seq: 1, update: initialUpdate }],
@@ -42,25 +47,25 @@ describe('useEmbeddedCanvasStateFromUpdates', () => {
 
     const available = requireAvailableEmbeddedCanvasState(result.current)
     expect(available.nodes[0]).toMatchObject({
-      id: 'node-1',
+      id: NODE_1,
       position: { x: 10, y: 20 },
     })
     expect(available.edges[0]).toMatchObject({
       id: 'edge-1',
-      source: 'node-1',
-      target: 'node-1',
+      source: NODE_1,
+      target: NODE_1,
     })
   })
 
   it('publishes same-id embedded canvas node and edge changes', async () => {
     const { initialUpdate, nextUpdate } = createCanvasUpdateSequence({
       initial: {
-        nodes: [{ id: 'node-1', position: { x: 10, y: 20 }, data: {}, type: 'text' }],
-        edges: [{ id: 'edge-1', source: 'node-1', target: 'node-1', type: 'bezier' }],
+        nodes: [{ id: NODE_1, position: { x: 10, y: 20 }, data: {}, type: 'text' }],
+        edges: [{ id: 'edge-1', source: NODE_1, target: NODE_1, type: 'bezier' }],
       },
       next: {
-        nodes: [{ id: 'node-1', position: { x: 30, y: 40 }, data: {}, type: 'note' }],
-        edges: [{ id: 'edge-1', source: 'node-1', target: 'node-2', type: 'straight' }],
+        nodes: [{ id: NODE_1, position: { x: 30, y: 40 }, data: {}, type: 'embed' }],
+        edges: [{ id: 'edge-1', source: NODE_1, target: NODE_2, type: 'straight' }],
       },
     })
     let currentResult = {
@@ -85,8 +90,8 @@ describe('useEmbeddedCanvasStateFromUpdates', () => {
       expect(result.current.status).toBe('available')
     })
     let available = requireAvailableEmbeddedCanvasState(result.current)
-    expect(available.nodes[0]).toMatchObject({ id: 'node-1', position: { x: 10, y: 20 } })
-    expect(available.edges[0]).toMatchObject({ id: 'edge-1', target: 'node-1' })
+    expect(available.nodes[0]).toMatchObject({ id: NODE_1, position: { x: 10, y: 20 } })
+    expect(available.edges[0]).toMatchObject({ id: 'edge-1', target: NODE_1 })
 
     currentResult = {
       data: [{ revision: 0, seq: 2, update: nextUpdate }],
@@ -107,13 +112,13 @@ describe('useEmbeddedCanvasStateFromUpdates', () => {
     await waitFor(() => {
       const current = requireAvailableEmbeddedCanvasState(result.current)
       expect(current.nodes[0]).toMatchObject({
-        id: 'node-1',
+        id: NODE_1,
         position: { x: 30, y: 40 },
-        type: 'note',
+        type: 'embed',
       })
       expect(current.edges[0]).toMatchObject({
         id: 'edge-1',
-        target: 'node-2',
+        target: NODE_2,
         type: 'straight',
       })
     })
@@ -149,11 +154,11 @@ describe('useEmbeddedCanvasStateFromUpdates', () => {
 
   it('resets local state when the embedded canvas id changes', async () => {
     const canvasOneUpdate = createCanvasUpdate({
-      nodes: [{ id: 'node-1', position: { x: 10, y: 20 }, data: {}, type: 'text' }],
+      nodes: [{ id: NODE_1, position: { x: 10, y: 20 }, data: {}, type: 'text' }],
       edges: [],
     })
     const canvasTwoUpdate = createCanvasUpdate({
-      nodes: [{ id: 'node-2', position: { x: 30, y: 40 }, data: {}, type: 'text' }],
+      nodes: [{ id: NODE_2, position: { x: 30, y: 40 }, data: {}, type: 'text' }],
       edges: [],
     })
     let currentResult = {
@@ -186,7 +191,7 @@ describe('useEmbeddedCanvasStateFromUpdates', () => {
     rerender({ currentCanvasId: canvasId('canvas-1') })
 
     await waitFor(() => expect(result.current.status).toBe('available'))
-    expect(requireAvailableEmbeddedCanvasState(result.current).nodes[0]?.id).toBe('node-1')
+    expect(requireAvailableEmbeddedCanvasState(result.current).nodes[0]?.id).toBe(NODE_1)
 
     currentResult = {
       data: [],
@@ -226,7 +231,7 @@ describe('useEmbeddedCanvasStateFromUpdates', () => {
     await waitFor(() => {
       const current = requireAvailableEmbeddedCanvasState(result.current)
       expect(current.nodes).toEqual([
-        expect.objectContaining({ id: 'node-2', position: { x: 30, y: 40 } }),
+        expect.objectContaining({ id: NODE_2, position: { x: 30, y: 40 } }),
       ])
     })
   })
@@ -282,7 +287,7 @@ function createCanvasUpdateSequence({
 }
 
 interface TestNode {
-  id: string
+  id: CanvasNodeId
   position: { x: number; y: number }
   data: Record<string, unknown>
   type: string
@@ -290,8 +295,8 @@ interface TestNode {
 
 interface TestEdge {
   id: string
-  source: string
-  target: string
+  source: CanvasNodeId
+  target: CanvasNodeId
   type: string
 }
 

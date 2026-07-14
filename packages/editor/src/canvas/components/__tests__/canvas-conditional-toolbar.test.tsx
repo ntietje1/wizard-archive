@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
 import { registerCanvasTextFormattingSession } from '../../text/formatting-session'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
@@ -229,7 +230,7 @@ function createNode(
       : {}
 
   return {
-    id: `${type}-${nodeIdCounter++}`,
+    id: testCanvasNodeId(`${type}-${nodeIdCounter++}`),
     type,
     position: { x: 0, y: 0 },
     width: 100,
@@ -273,8 +274,8 @@ function createEdge(
   return {
     id: `edge-${edgeIdCounter++}`,
     type: options.type ?? 'bezier',
-    source: options.source ?? 'source-node',
-    target: options.target ?? 'target-node',
+    source: testCanvasNodeId(options.source ?? 'source-node'),
+    target: testCanvasNodeId(options.target ?? 'target-node'),
     style:
       options.stroke !== undefined || options.strokeWidth !== undefined
         ? {
@@ -608,7 +609,7 @@ describe('CanvasConditionalToolbar', () => {
     let unregister: () => void = () => undefined
     act(() => {
       unregister = registerCanvasTextFormattingSession({
-        nodeId: 'text-0',
+        nodeId: testCanvasNodeId('text-0'),
         editor,
         defaultTextColor: 'var(--t-purple)',
         setDefaultTextColor: vi.fn(),
@@ -646,7 +647,7 @@ describe('CanvasConditionalToolbar', () => {
     let unregister: () => void = () => undefined
     act(() => {
       unregister = registerCanvasTextFormattingSession({
-        nodeId: 'text-0',
+        nodeId: testCanvasNodeId('text-0'),
         editor,
         defaultTextColor: 'var(--t-purple)',
         setDefaultTextColor,
@@ -690,7 +691,7 @@ describe('CanvasConditionalToolbar', () => {
     let unregister: () => void = () => undefined
     act(() => {
       unregister = registerCanvasTextFormattingSession({
-        nodeId: 'text-0',
+        nodeId: testCanvasNodeId('text-0'),
         editor,
         defaultTextColor: 'var(--foreground)',
         setDefaultTextColor: vi.fn(),
@@ -727,7 +728,7 @@ describe('CanvasConditionalToolbar', () => {
     let unregister: () => void = () => undefined
     act(() => {
       unregister = registerCanvasTextFormattingSession({
-        nodeId: 'text-0',
+        nodeId: testCanvasNodeId('text-0'),
         editor,
         defaultTextColor: 'var(--t-purple)',
         setDefaultTextColor: vi.fn((textColor: string) => {
@@ -822,7 +823,7 @@ describe('CanvasConditionalToolbar', () => {
     let unregister: () => void = () => undefined
     act(() => {
       unregister = registerCanvasTextFormattingSession({
-        nodeId: 'text-0',
+        nodeId: testCanvasNodeId('text-0'),
         editor,
         defaultTextColor: 'var(--t-purple)',
         setDefaultTextColor: vi.fn((textColor: string) => {
@@ -875,7 +876,7 @@ describe('CanvasConditionalToolbar', () => {
     let unregister: () => void = () => undefined
     act(() => {
       unregister = registerCanvasTextFormattingSession({
-        nodeId: 'text-0',
+        nodeId: testCanvasNodeId('text-0'),
         editor,
         defaultTextColor: 'var(--t-purple)',
         setDefaultTextColor: vi.fn((textColor: string) => {

@@ -13,6 +13,7 @@ import type { CanvasViewportController } from '../../system/canvas-viewport-cont
 import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type * as Y from 'yjs'
 import type { CanvasCollaborationProvider } from '../../session-contract'
+import { DOMAIN_ID_KIND, generateDomainId, parseDomainId } from '../../../resources/domain-id'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../document-contract'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
 
@@ -111,7 +112,8 @@ function createCanvasPerformanceRuntime(
     seedEdge: (options) => seedPerformanceEdge(dependencies, requireCanEdit, options),
     seedEmbedNode: (options) => seedPerformanceEmbedNode(dependencies, requireCanEdit, options),
     updateSelectedNodeSurface: () => updateSelectedNodeSurface(dependencies, requireCanEdit),
-    selectFirstNodes: (count) => selectFirstPerformanceNodes(dependencies.selection, count),
+    selectFirstNodes: (count) =>
+      selectFirstPerformanceNodes(dependencies.nodesMap, dependencies.selection, count),
     getSelectedCount: () => {
       const snapshot = dependencies.selection.getSnapshot()
       return snapshot.nodeIds.size + snapshot.edgeIds.size
@@ -166,7 +168,13 @@ function getPerformanceSnapshot({
     nodes: Array.from(nodesMap.values()),
     edges: Array.from(edgesMap.values()),
     selection: {
-      nodeIds: Array.from(selectionSnapshot.nodeIds),
+      nodeIds: Array.from(selectionSnapshot.nodeIds, (nodeId) => {
+        const parsedNodeId = parseDomainId(DOMAIN_ID_KIND.canvasNode, nodeId)
+        if (!parsedNodeId) {
+          throw new Error(`Canvas selection contains invalid node id: ${nodeId}`)
+        }
+        return parsedNodeId
+      }),
       edgeIds: Array.from(selectionSnapshot.edgeIds),
     },
     viewport: viewportController.getViewport(),
@@ -195,7 +203,7 @@ function seedPerformanceTextNodes(
   {
     count,
     columns = 25,
-    idPrefix = 'perf-node',
+    nodeIds,
     labelPrefix = 'Perf node',
     size,
     spacingX = 180,
@@ -207,6 +215,7 @@ function seedPerformanceTextNodes(
 ) {
   requireCanEdit()
   validatePerformanceGrid({ columns, count, spacingX, spacingY, start, zIndex })
+  validateNodeIds(count, nodeIds)
   if (size) {
     requirePositiveFiniteNumber('size.width', size.width)
     requirePositiveFiniteNumber('size.height', size.height)
@@ -228,7 +237,7 @@ function seedPerformanceTextNodes(
       })
       const node = {
         ...placement.node,
-        id: `${idPrefix}-${index}`,
+        id: nodeIds?.[index] ?? placement.node.id,
         zIndex: getPerformanceZIndex(index, zIndex),
       }
       nodesMap.set(node.id, node)
@@ -261,7 +270,7 @@ function seedPerformanceStrokeNodes(
   {
     count,
     columns = 10,
-    idPrefix = 'perf-stroke',
+    nodeIds,
     spacingX = 240,
     spacingY = 160,
     start = { x: 0, y: 0 },
@@ -272,6 +281,7 @@ function seedPerformanceStrokeNodes(
 ) {
   requireCanEdit()
   validatePerformanceGrid({ columns, count, spacingX, spacingY, start, zIndex })
+  validateNodeIds(count, nodeIds)
   requirePositiveFiniteInteger('pointsPerStroke', pointsPerStroke)
   if (style?.opacity !== undefined) {
     requireFiniteNumber('style.opacity', style.opacity)
@@ -285,8 +295,9 @@ function seedPerformanceStrokeNodes(
       const points = createPerformanceStrokePoints(origin, pointsPerStroke)
       const size = style?.size ?? 8
       const bounds = getStrokeBounds(points, size)
-      nodesMap.set(`${idPrefix}-${index}`, {
-        id: `${idPrefix}-${index}`,
+      const id = nodeIds?.[index] ?? generateDomainId(DOMAIN_ID_KIND.canvasNode)
+      nodesMap.set(id, {
+        id,
         type: 'stroke',
         position: { x: bounds.x, y: bounds.y },
         width: bounds.width,
@@ -376,13 +387,20 @@ function updateSelectedNodeSurface(
   documentWriter.patchNodeData(updates)
 }
 
-function selectFirstPerformanceNodes(selection: CanvasSelectionController, count: number) {
+function selectFirstPerformanceNodes(
+  nodesMap: Y.Map<CanvasDocumentNode>,
+  selection: CanvasSelectionController,
+  count: number,
+) {
   requirePositiveFiniteInteger('count', count)
-  const nodeIds = new Set<string>()
-  for (let index = 0; index < count; index += 1) {
-    nodeIds.add(`perf-node-${index}`)
-  }
+  const nodeIds = new Set(Array.from(nodesMap.keys()).slice(0, count))
   selection.setSelection({ nodeIds, edgeIds: new Set() })
+}
+
+function validateNodeIds(count: number, nodeIds: ReadonlyArray<string> | undefined) {
+  if (nodeIds !== undefined && nodeIds.length !== count) {
+    throw new Error('nodeIds must contain exactly one id per node')
+  }
 }
 
 function requirePositiveFiniteInteger(name: string, value: number) {

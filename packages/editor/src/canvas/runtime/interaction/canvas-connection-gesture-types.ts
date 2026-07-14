@@ -1,10 +1,11 @@
 import type { CanvasHandlePosition } from '../../types/canvas-domain-types'
 import type { Point2D } from '../../utils/canvas-awareness-types'
+import type { CanvasNodeId } from '../../../resources/domain-id'
 
 /** Endpoint metadata for a connection draft, including the node, optional handle, side, and canvas point. */
 export type CanvasConnectionDraftEndpoint = {
   /** Target node id for this endpoint. */
-  readonly nodeId: string
+  readonly nodeId: CanvasNodeId
   /** Optional connection handle id within the target node. */
   readonly handleId: string | null
   /** Handle side expressed as a CanvasHandlePosition. */

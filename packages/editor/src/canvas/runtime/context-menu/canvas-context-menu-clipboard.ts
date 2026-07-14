@@ -2,6 +2,7 @@ import { getNextCanvasElementZIndex } from '../document/canvas-z-index'
 import { sortCanvasElementsByZIndex } from '../document/canvas-z-order'
 import { stripEphemeralCanvasNodeState } from '../../document-contract'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
+import type { CanvasNodeId } from '../../../resources/domain-id'
 import type { CanvasClipboardEntry } from './canvas-context-menu-types'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type * as Y from 'yjs'
@@ -44,7 +45,7 @@ export function createCanvasClipboardEntry(
     return null
   }
 
-  const selectedNodeIds = new Set(selectedNodes.map((node) => node.id))
+  const selectedNodeIds = new Set<string>(selectedNodes.map((node) => node.id))
   const selectedEdges = getCurrentCanvasEdges(edgesMap).filter(
     (edge) => selectedNodeIds.has(edge.source) && selectedNodeIds.has(edge.target),
   )
@@ -61,7 +62,7 @@ export function materializeCanvasPaste(
   edgesMap: Y.Map<CanvasDocumentEdge>,
   clipboardEntry: CanvasClipboardEntry,
 ): MaterializedCanvasPaste {
-  const nodeIdMap = new Map<string, string>()
+  const nodeIdMap = new Map<CanvasNodeId, CanvasNodeId>()
   const offset = CANVAS_PASTE_OFFSET * (clipboardEntry.pasteCount + 1)
   const nextNodeZIndex = getNextCanvasElementZIndex(getCurrentCanvasNodes(nodesMap))
   const nextEdgeZIndex = getNextCanvasElementZIndex(getCurrentCanvasEdges(edgesMap))

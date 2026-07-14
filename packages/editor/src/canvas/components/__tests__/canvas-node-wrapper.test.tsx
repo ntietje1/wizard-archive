@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasNodeWrapper } from '../canvas-node-wrapper'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
@@ -57,7 +58,7 @@ describe('CanvasNodeWrapper', () => {
 
 function createNode(): CanvasDocumentNode {
   return {
-    id: 'node-1',
+    id: testCanvasNodeId('node-1'),
     type: 'text',
     position: { x: 0, y: 0 },
     width: 100,

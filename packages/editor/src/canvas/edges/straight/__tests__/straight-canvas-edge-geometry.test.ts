@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import {
   buildStraightCanvasEdgeGeometryFromEdge,
   buildStraightCanvasEdgeGeometryFromRenderProps,
@@ -60,7 +61,7 @@ describe('buildStraightCanvasEdgeGeometryFromEdge', () => {
 
 function createNode(id: string, x: number, y: number, width: number, height: number): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x, y },
     width,
@@ -73,8 +74,8 @@ function createEdge(): Edge {
   return {
     id: 'edge-1',
     type: 'straight',
-    source: 'source',
-    target: 'target',
+    source: testCanvasNodeId('source'),
+    target: testCanvasNodeId('target'),
     sourceHandle: 'right',
     targetHandle: 'left',
   }

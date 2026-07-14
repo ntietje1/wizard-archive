@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useCanvasDocumentCommands } from '../use-canvas-commands'
 import { useCanvasClipboardStore } from '../../context-menu/use-canvas-clipboard-store'
@@ -14,7 +15,7 @@ import { isUuidV7 } from '../../../../resources/domain-id'
 
 function createNode(id: string, zIndex: number, width = 20, height = 10): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: zIndex * 10, y: zIndex * 10 },
     width,
@@ -28,8 +29,8 @@ function createEdge(id: string, source: string, target: string, zIndex: number):
   return {
     id,
     type: 'bezier',
-    source,
-    target,
+    source: testCanvasNodeId(source),
+    target: testCanvasNodeId(target),
     zIndex,
   }
 }
@@ -60,9 +61,9 @@ function createCanvasMaps() {
   const nodesMap = doc.getMap<Node>('nodes')
   const edgesMap = doc.getMap<Edge>('edges')
 
-  nodesMap.set('node-1', createNode('node-1', 0))
-  nodesMap.set('node-2', createNode('node-2', 1))
-  nodesMap.set('node-3', createNode('node-3', 2))
+  nodesMap.set(testCanvasNodeId('node-1'), createNode('node-1', 0))
+  nodesMap.set(testCanvasNodeId('node-2'), createNode('node-2', 1))
+  nodesMap.set(testCanvasNodeId('node-3'), createNode('node-3', 2))
   edgesMap.set('edge-1', createEdge('edge-1', 'node-1', 'node-2', 0))
   edgesMap.set('edge-2', createEdge('edge-2', 'node-2', 'node-3', 1))
 
@@ -95,7 +96,9 @@ afterEach(() => {
 describe('useCanvasDocumentCommands', () => {
   it('copies the live selection snapshot into the shared clipboard', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
+    const selection = createSelectionController(
+      selectionSnapshot(new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')])),
+    )
 
     const { result, unmount } = renderHook(() =>
       useCanvasDocumentCommands({
@@ -113,7 +116,7 @@ describe('useCanvasDocumentCommands', () => {
     })
 
     expect(useCanvasClipboardStore.getState().clipboard).toMatchObject({
-      nodes: [{ id: 'node-1' }, { id: 'node-2' }],
+      nodes: [{ id: testCanvasNodeId('node-1') }, { id: testCanvasNodeId('node-2') }],
       edges: [{ id: 'edge-1' }],
       pasteCount: 0,
     })
@@ -124,7 +127,9 @@ describe('useCanvasDocumentCommands', () => {
 
   it('cuts an override selection, clears selection, and deletes the selected content', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController(selectionSnapshot(new Set(['node-3'])))
+    const selection = createSelectionController(
+      selectionSnapshot(new Set([testCanvasNodeId('node-3')])),
+    )
 
     const { result, unmount } = renderHook(() =>
       useCanvasDocumentCommands({
@@ -138,17 +143,19 @@ describe('useCanvasDocumentCommands', () => {
     act(() => {
       expect(
         result.current.cut.run({
-          selection: selectionSnapshot(new Set(['node-1', 'node-2'])),
+          selection: selectionSnapshot(
+            new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')]),
+          ),
         }),
       ).toBe(true)
     })
 
     expect(selection.clearSelection).toHaveBeenCalledTimes(1)
-    expect(nodesMap.has('node-1')).toBe(false)
-    expect(nodesMap.has('node-2')).toBe(false)
+    expect(nodesMap.has(testCanvasNodeId('node-1'))).toBe(false)
+    expect(nodesMap.has(testCanvasNodeId('node-2'))).toBe(false)
     expect(edgesMap.has('edge-1')).toBe(false)
     expect(useCanvasClipboardStore.getState().clipboard).toMatchObject({
-      nodes: [{ id: 'node-1' }, { id: 'node-2' }],
+      nodes: [{ id: testCanvasNodeId('node-1') }, { id: testCanvasNodeId('node-2') }],
       edges: [{ id: 'edge-1' }],
     })
 
@@ -161,10 +168,12 @@ describe('useCanvasDocumentCommands', () => {
       .spyOn(canvasDocumentCommands, 'deleteCanvasSelectionCommand')
       .mockReturnValue({ nodeCount: 0, edgeCount: 0 })
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const initialSelection = selectionSnapshot(new Set(['node-1', 'node-2']))
+    const initialSelection = selectionSnapshot(
+      new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')]),
+    )
     const selection = createSelectionController(initialSelection)
     const previousClipboard = {
-      nodes: [nodesMap.get('node-3')!],
+      nodes: [nodesMap.get(testCanvasNodeId('node-3'))!],
       edges: [],
       pasteCount: 0,
     }
@@ -185,8 +194,8 @@ describe('useCanvasDocumentCommands', () => {
 
     expect(selection.getSnapshot()).toEqual(initialSelection)
     expect(useCanvasClipboardStore.getState().clipboard).toBe(previousClipboard)
-    expect(nodesMap.has('node-1')).toBe(true)
-    expect(nodesMap.has('node-2')).toBe(true)
+    expect(nodesMap.has(testCanvasNodeId('node-1'))).toBe(true)
+    expect(nodesMap.has(testCanvasNodeId('node-2'))).toBe(true)
 
     deleteSelectionSpy.mockRestore()
     unmount()
@@ -198,10 +207,12 @@ describe('useCanvasDocumentCommands', () => {
       .spyOn(globalThis.crypto, 'randomUUID')
       .mockReturnValue('00000000-0000-4000-8000-000000000003')
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController(selectionSnapshot(new Set(['node-1'])))
+    const selection = createSelectionController(
+      selectionSnapshot(new Set([testCanvasNodeId('node-1')])),
+    )
 
     useCanvasClipboardStore.getState().setClipboard({
-      nodes: [nodesMap.get('node-1')!, nodesMap.get('node-2')!],
+      nodes: [nodesMap.get(testCanvasNodeId('node-1'))!, nodesMap.get(testCanvasNodeId('node-2'))!],
       edges: [edgesMap.get('edge-1')!],
       pasteCount: 0,
     })
@@ -237,7 +248,9 @@ describe('useCanvasDocumentCommands', () => {
 
   it('deletes the live selection and clears it when content was removed', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
+    const selection = createSelectionController(
+      selectionSnapshot(new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')])),
+    )
 
     const { result, unmount } = renderHook(() =>
       useCanvasDocumentCommands({
@@ -253,8 +266,8 @@ describe('useCanvasDocumentCommands', () => {
     })
 
     expect(selection.clearSelection).toHaveBeenCalledTimes(1)
-    expect(nodesMap.has('node-1')).toBe(false)
-    expect(nodesMap.has('node-2')).toBe(false)
+    expect(nodesMap.has(testCanvasNodeId('node-1'))).toBe(false)
+    expect(nodesMap.has(testCanvasNodeId('node-2'))).toBe(false)
     expect(edgesMap.has('edge-1')).toBe(false)
 
     unmount()
@@ -266,7 +279,9 @@ describe('useCanvasDocumentCommands', () => {
       .spyOn(globalThis.crypto, 'randomUUID')
       .mockReturnValue('00000000-0000-4000-8000-000000000013')
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
+    const selection = createSelectionController(
+      selectionSnapshot(new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')])),
+    )
 
     const { result, unmount } = renderHook(() =>
       useCanvasDocumentCommands({
@@ -327,27 +342,27 @@ describe('useCanvasDocumentCommands', () => {
   it.each([
     [
       'sendToBack',
-      { id: 'node-1', zIndex: 2 },
-      { id: 'node-2', zIndex: 1 },
-      { id: 'node-3', zIndex: 5 },
+      { id: testCanvasNodeId('node-1'), zIndex: 2 },
+      { id: testCanvasNodeId('node-2'), zIndex: 1 },
+      { id: testCanvasNodeId('node-3'), zIndex: 5 },
     ],
     [
       'sendBackward',
-      { id: 'node-1', zIndex: 1 },
-      { id: 'node-2', zIndex: 2 },
-      { id: 'node-3', zIndex: 5 },
+      { id: testCanvasNodeId('node-1'), zIndex: 1 },
+      { id: testCanvasNodeId('node-2'), zIndex: 2 },
+      { id: testCanvasNodeId('node-3'), zIndex: 5 },
     ],
     [
       'bringForward',
-      { id: 'node-1', zIndex: 1 },
-      { id: 'node-2', zIndex: 4 },
-      { id: 'node-3', zIndex: 5 },
+      { id: testCanvasNodeId('node-1'), zIndex: 1 },
+      { id: testCanvasNodeId('node-2'), zIndex: 4 },
+      { id: testCanvasNodeId('node-3'), zIndex: 5 },
     ],
     [
       'bringToFront',
-      { id: 'node-1', zIndex: 1 },
-      { id: 'node-2', zIndex: 5 },
-      { id: 'node-3', zIndex: 4 },
+      { id: testCanvasNodeId('node-1'), zIndex: 1 },
+      { id: testCanvasNodeId('node-2'), zIndex: 5 },
+      { id: testCanvasNodeId('node-3'), zIndex: 4 },
     ],
   ] satisfies Array<
     [
@@ -358,7 +373,9 @@ describe('useCanvasDocumentCommands', () => {
     ]
   >)('reorders node selections with %s', (direction, firstNode, secondNode, thirdNode) => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController(selectionSnapshot(new Set(['node-2'])))
+    const selection = createSelectionController(
+      selectionSnapshot(new Set([testCanvasNodeId('node-2')])),
+    )
 
     const { result, unmount } = renderHook(() =>
       useCanvasDocumentCommands({
@@ -404,20 +421,23 @@ describe('useCanvasDocumentCommands', () => {
 
   it('arranges selected nodes and ignores selected edges for eligibility', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    nodesMap.set('node-1', {
-      ...nodesMap.get('node-1')!,
+    nodesMap.set(testCanvasNodeId('node-1'), {
+      ...nodesMap.get(testCanvasNodeId('node-1'))!,
       position: { x: 30, y: 10 },
       width: 20,
       height: 10,
     })
-    nodesMap.set('node-2', {
-      ...nodesMap.get('node-2')!,
+    nodesMap.set(testCanvasNodeId('node-2'), {
+      ...nodesMap.get(testCanvasNodeId('node-2'))!,
       position: { x: 10, y: 50 },
       width: 40,
       height: 20,
     })
     const selection = createSelectionController(
-      selectionSnapshot(new Set(['node-1', 'node-2']), new Set(['edge-1'])),
+      selectionSnapshot(
+        new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')]),
+        new Set(['edge-1']),
+      ),
     )
 
     const { result, unmount } = renderHook(() =>
@@ -436,9 +456,9 @@ describe('useCanvasDocumentCommands', () => {
     })
 
     expect(getNodePositions(nodesMap)).toEqual([
-      { id: 'node-1', position: { x: 10, y: 10 } },
-      { id: 'node-2', position: { x: 10, y: 50 } },
-      { id: 'node-3', position: { x: 20, y: 20 } },
+      { id: testCanvasNodeId('node-1'), position: { x: 10, y: 10 } },
+      { id: testCanvasNodeId('node-2'), position: { x: 10, y: 50 } },
+      { id: testCanvasNodeId('node-3'), position: { x: 20, y: 20 } },
     ])
 
     unmount()
@@ -448,7 +468,7 @@ describe('useCanvasDocumentCommands', () => {
   it('requires enough selected nodes for each arrangement action', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
     const twoNodeSelection = createSelectionController(
-      selectionSnapshot(new Set(['node-1', 'node-2'])),
+      selectionSnapshot(new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')])),
     )
 
     const { result, unmount } = renderHook(() =>
@@ -526,7 +546,9 @@ describe('useCanvasDocumentCommands', () => {
 
   it('recomputes reorder plans when running after canRun', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController(selectionSnapshot(new Set(['node-2'])))
+    const selection = createSelectionController(
+      selectionSnapshot(new Set([testCanvasNodeId('node-2')])),
+    )
     const args = { direction: 'bringForward' as const }
     edgesMap.clear()
 
@@ -540,16 +562,19 @@ describe('useCanvasDocumentCommands', () => {
     )
 
     expect(result.current.reorder.canRun(args)).toBe(true)
-    nodesMap.set('node-3', { ...nodesMap.get('node-3')!, zIndex: -1 })
+    nodesMap.set(testCanvasNodeId('node-3'), {
+      ...nodesMap.get(testCanvasNodeId('node-3'))!,
+      zIndex: -1,
+    })
 
     act(() => {
       expect(result.current.reorder.run(args)).toBe(true)
     })
 
     expect(getNodeZIndexes(nodesMap)).toEqual([
-      { id: 'node-1', zIndex: 2 },
-      { id: 'node-2', zIndex: 3 },
-      { id: 'node-3', zIndex: 1 },
+      { id: testCanvasNodeId('node-1'), zIndex: 2 },
+      { id: testCanvasNodeId('node-2'), zIndex: 3 },
+      { id: testCanvasNodeId('node-3'), zIndex: 1 },
     ])
     expect(args).toEqual({ direction: 'bringForward' })
 
@@ -559,7 +584,9 @@ describe('useCanvasDocumentCommands', () => {
 
   it('recomputes arrange eligibility when running after canRun', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
+    const selection = createSelectionController(
+      selectionSnapshot(new Set([testCanvasNodeId('node-1'), testCanvasNodeId('node-2')])),
+    )
     const args = { action: 'alignLeft' as const }
 
     const { result, unmount } = renderHook(() =>
@@ -572,13 +599,13 @@ describe('useCanvasDocumentCommands', () => {
     )
 
     expect(result.current.arrange.canRun(args)).toBe(true)
-    nodesMap.delete('node-2')
+    nodesMap.delete(testCanvasNodeId('node-2'))
 
     act(() => {
       expect(result.current.arrange.run(args)).toBe(false)
     })
 
-    expect(nodesMap.has('node-2')).toBe(false)
+    expect(nodesMap.has(testCanvasNodeId('node-2'))).toBe(false)
     expect(args).toEqual({ action: 'alignLeft' })
 
     unmount()

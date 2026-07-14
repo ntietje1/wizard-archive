@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import {
   createCanvasNodePlacement,
   getCanvasNodeInspectableProperties,
@@ -143,7 +144,7 @@ describe('canvas node specs', () => {
     expect(
       getCanvasNodeInspectableProperties(
         normalizeCanvasNode({
-          id: 'text-1',
+          id: testCanvasNodeId('text-1'),
           type: 'text',
           position: { x: 0, y: 0 },
           width: 100,
@@ -159,7 +160,7 @@ describe('canvas node specs', () => {
     const patchNodeData = vi.fn()
     const properties = getCanvasNodeInspectableProperties(
       normalizeCanvasNode({
-        id: 'text-1',
+        id: testCanvasNodeId('text-1'),
         type: 'text',
         position: { x: 0, y: 0 },
         width: 100,
@@ -182,12 +183,14 @@ describe('canvas node specs', () => {
     fill.setValue({ color: '', opacity: Number.NaN })
     linePaint.setValue({ color: '', opacity: Number.POSITIVE_INFINITY })
 
-    expect(patchNodeData).toHaveBeenNthCalledWith(1, 'text-1', { textColor: 'var(--text)' })
-    expect(patchNodeData).toHaveBeenNthCalledWith(2, 'text-1', {
+    expect(patchNodeData).toHaveBeenNthCalledWith(1, testCanvasNodeId('text-1'), {
+      textColor: 'var(--text)',
+    })
+    expect(patchNodeData).toHaveBeenNthCalledWith(2, testCanvasNodeId('text-1'), {
       backgroundColor: 'var(--surface)',
       backgroundOpacity: 40,
     })
-    expect(patchNodeData).toHaveBeenNthCalledWith(3, 'text-1', {
+    expect(patchNodeData).toHaveBeenNthCalledWith(3, testCanvasNodeId('text-1'), {
       borderStroke: 'var(--line)',
       borderOpacity: 30,
     })
@@ -199,7 +202,7 @@ describe('canvas node specs', () => {
     expect(
       getCanvasNodeInspectableProperties(
         normalizeCanvasNode({
-          id: 'embed-1',
+          id: testCanvasNodeId('embed-1'),
           type: 'embed',
           position: { x: 0, y: 0 },
           width: 100,

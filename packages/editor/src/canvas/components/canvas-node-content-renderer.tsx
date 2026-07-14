@@ -7,13 +7,14 @@ import type { CanvasEngineSnapshot, CanvasInternalNode } from '../system/canvas-
 import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { ComponentType } from 'react'
 import type { CanvasDocumentNode, CanvasNodeType } from '../document-contract'
+import type { CanvasNodeId } from '../../resources/domain-id'
 
 export type CanvasNodeRendererMap = {
   [TType in CanvasNodeType]: ComponentType<CanvasNodeComponentProps<TType>>
 }
 
 type CanvasNodeContentSnapshot = {
-  id: string
+  id: CanvasNodeId
   type: CanvasNodeType
   data: CanvasDocumentNode['data']
   dragging: boolean

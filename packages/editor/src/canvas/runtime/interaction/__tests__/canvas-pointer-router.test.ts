@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { createCanvasPointerRouter } from '../canvas-pointer-router'
 import { createCanvasToolLocalOverlayStore } from '../../../stores/canvas-tool-local-overlay-store'
 import type { CanvasEngine } from '../../../system/canvas-engine-types'
@@ -48,7 +49,7 @@ describe('createCanvasPointerRouter', () => {
         selection,
         nodes: [
           {
-            id: 'node-1',
+            id: testCanvasNodeId('node-1'),
             type: 'text',
             data: {},
             position: { x: 10, y: 10 },
@@ -58,10 +59,10 @@ describe('createCanvasPointerRouter', () => {
         ],
         nodeLookup: new Map([
           [
-            'node-1',
+            testCanvasNodeId('node-1'),
             {
               node: {
-                id: 'node-1',
+                id: testCanvasNodeId('node-1'),
                 type: 'text',
                 data: {},
                 position: { x: 10, y: 10 },
@@ -83,7 +84,7 @@ describe('createCanvasPointerRouter', () => {
 
     expect(selection.beginGesture).toHaveBeenCalledWith('marquee', 'replace')
     expect(selection.setGesturePreview).toHaveBeenCalledWith({
-      nodeIds: new Set(['node-1']),
+      nodeIds: new Set([testCanvasNodeId('node-1')]),
       edgeIds: new Set(),
     })
     expect(selection.commitGesture).toHaveBeenCalledTimes(1)
@@ -101,7 +102,9 @@ describe('createCanvasPointerRouter', () => {
         activeTool: 'select',
         selection,
         nodes: [createMeasuredNode('node-1', 10, 10)],
-        nodeLookup: new Map([['node-1', createInternalNode('node-1', 10, 10)]]),
+        nodeLookup: new Map([
+          [testCanvasNodeId('node-1'), createInternalNode(testCanvasNodeId('node-1'), 10, 10)],
+        ]),
       }),
     )
     const detach = router.attach(surface)
@@ -182,8 +185,14 @@ describe('createCanvasPointerRouter', () => {
           createMeasuredNode('outside-node', 200, 200),
         ],
         nodeLookup: new Map([
-          ['inside-node', createInternalNode('inside-node', 20, 20)],
-          ['outside-node', createInternalNode('outside-node', 200, 200)],
+          [
+            testCanvasNodeId('inside-node'),
+            createInternalNode(testCanvasNodeId('inside-node'), 20, 20),
+          ],
+          [
+            testCanvasNodeId('outside-node'),
+            createInternalNode(testCanvasNodeId('outside-node'), 200, 200),
+          ],
         ]),
       }),
     )
@@ -209,7 +218,7 @@ describe('createCanvasPointerRouter', () => {
 
     expect(selection.beginGesture).toHaveBeenCalledWith('lasso', 'add')
     expect(selection.setGesturePreview).toHaveBeenCalledWith({
-      nodeIds: new Set(['existing-node', 'inside-node']),
+      nodeIds: new Set(['existing-node', testCanvasNodeId('inside-node')]),
       edgeIds: new Set(['existing-edge']),
     })
     expect(selection.commitGesture).toHaveBeenCalledTimes(1)
@@ -307,7 +316,10 @@ describe('createCanvasPointerRouter', () => {
     window.dispatchEvent(createPointerEvent('pointermove', { clientX: 20, pointerId: 7 }))
     window.dispatchEvent(createPointerEvent('pointerup', { clientX: 20, pointerId: 7 }))
 
-    expect(nodeDragController.begin).toHaveBeenCalledWith('node-1', expect.any(Event))
+    expect(nodeDragController.begin).toHaveBeenCalledWith(
+      testCanvasNodeId('node-1'),
+      expect.any(Event),
+    )
     expect(nodeDragController.update).toHaveBeenCalledTimes(1)
     expect(nodeDragController.commit).toHaveBeenCalledTimes(1)
     expect(nodeDragController.cancel).not.toHaveBeenCalled()
@@ -348,7 +360,10 @@ describe('createCanvasPointerRouter', () => {
     window.dispatchEvent(createPointerEvent('pointermove', { clientX: 20, pointerId: 7 }))
     window.dispatchEvent(createPointerEvent('pointerup', { clientX: 20, pointerId: 7 }))
 
-    expect(nodeDragController.begin).toHaveBeenCalledWith('node-1', expect.any(Event))
+    expect(nodeDragController.begin).toHaveBeenCalledWith(
+      testCanvasNodeId('node-1'),
+      expect.any(Event),
+    )
     expect(nodeDragController.update).toHaveBeenCalledTimes(1)
     expect(nodeDragController.commit).toHaveBeenCalledTimes(1)
 
@@ -368,9 +383,12 @@ describe('createCanvasPointerRouter', () => {
     )
     window.dispatchEvent(createPointerEvent('pointerup', { ctrlKey: true, pointerId: 7 }))
 
-    expect(nodeDragController.begin).toHaveBeenCalledWith('node-1', expect.any(Event))
+    expect(nodeDragController.begin).toHaveBeenCalledWith(
+      testCanvasNodeId('node-1'),
+      expect.any(Event),
+    )
     expect(nodeDragController.commit).toHaveBeenCalledTimes(1)
-    expect(selection.toggleNode).toHaveBeenCalledExactlyOnceWith('node-1', true)
+    expect(selection.toggleNode).toHaveBeenCalledExactlyOnceWith(testCanvasNodeId('node-1'), true)
 
     detach()
   })
@@ -378,7 +396,7 @@ describe('createCanvasPointerRouter', () => {
   it('uses the clicked selected node for aggregate selection wrapper modifier-clicks', () => {
     const { surface, selectionDragWrapper } = createCanvasDom()
     const selection = createSelectionMock({
-      nodeIds: new Set(['node-1', 'node-2']),
+      nodeIds: new Set([testCanvasNodeId('node-1'), 'node-2']),
       edgeIds: new Set(),
     })
     const nodeDragController = createNodeDragControllerMock()
@@ -389,7 +407,7 @@ describe('createCanvasPointerRouter', () => {
         activeTool: 'select',
         nodeDragController,
         nodeLookup: new Map([
-          ['node-1', createInternalNode('node-1', 0, 0)],
+          [testCanvasNodeId('node-1'), createInternalNode(testCanvasNodeId('node-1'), 0, 0)],
           ['node-2', createInternalNode('node-2', 100, 0)],
         ]),
         selection,
@@ -574,7 +592,7 @@ function createCanvasDom() {
   edge.dataset.canvasEdgeId = 'edge-1'
   const node = document.createElement('div')
   node.className = 'canvas-node-shell'
-  node.dataset.nodeId = 'node-1'
+  node.dataset.nodeId = testCanvasNodeId('node-1')
   const text = document.createElement('p')
   text.textContent = 'node text'
   const handle = document.createElement('button')
@@ -583,7 +601,7 @@ function createCanvasDom() {
   resizeZone.className = 'canvas-selection-resize-zone'
   const input = document.createElement('input')
   const selectionDragWrapper = document.createElement('div')
-  selectionDragWrapper.dataset.canvasSelectionDragNodeId = 'node-1'
+  selectionDragWrapper.dataset.canvasSelectionDragNodeId = testCanvasNodeId('node-1')
 
   edgeLayer.appendChild(edge)
   node.append(text, handle, resizeZone, input)
@@ -621,7 +639,7 @@ function createNodeDragControllerMock(): NonNullable<
 
 function createMeasuredNode(id: string, x: number, y: number): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     data: {},
     position: { x, y },

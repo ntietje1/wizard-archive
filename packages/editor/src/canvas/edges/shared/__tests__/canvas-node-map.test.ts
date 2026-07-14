@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { createCanvasNodesById } from '../canvas-node-map'
 import type { CanvasDocumentNode as Node } from '../../../document-contract'
 
 function createNode(id: string, x: number): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x, y: 0 },
     width: 40,
@@ -36,7 +37,7 @@ describe('createCanvasNodesById', () => {
     const nodesById = createCanvasNodesById([node])
 
     expect(nodesById.size).toBe(1)
-    expect(nodesById.get('single')).toEqual(node)
+    expect(nodesById.get(testCanvasNodeId('single'))).toEqual(node)
     expect(consoleWarnSpy).not.toHaveBeenCalled()
   })
 
@@ -44,8 +45,8 @@ describe('createCanvasNodesById', () => {
     const nodesById = createCanvasNodesById([createNode('a', 0), createNode('b', 10)])
 
     expect(nodesById.size).toBe(2)
-    expect(nodesById.get('a')?.position).toEqual({ x: 0, y: 0 })
-    expect(nodesById.get('b')?.position).toEqual({ x: 10, y: 0 })
+    expect(nodesById.get(testCanvasNodeId('a'))?.position).toEqual({ x: 0, y: 0 })
+    expect(nodesById.get(testCanvasNodeId('b'))?.position).toEqual({ x: 10, y: 0 })
     expect(consoleWarnSpy).not.toHaveBeenCalled()
   })
 
@@ -53,9 +54,9 @@ describe('createCanvasNodesById', () => {
     const nodesById = createCanvasNodesById([createNode('node-1', 0), createNode('node-1', 20)])
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'createCanvasNodesById: duplicate node id "node-1", keeping last entry',
+      `createCanvasNodesById: duplicate node id "${testCanvasNodeId('node-1')}", keeping last entry`,
     )
-    expect(nodesById.get('node-1')?.position.x).toBe(20)
+    expect(nodesById.get(testCanvasNodeId('node-1'))?.position.x).toBe(20)
   })
 
   it('warns and skips invalid node entries', () => {
@@ -66,7 +67,7 @@ describe('createCanvasNodesById', () => {
     ] as Array<Node>)
 
     expect(nodesById.size).toBe(1)
-    expect(nodesById.get('node-1')?.position.x).toBe(0)
+    expect(nodesById.get(testCanvasNodeId('node-1'))?.position.x).toBe(0)
     expect(consoleWarnSpy).toHaveBeenCalledTimes(2)
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       'createCanvasNodesById: skipping invalid node entry at index 0',
@@ -95,8 +96,8 @@ describe('createCanvasNodesById', () => {
       },
     ] as Array<Node>)
 
-    expect([...nodesById.keys()]).toEqual(['anchorable'])
-    expect(nodesById.get('anchorable')).toEqual(anchorableNode)
+    expect([...nodesById.keys()]).toEqual([testCanvasNodeId('anchorable')])
+    expect(nodesById.get(testCanvasNodeId('anchorable'))).toEqual(anchorableNode)
     expect(consoleWarnSpy).toHaveBeenCalledTimes(2)
   })
 })

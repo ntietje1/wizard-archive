@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { createInitialCanvasSelectionState } from '../canvas-selection'
 import {
   EMPTY_EDGE_IDS_BY_NODE_ID,
@@ -26,7 +27,12 @@ import { createEdge, createNode } from './canvas-test-fixtures'
 describe('canvas culling', () => {
   it('returns empty snapshots for missing or invalid surface bounds', () => {
     const snapshot = createProjectedSnapshot([
-      { ...createNode('far', 0), position: { x: 2000, y: 0 }, width: 20, height: 20 },
+      {
+        ...createNode('far', 0),
+        position: { x: 2000, y: 0 },
+        width: 20,
+        height: 20,
+      },
     ])
 
     expect(cull(snapshot, null).culledNodeIds).toEqual(new Set())
@@ -37,39 +43,83 @@ describe('canvas culling', () => {
   it('keeps selected, previewed, and dragged nodes visible while culling ordinary offscreen nodes', () => {
     const snapshot = {
       ...createProjectedSnapshot([
-        { ...createNode('selected', 0), position: { x: 2000, y: 0 }, width: 20, height: 20 },
-        { ...createNode('previewed', 1), position: { x: 2100, y: 0 }, width: 20, height: 20 },
-        { ...createNode('dragged', 2), position: { x: 2200, y: 0 }, width: 20, height: 20 },
-        { ...createNode('ordinary', 3), position: { x: 2300, y: 0 }, width: 20, height: 20 },
+        {
+          ...createNode('selected', 0),
+          position: { x: 2000, y: 0 },
+          width: 20,
+          height: 20,
+        },
+        {
+          ...createNode('previewed', 1),
+          position: { x: 2100, y: 0 },
+          width: 20,
+          height: 20,
+        },
+        {
+          ...createNode('dragged', 2),
+          position: { x: 2200, y: 0 },
+          width: 20,
+          height: 20,
+        },
+        {
+          ...createNode('ordinary', 3),
+          position: { x: 2300, y: 0 },
+          width: 20,
+          height: 20,
+        },
       ]),
       selection: createSelection({
-        nodeIds: new Set(['selected']),
-        pendingPreviewNodeIds: new Set(['previewed']),
+        nodeIds: new Set([testCanvasNodeId('selected')]),
+        pendingPreviewNodeIds: new Set([testCanvasNodeId('previewed')]),
       }),
     }
 
-    const result = cull(snapshot, undefined, new Set(['dragged']))
+    const result = cull(snapshot, undefined, new Set([testCanvasNodeId('dragged')]))
 
-    expect(result.culledNodeIds).toEqual(new Set(['ordinary']))
+    expect(result.culledNodeIds).toEqual(new Set([testCanvasNodeId('ordinary')]))
   })
 
   it('keeps selected edges and edges connected to always-visible nodes visible', () => {
     const snapshot = {
       ...createProjectedSnapshot(
         [
-          { ...createNode('selected-node', 0), position: { x: 2000, y: 0 }, width: 20, height: 20 },
-          { ...createNode('other-a', 1), position: { x: 2100, y: 0 }, width: 20, height: 20 },
-          { ...createNode('other-b', 2), position: { x: 2200, y: 0 }, width: 20, height: 20 },
-          { ...createNode('other-c', 3), position: { x: 2300, y: 0 }, width: 20, height: 20 },
+          {
+            ...createNode('selected-node', 0),
+            position: { x: 2000, y: 0 },
+            width: 20,
+            height: 20,
+          },
+          {
+            ...createNode('other-a', 1),
+            position: { x: 2100, y: 0 },
+            width: 20,
+            height: 20,
+          },
+          {
+            ...createNode('other-b', 2),
+            position: { x: 2200, y: 0 },
+            width: 20,
+            height: 20,
+          },
+          {
+            ...createNode('other-c', 3),
+            position: { x: 2300, y: 0 },
+            width: 20,
+            height: 20,
+          },
         ],
         [
-          createEdge('connected-edge', 'selected-node', 'other-a'),
+          createEdge(
+            'connected-edge',
+            testCanvasNodeId('selected-node'),
+            testCanvasNodeId('other-a'),
+          ),
           createEdge('selected-edge', 'other-a', 'other-b'),
           createEdge('ordinary-edge', 'other-b', 'other-c'),
         ],
       ),
       selection: createSelection({
-        nodeIds: new Set(['selected-node']),
+        nodeIds: new Set([testCanvasNodeId('selected-node')]),
         edgeIds: new Set(['selected-edge']),
       }),
     }
@@ -81,11 +131,11 @@ describe('canvas culling', () => {
 
   it('diffs culled ids in both directions and reports empty diffs', () => {
     const previous = {
-      culledNodeIds: new Set(['a']),
+      culledNodeIds: new Set([testCanvasNodeId('a')]),
       culledEdgeIds: new Set(['edge-a']),
     }
     const next = {
-      culledNodeIds: new Set(['b']),
+      culledNodeIds: new Set([testCanvasNodeId('b')]),
       culledEdgeIds: new Set(['edge-a']),
     }
 
@@ -93,8 +143,8 @@ describe('canvas culling', () => {
 
     expect(diff.nodeIds).toEqual(
       new Map([
-        ['a', false],
-        ['b', true],
+        [testCanvasNodeId('a'), false],
+        [testCanvasNodeId('b'), true],
       ]),
     )
     expect(diff.edgeIds).toEqual(new Map())
@@ -105,7 +155,12 @@ describe('canvas culling', () => {
   it('tracks culling manager diffs and resets to an empty baseline', () => {
     const manager = createCanvasCullingManager()
     const snapshot = createProjectedSnapshot([
-      { ...createNode('far', 0), position: { x: 2000, y: 0 }, width: 20, height: 20 },
+      {
+        ...createNode('far', 0),
+        position: { x: 2000, y: 0 },
+        width: 20,
+        height: 20,
+      },
     ])
 
     expect(
@@ -114,7 +169,7 @@ describe('canvas culling', () => {
         surfaceBounds: { width: 100, height: 100 },
         draggingNodeIds: EMPTY_SET,
       })?.nodeIds,
-    ).toEqual(new Map([['far', true]]))
+    ).toEqual(new Map([[testCanvasNodeId('far'), true]]))
     expect(
       manager.reconcile({
         snapshot,
@@ -131,30 +186,42 @@ describe('canvas culling', () => {
         surfaceBounds: { width: 100, height: 100 },
         draggingNodeIds: EMPTY_SET,
       })?.nodeIds,
-    ).toEqual(new Map([['far', true]]))
+    ).toEqual(new Map([[testCanvasNodeId('far'), true]]))
   })
 
   it('uses measured and runtime geometry when deciding node visibility', () => {
     const geometryIndex = createCanvasGeometryIndex()
     const projected = createProjectedSnapshot([
       { ...createNode('measured', 0), position: { x: 800, y: 0 } },
-      { ...createNode('dragged', 1), position: { x: 2000, y: 0 }, width: 20, height: 20 },
-      { ...createNode('resized', 2), position: { x: 800, y: 0 }, width: 20, height: 20 },
+      {
+        ...createNode('dragged', 1),
+        position: { x: 2000, y: 0 },
+        width: 20,
+        height: 20,
+      },
+      {
+        ...createNode('resized', 2),
+        position: { x: 800, y: 0 },
+        width: 20,
+        height: 20,
+      },
     ])
-    const measured = geometryIndex.measureNode(projected, 'measured', { width: 20, height: 20 })
-      ?.snapshot as CanvasEngineSnapshot
+    const measured = geometryIndex.measureNode(projected, testCanvasNodeId('measured'), {
+      width: 20,
+      height: 20,
+    })?.snapshot as CanvasEngineSnapshot
     const dragged = geometryIndex.updateDraggedNodePositions(
       measured,
-      new Map([['dragged', { x: 0, y: 0 }]]),
+      new Map([[testCanvasNodeId('dragged'), { x: 0, y: 0 }]]),
     )?.snapshot as CanvasEngineSnapshot
     const resized = geometryIndex.updateResizedNodeBounds(
       dragged,
-      new Map([['resized', { position: { x: 0, y: 0 }, width: 20, height: 20 }]]),
+      new Map([[testCanvasNodeId('resized'), { position: { x: 0, y: 0 }, width: 20, height: 20 }]]),
     )?.snapshot as CanvasEngineSnapshot
 
     const result = cull(resized)
 
-    expect(result.culledNodeIds).toEqual(new Set(['measured']))
+    expect(result.culledNodeIds).toEqual(new Set([testCanvasNodeId('measured')]))
   })
 
   it('uses stroke padding and edge interaction padding when intersecting the viewport', () => {
@@ -188,15 +255,31 @@ describe('canvas culling', () => {
       [
         ordinary,
         stroke,
-        { ...createNode('edge-source', 2), position: { x: 613, y: 40 }, width: 1, height: 1 },
-        { ...createNode('edge-target', 3), position: { x: 650, y: 40 }, width: 1, height: 1 },
+        {
+          ...createNode('edge-source', 2),
+          position: { x: 613, y: 40 },
+          width: 1,
+          height: 1,
+        },
+        {
+          ...createNode('edge-target', 3),
+          position: { x: 650, y: 40 },
+          width: 1,
+          height: 1,
+        },
       ],
       [edge],
     )
 
     const result = cull(snapshot)
 
-    expect(result.culledNodeIds).toEqual(new Set(['ordinary', 'edge-source', 'edge-target']))
+    expect(result.culledNodeIds).toEqual(
+      new Set([
+        testCanvasNodeId('ordinary'),
+        testCanvasNodeId('edge-source'),
+        testCanvasNodeId('edge-target'),
+      ]),
+    )
     expect(result.culledEdgeIds).toEqual(new Set())
   })
 })

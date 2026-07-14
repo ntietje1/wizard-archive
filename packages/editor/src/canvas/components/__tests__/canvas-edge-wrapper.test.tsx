@@ -1,4 +1,5 @@
 import { act, render, waitFor } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasEdgeWrapper } from '../canvas-edge-wrapper'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
@@ -55,8 +56,8 @@ describe('CanvasEdgeWrapper', () => {
 function createEdge(): CanvasDocumentEdge {
   return {
     id: 'edge-1',
-    source: 'node-1',
-    target: 'node-2',
+    source: testCanvasNodeId('node-1'),
+    target: testCanvasNodeId('node-2'),
     sourceHandle: null,
     targetHandle: null,
     type: 'straight',

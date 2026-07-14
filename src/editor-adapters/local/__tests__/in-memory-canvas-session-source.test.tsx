@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { expect, test, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import type { CampaignId, SidebarItemId, UserProfileId } from 'shared/common/ids'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type {
@@ -34,7 +35,7 @@ type LocalCanvasItemWithContent = Extract<WizardEditorItemWithContent, { type: '
 test('in-memory canvas session source resolves embedded canvas payloads from supplied data', () => {
   const nodes: ReadonlyArray<LocalCanvasDocumentNode> = [
     {
-      id: 'node-1',
+      id: testCanvasNodeId('node-1'),
       type: 'text',
       position: { x: 12, y: 24 },
       width: 120,
@@ -59,8 +60,8 @@ test('in-memory canvas session source resolves embedded canvas payloads from sup
   const edges: ReadonlyArray<LocalCanvasDocumentEdge> = [
     {
       id: 'edge-1',
-      source: 'node-1',
-      target: 'node-2',
+      source: testCanvasNodeId('node-1'),
+      target: testCanvasNodeId('node-2'),
       type: 'straight',
     },
   ]
@@ -90,7 +91,7 @@ test('in-memory canvas session source resolves embedded canvas payloads from sup
   if (session.current.status !== 'ready') throw new Error('expected ready canvas session')
   expect(session.current.canEdit).toBe(false)
   expect(session.current.collaboration).toEqual({ status: 'unsupported' })
-  expect(session.current.nodesMap.get('node-1')).toEqual(nodes[0])
+  expect(session.current.nodesMap.get(testCanvasNodeId('node-1'))).toEqual(nodes[0])
   expect(session.current.edgesMap.get('edge-1')).toEqual(edges[0])
   session.current.doc.destroy()
 })
@@ -128,7 +129,7 @@ test('in-memory canvas sessions use the current workspace id after rerender', ()
     workspaceId,
   })
   if (result.current.status !== 'ready') throw new Error('expected ready canvas session')
-  expect(result.current.nodesMap.has('workspace-1-node')).toBe(true)
+  expect(result.current.nodesMap.has(testCanvasNodeId('workspace-1-node'))).toBe(true)
 
   rerender({ activeWorkspaceId: secondWorkspaceId })
 
@@ -137,7 +138,7 @@ test('in-memory canvas sessions use the current workspace id after rerender', ()
     workspaceId: secondWorkspaceId,
   })
   if (result.current.status !== 'ready') throw new Error('expected ready canvas session')
-  expect(result.current.nodesMap.has('workspace-2-node')).toBe(true)
+  expect(result.current.nodesMap.has(testCanvasNodeId('workspace-2-node'))).toBe(true)
 })
 
 test('in-memory canvas sessions keep one document when edit capability changes', () => {
@@ -277,7 +278,7 @@ type StaticCanvasTestPayload = {
 
 function createTextNode(id: string, text: string): LocalCanvasDocumentNode {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 0, y: 0 },
     width: 120,

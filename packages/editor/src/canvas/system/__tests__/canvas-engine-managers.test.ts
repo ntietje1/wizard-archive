@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { createInitialCanvasSelectionState } from '../canvas-selection'
 import {
   EMPTY_EDGE_IDS_BY_NODE_ID,
@@ -49,12 +50,12 @@ describe('canvas engine managers', () => {
       draggingNodeIds: EMPTY_SET,
     })
 
-    expect(projected.nodeIds).toEqual(['source', 'target'])
+    expect(projected.nodeIds).toEqual([testCanvasNodeId('source'), testCanvasNodeId('target')])
     expect(projected.edgeIds).toEqual(['edge-1'])
-    expect(projected.nodeLookup.get('source')?.node).toBe(source)
+    expect(projected.nodeLookup.get(testCanvasNodeId('source'))?.node).toBe(source)
     expect(projected.edgeLookup.get('edge-1')?.edge).toBe(edge)
-    expect(projected.edgeIdsByNodeId.get('source')).toEqual(new Set(['edge-1']))
-    expect(projected.edgeIdsByNodeId.get('target')).toEqual(new Set(['edge-1']))
+    expect(projected.edgeIdsByNodeId.get(testCanvasNodeId('source'))).toEqual(new Set(['edge-1']))
+    expect(projected.edgeIdsByNodeId.get(testCanvasNodeId('target'))).toEqual(new Set(['edge-1']))
   })
 
   it('keeps edge patch projection stable when persisted fields are unchanged', () => {
@@ -102,7 +103,7 @@ describe('canvas engine managers', () => {
     const gesture = selectionManager.beginGesture(projected, 'lasso', 'replace')
     expect(gesture).not.toBeNull()
     const preview = selectionManager.setGesturePreview(gesture as CanvasEngineSnapshot, {
-      nodeIds: new Set(['b']),
+      nodeIds: new Set([testCanvasNodeId('b')]),
       edgeIds: new Set(['edge-1']),
     })
     expect(preview).not.toBeNull()
@@ -110,7 +111,7 @@ describe('canvas engine managers', () => {
 
     expect(preview?.nodeLookup).toBe(projected.nodeLookup)
     expect(preview?.edgeLookup).toBe(projected.edgeLookup)
-    expect(committed?.selection.nodeIds).toEqual(new Set(['b']))
+    expect(committed?.selection.nodeIds).toEqual(new Set([testCanvasNodeId('b')]))
     expect(committed?.selection.edgeIds).toEqual(new Set(['edge-1']))
   })
 
@@ -125,7 +126,7 @@ describe('canvas engine managers', () => {
 
     const gesture = selectionManager.beginGesture(projected, 'lasso', 'replace')
     const preview = selectionManager.setGesturePreview(gesture as CanvasEngineSnapshot, {
-      nodeIds: new Set(['a']),
+      nodeIds: new Set([testCanvasNodeId('a')]),
       edgeIds: new Set(['edge-1']),
     })
     const next = selectionManager.setSelection(preview as CanvasEngineSnapshot, {
@@ -133,7 +134,7 @@ describe('canvas engine managers', () => {
       edgeIds: EMPTY_SET,
     })
 
-    expect(next?.dirtyNodeIds).toEqual(new Set(['a']))
+    expect(next?.dirtyNodeIds).toEqual(new Set([testCanvasNodeId('a')]))
     expect(next?.dirtyEdgeIds).toEqual(new Set(['edge-1']))
   })
 
@@ -148,12 +149,12 @@ describe('canvas engine managers', () => {
 
     const gesture = selectionManager.beginGesture(projected, 'lasso', 'replace')
     const preview = selectionManager.setGesturePreview(gesture as CanvasEngineSnapshot, {
-      nodeIds: new Set(['b']),
+      nodeIds: new Set([testCanvasNodeId('b')]),
       edgeIds: new Set(['edge-1']),
     })
     const next = selectionManager.beginGesture(preview as CanvasEngineSnapshot, 'marquee', 'add')
 
-    expect(next?.dirtyNodeIds).toEqual(new Set(['b']))
+    expect(next?.dirtyNodeIds).toEqual(new Set([testCanvasNodeId('b')]))
     expect(next?.dirtyEdgeIds).toEqual(new Set(['edge-1']))
   })
 
@@ -179,7 +180,12 @@ describe('canvas engine managers', () => {
       snapshot: createSnapshot(),
       nodes: [
         { ...createNode('source', 0), width: 100, height: 50 },
-        { ...createNode('target', 1), position: { x: 200, y: 0 }, width: 100, height: 50 },
+        {
+          ...createNode('target', 1),
+          position: { x: 200, y: 0 },
+          width: 100,
+          height: 50,
+        },
       ],
       edges: [createEdge('edge-1', 'source', 'target')],
       draggingNodeIds: EMPTY_SET,
@@ -188,12 +194,12 @@ describe('canvas engine managers', () => {
 
     const update = geometryIndex.updateDraggedNodePositions(
       projected,
-      new Map([['source', { x: 20, y: 10 }]]),
+      new Map([[testCanvasNodeId('source'), { x: 20, y: 10 }]]),
     )
     expect(update).not.toBeNull()
     const paths = geometryIndex.getConnectedEdgePaths(
       update?.snapshot as CanvasEngineSnapshot,
-      new Set(['source']),
+      new Set([testCanvasNodeId('source')]),
     )
 
     expect(update?.snapshot.nodes).toBe(nodesBefore)
@@ -206,7 +212,12 @@ describe('canvas engine managers', () => {
       snapshot: createSnapshot(),
       nodes: [
         { ...createNode('inside', 0), width: 20, height: 20 },
-        { ...createNode('far', 1), position: { x: 2000, y: 0 }, width: 20, height: 20 },
+        {
+          ...createNode('far', 1),
+          position: { x: 2000, y: 0 },
+          width: 20,
+          height: 20,
+        },
       ],
       draggingNodeIds: EMPTY_SET,
     }) as CanvasEngineSnapshot
@@ -217,8 +228,8 @@ describe('canvas engine managers', () => {
       draggingNodeIds: EMPTY_SET,
     })
 
-    expect(projected.nodeIds).toEqual(['inside', 'far'])
-    expect(diff?.nodeIds).toEqual(new Map([['far', true]]))
+    expect(projected.nodeIds).toEqual([testCanvasNodeId('inside'), testCanvasNodeId('far')])
+    expect(diff?.nodeIds).toEqual(new Map([[testCanvasNodeId('far'), true]]))
   })
 })
 

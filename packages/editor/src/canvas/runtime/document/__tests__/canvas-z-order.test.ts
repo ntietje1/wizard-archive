@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { createCanvasReorderPlan } from '../canvas-reorder-plan'
 import { reorderCanvasElementIds } from '../canvas-reorder'
 import { getNextCanvasElementZIndex } from '../canvas-z-index'
@@ -11,7 +12,7 @@ import type {
 
 function createNode(id: string, zIndex: number): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 0, y: 0 },
     data: {},
@@ -23,8 +24,8 @@ function createEdge(id: string, zIndex: number): Edge {
   return {
     id,
     type: 'bezier',
-    source: `${id}-source`,
-    target: `${id}-target`,
+    source: testCanvasNodeId(`${id}-source`),
+    target: testCanvasNodeId(`${id}-target`),
     zIndex,
   }
 }

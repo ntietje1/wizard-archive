@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { CANVAS_HANDLE_POSITION } from '../../../types/canvas-domain-types'
 import {
   buildBezierCanvasEdgeGeometryFromEdge,
@@ -87,7 +88,7 @@ describe('buildBezierCanvasEdgeGeometryFromEdge', () => {
 
 function createNode(id: string, x: number, y: number, width = 100, height = 50): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x, y },
     width,
@@ -100,8 +101,8 @@ function createEdge(overrides: Partial<Edge> = {}): Edge {
   return {
     id: 'edge-1',
     type: 'bezier',
-    source: 'source',
-    target: 'target',
+    source: testCanvasNodeId('source'),
+    target: testCanvasNodeId('target'),
     sourceHandle: 'right',
     targetHandle: 'left',
     ...overrides,

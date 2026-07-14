@@ -5,6 +5,7 @@ import type {
   CanvasTextDocumentNode,
 } from '../../document-contract'
 import type { SidebarItemId } from '../../../../../../shared/common/ids'
+import type { CanvasNodeId } from '../../../resources/domain-id'
 
 interface CanvasPerformanceMetric {
   name: string
@@ -14,8 +15,8 @@ interface CanvasPerformanceMetric {
 }
 
 type CanvasRuntimeSelectionInput =
-  | { nodeIds: Array<string>; edgeIds?: Array<string> }
-  | { nodeIds?: Array<string>; edgeIds: Array<string> }
+  | { nodeIds: Array<CanvasNodeId>; edgeIds?: Array<string> }
+  | { nodeIds?: Array<CanvasNodeId>; edgeIds: Array<string> }
 
 interface CanvasPerformanceRuntime {
   clearCanvas: () => void
@@ -24,7 +25,7 @@ interface CanvasPerformanceRuntime {
   getSnapshot: () => {
     nodes: Array<CanvasDocumentNode>
     edges: Array<CanvasDocumentEdge>
-    selection: { nodeIds: Array<string>; edgeIds: Array<string> }
+    selection: { nodeIds: Array<CanvasNodeId>; edgeIds: Array<string> }
     viewport: { x: number; y: number; zoom: number }
   }
   getMetrics: () => Array<CanvasPerformanceMetric>
@@ -37,7 +38,7 @@ interface CanvasPerformanceRuntime {
   seedTextNodes: (options: {
     count: number
     columns?: number
-    idPrefix?: string
+    nodeIds?: Array<CanvasNodeId>
     labelPrefix?: string
     size?: { width: number; height: number }
     spacingX?: number
@@ -47,11 +48,11 @@ interface CanvasPerformanceRuntime {
     style?: Partial<CanvasTextDocumentNode['data']>
     zIndex?: number
   }) => void
-  seedCoordinateProbeNode: (options: { id: string; start?: CanvasPosition }) => void
+  seedCoordinateProbeNode: (options: { id: CanvasNodeId; start?: CanvasPosition }) => void
   seedStrokeNodes: (options: {
     count: number
     columns?: number
-    idPrefix?: string
+    nodeIds?: Array<CanvasNodeId>
     spacingX?: number
     spacingY?: number
     /** Grid origin for generated stroke nodes. */
@@ -66,8 +67,8 @@ interface CanvasPerformanceRuntime {
   }) => void
   seedEdge: (options: {
     id?: string
-    source: string
-    target: string
+    source: CanvasNodeId
+    target: CanvasNodeId
     sourceHandle?: string
     targetHandle?: string
     type?: CanvasDocumentEdge['type']
@@ -75,7 +76,7 @@ interface CanvasPerformanceRuntime {
     zIndex?: number
   }) => void
   seedEmbedNode: (options: {
-    id: string
+    id: CanvasNodeId
     resourceId: SidebarItemId
     position: CanvasPosition
     width?: number

@@ -1,4 +1,5 @@
 import { assert, describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import {
   getSharedSelectedEdgeType,
   resolveCanvasSelectionProperties,
@@ -377,7 +378,7 @@ function createTextNode({
   textColor?: string
 } = {}): CanvasDocumentNode {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 0, y: 0 },
     width: 120,
@@ -398,8 +399,8 @@ function createEdge({
 }): CanvasDocumentEdge {
   return {
     id,
-    source: 'node-1',
-    target: 'node-2',
+    source: testCanvasNodeId('node-1'),
+    target: testCanvasNodeId('node-2'),
     type,
     sourceHandle: null,
     targetHandle: null,
@@ -415,13 +416,13 @@ function createFormattingSnapshot({
   textColor: string
 }): CanvasTextFormattingSnapshot {
   return {
+    nodeId: testCanvasNodeId(nodeId),
     defaultTextColor: 'var(--foreground)',
     editor: {
       addStyles: vi.fn(),
       focus: vi.fn(),
     },
     hasTextSelection: true,
-    nodeId,
     revision: 0,
     selectionSnapshot: null,
     setDefaultTextColor: vi.fn(),

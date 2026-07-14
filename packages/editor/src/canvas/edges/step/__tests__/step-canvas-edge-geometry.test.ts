@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import {
   buildStepCanvasEdgeGeometryFromEdge,
   buildStepCanvasEdgeGeometryFromRenderProps,
@@ -151,7 +152,7 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
 describe('buildStepCanvasEdgeGeometryFromEdge', () => {
   it('positions the split using the midpoint between the closest node edges', () => {
     const sourceNode: Node = {
-      id: 'source',
+      id: testCanvasNodeId('source'),
       type: 'text',
       position: { x: 0, y: 0 },
       width: 200,
@@ -159,7 +160,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
       data: {},
     }
     const targetNode: Node = {
-      id: 'target',
+      id: testCanvasNodeId('target'),
       type: 'text',
       position: { x: 300, y: 0 },
       width: 100,
@@ -169,8 +170,8 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
     const edge: Edge = {
       id: 'edge-1',
       type: 'step',
-      source: 'source',
-      target: 'target',
+      source: testCanvasNodeId('source'),
+      target: testCanvasNodeId('target'),
       sourceHandle: 'bottom',
       targetHandle: 'top',
     }
@@ -196,7 +197,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
 
   it('relaxes the minimum stubs when the split column would land inside a node', () => {
     const sourceNode: Node = {
-      id: 'source',
+      id: testCanvasNodeId('source'),
       type: 'text',
       position: { x: 0, y: 0 },
       width: 200,
@@ -204,7 +205,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
       data: {},
     }
     const targetNode: Node = {
-      id: 'target',
+      id: testCanvasNodeId('target'),
       type: 'text',
       position: { x: 180, y: 0 },
       width: 100,
@@ -214,8 +215,8 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
     const edge: Edge = {
       id: 'edge-2',
       type: 'step',
-      source: 'source',
-      target: 'target',
+      source: testCanvasNodeId('source'),
+      target: testCanvasNodeId('target'),
       sourceHandle: 'bottom',
       targetHandle: 'top',
     }
@@ -239,7 +240,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
 
   it('keeps the minimum stubs when the split column lands exactly on a node edge', () => {
     const sourceNode: Node = {
-      id: 'source',
+      id: testCanvasNodeId('source'),
       type: 'text',
       position: { x: 0, y: 0 },
       width: 200,
@@ -247,7 +248,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
       data: {},
     }
     const targetNode: Node = {
-      id: 'target',
+      id: testCanvasNodeId('target'),
       type: 'text',
       position: { x: 200, y: 0 },
       width: 100,
@@ -257,8 +258,8 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
     const edge: Edge = {
       id: 'edge-3',
       type: 'step',
-      source: 'source',
-      target: 'target',
+      source: testCanvasNodeId('source'),
+      target: testCanvasNodeId('target'),
       sourceHandle: 'bottom',
       targetHandle: 'top',
     }
@@ -284,7 +285,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
 
   it('resolves mixed horizontal and vertical handles from edge endpoints', () => {
     const sourceNode: Node = {
-      id: 'source',
+      id: testCanvasNodeId('source'),
       type: 'text',
       position: { x: 0, y: 0 },
       width: 100,
@@ -292,7 +293,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
       data: {},
     }
     const targetNode: Node = {
-      id: 'target',
+      id: testCanvasNodeId('target'),
       type: 'text',
       position: { x: 160, y: 160 },
       width: 100,
@@ -302,8 +303,8 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
     const edge: Edge = {
       id: 'edge-4',
       type: 'step',
-      source: 'source',
-      target: 'target',
+      source: testCanvasNodeId('source'),
+      target: testCanvasNodeId('target'),
       sourceHandle: 'right',
       targetHandle: 'top',
     }

@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasReadOnlyPreview } from '../read-only-preview'
 import { ResourceContentSourceProvider } from '../../../filesystem/resource-content-context'
@@ -48,7 +49,7 @@ describe('CanvasReadOnlyPreview', () => {
       <CanvasReadOnlyPreview
         nodes={[
           {
-            id: 'embed-1',
+            id: testCanvasNodeId('embed-1'),
             type: 'embed',
             position: { x: 0, y: 0 },
             width: 240,
@@ -184,7 +185,7 @@ describe('CanvasReadOnlyPreview', () => {
       <CanvasReadOnlyPreview
         nodes={[
           {
-            id: 'embed-1',
+            id: testCanvasNodeId('embed-1'),
             type: 'embed',
             position: { x: 0, y: 0 },
             width: 100,
@@ -258,7 +259,7 @@ describe('CanvasReadOnlyPreview', () => {
       <CanvasReadOnlyPreview
         nodes={[
           {
-            id: 'embed-1',
+            id: testCanvasNodeId('embed-1'),
             type: 'embed',
             position: { x: 0, y: 0 },
             width: 100,
@@ -297,7 +298,7 @@ describe('CanvasReadOnlyPreview', () => {
       <CanvasReadOnlyPreview
         nodes={[
           {
-            id: 'embed-1',
+            id: testCanvasNodeId('embed-1'),
             type: 'embed',
             position: { x: 0, y: 0 },
             data: {
@@ -337,7 +338,7 @@ describe('CanvasReadOnlyPreview', () => {
       <CanvasReadOnlyPreview
         nodes={[
           {
-            id: 'embed-1',
+            id: testCanvasNodeId('embed-1'),
             type: 'embed',
             position: { x: 0, y: 0 },
             width: 4000,
@@ -378,7 +379,7 @@ describe('CanvasReadOnlyPreview', () => {
         <CanvasReadOnlyPreview
           nodes={[
             {
-              id: 'embed-1',
+              id: testCanvasNodeId('embed-1'),
               type: 'embed',
               position: { x: 0, y: 0 },
               width: 240,
@@ -449,7 +450,7 @@ function createTextNode({
   position: { x: number; y: number }
 }): CanvasDocumentNode {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position,
     width: 100,
@@ -469,8 +470,8 @@ function createEdge({
 }): CanvasDocumentEdge {
   return {
     id,
-    source,
-    target,
+    source: testCanvasNodeId(source),
+    target: testCanvasNodeId(target),
     sourceHandle: null,
     targetHandle: null,
     type: 'straight',

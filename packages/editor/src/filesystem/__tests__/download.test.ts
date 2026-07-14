@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import type { CanvasDocumentContent } from '../../canvas/document-contract'
 import type { FileItemWithContent } from '../../files/item-contract'
 import { resolveMapImage } from '../../game-maps/image-resolution'
@@ -47,7 +48,7 @@ describe('createCatalogFileSystemDownload', () => {
       edges: [],
       nodes: [
         {
-          id: 'canvas-node-1',
+          id: testCanvasNodeId('canvas-node-1'),
           type: 'text',
           position: { x: 10, y: 20 },
           data: {},

@@ -1,4 +1,5 @@
 import { renderHook } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useCanvasToolRuntimeCore } from '../use-canvas-tool-runtime-core'
 import type { useCanvasDocumentCommands } from '../document/use-canvas-commands'
@@ -99,7 +100,7 @@ describe('useCanvasToolRuntimeCore', () => {
         }
       | undefined
     const node = {
-      id: 'node-1',
+      id: testCanvasNodeId('node-1'),
       type: 'text',
       position: { x: 0, y: 0 },
       data: {},
@@ -124,7 +125,7 @@ describe('useCanvasToolRuntimeCore', () => {
         }
       | undefined
     contextMenuOptions?.createNode?.({
-      id: 'node-1',
+      id: testCanvasNodeId('node-1'),
       type: 'text',
       position: { x: 0, y: 0 },
       data: {},
@@ -154,7 +155,10 @@ describe('useCanvasToolRuntimeCore', () => {
       strokeOpacity: 40,
       strokeSize: 999,
     })
-    const connection: CanvasConnection = { source: 'source', target: 'target' }
+    const connection: CanvasConnection = {
+      source: testCanvasNodeId('source'),
+      target: testCanvasNodeId('target'),
+    }
     const { result, rerender } = renderHook(
       ({ canEdit }) => useCanvasToolRuntimeCore({ ...harness, activeTool: 'edge', canEdit }),
       { initialProps: { canEdit: true } },
@@ -195,7 +199,10 @@ describe('useCanvasToolRuntimeCore', () => {
   ])('normalizes edge opacity percentage %s to %s', (strokeOpacity, expectedOpacity) => {
     const harness = createToolRuntimeHarness()
     canvasToolStore.setState({ strokeOpacity })
-    const connection: CanvasConnection = { source: 'source', target: 'target' }
+    const connection: CanvasConnection = {
+      source: testCanvasNodeId('source'),
+      target: testCanvasNodeId('target'),
+    }
     const { result } = renderHook(() =>
       useCanvasToolRuntimeCore({ ...harness, activeTool: 'edge' }),
     )

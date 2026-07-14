@@ -8,6 +8,8 @@ import { canvasSurfaceStyleKeys, parseCanvasSurfaceStyles } from './surface-styl
 import { parseCanvasTextDocument } from './text/model'
 import type { CanvasTextDocument } from './text/model'
 import type { EmbedTarget } from '../../../../shared/embeds/embedTargets'
+import { DOMAIN_ID_KIND, parseDomainId } from '../resources/domain-id'
+import type { CanvasNodeId } from '../resources/domain-id'
 
 export interface CanvasStrokeNodeData {
   points: Array<[number, number, number]>
@@ -89,7 +91,7 @@ interface CanvasDocumentPoint {
 }
 
 interface CanvasDocumentNodeBase<TType extends CanvasNodeType, TData> {
-  id: string
+  id: CanvasNodeId
   type: TType
   position: CanvasDocumentPoint
   data: TData
@@ -116,8 +118,8 @@ export interface CanvasEdgeStyle {
 
 export interface CanvasDocumentEdge {
   id: string
-  source: string
-  target: string
+  source: CanvasNodeId
+  target: CanvasNodeId
   type: CanvasEdgeType
   sourceHandle?: string | null
   targetHandle?: string | null
@@ -148,10 +150,6 @@ function hasValidSharedDocumentFields(value: Record<string, unknown>): boolean {
     (value.hidden === undefined || typeof value.hidden === 'boolean') &&
     (value.zIndex === undefined || isFiniteNumber(value.zIndex))
   )
-}
-
-function isNonEmptyDocumentId(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0
 }
 
 function pickSharedDocumentFields(value: Record<string, unknown>) {
@@ -190,7 +188,9 @@ function pickCanvasDocumentNodeFields(value: Record<string, unknown>) {
 
 export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | null {
   if (!isRecord(value) || !hasOnlyKeys(value, documentNodeKeys)) return null
-  if (!isNonEmptyDocumentId(value.id)) return null
+  if (typeof value.id !== 'string') return null
+  const id = parseDomainId(DOMAIN_ID_KIND.canvasNode, value.id)
+  if (!id) return null
 
   const type = parseCanvasNodeType(value.type)
   const position = parseCanvasPoint2D(value.position)
@@ -201,7 +201,7 @@ export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | nu
   if (!hasValidOptionalNodeFields(value)) return null
 
   return {
-    id: value.id,
+    id,
     type,
     position,
     data,
@@ -253,13 +253,11 @@ function pickCanvasDocumentEdgeFields(value: Record<string, unknown>) {
 
 export function parseCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | null {
   if (!isRecord(value) || !hasOnlyKeys(value, documentEdgeKeys)) return null
-  if (
-    !isNonEmptyDocumentId(value.id) ||
-    !isNonEmptyDocumentId(value.source) ||
-    !isNonEmptyDocumentId(value.target)
-  ) {
-    return null
-  }
+  if (typeof value.id !== 'string' || value.id.trim().length === 0) return null
+  if (typeof value.source !== 'string' || typeof value.target !== 'string') return null
+  const source = parseDomainId(DOMAIN_ID_KIND.canvasNode, value.source)
+  const target = parseDomainId(DOMAIN_ID_KIND.canvasNode, value.target)
+  if (!source || !target) return null
 
   const type = parseCanvasEdgeType(value.type)
   if (!type) return null
@@ -274,8 +272,8 @@ export function parseCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | nu
 
   return {
     id: value.id,
-    source: value.source,
-    target: value.target,
+    source,
+    target,
     type,
     ...pickCanvasDocumentEdgeFields(value),
     ...(style !== undefined ? { style } : {}),

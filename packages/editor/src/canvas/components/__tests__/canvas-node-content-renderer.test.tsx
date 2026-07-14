@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { describe, expect, it } from 'vite-plus/test'
 import { CanvasNodeContentRenderer } from '../canvas-node-content-renderer'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
@@ -33,7 +34,7 @@ function buildEngineWithTextNode() {
   engine.setDocumentSnapshot({
     nodes: [
       {
-        id: 'node-1',
+        id: testCanvasNodeId('node-1'),
         type: 'text',
         position: { x: 0, y: 0 },
         width: 100,
@@ -51,11 +52,14 @@ describe('CanvasNodeContentRenderer', () => {
     try {
       render(
         <CanvasEngineProvider engine={engine}>
-          <CanvasNodeContentRenderer nodeId="node-1" renderers={renderers} />
+          <CanvasNodeContentRenderer nodeId={testCanvasNodeId('node-1')} renderers={renderers} />
         </CanvasEngineProvider>,
       )
 
-      expect(screen.getByTestId('text-renderer')).toHaveAttribute('data-node-id', 'node-1')
+      expect(screen.getByTestId('text-renderer')).toHaveAttribute(
+        'data-node-id',
+        testCanvasNodeId('node-1'),
+      )
       expect(screen.getByTestId('text-renderer')).toHaveAttribute('data-node-type', 'text')
     } finally {
       engine.destroy()

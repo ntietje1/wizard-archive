@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasScene } from '../canvas-scene'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
@@ -25,7 +26,7 @@ vi.mock('../canvas-awareness-host', () => ({
 }))
 
 const sourceNode: CanvasDocumentNode = {
-  id: 'source',
+  id: testCanvasNodeId('source'),
   type: 'text',
   position: { x: 0, y: 0 },
   width: 100,

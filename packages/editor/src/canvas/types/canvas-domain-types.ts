@@ -1,3 +1,5 @@
+import type { CanvasNodeId } from '../../resources/domain-id'
+
 export type CanvasPosition = {
   x: number
   y: number
@@ -18,8 +20,8 @@ export type CanvasHandlePosition =
   (typeof CANVAS_HANDLE_POSITION)[keyof typeof CANVAS_HANDLE_POSITION]
 
 export type CanvasConnection = {
-  source: string
-  target: string
+  source: CanvasNodeId
+  target: CanvasNodeId
   sourceHandle?: string | null
   targetHandle?: string | null
 }

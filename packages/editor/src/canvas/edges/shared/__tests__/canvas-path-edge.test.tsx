@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { CANVAS_HANDLE_POSITION } from '../../../types/canvas-domain-types'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
@@ -151,8 +152,8 @@ function createEdgeProps(): CanvasEdgeRendererProps {
   return {
     id: 'edge-1',
     type: 'bezier',
-    source: 'source',
-    target: 'target',
+    source: testCanvasNodeId('source'),
+    target: testCanvasNodeId('target'),
     sourceX: 0,
     sourceY: 0,
     targetX: 10,

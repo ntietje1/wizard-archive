@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasScene } from '../canvas-scene'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
@@ -30,7 +31,7 @@ vi.mock('../canvas-awareness-host', () => ({
 vi.mock('../canvas-node-renderer', () => ({
   CanvasNodeRenderer: () => (
     <>
-      <div data-node-id="source" data-testid="source-node">
+      <div data-node-id={testCanvasNodeId('source')} data-testid="source-node">
         <div contentEditable data-testid="source-editable-text" />
         <div
           data-canvas-node-handle="true"
@@ -45,7 +46,7 @@ vi.mock('../canvas-node-renderer', () => ({
           data-testid="source-left-handle"
         />
       </div>
-      <div data-node-id="target" data-testid="target-node">
+      <div data-node-id={testCanvasNodeId('target')} data-testid="target-node">
         <div
           data-canvas-node-handle="true"
           data-handle-id="left"
@@ -58,7 +59,7 @@ vi.mock('../canvas-node-renderer', () => ({
 }))
 
 const sourceNode: Node = {
-  id: 'source',
+  id: testCanvasNodeId('source'),
   type: 'text',
   position: { x: 0, y: 0 },
   width: 100,
@@ -66,7 +67,7 @@ const sourceNode: Node = {
   data: {},
 }
 const targetNode: Node = {
-  id: 'target',
+  id: testCanvasNodeId('target'),
   type: 'text',
   position: { x: 200, y: 0 },
   width: 100,
@@ -200,8 +201,8 @@ describe('CanvasScene connection creation', () => {
     fireEvent.pointerUp(window, { clientX: 206, clientY: 25, pointerId: 1 })
 
     expect(createEdgeFromConnection).toHaveBeenCalledWith({
-      source: 'source',
-      target: 'target',
+      source: sourceNode.id,
+      target: targetNode.id,
       sourceHandle: 'right',
       targetHandle: 'left',
     } satisfies CanvasConnection)
@@ -287,15 +288,15 @@ describe('CanvasScene connection creation', () => {
     fireEvent.pointerUp(window, { clientX: 206, clientY: 25, pointerId: 1 })
 
     expect(createEdgeFromConnection).toHaveBeenCalledWith({
-      source: 'source',
-      target: 'target',
+      source: sourceNode.id,
+      target: targetNode.id,
       sourceHandle: 'right',
       targetHandle: 'left',
     } satisfies CanvasConnection)
   })
 
   it('keeps screen-space selection chrome outside the transformed viewport', () => {
-    renderScene({ selectedNodeIds: new Set(['source', 'target']) })
+    renderScene({ selectedNodeIds: new Set([sourceNode.id, targetNode.id]) })
 
     const wrapper = screen.getByTestId('canvas-selection-resize-wrapper')
     const viewport = screen
@@ -308,7 +309,7 @@ describe('CanvasScene connection creation', () => {
   it('opens the node context menu from the multi-select wrapper', () => {
     const onNodeContextMenu = vi.fn()
     renderScene({
-      selectedNodeIds: new Set(['source', 'target']),
+      selectedNodeIds: new Set([sourceNode.id, targetNode.id]),
       onNodeContextMenu,
     })
 

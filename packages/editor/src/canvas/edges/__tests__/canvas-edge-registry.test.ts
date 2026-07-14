@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import {
   buildCanvasEdgeGeometry,
   getCanvasEdgeInspectableProperties,
@@ -15,7 +16,7 @@ import type {
 
 function createNode(id: string, x: number, y: number): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x, y },
     width: 40,
@@ -27,8 +28,8 @@ function createNode(id: string, x: number, y: number): Node {
 function createBezierEdge(overrides?: Partial<Edge>): Edge {
   return {
     id: 'edge-1',
-    source: 'source',
-    target: 'target',
+    source: testCanvasNodeId('source'),
+    target: testCanvasNodeId('target'),
     sourceHandle: 'right',
     targetHandle: 'left',
     type: 'bezier',
@@ -39,8 +40,8 @@ function createBezierEdge(overrides?: Partial<Edge>): Edge {
 function createStraightEdge(overrides?: Partial<Edge>): Edge {
   return {
     id: 'straight-edge',
-    source: 'source',
-    target: 'target',
+    source: testCanvasNodeId('source'),
+    target: testCanvasNodeId('target'),
     sourceHandle: 'right',
     targetHandle: 'left',
     type: 'straight',
@@ -51,8 +52,8 @@ function createStraightEdge(overrides?: Partial<Edge>): Edge {
 function createStepEdge(overrides?: Partial<Edge>): Edge {
   return {
     id: 'step-edge',
-    source: 'source',
-    target: 'target',
+    source: testCanvasNodeId('source'),
+    target: testCanvasNodeId('target'),
     sourceHandle: 'bottom',
     targetHandle: 'top',
     type: 'step',
@@ -68,8 +69,8 @@ describe('canvas edge specs', () => {
       createBezierEdge(),
       createBezierEdge({
         id: 'edge-2',
-        source: 'target',
-        target: 'source',
+        source: testCanvasNodeId('target'),
+        target: testCanvasNodeId('source'),
         sourceHandle: undefined,
         targetHandle: undefined,
       }),
@@ -106,13 +107,13 @@ describe('canvas edge specs', () => {
   it('selects only intersecting edges through lasso hit testing', () => {
     const crossingEdge = createBezierEdge({
       id: 'crossing-edge',
-      source: 'source',
-      target: 'target',
+      source: testCanvasNodeId('source'),
+      target: testCanvasNodeId('target'),
     })
     const outsideEdge = createBezierEdge({
       id: 'outside-edge',
-      source: 'target',
-      target: 'target-2',
+      source: testCanvasNodeId('target'),
+      target: testCanvasNodeId('target-2'),
     })
     const lassoNodes = [...nodes, createNode('target-2', 160, 120)]
 
@@ -159,7 +160,7 @@ describe('canvas edge specs', () => {
 
   it('matches step edges through rectangle and lasso hit testing', () => {
     const stepNodes = [createNode('source', 0, 0), createNode('target', 80, 120)]
-    const edge = createStepEdge({ target: 'target' })
+    const edge = createStepEdge({ target: testCanvasNodeId('target') })
 
     expect(
       getCanvasEdgesMatchingRectangle(

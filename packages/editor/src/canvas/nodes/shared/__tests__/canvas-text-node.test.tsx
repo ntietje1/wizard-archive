@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { useReducer } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasTextNode } from '../canvas-text-node'
@@ -96,13 +97,15 @@ describe('CanvasTextNode', () => {
 
     await settleCanvasTextNodeEffects()
 
-    expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set(['text-1']))
+    expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(
+      new Set([testCanvasNodeId('text-1')]),
+    )
     expect(getCanvasNode()).toHaveAttribute('data-node-selected', 'true')
   })
 
   it('narrows multi-selection before pending auto-edit enters editing', async () => {
     canvasTextEngine.setSelection({
-      nodeIds: new Set(['text-1', 'text-2']),
+      nodeIds: new Set([testCanvasNodeId('text-1'), testCanvasNodeId('text-2')]),
       edgeIds: new Set(),
     })
 
@@ -110,7 +113,9 @@ describe('CanvasTextNode', () => {
 
     await settleCanvasTextNodeEffects()
 
-    expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set(['text-1']))
+    expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(
+      new Set([testCanvasNodeId('text-1')]),
+    )
     expect(getCanvasNode()).toHaveAttribute('data-node-editing', 'false')
   })
 
@@ -167,7 +172,7 @@ describe('CanvasTextNode', () => {
   it('exits text editing when selection moves to another node', async () => {
     ownedEditorState.editor = createEditor()
     canvasTextEngine.setSelection({
-      nodeIds: new Set(['text-1']),
+      nodeIds: new Set([testCanvasNodeId('text-1')]),
       edgeIds: new Set(),
     })
     render(<CanvasTextNodeHarness initialPendingEditNodeId={null} />)
@@ -179,7 +184,7 @@ describe('CanvasTextNode', () => {
 
     act(() => {
       canvasTextEngine.setSelection({
-        nodeIds: new Set(['text-2']),
+        nodeIds: new Set([testCanvasNodeId('text-2')]),
         edgeIds: new Set(),
       })
     })
@@ -191,7 +196,7 @@ describe('CanvasTextNode', () => {
   it('exits text editing when Escape starts inside the rich text child', async () => {
     ownedEditorState.editor = createEditor()
     canvasTextEngine.setSelection({
-      nodeIds: new Set(['text-1']),
+      nodeIds: new Set([testCanvasNodeId('text-1')]),
       edgeIds: new Set(),
     })
     render(<CanvasTextNodeHarness initialPendingEditNodeId={null} />)
@@ -211,7 +216,7 @@ describe('CanvasTextNode', () => {
   it('narrows multi-selection and enters editing on double-click', async () => {
     ownedEditorState.editor = createEditor()
     canvasTextEngine.setSelection({
-      nodeIds: new Set(['text-1', 'text-2']),
+      nodeIds: new Set([testCanvasNodeId('text-1'), testCanvasNodeId('text-2')]),
       edgeIds: new Set(),
     })
     render(<CanvasTextNodeHarness initialPendingEditNodeId={null} />)
@@ -221,7 +226,9 @@ describe('CanvasTextNode', () => {
 
     await settleEditModeChange()
 
-    expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set(['text-1']))
+    expect(canvasTextEngine.getSnapshot().selection.nodeIds).toEqual(
+      new Set([testCanvasNodeId('text-1')]),
+    )
     expect(getCanvasNode()).toHaveAttribute('data-node-editing', 'true')
   })
 
@@ -280,14 +287,17 @@ describe('CanvasTextNode', () => {
     await settleEditModeChange()
 
     const readOnlySurface = screen.getByLabelText('Empty text node')
-    expect(registerNodeSurfaceElementSpy).toHaveBeenCalledWith('text-1', readOnlySurface)
+    expect(registerNodeSurfaceElementSpy).toHaveBeenCalledWith(
+      testCanvasNodeId('text-1'),
+      readOnlySurface,
+    )
 
     rerender(<CanvasTextNodeHarness canEdit />)
 
     await settleEditModeChange()
 
     expect(registerNodeSurfaceElementSpy).toHaveBeenCalledWith(
-      'text-1',
+      testCanvasNodeId('text-1'),
       screen.getByRole('textbox', { name: 'Empty text node' }),
     )
   })
@@ -342,7 +352,7 @@ const EMPTY_CONTENT: Array<never> = []
 function CanvasTextNodeHarness({
   canEdit = true,
   content = EMPTY_CONTENT,
-  initialPendingEditNodeId = 'text-1',
+  initialPendingEditNodeId = testCanvasNodeId('text-1'),
   initialPendingEditNodePoint = { x: 100, y: 120 },
   mode = 'interactive',
   onPendingEditNodeIdChange,
@@ -369,7 +379,7 @@ function CanvasTextNodeHarness({
       : null,
   )
   const nodeProps = {
-    id: 'text-1',
+    id: testCanvasNodeId('text-1'),
     dragging: false,
     data: normalizeCanvasTextNodeRenderData({ content, textColor }),
     variant: {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { eraseToolSpec } from '../erase-tool-module'
 import { createMockCanvasToolRuntime } from '../../__tests__/helpers/create-mock-canvas-tool-runtime'
 import { createCanvasToolLocalOverlayStore } from '../../../stores/canvas-tool-local-overlay-store'
@@ -26,7 +27,7 @@ describe('eraseToolSpec', () => {
             [100, 120, 0.5],
           ]),
           {
-            id: 'text-node',
+            id: testCanvasNodeId('text-node'),
             type: 'text',
             position: { x: 0, y: 0 },
             data: {},
@@ -42,11 +43,13 @@ describe('eraseToolSpec', () => {
 
     await nextAnimationFrame()
 
-    expect(localOverlayStore.getState().eraseErasingStrokeIds).toEqual(new Set(['hit-stroke']))
+    expect(localOverlayStore.getState().eraseErasingStrokeIds).toEqual(
+      new Set([testCanvasNodeId('hit-stroke')]),
+    )
 
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 40, clientY: 40 }))
 
-    expect(deleteNodes).toHaveBeenCalledWith(new Set(['hit-stroke']))
+    expect(deleteNodes).toHaveBeenCalledWith(new Set([testCanvasNodeId('hit-stroke')]))
   })
 
   it('releases pointer capture on cancel', () => {
@@ -97,7 +100,7 @@ describe('eraseToolSpec', () => {
     )
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 40, clientY: 40 }))
 
-    expect(deleteNodes).toHaveBeenCalledWith(new Set(['hit-stroke']))
+    expect(deleteNodes).toHaveBeenCalledWith(new Set([testCanvasNodeId('hit-stroke')]))
   })
 
   it('preserves untested erase trail segments until intersections are checked', () => {
@@ -124,7 +127,7 @@ describe('eraseToolSpec', () => {
     }
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 350, clientY: 100 }))
 
-    expect(deleteNodes).toHaveBeenCalledWith(new Set(['early-hit-stroke']))
+    expect(deleteNodes).toHaveBeenCalledWith(new Set([testCanvasNodeId('early-hit-stroke')]))
   })
 })
 
@@ -146,7 +149,7 @@ function createStrokeNode(id: string, points: Array<[number, number, number]>): 
   const bounds = getStrokeBounds(points, STROKE_SIZE)
 
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'stroke',
     position: { x: bounds.x, y: bounds.y },
     width: bounds.width,

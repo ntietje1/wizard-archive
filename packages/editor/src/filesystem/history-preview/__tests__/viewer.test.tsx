@@ -10,6 +10,7 @@ import { createCanvasDocumentDoc } from '../../../canvas/document-contract'
 import { RESOURCE_TYPES } from '../../../workspace/items-persistence-contract'
 import { testNoteBlockId } from '../../../test/blocknote-id'
 import { testAssetId } from '../../../../../../shared/test/asset-id'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 
 const { canvasReadOnlyPreviewMock, readNoteYDocContentMock, staticNoteContentMock } = vi.hoisted(
   () => ({
@@ -141,7 +142,7 @@ describe('HistoryPreviewViewer', () => {
     const doc = createCanvasDocumentDoc({
       nodes: [
         {
-          id: 'embed-1',
+          id: testCanvasNodeId('embed-1'),
           type: 'embed',
           position: { x: 0, y: 0 },
           data: { target: { kind: 'resource', resourceId: noteId } },
@@ -172,7 +173,7 @@ describe('HistoryPreviewViewer', () => {
         sourceItemId: canvasId,
         nodes: [
           {
-            id: 'embed-1',
+            id: testCanvasNodeId('embed-1'),
             type: 'embed',
             position: { x: 0, y: 0 },
             data: { target: { kind: 'resource', resourceId: noteId } },

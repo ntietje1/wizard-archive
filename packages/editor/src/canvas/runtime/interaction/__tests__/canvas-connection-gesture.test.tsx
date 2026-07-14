@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { useRef } from 'react'
 import { CANVAS_HANDLE_POSITION } from '../../../types/canvas-domain-types'
@@ -48,7 +49,7 @@ function createConnectionDom() {
   const pane = document.createElement('div')
   document.body.append(pane)
   const sourceNode = document.createElement('div')
-  sourceNode.dataset.nodeId = 'source'
+  sourceNode.dataset.nodeId = testCanvasNodeId('source')
   const sourceHandle = createHandle('right', CANVAS_HANDLE_POSITION.Right, {
     left: 0,
     top: 0,
@@ -56,7 +57,7 @@ function createConnectionDom() {
     height: 20,
   })
   const targetNode = document.createElement('div')
-  targetNode.dataset.nodeId = 'target'
+  targetNode.dataset.nodeId = testCanvasNodeId('target')
   const targetHandle = createHandle('left', CANVAS_HANDLE_POSITION.Left, {
     left: 30,
     top: 0,

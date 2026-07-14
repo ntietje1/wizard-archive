@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
 import {
   RESOURCE_LOCATION,
@@ -45,7 +46,7 @@ describe('useCanvasDocumentSession', () => {
       collaboration: { status: 'unsupported' },
     })
     if (result.current.status !== 'ready') throw new Error('expected ready session')
-    expect(result.current.nodesMap.get('node-1')).toEqual(node)
+    expect(result.current.nodesMap.get(testCanvasNodeId('node-1'))).toEqual(node)
     expect(result.current.edgesMap.get('edge-1')).toEqual(edge)
     doc.destroy()
   })
@@ -168,7 +169,7 @@ function createCanvas(overrides: Partial<CanvasItemWithContent> = {}): CanvasIte
 
 function createNode(id: string): CanvasDocumentNode {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 0, y: 0 },
     data: { content: [] },
@@ -180,8 +181,8 @@ function createNode(id: string): CanvasDocumentNode {
 function createEdge(id: string): CanvasDocumentEdge {
   return {
     id,
-    source: 'node-1',
-    target: 'node-2',
+    source: testCanvasNodeId('node-1'),
+    target: testCanvasNodeId('node-2'),
     type: 'step',
   }
 }

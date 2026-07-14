@@ -1,4 +1,5 @@
 import { act, render } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
@@ -10,6 +11,7 @@ import { getCachedStrokeDetailPath } from '../stroke-path-cache'
 import { StrokeNode } from '../stroke-node'
 
 let strokeEngine!: CanvasEngine
+const strokeNodeId = testCanvasNodeId('stroke-1')
 const strokeNodeMocks = vi.hoisted(() => ({
   localOverlayState: {
     eraseErasingStrokeIds: new Set<string>(),
@@ -67,7 +69,7 @@ describe('StrokeNode', () => {
   it('renders the local stroke highlight for pending-selected strokes', () => {
     const props = setupStrokeNodeProps({ selected: false })
     strokeEngine.setSelectionGesturePreview({
-      nodeIds: new Set(['stroke-1']),
+      nodeIds: new Set([strokeNodeId]),
       edgeIds: new Set(),
     })
     const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
@@ -115,7 +117,7 @@ describe('StrokeNode', () => {
   it('keeps the highlight path when a pending preview includes an already selected stroke', () => {
     const props = setupStrokeNodeProps({ selected: true })
     strokeEngine.setSelectionGesturePreview({
-      nodeIds: new Set(['stroke-1']),
+      nodeIds: new Set([strokeNodeId]),
       edgeIds: new Set(),
     })
     const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
@@ -175,7 +177,7 @@ describe('StrokeNode', () => {
     ).toBeTruthy()
     expect(highlightPath).toHaveAttribute(
       'd',
-      getCachedStrokeDetailPath('stroke-1', props.data, 16),
+      getCachedStrokeDetailPath(strokeNodeId, props.data, 16),
     )
   })
 
@@ -243,12 +245,12 @@ function setupStrokeNodeProps({
   width?: number
 }) {
   strokeEngine.setSelection({
-    nodeIds: selected ? new Set(['stroke-1']) : new Set<string>(),
+    nodeIds: selected ? new Set([strokeNodeId]) : new Set<string>(),
     edgeIds: new Set<string>(),
   })
 
   return {
-    id: 'stroke-1',
+    id: strokeNodeId,
     selected,
     dragging: false,
     width,

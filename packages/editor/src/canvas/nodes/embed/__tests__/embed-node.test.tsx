@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { RESOURCE_TYPES } from '../../../../workspace/items-persistence-contract'
@@ -258,7 +259,7 @@ describe('EmbedNode', () => {
 
     expect(useEmbedDropTargetMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        embedBlockId: 'node-1',
+        embedBlockId: testCanvasNodeId('node-1'),
         sourceItemId: 'source-canvas',
       }),
     )
@@ -368,7 +369,7 @@ describe('EmbedNode', () => {
     )
     await waitFor(() => {
       expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
-        new Map([['node-1', { lockedAspectRatio: documentEmbedAspectRatio }]]),
+        new Map([[testCanvasNodeId('node-1'), { lockedAspectRatio: documentEmbedAspectRatio }]]),
       )
     })
   })
@@ -411,7 +412,7 @@ describe('EmbedNode', () => {
     })
 
     expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
-      new Map([['node-1', { lockedAspectRatio: 2 }]]),
+      new Map([[testCanvasNodeId('node-1'), { lockedAspectRatio: 2 }]]),
     )
   })
 
@@ -432,10 +433,10 @@ describe('EmbedNode', () => {
     })
 
     expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
-      new Map([['node-1', { lockedAspectRatio: null }]]),
+      new Map([[testCanvasNodeId('node-1'), { lockedAspectRatio: null }]]),
     )
     expect(canvasRuntimeState.resizeNode).toHaveBeenCalledWith(
-      'node-1',
+      testCanvasNodeId('node-1'),
       320,
       AUDIO_EMBED_PLAYER_HEIGHT_FALLBACK,
       { x: 10, y: 20 },
@@ -698,7 +699,7 @@ describe('EmbedNode', () => {
     )
     await waitFor(() => {
       expect(canvasRuntimeState.resizeNode).toHaveBeenCalledWith(
-        'node-1',
+        testCanvasNodeId('node-1'),
         240 * documentEmbedAspectRatio,
         240,
         { x: 10, y: 20 },
@@ -725,7 +726,7 @@ describe('EmbedNode', () => {
     )
     await waitFor(() => {
       expect(canvasRuntimeState.patchNodeData).toHaveBeenCalledWith(
-        new Map([['node-1', { lockedAspectRatio: null }]]),
+        new Map([[testCanvasNodeId('node-1'), { lockedAspectRatio: null }]]),
       )
     })
   })
@@ -822,13 +823,14 @@ function renderEmbedNodeHarness(
   data: Record<string, unknown> = {},
   nodeSize: { height: number; width: number } = { width: 320, height: 180 },
 ) {
+  const nodeId = testCanvasNodeId(id)
   const engine = createCanvasEngine()
   engine.setViewport({ x: 0, y: 0, zoom: viewport.zoom })
   const props = createEmbedNodeProps(id, sidebarItemId, data)
   engine.setDocumentSnapshot({
     nodes: [
       {
-        id,
+        id: nodeId,
         type: 'embed',
         data: props.data,
         position: { x: 10, y: 20 },
@@ -880,7 +882,7 @@ function createEmbedNodeProps(
   data: Record<string, unknown>,
 ): Parameters<typeof EmbedNode>[0] {
   return {
-    id,
+    id: testCanvasNodeId(id),
     data: {
       target: { kind: 'resource', resourceId: testId<'sidebarItems'>(sidebarItemId) },
       ...data,

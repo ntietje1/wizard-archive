@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { TextNode } from '../text-node'
 
@@ -15,7 +16,7 @@ describe('TextNode', () => {
   it('uses the uniform small canvas node resize minimum', () => {
     canvasTextNodeSpy.mockReset()
 
-    render(<TextNode id="text-1" data={{}} dragging={false} />)
+    render(<TextNode id={testCanvasNodeId('text-1')} data={{}} dragging={false} />)
 
     expect(canvasTextNodeSpy).toHaveBeenCalledWith(
       expect.objectContaining({

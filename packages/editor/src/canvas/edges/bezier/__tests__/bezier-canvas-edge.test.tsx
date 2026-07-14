@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { CANVAS_HANDLE_POSITION } from '../../../types/canvas-domain-types'
 import { describe, expect, it } from 'vite-plus/test'
 import { CanvasRenderModeContext } from '../../../runtime/providers/canvas-render-mode-context'
@@ -168,7 +169,7 @@ describe('BezierCanvasEdge', () => {
   it('anchors the curve to node bounds instead of render-prop handle coordinates when nodes are available', () => {
     const nodes: Array<CanvasDocumentNode> = [
       {
-        id: 'source',
+        id: testCanvasNodeId('source'),
         type: 'text',
         position: { x: 10, y: 20 },
         width: 80,
@@ -176,7 +177,7 @@ describe('BezierCanvasEdge', () => {
         data: {},
       },
       {
-        id: 'target',
+        id: testCanvasNodeId('target'),
         type: 'text',
         position: { x: 200, y: 20 },
         width: 80,
@@ -204,8 +205,8 @@ describe('BezierCanvasEdge', () => {
       {
         id: 'edge-1',
         type: 'bezier',
-        source: 'source',
-        target: 'target',
+        source: testCanvasNodeId('source'),
+        target: testCanvasNodeId('target'),
         sourceHandle: 'right',
         targetHandle: 'left',
       },
@@ -243,8 +244,8 @@ function createEdgeProps(
   return {
     id: 'edge-1',
     type: 'bezier',
-    source: 'source',
-    target: 'target',
+    source: testCanvasNodeId('source'),
+    target: testCanvasNodeId('target'),
     sourceX: 40,
     sourceY: 20,
     targetX: 160,

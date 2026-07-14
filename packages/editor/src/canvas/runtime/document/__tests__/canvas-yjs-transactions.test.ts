@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import * as Y from 'yjs'
 import { transactCanvasMap, transactCanvasMaps } from '../canvas-yjs-transactions'
 import type {
@@ -54,7 +55,7 @@ describe('transactCanvasMaps', () => {
 
 function createNode(id: string): Node {
   return {
-    id,
+    id: testCanvasNodeId(id),
     type: 'text',
     position: { x: 0, y: 0 },
     data: {},
@@ -65,7 +66,7 @@ function createEdge(id: string): Edge {
   return {
     id,
     type: 'bezier',
-    source: 'node-1',
-    target: 'node-2',
+    source: testCanvasNodeId('node-1'),
+    target: testCanvasNodeId('node-2'),
   }
 }

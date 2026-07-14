@@ -548,7 +548,7 @@ function normalizeCanvasPreviewContent(
   edges: ReadonlyArray<CanvasDocumentEdge>,
 ) {
   const normalizedNodes = normalizeCanvasPreviewNodes(nodes)
-  const nodeIds = new Set(normalizedNodes.map((node) => node.id))
+  const nodeIds = new Set<string>(normalizedNodes.map((node) => node.id))
 
   return {
     nodes: normalizedNodes,

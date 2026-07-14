@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import * as Y from 'yjs'
 import { useCanvasPerformanceProbeRuntime } from '../use-canvas-performance-probe-runtime'
 import type { CanvasDragController } from '../../../system/canvas-drag-controller'
@@ -28,6 +29,7 @@ describe('useCanvasPerformanceProbeRuntime', () => {
 
     window.__WA_CANVAS_PERF_RUNTIME__?.seedTextNodes({
       count: 2,
+      nodeIds: [testCanvasNodeId('perf-node-0'), testCanvasNodeId('perf-node-1')],
       start: { x: 10, y: 20 },
       spacingX: 30,
       spacingY: 40,
@@ -35,7 +37,10 @@ describe('useCanvasPerformanceProbeRuntime', () => {
     })
 
     expect(harness.nodesMap.size).toBe(2)
-    expect([...harness.nodesMap.keys()]).toEqual(['perf-node-0', 'perf-node-1'])
+    expect([...harness.nodesMap.keys()]).toEqual([
+      testCanvasNodeId('perf-node-0'),
+      testCanvasNodeId('perf-node-1'),
+    ])
   })
 
   it('rejects invalid probe geometry before mutating the document', () => {

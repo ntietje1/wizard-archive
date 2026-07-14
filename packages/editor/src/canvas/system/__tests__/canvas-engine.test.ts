@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
+import { testCanvasNodeId } from 'shared/test/canvas-node-id'
 import { createCanvasDomRuntime } from '../canvas-dom-runtime'
 import { createCanvasEngine } from '../canvas-engine'
 import { getCachedStrokeDetailPath } from '../../nodes/stroke/stroke-path-cache'
@@ -19,9 +20,9 @@ describe('createCanvasEngine', () => {
     engine.setDocumentSnapshot({ nodes: [first, second] })
 
     const snapshot = engine.getSnapshot()
-    expect(snapshot.nodeIds).toEqual(['first', 'second'])
-    expect(snapshot.nodeLookup.get('first')?.node).toBe(first)
-    expect(snapshot.nodeLookup.get('second')?.zIndex).toBe(1)
+    expect(snapshot.nodeIds).toEqual([testCanvasNodeId('first'), testCanvasNodeId('second')])
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('first'))?.node).toBe(first)
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('second'))?.zIndex).toBe(1)
   })
 
   it('notifies endpoint selectors only when one endpoint node changes', () => {
@@ -33,15 +34,20 @@ describe('createCanvasEngine', () => {
 
     const listener = vi.fn()
     engine.subscribeSelector(
-      (snapshot) => selectCanvasEdgeEndpointNodes(snapshot, 'source', 'target'),
+      (snapshot) =>
+        selectCanvasEdgeEndpointNodes(
+          snapshot,
+          testCanvasNodeId('source'),
+          testCanvasNodeId('target'),
+        ),
       listener,
       areCanvasEdgeEndpointNodesEqual,
     )
 
-    engine.setNodePositions(new Map([['other', { x: 50, y: 50 }]]))
+    engine.setNodePositions(new Map([[testCanvasNodeId('other'), { x: 50, y: 50 }]]))
     expect(listener).not.toHaveBeenCalled()
 
-    engine.setNodePositions(new Map([['source', { x: 20, y: 30 }]]))
+    engine.setNodePositions(new Map([[testCanvasNodeId('source'), { x: 20, y: 30 }]]))
     expect(listener).toHaveBeenCalledTimes(1)
     expect(listener.mock.calls[0]?.[0].source?.position).toEqual({ x: 20, y: 30 })
   })
@@ -54,14 +60,14 @@ describe('createCanvasEngine', () => {
     })
 
     engine.setSelection({
-      nodeIds: new Set(['b']),
+      nodeIds: new Set([testCanvasNodeId('b')]),
       edgeIds: new Set(['edge-1']),
     })
 
     const snapshot = engine.getSnapshot()
-    expect(snapshot.nodeIds).toEqual(['a', 'b'])
-    expect(snapshot.selectedNodeIds.has('b')).toBe(true)
-    expect(snapshot.nodeLookup.get('b')?.selected).toBe(true)
+    expect(snapshot.nodeIds).toEqual([testCanvasNodeId('a'), testCanvasNodeId('b')])
+    expect(snapshot.selectedNodeIds.has(testCanvasNodeId('b'))).toBe(true)
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('b'))?.selected).toBe(true)
     expect(snapshot.edgeLookup.get('edge-1')?.selected).toBe(true)
   })
 
@@ -85,9 +91,9 @@ describe('createCanvasEngine', () => {
     const listener = vi.fn()
     engine.subscribe(listener)
 
-    engine.patchNodes(new Map([['a', { zIndex: 0 }]]))
+    engine.patchNodes(new Map([[testCanvasNodeId('a'), { zIndex: 0 }]]))
     engine.patchEdges(new Map([['edge-1', { type: 'bezier' }]]))
-    engine.setNodePositions(new Map([['a', { x: 0, y: 0 }]]))
+    engine.setNodePositions(new Map([[testCanvasNodeId('a'), { x: 0, y: 0 }]]))
 
     expect(listener).not.toHaveBeenCalled()
     expect(engine.getSnapshot().version).toBe(version)
@@ -119,20 +125,20 @@ describe('createCanvasEngine', () => {
       edges: [createEdge('edge-1', 'a', 'b'), createEdge('edge-2', 'b', 'c')],
     })
     engine.setSelection({
-      nodeIds: new Set(['a']),
+      nodeIds: new Set([testCanvasNodeId('a')]),
       edgeIds: new Set(['edge-1']),
     })
-    const selectedNodeBefore = engine.getSnapshot().nodeLookup.get('a')
-    const untouchedNodeBefore = engine.getSnapshot().nodeLookup.get('b')
+    const selectedNodeBefore = engine.getSnapshot().nodeLookup.get(testCanvasNodeId('a'))
+    const untouchedNodeBefore = engine.getSnapshot().nodeLookup.get(testCanvasNodeId('b'))
     const untouchedEdgeBefore = engine.getSnapshot().edgeLookup.get('edge-2')
 
     engine.clearSelection()
     const snapshot = engine.getSnapshot()
 
-    expect(snapshot.nodeLookup.get('a')).not.toBe(selectedNodeBefore)
-    expect(snapshot.nodeLookup.get('b')).toBe(untouchedNodeBefore)
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('a'))).not.toBe(selectedNodeBefore)
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('b'))).toBe(untouchedNodeBefore)
     expect(snapshot.edgeLookup.get('edge-2')).toBe(untouchedEdgeBefore)
-    expect(snapshot.dirtyNodeIds).toEqual(new Set(['a']))
+    expect(snapshot.dirtyNodeIds).toEqual(new Set([testCanvasNodeId('a')]))
     expect(snapshot.dirtyEdgeIds).toEqual(new Set(['edge-1']))
   })
 
@@ -147,7 +153,7 @@ describe('createCanvasEngine', () => {
 
     engine.beginSelectionGesture('marquee', 'replace')
     engine.setSelectionGesturePreview({
-      nodeIds: new Set(['a']),
+      nodeIds: new Set([testCanvasNodeId('a')]),
       edgeIds: new Set(['edge-1']),
     })
 
@@ -164,9 +170,16 @@ describe('createCanvasEngine', () => {
       ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
     const farElement = document.createElement('div')
     const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
-    const unregisterFar = domRuntime.registerNodeElement('far', farElement)
+    const unregisterFar = domRuntime.registerNodeElement(testCanvasNodeId('far'), farElement)
     engine.setDocumentSnapshot({
-      nodes: [{ ...createNode('far', 0), position: { x: 800, y: 0 }, width: 20, height: 20 }],
+      nodes: [
+        {
+          ...createNode('far', 0),
+          position: { x: 800, y: 0 },
+          width: 20,
+          height: 20,
+        },
+      ],
     })
     engine.refreshCulling()
     domRuntime.flush()
@@ -176,14 +189,17 @@ describe('createCanvasEngine', () => {
 
     engine.beginSelectionGesture('marquee', 'replace')
     listener.mockClear()
-    engine.setSelectionGesturePreview({ nodeIds: new Set(['far']), edgeIds: new Set() })
+    engine.setSelectionGesturePreview({
+      nodeIds: new Set([testCanvasNodeId('far')]),
+      edgeIds: new Set(),
+    })
     domRuntime.flush()
 
     expect(listener).toHaveBeenCalledTimes(1)
     expect(engine.getSnapshot().version).toBe(version + 2)
     expect(engine.getSnapshot().selection.pendingPreview).toEqual({
       kind: 'active',
-      nodeIds: new Set(['far']),
+      nodeIds: new Set([testCanvasNodeId('far')]),
       edgeIds: new Set(),
     })
     expect(farElement.style.display).toBe('')
@@ -191,7 +207,7 @@ describe('createCanvasEngine', () => {
     engine.commitSelectionGesture()
 
     expect(listener).toHaveBeenCalledTimes(2)
-    expect(engine.getSnapshot().selection.nodeIds).toEqual(new Set(['far']))
+    expect(engine.getSnapshot().selection.nodeIds).toEqual(new Set([testCanvasNodeId('far')]))
 
     unsubscribe()
     unregisterFar()
@@ -207,13 +223,13 @@ describe('createCanvasEngine', () => {
     })
     engine.beginSelectionGesture('lasso', 'replace')
     engine.setSelectionGesturePreview({
-      nodeIds: new Set(['b']),
+      nodeIds: new Set([testCanvasNodeId('b')]),
       edgeIds: new Set(['edge-1']),
     })
 
     engine.commitSelectionGesture()
 
-    expect(engine.getSnapshot().selection.nodeIds).toEqual(new Set(['b']))
+    expect(engine.getSnapshot().selection.nodeIds).toEqual(new Set([testCanvasNodeId('b')]))
     expect(engine.getSnapshot().selection.edgeIds).toEqual(new Set(['edge-1']))
     expect(engine.getSnapshot().selection.pendingPreview).toEqual({ kind: 'inactive' })
     expect(engine.getSnapshot().selection.gestureKind).toBeNull()
@@ -225,18 +241,20 @@ describe('createCanvasEngine', () => {
       nodes: [createNode('a', 0), createNode('b', 1)],
     })
     engine.setSelection({
-      nodeIds: new Set(['a']),
+      nodeIds: new Set([testCanvasNodeId('a')]),
       edgeIds: new Set(),
     })
 
     engine.beginSelectionGesture('lasso', 'add')
     engine.setSelectionGesturePreview({
-      nodeIds: new Set(['b']),
+      nodeIds: new Set([testCanvasNodeId('b')]),
       edgeIds: new Set(),
     })
     engine.commitSelectionGesture()
 
-    expect(engine.getSnapshot().selection.nodeIds).toEqual(new Set(['a', 'b']))
+    expect(engine.getSnapshot().selection.nodeIds).toEqual(
+      new Set([testCanvasNodeId('a'), testCanvasNodeId('b')]),
+    )
     expect(engine.getSnapshot().selection.pendingPreview).toEqual({ kind: 'inactive' })
     expect(engine.getSnapshot().selection.gestureKind).toBeNull()
   })
@@ -246,9 +264,12 @@ describe('createCanvasEngine', () => {
     const nodeA = createNode('a', 0)
     const nodeB = createNode('b', 1)
     engine.setDocumentSnapshot({ nodes: [nodeA, nodeB] })
-    engine.setSelection({ nodeIds: new Set(['a']), edgeIds: new Set() })
+    engine.setSelection({ nodeIds: new Set([testCanvasNodeId('a')]), edgeIds: new Set() })
     engine.beginSelectionGesture('lasso', 'add')
-    engine.setSelectionGesturePreview({ nodeIds: new Set(['b']), edgeIds: new Set() })
+    engine.setSelectionGesturePreview({
+      nodeIds: new Set([testCanvasNodeId('b')]),
+      edgeIds: new Set(),
+    })
 
     engine.setDocumentSnapshot({ nodes: [nodeB] })
 
@@ -257,13 +278,13 @@ describe('createCanvasEngine', () => {
     expect(selection.gestureStartSelection?.nodeIds).toEqual(new Set())
     expect(selection.pendingPreview).toEqual({
       kind: 'active',
-      nodeIds: new Set(['b']),
+      nodeIds: new Set([testCanvasNodeId('b')]),
       edgeIds: new Set(),
     })
     expect(engine.getSnapshot().selectedNodeIds).toEqual(new Set())
 
     engine.commitSelectionGesture()
-    expect(engine.getSnapshot().selection.nodeIds).toEqual(new Set(['b']))
+    expect(engine.getSnapshot().selection.nodeIds).toEqual(new Set([testCanvasNodeId('b')]))
 
     engine.destroy()
   })
@@ -271,11 +292,11 @@ describe('createCanvasEngine', () => {
   it('preserves auto-sized measurements when drag state is rebuilt', () => {
     const engine = createCanvasEngine()
     engine.setDocumentSnapshot({ nodes: [createNode('auto-sized', 0)] })
-    engine.measureNode('auto-sized', { width: 120, height: 80 })
+    engine.measureNode(testCanvasNodeId('auto-sized'), { width: 120, height: 80 })
 
-    engine.startDrag(new Set(['auto-sized']))
+    engine.startDrag(new Set([testCanvasNodeId('auto-sized')]))
 
-    expect(engine.getSnapshot().nodeLookup.get('auto-sized')?.measured).toEqual({
+    expect(engine.getSnapshot().nodeLookup.get(testCanvasNodeId('auto-sized'))?.measured).toEqual({
       width: 120,
       height: 80,
     })
@@ -300,7 +321,7 @@ describe('createCanvasEngine', () => {
       edges: [createEdge('edge-1', 'source', 'target')],
     })
 
-    engine.patchNodes(new Map([['source', { position: { x: 40, y: 20 } }]]))
+    engine.patchNodes(new Map([[testCanvasNodeId('source'), { position: { x: 40, y: 20 } }]]))
     domRuntime.flush()
 
     expect(edgePath.getAttribute('d')).toBeTruthy()
@@ -311,20 +332,25 @@ describe('createCanvasEngine', () => {
 
   it('marks only dragged nodes dirty during drag sessions', () => {
     const engine = createCanvasEngine()
-    engine.setDocumentSnapshot({ nodes: [createNode('a', 0), createNode('b', 1)] })
+    engine.setDocumentSnapshot({
+      nodes: [createNode('a', 0), createNode('b', 1)],
+    })
     const documentNodes = engine.getSnapshot().nodes
 
-    engine.startDrag(new Set(['a']))
-    expect(engine.getSnapshot().nodeLookup.get('a')?.dragging).toBe(true)
-    expect(engine.getSnapshot().nodeLookup.get('b')?.dragging).toBe(false)
+    engine.startDrag(new Set([testCanvasNodeId('a')]))
+    expect(engine.getSnapshot().nodeLookup.get(testCanvasNodeId('a'))?.dragging).toBe(true)
+    expect(engine.getSnapshot().nodeLookup.get(testCanvasNodeId('b'))?.dragging).toBe(false)
 
-    engine.updateDrag(new Map([['a', { x: 10, y: 12 }]]))
+    engine.updateDrag(new Map([[testCanvasNodeId('a'), { x: 10, y: 12 }]]))
     expect(engine.getSnapshot().nodes).toBe(documentNodes)
-    expect(engine.getSnapshot().nodeLookup.get('a')?.node.position).toEqual({ x: 10, y: 12 })
+    expect(engine.getSnapshot().nodeLookup.get(testCanvasNodeId('a'))?.node.position).toEqual({
+      x: 10,
+      y: 12,
+    })
 
     engine.stopDrag()
-    expect(engine.getSnapshot().nodeLookup.get('a')?.dragging).toBe(false)
-    expect(engine.getSnapshot().dirtyNodeIds).toEqual(new Set(['a']))
+    expect(engine.getSnapshot().nodeLookup.get(testCanvasNodeId('a'))?.dragging).toBe(false)
+    expect(engine.getSnapshot().dirtyNodeIds).toEqual(new Set([testCanvasNodeId('a')]))
   })
 
   it('preserves live dragged node positions across unrelated document patches', () => {
@@ -334,30 +360,30 @@ describe('createCanvasEngine', () => {
       edges: [createEdge('edge-1', 'a', 'b')],
     })
 
-    engine.startDrag(new Set(['a']))
-    engine.updateDrag(new Map([['a', { x: 10, y: 12 }]]))
-    engine.patchNodes(new Map([['b', { position: { x: 30, y: 40 } }]]))
+    engine.startDrag(new Set([testCanvasNodeId('a')]))
+    engine.updateDrag(new Map([[testCanvasNodeId('a'), { x: 10, y: 12 }]]))
+    engine.patchNodes(new Map([[testCanvasNodeId('b'), { position: { x: 30, y: 40 } }]]))
     engine.patchEdges(new Map([['edge-1', { style: { stroke: '#00ff00' } }]]))
 
     const snapshot = engine.getSnapshot()
-    expect(snapshot.nodeLookup.get('a')?.node.position).toEqual({ x: 10, y: 12 })
-    expect(snapshot.nodeLookup.get('a')?.dragging).toBe(true)
-    expect(snapshot.nodeLookup.get('b')?.node.position).toEqual({ x: 30, y: 40 })
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('a'))?.node.position).toEqual({ x: 10, y: 12 })
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('a'))?.dragging).toBe(true)
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('b'))?.node.position).toEqual({ x: 30, y: 40 })
   })
 
   it('keeps drag positions in runtime lookup until document positions are committed', () => {
     const engine = createCanvasEngine()
     engine.setDocumentSnapshot({ nodes: [createNode('a', 0)] })
 
-    engine.startDrag(new Set(['a']))
-    engine.updateDrag(new Map([['a', { x: 10, y: 12 }]]))
-    engine.setNodePositions(new Map([['a', { x: 10, y: 12 }]]))
+    engine.startDrag(new Set([testCanvasNodeId('a')]))
+    engine.updateDrag(new Map([[testCanvasNodeId('a'), { x: 10, y: 12 }]]))
+    engine.setNodePositions(new Map([[testCanvasNodeId('a'), { x: 10, y: 12 }]]))
     engine.stopDrag()
 
     const snapshot = engine.getSnapshot()
     expect(snapshot.nodes[0]?.position).toEqual({ x: 10, y: 12 })
-    expect(snapshot.nodeLookup.get('a')?.node.position).toEqual({ x: 10, y: 12 })
-    expect(snapshot.nodeLookup.get('a')?.dragging).toBe(false)
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('a'))?.node.position).toEqual({ x: 10, y: 12 })
+    expect(snapshot.nodeLookup.get(testCanvasNodeId('a'))?.dragging).toBe(false)
   })
 
   it('updates live drag DOM transforms and connected edge paths without notifying subscribers', () => {
@@ -371,7 +397,7 @@ describe('createCanvasEngine', () => {
     }
     const nodeElement = document.createElement('div')
     const edgePath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    const unsubscribeNode = domRuntime.registerNodeElement('source', nodeElement)
+    const unsubscribeNode = domRuntime.registerNodeElement(testCanvasNodeId('source'), nodeElement)
     const unsubscribeEdge = domRuntime.registerEdgePaths('edge-1', {
       path: edgePath,
       highlightPath: null,
@@ -381,11 +407,11 @@ describe('createCanvasEngine', () => {
       nodes: [source, target],
       edges: [createEdge('edge-1', 'source', 'target')],
     })
-    engine.startDrag(new Set(['source']))
+    engine.startDrag(new Set([testCanvasNodeId('source')]))
     const listener = vi.fn()
     const unsubscribe = engine.subscribe(listener)
 
-    engine.updateDrag(new Map([['source', { x: 20, y: 10 }]]))
+    engine.updateDrag(new Map([[testCanvasNodeId('source'), { x: 20, y: 10 }]]))
     domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
@@ -412,7 +438,7 @@ describe('createCanvasEngine', () => {
     }
     const nodeElement = document.createElement('div')
     const edgePath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    const unsubscribeNode = domRuntime.registerNodeElement('source', nodeElement)
+    const unsubscribeNode = domRuntime.registerNodeElement(testCanvasNodeId('source'), nodeElement)
     const unsubscribeEdge = domRuntime.registerEdgePaths('edge-1', {
       path: edgePath,
       highlightPath: null,
@@ -428,7 +454,7 @@ describe('createCanvasEngine', () => {
     engine.updateResize(
       new Map([
         [
-          'source',
+          testCanvasNodeId('source'),
           {
             width: 160,
             height: 80,
@@ -450,7 +476,7 @@ describe('createCanvasEngine', () => {
       height: 80,
       position: { x: 20, y: 10 },
     })
-    expect(engine.getSnapshot().nodeLookup.get('source')?.node).toEqual({
+    expect(engine.getSnapshot().nodeLookup.get(testCanvasNodeId('source'))?.node).toEqual({
       ...source,
       width: 160,
       height: 80,
@@ -480,12 +506,15 @@ describe('createCanvasEngine', () => {
         } as Node,
       ],
     })
-    const unregister = domRuntime.registerNodeSurfaceElement('a', nodeSurface)
+    const unregister = domRuntime.registerNodeSurfaceElement(testCanvasNodeId('a'), nodeSurface)
 
-    domRuntime.scheduleNodeDataPatches(engine.getSnapshot(), new Map([['a', { borderWidth: 4 }]]))
     domRuntime.scheduleNodeDataPatches(
       engine.getSnapshot(),
-      new Map([['a', { borderStroke: '#00ff00' }]]),
+      new Map([[testCanvasNodeId('a'), { borderWidth: 4 }]]),
+    )
+    domRuntime.scheduleNodeDataPatches(
+      engine.getSnapshot(),
+      new Map([[testCanvasNodeId('a'), { borderStroke: '#00ff00' }]]),
     )
     domRuntime.flush()
 
@@ -506,12 +535,12 @@ describe('createCanvasEngine', () => {
     engine.setDocumentSnapshot({
       nodes: [{ ...createNode('a', 0), width: 100, height: 50 }],
     })
-    const unregister = domRuntime.registerNodeElement('a', nodeElement)
+    const unregister = domRuntime.registerNodeElement(testCanvasNodeId('a'), nodeElement)
 
     engine.patchNodes(
       new Map([
         [
-          'a',
+          testCanvasNodeId('a'),
           {
             position: { x: 20, y: 10 },
             width: 160,
@@ -607,21 +636,32 @@ describe('createCanvasEngine', () => {
     const insideElement = document.createElement('div')
     const farElement = document.createElement('div')
     const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
-    const unregisterInside = domRuntime.registerNodeElement('inside', insideElement)
-    const unregisterFar = domRuntime.registerNodeElement('far', farElement)
+    const unregisterInside = domRuntime.registerNodeElement(
+      testCanvasNodeId('inside'),
+      insideElement,
+    )
+    const unregisterFar = domRuntime.registerNodeElement(testCanvasNodeId('far'), farElement)
     const listener = vi.fn()
     const unsubscribe = engine.subscribe(listener)
 
     engine.setDocumentSnapshot({
       nodes: [
         { ...createNode('inside', 0), width: 20, height: 20 },
-        { ...createNode('far', 1), position: { x: 800, y: 0 }, width: 20, height: 20 },
+        {
+          ...createNode('far', 1),
+          position: { x: 800, y: 0 },
+          width: 20,
+          height: 20,
+        },
       ],
     })
     engine.refreshCulling()
     domRuntime.flush()
 
-    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
+    expect(engine.getSnapshot().nodeIds).toEqual([
+      testCanvasNodeId('inside'),
+      testCanvasNodeId('far'),
+    ])
     expect(insideElement.style.display).toBe('')
     expect(farElement.style.display).toBe('none')
     expect(farElement).toHaveAttribute('data-canvas-culled', 'true')
@@ -631,7 +671,10 @@ describe('createCanvasEngine', () => {
     domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
-    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
+    expect(engine.getSnapshot().nodeIds).toEqual([
+      testCanvasNodeId('inside'),
+      testCanvasNodeId('far'),
+    ])
     expect(insideElement.style.display).toBe('none')
     expect(farElement.style.display).toBe('')
 
@@ -639,7 +682,10 @@ describe('createCanvasEngine', () => {
     domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
-    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
+    expect(engine.getSnapshot().nodeIds).toEqual([
+      testCanvasNodeId('inside'),
+      testCanvasNodeId('far'),
+    ])
     expect(farElement.style.display).toBe('')
 
     unsubscribe()
@@ -659,13 +705,20 @@ describe('createCanvasEngine', () => {
     const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
 
     engine.setDocumentSnapshot({
-      nodes: [{ ...createNode('far', 0), position: { x: 800, y: 0 }, width: 20, height: 20 }],
+      nodes: [
+        {
+          ...createNode('far', 0),
+          position: { x: 800, y: 0 },
+          width: 20,
+          height: 20,
+        },
+      ],
     })
     engine.refreshCulling()
     domRuntime.flush()
 
     const farElement = document.createElement('div')
-    const unregisterFar = domRuntime.registerNodeElement('far', farElement)
+    const unregisterFar = domRuntime.registerNodeElement(testCanvasNodeId('far'), farElement)
 
     expect(farElement.style.display).toBe('none')
     expect(farElement).toHaveAttribute('data-canvas-culled', 'true')
@@ -684,7 +737,10 @@ describe('createCanvasEngine', () => {
       ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
     const measuredElement = document.createElement('div')
     const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
-    const unregisterMeasured = domRuntime.registerNodeElement('measured', measuredElement)
+    const unregisterMeasured = domRuntime.registerNodeElement(
+      testCanvasNodeId('measured'),
+      measuredElement,
+    )
     engine.setDocumentSnapshot({
       nodes: [{ ...createNode('measured', 0), position: { x: 800, y: 0 } }],
     })
@@ -693,7 +749,7 @@ describe('createCanvasEngine', () => {
 
     expect(measuredElement.style.display).toBe('')
 
-    engine.measureNode('measured', { width: 20, height: 20 })
+    engine.measureNode(testCanvasNodeId('measured'), { width: 20, height: 20 })
     domRuntime.flush()
 
     expect(measuredElement.style.display).toBe('none')
@@ -716,12 +772,17 @@ describe('createCanvasEngine', () => {
     engine.setDocumentSnapshot({
       nodes: [
         createNode('source', 0),
-        { ...createNode('target', 1), position: { x: 200, y: 0 }, width: 100, height: 50 },
+        {
+          ...createNode('target', 1),
+          position: { x: 200, y: 0 },
+          width: 100,
+          height: 50,
+        },
       ],
       edges: [createEdge('edge-1', 'source', 'target')],
     })
 
-    engine.measureNode('source', { width: 100, height: 50 })
+    engine.measureNode(testCanvasNodeId('source'), { width: 100, height: 50 })
     domRuntime.flush()
 
     expect(edgePath.getAttribute('d')).toBeTruthy()
@@ -740,10 +801,10 @@ describe('createCanvasEngine', () => {
     })
     engine.subscribe(listener)
 
-    engine.measureNode('dimensioned', { width: 30, height: 40 })
+    engine.measureNode(testCanvasNodeId('dimensioned'), { width: 30, height: 40 })
 
     expect(listener).not.toHaveBeenCalled()
-    expect(engine.getSnapshot().nodeLookup.get('dimensioned')?.measured).toEqual({
+    expect(engine.getSnapshot().nodeLookup.get(testCanvasNodeId('dimensioned'))?.measured).toEqual({
       width: 30,
       height: 40,
     })
@@ -762,14 +823,30 @@ describe('createCanvasEngine', () => {
     const targetElement = document.createElement('div')
     const edgeElement = document.createElementNS('http://www.w3.org/2000/svg', 'g')
     const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
-    const unregisterSource = domRuntime.registerNodeElement('source', sourceElement)
-    const unregisterTarget = domRuntime.registerNodeElement('target', targetElement)
+    const unregisterSource = domRuntime.registerNodeElement(
+      testCanvasNodeId('source'),
+      sourceElement,
+    )
+    const unregisterTarget = domRuntime.registerNodeElement(
+      testCanvasNodeId('target'),
+      targetElement,
+    )
     const unregisterEdge = domRuntime.registerEdgeElement('edge-1', edgeElement)
 
     engine.setDocumentSnapshot({
       nodes: [
-        { ...createNode('source', 0), position: { x: 800, y: 0 }, width: 20, height: 20 },
-        { ...createNode('target', 1), position: { x: 900, y: 0 }, width: 20, height: 20 },
+        {
+          ...createNode('source', 0),
+          position: { x: 800, y: 0 },
+          width: 20,
+          height: 20,
+        },
+        {
+          ...createNode('target', 1),
+          position: { x: 900, y: 0 },
+          width: 20,
+          height: 20,
+        },
       ],
       edges: [createEdge('edge-1', 'source', 'target')],
     })
@@ -779,7 +856,10 @@ describe('createCanvasEngine', () => {
     expect(sourceElement.style.display).toBe('none')
     expect(edgeElement.style.display).toBe('none')
 
-    engine.setSelection({ nodeIds: new Set(['source']), edgeIds: new Set() })
+    engine.setSelection({
+      nodeIds: new Set([testCanvasNodeId('source')]),
+      edgeIds: new Set(),
+    })
     domRuntime.flush()
 
     expect(sourceElement.style.display).toBe('')
@@ -824,7 +904,7 @@ describe('createCanvasEngine', () => {
     const { domRuntime, engine } = createEngineWithDomRuntime()
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     const highlightPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    const unregister = domRuntime.registerStrokeNodePaths('stroke-1', {
+    const unregister = domRuntime.registerStrokeNodePaths(testCanvasNodeId('stroke-1'), {
       path,
       highlightPath,
     })
@@ -846,7 +926,10 @@ describe('createCanvasEngine', () => {
       ],
     })
 
-    domRuntime.scheduleNodeDataPatches(engine.getSnapshot(), new Map([['stroke-1', { size: 8 }]]))
+    domRuntime.scheduleNodeDataPatches(
+      engine.getSnapshot(),
+      new Map([[testCanvasNodeId('stroke-1'), { size: 8 }]]),
+    )
     domRuntime.flush()
 
     expect(path.getAttribute('d')).toBeTruthy()
@@ -897,7 +980,7 @@ describe('createCanvasEngine', () => {
       size: 1,
     }
     const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
-    const unregisterStroke = domRuntime.registerStrokeNodePaths('stroke-1', {
+    const unregisterStroke = domRuntime.registerStrokeNodePaths(testCanvasNodeId('stroke-1'), {
       path,
       data: strokeData,
     })
@@ -905,7 +988,9 @@ describe('createCanvasEngine', () => {
     engine.setViewportLive({ x: 0, y: 0, zoom: 0.25 })
     domRuntime.flush()
 
-    expect(path.getAttribute('d')).toBe(getCachedStrokeDetailPath('stroke-1', strokeData, 4))
+    expect(path.getAttribute('d')).toBe(
+      getCachedStrokeDetailPath(testCanvasNodeId('stroke-1'), strokeData, 4),
+    )
 
     unregisterStroke()
     unregisterViewport()
@@ -925,7 +1010,7 @@ describe('canvas engine property selectors', () => {
 
   it('treats edge endpoint-only changes as equal for property subscribers', () => {
     const edge = createEdge('edge-1', 'a', 'b')
-    const reconnectedEdge = { ...edge, target: 'c' }
+    const reconnectedEdge = { ...edge, target: testCanvasNodeId('c') }
     const restyledEdge = { ...edge, style: { stroke: 'red' } }
 
     expect(areCanvasPropertyEdgesEqual([edge], [reconnectedEdge])).toBe(true)
