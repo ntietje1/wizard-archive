@@ -22,9 +22,11 @@ describe('canonical domain identity', () => {
   it('generates final UUIDv7 identities at the owning intent boundary', () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    const exportJobId = generateDomainId(DOMAIN_ID_KIND.exportJob)
 
     expect(isUuidV7(resourceId)).toBe(true)
     expect(isUuidV7(operationId)).toBe(true)
+    expect(isUuidV7(exportJobId)).toBe(true)
     expect(resourceId).not.toBe(operationId)
   })
 })
