@@ -15,7 +15,7 @@ import type {
 } from './resource-index-contract'
 import type { VersionStamp } from './component-version'
 
-export type ResourceCapabilityState<T> =
+export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
   | {
       readonly status: 'unavailable'
@@ -33,7 +33,7 @@ export interface ResourceBookmarkGateway extends ResourceBookmarkCommandGateway 
 }
 
 export interface ResourcePreviewSource {
-  get(resourceId: ResourceId): ResourceCapabilityState<AssetId | null>
+  get(resourceId: ResourceId): ResourceKnowledge<AssetId | null>
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
@@ -84,9 +84,7 @@ export type ResourceHistoryEntry = Readonly<{
 }>
 
 export interface ReadonlyResourceHistory {
-  list(
-    resourceId: ResourceId,
-  ): Promise<ResourceCapabilityState<ReadonlyArray<ResourceHistoryEntry>>>
+  list(resourceId: ResourceId): Promise<ReadonlyArray<ResourceHistoryEntry>>
 }
 
 export interface WizardEditorRuntime {
@@ -95,9 +93,9 @@ export interface WizardEditorRuntime {
     readonly index: WorkspaceResourceIndex
     readonly loader: ResourceIndexLoader
     readonly structure: ResourceStructureCommandGateway
-    readonly access: ResourceAccessGateway
-    readonly bookmarks: ResourceBookmarkGateway
-    readonly previews: ResourcePreviewSource
+    readonly access: ResourceCapability<ResourceAccessGateway>
+    readonly bookmarks: ResourceCapability<ResourceBookmarkGateway>
+    readonly previews: ResourceCapability<ResourcePreviewSource>
   }
   readonly content: {
     readonly notes: NoteContentSource<Y.Doc, Y.Doc>
@@ -106,6 +104,6 @@ export interface WizardEditorRuntime {
     readonly canvases: ResourceContentSource<null, Y.Doc>
   }
   readonly navigation: ResourceNavigation
-  readonly search: WorkspaceSearch
-  readonly history: ReadonlyResourceHistory
+  readonly search: ResourceCapability<WorkspaceSearch>
+  readonly history: ResourceCapability<ReadonlyResourceHistory>
 }

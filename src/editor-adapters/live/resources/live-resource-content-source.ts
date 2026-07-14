@@ -22,7 +22,7 @@ type ResourceContentStore = ReturnType<
   typeof createResourceWatchStore<ResourceContentSnapshot, ResourceContentState>
 >
 
-type LiveResourceContentBackend = Readonly<{
+export type LiveResourceContentBackend = Readonly<{
   watch(resourceId: ResourceId, apply: (snapshot: ResourceContentSnapshot) => void): () => void
 }>
 
@@ -120,6 +120,18 @@ class LiveResourceContentSource implements ResourceContentSource<null, ResourceC
   }
 }
 
+export function createLiveResourceContentSource(
+  kind: 'file',
+  backend: LiveResourceContentBackend,
+): ResourceContentSource<null, FileResourceContent> & { dispose(): void }
+export function createLiveResourceContentSource(
+  kind: 'map',
+  backend: LiveResourceContentBackend,
+): ResourceContentSource<null, MapResourceContent> & { dispose(): void }
+export function createLiveResourceContentSource(
+  kind: 'canvas',
+  backend: LiveResourceContentBackend,
+): ResourceContentSource<null, Y.Doc> & { dispose(): void }
 export function createLiveResourceContentSource(
   kind: ResourceContentKind,
   backend: LiveResourceContentBackend,

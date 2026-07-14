@@ -18,11 +18,15 @@ const campaignState = vi.hoisted(() => ({
   membership: undefined as { id: ReturnType<typeof testCampaignMemberId>; role: 'DM' } | undefined,
 }))
 const resourceCore = vi.hoisted(() => ({
-  index: {},
-  loader: { ensureResource: vi.fn(), ensureCollection: vi.fn() },
-  structure: { execute: vi.fn() },
+  resources: {
+    index: {},
+    loader: { ensureResource: vi.fn(), ensureCollection: vi.fn() },
+    structure: { execute: vi.fn() },
+  },
 }))
-const useLiveResourceCoreMock = vi.hoisted(() => vi.fn((_scope: unknown) => resourceCore))
+const useLiveResourceCoreMock = vi.hoisted(() =>
+  vi.fn((_scope: unknown, _navigation: unknown) => resourceCore),
+)
 const filesystemReadModel = vi.hoisted(() => ({
   activeItems: ['active-item'],
   visibleTrashItems: [],
@@ -57,7 +61,8 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 }))
 
 vi.mock('../resources/use-live-resource-core', () => ({
-  useLiveResourceCore: (scope: unknown) => useLiveResourceCoreMock(scope),
+  useLiveResourceCore: (scope: unknown, navigation: unknown) =>
+    useLiveResourceCoreMock(scope, navigation),
 }))
 
 vi.mock('../filesystem/read-model', () => ({
@@ -131,12 +136,19 @@ describe('LiveWorkspaceRuntimeProvider', () => {
       openSeparateItem: expect.any(Function),
     })
     expect(screen.getByTestId('runtime-probe')).toHaveAttribute('data-render-prop', 'true')
-    expect(useLiveResourceCoreMock).toHaveBeenCalledExactlyOnceWith({
-      campaignId,
-      actorId,
-      projection: 'dm',
-      schema: 'resource-index-v1',
-    })
+    expect(useLiveResourceCoreMock).toHaveBeenCalledExactlyOnceWith(
+      {
+        campaignId,
+        actorId,
+        projection: 'dm',
+        schema: 'resource-index-v1',
+      },
+      expect.objectContaining({
+        current: expect.any(Function),
+        open: expect.any(Function),
+        subscribe: expect.any(Function),
+      }),
+    )
     expect(screen.getByTestId('route-effects')).toBeInTheDocument()
     expect(screen.getByText('Filesystem operation dialog')).toBeInTheDocument()
   })

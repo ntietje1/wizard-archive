@@ -6,6 +6,12 @@ import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/i
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { useLiveResourceCore } from '../use-live-resource-core'
 
+const navigation = {
+  current: () => null,
+  open: vi.fn(),
+  subscribe: () => () => {},
+}
+
 const convex = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn() }))
 
 vi.mock('@convex-dev/react-query', () => ({ useConvex: () => convex }))
@@ -25,43 +31,48 @@ describe('useLiveResourceCore', () => {
 
   it('preserves every capability identity within one authoritative scope', () => {
     const { result, rerender } = renderHook(
-      ({ currentScope }) => useLiveResourceCore(currentScope),
+      ({ currentScope }) => useLiveResourceCore(currentScope, navigation),
       { initialProps: { currentScope: scope } },
     )
     const initial = result.current
 
     rerender({ currentScope: { ...scope } })
 
-    expect(result.current.index).toBe(initial.index)
-    expect(result.current.loader).toBe(initial.loader)
-    expect(result.current.structure).toBe(initial.structure)
+    expect(result.current.scope).toBe(initial.scope)
+    expect(result.current.resources.index).toBe(initial.resources.index)
+    expect(result.current.resources.loader).toBe(initial.resources.loader)
+    expect(result.current.resources.structure).toBe(initial.resources.structure)
     expect(result.current.content.notes).toBe(initial.content.notes)
     expect(result.current.content.files).toBe(initial.content.files)
     expect(result.current.content.maps).toBe(initial.content.maps)
     expect(result.current.content.canvases).toBe(initial.content.canvases)
+    expect(result.current.navigation).toBe(navigation)
+    expect(result.current.resources.access).toEqual({
+      status: 'unavailable',
+      reason: 'capability_not_supported',
+    })
   })
 
-  it('replaces every scoped capability when the actor projection changes', () => {
-    const { result, rerender } = renderHook(
-      ({ currentScope }) => useLiveResourceCore(currentScope),
-      { initialProps: { currentScope: scope } },
-    )
-    const initial = result.current
+  it('replaces every capability at a new actor projection scope boundary', () => {
+    const initial = renderHook(() => useLiveResourceCore(scope, navigation)).result.current
+    const next = renderHook(() =>
+      useLiveResourceCore(
+        {
+          ...scope,
+          actorId: testCampaignMemberId('other-actor'),
+          projection: 'player',
+        },
+        navigation,
+      ),
+    ).result.current
 
-    rerender({
-      currentScope: {
-        ...scope,
-        actorId: testCampaignMemberId('other-actor'),
-        projection: 'player',
-      },
-    })
-
-    expect(result.current.index).not.toBe(initial.index)
-    expect(result.current.loader).not.toBe(initial.loader)
-    expect(result.current.structure).not.toBe(initial.structure)
-    expect(result.current.content.notes).not.toBe(initial.content.notes)
-    expect(result.current.content.files).not.toBe(initial.content.files)
-    expect(result.current.content.maps).not.toBe(initial.content.maps)
-    expect(result.current.content.canvases).not.toBe(initial.content.canvases)
+    expect(next.scope).not.toBe(initial.scope)
+    expect(next.resources.index).not.toBe(initial.resources.index)
+    expect(next.resources.loader).not.toBe(initial.resources.loader)
+    expect(next.resources.structure).not.toBe(initial.resources.structure)
+    expect(next.content.notes).not.toBe(initial.content.notes)
+    expect(next.content.files).not.toBe(initial.content.files)
+    expect(next.content.maps).not.toBe(initial.content.maps)
+    expect(next.content.canvases).not.toBe(initial.content.canvases)
   })
 })

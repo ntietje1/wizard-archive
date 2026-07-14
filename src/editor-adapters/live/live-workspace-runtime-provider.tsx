@@ -17,6 +17,7 @@ import type { LiveWorkspaceSeparateItemNavigation } from './use-live-workspace-r
 import { openBrowserExternalUrl } from '~/editor-adapters/browser/open-browser-external-url'
 import { createEditorRoutePath } from './editor-route'
 import { useLiveResourceCore } from './resources/use-live-resource-core'
+import { useLiveResourceNavigation } from './resources/use-live-resource-navigation'
 
 export function LiveWorkspaceRuntimeProvider({
   children,
@@ -42,11 +43,13 @@ function LiveWorkspaceRuntimeContent({
     )
   }
 
+  const projection = membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player'
   return (
     <LoadedLiveWorkspaceRuntimeContent
+      key={`${campaignId}:${membership.id}:${projection}`}
       workspaceId={campaignId}
       actorId={membership.id}
-      projection={membership.role === CAMPAIGN_MEMBER_ROLE.DM ? 'dm' : 'player'}
+      projection={projection}
     >
       {children}
     </LoadedLiveWorkspaceRuntimeContent>
@@ -64,12 +67,16 @@ function LoadedLiveWorkspaceRuntimeContent({
   children: (runtime: WorkspaceRuntime) => ReactNode
   projection: 'dm' | 'player'
 }) {
-  const resourceCore = useLiveResourceCore({
-    campaignId: workspaceId,
-    actorId,
-    projection,
-    schema: RESOURCE_INDEX_SCHEMA,
-  })
+  const resourceNavigation = useLiveResourceNavigation()
+  const resourceCore = useLiveResourceCore(
+    {
+      campaignId: workspaceId,
+      actorId,
+      projection,
+      schema: RESOURCE_INDEX_SCHEMA,
+    },
+    resourceNavigation,
+  )
   const filesystemReadModel = useFileSystemReadModel()
   const liveWorkspaceNavigation = useLiveWorkspaceNavigation()
   const currentResourceId = useLiveWorkspaceSelectedResourceId()
@@ -95,7 +102,7 @@ function LoadedLiveWorkspaceRuntimeContent({
 
   return (
     <>
-      <LiveWorkspaceRouteEffects resourceLoader={resourceCore.loader} />
+      <LiveWorkspaceRouteEffects resourceLoader={resourceCore.resources.loader} />
       {children(runtime)}
       {liveFileSystemRuntime.filesystem.dialog}
     </>
