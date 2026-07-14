@@ -40,7 +40,7 @@ describe('filesystem undo recording', () => {
       transactionId: id,
       direction,
       command: { type: 'rename', itemId, name: sidebarItemName },
-      events: [{ type: 'renamed', itemId, slug: name, previousSlug: 'previous' }],
+      events: [{ type: 'renamed', itemId }],
       patches: [forwardPatch],
     })
   }
@@ -108,7 +108,7 @@ describe('filesystem undo recording', () => {
           name: created.name,
           parentTarget: { kind: 'direct', parentId: created.parentId },
         },
-        events: [{ type: 'created', itemId: created.id, slug: created.slug }],
+        events: [{ type: 'created', itemId: created.id }],
         patches: [{ type: 'upsertResource', item: resourcePatchRowFromCacheItem(created) }],
       }),
       { replayFingerprint: 'graph-after-create' },

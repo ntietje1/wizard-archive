@@ -5,7 +5,7 @@ import {
   coerceSidebarItemIconNameForInput,
 } from '../workspace/items/appearance'
 import type { AnyItem } from '../workspace/items'
-import type { ResourceColor, ResourceSlug, ResourceIconName } from '../workspace/resource-contract'
+import type { ResourceColor, ResourceIconName } from '../workspace/resource-contract'
 import type { ResourceTitle } from '../resources/resource-contract'
 
 import type { FileSystemItemMetadataUpdateOperations } from './item-operation-contracts'
@@ -17,11 +17,7 @@ interface EditItemBase {
   color?: string | null
 }
 
-type EditItemResult = { slug: ResourceSlug }
-
-export type EditFileSystemItemFn = (
-  args: EditItemBase & { item: AnyItem },
-) => Promise<EditItemResult>
+export type EditFileSystemItemFn = (args: EditItemBase & { item: AnyItem }) => Promise<void>
 
 type EditFileSystemItemSource = {
   operations: FileSystemItemMetadataUpdateOperations
@@ -62,7 +58,7 @@ export function createEditFileSystemItem({
   operations,
   permissions,
 }: EditFileSystemItemSource): EditFileSystemItemFn {
-  return async (args: EditItemBase & { item: AnyItem }): Promise<EditItemResult> => {
+  return async (args: EditItemBase & { item: AnyItem }): Promise<void> => {
     const { item } = args
     const canEditItem = permissions.canMutateItem(item, PERMISSION_LEVEL.EDIT)
     const requestedTitle =
@@ -79,16 +75,13 @@ export function createEditFileSystemItem({
     if (hasMetadataChange && !canEditItem) {
       throw new Error('Sidebar item editing is not supported')
     }
-    let rename: EditItemResult | null = null
     if (hasMetadataChange && canEditItem) {
-      rename = await operations.updateItemMetadata({
+      await operations.updateItemMetadata({
         item,
         name: metadataUpdate.name,
         iconName: metadataUpdate.iconName,
         color: metadataUpdate.color,
       })
     }
-
-    return { slug: rename?.slug ?? item.slug }
   }
 }

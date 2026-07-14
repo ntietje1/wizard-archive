@@ -38,7 +38,7 @@ describe('NewItemCard', () => {
 
   it('creates a canvas in the current folder', async () => {
     const user = userEvent.setup()
-    createItemMock.mockResolvedValue({ status: 'completed', id: 'canvas_1', slug: 'canvas-1' })
+    createItemMock.mockResolvedValue({ status: 'completed', id: 'canvas_1' })
     render(<NewItemCard parentId={'folder_1' as ResourceId} source={createTestSource()} />)
 
     await user.click(screen.getByRole('button', { name: 'Create item in this folder' }))
@@ -55,7 +55,7 @@ describe('NewItemCard', () => {
 
   it('creates a canvas from keyboard menu selection', async () => {
     const user = userEvent.setup()
-    createItemMock.mockResolvedValue({ status: 'completed', id: 'canvas_1', slug: 'canvas-1' })
+    createItemMock.mockResolvedValue({ status: 'completed', id: 'canvas_1' })
     render(<NewItemCard parentId={'folder_1' as ResourceId} source={createTestSource()} />)
 
     await user.click(screen.getByRole('button', { name: 'Create item in this folder' }))

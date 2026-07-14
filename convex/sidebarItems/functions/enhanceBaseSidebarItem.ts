@@ -10,7 +10,6 @@ import type {
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { AssetId, CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { assertConvexResourceTitle } from '../validation/name'
-import { assertConvexSidebarItemSlug } from '../validation/slug'
 import { getStorageIdByAssetId } from '../../storage/functions/assetIdentity'
 import { isActiveSidebarItem, isTrashedSidebarItem } from '../types/status'
 import type { CampaignQueryCtx } from '../../functions'
@@ -42,7 +41,6 @@ function normalizeSidebarItemFields<T extends SidebarItemEnhancementRow>(
     name: assertConvexResourceTitle(item.name),
     iconName: item.iconName === null ? null : assertResourceIconName(item.iconName),
     color: item.color === null ? null : assertResourceColor(item.color),
-    slug: assertConvexSidebarItemSlug(item.slug),
     previewAssetId,
   }
 }

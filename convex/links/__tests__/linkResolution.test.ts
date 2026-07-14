@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import {
   resolveParsedItemPath,
   getMinDisambiguationPath,
@@ -7,20 +7,15 @@ import {
 import type { AnyItem } from '@wizard-archive/editor/resources/items'
 import type { Id } from '../../_generated/dataModel'
 import { assertConvexResourceTitle } from '../../sidebarItems/validation/name'
-import { assertConvexSidebarItemSlug } from '../../sidebarItems/validation/slug'
 import { testResourceId } from '../../../shared/test/resource-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 function makeItem(id: string, name: string, parentId: string | null = null): AnyItem {
-  const rawSlug = name.toLowerCase().replace(/\s+/g, '-')
-  const slug = rawSlug.length >= 3 ? rawSlug : rawSlug.padEnd(3, '0')
-
   return {
     id: testResourceId(id),
     _id: id as Id<'sidebarItems'>,
     _creationTime: 0,
     name: name ? assertConvexResourceTitle(name) : ('' as AnyItem['name']),
-    slug: name ? assertConvexSidebarItemSlug(slug) : ('invalid' as AnyItem['slug']),
     parentId: parentId ? testResourceId(parentId) : null,
     campaignId: 'campaign1' as Id<'campaigns'>,
     type: 'notes',

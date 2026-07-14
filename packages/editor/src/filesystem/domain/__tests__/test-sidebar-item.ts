@@ -10,17 +10,11 @@ import type { FileItem } from '../../../files/item-contract'
 import type { MapItem } from '../../../game-maps/item-contract'
 import type { NoteItem } from '../../../notes/item-contract'
 import type { AnyItem, FolderItem } from '../../../workspace/items'
-import { slugify } from '../../../../../../shared/slugs'
 import type { UserProfileId } from '../../../../../../shared/common/ids'
 import { testCampaignId } from '../../../../../../shared/test/campaign-id'
 
 function assertNeverSidebarItemType(type: never): never {
   throw new Error(`Unhandled sidebar item type: ${String(type)}`)
-}
-
-function testSidebarSlug(name: string): AnyItem['slug'] {
-  const slug = slugify(name)
-  return (slug.length >= 3 ? slug : `${slug || 'item'}-item`) as AnyItem['slug']
 }
 
 export function createSidebarItem(
@@ -33,7 +27,6 @@ export function createSidebarItem(
     id: id as ResourceId,
     createdAt: 1,
     name: name as AnyItem['name'],
-    slug: testSidebarSlug(name),
     campaignId: testCampaignId('campaign'),
     iconName: null,
     color: null,

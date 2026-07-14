@@ -8,7 +8,6 @@ import {
   RESOURCE_TYPES,
 } from '../../../../workspace/items-persistence-contract'
 import type { AnyItem } from '../../../../workspace/items'
-import type { ResourceSlug } from '../../../../workspace/resource-contract'
 import { testId } from '../../../../test/id'
 import { createResourceCatalogModel } from '../../../../filesystem/catalog'
 import { createWorkspaceCanvasContextMenuSource } from '../workspace-source'
@@ -43,7 +42,6 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
     const createItem = vi.fn().mockResolvedValue({
       status: 'completed',
       id: createdItemId,
-      slug: 'created-item' as ResourceSlug,
     })
     const runtime = createRuntime({ createItem })
     const context = createAdapterContext()
@@ -87,7 +85,6 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
     const createItem = vi.fn().mockResolvedValue({
       status: 'completed',
       id: createdItemId,
-      slug: 'created-map' as ResourceSlug,
     })
     const runtime = createRuntime({ createItem })
     const context = createAdapterContext()
@@ -129,7 +126,6 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
     const createItem = vi.fn().mockResolvedValue({
       status: 'completed',
       id: createdItemId,
-      slug: 'created-item' as ResourceSlug,
     })
     const runtime = createRuntime({ createItem })
     const context = createAdapterContext({
@@ -158,7 +154,6 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
   it('opens sidebar embed targets through runtime navigation', async () => {
     const embeddedItem = createSidebarItem({
       id: testResourceId('note-1'),
-      slug: 'note-1' as ResourceSlug,
     })
     const openItem = vi.fn()
     const runtime = createRuntime({ activeItems: [embeddedItem], openItem })
@@ -195,7 +190,6 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
   it('reports a stale sidebar embed target when it disappears before opening', async () => {
     const embeddedItem = createSidebarItem({
       id: testResourceId('note-1'),
-      slug: 'note-1' as ResourceSlug,
     })
     const openItem = vi.fn()
     let resolveItem = true
@@ -236,7 +230,6 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
   it('opens sidebar embed targets that are hidden from the visible catalog', async () => {
     const hiddenItem = createSidebarItem({
       id: testResourceId('hidden-note'),
-      slug: 'hidden-note' as ResourceSlug,
     })
     const openItem = vi.fn()
     const runtime = createRuntime({ activeItems: [hiddenItem], openItem, visibleItems: [] })
@@ -273,7 +266,6 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
   it('reveals sidebar embed targets through the workspace sidebar action', async () => {
     const embeddedItem = createSidebarItem({
       id: testResourceId('note-1'),
-      slug: 'note-1' as ResourceSlug,
     })
     const showItemInSidebar = vi.fn()
     const runtime = createRuntime({ activeItems: [embeddedItem] })
@@ -317,7 +309,6 @@ describe('createWorkspaceCanvasContextMenuSource', () => {
   it('opens sidebar embed targets separately through runtime navigation', async () => {
     const embeddedItem = createSidebarItem({
       id: testResourceId('note-1'),
-      slug: 'note-1' as ResourceSlug,
     })
     const openItem = vi.fn()
     const runtime = createRuntime({ activeItems: [embeddedItem], openItem })
@@ -425,7 +416,6 @@ function createSidebarItem(overrides: Partial<AnyItem> = {}): AnyItem {
     campaignId: testId<'campaigns'>('campaign-1'),
     type: RESOURCE_TYPES.notes,
     name: 'Note',
-    slug: 'note-1' as ResourceSlug,
     parentId: null,
     color: null,
     iconName: null,

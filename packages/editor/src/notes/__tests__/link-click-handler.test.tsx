@@ -53,7 +53,6 @@ function createLink({
   itemPath = [],
   itemId = null,
   itemName = null,
-  itemSlug = null,
   heading = null,
   status,
 }: {
@@ -64,7 +63,6 @@ function createLink({
   itemPath?: Array<string>
   itemId?: ResourceId | null
   itemName?: string | null
-  itemSlug?: string | null
   heading?: string | null
   status?: LinkStatus
 }) {
@@ -80,7 +78,6 @@ function createLink({
     itemPath,
     itemId,
     itemName,
-    itemSlug,
     href,
     heading,
     type,
@@ -129,7 +126,6 @@ describe('LinkClickHandler', () => {
         type: 'wiki',
         href: '/dest?item=lore',
         itemId: 'lore-id' as ResourceId,
-        itemSlug: 'lore',
       }),
     )
 
@@ -158,7 +154,6 @@ describe('LinkClickHandler', () => {
         type: 'wiki',
         href: '/dest?item=lore',
         itemId: 'lore-id' as ResourceId,
-        itemSlug: 'lore',
       }),
     )
 
@@ -177,7 +172,6 @@ describe('LinkClickHandler', () => {
         type: 'wiki',
         href: '/dest?item=lore',
         itemId: 'lore-id' as ResourceId,
-        itemSlug: 'lore',
       }),
     )
 
@@ -622,7 +616,6 @@ describe('LinkClickHandler', () => {
         type: 'wiki',
         href: null,
         itemId: 'capital-id' as ResourceId,
-        itemSlug: 'capital',
         heading: 'Overview',
       }),
     )
@@ -641,7 +634,6 @@ describe('LinkClickHandler', () => {
         type: 'wiki',
         href: null,
         itemId: 'capital-id' as ResourceId,
-        itemSlug: 'capital',
         heading: 'Overview',
       }),
     )
@@ -769,7 +761,6 @@ function sidebarItem({
     id: id as ResourceId,
     name,
     parentId: parentId as ResourceId | null,
-    slug: id,
     status: RESOURCE_STATUS.active,
     type,
   } as AnyItem

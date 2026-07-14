@@ -225,7 +225,6 @@ describe('filesystem transaction receipts', () => {
     }
     expect(Object.keys(receipt.patches[0].fields).sort()).toEqual([
       'name',
-      'slug',
       'updatedBy',
       'updatedTime',
     ])
@@ -259,7 +258,7 @@ describe('filesystem transaction receipts', () => {
       },
     })
 
-    expect(receipt.events).toEqual([expect.objectContaining({ type: 'created', slug: 'scene' })])
+    expect(receipt.events).toEqual([expect.objectContaining({ type: 'created' })])
     expect(receipt.summary).toMatchObject({
       kind: 'created',
       affectedCount: 1,

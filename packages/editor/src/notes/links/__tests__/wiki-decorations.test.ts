@@ -45,7 +45,6 @@ describe('wiki link decoration entries', () => {
           status: 'resolved',
           rejectionReason: null,
           itemId: 'capital-id',
-          itemSlug: 'capital',
           href: '/campaigns/dm/world/editor?item=capital&heading=District',
           color: '#334455',
         },
@@ -68,7 +67,6 @@ describe('wiki link decoration entries', () => {
         'data-link-status': 'exists',
         'data-link-item-name': 'Capital',
         'data-link-item-id': 'capital-id',
-        'data-link-slug': 'capital',
       }),
     )
     expect(getDecorationAttrs(findDecorationByRole(decorations, 'content')!)).toEqual(
@@ -78,7 +76,6 @@ describe('wiki link decoration entries', () => {
         'data-link-type': 'wiki',
         'data-link-path': 'Lore/Capital',
         'data-link-item-id': 'capital-id',
-        'data-link-slug': 'capital',
         'data-link-heading': 'District',
         'data-link-active': 'true',
       }),
@@ -88,7 +85,6 @@ describe('wiki link decoration entries', () => {
         class: 'wiki-link wiki-link-bracket wiki-link-bracket-open',
         'data-link-role': 'bracket-open',
         'data-link-type': 'wiki',
-        'data-link-slug': 'capital',
       }),
     )
   })
@@ -120,7 +116,6 @@ describe('wiki link decoration entries', () => {
           status: 'resolved',
           rejectionReason: null,
           itemId: 'capital-id',
-          itemSlug: 'capital',
           href: null,
           color: null,
         },
@@ -134,7 +129,6 @@ describe('wiki link decoration entries', () => {
         class: 'wiki-link wiki-link-hidden-prefix',
         'data-link-role': 'prefix',
         'data-link-type': 'wiki',
-        'data-link-slug': 'capital',
       }),
     )
   })
@@ -165,7 +159,6 @@ describe('wiki link decoration entries', () => {
           status: 'unresolved',
           rejectionReason: null,
           itemId: null,
-          itemSlug: null,
           href: null,
           color: null,
         },

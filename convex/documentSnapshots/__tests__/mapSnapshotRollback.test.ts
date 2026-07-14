@@ -288,7 +288,6 @@ describe('rollback of game map pin with non-note itemId', () => {
           campaignId: ctx.campaignId,
           name: 'Pinned Folder',
           normalizedName: 'pinned folder',
-          slug: 'pinned-folder',
           type: RESOURCE_TYPES.folders,
           parentId: null,
           iconName: null,

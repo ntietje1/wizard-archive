@@ -18,7 +18,6 @@ interface CreateLinkDecorationStateOptions {
   resolutionStatus: ResolvedLink['status']
   href?: string | null
   itemId?: string | null
-  itemSlug?: string | null
   pathKind?: LinkPathKind | null
   itemPath?: Array<string> | null
   itemName?: string | null
@@ -45,7 +44,6 @@ export function createLinkDecorationState({
   resolutionStatus,
   href,
   itemId,
-  itemSlug,
   pathKind,
   itemPath,
   itemName,
@@ -60,7 +58,6 @@ export function createLinkDecorationState({
     resolutionStatus,
     href,
     itemId,
-    itemSlug,
     pathKind,
     itemPath,
     itemName,
@@ -103,22 +100,13 @@ function createLinkAttributes({
   resolutionStatus,
   href,
   itemId,
-  itemSlug,
   pathKind,
   itemPath,
   itemName,
   heading,
 }: Pick<
   CreateLinkDecorationStateOptions,
-  | 'type'
-  | 'resolutionStatus'
-  | 'href'
-  | 'itemId'
-  | 'itemSlug'
-  | 'pathKind'
-  | 'itemPath'
-  | 'itemName'
-  | 'heading'
+  'type' | 'resolutionStatus' | 'href' | 'itemId' | 'pathKind' | 'itemPath' | 'itemName' | 'heading'
 >) {
   const attributes: Record<string, string> = {
     'data-link-exists': resolutionStatus === 'resolved' ? 'true' : 'false',
@@ -127,7 +115,6 @@ function createLinkAttributes({
 
   setLinkAttribute(attributes, 'data-link-href', href)
   setLinkAttribute(attributes, 'data-link-item-id', itemId)
-  setLinkAttribute(attributes, 'data-link-slug', itemSlug)
   setLinkAttribute(attributes, 'data-link-path-kind', pathKind)
   setLinkAttribute(attributes, 'data-link-path', itemPath?.join('/'))
   setLinkAttribute(attributes, 'data-link-item-name', itemName)

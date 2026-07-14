@@ -19,7 +19,6 @@ export type ResourcePatchRow = {
   id: ResourceId
   createdAt: number
   name: string
-  slug: string
   parentId: ResourceId | null
   workspaceId: CampaignId
   type: ResourceKind
@@ -38,7 +37,6 @@ export type ResourcePatchRow = {
 
 type ResourcePatchFields = {
   name: string
-  slug: string
   iconName: ResourceIconName | null
   color: string | null
   parentId: ResourceId | null
@@ -57,7 +55,6 @@ type ResourcePatchPrecondition = ResourceFieldPatch &
 type ResourcePatchSource = Pick<
   ResourcePatchRow,
   | 'name'
-  | 'slug'
   | 'iconName'
   | 'color'
   | 'parentId'
@@ -72,7 +69,6 @@ type ResourcePatchSource = Pick<
 
 const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
   'name',
-  'slug',
   'iconName',
   'color',
   'parentId',

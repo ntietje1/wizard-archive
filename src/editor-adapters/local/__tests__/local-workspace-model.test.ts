@@ -170,9 +170,7 @@ describe('localWorkspaceReducer', () => {
       [[SAMPLE_LOCAL_RESOURCE_IDS.marketNote, copiedId]],
     )
 
-    expect(nextWorkspace.items).toContainEqual(
-      expect.objectContaining({ id: copiedId, slug: copiedId }),
-    )
+    expect(nextWorkspace.items).toContainEqual(expect.objectContaining({ id: copiedId }))
     expect(nextWorkspace.items.filter((item) => item.id === copiedId)).toHaveLength(1)
     expect(nextWorkspace.nextLocalItemIndex).toBe(SAMPLE_LOCAL_WORKSPACE.nextLocalItemIndex)
   })

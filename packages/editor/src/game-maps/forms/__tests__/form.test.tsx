@@ -80,7 +80,7 @@ describe('MapForm', () => {
   it('updates an existing map and only uploads a newly selected image', async () => {
     const onClose = vi.fn()
     const onSuccess = vi.fn()
-    const updateItemMetadata = vi.fn().mockResolvedValue({ slug: 'updated-map' })
+    const updateItemMetadata = vi.fn().mockResolvedValue(undefined)
     const mapId = 'map-1' as ResourceId
     const updateMapImage = vi.fn().mockResolvedValue(completedMapImageUpdate(mapId))
     const map = createExistingMap(mapId)
@@ -111,7 +111,7 @@ describe('MapForm', () => {
       })
     })
     expect(updateMapImage).not.toHaveBeenCalled()
-    expect(onSuccess).toHaveBeenCalledExactlyOnceWith('updated-map')
+    expect(onSuccess).toHaveBeenCalledOnce()
     expect(onClose).not.toHaveBeenCalled()
 
     vi.clearAllMocks()
@@ -177,7 +177,7 @@ describe('MapForm', () => {
 
 function createSource(overrides: Partial<MapFormSource> = {}): MapFormSource {
   return {
-    updateItemMetadata: vi.fn().mockResolvedValue({ slug: 'map' }),
+    updateItemMetadata: vi.fn().mockResolvedValue(undefined),
     updateMapImage: vi.fn().mockResolvedValue(completedMapImageUpdate('map-1' as ResourceId)),
     ...overrides,
   } as MapFormSource

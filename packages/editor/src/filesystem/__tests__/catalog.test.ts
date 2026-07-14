@@ -132,14 +132,13 @@ describe('createResourceCatalogModel', () => {
 
   it('keeps catalog item snapshots stable after caller-side item mutations', () => {
     const folder = createFolder({ name: 'Folder' })
-    const child = createNote({ name: 'Child', parentId: folder.id, slug: 'child' })
+    const child = createNote({ name: 'Child', parentId: folder.id })
     const catalog = createResourceCatalogModel({
       activeItems: [folder, child],
       trashItems: [],
     }).catalog
 
     child.parentId = null
-    child.slug = 'renamed-child' as typeof child.slug
     child.status = RESOURCE_STATUS.trashed
     child.isTrashed = true
 
@@ -148,13 +147,12 @@ describe('createResourceCatalogModel', () => {
     expect(catalog.getVisibleItemById(child.id)).toMatchObject({
       id: child.id,
       parentId: folder.id,
-      slug: 'child',
       isTrashed: false,
     })
   })
 
   it('prevents catalog consumers from mutating returned item snapshots', () => {
-    const note = createNote({ name: 'Child', slug: 'child' })
+    const note = createNote({ name: 'Child' })
     const catalog = createResourceCatalogModel({
       activeItems: [note],
       trashItems: [],
@@ -166,13 +164,12 @@ describe('createResourceCatalogModel', () => {
     }).toThrow(TypeError)
     expect(catalog.getVisibleItemById(note.id)).toMatchObject({
       parentId: null,
-      slug: 'child',
     })
   })
 
   it('detaches nested item content from caller-owned catalog inputs', () => {
     const note: NoteItemWithContent = {
-      ...createNote({ name: 'Child', slug: 'child' }),
+      ...createNote({ name: 'Child' }),
       ancestors: [],
       content: [{ id: testNoteBlockId('block-1'), type: 'paragraph', props: {}, content: [] }],
       blockMeta: {

@@ -27,7 +27,6 @@ import type {
   WizardEditorDocumentSourceInput,
   WizardEditorItemWithContent,
 } from '@wizard-archive/editor/adapter'
-import { assertResourceItemSlug } from '@wizard-archive/editor/resources/items'
 import { RESOURCE_STATUS } from '@wizard-archive/editor/resources/items-persistence-contract'
 import {
   completedResourceCommand,
@@ -169,18 +168,15 @@ describe('WizardEditor adapter contract', () => {
     const visible = createContentNote({
       id: 'visible-note' as ResourceId,
       name: 'Visible Note',
-      slug: 'visible-note',
     })
     const trashed = createContentNote({
       id: 'trashed-note' as ResourceId,
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     const hidden = createContentNote({
       id: 'hidden-note' as ResourceId,
       name: 'Hidden Note',
-      slug: 'hidden-note',
     })
     const snapshot = createWizardEditorCatalogSnapshot({
       activeItems: [visible, hidden],
@@ -502,7 +498,7 @@ describe('WizardEditor adapter contract', () => {
   })
 
   it('builds a catalog-backed runtime through the shared adapter source path', () => {
-    const visible = createContentNote({ name: 'Visible Note', slug: 'visible-note' })
+    const visible = createContentNote({ name: 'Visible Note' })
     const snapshot = createWizardEditorCatalogSnapshot({
       activeItems: [visible],
       trashItems: [],
@@ -737,11 +733,10 @@ describe('WizardEditor adapter contract', () => {
   })
 
   it('builds resource catalog and load sources from adapter read-model facts', () => {
-    const visible = createContentNote({ name: 'Visible Note', slug: 'visible-note' })
-    const hidden = createContentNote({ name: 'Hidden Note', slug: 'hidden-note' })
+    const visible = createContentNote({ name: 'Visible Note' })
+    const hidden = createContentNote({ name: 'Hidden Note' })
     const trashed = createContentNote({
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
 
@@ -779,11 +774,10 @@ describe('WizardEditor adapter contract', () => {
   })
 
   it('builds static catalog snapshots from adapter read-model facts', () => {
-    const visible = createContentNote({ name: 'Visible Note', slug: 'visible-note' })
-    const hidden = createContentNote({ name: 'Hidden Note', slug: 'hidden-note' })
+    const visible = createContentNote({ name: 'Visible Note' })
+    const hidden = createContentNote({ name: 'Hidden Note' })
     const trashed = createContentNote({
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
 
@@ -844,7 +838,7 @@ describe('WizardEditor adapter contract', () => {
   })
 
   it('builds catalog resource sources from adapter-owned catalog snapshots', () => {
-    const visible = createContentNote({ name: 'Visible Note', slug: 'visible-note' })
+    const visible = createContentNote({ name: 'Visible Note' })
     const snapshot = createWizardEditorCatalogSnapshot({
       activeItems: [visible],
       trashItems: [],
@@ -1016,7 +1010,6 @@ function createTestResourceCommandDriver(): WizardEditorCommandSource['resourceC
             {
               type: RESOURCE_EVENT_TYPE.created,
               itemId: 'created-item' as ResourceId,
-              slug: assertResourceItemSlug('created-item'),
             },
           ],
           { transactionId: testOperationId('transaction-created-item') },
@@ -1027,8 +1020,6 @@ function createTestResourceCommandDriver(): WizardEditorCommandSource['resourceC
           {
             type: RESOURCE_EVENT_TYPE.renamed,
             itemId: command.itemId,
-            slug: assertResourceItemSlug('renamed-item'),
-            previousSlug: assertResourceItemSlug('old-item'),
           },
         ])
       }

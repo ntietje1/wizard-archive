@@ -27,7 +27,6 @@ export function createLinkResolver({
         status: rejected ? 'rejected' : 'resolved',
         rejectionReason: rejected ? 'dangerous_url' : null,
         itemId: null,
-        itemSlug: null,
         href: rejected ? null : parsed.rawTarget,
         color: null,
       }
@@ -39,7 +38,6 @@ export function createLinkResolver({
         status: 'unresolved',
         rejectionReason: null,
         itemId: null,
-        itemSlug: null,
         href: null,
         color: null,
       }
@@ -52,7 +50,6 @@ export function createLinkResolver({
         status: 'unresolved',
         rejectionReason: null,
         itemId: null,
-        itemSlug: null,
         href: null,
         color: null,
       }
@@ -63,7 +60,6 @@ export function createLinkResolver({
       status: 'resolved',
       rejectionReason: null,
       itemId: item.id,
-      itemSlug: item.slug,
       href: null,
       color: normalizeSidebarItemColorOrDefault(item.color),
     }

@@ -189,16 +189,13 @@ function createLinkResolutionRevision(
     id: string
     type: string
     name: string
-    slug: string
     parentId: string | null
     color?: string | null
   }>,
 ) {
   return items
     .map((item) =>
-      [item.id, item.type, item.name, item.slug, item.parentId ?? '', item.color ?? ''].join(
-        '\u0000',
-      ),
+      [item.id, item.type, item.name, item.parentId ?? '', item.color ?? ''].join('\u0000'),
     )
     .join('\u0001')
 }

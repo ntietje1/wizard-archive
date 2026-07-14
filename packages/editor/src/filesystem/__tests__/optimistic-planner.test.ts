@@ -128,7 +128,7 @@ describe('filesystem optimistic planning', () => {
 
   it('reserves route slugs without changing duplicate titles', () => {
     const parent = createFolder({ name: 'Scenes' })
-    const pending = createNote({ name: 'Scene', slug: 'scene', parentId: parent.id })
+    const pending = createNote({ name: 'Scene', parentId: parent.id })
     const snapshot: SidebarCacheSnapshot = { sidebar: [parent, pending], trash: [] }
     const cache = createTestCache(snapshot)
 
@@ -152,7 +152,7 @@ describe('filesystem optimistic planning', () => {
     const upsert = plan.preview.receiptPatches[0]
     expect(upsert?.type).toBe('upsertResource')
     if (upsert?.type !== 'upsertResource') return
-    expect(upsert.item).toEqual(expect.objectContaining({ name: 'Scene', slug: 'scene-1' }))
+    expect(upsert.item).toEqual(expect.objectContaining({ name: 'Scene' }))
   })
 
   it('populates concrete type fields for optimistic create previews', () => {

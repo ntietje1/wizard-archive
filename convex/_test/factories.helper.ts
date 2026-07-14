@@ -24,10 +24,8 @@ import { normalizeLegacyResourcePathSegment } from '../sidebarItems/resourcePath
 import { requireSidebarItemRow } from '../sidebarItems/functions/sidebarItemIdentity'
 
 import { SHARE_STATUS } from '../../shared/block-shares/share-status'
-import { slugify } from '../../shared/slugs'
 import { assertCampaignSlug } from '../campaigns/validation'
 import { assertConvexResourceTitle } from '../sidebarItems/validation/name'
-import { assertConvexSidebarItemSlug } from '../sidebarItems/validation/slug'
 import { assertSidebarItemLifecycleConsistency } from '../sidebarItems/types/status'
 import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from './yjs.helper'
@@ -307,7 +305,6 @@ const sidebarItemBase = (
   resourceUuid: ResourceId
   name: ResourceTitle
   normalizedName: string
-  slug: string
   campaignId: Id<'campaigns'>
   iconName: null
   color: null
@@ -321,7 +318,6 @@ const sidebarItemBase = (
   resourceUuid: generateDomainId(DOMAIN_ID_KIND.resource),
   name,
   normalizedName: normalizeLegacyResourcePathSegment(name),
-  slug: assertConvexSidebarItemSlug(slugify(name)),
   campaignId,
   iconName: null,
   color: null,
@@ -337,7 +333,6 @@ const sidebarItemBase = (
 type CommonSidebarItemOverrides = Partial<{
   resourceUuid: ResourceId
   name: string
-  slug: string
   parentId: ResourceId | null
   allPermissionLevel: PermissionLevel | null
   location: ResourceLocation
@@ -369,15 +364,10 @@ async function insertResource(
     inheritShares,
     imageStorageId,
     storageId,
-    slug,
     name: _name,
     parentId: parentResourceId,
     ...sidebarOverrides
   } = overrides ?? {}
-  const validatedSlug =
-    slug !== undefined
-      ? assertConvexSidebarItemSlug(slug)
-      : assertConvexSidebarItemSlug(slugify(name))
   const requestedStatus =
     sidebarOverrides.status ??
     (sidebarOverrides.deletionTime !== undefined && sidebarOverrides.deletionTime !== null
@@ -403,7 +393,6 @@ async function insertResource(
       parentId: parent?._id ?? null,
       location: sidebarOverrides.location ?? RESOURCE_LOCATION.sidebar,
       status: requestedStatus,
-      slug: validatedSlug,
     }
     assertSidebarItemLifecycleConsistency(sharedData)
     const itemId = await ctx.db.insert('sidebarItems', sharedData)

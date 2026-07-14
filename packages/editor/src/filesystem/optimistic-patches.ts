@@ -1,37 +1,18 @@
 import type { ResourceId } from '../resources/domain-id'
-import { assertResourceItemSlug, RESOURCE_SLUG_MAX_LENGTH } from '../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
   RESOURCE_TYPES,
 } from '../workspace/items-persistence-contract'
 import type { AnyItem } from '../workspace/items'
-import type { ResourceSlug } from '../workspace/resource-contract'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { diffResourceFields } from './patch-contract'
 import type { ResourceCreateCommand, ResourceRenameCommand } from './transaction-contract'
 import type { ResourcePatch } from './patch-contract'
-import { deduplicateSlug, slugify } from '../../../../shared/slugs'
 import type { UserProfileId } from '../../../../shared/common/ids'
 import type { FileSystemOptimisticPreview } from './domain/lifecycle'
 import { sidebarCachePatchItemFromCacheItem } from './cache-patches'
 import type { SidebarCacheSnapshot } from './cache-patches'
-
-export function expectedOptimisticCreateSlug(
-  name: string,
-  existingSlugs: ReadonlySet<string>,
-): ResourceSlug {
-  const normalized = slugify(name, {
-    fallback: 'item',
-    maxLength: RESOURCE_SLUG_MAX_LENGTH,
-  })
-  return assertResourceItemSlug(
-    deduplicateSlug(normalized, existingSlugs, {
-      label: 'Slug',
-      maxLength: RESOURCE_SLUG_MAX_LENGTH,
-    }),
-  )
-}
 
 export function buildOptimisticCreatePreview({
   command,
@@ -39,7 +20,6 @@ export function buildOptimisticCreatePreview({
   currentUserId,
   workspaceId,
   name,
-  slug,
   now = Date.now(),
 }: {
   command: ResourceCreateCommand
@@ -47,7 +27,6 @@ export function buildOptimisticCreatePreview({
   currentUserId: UserProfileId | null
   workspaceId: string
   name: AnyItem['name']
-  slug: ResourceSlug
   now?: number
 }): FileSystemOptimisticPreview {
   if (!currentUserId) {
@@ -67,7 +46,6 @@ export function buildOptimisticCreatePreview({
     name,
     now,
     parentId,
-    slug,
   })
 
   const patchRow = sidebarCachePatchItemFromCacheItem(item)
@@ -90,7 +68,6 @@ function buildOptimisticCreateItem({
   name,
   now,
   parentId,
-  slug,
 }: {
   workspaceId: string
   command: ResourceCreateCommand
@@ -99,13 +76,11 @@ function buildOptimisticCreateItem({
   name: AnyItem['name']
   now: number
   parentId: ResourceId | null
-  slug: ResourceSlug
 }): AnyItem {
   const base = {
     id,
     createdAt: now,
     name,
-    slug,
     campaignId: workspaceId as AnyItem['campaignId'],
     parentId,
     allPermissionLevel: null,

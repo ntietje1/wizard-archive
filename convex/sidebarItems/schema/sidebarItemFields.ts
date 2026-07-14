@@ -12,7 +12,6 @@ export const sidebarItemTableFields = {
   resourceUuid: v.string(),
   name: v.string(),
   normalizedName: v.string(),
-  slug: v.string(),
   campaignId: v.id('campaigns'),
   iconName: v.nullable(sidebarItemIconNameValidator),
   color: v.nullable(v.string()),

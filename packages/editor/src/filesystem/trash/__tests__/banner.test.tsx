@@ -24,7 +24,6 @@ describe('TrashBanner', () => {
     const user = userEvent.setup()
     const item = createNote({
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     const restoreItems = vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' })
@@ -46,7 +45,6 @@ describe('TrashBanner', () => {
     const user = userEvent.setup()
     const item = createNote({
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     let resolveRestore!: (result: { status: 'completed' }) => void
@@ -74,7 +72,6 @@ describe('TrashBanner', () => {
     const user = userEvent.setup()
     const item = createNote({
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     const requestDeleteItemsForever = vi.fn()
@@ -95,7 +92,6 @@ describe('TrashBanner', () => {
   it('keeps future deletion timestamps from producing negative trash age copy', () => {
     const item = createNote({
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
       deletionTime: Date.now() + 24 * 60 * 60 * 1000,
     })

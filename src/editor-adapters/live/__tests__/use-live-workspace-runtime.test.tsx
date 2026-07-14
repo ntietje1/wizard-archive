@@ -2,10 +2,7 @@ import type { WorkspaceRuntime } from '@wizard-archive/editor/runtime'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { testResourceId } from '../../../../shared/test/resource-id'
 import { testCampaignId } from '../../../../shared/test/campaign-id'
-import {
-  completeWizardEditorResourceCommand,
-  parseWizardEditorResourceSlug,
-} from '@wizard-archive/editor/adapter'
+import { completeWizardEditorResourceCommand } from '@wizard-archive/editor/adapter'
 import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'
 import type {
   WizardEditorItem,
@@ -14,7 +11,6 @@ import type {
   WizardEditorFileSessionReplaceInput,
   WizardEditorResourceCommand,
   WizardEditorResourceEvent,
-  WizardEditorResourceSlug,
   WizardEditorWorkspaceActor,
   createWizardEditorFileContentSource,
 } from '@wizard-archive/editor/adapter'
@@ -432,14 +428,12 @@ function createCompletedCommandResult(
 ): CompletedResourceCommandResult {
   const events: Array<WizardEditorResourceEvent> =
     command.type === 'create'
-      ? [{ type: 'created', itemId: testResourceId('created-item'), slug: 'created-item' }]
+      ? [{ type: 'created', itemId: testResourceId('created-item') }]
       : command.type === 'rename'
         ? [
             {
               type: 'renamed',
               itemId: command.itemId,
-              slug: 'renamed-note',
-              previousSlug: 'note-1',
             },
           ]
         : command.type === 'toggleBookmarks'
@@ -460,11 +454,9 @@ function createCompletedCommandResult(
 function createCompletedCreateCommandResult({
   command,
   itemId,
-  slug,
 }: {
   command: Extract<WizardEditorResourceCommand, { type: 'create' }>
   itemId: ResourceId
-  slug: string
 }): CompletedResourceCommandResult {
   return {
     ...completedFileSystemCommandResult,
@@ -472,7 +464,7 @@ function createCompletedCreateCommandResult({
       ...completedFileSystemCommandResult.receipt,
       transactionId: `${itemId}-transaction` as never,
       command,
-      events: [{ type: 'created', itemId, slug }],
+      events: [{ type: 'created', itemId }],
     },
   }
 }
@@ -545,7 +537,6 @@ describe('useLiveWorkspaceRuntime', () => {
     noteSessionMocks.useNoteYjsCollaboration.mockReset()
     fileSystemItemMocks.createItem.mockResolvedValue({
       id: testResourceId('created-note'),
-      slug: 'created-note',
     })
     fileSystemItemMocks.renameItem.mockResolvedValue({ slug: 'renamed-note' })
     mediaImportMocks.createUploadSession.mutateAsync.mockResolvedValue({
@@ -1384,7 +1375,6 @@ describe('useLiveWorkspaceRuntime', () => {
         return createCompletedCreateCommandResult({
           command,
           itemId: createdFileId,
-          slug: 'created-file',
         })
       },
     )
@@ -1431,7 +1421,7 @@ describe('useLiveWorkspaceRuntime', () => {
       status: 'imported',
       kind: 'file',
       fileName: 'portrait.png',
-      result: { status: 'completed', id: createdFileId, slug: 'created-file' },
+      result: { status: 'completed', id: createdFileId },
     })
   })
 
@@ -1446,7 +1436,6 @@ describe('useLiveWorkspaceRuntime', () => {
         return createCompletedCreateCommandResult({
           command,
           itemId: createdNoteId,
-          slug: testResourceSlug('created-note'),
         })
       },
     )
@@ -1482,7 +1471,7 @@ describe('useLiveWorkspaceRuntime', () => {
       status: 'imported',
       kind: 'note',
       fileName: 'notes.txt',
-      result: { status: 'completed', id: createdNoteId, slug: 'created-note' },
+      result: { status: 'completed', id: createdNoteId },
     })
   })
 
@@ -1544,7 +1533,6 @@ describe('useLiveWorkspaceRuntime', () => {
     const hiddenItem = createNote({
       id: testResourceId('hidden-note'),
       name: 'Hidden Note',
-      slug: 'hidden-note',
     })
     liveSourceState.hiddenActiveItems = [hiddenItem]
     const { result } = renderLiveWorkspaceRuntime()
@@ -1685,14 +1673,6 @@ function getAvailableResourceContent(
     throw new Error('Expected available resource content capability')
   }
   return resourceContent
-}
-
-function testResourceSlug(value: string): WizardEditorResourceSlug {
-  const slug = parseWizardEditorResourceSlug(value)
-  if (!slug) {
-    throw new Error(`Invalid test resource slug: ${value}`)
-  }
-  return slug
 }
 
 function createDeferred<T>() {

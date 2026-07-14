@@ -1,11 +1,10 @@
-import { prepareSidebarItemCreate } from '../validation/orchestration'
+import { validateSidebarCreateParent } from '../validation/orchestration'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
 } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type {
   ResourceColor,
-  ResourceSlug,
   ResourceIconName,
   ResourceKind,
 } from '@wizard-archive/editor/resources/resource-contract'
@@ -42,21 +41,17 @@ export async function insertFilesystemSidebarItem(
     previewStorageId,
     previewUpdatedAt,
   }: InsertFilesystemSidebarItemArgs,
-): Promise<{ itemId: Id<'sidebarItems'>; resourceId: ResourceId; slug: ResourceSlug }> {
+): Promise<{ itemId: Id<'sidebarItems'>; resourceId: ResourceId }> {
   if (await findSidebarItemRow(ctx, resourceId)) {
     throwClientError(ERROR_CODE.CONFLICT, 'Resource id already exists')
   }
-  const prepared = await prepareSidebarItemCreate(ctx, {
-    parentId,
-    name,
-  })
+  await validateSidebarCreateParent(ctx, { parentId })
 
   const row = {
     resourceUuid: resourceId,
     campaignId: ctx.campaign._id,
-    name: prepared.name,
-    normalizedName: normalizeLegacyResourcePathSegment(prepared.name),
-    slug: prepared.slug,
+    name,
+    normalizedName: normalizeLegacyResourcePathSegment(name),
     iconName: iconName ?? null,
     color: color ?? null,
     parentId,
@@ -75,5 +70,5 @@ export async function insertFilesystemSidebarItem(
   assertSidebarItemLifecycleConsistency(row)
   const itemId = await ctx.db.insert('sidebarItems', row)
 
-  return { itemId, resourceId, slug: prepared.slug }
+  return { itemId, resourceId }
 }

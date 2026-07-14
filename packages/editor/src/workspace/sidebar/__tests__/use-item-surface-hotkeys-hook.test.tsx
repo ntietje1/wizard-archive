@@ -365,7 +365,7 @@ describe('useItemSurfaceHotkeys', () => {
 
   it('ignores Enter from nested interactive controls inside an item surface', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const note = createNote({ slug: 'scene-start' })
+    const note = createNote({})
     sidebarItems = [note]
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -401,8 +401,8 @@ describe('useItemSurfaceHotkeys', () => {
   it('ignores item-surface key events owned by another runtime host', () => {
     const firstSidebar = createSidebarWorkspaceStateHarness()
     const secondSidebar = createSidebarWorkspaceStateHarness()
-    const firstNote = createNote({ slug: 'first-note' })
-    const secondNote = createNote({ slug: 'second-note' })
+    const firstNote = createNote({})
+    const secondNote = createNote({})
     sidebarItems = [firstNote, secondNote]
     act(() => {
       firstSidebar.current.selectionCommands.setActiveItemSurface({
@@ -490,8 +490,8 @@ describe('useItemSurfaceHotkeys', () => {
 
   it('ignores repeated mutating keydown events while keeping arrow navigation available', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const firstNote = createNote({ slug: 'first-note' })
-    const secondNote = createNote({ slug: 'second-note' })
+    const firstNote = createNote({})
+    const secondNote = createNote({})
     sidebarItems = [firstNote, secondNote]
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -523,8 +523,8 @@ describe('useItemSurfaceHotkeys', () => {
 
   it('leaves modified arrow shortcuts to the browser', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const firstNote = createNote({ slug: 'first-note' })
-    const secondNote = createNote({ slug: 'second-note' })
+    const firstNote = createNote({})
+    const secondNote = createNote({})
     sidebarItems = [firstNote, secondNote]
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({
@@ -638,7 +638,7 @@ describe('useItemSurfaceHotkeys', () => {
 
   it('opens the selected item through the supplied filesystem action', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const note = createNote({ slug: 'scene-start' })
+    const note = createNote({})
     sidebarItems = [note]
     act(() => {
       sidebar.current.selectionCommands.setActiveItemSurface({

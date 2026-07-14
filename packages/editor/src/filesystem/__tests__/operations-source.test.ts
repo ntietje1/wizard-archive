@@ -1,6 +1,5 @@
 import type { ResourceId } from '../../resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { assertResourceItemSlug } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import { createResourceCatalogModel } from '../catalog'
 import { createWorkspaceFileSystemOperations } from '../operation-construction'
@@ -12,7 +11,6 @@ import {
 } from '../../test/sidebar-item-factory'
 
 import type { ResourceImportContentInitializers } from '../../files/import-contract'
-import type { ResourceSlug } from '../../workspace/resource-contract'
 import type { ResourceCommandResult } from '../transaction-contract'
 
 const contentInitializers: ResourceImportContentInitializers = {
@@ -93,13 +91,13 @@ function createTrashDriver(
 describe('filesystem operations source', () => {
   it('preserves a created title that duplicates a target sibling', async () => {
     const existing = createNote({ name: 'Scene' })
-    const created = createNote({ name: 'Scene', slug: 'scene-1' })
+    const created = createNote({ name: 'Scene' })
     const catalog = createResourceCatalogModel({
       activeItems: [existing],
       trashItems: [],
     }).catalog
     const operationDriver = createOperationDriver({
-      createItem: vi.fn().mockResolvedValue({ id: created.id, slug: created.slug }),
+      createItem: vi.fn().mockResolvedValue({ id: created.id }),
     })
     const source = createTestWorkspaceFileSystemOperations({
       catalog,
@@ -117,7 +115,7 @@ describe('filesystem operations source', () => {
       name: 'Scene',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    expect(response).toEqual({ status: 'completed', id: created.id, slug: created.slug })
+    expect(response).toEqual({ status: 'completed', id: created.id })
   })
 
   it('returns an explicit unavailable create result when item creation is disabled', async () => {
@@ -187,7 +185,7 @@ describe('filesystem operations source', () => {
     const created = createNote({ name: 'Scene', parentId: parent.id })
     const catalog = createResourceCatalogModel({ activeItems: [parent], trashItems: [] }).catalog
     const operationDriver = createOperationDriver({
-      createItem: vi.fn(() => ({ id: created.id, slug: created.slug })),
+      createItem: vi.fn(() => ({ id: created.id })),
     })
     const source = createTestWorkspaceFileSystemOperations({
       canManageFolders: false,
@@ -203,7 +201,7 @@ describe('filesystem operations source', () => {
           name: 'Scene',
         }),
       ),
-    ).resolves.toEqual({ status: 'completed', id: created.id, slug: created.slug })
+    ).resolves.toEqual({ status: 'completed', id: created.id })
   })
 
   it('uses the canonical Untitled title for unnamed resources', async () => {
@@ -217,7 +215,6 @@ describe('filesystem operations source', () => {
         createdCount += 1
         return {
           id: `created_${createdCount}` as ResourceId,
-          slug: assertResourceItemSlug(`created-${createdCount}`),
         }
       },
     )
@@ -263,7 +260,6 @@ describe('filesystem operations source', () => {
     }).catalog
     const createItem = vi.fn().mockResolvedValue({
       id: 'note_1' as ResourceId,
-      slug: assertResourceItemSlug('untitled-note-2'),
     })
     const operationDriver = createOperationDriver({ createItem })
 
@@ -292,12 +288,12 @@ describe('filesystem operations source', () => {
     const operationDriver = createOperationDriver({
       createItem: vi.fn(({ itemType, parentTarget }) => {
         if (itemType === RESOURCE_TYPES.folders) {
-          return { id: 'folder_1' as ResourceId, slug: assertResourceItemSlug('folder-1') }
+          return { id: 'folder_1' as ResourceId }
         }
         if (parentTarget.kind !== 'direct' || parentTarget.parentId !== 'folder_1') {
           throw new Error('Expected imported file to target the imported folder')
         }
-        return { id: 'file_1' as ResourceId, slug: assertResourceItemSlug('file-1') }
+        return { id: 'file_1' as ResourceId }
       }),
     })
 
@@ -343,13 +339,11 @@ describe('filesystem operations source', () => {
     }).catalog
     const createdFolder = {
       id: 'folder_1' as ResourceId,
-      slug: assertResourceItemSlug('folder-1'),
     }
     const createdNote = {
       id: 'note_1' as ResourceId,
-      slug: assertResourceItemSlug('note-1'),
     }
-    let initializedChild: { status: 'completed'; id: ResourceId; slug: ResourceSlug } | null = null
+    let initializedChild: { status: 'completed'; id: ResourceId } | null = null
     const createItem = vi.fn(
       async (
         input: Parameters<TestWorkspaceFileSystemOperationDriver['createItem']>[0],
@@ -400,12 +394,8 @@ describe('filesystem operations source', () => {
     }).catalog
     const createdFolder = {
       id: 'folder_1' as ResourceId,
-      slug: assertResourceItemSlug('folder-1'),
     }
-    const createdNotes = [
-      { id: 'note_1' as ResourceId, slug: assertResourceItemSlug('scene') },
-      { id: 'note_2' as ResourceId, slug: assertResourceItemSlug('scene-1') },
-    ]
+    const createdNotes = [{ id: 'note_1' as ResourceId }, { id: 'note_2' as ResourceId }]
     let noteIndex = 0
     const createItem = vi.fn(
       async (
@@ -462,10 +452,7 @@ describe('filesystem operations source', () => {
       activeItems: [],
       trashItems: [],
     }).catalog
-    const createdNotes = [
-      { id: 'note_1' as ResourceId, slug: assertResourceItemSlug('scene') },
-      { id: 'note_2' as ResourceId, slug: assertResourceItemSlug('scene') },
-    ]
+    const createdNotes = [{ id: 'note_1' as ResourceId }, { id: 'note_2' as ResourceId }]
     let noteIndex = 0
     const createItem = vi.fn(
       async (
@@ -512,11 +499,9 @@ describe('filesystem operations source', () => {
     }).catalog
     const createdFolder = {
       id: 'folder_1' as ResourceId,
-      slug: assertResourceItemSlug('folder-1'),
     }
     const createdChildFolder = {
       id: 'folder_child_1' as ResourceId,
-      slug: assertResourceItemSlug('folder-child-1'),
     }
     const createItem = vi.fn(
       async (
@@ -530,7 +515,7 @@ describe('filesystem operations source', () => {
         if (input.name === 'Nested') {
           return createdChildFolder
         }
-        return { id: 'note_1' as ResourceId, slug: assertResourceItemSlug('scene') }
+        return { id: 'note_1' as ResourceId }
       },
     )
     const operationDriver = createOperationDriver({ createItem })
@@ -573,10 +558,7 @@ describe('filesystem operations source', () => {
       activeItems: [],
       trashItems: [],
     }).catalog
-    const createdNotes = [
-      { id: 'note_1' as ResourceId, slug: assertResourceItemSlug('untitled-note') },
-      { id: 'note_2' as ResourceId, slug: assertResourceItemSlug('untitled-note-1') },
-    ]
+    const createdNotes = [{ id: 'note_1' as ResourceId }, { id: 'note_2' as ResourceId }]
     let noteIndex = 0
     const createItem = vi.fn(
       (_: Parameters<TestWorkspaceFileSystemOperationDriver['createItem']>[0]) => {
@@ -749,13 +731,13 @@ describe('filesystem operations source', () => {
   })
 
   it('renames an item without changing resource navigation identity', async () => {
-    const note = createNote({ name: 'Scene', slug: 'scene' })
+    const note = createNote({ name: 'Scene' })
     const catalog = createResourceCatalogModel({
       activeItems: [note],
       trashItems: [],
     }).catalog
     const operationDriver = createOperationDriver({
-      renameItem: vi.fn().mockResolvedValue({ slug: 'renamed-scene' }),
+      renameItem: vi.fn().mockResolvedValue(undefined),
     })
 
     const source = createTestWorkspaceFileSystemOperations({
@@ -765,7 +747,7 @@ describe('filesystem operations source', () => {
 
     await expect(
       source.updateItemMetadata({ item: note, name: ' Renamed Scene ' }),
-    ).resolves.toEqual({ slug: 'renamed-scene' })
+    ).resolves.toBeUndefined()
 
     expect(operationDriver.renameItem).toHaveBeenCalledWith({
       itemId: note.id,
@@ -776,7 +758,7 @@ describe('filesystem operations source', () => {
   })
 
   it('rejects changed metadata when the operation driver cannot complete a rename', async () => {
-    const note = createNote({ name: 'Scene', slug: 'scene' })
+    const note = createNote({ name: 'Scene' })
     const catalog = createResourceCatalogModel({
       activeItems: [note],
       trashItems: [],
@@ -796,8 +778,8 @@ describe('filesystem operations source', () => {
     )
   })
 
-  it('returns the current slug without mutating unchanged metadata', async () => {
-    const note = createNote({ name: 'Scene', slug: 'scene', iconName: 'FileText' })
+  it('does not mutate unchanged metadata', async () => {
+    const note = createNote({ name: 'Scene', iconName: 'FileText' })
     const catalog = createResourceCatalogModel({
       activeItems: [note],
       trashItems: [],
@@ -815,7 +797,7 @@ describe('filesystem operations source', () => {
         name: ' Scene ',
         iconName: 'FileText',
       }),
-    ).resolves.toEqual({ slug: 'scene' })
+    ).resolves.toBeUndefined()
 
     expect(operationDriver.renameItem).not.toHaveBeenCalled()
   })

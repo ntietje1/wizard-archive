@@ -50,7 +50,6 @@ describe('link panel rows', () => {
           displayName: 'Target Alias',
           item: expect.objectContaining({
             name: 'Target Note',
-            slug: 'target-note',
             type: 'note',
           }),
         }),
@@ -96,7 +95,6 @@ describe('link panel rows', () => {
       item: {
         id: sourceId,
         name: 'Source Note',
-        slug: 'source-note',
         type: 'note',
       },
     })

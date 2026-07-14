@@ -22,7 +22,6 @@ export function buildWikiLinkDecorationEntries(
     resolutionStatus: resolved.status,
     href: resolved.href,
     itemId: resolved.itemId,
-    itemSlug: resolved.itemSlug,
     pathKind: parsed.pathKind,
     itemPath: parsed.itemPath,
     itemName: parsed.itemName,

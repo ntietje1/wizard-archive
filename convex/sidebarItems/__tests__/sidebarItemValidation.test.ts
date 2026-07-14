@@ -1,21 +1,19 @@
 import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { createTestContext } from '../../_test/setup.helper'
 import {
-  createNoteViaFilesystem,
   createFolderViaFilesystem,
   createGameMapViaFilesystem,
   createCanvasViaFilesystem,
 } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createFolder, createNote } from '../../_test/factories.helper'
+import { createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { testResourceId } from '../../../shared/test/resource-id'
 import {
   canonicalizeResourceItemTitle,
   validateResourceTitle,
   validateNoCircularParentAsync,
-  parseResourceItemSlug,
 } from '@wizard-archive/editor/resources/items'
 import {
   RESOURCE_STATUS,
@@ -76,54 +74,6 @@ describe('sidebar item lifecycle schema invariants', () => {
         deletedBy: null,
       })
     })
-  })
-})
-
-describe('validateSidebarItemSlug', () => {
-  it('accepts a valid slug', () => {
-    expect(parseResourceItemSlug('my-note')).toBe('my-note')
-  })
-
-  it('rejects empty string', () => {
-    expect(parseResourceItemSlug('')).toBeNull()
-  })
-
-  it('accepts single-character slugs', () => {
-    expect(parseResourceItemSlug('a')).toBe('a')
-  })
-
-  it('rejects uppercase letters', () => {
-    expect(parseResourceItemSlug('My-Note')).toBeNull()
-  })
-
-  it('rejects spaces', () => {
-    expect(parseResourceItemSlug('my note')).toBeNull()
-  })
-
-  it('accepts underscores', () => {
-    expect(parseResourceItemSlug('my_note')).toBe('my_note')
-  })
-
-  it('rejects consecutive separators', () => {
-    expect(parseResourceItemSlug('my--note')).toBeNull()
-    expect(parseResourceItemSlug('my-_note')).toBeNull()
-  })
-
-  it('rejects leading or trailing separators', () => {
-    expect(parseResourceItemSlug('-note')).toBeNull()
-    expect(parseResourceItemSlug('note-')).toBeNull()
-    expect(parseResourceItemSlug('_note')).toBeNull()
-    expect(parseResourceItemSlug('note_')).toBeNull()
-  })
-
-  it('accepts exactly 255 characters', () => {
-    const slug = 'a'.repeat(255)
-    expect(parseResourceItemSlug(slug)).toBe(slug)
-  })
-
-  it('rejects 256 characters', () => {
-    const slug = 'a'.repeat(256)
-    expect(parseResourceItemSlug(slug)).toBeNull()
   })
 })
 
@@ -228,121 +178,8 @@ describe('requireCreateParentTarget', () => {
   })
 })
 
-describe('cross-table slug uniqueness', () => {
+describe('sidebar item mutation validation', () => {
   const t = createTestContext()
-
-  it('assigns different slugs when note and folder share a name in different parents', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'container',
-    })
-
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'test',
-      slug: 'test',
-      parentId: folderId,
-    })
-
-    const result = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignDomainId,
-      name: 'test',
-      parentTarget: { kind: 'direct', parentId: null },
-    })
-
-    expect(result.slug).toBe('test-1')
-  })
-
-  it('allows same slug in different campaigns', async () => {
-    const ctx1 = await setupCampaignContext(t)
-    const ctx2 = await setupCampaignContext(t)
-    const dm1 = asDm(ctx1)
-    const dm2 = asDm(ctx2)
-
-    const first = await createNote(t, ctx1.campaignId, ctx1.dm.profile._id, {
-      name: 'shared-name',
-      slug: 'shared-name',
-    })
-
-    const second = await createNote(t, ctx2.campaignId, ctx2.dm.profile._id, {
-      name: 'shared-name',
-      slug: 'shared-name',
-    })
-
-    const item1 = await dm1.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx1.campaignDomainId,
-      id: first.noteId,
-    })
-    const item2 = await dm2.query(api.sidebarItems.queries.getSidebarItem, {
-      campaignId: ctx2.campaignDomainId,
-      id: second.noteId,
-    })
-
-    expect(item1).not.toBeNull()
-    expect(item2).not.toBeNull()
-  })
-
-  it('collides with soft-deleted item slug', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'deleted-item',
-      slug: 'deleted-item',
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
-      status: 'trashed',
-    })
-
-    const result = await createFolderViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignDomainId,
-      name: 'deleted-item',
-      parentTarget: { kind: 'direct', parentId: null },
-    })
-
-    expect(result.slug).toBe('deleted-item-1')
-  })
-
-  it('accepts titles that do not produce a textual route slug', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-
-    const created = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignDomainId,
-      name: '🎉🎊',
-      parentTarget: { kind: 'direct', parentId: null },
-      content: [],
-    })
-
-    expect(created.slug).toBe('item')
-  })
-
-  it('keeps generated slugs valid for max-length names', async () => {
-    const ctx = await setupCampaignContext(t)
-    const dmAuth = asDm(ctx)
-    const firstName = 'a'.repeat(255)
-    const secondName = `${'a'.repeat(253)} 2`
-
-    const first = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignDomainId,
-      name: firstName,
-      parentTarget: { kind: 'direct', parentId: null },
-      content: [],
-    })
-
-    const second = await createNoteViaFilesystem(dmAuth, {
-      campaignId: ctx.campaignDomainId,
-      name: secondName,
-      parentTarget: { kind: 'direct', parentId: null },
-      content: [],
-    })
-
-    expect(parseResourceItemSlug(first.slug)).toBe(first.slug)
-    expect(parseResourceItemSlug(second.slug)).toBe(second.slug)
-    expect(first.slug.length).toBeLessThanOrEqual(255)
-    expect(second.slug.length).toBeLessThanOrEqual(255)
-  })
 
   it('rejects invalid note colors at the mutation boundary', async () => {
     const ctx = await setupCampaignContext(t)

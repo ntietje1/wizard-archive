@@ -2,11 +2,9 @@ import type {
   WizardEditorEmbeddedCanvasState,
   WizardEditorItem,
   WizardEditorNoteCollaborationSessionRequest,
-  WizardEditorResourceSlug,
   completeWizardEditorResourceCommand,
 } from '@wizard-archive/editor/adapter'
 import {
-  parseWizardEditorResourceSlug,
   planWizardEditorMapPinCreations,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
 } from '@wizard-archive/editor/adapter'
@@ -43,7 +41,6 @@ interface LocalWorkspaceItem {
   isBookmarked?: boolean
   metadataVersion?: VersionStamp
   parentId: ResourceId | null
-  slug?: WizardEditorResourceSlug
   status: 'active' | 'trash'
   trashedAt?: number | null
   type: LocalWorkspaceItemType
@@ -56,7 +53,6 @@ interface LocalItemCreation {
   id: ResourceId
   item: LocalWorkspaceItem
   nextLocalItemIndex: number
-  slug: WizardEditorResourceSlug
 }
 
 interface LocalMapPin {
@@ -212,7 +208,6 @@ export type LocalWorkspaceAction =
       type: 'updateItemMetadata'
       itemId: ResourceId
       title?: string
-      slug?: WizardEditorResourceSlug
       iconName?: LocalResourceIconName | null
       color?: LocalResourceColor | null
     }
@@ -321,13 +316,11 @@ function updateItemMetadata(
   const nextItem = {
     ...item,
     ...(nextTitle === undefined ? {} : { title: nextTitle }),
-    ...(action.slug === undefined ? {} : { slug: action.slug }),
     ...(action.iconName === undefined ? {} : { iconName: action.iconName ?? undefined }),
     ...(action.color === undefined ? {} : { color: action.color ?? undefined }),
   }
   if (
     nextItem.title === item.title &&
-    nextItem.slug === item.slug &&
     nextItem.iconName === item.iconName &&
     nextItem.color === item.color
   ) {
@@ -786,7 +779,6 @@ function copyItemTree({
     id: copiedId,
     isBookmarked: false,
     parentId: copiedParentId,
-    slug: requireLocalResourceSlug(copiedId),
     status: 'active',
     trashedAt: null,
     title: item.title || localItemTitle(item.type),
@@ -1105,14 +1097,12 @@ function createLocalItemCreation({
 }): LocalItemCreation {
   const id = generateDomainId(DOMAIN_ID_KIND.resource)
   const createdAt = createLocalWorkspaceMutationTimestamp()
-  const slug = requireLocalResourceSlug(`local-${type}-${index}`)
   const item: LocalWorkspaceItem = {
     color,
     createdAt,
     id,
     iconName,
     parentId,
-    slug,
     status: 'active',
     trashedAt: null,
     type,
@@ -1125,7 +1115,6 @@ function createLocalItemCreation({
     id,
     item,
     nextLocalItemIndex: index + 1,
-    slug,
   }
 }
 
@@ -1133,12 +1122,6 @@ export function localItemTypeForSidebarItemType(
   sidebarItemType: LocalSidebarItemType,
 ): LocalWorkspaceItemType {
   return LOCAL_ITEM_TYPES_BY_SIDEBAR_TYPE[sidebarItemType]
-}
-
-function requireLocalResourceSlug(value: string): WizardEditorResourceSlug {
-  const slug = parseWizardEditorResourceSlug(value)
-  if (!slug) throw new Error(`Invalid local resource slug: ${value}`)
-  return slug
 }
 
 function localItemTitle(type: LocalWorkspaceItemType) {

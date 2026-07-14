@@ -4,7 +4,6 @@ import { logEditHistory } from '../../../editHistory/log'
 import { PERMISSION_OPERATION } from '../../../../shared/permissions/requirements'
 import { assertConvexResourceTitle } from '../../validation/name'
 import { requireOptionalSidebarItemColor, requireOptionalSidebarItemIconName } from '../appearance'
-import { prepareSidebarItemRename } from '../../validation/orchestration'
 import { EDIT_HISTORY_ACTION } from '@wizard-archive/editor/resources/history-contract'
 import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
 import type { EditHistoryChange } from '@wizard-archive/editor/resources/history-contract'
@@ -20,7 +19,7 @@ import { requireSidebarItemRow, sidebarItemResourceId } from '../../functions/si
 type RenameFileSystemCommand = Extract<ResourceCommand, { type: 'rename' }>
 type SidebarItemUpdates = Pick<
   Extract<ResourcePatch, { type: 'updateResource' }>['fields'],
-  'name' | 'slug' | 'iconName' | 'color'
+  'name' | 'iconName' | 'color'
 >
 
 type RenameChangeSet = {
@@ -46,7 +45,7 @@ export async function executeRenameCommand(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only active items can be renamed')
   }
 
-  const { updates, changes } = await collectRenameChanges(ctx, item, command)
+  const { updates, changes } = collectRenameChanges(item, command)
 
   if (changes.length === 0) {
     const events = [{ type: RESOURCE_EVENT_TYPE.noop, itemId: sidebarItemResourceId(item) }]
@@ -76,34 +75,30 @@ export async function executeRenameCommand(
   })
 }
 
-async function collectRenameChanges(
-  ctx: CampaignMutationCtx,
+function collectRenameChanges(
   item: AccessibleSidebarItemRow,
   command: RenameFileSystemCommand,
-): Promise<RenameChangeSet> {
+): RenameChangeSet {
   const changeSet: RenameChangeSet = { updates: {}, changes: [] }
-  await collectSidebarMetadataChanges(ctx, item, command, changeSet)
+  collectSidebarMetadataChanges(item, command, changeSet)
   return changeSet
 }
 
-async function collectSidebarMetadataChanges(
-  ctx: CampaignMutationCtx,
+function collectSidebarMetadataChanges(
   item: AccessibleSidebarItemRow,
   command: RenameFileSystemCommand,
   changeSet: RenameChangeSet,
-): Promise<void> {
+): void {
   const name = command.name === undefined ? undefined : assertConvexResourceTitle(command.name)
   const iconName = requireOptionalSidebarItemIconName(command.iconName)
   const color = requireOptionalSidebarItemColor(command.color)
 
   if (name !== undefined) {
-    const rename = await prepareSidebarItemRename(ctx, { item, newName: name })
-    if (rename) {
-      changeSet.updates.name = rename.name
-      changeSet.updates.slug = rename.slug
+    if (name !== item.name) {
+      changeSet.updates.name = name
       changeSet.changes.push({
         action: EDIT_HISTORY_ACTION.renamed,
-        metadata: { from: item.name, to: rename.name },
+        metadata: { from: item.name, to: name },
       })
     }
   }
@@ -126,15 +121,8 @@ async function collectSidebarMetadataChanges(
 }
 
 function buildRenameEvents(item: AccessibleSidebarItemRow, updates: SidebarItemUpdates) {
-  if (typeof updates.slug !== 'string') {
+  if (updates.name === undefined) {
     return [{ type: RESOURCE_EVENT_TYPE.updated, itemId: sidebarItemResourceId(item) }]
   }
-  return [
-    {
-      type: RESOURCE_EVENT_TYPE.renamed,
-      itemId: sidebarItemResourceId(item),
-      slug: updates.slug,
-      previousSlug: item.slug,
-    },
-  ]
+  return [{ type: RESOURCE_EVENT_TYPE.renamed, itemId: sidebarItemResourceId(item) }]
 }

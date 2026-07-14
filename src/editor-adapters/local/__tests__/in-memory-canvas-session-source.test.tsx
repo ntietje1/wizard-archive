@@ -264,7 +264,6 @@ function createCanvasItem({
     previewAssetId: null,
     previewUrl: null,
     shares: [],
-    slug: 'canvas' as LocalCanvasItemWithContent['slug'],
     status: TEST_RESOURCE_STATUS.active,
     type: TEST_RESOURCE_TYPES.canvases,
     updatedBy: null,

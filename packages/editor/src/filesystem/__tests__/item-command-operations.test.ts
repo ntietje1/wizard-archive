@@ -20,7 +20,7 @@ function createTestCache(snapshot: SidebarCacheSnapshot) {
 
 describe('filesystem item command operations', () => {
   it('forwards the package-owned parent plan through command execution', async () => {
-    const created = createNote({ name: 'Scene', slug: 'scene' })
+    const created = createNote({ name: 'Scene' })
     const parentPlan = {
       kind: 'path' as const,
       folders: [{ kind: 'virtual' as const, name: 'Scenes' }],
@@ -55,7 +55,7 @@ describe('filesystem item command operations', () => {
   })
 
   it('rejects create receipts that omit the created item event', async () => {
-    const created = createNote({ name: 'Scene', slug: 'scene' })
+    const created = createNote({ name: 'Scene' })
     const receipt = { ...createCreatedItemReceipt(created), events: [] }
     const executeCommand = vi.fn().mockResolvedValue({ status: 'completed', receipt })
     const operations = createFileSystemItemCommandOperations({
@@ -73,7 +73,7 @@ describe('filesystem item command operations', () => {
   })
 
   it('rolls back created items when initialization fails', async () => {
-    const created = createNote({ name: 'Scene', slug: 'scene' })
+    const created = createNote({ name: 'Scene' })
     const receipt = createCreatedItemReceipt(created)
     const executeCommand = vi.fn().mockResolvedValue({ status: 'completed', receipt })
     const discardCreatedItem = vi.fn()
@@ -100,7 +100,7 @@ describe('filesystem item command operations', () => {
   })
 
   it('discards a created item only once when synchronous finalization fails', async () => {
-    const created = createNote({ name: 'Scene', slug: 'scene' })
+    const created = createNote({ name: 'Scene' })
     const receipt = createCreatedItemReceipt(created)
     const finalizeError = new Error('finalize failed')
     const discardCreatedItem = vi.fn()

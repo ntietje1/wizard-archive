@@ -38,7 +38,7 @@ interface FileFormProps {
   fileId?: ResourceId
   parentId?: ResourceId | null
   onClose: () => void
-  onSuccess?: (fileSlug?: string) => void
+  onSuccess?: () => void
   source: FileFormSource
   upload: FileUploadControl
 }
@@ -187,7 +187,7 @@ interface SaveFileFormOptions {
   fileId?: ResourceId
   hasFile: boolean
   onClose: () => void
-  onSuccess?: (fileSlug?: string) => void
+  onSuccess?: () => void
   parentId?: ResourceId | null
   setIsSubmitting: (isSubmitting: boolean) => void
   source: FileFormSource
@@ -246,7 +246,7 @@ async function updateExistingFile({
   upload,
   values,
 }: SaveFileFormOptions & { file: FileItem; fileId: ResourceId }) {
-  const { slug } = await source.updateItemMetadata({
+  await source.updateItemMetadata({
     item: file,
     name: resolveFinalName({ file, upload, values }),
     iconName: values.iconName,
@@ -268,7 +268,7 @@ async function updateExistingFile({
 
   toast.success('File updated')
   onClose()
-  onSuccess?.(slug)
+  onSuccess?.()
 }
 
 async function createNewFile({
@@ -304,7 +304,7 @@ async function createNewFile({
 
   void openCreatedFile(source, created.id)
   toast.success('File created')
-  onSuccess?.(created.slug)
+  onSuccess?.()
   onClose()
 }
 

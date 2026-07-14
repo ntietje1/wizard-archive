@@ -11,7 +11,7 @@ import type { CampaignQueryCtx } from '../functions'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { resourceIdValidator } from '../resources/validators'
 import { findSidebarItemRow } from '../sidebarItems/functions/sidebarItemIdentity'
-type LinkPanelItem = Pick<AnyResourceRow, 'id' | 'name' | 'slug' | 'type'>
+type LinkPanelItem = Pick<AnyResourceRow, 'id' | 'name' | 'type'>
 
 type LinkPanelRow = Pick<Doc<'noteLinks'>, 'blockId' | 'query' | 'displayName' | 'syntax'> & {
   id: Id<'noteLinks'>
@@ -22,7 +22,6 @@ type LinkPanelRow = Pick<Doc<'noteLinks'>, 'blockId' | 'query' | 'displayName' |
 const linkPanelItemValidator = v.object({
   id: resourceIdValidator,
   name: v.string(),
-  slug: v.string(),
   type: sidebarItemTypeValidator,
 })
 
@@ -49,7 +48,6 @@ async function toLinkPanelItem(
   return {
     id: visibleItem.id,
     name: visibleItem.name,
-    slug: visibleItem.slug,
     type: visibleItem.type,
   }
 }

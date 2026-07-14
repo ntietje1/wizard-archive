@@ -60,7 +60,6 @@ function createResolver(isViewerMode: boolean, revision = 'catalog-1'): LinkReso
     status: parsed.itemName.toLowerCase().includes('ghost') ? 'unresolved' : 'resolved',
     rejectionReason: null,
     itemId: null,
-    itemSlug: parsed.isExternal ? null : parsed.itemName.toLowerCase(),
     href: parsed.isExternal
       ? parsed.rawTarget
       : `/campaigns/dm/world/editor?item=${parsed.itemName.toLowerCase()}`,
@@ -174,7 +173,6 @@ describe('useNoteLinkDecorations', () => {
       expect.objectContaining({
         'data-link-role': 'content',
         'data-link-type': 'wiki',
-        'data-link-slug': 'lore',
       }),
     )
   })

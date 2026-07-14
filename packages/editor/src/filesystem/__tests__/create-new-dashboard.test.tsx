@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { CreateNewDashboard } from '../create-new-dashboard'
 
-import { assertResourceItemSlug } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { CreateItemSource } from '../create-item-source'
 
@@ -20,7 +19,6 @@ describe('CreateNewDashboard', () => {
     const createItem = vi.fn<CreateItemSource['createItem']>((_input) => ({
       status: 'completed',
       id: 'note-1' as ResourceId,
-      slug: assertResourceItemSlug('note-1'),
     }))
     const openItem = vi.fn()
 
@@ -52,7 +50,6 @@ describe('CreateNewDashboard', () => {
     const createItem = vi.fn<CreateItemSource['createItem']>(() => ({
       status: 'completed',
       id: 'map-canvas-1' as ResourceId,
-      slug: assertResourceItemSlug('untitled-map'),
     }))
     const openItem = vi.fn()
 
@@ -82,7 +79,6 @@ describe('CreateNewDashboard', () => {
     const createItem = vi.fn<CreateItemSource['createItem']>(() => ({
       status: 'completed',
       id: 'note-1' as ResourceId,
-      slug: assertResourceItemSlug('note-1'),
     }))
     const openError = new Error('open failed')
     const openItem = vi.fn<CreateItemSource['openItem']>(() => {

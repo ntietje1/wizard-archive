@@ -10,11 +10,7 @@ import type { MapLayer } from '../../../game-maps/document-contract'
 import type { MapPinsCreateResult } from '../../../game-maps/session-contract'
 import type { NoteItem } from '../../../notes/item-contract'
 import type { AnyItem } from '../../../workspace/items'
-import {
-  assertResourceItemColor,
-  canonicalizeResourceItemTitle,
-  assertResourceItemSlug,
-} from '../../../workspace/items'
+import { assertResourceItemColor, canonicalizeResourceItemTitle } from '../../../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -165,7 +161,6 @@ function createBaseResourceItem({
     previewAssetId: null,
     previewUrl: null,
     shares: [],
-    slug: assertResourceItemSlug(name.toLowerCase().replace(/\s+/gu, '-')),
     status: RESOURCE_STATUS.active,
     updatedBy: null,
     updatedTime: null,

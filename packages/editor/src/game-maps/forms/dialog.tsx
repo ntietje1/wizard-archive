@@ -11,7 +11,7 @@ interface MapDialogProps {
   isOpen: boolean
   onClose: () => void
   mapId: ResourceId
-  onSuccess?: (mapSlug?: string) => void
+  onSuccess?: () => void
   source: MapFormSource
   upload: FileUploadControl
 }

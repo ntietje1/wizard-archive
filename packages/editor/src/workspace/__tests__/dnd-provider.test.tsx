@@ -148,7 +148,6 @@ describe('WorkspaceRuntimeDndProvider', () => {
       fileName: 'notes.txt',
       result: {
         id: testResourceId('note_clues'),
-        slug: 'note-clues',
       },
     })
     const openItem = vi.fn()
@@ -184,7 +183,6 @@ describe('WorkspaceRuntimeDndProvider', () => {
         status: 'completed',
         receipt: {
           id: testResourceId('note_clues'),
-          slug: 'note-clues',
         },
       })
     }

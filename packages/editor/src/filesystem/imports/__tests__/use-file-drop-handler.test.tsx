@@ -31,7 +31,6 @@ describe('useFileDropHandler', () => {
     vi.clearAllMocks()
     mocks.createItem.mockResolvedValue({
       id: testId('folder-created'),
-      slug: 'folder-created',
     })
     mocks.importFile.mockResolvedValue({
       status: 'imported',
@@ -39,7 +38,6 @@ describe('useFileDropHandler', () => {
       fileName: 'file-created.png',
       result: {
         id: testId('file-created'),
-        slug: 'file-created',
       },
     })
     mocks.importDrop.mockResolvedValue({
@@ -64,7 +62,6 @@ describe('useFileDropHandler', () => {
       fileName: 'notes.txt 1',
       result: {
         id: testId('note-created'),
-        slug: 'note-created',
       },
     })
     const runtime = createDropRuntime()
@@ -101,7 +98,6 @@ describe('useFileDropHandler', () => {
       fileName: 'portrait.png 1',
       result: {
         id: testId('file-created'),
-        slug: 'file-created',
       },
     })
     const runtime = createDropRuntime()
@@ -164,7 +160,7 @@ describe('useFileDropHandler', () => {
 
     const upload = await result.current.uploadSingleFile(file, null, { silent: true })
 
-    expect(upload).toEqual({ id: 'file-created', slug: 'file-created' })
+    expect(upload).toEqual({ id: 'file-created' })
     expect(mocks.openItem).toHaveBeenCalledWith('file-created', { replace: false })
     await waitFor(() => expect(consoleError).toHaveBeenCalledWith(navigationError))
   })
@@ -184,7 +180,7 @@ describe('useFileDropHandler', () => {
 
     const upload = await result.current.uploadSingleFile(file, null, { silent: true })
 
-    expect(upload).toEqual({ id: 'file-created', slug: 'file-created' })
+    expect(upload).toEqual({ id: 'file-created' })
     expect(mocks.revealItem).toHaveBeenCalledWith('file-created')
     await waitFor(() => expect(consoleError).toHaveBeenCalledWith(navigationError))
   })
@@ -251,7 +247,6 @@ describe('useFileDropHandler', () => {
       status: 'completed',
       receipt: {
         id: 'file-created',
-        slug: 'file-created',
       },
     })
   })
@@ -361,7 +356,6 @@ describe('useFileDropHandler', () => {
         fileName: 'portrait.png',
         result: {
           id: testId('file-created'),
-          slug: 'file-created',
         },
       })
     })

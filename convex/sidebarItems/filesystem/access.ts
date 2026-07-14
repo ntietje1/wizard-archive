@@ -4,7 +4,6 @@ import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeas
 import { getPermissionRequirementForOperation } from '../../../shared/permissions/requirements'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { assertConvexResourceTitle } from '../validation/name'
-import { assertConvexSidebarItemSlug } from '../validation/slug'
 import type { PermissionOperation } from '../../../shared/permissions/requirements'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
@@ -15,7 +14,6 @@ type SidebarItemAccessRow = Doc<'sidebarItems'>
 export type AccessibleSidebarItemRow = Doc<'sidebarItems'> & {
   id: Doc<'sidebarItems'>['_id']
   name: ReturnType<typeof assertConvexResourceTitle>
-  slug: ReturnType<typeof assertConvexSidebarItemSlug>
   myPermissionLevel: PermissionLevel
 }
 
@@ -43,7 +41,6 @@ export async function checkSidebarItemRowAccess<T extends SidebarItemAccessRow>(
     ...rawItem,
     id: rawItem._id,
     name: assertConvexResourceTitle(rawItem.name),
-    slug: assertConvexSidebarItemSlug(rawItem.slug),
     myPermissionLevel,
   }
 }

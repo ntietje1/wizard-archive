@@ -122,8 +122,6 @@ describe('summarizeResourceReceipt', () => {
           {
             type: RESOURCE_EVENT_TYPE.renamed,
             itemId,
-            slug: 'new-name',
-            previousSlug: 'old-name',
           },
         ],
       ).kind,
@@ -142,8 +140,6 @@ describe('summarizeResourceReceipt', () => {
           {
             type: RESOURCE_EVENT_TYPE.renamed,
             itemId: sourceItemId,
-            slug: 'meeting-notes-2',
-            previousSlug: 'meeting-notes',
           },
           {
             type: RESOURCE_EVENT_TYPE.restored,

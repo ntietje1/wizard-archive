@@ -119,7 +119,6 @@ describe('useFileSystemExecutor', () => {
     const item = createNote({
       id: 'renamed_item' as ResourceId,
       name: 'Old Name',
-      slug: 'old-name',
     })
     const nextName = 'New Name' as ResourceTitle
     const snapshot: SidebarCacheSnapshot = { sidebar: [item], trash: [] }
@@ -135,8 +134,6 @@ describe('useFileSystemExecutor', () => {
         {
           type: 'renamed',
           itemId: item.id,
-          slug: 'new-name',
-          previousSlug: item.slug,
         },
       ],
       patches: [

@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { assertResourceItemSlug } from '../../workspace/items'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import { createAssetsFolderResolver } from '../assets-folder'
 import { resolveAssetsFolderId } from '../assets-folder-resolver'
@@ -89,7 +88,6 @@ describe('createAssetsFolderResolver', () => {
     const createItem = createRuntimeItemMock().mockResolvedValue({
       status: 'completed',
       id: newAssetsFolderId,
-      slug: assertResourceItemSlug('new-assets'),
     })
 
     const resolver = createTestAssetsFolderResolver({ createItem })
@@ -107,7 +105,6 @@ describe('createAssetsFolderResolver', () => {
     const createdAssets = {
       status: 'completed' as const,
       id: newAssetsFolderId,
-      slug: assertResourceItemSlug('new-assets'),
     }
     const releaseCreate: Array<() => void> = []
     const createItem = createRuntimeItemMock().mockImplementation(
@@ -137,7 +134,6 @@ describe('createAssetsFolderResolver', () => {
     const createItem = createRuntimeItemMock().mockResolvedValue({
       status: 'completed',
       id: newAssetsFolderId,
-      slug: assertResourceItemSlug('new-assets'),
     })
     const resolver = createTestAssetsFolderResolver({ createItem })
 

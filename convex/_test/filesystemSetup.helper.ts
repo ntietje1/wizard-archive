@@ -58,7 +58,7 @@ async function createSidebarItemViaFilesystem(
     },
   })
   const created = createdItemFromReceipt(receipt)
-  return { itemId: created.itemId, slug: created.slug, receipt }
+  return { itemId: created.itemId, receipt }
 }
 
 export async function createNoteViaFilesystem(
@@ -80,7 +80,7 @@ export async function createNoteViaFilesystem(
       documentId: created.itemId,
     })
   }
-  return { noteId: created.itemId, slug: created.slug, receipt: created.receipt }
+  return { noteId: created.itemId, receipt: created.receipt }
 }
 
 export async function createFolderViaFilesystem(
@@ -91,7 +91,7 @@ export async function createFolderViaFilesystem(
     ...args,
     itemType: RESOURCE_TYPES.folders,
   })
-  return { folderId: created.itemId, slug: created.slug, receipt: created.receipt }
+  return { folderId: created.itemId, receipt: created.receipt }
 }
 
 export async function createFileViaFilesystem(
@@ -109,7 +109,7 @@ export async function createFileViaFilesystem(
       uploadSessionId: args.uploadSessionId,
     })
   }
-  return { fileId: created.itemId, slug: created.slug, receipt: created.receipt }
+  return { fileId: created.itemId, receipt: created.receipt }
 }
 
 export async function createGameMapViaFilesystem(
@@ -134,7 +134,7 @@ export async function createGameMapViaFilesystem(
       uploadSessionId: args.uploadSessionId,
     })
   }
-  return { mapId: created.itemId, slug: created.slug, receipt: created.receipt }
+  return { mapId: created.itemId, receipt: created.receipt }
 }
 
 export async function createCanvasViaFilesystem(
@@ -145,5 +145,5 @@ export async function createCanvasViaFilesystem(
     ...args,
     itemType: RESOURCE_TYPES.canvases,
   })
-  return { canvasId: created.itemId, slug: created.slug, receipt: created.receipt }
+  return { canvasId: created.itemId, receipt: created.receipt }
 }

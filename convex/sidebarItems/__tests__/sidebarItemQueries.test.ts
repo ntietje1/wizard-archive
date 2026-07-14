@@ -356,7 +356,6 @@ describe('getSidebarItem', () => {
 
     expect(result).toHaveProperty('id')
     expect(result).toHaveProperty('name')
-    expect(result).toHaveProperty('slug')
     expect(result).toHaveProperty('myPermissionLevel')
     expect(result).toHaveProperty('shares')
     expect(result).toHaveProperty('isBookmarked')

@@ -44,7 +44,7 @@ import type { Awareness } from 'y-protocols/awareness'
 import type { Doc, Map as YMap } from 'yjs'
 
 import type { BlockSearchResult } from '../../../shared/search/types'
-import { isPersistedResourceId, parseResourceSlug } from './workspace/resource-contract'
+import { isPersistedResourceId } from './workspace/resource-contract'
 import type {
   ResourceByKind,
   ResourceKind,
@@ -176,8 +176,6 @@ export const WIZARD_EDITOR_DEFAULT_SORT_OPTIONS: WizardEditorSortOptions = {
   order: 'DateCreated',
   direction: 'Descending',
 }
-
-export type WizardEditorResourceSlug = string & { readonly __brand: 'ResourceSlug' }
 
 export type WizardEditorItem = ResourceByKind<ResourceKind>
 export type WizardEditorItemWithContent = ResourceWithContentByKind<ResourceKind>
@@ -338,10 +336,6 @@ export function isWizardEditorNoteItem(
   item: WizardEditorItem | null | undefined,
 ): item is ResourceByKind<typeof RESOURCE_TYPES.notes> {
   return item?.type === RESOURCE_TYPES.notes
-}
-
-export function parseWizardEditorResourceSlug(value: string): WizardEditorResourceSlug | null {
-  return parseResourceSlug(value)
 }
 
 type WizardEditorNavigationTarget = 'current' | 'separate'

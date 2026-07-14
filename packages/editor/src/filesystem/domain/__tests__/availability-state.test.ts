@@ -74,7 +74,6 @@ describe('resolveResourceAvailabilityState', () => {
     const metadata = createNote({
       id: noteId('note-1'),
       name: 'Secret Note',
-      slug: 'secret-note',
     })
     const readableItem = createReadableNote({
       ...metadata,
@@ -103,7 +102,6 @@ describe('resolveResourceAvailabilityState', () => {
     const metadata = createNote({
       id: noteId('note-hidden-from-viewed-player'),
       name: 'Secret Note',
-      slug: 'secret-note',
       allPermissionLevel: null,
       shares: [],
     })
@@ -237,7 +235,6 @@ describe('resolveResourceAvailabilityState', () => {
     const metadata = createNote({
       id: noteId('note-1'),
       name: 'Secret Note',
-      slug: 'secret-note',
     })
     const state = resolveResourceAvailabilityState({
       resourceId: metadata.id,

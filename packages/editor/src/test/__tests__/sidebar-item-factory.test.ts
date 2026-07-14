@@ -23,7 +23,6 @@ describe('sidebar item factory', () => {
       id: 'note_1',
       createdAt: 1,
       name: 'Test Item 1',
-      slug: 'test-item-1',
       campaignId: testCampaignId('campaign_1'),
       createdBy: 'user_1',
     })
@@ -36,7 +35,6 @@ describe('sidebar item factory', () => {
       id: 'folder_override' as ResourceId,
       inheritShares: false,
       name: 'Scenes',
-      slug: 'scene-folder',
       status: RESOURCE_STATUS.trashed,
     })
     const file = createFile({
@@ -50,7 +48,6 @@ describe('sidebar item factory', () => {
       isActive: false,
       isTrashed: true,
       name: 'Scenes',
-      slug: 'scene-folder',
     })
     expect(file).toMatchObject({
       contentType: 'application/pdf',

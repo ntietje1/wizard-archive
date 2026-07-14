@@ -6,7 +6,6 @@ import {
   completeWizardEditorResourceCommand,
   isWizardEditorResourceCatalogCommand,
   isWizardEditorResourceSharingCommand,
-  parseWizardEditorResourceSlug,
   WIZARD_EDITOR_RESOURCE_COMMAND_TYPE,
   WIZARD_EDITOR_RESOURCE_EVENT_TYPE,
 } from '@wizard-archive/editor/adapter'
@@ -27,7 +26,6 @@ import {
 import type { LocalWorkspaceAction, LocalWorkspaceState } from './local-workspace-model'
 import { assertLocalCanMutate } from './local-operation-utils'
 import { createCompletedLocalFileSystemCommandResult } from './local-filesystem-command-receipts'
-import { deduplicateSlug, slugify } from 'shared/slugs'
 import { createLocalFileSystemSnapshot } from './local-filesystem-snapshot'
 
 type LocalCommittedFileSystemCommand = Exclude<
@@ -255,7 +253,6 @@ function executeLocalCreateCommand(
       {
         type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.created,
         itemId: creation.id,
-        slug: creation.slug,
       },
     ],
     { transactionId },
@@ -269,44 +266,20 @@ function executeLocalRenameCommand(
   assertLocalCanMutate(canEdit)
   const item = catalog.getKnownItemById(itemId)
   if (!item) throw new Error(`Local rename item "${String(itemId)}" was not found`)
-  const slug = name === undefined ? item.slug : createLocalRenameSlug(catalog, item.id, name)
+  const renamed = name !== undefined && name !== item.name
   dispatch({
     type: 'updateItemMetadata',
     itemId,
     ...(name === undefined ? {} : { title: name }),
-    ...(slug === item.slug ? {} : { slug }),
     ...(iconName === undefined ? {} : { iconName }),
     ...(color === undefined ? {} : { color }),
   })
   return completeWizardEditorResourceCommand(
     { type: WIZARD_EDITOR_RESOURCE_COMMAND_TYPE.rename, itemId, name, iconName, color },
-    slug === item.slug
-      ? [{ type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.updated, itemId }]
-      : [
-          {
-            type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.renamed,
-            itemId,
-            slug,
-            previousSlug: item.slug,
-          },
-        ],
+    renamed
+      ? [{ type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.renamed, itemId }]
+      : [{ type: WIZARD_EDITOR_RESOURCE_EVENT_TYPE.updated, itemId }],
   )
-}
-
-function createLocalRenameSlug(
-  catalog: WizardEditorResourceCatalog,
-  itemId: ResourceId,
-  name: string,
-) {
-  const value = deduplicateSlug(
-    slugify(name, { fallback: 'item' }),
-    [...catalog.getVisibleItems(), ...catalog.getTrashedItems()]
-      .filter((candidate) => candidate.id !== itemId)
-      .map((candidate) => candidate.slug),
-  )
-  const slug = parseWizardEditorResourceSlug(value)
-  if (!slug) throw new Error(`Invalid local resource slug: ${value}`)
-  return slug
 }
 
 function executeLocalFileSystemCommand(

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from '../../../../../shared/permissions/types'
-import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -264,7 +264,6 @@ function baseItem(id: ResourceId, name: string) {
     name: canonicalizeResourceItemTitle(name),
     iconName: null,
     color: null,
-    slug: assertResourceItemSlug(name.toLowerCase().replaceAll(' ', '-')),
     parentId: null,
     allPermissionLevel: null,
     location: RESOURCE_LOCATION.sidebar,

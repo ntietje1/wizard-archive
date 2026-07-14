@@ -14,7 +14,7 @@ import type {
   WikiLinkAutocompleteItemSource,
 } from '../autocomplete-model'
 import type { Heading } from '../../document/model'
-import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -68,7 +68,6 @@ function createBaseItem({
   type: AnyItem['type']
 }): AnyItem {
   const id = createSidebarItemId(name.toLowerCase().replace(/\W+/g, '-'))
-  const slug = assertResourceItemSlug(id)
   return {
     id: id,
     createdAt: 0,
@@ -89,7 +88,6 @@ function createBaseItem({
     previewAssetId: null,
     previewUrl: null,
     shares: [],
-    slug,
     status: RESOURCE_STATUS.active,
     type,
     updatedBy: null,

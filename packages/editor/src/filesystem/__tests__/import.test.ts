@@ -1,7 +1,6 @@
 import { testResourceId } from '../../../../../shared/test/resource-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
-import type { ResourceSlug } from '../../workspace/resource-contract'
 import { createResourceCatalogModel } from '../catalog'
 import type { FileSystemCreateItem, ResourceImportFileOperation } from '../item-operation-contracts'
 import { importWorkspaceFile, importWorkspaceFileDrop } from '../import'
@@ -36,7 +35,6 @@ describe('importWorkspaceFile', () => {
       const created = {
         status: 'completed' as const,
         id: testResourceId(`note-${name}`),
-        slug: `note-${name}` as ResourceSlug,
       }
       await initialize?.(created, createItem)
       return created
@@ -69,7 +67,6 @@ describe('importWorkspaceFile', () => {
       result: {
         status: 'completed',
         id: testResourceId('note-notes.txt'),
-        slug: 'note-notes.txt',
       },
     })
   })
@@ -82,7 +79,6 @@ describe('importWorkspaceFile', () => {
       const created = {
         status: 'completed' as const,
         id: testResourceId(`file-${name}`),
-        slug: `file-${name}` as ResourceSlug,
       }
       await initialize?.(created, createItem)
       return created
@@ -121,7 +117,6 @@ describe('importWorkspaceFile', () => {
       result: {
         status: 'completed',
         id: testResourceId('file-portrait.png'),
-        slug: 'file-portrait.png',
       },
     })
   })
@@ -133,7 +128,6 @@ describe('importWorkspaceFile', () => {
     const createItem = vi.fn<FileSystemCreateItem>(({ name }) => ({
       status: 'completed',
       id: testResourceId(`file-${name}`),
-      slug: `file-${name}` as ResourceSlug,
     }))
     const image = createImportFile(['image'], 'portrait.png', { type: '' })
 
@@ -167,7 +161,6 @@ describe('importWorkspaceFile', () => {
       const created = {
         status: 'completed' as const,
         id: testResourceId(`file-${name}`),
-        slug: `file-${name}` as ResourceSlug,
       }
       try {
         await initialize?.(created, createItem)
@@ -269,7 +262,6 @@ describe('importWorkspaceFileDrop', () => {
     const createItem = vi.fn<FileSystemCreateItem>(({ name }) => ({
       status: 'completed',
       id: testResourceId(`created-${name}`),
-      slug: `created-${name}` as ResourceSlug,
     }))
     const importFile = vi.fn<ResourceImportFileOperation>(({ file }) => ({
       status: 'imported',
@@ -278,7 +270,6 @@ describe('importWorkspaceFileDrop', () => {
       result: {
         status: 'completed',
         id: testResourceId(`imported-${file.name}`),
-        slug: `imported-${file.name}` as ResourceSlug,
       },
     }))
     const onProgress = vi.fn()
@@ -385,7 +376,6 @@ describe('importWorkspaceFileDrop', () => {
       return {
         status: 'completed',
         id: testResourceId(`created-${name}`),
-        slug: `created-${name}` as ResourceSlug,
       }
     })
     const importFile = vi.fn<ResourceImportFileOperation>(({ file }) => ({
@@ -395,7 +385,6 @@ describe('importWorkspaceFileDrop', () => {
       result: {
         status: 'completed',
         id: testResourceId(`imported-${file.name}`),
-        slug: `imported-${file.name}` as ResourceSlug,
       },
     }))
     const onProgress = vi.fn()
@@ -466,12 +455,11 @@ describe('importWorkspaceFileDrop', () => {
       trashItems: [],
     }).catalog
     let createCount = 0
-    const createItem = vi.fn<FileSystemCreateItem>(({ name }) => {
+    const createItem = vi.fn<FileSystemCreateItem>(() => {
       createCount++
       return {
         status: 'completed',
         id: testResourceId(`created-${createCount}`),
-        slug: `created-${name}` as ResourceSlug,
       }
     })
     const importFile = vi.fn<ResourceImportFileOperation>()
@@ -536,7 +524,6 @@ describe('importWorkspaceFileDrop', () => {
       result: {
         status: 'completed',
         id: testResourceId(`imported-${name}`),
-        slug: `imported-${name}` as ResourceSlug,
       },
     }))
 

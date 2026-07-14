@@ -24,7 +24,6 @@ export function buildMdLinkDecorationEntries(
     resolutionStatus: resolved.status,
     href: resolved.href,
     itemId: parsed.isExternal ? null : resolved.itemId,
-    itemSlug: parsed.isExternal ? null : resolved.itemSlug,
     pathKind: parsed.isExternal ? null : parsed.pathKind,
     itemPath: parsed.isExternal ? null : parsed.itemPath,
     itemName: parsed.isExternal ? null : parsed.itemName,

@@ -3,7 +3,7 @@ import type { ResourceId } from '../../../resources/domain-id'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { assertResourceItemColor, assertResourceItemSlug } from '../../../workspace/items'
+import { assertResourceItemColor } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import { FileForm } from '../form'
@@ -52,7 +52,6 @@ describe('FileForm', () => {
       color: assertResourceItemColor('#3366ff'),
       iconName: 'FileText',
       name: 'Loaded handout',
-      slug: 'loaded-handout',
       assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const { rerender } = render(
@@ -126,7 +125,6 @@ describe('FileForm', () => {
     const file = createFile({
       id: testResourceId('file_1'),
       name: 'Handout',
-      slug: 'handout',
       assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const source = createFileFormSource()
@@ -150,7 +148,7 @@ describe('FileForm', () => {
       })
     })
     expect(toastSuccess).toHaveBeenCalledWith('File updated')
-    expect(onSuccess).toHaveBeenCalledWith(assertResourceItemSlug('updated-handout'))
+    expect(onSuccess).toHaveBeenCalledOnce()
     expect(source.replaceFile).not.toHaveBeenCalled()
   })
 
@@ -159,7 +157,6 @@ describe('FileForm', () => {
     const file = createFile({
       id: testResourceId('file_1'),
       name: 'Handout',
-      slug: 'handout',
       assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const source = createFileFormSource()
@@ -200,7 +197,6 @@ describe('FileForm', () => {
     const file = createFile({
       id: testResourceId('file_1'),
       name: 'Handout',
-      slug: 'handout',
       assetId: generateDomainId(DOMAIN_ID_KIND.asset),
     })
     const source = createFileFormSource()
@@ -259,7 +255,7 @@ describe('FileForm', () => {
     expect(source.createItem).toHaveBeenCalled()
     expect(source.openItem).toHaveBeenCalledWith(testResourceId('created_file'))
     expect(toastSuccess).toHaveBeenCalledWith('File created')
-    expect(onSuccess).toHaveBeenCalledWith(assertResourceItemSlug('created-file'))
+    expect(onSuccess).toHaveBeenCalledOnce()
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -287,7 +283,7 @@ describe('FileForm', () => {
       expect(toastSuccess).toHaveBeenCalledWith('File created')
     })
     expect(toastError).not.toHaveBeenCalledWith('Failed to save file')
-    expect(onSuccess).toHaveBeenCalledWith(assertResourceItemSlug('created-file'))
+    expect(onSuccess).toHaveBeenCalledOnce()
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -317,7 +313,7 @@ describe('FileForm', () => {
       expect(toastSuccess).toHaveBeenCalledWith('File created')
     })
     expect(toastError).not.toHaveBeenCalledWith('Failed to save file')
-    expect(onSuccess).toHaveBeenCalledWith(assertResourceItemSlug('created-file'))
+    expect(onSuccess).toHaveBeenCalledOnce()
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -382,7 +378,6 @@ function createFileFormSource(overrides: Partial<FileFormSource> = {}): FileForm
       const created = {
         status: 'completed' as const,
         id: testResourceId('created_file'),
-        slug: assertResourceItemSlug('created-file'),
       }
       await attachFile(created)
       return created
@@ -396,9 +391,7 @@ function createFileFormSource(overrides: Partial<FileFormSource> = {}): FileForm
         affectedCount: 1,
       },
     })),
-    updateItemMetadata: vi.fn(() => ({
-      slug: assertResourceItemSlug('updated-handout'),
-    })),
+    updateItemMetadata: vi.fn(() => undefined),
     ...overrides,
   }
 }

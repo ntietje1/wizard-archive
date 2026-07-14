@@ -181,7 +181,6 @@ function createReceipt(transactionId: OperationId = TRANSACTION_1): ResourceTran
   const item = createNote({
     id: 'item_1' as ResourceId,
     name: 'Scene',
-    slug: 'scene',
     status: TEST_RESOURCE_STATUS.active,
   })
   const patches = [{ type: 'upsertResource' as const, item: patchRow(item) }]
@@ -199,7 +198,6 @@ function createReceipt(transactionId: OperationId = TRANSACTION_1): ResourceTran
       {
         type: 'created',
         itemId: item.id,
-        slug: 'scene',
       },
     ],
     patches,
@@ -250,8 +248,6 @@ function createRenameReceipt({
       {
         type: 'renamed',
         itemId,
-        slug: 'new-name',
-        previousSlug: 'old-name',
       },
     ],
     patches: [
@@ -282,7 +278,7 @@ function createUndoCreateReceipt(item: WizardEditorItem): ResourceTransactionRec
       name: item.name,
       parentTarget: { kind: 'direct', parentId: item.parentId },
     },
-    events: [{ type: 'created', itemId: item.id, slug: item.slug }],
+    events: [{ type: 'created', itemId: item.id }],
     patches: [
       {
         type: 'updateResource',
@@ -290,7 +286,6 @@ function createUndoCreateReceipt(item: WizardEditorItem): ResourceTransactionRec
         before: {
           status: TEST_RESOURCE_STATUS.active,
           parentId: item.parentId,
-          slug: item.slug,
         },
         fields: { status: TEST_RESOURCE_STATUS.undoHidden },
       },
@@ -327,14 +322,13 @@ function createUndoCopiedFolderReceipt({
         before: {
           status: TEST_RESOURCE_STATUS.active,
           parentId: folder.parentId,
-          slug: folder.slug,
         },
         fields: { status: TEST_RESOURCE_STATUS.undoHidden },
       },
       {
         type: 'updateResource',
         itemId: child.id,
-        before: { status: TEST_RESOURCE_STATUS.active, parentId: folder.id, slug: child.slug },
+        before: { status: TEST_RESOURCE_STATUS.active, parentId: folder.id },
         fields: { status: TEST_RESOURCE_STATUS.undoHidden },
       },
     ],
@@ -495,7 +489,7 @@ function TestLiveFileSystemHost({ children }: { children: ReactNode }) {
     {
       getCurrentResourceId: getCurrentResourceIdMock,
       clearWorkspaceContent: clearWorkspaceContentMock,
-      openResource: (resource, options) => navigateToItemMock(resource.slug, options),
+      openResource: (resource, options) => navigateToItemMock(resource.id, options),
     },
     createTestFileSystemReadModel(),
   )
@@ -589,7 +583,6 @@ describe('useLiveFileSystemRuntime', () => {
     const submittedCommand = executeMutateAsync.mock.calls[0]?.[0].command
     expect(isUuidV7(optimisticItem.id)).toBe(true)
     expect(optimisticItem.id).toBe(submittedCommand.resourceId)
-    expect(optimisticItem.slug).toBe('scene')
     expect(toastLoadingMock).toHaveBeenCalledWith('Creating item...')
 
     act(() => resolveCreate(createReceipt()))
@@ -717,7 +710,6 @@ describe('useLiveFileSystemRuntime', () => {
     const item = createNote({
       id: 'item_1' as ResourceId,
       name: 'Scene',
-      slug: 'scene',
       status: TEST_RESOURCE_STATUS.active,
     })
     currentResourceIdState.value = item.id
@@ -742,13 +734,11 @@ describe('useLiveFileSystemRuntime', () => {
     const folder = createFolder({
       id: 'copied_folder' as ResourceId,
       name: 'Copied Folder',
-      slug: 'copied-folder',
       status: TEST_RESOURCE_STATUS.active,
     })
     const child = createNote({
       id: 'copied_child' as ResourceId,
       name: 'Copied Child',
-      slug: 'copied-child',
       parentId: folder.id,
       status: TEST_RESOURCE_STATUS.active,
     })
@@ -1023,7 +1013,6 @@ describe('useLiveFileSystemRuntime', () => {
     const item = createNote({
       id: 'trash_item' as ResourceId,
       name: 'Trash Item',
-      slug: 'trash-item',
       status: TEST_RESOURCE_STATUS.trashed,
     })
     trashItems = [item]

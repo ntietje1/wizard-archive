@@ -183,7 +183,6 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(created).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-2'),
-      slug: 'local-note-2',
     })
     expectCreateItemDispatch(dispatch, {
       id: createdResourceId(dispatch, 'local-note-2'),
@@ -245,7 +244,7 @@ describe('createLocalRuntimeFileSystem', () => {
       color: testResourceColor('#ABCDEF'),
     })
 
-    expect(update).toEqual({ slug: 'renamed-market' })
+    expect(update).toBeUndefined()
 
     const nextWorkspace = dispatch.mock.calls.reduce(
       (state, [action]) => localWorkspaceReducer(state, action),
@@ -260,7 +259,6 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
       itemId: SAMPLE_LOCAL_RESOURCE_IDS.marketNote,
-      slug: 'renamed-market',
       title: 'Renamed Market',
       iconName: 'FileText',
       color: '#abcdef',
@@ -269,7 +267,6 @@ describe('createLocalRuntimeFileSystem', () => {
       nextFilesystem.catalog.getKnownItemById(SAMPLE_LOCAL_RESOURCE_IDS.marketNote),
     ).toMatchObject({
       name: 'Renamed Market',
-      slug: 'renamed-market',
       iconName: 'FileText',
       color: '#abcdef',
     })
@@ -463,7 +460,6 @@ describe('createLocalRuntimeFileSystem', () => {
       result: {
         status: 'completed',
         id: createdResourceId(dispatch, 'local-file-2'),
-        slug: 'local-file-2',
       },
     })
     expectCreateItemDispatch(dispatch, {
@@ -556,7 +552,6 @@ describe('createLocalRuntimeFileSystem', () => {
       result: {
         status: 'completed',
         id: createdResourceId(dispatch, 'local-note-2'),
-        slug: 'local-note-2',
       },
     })
     expectCreateItemDispatch(dispatch, {
@@ -618,7 +613,6 @@ describe('createLocalRuntimeFileSystem', () => {
       result: {
         status: 'completed',
         id: createdResourceId(dispatch, 'local-note-2'),
-        slug: 'local-note-2',
       },
     })
     expect(note.content).toEqual([
@@ -1177,7 +1171,6 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(created).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-3'),
-      slug: 'local-note-3',
     })
     expectCreateItemDispatch(dispatch, {
       id: createdResourceId(dispatch, 'local-note-3'),
@@ -1222,7 +1215,6 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(created).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-file-2'),
-      slug: 'local-file-2',
     })
 
     const nextWorkspace = dispatch.mock.calls.reduce(
@@ -1267,12 +1259,10 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(firstCreated).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-2'),
-      slug: 'local-note-2',
     })
     expect(secondCreated).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-3'),
-      slug: 'local-note-3',
     })
     expectCreateItemDispatch(dispatch, {
       id: createdResourceId(dispatch, 'local-note-2'),
@@ -1316,7 +1306,6 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(created).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-4'),
-      slug: 'local-note-4',
     })
     expectCreateItemDispatch(dispatch, {
       id: createdResourceId(dispatch, 'local-folder-2'),
@@ -1376,12 +1365,10 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(firstCreated).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-4'),
-      slug: 'local-note-4',
     })
     expect(secondCreated).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-5'),
-      slug: 'local-note-5',
     })
     expectCreateItemDispatch(dispatch, {
       id: createdResourceId(dispatch, 'local-folder-2'),
@@ -1456,7 +1443,6 @@ describe('createLocalRuntimeFileSystem', () => {
     await expect(Promise.resolve(secondCreated)).resolves.toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-5'),
-      slug: 'local-note-5',
     })
     failFirstInitialization(new Error('Initialization failed'))
     await expect(Promise.resolve(firstCreated)).resolves.toMatchObject({
@@ -1544,7 +1530,6 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(successfulCreate).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-7'),
-      slug: 'local-note-7',
     })
     expectCreateItemDispatch(dispatch, {
       id: createdResourceId(dispatch, 'local-folder-2'),
@@ -1610,7 +1595,6 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(created).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-3'),
-      slug: 'local-note-3',
     })
     expectCreateItemDispatch(dispatch, {
       id: createdResourceId(dispatch, 'local-folder-2'),
@@ -1653,7 +1637,6 @@ describe('createLocalRuntimeFileSystem', () => {
     expect(created).toEqual({
       status: 'completed',
       id: createdResourceId(dispatch, 'local-note-5'),
-      slug: 'local-note-5',
     })
     expectCreateItemDispatch(dispatch, {
       id: createdResourceId(dispatch, 'local-folder-4'),
@@ -2578,14 +2561,21 @@ function expectCreateItemDispatch(
   })
 }
 
-function createdResourceId(dispatch: ReturnType<typeof vi.fn>, slugOrId: string): ResourceId {
-  if (isUuidV7(slugOrId)) return assertDomainId(DOMAIN_ID_KIND.resource, slugOrId)
-  for (const [action] of dispatch.mock.calls as Array<[LocalWorkspaceAction]>) {
-    if (action.type === 'createItem' && action.creation.slug === slugOrId) {
-      return action.creation.id
-    }
+function createdResourceId(dispatch: ReturnType<typeof vi.fn>, legacyId: string): ResourceId {
+  if (isUuidV7(legacyId)) return assertDomainId(DOMAIN_ID_KIND.resource, legacyId)
+  const match = /^local-(canvas|file|folder|map|note)-(\d+)$/.exec(legacyId)
+  const creationIndex = match ? Number(match[2]) : -1
+  const creations = (dispatch.mock.calls as Array<[LocalWorkspaceAction]>)
+    .map(([action]) => action)
+    .filter((action) => action.type === 'createItem')
+  const creation = creations.find(
+    (action) =>
+      action.type === 'createItem' && action.creation.nextLocalItemIndex === creationIndex + 1,
+  )
+  if (creation?.type === 'createItem' && creation.creation.item.type === match?.[1]) {
+    return creation.creation.id
   }
-  throw new Error(`Expected local creation for ${slugOrId}`)
+  throw new Error(`Expected local creation for ${legacyId}`)
 }
 
 function findMapPinItem(map: LocalMapItemWithContent, itemId: ResourceId) {

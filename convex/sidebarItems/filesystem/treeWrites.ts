@@ -2,8 +2,6 @@ import {
   RESOURCE_STATUS,
   RESOURCE_TYPES,
 } from '@wizard-archive/editor/resources/items-persistence-contract'
-import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { findUniqueSidebarItemSlug } from '../validation/orchestration'
 import { collectDescendants } from '../functions/collectDescendants'
 import {
   isTrashedSidebarItem,
@@ -70,16 +68,10 @@ export async function restoreTreeDescendants(
     if (i._id === item._id) return
     if (!isTrashedSidebarItem(i)) return
 
-    const name = i.name as ResourceTitle
-    const slug = await findUniqueSidebarItemSlug(ctx, {
-      itemId: i._id,
-      name,
-    })
     const patch = {
       deletionTime: null,
       deletedBy: null,
       status: RESOURCE_STATUS.active,
-      slug,
     }
     const restoredItem = toSidebarItemDocument({ ...i, ...patch })
     await ctx.db.replace('sidebarItems', i._id, toSidebarItemReplacement(restoredItem))

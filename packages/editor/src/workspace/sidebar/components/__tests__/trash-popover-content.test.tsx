@@ -43,7 +43,6 @@ describe('TrashPopoverContent', () => {
     const trashedNote = createNote({
       deletionTime: Date.UTC(2026, 0, 1),
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     const onClose = vi.fn()
@@ -89,7 +88,6 @@ describe('TrashPopoverContent', () => {
     const trashedNote = createNote({
       deletionTime: Date.UTC(2026, 0, 1),
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     const restoreDeferred = createDeferred<ResourceCommandResult>()
@@ -121,7 +119,6 @@ describe('TrashPopoverContent', () => {
     const trashedNote = createNote({
       deletionTime: Date.UTC(2026, 0, 1),
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     const restoreDeferred = createDeferred<ResourceCommandResult>()
@@ -162,7 +159,6 @@ describe('TrashPopoverContent', () => {
     const trashedNote = createNote({
       deletionTime: Date.UTC(2026, 0, 1),
       name: 'Trashed Note',
-      slug: 'trashed-note',
       status: RESOURCE_STATUS.trashed,
     })
     const emptyTrashDeferred = createDeferred<void>()
@@ -201,13 +197,11 @@ describe('TrashPopoverContent', () => {
     const restoreOnlyNote = createNote({
       deletionTime: Date.UTC(2026, 0, 1),
       name: 'Restore Only',
-      slug: 'restore-only',
       status: RESOURCE_STATUS.trashed,
     })
     const deleteOnlyNote = createNote({
       deletionTime: Date.UTC(2026, 0, 2),
       name: 'Delete Only',
-      slug: 'delete-only',
       status: RESOURCE_STATUS.trashed,
     })
     const restoreItems = vi.fn().mockResolvedValue({ status: 'unavailable', reason: 'test' })
@@ -245,7 +239,6 @@ describe('TrashPopoverContent', () => {
     const trashedNote = createNote({
       deletionTime: Date.UTC(2026, 0, 1),
       name: 'Draggable Trash',
-      slug: 'draggable-trash',
       status: RESOURCE_STATUS.trashed,
     })
     const canDragItem = vi.fn(() => true)
@@ -289,7 +282,6 @@ describe('TrashPopoverContent', () => {
     const epochTrashedNote = createNote({
       deletionTime: 0,
       name: 'Epoch Trash',
-      slug: 'epoch-trash',
       status: RESOURCE_STATUS.trashed,
     })
     const source = createTrashSource({

@@ -60,7 +60,6 @@ export const sidebarItemsTables = {
       'deletionTime',
     ])
     .index('by_campaign_status_deletionTime', ['campaignId', 'status', 'deletionTime'])
-    .index('by_campaign_slug', ['campaignId', 'slug', 'deletionTime'])
     .index('by_campaign_deletionTime', ['campaignId', 'deletionTime'])
     .index('by_previewStorageId', ['previewStorageId']),
 

@@ -77,7 +77,6 @@ function createMockSidebarItem(overrides: Partial<AnyItem> = {}): AnyItem {
     name: 'Sidebar Item' as AnyItem['name'],
     iconName: null,
     color: null,
-    slug: 'sidebar-item' as AnyItem['slug'],
     allPermissionLevel: null,
     status: 'active',
     previewAssetId: null,
@@ -141,7 +140,7 @@ function createTestContextMenuSource(): CanvasContextMenuSource {
                   return false
                 }
 
-                await sidebarItemsState.navigateToItem(item.slug)
+                await sidebarItemsState.navigateToItem(item.id)
                 return true
               },
             }),
@@ -575,7 +574,6 @@ describe('useCanvasContextMenu', () => {
       'note-1',
       createMockSidebarItem({
         id: testResourceId('note-1'),
-        slug: 'note-1' as AnyItem['slug'],
       }),
     )
     const embedNode = {
@@ -625,7 +623,6 @@ describe('useCanvasContextMenu', () => {
       'note-1',
       createMockSidebarItem({
         id: testResourceId('note-1'),
-        slug: 'note-1' as AnyItem['slug'],
       }),
     )
     const embedNode = {

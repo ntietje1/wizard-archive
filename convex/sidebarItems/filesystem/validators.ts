@@ -147,7 +147,6 @@ export const fileSystemEventValidator = v.union(
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.created),
     itemId: resourceIdValidator,
-    slug: v.string(),
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.updated),
@@ -156,8 +155,6 @@ export const fileSystemEventValidator = v.union(
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.renamed),
     itemId: resourceIdValidator,
-    slug: v.string(),
-    previousSlug: v.string(),
   }),
   v.object({
     type: v.literal(RESOURCE_EVENT_TYPE.copied),
@@ -208,7 +205,6 @@ const sidebarItemSnapshotValidator = v.object({
   id: resourceIdValidator,
   createdAt: v.number(),
   name: v.string(),
-  slug: v.string(),
   parentId: v.nullable(resourceIdValidator),
   workspaceId: campaignIdValidator,
   type: sidebarItemTypeValidator,
@@ -233,7 +229,6 @@ const storedSidebarItemSnapshotValidator = v.object({
 
 const sidebarItemPatchCommonFields = {
   name: v.optional(v.string()),
-  slug: v.optional(v.string()),
   iconName: v.optional(v.nullable(v.string())),
   color: v.optional(v.nullable(v.string())),
   parentId: v.optional(v.nullable(resourceIdValidator)),

@@ -32,18 +32,15 @@ describe('SidebarItemBreadcrumb', () => {
     const grandparent = createFolder({
       id: testResourceId('folder_grandparent'),
       name: 'World',
-      slug: 'world',
     })
     const parent = createFolder({
       id: testResourceId('folder_parent'),
       name: 'Places',
-      slug: 'places',
       parentId: grandparent.id,
     })
     const child = createNote({
       id: testResourceId('optimistic-create-1'),
       name: 'Tavern',
-      slug: 'tavern-optimistic-1',
       parentId: parent.id,
     })
 
@@ -65,7 +62,6 @@ describe('SidebarItemBreadcrumb', () => {
     const item = createNote({
       id: testResourceId('note_root'),
       name: 'Root Note',
-      slug: 'root-note',
       parentId: null,
     })
 
@@ -78,12 +74,10 @@ describe('SidebarItemBreadcrumb', () => {
     const parent = createFolder({
       id: testResourceId('folder_parent'),
       name: 'Places',
-      slug: 'places',
     })
     const child = createNote({
       id: testResourceId('note_child'),
       name: 'Tavern',
-      slug: 'tavern',
       parentId: parent.id,
     })
 

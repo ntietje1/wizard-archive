@@ -2,7 +2,7 @@ import { testResourceId } from '../../../../../../shared/test/resource-id'
 import { fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../../workspace/items'
 import { createFile } from '../../../test/sidebar-item-factory'
 import { DOMAIN_ID_KIND, generateDomainId } from '../../../resources/domain-id'
 import { FileDialog } from '../dialog'
@@ -66,16 +66,13 @@ function createFileFormSource(): FileFormSource {
     createItem: vi.fn(() => ({
       status: 'completed' as const,
       id: testResourceId('created_file'),
-      slug: assertResourceItemSlug('created-file'),
     })),
     openItem: vi.fn(),
     replaceFile: vi.fn(({ fileId }) => ({
       status: 'completed' as const,
       receipt: { kind: 'fileReplaced' as const, itemId: fileId, affectedCount: 1 },
     })),
-    updateItemMetadata: vi.fn(() => ({
-      slug: assertResourceItemSlug('updated-handout'),
-    })),
+    updateItemMetadata: vi.fn(() => undefined),
   }
 }
 

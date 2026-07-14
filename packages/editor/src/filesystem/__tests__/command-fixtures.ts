@@ -97,14 +97,12 @@ export const fileSystemCommandFixtures = {
 
 export const fileSystemCommandReceiptEvents = {
   [RESOURCE_COMMAND_TYPE.create]: [
-    { type: RESOURCE_EVENT_TYPE.created, itemId: commandFixtureItemIds.item, slug: 'created' },
+    { type: RESOURCE_EVENT_TYPE.created, itemId: commandFixtureItemIds.item },
   ],
   [RESOURCE_COMMAND_TYPE.rename]: [
     {
       type: RESOURCE_EVENT_TYPE.renamed,
       itemId: commandFixtureItemIds.item,
-      slug: 'renamed',
-      previousSlug: 'previous',
     },
   ],
   [RESOURCE_COMMAND_TYPE.move]: [

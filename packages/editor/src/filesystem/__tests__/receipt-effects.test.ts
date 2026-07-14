@@ -22,7 +22,6 @@ describe('filesystem receipt effects', () => {
     const item = createNote({
       id: 'item_1' as ResourceId,
       name: 'Scene',
-      slug: 'scene',
       status: RESOURCE_STATUS.active,
     })
     const receipt = createCreatedItemReceipt(item)
@@ -45,13 +44,11 @@ describe('filesystem receipt effects', () => {
     const copiedItem = createNote({
       id: 'copied_item' as ResourceId,
       name: 'Scene Copy',
-      slug: 'scene-copy',
       status: RESOURCE_STATUS.active,
     })
     const replacedItem = createNote({
       id: 'replaced_item' as ResourceId,
       name: 'Scene',
-      slug: 'scene',
       status: RESOURCE_STATUS.active,
     })
     const sourceItemId = 'source_item' as ResourceId
@@ -86,37 +83,9 @@ describe('filesystem receipt effects', () => {
     const item = createNote({
       id: 'renamed_item' as ResourceId,
       name: 'Renamed Scene',
-      slug: 'renamed-scene',
       status: RESOURCE_STATUS.active,
     })
-    const createRenameReceipt = (previousSlug: string) =>
-      createFileSystemReceipt({
-        command: {
-          type: RESOURCE_COMMAND_TYPE.rename,
-          itemId: item.id,
-          color: null,
-        },
-        events: [
-          {
-            type: RESOURCE_EVENT_TYPE.renamed,
-            itemId: item.id,
-            slug: item.slug,
-            previousSlug,
-          },
-        ],
-      })
-    const readModel = createReadModel({ sidebar: [item], trash: [] })
-
-    expect(
-      planFileSystemReceiptEffects({
-        receipt: createRenameReceipt('previous-scene'),
-        readModel,
-        currentResourceId: item.id,
-        selectedItemIds: [],
-      }),
-    ).toEqual([{ type: 'openResource', itemId: item.id, replace: true }])
-
-    const malformedReceipt = createFileSystemReceipt({
+    const renameReceipt = createFileSystemReceipt({
       command: {
         type: RESOURCE_COMMAND_TYPE.rename,
         itemId: item.id,
@@ -126,15 +95,23 @@ describe('filesystem receipt effects', () => {
         {
           type: RESOURCE_EVENT_TYPE.renamed,
           itemId: item.id,
-          slug: item.slug,
-          previousSlug: 'bad route slug',
         },
       ],
     })
+    const readModel = createReadModel({ sidebar: [item], trash: [] })
 
     expect(
       planFileSystemReceiptEffects({
-        receipt: malformedReceipt,
+        receipt: renameReceipt,
+        readModel,
+        currentResourceId: item.id,
+        selectedItemIds: [],
+      }),
+    ).toEqual([{ type: 'openResource', itemId: item.id, replace: true }])
+
+    expect(
+      planFileSystemReceiptEffects({
+        receipt: renameReceipt,
         readModel,
         currentResourceId: 'other_item' as ResourceId,
         selectedItemIds: [],
@@ -146,7 +123,6 @@ describe('filesystem receipt effects', () => {
     const item = createNote({
       id: 'removed_item' as ResourceId,
       name: 'Removed Scene',
-      slug: 'removed-scene',
       status: RESOURCE_STATUS.active,
     })
 

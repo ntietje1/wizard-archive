@@ -9,18 +9,12 @@ import type { FileItem } from '@wizard-archive/editor/files/item-contract'
 import type { MapItem } from '@wizard-archive/editor/game-maps/item-contract'
 import type { NoteItem } from '@wizard-archive/editor/notes/item-contract'
 import type { AnyItem, FolderItem } from '@wizard-archive/editor/resources/items'
-import { slugify } from '../../shared/slugs'
 import type { Id } from '../_generated/dataModel'
 import { testCampaignId } from '../../shared/test/campaign-id'
 import { testResourceId } from '../../shared/test/resource-id'
 
 function assertNeverSidebarItemType(type: never): never {
   throw new Error(`Unhandled sidebar item type: ${String(type)}`)
-}
-
-function testSidebarSlug(name: string): AnyItem['slug'] {
-  const slug = slugify(name)
-  return (slug.length >= 3 ? slug : `${slug || 'item'}-item`) as AnyItem['slug']
 }
 
 export function createSidebarItem(
@@ -33,7 +27,6 @@ export function createSidebarItem(
     id: testResourceId(id),
     createdAt: 1,
     name: name as AnyItem['name'],
-    slug: testSidebarSlug(name),
     campaignId: testCampaignId('campaign'),
     iconName: null,
     color: null,

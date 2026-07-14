@@ -87,7 +87,6 @@ describe('useLocalWorkspaceRuntime', () => {
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
       itemId: SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
-      slug: 'board',
       title: 'Board',
     })
 
@@ -96,7 +95,7 @@ describe('useLocalWorkspaceRuntime', () => {
       parentTarget: { kind: TEST_PARENT_TARGET_KIND.direct, parentId: null },
       name: 'Local note',
     })
-    expect(created).toMatchObject({ status: 'completed', slug: 'local-note-2' })
+    expect(created).toMatchObject({ status: 'completed' })
     if (created.status !== 'completed') throw new Error('Expected local note creation')
     expect(isUuidV7(created.id)).toBe(true)
     expect(dispatch).toHaveBeenCalledWith({

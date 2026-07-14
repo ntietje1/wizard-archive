@@ -25,8 +25,6 @@ function createUndoRenameReceipt(): ResourceTransactionReceipt {
       {
         type: 'renamed',
         itemId,
-        slug: 'new-name',
-        previousSlug: 'old-name',
       },
     ],
     patches: [

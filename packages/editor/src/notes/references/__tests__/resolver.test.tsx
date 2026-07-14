@@ -1,6 +1,6 @@
 import type { ResourceId } from '../../../resources/domain-id'
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
-import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../../../workspace/items'
+import { canonicalizeResourceItemTitle } from '../../../workspace/items'
 import type { AnyItem } from '../../../workspace/items'
 import { createResourceCatalogModel } from '../../../filesystem/catalog'
 import { createLinkResolver } from '../resolver'
@@ -72,19 +72,16 @@ describe('createLinkResolver', () => {
         id: 'folder-1' as ResourceId,
         name: canonicalizeResourceItemTitle('Lore'),
         parentId: null,
-        slug: assertResourceItemSlug('lore'),
       },
       {
         id: 'note-1' as ResourceId,
         name: canonicalizeResourceItemTitle('Current Note'),
         parentId: 'folder-1' as ResourceId,
-        slug: assertResourceItemSlug('current-note'),
       },
       {
         id: 'note-2' as ResourceId,
         name: canonicalizeResourceItemTitle('Sibling Note'),
         parentId: 'folder-1' as ResourceId,
-        slug: assertResourceItemSlug('sibling-note'),
       },
     ])
 
@@ -105,7 +102,6 @@ describe('createLinkResolver', () => {
       status: 'resolved',
       rejectionReason: null,
       itemId: 'note-2',
-      itemSlug: 'sibling-note',
       href: null,
       isExternal: false,
     })
@@ -117,13 +113,11 @@ describe('createLinkResolver', () => {
         id: 'note-1' as ResourceId,
         name: canonicalizeResourceItemTitle('Current Note'),
         parentId: null,
-        slug: assertResourceItemSlug('current-note'),
       },
       {
         id: 'note-2' as ResourceId,
         name: canonicalizeResourceItemTitle('Sibling Note'),
         parentId: null,
-        slug: assertResourceItemSlug('sibling-note'),
       },
     ])
 
@@ -144,7 +138,6 @@ describe('createLinkResolver', () => {
       status: 'resolved',
       rejectionReason: null,
       itemId: 'note-2',
-      itemSlug: 'sibling-note',
       href: null,
     })
   })
@@ -155,7 +148,6 @@ describe('createLinkResolver', () => {
         id: 'note-1' as ResourceId,
         name: canonicalizeResourceItemTitle('Current Note'),
         parentId: null,
-        slug: assertResourceItemSlug('current-note'),
       },
     ])
 
@@ -176,7 +168,6 @@ describe('createLinkResolver', () => {
       status: 'resolved',
       rejectionReason: null,
       itemId: 'note-1',
-      itemSlug: 'current-note',
       href: null,
     })
   })

@@ -34,7 +34,6 @@ import type {
   ResourcePatchRow,
 } from '@wizard-archive/editor/resources/patch-contract'
 import { assertConvexResourceTitle } from '../validation/name'
-import { assertConvexSidebarItemSlug } from '../validation/slug'
 import { logEditHistory } from '../../editHistory/log'
 import { assertSidebarOperationAllowed, operationActorFromRole } from './capabilities'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -110,7 +109,6 @@ type SidebarItemSharePatchRow = Extract<ResourcePatch, { type: 'upsertResourceSh
 
 const UNDOABLE_UPDATE_FIELD_KEYS = [
   'name',
-  'slug',
   'iconName',
   'color',
   'parentId',
@@ -384,7 +382,6 @@ async function insertedItemUndoPrecondition(
   return {
     type: after.type,
     name: assertConvexResourceTitle(after.name),
-    slug: assertConvexSidebarItemSlug(after.slug),
     iconName: after.iconName === null ? null : assertResourceIconName(after.iconName),
     color: after.color === null ? null : assertResourceColor(after.color),
     parentId:
@@ -604,7 +601,7 @@ function changeSetIsUndoable(changes: Array<StoredFileSystemChange>) {
 export type FileSystemWriteSession = {
   insertResource: (
     args: InsertFilesystemSidebarItemArgs,
-  ) => Promise<{ itemId: Id<'sidebarItems'>; resourceId: ResourcePatchRow['id']; slug: string }>
+  ) => Promise<{ itemId: Id<'sidebarItems'>; resourceId: ResourcePatchRow['id'] }>
   updateResource: (itemId: Id<'sidebarItems'>, fields: StoredSidebarItemFieldPatch) => Promise<void>
   trashSidebarTree: (item: StoredResourcePatchRow) => Promise<void>
   restoreSidebarTree: (

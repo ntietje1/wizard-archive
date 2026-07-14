@@ -1,4 +1,3 @@
-import { deduplicateSlug, slugify } from '../../../shared/slugs'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
@@ -10,13 +9,9 @@ import {
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { getSidebarItem } from '../functions/getSidebarItem'
-import {
-  validateNoCircularResourceParentAsync,
-  RESOURCE_SLUG_MAX_LENGTH,
-  assertResourceSlug,
-} from '@wizard-archive/editor/resources/resource-contract'
+import { validateNoCircularResourceParentAsync } from '@wizard-archive/editor/resources/resource-contract'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
-import type { AnyResource, ResourceSlug } from '@wizard-archive/editor/resources/resource-contract'
+import type { AnyResource } from '@wizard-archive/editor/resources/resource-contract'
 import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { isActiveSidebarItem } from '../types/status'
 import { evaluateMoveToParent } from '@wizard-archive/editor/resources/operation-capabilities'
@@ -140,99 +135,4 @@ export async function validateSidebarMove(
   },
 ): Promise<void> {
   await validateSidebarParentChange(ctx, { item, newParentId })
-}
-
-async function checkSlugConflict(
-  ctx: CampaignQueryCtx,
-  {
-    campaignId,
-    slug,
-    excludeId,
-  }: {
-    campaignId: Id<'campaigns'>
-    slug: string
-    excludeId?: Id<'sidebarItems'>
-  },
-): Promise<boolean> {
-  const conflict = await ctx.db
-    .query('sidebarItems')
-    .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-    .first()
-  if (!excludeId) {
-    return conflict !== null
-  }
-  return conflict !== null && conflict._id !== excludeId
-}
-
-export async function findUniqueSidebarItemSlug(
-  ctx: CampaignQueryCtx,
-  {
-    itemId,
-    name,
-  }: {
-    itemId?: Id<'sidebarItems'>
-    name: string
-  },
-): Promise<ResourceSlug> {
-  const baseSlug = slugify(name, {
-    fallback: 'item',
-    maxLength: RESOURCE_SLUG_MAX_LENGTH,
-  })
-  const conflicts = new Set<string>()
-
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const candidateSlug = deduplicateSlug(baseSlug, conflicts, {
-      label: 'Slug',
-      maxLength: RESOURCE_SLUG_MAX_LENGTH,
-    })
-    const conflict = await checkSlugConflict(ctx, {
-      campaignId: ctx.campaign._id,
-      slug: candidateSlug,
-      excludeId: itemId,
-    })
-    if (!conflict) {
-      return assertResourceSlug(candidateSlug)
-    }
-    conflicts.add(candidateSlug)
-  }
-
-  throwClientError(ERROR_CODE.VALIDATION_FAILED, `Failed to find unique slug for "${name}"`)
-}
-
-export async function prepareSidebarItemCreate(
-  ctx: CampaignQueryCtx,
-  {
-    parentId,
-    name,
-  }: {
-    parentId: Id<'sidebarItems'> | null
-    name: ResourceTitle
-  },
-): Promise<{ name: ResourceTitle; slug: ResourceSlug }> {
-  await validateSidebarCreateParent(ctx, { parentId })
-  const slug = await findUniqueSidebarItemSlug(ctx, { name })
-
-  return { name, slug }
-}
-
-export async function prepareSidebarItemRename(
-  ctx: CampaignQueryCtx,
-  {
-    item,
-    newName,
-  }: {
-    item: NamedOperationResourceItem<Id<'sidebarItems'>>
-    newName: ResourceTitle
-  },
-): Promise<{ name: ResourceTitle; slug: ResourceSlug } | null> {
-  if (newName === item.name) {
-    return null
-  }
-
-  const slug = await findUniqueSidebarItemSlug(ctx, {
-    itemId: item.id,
-    name: newName,
-  })
-
-  return { name: newName, slug }
 }

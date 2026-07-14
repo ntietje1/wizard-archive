@@ -56,7 +56,6 @@ export function toSidebarItemReplacement<T extends SidebarItemLifecycleFields>(i
     resourceUuid: document.resourceUuid,
     name: document.name,
     normalizedName: normalizeLegacyResourcePathSegment(document.name),
-    slug: document.slug,
     campaignId: document.campaignId,
     iconName: document.iconName,
     color: document.color,

@@ -118,7 +118,6 @@ describe('SidebarItem', () => {
     const item = createNote({
       id: 'optimistic-create-1' as ResourceId,
       name: 'New Scene',
-      slug: 'new-scene',
     })
 
     renderSidebarItem({ item, visibleItemIds: [item.id] })
@@ -135,12 +134,10 @@ describe('SidebarItem', () => {
     const first = createNote({
       id: 'optimistic-create-1' as ResourceId,
       name: 'First Scene',
-      slug: 'first-scene',
     })
     const second = createNote({
       id: 'optimistic-create-2' as ResourceId,
       name: 'Second Scene',
-      slug: 'second-scene',
     })
 
     render(
@@ -167,7 +164,6 @@ describe('SidebarItem', () => {
     const item = createNote({
       id: testResourceId('note_1'),
       name: 'Existing Scene',
-      slug: 'existing-scene',
     })
 
     renderSidebarItem({ item, visibleItemIds: [item.id] })
@@ -183,7 +179,6 @@ describe('SidebarItem', () => {
     const item = createNote({
       id: testResourceId('note_1'),
       name: 'Session Notes',
-      slug: 'session-notes',
     })
     const editItem = vi.fn().mockRejectedValue(new Error('rename failed'))
 
@@ -208,13 +203,11 @@ describe('SidebarItem', () => {
     const folder = createFolder({
       id: testResourceId('folder_1'),
       name: 'Quests',
-      slug: 'quests',
     })
     const child = createNote({
       id: testResourceId('note_1'),
       name: 'Forest Ambush',
       parentId: folder.id,
-      slug: 'forest-ambush',
     })
 
     renderSidebarItem({
@@ -231,7 +224,6 @@ describe('SidebarItem', () => {
     const folder = createFolder({
       id: testResourceId('folder_1'),
       name: 'Quests',
-      slug: 'quests',
     })
 
     renderSidebarItem({

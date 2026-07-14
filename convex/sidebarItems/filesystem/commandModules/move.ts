@@ -9,7 +9,6 @@ import {
 import type { ResourceStatus } from '@wizard-archive/editor/resources/resource-contract'
 
 import {
-  findUniqueSidebarItemSlug,
   validateSidebarMove,
   validateNoCircularSidebarParentChange,
 } from '../../validation/orchestration'
@@ -189,15 +188,7 @@ async function executeRestore(
     newParentId: restoreParentId,
   })
 
-  const titlePatch = requestedName
-    ? {
-        name: requestedName,
-        slug: await findUniqueSidebarItemSlug(ctx, {
-          itemId: item._id,
-          name: requestedName,
-        }),
-      }
-    : {}
+  const titlePatch = requestedName ? { name: requestedName } : {}
 
   await session.restoreSidebarTree(item, {
     ...clearDeletion,
@@ -241,16 +232,7 @@ async function executeParentMove(
 
   const oldParent = item.parentId ? await getSidebarItemRow(ctx, item.parentId) : null
   const newParent = parentId ? await getSidebarItemRow(ctx, parentId) : null
-  const renamePatch =
-    requestedName && requestedName !== item.name
-      ? {
-          name: requestedName,
-          slug: await findUniqueSidebarItemSlug(ctx, {
-            itemId: item._id,
-            name: requestedName,
-          }),
-        }
-      : {}
+  const renamePatch = requestedName && requestedName !== item.name ? { name: requestedName } : {}
 
   await session.updateResource(item._id, {
     parentId,

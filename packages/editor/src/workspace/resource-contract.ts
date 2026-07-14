@@ -1,9 +1,7 @@
 import { isPromiseLike } from '../../../../shared/common/async'
 import type { MaybePromise } from '../../../../shared/common/async'
 import type { UserProfileId } from '../../../../shared/common/ids'
-import { brandString } from '../../../../shared/branded'
 import type { BrandedString } from '../../../../shared/branded'
-import { parseSlug, validateSlug } from '../../../../shared/slugs'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
 import type { CanvasItem, CanvasItemRow, CanvasItemWithContent } from '../canvas/item-contract'
 import type { FileItem, FileItemRow, FileItemWithContent } from '../files/item-contract'
@@ -29,7 +27,6 @@ export type ResourceKind = (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES]
 export type ResourceStatus = (typeof RESOURCE_STATUS)[keyof typeof RESOURCE_STATUS]
 export type ResourceLocation = 'sidebar'
 export type ResourceIconName = (typeof RESOURCE_ICON_NAMES)[number]
-export type ResourceSlug = BrandedString<'ResourceSlug'>
 export type ResourceColor = BrandedString<'ResourceColor'>
 
 export type ResourceValidationResult = { valid: true } | { valid: false; error: string }
@@ -143,30 +140,6 @@ export function createResourceReadModel<T extends ResourceReadModelResource>(
   }
 }
 
-export const RESOURCE_SLUG_MAX_LENGTH = 255
-
-const RESOURCE_SLUG_OPTIONS = {
-  label: 'Slug',
-  maxLength: RESOURCE_SLUG_MAX_LENGTH,
-} as const
-
-function validateResourceSlug(value: string): string | null {
-  return validateSlug(value, RESOURCE_SLUG_OPTIONS)
-}
-
-export function parseResourceSlug(value: string): ResourceSlug | null {
-  const parsed = parseSlug(value, RESOURCE_SLUG_OPTIONS)
-  return parsed ? brandString<'ResourceSlug'>(parsed) : null
-}
-
-export function assertResourceSlug(value: string): ResourceSlug {
-  const parsed = parseResourceSlug(value)
-  if (!parsed) {
-    throw new Error(validateResourceSlug(value) ?? 'Invalid slug')
-  }
-  return parsed
-}
-
 const RESOURCE_HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
 function validateResourceColor(color: string): string | null {
@@ -196,7 +169,6 @@ type ResourceNormalizedFields = {
   name: ResourceTitle
   iconName: ResourceIconName | null
   color: ResourceColor | null
-  slug: ResourceSlug
 }
 
 export type ResourceShare = {
@@ -214,7 +186,6 @@ type ResourcePersistedStringFields = {
   name: string
   iconName: string | null
   color: string | null
-  slug: string
 }
 
 type ResourceEnhancementFields = {
@@ -241,7 +212,6 @@ export type ResourceRow<T extends ResourceKind = ResourceKind> = {
   name: string
   iconName: string | null
   color: string | null
-  slug: string
   campaignId: CampaignId
   parentId: ResourceId | null
   type: T

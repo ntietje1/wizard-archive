@@ -64,7 +64,6 @@ describe('executeMoveCommand', () => {
       ctx.dm.profile._id,
       {
         name: 'Scene',
-        slug: 'scene-source',
         parentId: sourceFolder,
       },
     )
@@ -74,13 +73,11 @@ describe('executeMoveCommand', () => {
       ctx.dm.profile._id,
       {
         name: 'Scene 2',
-        slug: 'scene-2-source',
         parentId: sourceFolder,
       },
     )
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scene',
-      slug: 'scene-destination',
       parentId: destinationFolder,
     })
 

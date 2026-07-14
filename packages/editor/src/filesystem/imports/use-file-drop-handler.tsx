@@ -1,6 +1,5 @@
 import type { ResourceId } from '../../resources/domain-id'
 import { toast } from 'sonner'
-import type { ResourceSlug } from '../../workspace/resource-contract'
 
 import type { MaybePromise } from '../../../../../shared/common/async'
 import type {
@@ -33,7 +32,6 @@ interface UploadSingleFileOptions {
 
 interface UploadSingleFileResult {
   id: ResourceId
-  slug: ResourceSlug
 }
 
 type FileDropFileSystem = {

@@ -56,7 +56,6 @@ describe('useLiveCurrentItem', () => {
     const optimisticItem = createNote({
       id: testResourceId('optimistic-create-1'),
       name: 'Scene Draft',
-      slug: 'scene-draft',
     })
     routeSearch = { item: optimisticItem.id }
     activeItems = [optimisticItem]
@@ -83,7 +82,6 @@ describe('useLiveCurrentItem', () => {
     const serverItem = createNote({
       id: testResourceId('note-1'),
       name: 'Resolved Scene',
-      slug: 'resolved-scene',
     })
     routeSearch = { item: serverItem.id }
     queryData = { status: 'available', item: serverItem as WizardEditorItemWithContent }
@@ -93,7 +91,6 @@ describe('useLiveCurrentItem', () => {
     expect(result.current.item).toMatchObject({
       id: serverItem.id,
       name: 'Resolved Scene',
-      slug: 'resolved-scene',
     })
     expect(result.current.contentItem).toBe(result.current.item)
     expect(authQueryCalls[0]?.[1]).toEqual({
@@ -132,12 +129,10 @@ describe('useLiveCurrentItem', () => {
     const optimisticItem = createNote({
       id: testResourceId('optimistic-create-1'),
       name: 'Scene Draft',
-      slug: 'resolved-scene',
     })
     const serverItem = createNote({
       id: testResourceId('note-1'),
       name: 'Resolved Scene',
-      slug: optimisticItem.slug,
     })
     routeSearch = { item: serverItem.id }
     activeItems = [optimisticItem]
@@ -148,7 +143,6 @@ describe('useLiveCurrentItem', () => {
     expect(result.current.item).toMatchObject({
       id: serverItem.id,
       name: 'Resolved Scene',
-      slug: 'resolved-scene',
     })
     expect(result.current.item?.id).not.toBe(optimisticItem.id)
     expect(result.current.contentItem).toBe(result.current.item)
@@ -168,7 +162,6 @@ describe('useLiveCurrentItem', () => {
     const staleItem = createNote({
       id: testResourceId('note-stale'),
       name: 'Stale Scene',
-      slug: 'stale-scene',
     })
     routeSearch = { item: testResourceId('requested-scene') }
     queryData = { status: 'available', item: staleItem as WizardEditorItemWithContent }

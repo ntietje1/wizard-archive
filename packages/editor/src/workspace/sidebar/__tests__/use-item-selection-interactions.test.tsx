@@ -24,7 +24,7 @@ function clickEvent(
 describe('useItemSelectionInteractions', () => {
   it('selects a plain-clicked item before open navigation finishes', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const item = createNote({ slug: 'target-note' })
+    const item = createNote({})
     const onOpen = vi.fn(() => {
       expect(sidebar.current.selectionCommands.getSelectionSnapshot().selectedItemIds).toEqual([
         item.id,
@@ -55,8 +55,8 @@ describe('useItemSelectionInteractions', () => {
 
   it('extends selection for range selection clicks', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const first = createNote({ slug: 'first-note' })
-    const second = createNote({ slug: 'second-note' })
+    const first = createNote({})
+    const second = createNote({})
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(first.id)
     })
@@ -84,8 +84,8 @@ describe('useItemSelectionInteractions', () => {
 
   it('toggles selection for ctrl-clicks', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const first = createNote({ slug: 'first-note' })
-    const second = createNote({ slug: 'second-note' })
+    const first = createNote({})
+    const second = createNote({})
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(first.id)
     })
@@ -113,8 +113,8 @@ describe('useItemSelectionInteractions', () => {
 
   it('does not toggle selection for macOS ctrl-clicks', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const first = createNote({ slug: 'first-note' })
-    const second = createNote({ slug: 'second-note' })
+    const first = createNote({})
+    const second = createNote({})
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(first.id)
     })
@@ -142,8 +142,8 @@ describe('useItemSelectionInteractions', () => {
 
   it('toggles selection for meta-clicks', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const first = createNote({ slug: 'first-note' })
-    const second = createNote({ slug: 'second-note' })
+    const first = createNote({})
+    const second = createNote({})
     act(() => {
       sidebar.current.selectionCommands.selectSingleItem(first.id)
     })
@@ -171,8 +171,8 @@ describe('useItemSelectionInteractions', () => {
 
   it('keeps sidebar row activation owned by the sidebar root surface', () => {
     const sidebar = createSidebarWorkspaceStateHarness()
-    const parent = createNote({ slug: 'parent-note' })
-    const child = createNote({ slug: 'child-note', parentId: parent.id })
+    const parent = createNote({})
+    const child = createNote({ parentId: parent.id })
     const { result } = renderHook(
       () =>
         useItemSelectionInteractions(child, {
@@ -206,8 +206,8 @@ describe('useItemSelectionInteractions', () => {
     'removes a $label item from multi-selection while preserving the remaining item',
     ({ modifiers }) => {
       const sidebar = createSidebarWorkspaceStateHarness()
-      const first = createNote({ slug: 'first-note' })
-      const second = createNote({ slug: 'second-note' })
+      const first = createNote({})
+      const second = createNote({})
       act(() => {
         sidebar.current.selectionCommands.selectSingleItem(first.id)
         sidebar.current.selectionCommands.toggleItemSelection(second.id)

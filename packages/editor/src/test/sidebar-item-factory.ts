@@ -1,4 +1,4 @@
-import { canonicalizeResourceItemTitle, assertResourceItemSlug } from '../workspace/items'
+import { canonicalizeResourceItemTitle } from '../workspace/items'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -15,12 +15,8 @@ import { testCampaignId } from '../../../../shared/test/campaign-id'
 
 let itemCounter = 0
 
-type SidebarItemOverrides<T extends { slug: unknown; name: unknown }> = Omit<
-  Partial<T>,
-  'slug' | 'name'
-> & {
+type SidebarItemOverrides<T extends { name: unknown }> = Omit<Partial<T>, 'name'> & {
   name?: string
-  slug?: string
 }
 
 function baseFields() {
@@ -30,7 +26,6 @@ function baseFields() {
     name: canonicalizeResourceItemTitle(`Test Item ${itemCounter}`),
     iconName: null,
     color: null,
-    slug: assertResourceItemSlug(`test-item-${itemCounter}`),
     campaignId: testCampaignId(`campaign_${itemCounter}`),
     parentId: null,
     allPermissionLevel: null,
@@ -71,14 +66,13 @@ function createSidebarItem<T extends AnyItem>(
   overrides?: SidebarItemOverrides<T>,
 ): T {
   const base = baseFields()
-  const { slug, name, ...rest } = overrides ?? {}
+  const { name, ...rest } = overrides ?? {}
   return withLifecycleFacts({
     ...base,
     id: `${idPrefix}_${itemCounter}` as T['id'],
     type,
     ...staticFields,
     ...(name !== undefined ? { name: canonicalizeResourceItemTitle(name) } : {}),
-    ...(slug !== undefined ? { slug: assertResourceItemSlug(slug) } : {}),
     ...rest,
   } as unknown as T)
 }

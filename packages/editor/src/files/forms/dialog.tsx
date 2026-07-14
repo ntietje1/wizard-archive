@@ -12,7 +12,7 @@ interface FileDialogProps {
   onClose: () => void
   fileId?: ResourceId
   parentId?: ResourceId | null
-  onSuccess?: (fileSlug?: string) => void
+  onSuccess?: () => void
   source: FileFormSource
   upload: FileUploadControl
 }

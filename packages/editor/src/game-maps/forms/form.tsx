@@ -30,7 +30,7 @@ interface MapFormProps {
   mapState: MapFormEditState
   mapId: ResourceId
   onClose: () => void
-  onSuccess?: (mapSlug?: string) => void
+  onSuccess?: () => void
   source: MapFormSource
   upload: FileUploadControl
 }
@@ -73,7 +73,7 @@ export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }:
   async function updateExistingMap() {
     if (!map) throw new Error('Map data failed to load')
 
-    const { slug } = await updateItemMetadata({
+    await updateItemMetadata({
       item: map,
       name: values.name,
       iconName: values.iconName,
@@ -93,7 +93,7 @@ export function MapForm({ mapId, mapState, onClose, onSuccess, source, upload }:
     }
 
     toast.success('Map updated')
-    onSuccess?.(slug)
+    onSuccess?.()
   }
 
   async function saveMapForm() {

@@ -43,9 +43,7 @@ export function createCreatedItemReceipt(item: AnyItem): ResourceTransactionRece
     name: item.name,
     parentTarget: { kind: 'direct', parentId: item.parentId },
   } satisfies ResourceCommand
-  const events = [
-    { type: 'created', itemId: item.id, slug: item.slug },
-  ] satisfies Array<ResourceEvent>
+  const events = [{ type: 'created', itemId: item.id }] satisfies Array<ResourceEvent>
 
   return createFileSystemReceipt({
     command,

@@ -18,7 +18,6 @@ type CreateFileSystemCommand = Extract<ResourceCommand, { type: 'create' }>
 type CreatedItem = {
   itemId: Id<'sidebarItems'>
   resourceId: ResourceId
-  slug: string
 }
 
 async function createSidebarItem(
@@ -35,7 +34,7 @@ async function createSidebarItem(
   const color = requireOptionalSidebarItemColor(command.color)
   const parentId = await resolveCreateCommandParentId(ctx, session, { parentTarget })
 
-  const { itemId, resourceId, slug } = await session.insertResource({
+  const { itemId, resourceId } = await session.insertResource({
     resourceId: command.resourceId,
     type: command.itemType,
     name,
@@ -45,7 +44,7 @@ async function createSidebarItem(
   })
 
   await initializeEmptySidebarItemCompanion(ctx, { itemId, itemType: command.itemType })
-  return { itemId, resourceId, slug }
+  return { itemId, resourceId }
 }
 
 export async function executeCreateCommand(
@@ -58,9 +57,7 @@ export async function executeCreateCommand(
 ): Promise<StoredResourceDelta> {
   const session = createFileSystemWriteSession(ctx)
   const created = await createSidebarItem(ctx, session, command)
-  const events = [
-    { type: RESOURCE_EVENT_TYPE.created, itemId: created.resourceId, slug: created.slug },
-  ]
+  const events = [{ type: RESOURCE_EVENT_TYPE.created, itemId: created.resourceId }]
   return await session.build({
     command,
     events,

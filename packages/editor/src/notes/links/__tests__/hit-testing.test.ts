@@ -31,7 +31,6 @@ describe('getLinkAt', () => {
     linkEl.setAttribute('data-link-path-kind', 'global')
     linkEl.setAttribute('data-link-item-name', 'Capital')
     linkEl.setAttribute('data-link-item-id', 'capital-id')
-    linkEl.setAttribute('data-link-slug', 'capital')
     linkEl.setAttribute('data-link-href', '/campaigns/dm/world/editor?item=capital')
     document.body.appendChild(linkEl)
 
@@ -45,7 +44,6 @@ describe('getLinkAt', () => {
         itemPath: [],
         itemName: 'Capital',
         itemId: 'capital-id',
-        itemSlug: 'capital',
       }),
     )
   })
@@ -88,7 +86,6 @@ describe('getLinkAt', () => {
     linkEl.setAttribute('data-link-path', 'Journals/Journal')
     linkEl.setAttribute('data-link-item-name', 'Journal')
     linkEl.setAttribute('data-link-item-id', 'journal-id')
-    linkEl.setAttribute('data-link-slug', 'journal')
     linkEl.setAttribute('data-link-heading', 'Day 1')
     linkEl.appendChild(child)
     document.body.appendChild(linkEl)
@@ -102,7 +99,6 @@ describe('getLinkAt', () => {
         exists: true,
         itemPath: ['Journals', 'Journal'],
         itemId: 'journal-id',
-        itemSlug: 'journal',
         heading: 'Day 1',
       }),
     )
@@ -143,7 +139,6 @@ describe('getLinkAt', () => {
       linkEl.setAttribute('data-link-path', './Journal')
       linkEl.setAttribute('data-link-item-name', 'Journal')
       linkEl.setAttribute('data-link-item-id', 'journal-id')
-      linkEl.setAttribute('data-link-slug', 'journal')
     }
     bracketEl.setAttribute('data-link-role', 'bracket-open')
     targetEl.setAttribute('data-link-role', 'target')
@@ -158,7 +153,6 @@ describe('getLinkAt', () => {
         type: 'md-internal',
         pathKind: 'relative',
         itemPath: ['.', 'Journal'],
-        itemSlug: 'journal',
       }),
     )
 
@@ -169,7 +163,6 @@ describe('getLinkAt', () => {
         type: 'md-internal',
         pathKind: 'relative',
         itemPath: ['.', 'Journal'],
-        itemSlug: 'journal',
       }),
     )
   })

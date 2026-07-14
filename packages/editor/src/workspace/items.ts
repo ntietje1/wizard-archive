@@ -1,10 +1,8 @@
 import {
   assertResourceColor,
   assertResourceIconName,
-  assertResourceSlug,
   createResourceReadModel,
   isActiveResource,
-  parseResourceSlug,
   validateNoCircularResourceParentAsync,
 } from './resource-contract'
 import type {
@@ -17,7 +15,6 @@ import type {
   ResourceRow,
   ResourceRowByKind,
   ResourceReadModel,
-  ResourceSlug,
   ResourceWithContentByKind,
   WithContentResource,
   ResourceStatus,
@@ -112,16 +109,6 @@ export function validateResourceTitle(name: string): ValidationResult {
 
 export function canonicalizeResourceItemTitle(name: string): ResourceTitle {
   return canonicalizeResourceTitle(name)
-}
-
-export const RESOURCE_SLUG_MAX_LENGTH = 255
-
-export function parseResourceItemSlug(value: string): ResourceSlug | null {
-  return parseResourceSlug(value)
-}
-
-export function assertResourceItemSlug(value: string): ResourceSlug {
-  return assertResourceSlug(value)
 }
 
 export function assertResourceItemColor(color: string): ResourceColor {

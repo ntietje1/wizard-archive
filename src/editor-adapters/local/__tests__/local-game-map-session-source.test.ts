@@ -1,10 +1,7 @@
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import {
-  createWizardEditorResourceCatalogSource,
-  parseWizardEditorResourceSlug,
-} from '@wizard-archive/editor/adapter'
+import { createWizardEditorResourceCatalogSource } from '@wizard-archive/editor/adapter'
 import type {
   WizardEditorFileSessionReplaceInput,
   WizardEditorItem,
@@ -340,7 +337,6 @@ function createBaseItem(id: ResourceId, name: string) {
     previewAssetId: null,
     previewUrl: null,
     shares: [],
-    slug: parseWizardEditorResourceSlug(id)!,
     status: TEST_RESOURCE_STATUS.active,
     updatedBy: null,
     updatedTime: null,

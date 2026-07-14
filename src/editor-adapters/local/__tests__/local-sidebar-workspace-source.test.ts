@@ -51,7 +51,6 @@ describe('local demo workspace runtime', () => {
     expect(dispatch).toHaveBeenCalledWith({
       type: 'updateItemMetadata',
       itemId: String(item.id),
-      slug: 'renamed-note',
       title: 'Renamed note',
     })
   })
@@ -174,7 +173,7 @@ describe('local demo workspace runtime', () => {
       }),
     )
 
-    expect(created).toMatchObject({ status: 'completed', slug: 'local-note-2' })
+    expect(created).toMatchObject({ status: 'completed' })
     if (created.status !== 'completed') throw new Error('Expected local note creation')
     expect(isUuidV7(created.id)).toBe(true)
 

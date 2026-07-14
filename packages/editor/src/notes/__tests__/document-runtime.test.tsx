@@ -80,12 +80,10 @@ describe('NoteDocumentRuntime', () => {
     const currentNote = createNote({
       id: testResourceId('note-current'),
       name: 'Current Note',
-      slug: 'current-note',
     })
     const sourceNote = createNote({
       id: testResourceId('note-source'),
       name: 'Source Note',
-      slug: 'source-note',
     })
     const currentValue = createRuntimeState({
       noteId: currentNote.id,
@@ -182,7 +180,6 @@ describe('NoteDocumentRuntime', () => {
             createNote({
               id: noteId,
               name: noteName,
-              slug: noteName.toLowerCase().replace(/\s+/g, '-'),
             }),
           ],
         },

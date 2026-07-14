@@ -3,10 +3,8 @@ import type { ResourceId, OperationId } from '../resources/domain-id'
 import { isPromiseLike } from '../../../../shared/common/async'
 import type { MaybePromise } from '../../../../shared/common/async'
 
-import { assertResourceItemSlug } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { AnyItem, FolderItem } from '../workspace/items'
-import type { ResourceSlug } from '../workspace/resource-contract'
 
 import { normalizeSelectedRoots } from './domain/selection-roots'
 import type {
@@ -36,7 +34,6 @@ type CreateFileSystemHostItemInput = Omit<ResourceCreateCommand, 'type' | 'resou
 
 export type CreatedFileSystemHostItem = {
   id: ResourceId
-  slug: ResourceSlug
 }
 
 export type CreateFileSystemHostItemInitializer = (
@@ -45,9 +42,7 @@ export type CreateFileSystemHostItemInitializer = (
 
 export type RenameFileSystemHostItemInput = Omit<ResourceRenameCommand, 'type'>
 
-export type RenamedFileSystemHostItem = {
-  slug: ResourceSlug | null
-}
+export type RenamedFileSystemHostItem = void
 
 function getCompletedReceipt(result: ResourceCommandResult): ResourceTransactionReceipt {
   if (result.status === 'completed') return result.receipt
@@ -56,26 +51,17 @@ function getCompletedReceipt(result: ResourceCommandResult): ResourceTransaction
 
 function getCreatedItemResult(receipt: ResourceTransactionReceipt): {
   id: ResourceId
-  slug: ResourceSlug
   transactionId: OperationId
 } {
   if (!receipt.transactionId) throw new Error('Create item receipt did not include transaction id')
   const created = receipt.events.find(
     (event): event is Extract<ResourceEvent, { type: 'created' }> => event.type === 'created',
   )
-  if (!created?.slug) throw new Error('Create item receipt did not include created item')
+  if (!created) throw new Error('Create item receipt did not include created item')
   return {
     id: created.itemId,
-    slug: assertResourceItemSlug(created.slug),
     transactionId: receipt.transactionId,
   }
-}
-
-function getReceiptRenamedSlug(receipt: ResourceTransactionReceipt): ResourceSlug | null {
-  const renamed = receipt.events.find(
-    (event): event is Extract<ResourceEvent, { type: 'renamed' }> => event.type === 'renamed',
-  )
-  return renamed ? assertResourceItemSlug(renamed.slug) : null
 }
 
 type FileSystemItemCommandOperations = {
@@ -177,12 +163,12 @@ function completeCreatedItem(
   const complete = (): MaybePromise<CreatedFileSystemHostItem> => {
     const finalized = driver.finalizeCreatedItem?.(created.transactionId)
     if (isPromiseLike(finalized)) {
-      return finalized.then(() => ({ id: created.id, slug: created.slug }))
+      return finalized.then(() => ({ id: created.id }))
     }
-    return { id: created.id, slug: created.slug }
+    return { id: created.id }
   }
   try {
-    const initialized = initialize?.({ id: created.id, slug: created.slug })
+    const initialized = initialize?.({ id: created.id })
     const completeWithRollback = (): MaybePromise<CreatedFileSystemHostItem> => {
       try {
         const completed = complete()
@@ -204,8 +190,7 @@ function completeCreatedItem(
 }
 
 function completeRenamedItem(result: ResourceCommandResult): RenamedFileSystemHostItem {
-  const receipt = getCompletedReceipt(result)
-  return { slug: getReceiptRenamedSlug(receipt) }
+  getCompletedReceipt(result)
 }
 
 export function createResourceCommandDrivers(

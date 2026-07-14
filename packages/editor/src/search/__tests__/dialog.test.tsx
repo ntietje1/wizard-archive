@@ -159,7 +159,6 @@ describe('SearchDialog', () => {
     searchDataState.createSidebarItem.mockResolvedValue({
       status: 'completed',
       id: 'note_1',
-      slug: 'new-note',
     })
 
     renderSearchDialog()
@@ -192,7 +191,6 @@ describe('SearchDialog', () => {
     const note = createNote({
       id: 'note_1' as ResourceId,
       name: 'Dragon notes',
-      slug: 'dragon-notes',
     })
     searchDataState.items = [note]
     searchDataState.openItem.mockReturnValue(new Promise(() => {}))
@@ -212,7 +210,6 @@ describe('SearchDialog', () => {
     const note = createNote({
       id: 'note_1' as ResourceId,
       name: 'Dragon notes',
-      slug: 'dragon-notes',
     })
     searchDataState.items = [note]
     searchDataState.openItem
@@ -272,7 +269,6 @@ describe('SearchDialog', () => {
       createNote({
         id: 'note_1' as ResourceId,
         name: 'Dragon notes',
-        slug: 'dragon-notes',
       }),
     ]
     searchDataState.bodyQuery.error = new Error('body failed')
@@ -288,14 +284,12 @@ describe('SearchDialog', () => {
     const firstNote = createNote({
       id: 'note_1' as ResourceId,
       name: 'Dragon Alpha',
-      slug: 'dragon-alpha',
     })
     searchDataState.items = [
       firstNote,
       createNote({
         id: 'note_2' as ResourceId,
         name: 'Dragon Beta',
-        slug: 'dragon-beta',
       }),
     ]
     const { rerender } = renderSearchDialog()
@@ -321,7 +315,6 @@ describe('SearchDialog', () => {
     const note = createNote({
       id: 'note_1' as ResourceId,
       name: 'Dragon notes',
-      slug: 'dragon-notes',
     })
     searchDataState.items = [note]
 
@@ -339,7 +332,6 @@ describe('SearchDialog', () => {
     const note = createNote({
       id: 'note_1' as ResourceId,
       name: 'Dragon notes',
-      slug: 'dragon-notes',
     })
     searchDataState.items = [note]
 
@@ -354,7 +346,6 @@ describe('SearchDialog', () => {
     const note = createNote({
       id: 'note_1' as ResourceId,
       name: 'Dragon notes',
-      slug: 'dragon-notes',
     })
     searchDataState.items = [note]
     searchDataState.previewQuery.error = new Error('preview failed')
@@ -375,7 +366,6 @@ describe('SearchDialog', () => {
     const note = createNote({
       id: 'note_1' as ResourceId,
       name: 'Dragon notes',
-      slug: 'dragon-notes',
     })
     searchDataState.items = [note]
     searchDataState.openItem.mockRejectedValue(new Error('open failed'))
@@ -393,7 +383,6 @@ describe('SearchDialog', () => {
     const note = createNote({
       id: 'note_1' as ResourceId,
       name: 'Dragon notes',
-      slug: 'dragon-notes',
     })
     const selectedResult = buildItemSearchResults({
       bodyResults: undefined,
@@ -442,7 +431,6 @@ describe('SearchDialog', () => {
     const folder = createFolder({
       id: 'folder_1' as ResourceId,
       name: 'Dragon Folder',
-      slug: 'dragon-folder',
     })
     const child = createNote({
       id: 'note_1' as ResourceId,

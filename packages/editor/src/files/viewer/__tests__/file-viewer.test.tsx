@@ -701,13 +701,12 @@ function createFileWithSize(name: string, type: string, size: number) {
   return file
 }
 
-type FileFixtureOverrides = Partial<Omit<FileItemWithContent, 'name' | 'slug'>> & {
+type FileFixtureOverrides = Partial<Omit<FileItemWithContent, 'name'>> & {
   name?: string
-  slug?: string
 }
 
 function createFileFixture(overrides: FileFixtureOverrides = {}): FileItemWithContent {
-  const { name = 'Handout', slug = 'handout', ...rest } = overrides
+  const { name = 'Handout', ...rest } = overrides
   return {
     createdAt: 0,
     id: 'file-1' as FileItemWithContent['id'],
@@ -731,7 +730,6 @@ function createFileFixture(overrides: FileFixtureOverrides = {}): FileItemWithCo
     previewAssetId: null,
     previewUrl: null,
     shares: [],
-    slug: slug as FileItemWithContent['slug'],
     status: RESOURCE_STATUS.active,
     assetId: null,
     type: RESOURCE_TYPES.files,

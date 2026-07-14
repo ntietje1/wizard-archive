@@ -130,8 +130,6 @@ describe('filesystem receipt selectors', () => {
             {
               type: 'renamed',
               itemId,
-              slug: 'new-scene',
-              previousSlug: 'old-scene',
             },
           ],
         }),

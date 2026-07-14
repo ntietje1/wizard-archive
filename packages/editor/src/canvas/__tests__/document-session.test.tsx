@@ -8,7 +8,6 @@ import {
   RESOURCE_STATUS,
   RESOURCE_TYPES,
 } from '../../workspace/items-persistence-contract'
-import type { ResourceSlug } from '../../workspace/resource-contract'
 import type { ResourceTitle } from '../../resources/resource-contract'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../document-contract'
 import type { CanvasItemWithContent } from '../item-contract'
@@ -148,7 +147,6 @@ function createCanvas(overrides: Partial<CanvasItemWithContent> = {}): CanvasIte
     parentId: 'folder-1' as ResourceId,
     iconName: null,
     color: null,
-    slug: 'canvas' as ResourceSlug,
     allPermissionLevel: null,
     location: RESOURCE_LOCATION.sidebar,
     status: RESOURCE_STATUS.active,

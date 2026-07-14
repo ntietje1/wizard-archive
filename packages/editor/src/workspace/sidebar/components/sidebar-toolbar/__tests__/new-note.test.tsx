@@ -47,7 +47,7 @@ describe('NewNoteButton', () => {
 
   it('creates a note through filesystem operations', async () => {
     const user = userEvent.setup()
-    createSidebarItemMock.mockResolvedValue({ status: 'completed', id: 'note_1', slug: 'new-note' })
+    createSidebarItemMock.mockResolvedValue({ status: 'completed', id: 'note_1' })
 
     render(<NewNoteButton source={createSource()} />)
 
@@ -66,7 +66,7 @@ describe('NewNoteButton', () => {
     const user = userEvent.setup()
     createSidebarItemMock
       .mockRejectedValueOnce(new Error('create failed'))
-      .mockResolvedValueOnce({ status: 'completed', id: 'note_1', slug: 'new-note' })
+      .mockResolvedValueOnce({ status: 'completed', id: 'note_1' })
 
     render(<NewNoteButton source={createSource()} />)
 

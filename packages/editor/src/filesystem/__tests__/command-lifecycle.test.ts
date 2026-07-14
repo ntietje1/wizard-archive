@@ -24,7 +24,6 @@ describe('filesystem command lifecycle', () => {
     const created = createNote({
       id: 'created_item' as ResourceId,
       name: 'Scene',
-      slug: 'scene',
       parentId: parent.id,
       status: RESOURCE_STATUS.active,
     })
@@ -98,7 +97,6 @@ describe('filesystem command lifecycle', () => {
     const created = createNote({
       id: 'created_item' as ResourceId,
       name: 'Scene',
-      slug: 'scene',
       parentId: parent.id,
       status: RESOURCE_STATUS.active,
     })

@@ -229,10 +229,7 @@ function createWorkspaceItemWithScope({
               ownerScope: scope,
               reportCreateItemError,
             })
-          return initialize(
-            { status: 'completed', id: createdItem.id, slug: createdItem.slug },
-            createNestedItem,
-          )
+          return initialize({ status: 'completed', id: createdItem.id }, createNestedItem)
         })
       : filesystem.createItem(request.commandInput)
 
@@ -350,7 +347,7 @@ function createCreatedItemRecorder({
       parentKey,
       type,
     })
-    recordedResult = { status: 'completed', id: createdItem.id, slug: createdItem.slug }
+    recordedResult = { status: 'completed', id: createdItem.id }
     return recordedResult
   }
 }
@@ -420,12 +417,11 @@ function createWorkspaceUpdateItemMetadataOperation({
   return async ({ color, iconName, item, name }) => {
     const metadataUpdate = normalizeRuntimeMetadataUpdate({ color, iconName, name })
     if (!metadataUpdate || !hasRuntimeMetadataChange(item, metadataUpdate)) {
-      return { slug: item.slug }
+      return
     }
 
-    let update: Awaited<ReturnType<ResourceOperationDriver['renameItem']>>
     try {
-      update = await filesystem.renameItem({
+      await filesystem.renameItem({
         itemId: item.id,
         name: metadataUpdate.name,
         iconName: metadataUpdate.iconName,
@@ -434,8 +430,6 @@ function createWorkspaceUpdateItemMetadataOperation({
     } catch (error) {
       throw new Error('Failed to update item metadata', { cause: error })
     }
-    const slug = update.slug ?? item.slug
-    return { slug }
   }
 }
 

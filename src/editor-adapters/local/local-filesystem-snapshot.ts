@@ -2,7 +2,6 @@ import {
   createWizardEditorCatalogSnapshot,
   createWizardEditorPlainTextNoteContent,
   filterWizardEditorItemsForActor,
-  parseWizardEditorResourceSlug,
 } from '@wizard-archive/editor/adapter'
 import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/resources/items'
 import type {
@@ -49,7 +48,6 @@ export type LocalFileSystemSnapshot = Omit<WizardEditorCatalogSnapshot, 'current
 
 type LocalWorkspaceItem = LocalWorkspaceState['items'][number]
 type LocalItemName = WizardEditorItemWithContent['name']
-type LocalItemSlug = WizardEditorItemWithContent['slug']
 type LocalSidebarItemShareType = WizardEditorItemWithContent['shares'][number]['sidebarItemType']
 const localResourceShareIds = new Map<string, ResourceShareId>()
 type LocalSidebarItemBaseFields = Pick<
@@ -59,7 +57,6 @@ type LocalSidebarItemBaseFields = Pick<
   | 'name'
   | 'iconName'
   | 'color'
-  | 'slug'
   | 'campaignId'
   | 'parentId'
   | 'allPermissionLevel'
@@ -321,7 +318,6 @@ function localSidebarItemBaseFields(
     name: requireLocalResourceTitle(item.title || 'Untitled'),
     iconName: item.iconName ?? null,
     color: item.color ?? null,
-    slug: item.slug ?? requireLocalResourceSlug(item.id),
     campaignId: state.workspaceId,
     parentId: localVisibleParentId(state, item, localItemsById),
     allPermissionLevel: state.selectedViewAsPlayerId ? null : PERMISSION_LEVEL.FULL_ACCESS,
@@ -426,12 +422,6 @@ function localItemAncestors(
 
 function requireLocalResourceTitle(value: string): LocalItemName {
   return value as LocalItemName
-}
-
-function requireLocalResourceSlug(value: string): LocalItemSlug {
-  const slug = parseWizardEditorResourceSlug(value)
-  if (!slug) throw new Error(`Invalid local resource slug: ${value}`)
-  return slug as LocalItemSlug
 }
 
 function localVisibleParentId(

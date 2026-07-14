@@ -16,7 +16,6 @@ export type ResolvedLink<TItemId = string> = ParsedLinkData & {
   status: 'resolved' | 'unresolved' | 'rejected'
   rejectionReason: 'dangerous_url' | null
   itemId: TItemId | null
-  itemSlug: string | null
   href: string | null
   color: string | null
 }

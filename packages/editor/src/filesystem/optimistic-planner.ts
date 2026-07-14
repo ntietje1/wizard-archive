@@ -20,11 +20,7 @@ import type { AnyItem, WorkspaceResourceReadModel } from '../workspace/items'
 import { planCreateParentTarget } from '../workspace/items/create-parent-target'
 import { isTrashedSidebarItem } from '../workspace/items/status'
 import type { UserProfileId } from '../../../../shared/common/ids'
-import {
-  buildOptimisticCreatePreview,
-  buildOptimisticRenamePreview,
-  expectedOptimisticCreateSlug,
-} from './optimistic-patches'
+import { buildOptimisticCreatePreview, buildOptimisticRenamePreview } from './optimistic-patches'
 import { resourcePatchRowFromCacheItem } from './cache-patches'
 import type { SidebarCacheSnapshot } from './cache-patches'
 
@@ -203,7 +199,6 @@ function planCreate(args: CommandPlannerArgs<ResourceCreateCommand>): FileSystem
   const parentId = getCreatePreviewParentId(parentPlan)
   if (parentId === undefined) return ready()
   const name = canonicalizeResourceItemTitle(args.command.name)
-  const slug = expectedOptimisticCreateSlug(name, getReservedSlugs(args))
   return {
     status: 'ready',
     preview: buildOptimisticCreatePreview({
@@ -212,23 +207,8 @@ function planCreate(args: CommandPlannerArgs<ResourceCreateCommand>): FileSystem
       currentUserId: args.currentUserId,
       workspaceId: args.workspaceId,
       name,
-      slug,
     }),
   }
-}
-
-function getReservedSlugs(args: CommandPlannerArgs<ResourceCreateCommand>) {
-  const slugs = new Set<string>()
-  for (const item of args.readModel.itemsById.values()) {
-    slugs.add(item.slug)
-  }
-  for (const item of args.snapshot.sidebar) {
-    slugs.add(item.slug)
-  }
-  for (const item of args.snapshot.trash) {
-    slugs.add(item.slug)
-  }
-  return slugs
 }
 
 function getCreatePreviewParentId(

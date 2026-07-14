@@ -3,12 +3,7 @@ import type { MaybePromise } from '../../../../shared/common/async'
 
 import type { ResourceImportFile } from '../files/import-contract'
 import type { AnyItem, CreateParentTarget, ValidationResult } from '../workspace/items'
-import type {
-  ResourceColor,
-  ResourceSlug,
-  ResourceIconName,
-  ResourceKind,
-} from '../workspace/resource-contract'
+import type { ResourceColor, ResourceIconName, ResourceKind } from '../workspace/resource-contract'
 
 import type { FileSystemIntentCommand } from './domain/intent-planning'
 import type { ResourceTrashRequestResult } from './operation-runtime-contract'
@@ -31,7 +26,6 @@ interface FileSystemCreateItemValidationInput {
 export interface FileSystemCreateItemCompletedResult {
   status: 'completed'
   id: ResourceId
-  slug: ResourceSlug
 }
 
 type FileSystemCreateItemUnavailableResult = {
@@ -67,13 +61,9 @@ interface FileSystemUpdateItemMetadataInput {
   color?: ResourceColor | null
 }
 
-interface FileSystemUpdateItemMetadataResult {
-  slug: ResourceSlug
-}
-
 export type FileSystemUpdateItemMetadata = (
   input: FileSystemUpdateItemMetadataInput,
-) => MaybePromise<FileSystemUpdateItemMetadataResult>
+) => MaybePromise<void>
 
 export interface FileSystemPasteTargetInput {
   clickedItem?: AnyItem

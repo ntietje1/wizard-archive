@@ -217,14 +217,9 @@ export const RESOURCE_EVENT_TYPE = {
 } as const
 
 export type ResourceEvent =
-  | { type: typeof RESOURCE_EVENT_TYPE.created; itemId: ResourceId; slug: string }
+  | { type: typeof RESOURCE_EVENT_TYPE.created; itemId: ResourceId }
   | { type: typeof RESOURCE_EVENT_TYPE.updated; itemId: ResourceId }
-  | {
-      type: typeof RESOURCE_EVENT_TYPE.renamed
-      itemId: ResourceId
-      slug: string
-      previousSlug: string
-    }
+  | { type: typeof RESOURCE_EVENT_TYPE.renamed; itemId: ResourceId }
   | {
       type: typeof RESOURCE_EVENT_TYPE.copied
       itemId: ResourceId

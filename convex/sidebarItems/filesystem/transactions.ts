@@ -252,7 +252,6 @@ function sidebarItemPatchOperation(patch: Extract<ResourcePatch, { type: 'update
   }
   if (
     patch.fields.name !== undefined ||
-    patch.fields.slug !== undefined ||
     patch.fields.iconName !== undefined ||
     patch.fields.color !== undefined
   ) {

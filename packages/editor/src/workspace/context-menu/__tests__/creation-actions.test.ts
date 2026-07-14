@@ -22,7 +22,6 @@ describe('createCreationActions', () => {
     const createItem = vi.fn(() => ({
       status: 'completed' as const,
       id: created.id,
-      slug: created.slug,
     }))
     const openItem = vi.fn()
     const setRenamingItemId = vi.fn()
