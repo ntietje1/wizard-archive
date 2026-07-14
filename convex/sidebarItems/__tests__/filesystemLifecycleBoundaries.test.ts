@@ -1,5 +1,5 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
-import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
@@ -14,7 +14,7 @@ describe('filesystem command lifecycle boundaries', () => {
     campaignId: Id<'campaigns'>,
     command: ResourceCommand,
   ) =>
-    dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    executeTestFileSystemCommand(dmAuth, {
       campaignId,
       command,
     })
@@ -188,7 +188,7 @@ describe('filesystem command lifecycle boundaries', () => {
 
     for (const action of ['skip', 'replace', 'keepBoth'] as const) {
       await expect(
-        dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        executeTestFileSystemCommand(dmAuth, {
           campaignId: ctx.campaignId,
           command: { type: 'copy', itemIds: [noteId], targetParentId: folderId },
           decisions: [{ sourceItemId: noteId, action }],
@@ -196,7 +196,7 @@ describe('filesystem command lifecycle boundaries', () => {
       ).rejects.toThrow('Conflict decision does not match an item with a conflict')
 
       await expect(
-        dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        executeTestFileSystemCommand(dmAuth, {
           campaignId: ctx.campaignId,
           command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
           decisions: [{ sourceItemId: noteId, action }],

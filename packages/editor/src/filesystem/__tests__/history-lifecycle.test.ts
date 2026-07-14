@@ -6,17 +6,14 @@ import { createNote } from '../../test/sidebar-item-factory'
 import type { SidebarCacheSnapshot } from '../cache-patches'
 import { executeFileSystemHistoryLifecycle } from '../history-lifecycle'
 import { createReadWriteTestCache } from './cache-test-utils'
-import type {
-  CampaignId,
-  FileSystemTransactionId,
-  SidebarItemId,
-} from '../../../../../shared/common/ids'
+import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
 import { createFileSystemReceipt } from './receipt-factory'
+import { testOperationId } from '../../test/operation-id'
 
 function createUndoRenameReceipt(): ResourceTransactionReceipt {
   const itemId = 'renamed_item' as SidebarItemId
   return createFileSystemReceipt({
-    transactionId: 'transaction_1' as FileSystemTransactionId,
+    transactionId: testOperationId('transaction_1'),
     direction: 'undo',
     command: {
       type: 'rename',
@@ -63,7 +60,7 @@ describe('filesystem history lifecycle', () => {
       direction: 'undo',
       entry: {
         workspaceId: 'campaign_1' as CampaignId,
-        transactionId: 'transaction_1' as FileSystemTransactionId,
+        transactionId: testOperationId('transaction_1'),
       },
       cacheAdapter,
       runMutation: (operation) => operation(),
@@ -77,11 +74,11 @@ describe('filesystem history lifecycle', () => {
     })
 
     expect(result).toEqual({ status: 'completed', receipt })
-    expect(executeMutation).toHaveBeenCalledWith('transaction_1')
+    expect(executeMutation).toHaveBeenCalledWith(testOperationId('transaction_1'))
     expect(snapshot.sidebar[0]?.name).toBe('Old Name')
     expect(recordHistorySuccess).toHaveBeenCalledWith({
       workspaceId: 'campaign_1',
-      transactionId: 'transaction_1',
+      transactionId: testOperationId('transaction_1'),
     })
     expect(applyReceiptSideEffects).toHaveBeenCalledWith(receipt)
     expect(showProgress).toHaveBeenCalledWith('Undoing...')
@@ -108,7 +105,7 @@ describe('filesystem history lifecycle', () => {
       direction: 'undo',
       entry: {
         workspaceId: 'campaign_1' as CampaignId,
-        transactionId: 'transaction_1' as FileSystemTransactionId,
+        transactionId: testOperationId('transaction_1'),
       },
       cacheAdapter,
       runMutation: (operation) => operation(),
@@ -127,7 +124,7 @@ describe('filesystem history lifecycle', () => {
     expect(snapshot.sidebar[0]?.name).toBe('Old Name')
     expect(recordHistorySuccess).toHaveBeenCalledWith({
       workspaceId: 'campaign_1',
-      transactionId: 'transaction_1',
+      transactionId: testOperationId('transaction_1'),
     })
     expect(reportError).toHaveBeenCalledWith(toastError, 'Failed to show filesystem receipt')
   })
@@ -147,7 +144,7 @@ describe('filesystem history lifecycle', () => {
       direction: 'undo',
       entry: {
         workspaceId: 'campaign_1' as CampaignId,
-        transactionId: 'transaction_1' as FileSystemTransactionId,
+        transactionId: testOperationId('transaction_1'),
       },
       cacheAdapter,
       runMutation: (operation) => operation(),

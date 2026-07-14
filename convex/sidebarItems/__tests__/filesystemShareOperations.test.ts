@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
@@ -31,7 +32,7 @@ async function executeShareCommand(
     command: ResourceCommand
   },
 ) {
-  return await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+  return await executeTestFileSystemCommand(dmAuth, {
     campaignId: args.campaignId,
     command: args.command,
   })
@@ -173,7 +174,7 @@ describe('filesystem share operations', () => {
     })
 
     await expect(
-      playerAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(playerAuth, {
         campaignId: ctx.campaignId,
         command: {
           type: 'setResourceAudiencePermission',

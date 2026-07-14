@@ -7,11 +7,14 @@ import type {
   useWizardEditorResourceCommandRuntime,
 } from '@wizard-archive/editor/adapter'
 import type { Id } from 'convex/_generated/dataModel'
+import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 import { createContext, use } from 'react'
 import type { ReactNode } from 'react'
 import { useLiveFileSystemRuntime } from '../host'
 import type { LiveFileSystemReadModel } from '../read-model'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
+import { testOperationId } from '../../../../../shared/test/operation-id'
+import type { OperationId } from '@wizard-archive/editor/resources/domain-id'
 
 let sidebarItems: Array<WizardEditorItem> = []
 let trashItems: Array<WizardEditorItem> = []
@@ -32,6 +35,8 @@ const currentResourceIdState = vi.hoisted(() => ({
 const currentWorkspaceIdState = vi.hoisted(() => ({
   value: 'campaign_1' as Id<'campaigns'>,
 }))
+const TRANSACTION_1 = testOperationId('transaction_1')
+const TRANSACTION_2 = testOperationId('transaction_2')
 type LiveFileSystemRuntime = ReturnType<typeof useLiveFileSystemRuntime>
 type FileSystemOperationHost = LiveFileSystemRuntime['filesystem']['operations']
 type FileSystemClipboardOperations = LiveFileSystemRuntime['filesystem']['clipboardOperations']
@@ -167,9 +172,7 @@ vi.mock('sonner', () => ({
   },
 }))
 
-function createReceipt(
-  transactionId: Id<'filesystemTransactions'> = 'transaction_1' as Id<'filesystemTransactions'>,
-): ResourceTransactionReceipt {
+function createReceipt(transactionId: OperationId = TRANSACTION_1): ResourceTransactionReceipt {
   const item = createNote({
     id: 'item_1' as Id<'sidebarItems'>,
     name: 'Scene',
@@ -207,7 +210,7 @@ function createReceipt(
 
 function createDeleteForeverReceipt(item: WizardEditorItem): ResourceTransactionReceipt {
   return {
-    transactionId: 'transaction_delete_forever' as Id<'filesystemTransactions'>,
+    transactionId: testOperationId('transaction_delete_forever'),
     direction: 'forward',
     command: { type: 'deleteForever', itemIds: [item.id] },
     events: [{ type: 'deletedForever', itemId: item.id }],
@@ -224,12 +227,12 @@ function createDeleteForeverReceipt(item: WizardEditorItem): ResourceTransaction
 }
 
 function createRenameReceipt({
-  transactionId = 'transaction_rename' as Id<'filesystemTransactions'>,
+  transactionId = testOperationId('transaction_rename'),
   direction = 'forward',
   before = 'Old Name',
   after = 'New Name',
 }: {
-  transactionId?: Id<'filesystemTransactions'>
+  transactionId?: OperationId
   direction?: ResourceTransactionReceipt['direction']
   before?: string
   after?: string
@@ -270,7 +273,7 @@ function createRenameReceipt({
 
 function createUndoCreateReceipt(item: WizardEditorItem): ResourceTransactionReceipt {
   return {
-    transactionId: 'transaction_create' as Id<'filesystemTransactions'>,
+    transactionId: testOperationId('transaction_create'),
     direction: 'undo',
     command: {
       type: 'create',
@@ -310,7 +313,7 @@ function createUndoCopiedFolderReceipt({
   child: WizardEditorItem
 }): ResourceTransactionReceipt {
   return {
-    transactionId: 'transaction_copy_folder' as Id<'filesystemTransactions'>,
+    transactionId: testOperationId('transaction_copy_folder'),
     direction: 'undo',
     command: {
       type: 'copy',
@@ -561,10 +564,9 @@ describe('useLiveFileSystemRuntime', () => {
     navigateToItemMock.mockReset()
     currentResourceIdState.value = null
     executeMutateAsync.mockResolvedValue(createReceipt())
-    vi.stubGlobal('crypto', { randomUUID: () => 'operation-1' })
   })
 
-  it('sends a client operation id for forward commands', async () => {
+  it('sends a UUIDv7 operation id for forward commands', async () => {
     render(
       <TestLiveFileSystemHost>
         <CreateButton />
@@ -574,9 +576,8 @@ describe('useLiveFileSystemRuntime', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))
 
     await waitFor(() => expect(executeMutateAsync).toHaveBeenCalled())
-    expect(executeMutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ clientOperationId: 'operation-1' }),
-    )
+    const operationId = executeMutateAsync.mock.calls[0]?.[0].operationId
+    expect(isUuidV7(operationId)).toBe(true)
   })
 
   it('inserts the optimistic item while create is pending', async () => {
@@ -642,12 +643,12 @@ describe('useLiveFileSystemRuntime', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     await waitFor(() =>
-      expect(undoMutateAsync).toHaveBeenCalledWith({ transactionId: 'transaction_1' }),
+      expect(undoMutateAsync).toHaveBeenCalledWith({ transactionId: TRANSACTION_1 }),
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
     await waitFor(() =>
-      expect(redoMutateAsync).toHaveBeenCalledWith({ transactionId: 'transaction_1' }),
+      expect(redoMutateAsync).toHaveBeenCalledWith({ transactionId: TRANSACTION_1 }),
     )
   })
 
@@ -729,9 +730,7 @@ describe('useLiveFileSystemRuntime', () => {
       status: TEST_RESOURCE_STATUS.active,
     })
     currentResourceIdState.value = item.id
-    executeMutateAsync.mockResolvedValueOnce(
-      createReceipt('transaction_create' as Id<'filesystemTransactions'>),
-    )
+    executeMutateAsync.mockResolvedValueOnce(createReceipt(testOperationId('transaction_create')))
     undoMutateAsync.mockResolvedValueOnce(createUndoCreateReceipt(item))
     render(
       <TestLiveFileSystemHost>
@@ -765,7 +764,7 @@ describe('useLiveFileSystemRuntime', () => {
     sidebarItems = [folder, child]
     undoMutateAsync.mockResolvedValueOnce(createUndoCopiedFolderReceipt({ folder, child }))
     executeMutateAsync.mockResolvedValueOnce(
-      createReceipt('transaction_copy_folder' as Id<'filesystemTransactions'>),
+      createReceipt(testOperationId('transaction_copy_folder')),
     )
     currentResourceIdState.value = child.id
 
@@ -878,24 +877,24 @@ describe('useLiveFileSystemRuntime', () => {
 
   it('keeps original transaction ids through multiple undo and redo operations', async () => {
     executeMutateAsync
-      .mockResolvedValueOnce(createReceipt('transaction_1' as Id<'filesystemTransactions'>))
-      .mockResolvedValueOnce(createReceipt('transaction_2' as Id<'filesystemTransactions'>))
+      .mockResolvedValueOnce(createReceipt(TRANSACTION_1))
+      .mockResolvedValueOnce(createReceipt(TRANSACTION_2))
     undoMutateAsync
       .mockResolvedValueOnce({
-        ...createReceipt('transaction_2' as Id<'filesystemTransactions'>),
+        ...createReceipt(TRANSACTION_2),
         direction: 'undo',
       })
       .mockResolvedValueOnce({
-        ...createReceipt('transaction_1' as Id<'filesystemTransactions'>),
+        ...createReceipt(TRANSACTION_1),
         direction: 'undo',
       })
     redoMutateAsync
       .mockResolvedValueOnce({
-        ...createReceipt('transaction_1' as Id<'filesystemTransactions'>),
+        ...createReceipt(TRANSACTION_1),
         direction: 'redo',
       })
       .mockResolvedValueOnce({
-        ...createReceipt('transaction_2' as Id<'filesystemTransactions'>),
+        ...createReceipt(TRANSACTION_2),
         direction: 'redo',
       })
     render(
@@ -911,20 +910,20 @@ describe('useLiveFileSystemRuntime', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     await waitFor(() =>
-      expect(undoMutateAsync).toHaveBeenNthCalledWith(1, { transactionId: 'transaction_2' }),
+      expect(undoMutateAsync).toHaveBeenNthCalledWith(1, { transactionId: TRANSACTION_2 }),
     )
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     await waitFor(() =>
-      expect(undoMutateAsync).toHaveBeenNthCalledWith(2, { transactionId: 'transaction_1' }),
+      expect(undoMutateAsync).toHaveBeenNthCalledWith(2, { transactionId: TRANSACTION_1 }),
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
     await waitFor(() =>
-      expect(redoMutateAsync).toHaveBeenNthCalledWith(1, { transactionId: 'transaction_1' }),
+      expect(redoMutateAsync).toHaveBeenNthCalledWith(1, { transactionId: TRANSACTION_1 }),
     )
     fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
     await waitFor(() =>
-      expect(redoMutateAsync).toHaveBeenNthCalledWith(2, { transactionId: 'transaction_2' }),
+      expect(redoMutateAsync).toHaveBeenNthCalledWith(2, { transactionId: TRANSACTION_2 }),
     )
   })
 
@@ -950,7 +949,7 @@ describe('useLiveFileSystemRuntime', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
 
     await waitFor(() =>
-      expect(redoMutateAsync).toHaveBeenCalledWith({ transactionId: 'transaction_1' }),
+      expect(redoMutateAsync).toHaveBeenCalledWith({ transactionId: TRANSACTION_1 }),
     )
   })
 
@@ -1070,11 +1069,7 @@ describe('useLiveFileSystemRuntime', () => {
     expect(clearWorkspaceContentMock).toHaveBeenCalled()
   })
 
-  it('generates a fresh client operation id for each forward command', async () => {
-    let operationIndex = 0
-    vi.stubGlobal('crypto', {
-      randomUUID: () => `operation-${++operationIndex}`,
-    })
+  it('generates a fresh operation id for each forward command', async () => {
     render(
       <TestLiveFileSystemHost>
         <CreateButton />
@@ -1085,14 +1080,11 @@ describe('useLiveFileSystemRuntime', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))
 
     await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(2))
-    expect(executeMutateAsync).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ clientOperationId: 'operation-1' }),
-    )
-    expect(executeMutateAsync).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ clientOperationId: 'operation-2' }),
-    )
+    const firstOperationId = executeMutateAsync.mock.calls[0]?.[0].operationId
+    const secondOperationId = executeMutateAsync.mock.calls[1]?.[0].operationId
+    expect(isUuidV7(firstOperationId)).toBe(true)
+    expect(isUuidV7(secondOperationId)).toBe(true)
+    expect(firstOperationId).not.toBe(secondOperationId)
   })
 
   it('routes bookmark toggles through the filesystem command executor', async () => {

@@ -10,6 +10,7 @@ import type {
   ShareActionResult,
 } from '@wizard-archive/editor/sharing'
 import type { ReactNode } from 'react'
+import { testOperationId } from '../../../../../shared/test/operation-id'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())
 const convexActionMock = vi.hoisted(() => vi.fn())
@@ -54,7 +55,7 @@ describe('useLiveBlocksShare', () => {
     useCampaignQueryMock.mockReset()
     convexActionMock.mockReset()
     convexActionMock.mockResolvedValue({
-      transactionId: 'transaction-1',
+      transactionId: testOperationId('transaction-1'),
       direction: 'forward',
       command: { type: 'setBlocksShareStatus' },
       events: [],
@@ -475,7 +476,7 @@ function createDeferredPromise() {
   }>((resolvePromise) => {
     resolve = () =>
       resolvePromise({
-        transactionId: 'transaction-1',
+        transactionId: testOperationId('transaction-1'),
         direction: 'forward',
         command: { type: 'setBlocksShareStatus' },
         events: [],

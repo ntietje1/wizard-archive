@@ -1,8 +1,10 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNote } from '../../_test/factories.helper'
+import { testOperationId } from '../../../shared/test/operation-id'
 
 describe('filesystem transaction pruning', () => {
   const t = createTestContext()
@@ -14,29 +16,29 @@ describe('filesystem transaction pruning', () => {
       name: 'Scene',
     })
 
-    const firstReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        clientOperationId: 'retention-0',
-        command: { type: 'rename', itemId: noteId, name: 'Scene 0' },
-      },
-    )
+    const firstReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: noteId, name: 'Scene 0' },
+    })
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignId,
       transactionId: firstReceipt.transactionId!,
     })
 
     for (let index = 1; index <= 50; index += 1) {
-      await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      await executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
-        clientOperationId: `retention-${index}`,
         command: { type: 'rename', itemId: noteId, name: `Scene ${index}` },
       })
     }
 
     const [prunedForward, retainedTransactions] = await t.run(async (dbCtx) => {
-      const forward = await dbCtx.db.get('filesystemTransactions', firstReceipt.transactionId!)
+      const forward = await dbCtx.db
+        .query('filesystemTransactions')
+        .withIndex('by_operationUuid', (query) =>
+          query.eq('operationUuid', firstReceipt.transactionId!),
+        )
+        .unique()
       const transactions = await dbCtx.db
         .query('filesystemTransactions')
         .withIndex('by_campaign_actor', (q) =>
@@ -56,14 +58,10 @@ describe('filesystem transaction pruning', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scene',
     })
-    const copyReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        clientOperationId: 'copy-pruned-hidden-row',
-        command: { type: 'copy', itemIds: [noteId], targetParentId: null },
-      },
-    )
+    const copyReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'copy', itemIds: [noteId], targetParentId: null },
+    })
     const copiedEvent = copyReceipt.events.find((event) => event.type === 'copied')
     expect(copiedEvent).toBeDefined()
 
@@ -77,15 +75,20 @@ describe('filesystem transaction pruning', () => {
     })
 
     for (let index = 0; index < 50; index += 1) {
-      await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      await executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
-        clientOperationId: `prune-hidden-${index}`,
         command: { type: 'rename', itemId: noteId, name: `Scene ${index}` },
       })
     }
 
     await t.run(async (dbCtx) => {
-      expect(await dbCtx.db.get('filesystemTransactions', copyReceipt.transactionId!)).toBeNull()
+      const transaction = await dbCtx.db
+        .query('filesystemTransactions')
+        .withIndex('by_operationUuid', (query) =>
+          query.eq('operationUuid', copyReceipt.transactionId!),
+        )
+        .unique()
+      expect(transaction).toBeNull()
       expect(await dbCtx.db.get('sidebarItems', copiedEvent!.itemId)).toBeNull()
     })
   })
@@ -97,25 +100,25 @@ describe('filesystem transaction pruning', () => {
       name: 'Scene',
     })
 
-    const undoableReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        clientOperationId: 'undoable-retained',
-        command: { type: 'rename', itemId: noteId, name: 'Scene Retained' },
-      },
-    )
+    const undoableReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: noteId, name: 'Scene Retained' },
+    })
 
     for (let index = 0; index < 50; index += 1) {
-      await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      await executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
-        clientOperationId: `non-undoable-${index}`,
         command: { type: 'emptyTrash' },
       })
     }
 
     const [retainedUndoable, undoableTransactions] = await t.run(async (dbCtx) => {
-      const retained = await dbCtx.db.get('filesystemTransactions', undoableReceipt.transactionId!)
+      const retained = await dbCtx.db
+        .query('filesystemTransactions')
+        .withIndex('by_operationUuid', (query) =>
+          query.eq('operationUuid', undoableReceipt.transactionId!),
+        )
+        .unique()
       const transactions = await dbCtx.db
         .query('filesystemTransactions')
         .withIndex('by_campaign_actor_undoable', (q) =>
@@ -129,7 +132,7 @@ describe('filesystem transaction pruning', () => {
     })
 
     expect(retainedUndoable).not.toBeNull()
-    expect(undoableTransactions.map((transaction) => transaction._id)).toContain(
+    expect(undoableTransactions.map((transaction) => transaction.operationUuid)).toContain(
       undoableReceipt.transactionId,
     )
   })
@@ -139,9 +142,9 @@ describe('filesystem transaction pruning', () => {
     const dmAuth = asDm(ctx)
 
     for (let index = 0; index < 52; index += 1) {
-      await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      await executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
-        clientOperationId: `non-undoable-prune-${index}`,
+        operationId: testOperationId(`non-undoable-prune-${index}`),
         command: { type: 'emptyTrash' },
       })
     }
@@ -159,8 +162,8 @@ describe('filesystem transaction pruning', () => {
     })
 
     expect(nonUndoableTransactions).toHaveLength(50)
-    expect(
-      nonUndoableTransactions.map((transaction) => transaction.clientOperationId),
-    ).not.toContain('non-undoable-prune-0')
+    expect(nonUndoableTransactions.map((transaction) => transaction.operationUuid)).not.toContain(
+      testOperationId('non-undoable-prune-0'),
+    )
   })
 })

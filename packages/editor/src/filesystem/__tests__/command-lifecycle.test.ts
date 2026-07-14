@@ -7,6 +7,7 @@ import { executeFileSystemCommandLifecycle } from '../command-lifecycle'
 import { createCreatedItemReceipt } from './receipt-factory'
 import { createReadWriteTestCache } from './cache-test-utils'
 import type { CampaignId, SidebarItemId, UserProfileId } from '../../../../../shared/common/ids'
+import { testOperationId } from '../../test/operation-id'
 
 const campaignId = 'campaign_1' as CampaignId
 const currentUserId = 'user_1' as UserProfileId
@@ -47,7 +48,7 @@ describe('filesystem command lifecycle', () => {
       currentUserId,
       activeItemSurface: { parentId: null },
       cacheAdapter,
-      createClientOperationId: () => 'operation-1',
+      createOperationId: () => testOperationId('operation-1'),
       getCurrentResourceId: () => null,
       runMutation: (operation) => operation(),
       executeMutation,
@@ -70,7 +71,7 @@ describe('filesystem command lifecycle', () => {
         parentTarget: { kind: 'direct', parentId: parent.id },
       },
       decisions: undefined,
-      clientOperationId: 'operation-1',
+      operationId: testOperationId('operation-1'),
     })
     expect(applyLifecycleIntents).toHaveBeenCalledWith(
       [{ type: 'openFolder', workspaceId: campaignId, folderId: parent.id }],
@@ -126,7 +127,7 @@ describe('filesystem command lifecycle', () => {
       currentUserId,
       activeItemSurface: { parentId: null },
       cacheAdapter,
-      createClientOperationId: () => 'operation-1',
+      createOperationId: () => testOperationId('operation-1'),
       getCurrentResourceId: () => null,
       runMutation: (operation) => operation(),
       executeMutation,
@@ -164,7 +165,7 @@ describe('filesystem command lifecycle', () => {
       currentUserId,
       activeItemSurface: null,
       cacheAdapter,
-      createClientOperationId: () => 'operation-1',
+      createOperationId: () => testOperationId('operation-1'),
       getCurrentResourceId: () => null,
       runMutation: (operation) => operation(),
       executeMutation,
@@ -221,7 +222,7 @@ describe('filesystem command lifecycle', () => {
       currentUserId: null,
       activeItemSurface: { parentId: null },
       cacheAdapter,
-      createClientOperationId: () => 'operation-1',
+      createOperationId: () => testOperationId('operation-1'),
       getCurrentResourceId: () => null,
       runMutation: (operation) => operation(),
       executeMutation,
@@ -266,7 +267,7 @@ describe('filesystem command lifecycle', () => {
       currentUserId,
       activeItemSurface: { parentId: null },
       cacheAdapter,
-      createClientOperationId: () => 'operation-1',
+      createOperationId: () => testOperationId('operation-1'),
       getCurrentResourceId: () => null,
       runMutation: (operation) => operation(),
       executeMutation,
@@ -319,7 +320,7 @@ describe('filesystem command lifecycle', () => {
       currentUserId: null,
       activeItemSurface: { parentId: null },
       cacheAdapter,
-      createClientOperationId: () => 'operation-1',
+      createOperationId: () => testOperationId('operation-1'),
       getCurrentResourceId: () => null,
       runMutation: async (operation) => {
         snapshot.sidebar.push(existing)
@@ -367,7 +368,7 @@ describe('filesystem command lifecycle', () => {
       currentUserId,
       activeItemSurface: { parentId: null },
       cacheAdapter,
-      createClientOperationId: () => 'operation-1',
+      createOperationId: () => testOperationId('operation-1'),
       getCurrentResourceId: () => 'previous_item' as SidebarItemId,
       runMutation: (operation) => operation(),
       executeMutation,

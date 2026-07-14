@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from './filesystemCommand.helper'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
 import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
@@ -26,7 +27,6 @@ import { assertSidebarItemLifecycleConsistency } from '../sidebarItems/types/sta
 import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from './yjs.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
-import { api } from '../_generated/api'
 import type { DataModel, Id } from '../_generated/dataModel'
 import type schema from '../schema'
 import type { PermissionLevel } from '../../shared/permissions/types'
@@ -71,7 +71,7 @@ export async function executeMoveCommand(
           itemIds: args.sourceItemIds,
           targetParentId: args.targetParentId,
         } as const)
-  return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+  return await executeTestFileSystemCommand(client, {
     campaignId: args.campaignId,
     command,
     decisions: args.decisions,
@@ -87,7 +87,7 @@ export async function executeCopyCommand(
     decisions?: Array<ResourceOperationDecision>
   },
 ): Promise<ResourceTransactionReceipt> {
-  return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+  return await executeTestFileSystemCommand(client, {
     campaignId: args.campaignId,
     command: {
       type: 'copy',
@@ -105,7 +105,7 @@ export async function executeDeleteForeverCommand(
     sourceItemIds: Array<Id<'sidebarItems'>>
   },
 ): Promise<ResourceTransactionReceipt> {
-  return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+  return await executeTestFileSystemCommand(client, {
     campaignId: args.campaignId,
     command: {
       type: 'deleteForever',
@@ -120,7 +120,7 @@ export async function executeEmptyTrashCommand(
     campaignId: Id<'campaigns'>
   },
 ): Promise<ResourceTransactionReceipt> {
-  return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+  return await executeTestFileSystemCommand(client, {
     campaignId: args.campaignId,
     command: { type: 'emptyTrash' },
   })

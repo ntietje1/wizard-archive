@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { getPreviewLease } from '../previewLease'
@@ -17,18 +18,14 @@ describe('filesystem transaction undo and redo', () => {
       name: 'Scene',
     })
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        clientOperationId: 'copy-scene-undo-redo',
-        command: {
-          type: 'copy',
-          itemIds: [noteId],
-          targetParentId: null,
-        },
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: {
+        type: 'copy',
+        itemIds: [noteId],
+        targetParentId: null,
       },
-    )
+    })
     expect(receipt.transactionId).not.toBeNull()
     const { active: afterCopy } = await dmAuth.query(api.sidebarItems.queries.getSidebarItems, {
       campaignId: ctx.campaignId,
@@ -67,18 +64,15 @@ describe('filesystem transaction undo and redo', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: {
-          type: 'create',
-          itemType: 'note',
-          name: 'Draft',
-          parentTarget: { kind: 'direct', parentId: null },
-        },
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: {
+        type: 'create',
+        itemType: 'note',
+        name: 'Draft',
+        parentTarget: { kind: 'direct', parentId: null },
       },
-    )
+    })
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignId,
       transactionId: receipt.transactionId!,
@@ -114,15 +108,12 @@ describe('filesystem transaction undo and redo', () => {
       permissionLevel: 'full_access',
     })
 
-    const receipt = await playerAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'rename', itemId: noteId, name: 'Player Scene Renamed' },
-      },
-    )
+    const receipt = await executeTestFileSystemCommand(playerAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: noteId, name: 'Player Scene Renamed' },
+    })
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: {
         type: 'setResourcesMemberPermission',
@@ -156,20 +147,14 @@ describe('filesystem transaction undo and redo', () => {
       name: 'Second',
     })
 
-    const firstReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'rename', itemId: firstId, name: 'First Renamed' },
-      },
-    )
-    const secondReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'rename', itemId: secondId, name: 'Second Renamed' },
-      },
-    )
+    const firstReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: firstId, name: 'First Renamed' },
+    })
+    const secondReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: secondId, name: 'Second Renamed' },
+    })
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignId,
@@ -210,13 +195,10 @@ describe('filesystem transaction undo and redo', () => {
       name: 'Opening',
     })
 
-    const renameReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'rename', itemId: noteId, name: 'Cold Open' },
-      },
-    )
+    const renameReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: noteId, name: 'Cold Open' },
+    })
     expect(renameReceipt.undoable).toBe(true)
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignId,
@@ -231,13 +213,10 @@ describe('filesystem transaction undo and redo', () => {
     note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
     expect(note?.name).toBe('Cold Open')
 
-    const moveReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
-      },
-    )
+    const moveReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
+    })
     expect(moveReceipt.undoable).toBe(true)
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignId,
@@ -252,13 +231,10 @@ describe('filesystem transaction undo and redo', () => {
     note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
     expect(note?.parentId).toBe(folderId)
 
-    const trashReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'trash', itemIds: [noteId] },
-      },
-    )
+    const trashReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'trash', itemIds: [noteId] },
+    })
     expect(trashReceipt.undoable).toBe(true)
     note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
     expect(note?.status).toBe('trashed')
@@ -272,13 +248,10 @@ describe('filesystem transaction undo and redo', () => {
       campaignId: ctx.campaignId,
       transactionId: trashReceipt.transactionId!,
     })
-    const restoreReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'restore', itemIds: [noteId], targetParentId: folderId },
-      },
-    )
+    const restoreReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'restore', itemIds: [noteId], targetParentId: folderId },
+    })
     expect(restoreReceipt.undoable).toBe(true)
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
       campaignId: ctx.campaignId,
@@ -302,13 +275,10 @@ describe('filesystem transaction undo and redo', () => {
       name: 'Original',
     })
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'rename', itemId: noteId, name: 'Renamed' },
-      },
-    )
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: noteId, name: 'Renamed' },
+    })
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.insert('sidebarItemPreviewLeases', {
@@ -332,22 +302,19 @@ describe('filesystem transaction undo and redo', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const createReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: {
-          type: 'create',
-          itemType: 'note',
-          name: 'Draft',
-          parentTarget: { kind: 'direct', parentId: null },
-        },
+    const createReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: {
+        type: 'create',
+        itemType: 'note',
+        name: 'Draft',
+        parentTarget: { kind: 'direct', parentId: null },
       },
-    )
+    })
     const created = createReceipt.events.find((event) => event.type === 'created')
     expect(created).toBeDefined()
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: { type: 'rename', itemId: created!.itemId, name: 'Draft Revised' },
     })
@@ -371,13 +338,10 @@ describe('filesystem transaction undo and redo', () => {
       creatorProfileId: ctx.dm.profile._id,
     })
 
-    const moveReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'move', itemIds: [sourceId], targetParentId: folderB },
-      },
-    )
+    const moveReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'move', itemIds: [sourceId], targetParentId: folderB },
+    })
     let links = await getNoteLinksForSource(t, ctx.campaignId, sourceId)
     expect(links[0]?.targetItemId).toBeNull()
 
@@ -410,14 +374,11 @@ describe('filesystem transaction undo and redo', () => {
       parentId: folderId,
     })
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'copy', itemIds: [sourceId], targetParentId: folderId },
-        decisions: [{ sourceItemId: sourceId, action: 'replace' }],
-      },
-    )
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'copy', itemIds: [sourceId], targetParentId: folderId },
+      decisions: [{ sourceItemId: sourceId, action: 'replace' }],
+    })
 
     expect(receipt.undoable).toBe(true)
     expect(receipt.events).toContainEqual(

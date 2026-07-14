@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import {
@@ -66,7 +67,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(playerAuth, {
         campaignId: ctx.campaignId,
         command: {
           type: 'create',
@@ -94,7 +95,7 @@ describe('create item with parentTarget paths', () => {
     const dmAuth = asDm(ctx)
 
     await expectValidationFailed(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
         command: {
           type: 'create',

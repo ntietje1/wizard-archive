@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from './filesystemCommand.helper'
 import { api } from '../_generated/api'
 import {
   assertResourceItemColor,
@@ -44,21 +45,17 @@ async function createSidebarItemViaFilesystem(
   client: AuthedContext,
   args: CreateSidebarItemSetupArgs & { itemType: ResourceKind },
 ) {
-  const receipt = await client.mutation(
-    api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-    {
-      campaignId: args.campaignId,
-      command: {
-        type: 'create',
-        itemType: args.itemType,
-        name: assertConvexSidebarItemName(args.name),
-        parentTarget: args.parentTarget ?? { kind: 'direct', parentId: null },
-        iconName:
-          args.iconName === undefined ? undefined : assertResourceItemIconName(args.iconName),
-        color: args.color === undefined ? undefined : assertResourceItemColor(args.color),
-      },
+  const receipt = await executeTestFileSystemCommand(client, {
+    campaignId: args.campaignId,
+    command: {
+      type: 'create',
+      itemType: args.itemType,
+      name: assertConvexSidebarItemName(args.name),
+      parentTarget: args.parentTarget ?? { kind: 'direct', parentId: null },
+      iconName: args.iconName === undefined ? undefined : assertResourceItemIconName(args.iconName),
+      color: args.color === undefined ? undefined : assertResourceItemColor(args.color),
     },
-  )
+  })
   const created = createdItemFromReceipt(receipt)
   return { itemId: created.itemId, slug: created.slug, receipt }
 }

@@ -5,7 +5,8 @@ import type {
   ResourceTransactionReceipt,
 } from '../transaction-contract'
 import type { AnyItem } from '../../workspace/items'
-import type { FileSystemTransactionId } from '../../../../../shared/common/ids'
+import type { OperationId } from '../../resources/domain-id'
+import { testOperationId } from '../../test/operation-id'
 import { sidebarCachePatchItemFromCacheItem } from '../cache-patches'
 
 export function createFileSystemReceipt({
@@ -13,14 +14,14 @@ export function createFileSystemReceipt({
   direction = 'forward',
   events,
   patches = [],
-  transactionId = 'transaction_1' as FileSystemTransactionId,
+  transactionId = testOperationId('transaction_1'),
   undoable = true,
 }: {
   command: ResourceCommand
   direction?: ResourceTransactionReceipt['direction']
   events: Array<ResourceEvent>
   patches?: ResourceTransactionReceipt['patches']
-  transactionId?: FileSystemTransactionId
+  transactionId?: OperationId
   undoable?: boolean
 }): ResourceTransactionReceipt {
   return {

@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import {
@@ -466,7 +467,7 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
         command: {
           type: 'create',
@@ -490,7 +491,7 @@ describe('cross-table slug uniqueness', () => {
     })
 
     await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
         command: {
           type: 'rename',
@@ -505,20 +506,17 @@ describe('cross-table slug uniqueness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: {
-          type: 'create',
-          itemType: RESOURCE_TYPES.files,
-          name: 'file-with-color',
-          parentTarget: { kind: 'direct', parentId: null },
-          iconName: 'Shield',
-          color: '#ABCDEF',
-        },
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: {
+        type: 'create',
+        itemType: RESOURCE_TYPES.files,
+        name: 'file-with-color',
+        parentTarget: { kind: 'direct', parentId: null },
+        iconName: 'Shield',
+        color: '#ABCDEF',
       },
-    )
+    })
     const created = receipt.events.find((event) => event.type === 'created')
     if (!created || created.type !== 'created') {
       throw new Error('Expected file create command to create a sidebar item')
@@ -543,7 +541,7 @@ describe('cross-table slug uniqueness', () => {
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: {
         type: 'rename',
@@ -573,7 +571,7 @@ describe('cross-table slug uniqueness', () => {
     })
 
     await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
         command: {
           type: 'rename',

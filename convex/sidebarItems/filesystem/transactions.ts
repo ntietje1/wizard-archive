@@ -32,6 +32,7 @@ import { requireSidebarItemRowOperationAccess } from './access'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import { toSidebarItemDocument, toSidebarItemReplacement } from '../types/status'
+import type { OperationId } from '@wizard-archive/editor/resources/domain-id'
 const MAX_FILESYSTEM_UNDO_HISTORY = 50
 const MAX_FILESYSTEM_NON_UNDOABLE_HISTORY = 50
 const MAX_FILESYSTEM_TRANSACTION_EVENTS = 1_000
@@ -75,18 +76,14 @@ export function fileSystemRequestFingerprint({
   return stableSerialize({ command, decisions: decisions ?? [] })
 }
 
-async function getExistingClientTransaction(
-  ctx: CampaignMutationCtx,
-  clientOperationId: string | undefined,
-) {
-  if (!clientOperationId) return null
+async function getExistingOperation(ctx: CampaignMutationCtx, operationId: OperationId) {
   return await ctx.db
     .query('filesystemTransactions')
-    .withIndex('by_campaign_actor_clientOperationId', (q) =>
+    .withIndex('by_campaign_actor_operationUuid', (q) =>
       q
         .eq('campaignId', ctx.campaign._id)
         .eq('actorMemberId', ctx.membership._id)
-        .eq('clientOperationId', clientOperationId),
+        .eq('operationUuid', operationId),
     )
     .first()
 }
@@ -132,7 +129,7 @@ export async function loadTransactionReceipt(
   const command = transaction.command as ResourceCommand
   const changes = transaction.changes as StoredResourceDelta['changes']
   return {
-    transactionId,
+    transactionId: transaction.operationUuid,
     direction,
     command,
     events: transaction.events,
@@ -144,15 +141,15 @@ export async function loadTransactionReceipt(
 
 export async function loadIdempotentFilesystemReceipt(
   ctx: CampaignMutationCtx,
-  clientOperationId: string | undefined,
+  operationId: OperationId,
   requestFingerprint: string,
 ): Promise<ResourceTransactionReceipt | null> {
-  const transaction = await getExistingClientTransaction(ctx, clientOperationId)
+  const transaction = await getExistingOperation(ctx, operationId)
   if (!transaction) return null
   if (transaction.requestFingerprint !== requestFingerprint) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,
-      'Client operation id was already used for a different filesystem command',
+      'Operation id was already used for a different filesystem command',
     )
   }
   return await loadTransactionReceipt(ctx, transaction._id, 'forward')
@@ -162,20 +159,20 @@ export async function recordFilesystemTransaction(
   ctx: CampaignMutationCtx,
   {
     delta,
-    clientOperationId,
+    operationId,
     requestFingerprint,
   }: {
     delta: StoredResourceDelta
-    clientOperationId?: string
+    operationId: OperationId
     requestFingerprint: string
   },
 ): Promise<ResourceTransactionReceipt> {
   assertTransactionPayloadSize(delta)
   const receiptPatches = receiptPatchesFromChangeSet(delta.changes)
-  const transactionId = await ctx.db.insert('filesystemTransactions', {
+  await ctx.db.insert('filesystemTransactions', {
     campaignId: ctx.campaign._id,
     actorMemberId: ctx.membership._id,
-    clientOperationId: clientOperationId ?? null,
+    operationUuid: operationId,
     requestFingerprint,
     command: delta.command,
     events: delta.events,
@@ -186,7 +183,7 @@ export async function recordFilesystemTransaction(
   await pruneOldFilesystemTransactions(ctx)
 
   return {
-    transactionId,
+    transactionId: operationId,
     events: delta.events,
     direction: 'forward',
     command: delta.command,
@@ -733,11 +730,14 @@ export async function applyFilesystemTransactionDirection(
     transactionId,
     direction,
   }: {
-    transactionId: Id<'filesystemTransactions'>
+    transactionId: OperationId
     direction: 'undo' | 'redo'
   },
 ): Promise<ResourceTransactionReceipt> {
-  const source = await ctx.db.get('filesystemTransactions', transactionId)
+  const source = await ctx.db
+    .query('filesystemTransactions')
+    .withIndex('by_operationUuid', (query) => query.eq('operationUuid', transactionId))
+    .unique()
   if (!source) throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem transaction not found')
   if (source.campaignId !== ctx.campaign._id || source.actorMemberId !== ctx.membership._id) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Filesystem transaction is not available')
@@ -753,7 +753,7 @@ export async function applyFilesystemTransactionDirection(
   await applyPatches(ctx, databasePatches, direction)
 
   return {
-    transactionId,
+    transactionId: source.operationUuid,
     events: source.events,
     direction,
     command,

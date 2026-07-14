@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
 
-import type { FileSystemTransactionId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { testOperationId } from '../../test/operation-id'
 import { RESOURCE_COMMAND_TYPE } from '../transaction-contract'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
 import { getReceiptToastMessage } from '../receipt-toast-message'
@@ -11,7 +12,7 @@ function metadataUpdateReceipt(
   direction: ResourceTransactionReceipt['direction'],
 ): ResourceTransactionReceipt {
   return {
-    transactionId: 'transaction_1' as FileSystemTransactionId,
+    transactionId: testOperationId('transaction_1'),
     direction,
     command: { type: 'rename', itemId, color: null },
     events: [{ type: 'updated', itemId }],
@@ -34,7 +35,7 @@ function copyFolderMergeReceipt(
   const createdCount = options.createdCount ?? 0
   const mergedCount = options.mergedCount ?? 1
   return {
-    transactionId: 'transaction_1' as FileSystemTransactionId,
+    transactionId: testOperationId('transaction_1'),
     direction,
     command: {
       type: RESOURCE_COMMAND_TYPE.copy,

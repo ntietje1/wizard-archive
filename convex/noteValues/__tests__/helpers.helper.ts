@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdateWithBlocks } from '../../_test/yjs.helper'
 import { executeMoveCommand, testBlockNoteId } from '../../_test/factories.helper'
@@ -84,7 +85,7 @@ export async function renameValueTestNote(
     name: string
   },
 ) {
-  await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+  await executeTestFileSystemCommand(dmAuth, {
     campaignId,
     command: { type: 'rename', itemId: noteId, name },
   })
@@ -107,7 +108,7 @@ export async function hardDeleteValueTestNote(
     action: 'trash',
   })
 
-  await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+  await executeTestFileSystemCommand(dmAuth, {
     campaignId,
     command: { type: 'emptyTrash' },
   })

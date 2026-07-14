@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
@@ -20,13 +21,10 @@ describe('filesystem transaction semantics', () => {
       name: 'Scene',
     })
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
-      },
-    )
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
+    })
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', noteId, {
         updatedTime: CONTENT_UPDATED_TIMESTAMP,
@@ -54,17 +52,14 @@ describe('filesystem transaction semantics', () => {
       color: '#14b8a6' as ResourceColor,
     })
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: {
-          type: 'rename',
-          itemId: noteId,
-          color: '#ff0000' as ResourceColor,
-        },
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: {
+        type: 'rename',
+        itemId: noteId,
+        color: '#ff0000' as ResourceColor,
       },
-    )
+    })
 
     expect(receipt.summary.kind).toBe('updated')
     expect(receipt.events).toEqual([{ type: 'updated', itemId: noteId }])

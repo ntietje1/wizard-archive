@@ -1,23 +1,21 @@
 import { describe, expect, it } from 'vite-plus/test'
 import { shouldRecordFileSystemUndo } from '../undo-recording'
 import { createFileSystemUndoStore } from '../undo-store'
-import type {
-  CampaignId,
-  FileSystemTransactionId,
-  SidebarItemId,
-} from '../../../../../shared/common/ids'
+import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
 import type { ResourceTransactionReceipt } from '../transaction-contract'
 import { assertResourceItemName } from '../../workspace/items'
 import { createNote } from '../../test/sidebar-item-factory'
 import { createFileSystemReceipt } from './receipt-factory'
 import { resourcePatchRowFromCacheItem } from '../cache-patches'
+import { testOperationId } from '../../test/operation-id'
+import type { OperationId } from '../../resources/domain-id'
 
 function assertNotNull<T>(value: T | null, message: string): asserts value is T {
   if (value === null) throw new Error(message)
 }
 
 describe('filesystem undo recording', () => {
-  const transactionId = 'tx-1' as FileSystemTransactionId
+  const transactionId = testOperationId('tx-1')
   const itemId = 'item-1' as SidebarItemId
   const workspaceId = 'campaign-1' as CampaignId
   const otherWorkspaceId = 'campaign-2' as CampaignId
@@ -27,7 +25,7 @@ describe('filesystem undo recording', () => {
     name,
     direction = 'forward',
   }: {
-    id: string
+    id: OperationId
     name: string
     direction?: ResourceTransactionReceipt['direction']
   }): ResourceTransactionReceipt => {
@@ -39,7 +37,7 @@ describe('filesystem undo recording', () => {
       fields: { name: sidebarItemName },
     }
     return createFileSystemReceipt({
-      transactionId: id as FileSystemTransactionId,
+      transactionId: id,
       direction,
       command: { type: 'rename', itemId, name: sidebarItemName },
       events: [{ type: 'renamed', itemId, slug: name, previousSlug: 'previous' }],
@@ -67,30 +65,31 @@ describe('filesystem undo recording', () => {
 
   it('preserves remaining redo entries when recording a redone transaction', () => {
     const store = createFileSystemUndoStore().getState()
+    const secondTransactionId = testOperationId('tx-2')
     store.setWorkspace(workspaceId)
-    store.pushUndo(workspaceId, receipt({ id: 'tx-1', name: 'First' }))
-    store.pushUndo(workspaceId, receipt({ id: 'tx-2', name: 'Second' }))
+    store.pushUndo(workspaceId, receipt({ id: transactionId, name: 'First' }))
+    store.pushUndo(workspaceId, receipt({ id: secondTransactionId, name: 'Second' }))
 
     const secondUndo = store.peekUndo()
     assertNotNull(secondUndo, 'Expected an undo entry for tx-2')
-    expect(secondUndo.transactionId).toBe('tx-2')
+    expect(secondUndo.transactionId).toBe(secondTransactionId)
     store.removeUndo()
     store.pushRedoEntry(secondUndo)
 
     const firstUndo = store.peekUndo()
     assertNotNull(firstUndo, 'Expected an undo entry for tx-1')
-    expect(firstUndo.transactionId).toBe('tx-1')
+    expect(firstUndo.transactionId).toBe(transactionId)
     store.removeUndo()
     store.pushRedoEntry(firstUndo)
 
     const firstRedo = store.peekRedo()
     assertNotNull(firstRedo, 'Expected a redo entry for tx-1')
-    expect(firstRedo.transactionId).toBe('tx-1')
+    expect(firstRedo.transactionId).toBe(transactionId)
     store.removeRedo()
     store.pushUndoEntry(firstRedo, { preserveRedo: true })
 
-    expect(store.peekRedo()?.transactionId).toBe('tx-2')
-    expect(store.peekUndo()?.transactionId).toBe('tx-1')
+    expect(store.peekRedo()?.transactionId).toBe(secondTransactionId)
+    expect(store.peekUndo()?.transactionId).toBe(transactionId)
   })
 
   it('stores the replay fingerprint with undoable receipts when supplied', () => {

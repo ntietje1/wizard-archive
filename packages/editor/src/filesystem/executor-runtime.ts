@@ -1,8 +1,4 @@
-import type {
-  FileSystemTransactionId,
-  SidebarItemId,
-  UserProfileId,
-} from '../../../../shared/common/ids'
+import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
 import type {
   ResourceCommand,
   ResourceCommandDecisionRecord,
@@ -23,9 +19,11 @@ import { applyFileSystemReceiptEffects } from './receipt-effects'
 import { withFileSystemHistoryReplayFingerprint } from './undo-store'
 import type { FileSystemUndoStore } from './undo-store'
 import type { FileSystemExecutorEffects } from './executor-effects'
+import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
+import type { OperationId } from '../resources/domain-id'
 
 type ExecuteFileSystemHistoryMutation = (
-  transactionId: FileSystemTransactionId,
+  transactionId: OperationId,
 ) => Promise<ResourceTransactionReceipt>
 
 type FileSystemNavigationEffects = {
@@ -76,8 +74,8 @@ export type FileSystemExecutorRuntimeArgs = {
   effects: FileSystemExecutorEffects
 }
 
-function createClientOperationId() {
-  return globalThis.crypto?.randomUUID?.() ?? `filesystem-${Date.now()}-${Math.random()}`
+function createOperationId() {
+  return generateDomainId(DOMAIN_ID_KIND.operation)
 }
 
 function fingerprintFileSystemSnapshot(cacheAdapter: FileSystemCacheAdapter) {
@@ -189,7 +187,7 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
       currentUserId: operationArgs.currentUserId,
       activeItemSurface: operationArgs.activeItemSurface,
       cacheAdapter: operationArgs.cacheAdapter,
-      createClientOperationId,
+      createOperationId,
       getCurrentResourceId: operationArgs.navigation.getCurrentResourceId,
       runMutation: (operation) => withPendingOperation(() => runQueuedMutation(operation)),
       executeMutation: operationArgs.executeMutation,
@@ -221,7 +219,7 @@ export function createFileSystemExecutorRuntime(initialArgs: FileSystemExecutorR
     return result
   }
 
-  const discardCreatedItem = async (transactionId: FileSystemTransactionId) => {
+  const discardCreatedItem = async (transactionId: OperationId) => {
     const operationArgs = args
     await withPendingOperation(() =>
       runQueuedMutation(() =>

@@ -1,8 +1,10 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
+import { testOperationId } from '../../../shared/test/operation-id'
 
 describe('non-undoable filesystem transactions', () => {
   const t = createTestContext()
@@ -17,17 +19,15 @@ describe('non-undoable filesystem transactions', () => {
       deletedBy: ctx.dm.profile._id,
     })
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        clientOperationId: 'delete-folder-forever',
-        command: {
-          type: 'deleteForever',
-          itemIds: [folderId],
-        },
+    const operationId = testOperationId('delete-folder-forever')
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      operationId,
+      command: {
+        type: 'deleteForever',
+        itemIds: [folderId],
       },
-    )
+    })
 
     expect(receipt.transactionId).toEqual(expect.any(String))
     expect(receipt.undoable).toBe(false)
@@ -35,17 +35,14 @@ describe('non-undoable filesystem transactions', () => {
       expect.objectContaining({ type: 'deletedForever', itemId: folderId }),
     )
 
-    const retryReceipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        clientOperationId: 'delete-folder-forever',
-        command: {
-          type: 'deleteForever',
-          itemIds: [folderId],
-        },
+    const retryReceipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      operationId,
+      command: {
+        type: 'deleteForever',
+        itemIds: [folderId],
       },
-    )
+    })
     expect(retryReceipt.patches).toEqual(receipt.patches)
   })
 
@@ -62,7 +59,7 @@ describe('non-undoable filesystem transactions', () => {
     }
 
     await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
         command: { type: 'emptyTrash' },
       }),

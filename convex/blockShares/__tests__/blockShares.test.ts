@@ -62,7 +62,10 @@ describe('setBlocksShareStatus', () => {
     })
     expect(receipt.transactionId).toEqual(expect.any(String))
     const transaction = await t.run(async (dbCtx) => {
-      return await dbCtx.db.get('filesystemTransactions', receipt.transactionId!)
+      return await dbCtx.db
+        .query('filesystemTransactions')
+        .withIndex('by_operationUuid', (query) => query.eq('operationUuid', receipt.transactionId!))
+        .unique()
     })
     expect(transaction).toMatchObject({
       command: receipt.command,

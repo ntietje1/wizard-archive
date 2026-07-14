@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import {
@@ -49,7 +50,7 @@ describe('hard delete YJS cleanup', () => {
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: { type: 'emptyTrash' },
     })
@@ -84,7 +85,7 @@ describe('hard delete YJS cleanup', () => {
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: { type: 'emptyTrash' },
     })
@@ -120,7 +121,7 @@ describe('hard delete YJS cleanup', () => {
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: { type: 'emptyTrash' },
     })
@@ -160,7 +161,7 @@ describe('hard delete YJS cleanup', () => {
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: { type: 'emptyTrash' },
     })

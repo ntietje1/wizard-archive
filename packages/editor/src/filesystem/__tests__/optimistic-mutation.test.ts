@@ -5,10 +5,11 @@ import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceName } from '../../workspace/resource-contract'
 import type { FileSystemCacheAdapter } from '../cache'
 import { runFileSystemOptimisticMutation } from '../optimistic-mutation'
-import type { FileSystemTransactionId, SidebarItemId } from '../../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../../shared/common/ids'
+import { testOperationId } from '../../test/operation-id'
 
 const receipt: ResourceTransactionReceipt = {
-  transactionId: 'transaction_1' as FileSystemTransactionId,
+  transactionId: testOperationId('transaction_1'),
   direction: 'forward',
   command: {
     type: 'create',

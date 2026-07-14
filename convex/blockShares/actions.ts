@@ -16,6 +16,7 @@ import type {
   ResourceCommand,
   ResourceTransactionReceipt,
 } from '@wizard-archive/editor/resources/transaction-contract'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 type BlockShareActionCtx = Pick<ActionCtx, 'runMutation' | 'runQuery'>
 type BlockShareActionCommand = Extract<
@@ -64,6 +65,7 @@ async function executeProjectedBlockShareCommand(
       command,
       content,
       historyStatus: args.historyStatus,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
     },
   )
   return receipt

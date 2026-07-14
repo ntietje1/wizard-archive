@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { StoreApi, UseBoundStore } from 'zustand'
-import type { FileSystemTransactionId } from '../../../../shared/common/ids'
+import type { OperationId } from '../resources/domain-id'
 import type { ResourceTransactionReceipt } from './transaction-contract'
 import { shouldRecordFileSystemUndo } from './undo-recording'
 
@@ -9,7 +9,7 @@ const historyEntryWorkspaceRevision: unique symbol = Symbol('historyEntryWorkspa
 
 export type FileSystemHistoryEntry = {
   workspaceId: string
-  transactionId: FileSystemTransactionId
+  transactionId: OperationId
   replayFingerprint?: string
   [historyEntryWorkspaceRevision]?: number
 }
@@ -30,7 +30,7 @@ type FileSystemUndoState = {
   isCurrentEntry: (entry: FileSystemHistoryEntry) => boolean
   peekUndo: () => FileSystemHistoryEntry | null
   removeUndo: () => void
-  removeUndoTransaction: (workspaceId: string, transactionId: FileSystemTransactionId) => void
+  removeUndoTransaction: (workspaceId: string, transactionId: OperationId) => void
   pushRedoEntry: (entry: FileSystemHistoryEntry) => void
   peekRedo: () => FileSystemHistoryEntry | null
   removeRedo: () => void
@@ -41,7 +41,7 @@ export type FileSystemUndoStore = UseBoundStore<StoreApi<FileSystemUndoState>>
 
 function createFileSystemHistoryEntry(
   workspaceId: string,
-  transactionId: FileSystemTransactionId,
+  transactionId: OperationId,
   workspaceRevision: number,
   replayFingerprint?: string,
 ): FileSystemHistoryEntry {

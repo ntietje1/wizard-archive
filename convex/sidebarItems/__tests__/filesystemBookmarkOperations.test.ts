@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
@@ -16,7 +17,7 @@ async function executeToggleBookmarks(
     itemIds: Array<Id<'sidebarItems'>>
   },
 ) {
-  return await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+  return await executeTestFileSystemCommand(dmAuth, {
     campaignId,
     command: { type: 'toggleBookmarks', itemIds },
   })

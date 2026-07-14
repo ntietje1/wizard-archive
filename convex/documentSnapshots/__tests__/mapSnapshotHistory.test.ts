@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createGameMapViaFilesystem } from '../../_test/filesystemSetup.helper'
@@ -84,7 +85,7 @@ describe('updateMap creates correct number of history entries', () => {
       return entries.length
     })
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: {
         type: 'rename',

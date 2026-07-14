@@ -1,6 +1,7 @@
 import { isPromiseLike } from '../../../../shared/common/async'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type { FileSystemTransactionId, SidebarItemId } from '../../../../shared/common/ids'
+import type { SidebarItemId } from '../../../../shared/common/ids'
+import type { OperationId } from '../resources/domain-id'
 import { assertResourceItemSlug } from '../workspace/items'
 import { RESOURCE_TYPES } from '../workspace/items-persistence-contract'
 import type { AnyItem, FolderItem } from '../workspace/items'
@@ -27,7 +28,7 @@ import type { FileSystemCacheAdapter } from './cache'
 
 type ExecuteFileSystemItemCommand = ResourceCommandDriver['executeCommand']
 
-type DiscardCreatedItem = (transactionId: FileSystemTransactionId) => MaybePromise<void>
+type DiscardCreatedItem = (transactionId: OperationId) => MaybePromise<void>
 type CreateFileSystemHostItemInput = Omit<ResourceCreateCommand, 'type'> & {
   parentPlan?: ResourceCreateParentPlan
 }
@@ -55,7 +56,7 @@ function getCompletedReceipt(result: ResourceCommandResult): ResourceTransaction
 function getCreatedItemResult(receipt: ResourceTransactionReceipt): {
   id: SidebarItemId
   slug: ResourceSlug
-  transactionId: FileSystemTransactionId
+  transactionId: OperationId
 } {
   if (!receipt.transactionId) throw new Error('Create item receipt did not include transaction id')
   const created = receipt.events.find(

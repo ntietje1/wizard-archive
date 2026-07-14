@@ -20,7 +20,8 @@ import { ERROR_CODE } from '../../shared/errors/client'
 import { throwClientError } from '../errors'
 import { normalizeBlockShareTargetIds } from './blockShareCommand'
 import type { NoteBlock } from '@wizard-archive/editor/notes/document-contract'
-import type { NoteBlockId } from '@wizard-archive/editor/resources/domain-id'
+import type { NoteBlockId, OperationId } from '@wizard-archive/editor/resources/domain-id'
+import { operationIdValidator } from '../resources/validators'
 import type {
   ResourceCommand,
   ResourceTransactionReceipt,
@@ -93,6 +94,7 @@ async function executeProjectedBlockShareCommand(
     command: BlockShareCommand
     content: Array<NoteBlock>
     historyStatus?: 'shared' | 'unshared'
+    operationId: OperationId
   },
 ): Promise<ResourceTransactionReceipt> {
   const blockNoteIds = normalizeBlockShareTargetIds(args.command.blockNoteIds)
@@ -138,6 +140,7 @@ async function executeProjectedBlockShareCommand(
       undoable: false,
     },
     requestFingerprint: fileSystemRequestFingerprint({ command }),
+    operationId: args.operationId,
   })
 }
 
@@ -159,6 +162,7 @@ export const executeBlockShareCommand = internalMutation({
     command: blockShareCommandValidator,
     content: v.array(editorBlockInputValidator),
     historyStatus: v.optional(v.union(v.literal('shared'), v.literal('unshared'))),
+    operationId: operationIdValidator,
   },
   returns: fileSystemTransactionReceiptValidator,
   handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
@@ -168,6 +172,7 @@ export const executeBlockShareCommand = internalMutation({
       command: args.command as BlockShareCommand,
       content,
       historyStatus: args.historyStatus,
+      operationId: args.operationId,
     })
   },
 })

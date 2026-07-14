@@ -104,7 +104,12 @@ describe('campaign deletion cascade', () => {
         bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
         pin: await dbCtx.db.get('mapPins', pinId),
         session: await dbCtx.db.get('sessions', sessionId),
-        transaction: await dbCtx.db.get('filesystemTransactions', moveReceipt.transactionId!),
+        transaction: await dbCtx.db
+          .query('filesystemTransactions')
+          .withIndex('by_operationUuid', (query) =>
+            query.eq('operationUuid', moveReceipt.transactionId!),
+          )
+          .unique(),
       }
     })
 

@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
@@ -12,6 +13,7 @@ import {
 } from '../../_test/factories.helper'
 import { assertUndoablePatch } from '../filesystem/deltas'
 import type { ResourcePatch } from '@wizard-archive/editor/resources/patch-contract'
+import { testOperationId } from '../../../shared/test/operation-id'
 
 describe('filesystem transaction guards', () => {
   const t = createTestContext()
@@ -67,14 +69,15 @@ describe('filesystem transaction guards', () => {
       permissionLevel: 'view',
     })
 
-    const transactionId = await t.run(async (dbCtx) => {
+    const transactionId = testOperationId('foreign-related-row-upserts')
+    await t.run(async (dbCtx) => {
       const shareRow = await dbCtx.db.get('sidebarItemShares', share.shareId)
       if (!shareRow) throw new Error('Missing setup share')
 
-      return await dbCtx.db.insert('filesystemTransactions', {
+      await dbCtx.db.insert('filesystemTransactions', {
         campaignId: ctx.campaignId,
         actorMemberId: ctx.dm.memberId,
-        clientOperationId: null,
+        operationUuid: transactionId,
         requestFingerprint: 'foreign-related-row-upserts',
         command: { type: 'toggleBookmarks', itemIds: [localNoteId] },
         events: [],
@@ -145,14 +148,15 @@ describe('filesystem transaction guards', () => {
       permissionLevel: 'view',
     })
 
-    const transactionId = await t.run(async (dbCtx) => {
+    const transactionId = testOperationId('foreign-share-member-upsert')
+    await t.run(async (dbCtx) => {
       const shareRow = await dbCtx.db.get('sidebarItemShares', share.shareId)
       if (!shareRow) throw new Error('Missing setup share')
 
-      return await dbCtx.db.insert('filesystemTransactions', {
+      await dbCtx.db.insert('filesystemTransactions', {
         campaignId: ctx.campaignId,
         actorMemberId: ctx.dm.memberId,
-        clientOperationId: null,
+        operationUuid: transactionId,
         requestFingerprint: 'foreign-share-member-upsert',
         command: {
           type: 'setResourcesMemberPermission',
@@ -202,11 +206,12 @@ describe('filesystem transaction guards', () => {
       name: 'Local',
     })
 
-    const transactionId = await t.run(async (dbCtx) => {
-      return await dbCtx.db.insert('filesystemTransactions', {
+    const transactionId = testOperationId('foreign-bookmark-member-upsert')
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.insert('filesystemTransactions', {
         campaignId: ctx.campaignId,
         actorMemberId: ctx.dm.memberId,
-        clientOperationId: null,
+        operationUuid: transactionId,
         requestFingerprint: 'foreign-bookmark-member-upsert',
         command: { type: 'toggleBookmarks', itemIds: [noteId] },
         events: [],
@@ -266,11 +271,12 @@ describe('filesystem transaction guards', () => {
       { name: 'Other Folder' },
     )
 
-    const transactionId = await t.run(async (dbCtx) => {
-      return await dbCtx.db.insert('filesystemTransactions', {
+    const transactionId = testOperationId('foreign-folder-share-patch')
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.insert('filesystemTransactions', {
         campaignId: ctx.campaignId,
         actorMemberId: ctx.dm.memberId,
-        clientOperationId: null,
+        operationUuid: transactionId,
         requestFingerprint: 'foreign-folder-share-patch',
         command: {
           type: 'setFolderInheritShares',
@@ -349,7 +355,7 @@ describe('filesystem transaction guards', () => {
 
     for (const command of commands) {
       await expect(
-        dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        executeTestFileSystemCommand(dmAuth, {
           campaignId: ctx.campaignId,
           command,
         }),
@@ -392,7 +398,7 @@ describe('filesystem transaction guards', () => {
     ).resolves.toBeNull()
 
     await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
         command: {
           type: 'create',
@@ -403,7 +409,7 @@ describe('filesystem transaction guards', () => {
       }),
     ).rejects.toThrow('Parent not found')
     await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(dmAuth, {
         campaignId: ctx.campaignId,
         command: { type: 'move', itemIds: [noteId], targetParentId: hiddenFolderId },
       }),

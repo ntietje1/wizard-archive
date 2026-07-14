@@ -8,8 +8,8 @@ import type {
   ResourceName,
   ResourceIconName,
   ResourceKind,
-  ResourceTransactionId,
 } from '../workspace/resource-contract'
+import type { OperationId } from '../resources/domain-id'
 
 import type { ResourceChange, ResourcePatch } from './patch-contract'
 
@@ -217,7 +217,7 @@ export type ResourceCommandExecutionOptions = {
 export type ResourceCommandMutationInput = {
   command: ResourceCommand
   decisions: Array<ResourceOperationDecision> | undefined
-  clientOperationId: string
+  operationId: OperationId
 }
 
 export const RESOURCE_EVENT_TYPE = {
@@ -425,7 +425,7 @@ export function summarizeResourceReceipt(
 type ResourceTransactionDirection = 'forward' | 'undo' | 'redo'
 
 export type ResourceTransactionReceipt = {
-  transactionId: ResourceTransactionId | null
+  transactionId: OperationId | null
   direction: ResourceTransactionDirection
   command: ResourceCommand
   events: Array<ResourceEvent>
@@ -449,7 +449,7 @@ export function completedResourceCommand(
     transactionId = null,
     undoable = false,
   }: {
-    transactionId?: ResourceTransactionId | null
+    transactionId?: OperationId | null
     undoable?: boolean
   } = {},
 ): ResourceCommandResult<never> {

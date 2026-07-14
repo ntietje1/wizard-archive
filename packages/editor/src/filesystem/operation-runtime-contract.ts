@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react'
 import type { MaybePromise } from '../../../../shared/common/async'
-import type {
-  FileSystemTransactionId,
-  SidebarItemId,
-  UserProfileId,
-} from '../../../../shared/common/ids'
+import type { SidebarItemId, UserProfileId } from '../../../../shared/common/ids'
+import type { OperationId } from '../resources/domain-id'
 import type {
   ResourceColor,
   ResourceIconName,
@@ -90,8 +87,8 @@ export type ResourceCommandDriver = {
     command: ResourceCommand,
     options?: ResourceCommandExecutionOptions,
   ) => MaybePromise<ResourceCommandResult>
-  discardCreatedItem: (transactionId: FileSystemTransactionId) => MaybePromise<void>
-  finalizeCreatedItem?: (transactionId: FileSystemTransactionId) => MaybePromise<void>
+  discardCreatedItem: (transactionId: OperationId) => MaybePromise<void>
+  finalizeCreatedItem?: (transactionId: OperationId) => MaybePromise<void>
   undo: () => MaybePromise<ResourceCommandResult>
   redo: () => MaybePromise<ResourceCommandResult>
   canUndo: boolean
@@ -116,8 +113,8 @@ export type ResourceCommandRuntimeArgs = {
   navigation: FileSystemNavigationEffects
   trashState: FileSystemTrashDialogState
   executeMutation: (args: ResourceCommandMutationInput) => Promise<ResourceTransactionReceipt>
-  undoMutation: (transactionId: FileSystemTransactionId) => Promise<ResourceTransactionReceipt>
-  redoMutation: (transactionId: FileSystemTransactionId) => Promise<ResourceTransactionReceipt>
+  undoMutation: (transactionId: OperationId) => Promise<ResourceTransactionReceipt>
+  redoMutation: (transactionId: OperationId) => Promise<ResourceTransactionReceipt>
 }
 
 export type ResourceCommandRuntime = {

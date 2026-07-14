@@ -1,5 +1,5 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
-import { api } from '../../_generated/api'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import {
@@ -297,14 +297,11 @@ describe('executeCopyCommand', () => {
       },
     )
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'copy', itemIds: [sourceId], targetParentId: destinationFolderId },
-        decisions: [{ sourceItemId: sourceId, action: 'replace' }],
-      },
-    )
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'copy', itemIds: [sourceId], targetParentId: destinationFolderId },
+      decisions: [{ sourceItemId: sourceId, action: 'replace' }],
+    })
 
     expect(
       receipt.events.filter((event) => event.type === 'replaced').map((event) => event.itemId),
@@ -413,14 +410,11 @@ describe('executeCopyCommand', () => {
       },
     )
 
-    const receipt = await dmAuth.mutation(
-      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
-      {
-        campaignId: ctx.campaignId,
-        command: { type: 'copy', itemIds: [sourceFolderId], targetParentId: targetFolderId },
-        decisions: [{ sourceItemId: sourceFolderId, action: 'mergeFolder' }],
-      },
-    )
+    const receipt = await executeTestFileSystemCommand(dmAuth, {
+      campaignId: ctx.campaignId,
+      command: { type: 'copy', itemIds: [sourceFolderId], targetParentId: targetFolderId },
+      decisions: [{ sourceItemId: sourceFolderId, action: 'mergeFolder' }],
+    })
 
     expect(
       receipt.events.filter((event) => event.type === 'mergedFolder').map((event) => event.itemId),

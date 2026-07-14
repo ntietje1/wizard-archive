@@ -34,12 +34,13 @@ import {
   completedResourceCommand,
   RESOURCE_EVENT_TYPE,
 } from '@wizard-archive/editor/resources/transaction-contract'
-import type { FileSystemTransactionId, SidebarItemId } from 'shared/common/ids'
+import type { SidebarItemId } from 'shared/common/ids'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { WORKSPACE_MODE } from 'shared/workspace/workspace-mode'
 import type { ResourceImportFile } from '../files/import-contract'
 import { createCanvas, createFile, createGameMap, createNote } from '../test/sidebar-item-factory'
 import { testMapPinId } from '../../../../shared/test/map-pin-id'
+import { testOperationId } from '../../../../shared/test/operation-id'
 
 type AdapterCanvasItemWithContent = Extract<WizardEditorItemWithContent, { type: 'canvas' }>
 type AdapterFileItemWithContent = Extract<WizardEditorItemWithContent, { type: 'file' }>
@@ -1034,7 +1035,7 @@ function createTestResourceCommandDriver(): WizardEditorCommandSource['resourceC
               slug: assertResourceItemSlug('created-item'),
             },
           ],
-          { transactionId: 'transaction-created-item' as FileSystemTransactionId },
+          { transactionId: testOperationId('transaction-created-item') },
         )
       }
       if (command.type === 'rename') {

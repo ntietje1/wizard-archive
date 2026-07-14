@@ -9,6 +9,7 @@ import {
 } from '../filesystem/validators'
 import { sidebarItemShareValidator } from '../../sidebarShares/schema'
 import { domainValidatorFields } from '../../common/schema'
+import { operationIdValidator } from '../../resources/validators'
 
 const {
   normalizedName: _normalizedName,
@@ -99,18 +100,15 @@ export const sidebarItemsTables = {
   filesystemTransactions: defineTable({
     campaignId: v.id('campaigns'),
     actorMemberId: v.id('campaignMembers'),
-    clientOperationId: v.nullable(v.string()),
+    operationUuid: operationIdValidator,
     requestFingerprint: v.string(),
     command: fileSystemCommandValidator,
     events: v.array(fileSystemEventValidator),
     changes: v.array(fileSystemChangeValidator),
     undoable: v.boolean(),
   })
+    .index('by_operationUuid', ['operationUuid'])
     .index('by_campaign_actor', ['campaignId', 'actorMemberId'])
     .index('by_campaign_actor_undoable', ['campaignId', 'actorMemberId', 'undoable'])
-    .index('by_campaign_actor_clientOperationId', [
-      'campaignId',
-      'actorMemberId',
-      'clientOperationId',
-    ]),
+    .index('by_campaign_actor_operationUuid', ['campaignId', 'actorMemberId', 'operationUuid']),
 }

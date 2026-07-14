@@ -16,6 +16,7 @@ import {
 } from '../../blockShares/commandValidators'
 import { createParentTargetValidator } from '../validation/parent'
 import { resourceShareIdValidator } from '../../sidebarShares/validators'
+import { operationIdValidator } from '../../resources/validators'
 
 const createCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.create),
@@ -418,7 +419,7 @@ export const fileSystemChangeValidator = v.union(
 )
 
 export const fileSystemTransactionReceiptValidator = v.object({
-  transactionId: v.nullable(v.id('filesystemTransactions')),
+  transactionId: v.nullable(operationIdValidator),
   direction: v.union(v.literal('forward'), v.literal('undo'), v.literal('redo')),
   command: fileSystemCommandValidator,
   events: v.array(fileSystemEventValidator),

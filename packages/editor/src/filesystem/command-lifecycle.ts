@@ -15,6 +15,7 @@ import { planFileSystemOptimisticCommand } from './optimistic-planner'
 import { getCommandProgressToastText } from './progress-messages'
 import { executeFileSystemReceiptLifecycle } from './receipt-lifecycle'
 import { shouldRecordFileSystemUndo } from './undo-recording'
+import type { OperationId } from '../resources/domain-id'
 
 type ProgressToastId = string | number
 
@@ -26,7 +27,7 @@ type FileSystemCommandLifecycleArgs = {
   currentUserId: UserProfileId | null
   activeItemSurface: { parentId: SidebarItemId | null } | null
   cacheAdapter: FileSystemCacheAdapter
-  createClientOperationId: () => string
+  createOperationId: () => OperationId
   getCurrentResourceId: () => SidebarItemId | null
   runMutation: <T>(operation: () => Promise<T>) => Promise<T>
   executeMutation: (args: ResourceCommandMutationInput) => Promise<ResourceTransactionReceipt>
@@ -54,7 +55,7 @@ export async function executeFileSystemCommandLifecycle({
   currentUserId,
   activeItemSurface,
   cacheAdapter,
-  createClientOperationId,
+  createOperationId,
   getCurrentResourceId,
   runMutation,
   executeMutation,
@@ -104,7 +105,7 @@ export async function executeFileSystemCommandLifecycle({
         executeMutation({
           command,
           decisions: operationDecisions,
-          clientOperationId: createClientOperationId(),
+          operationId: createOperationId(),
         }),
       progressMessage: getCommandProgressToastText(command),
       onSuccess: async (committedReceipt) => {

@@ -1,11 +1,8 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 
-import type {
-  CampaignId,
-  FileSystemTransactionId,
-  SidebarItemId,
-} from '../../../../../shared/common/ids'
+import type { CampaignId, SidebarItemId } from '../../../../../shared/common/ids'
+import { testOperationId } from '../../test/operation-id'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import type { ResourceName } from '../../workspace/resource-contract'
 import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
@@ -48,7 +45,7 @@ describe('useFileSystemExecutor', () => {
     const createReceipt = createCreatedItemReceipt(created)
     const discardReceipt: ResourceTransactionReceipt = {
       ...createCreatedItemReceipt(discarded),
-      transactionId: 'discard_transaction' as FileSystemTransactionId,
+      transactionId: testOperationId('discard_transaction'),
       direction: 'undo',
       patches: [],
       undoable: false,
@@ -101,9 +98,7 @@ describe('useFileSystemExecutor', () => {
 
     let discardPromise!: Promise<void>
     await act(async () => {
-      discardPromise = result.current.discardCreatedItem(
-        'discard_transaction' as FileSystemTransactionId,
-      )
+      discardPromise = result.current.discardCreatedItem(testOperationId('discard_transaction'))
       await Promise.resolve()
     })
 
@@ -115,7 +110,7 @@ describe('useFileSystemExecutor', () => {
       await discardPromise
     })
 
-    expect(undoMutation).toHaveBeenCalledWith('discard_transaction')
+    expect(undoMutation).toHaveBeenCalledWith(testOperationId('discard_transaction'))
   })
 
   it('rejects pending conflict resolution when the conflict context has changed', async () => {
@@ -206,7 +201,7 @@ describe('useFileSystemExecutor', () => {
     const nextName = 'New Name' as ResourceName
     const snapshot: SidebarCacheSnapshot = { sidebar: [item], trash: [] }
     const renameReceipt = createFileSystemReceipt({
-      transactionId: 'rename_transaction' as FileSystemTransactionId,
+      transactionId: testOperationId('rename_transaction'),
       direction: 'forward',
       command: {
         type: 'rename',

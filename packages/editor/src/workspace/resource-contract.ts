@@ -27,7 +27,6 @@ import type { ResourceShareId } from '../resources/domain-id'
 type ResourceTableId<TableName extends string> = string & { __tableName: TableName }
 
 export type ResourceId = ResourceTableId<'sidebarItems'>
-export type ResourceTransactionId = ResourceTableId<'filesystemTransactions'>
 export type ResourceKind = (typeof RESOURCE_TYPES)[keyof typeof RESOURCE_TYPES]
 export type ResourceStatus = (typeof RESOURCE_STATUS)[keyof typeof RESOURCE_STATUS]
 export type ResourceLocation = 'sidebar'

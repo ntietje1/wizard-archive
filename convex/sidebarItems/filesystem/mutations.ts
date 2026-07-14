@@ -31,6 +31,8 @@ import {
 import type { StoredResourceDelta } from './deltas'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { operationIdValidator } from '../../resources/validators'
 const MAX_FILE_SYSTEM_COMMAND_ITEMS = 100
 
 type FileSystemCommandWithItemIds = Extract<ResourceCommand, { itemIds: Array<Id<'sidebarItems'>> }>
@@ -116,18 +118,15 @@ export const executeFileSystemCommand = campaignMutation({
   args: {
     command: fileSystemCommandValidator,
     decisions: v.optional(v.array(fileSystemOperationDecisionValidator)),
-    clientOperationId: v.optional(v.string()),
+    operationId: operationIdValidator,
   },
   returns: fileSystemTransactionReceiptValidator,
   handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
     const command = normalizeCommand(args.command as ResourceCommand)
     const decisions = args.decisions as Array<ResourceOperationDecision> | undefined
+    const operationId = assertDomainId(DOMAIN_ID_KIND.operation, args.operationId)
     const requestFingerprint = fileSystemRequestFingerprint({ command, decisions })
-    const existing = await loadIdempotentFilesystemReceipt(
-      ctx,
-      args.clientOperationId,
-      requestFingerprint,
-    )
+    const existing = await loadIdempotentFilesystemReceipt(ctx, operationId, requestFingerprint)
     if (existing) return existing
 
     const delta = await executeCommand(ctx, {
@@ -136,7 +135,7 @@ export const executeFileSystemCommand = campaignMutation({
     })
     return await recordFilesystemTransaction(ctx, {
       delta,
-      clientOperationId: args.clientOperationId,
+      operationId,
       requestFingerprint,
     })
   },
@@ -144,12 +143,12 @@ export const executeFileSystemCommand = campaignMutation({
 
 export const undoFileSystemTransaction = campaignMutation({
   args: {
-    transactionId: v.id('filesystemTransactions'),
+    transactionId: operationIdValidator,
   },
   returns: fileSystemTransactionReceiptValidator,
   handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
     return await applyFilesystemTransactionDirection(ctx, {
-      transactionId: args.transactionId,
+      transactionId: assertDomainId(DOMAIN_ID_KIND.operation, args.transactionId),
       direction: 'undo',
     })
   },
@@ -157,12 +156,12 @@ export const undoFileSystemTransaction = campaignMutation({
 
 export const redoFileSystemTransaction = campaignMutation({
   args: {
-    transactionId: v.id('filesystemTransactions'),
+    transactionId: operationIdValidator,
   },
   returns: fileSystemTransactionReceiptValidator,
   handler: async (ctx, args): Promise<ResourceTransactionReceipt> => {
     return await applyFilesystemTransactionDirection(ctx, {
-      transactionId: args.transactionId,
+      transactionId: assertDomainId(DOMAIN_ID_KIND.operation, args.transactionId),
       direction: 'redo',
     })
   },

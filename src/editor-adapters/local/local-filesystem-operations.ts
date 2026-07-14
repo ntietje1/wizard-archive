@@ -1,5 +1,7 @@
 import type { Dispatch } from 'react'
-import type { FileSystemTransactionId, SidebarItemId } from 'shared/common/ids'
+import type { SidebarItemId } from 'shared/common/ids'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
+import type { OperationId } from '@wizard-archive/editor/resources/domain-id'
 import {
   completeWizardEditorResourceCommand,
   isWizardEditorResourceCatalogCommand,
@@ -67,7 +69,7 @@ type LocalCommandContext = Omit<
 > & {
   catalog: WizardEditorResourceCatalog
   createdPathFolders: Map<string, LocalPathFolderReservation>
-  createdTransactions: Map<FileSystemTransactionId, LocalCreatedTransaction>
+  createdTransactions: Map<OperationId, LocalCreatedTransaction>
   creationSession: ReturnType<typeof createLocalItemCreationSession>
 }
 
@@ -120,7 +122,7 @@ function createLocalItemOperations({
   creationSession: ReturnType<typeof createLocalItemCreationSession>
 }) {
   const createdPathFolders = new Map<string, LocalPathFolderReservation>()
-  const createdTransactions = new Map<FileSystemTransactionId, LocalCreatedTransaction>()
+  const createdTransactions = new Map<OperationId, LocalCreatedTransaction>()
   const getCommandContext = (): LocalCommandContext => ({
     canEdit,
     catalog: getCatalog(),
@@ -137,7 +139,7 @@ function createLocalItemOperations({
   return {
     resourceCommandDriver: {
       executeCommand,
-      discardCreatedItem: (transactionId: FileSystemTransactionId) => {
+      discardCreatedItem: (transactionId: OperationId) => {
         const transaction = createdTransactions.get(transactionId)
         if (!transaction) return
         const itemIds = [
@@ -151,7 +153,7 @@ function createLocalItemOperations({
         dispatch({ type: 'deleteItemsForever', itemIds })
         createdTransactions.delete(transactionId)
       },
-      finalizeCreatedItem: (transactionId: FileSystemTransactionId) => {
+      finalizeCreatedItem: (transactionId: OperationId) => {
         const transaction = createdTransactions.get(transactionId)
         if (!transaction) return
         commitLocalPathFolderClaims(createdPathFolders, transaction.pathFolderEntries)
@@ -243,7 +245,7 @@ function executeLocalCreateCommand(
   if (command.name?.trim()) {
     dispatch({ type: 'updateItemMetadata', itemId: creation.id, title: command.name })
   }
-  const transactionId = creation.id as FileSystemTransactionId
+  const transactionId = generateDomainId(DOMAIN_ID_KIND.operation)
   createdTransactions.set(transactionId, {
     creationId: creation.id,
     pathFolderEntries: parentResolution.createdPathFolderEntries,

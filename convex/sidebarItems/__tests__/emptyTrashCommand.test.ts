@@ -1,3 +1,4 @@
+import { executeTestFileSystemCommand } from '../../_test/filesystemCommand.helper'
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
@@ -22,7 +23,7 @@ describe('emptyTrash filesystem command', () => {
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    await executeTestFileSystemCommand(dmAuth, {
       campaignId: ctx.campaignId,
       command: { type: 'emptyTrash' },
     })
@@ -43,7 +44,7 @@ describe('emptyTrash filesystem command', () => {
     const playerAuth = asPlayer(ctx)
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      executeTestFileSystemCommand(playerAuth, {
         campaignId: ctx.campaignId,
         command: { type: 'emptyTrash' },
       }),
