@@ -5,7 +5,7 @@ import { RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { ResourceCommand } from '../transaction-contract'
 import { getCommandProgressToastText, getHistoryProgressToastText } from '../progress-messages'
 
-import { fileSystemCommandFixtures } from './command-fixtures'
+import { commandFixtureItemIds, fileSystemCommandFixtures } from './command-fixtures'
 import { RESOURCE_COMMAND_TYPE } from '../transaction-contract'
 
 const itemId = (value: string) => value as ResourceId
@@ -25,6 +25,7 @@ describe('filesystem progress messages', () => {
     [
       {
         type: 'create',
+        resourceId: commandFixtureItemIds.created,
         itemType: RESOURCE_TYPES.notes,
         name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'direct', parentId: null },

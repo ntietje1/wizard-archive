@@ -606,6 +606,7 @@ describe('useLiveWorkspaceRuntime', () => {
     expect(fileSystemItemMocks.executeCommand).toHaveBeenCalledWith(
       {
         type: 'create',
+        resourceId: expect.any(String),
         itemType: 'note',
         parentTarget: {
           kind: 'direct',
@@ -1411,6 +1412,7 @@ describe('useLiveWorkspaceRuntime', () => {
     expect(fileSystemItemMocks.executeCommand).toHaveBeenCalledWith(
       {
         type: 'create',
+        resourceId: expect.any(String),
         itemType: 'file',
         name: 'portrait.png',
         parentTarget: { kind: 'direct', parentId: testResourceId('folder-1') },
@@ -1460,6 +1462,7 @@ describe('useLiveWorkspaceRuntime', () => {
     expect(fileSystemItemMocks.executeCommand).toHaveBeenCalledWith(
       {
         type: 'create',
+        resourceId: expect.any(String),
         itemType: 'note',
         name: 'notes.txt',
         parentTarget: { kind: 'direct', parentId: testResourceId('folder-1') },

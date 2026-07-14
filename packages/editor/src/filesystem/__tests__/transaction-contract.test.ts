@@ -11,7 +11,11 @@ import {
   summarizeResourceReceipt,
 } from '../transaction-contract'
 import type { ResourceCommand } from '../transaction-contract'
-import { fileSystemCommandFixtures, fileSystemCommandReceiptEvents } from './command-fixtures'
+import {
+  commandFixtureItemIds,
+  fileSystemCommandFixtures,
+  fileSystemCommandReceiptEvents,
+} from './command-fixtures'
 
 const sourceItemId = 'source' as ResourceId
 const itemId = 'item' as ResourceId
@@ -71,6 +75,7 @@ describe('summarizeResourceReceipt', () => {
     const commands = [
       {
         type: RESOURCE_COMMAND_TYPE.create,
+        resourceId: commandFixtureItemIds.created,
         itemType: RESOURCE_TYPES.notes,
         name: canonicalizeResourceItemTitle('New note'),
         parentTarget: { kind: 'direct', parentId: null },

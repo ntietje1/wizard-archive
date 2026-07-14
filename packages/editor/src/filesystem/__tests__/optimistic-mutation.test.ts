@@ -8,12 +8,15 @@ import type { FileSystemCacheAdapter } from '../cache'
 import { runFileSystemOptimisticMutation } from '../optimistic-mutation'
 
 import { testOperationId } from '../../test/operation-id'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 
 const receipt: ResourceTransactionReceipt = {
   transactionId: testOperationId('transaction_1'),
   direction: 'forward',
   command: {
     type: 'create',
+    resourceId: testDomainId(DOMAIN_ID_KIND.resource, 'optimistic-mutation-create'),
     itemType: RESOURCE_TYPES.notes,
     name: 'Scene' as ResourceTitle,
     parentTarget: { kind: 'direct', parentId: null },

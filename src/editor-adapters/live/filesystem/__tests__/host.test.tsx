@@ -185,6 +185,7 @@ function createReceipt(transactionId: OperationId = TRANSACTION_1): ResourceTran
     direction: 'forward',
     command: {
       type: 'create',
+      resourceId: item.id,
       itemType: TEST_RESOURCE_TYPES.notes,
       name: testResourceTitle('Scene'),
       parentTarget: { kind: 'direct', parentId: null },
@@ -271,6 +272,7 @@ function createUndoCreateReceipt(item: WizardEditorItem): ResourceTransactionRec
     direction: 'undo',
     command: {
       type: 'create',
+      resourceId: item.id,
       itemType: item.type,
       name: item.name,
       parentTarget: { kind: 'direct', parentId: item.parentId },
@@ -579,7 +581,9 @@ describe('useLiveFileSystemRuntime', () => {
 
     await waitFor(() => expect(sidebarItems).toHaveLength(1))
     const optimisticItem = sidebarItems[0]
-    expect(String(optimisticItem.id)).toMatch(/^optimistic-create-/)
+    const submittedCommand = executeMutateAsync.mock.calls[0]?.[0].command
+    expect(isUuidV7(optimisticItem.id)).toBe(true)
+    expect(optimisticItem.id).toBe(submittedCommand.resourceId)
     expect(optimisticItem.slug).toBe('scene')
     expect(toastLoadingMock).toHaveBeenCalledWith('Creating item...')
 

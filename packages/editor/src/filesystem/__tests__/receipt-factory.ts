@@ -38,6 +38,7 @@ export function createFileSystemReceipt({
 export function createCreatedItemReceipt(item: AnyItem): ResourceTransactionReceipt {
   const command = {
     type: 'create',
+    resourceId: item.id,
     itemType: item.type,
     name: item.name,
     parentTarget: { kind: 'direct', parentId: item.parentId },

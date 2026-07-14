@@ -6,10 +6,60 @@ import { createTestContext } from '../../_test/setup.helper'
 import { createNote, createSidebarShare } from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { testOperationId } from '../../../shared/test/operation-id'
+import { testResourceId } from '../../../shared/test/resource-id'
 import { isUuidV7 } from '@wizard-archive/editor/resources/domain-id'
 
 describe('filesystem transaction receipts', () => {
   const t = createTestContext()
+
+  it('persists and returns the browser-owned create UUID unchanged', async () => {
+    const ctx = await setupCampaignContext(t)
+    const resourceId = testResourceId('browser-owned-create')
+    const receipt = await executeTestFileSystemCommand(asDm(ctx), {
+      campaignId: ctx.campaignDomainId,
+      command: {
+        type: 'create',
+        resourceId,
+        itemType: 'note',
+        name: 'Scene',
+        parentTarget: { kind: 'direct', parentId: null },
+      },
+    })
+
+    expect(receipt.events).toContainEqual(
+      expect.objectContaining({ type: 'created', itemId: resourceId }),
+    )
+    const stored = await t.run(async (dbCtx) =>
+      dbCtx.db
+        .query('sidebarItems')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique(),
+    )
+    expect(stored?.resourceUuid).toBe(resourceId)
+  })
+
+  it('rejects reusing a resource UUID for a different create operation', async () => {
+    const ctx = await setupCampaignContext(t)
+    const resourceId = testResourceId('duplicate-create-resource')
+    const command = {
+      type: 'create' as const,
+      resourceId,
+      itemType: 'note' as const,
+      name: 'Scene',
+      parentTarget: { kind: 'direct' as const, parentId: null },
+    }
+    await executeTestFileSystemCommand(asDm(ctx), {
+      campaignId: ctx.campaignDomainId,
+      command,
+    })
+
+    await expect(
+      executeTestFileSystemCommand(asDm(ctx), {
+        campaignId: ctx.campaignDomainId,
+        command,
+      }),
+    ).rejects.toThrow('Resource id already exists')
+  })
 
   it('returns event receipts instead of bucket arrays and records copy as undoable', async () => {
     const ctx = await setupCampaignContext(t)

@@ -8,7 +8,6 @@ import {
   resourcePatchRowFromCacheItem,
 } from '../cache-patches'
 import { createWorkspaceResourceReadModel } from '../../workspace/items'
-import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../../workspace/items/optimistic'
 import { projectMoveOperations, projectTrashRoots } from '../domain/patch-projection'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import type { ResourcePatch } from '../patch-contract'
@@ -102,7 +101,7 @@ describe('filesystem cache patches', () => {
     const created = createNote({ name: 'Created' })
     const optimistic = {
       ...rawSidebarRow(created),
-      id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}created` as typeof created.id,
+      id: 'optimistic-created' as typeof created.id,
     }
     const snapshot: SidebarCacheSnapshot = { sidebar: [], trash: [] }
 
@@ -118,7 +117,7 @@ describe('filesystem cache patches', () => {
     const created = createNote({ name: 'Created' })
     const optimistic = {
       ...created,
-      id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}created` as typeof created.id,
+      id: 'optimistic-created' as typeof created.id,
     }
 
     const updated = applyFileSystemPatchesToSidebarCache(

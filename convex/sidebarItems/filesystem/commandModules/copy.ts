@@ -10,6 +10,7 @@ import type {
   ResourceIconName,
 } from '@wizard-archive/editor/resources/resource-contract'
 import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 
 import { RESOURCE_EVENT_TYPE } from '@wizard-archive/editor/resources/transaction-contract'
 import { evaluateCopy } from '@wizard-archive/editor/resources/operation-capabilities'
@@ -95,6 +96,7 @@ async function insertCopiedSidebarItem(
 ): Promise<Id<'sidebarItems'>> {
   const previewStorageId = source.previewStorageId
   const { itemId, resourceId } = await copyContext.session.insertResource({
+    resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
     type: source.type,
     name,
     parentId,

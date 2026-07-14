@@ -7,6 +7,7 @@ import { DOMAIN_ID_KIND } from '../../resources/domain-id'
 import { testDomainId } from '../../test/domain-id'
 
 export const commandFixtureItemIds = {
+  created: testDomainId(DOMAIN_ID_KIND.resource, 'fixture_created'),
   item: 'fixture_item' as ResourceId,
   source: 'fixture_source' as ResourceId,
   destination: 'fixture_destination' as ResourceId,
@@ -18,6 +19,7 @@ export const commandFixtureItemIds = {
 export const fileSystemCommandFixtures = {
   [RESOURCE_COMMAND_TYPE.create]: {
     type: RESOURCE_COMMAND_TYPE.create,
+    resourceId: commandFixtureItemIds.created,
     itemType: RESOURCE_TYPES.notes,
     name: canonicalizeResourceItemTitle('Created note'),
     parentTarget: { kind: 'direct', parentId: null },

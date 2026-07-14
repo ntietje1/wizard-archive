@@ -103,6 +103,7 @@ describe('filesystem undo recording', () => {
         direction: 'forward',
         command: {
           type: 'create',
+          resourceId: created.id,
           itemType: created.type,
           name: created.name,
           parentTarget: { kind: 'direct', parentId: created.parentId },

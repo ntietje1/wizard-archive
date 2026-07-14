@@ -1,6 +1,5 @@
 import type { ResourceId } from '../resources/domain-id'
 import { assertResourceItemSlug, RESOURCE_SLUG_MAX_LENGTH } from '../workspace/items'
-import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../workspace/items/optimistic'
 import {
   RESOURCE_LOCATION,
   RESOURCE_STATUS,
@@ -17,13 +16,6 @@ import type { UserProfileId } from '../../../../shared/common/ids'
 import type { FileSystemOptimisticPreview } from './domain/lifecycle'
 import { sidebarCachePatchItemFromCacheItem } from './cache-patches'
 import type { SidebarCacheSnapshot } from './cache-patches'
-
-let optimisticIdIndex = 0
-
-function nextOptimisticIdIndex() {
-  optimisticIdIndex += 1
-  return optimisticIdIndex
-}
 
 export function expectedOptimisticCreateSlug(
   name: string,
@@ -67,12 +59,11 @@ export function buildOptimisticCreatePreview({
     }
   }
 
-  const index = nextOptimisticIdIndex()
   const item = buildOptimisticCreateItem({
     workspaceId,
     command,
     currentUserId,
-    id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}create-${now}-${index}` as ResourceId,
+    id: command.resourceId,
     name,
     now,
     parentId,

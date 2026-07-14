@@ -90,6 +90,7 @@ describe('useFileSystemExecutor', () => {
     await act(async () => {
       createPromise = result.current.executeCommand({
         type: 'create',
+        resourceId: created.id,
         itemType: RESOURCE_TYPES.notes,
         name: 'Scene' as ResourceTitle,
         parentTarget: { kind: 'direct', parentId: parent.id },

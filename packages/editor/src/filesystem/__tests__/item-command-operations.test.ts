@@ -9,6 +9,7 @@ import {
 import { completedResourceCommand } from '../transaction-contract'
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { createCreatedItemReceipt } from './receipt-factory'
+import { isUuidV7 } from '../../resources/domain-id'
 
 function createTestCache(snapshot: SidebarCacheSnapshot) {
   return createFileSystemCacheAdapter({
@@ -43,12 +44,14 @@ describe('filesystem item command operations', () => {
     expect(executeCommand).toHaveBeenCalledWith(
       {
         type: 'create',
+        resourceId: expect.any(String),
         itemType: RESOURCE_TYPES.notes,
         name: created.name,
         parentTarget: { kind: 'path', baseParentId: null, pathSegments: ['Scenes'] },
       },
       { createParentPlan: parentPlan },
     )
+    expect(isUuidV7(executeCommand.mock.calls[0]![0].resourceId)).toBe(true)
   })
 
   it('rejects create receipts that omit the created item event', async () => {

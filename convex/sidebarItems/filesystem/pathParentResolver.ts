@@ -4,6 +4,7 @@ import { validateSidebarCreateParent } from '../validation/orchestration'
 import { RESOURCE_PARENT_TARGET_KIND } from '@wizard-archive/editor/resources/resource-contract'
 import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'
 import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { assertSidebarItemLifecycleConsistency, isActiveSidebarItem } from '../types/status'
 import type { ParsedCreateParentTarget } from '../validation/parent'
@@ -61,6 +62,7 @@ async function resolveOrCreateChildFolder(
       evaluateCreateItem(operationActorFromRole(ctx.membership.role), RESOURCE_TYPES.folders),
     )
     const { itemId } = await session.insertResource({
+      resourceId: generateDomainId(DOMAIN_ID_KIND.resource),
       type: RESOURCE_TYPES.folders,
       name: segment,
       parentId,

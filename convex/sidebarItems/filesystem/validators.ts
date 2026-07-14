@@ -26,6 +26,7 @@ import { sessionIdValidator } from '../../sessions/schema'
 
 const createCommandValidator = v.object({
   type: v.literal(RESOURCE_COMMAND_TYPE.create),
+  resourceId: resourceIdValidator,
   itemType: sidebarItemTypeValidator,
   name: v.string(),
   parentTarget: createParentTargetValidator,

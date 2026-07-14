@@ -10,9 +10,12 @@ import {
 import { createFolder, createNote } from '../../test/sidebar-item-factory'
 import { RESOURCE_STATUS, RESOURCE_TYPES } from '../../workspace/items-persistence-contract'
 import type { CampaignId, UserProfileId } from '../../../../../shared/common/ids'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 
 const campaignId = 'campaign' as CampaignId
 const userId = 'user_1' as UserProfileId
+const createdResourceId = testDomainId(DOMAIN_ID_KIND.resource, 'optimistic-created')
 
 function createTestCache(snapshot: SidebarCacheSnapshot) {
   const adapter = createFileSystemCacheAdapter({
@@ -34,6 +37,7 @@ describe('filesystem optimistic planning', () => {
     const plan = planFileSystemOptimisticCommand({
       command: {
         type: 'create',
+        resourceId: createdResourceId,
         itemType: RESOURCE_TYPES.notes,
         name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'direct', parentId: parent.id },
@@ -50,6 +54,7 @@ describe('filesystem optimistic planning', () => {
     const upsert = plan.preview.receiptPatches[0]
     expect(upsert?.type).toBe('upsertResource')
     if (upsert?.type !== 'upsertResource') return
+    expect(upsert.item.id).toBe(createdResourceId)
     expect(plan.preview.optimisticIntents).toEqual([
       { type: 'openFolder', workspaceId: campaignId, folderId: parent.id },
     ])
@@ -64,6 +69,7 @@ describe('filesystem optimistic planning', () => {
     const plan = planFileSystemOptimisticCommand({
       command: {
         type: 'create',
+        resourceId: createdResourceId,
         itemType: RESOURCE_TYPES.notes,
         name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'path', baseParentId: null, pathSegments: ['Scenes'] },
@@ -97,6 +103,7 @@ describe('filesystem optimistic planning', () => {
     const plan = planFileSystemOptimisticCommand({
       command: {
         type: 'create',
+        resourceId: createdResourceId,
         itemType: RESOURCE_TYPES.notes,
         name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'path', baseParentId: null, pathSegments: ['Pending parent'] },
@@ -128,6 +135,7 @@ describe('filesystem optimistic planning', () => {
     const plan = planFileSystemOptimisticCommand({
       command: {
         type: 'create',
+        resourceId: createdResourceId,
         itemType: RESOURCE_TYPES.notes,
         name: canonicalizeResourceItemTitle('Scene'),
         parentTarget: { kind: 'direct', parentId: parent.id },
@@ -160,6 +168,7 @@ describe('filesystem optimistic planning', () => {
       const plan = planFileSystemOptimisticCommand({
         command: {
           type: 'create',
+          resourceId: createdResourceId,
           itemType,
           name: canonicalizeResourceItemTitle('Created'),
           parentTarget: { kind: 'direct', parentId: null },

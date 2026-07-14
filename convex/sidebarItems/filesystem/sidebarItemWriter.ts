@@ -10,14 +10,17 @@ import type {
   ResourceKind,
 } from '@wizard-archive/editor/resources/resource-contract'
 import type { ResourceTitle } from '@wizard-archive/editor/resources/resource-record'
-import { DOMAIN_ID_KIND, generateDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { normalizeLegacyResourcePathSegment } from '../resourcePathSegment'
 
 import { assertSidebarItemLifecycleConsistency } from '../types/status'
+import { findSidebarItemRow } from '../functions/sidebarItemIdentity'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 export type InsertFilesystemSidebarItemArgs = {
+  resourceId: ResourceId
   type: ResourceKind
   name: ResourceTitle
   parentId: Id<'sidebarItems'> | null
@@ -31,6 +34,7 @@ export async function insertFilesystemSidebarItem(
   ctx: CampaignMutationCtx,
   {
     type,
+    resourceId,
     name,
     parentId,
     iconName,
@@ -39,12 +43,14 @@ export async function insertFilesystemSidebarItem(
     previewUpdatedAt,
   }: InsertFilesystemSidebarItemArgs,
 ): Promise<{ itemId: Id<'sidebarItems'>; resourceId: ResourceId; slug: ResourceSlug }> {
+  if (await findSidebarItemRow(ctx, resourceId)) {
+    throwClientError(ERROR_CODE.CONFLICT, 'Resource id already exists')
+  }
   const prepared = await prepareSidebarItemCreate(ctx, {
     parentId,
     name,
   })
 
-  const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
   const row = {
     resourceUuid: resourceId,
     campaignId: ctx.campaign._id,

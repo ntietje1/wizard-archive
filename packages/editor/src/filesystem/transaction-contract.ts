@@ -27,6 +27,7 @@ export const RESOURCE_COMMAND_TYPE = {
 
 export type ResourceCreateCommand = {
   type: typeof RESOURCE_COMMAND_TYPE.create
+  resourceId: ResourceId
   itemType: ResourceKind
   name: ResourceTitle
   parentTarget: CreateParentTarget

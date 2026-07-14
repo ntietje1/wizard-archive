@@ -9,6 +9,8 @@ import { createCreatedItemReceipt } from './receipt-factory'
 import { createReadWriteTestCache } from './cache-test-utils'
 import type { CampaignId, UserProfileId } from '../../../../../shared/common/ids'
 import { testOperationId } from '../../test/operation-id'
+import { DOMAIN_ID_KIND } from '../../resources/domain-id'
+import { testDomainId } from '../../test/domain-id'
 
 const campaignId = 'campaign_1' as CampaignId
 const currentUserId = 'user_1' as UserProfileId
@@ -41,6 +43,7 @@ describe('filesystem command lifecycle', () => {
     const result = await executeFileSystemCommandLifecycle({
       command: {
         type: 'create',
+        resourceId: created.id,
         itemType: RESOURCE_TYPES.notes,
         name: 'Scene' as ResourceTitle,
         parentTarget: { kind: 'direct', parentId: parent.id },
@@ -67,6 +70,7 @@ describe('filesystem command lifecycle', () => {
     expect(executeMutation).toHaveBeenCalledWith({
       command: {
         type: 'create',
+        resourceId: created.id,
         itemType: RESOURCE_TYPES.notes,
         name: 'Scene',
         parentTarget: { kind: 'direct', parentId: parent.id },
@@ -119,6 +123,7 @@ describe('filesystem command lifecycle', () => {
     const result = await executeFileSystemCommandLifecycle({
       command: {
         type: 'create',
+        resourceId: created.id,
         itemType: RESOURCE_TYPES.notes,
         name: 'Scene' as ResourceTitle,
         parentTarget: { kind: 'direct', parentId: parent.id },
@@ -343,6 +348,7 @@ describe('filesystem command lifecycle', () => {
     const result = await executeFileSystemCommandLifecycle({
       command: {
         type: 'create',
+        resourceId: testDomainId(DOMAIN_ID_KIND.resource, 'failed-create'),
         itemType: RESOURCE_TYPES.notes,
         name: 'Scene' as ResourceTitle,
         parentTarget: { kind: 'direct', parentId: parent.id },

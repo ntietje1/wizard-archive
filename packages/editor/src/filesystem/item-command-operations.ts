@@ -1,3 +1,4 @@
+import { DOMAIN_ID_KIND, generateDomainId } from '../resources/domain-id'
 import type { ResourceId, OperationId } from '../resources/domain-id'
 import { isPromiseLike } from '../../../../shared/common/async'
 import type { MaybePromise } from '../../../../shared/common/async'
@@ -29,7 +30,7 @@ import type { FileSystemCacheAdapter } from './cache'
 type ExecuteFileSystemItemCommand = ResourceCommandDriver['executeCommand']
 
 type DiscardCreatedItem = (transactionId: OperationId) => MaybePromise<void>
-type CreateFileSystemHostItemInput = Omit<ResourceCreateCommand, 'type'> & {
+type CreateFileSystemHostItemInput = Omit<ResourceCreateCommand, 'type' | 'resourceId'> & {
   parentPlan?: ResourceCreateParentPlan
 }
 
@@ -105,7 +106,7 @@ export function createFileSystemItemCommandOperations({
   return {
     createItem: ({ parentPlan, ...input }, initialize) => {
       const result = executeCommand(
-        { type: 'create', ...input },
+        { type: 'create', resourceId: generateDomainId(DOMAIN_ID_KIND.resource), ...input },
         parentPlan === undefined ? undefined : { createParentPlan: parentPlan },
       )
       return isPromiseLike(result)

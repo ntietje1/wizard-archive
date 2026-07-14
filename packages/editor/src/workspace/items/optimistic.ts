@@ -1,4 +1,4 @@
-export const OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX = 'optimistic-' as const
+const OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX = 'optimistic-' as const
 
 export function isOptimisticSidebarItemId(itemId: string | null | undefined): itemId is string {
   return typeof itemId === 'string' && itemId.startsWith(OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX)

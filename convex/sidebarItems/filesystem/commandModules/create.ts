@@ -36,6 +36,7 @@ async function createSidebarItem(
   const parentId = await resolveCreateCommandParentId(ctx, session, { parentTarget })
 
   const { itemId, resourceId, slug } = await session.insertResource({
+    resourceId: command.resourceId,
     type: command.itemType,
     name,
     parentId,
