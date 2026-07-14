@@ -50,14 +50,15 @@ export function HistoryPreviewSurface({
       handleError(error, 'Failed to restore history version')
       return
     }
+    const currentHistory = currentHistoryRef.current
     if (
       result.status === 'restored' &&
-      currentHistoryRef.current === history &&
       currentItemIdRef.current === itemId &&
-      history.rollbackEntryId === rollbackEntryId
+      currentHistory.itemId === itemId &&
+      currentHistory.rollbackEntryId === rollbackEntryId
     ) {
-      history.clearPreview()
-      history.clearRollback()
+      currentHistory.clearPreview()
+      currentHistory.clearRollback()
     }
   }
   const rollbackDialog = (

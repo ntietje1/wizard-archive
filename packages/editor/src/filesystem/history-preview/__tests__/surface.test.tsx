@@ -83,6 +83,46 @@ describe('HistoryPreviewSurface', () => {
     expect(firstHistory.clearPreview).not.toHaveBeenCalled()
     expect(firstHistory.clearRollback).not.toHaveBeenCalled()
   })
+
+  it('clears the current history session after its restore completes across rerenders', async () => {
+    let resolveRestore!: (value: HistoryRollbackResult) => void
+    const restore = new Promise<HistoryRollbackResult>((resolve) => {
+      resolveRestore = resolve
+    })
+    const itemId = 'note-1' as ResourceId
+    const rollbackEntryId = testHistoryEntryId('history-1')
+    const firstHistory = historyFor(itemId)
+    firstHistory.rollbackEntryId = rollbackEntryId
+    firstHistory.rollback = { status: 'ready', entryTime: 1, isRestoring: false }
+    firstHistory.restoreRollback = vi.fn(() => restore)
+    const { rerender } = render(
+      <HistoryPreviewSurface canEdit history={firstHistory} itemId={itemId}>
+        <div>Current item</div>
+      </HistoryPreviewSurface>,
+    )
+    const onRestore = rollbackDialogProps.mock.lastCall?.[0].onRestore as () => void
+    onRestore()
+
+    const currentHistory = historyFor(itemId)
+    currentHistory.rollbackEntryId = rollbackEntryId
+    currentHistory.rollback = { status: 'ready', entryTime: 1, isRestoring: true }
+    rerender(
+      <HistoryPreviewSurface canEdit history={currentHistory} itemId={itemId}>
+        <div>Current item</div>
+      </HistoryPreviewSurface>,
+    )
+    resolveRestore({
+      status: 'restored',
+      historyEntryId: testHistoryEntryId('history-2'),
+      preservedHistoryEntryId: testHistoryEntryId('history-3'),
+      restoredFromHistoryEntryId: rollbackEntryId,
+      restoredItemId: itemId,
+    })
+    await restore
+
+    expect(currentHistory.clearPreview).toHaveBeenCalledOnce()
+    expect(currentHistory.clearRollback).toHaveBeenCalledOnce()
+  })
 })
 
 function historyFor(itemId: ResourceId): ResourceHistoryAvailable {
