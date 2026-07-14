@@ -4,13 +4,20 @@ import type { api } from 'convex/_generated/api'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
-import type { ContentSessionState } from '@wizard-archive/editor/resources/content-session-contract'
-import type { ResourceSessionSource } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import type {
+  ContentSessionState,
+  ResourceContentSource,
+} from '@wizard-archive/editor/resources/content-session-contract'
+import type {
+  FileResourceContent,
+  MapResourceContent,
+} from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { createResourceWatchStore } from './resource-watch-store'
 
 type ResourceContentSnapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
 type ResourceContentKind = 'file' | 'map' | 'canvas'
-type ResourceContentState = ContentSessionState<null, unknown>
+type ResourceContent = FileResourceContent | MapResourceContent | Y.Doc
+type ResourceContentState = ContentSessionState<null, ResourceContent>
 type ResourceContentStore = ReturnType<
   typeof createResourceWatchStore<ResourceContentSnapshot, ResourceContentState>
 >
@@ -19,7 +26,7 @@ type LiveResourceContentBackend = Readonly<{
   watch(resourceId: ResourceId, apply: (snapshot: ResourceContentSnapshot) => void): () => void
 }>
 
-class LiveResourceContentSource implements ResourceSessionSource {
+class LiveResourceContentSource implements ResourceContentSource<null, ResourceContent> {
   readonly #store: ResourceContentStore
   readonly #disposers = new Map<ResourceId, () => void>()
 
@@ -76,8 +83,22 @@ class LiveResourceContentSource implements ResourceSessionSource {
           return
         }
         try {
-          if (snapshot.kind !== 'canvas') {
+          if (snapshot.kind === 'file') {
             this.#setState(resourceId, { status: 'ready', content: snapshot.content, version })
+            return
+          }
+          if (snapshot.kind === 'map') {
+            this.#setState(resourceId, {
+              status: 'ready',
+              content: {
+                ...snapshot.content,
+                pins: snapshot.content.pins.map((pin) => ({
+                  ...pin,
+                  targetResourceId: assertDomainId(DOMAIN_ID_KIND.resource, pin.targetResourceId),
+                })),
+              },
+              version,
+            })
             return
           }
           const doc = new Y.Doc()
