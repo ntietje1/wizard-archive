@@ -34,7 +34,10 @@ export function createCollaborativeNoteEditor({
 }
 
 function initializeCollaborativeDocument(editor: CustomBlockNoteEditor) {
-  const { state, view } = editor._tiptapEditor
+  const tiptapEditor = editor._tiptapEditor
+  if (!tiptapEditor) return
+  const { state, view } = tiptapEditor
+  if (!state || !view) return
   const transaction = state.tr
   let initialized = false
 
