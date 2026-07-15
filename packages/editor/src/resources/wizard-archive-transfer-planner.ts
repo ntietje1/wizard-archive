@@ -135,9 +135,9 @@ export type WizardArchiveTransferPlan = Readonly<{
   resourceWrites: ReadonlyArray<WizardArchiveResourceWrite>
   contentPlans: ReadonlyArray<WizardArchiveContentPlan>
   aliases: ReadonlyArray<SourcePathAlias>
-  roles:
+  assetsFolder:
     | Readonly<{ action: 'preserve_destination' }>
-    | Readonly<{ action: 'replace_for_new_campaign'; values: WizardArchiveManifest['roles'] }>
+    | Readonly<{ action: 'replace_for_new_campaign'; value: ResourceId | null }>
   observations: ReadonlyArray<WizardArchiveVersionObservation>
   explanations: ReadonlyArray<string>
 }>
@@ -271,12 +271,12 @@ async function planClone(
         campaignId: destinationCampaignId,
         resourceId: destinationIdBySourceId.get(alias.resourceId)!,
       })),
-      roles: {
+      assetsFolder: {
         action: 'replace_for_new_campaign',
-        values: manifest.roles.map((role) => ({
-          ...role,
-          resourceId: destinationIdBySourceId.get(role.resourceId)!,
-        })),
+        value:
+          manifest.assetsFolderId === null
+            ? null
+            : destinationIdBySourceId.get(manifest.assetsFolderId)!,
       },
       observations: [],
       explanations: [
@@ -386,11 +386,11 @@ async function planSameCampaignUpdate(
         ...alias,
         resourceId: aliasDestinationBySourceId.get(alias.resourceId) ?? alias.resourceId,
       })),
-      roles: { action: 'preserve_destination' },
+      assetsFolder: { action: 'preserve_destination' },
       observations: state.observations,
       explanations: [
         'Compared metadata and owning-domain content independently using authoritative-revision-v1.',
-        'Preserved destination roles and destination-owned access, history, preview, and session state.',
+        'Preserved the destination Assets folder and destination-owned access, history, preview, and session state.',
       ],
     },
   }

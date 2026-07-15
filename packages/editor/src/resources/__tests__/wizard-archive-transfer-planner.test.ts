@@ -166,7 +166,7 @@ describe('Wizard Archive transfer planner', () => {
       }),
     ])
     expect(result.plan.aliases).toHaveLength(2)
-    expect(result.plan.roles).toEqual({ action: 'preserve_destination' })
+    expect(result.plan.assetsFolder).toEqual({ action: 'preserve_destination' })
   })
 
   it('recovers an unknown imported resource under one fresh resource map', async () => {
@@ -353,12 +353,10 @@ describe('Wizard Archive transfer planner', () => {
         resourceId: noteClone.destinationResourceId,
       }),
     )
-    expect(result.plan.roles).toEqual(
+    expect(result.plan.assetsFolder).toEqual(
       expect.objectContaining({
         action: 'replace_for_new_campaign',
-        values: expect.arrayContaining([
-          expect.objectContaining({ role: 'home', resourceId: folderClone.destinationId }),
-        ]),
+        value: folderClone.destinationId,
       }),
     )
     expect(result.plan.unknownDecisions).toEqual([])
@@ -439,10 +437,7 @@ function fixture(): WizardArchiveManifest {
         rawPath: 'maps/map.wizardmap',
       }),
     ],
-    roles: [
-      { role: 'home', resourceId: folderId },
-      { role: 'handout', resourceId: noteId },
-    ],
+    assetsFolderId: folderId,
     sections: {
       notes: {
         version: WIZARD_ARCHIVE_NOTE_SECTION_VERSION,
@@ -489,7 +484,7 @@ function oneNoteFixture(metadataVersion: VersionStamp): WizardArchiveManifest {
     resources: [archiveResource(noteId, null, 'note', metadataVersion, stamp(1, 'c'), 'Note')],
     tombstones: [],
     aliases: [],
-    roles: [],
+    assetsFolderId: null,
     sections: {
       ...manifest.sections,
       notes: {

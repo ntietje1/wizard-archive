@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import * as Y from 'yjs'
 import { DOMAIN_ID_KIND, generateDomainId } from './domain-id'
 import type { ResourceId } from './domain-id'
-import type { WizardEditorRuntime } from './editor-runtime-contract'
+import type { EditorRuntime } from './editor-runtime-contract'
 import type {
   CommandDelivery,
   ResourceStructureCommand,
@@ -37,7 +37,7 @@ export function ResourceShell({
   workspaceName,
 }: {
   ariaLabel: string
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
   resourcePanelSlots?: Readonly<{
     footer?: ReactNode
     headerEnd?: ReactNode
@@ -122,7 +122,7 @@ export function ResourceShell({
   )
 }
 
-function useResourceSnapshot(runtime: WizardEditorRuntime) {
+function useResourceSnapshot(runtime: EditorRuntime) {
   return useSyncExternalStore(
     (listener) => runtime.resources.index.subscribe(listener),
     () => runtime.resources.index.getSnapshot(),
@@ -130,7 +130,7 @@ function useResourceSnapshot(runtime: WizardEditorRuntime) {
   )
 }
 
-function useResourceSelection(runtime: WizardEditorRuntime) {
+function useResourceSelection(runtime: EditorRuntime) {
   return useSyncExternalStore(
     (listener) => runtime.navigation.subscribe(listener),
     () => runtime.navigation.current(),
@@ -138,7 +138,7 @@ function useResourceSelection(runtime: WizardEditorRuntime) {
   )
 }
 
-function useEnsureCollection(runtime: WizardEditorRuntime, query: ResourceCollectionQuery) {
+function useEnsureCollection(runtime: EditorRuntime, query: ResourceCollectionQuery) {
   const { lifecycle, parentId } = query
   const [attempt, setAttempt] = useState(0)
   const key = `${parentId ?? 'root'}:${lifecycle}:${attempt}`
@@ -158,7 +158,7 @@ function useEnsureCollection(runtime: WizardEditorRuntime, query: ResourceCollec
   }
 }
 
-function useEnsureResource(runtime: WizardEditorRuntime, resourceId: ResourceId | null) {
+function useEnsureResource(runtime: EditorRuntime, resourceId: ResourceId | null) {
   const [attempt, setAttempt] = useState(0)
   const key = `${resourceId ?? 'none'}:${attempt}`
   const [loaded, setLoaded] = useState<{ key: string; result: ResourceLoadResult } | null>(null)
@@ -187,7 +187,7 @@ function ResourceCollection({
   sort,
 }: {
   query: ResourceCollectionQuery
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
   selectedResourceId: ResourceId | null
   snapshot: WorkspaceResourceIndexSnapshot
   sort: ResourceSort
@@ -265,7 +265,7 @@ function ResourceTreeRow({
   sort,
 }: {
   resource: AuthorizedResourceSummary
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
   selectedResourceId: ResourceId | null
   snapshot: WorkspaceResourceIndexSnapshot
   sort: ResourceSort
@@ -322,7 +322,7 @@ function ResourceCreateMenu({
 }: {
   onReport: Report
   parentId: ResourceId | null
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
 }) {
   const [title, setTitle] = useState('')
   const [icon, setIcon] = useState('')
@@ -384,7 +384,7 @@ function ResourceCreateMenu({
 }
 
 async function createResource(
-  runtime: WizardEditorRuntime,
+  runtime: EditorRuntime,
   kind: ResourceKind,
   parentId: ResourceId | null,
   metadata: { title: string; icon: string; color: string },
@@ -456,7 +456,7 @@ function SelectedResource({
   load: { result: ResourceLoadResult | null; retry: () => void }
   onReport: Report
   resourceId: ResourceId | null
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
 }) {
   if (!resourceId) return <EmptySelection />
   if (knowledge.state === 'unknown') {
@@ -489,7 +489,7 @@ function ResourceBreadcrumb({
   runtime,
 }: {
   resource: AuthorizedResourceSummary
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
 }) {
   const ancestors = runtime.resources.index.getSnapshot().ancestors(resource.id)
   const values = ancestors.state === 'known' ? ancestors.value : []
@@ -505,7 +505,7 @@ function ResourceCapabilitySummary({
   runtime,
 }: {
   resourceId: ResourceId
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
 }) {
   const accessCapability = runtime.resources.access
   const bookmarkCapability = runtime.resources.bookmarks
@@ -552,7 +552,7 @@ function ResourceDetails({
 }: {
   onReport: Report
   resource: AuthorizedResourceSummary
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
 }) {
   return (
     <details className="border-t border-border p-3 text-xs text-muted-foreground">
@@ -583,7 +583,7 @@ function ResourceDetails({
 }
 
 async function copyResourceLink(
-  runtime: WizardEditorRuntime,
+  runtime: EditorRuntime,
   resource: AuthorizedResourceSummary,
   report: Report,
 ) {
@@ -610,7 +610,7 @@ function ResourceActions({
 }: {
   onReport: Report
   resource: AuthorizedResourceSummary
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
 }) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -714,7 +714,7 @@ function ResourceMetadataForm({
   onCancel: () => void
   onReport: Report
   resource: AuthorizedResourceSummary
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
 }) {
   const [title, setTitle] = useState<string>(resource.title)
   const [icon, setIcon] = useState(resource.icon ?? '')
@@ -764,7 +764,7 @@ function ResourceMetadataForm({
 }
 
 async function updateResourceMetadata(
-  runtime: WizardEditorRuntime,
+  runtime: EditorRuntime,
   resourceId: ResourceId,
   values: { title: string; icon: string; color: string },
   report: Report,
@@ -791,11 +791,7 @@ async function updateResourceMetadata(
   )
 }
 
-async function moveResourceToRoot(
-  runtime: WizardEditorRuntime,
-  resourceId: ResourceId,
-  report: Report,
-) {
+async function moveResourceToRoot(runtime: EditorRuntime, resourceId: ResourceId, report: Report) {
   await executeRetryableStructureCommand(
     runtime,
     {
@@ -808,7 +804,7 @@ async function moveResourceToRoot(
 }
 
 async function executeSingleResourceCommand(
-  runtime: WizardEditorRuntime,
+  runtime: EditorRuntime,
   resourceId: ResourceId,
   type: 'trash' | 'restore' | 'permanentlyDelete',
   report: Report,
@@ -817,7 +813,7 @@ async function executeSingleResourceCommand(
 }
 
 async function duplicateResource(
-  runtime: WizardEditorRuntime,
+  runtime: EditorRuntime,
   resource: AuthorizedResourceSummary,
   report: Report,
 ) {
@@ -846,7 +842,7 @@ async function duplicateResource(
 }
 
 async function executeRetryableStructureCommand(
-  runtime: WizardEditorRuntime,
+  runtime: EditorRuntime,
   command: ResourceStructureCommand,
   report: Report,
   handle: (delivery: CommandDelivery<ResourceStructureCommandResult>) => void = (delivery) =>
@@ -869,14 +865,14 @@ async function executeRetryableStructureCommand(
   return await attempt()
 }
 
-function availableStructure(runtime: WizardEditorRuntime): ResourceStructureCommandGateway | null {
+function availableStructure(runtime: EditorRuntime): ResourceStructureCommandGateway | null {
   return runtime.resources.structure.status === 'available'
     ? runtime.resources.structure.value
     : null
 }
 
 function deliverStructureCommand(
-  runtime: WizardEditorRuntime,
+  runtime: EditorRuntime,
   command: ResourceStructureCommand,
   operationId = generateDomainId(DOMAIN_ID_KIND.operation),
 ): Promise<CommandDelivery<ResourceStructureCommandResult>> | null {
@@ -895,7 +891,7 @@ function ResourceContent({
   runtime,
 }: {
   resource: AuthorizedResourceSummary
-  runtime: WizardEditorRuntime
+  runtime: EditorRuntime
 }) {
   if (resource.kind === 'folder') {
     return <SurfaceState label="Folder" />
@@ -915,7 +911,7 @@ function ResourceContent({
 function NoteContent({ resourceId, runtime }: ContentProps) {
   const state = runtime.content.notes.get(resourceId)
   if (state.status === 'initializing') return <NoteSurface document={state.local} />
-  if (state.status === 'ready') return <NoteSurface document={state.content} />
+  if (state.status === 'ready') return <NoteSurface document={state.session.document} />
   return unavailableContentState(state)
 }
 
@@ -934,7 +930,7 @@ function MapContent({ resourceId, runtime }: ContentProps) {
   const state = runtime.content.maps.get(resourceId)
   const unavailable = unavailableContentState(state)
   if (unavailable || state.status !== 'ready') return unavailable
-  return <SurfaceState label={`Map · ${state.content.pins.length} pins`} />
+  return <SurfaceState label={`Map · ${state.session.content.pins.length} pins`} />
 }
 
 function CanvasContent({ resourceId, runtime }: ContentProps) {
@@ -944,14 +940,14 @@ function CanvasContent({ resourceId, runtime }: ContentProps) {
   return <SurfaceState label="Canvas" />
 }
 
-type ContentProps = Readonly<{ resourceId: ResourceId; runtime: WizardEditorRuntime }>
+type ContentProps = Readonly<{ resourceId: ResourceId; runtime: EditorRuntime }>
 
 function unavailableContentState(
   state:
-    | ReturnType<WizardEditorRuntime['content']['notes']['get']>
-    | ReturnType<WizardEditorRuntime['content']['files']['get']>
-    | ReturnType<WizardEditorRuntime['content']['maps']['get']>
-    | ReturnType<WizardEditorRuntime['content']['canvases']['get']>,
+    | ReturnType<EditorRuntime['content']['notes']['get']>
+    | ReturnType<EditorRuntime['content']['files']['get']>
+    | ReturnType<EditorRuntime['content']['maps']['get']>
+    | ReturnType<EditorRuntime['content']['canvases']['get']>,
 ) {
   switch (state.status) {
     case 'loading':

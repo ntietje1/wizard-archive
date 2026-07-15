@@ -39,8 +39,8 @@ vi.mock('~/editor-adapters/local/use-local-workspace-runtime', () => ({
   useLocalWorkspaceRuntime: (props: Record<string, unknown>) => useLocalWorkspaceRuntimeMock(props),
 }))
 
-vi.mock('@wizard-archive/editor', () => ({
-  WizardEditor: (props: Record<string, unknown>) => {
+vi.mock('@wizard-archive/editor/resources/resource-shell', () => ({
+  ResourceShell: (props: Record<string, unknown>) => {
     workspaceRuntimeHostMock(props)
     workspaceRuntimeHostProps.current = props
     return <div aria-label={props.ariaLabel as string}>Local demo workspace</div>

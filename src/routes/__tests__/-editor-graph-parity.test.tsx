@@ -46,8 +46,8 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   }
 })
 
-vi.mock('@wizard-archive/editor', () => ({
-  WizardEditor: (props: Record<string, unknown>) => {
+vi.mock('@wizard-archive/editor/resources/resource-shell', () => ({
+  ResourceShell: (props: Record<string, unknown>) => {
     graphState.hostProps.push(props)
     return <section aria-label={props.ariaLabel as string}>Workspace runtime host</section>
   },
@@ -145,7 +145,7 @@ describe('editor graph parity', () => {
         expect.objectContaining({
           ariaLabel: 'Demo workspace',
           runtime: graphState.localRuntime,
-          resourcePanel: 'visible',
+          showResourcePanel: true,
           workspaceName: 'Demo workspace',
         }),
       ]),

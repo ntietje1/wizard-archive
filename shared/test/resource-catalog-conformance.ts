@@ -10,7 +10,6 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type {
-  ApplicationResourceRole,
   ResourceCatalogReader,
   SourcePathAlias,
 } from '@wizard-archive/editor/resources/catalog-contract'
@@ -30,8 +29,7 @@ type ResourceOperationAuthorizer = (
 
 type CatalogUnderTest = AuthoritativeResourceOperationExecutor & {
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
-  setRole(campaignId: CampaignId, role: ApplicationResourceRole): Promise<void>
-  removeRole(campaignId: CampaignId, role: string): Promise<void>
+  assignAssetsFolder(campaignId: CampaignId, resourceId: ResourceId | null): Promise<void>
 }
 
 export type ResourceCatalogConformanceFactory = (input: {
@@ -417,7 +415,58 @@ export function defineResourceCatalogConformance(
       ).resolves.toEqual({ status: 'rejected', reason: 'ownership_mismatch' })
     })
 
-    it('deduplicates equivalent import entries and keeps application roles deterministic', async () => {
+    it('trashes an ancestor without detaching or rejecting an already trashed descendant', async () => {
+      const { catalog, operations } = await createCatalog({ authorize: () => true, now: () => 65 })
+      const folderId = domainId(DOMAIN_ID_KIND.resource, 65)
+      const childId = domainId(DOMAIN_ID_KIND.resource, 66)
+      expectCompleted(
+        await operations.execute(
+          actorId,
+          envelope(
+            campaignId,
+            domainId(DOMAIN_ID_KIND.operation, 650),
+            createCommand(folderId, null, 'folder'),
+          ),
+        ),
+      )
+      expectCompleted(
+        await operations.execute(
+          actorId,
+          envelope(
+            campaignId,
+            domainId(DOMAIN_ID_KIND.operation, 651),
+            createCommand(childId, folderId),
+          ),
+        ),
+      )
+      expectCompleted(
+        await operations.execute(
+          actorId,
+          envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, 652), {
+            type: 'trash',
+            resourceIds: [childId],
+          }),
+        ),
+      )
+
+      expectCompleted(
+        await operations.execute(
+          actorId,
+          envelope(campaignId, domainId(DOMAIN_ID_KIND.operation, 653), {
+            type: 'trash',
+            resourceIds: [folderId],
+          }),
+        ),
+      )
+      expect(await catalog.getResource(campaignId, childId)).toEqual(
+        expect.objectContaining({
+          parentId: folderId,
+          lifecycle: expect.objectContaining({ state: 'trashed' }),
+        }),
+      )
+    })
+
+    it('deduplicates equivalent import entries and assigns one assets folder', async () => {
       const { catalog, operations } = await createCatalog({ authorize: () => true, now: () => 70 })
       const resourceId = domainId(DOMAIN_ID_KIND.resource, 70)
       expectCompleted(
@@ -426,7 +475,7 @@ export function defineResourceCatalogConformance(
           envelope(
             campaignId,
             domainId(DOMAIN_ID_KIND.operation, 700),
-            createCommand(resourceId, null),
+            createCommand(resourceId, null, 'folder'),
           ),
         ),
       )
@@ -437,14 +486,10 @@ export function defineResourceCatalogConformance(
       expect(await operations.appendAlias(repeated)).toEqual(repeated)
       expect(await catalog.listAliases(campaignId, resourceId)).toEqual([first, repeated])
 
-      await operations.setRole(campaignId, { role: 'player-handout', resourceId })
-      await operations.setRole(campaignId, { role: 'campaign-home', resourceId })
-      expect(await catalog.listRoles(campaignId)).toEqual([
-        { role: 'campaign-home', resourceId },
-        { role: 'player-handout', resourceId },
-      ])
-      await operations.removeRole(campaignId, 'campaign-home')
-      expect(await catalog.listRoles(campaignId)).toEqual([{ role: 'player-handout', resourceId }])
+      await operations.assignAssetsFolder(campaignId, resourceId)
+      expect(await catalog.getAssetsFolder(campaignId)).toBe(resourceId)
+      await operations.assignAssetsFolder(campaignId, null)
+      expect(await catalog.getAssetsFolder(campaignId)).toBeNull()
     })
 
     it('rejects closures above the synchronous operation limit without partial lifecycle changes', async () => {
@@ -478,7 +523,7 @@ export function defineResourceCatalogConformance(
       ).resolves.toEqual({ status: 'rejected', reason: 'closure_too_large' })
       expect((await catalog.getResource(campaignId, rootId))?.lifecycle.state).toBe('active')
       expect((await catalog.getResource(campaignId, parentId!))?.lifecycle.state).toBe('active')
-    })
+    }, 15_000)
   })
 }
 

@@ -5,12 +5,12 @@ import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-co
 import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
 import { createLiveResourceIndexRuntime } from '../live-resource-index'
 
-const scope: ResourceProjectionScope = {
+const scope = {
   campaignId: testDomainId('campaign', 'live-index'),
   actorId: testDomainId('campaignMember', 'live-index'),
   projection: 'dm',
   schema: RESOURCE_INDEX_SCHEMA,
-}
+} satisfies ResourceProjectionScope
 const version = {
   scheme: 'authoritative-revision-v1' as const,
   revision: 1,
@@ -42,7 +42,10 @@ function snapshot(
       resourceIds: Array<ResourceId>
       complete: boolean
     }>
-    scopeOverride?: Partial<ResourceProjectionScope>
+    scopeOverride?: Partial<Omit<ResourceProjectionScope, 'projection' | 'schema'>> & {
+      projection?: 'dm' | 'player'
+      schema?: typeof RESOURCE_INDEX_SCHEMA
+    }
   } = {},
 ) {
   return {

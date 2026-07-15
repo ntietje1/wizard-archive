@@ -11,7 +11,7 @@ import type {
 } from './domain-id'
 import type { PORTABLE_PATH_VERSION, PortableRelativePath } from './portable-path-contract'
 import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-record'
-import type { ApplicationResourceRole, SourcePathAlias } from './resource-catalog-contract'
+import type { SourcePathAlias } from './resource-catalog-contract'
 import type { ResourceTombstone } from './resource-metadata-version'
 import type { FileOwnedMetadata } from './file-content-contract'
 
@@ -86,7 +86,7 @@ export type WizardArchiveManifest = Readonly<{
   resources: ReadonlyArray<WizardArchiveResource>
   tombstones: ReadonlyArray<ResourceTombstone>
   aliases: ReadonlyArray<SourcePathAlias>
-  roles: ReadonlyArray<ApplicationResourceRole>
+  assetsFolderId: ResourceId | null
   sections: Readonly<{
     notes: WizardArchiveSection<
       WizardArchiveNoteSection,

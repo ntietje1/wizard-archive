@@ -1,12 +1,10 @@
 import { DOMAIN_ID_KIND, assertDomainId, generateDomainId } from './domain-id'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
 import type {
-  ApplicationResourceRole,
   ResourceCatalogPage,
   ResourceCatalogReader,
   ResourceCatalogSnapshotSource,
   ResourceCatalogSnapshot,
-  ResourceMetadataChanges,
   SourcePathAlias,
 } from './resource-catalog-contract'
 import { assertResourceCatalogPageSize } from './resource-catalog-contract'
@@ -18,7 +16,6 @@ import type {
   ResourcePostcondition,
   ResourceStructureCommand,
   ResourceStructureCommandResult,
-  ResourceStructureRejection,
 } from './resource-command-contract'
 import {
   RESOURCE_COMMAND_PROTOCOL_VERSION,
@@ -27,16 +24,8 @@ import {
   resourceStructureInputRejection,
 } from './resource-command-protocol'
 import type { AuditStamp, ResourceRecord } from './resource-record'
-import {
-  MAX_SYNCHRONOUS_RESOURCE_CLOSURE,
-  canonicalizeResourceTitle,
-  resourceMetadataValue,
-} from './resource-record'
-import {
-  advanceResourceMetadataVersion,
-  createResourceTombstone,
-  initialResourceMetadataVersion,
-} from './resource-metadata-version'
+import { canonicalizeResourceTitle } from './resource-record'
+import { initialResourceMetadataVersion } from './resource-metadata-version'
 import type { ResourceTombstone } from './resource-metadata-version'
 import { InMemoryResourceOperationLedger } from './resource-operation-ledger'
 import type {
@@ -44,6 +33,13 @@ import type {
   ContentCopyPlanner,
   ResourceCopyMapEntry,
 } from './content-copy-contract'
+import {
+  ResourceGraphRejection,
+  requireActiveResourceFolder,
+  selectResourceClosure,
+  selectResourceRoots,
+  transitionResourceGraph,
+} from './resource-graph-transition'
 
 export type ResourceOperationAuthorizer = (
   actorId: CampaignMemberId,
@@ -54,17 +50,22 @@ export type InMemoryResourceCatalogOptions = Readonly<{
   initialSnapshot?: ResourceCatalogSnapshot
 }>
 
-export type InMemoryResourceOperationExecutorOptions<TContentCopyPlan = never> = Readonly<{
+export type InMemoryResourceOperationsOptions<TContentCopyPlan = never> = Readonly<{
   authorize: ResourceOperationAuthorizer
   contentCopy?: ContentCopyPlanner<TContentCopyPlan, () => void>
   now?: () => number
 }>
 
+export interface InMemoryResourceOperations extends AuthoritativeResourceOperationExecutor {
+  appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
+  assignAssetsFolder(campaignId: CampaignId, resourceId: ResourceId | null): Promise<void>
+}
+
 type CatalogState = {
   resources: Map<ResourceId, ResourceRecord>
   tombstones: Map<ResourceId, ResourceTombstone>
   aliases: Map<ResourceId, Array<SourcePathAlias>>
-  roles: Map<CampaignId, Map<string, ResourceId>>
+  assetsFolders: Map<CampaignId, ResourceId>
 }
 
 type InMemoryResourceCatalogBackend = {
@@ -74,26 +75,12 @@ type InMemoryResourceCatalogBackend = {
   snapshotCache: Map<CampaignId, ResourceCatalogSnapshot>
 }
 
-const catalogBackends = new WeakMap<InMemoryResourceCatalog, InMemoryResourceCatalogBackend>()
-
-function requireCatalogBackend(catalog: InMemoryResourceCatalog): InMemoryResourceCatalogBackend {
-  const backend = catalogBackends.get(catalog)
-  if (!backend) throw new TypeError('Unknown in-memory resource catalog')
-  return backend
-}
-
-class CatalogRejection extends Error {
-  constructor(readonly reason: ResourceStructureRejection) {
-    super(reason)
-  }
-}
-
 function emptyCatalogState(): CatalogState {
   return {
     resources: new Map(),
     tombstones: new Map(),
     aliases: new Map(),
-    roles: new Map(),
+    assetsFolders: new Map(),
   }
 }
 
@@ -104,7 +91,7 @@ function cloneCatalogState(state: CatalogState): CatalogState {
     aliases: new Map(
       Array.from(state.aliases, ([resourceId, aliases]) => [resourceId, [...aliases]]),
     ),
-    roles: new Map(Array.from(state.roles, ([campaignId, roles]) => [campaignId, new Map(roles)])),
+    assetsFolders: new Map(state.assetsFolders),
   }
 }
 
@@ -160,15 +147,13 @@ function addSnapshotAliases(state: CatalogState, snapshot: ResourceCatalogSnapsh
   }
 }
 
-function addSnapshotRoles(state: CatalogState, snapshot: ResourceCatalogSnapshot): void {
-  const roles = new Map<string, ResourceId>()
-  for (const role of snapshot.roles) {
-    if (roles.has(role.role) || !state.resources.has(role.resourceId)) {
-      throw new TypeError('Invalid initial resource catalog role')
-    }
-    roles.set(role.role, role.resourceId)
+function addSnapshotAssetsFolder(state: CatalogState, snapshot: ResourceCatalogSnapshot): void {
+  if (snapshot.assetsFolderId === null) return
+  const resource = state.resources.get(snapshot.assetsFolderId)
+  if (!resource || resource.campaignId !== snapshot.campaignId || resource.kind !== 'folder') {
+    throw new TypeError('Invalid initial resource catalog assets folder')
   }
-  if (roles.size > 0) state.roles.set(snapshot.campaignId, roles)
+  state.assetsFolders.set(snapshot.campaignId, snapshot.assetsFolderId)
 }
 
 function catalogStateFromSnapshot(snapshot: ResourceCatalogSnapshot): CatalogState {
@@ -177,7 +162,7 @@ function catalogStateFromSnapshot(snapshot: ResourceCatalogSnapshot): CatalogSta
   addSnapshotTombstones(state, snapshot)
   validateSnapshotHierarchy(state, snapshot.campaignId)
   addSnapshotAliases(state, snapshot)
-  addSnapshotRoles(state, snapshot)
+  addSnapshotAssetsFolder(state, snapshot)
   return state
 }
 
@@ -208,115 +193,29 @@ function sameAlias(left: SourcePathAlias, right: SourcePathAlias): boolean {
   )
 }
 
-function byRole(left: ApplicationResourceRole, right: ApplicationResourceRole): number {
-  return left.role.localeCompare(right.role) || left.resourceId.localeCompare(right.resourceId)
-}
-
-function operationRoots(
-  state: CatalogState,
-  campaignId: CampaignId,
-  resourceIds: ReadonlyArray<ResourceId>,
-): ReadonlyArray<ResourceRecord> {
-  const selected = new Set(resourceIds)
-  const resources = resourceIds.map((resourceId) => ownedResource(state, campaignId, resourceId))
-  if (resources.length > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) {
-    throw new CatalogRejection('closure_too_large')
-  }
-  return resources.filter((resource) => {
-    let parentId = resource.parentId
-    while (parentId !== null) {
-      if (selected.has(parentId)) return false
-      const parent = state.resources.get(parentId)
-      if (!parent || parent.campaignId !== campaignId) break
-      parentId = parent.parentId
-    }
-    return true
-  })
-}
-
 function ownedResource(
   state: CatalogState,
   campaignId: CampaignId,
   resourceId: ResourceId,
 ): ResourceRecord {
   const resource = state.resources.get(resourceId)
-  if (!resource) throw new CatalogRejection('resource_missing')
-  if (resource.campaignId !== campaignId) throw new CatalogRejection('ownership_mismatch')
+  if (!resource) throw new ResourceGraphRejection('resource_missing')
+  if (resource.campaignId !== campaignId) throw new ResourceGraphRejection('ownership_mismatch')
   return resource
 }
 
-function activeFolder(
-  state: CatalogState,
-  campaignId: CampaignId,
-  parentId: ResourceId | null,
-): ResourceRecord | null {
-  if (parentId === null) return null
-  const parent = state.resources.get(parentId)
-  if (!parent) throw new CatalogRejection('invalid_parent')
-  if (parent.campaignId !== campaignId) throw new CatalogRejection('ownership_mismatch')
-  if (parent.kind !== 'folder') throw new CatalogRejection('invalid_parent_kind')
-  if (parent.lifecycle.state !== 'active') throw new CatalogRejection('invalid_parent')
-  return parent
-}
-
-function descendants(
-  state: CatalogState,
-  campaignId: CampaignId,
-  roots: ReadonlyArray<ResourceRecord>,
-): ReadonlyArray<ResourceRecord> {
-  const result: Array<ResourceRecord> = []
-  const pending = roots.map((resource) => resource.id)
-  const visited = new Set<ResourceId>()
-
-  while (pending.length > 0) {
-    const resourceId = pending.shift()!
-    if (visited.has(resourceId)) continue
-    visited.add(resourceId)
-    const resource = ownedResource(state, campaignId, resourceId)
-    result.push(resource)
-    if (result.length > MAX_SYNCHRONOUS_RESOURCE_CLOSURE) {
-      throw new CatalogRejection('closure_too_large')
-    }
-    for (const candidate of state.resources.values()) {
-      if (candidate.campaignId === campaignId && candidate.parentId === resourceId) {
-        pending.push(candidate.id)
-      }
-    }
-  }
-
-  return result.sort(byResourceId)
-}
-
-function lifecycleClosure(
+function activeClosure(
   state: CatalogState,
   campaignId: CampaignId,
   resourceIds: ReadonlyArray<ResourceId>,
-  lifecycle: ResourceRecord['lifecycle']['state'],
 ): Readonly<{ roots: ReadonlyArray<ResourceRecord>; closure: ReadonlyArray<ResourceRecord> }> {
-  const roots = operationRoots(state, campaignId, resourceIds)
-  const closure = descendants(state, campaignId, roots)
-  if (closure.some((resource) => resource.lifecycle.state !== lifecycle)) {
-    throw new CatalogRejection('invalid_lifecycle')
+  const graph = { resources: state.resources, tombstones: state.tombstones }
+  const roots = selectResourceRoots(graph, campaignId, resourceIds)
+  const closure = selectResourceClosure(graph, campaignId, roots)
+  if (closure.some((resource) => resource.lifecycle.state !== 'active')) {
+    throw new ResourceGraphRejection('invalid_lifecycle')
   }
   return { roots, closure }
-}
-
-async function replaceMetadata(
-  resource: ResourceRecord,
-  changes: ResourceMetadataChanges & { lifecycle?: ResourceRecord['lifecycle'] },
-  audit: AuditStamp,
-): Promise<ResourceRecord> {
-  const candidate: ResourceRecord = {
-    ...resource,
-    ...changes,
-    updated: audit,
-  }
-  const metadataVersion = await advanceResourceMetadataVersion(
-    resource.metadataVersion,
-    resourceMetadataValue(candidate),
-  )
-  if (metadataVersion === resource.metadataVersion) return resource
-  return { ...candidate, metadataVersion }
 }
 
 function postconditions(
@@ -349,19 +248,27 @@ type PreparedDeepCopy = Readonly<{
 export class InMemoryResourceCatalog
   implements ResourceCatalogReader, ResourceCatalogSnapshotSource
 {
+  readonly #backend: InMemoryResourceCatalogBackend
+
   constructor(options: InMemoryResourceCatalogOptions = {}) {
-    catalogBackends.set(this, {
+    this.#backend = {
       state: options.initialSnapshot
         ? catalogStateFromSnapshot(options.initialSnapshot)
         : emptyCatalogState(),
       operationQueue: Promise.resolve(),
       listeners: new Map(),
       snapshotCache: new Map(),
-    })
+    }
+  }
+
+  operations<TContentCopyPlan = never>(
+    options: InMemoryResourceOperationsOptions<TContentCopyPlan>,
+  ): InMemoryResourceOperations {
+    return new InMemoryResourceOperationExecutor(this.#backend, options)
   }
 
   getSnapshot(campaignId: CampaignId): ResourceCatalogSnapshot {
-    const backend = requireCatalogBackend(this)
+    const backend = this.#backend
     const cached = backend.snapshotCache.get(campaignId)
     if (cached) return cached
     const snapshot = {
@@ -376,17 +283,14 @@ export class InMemoryResourceCatalog
         .flat()
         .filter((alias) => alias.campaignId === campaignId)
         .sort(byAlias),
-      roles: Array.from(backend.state.roles.get(campaignId) ?? [], ([role, resourceId]) => ({
-        role,
-        resourceId,
-      })).sort(byRole),
+      assetsFolderId: backend.state.assetsFolders.get(campaignId) ?? null,
     } satisfies ResourceCatalogSnapshot
     backend.snapshotCache.set(campaignId, snapshot)
     return snapshot
   }
 
   subscribe(campaignId: CampaignId, listener: () => void): () => void {
-    const backend = requireCatalogBackend(this)
+    const backend = this.#backend
     const listeners = backend.listeners.get(campaignId) ?? new Set<() => void>()
     listeners.add(listener)
     backend.listeners.set(campaignId, listeners)
@@ -397,7 +301,7 @@ export class InMemoryResourceCatalog
   }
 
   getResource(campaignId: CampaignId, resourceId: ResourceId): Promise<ResourceRecord | null> {
-    const resource = requireCatalogBackend(this).state.resources.get(resourceId)
+    const resource = this.#backend.state.resources.get(resourceId)
     return Promise.resolve(resource?.campaignId === campaignId ? resource : null)
   }
 
@@ -405,7 +309,7 @@ export class InMemoryResourceCatalog
     campaignId: CampaignId,
     resourceIds: ReadonlyArray<ResourceId>,
   ): Promise<ReadonlyArray<ResourceRecord>> {
-    const state = requireCatalogBackend(this).state
+    const state = this.#backend.state
     return Promise.resolve(
       resourceIds.flatMap((resourceId) => {
         const resource = state.resources.get(resourceId)
@@ -426,7 +330,7 @@ export class InMemoryResourceCatalog
     } catch (error) {
       return Promise.reject(error)
     }
-    const candidates = Array.from(requireCatalogBackend(this).state.resources.values())
+    const candidates = Array.from(this.#backend.state.resources.values())
       .filter(
         (resource) =>
           resource.campaignId === campaignId &&
@@ -443,7 +347,7 @@ export class InMemoryResourceCatalog
   }
 
   getTombstone(campaignId: CampaignId, resourceId: ResourceId): Promise<ResourceTombstone | null> {
-    const tombstone = requireCatalogBackend(this).state.tombstones.get(resourceId)
+    const tombstone = this.#backend.state.tombstones.get(resourceId)
     return Promise.resolve(tombstone?.campaignId === campaignId ? tombstone : null)
   }
 
@@ -452,22 +356,14 @@ export class InMemoryResourceCatalog
     resourceId: ResourceId,
   ): Promise<ReadonlyArray<SourcePathAlias>> {
     return Promise.resolve(
-      (requireCatalogBackend(this).state.aliases.get(resourceId) ?? [])
+      (this.#backend.state.aliases.get(resourceId) ?? [])
         .filter((alias) => alias.campaignId === campaignId)
         .sort(byAlias),
     )
   }
 
-  listRoles(campaignId: CampaignId): Promise<ReadonlyArray<ApplicationResourceRole>> {
-    return Promise.resolve(
-      Array.from(
-        requireCatalogBackend(this).state.roles.get(campaignId) ?? [],
-        ([role, resourceId]) => ({
-          role,
-          resourceId,
-        }),
-      ).sort(byRole),
-    )
+  getAssetsFolder(campaignId: CampaignId): Promise<ResourceId | null> {
+    return Promise.resolve(this.#backend.state.assetsFolders.get(campaignId) ?? null)
   }
 
   readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot> {
@@ -475,9 +371,9 @@ export class InMemoryResourceCatalog
   }
 }
 
-export class InMemoryResourceOperationExecutor<
+class InMemoryResourceOperationExecutor<
   TContentCopyPlan = never,
-> implements AuthoritativeResourceOperationExecutor {
+> implements InMemoryResourceOperations {
   readonly #backend: InMemoryResourceCatalogBackend
   readonly #ledger = new InMemoryResourceOperationLedger<ResourceCommandReceipt>()
   readonly #authorize: ResourceOperationAuthorizer
@@ -485,10 +381,10 @@ export class InMemoryResourceOperationExecutor<
   readonly #now: () => number
 
   constructor(
-    catalog: InMemoryResourceCatalog,
-    options: InMemoryResourceOperationExecutorOptions<TContentCopyPlan>,
+    backend: InMemoryResourceCatalogBackend,
+    options: InMemoryResourceOperationsOptions<TContentCopyPlan>,
   ) {
-    this.#backend = requireCatalogBackend(catalog)
+    this.#backend = backend
     this.#authorize = options.authorize
     this.#contentCopy = options.contentCopy
     this.#now = options.now ?? Date.now
@@ -507,20 +403,16 @@ export class InMemoryResourceOperationExecutor<
     })
   }
 
-  setRole(campaignId: CampaignId, role: ApplicationResourceRole): Promise<void> {
+  assignAssetsFolder(campaignId: CampaignId, resourceId: ResourceId | null): Promise<void> {
     return this.#enqueue(() => {
-      ownedResource(this.#backend.state, campaignId, role.resourceId)
-      const roles = this.#backend.state.roles.get(campaignId) ?? new Map<string, ResourceId>()
-      if (roles.get(role.role) === role.resourceId) return
-      roles.set(role.role, role.resourceId)
-      this.#backend.state.roles.set(campaignId, roles)
+      if (resourceId !== null) {
+        const resource = ownedResource(this.#backend.state, campaignId, resourceId)
+        if (resource.kind !== 'folder') throw new TypeError('Assets must be assigned to a folder')
+      }
+      if ((this.#backend.state.assetsFolders.get(campaignId) ?? null) === resourceId) return
+      if (resourceId === null) this.#backend.state.assetsFolders.delete(campaignId)
+      else this.#backend.state.assetsFolders.set(campaignId, resourceId)
       this.#publish(campaignId)
-    })
-  }
-
-  removeRole(campaignId: CampaignId, role: string): Promise<void> {
-    return this.#enqueue(() => {
-      if (this.#backend.state.roles.get(campaignId)?.delete(role)) this.#publish(campaignId)
     })
   }
 
@@ -584,7 +476,9 @@ export class InMemoryResourceOperationExecutor<
         result = await this.#apply(actorId, normalizedEnvelope, draft)
       }
     } catch (error) {
-      if (error instanceof CatalogRejection) return { status: 'rejected', reason: error.reason }
+      if (error instanceof ResourceGraphRejection) {
+        return { status: 'rejected', reason: error.reason }
+      }
       if (error instanceof RangeError && error.message === 'version_exhausted') {
         return { status: 'rejected', reason: 'version_exhausted' }
       }
@@ -629,8 +523,12 @@ export class InMemoryResourceOperationExecutor<
       }
     }
     const { campaignId, command, operationId } = envelope
-    activeFolder(state, campaignId, command.destinationParentId)
-    const { roots, closure } = lifecycleClosure(state, campaignId, command.sourceRootIds, 'active')
+    requireActiveResourceFolder(
+      { resources: state.resources, tombstones: state.tombstones },
+      campaignId,
+      command.destinationParentId,
+    )
+    const { roots, closure } = activeClosure(state, campaignId, command.sourceRootIds)
     const rootIds = new Set(roots.map((resource) => resource.id))
     const resourceMap: Array<ResourceCopyMapEntry> = closure.map((resource) => ({
       sourceId: resource.id,
@@ -646,7 +544,9 @@ export class InMemoryResourceOperationExecutor<
           ? command.destinationParentId
           : destinationIdBySourceId.get(source.parentId!)!
         const title = canonicalizeResourceTitle(source.title)
-        if (title !== source.title) throw new CatalogRejection('content_integrity_failure')
+        if (title !== source.title) {
+          throw new ResourceGraphRejection('content_integrity_failure')
+        }
         const metadata = {
           parentId,
           kind: source.kind,
@@ -685,7 +585,7 @@ export class InMemoryResourceOperationExecutor<
         ...this.#contentCopy.referenceableTargets(plan),
       ])
     } catch {
-      throw new CatalogRejection('content_integrity_failure')
+      throw new ResourceGraphRejection('content_integrity_failure')
     }
 
     for (const copy of copies) state.resources.set(copy.destination.id, copy.destination)
@@ -711,224 +611,29 @@ export class InMemoryResourceOperationExecutor<
     envelope: CommandEnvelope<ResourceStructureCommand>,
     state: CatalogState,
   ): Promise<ResourceStructureCommandResult> {
-    const audit = { at: this.#now(), by: actorId } as const
-    switch (envelope.command.type) {
-      case 'create':
-        return await this.#create({ ...envelope, command: envelope.command }, state, audit)
-      case 'updateMetadata':
-        return await this.#updateMetadata({ ...envelope, command: envelope.command }, state, audit)
-      case 'move':
-        return await this.#move({ ...envelope, command: envelope.command }, state, audit)
-      case 'trash':
-        return await this.#trash({ ...envelope, command: envelope.command }, state, audit)
-      case 'restore':
-        return await this.#restore({ ...envelope, command: envelope.command }, state, audit)
-      case 'permanentlyDelete':
-        return await this.#permanentlyDelete(
-          { ...envelope, command: envelope.command },
-          state,
-          audit,
-        )
-      case 'deepCopy':
-        return { status: 'unavailable', reason: 'capability_not_supported' }
+    if (envelope.command.type === 'deepCopy') {
+      return { status: 'unavailable', reason: 'capability_not_supported' }
     }
-  }
-
-  async #create(
-    envelope: CommandEnvelope<Extract<ResourceStructureCommand, { type: 'create' }>>,
-    state: CatalogState,
-    audit: AuditStamp,
-  ): Promise<ResourceStructureCommandResult> {
-    const { command, campaignId, operationId } = envelope
-    const existing = state.resources.get(command.resourceId)
-    if (existing) {
-      throw new CatalogRejection(
-        existing.campaignId === campaignId ? 'invalid_command' : 'ownership_mismatch',
-      )
-    }
-    const tombstone = state.tombstones.get(command.resourceId)
-    if (tombstone) {
-      throw new CatalogRejection(
-        tombstone.campaignId === campaignId ? 'invalid_command' : 'ownership_mismatch',
-      )
-    }
-    activeFolder(state, campaignId, command.parentId)
-    const metadata = {
-      parentId: command.parentId,
-      kind: command.kind,
-      title: command.title,
-      icon: command.icon,
-      color: command.color,
-      lifecycle: 'active' as const,
-    }
-    const resource: ResourceRecord = {
-      id: command.resourceId,
-      campaignId,
-      ...metadata,
-      lifecycle: { state: 'active' },
-      metadataVersion: await initialResourceMetadataVersion(metadata),
-      created: audit,
-      updated: audit,
-    }
-    state.resources.set(resource.id, resource)
-    return completed(
-      campaignId,
-      operationId,
-      { type: 'created', resourceId: resource.id },
-      postconditions([resource]),
+    const transition = await transitionResourceGraph(
+      { resources: state.resources, tombstones: state.tombstones },
+      envelope.campaignId,
+      envelope.operationId,
+      envelope.command,
+      { at: this.#now(), by: actorId },
     )
-  }
-
-  async #updateMetadata(
-    envelope: CommandEnvelope<Extract<ResourceStructureCommand, { type: 'updateMetadata' }>>,
-    state: CatalogState,
-    audit: AuditStamp,
-  ): Promise<ResourceStructureCommandResult> {
-    const { command, campaignId, operationId } = envelope
-    const resource = ownedResource(state, campaignId, command.resourceId)
-    if (resource.lifecycle.state !== 'active') throw new CatalogRejection('invalid_lifecycle')
-    const updated = await replaceMetadata(resource, command.changes, audit)
-    state.resources.set(updated.id, updated)
-    return completed(
-      campaignId,
-      operationId,
-      { type: 'metadataUpdated', resourceId: updated.id },
-      postconditions([updated]),
-    )
-  }
-
-  async #move(
-    envelope: CommandEnvelope<Extract<ResourceStructureCommand, { type: 'move' }>>,
-    state: CatalogState,
-    audit: AuditStamp,
-  ): Promise<ResourceStructureCommandResult> {
-    const { command, campaignId, operationId } = envelope
-    const roots = operationRoots(state, campaignId, command.resourceIds)
-    const destination = activeFolder(state, campaignId, command.destinationParentId)
-    if (destination) {
-      const movedIds = new Set(roots.map((resource) => resource.id))
-      let ancestor: ResourceRecord | undefined = destination
-      while (ancestor) {
-        if (movedIds.has(ancestor.id)) throw new CatalogRejection('hierarchy_cycle')
-        ancestor = ancestor.parentId === null ? undefined : state.resources.get(ancestor.parentId)
-      }
+    for (const resource of transition.upserted) state.resources.set(resource.id, resource)
+    for (const tombstone of transition.tombstones) {
+      state.tombstones.set(tombstone.resourceId, tombstone)
     }
-    if (roots.some((resource) => resource.lifecycle.state !== 'active')) {
-      throw new CatalogRejection('invalid_lifecycle')
+    for (const resourceId of transition.deletedResourceIds) {
+      state.resources.delete(resourceId)
+      state.aliases.delete(resourceId)
     }
-    const updated = await Promise.all(
-      roots.map((resource) =>
-        replaceMetadata(resource, { parentId: command.destinationParentId }, audit),
-      ),
-    )
-    for (const moved of updated) {
-      state.resources.set(moved.id, moved)
+    const deletedIds = new Set(transition.deletedResourceIds)
+    const assetsFolderId = state.assetsFolders.get(envelope.campaignId)
+    if (assetsFolderId !== undefined && deletedIds.has(assetsFolderId)) {
+      state.assetsFolders.delete(envelope.campaignId)
     }
-    return completed(
-      campaignId,
-      operationId,
-      { type: 'moved', resourceIds: updated.map((resource) => resource.id) },
-      postconditions(updated),
-    )
-  }
-
-  async #trash(
-    envelope: CommandEnvelope<Extract<ResourceStructureCommand, { type: 'trash' }>>,
-    state: CatalogState,
-    audit: AuditStamp,
-  ): Promise<ResourceStructureCommandResult> {
-    const { command, campaignId, operationId } = envelope
-    const { closure } = lifecycleClosure(state, campaignId, command.resourceIds, 'active')
-    const updated = await Promise.all(
-      closure.map((resource) =>
-        replaceMetadata(resource, { lifecycle: { state: 'trashed', ...audit } }, audit),
-      ),
-    )
-    for (const trashed of updated) {
-      state.resources.set(trashed.id, trashed)
-    }
-    return completed(
-      campaignId,
-      operationId,
-      { type: 'trashed', resourceIds: updated.map((resource) => resource.id) },
-      postconditions(updated),
-    )
-  }
-
-  async #restore(
-    envelope: CommandEnvelope<Extract<ResourceStructureCommand, { type: 'restore' }>>,
-    state: CatalogState,
-    audit: AuditStamp,
-  ): Promise<ResourceStructureCommandResult> {
-    const { command, campaignId, operationId } = envelope
-    const { roots, closure } = lifecycleClosure(state, campaignId, command.resourceIds, 'trashed')
-    const rootIds = new Set(roots.map((resource) => resource.id))
-    const updated = await Promise.all(
-      closure.map((resource) => {
-        const parent = resource.parentId === null ? null : state.resources.get(resource.parentId)
-        const parentId =
-          rootIds.has(resource.id) &&
-          (!parent || parent.campaignId !== campaignId || parent.lifecycle.state !== 'active')
-            ? null
-            : resource.parentId
-        return replaceMetadata(resource, { parentId, lifecycle: { state: 'active' } }, audit)
-      }),
-    )
-    for (const restored of updated) {
-      state.resources.set(restored.id, restored)
-    }
-    return completed(
-      campaignId,
-      operationId,
-      { type: 'restored', resourceIds: updated.map((resource) => resource.id) },
-      postconditions(updated),
-    )
-  }
-
-  async #permanentlyDelete(
-    envelope: CommandEnvelope<Extract<ResourceStructureCommand, { type: 'permanentlyDelete' }>>,
-    state: CatalogState,
-    audit: AuditStamp,
-  ): Promise<ResourceStructureCommandResult> {
-    const { command, campaignId, operationId } = envelope
-    const roots = operationRoots(state, campaignId, command.resourceIds)
-    for (const root of roots) {
-      const parent = root.parentId === null ? null : state.resources.get(root.parentId)
-      if (
-        root.lifecycle.state !== 'trashed' ||
-        (parent?.campaignId === campaignId && parent.lifecycle.state === 'trashed')
-      ) {
-        throw new CatalogRejection('invalid_root_selection')
-      }
-    }
-    const closure = descendants(state, campaignId, roots)
-    if (closure.some((resource) => resource.lifecycle.state !== 'trashed')) {
-      throw new CatalogRejection('invalid_lifecycle')
-    }
-    const deletedResourceIds = closure.map((resource) => resource.id)
-    const tombstones = await Promise.all(
-      closure.map((resource) =>
-        createResourceTombstone(resource.id, campaignId, resource.metadataVersion, audit.at),
-      ),
-    )
-    for (const [index, resource] of closure.entries()) {
-      const tombstone = tombstones[index]!
-      state.resources.delete(resource.id)
-      state.tombstones.set(resource.id, tombstone)
-      state.aliases.delete(resource.id)
-    }
-    const deletedIds = new Set(deletedResourceIds)
-    const roles = state.roles.get(campaignId)
-    if (roles) {
-      for (const [role, resourceId] of roles) {
-        if (deletedIds.has(resourceId)) roles.delete(role)
-      }
-    }
-    return completed(
-      campaignId,
-      operationId,
-      { type: 'permanentlyDeleted', resourceIds: deletedResourceIds },
-      deletedResourceIds.map((resourceId) => ({ state: 'missing', resourceId })),
-    )
+    return { status: 'completed', receipt: transition.receipt }
   }
 }

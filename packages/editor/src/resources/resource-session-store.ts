@@ -1,15 +1,13 @@
 import type { ResourceId } from './domain-id'
-import type { ContentSessionState, ResourceContentSource } from './content-session-contract'
 
-export class MutableResourceContentSource<TLocal, TReady> implements ResourceContentSource<
-  TLocal,
-  TReady
-> {
+export class ResourceSessionStore<TState> {
   readonly #listeners = new Map<ResourceId, Set<() => void>>()
-  readonly #states = new Map<ResourceId, ContentSessionState<TLocal, TReady>>()
+  readonly #states = new Map<ResourceId, TState>()
 
-  get(resourceId: ResourceId): ContentSessionState<TLocal, TReady> {
-    return this.#states.get(resourceId) ?? { status: 'loading' }
+  constructor(private readonly initialState: TState) {}
+
+  get(resourceId: ResourceId): TState {
+    return this.#states.get(resourceId) ?? this.initialState
   }
 
   subscribe(resourceId: ResourceId, listener: () => void): () => void {
@@ -19,7 +17,7 @@ export class MutableResourceContentSource<TLocal, TReady> implements ResourceCon
     return () => listeners.delete(listener)
   }
 
-  set(resourceId: ResourceId, state: ContentSessionState<TLocal, TReady>): void {
+  set(resourceId: ResourceId, state: TState): void {
     this.#states.set(resourceId, state)
     for (const listener of this.#listeners.get(resourceId) ?? []) listener()
   }

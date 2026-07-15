@@ -32,11 +32,11 @@ vi.mock('~/editor-adapters/local/use-local-workspace-runtime', () => ({
   },
 }))
 
-vi.mock('@wizard-archive/editor', () => ({
-  WizardEditor: (props: Record<string, unknown>) => {
+vi.mock('@wizard-archive/editor/resources/resource-shell', () => ({
+  ResourceShell: (props: Record<string, unknown>) => {
     workspaceRuntimeHostMock(props)
     const ariaLabel = typeof props.ariaLabel === 'string' ? props.ariaLabel : 'Demo workspace'
-    const resourcePanel = typeof props.resourcePanel === 'string' ? props.resourcePanel : 'visible'
+    const resourcePanel = props.showResourcePanel === false ? 'hidden' : 'visible'
     return (
       <section aria-label={ariaLabel} data-resource-panel={resourcePanel}>
         Workspace runtime host
@@ -72,7 +72,7 @@ describe('public demo feature islands', () => {
       expect.objectContaining({
         ariaLabel: 'Demo workspace',
         runtime: { workspace: { id: 'demo-workspace', instanceId: 'runtime' } },
-        resourcePanel: 'visible',
+        showResourcePanel: true,
         workspaceName: 'Demo workspace',
       }),
     )
@@ -99,7 +99,7 @@ describe('public demo feature islands', () => {
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ariaLabel: 'Text editor link autocomplete preview',
-        resourcePanel: 'hidden',
+        showResourcePanel: false,
       }),
     )
   })
@@ -122,7 +122,7 @@ describe('public demo feature islands', () => {
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ariaLabel: 'Canvas feature preview',
-        resourcePanel: 'hidden',
+        showResourcePanel: false,
       }),
     )
   })
@@ -145,7 +145,7 @@ describe('public demo feature islands', () => {
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ariaLabel: 'Map feature preview',
-        resourcePanel: 'hidden',
+        showResourcePanel: false,
       }),
     )
   })
@@ -169,7 +169,7 @@ describe('public demo feature islands', () => {
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ariaLabel: 'Collaborative note preview',
-        resourcePanel: 'hidden',
+        showResourcePanel: false,
       }),
     )
   })
@@ -193,7 +193,7 @@ describe('public demo feature islands', () => {
     expect(workspaceRuntimeHostMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ariaLabel: 'Template note editor',
-        resourcePanel: 'hidden',
+        showResourcePanel: false,
       }),
     )
   })

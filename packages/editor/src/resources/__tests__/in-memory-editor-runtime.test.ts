@@ -15,7 +15,7 @@ function emptySnapshot(): ResourceCatalogSnapshot {
     resources: [],
     tombstones: [],
     aliases: [],
-    roles: [],
+    assetsFolderId: null,
   }
 }
 
@@ -107,7 +107,12 @@ describe('createInMemoryEditorRuntime', () => {
 
     await core.runtime.content.notes.create(envelope, document)
     const ready = core.runtime.content.notes.get(resourceId)
-    expect(ready).toEqual(expect.objectContaining({ status: 'ready', content: document }))
+    expect(ready).toEqual(
+      expect.objectContaining({
+        status: 'ready',
+        session: expect.objectContaining({ document }),
+      }),
+    )
     await core.runtime.content.notes.create(envelope, document)
     expect(core.runtime.content.notes.get(resourceId)).toEqual(ready)
     core.dispose()
@@ -146,8 +151,10 @@ describe('createInMemoryEditorRuntime', () => {
 
     expect(core.runtime.content.maps.get(mapId)).toMatchObject({
       status: 'ready',
-      content: { imageAssetId: null, layers: [], pins: [] },
-      version: { revision: 1 },
+      session: {
+        content: { imageAssetId: null, layers: [], pins: [] },
+        version: { revision: 1 },
+      },
     })
     core.dispose()
   })
@@ -174,8 +181,11 @@ describe('createInMemoryEditorRuntime', () => {
     })
     expect(core.runtime.content.notes.get(resourceId)).toEqual({
       status: 'ready',
-      content: document,
-      version,
+      session: {
+        document,
+        version,
+        awareness: { status: 'unavailable' },
+      },
     })
     core.dispose()
   })
@@ -259,14 +269,14 @@ describe('createInMemoryEditorRuntime', () => {
 
     expect(copiedNote).toMatchObject({ status: 'ready' })
     if (copiedNote.status !== 'ready') throw new Error('Expected copied note content')
-    expect(copiedNote.content).not.toBe(note)
-    expect(copiedNote.content.getText('body').toJSON()).toBe('Copied note')
+    expect(copiedNote.session.document).not.toBe(note)
+    expect(copiedNote.session.document.getText('body').toJSON()).toBe('Copied note')
     expect(copiedMap).toMatchObject({
       status: 'ready',
-      content: { pins: [{ targetResourceId: copiedNoteId }] },
+      session: { content: { pins: [{ targetResourceId: copiedNoteId }] } },
     })
     if (copiedMap.status !== 'ready') throw new Error('Expected copied map content')
-    expect(copiedMap.content.pins[0]!.id).not.toBe(pinId)
+    expect(copiedMap.session.content.pins[0]!.id).not.toBe(pinId)
     core.dispose()
 
     function resource(

@@ -1,7 +1,12 @@
 import * as Y from 'yjs'
 import { createCanvasDocumentDoc, parseCanvasDocumentContent } from '../canvas/document-contract'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../canvas/document-contract'
-import type { ContentSessionState } from './content-session-contract'
+import type {
+  CanvasSessionState,
+  FileContentState,
+  MapSessionState,
+  NoteSessionState,
+} from './content-session-contract'
 import type {
   CanonicalTargetMapEntry,
   ContentCopyContext,
@@ -10,20 +15,19 @@ import type {
 import { initialVersion, sha256Digest } from './component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from './domain-id'
 import type { CanvasNodeId, MapPinId, ResourceId } from './domain-id'
-import type { FileResourceContent, MapResourceContent } from './editor-runtime-contract'
 import { initialNoteContentVersion } from './resource-content-version'
 import type { ResourceKind } from './resource-record'
 
-interface ContentStore<TLocal, TReady> {
-  get(resourceId: ResourceId): ContentSessionState<TLocal, TReady>
-  set(resourceId: ResourceId, state: ContentSessionState<TLocal, TReady>): void
+interface ContentStore<TState> {
+  get(resourceId: ResourceId): TState
+  set(resourceId: ResourceId, state: TState): void
 }
 
 type ContentStores = Readonly<{
-  notes: ContentStore<Y.Doc, Y.Doc>
-  files: ContentStore<null, FileResourceContent>
-  maps: ContentStore<null, MapResourceContent>
-  canvases: ContentStore<null, Y.Doc>
+  notes: ContentStore<NoteSessionState>
+  files: ContentStore<FileContentState>
+  maps: ContentStore<MapSessionState>
+  canvases: ContentStore<CanvasSessionState>
 }>
 
 type PreparedContent =
@@ -32,12 +36,12 @@ type PreparedContent =
   | Readonly<{
       kind: 'file'
       destinationId: ResourceId
-      source: Extract<ContentSessionState<null, FileResourceContent>, { status: 'ready' }>
+      source: Extract<FileContentState, { status: 'ready' }>
     }>
   | Readonly<{
       kind: 'map'
       destinationId: ResourceId
-      source: Extract<ContentSessionState<null, MapResourceContent>, { status: 'ready' }>
+      source: Extract<MapSessionState, { status: 'ready' }>
       pinIds: ReadonlyMap<MapPinId, MapPinId>
     }>
   | Readonly<{
@@ -86,19 +90,27 @@ function prepareContentCopy(
         entries.push({ kind, destinationId })
         break
       case 'note': {
-        const source = readyContent(stores.notes, sourceId)
-        entries.push({ kind, destinationId, source: source.content })
+        const source = stores.notes.get(sourceId)
+        assertReady(source)
+        entries.push({ kind, destinationId, source: source.session.document })
         break
       }
-      case 'file':
-        entries.push({ kind, destinationId, source: readyContent(stores.files, sourceId) })
+      case 'file': {
+        const source = stores.files.get(sourceId)
+        assertReady(source)
+        entries.push({ kind, destinationId, source })
         break
+      }
       case 'map': {
-        const source = readyContent(stores.maps, sourceId)
+        const source = stores.maps.get(sourceId)
+        assertReady(source)
         const pinIds = new Map(
-          source.content.pins.map((pin) => [pin.id, generateDomainId(DOMAIN_ID_KIND.mapPin)]),
+          source.session.content.pins.map((pin) => [
+            pin.id,
+            generateDomainId(DOMAIN_ID_KIND.mapPin),
+          ]),
         )
-        for (const pin of source.content.pins) {
+        for (const pin of source.session.content.pins) {
           referenceableTargets.push({
             source: { kind: 'mapPin', resourceId: sourceId, pinId: pin.id },
             destination: {
@@ -112,8 +124,9 @@ function prepareContentCopy(
         break
       }
       case 'canvas': {
-        const source = readyContent(stores.canvases, sourceId)
-        const { nodes, edges } = readCanvas(source.content)
+        const source = stores.canvases.get(sourceId)
+        assertReady(source)
+        const { nodes, edges } = readCanvas(source.session.document)
         const nodeIds = new Map(
           nodes.map((node) => [node.id, generateDomainId(DOMAIN_ID_KIND.canvasNode)]),
         )
@@ -135,10 +148,10 @@ function prepareContentCopy(
   return { entries, referenceableTargets }
 }
 
-function readyContent<TLocal, TReady>(store: ContentStore<TLocal, TReady>, resourceId: ResourceId) {
-  const state = store.get(resourceId)
+function assertReady<TState extends { status: string }>(
+  state: TState,
+): asserts state is TState & { status: 'ready' } {
   if (state.status !== 'ready') throw new TypeError('Copied resource content is unavailable')
-  return state
 }
 
 function readCanvas(document: Y.Doc) {
@@ -161,7 +174,10 @@ async function finalizeContentCopy(
       const version = await initialNoteContentVersion(Y.encodeStateAsUpdate(content))
       return () => {
         kinds.set(entry.destinationId, entry.kind)
-        stores.notes.set(entry.destinationId, { status: 'ready', content, version })
+        stores.notes.set(entry.destinationId, {
+          status: 'ready',
+          session: { document: content, version, awareness: { status: 'unavailable' } },
+        })
       }
     }
     case 'file':
@@ -175,9 +191,9 @@ async function finalizeContentCopy(
       }
     case 'map': {
       const content = {
-        imageAssetId: entry.source.content.imageAssetId,
-        layers: entry.source.content.layers.map((layer) => ({ ...layer })),
-        pins: entry.source.content.pins.map((pin) => ({
+        imageAssetId: entry.source.session.content.imageAssetId,
+        layers: entry.source.session.content.layers.map((layer) => ({ ...layer })),
+        pins: entry.source.session.content.pins.map((pin) => ({
           ...pin,
           id: entry.pinIds.get(pin.id)!,
           targetResourceId: remapResourceId(pin.targetResourceId, targetMap),
@@ -188,7 +204,10 @@ async function finalizeContentCopy(
       )
       return () => {
         kinds.set(entry.destinationId, entry.kind)
-        stores.maps.set(entry.destinationId, { status: 'ready', content, version })
+        stores.maps.set(entry.destinationId, {
+          status: 'ready',
+          session: { content, version, awareness: { status: 'unavailable' } },
+        })
       }
     }
     case 'canvas': {
@@ -203,7 +222,10 @@ async function finalizeContentCopy(
       const version = initialVersion(await sha256Digest(Y.encodeStateAsUpdate(content)))
       return () => {
         kinds.set(entry.destinationId, entry.kind)
-        stores.canvases.set(entry.destinationId, { status: 'ready', content, version })
+        stores.canvases.set(entry.destinationId, {
+          status: 'ready',
+          session: { document: content, version, awareness: { status: 'unavailable' } },
+        })
       }
     }
   }
@@ -230,15 +252,17 @@ function remapCanvasNode(
   nodeIds: ReadonlyMap<CanvasNodeId, CanvasNodeId>,
   targetMap: ReadonlyArray<CanonicalTargetMapEntry>,
 ): CanvasDocumentNode {
-  const data =
-    node.type === 'embed' && node.data.target?.kind === 'resource'
-      ? {
-          ...node.data,
-          target: {
-            ...node.data.target,
-            resourceId: remapResourceId(node.data.target.resourceId, targetMap),
-          },
-        }
-      : node.data
-  return { ...node, id: nodeIds.get(node.id)!, data } as CanvasDocumentNode
+  const id = nodeIds.get(node.id)!
+  if (node.type !== 'embed' || node.data.target?.kind !== 'resource') return { ...node, id }
+  return {
+    ...node,
+    id,
+    data: {
+      ...node.data,
+      target: {
+        ...node.data.target,
+        resourceId: remapResourceId(node.data.target.resourceId, targetMap),
+      },
+    },
+  }
 }

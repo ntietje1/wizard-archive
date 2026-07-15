@@ -1,3 +1,4 @@
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { AssetId, CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
 import type { Doc } from '../../_generated/dataModel'
@@ -13,7 +14,7 @@ type ResourceDeletionCtx = Pick<CampaignMutationCtx, 'db' | 'scheduler'>
 
 type ResourceDeletionPlan = {
   aliases: Array<Doc<'resourceSourcePathAliases'>>
-  roles: Array<Doc<'resourceRoles'>>
+  assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
   noteIntents: Array<Doc<'resourceNoteInitializationIntents'>>
   fileContents: Array<Doc<'resourceFileContents'>>
@@ -28,7 +29,7 @@ type ResourceDeletionPlan = {
 function createPlan(): ResourceDeletionPlan {
   return {
     aliases: [],
-    roles: [],
+    assetsFolders: [],
     noteContents: [],
     noteIntents: [],
     fileContents: [],
@@ -48,7 +49,7 @@ function rowCount(plan: ResourceDeletionPlan): number {
 function rowGroups(plan: ResourceDeletionPlan) {
   return [
     plan.aliases,
-    plan.roles,
+    plan.assetsFolders,
     plan.noteContents,
     plan.noteIntents,
     plan.fileContents,
@@ -65,7 +66,7 @@ async function addContent(
   plan: ResourceDeletionPlan,
   resource: Doc<'resources'>,
 ): Promise<void> {
-  const resourceId = resource.resourceUuid
+  const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, resource.resourceUuid)
   switch (resource.kind) {
     case 'folder':
       return
@@ -118,9 +119,9 @@ export async function planResourceDeletion(
         )
         .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
     )
-    plan.roles.push(
+    plan.assetsFolders.push(
       ...(await ctx.db
-        .query('resourceRoles')
+        .query('resourceAssetsFolders')
         .withIndex('by_campaign_and_resource', (query) =>
           query.eq('campaignUuid', campaignId).eq('resourceUuid', resource.resourceUuid),
         )
@@ -197,7 +198,7 @@ export async function deleteCampaignResources(
     resources,
     tombstones,
     aliases,
-    roles,
+    assetsFolders,
     operations,
     noteContents,
     noteIntents,
@@ -221,8 +222,8 @@ export async function deleteCampaignResources(
       .withIndex('by_campaign_and_resource', (query) => query.eq('campaignUuid', campaignId))
       .collect(),
     ctx.db
-      .query('resourceRoles')
-      .withIndex('by_campaign_and_role', (query) => query.eq('campaignUuid', campaignId))
+      .query('resourceAssetsFolders')
+      .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
       .collect(),
     ctx.db
       .query('resourceOperations')
@@ -266,7 +267,7 @@ export async function deleteCampaignResources(
     ...resources.map((row) => ctx.db.delete(row._id)),
     ...tombstones.map((row) => ctx.db.delete(row._id)),
     ...aliases.map((row) => ctx.db.delete(row._id)),
-    ...roles.map((row) => ctx.db.delete(row._id)),
+    ...assetsFolders.map((row) => ctx.db.delete(row._id)),
     ...operations.map((row) => ctx.db.delete(row._id)),
     ...noteContents.map((row) => ctx.db.delete(row._id)),
     ...noteIntents.map((row) => ctx.db.delete(row._id)),
@@ -277,5 +278,8 @@ export async function deleteCampaignResources(
     ...assetCopyIntents.map((row) => ctx.db.delete(row._id)),
     ...assetOwners.map((row) => ctx.db.delete(row._id)),
   ])
-  await queueAssetRetirements(ctx, new Set(assetOwners.map((owner) => owner.assetUuid)))
+  await queueAssetRetirements(
+    ctx,
+    new Set(assetOwners.map((owner) => assertDomainId(DOMAIN_ID_KIND.asset, owner.assetUuid))),
+  )
 }

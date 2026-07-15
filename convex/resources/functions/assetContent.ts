@@ -92,15 +92,15 @@ export async function prepareAssetCopies(
   }
 }
 
-export function fileAssetIds(content: { assetUuid: AssetId | null }): Array<AssetId> {
-  return content.assetUuid === null ? [] : [content.assetUuid]
+export function fileAssetIds(content: { assetUuid: string | null }): Array<AssetId> {
+  return content.assetUuid === null ? [] : [assertDomainId(DOMAIN_ID_KIND.asset, content.assetUuid)]
 }
 
 export function mapAssetIds(content: {
-  imageAssetUuid: AssetId | null
-  layers: ReadonlyArray<{ imageAssetUuid: AssetId | null }>
+  imageAssetUuid: string | null
+  layers: ReadonlyArray<{ imageAssetUuid: string | null }>
 }): Array<AssetId> {
-  return [content.imageAssetUuid, ...content.layers.map((layer) => layer.imageAssetUuid)].filter(
-    (assetUuid): assetUuid is AssetId => assetUuid !== null,
-  )
+  return [content.imageAssetUuid, ...content.layers.map((layer) => layer.imageAssetUuid)]
+    .filter((assetUuid): assetUuid is string => assetUuid !== null)
+    .map((assetUuid) => assertDomainId(DOMAIN_ID_KIND.asset, assetUuid))
 }

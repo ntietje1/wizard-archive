@@ -1,11 +1,5 @@
-import type { CampaignId, CampaignMemberId, ImportJobId, ResourceId } from './domain-id'
-import type {
-  AuditStamp,
-  ResourceColor,
-  ResourceIcon,
-  ResourceRecord,
-  ResourceTitle,
-} from './resource-record'
+import type { CampaignId, ImportJobId, ResourceId } from './domain-id'
+import type { ResourceRecord } from './resource-record'
 import type { ResourceTombstone } from './resource-metadata-version'
 
 export const MAX_RESOURCE_CATALOG_PAGE_SIZE = 200
@@ -27,11 +21,6 @@ export type SourcePathAlias = Readonly<{
   normalizedPath: string
 }>
 
-export type ApplicationResourceRole = Readonly<{
-  role: string
-  resourceId: ResourceId
-}>
-
 export type ResourceCatalogPage<T> = Readonly<{
   items: ReadonlyArray<T>
   cursor: string | null
@@ -42,7 +31,7 @@ export type ResourceCatalogSnapshot = Readonly<{
   resources: ReadonlyArray<ResourceRecord>
   tombstones: ReadonlyArray<ResourceTombstone>
   aliases: ReadonlyArray<SourcePathAlias>
-  roles: ReadonlyArray<ApplicationResourceRole>
+  assetsFolderId: ResourceId | null
 }>
 
 export interface ResourceCatalogReader {
@@ -63,53 +52,11 @@ export interface ResourceCatalogReader {
     campaignId: CampaignId,
     resourceId: ResourceId,
   ): Promise<ReadonlyArray<SourcePathAlias>>
-  listRoles(campaignId: CampaignId): Promise<ReadonlyArray<ApplicationResourceRole>>
+  getAssetsFolder(campaignId: CampaignId): Promise<ResourceId | null>
   readSnapshot(campaignId: CampaignId): Promise<ResourceCatalogSnapshot>
 }
 
 export interface ResourceCatalogSnapshotSource {
   getSnapshot(campaignId: CampaignId): ResourceCatalogSnapshot
   subscribe(campaignId: CampaignId, listener: () => void): () => void
-}
-
-export type ResourceMetadataChanges = Readonly<{
-  parentId?: ResourceId | null
-  title?: ResourceTitle
-  icon?: ResourceIcon | null
-  color?: ResourceColor | null
-}>
-
-export type ResourceCatalogDeleteResult = Readonly<{
-  deletedResourceIds: ReadonlyArray<ResourceId>
-  tombstones: ReadonlyArray<ResourceTombstone>
-}>
-
-export interface ResourceCatalogTransactionWriter {
-  insertResource(resource: ResourceRecord): Promise<void>
-  updateMetadata(
-    campaignId: CampaignId,
-    resourceId: ResourceId,
-    changes: ResourceMetadataChanges,
-    audit: AuditStamp,
-  ): Promise<ResourceRecord>
-  trashTrees(
-    campaignId: CampaignId,
-    rootIds: ReadonlyArray<ResourceId>,
-    at: number,
-    actorId: CampaignMemberId,
-  ): Promise<ReadonlyArray<ResourceRecord>>
-  restoreTrees(
-    campaignId: CampaignId,
-    rootIds: ReadonlyArray<ResourceId>,
-    at: number,
-    actorId: CampaignMemberId,
-  ): Promise<ReadonlyArray<ResourceRecord>>
-  permanentlyDeleteTrees(
-    campaignId: CampaignId,
-    rootIds: ReadonlyArray<ResourceId>,
-    deletedAt: number,
-  ): Promise<ResourceCatalogDeleteResult>
-  appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
-  setRole(campaignId: CampaignId, role: ApplicationResourceRole): Promise<void>
-  removeRole(campaignId: CampaignId, role: string): Promise<void>
 }

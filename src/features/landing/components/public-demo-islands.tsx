@@ -19,7 +19,7 @@ export function PublicDemoWorkspaceFeatureIsland() {
       ariaLabel="Text editor link autocomplete preview"
       canEdit
       scenario={scenario}
-      resourcePanel="hidden"
+      showResourcePanel={false}
     />
   )
 }
@@ -30,7 +30,7 @@ export function PublicDemoCanvasFeatureIsland() {
   return scenario.initialResourceId ? (
     <PublicDemoIsland
       ariaLabel="Canvas feature preview"
-      resourcePanel="hidden"
+      showResourcePanel={false}
       scenario={scenario}
     />
   ) : null
@@ -40,7 +40,11 @@ export function PublicDemoMapFeatureIsland() {
   const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap)
 
   return scenario.initialResourceId ? (
-    <PublicDemoIsland ariaLabel="Map feature preview" resourcePanel="hidden" scenario={scenario} />
+    <PublicDemoIsland
+      ariaLabel="Map feature preview"
+      scenario={scenario}
+      showResourcePanel={false}
+    />
   ) : null
 }
 
@@ -52,7 +56,7 @@ export function PublicDemoSharingFeatureIsland() {
       ariaLabel="Collaborative note preview"
       canEdit
       scenario={scenario}
-      resourcePanel="hidden"
+      showResourcePanel={false}
     />
   )
 }
@@ -64,7 +68,7 @@ export function PublicDemoTemplateFeatureIsland() {
     <PublicDemoIsland
       ariaLabel="Template note editor"
       canEdit
-      resourcePanel="hidden"
+      showResourcePanel={false}
       scenario={scenario}
     />
   )
@@ -74,12 +78,12 @@ function PublicDemoIsland({
   ariaLabel,
   canEdit = true,
   scenario,
-  resourcePanel = 'visible',
+  showResourcePanel = true,
 }: {
   ariaLabel: string
   canEdit?: boolean
   scenario: PublicDemoScenario
-  resourcePanel?: 'visible' | 'hidden'
+  showResourcePanel?: boolean
 }) {
   return (
     <LocalWorkspaceRuntimeHost
@@ -87,7 +91,7 @@ function PublicDemoIsland({
       canEdit={canEdit}
       initialResourceId={scenario.initialResourceId}
       initialWorkspace={scenario.workspace}
-      resourcePanel={resourcePanel}
+      showResourcePanel={showResourcePanel}
       workspaceName="Demo workspace"
     />
   )

@@ -2,19 +2,23 @@ import * as Y from 'yjs'
 import { initialFileContentVersion, initialNoteContentVersion } from './resource-content-version'
 import { initialVersion, sha256Digest } from './component-version'
 import type { VersionStamp } from './component-version'
-import type { CreateNoteResourceCommand, NoteContentSource } from './content-session-contract'
+import type {
+  CanvasSessionState,
+  CreateNoteResourceCommand,
+  FileContentState,
+  FileResourceContent,
+  MapResourceContent,
+  MapSessionState,
+  NoteSessionSource,
+  NoteSessionState,
+} from './content-session-contract'
 import type {
   CommandDelivery,
   CommandEnvelope,
   ResourceStructureCommandGateway,
   ResourceStructureCommandResult,
 } from './resource-command-contract'
-import type {
-  FileResourceContent,
-  MapResourceContent,
-  ResourceNavigation,
-  WizardEditorRuntime,
-} from './editor-runtime-contract'
+import type { ResourceNavigation, EditorRuntime } from './editor-runtime-contract'
 import type { CampaignId, OperationId, ResourceId } from './domain-id'
 import { createInMemoryResourceRuntime } from './in-memory-resource-runtime'
 import type { InMemoryResourceRuntimeOptions } from './in-memory-resource-runtime'
@@ -22,7 +26,7 @@ import type { ResourceCatalogSnapshot } from './resource-catalog-contract'
 import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { FILE_CLASSIFICATION, FILE_VIEWER_UNAVAILABLE_REASON } from './file-content-contract'
-import { MutableResourceContentSource } from './mutable-resource-content-source'
+import { ResourceSessionStore } from './resource-session-store'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -47,9 +51,9 @@ export type InMemoryEditorRuntimeInput = Readonly<{
   now?: () => number
 }>
 
-class InMemoryNoteContentSource
-  extends MutableResourceContentSource<Y.Doc, Y.Doc>
-  implements NoteContentSource<Y.Doc, Y.Doc>
+class InMemoryNoteSessionSource
+  extends ResourceSessionStore<NoteSessionState>
+  implements NoteSessionSource
 {
   readonly #creates = new Map<
     ResourceId,
@@ -65,8 +69,17 @@ class InMemoryNoteContentSource
     private readonly campaignId: CampaignId,
     private readonly executeStructure: ResourceStructureCommandGateway['execute'],
   ) {
-    super()
-    seedReadyContent(this, ready)
+    super({ status: 'loading' })
+    for (const entry of ready) {
+      this.set(entry.resourceId, {
+        status: 'ready',
+        session: {
+          document: entry.content,
+          version: entry.version,
+          awareness: { status: 'unavailable' },
+        },
+      })
+    }
   }
 
   async create(
@@ -108,7 +121,10 @@ class InMemoryNoteContentSource
 
     const version = await initialNoteContentVersion(Y.encodeStateAsUpdate(local))
     this.#creates.set(resourceId, { operationId: envelope.operationId, doc: local, delivery })
-    this.set(resourceId, { status: 'ready', content: local, version })
+    this.set(resourceId, {
+      status: 'ready',
+      session: { document: local, version, awareness: { status: 'unavailable' } },
+    })
     return delivery
   }
 }
@@ -128,7 +144,7 @@ export function createInMemoryEditorRuntime({
   now,
   scope,
   snapshot,
-}: InMemoryEditorRuntimeInput): Readonly<{ runtime: WizardEditorRuntime; dispose(): void }> {
+}: InMemoryEditorRuntimeInput): Readonly<{ runtime: EditorRuntime; dispose(): void }> {
   const canEdit = requestedCanEdit ?? scope.projection === 'dm'
   const kinds = new Map(snapshot.resources.map((resource) => [resource.id, resource.kind]))
   let executeStructure: ResourceStructureCommandGateway['execute'] = () =>
@@ -137,21 +153,35 @@ export function createInMemoryEditorRuntime({
       retryable: false,
       reason: 'transport_unavailable',
     })
-  const notes = new InMemoryNoteContentSource(content.notes ?? [], scope.campaignId, (envelope) =>
+  const notes = new InMemoryNoteSessionSource(content.notes ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),
   )
-  const files = seedReadyContent(
-    new MutableResourceContentSource<null, FileResourceContent>(),
-    content.files ?? [],
-  )
-  const maps = seedReadyContent(
-    new MutableResourceContentSource<null, MapResourceContent>(),
-    content.maps ?? [],
-  )
-  const canvases = seedReadyContent(
-    new MutableResourceContentSource<null, Y.Doc>(),
-    content.canvases ?? [],
-  )
+  const files = new ResourceSessionStore<FileContentState>({ status: 'loading' })
+  for (const entry of content.files ?? []) {
+    files.set(entry.resourceId, { status: 'ready', content: entry.content, version: entry.version })
+  }
+  const maps = new ResourceSessionStore<MapSessionState>({ status: 'loading' })
+  for (const entry of content.maps ?? []) {
+    maps.set(entry.resourceId, {
+      status: 'ready',
+      session: {
+        content: entry.content,
+        version: entry.version,
+        awareness: { status: 'unavailable' },
+      },
+    })
+  }
+  const canvases = new ResourceSessionStore<CanvasSessionState>({ status: 'loading' })
+  for (const entry of content.canvases ?? []) {
+    canvases.set(entry.resourceId, {
+      status: 'ready',
+      session: {
+        document: entry.content,
+        version: entry.version,
+        awareness: { status: 'unavailable' },
+      },
+    })
+  }
   const resources = createInMemoryResourceRuntime({
     scope,
     initialSnapshot: snapshot,
@@ -189,6 +219,7 @@ export function createInMemoryEditorRuntime({
   const structure = canEdit
     ? ({ status: 'available', value: editorStructure } as const)
     : ({ status: 'unavailable', reason: 'unauthorized' } as const)
+  const contentSources = { notes, files, maps, canvases }
 
   return {
     runtime: {
@@ -201,17 +232,15 @@ export function createInMemoryEditorRuntime({
         bookmarks: unsupported,
         previews: unsupported,
       },
-      content: {
-        notes,
-        files,
-        maps,
-        canvases,
-      },
+      content: contentSources,
       navigation,
       search: unsupported,
       history: unsupported,
     },
-    dispose: resources.dispose,
+    dispose: () => {
+      for (const source of Object.values(contentSources)) source.dispose()
+      resources.dispose()
+    },
   }
 }
 
@@ -222,10 +251,10 @@ async function initializeCreatedContent(
   >,
   operationId: OperationId,
   stores: Readonly<{
-    notes: InMemoryNoteContentSource
-    files: MutableResourceContentSource<null, FileResourceContent>
-    maps: MutableResourceContentSource<null, MapResourceContent>
-    canvases: MutableResourceContentSource<null, Y.Doc>
+    notes: InMemoryNoteSessionSource
+    files: ResourceSessionStore<FileContentState>
+    maps: ResourceSessionStore<MapSessionState>
+    canvases: ResourceSessionStore<CanvasSessionState>
   }>,
 ) {
   switch (command.kind) {
@@ -259,10 +288,13 @@ async function initializeCreatedContent(
       const content: MapResourceContent = { imageAssetId: null, layers: [], pins: [] }
       stores.maps.set(command.resourceId, {
         status: 'ready',
-        content,
-        version: initialVersion(
-          await sha256Digest(new TextEncoder().encode(JSON.stringify(content))),
-        ),
+        session: {
+          content,
+          version: initialVersion(
+            await sha256Digest(new TextEncoder().encode(JSON.stringify(content))),
+          ),
+          awareness: { status: 'unavailable' },
+        },
       })
       return
     }
@@ -270,23 +302,12 @@ async function initializeCreatedContent(
       const content = new Y.Doc()
       stores.canvases.set(command.resourceId, {
         status: 'ready',
-        content,
-        version: initialVersion(await sha256Digest(Y.encodeStateAsUpdate(content))),
+        session: {
+          document: content,
+          version: initialVersion(await sha256Digest(Y.encodeStateAsUpdate(content))),
+          awareness: { status: 'unavailable' },
+        },
       })
     }
   }
-}
-
-function seedReadyContent<TLocal, TReady>(
-  source: MutableResourceContentSource<TLocal, TReady>,
-  ready: ReadonlyArray<ReadyContent<TReady>>,
-): MutableResourceContentSource<TLocal, TReady> {
-  for (const entry of ready) {
-    source.set(entry.resourceId, {
-      status: 'ready',
-      content: entry.content,
-      version: entry.version,
-    })
-  }
-  return source
 }

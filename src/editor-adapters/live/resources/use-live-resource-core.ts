@@ -4,7 +4,7 @@ import { api } from 'convex/_generated/api'
 import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
 import type {
   ResourceNavigation,
-  WizardEditorRuntime,
+  EditorRuntime,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { createOptimisticResourceStructureRuntime } from '@wizard-archive/editor/resources/optimistic-runtime'
 import { createLiveResourceIndexRuntime } from './live-resource-index'
@@ -32,7 +32,7 @@ function subscribeToWatch<T>(
 export function useLiveResourceCore(
   scope: ResourceProjectionScope,
   navigation: ResourceNavigation,
-): WizardEditorRuntime {
+): EditorRuntime {
   const convex = useConvex()
   const [scoped] = useState(() => createScopedLiveResourceRuntime(scope, navigation, convex))
 
@@ -102,6 +102,7 @@ function createScopedLiveResourceRuntime(
     currentScope.projection === 'dm'
       ? ({ status: 'available', value: optimistic.structure } as const)
       : ({ status: 'unavailable', reason: 'unauthorized' } as const)
+  const content = { notes, files, maps, canvases }
   return {
     runtime: {
       scope: currentScope,
@@ -113,16 +114,13 @@ function createScopedLiveResourceRuntime(
         bookmarks: unsupported,
         previews: unsupported,
       },
-      content: { notes, files, maps, canvases },
+      content,
       navigation,
       search: unsupported,
       history: unsupported,
     },
     dispose: () => {
-      notes.dispose()
-      files.dispose()
-      maps.dispose()
-      canvases.dispose()
+      for (const source of Object.values(content)) source.dispose()
       optimistic.dispose()
     },
   }

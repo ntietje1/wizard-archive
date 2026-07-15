@@ -40,8 +40,8 @@ function id<TKind extends DomainIdKind>(kind: TKind, sequence: number): DomainId
 function projectionScope(
   campaign: CampaignId,
   actor: CampaignMemberId,
-  projection: string,
-  schema: string,
+  projection: ResourceProjectionScope['projection'],
+  schema: ResourceProjectionScope['schema'],
 ): ResourceProjectionScope {
   return { campaignId: campaign, actorId: actor, projection, schema }
 }
@@ -357,9 +357,8 @@ describe('MutableWorkspaceResourceIndex', () => {
         'player',
         'resource-index-v1',
       ),
-      projectionScope(campaignId, actorId, 'view-as-gm', 'resource-index-v1'),
-      projectionScope(campaignId, actorId, 'player-permissions-v2', 'resource-index-v1'),
-      projectionScope(campaignId, actorId, 'player', 'resource-index-v2'),
+      projectionScope(campaignId, actorId, 'dm', 'resource-index-v1'),
+      projectionScope(campaignId, actorId, 'local', 'resource-index-v1'),
     ]
 
     for (const [position, nextScope] of transitions.entries()) {
@@ -475,7 +474,7 @@ describe('ResourceIndexLoader', () => {
     const scopeChanging = createResourceIndexLoader(index, {
       loadResource: () => {
         index.replaceScope(
-          projectionScope(campaignId, actorId, 'new-permissions', 'resource-index-v1'),
+          projectionScope(campaignId, actorId, 'dm', 'resource-index-v1'),
           indexRevision('new-scope'),
         )
         return Promise.resolve({ status: 'completed' })

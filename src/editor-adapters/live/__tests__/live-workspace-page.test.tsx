@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { WizardEditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import type { EditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { LiveWorkspacePage } from '../live-workspace-page'
 
 const openCampaignsDashboardMock = vi.hoisted(() => vi.fn())
 const editorProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }))
-const runtime = vi.hoisted(() => ({ scope: { campaignId: 'campaign' } }) as WizardEditorRuntime)
+const runtime = vi.hoisted(() => ({ scope: { campaignId: 'campaign' } }) as EditorRuntime)
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({ campaign: { data: { name: 'Storm King' } } }),
@@ -15,12 +15,12 @@ vi.mock('../live-workspace-runtime-provider', () => ({
   LiveWorkspaceRuntimeProvider: ({
     children,
   }: {
-    children: (value: WizardEditorRuntime) => React.ReactNode
+    children: (value: EditorRuntime) => React.ReactNode
   }) => <>{children(runtime)}</>,
 }))
 
-vi.mock('@wizard-archive/editor', () => ({
-  WizardEditor: (props: Record<string, unknown>) => {
+vi.mock('@wizard-archive/editor/resources/resource-shell', () => ({
+  ResourceShell: (props: Record<string, unknown>) => {
     editorProps.current = props
     const slots = props.resourcePanelSlots as {
       footer: React.ReactNode

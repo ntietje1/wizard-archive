@@ -208,7 +208,13 @@ async function shellRuntime(canEdit: boolean, lifecycle: 'active' | 'trashed' = 
       projection: canEdit ? 'dm' : 'player',
       schema: RESOURCE_INDEX_SCHEMA,
     },
-    snapshot: { campaignId, resources: [resource], tombstones: [], aliases: [], roles: [] },
+    snapshot: {
+      campaignId,
+      resources: [resource],
+      tombstones: [],
+      aliases: [],
+      assetsFolderId: null,
+    },
     navigation,
   })
   return { core, navigation, resource }

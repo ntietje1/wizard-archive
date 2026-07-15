@@ -1,6 +1,10 @@
-import type * as Y from 'yjs'
-import type { NoteContentSource, ResourceContentSource } from './content-session-contract'
-import type { AssetId, CampaignMemberId, HistoryEntryId, MapPinId, ResourceId } from './domain-id'
+import type {
+  CanvasSessionSource,
+  FileContentSource,
+  MapSessionSource,
+  NoteSessionSource,
+} from './content-session-contract'
+import type { AssetId, CampaignMemberId, HistoryEntryId, ResourceId } from './domain-id'
 import type {
   ResourceAccessCommandGateway,
   ResourceBookmarkCommandGateway,
@@ -14,7 +18,6 @@ import type {
   WorkspaceResourceIndex,
 } from './resource-index-contract'
 import type { VersionStamp } from './component-version'
-import type { FileOwnedMetadata } from './file-content-contract'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -38,32 +41,6 @@ export interface ResourcePreviewSource {
   subscribe(resourceId: ResourceId, listener: () => void): () => void
 }
 
-export type FileResourceContent = FileOwnedMetadata &
-  Readonly<{
-    assetId: AssetId | null
-  }>
-
-export type MapResourceContent = Readonly<{
-  imageAssetId: AssetId | null
-  layers: ReadonlyArray<
-    Readonly<{
-      id: string
-      imageAssetId: AssetId | null
-      name: string
-    }>
-  >
-  pins: ReadonlyArray<
-    Readonly<{
-      id: MapPinId
-      targetResourceId: ResourceId
-      layerId: string | null
-      x: number
-      y: number
-      visible: boolean
-    }>
-  >
-}>
-
 export interface ResourceNavigation {
   current(): ResourceId | null
   open(resourceId: ResourceId): void
@@ -86,7 +63,7 @@ export interface ReadonlyResourceHistory {
   list(resourceId: ResourceId): Promise<ReadonlyArray<ResourceHistoryEntry>>
 }
 
-export interface WizardEditorRuntime {
+export interface EditorRuntime {
   readonly scope: ResourceProjectionScope
   readonly resources: {
     readonly index: WorkspaceResourceIndex
@@ -97,10 +74,10 @@ export interface WizardEditorRuntime {
     readonly previews: ResourceCapability<ResourcePreviewSource>
   }
   readonly content: {
-    readonly notes: NoteContentSource<Y.Doc, Y.Doc>
-    readonly files: ResourceContentSource<null, FileResourceContent>
-    readonly maps: ResourceContentSource<null, MapResourceContent>
-    readonly canvases: ResourceContentSource<null, Y.Doc>
+    readonly notes: NoteSessionSource
+    readonly files: FileContentSource
+    readonly maps: MapSessionSource
+    readonly canvases: CanvasSessionSource
   }
   readonly navigation: ResourceNavigation
   readonly search: ResourceCapability<WorkspaceSearch>

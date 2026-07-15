@@ -1,4 +1,3 @@
-import type { ResourceCollectionQuery } from '@wizard-archive/editor/resources/index-contract'
 import type { Infer } from 'convex/values'
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
@@ -28,14 +27,44 @@ type StoredAuthorizedResourceCollectionPage = Infer<
   typeof authorizedResourceCollectionPageValidator
 >
 
+function storedSnapshot(
+  snapshot: Awaited<ReturnType<typeof loadAuthorizedResource>>,
+): StoredAuthorizedResourceSnapshot {
+  if (snapshot.scope.projection === 'local') {
+    throw new TypeError('A local resource projection cannot cross the Convex boundary')
+  }
+  return {
+    scope: {
+      campaignId: snapshot.scope.campaignId,
+      actorId: snapshot.scope.actorId,
+      projection: snapshot.scope.projection,
+      schema: snapshot.scope.schema,
+    },
+    revision: snapshot.revision,
+    resources: snapshot.resources.map((resource) => ({
+      ...resource,
+      metadataVersion: { ...resource.metadataVersion },
+    })),
+    missingResourceIds: [...snapshot.missingResourceIds],
+    collections: snapshot.collections.map((collection) => ({
+      query: {
+        parentId: collection.query.parentId,
+        lifecycle: collection.query.lifecycle,
+        ...(collection.query.kinds === undefined ? {} : { kinds: [...collection.query.kinds] }),
+      },
+      resourceIds: [...collection.resourceIds],
+      complete: collection.complete,
+    })),
+  }
+}
+
 export const loadResource = campaignQuery({
   args: { resourceId: resourceIdValidator },
   returns: authorizedResourceSnapshotValidator,
   handler: async (ctx, args): Promise<StoredAuthorizedResourceSnapshot> => {
-    return (await loadAuthorizedResource(
-      ctx,
-      args.resourceId,
-    )) as unknown as StoredAuthorizedResourceSnapshot
+    return storedSnapshot(
+      await loadAuthorizedResource(ctx, assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)),
+    )
   },
 })
 
@@ -46,10 +75,18 @@ export const loadCollection = campaignQuery({
   },
   returns: authorizedResourceCollectionPageValidator,
   handler: async (ctx, args): Promise<StoredAuthorizedResourceCollectionPage> => {
-    return (await loadAuthorizedCollection(ctx, {
-      query: args.query as unknown as ResourceCollectionQuery,
+    const page = await loadAuthorizedCollection(ctx, {
+      query: {
+        parentId:
+          args.query.parentId === null
+            ? null
+            : assertDomainId(DOMAIN_ID_KIND.resource, args.query.parentId),
+        lifecycle: args.query.lifecycle,
+        ...(args.query.kinds === undefined ? {} : { kinds: args.query.kinds }),
+      },
       cursor: args.cursor ?? null,
-    })) as unknown as StoredAuthorizedResourceCollectionPage
+    })
+    return { snapshot: storedSnapshot(page.snapshot), cursor: page.cursor }
   },
 })
 

@@ -6,11 +6,8 @@ import type {
   ResourceStructureCommandGateway,
 } from './resource-command-contract'
 import type { ResourceId } from './domain-id'
-import {
-  InMemoryResourceCatalog,
-  InMemoryResourceOperationExecutor,
-} from './in-memory-resource-catalog'
-import type { InMemoryResourceOperationExecutorOptions } from './in-memory-resource-catalog'
+import { InMemoryResourceCatalog } from './in-memory-resource-catalog'
+import type { InMemoryResourceOperationsOptions } from './in-memory-resource-catalog'
 import type {
   AuthorizedResourceSnapshot,
   AuthorizedResourceSummary,
@@ -34,7 +31,7 @@ import {
 export type InMemoryResourceRuntimeOptions<TContentCopyPlan = never> = Readonly<{
   scope: ResourceProjectionScope
   initialSnapshot: ResourceCatalogSnapshot
-  authorize: InMemoryResourceOperationExecutorOptions<TContentCopyPlan>['authorize']
+  authorize: InMemoryResourceOperationsOptions<TContentCopyPlan>['authorize']
   contentCopy?: ContentCopyPlanner<TContentCopyPlan, () => void>
   now?: () => number
 }>
@@ -72,7 +69,7 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
   }
 
   const catalog = new InMemoryResourceCatalog({ initialSnapshot })
-  const operations = new InMemoryResourceOperationExecutor(catalog, {
+  const operations = catalog.operations({
     authorize,
     ...(contentCopy ? { contentCopy } : {}),
     ...(now ? { now } : {}),

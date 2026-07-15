@@ -8,13 +8,6 @@ import { cloudflare } from '@cloudflare/vite-plugin'
 import { codecovVitePlugin } from '@codecov/vite-plugin'
 import editorPackage from './packages/editor/package.json'
 
-const editorDevelopmentAliases = [
-  {
-    find: /^@wizard-archive\/editor$/,
-    replacement: editorSourcePath('index.ts'),
-  },
-]
-
 const editorPackEntries = Object.entries(editorPackage.exports).flatMap(([subpath, target]) => {
   if (typeof target === 'string') return []
 
@@ -36,7 +29,7 @@ function editorSourcePath(sourcePath: string) {
   return fileURLToPath(new URL(`packages/editor/src/${sourcePath}`, import.meta.url))
 }
 
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   pack: {
     entry: editorPackEntries,
     dts: true,
@@ -132,7 +125,6 @@ export default defineConfig(({ command }) => ({
   resolve: {
     tsconfigPaths: true,
     alias: [
-      ...(command === 'serve' ? editorDevelopmentAliases : []),
       {
         find: 'yjs',
         replacement: new URL('node_modules/yjs/dist/yjs.mjs', import.meta.url).pathname,
@@ -149,4 +141,4 @@ export default defineConfig(({ command }) => ({
     noExternal: ['@convex-dev/better-auth', '@wizard-archive/editor'],
   },
   envPrefix: ['VITE_'],
-}))
+})

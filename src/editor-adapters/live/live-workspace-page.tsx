@@ -1,4 +1,4 @@
-import { WizardEditor } from '@wizard-archive/editor'
+import { ResourceShell } from '@wizard-archive/editor/resources/resource-shell'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { CampaignPanel } from '~/features/campaigns/components/campaign-panel/campaign-panel'
 import { CampaignPlayersButton } from '~/features/campaigns/components/campaign-players-button'
@@ -15,7 +15,7 @@ export function LiveWorkspacePage() {
   return (
     <LiveWorkspaceRuntimeProvider>
       {(runtime) => (
-        <WizardEditor
+        <ResourceShell
           ariaLabel="Editor workspace"
           runtime={runtime}
           resourcePanelSlots={{

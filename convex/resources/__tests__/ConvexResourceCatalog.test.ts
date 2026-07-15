@@ -25,9 +25,8 @@ import type {
 import { ConvexResourceCatalog } from '../functions/ConvexResourceCatalog'
 import { executeStructureCommand } from '../functions/executeStructureCommand'
 import {
+  assignResourceAssetsFolder,
   appendResourceSourcePathAlias,
-  removeApplicationResourceRole,
-  setApplicationResourceRole,
 } from '../functions/resourceCatalogMetadata'
 
 const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) => {
@@ -43,8 +42,10 @@ const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) =
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).getTombstone(...args)),
     listAliases: async (...args) =>
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).listAliases(...args)),
-    listRoles: async (...args) =>
-      await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).listRoles(...args)),
+    getAssetsFolder: async (...args) =>
+      await test.run(
+        async (ctx) => await new ConvexResourceCatalog(ctx.db).getAssetsFolder(...args),
+      ),
     readSnapshot: async (...args) =>
       await test.run(async (ctx) => await new ConvexResourceCatalog(ctx.db).readSnapshot(...args)),
   }
@@ -72,15 +73,13 @@ const createConvexCatalog: ResourceCatalogConformanceFactory = ({ authorize }) =
       },
       appendAlias: async (alias: Parameters<typeof appendResourceSourcePathAlias>[1]) =>
         await test.run(async (ctx) => await appendResourceSourcePathAlias(ctx, alias)),
-      setRole: async (
-        campaignId: Parameters<typeof setApplicationResourceRole>[1],
-        role: Parameters<typeof setApplicationResourceRole>[2],
-      ) => await test.run(async (ctx) => await setApplicationResourceRole(ctx, campaignId, role)),
-      removeRole: async (
-        campaignId: Parameters<typeof removeApplicationResourceRole>[1],
-        role: Parameters<typeof removeApplicationResourceRole>[2],
+      assignAssetsFolder: async (
+        campaignId: Parameters<typeof assignResourceAssetsFolder>[1],
+        resourceId: Parameters<typeof assignResourceAssetsFolder>[2],
       ) =>
-        await test.run(async (ctx) => await removeApplicationResourceRole(ctx, campaignId, role)),
+        await test.run(
+          async (ctx) => await assignResourceAssetsFolder(ctx, campaignId, resourceId),
+        ),
     },
   } as unknown as ResourceCatalogConformanceRuntime
 }

@@ -30,7 +30,7 @@ describe('LiveResourceContentSource', () => {
     source.subscribe(resourceId, listener)
     const operationId = testDomainId('operation', 'file-copy')
     apply({ status: 'initializing', operationId })
-    expect(source.get(resourceId)).toEqual({ status: 'initializing', operationId, local: null })
+    expect(source.get(resourceId)).toEqual({ status: 'initializing', operationId })
 
     const content = {
       assetId: null,
@@ -71,8 +71,7 @@ describe('LiveResourceContentSource', () => {
     apply({ status: 'ready', kind: 'canvas', update: update.buffer as ArrayBuffer, version })
     expect(source.get(resourceId)).toEqual({
       status: 'ready',
-      content: expect.any(Y.Doc),
-      version,
+      session: expect.objectContaining({ document: expect.any(Y.Doc), version }),
     })
     apply({
       status: 'ready',

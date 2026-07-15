@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { WizardEditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import type { EditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { LoadingSpinner } from '@wizard-archive/ui/components/loading-spinner'
@@ -12,7 +12,7 @@ import { useLiveResourceNavigation } from './resources/use-live-resource-navigat
 export function LiveWorkspaceRuntimeProvider({
   children,
 }: {
-  children: (runtime: WizardEditorRuntime) => ReactNode
+  children: (runtime: EditorRuntime) => ReactNode
 }) {
   const { campaign, campaignId } = useCampaign()
   const membership = campaign.data?.myMembership
@@ -46,7 +46,7 @@ function LoadedLiveWorkspaceRuntimeContent({
 }: {
   workspaceId: CampaignId
   actorId: CampaignMemberId
-  children: (runtime: WizardEditorRuntime) => ReactNode
+  children: (runtime: EditorRuntime) => ReactNode
   projection: 'dm' | 'player'
 }) {
   const resourceNavigation = useLiveResourceNavigation()

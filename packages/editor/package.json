@@ -6,9 +6,9 @@
   ],
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "default": "./dist/index.mjs"
+    "./resources/resource-shell": {
+      "types": "./dist/resources/resource-shell.d.mts",
+      "default": "./dist/resources/resource-shell.mjs"
     },
     "./canvas/document-contract": {
       "types": "./dist/canvas/document-contract.d.mts",
@@ -62,6 +62,10 @@
       "types": "./dist/resources/resource-command-protocol.d.mts",
       "default": "./dist/resources/resource-command-protocol.mjs"
     },
+    "./resources/graph-transition": {
+      "types": "./dist/resources/resource-graph-transition.d.mts",
+      "default": "./dist/resources/resource-graph-transition.mjs"
+    },
     "./resources/operation-ledger": {
       "types": "./dist/resources/resource-operation-ledger.d.mts",
       "default": "./dist/resources/resource-operation-ledger.mjs"
@@ -82,9 +86,9 @@
       "types": "./dist/resources/content-session-contract.d.mts",
       "default": "./dist/resources/content-session-contract.mjs"
     },
-    "./resources/mutable-content-source": {
-      "types": "./dist/resources/mutable-resource-content-source.d.mts",
-      "default": "./dist/resources/mutable-resource-content-source.mjs"
+    "./resources/session-store": {
+      "types": "./dist/resources/resource-session-store.d.mts",
+      "default": "./dist/resources/resource-session-store.mjs"
     },
     "./resources/content-copy-contract": {
       "types": "./dist/resources/content-copy-contract.d.mts",
@@ -171,12 +175,13 @@
       "./resources/workspace-index",
       "./resources/command-contract",
       "./resources/command-protocol",
+      "./resources/graph-transition",
       "./resources/operation-ledger",
       "./resources/in-memory-catalog",
       "./resources/in-memory-runtime",
       "./resources/in-memory-editor-runtime",
       "./resources/content-session-contract",
-      "./resources/mutable-content-source",
+      "./resources/session-store",
       "./resources/content-copy-contract",
       "./resources/optimism-contract",
       "./resources/optimistic-index",

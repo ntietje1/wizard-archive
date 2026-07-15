@@ -12,6 +12,7 @@ import type {
 import { canonicalizeResourceTitle } from '../resource-record'
 import { indexRevision, MutableWorkspaceResourceIndex } from '../workspace-resource-index'
 import { createOptimisticResourceStructureRuntime } from '../resource-optimistic-runtime'
+import type { ResourceProjectionScope } from '../resource-index-contract'
 import { testDomainId } from '../../test/domain-id'
 
 const campaignId = testDomainId(DOMAIN_ID_KIND.campaign, 'optimistic-runtime-campaign')
@@ -24,9 +25,9 @@ const version2 = initialVersion(assertSha256Digest('2'.repeat(64)))
 const scope = {
   campaignId,
   actorId,
-  projection: 'editor',
+  projection: 'local',
   schema: 'resource-index-v1',
-}
+} satisfies ResourceProjectionScope
 
 function baseIndex() {
   const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vite-plus/test'
 import type { AuthoredDestination } from '../authored-destination-contract'
 import { parseSafeHttpsUrl } from '../authored-destination-contract'
-import type { ContentSessionState } from '../content-session-contract'
+import type { ContentPendingState } from '../content-session-contract'
 import { assertSha256Digest, initialVersion } from '../component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import type { PortablePathProjection } from '../portable-path-contract'
@@ -92,8 +92,7 @@ describe('canonical contract fixtures', () => {
     const state = {
       status: 'initializing',
       operationId,
-      local: { edits: 1 },
-    } satisfies ContentSessionState<{ edits: number }, Uint8Array>
+    } satisfies ContentPendingState
     const internal = {
       kind: 'internal',
       target: { kind: 'noteBlock', resourceId, blockId, presentation: 'heading' },
@@ -128,7 +127,7 @@ describe('canonical contract fixtures', () => {
       resources: [],
       tombstones: [],
       aliases: [],
-      roles: [],
+      assetsFolderId: null,
       sections: {
         notes: { version: WIZARD_ARCHIVE_NOTE_SECTION_VERSION, entries: [] },
         files: { version: WIZARD_ARCHIVE_FILE_SECTION_VERSION, entries: [] },

@@ -12,7 +12,7 @@ import {
 import type { PortableRelativePath } from './portable-path-contract'
 import { assertSourcePathAlias } from './source-path-alias'
 import { hasUnpairedUtf16 } from './well-formed-unicode'
-import type { ApplicationResourceRole, SourcePathAlias } from './resource-catalog-contract'
+import type { SourcePathAlias } from './resource-catalog-contract'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from './resource-record'
 import type { ResourceColor, ResourceIcon, ResourceKind, ResourceTitle } from './resource-record'
 import type { ResourceTombstone } from './resource-metadata-version'
@@ -195,41 +195,57 @@ export async function validateWizardArchivePackage(
   return { status: 'valid' }
 }
 
+const MANIFEST_KEYS = [
+  'version',
+  'schemaVersion',
+  'scope',
+  'sourceCampaignId',
+  'transferSnapshotId',
+  'portablePathVersion',
+  'resources',
+  'tombstones',
+  'aliases',
+  'assetsFolderId',
+  'sections',
+] as const
+
+type ManifestShape = Record<string, unknown> & {
+  scope: 'full_campaign'
+  sourceCampaignId: unknown
+  transferSnapshotId: unknown
+  portablePathVersion: typeof PORTABLE_PATH_VERSION
+  resources: Array<unknown>
+  tombstones: Array<unknown>
+  aliases: Array<unknown>
+  assetsFolderId: string | null
+  sections: Record<string, unknown>
+}
+
+function hasManifestShape(value: Record<string, unknown>): value is ManifestShape {
+  return (
+    hasRequiredKeysAndOptionalSection(value, MANIFEST_KEYS) &&
+    value.scope === 'full_campaign' &&
+    value.portablePathVersion === PORTABLE_PATH_VERSION &&
+    Array.isArray(value.resources) &&
+    Array.isArray(value.tombstones) &&
+    Array.isArray(value.aliases) &&
+    (value.assetsFolderId === null || typeof value.assetsFolderId === 'string') &&
+    isRecord(value.sections) &&
+    value.resources.length <= MAX_WIZARD_ARCHIVE_RESOURCES &&
+    value.tombstones.length <= MAX_WIZARD_ARCHIVE_RESOURCES &&
+    value.aliases.length <= MAX_WIZARD_ARCHIVE_RESOURCES
+  )
+}
+
 function readManifest(value: Record<string, unknown>): WizardArchiveManifest | null {
-  if (
-    !hasRequiredKeysAndOptionalSection(value, [
-      'version',
-      'schemaVersion',
-      'scope',
-      'sourceCampaignId',
-      'transferSnapshotId',
-      'portablePathVersion',
-      'resources',
-      'tombstones',
-      'aliases',
-      'roles',
-      'sections',
-    ]) ||
-    value.scope !== 'full_campaign' ||
-    value.portablePathVersion !== PORTABLE_PATH_VERSION ||
-    !Array.isArray(value.resources) ||
-    !Array.isArray(value.tombstones) ||
-    !Array.isArray(value.aliases) ||
-    !Array.isArray(value.roles) ||
-    !isRecord(value.sections) ||
-    value.resources.length > MAX_WIZARD_ARCHIVE_RESOURCES ||
-    value.tombstones.length > MAX_WIZARD_ARCHIVE_RESOURCES ||
-    value.aliases.length > MAX_WIZARD_ARCHIVE_RESOURCES ||
-    value.roles.length > MAX_WIZARD_ARCHIVE_RESOURCES
-  ) {
-    return null
-  }
+  if (!hasManifestShape(value)) return null
   const sourceCampaignId = domainId(DOMAIN_ID_KIND.campaign, value.sourceCampaignId)
   const transferSnapshotId = domainId(DOMAIN_ID_KIND.snapshot, value.transferSnapshotId)
   const resources = readArray(value.resources, readResource)
   const tombstones = readArray(value.tombstones, readTombstone)
   const aliases = readArray(value.aliases, readAlias)
-  const roles = readArray(value.roles, readRole)
+  const assetsFolderId =
+    value.assetsFolderId === null ? null : domainId(DOMAIN_ID_KIND.resource, value.assetsFolderId)
   const sections = readSections(value.sections)
   if (
     sourceCampaignId === null ||
@@ -237,7 +253,7 @@ function readManifest(value: Record<string, unknown>): WizardArchiveManifest | n
     resources === null ||
     tombstones === null ||
     aliases === null ||
-    roles === null ||
+    (value.assetsFolderId !== null && assetsFolderId === null) ||
     sections === null
   ) {
     return null
@@ -252,7 +268,7 @@ function readManifest(value: Record<string, unknown>): WizardArchiveManifest | n
     resources,
     tombstones,
     aliases,
-    roles,
+    assetsFolderId,
     sections,
   }
 }
@@ -424,19 +440,6 @@ function readAlias(value: unknown): SourcePathAlias | null {
   }
 }
 
-function readRole(value: unknown): ApplicationResourceRole | null {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, ['role', 'resourceId']) ||
-    typeof value.role !== 'string' ||
-    value.role.length === 0
-  ) {
-    return null
-  }
-  const resourceId = domainId(DOMAIN_ID_KIND.resource, value.resourceId)
-  return resourceId ? { role: value.role, resourceId } : null
-}
-
 function readSections(value: Record<string, unknown>): WizardArchiveManifest['sections'] | null {
   if (!hasExactKeys(value, ['notes', 'files', 'maps', 'canvases'])) return null
   const notes = readSection(value.notes, WIZARD_ARCHIVE_NOTE_SECTION_VERSION, readNoteSection)
@@ -598,10 +601,9 @@ function validateManifest(manifest: WizardArchiveManifest): boolean {
     }
     aliasKeys.add(key)
   }
-  const roleNames = new Set<string>()
-  for (const role of manifest.roles) {
-    if (!resources.has(role.resourceId) || roleNames.has(role.role)) return false
-    roleNames.add(role.role)
+  if (manifest.assetsFolderId !== null) {
+    const assetsFolder = resources.get(manifest.assetsFolderId)
+    if (!assetsFolder || assetsFolder.kind !== 'folder') return false
   }
 
   const noteIds = validateDomainEntries(manifest.sections.notes.entries, 'note', resources)
@@ -780,7 +782,7 @@ function normalizeManifest(manifest: WizardArchiveManifest): WizardArchiveManife
         `${right.resourceId}:${right.normalizedPath}`,
       ),
     ),
-    roles: [...manifest.roles].sort((left, right) => left.role.localeCompare(right.role)),
+    assetsFolderId: manifest.assetsFolderId,
     sections: {
       notes: {
         version: WIZARD_ARCHIVE_NOTE_SECTION_VERSION,

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { LocalWorkspaceRuntimeHost } from '../local-workspace-runtime-host'
 
 const useLocalWorkspaceRuntimeMock = vi.hoisted(() => vi.fn())
-const wizardEditorMock = vi.hoisted(() =>
+const resourceShellMock = vi.hoisted(() =>
   vi.fn((_props: unknown) => <div data-testid="local-runtime-host" />),
 )
 const runtime = vi.hoisted(() => ({ scope: { campaignId: 'local-workspace-1' } }))
@@ -12,15 +12,15 @@ vi.mock('../use-local-workspace-runtime', () => ({
   useLocalWorkspaceRuntime: (args: unknown) => useLocalWorkspaceRuntimeMock(args),
 }))
 
-vi.mock('@wizard-archive/editor', () => ({
-  WizardEditor: (props: unknown) => wizardEditorMock(props),
+vi.mock('@wizard-archive/editor/resources/resource-shell', () => ({
+  ResourceShell: (props: unknown) => resourceShellMock(props),
 }))
 
 describe('LocalWorkspaceRuntimeHost', () => {
   beforeEach(() => {
     useLocalWorkspaceRuntimeMock.mockReset()
     useLocalWorkspaceRuntimeMock.mockReturnValue(runtime)
-    wizardEditorMock.mockClear()
+    resourceShellMock.mockClear()
   })
 
   it('passes the canonical local resource runtime to the package editor', () => {
@@ -37,7 +37,7 @@ describe('LocalWorkspaceRuntimeHost', () => {
       initialResourceId: undefined,
       initialWorkspace: undefined,
     })
-    expect(wizardEditorMock).toHaveBeenCalledWith(
+    expect(resourceShellMock).toHaveBeenCalledWith(
       expect.objectContaining({
         ariaLabel: 'Local workspace',
         runtime,

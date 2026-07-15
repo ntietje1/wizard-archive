@@ -1,7 +1,4 @@
-import type {
-  ApplicationResourceRole,
-  SourcePathAlias,
-} from '@wizard-archive/editor/resources/catalog-contract'
+import type { SourcePathAlias } from '@wizard-archive/editor/resources/catalog-contract'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { assertSourcePathAlias } from '@wizard-archive/editor/resources/source-path-alias'
 import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
@@ -18,6 +15,7 @@ async function requireOwnedResource(
   if (!resource || resource.campaignUuid !== campaignId) {
     throw new TypeError('Resource catalog metadata target is not owned by the campaign')
   }
+  return resource
 }
 
 function sourcePathAliasFromRow(row: Doc<'resourceSourcePathAliases'>): SourcePathAlias {
@@ -63,40 +61,30 @@ export async function appendResourceSourcePathAlias(
   return alias
 }
 
-export async function setApplicationResourceRole(
+export async function assignResourceAssetsFolder(
   ctx: MutationCtx,
   campaignId: CampaignId,
-  role: ApplicationResourceRole,
+  resourceId: ResourceId | null,
 ): Promise<void> {
-  await requireOwnedResource(ctx, campaignId, role.resourceId)
+  if (resourceId !== null) {
+    const resource = await requireOwnedResource(ctx, campaignId, resourceId)
+    if (resource.kind !== 'folder') throw new TypeError('Assets must be assigned to a folder')
+  }
   const existing = await ctx.db
-    .query('resourceRoles')
-    .withIndex('by_campaign_and_role', (query) =>
-      query.eq('campaignUuid', campaignId).eq('role', role.role),
-    )
+    .query('resourceAssetsFolders')
+    .withIndex('by_campaign', (query) => query.eq('campaignUuid', campaignId))
     .unique()
-  if (existing?.resourceUuid === role.resourceId) return
-  if (existing) {
-    await ctx.db.patch('resourceRoles', existing._id, { resourceUuid: role.resourceId })
+  if (existing?.resourceUuid === resourceId || (!existing && resourceId === null)) return
+  if (resourceId === null) {
+    if (existing) await ctx.db.delete('resourceAssetsFolders', existing._id)
     return
   }
-  await ctx.db.insert('resourceRoles', {
+  if (existing) {
+    await ctx.db.patch('resourceAssetsFolders', existing._id, { resourceUuid: resourceId })
+    return
+  }
+  await ctx.db.insert('resourceAssetsFolders', {
     campaignUuid: campaignId,
-    role: role.role,
-    resourceUuid: role.resourceId,
+    resourceUuid: resourceId,
   })
-}
-
-export async function removeApplicationResourceRole(
-  ctx: MutationCtx,
-  campaignId: CampaignId,
-  role: string,
-): Promise<void> {
-  const existing = await ctx.db
-    .query('resourceRoles')
-    .withIndex('by_campaign_and_role', (query) =>
-      query.eq('campaignUuid', campaignId).eq('role', role),
-    )
-    .unique()
-  if (existing) await ctx.db.delete('resourceRoles', existing._id)
 }

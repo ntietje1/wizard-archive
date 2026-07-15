@@ -20,8 +20,8 @@ export type IndexRevision = string & { readonly [indexRevisionBrand]: true }
 export type ResourceProjectionScope = Readonly<{
   campaignId: CampaignId
   actorId: CampaignMemberId
-  projection: string
-  schema: string
+  projection: 'dm' | 'player' | 'local'
+  schema: typeof RESOURCE_INDEX_SCHEMA
 }>
 
 export type ResourceKnowledge<T> =

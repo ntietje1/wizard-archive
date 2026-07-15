@@ -47,7 +47,6 @@ describe('Wizard Archive manifest codec', () => {
       ...fixture.manifest,
       resources: [...fixture.manifest.resources].reverse(),
       aliases: [...fixture.manifest.aliases].reverse(),
-      roles: [...fixture.manifest.roles].reverse(),
     }
     const encoded = encodeWizardArchiveManifest(fixture.manifest)
 
@@ -261,10 +260,7 @@ async function createFixture() {
         rawPath: 'Notes/Note.md',
       }),
     ],
-    roles: [
-      { role: 'player-handout', resourceId: noteId },
-      { role: 'campaign-home', resourceId: folderId },
-    ],
+    assetsFolderId: folderId,
     sections: {
       notes: {
         version: WIZARD_ARCHIVE_NOTE_SECTION_VERSION,

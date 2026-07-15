@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import type { AssetId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { internal } from '../_generated/api'
 import { internalMutation } from '../_generated/server'
 import type { MutationCtx } from '../_generated/server'
@@ -11,31 +11,33 @@ const workResult = v.union(
 
 async function setContentAssetState(
   ctx: MutationCtx,
-  resourceUuid: ResourceId,
+  resourceUuid: string,
   state: 'initializing' | 'ready' | 'failed',
 ) {
+  const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, resourceUuid)
   const [file, map] = await Promise.all([
     ctx.db
       .query('resourceFileContents')
-      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceUuid))
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
       .unique(),
     ctx.db
       .query('resourceMapContents')
-      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceUuid))
+      .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
       .unique(),
   ])
   if (file) await ctx.db.patch(file._id, { state })
   if (map) await ctx.db.patch(map._id, { state })
 }
 
-async function ensureRetirementCandidate(ctx: MutationCtx, assetUuid: AssetId) {
+async function ensureRetirementCandidate(ctx: MutationCtx, assetUuid: string) {
+  const assetId = assertDomainId(DOMAIN_ID_KIND.asset, assetUuid)
   const existing = await ctx.db
     .query('resourceAssetRetirementCandidates')
-    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetUuid))
+    .withIndex('by_assetUuid', (query) => query.eq('assetUuid', assetId))
     .unique()
   if (existing) return existing._id
   return await ctx.db.insert('resourceAssetRetirementCandidates', {
-    assetUuid,
+    assetUuid: assetId,
     status: 'pending',
     attempts: 0,
     lastAttemptAt: null,

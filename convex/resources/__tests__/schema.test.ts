@@ -5,13 +5,13 @@ import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-versi
 import { resourceCommandReceiptValidator, resourceTables, versionStampValidator } from '../schema'
 
 describe('canonical resource schema', () => {
-  it('defines one UUID catalog with retained versions, receipts, tombstones, aliases, and roles', () => {
+  it('defines one UUID catalog with retained versions, receipts, tombstones, aliases, and assets', () => {
     expect(resourceTables).toEqual(
       expect.objectContaining({
         resources: expect.anything(),
         resourceTombstones: expect.anything(),
         resourceSourcePathAliases: expect.anything(),
-        resourceRoles: expect.anything(),
+        resourceAssetsFolders: expect.anything(),
         resourceOperations: expect.anything(),
         resourceCanvasContents: expect.anything(),
         resourceFileContents: expect.anything(),

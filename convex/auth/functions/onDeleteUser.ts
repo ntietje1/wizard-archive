@@ -1,4 +1,5 @@
 import { asyncMap } from 'convex-helpers'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { removeCampaignMemberForDeletedUser } from '../../campaigns/functions/lifecycle'
 import { isAssetOwnedByResource } from '../../storage/functions/storageReferences'
 import type { MutationCtx } from '../../_generated/server'
@@ -30,7 +31,11 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
 
   await asyncMap(prefs, (p) => ctx.db.delete('userPreferences', p._id))
   await asyncMap(files, async (f) => {
-    if (f.assetUuid && (await isAssetOwnedByResource(ctx.db, f.assetUuid))) return
+    if (
+      f.assetUuid &&
+      (await isAssetOwnedByResource(ctx.db, assertDomainId(DOMAIN_ID_KIND.asset, f.assetUuid)))
+    )
+      return
     if (f.storageId) await ctx.storage.delete(f.storageId)
     await ctx.db.delete('fileStorage', f._id)
   })

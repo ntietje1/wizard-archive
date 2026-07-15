@@ -1,12 +1,12 @@
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
-import type { ContentSessionState } from '@wizard-archive/editor/resources/content-session-contract'
-import { MutableResourceContentSource } from '@wizard-archive/editor/resources/mutable-content-source'
+import { ResourceSessionStore } from '@wizard-archive/editor/resources/session-store'
 
-export function createResourceWatchStore<TSnapshot, TLocal, TReady>(
+export function createResourceWatchStore<TSnapshot, TState>(
   watch: (resourceId: ResourceId, apply: (snapshot: TSnapshot) => void) => () => void,
   apply: (resourceId: ResourceId, snapshot: TSnapshot) => void,
+  initialState: TState,
 ) {
-  const source = new MutableResourceContentSource<TLocal, TReady>()
+  const source = new ResourceSessionStore(initialState)
   const watches = new Map<ResourceId, () => void>()
 
   const ensure = (resourceId: ResourceId) => {
@@ -27,7 +27,7 @@ export function createResourceWatchStore<TSnapshot, TLocal, TReady>(
       ensure(resourceId)
       return source.get(resourceId)
     },
-    set: (resourceId: ResourceId, state: ContentSessionState<TLocal, TReady>) => {
+    set: (resourceId: ResourceId, state: TState) => {
       source.set(resourceId, state)
     },
     subscribe: (resourceId: ResourceId, listener: () => void) => {

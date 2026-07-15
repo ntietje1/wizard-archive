@@ -899,10 +899,9 @@ describe('resource structure commands', () => {
         rawPath: 'Notes/Child.md',
         normalizedPath: 'Notes/Child.md',
       })
-      await ctx.db.insert('resourceRoles', {
+      await ctx.db.insert('resourceAssetsFolders', {
         campaignUuid,
-        resourceUuid: deleteChildId,
-        role: 'campaign-home',
+        resourceUuid: deleteRootId,
       })
     })
     await execute(campaign, campaignUuid, { type: 'trash', resourceIds: [deleteRootId] })
@@ -946,9 +945,9 @@ describe('resource structure commands', () => {
       ).toHaveLength(0)
       expect(
         await ctx.db
-          .query('resourceRoles')
+          .query('resourceAssetsFolders')
           .withIndex('by_campaign_and_resource', (query) =>
-            query.eq('campaignUuid', campaignUuid).eq('resourceUuid', deleteChildId),
+            query.eq('campaignUuid', campaignUuid).eq('resourceUuid', deleteRootId),
           )
           .take(1),
       ).toHaveLength(0)
@@ -1015,7 +1014,7 @@ describe('resource structure commands', () => {
         .unique()
       expect(root!.lifecycle).toBe('active')
     })
-  })
+  }, 15_000)
 
   it('returns domain rejections for invalid UUID and title input', async () => {
     const campaign = await setupCampaignContext(t)

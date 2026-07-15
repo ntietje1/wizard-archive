@@ -1,4 +1,5 @@
 import { RESOURCE_COMMAND_PROTOCOL_VERSION } from '@wizard-archive/editor/resources/command-protocol'
+import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { RESOURCE_KIND } from '@wizard-archive/editor/resources/resource-record'
 import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-version'
 import { defineTable } from 'convex/server'
@@ -41,8 +42,8 @@ const fileOwnedMetadataValidators = {
 export const resourceProjectionScopeValidator = v.object({
   campaignId: campaignIdValidator,
   actorId: campaignMemberIdValidator,
-  projection: v.string(),
-  schema: v.string(),
+  projection: literals('dm', 'player'),
+  schema: v.literal(RESOURCE_INDEX_SCHEMA),
 })
 
 export const resourceCollectionQueryValidator = v.object({
@@ -206,7 +207,7 @@ export const resourceStructureCommandResultValidator = v.union(
   }),
   v.object({
     status: v.literal('unavailable'),
-    reason: literals('capability_not_supported', 'scope_unavailable'),
+    reason: literals('capability_not_supported', 'dependency_unavailable', 'scope_unavailable'),
   }),
 )
 
@@ -339,12 +340,11 @@ export const resourceTables = {
       'normalizedPath',
     ]),
 
-  resourceRoles: defineTable({
+  resourceAssetsFolders: defineTable({
     campaignUuid: campaignIdValidator,
-    role: v.string(),
     resourceUuid: resourceIdValidator,
   })
-    .index('by_campaign_and_role', ['campaignUuid', 'role'])
+    .index('by_campaign', ['campaignUuid'])
     .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid']),
 
   resourceOperations: defineTable({

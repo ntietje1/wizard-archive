@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import {
-  InMemoryResourceCatalog,
-  InMemoryResourceOperationExecutor,
-} from '@wizard-archive/editor/resources/in-memory-catalog'
+import { InMemoryResourceCatalog } from '@wizard-archive/editor/resources/in-memory-catalog'
 import { defineResourceCatalogConformance } from '../../../../../shared/test/resource-catalog-conformance'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
@@ -10,7 +7,7 @@ import type { AuthoritativeResourceOperationExecutor } from '@wizard-archive/edi
 
 defineResourceCatalogConformance('in-memory', (options) => {
   const catalog = new InMemoryResourceCatalog()
-  return { catalog, operations: new InMemoryResourceOperationExecutor(catalog, options) }
+  return { catalog, operations: catalog.operations(options) }
 })
 
 const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, '01890f47-f6c8-7a5b-8c9d-000000000001')
@@ -26,13 +23,12 @@ describe('InMemoryResourceCatalog snapshots', () => {
 
     expect(catalog).not.toHaveProperty('execute')
     expect(catalog).not.toHaveProperty('appendAlias')
-    expect(catalog).not.toHaveProperty('setRole')
-    expect(catalog).not.toHaveProperty('removeRole')
+    expect(catalog).not.toHaveProperty('assignAssetsFolder')
   })
 
   it('hydrates an authoritative snapshot and publishes committed changes', async () => {
     const source = new InMemoryResourceCatalog()
-    const sourceOperations = new InMemoryResourceOperationExecutor(source, {
+    const sourceOperations = source.operations({
       authorize: () => true,
       now: () => 10,
     })
@@ -52,7 +48,7 @@ describe('InMemoryResourceCatalog snapshots', () => {
     const catalog = new InMemoryResourceCatalog({
       initialSnapshot: source.getSnapshot(campaignId),
     })
-    const operations = new InMemoryResourceOperationExecutor(catalog, {
+    const operations = catalog.operations({
       authorize: () => true,
       now: () => 20,
     })
@@ -80,13 +76,13 @@ describe('InMemoryResourceCatalog snapshots', () => {
     expect(catalog.getSnapshot(campaignId).resources[0]?.title).toBe('Renamed note')
 
     unsubscribe()
-    await operations.removeRole(campaignId, 'missing-role')
+    await operations.assignAssetsFolder(campaignId, null)
     expect(listener).toHaveBeenCalledOnce()
   })
 
   it('rejects invalid hydrated ownership and hierarchy', async () => {
     const source = new InMemoryResourceCatalog()
-    const sourceOperations = new InMemoryResourceOperationExecutor(source, {
+    const sourceOperations = source.operations({
       authorize: () => true,
       now: () => 10,
     })
@@ -126,7 +122,7 @@ describe('InMemoryResourceCatalog snapshots', () => {
   })
 })
 
-describe('InMemoryResourceOperationExecutor deep copy', () => {
+describe('in-memory resource operations deep copy', () => {
   it('copies a bounded closure with final IDs and one content-owned target map', async () => {
     const catalog = new InMemoryResourceCatalog()
     const committedResourceMaps: Array<ReadonlyArray<{ sourceId: string; destinationId: string }>> =
@@ -138,7 +134,7 @@ describe('InMemoryResourceOperationExecutor deep copy', () => {
         Promise.resolve(() => committedResourceMaps.push(plan.resourceMap)),
       ),
     }
-    const operations = new InMemoryResourceOperationExecutor(catalog, {
+    const operations = catalog.operations({
       authorize: () => true,
       contentCopy,
       now: () => 30,
@@ -157,7 +153,7 @@ describe('InMemoryResourceOperationExecutor deep copy', () => {
       rawPath: 'Note.md',
       normalizedPath: 'Note.md',
     })
-    await operations.setRole(campaignId, { role: 'campaign-home', resourceId: sourceRootId })
+    await operations.assignAssetsFolder(campaignId, sourceRootId)
     const listener = vi.fn()
     catalog.subscribe(campaignId, listener)
 
@@ -220,15 +216,13 @@ describe('InMemoryResourceOperationExecutor deep copy', () => {
       ]),
     )
     expect(await catalog.listAliases(campaignId, copiedChild!.id)).toEqual([])
-    expect(await catalog.listRoles(campaignId)).toEqual([
-      { role: 'campaign-home', resourceId: sourceRootId },
-    ])
+    expect(await catalog.getAssetsFolder(campaignId)).toBe(sourceRootId)
     expect(listener).toHaveBeenCalledOnce()
   })
 
   it('rejects content planning failures without committing metadata', async () => {
     const catalog = new InMemoryResourceCatalog()
-    const operations = new InMemoryResourceOperationExecutor(catalog, {
+    const operations = catalog.operations({
       authorize: () => true,
       contentCopy: {
         prepare: () => Promise.reject(new Error('invalid content')),
@@ -252,7 +246,7 @@ describe('InMemoryResourceOperationExecutor deep copy', () => {
 
   it('reports deep copy as unavailable without a content owner', async () => {
     const catalog = new InMemoryResourceCatalog()
-    const operations = new InMemoryResourceOperationExecutor(catalog, {
+    const operations = catalog.operations({
       authorize: () => true,
     })
 

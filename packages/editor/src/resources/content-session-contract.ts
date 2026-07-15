@@ -1,11 +1,13 @@
+import type * as Y from 'yjs'
 import type { VersionStamp } from './component-version'
-import type { OperationId, ResourceId } from './domain-id'
+import type { AssetId, CampaignMemberId, MapPinId, OperationId, ResourceId } from './domain-id'
 import type {
   CommandDelivery,
   CommandEnvelope,
   CreateResourceCommand,
   ResourceStructureCommandResult,
 } from './resource-command-contract'
+import type { FileOwnedMetadata } from './file-content-contract'
 
 export type ContentUnavailableReason =
   | 'capability_not_supported'
@@ -14,25 +16,115 @@ export type ContentUnavailableReason =
 
 export type ContentIntegrityIssue = 'content_missing' | 'content_corrupt' | 'version_mismatch'
 
-export type ContentSessionState<TLocal, TReady> =
-  | { readonly status: 'initializing'; readonly operationId: OperationId; readonly local: TLocal }
+export type ContentUnavailableState =
   | { readonly status: 'loading' }
-  | { readonly status: 'ready'; readonly content: TReady; readonly version: VersionStamp }
   | { readonly status: 'unavailable'; readonly reason: ContentUnavailableReason }
   | { readonly status: 'integrity_error'; readonly issue: ContentIntegrityIssue }
 
-export interface ResourceContentSource<TLocal, TReady> {
-  get(resourceId: ResourceId): ContentSessionState<TLocal, TReady>
-  subscribe(resourceId: ResourceId, listener: () => void): () => void
-}
+export type ContentPendingState =
+  | ContentUnavailableState
+  | { readonly status: 'initializing'; readonly operationId: OperationId }
+
+export type SessionAwareness =
+  | { readonly status: 'unavailable' }
+  | { readonly status: 'available'; readonly collaboratorIds: ReadonlyArray<CampaignMemberId> }
+
+export type FileResourceContent = FileOwnedMetadata &
+  Readonly<{
+    assetId: AssetId | null
+  }>
+
+export type MapResourceContent = Readonly<{
+  imageAssetId: AssetId | null
+  layers: ReadonlyArray<
+    Readonly<{
+      id: string
+      imageAssetId: AssetId | null
+      name: string
+    }>
+  >
+  pins: ReadonlyArray<
+    Readonly<{
+      id: MapPinId
+      targetResourceId: ResourceId
+      layerId: string | null
+      x: number
+      y: number
+      visible: boolean
+    }>
+  >
+}>
+
+export type NoteSessionState =
+  | ContentUnavailableState
+  | { readonly status: 'initializing'; readonly operationId: OperationId; readonly local: Y.Doc }
+  | {
+      readonly status: 'ready'
+      readonly session: Readonly<{
+        document: Y.Doc
+        version: VersionStamp
+        awareness: SessionAwareness
+      }>
+    }
+
+export type FileContentState =
+  | ContentPendingState
+  | {
+      readonly status: 'ready'
+      readonly content: FileResourceContent
+      readonly version: VersionStamp
+    }
+
+export type MapSessionState =
+  | ContentPendingState
+  | {
+      readonly status: 'ready'
+      readonly session: Readonly<{
+        content: MapResourceContent
+        version: VersionStamp
+        awareness: SessionAwareness
+      }>
+    }
+
+export type CanvasSessionState =
+  | ContentPendingState
+  | {
+      readonly status: 'ready'
+      readonly session: Readonly<{
+        document: Y.Doc
+        version: VersionStamp
+        awareness: SessionAwareness
+      }>
+    }
 
 export type CreateNoteResourceCommand = Omit<CreateResourceCommand, 'kind'> & {
   readonly kind: 'note'
 }
 
-export interface NoteContentSource<TLocal, TReady> extends ResourceContentSource<TLocal, TReady> {
+export interface NoteSessionSource {
+  get(resourceId: ResourceId): NoteSessionState
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
   create(
     envelope: CommandEnvelope<CreateNoteResourceCommand>,
-    local: TLocal,
+    local: Y.Doc,
   ): Promise<CommandDelivery<ResourceStructureCommandResult>>
+  dispose(): void
+}
+
+export interface FileContentSource {
+  get(resourceId: ResourceId): FileContentState
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
+  dispose(): void
+}
+
+export interface MapSessionSource {
+  get(resourceId: ResourceId): MapSessionState
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
+  dispose(): void
+}
+
+export interface CanvasSessionSource {
+  get(resourceId: ResourceId): CanvasSessionState
+  subscribe(resourceId: ResourceId, listener: () => void): () => void
+  dispose(): void
 }

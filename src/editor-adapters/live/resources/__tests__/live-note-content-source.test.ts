@@ -123,7 +123,10 @@ describe('LiveNoteContentSource', () => {
 
     await source.create(createEnvelope(resourceId, operationId), local)
     expect(source.get(resourceId)).toEqual(
-      expect.objectContaining({ status: 'ready', content: local }),
+      expect.objectContaining({
+        status: 'ready',
+        session: expect.objectContaining({ document: local }),
+      }),
     )
     const rebound = new Y.Doc()
     Y.applyUpdate(rebound, new Uint8Array(provider.bind.mock.calls[0]![0].update))
@@ -192,8 +195,8 @@ describe('LiveNoteContentSource', () => {
     const ready = source.get(resourceId)
     if (ready.status !== 'ready') throw new Error('Expected ready note')
     const update = provider.bind.mock.calls[0]![0].update
-    provider.emit(resourceId, { status: 'ready', update, version: ready.version })
-    expect(source.get(resourceId)).toEqual({ ...ready, content: local })
+    provider.emit(resourceId, { status: 'ready', update, version: ready.session.version })
+    expect(source.get(resourceId)).toEqual(ready)
   })
 
   it('preserves a loaded document for repeated snapshots of the same version', async () => {

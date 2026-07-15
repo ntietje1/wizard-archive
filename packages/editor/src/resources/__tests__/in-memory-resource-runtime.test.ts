@@ -3,6 +3,7 @@ import { createInMemoryResourceRuntime } from '../in-memory-resource-runtime'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import type { ResourceId } from '../domain-id'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
+import type { ResourceProjectionScope } from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
 import { initialResourceMetadataVersion } from '../resource-metadata-version'
 import type { ResourceCatalogSnapshot } from '../resource-catalog-contract'
@@ -14,7 +15,7 @@ const scope = {
   actorId,
   projection: 'local',
   schema: RESOURCE_INDEX_SCHEMA,
-}
+} satisfies ResourceProjectionScope
 
 async function resource(
   id: ResourceId,
@@ -53,7 +54,7 @@ describe('in-memory resource runtime', () => {
       ],
       tombstones: [],
       aliases: [],
-      roles: [],
+      assetsFolderId: null,
     }
     const runtime = createInMemoryResourceRuntime({
       scope,
@@ -96,7 +97,7 @@ describe('in-memory resource runtime', () => {
         resources: [],
         tombstones: [],
         aliases: [],
-        roles: [],
+        assetsFolderId: null,
       },
       authorize: () => authorization,
       now: () => 10,

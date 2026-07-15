@@ -9,9 +9,9 @@ import type {
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type {
-  ContentSessionState,
   CreateNoteResourceCommand,
-  NoteContentSource,
+  NoteSessionSource,
+  NoteSessionState,
 } from '@wizard-archive/editor/resources/content-session-contract'
 import type {
   CommandDelivery,
@@ -31,8 +31,7 @@ type LiveNoteContentBackend = Readonly<{
 }>
 
 type LocalCreate = Readonly<{ operationId: OperationId; doc: Y.Doc }>
-type NoteState = ContentSessionState<Y.Doc, Y.Doc>
-type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, Y.Doc, Y.Doc>>
+type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteSessionState>>
 
 function toArrayBuffer(update: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(update.byteLength)
@@ -55,7 +54,7 @@ function bindingIssue(reason: Extract<BindNoteContentResult, { status: 'rejected
       : ('content_corrupt' as const)
 }
 
-class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
+class LiveNoteSessionSource implements NoteSessionSource {
   readonly #store: NoteStore
   readonly #localCreates = new Map<ResourceId, LocalCreate>()
   readonly #pendingCreates = new Map<ResourceId, LocalCreate>()
@@ -67,12 +66,14 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
     private readonly structure: ResourceStructureCommandGateway,
     private readonly backend: LiveNoteContentBackend,
   ) {
-    this.#store = createResourceWatchStore(backend.watch, (resourceId, snapshot) =>
-      this.#apply(resourceId, snapshot),
+    this.#store = createResourceWatchStore<NoteSnapshot, NoteSessionState>(
+      backend.watch,
+      (resourceId, snapshot) => this.#apply(resourceId, snapshot),
+      { status: 'loading' },
     )
   }
 
-  get(resourceId: ResourceId): NoteState {
+  get(resourceId: ResourceId): NoteSessionState {
     return this.#store.get(resourceId)
   }
 
@@ -139,7 +140,10 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
       digest: version.digest,
       doc: local,
     })
-    this.#setState(envelope.command.resourceId, { status: 'ready', content: local, version })
+    this.#setState(envelope.command.resourceId, {
+      status: 'ready',
+      session: { document: local, version, awareness: { status: 'unavailable' } },
+    })
     return delivery
   }
 
@@ -185,13 +189,27 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
         const bound = this.#boundDocuments.get(resourceId)
         if (bound?.digest === version.digest) {
           this.#clearLoadedDocument(resourceId)
-          this.#setState(resourceId, { status: 'ready', content: bound.doc, version })
+          this.#setState(resourceId, {
+            status: 'ready',
+            session: {
+              document: bound.doc,
+              version,
+              awareness: { status: 'unavailable' },
+            },
+          })
           return
         }
         this.#boundDocuments.delete(resourceId)
         const loaded = this.#loadedDocuments.get(resourceId)
         if (loaded?.digest === version.digest) {
-          this.#setState(resourceId, { status: 'ready', content: loaded.doc, version })
+          this.#setState(resourceId, {
+            status: 'ready',
+            session: {
+              document: loaded.doc,
+              version,
+              awareness: { status: 'unavailable' },
+            },
+          })
           return
         }
         const doc = new Y.Doc()
@@ -199,7 +217,10 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
           Y.applyUpdate(doc, new Uint8Array(snapshot.update))
           this.#clearLoadedDocument(resourceId)
           this.#loadedDocuments.set(resourceId, { digest: version.digest, doc })
-          this.#setState(resourceId, { status: 'ready', content: doc, version })
+          this.#setState(resourceId, {
+            status: 'ready',
+            session: { document: doc, version, awareness: { status: 'unavailable' } },
+          })
         } catch {
           doc.destroy()
           this.#clearLoadedDocument(resourceId)
@@ -224,7 +245,7 @@ class LiveNoteContentSource implements NoteContentSource<Y.Doc, Y.Doc> {
     this.#loadedDocuments.delete(resourceId)
   }
 
-  #setState(resourceId: ResourceId, state: NoteState): void {
+  #setState(resourceId: ResourceId, state: NoteSessionState): void {
     this.#store.set(resourceId, state)
   }
 }
@@ -234,7 +255,7 @@ export function createLiveNoteContentSource(
   structure: ResourceStructureCommandGateway,
   backend: LiveNoteContentBackend,
 ) {
-  const source = new LiveNoteContentSource(campaignId, structure, backend)
+  const source = new LiveNoteSessionSource(campaignId, structure, backend)
   return {
     create: (envelope: CommandEnvelope<CreateNoteResourceCommand>, local: Y.Doc) =>
       source.create(envelope, local),

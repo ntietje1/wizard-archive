@@ -1,12 +1,12 @@
 import type { ComponentProps } from 'react'
-import { WizardEditor } from '@wizard-archive/editor'
+import { ResourceShell } from '@wizard-archive/editor/resources/resource-shell'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { LocalWorkspaceFixture } from './local-workspace-fixture'
 import { useLocalWorkspaceRuntime } from './use-local-workspace-runtime'
 
-type WizardEditorComponentProps = ComponentProps<typeof WizardEditor>
+type ResourceShellProps = ComponentProps<typeof ResourceShell>
 
-type LocalWorkspaceRuntimeHostProps = Omit<WizardEditorComponentProps, 'runtime'> & {
+type LocalWorkspaceRuntimeHostProps = Omit<ResourceShellProps, 'runtime'> & {
   canEdit?: boolean
   initialResourceId?: ResourceId | null
   initialWorkspace?: LocalWorkspaceFixture
@@ -24,5 +24,5 @@ export function LocalWorkspaceRuntimeHost({
     initialWorkspace,
   })
 
-  return <WizardEditor {...hostProps} runtime={runtime} />
+  return <ResourceShell {...hostProps} runtime={runtime} />
 }

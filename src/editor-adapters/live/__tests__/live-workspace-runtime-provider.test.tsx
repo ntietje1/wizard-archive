@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import type { WizardEditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import type { EditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import { testDomainId } from '../../../../shared/test/domain-id'
 import { LiveWorkspaceRuntimeProvider } from '../live-workspace-runtime-provider'
 
@@ -16,7 +16,7 @@ const resourceCore = vi.hoisted(
       resources: {
         loader: { ensureResource: vi.fn(), ensureCollection: vi.fn() },
       },
-    }) as unknown as WizardEditorRuntime,
+    }) as unknown as EditorRuntime,
 )
 const useLiveResourceCoreMock = vi.hoisted(() =>
   vi.fn((_scope: unknown, _navigation: unknown) => resourceCore),
