@@ -1,5 +1,5 @@
 import type { VersionStamp } from './component-version'
-import { isUuidV7 } from './domain-id'
+import { assertDomainId, DOMAIN_ID_KIND, isUuidV7 } from './domain-id'
 import type { CampaignId, CampaignMemberId, ResourceId } from './domain-id'
 import { RESOURCE_KIND } from './resource-record'
 import type {
@@ -210,17 +210,25 @@ export function resourceCollectionQueryFromKey(
   if (
     (candidate.parentId !== null && typeof candidate.parentId !== 'string') ||
     (candidate.lifecycle !== 'active' && candidate.lifecycle !== 'trashed') ||
-    (candidate.kinds !== null &&
-      (!Array.isArray(candidate.kinds) ||
-        candidate.kinds.some((kind) => typeof kind !== 'string' || !RESOURCE_KINDS.has(kind))))
+    (candidate.kinds !== null && !isResourceKinds(candidate.kinds))
   ) {
     throw new TypeError('Invalid resource collection key')
   }
+  const parentId =
+    candidate.parentId === null ? null : assertDomainId(DOMAIN_ID_KIND.resource, candidate.parentId)
   return normalizeResourceCollectionQuery({
-    parentId: candidate.parentId as ResourceId | null,
+    parentId,
     lifecycle: candidate.lifecycle,
-    ...(candidate.kinds === null ? {} : { kinds: candidate.kinds as Array<ResourceKind> }),
+    ...(candidate.kinds === null ? {} : { kinds: candidate.kinds }),
   })
+}
+
+function isResourceKinds(value: unknown): value is Array<ResourceKind> {
+  return Array.isArray(value) && value.every(isResourceKind)
+}
+
+function isResourceKind(value: unknown): value is ResourceKind {
+  return typeof value === 'string' && RESOURCE_KINDS.has(value)
 }
 
 export function resourceMatchesCollectionQuery(
