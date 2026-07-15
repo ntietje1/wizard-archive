@@ -1,6 +1,7 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { loadSourceFiles } from './source-files.mjs'
 
 const sourceRules = [
   {
@@ -146,31 +147,15 @@ function analyzeFile(file) {
 }
 
 export function loadResourceArchitectureInputs(root = process.cwd()) {
-  const files = []
-  for (const directory of ['convex', 'packages/editor/src', 'src/editor-adapters', 'shared']) {
-    collectSourceFiles(root, directory, files)
-  }
+  const files = loadSourceFiles(
+    root,
+    ['convex', 'packages/editor/src', 'src/editor-adapters', 'shared'],
+    { skippedDirectories: ['_generated', '__tests__'] },
+  )
   const packageJson = JSON.parse(
     readFileSync(path.join(root, 'packages/editor/package.json'), 'utf8'),
   )
   return { files, packageJson }
-}
-
-function collectSourceFiles(root, relativeDirectory, files) {
-  const directory = path.join(root, relativeDirectory)
-  if (!existsSync(directory)) return
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const relativePath = `${relativeDirectory}/${entry.name}`
-    if (entry.isDirectory()) {
-      if (entry.name === '_generated' || entry.name === '__tests__') continue
-      collectSourceFiles(root, relativePath, files)
-    } else if (/\.[cm]?[jt]sx?$/.test(entry.name)) {
-      files.push({
-        path: relativePath,
-        source: readFileSync(path.join(root, relativePath), 'utf8'),
-      })
-    }
-  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
