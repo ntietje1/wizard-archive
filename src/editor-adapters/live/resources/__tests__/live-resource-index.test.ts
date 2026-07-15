@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { testCampaignId } from '../../../../../shared/test/campaign-id'
-import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
-import { testResourceId } from '../../../../../shared/test/resource-id'
+import { testDomainId } from '../../../../../shared/test/domain-id'
+import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
 import { createLiveResourceIndexRuntime } from '../live-resource-index'
 
 const scope: ResourceProjectionScope = {
-  campaignId: testCampaignId('live-index'),
-  actorId: testCampaignMemberId('live-index'),
+  campaignId: testDomainId('campaign', 'live-index'),
+  actorId: testDomainId('campaignMember', 'live-index'),
   projection: 'dm',
   schema: RESOURCE_INDEX_SCHEMA,
 }
@@ -18,7 +17,7 @@ const version = {
   digest: '0'.repeat(64),
 }
 
-function resource(id: ReturnType<typeof testResourceId>, parentId: string | null = null) {
+function resource(id: ResourceId, parentId: ResourceId | null = null) {
   return {
     id,
     campaignId: scope.campaignId,
@@ -37,10 +36,10 @@ function resource(id: ReturnType<typeof testResourceId>, parentId: string | null
 function snapshot(
   resources: Array<ReturnType<typeof resource>>,
   input: {
-    missingResourceIds?: Array<string>
+    missingResourceIds?: Array<ResourceId>
     collections?: Array<{
-      query: { parentId: string | null; lifecycle: 'active' | 'trashed' }
-      resourceIds: Array<string>
+      query: { parentId: ResourceId | null; lifecycle: 'active' | 'trashed' }
+      resourceIds: Array<ResourceId>
       complete: boolean
     }>
     scopeOverride?: Partial<ResourceProjectionScope>
@@ -57,8 +56,8 @@ function snapshot(
 
 describe('createLiveResourceIndexRuntime', () => {
   it('loads exact resource knowledge with its ancestor spine', async () => {
-    const folderId = testResourceId('folder')
-    const noteId = testResourceId('note')
+    const folderId = testDomainId('resource', 'folder')
+    const noteId = testDomainId('resource', 'note')
     const loadResource = vi.fn(() =>
       Promise.resolve(snapshot([resource(folderId), resource(noteId, folderId)])),
     )
@@ -80,8 +79,8 @@ describe('createLiveResourceIndexRuntime', () => {
   })
 
   it('retains prior knowledge while loading a collection', async () => {
-    const knownId = testResourceId('known')
-    const rootId = testResourceId('root')
+    const knownId = testDomainId('resource', 'known')
+    const rootId = testDomainId('resource', 'root')
     const query = { parentId: null, lifecycle: 'active' as const }
     const runtime = createLiveResourceIndexRuntime(scope, {
       loadResource: vi.fn(() => Promise.resolve(snapshot([resource(knownId)]))),
@@ -110,7 +109,7 @@ describe('createLiveResourceIndexRuntime', () => {
   })
 
   it('lets the latest authoritative missing response remove stale collection knowledge', async () => {
-    const resourceId = testResourceId('deleted')
+    const resourceId = testDomainId('resource', 'deleted')
     const query = { parentId: null, lifecycle: 'active' as const }
     const loadResource = vi
       .fn()
@@ -141,7 +140,7 @@ describe('createLiveResourceIndexRuntime', () => {
   })
 
   it('rejects a provider response from another projection without publishing it', async () => {
-    const resourceId = testResourceId('foreign')
+    const resourceId = testDomainId('resource', 'foreign')
     const runtime = createLiveResourceIndexRuntime(scope, {
       loadResource: vi.fn(() =>
         Promise.resolve(
@@ -160,7 +159,7 @@ describe('createLiveResourceIndexRuntime', () => {
   })
 
   it('normalizes provider failures as retryable load failures', async () => {
-    const resourceId = testResourceId('offline')
+    const resourceId = testDomainId('resource', 'offline')
     const runtime = createLiveResourceIndexRuntime(scope, {
       loadResource: vi.fn(() => Promise.reject(new Error('offline'))),
       loadCollection: vi.fn(),

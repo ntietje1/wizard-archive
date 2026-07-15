@@ -1,13 +1,11 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { testCampaignId } from '../../../../../shared/test/campaign-id'
-import { testOperationId } from '../../../../../shared/test/operation-id'
-import { testResourceId } from '../../../../../shared/test/resource-id'
+import { testDomainId } from '../../../../../shared/test/domain-id'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { createLiveResourceStructureGateway } from '../live-resource-structure-gateway'
 
-const campaignId = testCampaignId('live-gateway')
-const operationId = testOperationId('live-gateway')
-const resourceId = testResourceId('live-gateway')
+const campaignId = testDomainId('campaign', 'live-gateway')
+const operationId = testDomainId('operation', 'live-gateway')
+const resourceId = testDomainId('resource', 'live-gateway')
 const command = {
   type: 'create' as const,
   resourceId,
@@ -75,7 +73,11 @@ describe('createLiveResourceStructureGateway', () => {
     const gateway = createLiveResourceStructureGateway(campaignId, execute)
 
     await expect(
-      gateway.execute({ campaignId: testCampaignId('other'), operationId, command }),
+      gateway.execute({
+        campaignId: testDomainId('campaign', 'other'),
+        operationId,
+        command,
+      }),
     ).resolves.toEqual({
       status: 'received',
       result: { status: 'unavailable', reason: 'scope_unavailable' },

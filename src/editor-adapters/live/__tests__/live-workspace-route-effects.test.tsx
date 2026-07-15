@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { testCampaignId } from '../../../../shared/test/campaign-id'
-import { testResourceId } from '../../../../shared/test/resource-id'
+import { testDomainId } from '../../../../shared/test/domain-id'
 import { EDITOR_ROUTE_ID } from '../editor-route'
 import { LiveWorkspaceRouteEffects } from '../live-workspace-route-effects'
 
@@ -27,8 +26,8 @@ vi.mock('~/editor-adapters/live/live-recent-items', () => ({
 }))
 
 describe('LiveWorkspaceRouteEffects', () => {
-  const campaignId = testCampaignId('route-effects')
-  const resourceId = testResourceId('scene-one')
+  const campaignId = testDomainId('campaign', 'route-effects')
+  const resourceId = testDomainId('resource', 'scene-one')
   beforeEach(() => {
     useMatchMock.mockReset()
     useCampaignMock.mockReset()

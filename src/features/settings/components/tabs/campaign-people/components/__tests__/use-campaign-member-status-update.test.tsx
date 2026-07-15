@@ -2,8 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { useCampaignMemberStatusUpdate } from '../use-campaign-member-status-update'
-import { testCampaignId } from 'shared/test/campaign-id'
-import { testCampaignMemberId } from 'shared/test/campaign-member-id'
+import { testDomainId } from 'shared/test/domain-id'
 
 const { mutateAsyncMock } = vi.hoisted(() => ({ mutateAsyncMock: vi.fn() }))
 
@@ -26,9 +25,11 @@ describe('useCampaignMemberStatusUpdate', () => {
     mutateAsyncMock
       .mockImplementationOnce(() => firstSave.promise)
       .mockImplementationOnce(() => secondSave.promise)
-    const firstMemberId = testCampaignMemberId('member-1')
-    const secondMemberId = testCampaignMemberId('member-2')
-    const { result } = renderHook(() => useCampaignMemberStatusUpdate(testCampaignId('campaign-1')))
+    const firstMemberId = testDomainId('campaignMember', 'member-1')
+    const secondMemberId = testDomainId('campaignMember', 'member-2')
+    const { result } = renderHook(() =>
+      useCampaignMemberStatusUpdate(testDomainId('campaign', 'campaign-1')),
+    )
     let firstUpdate!: Promise<void>
     let secondUpdate!: Promise<void>
 

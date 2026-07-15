@@ -1,7 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { testCampaignId } from '../../../../../shared/test/campaign-id'
-import { testCampaignMemberId } from '../../../../../shared/test/campaign-member-id'
+import { testDomainId } from '../../../../../shared/test/domain-id'
 import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
 import { RESOURCE_INDEX_SCHEMA } from '@wizard-archive/editor/resources/index-contract'
 import { useLiveResourceCore } from '../use-live-resource-core'
@@ -17,8 +16,8 @@ const convex = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn() }))
 vi.mock('@convex-dev/react-query', () => ({ useConvex: () => convex }))
 
 const scope: ResourceProjectionScope = {
-  campaignId: testCampaignId('resource-core'),
-  actorId: testCampaignMemberId('resource-core'),
+  campaignId: testDomainId('campaign', 'resource-core'),
+  actorId: testDomainId('campaignMember', 'resource-core'),
   projection: 'dm',
   schema: RESOURCE_INDEX_SCHEMA,
 }
@@ -60,7 +59,7 @@ describe('useLiveResourceCore', () => {
       useLiveResourceCore(
         {
           ...scope,
-          actorId: testCampaignMemberId('other-actor'),
+          actorId: testDomainId('campaignMember', 'other-actor'),
           projection: 'player',
         },
         navigation,

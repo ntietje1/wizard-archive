@@ -1,6 +1,6 @@
 import type { UserProfile } from 'shared/users/types'
 import { assertUsername } from 'shared/users/validation'
-import { testUserProfileId } from 'shared/test/user-profile-id'
+import { testDomainId } from 'shared/test/domain-id'
 
 let userCounter = 0
 
@@ -12,7 +12,7 @@ export function createUser(overrides?: CreateUserOverrides): UserProfile {
   userCounter++
   const { username, ...rest } = overrides ?? {}
   return {
-    id: testUserProfileId(`user_${userCounter}`),
+    id: testDomainId('userProfile', `user_${userCounter}`),
     createdAt: 1700000000000,
     username: assertUsername(username ?? `testuser${userCounter}`),
     email: `testuser${userCounter}@example.com`,

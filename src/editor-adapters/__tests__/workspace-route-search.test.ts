@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { testResourceId } from '../../../shared/test/resource-id'
+import { testDomainId } from '../../../shared/test/domain-id'
 import {
   parseWorkspaceRouteSearchParams,
   validateSearch,
 } from '~/editor-adapters/workspace-route-search'
 
-const resourceId = testResourceId('workspace-route')
+const resourceId = testDomainId('resource', 'workspace-route')
 
 describe('validateSearch', () => {
   it('accepts a resource UUID with an optional heading', () => {

@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { testResourceId } from '../../../../shared/test/resource-id'
+import { testDomainId } from '../../../../shared/test/domain-id'
 import { EDITOR_ROUTE, EDITOR_ROUTE_ID } from '~/editor-adapters/live/editor-route'
 import {
   useLiveWorkspaceNavigation,
@@ -31,7 +31,7 @@ vi.mock('~/editor-adapters/live/use-last-resource', () => ({
 }))
 
 describe('useLiveWorkspaceNavigation', () => {
-  const resourceId = testResourceId('scene-one')
+  const resourceId = testDomainId('resource', 'scene-one')
   beforeEach(() => {
     navigateMock.mockReset()
     useMatchMock.mockReset()

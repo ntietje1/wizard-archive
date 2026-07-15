@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { useLiveCampaignPanelSource } from '../use-live-campaign-panel-source'
-import { testSessionId } from 'shared/test/session-id'
+import { testDomainId } from 'shared/test/domain-id'
 
 const campaignMocks = vi.hoisted(() => ({
   useCampaign: vi.fn(),
@@ -68,7 +68,7 @@ beforeEach(() => {
 describe('useLiveCampaignPanelSource', () => {
   it('returns awaitable session mutation outcomes', async () => {
     const { result } = renderHook(() => useLiveCampaignPanelSource())
-    const sessionId = testSessionId('session-1')
+    const sessionId = testDomainId('session', 'session-1')
 
     await expect(result.current.sessionActions.startSession()).resolves.toBe('started-session')
     await expect(result.current.sessionActions.endCurrentSession()).resolves.toBe('ended-session')

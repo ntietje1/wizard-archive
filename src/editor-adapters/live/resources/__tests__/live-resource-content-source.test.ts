@@ -2,8 +2,7 @@ import * as Y from 'yjs'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import type { FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
-import { testOperationId } from '../../../../../shared/test/operation-id'
-import { testResourceId } from '../../../../../shared/test/resource-id'
+import { testDomainId } from '../../../../../shared/test/domain-id'
 import { createLiveResourceContentSource } from '../live-resource-content-source'
 
 type Snapshot = FunctionReturnType<typeof api.resources.queries.loadContent>
@@ -16,7 +15,7 @@ const version = {
 
 describe('LiveResourceContentSource', () => {
   it('keeps loading, initializing, ready, unavailable, and integrity states distinct', () => {
-    const resourceId = testResourceId('file-content')
+    const resourceId = testDomainId('resource', 'file-content')
     let apply: (snapshot: Snapshot) => void = () => undefined
     const unsubscribe = vi.fn()
     const listener = vi.fn()
@@ -29,7 +28,7 @@ describe('LiveResourceContentSource', () => {
 
     expect(source.get(resourceId)).toEqual({ status: 'loading' })
     source.subscribe(resourceId, listener)
-    const operationId = testOperationId('file-copy')
+    const operationId = testDomainId('operation', 'file-copy')
     apply({ status: 'initializing', operationId })
     expect(source.get(resourceId)).toEqual({ status: 'initializing', operationId, local: null })
 
@@ -58,7 +57,7 @@ describe('LiveResourceContentSource', () => {
   })
 
   it('owns decoded canvas documents and rejects corrupt updates', () => {
-    const resourceId = testResourceId('canvas-content')
+    const resourceId = testDomainId('resource', 'canvas-content')
     let apply: (snapshot: Snapshot) => void = () => undefined
     const source = createLiveResourceContentSource('canvas', {
       watch: (_resourceId, update) => {

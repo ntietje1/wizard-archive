@@ -1,15 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import type { WizardEditorRuntime } from '@wizard-archive/editor/resources/editor-runtime-contract'
-import { testCampaignId } from '../../../../shared/test/campaign-id'
-import { testCampaignMemberId } from '../../../../shared/test/campaign-member-id'
+import { testDomainId } from '../../../../shared/test/domain-id'
 import { LiveWorkspaceRuntimeProvider } from '../live-workspace-runtime-provider'
 
-const campaignId = testCampaignId('live-provider')
-const actorId = testCampaignMemberId('live-provider')
+const campaignId = testDomainId('campaign', 'live-provider')
+const actorId = testDomainId('campaignMember', 'live-provider')
 const campaignState = vi.hoisted(() => ({
-  campaignId: undefined as ReturnType<typeof testCampaignId> | undefined,
-  membership: undefined as { id: ReturnType<typeof testCampaignMemberId>; role: 'DM' } | undefined,
+  campaignId: undefined as typeof campaignId | undefined,
+  membership: undefined as { id: typeof actorId; role: 'DM' } | undefined,
 }))
 const resourceCore = vi.hoisted(
   () =>

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { testResourceId } from '../../../../shared/test/resource-id'
+import { testDomainId } from '../../../../shared/test/domain-id'
 import { addLiveRecentItem } from '../live-recent-items'
 
 describe('live recent items', () => {
@@ -21,7 +21,7 @@ describe('live recent items', () => {
   })
 
   it('persists a recent item entry for the live workspace storage key', () => {
-    const resourceId = testResourceId('my-note')
+    const resourceId = testDomainId('resource', 'my-note')
     addLiveRecentItem('campaign-1', resourceId)
 
     const stored = JSON.parse(storage['recent-resources-v1-campaign-1'])
@@ -35,7 +35,7 @@ describe('live recent items', () => {
   })
 
   it('moves the most recent resource to the front and caps the live workspace history', () => {
-    const ids = Array.from({ length: 100 }, (_, index) => testResourceId(`note-${index}`))
+    const ids = Array.from({ length: 100 }, (_, index) => testDomainId('resource', `note-${index}`))
     storage['recent-resources-v1-campaign-1'] = JSON.stringify(
       Array.from({ length: 100 }, (_, index) => ({
         resourceId: ids[index],
@@ -55,8 +55,8 @@ describe('live recent items', () => {
   })
 
   it('adds a new resource to the front and drops the oldest capped entry', () => {
-    const ids = Array.from({ length: 100 }, (_, index) => testResourceId(`note-${index}`))
-    const newResourceId = testResourceId('new-note')
+    const ids = Array.from({ length: 100 }, (_, index) => testDomainId('resource', `note-${index}`))
+    const newResourceId = testDomainId('resource', 'new-note')
     storage['recent-resources-v1-campaign-1'] = JSON.stringify(
       Array.from({ length: 100 }, (_, index) => ({
         resourceId: ids[index],

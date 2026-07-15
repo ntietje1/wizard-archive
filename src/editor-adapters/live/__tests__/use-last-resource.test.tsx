@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { testResourceId } from '../../../../shared/test/resource-id'
+import { testDomainId } from '../../../../shared/test/domain-id'
 import { useLastResource } from '../use-last-resource'
 
 const workspaceState = vi.hoisted(() => ({
@@ -24,7 +24,7 @@ vi.mock('@wizard-archive/ui/hooks/use-persisted-state', () => ({
 }))
 
 describe('useLastResource', () => {
-  const resourceId = testResourceId('last-note')
+  const resourceId = testDomainId('resource', 'last-note')
   beforeEach(() => {
     workspaceState.workspaceRecordId = 'campaign_1'
     persistedState.key = null
