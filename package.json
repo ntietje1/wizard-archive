@@ -107,8 +107,7 @@
     "vite": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "^4.78.0",
-    "y-protocols": "^1.0.6"
+    "wrangler": "^4.78.0"
   },
   "engines": {
     "node": ">=22.12.0"
