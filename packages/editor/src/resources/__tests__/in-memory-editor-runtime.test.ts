@@ -8,6 +8,11 @@ import type { ResourceCatalogSnapshot } from '../resource-catalog-contract'
 import type { ResourceRecord } from '../resource-record'
 import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
 import { createInMemoryEditorRuntime } from '../in-memory-editor-runtime'
+import {
+  noteBlocksToYDoc,
+  noteYDocToBlocks,
+  NOTE_YJS_FRAGMENT,
+} from '../../notes/document/headless-yjs'
 
 function emptySnapshot(): ResourceCatalogSnapshot {
   return {
@@ -164,8 +169,7 @@ describe('createInMemoryEditorRuntime', () => {
       snapshot,
       navigation: navigation(),
     })
-    const document = new Y.Doc()
-    document.getText('body').insert(0, 'Local edit')
+    const document = noteDocument('Local edit')
     const envelope = {
       campaignId: snapshot.campaignId,
       operationId,
@@ -301,13 +305,9 @@ describe('createInMemoryEditorRuntime', () => {
     expect(core.runtime.resources.index.getSnapshot().lookup(resourceId)).toEqual({
       state: 'unknown',
     })
-    expect(core.runtime.content.notes.get(resourceId)).toEqual({
+    expect(core.runtime.content.notes.get(resourceId)).toMatchObject({
       status: 'ready',
-      session: {
-        document,
-        version,
-        awareness: { status: 'unavailable' },
-      },
+      session: { document, version, awareness: { status: 'unavailable' } },
     })
     core.dispose()
   })
@@ -319,8 +319,7 @@ describe('createInMemoryEditorRuntime', () => {
     const mapId = generateDomainId(DOMAIN_ID_KIND.resource)
     const pinId = generateDomainId(DOMAIN_ID_KIND.mapPin)
     const version = initialVersion(await sha256Digest(new Uint8Array([2])))
-    const note = new Y.Doc()
-    note.getText('body').insert(0, 'Copied note')
+    const note = noteDocument('Copied note')
     const resources: Array<ResourceRecord> = [
       resource(noteId, 'note', 'Note'),
       resource(mapId, 'map', 'Map'),
@@ -392,7 +391,7 @@ describe('createInMemoryEditorRuntime', () => {
     expect(copiedNote).toMatchObject({ status: 'ready' })
     if (copiedNote.status !== 'ready') throw new Error('Expected copied note content')
     expect(copiedNote.session.document).not.toBe(note)
-    expect(copiedNote.session.document.getText('body').toJSON()).toBe('Copied note')
+    expect(noteText(copiedNote.session.document)).toContain('Copied note')
     expect(copiedMap).toMatchObject({
       status: 'ready',
       session: { content: { pins: [{ targetResourceId: copiedNoteId }] } },
@@ -422,3 +421,24 @@ describe('createInMemoryEditorRuntime', () => {
     }
   })
 })
+
+function noteDocument(text: string) {
+  return noteBlocksToYDoc(
+    [
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text }],
+      },
+    ],
+    NOTE_YJS_FRAGMENT,
+  )
+}
+
+function noteText(document: Y.Doc) {
+  return noteYDocToBlocks(document, NOTE_YJS_FRAGMENT).flatMap((block) =>
+    Array.isArray(block.content)
+      ? block.content.flatMap((inline) => (inline.type === 'text' ? [inline.text] : []))
+      : [],
+  )
+}

@@ -4,7 +4,7 @@ export const noteValueInlineConfig = {
   type: 'value',
   propSchema: {
     valueId: { default: NOTE_VALUE_PROP_DEFAULTS.valueId },
-    slug: { default: NOTE_VALUE_PROP_DEFAULTS.slug },
+    label: { default: NOTE_VALUE_PROP_DEFAULTS.label },
     expressionSource: { default: NOTE_VALUE_PROP_DEFAULTS.expressionSource },
   },
   content: 'none',

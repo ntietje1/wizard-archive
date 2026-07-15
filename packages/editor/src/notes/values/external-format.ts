@@ -3,13 +3,13 @@ import type { NoteValueProps } from './schema'
 
 const VALUE_INLINE_MARKER_ATTRIBUTE = 'data-note-value-inline'
 const VALUE_INLINE_ID_ATTRIBUTE = 'data-note-value-id'
-const VALUE_INLINE_SLUG_ATTRIBUTE = 'data-note-value-slug'
+const VALUE_INLINE_LABEL_ATTRIBUTE = 'data-note-value-label'
 const VALUE_INLINE_EXPRESSION_ATTRIBUTE = 'data-note-value-expression-source'
 
 function normalizeValueInlineProps(props: Partial<NoteValueProps>): NoteValueProps {
   return noteValuePropsSchema.parse({
     valueId: props.valueId ?? NOTE_VALUE_PROP_DEFAULTS.valueId,
-    slug: props.slug ?? NOTE_VALUE_PROP_DEFAULTS.slug,
+    label: props.label ?? NOTE_VALUE_PROP_DEFAULTS.label,
     expressionSource: props.expressionSource ?? NOTE_VALUE_PROP_DEFAULTS.expressionSource,
   })
 }
@@ -17,7 +17,7 @@ function normalizeValueInlineProps(props: Partial<NoteValueProps>): NoteValuePro
 export function renderValueInlineExternalElement(props: Partial<NoteValueProps>): HTMLElement {
   const valueProps = normalizeValueInlineProps(props)
   const element = document.createElement('span')
-  element.textContent = valueProps.slug || valueProps.expressionSource || 'value'
+  element.textContent = valueProps.label || valueProps.expressionSource || 'value'
   for (const [name, value] of getValueInlineExternalAttributes(valueProps)) {
     element.setAttribute(name, value)
   }
@@ -31,7 +31,7 @@ export function parseValueInlineExternalElement(
 
   return normalizeValueInlineProps({
     valueId: element.getAttribute(VALUE_INLINE_ID_ATTRIBUTE) ?? undefined,
-    slug: element.getAttribute(VALUE_INLINE_SLUG_ATTRIBUTE) ?? undefined,
+    label: element.getAttribute(VALUE_INLINE_LABEL_ATTRIBUTE) ?? undefined,
     expressionSource: element.getAttribute(VALUE_INLINE_EXPRESSION_ATTRIBUTE) ?? undefined,
   })
 }
@@ -40,7 +40,7 @@ function getValueInlineExternalAttributes(valueProps: NoteValueProps): Array<[st
   return [
     [VALUE_INLINE_MARKER_ATTRIBUTE, 'true'],
     [VALUE_INLINE_ID_ATTRIBUTE, valueProps.valueId],
-    [VALUE_INLINE_SLUG_ATTRIBUTE, valueProps.slug],
+    [VALUE_INLINE_LABEL_ATTRIBUTE, valueProps.label],
     [VALUE_INLINE_EXPRESSION_ATTRIBUTE, valueProps.expressionSource],
   ]
 }

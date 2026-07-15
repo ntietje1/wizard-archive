@@ -1,10 +1,14 @@
-import * as Y from 'yjs'
 import { createCanvasDocumentDoc } from '@wizard-archive/editor/canvas/document-contract'
+import { noteBlocksToYDoc, NOTE_YJS_FRAGMENT } from '@wizard-archive/editor/notes/document-yjs'
 import {
   assertSha256Digest,
   initialVersion,
 } from '@wizard-archive/editor/resources/component-version'
-import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  DOMAIN_ID_KIND,
+  assertDomainId,
+  generateDomainId,
+} from '@wizard-archive/editor/resources/domain-id'
 import {
   FILE_CLASSIFICATION,
   FILE_VIEWER_UNAVAILABLE_REASON,
@@ -160,9 +164,14 @@ function resourceRecord(
 }
 
 function noteDocument(body: string) {
-  const document = new Y.Doc()
-  document.getText('body').insert(0, body)
-  return document
+  return noteBlocksToYDoc(
+    body.split(/\n\s*\n/).map((text) => ({
+      id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+      type: 'paragraph' as const,
+      content: [{ type: 'text' as const, text }],
+    })),
+    NOTE_YJS_FRAGMENT,
+  )
 }
 
 function sampleCanvasDocument() {

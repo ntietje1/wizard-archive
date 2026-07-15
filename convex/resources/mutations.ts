@@ -26,9 +26,11 @@ import {
   resourcePostconditionValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
+  saveNoteContentResultValidator,
   versionStampValidator,
 } from './schema'
 import { bindNoteContent as bindNoteContentFn } from './functions/bindNoteContent'
+import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 import { commitUpload } from '../storage/functions/commitUpload'
@@ -198,6 +200,19 @@ export const bindNoteContent = campaignMutation({
     await bindNoteContentFn(ctx, {
       resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
       operationId: assertDomainId(DOMAIN_ID_KIND.operation, args.operationId),
+      update: args.update,
+    }),
+})
+
+export const saveNoteContent = campaignMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    update: v.bytes(),
+  },
+  returns: saveNoteContentResultValidator,
+  handler: async (ctx, args) =>
+    await saveNoteContentFn(ctx, {
+      resourceId: args.resourceId,
       update: args.update,
     }),
 })

@@ -9,6 +9,11 @@ import type {
   ResourceStructureCommandGateway,
 } from '@wizard-archive/editor/resources/command-contract'
 import type { OperationId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import {
+  NOTE_YJS_FRAGMENT,
+  decodeNoteYjsUpdatesToBlocks,
+  noteBlocksToYDoc,
+} from '@wizard-archive/editor/notes/document-yjs'
 import { createLiveNoteContentSource } from '../live-note-content-source'
 
 type LiveNoteContentSource = ReturnType<typeof createLiveNoteContentSource>
@@ -71,6 +76,12 @@ function backend() {
   const listeners = new Map<ResourceId, (snapshot: never) => void>()
   return {
     bind: vi.fn(),
+    save: vi.fn(async ({ resourceId, update }) => ({
+      status: 'completed' as const,
+      resourceId,
+      update,
+      version: await versionFor(update),
+    })),
     watch: vi.fn((resourceId: ResourceId, apply: (snapshot: never) => void) => {
       listeners.set(resourceId, apply)
       return () => listeners.delete(resourceId)
@@ -114,12 +125,21 @@ describe('LiveNoteContentSource', () => {
       version: await versionFor(update),
     }))
     source = createLiveNoteContentSource(campaignId, structure, provider)
-    const local = new Y.Doc()
-    local.getText('body').insert(0, 'before retry')
+    const local = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'before retry' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
 
     await source.create(createEnvelope(resourceId, operationId), local)
     expect(source.get(resourceId)).toEqual({ status: 'initializing', operationId, local })
-    local.getText('body').insert(local.getText('body').length, ' and after')
+    const text = noteTextType(local)
+    text.insert(text.length, ' and after')
 
     await source.create(createEnvelope(resourceId, operationId), local)
     expect(source.get(resourceId)).toEqual(
@@ -130,7 +150,17 @@ describe('LiveNoteContentSource', () => {
     )
     const rebound = new Y.Doc()
     Y.applyUpdate(rebound, new Uint8Array(provider.bind.mock.calls[0]![0].update))
-    expect(rebound.getText('body').toJSON()).toBe('before retry and after')
+    expect(
+      decodeNoteYjsUpdatesToBlocks(
+        [{ update: Y.encodeStateAsUpdate(rebound) }],
+        NOTE_YJS_FRAGMENT,
+      ).flatMap((block) =>
+        Array.isArray(block.content)
+          ? block.content.flatMap((inline) => (inline.type === 'text' ? [inline.text] : []))
+          : [],
+      ),
+    ).toContain('before retry and after')
+    rebound.destroy()
   })
 
   it('removes only the rejected create local state', async () => {
@@ -213,4 +243,47 @@ describe('LiveNoteContentSource', () => {
 
     expect(source.get(resourceId)).toEqual(first)
   })
+
+  it('flushes document-fragment edits through the canonical save backend', async () => {
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const provider = backend()
+    const source = createLiveNoteContentSource(campaignId, { execute: vi.fn() }, provider)
+    const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
+    const version = await versionFor(initial)
+
+    source.get(resourceId)
+    provider.emit(resourceId, { status: 'ready', update: initial, version })
+    const ready = source.get(resourceId)
+    if (ready.status !== 'ready') throw new Error('Expected ready note')
+    const edit = noteBlocksToYDoc(
+      [
+        {
+          id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Persisted edit' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    Y.applyUpdate(ready.session.document, Y.encodeStateAsUpdate(edit))
+    edit.destroy()
+
+    await expect(ready.session.flush()).resolves.toMatchObject({ status: 'completed' })
+    expect(provider.save).toHaveBeenCalledOnce()
+    expect(
+      decodeNoteYjsUpdatesToBlocks(
+        [{ update: provider.save.mock.calls[0]![0].update }],
+        NOTE_YJS_FRAGMENT,
+      ),
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ type: 'paragraph' })]))
+  })
 })
+
+function noteTextType(document: Y.Doc): Y.XmlText {
+  const group = document.getXmlFragment(NOTE_YJS_FRAGMENT).get(0)
+  const container = group instanceof Y.XmlElement ? group.get(0) : null
+  const paragraph = container instanceof Y.XmlElement ? container.get(0) : null
+  const text = paragraph instanceof Y.XmlElement ? paragraph.get(0) : null
+  if (!(text instanceof Y.XmlText)) throw new Error('Expected canonical note text')
+  return text
+}

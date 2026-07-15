@@ -29,6 +29,28 @@ export type SessionAwareness =
   | { readonly status: 'unavailable' }
   | { readonly status: 'available'; readonly collaboratorIds: ReadonlyArray<CampaignMemberId> }
 
+export type NoteSessionSaveResult =
+  | { readonly status: 'completed'; readonly version: VersionStamp }
+  | {
+      readonly status: 'rejected'
+      readonly reason:
+        | 'content_corrupt'
+        | 'content_missing'
+        | 'resource_missing'
+        | 'scope_unavailable'
+        | 'unauthorized'
+        | 'version_exhausted'
+    }
+
+export interface NoteSession {
+  readonly document: Y.Doc
+  readonly version: VersionStamp
+  readonly awareness: SessionAwareness
+  readonly readonly: boolean
+  flush(): Promise<NoteSessionSaveResult>
+  dispose(): void
+}
+
 export type FileResourceContent = FileOwnedMetadata &
   Readonly<{
     assetId: AssetId | null
@@ -60,11 +82,7 @@ export type NoteSessionState =
   | { readonly status: 'initializing'; readonly operationId: OperationId; readonly local: Y.Doc }
   | {
       readonly status: 'ready'
-      readonly session: Readonly<{
-        document: Y.Doc
-        version: VersionStamp
-        awareness: SessionAwareness
-      }>
+      readonly session: NoteSession
     }
 
 export type FileContentState =

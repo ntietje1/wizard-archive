@@ -10,6 +10,8 @@ import type {
 } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CreateNoteResourceCommand,
+  NoteSession,
+  NoteSessionSaveResult,
   NoteSessionSource,
   NoteSessionState,
 } from '@wizard-archive/editor/resources/content-session-contract'
@@ -24,14 +26,113 @@ import { createResourceWatchStore } from './resource-watch-store'
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type BindNoteContentArgs = FunctionArgs<typeof api.resources.mutations.bindNoteContent>
 type BindNoteContentResult = FunctionReturnType<typeof api.resources.mutations.bindNoteContent>
+type SaveNoteContentArgs = FunctionArgs<typeof api.resources.mutations.saveNoteContent>
+type SaveNoteContentResult = FunctionReturnType<typeof api.resources.mutations.saveNoteContent>
 
 type LiveNoteContentBackend = Readonly<{
   watch(resourceId: ResourceId, apply: (snapshot: NoteSnapshot) => void): () => void
   bind(args: BindNoteContentArgs): Promise<BindNoteContentResult>
+  save(args: SaveNoteContentArgs): Promise<SaveNoteContentResult>
 }>
 
 type LocalCreate = Readonly<{ operationId: OperationId; doc: Y.Doc }>
 type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteSessionState>>
+const REMOTE_NOTE_UPDATE = Symbol('remote-note-update')
+
+class LiveNoteSession implements NoteSession {
+  readonly awareness = { status: 'unavailable' as const }
+  readonly readonly = false
+  #version
+  #dirty = false
+  #disposed = false
+  #flushPromise: Promise<NoteSessionSaveResult> | null = null
+  #timer: ReturnType<typeof setTimeout> | null = null
+
+  constructor(
+    readonly document: Y.Doc,
+    version: NoteSession['version'],
+    private readonly campaignId: CampaignId,
+    private readonly resourceId: ResourceId,
+    private readonly backend: LiveNoteContentBackend,
+    private readonly changed: () => void,
+  ) {
+    this.#version = version
+    document.on('update', this.#onUpdate)
+  }
+
+  get version() {
+    return this.#version
+  }
+
+  apply(update: ArrayBuffer, version: NoteSession['version']) {
+    Y.applyUpdate(this.document, new Uint8Array(update), REMOTE_NOTE_UPDATE)
+    this.#version = version
+    this.changed()
+  }
+
+  flush(): Promise<NoteSessionSaveResult> {
+    if (this.#disposed) {
+      return Promise.resolve({ status: 'rejected', reason: 'scope_unavailable' })
+    }
+    if (!this.#dirty) return Promise.resolve({ status: 'completed', version: this.#version })
+    this.#flushPromise ??= this.#save()
+    return this.#flushPromise
+  }
+
+  dispose(): void {
+    if (this.#disposed) return
+    if (this.#timer) clearTimeout(this.#timer)
+    this.#timer = null
+    this.document.off('update', this.#onUpdate)
+    void this.flush()
+    this.#disposed = true
+    this.document.destroy()
+  }
+
+  readonly #onUpdate = (_update: Uint8Array, origin: unknown) => {
+    if (origin === REMOTE_NOTE_UPDATE || this.#disposed) return
+    this.#dirty = true
+    if (this.#timer) clearTimeout(this.#timer)
+    this.#timer = setTimeout(() => {
+      this.#timer = null
+      void this.flush()
+    }, 250)
+  }
+
+  async #save(): Promise<NoteSessionSaveResult> {
+    this.#dirty = false
+    try {
+      const result = await this.backend.save({
+        campaignId: this.campaignId,
+        resourceId: this.resourceId,
+        update: toArrayBuffer(Y.encodeStateAsUpdate(this.document)),
+      })
+      if (result.status === 'rejected') {
+        this.#dirty = true
+        return { status: 'rejected', reason: saveRejection(result.reason) }
+      }
+      this.apply(result.update, assertVersionStamp(result.version))
+      return { status: 'completed', version: this.#version }
+    } catch {
+      this.#dirty = true
+      return { status: 'rejected', reason: 'scope_unavailable' }
+    } finally {
+      this.#flushPromise = null
+      if (this.#dirty && !this.#disposed) {
+        this.#timer = setTimeout(() => {
+          this.#timer = null
+          void this.flush()
+        }, 250)
+      }
+    }
+  }
+}
+
+function saveRejection(reason: Extract<SaveNoteContentResult, { status: 'rejected' }>['reason']) {
+  if (reason === 'ownership_mismatch') return 'unauthorized' as const
+  if (reason === 'wrong_kind' || reason === 'invalid_uuid') return 'content_corrupt' as const
+  return reason
+}
 
 function toArrayBuffer(update: Uint8Array): ArrayBuffer {
   const copy = new Uint8Array(update.byteLength)
@@ -58,8 +159,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
   readonly #store: NoteStore
   readonly #localCreates = new Map<ResourceId, LocalCreate>()
   readonly #pendingCreates = new Map<ResourceId, LocalCreate>()
-  readonly #boundDocuments = new Map<ResourceId, Readonly<{ digest: string; doc: Y.Doc }>>()
-  readonly #loadedDocuments = new Map<ResourceId, Readonly<{ digest: string; doc: Y.Doc }>>()
+  readonly #sessions = new Map<ResourceId, LiveNoteSession>()
 
   constructor(
     private readonly campaignId: CampaignId,
@@ -126,7 +226,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
     }
     if (binding.status === 'rejected') {
       this.#localCreates.delete(envelope.command.resourceId)
-      this.#boundDocuments.delete(envelope.command.resourceId)
+      this.#clearSession(envelope.command.resourceId)
       this.#setState(envelope.command.resourceId, {
         status: 'integrity_error',
         issue: bindingIssue(binding.reason),
@@ -136,14 +236,7 @@ class LiveNoteSessionSource implements NoteSessionSource {
 
     const version = assertVersionStamp(binding.version)
     this.#localCreates.delete(envelope.command.resourceId)
-    this.#boundDocuments.set(envelope.command.resourceId, {
-      digest: version.digest,
-      doc: local,
-    })
-    this.#setState(envelope.command.resourceId, {
-      status: 'ready',
-      session: { document: local, version, awareness: { status: 'unavailable' } },
-    })
+    this.#setReady(envelope.command.resourceId, local, version)
     return delivery
   }
 
@@ -161,8 +254,8 @@ class LiveNoteSessionSource implements NoteSessionSource {
 
   dispose(): void {
     this.#store.dispose()
-    for (const loaded of this.#loadedDocuments.values()) loaded.doc.destroy()
-    this.#loadedDocuments.clear()
+    for (const session of this.#sessions.values()) session.dispose()
+    this.#sessions.clear()
   }
 
   #apply(resourceId: ResourceId, snapshot: NoteSnapshot): void {
@@ -180,50 +273,23 @@ class LiveNoteSessionSource implements NoteSessionSource {
       }
       case 'unavailable':
       case 'integrity_error':
-        this.#boundDocuments.delete(resourceId)
-        this.#clearLoadedDocument(resourceId)
+        this.#clearSession(resourceId)
         this.#setState(resourceId, snapshot)
         return
       case 'ready': {
         const version = assertVersionStamp(snapshot.version)
-        const bound = this.#boundDocuments.get(resourceId)
-        if (bound?.digest === version.digest) {
-          this.#clearLoadedDocument(resourceId)
-          this.#setState(resourceId, {
-            status: 'ready',
-            session: {
-              document: bound.doc,
-              version,
-              awareness: { status: 'unavailable' },
-            },
-          })
-          return
-        }
-        this.#boundDocuments.delete(resourceId)
-        const loaded = this.#loadedDocuments.get(resourceId)
-        if (loaded?.digest === version.digest) {
-          this.#setState(resourceId, {
-            status: 'ready',
-            session: {
-              document: loaded.doc,
-              version,
-              awareness: { status: 'unavailable' },
-            },
-          })
+        const session = this.#sessions.get(resourceId)
+        if (session) {
+          session.apply(snapshot.update, version)
           return
         }
         const doc = new Y.Doc()
         try {
           Y.applyUpdate(doc, new Uint8Array(snapshot.update))
-          this.#clearLoadedDocument(resourceId)
-          this.#loadedDocuments.set(resourceId, { digest: version.digest, doc })
-          this.#setState(resourceId, {
-            status: 'ready',
-            session: { document: doc, version, awareness: { status: 'unavailable' } },
-          })
+          this.#setReady(resourceId, doc, version)
         } catch {
           doc.destroy()
-          this.#clearLoadedDocument(resourceId)
+          this.#clearSession(resourceId)
           this.#setState(resourceId, {
             status: 'integrity_error',
             issue: 'content_corrupt',
@@ -236,13 +302,29 @@ class LiveNoteSessionSource implements NoteSessionSource {
   #removeLocal(resourceId: ResourceId): void {
     this.#pendingCreates.delete(resourceId)
     this.#localCreates.delete(resourceId)
-    this.#boundDocuments.delete(resourceId)
+    this.#clearSession(resourceId)
     this.#setState(resourceId, { status: 'loading' })
   }
 
-  #clearLoadedDocument(resourceId: ResourceId): void {
-    this.#loadedDocuments.get(resourceId)?.doc.destroy()
-    this.#loadedDocuments.delete(resourceId)
+  #setReady(resourceId: ResourceId, document: Y.Doc, version: NoteSession['version']): void {
+    this.#clearSession(resourceId)
+    const session = new LiveNoteSession(
+      document,
+      version,
+      this.campaignId,
+      resourceId,
+      this.backend,
+      () => {
+        this.#setState(resourceId, { status: 'ready', session })
+      },
+    )
+    this.#sessions.set(resourceId, session)
+    this.#setState(resourceId, { status: 'ready', session })
+  }
+
+  #clearSession(resourceId: ResourceId): void {
+    this.#sessions.get(resourceId)?.dispose()
+    this.#sessions.delete(resourceId)
   }
 
   #setState(resourceId: ResourceId, state: NoteSessionState): void {

@@ -13,10 +13,12 @@ import type {
   ContentCopyPlanner,
 } from './content-copy-contract'
 import { initialVersion, sha256Digest } from './component-version'
+import type { VersionStamp } from './component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from './domain-id'
 import type { CanvasNodeId, MapPinId, ResourceId } from './domain-id'
 import { initialNoteContentVersion } from './resource-content-version'
 import type { ResourceKind } from './resource-record'
+import { createInMemoryNoteSession } from './in-memory-note-session'
 
 interface ContentStore<TState> {
   get(resourceId: ResourceId): TState
@@ -24,7 +26,9 @@ interface ContentStore<TState> {
 }
 
 type ContentStores = Readonly<{
-  notes: ContentStore<NoteSessionState>
+  notes: ContentStore<NoteSessionState> & {
+    setReady?(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void
+  }
   files: ContentStore<FileContentState>
   maps: ContentStore<MapSessionState>
   canvases: ContentStore<CanvasSessionState>
@@ -174,10 +178,14 @@ async function finalizeContentCopy(
       const version = await initialNoteContentVersion(Y.encodeStateAsUpdate(content))
       return () => {
         kinds.set(entry.destinationId, entry.kind)
-        stores.notes.set(entry.destinationId, {
-          status: 'ready',
-          session: { document: content, version, awareness: { status: 'unavailable' } },
-        })
+        if (stores.notes.setReady) {
+          stores.notes.setReady(entry.destinationId, content, version)
+        } else {
+          stores.notes.set(entry.destinationId, {
+            status: 'ready',
+            session: createInMemoryNoteSession(content, version, false),
+          })
+        }
       }
     }
     case 'file':

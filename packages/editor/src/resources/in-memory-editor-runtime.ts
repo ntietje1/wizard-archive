@@ -42,6 +42,7 @@ import {
   createInMemoryBookmarks,
   createInMemoryWorkspaceSearch,
 } from './in-memory-workspace-discovery'
+import { createInMemoryNoteSession } from './in-memory-note-session'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -70,6 +71,7 @@ class InMemoryNoteSessionSource
   extends ResourceSessionStore<NoteSessionState>
   implements NoteSessionSource
 {
+  readonly #sessions = new Map<ResourceId, ReturnType<typeof createInMemoryNoteSession>>()
   readonly #creates = new Map<
     ResourceId,
     Readonly<{
@@ -83,17 +85,11 @@ class InMemoryNoteSessionSource
     ready: ReadonlyArray<ReadyContent<Y.Doc>>,
     private readonly campaignId: CampaignId,
     private readonly executeStructure: ResourceStructureCommandGateway['execute'],
+    private readonly readonly: boolean,
   ) {
     super({ status: 'loading' })
     for (const entry of ready) {
-      this.set(entry.resourceId, {
-        status: 'ready',
-        session: {
-          document: entry.content,
-          version: entry.version,
-          awareness: { status: 'unavailable' },
-        },
-      })
+      this.setReady(entry.resourceId, entry.content, entry.version)
     }
   }
 
@@ -136,11 +132,24 @@ class InMemoryNoteSessionSource
 
     const version = await initialNoteContentVersion(Y.encodeStateAsUpdate(local))
     this.#creates.set(resourceId, { operationId: envelope.operationId, doc: local, delivery })
-    this.set(resourceId, {
-      status: 'ready',
-      session: { document: local, version, awareness: { status: 'unavailable' } },
-    })
+    this.setReady(resourceId, local, version)
     return delivery
+  }
+
+  setReady(resourceId: ResourceId, document: Y.Doc, version: VersionStamp): void {
+    const previous = this.#sessions.get(resourceId)
+    if (previous && previous.document !== document) previous.dispose()
+    const session = createInMemoryNoteSession(document, version, this.readonly, (next) => {
+      this.set(resourceId, { status: 'ready', session: next })
+    })
+    this.#sessions.set(resourceId, session)
+    this.set(resourceId, { status: 'ready', session })
+  }
+
+  override dispose(): void {
+    for (const session of this.#sessions.values()) session.dispose()
+    this.#sessions.clear()
+    super.dispose()
   }
 }
 
@@ -212,8 +221,11 @@ export function createInMemoryEditorRuntime({
       retryable: false,
       reason: 'transport_unavailable',
     })
-  const notes = new InMemoryNoteSessionSource(content.notes ?? [], scope.campaignId, (envelope) =>
-    executeStructure(envelope),
+  const notes = new InMemoryNoteSessionSource(
+    content.notes ?? [],
+    scope.campaignId,
+    (envelope) => executeStructure(envelope),
+    !canEdit,
   )
   const files = new InMemoryFileContentSource(content.files ?? [], scope.campaignId, (envelope) =>
     executeStructure(envelope),

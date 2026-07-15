@@ -84,6 +84,7 @@ function createScopedLiveResourceRuntime(
   const undo = createResourceUndoHistory(optimistic.index, optimistic.structure, compensation)
   notes = createLiveNoteContentSource(currentScope.campaignId, undo.structure, {
     bind: (args) => convex.mutation(api.resources.mutations.bindNoteContent, args),
+    save: (args) => convex.mutation(api.resources.mutations.saveNoteContent, args),
     watch: (resourceId, apply) => {
       const watch = convex.watchQuery(api.resources.queries.loadNoteContent, {
         campaignId: currentScope.campaignId,

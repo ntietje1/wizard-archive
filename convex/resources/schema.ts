@@ -273,6 +273,27 @@ export const bindNoteContentResultValidator = v.union(
   }),
 )
 
+export const saveNoteContentResultValidator = v.union(
+  v.object({
+    status: v.literal('completed'),
+    resourceId: resourceIdValidator,
+    update: v.bytes(),
+    version: versionStampValidator,
+  }),
+  v.object({
+    status: v.literal('rejected'),
+    reason: literals(
+      'invalid_uuid',
+      'resource_missing',
+      'ownership_mismatch',
+      'wrong_kind',
+      'content_missing',
+      'content_corrupt',
+      'version_exhausted',
+    ),
+  }),
+)
+
 const contentUnavailableSnapshotValidator = v.object({
   status: v.literal('unavailable'),
   reason: literals('capability_not_supported', 'unauthorized'),

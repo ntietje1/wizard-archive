@@ -300,6 +300,75 @@ describe('resource structure commands', () => {
     })
   })
 
+  it('merges concurrent canonical note updates and advances the content revision', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
+    await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId,
+      command: {
+        type: 'create',
+        resourceId,
+        kind: 'note',
+        parentId: null,
+        title: 'Collaborative note',
+        icon: null,
+        color: null,
+      },
+    })
+    const baseUpdate = makeYjsUpdateWithBlocks([
+      {
+        id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Middle' }],
+      },
+    ])
+    await asDm(campaign).mutation(api.resources.mutations.bindNoteContent, {
+      campaignId: campaignUuid,
+      operationId,
+      resourceId,
+      update: baseUpdate,
+    })
+
+    const firstClient = new Y.Doc()
+    const secondClient = new Y.Doc()
+    Y.applyUpdate(firstClient, new Uint8Array(baseUpdate))
+    Y.applyUpdate(secondClient, new Uint8Array(baseUpdate))
+    noteTextType(firstClient).insert(0, 'First ')
+    const secondText = noteTextType(secondClient)
+    secondText.insert(secondText.length, ' Second')
+    const firstUpdate = Uint8Array.from(Y.encodeStateAsUpdate(firstClient)).buffer
+    const secondUpdate = Uint8Array.from(Y.encodeStateAsUpdate(secondClient)).buffer
+    firstClient.destroy()
+    secondClient.destroy()
+    const first = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+      campaignId: campaignUuid,
+      resourceId,
+      update: firstUpdate,
+    })
+    const second = await asDm(campaign).mutation(api.resources.mutations.saveNoteContent, {
+      campaignId: campaignUuid,
+      resourceId,
+      update: secondUpdate,
+    })
+
+    expect(first).toMatchObject({ status: 'completed', version: { revision: 2 } })
+    expect(second).toMatchObject({ status: 'completed', version: { revision: 3 } })
+    if (second.status !== 'completed') throw new Error('Expected merged note content')
+    const blocks = decodeNoteYjsUpdatesToBlocks([{ update: second.update }], NOTE_YJS_FRAGMENT)
+    expect(
+      blocks
+        .flatMap((block) =>
+          Array.isArray(block.content)
+            ? block.content.flatMap((inline) => (inline.type === 'text' ? [inline.text] : []))
+            : [],
+        )
+        .join(''),
+    ).toBe('First Middle Second')
+  })
+
   it('creates ready revision-1 content for files, maps, and canvases', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
@@ -1255,3 +1324,12 @@ describe('resource structure commands', () => {
     })
   }
 })
+
+function noteTextType(document: Y.Doc): Y.XmlText {
+  const group = document.getXmlFragment(NOTE_YJS_FRAGMENT).get(0)
+  const container = group instanceof Y.XmlElement ? group.get(0) : null
+  const paragraph = container instanceof Y.XmlElement ? container.get(0) : null
+  const text = paragraph instanceof Y.XmlElement ? paragraph.get(0) : null
+  if (!(text instanceof Y.XmlText)) throw new Error('Expected canonical note text')
+  return text
+}
