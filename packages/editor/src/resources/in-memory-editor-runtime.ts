@@ -27,6 +27,12 @@ import type { ResourceProjectionScope } from './resource-index-contract'
 import { createInMemoryContentCopyPlanner } from './in-memory-content-copy'
 import { FILE_CLASSIFICATION, FILE_VIEWER_UNAVAILABLE_REASON } from './file-content-contract'
 import { ResourceSessionStore } from './resource-session-store'
+import {
+  applyWorkspacePreferenceChange,
+  DEFAULT_WORKSPACE_PREFERENCES,
+  WorkspacePreferencesController,
+} from './workspace-preferences'
+import type { WorkspacePreferencesSnapshot } from './workspace-preferences'
 
 type ReadyContent<T> = Readonly<{
   content: T
@@ -220,6 +226,20 @@ export function createInMemoryEditorRuntime({
     ? ({ status: 'available', value: editorStructure } as const)
     : ({ status: 'unavailable', reason: 'unauthorized' } as const)
   const contentSources = { notes, files, maps, canvases }
+  let preferencesSnapshot: WorkspacePreferencesSnapshot = {
+    revision: 0,
+    value: DEFAULT_WORKSPACE_PREFERENCES,
+  }
+  const preferences = new WorkspacePreferencesController({
+    save: (change) => {
+      preferencesSnapshot = {
+        revision: preferencesSnapshot.revision + 1,
+        value: applyWorkspacePreferenceChange(preferencesSnapshot.value, change),
+      }
+      return Promise.resolve(preferencesSnapshot)
+    },
+  })
+  preferences.hydrate(preferencesSnapshot)
 
   return {
     runtime: {
@@ -234,6 +254,7 @@ export function createInMemoryEditorRuntime({
       },
       content: contentSources,
       navigation,
+      preferences,
       search: unsupported,
       history: unsupported,
     },

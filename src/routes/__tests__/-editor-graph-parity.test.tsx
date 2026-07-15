@@ -42,7 +42,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
     ),
     useMatch: () => ({ search: {} }),
     useNavigate: () => graphState.navigate,
-    useRouteContext: () => ({ initialPanelPreferences: null }),
+    useRouteContext: () => ({}),
   }
 })
 

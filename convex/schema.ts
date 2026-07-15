@@ -5,6 +5,7 @@ import { sessionTables } from './sessions/schema'
 import { fileStorageTables } from './storage/schema'
 import { userPreferencesTables } from './userPreferences/schema'
 import { resourceTables } from './resources/schema'
+import { workspacePreferencesTables } from './workspacePreferences/schema'
 
 export default defineSchema({
   ...campaignTables,
@@ -13,4 +14,5 @@ export default defineSchema({
   ...fileStorageTables,
   ...userPreferencesTables,
   ...resourceTables,
+  ...workspacePreferencesTables,
 })

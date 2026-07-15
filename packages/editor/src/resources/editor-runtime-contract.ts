@@ -18,6 +18,7 @@ import type {
   WorkspaceResourceIndex,
 } from './resource-index-contract'
 import type { VersionStamp } from './component-version'
+import type { WorkspacePreferencesSource } from './workspace-preferences'
 
 export type ResourceCapability<T> =
   | { readonly status: 'available'; readonly value: T }
@@ -80,6 +81,7 @@ export interface EditorRuntime {
     readonly canvases: CanvasSessionSource
   }
   readonly navigation: ResourceNavigation
+  readonly preferences: WorkspacePreferencesSource
   readonly search: ResourceCapability<WorkspaceSearch>
   readonly history: ResourceCapability<ReadonlyResourceHistory>
 }

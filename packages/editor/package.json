@@ -10,6 +10,10 @@
       "types": "./dist/resources/resource-shell.d.mts",
       "default": "./dist/resources/resource-shell.mjs"
     },
+    "./resources/workspace-preferences": {
+      "types": "./dist/resources/workspace-preferences.d.mts",
+      "default": "./dist/resources/workspace-preferences.mjs"
+    },
     "./canvas/document-contract": {
       "types": "./dist/canvas/document-contract.d.mts",
       "default": "./dist/canvas/document-contract.mjs"
@@ -166,6 +170,7 @@
       "./notes/document-contract",
       "./notes/document-yjs",
       "./resources/domain-id",
+      "./resources/workspace-preferences",
       "./resources/component-version",
       "./resources/resource-record",
       "./resources/resource-metadata-version",

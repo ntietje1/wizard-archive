@@ -12,6 +12,7 @@ import { createLiveResourceStructureGateway } from './live-resource-structure-ga
 import { createLiveNoteContentSource } from './live-note-content-source'
 import { createLiveResourceContentSource } from './live-resource-content-source'
 import type { LiveResourceContentBackend } from './live-resource-content-source'
+import { createLiveWorkspacePreferences } from './live-workspace-preferences'
 
 function subscribeToWatch<T>(
   watch: Readonly<{
@@ -93,6 +94,7 @@ function createScopedLiveResourceRuntime(
   const files = createLiveResourceContentSource('file', contentBackend('file'))
   const maps = createLiveResourceContentSource('map', contentBackend('map'))
   const canvases = createLiveResourceContentSource('canvas', contentBackend('canvas'))
+  const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
 
   const unsupported = {
     status: 'unavailable',
@@ -116,11 +118,13 @@ function createScopedLiveResourceRuntime(
       },
       content,
       navigation,
+      preferences: preferences.source,
       search: unsupported,
       history: unsupported,
     },
     dispose: () => {
       for (const source of Object.values(content)) source.dispose()
+      preferences.dispose()
       optimistic.dispose()
     },
   }

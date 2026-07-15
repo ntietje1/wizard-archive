@@ -28,22 +28,6 @@ describe('getUserPreferences', () => {
     const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result).not.toBeNull()
     expect(result!.theme).toBe('dark')
-    expect(result!.panelPreferences).toBeNull()
-  })
-
-  it('returns expected shape with all fields', async () => {
-    const { authed } = await setupUser(t)
-
-    await authed.mutation(api.userPreferences.mutations.setUserPreferences, {
-      theme: 'system',
-    })
-
-    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
-    expect(result).toHaveProperty('_id')
-    expect(result).toHaveProperty('_creationTime')
-    expect(result).toHaveProperty('userId')
-    expect(result!.theme).toBe('system')
-    expect(result!.panelPreferences).toBeNull()
   })
 })
 
@@ -60,7 +44,6 @@ describe('setUserPreferences', () => {
 
     const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
     expect(result!.theme).toBe('light')
-    expect(result!.panelPreferences).toBeNull()
   })
 
   it('updates existing preferences', async () => {
@@ -82,123 +65,6 @@ describe('setUserPreferences', () => {
     await expectNotAuthenticated(
       t.mutation(api.userPreferences.mutations.setUserPreferences, {
         theme: 'dark',
-      }),
-    )
-  })
-})
-
-describe('setPanelPreference', () => {
-  const t = createTestContext()
-
-  it('initializes panelPreferences when preferences exist but panelPreferences is null', async () => {
-    const { authed } = await setupUser(t)
-
-    await authed.mutation(api.userPreferences.mutations.setUserPreferences, {
-      theme: 'dark',
-    })
-
-    const before = await authed.query(api.userPreferences.queries.getUserPreferences, {})
-    expect(before!.panelPreferences).toBeNull()
-
-    await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'left-sidebar',
-      size: 300,
-      visible: true,
-    })
-
-    const after = await authed.query(api.userPreferences.queries.getUserPreferences, {})
-    expect(after!.theme).toBe('dark')
-    expect(after!.panelPreferences).toEqual({
-      'left-sidebar': { size: 300, visible: true },
-    })
-  })
-
-  it('creates preferences with panel data when none exist', async () => {
-    const { authed } = await setupUser(t)
-
-    const id = await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'left-sidebar',
-      size: 300,
-      visible: true,
-    })
-    expect(id).toBeDefined()
-
-    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
-    expect(result!.theme).toBeNull()
-    expect(result!.panelPreferences).toEqual({
-      'left-sidebar': { size: 300, visible: true },
-    })
-  })
-
-  it('merges into existing panelPreferences without clobbering other panels', async () => {
-    const { authed } = await setupUser(t)
-
-    await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'left-sidebar',
-      size: 280,
-      visible: true,
-    })
-
-    await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'editor-right-sidebar',
-      size: 350,
-      visible: false,
-    })
-
-    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
-    expect(result!.panelPreferences).toEqual({
-      'left-sidebar': { size: 280, visible: true },
-      'editor-right-sidebar': { size: 350, visible: false },
-    })
-  })
-
-  it('partial update preserves other fields on the same panel', async () => {
-    const { authed } = await setupUser(t)
-
-    await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'left-sidebar',
-      size: 280,
-      visible: true,
-    })
-
-    await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'left-sidebar',
-      size: 200,
-    })
-
-    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
-    expect(result!.panelPreferences!['left-sidebar']).toEqual({
-      size: 200,
-      visible: true,
-    })
-  })
-
-  it('partial update of visible preserves size on the same panel', async () => {
-    const { authed } = await setupUser(t)
-
-    await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'left-sidebar',
-      size: 280,
-      visible: true,
-    })
-
-    await authed.mutation(api.userPreferences.mutations.setPanelPreference, {
-      panelId: 'left-sidebar',
-      visible: false,
-    })
-
-    const result = await authed.query(api.userPreferences.queries.getUserPreferences, {})
-    expect(result!.panelPreferences!['left-sidebar']).toEqual({
-      size: 280,
-      visible: false,
-    })
-  })
-
-  it('requires authentication', async () => {
-    await expectNotAuthenticated(
-      t.mutation(api.userPreferences.mutations.setPanelPreference, {
-        panelId: 'left-sidebar',
-        size: 300,
       }),
     )
   })

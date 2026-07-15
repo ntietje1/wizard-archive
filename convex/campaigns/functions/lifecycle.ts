@@ -12,7 +12,7 @@ export async function hardDeleteCampaign(
   campaignRowId: Id<'campaigns'>,
   campaignId: CampaignId,
 ): Promise<void> {
-  const [sessions, campaignMembers] = await Promise.all([
+  const [sessions, campaignMembers, workspacePreferences] = await Promise.all([
     ctx.db
       .query('sessions')
       .withIndex('by_campaign_startedAt', (q) => q.eq('campaignId', campaignRowId))
@@ -21,12 +21,19 @@ export async function hardDeleteCampaign(
       .query('campaignMembers')
       .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignRowId))
       .collect(),
+    ctx.db
+      .query('workspacePreferences')
+      .withIndex('by_campaign_user', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
   ])
 
   await deleteCampaignResources(ctx, campaignId)
   await Promise.all([
     asyncMap(sessions, (session) => ctx.db.delete('sessions', session._id)),
     asyncMap(campaignMembers, (member) => ctx.db.delete('campaignMembers', member._id)),
+    asyncMap(workspacePreferences, (preference) =>
+      ctx.db.delete('workspacePreferences', preference._id),
+    ),
   ])
 
   await ctx.db.delete('campaigns', campaignRowId)

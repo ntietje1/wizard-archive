@@ -18,9 +18,13 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
 
   const profileId = profile._id
 
-  const [prefs, files] = await Promise.all([
+  const [prefs, workspacePreferences, files] = await Promise.all([
     ctx.db
       .query('userPreferences')
+      .withIndex('by_user', (q) => q.eq('userId', profileId))
+      .collect(),
+    ctx.db
+      .query('workspacePreferences')
       .withIndex('by_user', (q) => q.eq('userId', profileId))
       .collect(),
     ctx.db
@@ -30,6 +34,9 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
   ])
 
   await asyncMap(prefs, (p) => ctx.db.delete('userPreferences', p._id))
+  await asyncMap(workspacePreferences, (preference) =>
+    ctx.db.delete('workspacePreferences', preference._id),
+  )
   await asyncMap(files, async (f) => {
     if (
       f.assetUuid &&

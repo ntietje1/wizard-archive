@@ -107,6 +107,9 @@ import type * as users_functions_profileSummary from "../users/functions/profile
 import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_validation from "../users/validation.js";
+import type * as workspacePreferences_functions from "../workspacePreferences/functions.js";
+import type * as workspacePreferences_mutations from "../workspacePreferences/mutations.js";
+import type * as workspacePreferences_queries from "../workspacePreferences/queries.js";
 
 import type {
   ApiFromModules,
@@ -214,6 +217,9 @@ declare const fullApi: ApiFromModules<{
   "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;
   "users/validation": typeof users_validation;
+  "workspacePreferences/functions": typeof workspacePreferences_functions;
+  "workspacePreferences/mutations": typeof workspacePreferences_mutations;
+  "workspacePreferences/queries": typeof workspacePreferences_queries;
 }>;
 
 /**
