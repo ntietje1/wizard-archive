@@ -81,8 +81,6 @@ export type ClassifiedNoteSource = Readonly<{
   removedUtf8Bom: boolean
 }>
 
-export type ClassifiedFileSource = FileOwnedMetadata
-
 export type RejectedResourceSource = Readonly<{
   classification: 'rejected'
   byteSize: number
@@ -91,7 +89,7 @@ export type RejectedResourceSource = Readonly<{
 
 export type ResourceSourceClassification =
   | ClassifiedNoteSource
-  | ClassifiedFileSource
+  | FileOwnedMetadata
   | RejectedResourceSource
 
 const NOTE_EXTENSIONS: ReadonlySet<string> = new Set(['md', 'markdown', 'mdown', 'mkd', 'txt'])
@@ -233,7 +231,7 @@ function classifyImage(
   extension: string | null,
   format: Extract<DetectedFormat, 'png' | 'jpeg' | 'gif' | 'webp'>,
   inspection: ImageSourceInspection | undefined,
-): ClassifiedFileSource {
+): FileOwnedMetadata {
   if (!inspection) {
     return inertFile(byteSize, extension, format, FILE_VIEWER_UNAVAILABLE_REASON.malformed)
   }
@@ -278,7 +276,7 @@ function classifyPdf(
   byteSize: number,
   extension: string | null,
   inspection: PdfSourceInspection | undefined,
-): ClassifiedFileSource {
+): FileOwnedMetadata {
   if (!inspection || inspection.status === 'unavailable') {
     return inertFile(
       byteSize,
@@ -307,7 +305,7 @@ function classifyIsoBmff(
   byteSize: number,
   extension: string | null,
   inspection: IsoBmffSourceInspection | undefined,
-): ClassifiedFileSource {
+): FileOwnedMetadata {
   if (!inspection || inspection.status === 'unavailable') {
     return inertFile(
       byteSize,
@@ -329,7 +327,7 @@ function viewableFile(
   detectedFormat: string,
   mediaType: string,
   classification: Exclude<FileClassification, 'inert_file'>,
-): ClassifiedFileSource {
+): FileOwnedMetadata {
   return {
     classification,
     byteSize,
@@ -345,7 +343,7 @@ function inertFile(
   extension: string | null,
   detectedFormat: string | null,
   viewerUnavailableReason: FileViewerUnavailableReason,
-): ClassifiedFileSource {
+): FileOwnedMetadata {
   return {
     classification: FILE_CLASSIFICATION.inert,
     byteSize,
