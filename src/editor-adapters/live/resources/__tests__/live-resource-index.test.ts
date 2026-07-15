@@ -111,13 +111,10 @@ describe('createLiveResourceIndexRuntime', () => {
     })
   })
 
-  it('lets the latest authoritative missing response remove stale collection knowledge', async () => {
+  it('applies an authoritative missing projection without treating ensure as refresh', async () => {
     const resourceId = testDomainId('resource', 'deleted')
     const query = { parentId: null, lifecycle: 'active' as const }
-    const loadResource = vi
-      .fn()
-      .mockResolvedValueOnce(snapshot([resource(resourceId)]))
-      .mockResolvedValueOnce(snapshot([], { missingResourceIds: [resourceId] }))
+    const loadResource = vi.fn().mockResolvedValue(snapshot([resource(resourceId)]))
     const runtime = createLiveResourceIndexRuntime(scope, {
       loadResource,
       loadCollection: vi.fn(() =>
@@ -133,6 +130,10 @@ describe('createLiveResourceIndexRuntime', () => {
     await runtime.loader.ensureResource(resourceId)
     await runtime.loader.ensureCollection(query)
     await runtime.loader.ensureResource(resourceId)
+    expect(loadResource).toHaveBeenCalledOnce()
+    expect(runtime.applyProjection(snapshot([], { missingResourceIds: [resourceId] }))).toEqual({
+      status: 'completed',
+    })
 
     expect(runtime.index.getSnapshot().lookup(resourceId)).toEqual({ state: 'missing' })
     expect(runtime.index.getSnapshot().list(query)).toMatchObject({
@@ -140,6 +141,67 @@ describe('createLiveResourceIndexRuntime', () => {
       items: [],
       complete: true,
     })
+  })
+
+  it('deduplicates concurrent collection loads and advances the saved cursor until complete', async () => {
+    const firstId = testDomainId('resource', 'page-one')
+    const secondId = testDomainId('resource', 'page-two')
+    const query = { parentId: null, lifecycle: 'active' as const }
+    const loadCollection = vi
+      .fn()
+      .mockResolvedValueOnce({
+        snapshot: snapshot([resource(firstId)], {
+          collections: [{ query, resourceIds: [firstId], complete: false }],
+        }),
+        cursor: 'cursor-1',
+      })
+      .mockResolvedValueOnce({
+        snapshot: snapshot([resource(secondId)], {
+          collections: [{ query, resourceIds: [secondId], complete: true }],
+        }),
+        cursor: null,
+      })
+    const runtime = createLiveResourceIndexRuntime(scope, {
+      loadResource: vi.fn(),
+      loadCollection,
+    })
+
+    const firstLoads = await Promise.all([
+      runtime.loader.ensureCollection(query),
+      runtime.loader.ensureCollection({ ...query }),
+    ])
+
+    expect(firstLoads).toEqual([{ status: 'completed' }, { status: 'completed' }])
+    expect(loadCollection).toHaveBeenCalledOnce()
+    expect(loadCollection).toHaveBeenLastCalledWith({
+      campaignId: scope.campaignId,
+      query,
+      cursor: null,
+    })
+    expect(runtime.index.getSnapshot().list(query)).toMatchObject({
+      state: 'known',
+      items: [expect.objectContaining({ id: firstId })],
+      complete: false,
+    })
+
+    await expect(runtime.loader.ensureCollection(query)).resolves.toEqual({ status: 'completed' })
+    expect(loadCollection).toHaveBeenCalledTimes(2)
+    expect(loadCollection).toHaveBeenLastCalledWith({
+      campaignId: scope.campaignId,
+      query,
+      cursor: 'cursor-1',
+    })
+    expect(runtime.index.getSnapshot().list(query)).toMatchObject({
+      state: 'known',
+      items: expect.arrayContaining([
+        expect.objectContaining({ id: firstId }),
+        expect.objectContaining({ id: secondId }),
+      ]),
+      complete: true,
+    })
+
+    await expect(runtime.loader.ensureCollection(query)).resolves.toEqual({ status: 'completed' })
+    expect(loadCollection).toHaveBeenCalledTimes(2)
   })
 
   it('rejects a provider response from another projection without publishing it', async () => {

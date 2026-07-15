@@ -5,6 +5,7 @@ import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources
 import type {
   AuthorizedResourceSnapshot,
   AuthorizedResourceSummary,
+  ResourceCollectionKey,
   ResourceCollectionQuery,
   ResourceProjectionScope,
 } from '@wizard-archive/editor/resources/index-contract'
@@ -16,7 +17,6 @@ import {
   MutableWorkspaceResourceIndex,
   createResourceIndexLoader,
   indexRevision,
-  mergeAuthorizedResourceSnapshots,
 } from '@wizard-archive/editor/resources/workspace-index'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 
@@ -88,39 +88,25 @@ export function createLiveResourceIndexRuntime(
   queries: LiveResourceIndexQueries,
 ) {
   const index = new MutableWorkspaceResourceIndex(scope, indexRevision('live-empty'))
-  let snapshots = new Map<
-    string,
-    Readonly<{ sequence: number; snapshot: AuthorizedResourceSnapshot }>
-  >()
+  const collectionCursors = new Map<ResourceCollectionKey, string | null>()
   let sequence = 0
 
-  const apply = (key: string, rawSnapshot: LoadResourceResult) => {
-    let snapshot: AuthorizedResourceSnapshot
-    try {
-      snapshot = readSnapshot(rawSnapshot)
-    } catch {
-      return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
-    }
-    const nextSnapshots = new Map(snapshots)
+  const applySnapshot = (snapshot: AuthorizedResourceSnapshot) => {
     const nextSequence = sequence + 1
-    nextSnapshots.set(key, { sequence: nextSequence, snapshot })
-    const merged = mergeAuthorizedResourceSnapshots(
-      scope,
-      Array.from(nextSnapshots.values())
-        .sort((left, right) => left.sequence - right.sequence)
-        .map((entry) => entry.snapshot),
-      indexRevision(`live-${nextSequence}`),
-    )
-    if (!merged) {
-      return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
-    }
-    const result = index.replaceSnapshot(merged)
+    const result = index.applyProjectionSnapshot(snapshot, indexRevision(`live-${nextSequence}`))
     if (result.status !== 'applied' && result.status !== 'duplicate') {
       return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
     }
-    snapshots = nextSnapshots
-    sequence = nextSequence
+    if (result.status === 'applied') sequence = nextSequence
     return { status: 'completed' } as const
+  }
+
+  const apply = (rawSnapshot: LoadResourceResult) => {
+    try {
+      return applySnapshot(readSnapshot(rawSnapshot))
+    } catch {
+      return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
+    }
   }
 
   return {
@@ -129,10 +115,11 @@ export function createLiveResourceIndexRuntime(
       loadResource: async (currentScope, resourceId) => {
         if (!sameResourceProjectionScope(scope, currentScope)) return { status: 'scope_changed' }
         const snapshot = await queries.loadResource({ campaignId: scope.campaignId, resourceId })
-        return apply(`resource:${resourceId}`, snapshot)
+        return apply(snapshot)
       },
       loadCollection: async (currentScope, query) => {
         if (!sameResourceProjectionScope(scope, currentScope)) return { status: 'scope_changed' }
+        const key = resourceCollectionQueryKey(query)
         const page = await queries.loadCollection({
           campaignId: scope.campaignId,
           query: {
@@ -140,10 +127,29 @@ export function createLiveResourceIndexRuntime(
             lifecycle: query.lifecycle,
             ...(query.kinds === undefined ? {} : { kinds: [...query.kinds] }),
           },
-          cursor: null,
+          cursor: collectionCursors.get(key) ?? null,
         })
-        return apply(`collection:${resourceCollectionQueryKey(query)}`, page.snapshot)
+        let snapshot: AuthorizedResourceSnapshot
+        try {
+          snapshot = readSnapshot(page.snapshot)
+        } catch {
+          return { status: 'failed', retryable: false, reason: 'invalid_response' }
+        }
+        if (
+          snapshot.collections.length !== 1 ||
+          resourceCollectionQueryKey(snapshot.collections[0]!.query) !== key ||
+          snapshot.collections[0]!.complete !== (page.cursor === null)
+        ) {
+          return { status: 'failed', retryable: false, reason: 'invalid_response' }
+        }
+        const result = applySnapshot(snapshot)
+        if (result.status === 'completed') {
+          if (page.cursor === null) collectionCursors.delete(key)
+          else collectionCursors.set(key, page.cursor)
+        }
+        return result
       },
     }),
+    applyProjection: (snapshot: LoadResourceResult) => apply(snapshot),
   }
 }

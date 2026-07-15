@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test'
-import { assertSha256Digest, initialVersion } from '../component-version'
+import { assertSha256Digest, initialVersion, successorVersion } from '../component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
 import type {
   CampaignId,
@@ -20,7 +20,6 @@ import {
   MutableWorkspaceResourceIndex,
   createResourceIndexLoader,
   indexRevision,
-  mergeAuthorizedResourceSnapshots,
   sortAuthorizedResourceSummaries,
 } from '../workspace-resource-index'
 
@@ -31,6 +30,7 @@ const childId = id(DOMAIN_ID_KIND.resource, 11)
 const missingId = id(DOMAIN_ID_KIND.resource, 12)
 const unknownId = id(DOMAIN_ID_KIND.resource, 13)
 const version = initialVersion(assertSha256Digest('a'.repeat(64)))
+const newerVersion = successorVersion(version, assertSha256Digest('b'.repeat(64)))
 const scope = projectionScope(campaignId, actorId, 'player', 'resource-index-v1')
 
 function id<TKind extends DomainIdKind>(kind: TKind, sequence: number): DomainIdByKind[TKind] {
@@ -79,8 +79,9 @@ function authorizedSnapshot(
   }
 }
 
-describe('authorized resource snapshot merging', () => {
-  it('owns fragment precedence, missing knowledge, and collection reconciliation', () => {
+describe('authorized resource projection snapshots', () => {
+  it('incrementally owns fragment precedence, monotonic knowledge, and collection reconciliation', () => {
+    const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
     const roots: ResourceCollectionQuery = { parentId: null, lifecycle: 'active' }
     const first = authorizedSnapshot({
       resources: [
@@ -93,24 +94,39 @@ describe('authorized resource snapshot merging', () => {
     const second = authorizedSnapshot({
       revision: indexRevision('fragment-2'),
       resources: [
-        summary(rootId, { kind: 'folder', title: canonicalizeResourceTitle('Updated Root') }),
+        summary(rootId, {
+          kind: 'folder',
+          title: canonicalizeResourceTitle('Updated Root'),
+          metadataVersion: newerVersion,
+        }),
       ],
       missingResourceIds: [childId],
       collections: [],
     })
 
-    expect(
-      mergeAuthorizedResourceSnapshots(scope, [first, second], indexRevision('merged')),
-    ).toEqual({
-      scope,
-      revision: indexRevision('merged'),
-      resources: [expect.objectContaining({ id: rootId, title: 'Updated Root' })],
-      missingResourceIds: [childId],
-      collections: [{ query: roots, resourceIds: [rootId], complete: true }],
+    expect(index.applyProjectionSnapshot(first, indexRevision('fragment-1'))).toEqual({
+      status: 'applied',
+    })
+    expect(index.applyProjectionSnapshot(second, indexRevision('fragment-2'))).toEqual({
+      status: 'applied',
+    })
+    expect(index.getSnapshot().lookup(rootId)).toMatchObject({
+      state: 'known',
+      value: { title: 'Updated Root' },
+    })
+    expect(index.getSnapshot().lookup(childId)).toMatchObject({
+      state: 'known',
+      value: { id: childId },
+    })
+    expect(index.getSnapshot().list(roots)).toEqual({
+      state: 'known',
+      items: [expect.objectContaining({ id: rootId })],
+      complete: true,
     })
   })
 
-  it('rejects fragments that produce an incomplete ancestor spine', () => {
+  it('does not let partial missing fragments retract known ancestor spines', () => {
+    const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
     const first = authorizedSnapshot({
       resources: [
         summary(rootId, { kind: 'folder' }),
@@ -124,9 +140,14 @@ describe('authorized resource snapshot merging', () => {
       missingResourceIds: [rootId],
     })
 
-    expect(
-      mergeAuthorizedResourceSnapshots(scope, [first, second], indexRevision('merged')),
-    ).toBeNull()
+    expect(index.applyProjectionSnapshot(first, indexRevision('fragment-1'))).toEqual({
+      status: 'applied',
+    })
+    expect(index.applyProjectionSnapshot(second, indexRevision('fragment-2'))).toEqual({
+      status: 'duplicate',
+    })
+    expect(index.getSnapshot().lookup(rootId).state).toBe('known')
+    expect(index.getSnapshot().lookup(childId).state).toBe('known')
   })
 })
 

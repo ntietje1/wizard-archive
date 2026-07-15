@@ -184,6 +184,13 @@ function MoveFolderCollection({
           </li>
         )
       })}
+      {!collection.complete && (
+        <li>
+          <button type="button" className="px-8 py-2 text-xs underline" onClick={load.retry}>
+            {load.result?.status === 'failed' ? 'Try loading folders again' : 'Load more folders'}
+          </button>
+        </li>
+      )}
     </ul>
   )
 }

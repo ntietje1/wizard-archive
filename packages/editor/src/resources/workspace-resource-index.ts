@@ -11,6 +11,7 @@ import type {
   ResourceIndexApplyResult,
   ResourceIndexLoader,
   ResourceKnowledge,
+  ResourceCollectionKey,
   ResourceLoadResult,
   ResourceProjectionScope,
   WorkspaceResourceIndex,
@@ -46,7 +47,7 @@ type StoredCollection = Readonly<{
 type IndexState = Readonly<{
   resources: ReadonlyMap<ResourceId, AuthorizedResourceSummary>
   missingResourceIds: ReadonlySet<ResourceId>
-  collections: ReadonlyMap<string, StoredCollection>
+  collections: ReadonlyMap<ResourceCollectionKey, StoredCollection>
 }>
 
 const emptyState = (): IndexState => ({
@@ -215,8 +216,8 @@ function createStoredCollection(
 function createCollectionMap(
   snapshot: AuthorizedResourceSnapshot,
   resources: ReadonlyMap<ResourceId, AuthorizedResourceSummary>,
-): Map<string, StoredCollection> | null {
-  const collections = new Map<string, StoredCollection>()
+): Map<ResourceCollectionKey, StoredCollection> | null {
+  const collections = new Map<ResourceCollectionKey, StoredCollection>()
   for (const source of snapshot.collections) {
     const collection = createStoredCollection(source, resources)
     if (!collection) return null
@@ -237,45 +238,6 @@ function createState(snapshot: AuthorizedResourceSnapshot): IndexState | null {
   return { resources, missingResourceIds, collections }
 }
 
-export function mergeAuthorizedResourceSnapshots(
-  scope: ResourceProjectionScope,
-  snapshots: ReadonlyArray<AuthorizedResourceSnapshot>,
-  revision: IndexRevision,
-): AuthorizedResourceSnapshot | null {
-  const resources = new Map<ResourceId, AuthorizedResourceSummary>()
-  const missingResourceIds = new Set<ResourceId>()
-  const collections = new Map<string, StoredCollection>()
-
-  for (const snapshot of snapshots) {
-    if (!sameResourceProjectionScope(scope, snapshot.scope)) return null
-    const state = createState(snapshot)
-    if (!state) return null
-
-    for (const resource of state.resources.values()) {
-      resources.set(resource.id, resource)
-      missingResourceIds.delete(resource.id)
-    }
-    for (const resourceId of state.missingResourceIds) {
-      resources.delete(resourceId)
-      missingResourceIds.add(resourceId)
-    }
-    for (const [key, collection] of state.collections) collections.set(key, collection)
-  }
-
-  const merged: AuthorizedResourceSnapshot = {
-    scope,
-    revision,
-    resources: Array.from(resources.values()),
-    missingResourceIds: Array.from(missingResourceIds),
-    collections: Array.from(collections.values(), (collection) => ({
-      query: collection.query,
-      resourceIds: matchingResourceIds(resources.values(), collection.query),
-      complete: collection.complete,
-    })),
-  }
-  return createState(merged) ? merged : null
-}
-
 function matchingResourceIds(
   resources: Iterable<AuthorizedResourceSummary>,
   query: ResourceCollectionQuery,
@@ -285,6 +247,82 @@ function matchingResourceIds(
     if (resourceMatchesCollectionQuery(resource, query)) resourceIds.push(resource.id)
   }
   return resourceIds.sort()
+}
+
+function mergeProjectionState(current: IndexState, projection: IndexState): IndexState | null {
+  const resourceState = mergeProjectionResources(current, projection)
+  if (!resourceState) return null
+  const collections = mergeProjectionCollections(
+    resourceState.resources,
+    current.collections,
+    projection.collections,
+  )
+  return hasCompleteAncestorSpines(resourceState.resources)
+    ? { ...resourceState, collections }
+    : null
+}
+
+function mergeProjectionResources(current: IndexState, projection: IndexState) {
+  const resources = new Map(current.resources)
+  const missingResourceIds = new Set(current.missingResourceIds)
+  for (const resource of projection.resources.values()) {
+    const existing = resources.get(resource.id)
+    const decision = projectedResourceDecision(existing, resource)
+    if (decision === 'stale') continue
+    if (decision === 'conflict') return null
+    resources.set(resource.id, resource)
+    missingResourceIds.delete(resource.id)
+  }
+  for (const resourceId of projection.missingResourceIds) {
+    if (!resources.has(resourceId)) missingResourceIds.add(resourceId)
+  }
+  return { resources, missingResourceIds }
+}
+
+function projectedResourceDecision(
+  existing: AuthorizedResourceSummary | undefined,
+  projected: AuthorizedResourceSummary,
+) {
+  if (!existing) return 'apply' as const
+  if (projected.metadataVersion.revision < existing.metadataVersion.revision) {
+    return 'stale' as const
+  }
+  if (
+    projected.metadataVersion.revision === existing.metadataVersion.revision &&
+    projected.metadataVersion.digest !== existing.metadataVersion.digest
+  ) {
+    return 'conflict' as const
+  }
+  return 'apply' as const
+}
+
+function mergeProjectionCollections(
+  resources: ReadonlyMap<ResourceId, AuthorizedResourceSummary>,
+  current: ReadonlyMap<ResourceCollectionKey, StoredCollection>,
+  projection: ReadonlyMap<ResourceCollectionKey, StoredCollection>,
+) {
+  const collections = new Map(
+    Array.from(
+      current,
+      ([key, collection]) =>
+        [
+          key,
+          {
+            ...collection,
+            resourceIds: matchingResourceIds(resources.values(), collection.query),
+          },
+        ] as const,
+    ),
+  )
+  for (const [key, collection] of projection) {
+    const existing = collections.get(key)
+    collections.set(key, {
+      query: collection.query,
+      resourceIds: matchingResourceIds(resources.values(), collection.query),
+      complete: existing?.complete === true || collection.complete,
+    })
+  }
+  return collections
 }
 
 function applyResourceChange(
@@ -308,7 +346,7 @@ function applyResourceChange(
 }
 
 function reconcileCollections(
-  collections: Map<string, StoredCollection>,
+  collections: Map<ResourceCollectionKey, StoredCollection>,
   resourceId: ResourceId,
   resource: AuthorizedResourceSummary | undefined,
 ): void {
@@ -459,6 +497,31 @@ export class MutableWorkspaceResourceIndex implements WorkspaceResourceIndexCont
     return { status: 'applied' }
   }
 
+  applyProjectionSnapshot(
+    snapshot: AuthorizedResourceSnapshot,
+    nextRevision: IndexRevision,
+  ): ResourceIndexApplyResult {
+    if (!sameResourceProjectionScope(this.#scope, snapshot.scope)) {
+      return { status: 'replacement_required', reason: 'wrong_scope' }
+    }
+    const projection = createState(snapshot)
+    if (!projection) return { status: 'replacement_required', reason: 'invalid_projection' }
+    const currentSignature = stateSignature(this.#state)
+    const state = mergeProjectionState(this.#state, projection)
+    if (!state) return { status: 'replacement_required', reason: 'invalid_projection' }
+    const signature = stateSignature(state)
+    if (signature === currentSignature) return { status: 'duplicate' }
+    const knownSignature = this.#revisionSignatures.get(nextRevision)
+    if (knownSignature !== undefined && knownSignature !== signature) {
+      return { status: 'replacement_required', reason: 'invalid_projection' }
+    }
+    this.#revision = nextRevision
+    this.#state = state
+    this.#revisionSignatures.set(nextRevision, signature)
+    this.#publish()
+    return { status: 'applied' }
+  }
+
   applyChangeSet(changeSet: AuthorizedResourceChangeSet): ResourceIndexApplyResult {
     if (!sameResourceProjectionScope(this.#scope, changeSet.scope)) {
       return { status: 'replacement_required', reason: 'wrong_scope' }
@@ -551,13 +614,29 @@ export function createResourceIndexLoader(
   index: WorkspaceResourceIndex,
   source: ResourceIndexLoadSource,
 ): ResourceIndexLoader {
+  const inFlight = new Map<string, Promise<ResourceLoadResult>>()
+  const ensureOnce = (key: string, load: () => Promise<ResourceLoadResult>) => {
+    const existing = inFlight.get(key)
+    if (existing) return existing
+    const request = load().finally(() => {
+      if (inFlight.get(key) === request) inFlight.delete(key)
+    })
+    inFlight.set(key, request)
+    return request
+  }
   return {
-    ensureResource: (resourceId) =>
-      loadIndexKnowledge(
-        index,
-        (scope) => source.loadResource(scope, resourceId),
-        () => index.getSnapshot().lookup(resourceId).state !== 'unknown',
-      ),
+    ensureResource: (resourceId) => {
+      if (index.getSnapshot().lookup(resourceId).state !== 'unknown') {
+        return Promise.resolve({ status: 'completed' })
+      }
+      return ensureOnce(`resource:${resourceId}`, () =>
+        loadIndexKnowledge(
+          index,
+          (scope) => source.loadResource(scope, resourceId),
+          () => index.getSnapshot().lookup(resourceId).state !== 'unknown',
+        ),
+      )
+    },
     ensureCollection: (query) => {
       let normalized: ResourceCollectionQuery
       try {
@@ -565,10 +644,16 @@ export function createResourceIndexLoader(
       } catch {
         return Promise.resolve(invalidLoadResult())
       }
-      return loadIndexKnowledge(
-        index,
-        (scope) => source.loadCollection(scope, normalized),
-        () => index.getSnapshot().list(normalized).state !== 'unknown',
+      const knowledge = index.getSnapshot().list(normalized)
+      if (knowledge.state === 'known' && knowledge.complete) {
+        return Promise.resolve({ status: 'completed' })
+      }
+      return ensureOnce(`collection:${resourceCollectionQueryKey(normalized)}`, () =>
+        loadIndexKnowledge(
+          index,
+          (scope) => source.loadCollection(scope, normalized),
+          () => index.getSnapshot().list(normalized).state !== 'unknown',
+        ),
       )
     },
   }

@@ -1,13 +1,19 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vite-plus/test'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { initialVersion, sha256Digest } from '../component-version'
 import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
 import type { ResourceNavigation } from '../editor-runtime-contract'
 import { createInMemoryEditorRuntime } from '../in-memory-editor-runtime'
-import { RESOURCE_INDEX_SCHEMA } from '../resource-index-contract'
+import {
+  RESOURCE_INDEX_SCHEMA,
+  authorizedResourceSummaryFromRecord,
+} from '../resource-index-contract'
 import { canonicalizeResourceTitle } from '../resource-record'
 import type { ResourceRecord } from '../resource-record'
 import { ResourceShell } from '../resource-shell'
+import { DEFAULT_WORKSPACE_PREFERENCES } from '../workspace-preferences'
+import { EMPTY_WORKSPACE_SELECTION } from '../workspace-selection'
+import { ResourceViewport } from '../workspace/resource-viewport'
 
 describe('ResourceShell', () => {
   it('does not render mutating controls when structure editing is unavailable', async () => {
@@ -577,6 +583,46 @@ describe('ResourceShell', () => {
     await waitFor(() =>
       expect(core.runtime.resources.index.getSnapshot().lookup(resource.id).state).toBe('missing'),
     )
+    core.dispose()
+  })
+
+  it('offers an accessible continuation action for incomplete folder knowledge', async () => {
+    const { core, resource } = await shellRuntime(false)
+    const summary = authorizedResourceSummaryFromRecord(resource)
+    const baseSnapshot = core.runtime.resources.index.getSnapshot()
+    const snapshot = {
+      ...baseSnapshot,
+      list: (candidate: Parameters<typeof baseSnapshot.list>[0]) =>
+        candidate.parentId === resource.id
+          ? { state: 'known' as const, items: [summary], complete: false }
+          : baseSnapshot.list(candidate),
+    }
+    const ensureCollection = vi.fn(() => Promise.resolve({ status: 'completed' as const }))
+    const runtime = {
+      ...core.runtime,
+      resources: {
+        ...core.runtime.resources,
+        loader: { ...core.runtime.resources.loader, ensureCollection },
+      },
+    }
+
+    render(
+      <ResourceViewport
+        canEdit={false}
+        resource={summary}
+        runtime={runtime}
+        selection={EMPTY_WORKSPACE_SELECTION}
+        snapshot={snapshot}
+        sort={DEFAULT_WORKSPACE_PREFERENCES.sort}
+        onOpenContextMenu={vi.fn()}
+        onReport={vi.fn()}
+        onSelectionChange={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(ensureCollection).toHaveBeenCalledOnce())
+    fireEvent.click(screen.getByRole('button', { name: 'Load more resources' }))
+    await waitFor(() => expect(ensureCollection).toHaveBeenCalledTimes(2))
     core.dispose()
   })
 })

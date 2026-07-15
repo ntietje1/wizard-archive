@@ -203,7 +203,13 @@ function FolderViewport({
         )}
       </div>
       {!collection.complete && (
-        <p className="px-6 pb-6 text-sm text-muted-foreground">More resources may be available.</p>
+        <button
+          type="button"
+          className="mx-6 mb-6 self-start text-sm underline"
+          onClick={load.retry}
+        >
+          {load.result?.status === 'failed' ? 'Try loading resources again' : 'Load more resources'}
+        </button>
       )}
     </div>
   )

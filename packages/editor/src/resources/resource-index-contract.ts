@@ -11,11 +11,13 @@ import type {
 } from './resource-record'
 
 declare const indexRevisionBrand: unique symbol
+declare const resourceCollectionKeyBrand: unique symbol
 
 export const RESOURCE_INDEX_SCHEMA = 'resource-index-v1'
-const RESOURCE_KINDS = new Set<ResourceKind>(Object.values(RESOURCE_KIND))
+const RESOURCE_KINDS: ReadonlySet<string> = new Set(Object.values(RESOURCE_KIND))
 
 export type IndexRevision = string & { readonly [indexRevisionBrand]: true }
+export type ResourceCollectionKey = string & { readonly [resourceCollectionKeyBrand]: true }
 
 export type ResourceProjectionScope = Readonly<{
   campaignId: CampaignId
@@ -145,6 +147,10 @@ export type ResourceIndexApplyResult =
 export interface WorkspaceResourceIndexController extends WorkspaceResourceIndex {
   replaceScope(scope: ResourceProjectionScope, revision: IndexRevision): void
   replaceSnapshot(snapshot: AuthorizedResourceSnapshot): ResourceIndexApplyResult
+  applyProjectionSnapshot(
+    snapshot: AuthorizedResourceSnapshot,
+    nextRevision: IndexRevision,
+  ): ResourceIndexApplyResult
   applyChangeSet(changeSet: AuthorizedResourceChangeSet): ResourceIndexApplyResult
 }
 
@@ -186,12 +192,34 @@ export function sameResourceProjectionScope(
   )
 }
 
-export function resourceCollectionQueryKey(query: ResourceCollectionQuery): string {
+export function resourceCollectionQueryKey(query: ResourceCollectionQuery): ResourceCollectionKey {
   const normalized = normalizeResourceCollectionQuery(query)
   return JSON.stringify({
     parentId: normalized.parentId,
     lifecycle: normalized.lifecycle,
     kinds: normalized.kinds ?? null,
+  }) as ResourceCollectionKey
+}
+
+export function resourceCollectionQueryFromKey(
+  key: ResourceCollectionKey,
+): ResourceCollectionQuery {
+  const value: unknown = JSON.parse(key)
+  if (!value || typeof value !== 'object') throw new TypeError('Invalid resource collection key')
+  const candidate = value as Record<string, unknown>
+  if (
+    (candidate.parentId !== null && typeof candidate.parentId !== 'string') ||
+    (candidate.lifecycle !== 'active' && candidate.lifecycle !== 'trashed') ||
+    (candidate.kinds !== null &&
+      (!Array.isArray(candidate.kinds) ||
+        candidate.kinds.some((kind) => typeof kind !== 'string' || !RESOURCE_KINDS.has(kind))))
+  ) {
+    throw new TypeError('Invalid resource collection key')
+  }
+  return normalizeResourceCollectionQuery({
+    parentId: candidate.parentId as ResourceId | null,
+    lifecycle: candidate.lifecycle,
+    ...(candidate.kinds === null ? {} : { kinds: candidate.kinds as Array<ResourceKind> }),
   })
 }
 

@@ -58,7 +58,7 @@ type ResourceTreeExpansionState = Readonly<{
 }>
 
 const DEFAULT_TREE_EXPANSION: ResourceTreeExpansionState = {
-  defaultExpanded: true,
+  defaultExpanded: false,
   exceptions: new Set(),
 }
 
@@ -159,8 +159,14 @@ export function ResourceSidebar({
       }),
     [runtime.navigation, snapshot, view],
   )
+  const selectedAncestorIds = new Set(
+    view === 'bookmarks' || selectedResourceId === null
+      ? []
+      : visibleAncestorIds(snapshot, selectedResourceId),
+  )
   const expansion = {
-    isExpanded: (resourceId: ResourceId) => isTreeResourceExpanded(treeExpansion, resourceId),
+    isExpanded: (resourceId: ResourceId) =>
+      selectedAncestorIds.has(resourceId) || isTreeResourceExpanded(treeExpansion, resourceId),
     setExpanded: (resourceId: ResourceId, expanded: boolean) =>
       setTreeExpansion((current) => setTreeResourceExpanded(current, resourceId, expanded)),
   }
@@ -455,7 +461,13 @@ function ResourceCollection({
         />
       ))}
       {!collection.complete && (
-        <li className="px-2 py-1 text-xs text-muted-foreground">More resources may be available</li>
+        <li className="px-2 py-1">
+          <button type="button" className="text-xs underline" onClick={load.retry}>
+            {load.result?.status === 'failed'
+              ? 'Try loading resources again'
+              : 'Load more resources'}
+          </button>
+        </li>
       )}
     </ul>
   )
