@@ -34,19 +34,19 @@ describe('import boundary checks', () => {
     ])
   })
 
-  it('blocks legacy Convex DTO type imports from src', () => {
+  it('blocks type imports from local Convex modules', () => {
     expect(
       analyzeImportBoundaries([
         {
           filePath: 'src/example.ts',
           source: [
-            "import type { AnyItem } from 'convex/sidebarItems/types/types'",
+            "import type { PrivateResource } from 'convex/resources/privateTypes'",
             "import type { MapItem } from 'convex/gameMaps/types'",
           ].join('\n'),
         },
       ]),
     ).toEqual([
-      'src/example.ts:1 src may not import type from local Convex module convex/sidebarItems/types/types',
+      'src/example.ts:1 src may not import type from local Convex module convex/resources/privateTypes',
       'src/example.ts:2 src may not import type from local Convex module convex/gameMaps/types',
     ])
   })
@@ -139,25 +139,6 @@ describe('import boundary checks', () => {
       ]),
     ).toEqual([
       'src/example.ts:1 src may not import type from local Convex module convex/gameMaps/types',
-    ])
-  })
-
-  it('blocks P01.1 contract families from returning to src imports', () => {
-    expect(
-      analyzeImportBoundaries([
-        {
-          filePath: 'src/example.ts',
-          source: [
-            "import type { ClientError } from 'convex/errors'",
-            "import { MAX_FILE_SIZE } from 'convex/storage/validation'",
-            "import type { ResourceCommand } from 'convex/sidebarItems/filesystem/commands'",
-          ].join('\n'),
-        },
-      ]),
-    ).toEqual([
-      'src/example.ts:1 src may not import type from local Convex module convex/errors',
-      'src/example.ts:2 src may not import value from local Convex module convex/storage/validation',
-      'src/example.ts:3 src may not import type from local Convex module convex/sidebarItems/filesystem/commands',
     ])
   })
 
@@ -307,25 +288,6 @@ describe('import boundary checks', () => {
       'src/editor-adapters/live/example.ts:4 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/game-maps',
       'src/editor-adapters/live/example.ts:5 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/notes',
       'src/editor-adapters/live/example.ts:6 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/adapter',
-    ])
-  })
-
-  it('blocks undeclared legacy resource models', () => {
-    expect(
-      analyzeImportBoundaries([
-        {
-          filePath: 'src/editor-adapters/live/example.ts',
-          source: [
-            "import { createWorkspaceResourceReadModel } from '@wizard-archive/editor/workspace/items'",
-            "import type { AnyItem } from '@wizard-archive/editor/workspace/items'",
-            "import { RESOURCE_TYPES } from '@wizard-archive/editor/resources/items-persistence-contract'",
-          ].join('\n'),
-        },
-      ]),
-    ).toEqual([
-      'src/editor-adapters/live/example.ts:1 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/workspace/items',
-      'src/editor-adapters/live/example.ts:2 src/editor-adapters may not import type from unapproved editor package subpath @wizard-archive/editor/workspace/items',
-      'src/editor-adapters/live/example.ts:3 src/editor-adapters may not import value from unapproved editor package subpath @wizard-archive/editor/resources/items-persistence-contract',
     ])
   })
 

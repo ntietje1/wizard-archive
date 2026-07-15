@@ -13,7 +13,7 @@
     "start": "vp exec node .output/server/index.mjs",
     "generate:brand-assets": "vp exec node scripts/generate-brand-assets.mjs",
     "check": "vp check",
-    "check:editor-sdk": "vp run build:editor-package && vp exec tsc -p packages/editor/tsconfig.json --noEmit && vp test run --config vitest.editor-package.config.ts && vp exec node scripts/editor-sdk-portability.mjs && vp exec node scripts/editor-sdk-vocabulary.mjs && vp exec node scripts/resource-architecture.mjs",
+    "check:editor-sdk": "vp run build:editor-package && vp exec tsc -p packages/editor/tsconfig.json --noEmit && vp test run --config vitest.editor-package.config.ts && vp exec node scripts/editor-sdk-portability.mjs && vp exec node scripts/resource-architecture.mjs",
     "check:ui-package": "vp exec tsc -p packages/ui/tsconfig.json --noEmit",
     "format": "vp fmt .",
     "lint": "vp lint . && vp run lint:convex",

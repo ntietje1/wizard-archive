@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi } from 'vite-plus/test'
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
 
 // Single cast point for partial query mocks — unavoidable since tests

@@ -596,7 +596,7 @@ async function copyResourceLink(
     return
   }
   const url = new URL(
-    `/campaigns/${runtime.scope.campaignId}/editor?item=${resource.id}`,
+    `/campaigns/${runtime.scope.campaignId}/editor?resource=${resource.id}`,
     globalThis.location?.origin ?? 'https://wizard-archive.invalid',
   )
   await navigator.clipboard.writeText(url.href)

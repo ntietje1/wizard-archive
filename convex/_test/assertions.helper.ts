@@ -1,4 +1,4 @@
-import { expect } from 'vitest'
+import { expect } from 'vite-plus/test'
 import { ConvexError } from 'convex/values'
 import { isClientError } from '../../shared/errors/client'
 import type { ClientErrorCode } from '../../shared/errors/client'

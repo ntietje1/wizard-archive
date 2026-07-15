@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { deduplicateSlug, parseSlug, slugify, validateSlug } from '../../../shared/slugs'
 
 describe('slugify', () => {

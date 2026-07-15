@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vite-plus/test'
 import { usePanelPreference } from '../use-panel-preference'
 import { usePanelPreferenceStore } from '@wizard-archive/ui/panel-preferences/store'
 

@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import {
   InMemoryResourceCatalog,
   InMemoryResourceOperationExecutor,
-} from '../in-memory-resource-catalog'
-import { defineResourceCatalogConformance } from './resource-catalog-conformance'
-import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
-import { canonicalizeResourceTitle } from '../resource-record'
-import type { AuthoritativeResourceOperationExecutor } from '../resource-command-contract'
+} from '@wizard-archive/editor/resources/in-memory-catalog'
+import { defineResourceCatalogConformance } from '../../../../../shared/test/resource-catalog-conformance'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+import type { AuthoritativeResourceOperationExecutor } from '@wizard-archive/editor/resources/command-contract'
 
 defineResourceCatalogConformance('in-memory', (options) => {
   const catalog = new InMemoryResourceCatalog()

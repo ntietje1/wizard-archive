@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 
 describe('SelectContent', () => {

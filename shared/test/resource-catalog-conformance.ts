@@ -1,27 +1,32 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
+import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CampaignId,
+  CampaignMemberId,
   DomainIdByKind,
   DomainIdKind,
   ImportJobId,
   OperationId,
   ResourceId,
-} from '../domain-id'
+} from '@wizard-archive/editor/resources/domain-id'
 import type {
   ApplicationResourceRole,
   ResourceCatalogReader,
   SourcePathAlias,
-} from '../resource-catalog-contract'
+} from '@wizard-archive/editor/resources/catalog-contract'
 import type {
   AuthoritativeResourceOperationExecutor,
   CommandEnvelope,
   ResourceCommandReceipt,
   ResourceStructureCommand,
   ResourceStructureCommandResult,
-} from '../resource-command-contract'
-import { canonicalizeResourceTitle } from '../resource-record'
-import type { ResourceOperationAuthorizer } from '../in-memory-resource-catalog'
+} from '@wizard-archive/editor/resources/command-contract'
+import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
+
+type ResourceOperationAuthorizer = (
+  actorId: CampaignMemberId,
+  envelope: CommandEnvelope<ResourceStructureCommand>,
+) => boolean | Promise<boolean>
 
 type CatalogUnderTest = AuthoritativeResourceOperationExecutor & {
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>

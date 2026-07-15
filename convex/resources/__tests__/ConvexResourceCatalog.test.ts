@@ -17,11 +17,11 @@ import type { CampaignMutationCtx } from '../../functions'
 import { setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
-import { defineResourceCatalogConformance } from '../../../packages/editor/src/resources/__tests__/resource-catalog-conformance'
+import { defineResourceCatalogConformance } from '../../../shared/test/resource-catalog-conformance'
 import type {
   ResourceCatalogConformanceFactory,
   ResourceCatalogConformanceRuntime,
-} from '../../../packages/editor/src/resources/__tests__/resource-catalog-conformance'
+} from '../../../shared/test/resource-catalog-conformance'
 import { ConvexResourceCatalog } from '../functions/ConvexResourceCatalog'
 import { executeStructureCommand } from '../functions/executeStructureCommand'
 import {

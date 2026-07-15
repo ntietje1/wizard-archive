@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { createTestContext } from '../../_test/setup.helper'
 import { setupUser } from '../../_test/identities.helper'
 import { expectNotAuthenticated } from '../../_test/assertions.helper'

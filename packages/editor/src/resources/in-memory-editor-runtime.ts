@@ -58,11 +58,11 @@ class InMemoryContentSource<TLocal, TReady> implements ResourceContentSource<TLo
   readonly #states = new Map<ResourceId, ResourceState<TLocal, TReady>>()
 
   constructor(ready: ReadonlyArray<ReadyContent<TReady>>) {
-    for (const item of ready) {
-      this.#states.set(item.resourceId, {
+    for (const entry of ready) {
+      this.#states.set(entry.resourceId, {
         status: 'ready',
-        content: item.content,
-        version: item.version,
+        content: entry.content,
+        version: entry.version,
       })
     }
   }

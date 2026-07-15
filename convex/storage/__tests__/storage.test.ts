@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { api } from '../../_generated/api'
 import { expectNotAuthenticated } from '../../_test/assertions.helper'
 import { setupUser } from '../../_test/identities.helper'

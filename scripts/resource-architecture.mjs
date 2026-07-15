@@ -4,9 +4,26 @@ import { pathToFileURL } from 'node:url'
 
 const sourceRules = [
   {
+    className: 'legacy_editor_vocabulary',
+    files: /^packages\/editor\/src\//,
+    pattern:
+      /FileSystem\w*|SidebarItem\w*|SIDEBAR_ITEM\w*|AllPlayers\w*|initialItemId|navigateToItem|sidebarSlots|sidebarSort|showSidebar|ResourceShellSort|[?&]item=/,
+  },
+  {
+    className: 'provider_identity_leakage',
+    files: /^packages\/editor\/src\//,
+    pattern: /\b(?:SharedId|SessionRowId|WorkspaceMemberId|authUserId|storageId|_id)\b|\bId\s*</,
+  },
+  {
+    className: 'pre_cutover_compatibility',
+    files: /^packages\/editor\/src\//,
+    pattern: /migrateLegacy|stripLegacy|LegacyMedia|createLegacy/,
+  },
+  {
     className: 'provider_or_composite_identity',
     files: /resources\/(domain-id|resource-record)\.ts$/,
-    pattern: /ProviderId|providerId|composite(?:Id|Key)|resourceKey|temporaryId|tempId|slug/i,
+    pattern:
+      /ProviderId|providerId|composite(?:Id|Key)|resourceKey|temporaryId|tempId|slug|exportJob|resourceShare/i,
   },
   {
     className: 'catalog_or_loading_duplication',
@@ -59,6 +76,8 @@ const sourceRules = [
 ]
 
 const forbiddenPaths = [
+  /packages\/editor\/src\/filesystem(?:\/|$)/,
+  /packages\/editor\/src\/notes\/document\/legacy-media-migration\.[tj]s$/,
   /(?:^|\/)sidebarItems(?:\/|$)/,
   /(?:^|\/)sidebarShares(?:\/|$)/,
   /(?:^|\/)blockShares(?:\/|$)/,
@@ -67,6 +86,8 @@ const forbiddenPaths = [
   /(?:^|\/)yjsSync(?:\/|$)/,
   /use-last-workspace-item\.[tj]sx?$/,
 ]
+
+const forbiddenExportPatterns = [/^\.\/filesystem(?:\/|$)/]
 
 const forbiddenExports = new Set([
   './canvas/item-contract',
@@ -90,7 +111,11 @@ const forbiddenExports = new Set([
 export function analyzeResourceArchitecture(files, packageJson = { exports: {} }) {
   const fileViolations = files.flatMap(analyzeFile)
   const exportViolations = Object.keys(packageJson.exports ?? {})
-    .filter((exportPath) => forbiddenExports.has(exportPath))
+    .filter(
+      (exportPath) =>
+        forbiddenExports.has(exportPath) ||
+        forbiddenExportPatterns.some((pattern) => pattern.test(exportPath)),
+    )
     .map((exportPath) => ({ className: 'legacy_public_export', path: exportPath }))
   const violations = [...fileViolations, ...exportViolations]
   return violations.sort((left, right) =>

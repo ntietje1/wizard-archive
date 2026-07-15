@@ -26,17 +26,6 @@ const ignoredPathPrefixes = ['convex/_generated/']
 const packageConvexModules = new Set(['convex/react', 'convex/server', 'convex/values'])
 const generatedConvexDataModel = 'convex/_generated/dataModel'
 const generatedConvexApi = 'convex/_generated/api'
-const blockedP01ContractPrefixes = [
-  'convex/errors',
-  'convex/storage/validation',
-  'convex/links',
-  'convex/permissions',
-  'convex/editors/types',
-  'convex/userPreferences/types',
-  'convex/sidebarItems/filesystem',
-  'convex/sidebarItems/validation/parent',
-  'convex/sidebarItems/functions/defaultItemName',
-]
 const editorPackageName = '@wizard-archive/editor'
 const uiPackageName = '@wizard-archive/ui'
 const editorPackageJson = JSON.parse(
@@ -89,12 +78,6 @@ function lineNumber(source, index) {
   return source.slice(0, index).split('\n').length
 }
 
-function isBlockedP01Contract(specifier) {
-  return blockedP01ContractPrefixes.some(
-    (prefix) => specifier === prefix || specifier.startsWith(`${prefix}/`),
-  )
-}
-
 function isGeneratedApiDataBoundary(filePath) {
   return (
     filePath.startsWith('src/editor-adapters/') ||
@@ -120,7 +103,6 @@ function isAllowedSrcConvexImport(filePath, specifier) {
   if (packageConvexModules.has(specifier)) return true
   if (specifier === generatedConvexDataModel) return isGeneratedDataModelBoundary(filePath)
   if (specifier === generatedConvexApi) return isGeneratedApiDataBoundary(filePath)
-  if (isBlockedP01Contract(specifier)) return false
   return false
 }
 
@@ -212,6 +194,9 @@ function srcConvexImportViolation(filePath, source, index, specifier, kind) {
 function sharedBoundaryViolation(filePath, source, index, specifier, kind, sourceZone, targetZone) {
   if (sourceZone !== 'shared') return null
   if (specifier === `${editorPackageName}/resources/domain-id`) {
+    return null
+  }
+  if (filePath.startsWith('shared/test/') && backendSafeEditorPackageSpecifiers.has(specifier)) {
     return null
   }
   if (!['convex', 'src', 'editor-package', 'ui-package'].includes(targetZone)) return null

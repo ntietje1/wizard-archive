@@ -11,6 +11,21 @@ describe('minimal resource architecture', () => {
 
   it.each([
     [
+      'legacy_editor_vocabulary',
+      'packages/editor/src/index.ts',
+      'sidebarSlots: { railStartControls: null }',
+    ],
+    [
+      'provider_identity_leakage',
+      'packages/editor/src/resources/example.ts',
+      'type ResourceOwner = SharedId<"sidebarItems">',
+    ],
+    [
+      'pre_cutover_compatibility',
+      'packages/editor/src/notes/document/model.ts',
+      'function migrateLegacyBlocks() {}',
+    ],
+    [
       'provider_or_composite_identity',
       'packages/editor/src/resources/resource-record.ts',
       'type ProviderId = string',
@@ -74,6 +89,14 @@ describe('minimal resource architecture', () => {
     ).toContainEqual({
       className: 'legacy_public_export',
       path: './resources/transaction-contract',
+    })
+    expect(
+      analyzeResourceArchitecture([], {
+        exports: { './filesystem/catalog': './dist/filesystem/catalog.mjs' },
+      }),
+    ).toContainEqual({
+      className: 'legacy_public_export',
+      path: './filesystem/catalog',
     })
   })
 })

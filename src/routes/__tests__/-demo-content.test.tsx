@@ -66,7 +66,7 @@ describe('LocalDemoRouteContent', () => {
     expect(screen.getByText('Loading demo workspace')).toBeInTheDocument()
   })
 
-  it('mounts the local workspace from item URL state', () => {
+  it('mounts the local workspace from resource URL state', () => {
     clientOnlyState.renderClient = true
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
     const resourceId = scenario.workspace.snapshot.resources[0]!.id
