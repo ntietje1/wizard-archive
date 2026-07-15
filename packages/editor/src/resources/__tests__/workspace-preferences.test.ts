@@ -10,6 +10,30 @@ import type {
 } from '../workspace-preferences'
 
 describe('WorkspacePreferencesController', () => {
+  it('projects the same bounded panel size that persistence receives', () => {
+    expect(
+      applyWorkspacePreferenceChange(DEFAULT_WORKSPACE_PREFERENCES, {
+        type: 'panel',
+        panel: 'left',
+        size: 1,
+      }).panels.left.size,
+    ).toBe(200)
+    expect(
+      applyWorkspacePreferenceChange(DEFAULT_WORKSPACE_PREFERENCES, {
+        type: 'panel',
+        panel: 'right',
+        size: 1000,
+      }).panels.right.size,
+    ).toBe(600)
+    expect(
+      applyWorkspacePreferenceChange(DEFAULT_WORKSPACE_PREFERENCES, {
+        type: 'panel',
+        panel: 'left',
+        size: Number.NaN,
+      }).panels.left.size,
+    ).toBe(DEFAULT_WORKSPACE_PREFERENCES.panels.left.size)
+  })
+
   it('keeps a newer optimistic preference when an older save fails', async () => {
     const saves: Array<ReturnType<typeof deferred<WorkspacePreferencesSnapshot>>> = []
     const controller = new WorkspacePreferencesController({

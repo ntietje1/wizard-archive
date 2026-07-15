@@ -63,6 +63,9 @@ export const DEFAULT_WORKSPACE_PREFERENCES: WorkspacePreferences = {
   },
 }
 
+const MIN_WORKSPACE_PANEL_SIZE = 200
+const MAX_WORKSPACE_PANEL_SIZE = 600
+
 export function applyWorkspacePreferenceChange(
   preferences: WorkspacePreferences,
   change: WorkspacePreferenceChange,
@@ -79,13 +82,21 @@ export function applyWorkspacePreferenceChange(
         panels: {
           ...preferences.panels,
           [change.panel]: {
-            size: change.size ?? current.size,
+            size:
+              change.size === undefined
+                ? current.size
+                : normalizeWorkspacePanelSize(change.size, current.size),
             visible: change.visible ?? current.visible,
           },
         },
       }
     }
   }
+}
+
+function normalizeWorkspacePanelSize(size: number, fallback: number): number {
+  if (!Number.isFinite(size)) return fallback
+  return Math.min(MAX_WORKSPACE_PANEL_SIZE, Math.max(MIN_WORKSPACE_PANEL_SIZE, Math.round(size)))
 }
 
 type WorkspacePreferencesPersistence = Readonly<{
