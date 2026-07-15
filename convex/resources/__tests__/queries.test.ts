@@ -356,20 +356,24 @@ describe('authorized resource projection', () => {
       ]),
     })
 
-    await expect(
-      asDm(campaign).query(api.resources.queries.searchResources, {
-        campaignId: campaignUuid,
-        query: 'adventure',
-      }),
-    ).resolves.toEqual([{ resourceId: noteId, match: { type: 'title' } }])
-    await expect(
-      asDm(campaign).query(api.resources.queries.searchResources, {
-        campaignId: campaignUuid,
-        query: 'citadel',
-      }),
-    ).resolves.toEqual([
-      { resourceId: noteId, match: { type: 'body', text: 'The hidden citadel awaits.' } },
-    ])
+    const titleSearch = await asDm(campaign).query(api.resources.queries.searchResources, {
+      campaignId: campaignUuid,
+      query: 'adventure',
+    })
+    expect(titleSearch).toMatchObject({
+      results: [{ resourceId: noteId, match: { type: 'title' } }],
+      snapshot: { resources: [{ id: noteId }], missingResourceIds: [], collections: [] },
+    })
+    const bodySearch = await asDm(campaign).query(api.resources.queries.searchResources, {
+      campaignId: campaignUuid,
+      query: 'citadel',
+    })
+    expect(bodySearch).toMatchObject({
+      results: [
+        { resourceId: noteId, match: { type: 'body', text: 'The hidden citadel awaits.' } },
+      ],
+      snapshot: { resources: [{ id: noteId }], missingResourceIds: [], collections: [] },
+    })
   })
 
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {

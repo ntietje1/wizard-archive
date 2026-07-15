@@ -1272,7 +1272,10 @@ describe('resource structure commands', () => {
     expect(first).toMatchObject({ status: 'completed', receipt: { resourceIds: [resourceId] } })
     await expect(
       asDm(campaign).query(api.resources.queries.loadBookmarks, { campaignId: campaignUuid }),
-    ).resolves.toEqual([resourceId])
+    ).resolves.toMatchObject({
+      resourceIds: [resourceId],
+      snapshot: { resources: [{ id: resourceId }], missingResourceIds: [], collections: [] },
+    })
   })
 
   async function getCampaignUuid(campaignId: Id<'campaigns'>) {

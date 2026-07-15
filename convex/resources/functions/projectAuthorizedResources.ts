@@ -122,6 +122,40 @@ export async function loadAuthorizedResource(
   })
 }
 
+export async function loadAuthorizedResourceProjection(
+  ctx: CampaignQueryCtx,
+  resourceIds: ReadonlyArray<ResourceId>,
+): Promise<AuthorizedResourceSnapshot> {
+  const scope = projectionScope(ctx)
+  const uniqueIds = Array.from(new Set(resourceIds))
+  if (ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    return await createSnapshot({
+      scope,
+      resources: [],
+      missingResourceIds: uniqueIds,
+      collections: [],
+    })
+  }
+  const catalog = new ConvexResourceCatalog(ctx.db)
+  const resources = new Map(
+    (await Promise.all(uniqueIds.map((id) => catalog.getResource(scope.campaignId, id)))).flatMap(
+      (resource) => (resource === null ? [] : [[resource.id, resource] as const]),
+    ),
+  )
+  const projected = await Promise.all(
+    Array.from(resources.values(), async (resource) => [
+      ...(await visibleSpine(catalog, resource)),
+      resource,
+    ]),
+  )
+  return await createSnapshot({
+    scope,
+    resources: await uniqueSummaries(catalog, projected.flat()),
+    missingResourceIds: uniqueIds.filter((resourceId) => !resources.has(resourceId)),
+    collections: [],
+  })
+}
+
 export async function loadAuthorizedCollection(
   ctx: CampaignQueryCtx,
   input: {

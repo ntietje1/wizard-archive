@@ -6,6 +6,7 @@ import type {
   ResourceBookmarkGateway,
   WorkspaceSearch,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
+import type { ResourceLoadResult } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceBookmarkCommandResult } from '@wizard-archive/editor/resources/command-contract'
 import {
   addLiveRecentResource,
@@ -15,12 +16,28 @@ import {
 
 type BookmarkArgs = FunctionArgs<typeof api.resources.mutations.executeBookmarkCommand>
 type BookmarkResult = FunctionReturnType<typeof api.resources.mutations.executeBookmarkCommand>
+type StoredProjection = FunctionReturnType<typeof api.resources.queries.loadResource>
+type BookmarkProjection = Readonly<{
+  resourceIds: ReadonlyArray<string>
+  snapshot: StoredProjection
+}>
+type SearchProjection = Readonly<{
+  results: ReadonlyArray<
+    Readonly<{
+      resourceId: string
+      match: Readonly<{ type: 'title' }> | Readonly<{ type: 'body'; text: string }>
+    }>
+  >
+  snapshot: StoredProjection
+}>
+type ApplyProjection = (snapshot: StoredProjection) => ResourceLoadResult
 
 export function createLiveResourceBookmarks(
   campaignId: CampaignId,
+  applyProjection: ApplyProjection,
   backend: Readonly<{
     execute(args: BookmarkArgs): Promise<BookmarkResult>
-    watch(apply: (resourceIds: ReadonlyArray<string>) => void): () => void
+    watch(apply: (projection: BookmarkProjection) => void): () => void
   }>,
 ): Readonly<{ gateway: ResourceBookmarkGateway; dispose(): void }> {
   let snapshot:
@@ -29,8 +46,9 @@ export function createLiveResourceBookmarks(
     state: 'unknown',
   }
   const listeners = new Set<() => void>()
-  const dispose = backend.watch((ids) => {
-    snapshot = { state: 'known', value: new Set(ids.map(resourceId)) }
+  const dispose = backend.watch((projection) => {
+    if (applyProjection(projection.snapshot).status !== 'completed') return
+    snapshot = { state: 'known', value: new Set(projection.resourceIds.map(resourceId)) }
     for (const listener of listeners) listener()
   })
   return {
@@ -71,16 +89,22 @@ export function createLiveResourceBookmarks(
 
 export function createLiveWorkspaceSearch(
   campaignId: CampaignId,
+  applyProjection: ApplyProjection,
   search: (
     args: FunctionArgs<typeof api.resources.queries.searchResources>,
-  ) => Promise<FunctionReturnType<typeof api.resources.queries.searchResources>>,
+  ) => Promise<SearchProjection>,
 ): WorkspaceSearch {
   return {
-    search: async (query) =>
-      (await search({ campaignId, query })).map((result) => ({
+    search: async (query) => {
+      const projection = await search({ campaignId, query })
+      if (applyProjection(projection.snapshot).status !== 'completed') {
+        throw new TypeError('Invalid authorized search projection')
+      }
+      return projection.results.map((result) => ({
         resourceId: resourceId(result.resourceId),
         match: result.match,
-      })),
+      }))
+    },
     recent: () => getLiveRecentResources(campaignId),
     subscribeRecent: (listener) => subscribeToLiveRecentResources(campaignId, listener),
     recordOpened: (id) => addLiveRecentResource(campaignId, id),

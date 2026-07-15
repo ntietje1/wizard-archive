@@ -4,6 +4,7 @@ import { campaignQuery, dmQuery } from '../functions'
 import {
   loadAuthorizedCollection,
   loadAuthorizedResource,
+  loadAuthorizedResourceProjection,
 } from './functions/projectAuthorizedResources'
 import {
   authorizedResourceSnapshotValidator,
@@ -23,6 +24,16 @@ type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotV
 const authorizedResourceCollectionPageValidator = v.object({
   snapshot: authorizedResourceSnapshotValidator,
   cursor: v.nullable(v.string()),
+})
+
+const authorizedResourceBookmarksValidator = v.object({
+  resourceIds: v.array(resourceIdValidator),
+  snapshot: authorizedResourceSnapshotValidator,
+})
+
+const authorizedResourceSearchValidator = v.object({
+  results: v.array(workspaceSearchResultValidator),
+  snapshot: authorizedResourceSnapshotValidator,
 })
 
 type StoredAuthorizedResourceCollectionPage = Infer<
@@ -115,7 +126,7 @@ export const loadContent = campaignQuery({
 
 export const loadBookmarks = dmQuery({
   args: {},
-  returns: v.array(resourceIdValidator),
+  returns: authorizedResourceBookmarksValidator,
   handler: async (ctx) => {
     const rows = await ctx.db
       .query('resourceBookmarks')
@@ -125,16 +136,30 @@ export const loadBookmarks = dmQuery({
           .eq('memberUuid', ctx.resourceScope.actorId),
       )
       .collect()
-    return rows.map((row) => row.resourceUuid)
+    const resourceIds = rows.map((row) => assertDomainId(DOMAIN_ID_KIND.resource, row.resourceUuid))
+    return {
+      resourceIds,
+      snapshot: storedSnapshot(await loadAuthorizedResourceProjection(ctx, resourceIds)),
+    }
   },
 })
 
 export const searchResources = dmQuery({
   args: { query: v.string() },
-  returns: v.array(workspaceSearchResultValidator),
-  handler: async (ctx, args) =>
-    (await searchResourcesFn(ctx, args.query)).map((result) => ({
+  returns: authorizedResourceSearchValidator,
+  handler: async (ctx, args) => {
+    const results = (await searchResourcesFn(ctx, args.query)).map((result) => ({
       resourceId: result.resourceId,
       match: result.match.type === 'title' ? { type: 'title' as const } : { ...result.match },
-    })),
+    }))
+    return {
+      results,
+      snapshot: storedSnapshot(
+        await loadAuthorizedResourceProjection(
+          ctx,
+          results.map((result) => result.resourceId),
+        ),
+      ),
+    }
+  },
 })

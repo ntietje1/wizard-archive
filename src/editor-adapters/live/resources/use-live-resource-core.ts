@@ -142,7 +142,7 @@ function createScopedLiveResourceRuntime(
   const maps = createLiveResourceContentSource('map', contentBackend('map'))
   const canvases = createLiveResourceContentSource('canvas', contentBackend('canvas'))
   const preferences = createLiveWorkspacePreferences(currentScope.campaignId, convex)
-  const bookmarks = createLiveResourceBookmarks(currentScope.campaignId, {
+  const bookmarks = createLiveResourceBookmarks(currentScope.campaignId, base.applyProjection, {
     execute: (args) => convex.mutation(api.resources.mutations.executeBookmarkCommand, args),
     watch: (apply) => {
       const watch = convex.watchQuery(api.resources.queries.loadBookmarks, {
@@ -151,7 +151,7 @@ function createScopedLiveResourceRuntime(
       return subscribeToWatch(watch, apply)
     },
   })
-  const search = createLiveWorkspaceSearch(currentScope.campaignId, (args) =>
+  const search = createLiveWorkspaceSearch(currentScope.campaignId, base.applyProjection, (args) =>
     convex.query(api.resources.queries.searchResources, args),
   )
 

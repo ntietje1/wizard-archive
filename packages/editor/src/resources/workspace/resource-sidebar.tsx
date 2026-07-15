@@ -346,11 +346,6 @@ function BookmarkedResourceCollection({
   visibleIds: () => ReadonlyArray<ResourceId>
 }) {
   const bookmarkedIds = bookmarks.state === 'known' ? bookmarks.value : EMPTY_BOOKMARKS
-  useEffect(() => {
-    void Promise.all(
-      [...bookmarkedIds].map((resourceId) => runtime.resources.loader.ensureResource(resourceId)),
-    )
-  }, [bookmarkedIds, runtime.resources.loader])
   if (bookmarks.state === 'unknown')
     return (
       <SidebarState load={{ result: null, retry: () => {} }} pendingLabel="Loading bookmarks…" />

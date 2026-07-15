@@ -91,10 +91,7 @@ function OpenResourceSearchDialog({
       setState((current) => ({ status: 'searching', results: current.results }))
       void search
         .search(normalized)
-        .then(async (results) => {
-          await Promise.all(
-            results.map((result) => runtime.resources.loader.ensureResource(result.resourceId)),
-          )
+        .then((results) => {
           if (active) setState({ status: 'ready', results })
         })
         .catch(() => {
@@ -105,7 +102,7 @@ function OpenResourceSearchDialog({
       active = false
       window.clearTimeout(timer)
     }
-  }, [query, runtime.resources.loader, search])
+  }, [query, search])
 
   const recentResults = recent.flatMap((resourceId) =>
     snapshot.lookup(resourceId).state === 'known'
