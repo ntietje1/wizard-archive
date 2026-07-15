@@ -97,10 +97,6 @@
       "types": "./dist/resources/in-memory-resource-catalog.d.mts",
       "default": "./dist/resources/in-memory-resource-catalog.mjs"
     },
-    "./resources/in-memory-runtime": {
-      "types": "./dist/resources/in-memory-resource-runtime.d.mts",
-      "default": "./dist/resources/in-memory-resource-runtime.mjs"
-    },
     "./resources/in-memory-editor-runtime": {
       "types": "./dist/resources/in-memory-editor-runtime.d.mts",
       "default": "./dist/resources/in-memory-editor-runtime.mjs"
@@ -129,33 +125,9 @@
       "types": "./dist/resources/resource-optimistic-runtime.d.mts",
       "default": "./dist/resources/resource-optimistic-runtime.mjs"
     },
-    "./resources/authored-destination-contract": {
-      "types": "./dist/resources/authored-destination-contract.d.mts",
-      "default": "./dist/resources/authored-destination-contract.mjs"
-    },
     "./resources/authored-destination": {
       "types": "./dist/resources/authored-destination.d.mts",
       "default": "./dist/resources/authored-destination.mjs"
-    },
-    "./resources/portable-path-contract": {
-      "types": "./dist/resources/portable-path-contract.d.mts",
-      "default": "./dist/resources/portable-path-contract.mjs"
-    },
-    "./resources/portable-path-projector": {
-      "types": "./dist/resources/portable-path-projector.d.mts",
-      "default": "./dist/resources/portable-path-projector.mjs"
-    },
-    "./resources/wizard-archive-contract": {
-      "types": "./dist/resources/wizard-archive-contract.d.mts",
-      "default": "./dist/resources/wizard-archive-contract.mjs"
-    },
-    "./resources/wizard-archive-codec": {
-      "types": "./dist/resources/wizard-archive-codec.d.mts",
-      "default": "./dist/resources/wizard-archive-codec.mjs"
-    },
-    "./resources/wizard-archive-transfer-planner": {
-      "types": "./dist/resources/wizard-archive-transfer-planner.d.mts",
-      "default": "./dist/resources/wizard-archive-transfer-planner.mjs"
     },
     "./resources/editor-runtime-contract": {
       "types": "./dist/resources/editor-runtime-contract.d.mts",
@@ -216,7 +188,6 @@
       "./resources/graph-transition",
       "./resources/operation-ledger",
       "./resources/in-memory-catalog",
-      "./resources/in-memory-runtime",
       "./resources/in-memory-editor-runtime",
       "./resources/content-session-contract",
       "./resources/session-store",
@@ -224,13 +195,7 @@
       "./resources/optimism-contract",
       "./resources/optimistic-index",
       "./resources/optimistic-runtime",
-      "./resources/authored-destination-contract",
       "./resources/authored-destination",
-      "./resources/portable-path-contract",
-      "./resources/portable-path-projector",
-      "./resources/wizard-archive-contract",
-      "./resources/wizard-archive-codec",
-      "./resources/wizard-archive-transfer-planner",
       "./resources/editor-runtime-contract",
       "./resources/search-policy",
       "./resources/file-content-contract",

@@ -5,8 +5,6 @@ import { parseSafeHttpsUrl } from '../authored-destination-contract'
 import type { ContentPendingState } from '../content-session-contract'
 import { assertSha256Digest, initialVersion } from '../component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '../domain-id'
-import type { PortablePathProjection } from '../portable-path-contract'
-import { PORTABLE_PATH_VERSION } from '../portable-path-contract'
 import type {
   CommandEnvelope,
   ResourceCommandReceipt,
@@ -18,20 +16,10 @@ import type {
   ResourceIndexLoader,
 } from '../resource-index-contract'
 import { RESOURCE_KIND, canonicalizeResourceTitle } from '../resource-record'
-import type { WizardArchiveManifest } from '../wizard-archive-contract'
-import {
-  WIZARD_ARCHIVE_CANVAS_SECTION_VERSION,
-  WIZARD_ARCHIVE_FILE_SECTION_VERSION,
-  WIZARD_ARCHIVE_MAP_SECTION_VERSION,
-  WIZARD_ARCHIVE_NOTE_SECTION_VERSION,
-  WIZARD_ARCHIVE_SCHEMA_VERSION,
-  WIZARD_ARCHIVE_VERSION,
-} from '../wizard-archive-contract'
 
 const campaignId = assertDomainId(DOMAIN_ID_KIND.campaign, '01890f47-f6c8-7a5b-8c9d-0123456789a1')
 const operationId = assertDomainId(DOMAIN_ID_KIND.operation, '01890f47-f6c8-7a5b-8c9d-0123456789a3')
 const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, '01890f47-f6c8-7a5b-8c9d-0123456789a4')
-const snapshotId = assertDomainId(DOMAIN_ID_KIND.snapshot, '01890f47-f6c8-7a5b-8c9d-0123456789a5')
 const blockId = assertDomainId(DOMAIN_ID_KIND.noteBlock, '01890f47-f6c8-7a5b-8c9d-0123456789a6')
 const version = initialVersion(assertSha256Digest('a'.repeat(64)))
 
@@ -109,40 +97,10 @@ describe('canonical contract fixtures', () => {
     expect(external?.url).toBe('https://example.com/path')
     expect(unresolved.rawTarget).toBe('../missing.md')
   })
-
-  it('models actual portable paths and one full-campaign manifest without plan identity', () => {
-    const projection = {
-      version: PORTABLE_PATH_VERSION,
-      entries: [],
-      warnings: [],
-      failures: [],
-    } satisfies PortablePathProjection
-    const manifest = {
-      version: WIZARD_ARCHIVE_VERSION,
-      schemaVersion: WIZARD_ARCHIVE_SCHEMA_VERSION,
-      scope: 'full_campaign',
-      sourceCampaignId: campaignId,
-      transferSnapshotId: snapshotId,
-      portablePathVersion: PORTABLE_PATH_VERSION,
-      resources: [],
-      tombstones: [],
-      aliases: [],
-      assetsFolderId: null,
-      sections: {
-        notes: { version: WIZARD_ARCHIVE_NOTE_SECTION_VERSION, entries: [] },
-        files: { version: WIZARD_ARCHIVE_FILE_SECTION_VERSION, entries: [] },
-        maps: { version: WIZARD_ARCHIVE_MAP_SECTION_VERSION, entries: [] },
-        canvases: { version: WIZARD_ARCHIVE_CANVAS_SECTION_VERSION, entries: [] },
-      },
-    } satisfies WizardArchiveManifest
-
-    expect(projection).not.toHaveProperty('planDigest')
-    expect(manifest.sourceCampaignId).toBe(campaignId)
-  })
 })
 
 describe('removed architecture boundaries', () => {
-  it('keeps replaced command, index, version, and archive models out of canonical contracts', () => {
+  it('keeps replaced command, index, and version models out of canonical contracts', () => {
     const command = readFileSync(
       'packages/editor/src/resources/resource-command-contract.ts',
       'utf8',
@@ -152,13 +110,11 @@ describe('removed architecture boundaries', () => {
       'packages/editor/src/resources/component-version.ts',
       'utf8',
     )
-    const archive = readFileSync('packages/editor/src/resources/wizard-archive-contract.ts', 'utf8')
 
     expect(command).not.toMatch(
       /needsDecision|inverse|undo|redo|emptyTrash|ifMatch|clientFingerprint/,
     )
     expect(index).not.toMatch(/ensureSubtree|providerCursor|operationId/)
     expect(componentVersion).not.toMatch(/concurrent|vectorClock|replicaId|codecRegistry/)
-    expect(archive).not.toMatch(/signature|attestation|trustClass|selectedResource/)
   })
 })
