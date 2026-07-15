@@ -131,6 +131,8 @@ describe('createLiveResourceIndexRuntime', () => {
     await runtime.loader.ensureCollection(query)
     await runtime.loader.ensureResource(resourceId)
     expect(loadResource).toHaveBeenCalledOnce()
+    const listener = vi.fn()
+    runtime.index.subscribe(listener)
     expect(runtime.applyProjection(snapshot([], { missingResourceIds: [resourceId] }))).toEqual({
       status: 'completed',
     })
@@ -141,6 +143,7 @@ describe('createLiveResourceIndexRuntime', () => {
       items: [],
       complete: true,
     })
+    expect(listener).toHaveBeenCalledOnce()
   })
 
   it('deduplicates concurrent collection loads and advances the saved cursor until complete', async () => {

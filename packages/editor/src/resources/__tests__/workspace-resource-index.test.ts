@@ -149,6 +149,30 @@ describe('authorized resource projection snapshots', () => {
     expect(index.getSnapshot().lookup(rootId).state).toBe('known')
     expect(index.getSnapshot().lookup(childId).state).toBe('known')
   })
+
+  it('atomically retracts authoritative missing resources', () => {
+    const index = new MutableWorkspaceResourceIndex(scope, indexRevision('empty'))
+    expect(
+      index.applyProjectionSnapshot(
+        authorizedSnapshot({
+          resources: [summary(rootId, { kind: 'folder' }), summary(childId)],
+          missingResourceIds: [],
+        }),
+        indexRevision('fragment-1'),
+      ),
+    ).toEqual({ status: 'applied' })
+    const listener = vi.fn()
+    index.subscribe(listener)
+
+    expect(
+      index.applyAuthoritativeProjectionSnapshot(
+        authorizedSnapshot({ resources: [], missingResourceIds: [childId] }),
+        indexRevision('authoritative-2'),
+      ),
+    ).toEqual({ status: 'applied' })
+    expect(index.getSnapshot().lookup(childId)).toEqual({ state: 'missing' })
+    expect(listener).toHaveBeenCalledOnce()
+  })
 })
 
 describe('MutableWorkspaceResourceIndex', () => {

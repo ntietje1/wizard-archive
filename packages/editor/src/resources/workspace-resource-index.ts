@@ -249,8 +249,12 @@ function matchingResourceIds(
   return resourceIds.sort()
 }
 
-function mergeProjectionState(current: IndexState, projection: IndexState): IndexState | null {
-  const resourceState = mergeProjectionResources(current, projection)
+function mergeProjectionState(
+  current: IndexState,
+  projection: IndexState,
+  retractMissing: boolean,
+): IndexState | null {
+  const resourceState = mergeProjectionResources(current, projection, retractMissing)
   if (!resourceState) return null
   const collections = mergeProjectionCollections(
     resourceState.resources,
@@ -262,7 +266,11 @@ function mergeProjectionState(current: IndexState, projection: IndexState): Inde
     : null
 }
 
-function mergeProjectionResources(current: IndexState, projection: IndexState) {
+function mergeProjectionResources(
+  current: IndexState,
+  projection: IndexState,
+  retractMissing: boolean,
+) {
   const resources = new Map(current.resources)
   const missingResourceIds = new Set(current.missingResourceIds)
   for (const resource of projection.resources.values()) {
@@ -274,7 +282,8 @@ function mergeProjectionResources(current: IndexState, projection: IndexState) {
     missingResourceIds.delete(resource.id)
   }
   for (const resourceId of projection.missingResourceIds) {
-    if (!resources.has(resourceId)) missingResourceIds.add(resourceId)
+    if (retractMissing) resources.delete(resourceId)
+    if (retractMissing || !resources.has(resourceId)) missingResourceIds.add(resourceId)
   }
   return { resources, missingResourceIds }
 }
@@ -501,13 +510,28 @@ export class MutableWorkspaceResourceIndex implements WorkspaceResourceIndexCont
     snapshot: AuthorizedResourceSnapshot,
     nextRevision: IndexRevision,
   ): ResourceIndexApplyResult {
+    return this.#applyProjectionSnapshot(snapshot, nextRevision, false)
+  }
+
+  applyAuthoritativeProjectionSnapshot(
+    snapshot: AuthorizedResourceSnapshot,
+    nextRevision: IndexRevision,
+  ): ResourceIndexApplyResult {
+    return this.#applyProjectionSnapshot(snapshot, nextRevision, true)
+  }
+
+  #applyProjectionSnapshot(
+    snapshot: AuthorizedResourceSnapshot,
+    nextRevision: IndexRevision,
+    retractMissing: boolean,
+  ): ResourceIndexApplyResult {
     if (!sameResourceProjectionScope(this.#scope, snapshot.scope)) {
       return { status: 'replacement_required', reason: 'wrong_scope' }
     }
     const projection = createState(snapshot)
     if (!projection) return { status: 'replacement_required', reason: 'invalid_projection' }
     const currentSignature = stateSignature(this.#state)
-    const state = mergeProjectionState(this.#state, projection)
+    const state = mergeProjectionState(this.#state, projection, retractMissing)
     if (!state) return { status: 'replacement_required', reason: 'invalid_projection' }
     const signature = stateSignature(state)
     if (signature === currentSignature) return { status: 'duplicate' }

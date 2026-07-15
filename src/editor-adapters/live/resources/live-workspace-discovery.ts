@@ -1,10 +1,15 @@
 import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import type { api } from 'convex/_generated/api'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
-import type { CampaignId, CampaignMemberId } from '@wizard-archive/editor/resources/domain-id'
+import type {
+  CampaignId,
+  CampaignMemberId,
+  ResourceId,
+} from '@wizard-archive/editor/resources/domain-id'
 import type {
   ResourceBookmarkGateway,
   WorkspaceSearch,
+  WorkspaceSearchResult,
 } from '@wizard-archive/editor/resources/editor-runtime-contract'
 import type { ResourceLoadResult } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceBookmarkCommandResult } from '@wizard-archive/editor/resources/command-contract'
@@ -16,20 +21,9 @@ import {
 
 type BookmarkArgs = FunctionArgs<typeof api.resources.mutations.executeBookmarkCommand>
 type BookmarkResult = FunctionReturnType<typeof api.resources.mutations.executeBookmarkCommand>
-type StoredProjection = FunctionReturnType<typeof api.resources.queries.loadResource>
-type BookmarkProjection = Readonly<{
-  resourceIds: ReadonlyArray<string>
-  snapshot: StoredProjection
-}>
-type SearchProjection = Readonly<{
-  results: ReadonlyArray<
-    Readonly<{
-      resourceId: string
-      match: Readonly<{ type: 'title' }> | Readonly<{ type: 'body'; text: string }>
-    }>
-  >
-  snapshot: StoredProjection
-}>
+type BookmarkProjection = FunctionReturnType<typeof api.resources.queries.loadBookmarks>
+type SearchProjection = FunctionReturnType<typeof api.resources.queries.searchResources>
+type StoredProjection = BookmarkProjection['snapshot']
 type ApplyProjection = (snapshot: StoredProjection) => ResourceLoadResult
 
 export function createLiveResourceBookmarks(
@@ -82,8 +76,14 @@ export function createLiveResourceBookmarks(
     start: () => {
       if (unsubscribe) return
       unsubscribe = backend.watch((projection) => {
+        let resourceIds: ReadonlyArray<ResourceId>
+        try {
+          resourceIds = readCoveredResourceIds(projection.resourceIds, projection.snapshot)
+        } catch {
+          return
+        }
         if (applyProjection(projection.snapshot).status !== 'completed') return
-        snapshot = { state: 'known', value: new Set(projection.resourceIds.map(resourceId)) }
+        snapshot = { state: 'known', value: new Set(resourceIds) }
         for (const listener of listeners) listener()
       })
     },
@@ -105,13 +105,15 @@ export function createLiveWorkspaceSearch(
   return {
     search: async (query) => {
       const projection = await search({ campaignId, query })
+      const results = readSearchResults(projection.results)
+      requireExactProjectionCoverage(
+        projection.snapshot,
+        new Set(results.map((result) => result.resourceId)),
+      )
       if (applyProjection(projection.snapshot).status !== 'completed') {
         throw new TypeError('Invalid authorized search projection')
       }
-      return projection.results.map((result) => ({
-        resourceId: resourceId(result.resourceId),
-        match: result.match,
-      }))
+      return results
     },
     recent: () => getLiveRecentResources(campaignId, actorId),
     subscribeRecent: (listener) => subscribeToLiveRecentResources(campaignId, actorId, listener),
@@ -134,4 +136,94 @@ function readBookmarkResult(result: BookmarkResult): ResourceBookmarkCommandResu
 
 function resourceId(value: string) {
   return assertDomainId(DOMAIN_ID_KIND.resource, value)
+}
+
+function readCoveredResourceIds(
+  values: ReadonlyArray<string>,
+  snapshot: StoredProjection,
+): ReadonlyArray<ResourceId> {
+  const resourceIds = values.map(resourceId)
+  const targets = new Set(resourceIds)
+  if (targets.size !== resourceIds.length) throw new TypeError('Duplicate projected resource')
+  requireExactProjectionCoverage(snapshot, targets)
+  return resourceIds
+}
+
+function readSearchResults(
+  values: SearchProjection['results'],
+): ReadonlyArray<WorkspaceSearchResult> {
+  const results = values.map((result) => ({
+    resourceId: resourceId(result.resourceId),
+    match: result.match,
+  }))
+  if (new Set(results.map((result) => result.resourceId)).size !== results.length) {
+    throw new TypeError('Duplicate search result')
+  }
+  return results
+}
+
+function requireExactProjectionCoverage(
+  snapshot: StoredProjection,
+  targets: ReadonlySet<ResourceId>,
+): void {
+  const resources = readProjectionResources(snapshot)
+  const missing = readMissingProjectionResources(snapshot, resources, targets)
+  const requiredResources = requiredProjectionResources(resources, missing, targets)
+  if (resources.size !== requiredResources.size) {
+    throw new TypeError('Projected resource coverage is not exact')
+  }
+}
+
+type ProjectionResource = Readonly<{ displayParentId: ResourceId | null }>
+
+function readProjectionResources(
+  snapshot: StoredProjection,
+): ReadonlyMap<ResourceId, ProjectionResource> {
+  const resources = new Map<ResourceId, Readonly<{ displayParentId: ResourceId | null }>>()
+  for (const source of snapshot.resources) {
+    const id = resourceId(source.id)
+    if (resources.has(id)) throw new TypeError('Duplicate projected resource')
+    resources.set(id, {
+      displayParentId: source.displayParentId === null ? null : resourceId(source.displayParentId),
+    })
+  }
+  return resources
+}
+
+function readMissingProjectionResources(
+  snapshot: StoredProjection,
+  resources: ReadonlyMap<ResourceId, ProjectionResource>,
+  targets: ReadonlySet<ResourceId>,
+): ReadonlySet<ResourceId> {
+  const missing = new Set<ResourceId>()
+  for (const value of snapshot.missingResourceIds) {
+    const id = resourceId(value)
+    if (missing.has(id) || resources.has(id) || !targets.has(id)) {
+      throw new TypeError('Invalid missing resource coverage')
+    }
+    missing.add(id)
+  }
+  return missing
+}
+
+function requiredProjectionResources(
+  resources: ReadonlyMap<ResourceId, ProjectionResource>,
+  missing: ReadonlySet<ResourceId>,
+  targets: ReadonlySet<ResourceId>,
+): ReadonlySet<ResourceId> {
+  const requiredResources = new Set<ResourceId>()
+  for (const target of targets) {
+    if (missing.has(target)) continue
+    let currentId: ResourceId | null = target
+    const spine = new Set<ResourceId>()
+    while (currentId !== null) {
+      if (spine.has(currentId)) throw new TypeError('Projected resource spine contains a cycle')
+      spine.add(currentId)
+      requiredResources.add(currentId)
+      const resource = resources.get(currentId)
+      if (!resource) throw new TypeError('Projected resource coverage is incomplete')
+      currentId = resource.displayParentId
+    }
+  }
+  return requiredResources
 }

@@ -65,6 +65,31 @@ describe('live workspace discovery', () => {
     bookmarks.dispose()
   })
 
+  it('rejects an incomplete bookmark envelope before applying or publishing it', () => {
+    let publish: ((value: BookmarkProjection) => void) | undefined
+    const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
+    const listener = vi.fn()
+    const bookmarks = createLiveResourceBookmarks(campaignId, applyProjection, {
+      execute: vi.fn(),
+      watch: (apply) => {
+        publish = apply
+        return () => {}
+      },
+    })
+    bookmarks.gateway.subscribe(listener)
+    bookmarks.start()
+
+    publish!({
+      resourceIds: [resourceId],
+      snapshot: { ...snapshot, resources: [] },
+    })
+
+    expect(applyProjection).not.toHaveBeenCalled()
+    expect(bookmarks.gateway.get()).toEqual({ state: 'unknown' })
+    expect(listener).not.toHaveBeenCalled()
+    bookmarks.dispose()
+  })
+
   it('hydrates search resource knowledge before returning results', async () => {
     const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
     const search = createLiveWorkspaceSearch(
@@ -83,5 +108,25 @@ describe('live workspace discovery', () => {
       { resourceId, match: { type: 'title' } },
     ])
     expect(applyProjection).toHaveBeenCalledWith(snapshot)
+  })
+
+  it('rejects an incomplete search envelope before applying it', async () => {
+    const applyProjection = vi.fn((): ResourceLoadResult => ({ status: 'completed' }))
+    const search = createLiveWorkspaceSearch(
+      campaignId,
+      actorId,
+      applyProjection,
+      vi.fn(() =>
+        Promise.resolve({
+          results: [{ resourceId, match: { type: 'title' as const } }],
+          snapshot: { ...snapshot, resources: [] },
+        }),
+      ),
+    )
+
+    await expect(search.search('discovery')).rejects.toThrow(
+      'Projected resource coverage is incomplete',
+    )
+    expect(applyProjection).not.toHaveBeenCalled()
   })
 })

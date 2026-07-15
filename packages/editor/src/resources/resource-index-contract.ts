@@ -151,6 +151,10 @@ export interface WorkspaceResourceIndexController extends WorkspaceResourceIndex
     snapshot: AuthorizedResourceSnapshot,
     nextRevision: IndexRevision,
   ): ResourceIndexApplyResult
+  applyAuthoritativeProjectionSnapshot(
+    snapshot: AuthorizedResourceSnapshot,
+    nextRevision: IndexRevision,
+  ): ResourceIndexApplyResult
   applyChangeSet(changeSet: AuthorizedResourceChangeSet): ResourceIndexApplyResult
 }
 
