@@ -15,6 +15,12 @@ const sourceRules = [
     pattern: /\b(?:SharedId|SessionRowId|WorkspaceMemberId|authUserId|storageId|_id)\b|\bId\s*</,
   },
   {
+    className: 'unchecked_domain_id_cast',
+    files: /^(?:convex|packages\/editor\/src|shared|src)\//,
+    pattern:
+      /\bas (?:AssetId|CampaignId|CampaignMemberId|CanvasNodeId|HistoryEntryId|ImportJobId|MapPinId|NoteBlockId|OperationId|ResourceId|SessionId|SnapshotId|UserProfileId)\b/,
+  },
+  {
     className: 'pre_cutover_compatibility',
     files: /^packages\/editor\/src\//,
     pattern: /migrateLegacy|stripLegacy|LegacyMedia|createLegacy/,

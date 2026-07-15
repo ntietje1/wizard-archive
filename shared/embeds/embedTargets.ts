@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
 export const externalEmbedUrlSchema = z.string().refine(isHttpsUrl, {
@@ -41,9 +42,11 @@ export function parseEmbedTarget(value: unknown): EmbedTarget | null {
   if (!result.success) return null
   const target = result.data
   if (target.kind !== 'resource') return target
+  const resourceId = parseDomainId(DOMAIN_ID_KIND.resource, target.resourceId)
+  if (resourceId === null) return null
   return {
     kind: 'resource',
-    resourceId: target.resourceId as ResourceId,
+    resourceId,
   }
 }
 

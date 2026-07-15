@@ -11,17 +11,17 @@ import {
   noteContentSnapshotValidator,
   resourceContentSnapshotValidator,
   resourceCollectionQueryValidator,
-  resourceUuidValidator,
 } from './schema'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteContent'
 import { loadResourceContent as loadResourceContentFn } from './functions/loadResourceContent'
+import { resourceIdValidator } from './validators'
 
 type StoredAuthorizedResourceSnapshot = Infer<typeof authorizedResourceSnapshotValidator>
 
 const authorizedResourceCollectionPageValidator = v.object({
   snapshot: authorizedResourceSnapshotValidator,
-  cursor: v.nullable(resourceUuidValidator),
+  cursor: v.nullable(v.string()),
 })
 
 type StoredAuthorizedResourceCollectionPage = Infer<
@@ -29,7 +29,7 @@ type StoredAuthorizedResourceCollectionPage = Infer<
 >
 
 export const loadResource = campaignQuery({
-  args: { resourceId: resourceUuidValidator },
+  args: { resourceId: resourceIdValidator },
   returns: authorizedResourceSnapshotValidator,
   handler: async (ctx, args): Promise<StoredAuthorizedResourceSnapshot> => {
     return (await loadAuthorizedResource(
@@ -42,7 +42,7 @@ export const loadResource = campaignQuery({
 export const loadCollection = campaignQuery({
   args: {
     query: resourceCollectionQueryValidator,
-    cursor: v.optional(v.nullable(resourceUuidValidator)),
+    cursor: v.optional(v.nullable(v.string())),
   },
   returns: authorizedResourceCollectionPageValidator,
   handler: async (ctx, args): Promise<StoredAuthorizedResourceCollectionPage> => {
@@ -54,7 +54,7 @@ export const loadCollection = campaignQuery({
 })
 
 export const loadNoteContent = campaignQuery({
-  args: { resourceId: resourceUuidValidator },
+  args: { resourceId: resourceIdValidator },
   returns: noteContentSnapshotValidator,
   handler: async (ctx, args) => {
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
@@ -64,7 +64,7 @@ export const loadNoteContent = campaignQuery({
 
 export const loadContent = campaignQuery({
   args: {
-    resourceId: resourceUuidValidator,
+    resourceId: resourceIdValidator,
     kind: v.union(v.literal('file'), v.literal('map'), v.literal('canvas')),
   },
   returns: resourceContentSnapshotValidator,

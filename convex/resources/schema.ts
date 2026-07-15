@@ -4,15 +4,18 @@ import { VERSION_SCHEME } from '@wizard-archive/editor/resources/component-versi
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
-import { assetIdValidator } from './validators'
+import { campaignIdValidator, campaignMemberIdValidator } from '../campaigns/schema'
+import {
+  assetIdValidator,
+  importJobIdValidator,
+  mapPinIdValidator,
+  operationIdValidator,
+  resourceIdValidator,
+} from './validators'
 import {
   FILE_CLASSIFICATION,
   FILE_VIEWER_UNAVAILABLE_REASON,
 } from '@wizard-archive/editor/resources/file-content-contract'
-
-export const resourceUuidValidator = v.string()
-export const campaignUuidValidator = v.string()
-export const campaignMemberUuidValidator = v.string()
 
 export const versionStampValidator = v.object({
   scheme: v.literal(VERSION_SCHEME),
@@ -36,22 +39,22 @@ const fileOwnedMetadataValidators = {
 }
 
 export const resourceProjectionScopeValidator = v.object({
-  campaignId: campaignUuidValidator,
-  actorId: campaignMemberUuidValidator,
+  campaignId: campaignIdValidator,
+  actorId: campaignMemberIdValidator,
   projection: v.string(),
   schema: v.string(),
 })
 
 export const resourceCollectionQueryValidator = v.object({
-  parentId: v.nullable(resourceUuidValidator),
+  parentId: v.nullable(resourceIdValidator),
   lifecycle: literals('active', 'trashed'),
   kinds: v.optional(v.array(resourceKindValidator)),
 })
 
 export const authorizedResourceSummaryValidator = v.object({
-  id: resourceUuidValidator,
-  campaignId: campaignUuidValidator,
-  displayParentId: v.nullable(resourceUuidValidator),
+  id: resourceIdValidator,
+  campaignId: campaignIdValidator,
+  displayParentId: v.nullable(resourceIdValidator),
   kind: resourceKindValidator,
   title: v.string(),
   icon: v.nullable(v.string()),
@@ -66,11 +69,11 @@ export const authorizedResourceSnapshotValidator = v.object({
   scope: resourceProjectionScopeValidator,
   revision: v.string(),
   resources: v.array(authorizedResourceSummaryValidator),
-  missingResourceIds: v.array(resourceUuidValidator),
+  missingResourceIds: v.array(resourceIdValidator),
   collections: v.array(
     v.object({
       query: resourceCollectionQueryValidator,
-      resourceIds: v.array(resourceUuidValidator),
+      resourceIds: v.array(resourceIdValidator),
       complete: v.boolean(),
     }),
   ),
@@ -78,15 +81,15 @@ export const authorizedResourceSnapshotValidator = v.object({
 
 const resourceAuditFields = {
   createdAt: v.number(),
-  createdByMemberUuid: campaignMemberUuidValidator,
+  createdByMemberUuid: campaignMemberIdValidator,
   updatedAt: v.number(),
-  updatedByMemberUuid: campaignMemberUuidValidator,
+  updatedByMemberUuid: campaignMemberIdValidator,
 }
 
 const resourceCommonFields = {
-  resourceUuid: resourceUuidValidator,
-  campaignUuid: campaignUuidValidator,
-  parentResourceUuid: v.nullable(resourceUuidValidator),
+  resourceUuid: resourceIdValidator,
+  campaignUuid: campaignIdValidator,
+  parentResourceUuid: v.nullable(resourceIdValidator),
   kind: resourceKindValidator,
   title: v.string(),
   icon: v.nullable(v.string()),
@@ -106,32 +109,32 @@ const resourceTableValidator = v.union(
     ...resourceCommonFields,
     lifecycle: v.literal('trashed'),
     trashedAt: v.number(),
-    trashedByMemberUuid: campaignMemberUuidValidator,
+    trashedByMemberUuid: campaignMemberIdValidator,
   }),
 )
 
 const resourcePostconditionValidator = v.union(
   v.object({
     state: v.literal('present'),
-    resourceId: resourceUuidValidator,
+    resourceId: resourceIdValidator,
     metadataVersion: versionStampValidator,
   }),
-  v.object({ state: v.literal('missing'), resourceId: resourceUuidValidator }),
+  v.object({ state: v.literal('missing'), resourceId: resourceIdValidator }),
 )
 
 const resourceStructureResultValidator = v.union(
-  v.object({ type: v.literal('created'), resourceId: resourceUuidValidator }),
-  v.object({ type: v.literal('metadataUpdated'), resourceId: resourceUuidValidator }),
-  v.object({ type: v.literal('moved'), resourceIds: v.array(resourceUuidValidator) }),
-  v.object({ type: v.literal('trashed'), resourceIds: v.array(resourceUuidValidator) }),
-  v.object({ type: v.literal('restored'), resourceIds: v.array(resourceUuidValidator) }),
-  v.object({ type: v.literal('permanentlyDeleted'), resourceIds: v.array(resourceUuidValidator) }),
+  v.object({ type: v.literal('created'), resourceId: resourceIdValidator }),
+  v.object({ type: v.literal('metadataUpdated'), resourceId: resourceIdValidator }),
+  v.object({ type: v.literal('moved'), resourceIds: v.array(resourceIdValidator) }),
+  v.object({ type: v.literal('trashed'), resourceIds: v.array(resourceIdValidator) }),
+  v.object({ type: v.literal('restored'), resourceIds: v.array(resourceIdValidator) }),
+  v.object({ type: v.literal('permanentlyDeleted'), resourceIds: v.array(resourceIdValidator) }),
   v.object({
     type: v.literal('deepCopied'),
     roots: v.array(
       v.object({
-        sourceRootId: resourceUuidValidator,
-        destinationRootId: resourceUuidValidator,
+        sourceRootId: resourceIdValidator,
+        destinationRootId: resourceIdValidator,
       }),
     ),
   }),
@@ -140,16 +143,16 @@ const resourceStructureResultValidator = v.union(
 export const resourceStructureCommandValidator = v.union(
   v.object({
     type: v.literal('create'),
-    resourceId: resourceUuidValidator,
+    resourceId: resourceIdValidator,
     kind: resourceKindValidator,
-    parentId: v.nullable(resourceUuidValidator),
+    parentId: v.nullable(resourceIdValidator),
     title: v.string(),
     icon: v.nullable(v.string()),
     color: v.nullable(v.string()),
   }),
   v.object({
     type: v.literal('updateMetadata'),
-    resourceId: resourceUuidValidator,
+    resourceId: resourceIdValidator,
     changes: v.object({
       title: v.optional(v.string()),
       icon: v.optional(v.nullable(v.string())),
@@ -158,22 +161,22 @@ export const resourceStructureCommandValidator = v.union(
   }),
   v.object({
     type: v.literal('move'),
-    resourceIds: v.array(resourceUuidValidator),
-    destinationParentId: v.nullable(resourceUuidValidator),
+    resourceIds: v.array(resourceIdValidator),
+    destinationParentId: v.nullable(resourceIdValidator),
   }),
-  v.object({ type: v.literal('trash'), resourceIds: v.array(resourceUuidValidator) }),
-  v.object({ type: v.literal('restore'), resourceIds: v.array(resourceUuidValidator) }),
-  v.object({ type: v.literal('permanentlyDelete'), resourceIds: v.array(resourceUuidValidator) }),
+  v.object({ type: v.literal('trash'), resourceIds: v.array(resourceIdValidator) }),
+  v.object({ type: v.literal('restore'), resourceIds: v.array(resourceIdValidator) }),
+  v.object({ type: v.literal('permanentlyDelete'), resourceIds: v.array(resourceIdValidator) }),
   v.object({
     type: v.literal('deepCopy'),
-    sourceRootIds: v.array(resourceUuidValidator),
-    destinationParentId: v.nullable(resourceUuidValidator),
+    sourceRootIds: v.array(resourceIdValidator),
+    destinationParentId: v.nullable(resourceIdValidator),
   }),
 )
 
 export const resourceCommandReceiptValidator = v.object({
-  campaignId: campaignUuidValidator,
-  operationId: v.string(),
+  campaignId: campaignIdValidator,
+  operationId: operationIdValidator,
   result: resourceStructureResultValidator,
   postconditions: v.array(resourcePostconditionValidator),
 })
@@ -210,7 +213,7 @@ export const resourceStructureCommandResultValidator = v.union(
 export const bindNoteContentResultValidator = v.union(
   v.object({
     status: v.literal('completed'),
-    resourceId: resourceUuidValidator,
+    resourceId: resourceIdValidator,
     version: versionStampValidator,
   }),
   v.object({
@@ -239,14 +242,14 @@ const contentIntegritySnapshotValidator = v.object({
 })
 
 export const noteContentSnapshotValidator = v.union(
-  v.object({ status: v.literal('initializing'), operationId: v.string() }),
+  v.object({ status: v.literal('initializing'), operationId: operationIdValidator }),
   v.object({ status: v.literal('ready'), update: v.bytes(), version: versionStampValidator }),
   contentUnavailableSnapshotValidator,
   contentIntegritySnapshotValidator,
 )
 
 export const resourceContentSnapshotValidator = v.union(
-  v.object({ status: v.literal('initializing'), operationId: v.string() }),
+  v.object({ status: v.literal('initializing'), operationId: operationIdValidator }),
   v.object({
     status: v.literal('ready'),
     kind: v.literal('file'),
@@ -270,8 +273,8 @@ export const resourceContentSnapshotValidator = v.union(
       ),
       pins: v.array(
         v.object({
-          id: v.string(),
-          targetResourceId: v.string(),
+          id: mapPinIdValidator,
+          targetResourceId: resourceIdValidator,
           layerId: v.nullable(v.string()),
           x: v.number(),
           y: v.number(),
@@ -311,8 +314,8 @@ export const resourceTables = {
     ]),
 
   resourceTombstones: defineTable({
-    resourceUuid: resourceUuidValidator,
-    campaignUuid: campaignUuidValidator,
+    resourceUuid: resourceIdValidator,
+    campaignUuid: campaignIdValidator,
     deletionVersion: versionStampValidator,
     deletedAt: v.number(),
   })
@@ -320,9 +323,9 @@ export const resourceTables = {
     .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid']),
 
   resourceSourcePathAliases: defineTable({
-    campaignUuid: campaignUuidValidator,
-    resourceUuid: resourceUuidValidator,
-    importJobUuid: v.string(),
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
+    importJobUuid: importJobIdValidator,
     sourceRootId: v.string(),
     rawPath: v.string(),
     normalizedPath: v.string(),
@@ -337,17 +340,17 @@ export const resourceTables = {
     ]),
 
   resourceRoles: defineTable({
-    campaignUuid: campaignUuidValidator,
+    campaignUuid: campaignIdValidator,
     role: v.string(),
-    resourceUuid: resourceUuidValidator,
+    resourceUuid: resourceIdValidator,
   })
     .index('by_campaign_and_role', ['campaignUuid', 'role'])
     .index('by_campaign_and_resource', ['campaignUuid', 'resourceUuid']),
 
   resourceOperations: defineTable({
-    campaignUuid: campaignUuidValidator,
-    actorMemberUuid: campaignMemberUuidValidator,
-    operationUuid: v.string(),
+    campaignUuid: campaignIdValidator,
+    actorMemberUuid: campaignMemberIdValidator,
+    operationUuid: operationIdValidator,
     protocolVersion: v.literal(RESOURCE_COMMAND_PROTOCOL_VERSION),
     fingerprint: v.string(),
     receipt: resourceCommandReceiptValidator,
@@ -358,16 +361,16 @@ export const resourceTables = {
   resourceNoteContents: defineTable(
     v.union(
       v.object({
-        campaignUuid: campaignUuidValidator,
-        resourceUuid: resourceUuidValidator,
+        campaignUuid: campaignIdValidator,
+        resourceUuid: resourceIdValidator,
         state: v.literal('initializing'),
-        initializationOperationUuid: v.string(),
+        initializationOperationUuid: operationIdValidator,
       }),
       v.object({
-        campaignUuid: campaignUuidValidator,
-        resourceUuid: resourceUuidValidator,
+        campaignUuid: campaignIdValidator,
+        resourceUuid: resourceIdValidator,
         state: v.literal('ready'),
-        initializationOperationUuid: v.string(),
+        initializationOperationUuid: operationIdValidator,
         update: v.bytes(),
         version: versionStampValidator,
       }),
@@ -377,9 +380,9 @@ export const resourceTables = {
     .index('by_resourceUuid', ['resourceUuid']),
 
   resourceNoteInitializationIntents: defineTable({
-    campaignUuid: campaignUuidValidator,
-    resourceUuid: resourceUuidValidator,
-    operationUuid: v.string(),
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
+    operationUuid: operationIdValidator,
     status: literals('pending', 'failed'),
     ...externalEffectAttemptFields,
   })
@@ -388,8 +391,8 @@ export const resourceTables = {
     .index('by_status_and_createdAt', ['status', 'createdAt']),
 
   resourceFileContents: defineTable({
-    campaignUuid: campaignUuidValidator,
-    resourceUuid: resourceUuidValidator,
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
     state: literals('initializing', 'ready', 'failed'),
     assetUuid: v.nullable(assetIdValidator),
     ...fileOwnedMetadataValidators,
@@ -399,8 +402,8 @@ export const resourceTables = {
     .index('by_resourceUuid', ['resourceUuid']),
 
   resourceMapContents: defineTable({
-    campaignUuid: campaignUuidValidator,
-    resourceUuid: resourceUuidValidator,
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
     state: literals('initializing', 'ready', 'failed'),
     imageAssetUuid: v.nullable(assetIdValidator),
     layers: v.array(
@@ -416,10 +419,10 @@ export const resourceTables = {
     .index('by_resourceUuid', ['resourceUuid']),
 
   resourceMapPins: defineTable({
-    campaignUuid: campaignUuidValidator,
-    mapResourceUuid: resourceUuidValidator,
-    mapPinUuid: v.string(),
-    targetResourceUuid: resourceUuidValidator,
+    campaignUuid: campaignIdValidator,
+    mapResourceUuid: resourceIdValidator,
+    mapPinUuid: mapPinIdValidator,
+    targetResourceUuid: resourceIdValidator,
     layerId: v.nullable(v.string()),
     x: v.number(),
     y: v.number(),
@@ -430,8 +433,8 @@ export const resourceTables = {
     .index('by_mapPinUuid', ['mapPinUuid']),
 
   resourceCanvasContents: defineTable({
-    campaignUuid: campaignUuidValidator,
-    resourceUuid: resourceUuidValidator,
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
     update: v.bytes(),
     version: versionStampValidator,
   })
@@ -439,9 +442,9 @@ export const resourceTables = {
     .index('by_resourceUuid', ['resourceUuid']),
 
   resourceAssetCopyIntents: defineTable({
-    campaignUuid: campaignUuidValidator,
-    resourceUuid: resourceUuidValidator,
-    operationUuid: v.string(),
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
+    operationUuid: operationIdValidator,
     sourceAssetUuid: assetIdValidator,
     destinationAssetUuid: assetIdValidator,
     status: literals('pending', 'processing', 'failed'),
@@ -462,8 +465,8 @@ export const resourceTables = {
     .index('by_status_and_createdAt', ['status', 'createdAt']),
 
   resourceAssetOwners: defineTable({
-    campaignUuid: campaignUuidValidator,
-    resourceUuid: resourceUuidValidator,
+    campaignUuid: campaignIdValidator,
+    resourceUuid: resourceIdValidator,
     assetUuid: assetIdValidator,
   })
     .index('by_campaignUuid', ['campaignUuid'])

@@ -1034,7 +1034,7 @@ describe('resource structure commands', () => {
     await expect(
       asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
         campaignId: campaignUuid,
-        operationId: 'not-a-uuid',
+        operationId: 'not-a-uuid' as never,
         command,
       }),
     ).resolves.toEqual({ status: 'rejected', reason: 'invalid_uuid' })

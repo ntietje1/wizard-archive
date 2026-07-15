@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import type { AssetId } from '@wizard-archive/editor/resources/domain-id'
+import type { AssetId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import { internal } from '../_generated/api'
 import { internalMutation } from '../_generated/server'
 import type { MutationCtx } from '../_generated/server'
@@ -11,7 +11,7 @@ const workResult = v.union(
 
 async function setContentAssetState(
   ctx: MutationCtx,
-  resourceUuid: string,
+  resourceUuid: ResourceId,
   state: 'initializing' | 'ready' | 'failed',
 ) {
   const [file, map] = await Promise.all([

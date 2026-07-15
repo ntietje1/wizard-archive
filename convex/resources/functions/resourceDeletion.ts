@@ -1,4 +1,4 @@
-import type { AssetId, CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { AssetId, CampaignId } from '@wizard-archive/editor/resources/domain-id'
 import { MAX_SYNCHRONOUS_RESOURCE_CLOSURE } from '@wizard-archive/editor/resources/resource-record'
 import type { Doc } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
@@ -65,7 +65,7 @@ async function addContent(
   plan: ResourceDeletionPlan,
   resource: Doc<'resources'>,
 ): Promise<void> {
-  const resourceId = resource.resourceUuid as ResourceId
+  const resourceId = resource.resourceUuid
   switch (resource.kind) {
     case 'folder':
       return
@@ -275,5 +275,5 @@ export async function deleteCampaignResources(
     ...assetCopyIntents.map((row) => ctx.db.delete(row._id)),
     ...assetOwners.map((row) => ctx.db.delete(row._id)),
   ])
-  await queueAssetRetirements(ctx, new Set(assetOwners.map((owner) => owner.assetUuid as AssetId)))
+  await queueAssetRetirements(ctx, new Set(assetOwners.map((owner) => owner.assetUuid)))
 }

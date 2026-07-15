@@ -21,6 +21,11 @@ describe('minimal resource architecture', () => {
       'type ResourceOwner = SharedId<"sidebarItems">',
     ],
     [
+      'unchecked_domain_id_cast',
+      'convex/resources/functions/example.ts',
+      'const resourceId = value as ResourceId',
+    ],
+    [
       'pre_cutover_compatibility',
       'packages/editor/src/notes/document/model.ts',
       'function migrateLegacyBlocks() {}',

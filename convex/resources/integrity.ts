@@ -4,7 +4,8 @@ import type { Infer } from 'convex/values'
 import type { Doc } from '../_generated/dataModel'
 import { internalQuery } from '../_generated/server'
 import type { QueryCtx } from '../_generated/server'
-import { assetIdValidator } from './validators'
+import type { CampaignId, ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import { assetIdValidator, resourceIdValidator } from './validators'
 
 const MAX_DIAGNOSTIC_PAGE_SIZE = 100
 
@@ -35,7 +36,7 @@ const integrityIssueValidator = v.object({
     'failed_retirement',
   ),
   recordId: v.string(),
-  resourceUuid: v.nullable(v.string()),
+  resourceUuid: v.nullable(resourceIdValidator),
   assetUuid: v.nullable(assetIdValidator),
   repair: literals('report_only', 'retry_byte_copy', 'retry_retirement'),
 })
@@ -50,7 +51,7 @@ type IntegrityIssue = {
     | 'failed_byte_copy'
     | 'failed_retirement'
   recordId: string
-  resourceUuid: string | null
+  resourceUuid: ResourceId | null
   assetUuid: Doc<'resourceAssetOwners'>['assetUuid'] | null
   repair: 'report_only' | 'retry_byte_copy' | 'retry_retirement'
 }
@@ -97,7 +98,7 @@ async function resourceHasContent(ctx: QueryCtx, resource: Doc<'resources'>): Pr
 
 async function contentHasResource(
   ctx: QueryCtx,
-  content: { campaignUuid: string; resourceUuid: string },
+  content: { campaignUuid: CampaignId; resourceUuid: ResourceId },
   kind: 'note' | 'file' | 'map' | 'canvas',
 ): Promise<boolean> {
   const resource = await ctx.db
@@ -134,7 +135,7 @@ async function contentIssues(
 
 async function assetHasOwner(
   ctx: QueryCtx,
-  resourceUuid: string,
+  resourceUuid: ResourceId,
   assetUuid: Doc<'resourceAssetOwners'>['assetUuid'],
 ): Promise<boolean> {
   const owner = await ctx.db

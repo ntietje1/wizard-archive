@@ -9,12 +9,13 @@ import {
   resourceStructureCommandValidator,
 } from './schema'
 import { bindNoteContent as bindNoteContentFn } from './functions/bindNoteContent'
+import { operationIdValidator, resourceIdValidator } from './validators'
 
 type StoredResourceStructureCommandResult = Infer<typeof resourceStructureCommandResultValidator>
 
 export const executeStructureCommand = campaignMutation({
   args: {
-    operationId: v.string(),
+    operationId: operationIdValidator,
     command: resourceStructureCommandValidator,
   },
   returns: resourceStructureCommandResultValidator,
@@ -29,8 +30,8 @@ export const executeStructureCommand = campaignMutation({
 
 export const bindNoteContent = campaignMutation({
   args: {
-    resourceId: v.string(),
-    operationId: v.string(),
+    resourceId: resourceIdValidator,
+    operationId: operationIdValidator,
     update: v.bytes(),
   },
   returns: bindNoteContentResultValidator,

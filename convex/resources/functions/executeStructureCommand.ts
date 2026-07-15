@@ -127,7 +127,7 @@ async function planMetadataUpdate(
   const lifecycle = changes.lifecycle ?? resource.lifecycle
   const currentVersion = assertVersionStamp(resource.metadataVersion)
   const metadataVersion = await advanceResourceMetadataVersion(currentVersion, {
-    parentId: parentId as ResourceId | null,
+    parentId,
     kind: resource.kind,
     title,
     icon,
@@ -306,7 +306,7 @@ async function hasSelectedAncestor(
   selected: ReadonlySet<ResourceId>,
   resources: Map<ResourceId, Doc<'resources'>>,
 ): Promise<boolean> {
-  let parentId = resource.parentResourceUuid as ResourceId | null
+  let parentId = resource.parentResourceUuid
   const visited = new Set<ResourceId>()
   while (parentId !== null) {
     if (selected.has(parentId)) return true
@@ -320,7 +320,7 @@ async function hasSelectedAncestor(
         throw new CatalogRejection('closure_too_large')
       }
     }
-    parentId = parent.parentResourceUuid as ResourceId | null
+    parentId = parent.parentResourceUuid
   }
   return false
 }
@@ -388,7 +388,7 @@ async function moveResources(
     ancestor =
       ancestor.parentResourceUuid === null
         ? null
-        : await requireResource(ctx, campaignId, ancestor.parentResourceUuid as ResourceId)
+        : await requireResource(ctx, campaignId, ancestor.parentResourceUuid)
   }
   if (roots.some((resource) => resource.lifecycle !== 'active')) {
     throw new CatalogRejection('invalid_lifecycle')
@@ -400,13 +400,13 @@ async function moveResources(
     ),
   )
   await applyMetadataUpdates(ctx, updates)
-  const resourceIds = updates.map((update) => update.resource.resourceUuid as ResourceId)
+  const resourceIds = updates.map((update) => update.resource.resourceUuid)
   return completed(
     campaignId,
     operationId,
     { type: 'moved', resourceIds },
     updates.map((update) =>
-      presentPostcondition(update.resource.resourceUuid as ResourceId, update.metadataVersion),
+      presentPostcondition(update.resource.resourceUuid, update.metadataVersion),
     ),
   )
 }
@@ -429,7 +429,7 @@ async function changeLifecycle(
   const audit = { at: Date.now(), by: actorId }
   const updates: Array<PlannedMetadataUpdate> = []
   for (const resource of closure) {
-    let parentId = resource.parentResourceUuid as ResourceId | null
+    let parentId = resource.parentResourceUuid
     if (restoring && rootIds.has(resource.resourceUuid) && parentId !== null) {
       const parent = await findCanonicalResource(ctx.db, parentId)
       if (!parent || parent.campaignUuid !== campaignId || parent.lifecycle !== 'active') {
@@ -445,13 +445,13 @@ async function changeLifecycle(
     )
   }
   await applyMetadataUpdates(ctx, updates)
-  const resourceIds = updates.map((update) => update.resource.resourceUuid as ResourceId)
+  const resourceIds = updates.map((update) => update.resource.resourceUuid)
   return completed(
     campaignId,
     operationId,
     { type: restoring ? 'restored' : 'trashed', resourceIds },
     updates.map((update) =>
-      presentPostcondition(update.resource.resourceUuid as ResourceId, update.metadataVersion),
+      presentPostcondition(update.resource.resourceUuid, update.metadataVersion),
     ),
   )
 }
@@ -467,7 +467,7 @@ async function permanentlyDeleteResources(
     roots.map(async (root) =>
       root.parentResourceUuid === null
         ? null
-        : await findCanonicalResource(ctx.db, root.parentResourceUuid as ResourceId),
+        : await findCanonicalResource(ctx.db, root.parentResourceUuid),
     ),
   )
   for (const [index, root] of roots.entries()) {
@@ -490,7 +490,7 @@ async function permanentlyDeleteResources(
   const tombstones = await Promise.all(
     closure.map(async (resource) => {
       return await createResourceTombstone(
-        resource.resourceUuid as ResourceId,
+        resource.resourceUuid,
         campaignId,
         assertVersionStamp(resource.metadataVersion),
         deletedAt,
@@ -509,13 +509,22 @@ async function permanentlyDeleteResources(
       deletedAt: tombstone.deletedAt,
     })
   }
-  const resourceIds = closure.map((resource) => resource.resourceUuid as ResourceId)
+  const resourceIds = closure.map((resource) => resource.resourceUuid)
   return completed(
     campaignId,
     operationId,
     { type: 'permanentlyDeleted', resourceIds },
     resourceIds.map((resourceId) => ({ state: 'missing', resourceId })),
   )
+}
+
+function copiedResourceId(
+  resourceMap: ReadonlyMap<ResourceId, ResourceId>,
+  sourceId: ResourceId,
+): ResourceId {
+  const resourceId = resourceMap.get(sourceId)
+  if (!resourceId) throw new CatalogRejection('content_integrity_failure')
+  return resourceId
 }
 
 async function deepCopyResources(
@@ -534,19 +543,20 @@ async function deepCopyResources(
   )
   const rootIds = new Set(roots.map((root) => root.resourceUuid))
   const resourceMap = new Map(
-    closure.map((resource) => [
-      resource.resourceUuid as ResourceId,
-      generateDomainId(DOMAIN_ID_KIND.resource),
-    ]),
+    closure.map((resource) => [resource.resourceUuid, generateDomainId(DOMAIN_ID_KIND.resource)]),
   )
   const now = Date.now()
   const copies = await Promise.all(
     closure.map(async (source) => {
-      const sourceId = source.resourceUuid as ResourceId
-      const resourceId = resourceMap.get(sourceId)!
-      const parentId = rootIds.has(source.resourceUuid)
-        ? command.destinationParentId
-        : resourceMap.get(source.parentResourceUuid as ResourceId)!
+      const sourceId = source.resourceUuid
+      const resourceId = copiedResourceId(resourceMap, sourceId)
+      let parentId = command.destinationParentId
+      if (!rootIds.has(sourceId)) {
+        if (source.parentResourceUuid === null) {
+          throw new CatalogRejection('content_integrity_failure')
+        }
+        parentId = copiedResourceId(resourceMap, source.parentResourceUuid)
+      }
       const title = canonicalizeResourceTitle(source.title)
       if (title !== source.title) throw new CatalogRejection('content_integrity_failure')
       const metadataVersion = await initialResourceMetadataVersion({
@@ -566,7 +576,7 @@ async function deepCopyResources(
     campaignId,
     operationId,
     copies.map((copy) => ({
-      sourceResourceId: copy.source.resourceUuid as ResourceId,
+      sourceResourceId: copy.source.resourceUuid,
       destinationResourceId: copy.resourceId,
       kind: copy.source.kind,
     })),
@@ -603,8 +613,8 @@ async function deepCopyResources(
     {
       type: 'deepCopied',
       roots: roots.map((root) => ({
-        sourceRootId: root.resourceUuid as ResourceId,
-        destinationRootId: resourceMap.get(root.resourceUuid as ResourceId)!,
+        sourceRootId: root.resourceUuid,
+        destinationRootId: copiedResourceId(resourceMap, root.resourceUuid),
       })),
     },
     copies.map((copy) => presentPostcondition(copy.resourceId, copy.metadataVersion)),
