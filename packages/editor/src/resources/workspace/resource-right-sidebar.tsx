@@ -1,8 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Clock3, FileText, Link2, List, X } from 'lucide-react'
+import { NOTE_YJS_FRAGMENT, noteYDocToBlocks } from '../../notes/document/headless-yjs'
+import { noteDocumentOutline } from '../../notes/document/outline'
 import type { EditorRuntime, ResourceHistoryEntry } from '../editor-runtime-contract'
 import type { AuthorizedResourceSummary } from '../resource-index-contract'
 import type { WorkspaceActions } from './resource-operations'
+import type * as Y from 'yjs'
 
 type PanelId = 'details' | 'outline' | 'backlinks' | 'outgoing' | 'history'
 
@@ -23,7 +26,7 @@ export function ResourceRightSidebar({
 }) {
   const panels = [
     { id: 'details' as const, label: 'Details', icon: FileText, available: true },
-    { id: 'outline' as const, label: 'Outline', icon: List, available: false },
+    { id: 'outline' as const, label: 'Outline', icon: List, available: resource.kind === 'note' },
     { id: 'backlinks' as const, label: 'Backlinks', icon: Link2, available: false },
     { id: 'outgoing' as const, label: 'Outgoing links', icon: Link2, available: false },
     {
@@ -63,13 +66,90 @@ export function ResourceRightSidebar({
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {selected.id === 'details' ? (
-          <ResourceDetails actions={actions} resource={resource} runtime={runtime} />
-        ) : (
-          <ResourceHistoryPanel resource={resource} runtime={runtime} />
-        )}
+        <ResourcePanel
+          actions={actions}
+          panel={selected.id}
+          resource={resource}
+          runtime={runtime}
+        />
       </div>
     </aside>
+  )
+}
+
+function ResourcePanel({
+  actions,
+  panel,
+  resource,
+  runtime,
+}: {
+  actions: WorkspaceActions
+  panel: PanelId
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+}) {
+  if (panel === 'details') {
+    return <ResourceDetails actions={actions} resource={resource} runtime={runtime} />
+  }
+  if (panel === 'outline') return <NoteOutlinePanel resource={resource} runtime={runtime} />
+  if (panel === 'history') return <ResourceHistoryPanel resource={resource} runtime={runtime} />
+  throw new TypeError(`${panel} panel is unavailable`)
+}
+
+function NoteOutlinePanel({
+  resource,
+  runtime,
+}: {
+  resource: AuthorizedResourceSummary
+  runtime: EditorRuntime
+}) {
+  const state = useSyncExternalStore(
+    (listener) => runtime.content.notes.subscribe(resource.id, listener),
+    () => runtime.content.notes.get(resource.id),
+  )
+  const document =
+    state.status === 'initializing'
+      ? state.local
+      : state.status === 'ready'
+        ? state.session.document
+        : null
+  if (!document) {
+    return <p className="p-3 text-sm text-muted-foreground">Outline is unavailable.</p>
+  }
+  return <LiveNoteOutline document={document} />
+}
+
+function LiveNoteOutline({ document: yDocument }: { document: Y.Doc }) {
+  const [headings, setHeadings] = useState(() =>
+    noteDocumentOutline(noteYDocToBlocks(yDocument, NOTE_YJS_FRAGMENT)),
+  )
+  useEffect(() => {
+    const update = () =>
+      setHeadings(noteDocumentOutline(noteYDocToBlocks(yDocument, NOTE_YJS_FRAGMENT)))
+    update()
+    yDocument.on('update', update)
+    return () => yDocument.off('update', update)
+  }, [yDocument])
+
+  if (headings.length === 0) {
+    return <p className="p-3 text-sm text-muted-foreground">No headings yet.</p>
+  }
+  return (
+    <nav aria-label="Note outline" className="p-2">
+      {headings.map((heading) => (
+        <button
+          key={heading.blockId}
+          type="button"
+          className="block w-full truncate rounded py-1 pr-2 text-left text-sm hover:bg-muted"
+          style={{ paddingLeft: `${(heading.level - 1) * 0.75 + 0.5}rem` }}
+          onClick={() =>
+            document.getElementById(heading.blockId)?.scrollIntoView({ block: 'start' })
+          }
+        >
+          {heading.text}
+        </button>
+      ))}
+    </nav>
   )
 }
 

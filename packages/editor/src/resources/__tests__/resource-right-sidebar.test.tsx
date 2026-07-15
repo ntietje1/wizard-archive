@@ -1,0 +1,90 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vite-plus/test'
+import { NOTE_YJS_FRAGMENT, noteBlocksToYDoc } from '../../notes/document/headless-yjs'
+import { initialVersion, sha256Digest } from '../component-version'
+import { DOMAIN_ID_KIND, generateDomainId } from '../domain-id'
+import { createInMemoryEditorRuntime } from '../in-memory-editor-runtime'
+import {
+  RESOURCE_INDEX_SCHEMA,
+  authorizedResourceSummaryFromRecord,
+} from '../resource-index-contract'
+import { canonicalizeResourceTitle } from '../resource-record'
+import { ResourceRightSidebar } from '../workspace/resource-right-sidebar'
+import { createWorkspaceActions } from '../workspace/resource-operations'
+import type { ResourceNavigation } from '../editor-runtime-contract'
+import type { ResourceRecord } from '../resource-record'
+
+describe('ResourceRightSidebar note outline', () => {
+  it('lists canonical headings and scrolls to their stable block identities', async () => {
+    const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+    const actorId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+    const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
+    const headingId = generateDomainId(DOMAIN_ID_KIND.noteBlock)
+    const version = initialVersion(await sha256Digest(new Uint8Array([7])))
+    const noteDocument = noteBlocksToYDoc(
+      [
+        {
+          id: headingId,
+          type: 'heading',
+          props: { level: 2 },
+          content: [{ type: 'text', text: 'Hidden vault' }],
+        },
+      ],
+      NOTE_YJS_FRAGMENT,
+    )
+    const resource: ResourceRecord = {
+      id: resourceId,
+      campaignId,
+      parentId: null,
+      kind: 'note',
+      title: canonicalizeResourceTitle('Field notes'),
+      icon: null,
+      color: null,
+      lifecycle: { state: 'active' },
+      metadataVersion: version,
+      created: { at: 1, by: actorId },
+      updated: { at: 1, by: actorId },
+    }
+    const navigation: ResourceNavigation = {
+      current: () => resourceId,
+      open: vi.fn(),
+      subscribe: () => () => {},
+    }
+    const core = createInMemoryEditorRuntime({
+      canEdit: true,
+      scope: { campaignId, actorId, projection: 'dm', schema: RESOURCE_INDEX_SCHEMA },
+      snapshot: {
+        campaignId,
+        resources: [resource],
+        tombstones: [],
+        aliases: [],
+        assetsFolderId: null,
+      },
+      content: { notes: [{ resourceId, content: noteDocument, version }] },
+      navigation,
+    })
+    const target = document.createElement('div')
+    const scrollIntoView = vi.fn()
+    target.id = headingId
+    target.scrollIntoView = scrollIntoView
+    document.body.append(target)
+
+    render(
+      <ResourceRightSidebar
+        actions={createWorkspaceActions(core.runtime, vi.fn())}
+        activePanel="outline"
+        resource={authorizedResourceSummaryFromRecord(resource)}
+        runtime={core.runtime}
+        onActivePanelChange={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('navigation', { name: 'Note outline' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Hidden vault' }))
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+
+    target.remove()
+    core.dispose()
+  })
+})

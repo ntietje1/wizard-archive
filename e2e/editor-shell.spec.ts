@@ -48,4 +48,23 @@ test.describe('editor shell', () => {
       await page.screenshot({ path: process.env.WA_VISUAL_QA_PATH })
     }
   })
+
+  test('projects note headings into the live outline', async ({ page }) => {
+    await page.goto('/demo?scenario=campaign-home', { waitUntil: 'commit' })
+    await page.getByRole('button', { name: 'The Lantern Market' }).click()
+    const editor = page.getByRole('textbox', { name: 'The Lantern Market note editor' })
+    await expect(editor).toBeVisible()
+
+    await editor.click()
+    await page.keyboard.press('Control+End')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('/')
+    await page.getByRole('option', { name: /^Heading 2/ }).click()
+    await page.keyboard.type('Dockside clues')
+
+    await page.getByRole('button', { name: 'Open resource panel' }).click()
+    await page.getByRole('button', { name: 'Outline' }).click()
+    const outline = page.getByRole('navigation', { name: 'Note outline' })
+    await expect(outline.getByRole('button', { name: 'Dockside clues' })).toBeVisible()
+  })
 })
