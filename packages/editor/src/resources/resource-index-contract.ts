@@ -13,6 +13,7 @@ import type {
 declare const indexRevisionBrand: unique symbol
 
 export const RESOURCE_INDEX_SCHEMA = 'resource-index-v1'
+const RESOURCE_KINDS = new Set<ResourceKind>(Object.values(RESOURCE_KIND))
 
 export type IndexRevision = string & { readonly [indexRevisionBrand]: true }
 
@@ -157,8 +158,7 @@ export function normalizeResourceCollectionQuery(
   }
   if (
     query.kinds !== undefined &&
-    (!Array.isArray(query.kinds) ||
-      query.kinds.some((kind) => !Object.values(RESOURCE_KIND).includes(kind)))
+    (!Array.isArray(query.kinds) || query.kinds.some((kind) => !RESOURCE_KINDS.has(kind)))
   ) {
     throw new TypeError('Invalid resource collection kinds')
   }

@@ -154,10 +154,9 @@ export async function loadAuthorizedCollection(
     MAX_RESOURCE_CATALOG_PAGE_SIZE,
     input.cursor,
   )
+  const kinds = query.kinds === undefined ? null : new Set(query.kinds)
   const items =
-    query.kinds === undefined
-      ? page.items
-      : page.items.filter((resource) => query.kinds!.includes(resource.kind))
+    kinds === null ? page.items : page.items.filter((resource) => kinds.has(resource.kind))
   return {
     snapshot: await createSnapshot({
       scope,

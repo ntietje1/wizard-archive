@@ -255,5 +255,5 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasOnlyKeys(value: Record<string, unknown>, keys: ReadonlyArray<string>): boolean {
   const actual = Object.keys(value)
-  return actual.length === keys.length && actual.every((key) => keys.includes(key))
+  return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key))
 }

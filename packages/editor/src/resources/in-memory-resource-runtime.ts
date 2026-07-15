@@ -99,10 +99,11 @@ export function createInMemoryResourceRuntime<TContentCopyPlan = never>({
     const collections = Array.from(loadedCollections.entries())
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([, query]) => {
-        const resourceIds = resources
-          .filter((resource) => resourceMatchesCollectionQuery(resource, query))
-          .map((resource) => resource.id)
-          .sort()
+        const resourceIds: Array<ResourceId> = []
+        for (const resource of resources) {
+          if (resourceMatchesCollectionQuery(resource, query)) resourceIds.push(resource.id)
+        }
+        resourceIds.sort()
         for (const resourceId of resourceIds) {
           addAncestorSpine(resourceId, resourcesById, includedIds)
         }

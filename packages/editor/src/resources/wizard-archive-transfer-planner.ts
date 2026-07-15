@@ -324,9 +324,15 @@ async function planSameCampaignUpdate(
   }
   for (const imported of manifest.tombstones) evaluateImportedTombstone(imported, context)
 
+  const unknownDecisionByComponent = new Map(
+    state.unknownDecisions.map((decision) => [
+      `${decision.resourceId}:${decision.component}`,
+      decision,
+    ]),
+  )
   if (
     policies.some((policy) => {
-      const decision = state.unknownDecisions.find(sameDecision(policy))
+      const decision = unknownDecisionByComponent.get(`${policy.resourceId}:${policy.component}`)
       return !decision || !decision.supportedActions.includes(policy.action)
     })
   ) {
@@ -578,38 +584,37 @@ async function createSameCampaignResourceWrites(
       context.state.recoveredIds.get(resource.id) ?? resource.id,
     ]),
   )
+  const resourcesToWrite = context.manifest.resources.filter(
+    (resource) =>
+      context.state.metadataWriteIds.has(resource.id) ||
+      context.state.contentWriteIds.has(resource.id),
+  )
   return await Promise.all(
-    context.manifest.resources
-      .filter(
-        (resource) =>
-          context.state.metadataWriteIds.has(resource.id) ||
-          context.state.contentWriteIds.has(resource.id),
-      )
-      .map(async (resource) => {
-        const destinationResourceId = writeIdBySourceId.get(resource.id)!
-        const parentId = resource.parentId
-          ? (writeIdBySourceId.get(resource.parentId) ?? resource.parentId)
-          : null
-        const metadata = {
-          parentId,
-          kind: resource.kind,
-          title: resource.title,
-          icon: resource.icon,
-          color: resource.color,
-          lifecycle: resource.lifecycle,
-        }
-        return {
-          sourceResourceId: resource.id,
-          destinationResourceId,
-          writeMetadata: context.state.metadataWriteIds.has(resource.id),
-          writeContent: context.state.contentWriteIds.has(resource.id),
-          ...metadata,
-          metadataVersion:
-            destinationResourceId === resource.id
-              ? resource.metadataVersion
-              : await initialResourceMetadataVersion(metadata),
-        }
-      }),
+    resourcesToWrite.map(async (resource) => {
+      const destinationResourceId = writeIdBySourceId.get(resource.id)!
+      const parentId = resource.parentId
+        ? (writeIdBySourceId.get(resource.parentId) ?? resource.parentId)
+        : null
+      const metadata = {
+        parentId,
+        kind: resource.kind,
+        title: resource.title,
+        icon: resource.icon,
+        color: resource.color,
+        lifecycle: resource.lifecycle,
+      }
+      return {
+        sourceResourceId: resource.id,
+        destinationResourceId,
+        writeMetadata: context.state.metadataWriteIds.has(resource.id),
+        writeContent: context.state.contentWriteIds.has(resource.id),
+        ...metadata,
+        metadataVersion:
+          destinationResourceId === resource.id
+            ? resource.metadataVersion
+            : await initialResourceMetadataVersion(metadata),
+      }
+    }),
   )
 }
 
@@ -700,6 +705,9 @@ function finalizeContentPlans(
       ),
     ],
   ] as const
+  const freshDestinationResourceIds = resourceMap.flatMap((entry) =>
+    entry.sourceId === entry.destinationId ? [] : [entry.destinationId],
+  )
   const prepared = requests.map(([domain, planner, entries]) => ({
     domain,
     planner: planner as WizardArchiveContentDomainPlanner<never>,
@@ -709,9 +717,7 @@ function finalizeContentPlans(
       destinationCampaignId,
       entries,
       resourceMap,
-      freshDestinationResourceIds: resourceMap
-        .filter((entry) => entry.sourceId !== entry.destinationId)
-        .map((entry) => entry.destinationId),
+      freshDestinationResourceIds,
       initialContentRevision: 1,
     }),
   }))
@@ -829,11 +835,6 @@ function allCloneTargetsMapped(
     ),
   ]
   return expected.every((target) => mapped.has(JSON.stringify(target)))
-}
-
-function sameDecision(policy: WizardArchivePolicyDecision) {
-  return (decision: PendingUnknownDecision) =>
-    decision.resourceId === policy.resourceId && decision.component === policy.component
 }
 
 function rejected(

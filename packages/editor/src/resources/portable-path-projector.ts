@@ -50,10 +50,12 @@ export function projectPortablePaths(
     resourcesById.set(resource.resourceId, resource)
   }
 
-  const projected = resources
-    .filter((resource) => !invalidResourceIds.has(resource.resourceId))
-    .map((resource) => projectSegment(resource, warningCodes, failures))
-    .filter((resource): resource is ProjectedResource => resource !== null)
+  const projected: Array<ProjectedResource> = []
+  for (const resource of resources) {
+    if (invalidResourceIds.has(resource.resourceId)) continue
+    const candidate = projectSegment(resource, warningCodes, failures)
+    if (candidate) projected.push(candidate)
+  }
 
   const projectedById = new Map(
     projected.map((resource) => [resource.resource.resourceId, resource]),
@@ -222,9 +224,10 @@ function resolveSiblingCollisions(
     if (!extended) throw new TypeError('Portable path collision could not be resolved')
   }
 
+  const siblingById = new Map(siblings.map((resource) => [resource.resource.resourceId, resource]))
   for (const resourceId of suffixLengths.keys()) {
     addWarning(warningCodes, resourceId, 'collision_suffixed')
-    const resource = siblings.find((candidate) => candidate.resource.resourceId === resourceId)!
+    const resource = siblingById.get(resourceId)!
     const suffixLength = suffixLengths.get(resourceId)!
     const suffixBytes = utf8Length(`--${resourceId.replaceAll('-', '').slice(0, suffixLength)}`)
     const availableBytes = MAX_SEGMENT_UTF8_BYTES - utf8Length(resource.extension) - suffixBytes

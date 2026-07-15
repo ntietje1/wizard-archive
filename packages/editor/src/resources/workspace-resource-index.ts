@@ -269,14 +269,22 @@ export function mergeAuthorizedResourceSnapshots(
     missingResourceIds: Array.from(missingResourceIds),
     collections: Array.from(collections.values(), (collection) => ({
       query: collection.query,
-      resourceIds: Array.from(resources.values())
-        .filter((resource) => resourceMatchesCollectionQuery(resource, collection.query))
-        .map((resource) => resource.id)
-        .sort(),
+      resourceIds: matchingResourceIds(resources.values(), collection.query),
       complete: collection.complete,
     })),
   }
   return createState(merged) ? merged : null
+}
+
+function matchingResourceIds(
+  resources: Iterable<AuthorizedResourceSummary>,
+  query: ResourceCollectionQuery,
+): Array<ResourceId> {
+  const resourceIds: Array<ResourceId> = []
+  for (const resource of resources) {
+    if (resourceMatchesCollectionQuery(resource, query)) resourceIds.push(resource.id)
+  }
+  return resourceIds.sort()
 }
 
 function applyResourceChange(

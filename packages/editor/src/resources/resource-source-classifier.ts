@@ -199,7 +199,8 @@ function classifyNoteSource(
   if (bytes.includes(0)) {
     return { classification: 'file', reason: FILE_VIEWER_UNAVAILABLE_REASON.nulByte }
   }
-  const removedUtf8Bom = UTF8_BOM.every((byte, index) => bytes[index] === byte)
+  const removedUtf8Bom =
+    bytes.length >= UTF8_BOM.length && UTF8_BOM.every((byte, index) => bytes[index] === byte)
   let text: string
   try {
     text = new TextDecoder('utf-8', { fatal: true }).decode(

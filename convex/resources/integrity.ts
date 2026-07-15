@@ -60,6 +60,18 @@ function result(page: { continueCursor: string; isDone: boolean }, issues: Array
   return { issues, cursor: page.continueCursor, done: page.isDone }
 }
 
+function collectIssues<T>(
+  rows: ReadonlyArray<T>,
+  issueFor: (row: T) => IntegrityIssue | null,
+): Array<IntegrityIssue> {
+  const issues: Array<IntegrityIssue> = []
+  for (const row of rows) {
+    const issue = issueFor(row)
+    if (issue) issues.push(issue)
+  }
+  return issues
+}
+
 async function resourceHasContent(ctx: QueryCtx, resource: Doc<'resources'>): Promise<boolean> {
   if (resource.kind === 'folder') return true
   let content:
@@ -316,15 +328,17 @@ async function diagnoseStaleInitialization(
     .paginate(pagination)
   return result(
     page,
-    page.page
-      .filter((intent) => intent.status === 'pending' && intent.createdAt <= staleBefore)
-      .map((intent) => ({
-        type: 'stale_initialization_intent',
-        recordId: intent._id,
-        resourceUuid: intent.resourceUuid,
-        assetUuid: null,
-        repair: 'report_only',
-      })),
+    collectIssues(page.page, (intent) =>
+      intent.status === 'pending' && intent.createdAt <= staleBefore
+        ? {
+            type: 'stale_initialization_intent',
+            recordId: intent._id,
+            resourceUuid: intent.resourceUuid,
+            assetUuid: null,
+            repair: 'report_only',
+          }
+        : null,
+    ),
   )
 }
 
@@ -335,15 +349,17 @@ async function diagnoseFailedBinding(ctx: QueryCtx, pagination: DiagnosticPagina
     .paginate(pagination)
   return result(
     page,
-    page.page
-      .filter((intent) => intent.status === 'failed')
-      .map((intent) => ({
-        type: 'failed_provider_binding',
-        recordId: intent._id,
-        resourceUuid: intent.resourceUuid,
-        assetUuid: null,
-        repair: 'report_only',
-      })),
+    collectIssues(page.page, (intent) =>
+      intent.status === 'failed'
+        ? {
+            type: 'failed_provider_binding',
+            recordId: intent._id,
+            resourceUuid: intent.resourceUuid,
+            assetUuid: null,
+            repair: 'report_only',
+          }
+        : null,
+    ),
   )
 }
 
@@ -355,15 +371,17 @@ async function diagnoseFailedCopy(
   const page = await ctx.db.query('resourceAssetCopyIntents').order('asc').paginate(pagination)
   return result(
     page,
-    page.page
-      .filter((intent) => isFailedOrStale(intent, staleBefore))
-      .map((intent) => ({
-        type: 'failed_byte_copy',
-        recordId: intent._id,
-        resourceUuid: intent.resourceUuid,
-        assetUuid: intent.destinationAssetUuid,
-        repair: 'retry_byte_copy',
-      })),
+    collectIssues(page.page, (intent) =>
+      isFailedOrStale(intent, staleBefore)
+        ? {
+            type: 'failed_byte_copy',
+            recordId: intent._id,
+            resourceUuid: intent.resourceUuid,
+            assetUuid: intent.destinationAssetUuid,
+            repair: 'retry_byte_copy',
+          }
+        : null,
+    ),
   )
 }
 
@@ -378,15 +396,17 @@ async function diagnoseFailedRetirement(
     .paginate(pagination)
   return result(
     page,
-    page.page
-      .filter((candidate) => isFailedOrStale(candidate, staleBefore))
-      .map((candidate) => ({
-        type: 'failed_retirement',
-        recordId: candidate._id,
-        resourceUuid: null,
-        assetUuid: candidate.assetUuid,
-        repair: 'retry_retirement',
-      })),
+    collectIssues(page.page, (candidate) =>
+      isFailedOrStale(candidate, staleBefore)
+        ? {
+            type: 'failed_retirement',
+            recordId: candidate._id,
+            resourceUuid: null,
+            assetUuid: candidate.assetUuid,
+            repair: 'retry_retirement',
+          }
+        : null,
+    ),
   )
 }
 

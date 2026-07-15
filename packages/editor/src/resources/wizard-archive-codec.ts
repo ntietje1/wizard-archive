@@ -913,11 +913,11 @@ function withinJsonDepth(value: unknown, maximumDepth: number): boolean {
 
 function hasExactKeys(value: Record<string, unknown>, keys: ReadonlyArray<string>): boolean {
   const actual = Object.keys(value)
-  return actual.length === keys.length && actual.every((key) => keys.includes(key))
+  return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key))
 }
 
 function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
-  return left.byteLength === right.byteLength && left.every((byte, index) => byte === right[index])
+  return left.length === right.length && left.every((byte, index) => byte === right[index])
 }
 
 function byId(left: WizardArchiveResource, right: WizardArchiveResource): number {
