@@ -7,12 +7,15 @@ import { initialNoteContentVersion } from '@wizard-archive/editor/resources/cont
 import { normalizeResourceStructureCommand } from '@wizard-archive/editor/resources/command-protocol'
 import type {
   CampaignId,
+  CampaignMemberId,
   OperationId,
   ResourceId,
 } from '@wizard-archive/editor/resources/domain-id'
 import type {
   CreateNoteResourceCommand,
   ContentExportResult,
+  NoteCollaboration,
+  NoteCollaborationUser,
   NoteSession,
   NoteSessionSaveResult,
   NoteSessionSource,
@@ -30,6 +33,8 @@ import {
   readLiveStructureResult,
   toLiveStructureMutationCommand,
 } from './live-resource-structure-gateway'
+import { createLiveNoteAwareness } from './live-note-awareness'
+import type { LiveNoteAwarenessBackend } from './live-note-awareness'
 
 type NoteSnapshot = FunctionReturnType<typeof api.resources.queries.loadNoteContent>
 type CreateNoteArgs = FunctionArgs<typeof api.resources.mutations.createNoteResource>
@@ -37,12 +42,13 @@ type CreateNoteResult = FunctionReturnType<typeof api.resources.mutations.create
 type SaveNoteContentArgs = FunctionArgs<typeof api.resources.mutations.saveNoteContent>
 type SaveNoteContentResult = FunctionReturnType<typeof api.resources.mutations.saveNoteContent>
 
-type LiveNoteContentBackend = Readonly<{
-  watch(resourceId: ResourceId, apply: (snapshot: NoteSnapshot) => void): () => void
-  create(args: CreateNoteArgs): Promise<CreateNoteResult>
-  refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
-  save(args: SaveNoteContentArgs): Promise<SaveNoteContentResult>
-}>
+type LiveNoteContentBackend = LiveNoteAwarenessBackend &
+  Readonly<{
+    watch(resourceId: ResourceId, apply: (snapshot: NoteSnapshot) => void): () => void
+    create(args: CreateNoteArgs): Promise<CreateNoteResult>
+    refresh(resourceId: ResourceId, parentId: ResourceId | null): Promise<void>
+    save(args: SaveNoteContentArgs): Promise<SaveNoteContentResult>
+  }>
 
 type LocalCreate = Readonly<{ operationId: OperationId; doc: Y.Doc }>
 type NoteStore = ReturnType<typeof createResourceWatchStore<NoteSnapshot, NoteSessionState>>
@@ -55,8 +61,8 @@ type PersistedNoteSave = Extract<SaveNoteContentResult, { status: 'completed' }>
 type VersionDecision = 'applied' | 'conflict' | 'duplicate' | 'stale'
 
 class LiveNoteSession implements NoteSession {
-  readonly awareness = { status: 'unavailable' as const }
   readonly readonly = false
+  readonly #liveAwareness: ReturnType<typeof createLiveNoteAwareness>
   #version
   #drainPromise: Promise<NoteSessionSaveResult> | null = null
   #lifecycle: 'closing' | 'destroyed' | 'open' = 'open'
@@ -70,15 +76,33 @@ class LiveNoteSession implements NoteSession {
     private readonly campaignId: CampaignId,
     private readonly resourceId: ResourceId,
     private readonly backend: LiveNoteContentBackend,
+    memberId: CampaignMemberId,
+    user: NoteCollaborationUser,
     private readonly changed: () => void,
     private readonly failed: (result: RejectedNoteSave) => void,
   ) {
     this.#version = version
     document.on('update', this.#onUpdate)
+    this.#liveAwareness = createLiveNoteAwareness(
+      document,
+      resourceId,
+      memberId,
+      user,
+      backend,
+      changed,
+    )
   }
 
   get version() {
     return this.#version
+  }
+
+  get awareness() {
+    return this.#liveAwareness.awareness
+  }
+
+  get collaboration(): NoteCollaboration {
+    return this.#liveAwareness.collaboration
   }
 
   apply(update: ArrayBuffer, version: NoteSession['version']): VersionDecision {
@@ -95,6 +119,12 @@ class LiveNoteSession implements NoteSession {
   }
 
   flush(): Promise<NoteSessionSaveResult> {
+    const awareness = this.#liveAwareness.flush()
+    const document = this.#flushDocument()
+    return Promise.all([awareness, document]).then(([, result]) => result)
+  }
+
+  #flushDocument(): Promise<NoteSessionSaveResult> {
     if (this.#lifecycle === 'destroyed') {
       return Promise.resolve(this.#terminal ?? { status: 'rejected', reason: 'scope_unavailable' })
     }
@@ -188,7 +218,7 @@ class LiveNoteSession implements NoteSession {
   #destroy(): void {
     if (this.#lifecycle === 'destroyed') return
     this.#lifecycle = 'destroyed'
-    this.document.destroy()
+    void this.#liveAwareness.dispose().finally(() => this.document.destroy())
   }
 }
 
@@ -232,6 +262,8 @@ class LiveNoteSessionSource implements NoteSessionSource {
 
   constructor(
     private readonly campaignId: CampaignId,
+    private readonly memberId: CampaignMemberId,
+    private readonly user: NoteCollaborationUser,
     private readonly backend: LiveNoteContentBackend,
     private readonly beginCreate: () => ResourceHistoryRecording,
   ) {
@@ -373,8 +405,11 @@ class LiveNoteSessionSource implements NoteSessionSource {
       this.campaignId,
       resourceId,
       this.backend,
+      this.memberId,
+      this.user,
       () => {
-        this.#setState(resourceId, { status: 'ready', session })
+        const current = this.#sessions.get(resourceId)
+        if (current) this.#setState(resourceId, { status: 'ready', session: current })
       },
       (result) => {
         if (this.#sessions.get(resourceId)?.document !== document) return
@@ -398,8 +433,10 @@ class LiveNoteSessionSource implements NoteSessionSource {
 
 export function createLiveNoteContentSource(
   campaignId: CampaignId,
+  memberId: CampaignMemberId,
+  user: NoteCollaborationUser,
   backend: LiveNoteContentBackend,
   beginCreate: () => ResourceHistoryRecording,
 ) {
-  return new LiveNoteSessionSource(campaignId, backend, beginCreate)
+  return new LiveNoteSessionSource(campaignId, memberId, user, backend, beginCreate)
 }

@@ -17,9 +17,11 @@ import {
 } from '@wizard-archive/editor/notes/document-yjs'
 import { createLiveNoteContentSource } from '../live-note-content-source'
 
-type LiveNoteContentBackend = Parameters<typeof createLiveNoteContentSource>[1]
+type LiveNoteContentBackend = Parameters<typeof createLiveNoteContentSource>[3]
 
 const campaignId = generateDomainId(DOMAIN_ID_KIND.campaign)
+const memberId = generateDomainId(DOMAIN_ID_KIND.campaignMember)
+const user = { name: 'Editor', color: '#61afef' }
 
 function createEnvelope(resourceId: ResourceId, operationId: OperationId) {
   return {
@@ -86,12 +88,15 @@ function backend() {
   }
   return {
     create: vi.fn(create),
+    publishAwareness: vi.fn(() => Promise.resolve({ status: 'active' as const })),
+    releaseAwareness: vi.fn(() => Promise.resolve({ status: 'released' as const })),
     refresh: vi.fn(() => Promise.resolve()),
     save: vi.fn(save),
     watch: vi.fn((resourceId: ResourceId, apply: (snapshot: never) => void) => {
       listeners.set(resourceId, apply)
       return () => listeners.delete(resourceId)
     }),
+    watchAwareness: vi.fn(() => () => {}),
     emit(resourceId: ResourceId, snapshot: unknown) {
       const candidate = snapshot as {
         status?: string
@@ -120,7 +125,13 @@ describe('LiveNoteContentSource', () => {
         : Promise.resolve(completed(resourceId, operationId))
     })
     const recording = historyRecording()
-    const source = createLiveNoteContentSource(campaignId, provider, () => recording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      () => recording,
+    )
     const local = noteBlocksToYDoc(
       [
         {
@@ -171,7 +182,13 @@ describe('LiveNoteContentSource', () => {
       }
       return Promise.reject(new Error('connection lost'))
     })
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
 
     await source.create(createEnvelope(retainedId, retainedOperation), new Y.Doc())
     await source.create(createEnvelope(rejectedId, rejectedOperation), new Y.Doc())
@@ -186,7 +203,13 @@ describe('LiveNoteContentSource', () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const operationId = generateDomainId(DOMAIN_ID_KIND.operation)
     const provider = backend()
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
 
     expect(source.get(resourceId)).toEqual({ status: 'loading' })
 
@@ -202,7 +225,13 @@ describe('LiveNoteContentSource', () => {
   it('preserves a loaded document for repeated snapshots of the same version', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
     const update = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(update)
 
@@ -217,7 +246,13 @@ describe('LiveNoteContentSource', () => {
   it('flushes document-fragment edits through the canonical save backend', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
 
@@ -263,7 +298,13 @@ describe('LiveNoteContentSource', () => {
       }
       return await persist(args)
     })
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
     source.subscribe(resourceId, () => {})
@@ -299,7 +340,13 @@ describe('LiveNoteContentSource', () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
     provider.save.mockResolvedValue({ status: 'rejected', reason: 'content_corrupt' })
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
     source.subscribe(resourceId, () => {})
@@ -327,7 +374,13 @@ describe('LiveNoteContentSource', () => {
       const provider = backend()
       const persist = provider.save.getMockImplementation()!
       provider.save.mockRejectedValueOnce(new Error('offline')).mockImplementation(persist)
-      const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+      const source = createLiveNoteContentSource(
+        campaignId,
+        memberId,
+        user,
+        provider,
+        historyRecording,
+      )
       const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
       const version = await versionFor(initial)
       source.subscribe(resourceId, () => {})
@@ -344,7 +397,8 @@ describe('LiveNoteContentSource', () => {
       await expect(drain).resolves.toMatchObject({ status: 'completed' })
       expect(provider.save).toHaveBeenCalledTimes(2)
       source.dispose()
-      await vi.runAllTimersAsync()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(provider.releaseAwareness).toHaveBeenCalledOnce()
     } finally {
       vi.useRealTimers()
     }
@@ -353,7 +407,13 @@ describe('LiveNoteContentSource', () => {
   it('merges rapid updates into one incremental save for a large document', async () => {
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
     const provider = backend()
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
     const blocks = Array.from({ length: 200 }, (_, index) => ({
       id: generateDomainId(DOMAIN_ID_KIND.noteBlock),
       type: 'paragraph' as const,
@@ -395,7 +455,13 @@ describe('LiveNoteContentSource', () => {
       })
       return result
     })
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
     source.subscribe(resourceId, () => {})
@@ -437,7 +503,13 @@ describe('LiveNoteContentSource', () => {
       })
       return await persist(args)
     })
-    const source = createLiveNoteContentSource(campaignId, provider, historyRecording)
+    const source = createLiveNoteContentSource(
+      campaignId,
+      memberId,
+      user,
+      provider,
+      historyRecording,
+    )
     const initial = arrayBuffer(Y.encodeStateAsUpdate(new Y.Doc()))
     const version = await versionFor(initial)
 

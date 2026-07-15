@@ -3,6 +3,7 @@ import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ResourceProjectionScope } from '@wizard-archive/editor/resources/index-contract'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
+import type { NoteCollaborationUser } from '@wizard-archive/editor/resources/content-session-contract'
 import type {
   ResourceNavigation,
   EditorRuntime,
@@ -44,14 +45,18 @@ function subscribeToWatch<T>(
 export function useLiveResourceCore(
   scope: ResourceProjectionScope,
   navigation: ResourceNavigation,
+  collaborationUser: NoteCollaborationUser,
 ): EditorRuntime | null {
   const convex = useConvex()
-  return useCommittedRuntime(() => createScopedLiveResourceRuntime(scope, navigation, convex))
+  return useCommittedRuntime(() =>
+    createScopedLiveResourceRuntime(scope, navigation, collaborationUser, convex),
+  )
 }
 
 function createScopedLiveResourceRuntime(
   scope: ResourceProjectionScope,
   navigation: ResourceNavigation,
+  collaborationUser: NoteCollaborationUser,
   convex: ReturnType<typeof useConvex>,
 ) {
   const currentScope: ResourceProjectionScope = { ...scope }
@@ -80,12 +85,31 @@ function createScopedLiveResourceRuntime(
   }
   const notes = createLiveNoteContentSource(
     currentScope.campaignId,
+    currentScope.actorId,
+    collaborationUser,
     {
       create: (args) => convex.mutation(api.resources.mutations.createNoteResource, args),
       refresh,
       save: (args) => convex.mutation(api.resources.mutations.saveNoteContent, args),
+      publishAwareness: (args) =>
+        convex.mutation(api.resources.mutations.publishNoteAwareness, {
+          campaignId: currentScope.campaignId,
+          ...args,
+        }),
+      releaseAwareness: (args) =>
+        convex.mutation(api.resources.mutations.releaseNoteAwareness, {
+          campaignId: currentScope.campaignId,
+          ...args,
+        }),
       watch: (resourceId, apply) => {
         const watch = convex.watchQuery(api.resources.queries.loadNoteContent, {
+          campaignId: currentScope.campaignId,
+          resourceId,
+        })
+        return subscribeToWatch(watch, apply)
+      },
+      watchAwareness: (resourceId, apply) => {
+        const watch = convex.watchQuery(api.resources.queries.loadNoteAwareness, {
           campaignId: currentScope.campaignId,
           resourceId,
         })

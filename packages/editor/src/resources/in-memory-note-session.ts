@@ -1,4 +1,5 @@
 import * as Y from 'yjs'
+import { Awareness } from 'y-protocols/awareness'
 import type { NoteSession, NoteSessionSaveResult } from './content-session-contract'
 import { advanceNoteContentVersion } from './resource-content-version'
 import type { VersionStamp } from './component-version'
@@ -17,6 +18,12 @@ export function createInMemoryNoteSession(
     if (!disposed) dirty = true
   }
   document.on('update', onUpdate)
+  const collaborationAwareness = new Awareness(document)
+  const collaboration = {
+    provider: { awareness: collaborationAwareness },
+    user: { name: 'You', color: '#5e6ad2' },
+  }
+  collaborationAwareness.setLocalStateField('user', collaboration.user)
 
   const session: NoteSession = {
     document,
@@ -24,6 +31,7 @@ export function createInMemoryNoteSession(
       return version
     },
     awareness: { status: 'unavailable' },
+    collaboration,
     readonly,
     async flush(): Promise<NoteSessionSaveResult> {
       if (disposed) return { status: 'rejected', reason: 'scope_unavailable' }
@@ -38,6 +46,7 @@ export function createInMemoryNoteSession(
       if (disposed) return
       document.off('update', onUpdate)
       disposed = true
+      collaborationAwareness.destroy()
       document.destroy()
     },
   }

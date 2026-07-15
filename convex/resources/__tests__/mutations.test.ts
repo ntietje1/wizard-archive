@@ -327,7 +327,7 @@ describe('resource structure commands', () => {
     })
   })
 
-  it('merges concurrent canonical note updates and advances the content revision', async () => {
+  it('merges large concurrent canonical note updates and advances the content revision', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)
     const resourceId = generateDomainId(DOMAIN_ID_KIND.resource)
@@ -362,9 +362,11 @@ describe('resource structure commands', () => {
     const secondDeltas: Array<Uint8Array> = []
     firstClient.on('update', (update) => firstDeltas.push(Uint8Array.from(update)))
     secondClient.on('update', (update) => secondDeltas.push(Uint8Array.from(update)))
-    noteTextType(firstClient).insert(0, 'First ')
+    const firstInsertion = 'First '.repeat(256)
+    const secondInsertion = ' Second'.repeat(256)
+    noteTextType(firstClient).insert(0, firstInsertion)
     const secondText = noteTextType(secondClient)
-    secondText.insert(secondText.length, ' Second')
+    secondText.insert(secondText.length, secondInsertion)
     const firstUpdate = Uint8Array.from(Y.mergeUpdates(firstDeltas)).buffer
     const secondUpdate = Uint8Array.from(Y.mergeUpdates(secondDeltas)).buffer
     firstClient.destroy()
@@ -392,7 +394,108 @@ describe('resource structure commands', () => {
             : [],
         )
         .join(''),
-    ).toBe('First Middle Second')
+    ).toBe(`${firstInsertion}Middle${secondInsertion}`)
+  })
+
+  it('leases note awareness by client and removes it on release', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Presence')
+    const state = Uint8Array.from([1, 2, 3]).buffer
+
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.publishNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+        clientId: 17,
+        leaseId: 'first-lease',
+        state,
+      }),
+    ).resolves.toEqual({ status: 'active' })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({
+      status: 'ready',
+      entries: [{ clientId: 17, memberId: campaign.dm.memberDomainId, state }],
+    })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.publishNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+        clientId: 17,
+        leaseId: 'conflicting-lease',
+        state,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'lease_conflict' })
+    await expect(
+      asPlayer(campaign).mutation(api.resources.mutations.publishNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+        clientId: 18,
+        leaseId: 'player-lease',
+        state,
+      }),
+    ).resolves.toEqual({ status: 'unavailable' })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.releaseNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+        clientId: 17,
+        leaseId: 'conflicting-lease',
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'lease_conflict' })
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.releaseNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+        clientId: 17,
+        leaseId: 'first-lease',
+      }),
+    ).resolves.toEqual({ status: 'released' })
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'ready', entries: [] })
+  })
+
+  it('expires stale awareness without crowding out a reconnecting client', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Reconnect')
+    const state = Uint8Array.from([1]).buffer
+    const publish = (leaseId: string) =>
+      asDm(campaign).mutation(api.resources.mutations.publishNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+        clientId: 27,
+        leaseId,
+        state,
+      })
+
+    await expect(publish('expired-lease')).resolves.toEqual({ status: 'active' })
+    vi.advanceTimersByTime(30_001)
+    await expect(
+      asDm(campaign).query(api.resources.queries.loadNoteAwareness, {
+        campaignId: campaignUuid,
+        resourceId,
+      }),
+    ).resolves.toEqual({ status: 'ready', entries: [] })
+    await expect(publish('reconnected-lease')).resolves.toEqual({ status: 'active' })
+    await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query('resourceNoteAwareness')
+        .withIndex('by_resourceUuid_and_clientId', (query) => query.eq('resourceUuid', resourceId))
+        .take(2)
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.leaseId).toBe('reconnected-lease')
+    })
   })
 
   it('creates ready revision-1 content for files, maps, and canvases', async () => {

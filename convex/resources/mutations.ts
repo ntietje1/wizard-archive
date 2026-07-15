@@ -25,9 +25,15 @@ import {
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
   saveNoteContentResultValidator,
+  noteAwarenessLeaseResultValidator,
+  noteAwarenessReleaseResultValidator,
   versionStampValidator,
 } from './schema'
 import { saveNoteContent as saveNoteContentFn } from './functions/saveNoteContent'
+import {
+  publishNoteAwareness as publishNoteAwarenessFn,
+  releaseNoteAwareness as releaseNoteAwarenessFn,
+} from './functions/noteAwareness'
 import { operationIdValidator, resourceIdValidator } from './validators'
 import { executeBookmarkCommand as executeBookmarkCommandFn } from './functions/executeBookmarkCommand'
 import { commitUpload } from '../storage/functions/commitUpload'
@@ -283,6 +289,35 @@ export const saveNoteContent = campaignMutation({
     await saveNoteContentFn(ctx, {
       resourceId: args.resourceId,
       update: args.update,
+    }),
+})
+
+export const publishNoteAwareness = campaignMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    clientId: v.number(),
+    leaseId: v.string(),
+    state: v.bytes(),
+  },
+  returns: noteAwarenessLeaseResultValidator,
+  handler: async (ctx, args) =>
+    await publishNoteAwarenessFn(ctx, {
+      ...args,
+      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
+    }),
+})
+
+export const releaseNoteAwareness = campaignMutation({
+  args: {
+    resourceId: resourceIdValidator,
+    clientId: v.number(),
+    leaseId: v.string(),
+  },
+  returns: noteAwarenessReleaseResultValidator,
+  handler: async (ctx, args) =>
+    await releaseNoteAwarenessFn(ctx, {
+      ...args,
+      resourceId: assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId),
     }),
 })
 

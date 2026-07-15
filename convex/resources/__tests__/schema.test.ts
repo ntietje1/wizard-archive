@@ -18,6 +18,7 @@ describe('canonical resource schema', () => {
         resourceMapContents: expect.anything(),
         resourceMapPins: expect.anything(),
         resourceNoteContents: expect.anything(),
+        resourceNoteAwareness: expect.anything(),
       }),
     )
     expect(versionStampValidator).toBeTruthy()

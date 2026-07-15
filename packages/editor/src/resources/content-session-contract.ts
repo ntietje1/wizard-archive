@@ -1,4 +1,5 @@
 import type * as Y from 'yjs'
+import type { Awareness } from 'y-protocols/awareness'
 import type { AuthoredDestination } from './authored-destination-contract'
 import type { VersionStamp } from './component-version'
 import type { AssetId, CampaignMemberId, MapPinId, OperationId, ResourceId } from './domain-id'
@@ -43,6 +44,16 @@ export type SessionAwareness =
   | { readonly status: 'unavailable' }
   | { readonly status: 'available'; readonly collaboratorIds: ReadonlyArray<CampaignMemberId> }
 
+export type NoteCollaborationUser = Readonly<{
+  name: string
+  color: string
+}>
+
+export type NoteCollaboration = Readonly<{
+  provider: Readonly<{ awareness: Awareness }>
+  user: NoteCollaborationUser
+}>
+
 export type NoteSessionSaveResult =
   | { readonly status: 'completed'; readonly version: VersionStamp }
   | {
@@ -60,6 +71,7 @@ export interface NoteSession {
   readonly document: Y.Doc
   readonly version: VersionStamp
   readonly awareness: SessionAwareness
+  readonly collaboration: NoteCollaboration
   readonly readonly: boolean
   flush(): Promise<NoteSessionSaveResult>
   dispose(): void

@@ -113,6 +113,7 @@ function NoteViewport({
   if (state.status !== 'ready') return <ContentState resource={resource} state={state} />
   return (
     <NoteEditor
+      collaboration={state.session.collaboration}
       document={state.session.document}
       editable={canEdit && !state.session.readonly}
       label={`${resource.title} note editor`}

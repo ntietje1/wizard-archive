@@ -160,6 +160,7 @@
     "@blocknote/shadcn": "^0.46.2",
     "@tiptap/pm": "^3.27.4",
     "lucide-react": "^0.541.0",
+    "y-protocols": "^1.0.7",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

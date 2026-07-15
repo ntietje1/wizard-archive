@@ -46,7 +46,8 @@ describe('useLiveResourceCore', () => {
 
   it('preserves every capability identity within one authoritative scope', () => {
     const { result, rerender } = renderHook(
-      ({ currentScope }) => useLiveResourceCore(currentScope, navigation),
+      ({ currentScope }) =>
+        useLiveResourceCore(currentScope, navigation, { name: 'Editor', color: '#61afef' }),
       { initialProps: { currentScope: scope } },
     )
     const initial = requireRuntime(result.current)
@@ -73,7 +74,8 @@ describe('useLiveResourceCore', () => {
 
   it('replaces every capability at a new actor projection scope boundary', () => {
     const initial = requireRuntime(
-      renderHook(() => useLiveResourceCore(scope, navigation)).result.current,
+      renderHook(() => useLiveResourceCore(scope, navigation, { name: 'Editor', color: '#61afef' }))
+        .result.current,
     )
     const next = requireRuntime(
       renderHook(() =>
@@ -84,6 +86,7 @@ describe('useLiveResourceCore', () => {
             projection: 'player',
           },
           navigation,
+          { name: 'Editor', color: '#61afef' },
         ),
       ).result.current,
     )

@@ -1,11 +1,11 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceKind } from '@wizard-archive/editor/resources/resource-record'
-import type { CampaignQueryCtx } from '../../functions'
+import type { CampaignMutationCtx, CampaignQueryCtx } from '../../functions'
 import { findCanonicalResource } from './findCanonicalResource'
 
 export async function authorizeResourceContent(
-  ctx: CampaignQueryCtx,
+  ctx: CampaignMutationCtx | CampaignQueryCtx,
   resourceId: ResourceId,
   kind: Exclude<ResourceKind, 'folder'>,
 ) {

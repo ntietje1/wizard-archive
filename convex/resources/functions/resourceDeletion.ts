@@ -17,6 +17,7 @@ type ResourceDeletionPlan = {
   aliases: Array<Doc<'resourceSourcePathAliases'>>
   assetsFolders: Array<Doc<'resourceAssetsFolders'>>
   noteContents: Array<Doc<'resourceNoteContents'>>
+  noteAwareness: Array<Doc<'resourceNoteAwareness'>>
   fileContents: Array<Doc<'resourceFileContents'>>
   mapContents: Array<Doc<'resourceMapContents'>>
   mapPins: Array<Doc<'resourceMapPins'>>
@@ -32,6 +33,7 @@ function createPlan(): ResourceDeletionPlan {
     aliases: [],
     assetsFolders: [],
     noteContents: [],
+    noteAwareness: [],
     fileContents: [],
     mapContents: [],
     mapPins: [],
@@ -52,6 +54,7 @@ function rowGroups(plan: ResourceDeletionPlan) {
     plan.aliases,
     plan.assetsFolders,
     plan.noteContents,
+    plan.noteAwareness,
     plan.fileContents,
     plan.mapContents,
     plan.mapPins,
@@ -73,6 +76,14 @@ async function addContent(
     case 'note': {
       const content = await loadNoteContentDeletion(ctx, resourceId)
       if (content) plan.noteContents.push(content)
+      plan.noteAwareness.push(
+        ...(await ctx.db
+          .query('resourceNoteAwareness')
+          .withIndex('by_resourceUuid_and_clientId', (query) =>
+            query.eq('resourceUuid', resourceId),
+          )
+          .take(MAX_SYNCHRONOUS_RESOURCE_CLOSURE + 1)),
+      )
       return
     }
     case 'file': {
@@ -211,6 +222,7 @@ export async function deleteCampaignResources(
     assetsFolders,
     operations,
     noteContents,
+    noteAwareness,
     fileContents,
     mapContents,
     mapPins,
@@ -251,6 +263,10 @@ export async function deleteCampaignResources(
       .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
       .collect(),
     ctx.db
+      .query('resourceNoteAwareness')
+      .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
+      .collect(),
+    ctx.db
       .query('resourceFileContents')
       .withIndex('by_campaignUuid', (query) => query.eq('campaignUuid', campaignId))
       .collect(),
@@ -285,6 +301,7 @@ export async function deleteCampaignResources(
     ...assetsFolders.map((row) => ctx.db.delete(row._id)),
     ...operations.map((row) => ctx.db.delete(row._id)),
     ...noteContents.map((row) => ctx.db.delete(row._id)),
+    ...noteAwareness.map((row) => ctx.db.delete(row._id)),
     ...fileContents.map((row) => ctx.db.delete(row._id)),
     ...mapContents.map((row) => ctx.db.delete(row._id)),
     ...mapPins.map((row) => ctx.db.delete(row._id)),

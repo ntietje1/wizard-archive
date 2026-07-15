@@ -9,6 +9,7 @@ import '@blocknote/shadcn/style.css'
 import { Sigma } from 'lucide-react'
 import { useEffect } from 'react'
 import type * as Y from 'yjs'
+import type { NoteCollaboration } from '../resources/content-session-contract'
 import { createNoteBlockSpecs } from './document/schema-factory'
 import { NOTE_YJS_FRAGMENT } from './document/headless-yjs'
 import { noteInlineContentSpecs, noteStyleSpecs } from './dom-specs'
@@ -41,11 +42,13 @@ const noteEditorSchema = BlockNoteSchema.create({
 })
 
 export function NoteEditor({
+  collaboration,
   document,
   editable,
   label,
   onFlush,
 }: {
+  collaboration?: NoteCollaboration
   document: Y.Doc
   editable: boolean
   label: string
@@ -54,6 +57,7 @@ export function NoteEditor({
   return (
     <NoteDocumentEditor
       key={document.guid}
+      collaboration={collaboration}
       document={document}
       editable={editable}
       label={label}
@@ -63,11 +67,13 @@ export function NoteEditor({
 }
 
 function NoteDocumentEditor({
+  collaboration,
   document,
   editable,
   label,
   onFlush,
 }: {
+  collaboration?: NoteCollaboration
   document: Y.Doc
   editable: boolean
   label: string
@@ -78,7 +84,8 @@ function NoteDocumentEditor({
       schema: noteEditorSchema,
       collaboration: {
         fragment: document.getXmlFragment(NOTE_YJS_FRAGMENT),
-        user: { name: 'You', color: '#5e6ad2' },
+        provider: collaboration?.provider,
+        user: collaboration?.user ?? { name: 'You', color: '#5e6ad2' },
       },
       autofocus: editable ? 'end' : false,
       domAttributes: { editor: { 'aria-label': label } },

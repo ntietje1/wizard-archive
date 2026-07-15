@@ -8,7 +8,9 @@ const campaignId = testDomainId('campaign', 'live-provider')
 const actorId = testDomainId('campaignMember', 'live-provider')
 const campaignState = vi.hoisted(() => ({
   campaignId: undefined as typeof campaignId | undefined,
-  membership: undefined as { id: typeof actorId; role: 'DM' } | undefined,
+  membership: undefined as
+    | { id: typeof actorId; role: 'DM'; userProfile: { name: string | null; username: string } }
+    | undefined,
 }))
 const resourceCore = vi.hoisted(
   () =>
@@ -19,7 +21,7 @@ const resourceCore = vi.hoisted(
     }) as unknown as EditorRuntime,
 )
 const useLiveResourceCoreMock = vi.hoisted(() =>
-  vi.fn((_scope: unknown, _navigation: unknown) => resourceCore),
+  vi.fn((_scope: unknown, _navigation: unknown, _collaborationUser: unknown) => resourceCore),
 )
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
@@ -30,8 +32,8 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
 }))
 
 vi.mock('../resources/use-live-resource-core', () => ({
-  useLiveResourceCore: (scope: unknown, navigation: unknown) =>
-    useLiveResourceCoreMock(scope, navigation),
+  useLiveResourceCore: (scope: unknown, navigation: unknown, collaborationUser: unknown) =>
+    useLiveResourceCoreMock(scope, navigation, collaborationUser),
 }))
 
 vi.mock('../live-workspace-route-effects', () => ({
@@ -49,7 +51,11 @@ vi.mock('../resources/use-live-resource-navigation', () => ({
 describe('LiveWorkspaceRuntimeProvider', () => {
   beforeEach(() => {
     campaignState.campaignId = campaignId
-    campaignState.membership = { id: actorId, role: 'DM' }
+    campaignState.membership = {
+      id: actorId,
+      role: 'DM',
+      userProfile: { name: 'Editor', username: 'editor' },
+    }
     useLiveResourceCoreMock.mockClear()
   })
 
@@ -73,6 +79,7 @@ describe('LiveWorkspaceRuntimeProvider', () => {
         open: expect.any(Function),
         subscribe: expect.any(Function),
       }),
+      { name: 'Editor', color: expect.stringMatching(/^#[0-9a-f]{6}$/) },
     )
     expect(screen.getByTestId('route-effects')).toBeInTheDocument()
   })

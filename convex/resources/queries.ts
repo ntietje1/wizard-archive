@@ -10,12 +10,14 @@ import {
   authorizedResourceSnapshotValidator,
   fileDownloadSnapshotValidator,
   noteContentSnapshotValidator,
+  noteAwarenessSnapshotValidator,
   resourceContentSnapshotValidator,
   resourceCollectionQueryValidator,
   workspaceSearchResultValidator,
 } from './schema'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { loadNoteContent as loadNoteContentFn } from './functions/loadNoteContent'
+import { loadNoteAwareness as loadNoteAwarenessFn } from './functions/noteAwareness'
 import { loadResourceContent as loadResourceContentFn } from './functions/loadResourceContent'
 import { resourceIdValidator } from './validators'
 import { searchResources as searchResourcesFn } from './functions/searchResources'
@@ -113,6 +115,13 @@ export const loadNoteContent = campaignQuery({
     const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)
     return await loadNoteContentFn(ctx, resourceId)
   },
+})
+
+export const loadNoteAwareness = campaignQuery({
+  args: { resourceId: resourceIdValidator },
+  returns: noteAwarenessSnapshotValidator,
+  handler: async (ctx, args) =>
+    await loadNoteAwarenessFn(ctx, assertDomainId(DOMAIN_ID_KIND.resource, args.resourceId)),
 })
 
 export const loadContent = campaignQuery({
