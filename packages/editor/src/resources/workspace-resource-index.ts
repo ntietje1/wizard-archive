@@ -274,8 +274,7 @@ function mergeProjectionResources(current: IndexState, projection: IndexState) {
     missingResourceIds.delete(resource.id)
   }
   for (const resourceId of projection.missingResourceIds) {
-    resources.delete(resourceId)
-    missingResourceIds.add(resourceId)
+    if (!resources.has(resourceId)) missingResourceIds.add(resourceId)
   }
   return { resources, missingResourceIds }
 }

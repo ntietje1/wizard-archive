@@ -93,11 +93,27 @@ export function createLiveResourceIndexRuntime(
 
   const applySnapshot = (snapshot: AuthorizedResourceSnapshot) => {
     const nextSequence = sequence + 1
-    const result = index.applyProjectionSnapshot(snapshot, indexRevision(`live-${nextSequence}`))
-    if (result.status !== 'applied' && result.status !== 'duplicate') {
+    const projectionResult = index.applyProjectionSnapshot(
+      { ...snapshot, missingResourceIds: [] },
+      indexRevision(`live-${nextSequence}`),
+    )
+    if (projectionResult.status !== 'applied' && projectionResult.status !== 'duplicate') {
       return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
     }
-    if (result.status === 'applied') sequence = nextSequence
+    if (projectionResult.status === 'applied') sequence = nextSequence
+    if (snapshot.missingResourceIds.length === 0) return { status: 'completed' } as const
+
+    const removalSequence = sequence + 1
+    const removalResult = index.applyChangeSet({
+      scope,
+      baseRevision: index.getSnapshot().revision,
+      nextRevision: indexRevision(`live-${removalSequence}`),
+      changes: snapshot.missingResourceIds.map((resourceId) => ({ type: 'remove', resourceId })),
+    })
+    if (removalResult.status !== 'applied' && removalResult.status !== 'duplicate') {
+      return { status: 'failed', retryable: false, reason: 'invalid_response' } as const
+    }
+    if (removalResult.status === 'applied') sequence = removalSequence
     return { status: 'completed' } as const
   }
 
