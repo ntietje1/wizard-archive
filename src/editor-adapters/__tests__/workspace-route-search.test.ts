@@ -43,7 +43,7 @@ describe('parseWorkspaceRouteSearchParams', () => {
     })
   })
 
-  it('rejects pre-cutover slug routes', () => {
+  it('rejects non-UUID resource routes', () => {
     expect(
       parseWorkspaceRouteSearchParams(new URLSearchParams({ resource: 'session-notes' })),
     ).toEqual({})
