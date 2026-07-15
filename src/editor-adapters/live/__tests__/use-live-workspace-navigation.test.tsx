@@ -41,7 +41,7 @@ describe('useLiveWorkspaceNavigation', () => {
   })
 
   it('reads the selected resource UUID from the shared editor route', () => {
-    useMatchMock.mockReturnValue({ search: { item: resourceId } })
+    useMatchMock.mockReturnValue({ search: { resource: resourceId } })
 
     const { result } = renderHook(() => useLiveWorkspaceSelectedResourceId())
 
@@ -52,11 +52,11 @@ describe('useLiveWorkspaceNavigation', () => {
     expect(result.current).toBe(resourceId)
   })
 
-  it('navigates to an item and records it as the latest workspace item', async () => {
+  it('navigates to a resource and records it as the latest workspace resource', async () => {
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {
-      await result.current.navigateToItem(resourceId, {
+      await result.current.navigateToResource(resourceId, {
         heading: 'arrival',
         replace: true,
       })
@@ -66,7 +66,7 @@ describe('useLiveWorkspaceNavigation', () => {
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
       params: { campaignId },
-      search: { item: resourceId, heading: 'arrival' },
+      search: { resource: resourceId, heading: 'arrival' },
       replace: true,
     })
   })
@@ -86,8 +86,8 @@ describe('useLiveWorkspaceNavigation', () => {
     })
   })
 
-  it('opens the last editor item using the stored route search', async () => {
-    lastResourceState.lastSelectedResourceSearch = { item: resourceId, heading: 'scene' }
+  it('opens the last editor resource using the stored route search', async () => {
+    lastResourceState.lastSelectedResourceSearch = { resource: resourceId, heading: 'scene' }
 
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
@@ -98,12 +98,12 @@ describe('useLiveWorkspaceNavigation', () => {
     expect(navigateMock).toHaveBeenCalledWith({
       to: EDITOR_ROUTE,
       params: { campaignId },
-      search: { item: resourceId, heading: 'scene' },
+      search: { resource: resourceId, heading: 'scene' },
       replace: undefined,
     })
   })
 
-  it('opens the editor root when no last item is stored', async () => {
+  it('opens the editor root when no last resource is stored', async () => {
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {
@@ -118,8 +118,8 @@ describe('useLiveWorkspaceNavigation', () => {
     })
   })
 
-  it('keeps the last selected item when opening the create dashboard', async () => {
-    lastResourceState.lastSelectedResourceSearch = { item: resourceId }
+  it('keeps the last selected resource when opening the create dashboard', async () => {
+    lastResourceState.lastSelectedResourceSearch = { resource: resourceId }
     const { result } = renderHook(() => useLiveWorkspaceNavigation())
 
     await act(async () => {

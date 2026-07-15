@@ -47,7 +47,7 @@ describe('useLastResource', () => {
     const { result } = renderHook(() => useLastResource())
 
     expect(result.current.lastSelectedResource).toBe(resourceId)
-    expect(result.current.lastSelectedResourceSearch).toEqual({ item: resourceId })
+    expect(result.current.lastSelectedResourceSearch).toEqual({ resource: resourceId })
   })
 
   it('drops pre-cutover stored slugs', () => {

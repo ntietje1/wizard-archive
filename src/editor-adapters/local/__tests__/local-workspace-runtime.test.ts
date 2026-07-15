@@ -34,7 +34,7 @@ describe('useLocalWorkspaceRuntime', () => {
 
   it('owns local navigation by canonical resource ID', () => {
     const { result } = renderHook(() =>
-      useLocalWorkspaceRuntime({ initialItemId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap }),
+      useLocalWorkspaceRuntime({ initialResourceId: SAMPLE_LOCAL_RESOURCE_IDS.docksMap }),
     )
 
     expect(result.current.navigation.current()).toBe(SAMPLE_LOCAL_RESOURCE_IDS.docksMap)

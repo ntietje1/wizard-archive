@@ -7,18 +7,18 @@ import { createSampleLocalWorkspaceFixture } from './sample-local-workspace'
 
 export function useLocalWorkspaceRuntime({
   canEdit = true,
-  initialItemId,
+  initialResourceId,
   initialWorkspace,
 }: {
   canEdit?: boolean
-  initialItemId?: ResourceId | null
+  initialResourceId?: ResourceId | null
   initialWorkspace?: LocalWorkspaceFixture
 }) {
   const [core] = useState(() => {
     const workspace = initialWorkspace ?? createSampleLocalWorkspaceFixture()
     return createInMemoryEditorRuntime({
       ...workspace,
-      navigation: createLocalResourceNavigation(initialItemId ?? null),
+      navigation: createLocalResourceNavigation(initialResourceId ?? null),
       canEdit: canEdit && workspace.scope.projection === 'dm',
     })
   })

@@ -133,7 +133,7 @@ describe('editor graph parity', () => {
     expect(graphState.localRuntimeInputs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          initialItemId: null,
+          initialResourceId: null,
         }),
         expect.objectContaining({
           canEdit: false,

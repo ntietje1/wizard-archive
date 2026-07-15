@@ -25,7 +25,7 @@ export function useLastResource() {
   }
 
   const lastSelectedResourceSearch: WorkspaceRouteSearch | undefined = lastSelectedResource
-    ? { item: lastSelectedResource }
+    ? { resource: lastSelectedResource }
     : undefined
 
   return {

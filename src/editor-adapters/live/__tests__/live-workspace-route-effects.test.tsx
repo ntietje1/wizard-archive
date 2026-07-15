@@ -6,7 +6,7 @@ import { LiveWorkspaceRouteEffects } from '../live-workspace-route-effects'
 
 const useMatchMock = vi.hoisted(() => vi.fn())
 const useCampaignMock = vi.hoisted(() => vi.fn())
-const addRecentItemMock = vi.hoisted(() => vi.fn())
+const addRecentResourceMock = vi.hoisted(() => vi.fn())
 const ensureResourceMock = vi.hoisted(() =>
   vi.fn(() => Promise.resolve({ status: 'completed' as const })),
 )
@@ -20,9 +20,9 @@ vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => useCampaignMock(),
 }))
 
-vi.mock('~/editor-adapters/live/live-recent-items', () => ({
-  addLiveRecentItem: (workspaceRecordId: unknown, resourceId: unknown) =>
-    addRecentItemMock(workspaceRecordId, resourceId),
+vi.mock('~/editor-adapters/live/live-recent-resources', () => ({
+  addLiveRecentResource: (workspaceRecordId: unknown, resourceId: unknown) =>
+    addRecentResourceMock(workspaceRecordId, resourceId),
 }))
 
 describe('LiveWorkspaceRouteEffects', () => {
@@ -31,38 +31,38 @@ describe('LiveWorkspaceRouteEffects', () => {
   beforeEach(() => {
     useMatchMock.mockReset()
     useCampaignMock.mockReset()
-    addRecentItemMock.mockReset()
+    addRecentResourceMock.mockReset()
     ensureResourceMock.mockClear()
     useCampaignMock.mockReturnValue({ campaignId })
-    useMatchMock.mockReturnValue({ search: { item: resourceId } })
+    useMatchMock.mockReturnValue({ search: { resource: resourceId } })
   })
 
-  it('records the current live route resource as a recent item', () => {
+  it('records the current live route resource as a recent resource', () => {
     render(<LiveWorkspaceRouteEffects resourceLoader={resourceLoader} />)
 
     expect(useMatchMock).toHaveBeenCalledWith({
       from: EDITOR_ROUTE_ID,
       shouldThrow: false,
     })
-    expect(addRecentItemMock).toHaveBeenCalledExactlyOnceWith(campaignId, resourceId)
+    expect(addRecentResourceMock).toHaveBeenCalledExactlyOnceWith(campaignId, resourceId)
     expect(ensureResourceMock).toHaveBeenCalledExactlyOnceWith(resourceId)
   })
 
-  it('does not record a recent item without a route resource', () => {
+  it('does not record a recent resource without a route resource', () => {
     useMatchMock.mockReturnValue({ search: {} })
 
     render(<LiveWorkspaceRouteEffects resourceLoader={resourceLoader} />)
 
-    expect(addRecentItemMock).not.toHaveBeenCalled()
+    expect(addRecentResourceMock).not.toHaveBeenCalled()
     expect(ensureResourceMock).not.toHaveBeenCalled()
   })
 
-  it('does not record a recent item without a workspace context', () => {
+  it('does not record a recent resource without a workspace context', () => {
     useCampaignMock.mockReturnValue({ campaignId: undefined })
 
     render(<LiveWorkspaceRouteEffects resourceLoader={resourceLoader} />)
 
-    expect(addRecentItemMock).not.toHaveBeenCalled()
+    expect(addRecentResourceMock).not.toHaveBeenCalled()
     expect(ensureResourceMock).not.toHaveBeenCalled()
   })
 })

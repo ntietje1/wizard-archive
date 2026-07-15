@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { testDomainId } from '../../../../shared/test/domain-id'
-import { addLiveRecentItem } from '../live-recent-items'
+import { addLiveRecentResource } from '../live-recent-resources'
 
-describe('live recent items', () => {
+describe('live recent resources', () => {
   let storage: Record<string, string>
 
   beforeEach(() => {
@@ -20,9 +20,9 @@ describe('live recent items', () => {
     vi.restoreAllMocks()
   })
 
-  it('persists a recent item entry for the live workspace storage key', () => {
+  it('persists a recent resource entry for the live workspace storage key', () => {
     const resourceId = testDomainId('resource', 'my-note')
-    addLiveRecentItem('campaign-1', resourceId)
+    addLiveRecentResource('campaign-1', resourceId)
 
     const stored = JSON.parse(storage['recent-resources-v1-campaign-1'])
     expect(stored).toHaveLength(1)
@@ -43,7 +43,7 @@ describe('live recent items', () => {
       })),
     )
 
-    addLiveRecentItem('campaign-1', ids[50]!)
+    addLiveRecentResource('campaign-1', ids[50]!)
 
     const stored = JSON.parse(storage['recent-resources-v1-campaign-1'])
     expect(stored).toHaveLength(100)
@@ -64,7 +64,7 @@ describe('live recent items', () => {
       })),
     )
 
-    addLiveRecentItem('campaign-1', newResourceId)
+    addLiveRecentResource('campaign-1', newResourceId)
 
     const stored = JSON.parse(storage['recent-resources-v1-campaign-1'])
     expect(stored).toHaveLength(100)

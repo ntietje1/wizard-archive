@@ -8,13 +8,13 @@ import {
 
 export function useLiveResourceNavigation(): ResourceNavigation {
   const selectedResourceId = useLiveWorkspaceSelectedResourceId()
-  const { navigateToItem } = useLiveWorkspaceNavigation()
+  const { navigateToResource } = useLiveWorkspaceNavigation()
   const selectedRef = useRef(selectedResourceId)
-  const navigateRef = useRef(navigateToItem)
+  const navigateRef = useRef(navigateToResource)
   const listenersRef = useRef(new Set<() => void>())
   const navigationRef = useRef<ResourceNavigation>(null)
 
-  navigateRef.current = navigateToItem
+  navigateRef.current = navigateToResource
   navigationRef.current ??= {
     current: () => selectedRef.current,
     open: (resourceId: ResourceId) => void navigateRef.current(resourceId),

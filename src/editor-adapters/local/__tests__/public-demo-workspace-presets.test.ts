@@ -36,15 +36,18 @@ describe('public demo workspace presets', () => {
   })
 
   it('selects each focused scenario by canonical resource ID', () => {
-    expect(createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome).initialItemId).toBeNull()
-    expect(createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.connectedCanvas).initialItemId).toBe(
-      SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas,
-    )
-    expect(createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap).initialItemId).toBe(
-      SAMPLE_LOCAL_RESOURCE_IDS.docksMap,
-    )
     expect(
-      createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.collaborativeSessionNotes).initialItemId,
+      createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome).initialResourceId,
+    ).toBeNull()
+    expect(
+      createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.connectedCanvas).initialResourceId,
+    ).toBe(SAMPLE_LOCAL_RESOURCE_IDS.heistCanvas)
+    expect(
+      createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap).initialResourceId,
+    ).toBe(SAMPLE_LOCAL_RESOURCE_IDS.docksMap)
+    expect(
+      createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.collaborativeSessionNotes)
+        .initialResourceId,
     ).toBe(SAMPLE_LOCAL_RESOURCE_IDS.marketNote)
   })
 

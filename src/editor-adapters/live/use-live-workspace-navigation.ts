@@ -10,7 +10,7 @@ export function useLiveWorkspaceSelectedResourceId(): ResourceId | null {
     from: EDITOR_ROUTE_ID,
     shouldThrow: false,
   })
-  return editorMatch?.search.item ?? null
+  return editorMatch?.search.resource ?? null
 }
 
 export const useLiveWorkspaceNavigation = () => {
@@ -29,13 +29,15 @@ export const useLiveWorkspaceNavigation = () => {
     })
   }
 
-  const navigateToItem = async (
+  const navigateToResource = async (
     resourceId: ResourceId,
     options: { heading?: string; replace?: boolean } = {},
   ) => {
     setLastSelectedResource(resourceId)
     await navigateToWorkspaceRoute(
-      options.heading ? { item: resourceId, heading: options.heading } : { item: resourceId },
+      options.heading
+        ? { resource: resourceId, heading: options.heading }
+        : { resource: resourceId },
       options.replace,
     )
   }
@@ -57,7 +59,7 @@ export const useLiveWorkspaceNavigation = () => {
   }
 
   return {
-    navigateToItem,
+    navigateToResource,
     clearWorkspaceContent,
     openLastResource,
     openCampaignsDashboard,

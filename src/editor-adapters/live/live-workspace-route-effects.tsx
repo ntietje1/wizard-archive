@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { ResourceIndexLoader } from '@wizard-archive/editor/resources/index-contract'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { addLiveRecentItem } from '~/editor-adapters/live/live-recent-items'
+import { addLiveRecentResource } from '~/editor-adapters/live/live-recent-resources'
 import { useLiveWorkspaceSelectedResourceId } from './use-live-workspace-navigation'
 
 export function LiveWorkspaceRouteEffects({
@@ -14,7 +14,7 @@ export function LiveWorkspaceRouteEffects({
 
   useEffect(() => {
     if (requestedResourceId && workspaceRecordId) {
-      addLiveRecentItem(workspaceRecordId, requestedResourceId)
+      addLiveRecentResource(workspaceRecordId, requestedResourceId)
       void resourceLoader.ensureResource(requestedResourceId)
     }
   }, [requestedResourceId, resourceLoader, workspaceRecordId])

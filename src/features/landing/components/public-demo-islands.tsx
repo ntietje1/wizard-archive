@@ -27,7 +27,7 @@ export function PublicDemoWorkspaceFeatureIsland() {
 export function PublicDemoCanvasFeatureIsland() {
   const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.connectedCanvas)
 
-  return scenario.initialItemId ? (
+  return scenario.initialResourceId ? (
     <PublicDemoIsland ariaLabel="Canvas feature preview" scenario={scenario} sidebar="none" />
   ) : null
 }
@@ -35,7 +35,7 @@ export function PublicDemoCanvasFeatureIsland() {
 export function PublicDemoMapFeatureIsland() {
   const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.layeredLoreMap)
 
-  return scenario.initialItemId ? (
+  return scenario.initialResourceId ? (
     <PublicDemoIsland ariaLabel="Map feature preview" scenario={scenario} sidebar="none" />
   ) : null
 }
@@ -76,7 +76,7 @@ function PublicDemoIsland({
     <LocalWorkspaceRuntimeHost
       ariaLabel={ariaLabel}
       canEdit={canEdit}
-      initialItemId={scenario.initialItemId}
+      initialResourceId={scenario.initialResourceId}
       initialWorkspace={scenario.workspace}
       sidebar={sidebar}
       workspaceName="Demo workspace"

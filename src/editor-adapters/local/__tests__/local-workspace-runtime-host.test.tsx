@@ -34,7 +34,7 @@ describe('LocalWorkspaceRuntimeHost', () => {
 
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith({
       canEdit: false,
-      initialItemId: undefined,
+      initialResourceId: undefined,
       initialWorkspace: undefined,
     })
     expect(wizardEditorMock).toHaveBeenCalledWith(

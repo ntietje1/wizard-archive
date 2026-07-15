@@ -71,14 +71,14 @@ describe('LocalDemoRouteContent', () => {
     clientOnlyState.renderClient = true
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
     const resourceId = scenario.workspace.snapshot.resources[0]!.id
-    window.history.replaceState(null, '', `/demo?item=${resourceId}&heading=Intro`)
+    window.history.replaceState(null, '', `/demo?resource=${resourceId}&heading=Intro`)
 
     render(<LocalDemoRouteContent />)
 
     expect(screen.getByText('Local demo workspace')).toBeInTheDocument()
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        initialItemId: resourceId,
+        initialResourceId: resourceId,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
           snapshot: scenario.workspace.snapshot,
@@ -99,7 +99,7 @@ describe('LocalDemoRouteContent', () => {
 
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        initialItemId: scenario.initialItemId,
+        initialResourceId: scenario.initialResourceId,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
           snapshot: scenario.workspace.snapshot,
@@ -117,7 +117,7 @@ describe('LocalDemoRouteContent', () => {
 
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        initialItemId: scenario.initialItemId,
+        initialResourceId: scenario.initialResourceId,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
           snapshot: scenario.workspace.snapshot,
@@ -131,7 +131,7 @@ describe('LocalDemoRouteContent', () => {
     window.history.replaceState(
       null,
       '',
-      `/demo?item=${encodeURIComponent('../private-note')}&heading=${'h'.repeat(513)}`,
+      `/demo?resource=${encodeURIComponent('../private-note')}&heading=${'h'.repeat(513)}`,
     )
     const scenario = createPublicDemoScenario(PUBLIC_DEMO_SCENARIO_IDS.campaignHome)
 
@@ -139,7 +139,7 @@ describe('LocalDemoRouteContent', () => {
 
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        initialItemId: scenario.initialItemId,
+        initialResourceId: scenario.initialResourceId,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
           snapshot: scenario.workspace.snapshot,
@@ -157,7 +157,7 @@ describe('LocalDemoRouteContent', () => {
     expect(screen.getByLabelText('Demo workspace')).toBeInTheDocument()
     expect(useLocalWorkspaceRuntimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        initialItemId: null,
+        initialResourceId: null,
         initialWorkspace: expect.objectContaining({
           scope: scenario.workspace.scope,
           snapshot: scenario.workspace.snapshot,

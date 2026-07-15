@@ -8,19 +8,19 @@ type WizardEditorComponentProps = ComponentProps<typeof WizardEditor>
 
 type LocalWorkspaceRuntimeHostProps = Omit<WizardEditorComponentProps, 'runtime'> & {
   canEdit?: boolean
-  initialItemId?: ResourceId | null
+  initialResourceId?: ResourceId | null
   initialWorkspace?: LocalWorkspaceFixture
 }
 
 export function LocalWorkspaceRuntimeHost({
   canEdit,
-  initialItemId,
+  initialResourceId,
   initialWorkspace,
   ...hostProps
 }: LocalWorkspaceRuntimeHostProps) {
   const runtime = useLocalWorkspaceRuntime({
     canEdit,
-    initialItemId,
+    initialResourceId,
     initialWorkspace,
   })
 

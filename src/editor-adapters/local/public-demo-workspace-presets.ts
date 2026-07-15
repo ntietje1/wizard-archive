@@ -23,7 +23,7 @@ export type PublicDemoScenarioId =
 
 export interface PublicDemoScenario {
   id: PublicDemoScenarioId
-  initialItemId: ResourceId | null
+  initialResourceId: ResourceId | null
   workspace: LocalWorkspaceFixture
 }
 
@@ -77,13 +77,13 @@ export function createPublicDemoScenario(id: PublicDemoScenarioId): PublicDemoSc
 
 function scenario(
   id: PublicDemoScenarioId,
-  initialItemId: ResourceId | null,
+  initialResourceId: ResourceId | null,
   noteBody = SAMPLE_NOTE_BODY,
   projection: 'dm' | 'player' = 'dm',
 ): PublicDemoScenario {
   return {
     id,
-    initialItemId,
+    initialResourceId,
     workspace: createSampleLocalWorkspaceFixture({ noteBody, projection }),
   }
 }

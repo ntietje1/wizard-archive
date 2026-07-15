@@ -30,7 +30,7 @@ function LocalDemoWorkspace() {
   return (
     <LocalWorkspaceRuntimeHost
       ariaLabel="Demo workspace"
-      initialItemId={initialSearch.item ?? scenario.initialItemId}
+      initialResourceId={initialSearch.resource ?? scenario.initialResourceId}
       initialWorkspace={scenario.workspace}
       workspaceName="Demo workspace"
     />

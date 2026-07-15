@@ -3,9 +3,9 @@ import { readPersistedJson, writePersistedJson } from '@wizard-archive/ui/storag
 import { DOMAIN_ID_KIND, parseDomainId } from '@wizard-archive/editor/resources/domain-id'
 import type { ResourceId } from '@wizard-archive/editor/resources/domain-id'
 
-const MAX_RECENT_ITEMS = 100
+const MAX_RECENT_RESOURCES = 100
 
-interface RecentItemEntry {
+interface RecentResourceEntry {
   resourceId: ResourceId
   timestamp: number
 }
@@ -14,41 +14,41 @@ function storageKey(workspaceRecordId: string) {
   return `recent-resources-v1-${workspaceRecordId}`
 }
 
-export function addLiveRecentItem(workspaceRecordId: string, resourceId: ResourceId) {
+export function addLiveRecentResource(workspaceRecordId: string, resourceId: ResourceId) {
   if (!workspaceRecordId) return
   const key = storageKey(workspaceRecordId)
   try {
-    const entries = readPersistedJson(key, [], parseRecentItemEntries)
-    writePersistedJson(key, addRecentItemEntry({ entries, resourceId }))
+    const entries = readPersistedJson(key, [], parseRecentResourceEntries)
+    writePersistedJson(key, addRecentResourceEntry({ entries, resourceId }))
   } catch (error) {
-    logger.debug('Failed to write recent items for key', key, error)
+    logger.debug('Failed to write recent resources for key', key, error)
   }
 }
 
-function addRecentItemEntry({
+function addRecentResourceEntry({
   entries,
   now = Date.now(),
   resourceId,
 }: {
-  entries: ReadonlyArray<RecentItemEntry>
+  entries: ReadonlyArray<RecentResourceEntry>
   now?: number
   resourceId: ResourceId
-}): Array<RecentItemEntry> {
+}): Array<RecentResourceEntry> {
   return [
     { resourceId, timestamp: now },
     ...entries.filter((entry) => entry.resourceId !== resourceId),
-  ].slice(0, MAX_RECENT_ITEMS)
+  ].slice(0, MAX_RECENT_RESOURCES)
 }
 
-function parseRecentItemEntries(value: unknown): Array<RecentItemEntry> {
+function parseRecentResourceEntries(value: unknown): Array<RecentResourceEntry> {
   if (!Array.isArray(value)) return []
   return value.flatMap((entry) => {
-    const parsedEntry = parseRecentItemEntry(entry)
+    const parsedEntry = parseRecentResourceEntry(entry)
     return parsedEntry ? [parsedEntry] : []
   })
 }
 
-function parseRecentItemEntry(entry: unknown): RecentItemEntry | null {
+function parseRecentResourceEntry(entry: unknown): RecentResourceEntry | null {
   if (typeof entry !== 'object' || entry === null) return null
   const rawResourceId = (entry as { resourceId?: unknown }).resourceId
   const timestamp = (entry as { timestamp?: unknown }).timestamp
