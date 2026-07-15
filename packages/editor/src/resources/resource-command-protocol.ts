@@ -1,4 +1,4 @@
-import { sha256Digest } from './component-version'
+import { assertVersionStamp, sha256Digest } from './component-version'
 import type { Sha256Digest } from './component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from './domain-id'
 import type { CampaignMemberId, NoteBlockId, ResourceId } from './domain-id'
@@ -9,6 +9,7 @@ import type {
   ResourceAccessCommand,
   ResourceBookmarkCommand,
   ResourcePermission,
+  ResourcePostcondition,
   ResourceStructureCommand,
   ResourceStructureRejection,
   RestoreResourcesCommand,
@@ -243,6 +244,50 @@ export async function fingerprintResourceStructureCommand(
   command: ResourceStructureCommand,
 ): Promise<Sha256Digest> {
   return await sha256Digest(encodeResourceStructureCommand(command))
+}
+
+export function normalizeResourcePostconditions(
+  conditions: ReadonlyArray<
+    | { readonly state: 'missing'; readonly resourceId: string }
+    | {
+        readonly state: 'present'
+        readonly resourceId: string
+        readonly metadataVersion: unknown
+      }
+  >,
+): ReadonlyArray<ResourcePostcondition> {
+  const byResourceId = new Map<ResourceId, ResourcePostcondition>()
+  for (const condition of conditions) {
+    const resourceId = assertDomainId(DOMAIN_ID_KIND.resource, condition.resourceId)
+    if (byResourceId.has(resourceId)) throw new TypeError('Duplicate resource postcondition')
+    byResourceId.set(
+      resourceId,
+      condition.state === 'missing'
+        ? { state: 'missing', resourceId }
+        : {
+            state: 'present',
+            resourceId,
+            metadataVersion: assertVersionStamp(condition.metadataVersion),
+          },
+    )
+  }
+  if (byResourceId.size === 0) throw new TypeError('Compensation requires a postcondition')
+  return Array.from(byResourceId.values())
+}
+
+export async function fingerprintResourceCompensation(
+  command: ResourceStructureCommand,
+  expectedPostconditions: ReadonlyArray<ResourcePostcondition>,
+): Promise<Sha256Digest> {
+  const normalizedExpectedPostconditions = [
+    ...normalizeResourcePostconditions(expectedPostconditions),
+  ].sort((left, right) => left.resourceId.localeCompare(right.resourceId))
+  return await sha256Digest(
+    encodeCommand('structure-compensation', {
+      command: normalizeResourceStructureCommand(command),
+      expectedPostconditions: normalizedExpectedPostconditions,
+    }),
+  )
 }
 
 export async function fingerprintResourceAccessCommand(

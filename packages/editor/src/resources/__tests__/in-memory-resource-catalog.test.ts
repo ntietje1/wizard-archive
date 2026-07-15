@@ -264,6 +264,81 @@ describe('in-memory resource operations deep copy', () => {
   })
 })
 
+describe('in-memory resource compensation', () => {
+  it('replays compensation before checking its consumed postcondition', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = catalog.operations({ authorize: () => true })
+    const id = resourceDomainId(50)
+    await createResource(operations, id, operationDomainId(50), null, 'note')
+    const renamed = await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(51),
+      command: {
+        type: 'updateMetadata',
+        resourceId: id,
+        changes: { title: canonicalizeResourceTitle('Renamed') },
+      },
+    })
+    if (renamed.status !== 'completed') throw new TypeError('Expected rename completion')
+    const compensation = {
+      campaignId,
+      operationId: operationDomainId(52),
+      command: {
+        type: 'updateMetadata' as const,
+        resourceId: id,
+        changes: { title: canonicalizeResourceTitle('Resource 50') },
+      },
+      expectedPostconditions: renamed.receipt.postconditions,
+    }
+
+    const first = await operations.executeCompensation(actorId, compensation)
+    const replay = await operations.executeCompensation(actorId, compensation)
+
+    expect(replay).toEqual(first)
+    expect(catalog.getSnapshot(campaignId).resources[0]?.title).toBe('Resource 50')
+  })
+
+  it('rejects compensation after a later edit without overwriting it', async () => {
+    const catalog = new InMemoryResourceCatalog()
+    const operations = catalog.operations({ authorize: () => true })
+    const id = resourceDomainId(60)
+    await createResource(operations, id, operationDomainId(60), null, 'note')
+    const renamed = await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(61),
+      command: {
+        type: 'updateMetadata',
+        resourceId: id,
+        changes: { title: canonicalizeResourceTitle('First rename') },
+      },
+    })
+    if (renamed.status !== 'completed') throw new TypeError('Expected rename completion')
+    await operations.execute(actorId, {
+      campaignId,
+      operationId: operationDomainId(62),
+      command: {
+        type: 'updateMetadata',
+        resourceId: id,
+        changes: { title: canonicalizeResourceTitle('Later edit') },
+      },
+    })
+
+    await expect(
+      operations.executeCompensation(actorId, {
+        campaignId,
+        operationId: operationDomainId(63),
+        command: {
+          type: 'updateMetadata',
+          resourceId: id,
+          changes: { title: canonicalizeResourceTitle('Resource 60') },
+        },
+        expectedPostconditions: renamed.receipt.postconditions,
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'stale_history' })
+    expect(catalog.getSnapshot(campaignId).resources[0]?.title).toBe('Later edit')
+  })
+})
+
 function resourceDomainId(sequence: number) {
   return assertDomainId(
     DOMAIN_ID_KIND.resource,

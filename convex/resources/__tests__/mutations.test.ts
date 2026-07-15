@@ -34,6 +34,70 @@ describe('resource structure commands', () => {
 
   afterEach(() => vi.useRealTimers())
 
+  it('replays safe compensation and rejects it after a conflicting edit', async () => {
+    const campaign = await setupCampaignContext(t)
+    const campaignUuid = await getCampaignUuid(campaign.campaignId)
+    const resourceId = await createResource(campaign, campaignUuid, 'note', null, 'Original')
+    const renamed = await asDm(campaign).mutation(api.resources.mutations.executeStructureCommand, {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'updateMetadata',
+        resourceId,
+        changes: { title: 'Renamed' },
+      },
+    })
+    if (renamed.status !== 'completed') throw new Error('Expected rename completion')
+    const compensation = {
+      campaignId: campaignUuid,
+      operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+      command: {
+        type: 'updateMetadata' as const,
+        resourceId,
+        changes: { title: 'Original' },
+      },
+      expectedPostconditions: renamed.receipt.postconditions,
+    }
+
+    const first = await asDm(campaign).mutation(
+      api.resources.mutations.executeStructureCompensation,
+      compensation,
+    )
+    const replay = await asDm(campaign).mutation(
+      api.resources.mutations.executeStructureCompensation,
+      compensation,
+    )
+    expect(replay).toEqual(first)
+
+    const secondRename = await asDm(campaign).mutation(
+      api.resources.mutations.executeStructureCommand,
+      {
+        campaignId: campaignUuid,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        command: {
+          type: 'updateMetadata',
+          resourceId,
+          changes: { title: 'Later edit' },
+        },
+      },
+    )
+    if (secondRename.status !== 'completed') throw new Error('Expected second rename completion')
+    await expect(
+      asDm(campaign).mutation(api.resources.mutations.executeStructureCompensation, {
+        ...compensation,
+        operationId: generateDomainId(DOMAIN_ID_KIND.operation),
+        expectedPostconditions: first.status === 'completed' ? first.receipt.postconditions : [],
+      }),
+    ).resolves.toEqual({ status: 'rejected', reason: 'stale_history' })
+    await t.run(async (ctx) => {
+      const resource = await ctx.db
+        .query('resources')
+        .withIndex('by_resourceUuid', (query) => query.eq('resourceUuid', resourceId))
+        .unique()
+      expect(resource?.title).toBe('Later edit')
+    })
+  })
+
   it('atomically creates a file resource from one owned upload', async () => {
     const campaign = await setupCampaignContext(t)
     const campaignUuid = await getCampaignUuid(campaign.campaignId)

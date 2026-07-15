@@ -154,7 +154,7 @@ const resourceTableValidator = v.union(
   }),
 )
 
-const resourcePostconditionValidator = v.union(
+export const resourcePostconditionValidator = v.union(
   v.object({
     state: v.literal('present'),
     resourceId: resourceIdValidator,
@@ -243,6 +243,7 @@ export const resourceStructureCommandResultValidator = v.union(
       'content_integrity_failure',
       'version_exhausted',
       'operation_id_reused',
+      'stale_history',
     ),
   }),
   v.object({

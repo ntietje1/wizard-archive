@@ -144,6 +144,7 @@ export type ResourceStructureRejection =
   | 'content_integrity_failure'
   | 'version_exhausted'
   | 'operation_id_reused'
+  | 'stale_history'
 
 export type ResourcePostcondition =
   | {
@@ -152,6 +153,11 @@ export type ResourcePostcondition =
       readonly metadataVersion: VersionStamp
     }
   | { readonly state: 'missing'; readonly resourceId: ResourceId }
+
+export type ResourceCompensationEnvelope = CommandEnvelope<ResourceStructureCommand> &
+  Readonly<{
+    expectedPostconditions: ReadonlyArray<ResourcePostcondition>
+  }>
 
 export type DeepCopyRoot = Readonly<{
   sourceRootId: ResourceId
@@ -263,6 +269,12 @@ export interface ResourceStructureCommandGateway {
   ): Promise<CommandDelivery<ResourceStructureCommandResult>>
 }
 
+export interface ResourceStructureCompensationGateway {
+  executeCompensation(
+    envelope: ResourceCompensationEnvelope,
+  ): Promise<CommandDelivery<ResourceStructureCommandResult>>
+}
+
 export interface ResourceAccessCommandGateway {
   execute(
     envelope: CommandEnvelope<ResourceAccessCommand>,
@@ -285,6 +297,13 @@ export interface AuthoritativeResourceOperationExecutor {
   execute(
     actorId: CampaignMemberId,
     envelope: CommandEnvelope<ResourceStructureCommand>,
+  ): Promise<ResourceStructureCommandResult>
+}
+
+export interface AuthoritativeResourceCompensationExecutor {
+  executeCompensation(
+    actorId: CampaignMemberId,
+    envelope: ResourceCompensationEnvelope,
   ): Promise<ResourceStructureCommandResult>
 }
 

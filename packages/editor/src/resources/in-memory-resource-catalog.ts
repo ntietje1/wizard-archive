@@ -11,8 +11,10 @@ import { assertResourceCatalogPageSize } from './resource-catalog-contract'
 import { assertSourcePathAlias } from './source-path-alias'
 import type {
   AuthoritativeResourceOperationExecutor,
+  AuthoritativeResourceCompensationExecutor,
   CommandEnvelope,
   ResourceCommandReceipt,
+  ResourceCompensationEnvelope,
   ResourcePostcondition,
   ResourceStructureCommand,
   ResourceStructureCommandResult,
@@ -20,6 +22,8 @@ import type {
 import {
   RESOURCE_COMMAND_PROTOCOL_VERSION,
   fingerprintResourceStructureCommand,
+  fingerprintResourceCompensation,
+  normalizeResourcePostconditions,
   normalizeResourceStructureCommand,
   resourceStructureInputRejection,
 } from './resource-command-protocol'
@@ -57,7 +61,8 @@ export type InMemoryResourceOperationsOptions<TContentCopyPlan = never> = Readon
   now?: () => number
 }>
 
-export interface InMemoryResourceOperations extends AuthoritativeResourceOperationExecutor {
+export interface InMemoryResourceOperations
+  extends AuthoritativeResourceOperationExecutor, AuthoritativeResourceCompensationExecutor {
   appendAlias(alias: SourcePathAlias): Promise<SourcePathAlias>
   assignAssetsFolder(campaignId: CampaignId, resourceId: ResourceId | null): Promise<void>
 }
@@ -430,7 +435,16 @@ class InMemoryResourceOperationExecutor<
     actorId: CampaignMemberId,
     envelope: CommandEnvelope<ResourceStructureCommand>,
   ): Promise<ResourceStructureCommandResult> {
-    return this.#enqueue(() => this.#execute(actorId, envelope))
+    return this.#enqueue(() => this.#executeInput(actorId, envelope))
+  }
+
+  executeCompensation(
+    actorId: CampaignMemberId,
+    envelope: ResourceCompensationEnvelope,
+  ): Promise<ResourceStructureCommandResult> {
+    return this.#enqueue(() =>
+      this.#executeInput(actorId, envelope, envelope.expectedPostconditions),
+    )
   }
 
   #enqueue<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
@@ -442,26 +456,39 @@ class InMemoryResourceOperationExecutor<
     return result
   }
 
-  async #execute(
+  async #executeInput(
     actorId: CampaignMemberId,
     envelope: CommandEnvelope<ResourceStructureCommand>,
+    expected?: ReadonlyArray<ResourcePostcondition>,
   ): Promise<ResourceStructureCommandResult> {
     let normalizedEnvelope: CommandEnvelope<ResourceStructureCommand>
+    let expectedPostconditions: ReadonlyArray<ResourcePostcondition> | undefined
     try {
       normalizedEnvelope = {
         campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, envelope.campaignId),
         operationId: assertDomainId(DOMAIN_ID_KIND.operation, envelope.operationId),
         command: normalizeResourceStructureCommand(envelope.command),
       }
+      expectedPostconditions = expected && normalizeResourcePostconditions(expected)
       assertDomainId(DOMAIN_ID_KIND.campaignMember, actorId)
     } catch (error) {
       return { status: 'rejected', reason: resourceStructureInputRejection(error) }
     }
 
+    return await this.#execute(actorId, normalizedEnvelope, expectedPostconditions)
+  }
+
+  async #execute(
+    actorId: CampaignMemberId,
+    normalizedEnvelope: CommandEnvelope<ResourceStructureCommand>,
+    expectedPostconditions?: ReadonlyArray<ResourcePostcondition>,
+  ): Promise<ResourceStructureCommandResult> {
     if (!(await this.#authorize(actorId, normalizedEnvelope))) {
       return { status: 'rejected', reason: 'unauthorized' }
     }
-    const fingerprint = await fingerprintResourceStructureCommand(normalizedEnvelope.command)
+    const fingerprint = expectedPostconditions
+      ? await fingerprintResourceCompensation(normalizedEnvelope.command, expectedPostconditions)
+      : await fingerprintResourceStructureCommand(normalizedEnvelope.command)
     const lookup = this.#ledger.lookup(
       normalizedEnvelope.campaignId,
       actorId,
@@ -470,6 +497,10 @@ class InMemoryResourceOperationExecutor<
     )
     if (lookup.status === 'replay') return { status: 'completed', receipt: lookup.receipt }
     if (lookup.status === 'rejected') return { status: 'rejected', reason: lookup.reason }
+
+    if (expectedPostconditions && !this.#matches(expectedPostconditions)) {
+      return { status: 'rejected', reason: 'stale_history' }
+    }
 
     const draft = cloneCatalogState(this.#backend.state)
     let result: ResourceStructureCommandResult
@@ -508,6 +539,17 @@ class InMemoryResourceOperationExecutor<
     this.#backend.state = draft
     this.#publish(normalizedEnvelope.campaignId)
     return result
+  }
+
+  #matches(expectedPostconditions: ReadonlyArray<ResourcePostcondition>): boolean {
+    return expectedPostconditions.every((condition) => {
+      const resource = this.#backend.state.resources.get(condition.resourceId)
+      if (condition.state === 'missing') return resource === undefined
+      return (
+        resource?.metadataVersion.revision === condition.metadataVersion.revision &&
+        resource.metadataVersion.digest === condition.metadataVersion.digest
+      )
+    })
   }
 
   #publish(campaignId: CampaignId): void {

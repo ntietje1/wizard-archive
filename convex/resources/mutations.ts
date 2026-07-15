@@ -5,18 +5,25 @@ import type {
   ResourceStructureCommand,
   ResourceStructureCommandResult,
 } from '@wizard-archive/editor/resources/command-contract'
-import { resourceStructureInputRejection } from '@wizard-archive/editor/resources/command-protocol'
+import {
+  normalizeResourcePostconditions,
+  resourceStructureInputRejection,
+} from '@wizard-archive/editor/resources/command-protocol'
 import { canonicalizeResourceTitle } from '@wizard-archive/editor/resources/resource-record'
 import { FILE_CLASSIFICATION } from '@wizard-archive/editor/resources/file-content-contract'
 import { assertVersionStamp } from '@wizard-archive/editor/resources/component-version'
 import { DOMAIN_ID_KIND, assertDomainId } from '@wizard-archive/editor/resources/domain-id'
 import { campaignMutation, dmMutation } from '../functions'
-import { executeStructureCommand as executeStructureCommandFn } from './functions/executeStructureCommand'
+import {
+  executeStructureCommand as executeStructureCommandFn,
+  executeStructureCompensation as executeStructureCompensationFn,
+} from './functions/executeStructureCommand'
 import {
   bindNoteContentResultValidator,
   fileOwnedMetadataValidators,
   resourceStructureCommandResultValidator,
   resourceStructureCommandValidator,
+  resourcePostconditionValidator,
   resourceBookmarkCommandResultValidator,
   resourceBookmarkCommandValidator,
   versionStampValidator,
@@ -127,6 +134,32 @@ export const executeStructureCommand = campaignMutation({
       command,
     })
     return storedResult(result)
+  },
+})
+
+export const executeStructureCompensation = campaignMutation({
+  args: {
+    operationId: operationIdValidator,
+    command: resourceStructureCommandValidator,
+    expectedPostconditions: v.array(resourcePostconditionValidator),
+  },
+  returns: resourceStructureCommandResultValidator,
+  handler: async (ctx, args): Promise<StoredResourceStructureCommandResult> => {
+    let command: ResourceStructureCommand
+    let expectedPostconditions
+    try {
+      command = resourceStructureCommand(args.command)
+      expectedPostconditions = normalizeResourcePostconditions(args.expectedPostconditions)
+    } catch (error) {
+      return { status: 'rejected', reason: resourceStructureInputRejection(error) }
+    }
+    return storedResult(
+      await executeStructureCompensationFn(ctx, {
+        operationId: args.operationId,
+        command,
+        expectedPostconditions,
+      }),
+    )
   },
 })
 

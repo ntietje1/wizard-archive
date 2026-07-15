@@ -13,6 +13,7 @@ import type {
 } from '@wizard-archive/editor/resources/domain-id'
 import type {
   ResourceCommandReceipt,
+  ResourcePostcondition,
   ResourceStructureCommand,
   ResourceStructureCommandResult,
   ResourceStructureResult,
@@ -20,6 +21,8 @@ import type {
 import {
   RESOURCE_COMMAND_PROTOCOL_VERSION,
   fingerprintResourceStructureCommand,
+  fingerprintResourceCompensation,
+  normalizeResourcePostconditions,
   normalizeResourceStructureCommand,
   resourceStructureInputRejection,
 } from '@wizard-archive/editor/resources/command-protocol'
@@ -56,6 +59,10 @@ import { resourceRecordFromRow, resourceRowFromRecord } from './resourceRecordRo
 type ExecuteStructureCommandArgs = {
   operationId: string
   command: ResourceStructureCommand
+}
+
+type ExecuteStructureCompensationArgs = ExecuteStructureCommandArgs & {
+  expectedPostconditions: ReadonlyArray<ResourcePostcondition>
 }
 
 type LoadedGraph = ResourceGraph & {
@@ -429,18 +436,7 @@ function receiptFromRow(receipt: Doc<'resourceOperations'>['receipt']): Resource
     campaignId: assertDomainId(DOMAIN_ID_KIND.campaign, receipt.campaignId),
     operationId: assertDomainId(DOMAIN_ID_KIND.operation, receipt.operationId),
     result: resultFromRow(receipt.result),
-    postconditions: receipt.postconditions.map((condition) =>
-      condition.state === 'missing'
-        ? {
-            state: 'missing',
-            resourceId: assertDomainId(DOMAIN_ID_KIND.resource, condition.resourceId),
-          }
-        : {
-            state: 'present',
-            resourceId: assertDomainId(DOMAIN_ID_KIND.resource, condition.resourceId),
-            metadataVersion: assertVersionStamp(condition.metadataVersion),
-          },
-    ),
+    postconditions: normalizeResourcePostconditions(receipt.postconditions),
   }
 }
 
@@ -492,8 +488,26 @@ async function applyCommand(
   actorId: CampaignMemberId,
   operationId: OperationId,
   command: ResourceStructureCommand,
+  expectedPostconditions?: ReadonlyArray<ResourcePostcondition>,
 ): Promise<ResourceStructureCommandResult> {
   const graph = await loadGraph(ctx, campaignId, command)
+  if (expectedPostconditions) {
+    const resources = await Promise.all(
+      expectedPostconditions.map(async (condition) => {
+        const row = await findCanonicalResource(ctx.db, condition.resourceId)
+        return row ? resourceRecordFromRow(row) : undefined
+      }),
+    )
+    const matches = expectedPostconditions.every((condition, index) => {
+      const resource = resources[index]
+      if (condition.state === 'missing') return resource === undefined
+      return (
+        resource?.metadataVersion.revision === condition.metadataVersion.revision &&
+        resource.metadataVersion.digest === condition.metadataVersion.digest
+      )
+    })
+    if (!matches) return { status: 'rejected', reason: 'stale_history' }
+  }
   if (command.type === 'deepCopy') {
     return await deepCopyResources(ctx, graph, campaignId, actorId, operationId, command)
   }
@@ -505,15 +519,18 @@ async function applyCommand(
   return { status: 'completed', receipt: transition.receipt }
 }
 
-export async function executeStructureCommand(
+async function execute(
   ctx: CampaignMutationCtx,
   args: ExecuteStructureCommandArgs,
+  expected?: ReadonlyArray<ResourcePostcondition>,
 ): Promise<ResourceStructureCommandResult> {
   let operationId: OperationId
   let command: ResourceStructureCommand
+  let expectedPostconditions: ReadonlyArray<ResourcePostcondition> | undefined
   try {
     operationId = assertDomainId(DOMAIN_ID_KIND.operation, args.operationId)
     command = normalizeResourceStructureCommand(args.command)
+    expectedPostconditions = expected && normalizeResourcePostconditions(expected)
   } catch (error) {
     return { status: 'rejected', reason: resourceStructureInputRejection(error) }
   }
@@ -523,7 +540,9 @@ export async function executeStructureCommand(
 
   const { campaignId, actorId } = ctx.resourceScope
   const [fingerprint, stored] = await Promise.all([
-    fingerprintResourceStructureCommand(command),
+    expectedPostconditions
+      ? fingerprintResourceCompensation(command, expectedPostconditions)
+      : fingerprintResourceStructureCommand(command),
     ctx.db
       .query('resourceOperations')
       .withIndex('by_campaign_and_operation', (query) =>
@@ -539,7 +558,14 @@ export async function executeStructureCommand(
   }
 
   try {
-    const result = await applyCommand(ctx, campaignId, actorId, operationId, command)
+    const result = await applyCommand(
+      ctx,
+      campaignId,
+      actorId,
+      operationId,
+      command,
+      expectedPostconditions,
+    )
     if (result.status === 'completed') {
       await ctx.db.insert('resourceOperations', {
         campaignUuid: campaignId,
@@ -560,4 +586,18 @@ export async function executeStructureCommand(
     }
     throw error
   }
+}
+
+export async function executeStructureCommand(
+  ctx: CampaignMutationCtx,
+  args: ExecuteStructureCommandArgs,
+): Promise<ResourceStructureCommandResult> {
+  return await execute(ctx, args)
+}
+
+export async function executeStructureCompensation(
+  ctx: CampaignMutationCtx,
+  args: ExecuteStructureCompensationArgs,
+): Promise<ResourceStructureCommandResult> {
+  return await execute(ctx, args, args.expectedPostconditions)
 }
