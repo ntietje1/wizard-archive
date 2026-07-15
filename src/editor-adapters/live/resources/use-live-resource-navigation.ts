@@ -14,7 +14,6 @@ export function useLiveResourceNavigation(): ResourceNavigation {
   const listenersRef = useRef(new Set<() => void>())
   const navigationRef = useRef<ResourceNavigation>(null)
 
-  navigateRef.current = navigateToResource
   navigationRef.current ??= {
     current: () => selectedRef.current,
     open: (resourceId: ResourceId) => void navigateRef.current(resourceId),
@@ -23,6 +22,10 @@ export function useLiveResourceNavigation(): ResourceNavigation {
       return () => listenersRef.current.delete(listener)
     },
   }
+
+  useEffect(() => {
+    navigateRef.current = navigateToResource
+  }, [navigateToResource])
 
   useEffect(() => {
     if (selectedRef.current === selectedResourceId) return
